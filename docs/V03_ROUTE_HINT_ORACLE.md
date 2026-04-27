@@ -1,0 +1,1132 @@
+# v0.3 Route-Hint Oracle
+
+This note tracks the first value-bearing route-signal slice.
+
+It is oracle-only and experimental, but it passes its first fixture test.
+
+## Decision
+
+The oracle route-hint slice passes its first fixture test.
+
+Unlike jump-neighbor replacement, which either regressed the fixture when active
+or collapsed to a no-op under conservative gates, value-bearing route hints
+improve the fixture query metric without perturbing `repeating-text`.
+
+Reference result:
+
+- fixture query byte accuracy improves from `0.200000` to `1.000000` at
+  `lambda_route = 0.30`
+- `repeating-text` remains unchanged across tested route strengths
+
+Interpretation:
+
+The failure of previous v0.3 routing slices was not the existence of
+long-range information, but the representation of that information as
+neighbor replacement. When the remote signal is injected as a value-bearing
+proposal hint, the local dynamics can use it.
+
+## Scope
+
+- `--route-mode hint-oracle`
+- `--lambda-route`
+- fixture syntax: `@id=value` records and `?id=` query positions
+- query node: the `=` byte in `?id=`
+- oracle hint: matching record value byte
+- injection: additive proposal-energy bias toward the value byte's high/low
+  nibbles
+
+This slice does not replace local neighbors, change graph topology, discover
+candidates, or learn routing keys.
+
+Allowed wording:
+
+- `oracle value-bearing route hint works on the fixture`
+- `value-bearing route signal improves query positions`
+- `local topology is preserved`
+
+Do not say:
+
+- `sparse routing solved`
+- `long-context retrieval solved`
+- `learned routing works`
+- `passkey retrieval works`
+
+## Current Readout
+
+Helper:
+
+```bash
+./experiments/test_v03_route_hint_oracle.sh
+./experiments/run_v03_route_hint_oracle.sh
+```
+
+Reference readout, seed `1`, last-10:
+
+| Run | byte_acc | field_byte_acc | joint_byte_acc | query_count | applied | query_byte_acc | query_field_acc | query_joint_acc |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `fixture-off` | `0.257552` | `0.228776` | `0.259618` | `4.000000` | `0.000000` | `0.200000` | `0.150000` | `0.175000` |
+| `fixture-lr0p01` | `0.249285` | `0.228299` | `0.249285` | `4.000000` | `1.000000` | `0.150000` | `0.125000` | `0.125000` |
+| `fixture-lr0p03` | `0.248808` | `0.231002` | `0.252464` | `4.000000` | `1.000000` | `0.250000` | `0.250000` | `0.250000` |
+| `fixture-lr0p10` | `0.254054` | `0.234340` | `0.254213` | `4.000000` | `1.000000` | `0.300000` | `0.150000` | `0.150000` |
+| `fixture-lr0p20` | `0.253895` | `0.235453` | `0.250397` | `4.000000` | `1.000000` | `0.875000` | `0.150000` | `0.200000` |
+| `fixture-lr0p30` | `0.251828` | `0.232591` | `0.247377` | `4.000000` | `1.000000` | `1.000000` | `0.200000` | `0.200000` |
+| `fixture-lr0p50` | `0.256439` | `0.232591` | `0.252464` | `4.000000` | `1.000000` | `1.000000` | `0.100000` | `0.175000` |
+| `repeat-off` | `0.687500` | `0.683594` | `0.687500` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` |
+| `repeat-lr0p30` | `0.687500` | `0.683594` | `0.687500` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` |
+| `repeat-lr0p50` | `0.687500` | `0.683594` | `0.687500` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` |
+
+Primary gate:
+
+- fixture query positions improve
+- `repeating-text` does not regress
+
+Whole-file `byte_acc` is secondary because query positions are sparse.
+
+The current transition curve is weak below `lambda_route = 0.20`, nearly solved
+at `0.20`, and saturated by `0.30`.
+
+## Ablation Summary
+
+| Routing method | Fixture effect | Repeat effect | Interpretation |
+| --- | ---: | ---: | --- |
+| `probe` | no effect | no effect | diagnostics only |
+| `jump-neighbor` | regression or no-op | no useful lift | replacement semantics wrong |
+| confidence guard | suppresses bad jumps | no lift | guardrail, not routing |
+| oracle route hint | query acc `0.2 -> 1.0` | no regression | value-bearing signal works |
+
+Core finding:
+
+> Long-range information must enter as a value-bearing signal, not as a
+> topology replacement.
+
+## Roadmap
+
+Current state:
+
+- `v0.3-h1`: oracle route hint, `PASS`
+- `v0.3-h2`: parsed key-value candidate with non-oracle value delivery, `PASS`
+- `v0.3-h3`: exact key-match routing with O(1) record lookup, `PASS`
+- `v0.3-h3a`: exact KV scale-up, `PASS` for exact retrieval and distance
+  scaling; many-key/noisy query saturation depends on route strength
+- `v0.3-h4-1`: hashed symbolic key candidate retrieval, `PASS` for candidate
+  recall instrumentation and high-bit route hints; lossy buckets expose a
+  top-1 ranking bottleneck
+- `v0.3-h4-2`: multi-candidate vote aggregation, `PASS` as an ambiguity
+  mitigation; it improves lossy buckets but does not eliminate ranking/scoring
+- `v0.3-h4-3`: weighted value-vote candidate scoring, `PASS` as controlled
+  scoring instrumentation; neutral on the default 32-key sweep because collided
+  bucket values are mostly unique
+- `v0.3-h4-4`: deterministic key-shape candidate scoring, `PASS` as a symbolic
+  scoring baseline; it resolves the current 32-key lossy hash ambiguity, but it
+  uses parsed key-string shape and is not learned routing
+- `v0.3-h4-5b`: learned joint-code key-region hash, `PASS` as plumbing and
+  diagnostic instrumentation, but `NOT YET` a learned routing win on the
+  32-key sweep
+- `v0.3-h4-5c`: key-region joint-code representation diagnostics, `PASS` as
+  instrumentation; current joint-code has low key-byte reconstruction and high
+  signature collision
+- `v0.3-h4-5d`: route-code identity auxiliary, `PASS` as an identity-code
+  baseline; key-region identity code recovers the 32-key route-code sweep, but
+  it is still an explicit identity auxiliary, not general semantic routing
+- `v0.3-h4-5e`: route-code stress/ablation, `PASS` as diagnostics; route
+  identity stays separable, while many-key scaling exposes a downstream
+  dynamics/hint-strength limit
+- `v0.3-h4-5f`: many-key route-hint dynamics margin ablation, `PASS` as
+  diagnostics; 128-key retrieval stays perfect and `lambda_route = 10.0`
+  restores query accuracy, identifying hint strength/effective margin as the
+  primary bottleneck
+- `v0.3-h4-5g`: adaptive route strength, `PASS` as calibrated strength
+  diagnostics; margin mode nearly matches fixed strong routing with lower mean
+  strength
+- `v0.3-h4-5h`: wrong-candidate corruption stress, `PASS` as confidence
+  guardrail instrumentation; low-confidence corrupted hints are suppressed, but
+  this is not yet full wrong-candidate robustness
+- `v0.3-h4-5i`: candidate/value confidence calibration, `PASS` as
+  instrumentation; value-support confidence lowers wrong hint strength but does
+  not yet improve corruption robustness
+
+Recommended next stages:
+
+- stronger candidate ranking/confidence features before noisy learned routing
+- `v0.3-h5`: route plasticity
+
+The center of v0.3 is no longer whether to jump. The question is which value to
+bring into the local dynamics.
+
+## Parsed Value Candidate
+
+`v0.3-h2` lowers the oracle one step.
+
+Instead of directly handing `value_byte` to the query, the parser provides the
+matching record value position. The graph then reads the byte at that candidate
+position and injects it through the same proposal-hint energy.
+
+Helper:
+
+```bash
+./experiments/test_v03_route_hint_parsed.sh
+./experiments/run_v03_route_hint_parsed.sh
+```
+
+Reference parsed readout, seed `1`, last-10:
+
+| Run | query_count | applied | candidate_lookup_count | candidate_hit_rate | value_read_distance | query_byte_acc |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fixture-off` | `4.000000` | `0.000000` | `4.000000` | `1.000000` | `126.750000` | `0.200000` |
+| `fixture-lr0p01` | `4.000000` | `1.000000` | `4.000000` | `1.000000` | `126.750000` | `0.150000` |
+| `fixture-lr0p03` | `4.000000` | `1.000000` | `4.000000` | `1.000000` | `126.750000` | `0.250000` |
+| `fixture-lr0p10` | `4.000000` | `1.000000` | `4.000000` | `1.000000` | `126.750000` | `0.300000` |
+| `fixture-lr0p20` | `4.000000` | `1.000000` | `4.000000` | `1.000000` | `126.750000` | `0.875000` |
+| `fixture-lr0p30` | `4.000000` | `1.000000` | `4.000000` | `1.000000` | `126.750000` | `1.000000` |
+| `fixture-lr0p50` | `4.000000` | `1.000000` | `4.000000` | `1.000000` | `126.750000` | `1.000000` |
+| `repeat-lr0p50` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` |
+
+Decision:
+
+- `v0.3-h2 parsed value candidate`: `PASS`
+- the query metric curve matches the direct oracle route-hint slice
+- `repeating-text` remains unchanged because it has no parsed hints
+- this is still fixture-aware symbolic candidate delivery, not learned routing
+
+## Exact Key-Value Route Hint
+
+`v0.3-h3` removes the pre-attached value position and performs exact symbolic
+lookup from parsed records and queries.
+
+Format:
+
+```text
+@KEY=VALUE; ... ?KEY=
+```
+
+Lookup rule:
+
+- records update `record_table[KEY] = value_pos`
+- queries read `record_table[KEY]`
+- duplicate keys use latest-record-wins at query time
+
+This is still symbolic routing, not learned routing.
+
+Helper:
+
+```bash
+./experiments/test_v03_route_hint_kv_exact.sh
+./experiments/run_v03_route_hint_kv_exact.sh
+```
+
+Reference exact-KV readout, seed `1`, last-10:
+
+| Run | kv_records | kv_queries | kv_hit_rate | duplicate_rate | missing_rate | candidate_hit_rate | value_read_distance | query_byte_acc |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `fixture-off` | `4.000000` | `4.000000` | `1.000000` | `0.000000` | `0.000000` | `1.000000` | `126.750000` | `0.200000` |
+| `fixture-lr0p01` | `4.000000` | `4.000000` | `1.000000` | `0.000000` | `0.000000` | `1.000000` | `126.750000` | `0.150000` |
+| `fixture-lr0p03` | `4.000000` | `4.000000` | `1.000000` | `0.000000` | `0.000000` | `1.000000` | `126.750000` | `0.250000` |
+| `fixture-lr0p10` | `4.000000` | `4.000000` | `1.000000` | `0.000000` | `0.000000` | `1.000000` | `126.750000` | `0.300000` |
+| `fixture-lr0p20` | `4.000000` | `4.000000` | `1.000000` | `0.000000` | `0.000000` | `1.000000` | `126.750000` | `0.875000` |
+| `fixture-lr0p30` | `4.000000` | `4.000000` | `1.000000` | `0.000000` | `0.000000` | `1.000000` | `126.750000` | `1.000000` |
+| `fixture-lr0p50` | `4.000000` | `4.000000` | `1.000000` | `0.000000` | `0.000000` | `1.000000` | `126.750000` | `1.000000` |
+| `repeat-lr0p50` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` |
+
+Decision:
+
+- `v0.3-h3 exact key-value route hint`: `PASS`
+- exact lookup reproduces the parsed/oracle query curve
+- duplicate and missing key rates are now instrumented
+- `repeating-text` remains unchanged because it has no key-value hints
+- this provides a symbolic upper bound for learned key/value candidate routing
+
+## Exact KV Scale-Up
+
+`v0.3-h3a` keeps the same exact symbolic lookup path and varies distance,
+number of keys, duplicate-key policy, missing-key behavior, and filler noise.
+
+Helper:
+
+```bash
+./experiments/test_v03_route_hint_kv_scale.sh
+./experiments/run_v03_route_hint_kv_scale.sh
+./experiments/run_v03_route_hint_kv_scale.sh --strong
+```
+
+Profiles:
+
+- default: practical scale-up with `lambda_route = 0.50`
+- `--strong`: stress follow-up with `lambda_route = 5.0` for cases where exact
+  retrieval succeeds but the proposal hint is not strong enough to saturate the
+  query metric
+- `--full`: heavier distance/key sweep for slower runs
+
+Reference default readout, seed `1`, last-5:
+
+| Run | kv_hit_rate | duplicate_rate | missing_rate | value_read_distance | query_byte_acc |
+| --- | --- | --- | --- | --- | --- |
+| `distance_d64` | `1.000000` | `0.000000` | `0.000000` | `72.000000` | `1.000000` |
+| `distance_d256` | `1.000000` | `0.000000` | `0.000000` | `264.000000` | `1.000000` |
+| `distance_d1024` | `1.000000` | `0.000000` | `0.000000` | `1032.000000` | `1.000000` |
+| `distance_d4096` | `1.000000` | `0.000000` | `0.000000` | `4104.000000` | `1.000000` |
+| `keys_k16` | `1.000000` | `0.000000` | `0.000000` | `72.000000` | `0.775000` |
+| `keys_k64` | `1.000000` | `0.000000` | `0.000000` | `72.000000` | `0.271875` |
+| `duplicate_latest` | `1.000000` | `0.500000` | `0.000000` | `70.000000` | `1.000000` |
+| `missing_key` | `0.000000` | `0.000000` | `1.000000` | `0.000000` | `0.000000` |
+| `noisy_mixed` | `1.000000` | `0.000000` | `0.000000` | `264.000000` | `0.250000` |
+
+Reference strong readout, seed `1`, last-5:
+
+| Run | kv_hit_rate | value_read_distance | query_byte_acc |
+| --- | --- | --- | --- |
+| `keys_k64` | `1.000000` | `72.000000` | `1.000000` |
+| `noisy_mixed` | `1.000000` | `264.000000` | `1.000000` |
+
+Decision:
+
+- `v0.3-h3a exact KV scale-up`: `PASS` for symbolic exact retrieval,
+  duplicate/missing diagnostics, and distance scaling through `4096`
+- the default `lambda_route = 0.50` profile saturates the distance sweep but not
+  the many-key and noisy fixtures
+- the `--strong` profile recovers `keys_k64` and `noisy_mixed` to
+  `query_byte_acc = 1.000000`, so those failures are currently best read as
+  hint-strength/dynamics-margin limits, not candidate lookup failures
+- this is still symbolic exact KV routing, not learned routing or general
+  long-context retrieval
+
+## Hashed Key Candidate Retrieval
+
+`v0.3-h4-1` replaces exact string lookup with symbolic key hashing:
+
+```text
+record KEY -> hash(KEY) bucket -> value_pos candidates
+query KEY  -> hash(KEY) bucket -> top-K_route candidates
+```
+
+The route hint path is unchanged:
+
+```text
+selected candidate value_pos -> value byte read -> proposal hint
+```
+
+This still parses fixture keys symbolically. It is a hashed candidate-retrieval
+step, not learned routing.
+
+Helper:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash.sh
+./experiments/test_v03_route_hint_kv_hash_vote.sh
+./experiments/test_v03_route_hint_kv_hash_weighted.sh
+./experiments/test_v03_route_hint_kv_hash_key_shape.sh
+./experiments/run_v03_route_hint_kv_hash.sh
+```
+
+New metrics:
+
+- `route_candidate_query_count`
+- `route_candidate_recall_rate`
+- `route_candidate_top1_rate`
+- `route_candidate_rank_mean`
+- `route_bucket_load_mean`
+- `route_bucket_load_max`
+- `route_bucket_collision_rate`
+
+Reference default readout, keys `32`, records-block then queries-block,
+`lambda_route = 5.0`, last-5:
+
+| Run | recall | top1 | rank | bucket_mean | bucket_max | collision | query_byte_acc |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `bits4_kr1_top1` | `0.500000` | `0.500000` | `1.000000` | `2.125000` | `3.000000` | `0.937500` | `0.500000` |
+| `bits4_kr4_top1` | `1.000000` | `0.500000` | `1.562500` | `2.125000` | `3.000000` | `0.937500` | `0.500000` |
+| `bits6_kr1_top1` | `0.875000` | `0.875000` | `1.000000` | `1.250000` | `2.000000` | `0.250000` | `0.875000` |
+| `bits6_kr4_top1` | `1.000000` | `0.875000` | `1.125000` | `1.250000` | `2.000000` | `0.250000` | `0.875000` |
+| `bits8_kr1_top1` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `0.000000` | `1.000000` |
+| `bits16_kr1_top1` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `0.000000` | `1.000000` |
+
+Interpretation:
+
+- high-bit hash buckets reproduce exact-KV behavior with rank-1 candidates
+- lossy buckets degrade gracefully as collisions rise
+- increasing `K_route` can recover candidate-set recall, but the current hint
+  injection uses only the selected rank-1 value, so query accuracy follows
+  `route_candidate_top1_rate`, not top-K recall
+- this exposes the next h4 bottleneck: candidate ranking or multi-candidate
+  hint aggregation, before moving to learned joint-context keys
+- `repeating-text` has no KV queries and remains unchanged in the hash smoke
+
+Decision:
+
+- `v0.3-h4-1 hashed symbolic key candidate retrieval`: `PASS` as a candidate
+  retrieval diagnostic and high-bit hash route-hint path
+- do not call this learned routing; the key source is still symbolic fixture KEY
+- do not revive jump-neighbor replacement
+
+## Multi-Candidate Vote Aggregation
+
+`v0.3-h4-2` adds route-hint aggregation:
+
+```bash
+--route-hint-agg top1
+--route-hint-agg vote
+```
+
+`top1` preserves the previous h4-1 behavior. `vote` reads all top-`K_route`
+candidate value positions and adds normalized nibble votes to the proposal
+energy:
+
+```text
+candidates -> value bytes -> high/low vote tables -> proposal hint
+```
+
+The topology is still unchanged. No remote candidate becomes a neighbor.
+
+Additional metrics:
+
+- `route_hint_vote_candidate_count_mean`
+- `route_hint_vote_margin_mean`
+
+Controlled smoke readout, `bits4`, `K_route = 4`, last row:
+
+| Aggregation | recall | top1 | vote_count | vote_margin | query_byte_acc |
+| --- | --- | --- | --- | --- | --- |
+| `top1` | `1.000000` | `0.000000` | `4.000000` | `0.750000` | `0.000000` |
+| `vote` | `1.000000` | `0.000000` | `4.000000` | `0.750000` | `1.000000` |
+
+Reference 32-key lossy-hash readout, `lambda_route = 5.0`, last-5:
+
+| Run | recall | top1 | vote_margin | query_byte_acc |
+| --- | --- | --- | --- | --- |
+| `bits4_kr4_top1` | `1.000000` | `0.500000` | `0.671875` | `0.500000` |
+| `bits4_kr4_vote` | `1.000000` | `0.500000` | `0.671875` | `0.700000` |
+| `bits6_kr4_top1` | `1.000000` | `0.875000` | `0.937500` | `0.875000` |
+| `bits6_kr4_vote` | `1.000000` | `0.875000` | `0.937500` | `0.956250` |
+
+Decision:
+
+- `v0.3-h4-2 multi-candidate vote aggregation`: `PASS` as a mitigation for
+  top-1 ranking failures
+- vote aggregation can recover a controlled top1-failure case and improves the
+  lossy 32-key sweep
+- vote aggregation is not a full ambiguity solution; heavily collided buckets
+  still need better candidate scoring, confidence, or learned ranking
+- the next learned-key slice should preserve the value-position route-hint path
+  and treat ranking/aggregation as first-class diagnostics
+
+## Weighted Candidate Scoring
+
+`v0.3-h4-3` adds candidate scoring for weighted aggregation:
+
+```bash
+--route-hint-agg weighted-vote
+--route-candidate-score insertion
+--route-candidate-score recency
+--route-candidate-score value-vote
+--route-candidate-score key-shape
+```
+
+Current scoring semantics:
+
+- `insertion`: equal candidate weights
+- `recency`: higher weight for the current rank-1/latest bucket candidate
+- `value-vote`: candidates whose value byte appears more often in the top-K set
+  receive higher weight
+- `key-shape`: rank hash-bucket candidates by deterministic key-string shape
+  against the query key: length match, digit-count match, common prefix, and
+  common suffix, with latest-record tie-breaking
+
+Additional diagnostics:
+
+- `route_hint_correct_value_vote_share_mean`
+- `route_hint_vote_entropy_mean`
+- `route_hint_unique_values_mean`
+
+Controlled weighted smoke, `bits4`, `K_route = 4`, last row:
+
+| Aggregation | score | recall | top1 | qacc | correct_share | entropy | unique_values |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `weighted-vote` | `value-vote` | `1.000000` | `0.000000` | `1.000000` | `0.900000` | `0.468996` | `2.000000` |
+
+Reference 32-key lossy-hash readout, `lambda_route = 5.0`, last-5:
+
+| Run | qacc | correct_share | entropy | unique_values |
+| --- | --- | --- | --- | --- |
+| `bits4_kr4_vote` | `0.700000` | `0.739583` | `0.536560` | `1.562500` |
+| `bits4_kr4_weighted_value` | `0.700000` | `0.739583` | `0.536560` | `1.562500` |
+| `bits6_kr4_vote` | `0.956250` | `0.937500` | `0.125000` | `1.125000` |
+| `bits6_kr4_weighted_value` | `0.956250` | `0.937500` | `0.125000` | `1.125000` |
+
+Decision:
+
+- `v0.3-h4-3 weighted value-vote scoring`: `PASS` as controlled scoring
+  instrumentation
+- value-frequency weighting can amplify repeated supporting values in a
+  collision bucket
+- on the default 32-key lossy hash sweep it is neutral because most collided
+  candidate sets do not contain repeated value bytes, so weighting collapses
+  back to ordinary vote
+- this motivated testing information beyond value frequency; the next slice
+  below starts with deterministic key-shape/length scoring
+
+## Deterministic Key-shape Scoring
+
+`v0.3-h4-4` adds a deterministic symbolic scoring baseline:
+
+```bash
+--route-mode hint-kv-hash
+--route-hint-agg top1
+--route-candidate-score key-shape
+```
+
+The scorer does not change the successful route-hint path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+It only changes candidate order inside a hash bucket. Candidates whose record
+key has stronger shape agreement with the query key are ranked first. The score
+uses length match, digit-count match, common prefix, and common suffix, then
+falls back to latest-record tie-breaking.
+
+Controlled key-shape smoke:
+
+- insertion baseline: recall `1.000000`, top1 `0.000000`, qacc `0.000000`,
+  rank `2.000000`
+- key-shape scorer: recall `1.000000`, top1 `1.000000`, qacc `1.000000`,
+  rank `1.000000`
+
+Reference 32-key lossy-hash readout, `lambda_route = 5.0`, last-5:
+
+| Run | qacc | recall | top1 | rank |
+| --- | --- | --- | --- | --- |
+| `bits4_kr1_top1` | `0.500000` | `0.500000` | `0.500000` | `1.000000` |
+| `bits4_kr1_key_shape` | `1.000000` | `1.000000` | `1.000000` | `1.000000` |
+| `bits4_kr4_vote` | `0.700000` | `1.000000` | `0.500000` | `1.562500` |
+| `bits4_kr4_key_shape` | `1.000000` | `1.000000` | `1.000000` | `1.000000` |
+| `bits6_kr4_vote` | `0.956250` | `1.000000` | `0.875000` | `1.125000` |
+| `bits6_kr4_key_shape` | `1.000000` | `1.000000` | `1.000000` | `1.000000` |
+
+Decision:
+
+- `v0.3-h4-4 key-shape scoring`: `PASS` as a deterministic symbolic scoring
+  baseline
+- it shows that the current lossy hash ambiguity is resolvable when a strong
+  candidate feature is available
+- it should not be described as learned routing, because it uses parsed key
+  strings and deterministic shape comparison
+- next: replace this symbolic feature with raw key-region and learned
+  joint-code key-region candidate sources
+
+## Joint-code Key-region Hash
+
+`v0.3-h4-5b` adds a learned-code candidate source:
+
+```bash
+--route-mode hint-kv-hash
+--route-hash-source joint-code-key
+```
+
+This keeps the same value-bearing path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The difference is only the bucket key. Instead of hashing the parsed raw key
+bytes directly, the graph maps each key byte through the current learned
+`best_joint_byte()` code from the `H+B` local substrate, hashes that code
+sequence, and rebuilds hash buckets at `begin_epoch()`.
+
+Controlled smoke:
+
+- one-key fixture reaches recall `1.000000`, top1 `1.000000`, qacc
+  `1.000000`
+- this verifies that the learned-code bucket path is wired into route hints
+
+Reference 32-key joint-code sweep, `lambda_route = 5.0`, last-5:
+
+| Run | qacc | recall | top1 | bucket_load | collision |
+| --- | --- | --- | --- | --- | --- |
+| `bits4_kr4_vote` | `0.500000` | `0.675000` | `0.337500` | `5.875000` | `0.812500` |
+| `bits6_kr4_vote` | `0.481250` | `0.687500` | `0.368750` | `6.000000` | `0.762500` |
+| `bits8_kr4_vote` | `0.462500` | `0.687500` | `0.368750` | `6.000000` | `0.762500` |
+| `bits16_kr4_vote` | `0.462500` | `0.687500` | `0.375000` | `5.987500` | `0.750000` |
+
+`v0.3-h4-5c` adds representation diagnostics:
+
+- `key_region_count`
+- `key_region_joint_decode_acc`
+- `raw_key_unique_count`
+- `joint_key_unique_count`
+- `joint_signature_collision_rate`
+- `joint_vs_raw_candidate_overlap_rate`
+
+Reference 32-key representation readout, `lambda_route = 5.0`, last-5:
+
+| Run | key_bytes | decode_acc | raw_unique | joint_unique | signature_collision | raw_overlap |
+| --- | --- | --- | --- | --- | --- | --- |
+| `bits4_kr4_vote` | `256.000000` | `0.093750` | `32.000000` | `13.200000` | `0.587500` | `0.502083` |
+| `bits6_kr4_vote` | `256.000000` | `0.071875` | `32.000000` | `12.000000` | `0.625000` | `0.631250` |
+| `bits8_kr4_vote` | `256.000000` | `0.093750` | `32.000000` | `12.000000` | `0.625000` | `0.687500` |
+| `bits16_kr4_vote` | `256.000000` | `0.093750` | `32.000000` | `12.000000` | `0.625000` | `0.687500` |
+
+Decision:
+
+- `v0.3-h4-5b joint-code key-region hash`: `PASS` as plumbing and diagnostic
+  instrumentation
+- `v0.3-h4-5c representation diagnostics`: `PASS` as instrumentation
+- it is not yet a learned routing win; the learned joint-code representation
+  collapses too many key strings into ambiguous buckets on the 32-key fixture
+- key-region decode accuracy is only about `0.07-0.094`, and 32 raw keys collapse
+  to about `12-13.2` joint signatures under the current learned code
+- the gap to `raw-key` and `key-shape` is now measurable with the same
+  candidate metrics plus representation diagnostics
+- next: add an identity-preserving route-code auxiliary before claiming learned
+  sparse routing
+
+## Route-code Identity Auxiliary
+
+`v0.3-h4-5d` adds a separate route identity code:
+
+```bash
+--route-hash-source route-code-key
+--route-code-aux 1
+--route-code-key-region-only 1
+--eta-route-code 0.25
+--lambda-route-code-id 1.0
+```
+
+This keeps the successful nonlocal path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The new route-code path does not use the prediction joint-code as the routing
+key. Instead, it trains a separate `route_field_` table toward input-byte
+identity on key-region bytes only:
+
+```text
+route target high = input_byte / 16
+route target low  = input_byte % 16
+```
+
+The route hash then uses the route-code sequence for the parsed key region.
+
+Additional diagnostics:
+
+- `key_region_route_decode_acc`
+- `route_key_unique_count`
+- `route_signature_collision_rate`
+- `route_vs_raw_candidate_overlap_rate`
+
+Reference 32-key route-code sweep, `lambda_route = 5.0`, last-5:
+
+| Run | qacc | recall | top1 | route_decode | route_unique | route_collision | raw_overlap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `bits4_kr4_vote` | `0.731250` | `1.000000` | `0.500000` | `1.000000` | `32.000000` | `0.000000` | `1.000000` |
+| `bits6_kr4_vote` | `0.968750` | `1.000000` | `0.875000` | `1.000000` | `32.000000` | `0.000000` | `1.000000` |
+| `bits8_kr4_vote` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `32.000000` | `0.000000` | `1.000000` |
+| `bits16_kr4_vote` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `32.000000` | `0.000000` | `1.000000` |
+
+Decision:
+
+- `v0.3-h4-5d route-code identity auxiliary`: `PASS` as an identity-code
+  baseline
+- compared with joint-code key hash, the route-code auxiliary preserves key
+  identity on the 32-key fixture: route decode reaches `1.000000`, 32 raw keys
+  remain 32 route signatures, and signature collision drops to `0.000000`
+- candidate recall/top1/query accuracy recover to the raw/key-shape baseline
+  for sufficiently wide hashes
+- this should not be overclaimed as general learned semantic routing; it is an
+  explicit identity-preserving route code trained on key-region bytes
+- next: stress the route-code auxiliary under more keys, noisy fillers, lower
+  route-code learning rates, and less symbolic supervision
+
+## Route-code Stress / Ablation
+
+`v0.3-h4-5e` adds a focused stress helper:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_stress.sh
+```
+
+The helper writes a summary CSV and probes representative axes:
+
+- key count
+- hash bits and `K_route`
+- route-code learning rate
+- key-region-only versus full-sequence identity auxiliary
+- noisy and repeating-text filler
+
+Reference standard stress readout, `lambda_route = 5.0`, last-5:
+
+| Scenario | keys | bits | K | eta | filler | qacc | recall | top1 | route_decode | route_unique | collision |
+| --- | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `keycount` | `32` | `16` | `4` | `0.25` | `clean` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `32.000000` | `0.000000` |
+| `keycount` | `64` | `16` | `4` | `0.25` | `clean` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `64.000000` | `0.000000` |
+| `keycount` | `128` | `16` | `4` | `0.25` | `clean` | `0.562500` | `1.000000` | `1.000000` | `1.000000` | `128.000000` | `0.000000` |
+| `hashK` | `32` | `4` | `1` | `0.25` | `clean` | `0.500000` | `0.500000` | `0.500000` | `1.000000` | `32.000000` | `0.000000` |
+| `hashK` | `32` | `4` | `4` | `0.25` | `clean` | `0.693750` | `1.000000` | `0.500000` | `1.000000` | `32.000000` | `0.000000` |
+| `hashK` | `32` | `6` | `4` | `0.25` | `clean` | `0.943750` | `1.000000` | `0.875000` | `1.000000` | `32.000000` | `0.000000` |
+| `hashK` | `32` | `16` | `4` | `0.25` | `clean` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `32.000000` | `0.000000` |
+| `eta` | `32` | `16` | `4` | `0.005` | `clean` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `32.000000` | `0.000000` |
+| `scope` | `32` | `16` | `4` | `0.25` | `clean` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `32.000000` | `0.000000` |
+| `filler` | `32` | `16` | `4` | `0.25` | `noisy` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `32.000000` | `0.000000` |
+| `filler` | `32` | `16` | `4` | `0.25` | `repeat` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `32.000000` | `0.000000` |
+
+Decision:
+
+- `v0.3-h4-5e route-code stress`: `PASS` as diagnostics
+- route-code identity separability is robust in the tested 32/64-key clean
+  cases and under noisy/repeating fillers
+- low hash bits still behave like sparse hash buckets: `K_route` recovers
+  recall, but top1 and qacc remain collision-sensitive
+- the 128-key case is important: route identity, recall, and top1 remain
+  perfect, but query accuracy falls to `0.562500`; this is not a candidate
+  retrieval failure, but a downstream dynamics/hint-strength/relaxation limit
+- next: run many-key route-hint strength, epochs/cycles, and proposal-margin
+  ablations before claiming scale robustness
+
+## Many-key Route-hint Dynamics Margin
+
+`v0.3-h4-5f` adds a focused dynamics helper:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_dynamics.sh
+```
+
+It keeps the route-code candidate path fixed and varies:
+
+- `lambda_route`
+- `cycles_per_epoch`
+- `proposal_count`
+- `route_target_proposals`
+
+It also adds query-only dynamics diagnostics:
+
+- `fixture_query_hi_acc`
+- `fixture_query_lo_acc`
+- `query_route_hint_margin_mean`
+- `query_local_margin_against_route_mean`
+- `query_effective_route_margin_mean`
+
+Reference 128-key standard readout, last-5:
+
+| Scenario | lambda | cycles | proposals | target proposals | qacc | hi | lo | recall | top1 | route decode | route margin | local against | effective |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `lambda` | `0.5` | `20` | `30` | `0` | `0.198438` | `0.517188` | `0.312500` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `7.308821` | `-6.808821` |
+| `lambda` | `2.0` | `20` | `30` | `0` | `0.393750` | `0.717188` | `0.537500` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `5.339314` | `-3.339314` |
+| `lambda` | `5.0` | `20` | `30` | `0` | `0.625000` | `0.753125` | `0.800000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `5.203670` | `-0.203670` |
+| `lambda` | `10.0` | `20` | `30` | `0` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `4.508486` | `5.491514` |
+| `cycles` | `5.0` | `10` | `30` | `0` | `0.779688` | `0.834375` | `0.932813` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `3.637665` | `1.362335` |
+| `cycles` | `5.0` | `40` | `30` | `0` | `0.629688` | `0.834375` | `0.729688` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `5.460103` | `-0.460103` |
+| `proposal` | `5.0` | `20` | `8` | `0` | `0.693750` | `0.831250` | `0.814062` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `5.174281` | `-0.174281` |
+| `proposal` | `5.0` | `20` | `8` | `1` | `0.651563` | `0.834375` | `0.767188` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `5.394144` | `-0.394144` |
+
+Decision:
+
+- `v0.3-h4-5f route-hint dynamics margin`: `PASS` as diagnostics
+- candidate discovery, top-1 selection, and route-code identity remain solved
+  in every 128-key row above
+- increasing `lambda_route` moves the effective route margin from negative to
+  positive and recovers query accuracy to `1.000000` at `lambda_route = 10.0`
+- increasing cycles does not monotonically help, and route-target proposal
+  injection does not improve the current 128-key setting; proposal coverage is
+  therefore not the primary bottleneck in this slice
+- next: keep the value-position -> value-byte -> proposal-hint path, but add
+  adaptive or confidence-gated route strength so strong hints are reserved for
+  high-confidence candidates
+
+## Adaptive Route Strength
+
+`v0.3-h4-5g` adds margin-calibrated route strength:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_adaptive.sh
+```
+
+The fixed route-hint path is unchanged. The new mode only changes the effective
+route strength used inside the proposal delta:
+
+```text
+--route-strength-mode fixed
+--route-strength-mode margin
+--lambda-route-base 0.5
+--lambda-route-max 10.0
+--route-margin-alpha 1.0
+--route-confidence-power 1.0
+--route-min-confidence 0.0
+```
+
+The margin mode uses the local energy margin against the route target:
+
+```text
+lambda_route_eff = min(lambda_route_max,
+                      lambda_route_base + alpha * max(0, local_margin))
+```
+
+The implementation caches the effective strength once per cycle so the local
+margin is not recomputed for every sampled proposal. Diagnostics include:
+
+- `route_strength_mean`
+- `route_strength_p50`
+- `route_strength_p90`
+- `route_strength_max`
+
+Reference 128-key standard readout, last-5:
+
+| Scenario | mode | alpha | qacc | hi | lo | recall | top1 | route decode | effective margin | strength mean | p50 | p90 | max |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `fixed-low` | `fixed` | `1.0` | `0.173437` | `0.517188` | `0.262500` | `1.000000` | `1.000000` | `1.000000` | `-6.603894` | `0.500000` | `0.500000` | `0.500000` | `0.500000` |
+| `fixed-strong` | `fixed` | `1.0` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `5.646099` | `10.000000` | `10.000000` | `10.000000` | `10.000000` |
+| `adaptive-margin` | `margin` | `1.5` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `2.049732` | `6.454238` | `6.581428` | `9.950191` | `10.000000` |
+| `alpha` | `margin` | `1.0` | `0.998438` | `1.000000` | `0.998438` | `1.000000` | `1.000000` | `1.000000` | `0.432887` | `4.871687` | `4.656845` | `8.664847` | `9.127506` |
+| `alpha` | `margin` | `2.0` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `2.877283` | `7.449980` | `8.629980` | `10.000000` | `10.000000` |
+
+Decision:
+
+- `v0.3-h4-5g adaptive route strength`: `PASS` as calibrated strength
+  diagnostics
+- retrieval remains perfect in all rows, so the comparison isolates
+  hint-to-state conversion rather than candidate discovery
+- adaptive margin mode recovers near/final query accuracy with lower mean
+  strength than fixed `lambda_route = 10.0`
+- `alpha = 1.0` is already nearly solved (`qacc = 0.998438`) with mean
+  strength `4.871687`; `alpha = 1.5` fully solves the tested 128-key slice
+  with mean strength `6.454238`
+- this is still not learned semantic routing; it is a calibrated route-hint
+  strength baseline under correct high-confidence route-code candidates
+- next: add wrong-candidate/corruption stress and confidence guardrails before
+  using strong adaptive hints with learned or noisy candidates
+
+## Wrong-candidate Corruption Stress
+
+`v0.3-h4-5h` adds a corruption stress helper:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_corruption.sh
+```
+
+The helper corrupts a fraction of query candidates by replacing the selected
+`value_pos` with a wrong record value position. It compares:
+
+- clean adaptive route strength
+- corrupted candidates with confidence kept high
+- corrupted candidates with low confidence and a minimum-confidence guard
+
+New controls:
+
+```text
+--route-corrupt-candidate-rate
+--route-corrupt-confidence keep|low
+--route-corrupt-confidence-value
+--route-min-confidence
+```
+
+New diagnostics:
+
+- `route_candidate_corrupt_rate`
+- `route_correct_candidate_rate`
+- `route_wrong_hint_applied_rate`
+- `route_wrong_hint_strength_mean`
+- `route_correct_hint_strength_mean`
+
+Reference 128-key standard readout, last-5:
+
+| Scenario | corrupt rate | confidence | qacc | damage | corrupt observed | correct candidate | wrong strength | correct strength | strength mean |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `clean-adaptive` | `0.00` | `keep` | `1.000000` | `0.000000` | `0.000000` | `1.000000` | `0.000000` | `6.642268` | `6.642268` |
+| `corrupt-keep` | `0.10` | `keep` | `0.867188` | `0.132812` | `0.132812` | `0.867188` | `5.664520` | `6.493022` | `6.382987` |
+| `corrupt-lowconf` | `0.10` | `low` | `0.871875` | `0.128125` | `0.132812` | `0.867188` | `0.000000` | `7.536517` | `6.535573` |
+| `corrupt-keep` | `0.25` | `keep` | `0.648438` | `0.351562` | `0.351562` | `0.648438` | `6.178977` | `6.339243` | `6.282900` |
+| `corrupt-lowconf` | `0.25` | `low` | `0.662500` | `0.337500` | `0.351562` | `0.648438` | `0.000000` | `7.953271` | `5.157199` |
+
+Decision:
+
+- `v0.3-h4-5h wrong-candidate corruption stress`: `PASS` as confidence
+  guardrail instrumentation
+- when corrupted candidates keep high confidence, adaptive strength pushes wrong
+  hints strongly and query accuracy degrades roughly with the observed
+  corruption rate
+- when corrupted candidates are marked low-confidence and
+  `route_min_confidence = 0.5`, wrong hint strength is suppressed to `0.000000`
+- the qacc damage improvement is modest in this fixture, so this should not be
+  overclaimed as wrong-candidate robustness
+- next: learn or estimate candidate confidence/ranking quality; strength
+  guardrails help only when wrong candidates carry lower confidence
+
+## Candidate / Value Confidence Calibration
+
+`v0.3-h4-5i` adds a confidence calibration helper:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_confidence.sh
+```
+
+This slice preserves the route-hint path and tests whether confidence can
+separate correct from wrong candidates/values under corruption with a preserved
+correct fallback candidate.
+
+New option:
+
+```text
+--route-strength-confidence weight|value-support
+--route-corrupt-preserve-correct 0|1
+```
+
+Additional diagnostics:
+
+- `route_candidate_conf_correct_mean`
+- `route_candidate_conf_wrong_mean`
+- `route_candidate_conf_gap`
+- `route_value_top_correct_rate`
+- `route_value_conf_correct_mean`
+- `route_value_conf_wrong_mean`
+- `route_value_conf_gap`
+
+Reference 128-key standard readout, last-5:
+
+| Scenario | confidence | corrupt rate | qacc | damage | corrupt observed | candidate conf gap | top value correct | value conf gap | wrong strength | correct strength |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `clean-reference` | `weight` | `0.00` | `1.000000` | `0.000000` | `0.000000` | `1.000000` | `1.000000` | `1.000000` | `0.000000` | `6.681508` |
+| `corrupt-unscaled` | `weight` | `0.10` | `0.959375` | `0.040625` | `0.085938` | `0.000000` | `0.968750` | `0.479839` | `6.671535` | `6.642376` |
+| `corrupt-valueconf` | `value-support` | `0.10` | `0.939062` | `0.060938` | `0.085938` | `0.000000` | `0.968750` | `0.479839` | `3.536750` | `6.724178` |
+| `corrupt-unscaled` | `weight` | `0.25` | `0.853125` | `0.146875` | `0.210938` | `0.000000` | `0.937500` | `0.429167` | `5.874975` | `6.339989` |
+| `corrupt-valueconf` | `value-support` | `0.25` | `0.837500` | `0.162500` | `0.210938` | `0.000000` | `0.937500` | `0.429167` | `3.596367` | `6.675715` |
+
+Decision:
+
+- `v0.3-h4-5i confidence calibration`: `PASS` as instrumentation
+- candidate confidence based on route weight does not distinguish correct from
+  wrong candidates in this diagnostic (`candidate_conf_gap = 0.000000`)
+- value-support confidence does identify weaker support for wrong top values
+  (`value_conf_gap > 0`) and reduces wrong hint strength
+- reduced wrong hint strength does not improve qacc in this setting; it slightly
+  increases damage because the fallback correct value is also weakened by the
+  ambiguous vote
+- next: add stronger ranking/confidence features, not just value-support
+  scaling. Candidate confidence must become predictive before noisy learned
+  routing claims.
+
+## Scorer-agreement Confidence
+
+`v0.3-h4-5j` adds scorer-agreement confidence:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_agreement.sh
+```
+
+This slice keeps the same value-bearing route-hint path and uses hard
+agreement between four diagnostic scorers:
+
+- insertion/top candidate
+- value-vote top value
+- recency/latest value position
+- key-shape top value
+
+New strength mode:
+
+```text
+--route-strength-confidence agreement
+```
+
+Additional diagnostics:
+
+- `route_agreement_conf_correct_mean`
+- `route_agreement_conf_wrong_mean`
+- `route_agreement_conf_gap`
+- `route_agreement_top_correct_rate`
+
+Reference 128-key standard readout, last-5:
+
+| Scenario | confidence | power | corrupt rate | qacc | damage | agreement gap | agreement top correct | wrong strength | correct strength |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `clean-reference` | `weight` | `1.0` | `0.00` | `1.000000` | `0.000000` | `1.000000` | `1.000000` | `0.000000` | `6.320159` |
+| `corrupt-unscaled` | `weight` | `1.0` | `0.10` | `0.953125` | `0.046875` | `0.495868` | `0.945312` | `6.388133` | `6.441135` |
+| `corrupt-valueconf` | `value-support` | `1.0` | `0.10` | `0.939062` | `0.060938` | `0.495868` | `0.945312` | `3.910505` | `6.729169` |
+| `corrupt-agreement` | `agreement` | `1.0` | `0.10` | `0.940625` | `0.059375` | `0.495868` | `0.945312` | `3.734211` | `6.393201` |
+| `corrupt-agreement-p2` | `agreement` | `2.0` | `0.10` | `0.939062` | `0.060938` | `0.495868` | `0.945312` | `2.807783` | `6.662031` |
+| `corrupt-unscaled` | `weight` | `1.0` | `0.25` | `0.842188` | `0.157812` | `0.458020` | `0.890625` | `6.308168` | `6.314110` |
+| `corrupt-valueconf` | `value-support` | `1.0` | `0.25` | `0.831250` | `0.168750` | `0.458020` | `0.890625` | `3.059740` | `6.488814` |
+| `corrupt-agreement` | `agreement` | `1.0` | `0.25` | `0.843750` | `0.156250` | `0.458020` | `0.890625` | `3.775402` | `6.320678` |
+| `corrupt-agreement-p2` | `agreement` | `2.0` | `0.25` | `0.832812` | `0.167188` | `0.458020` | `0.890625` | `2.423250` | `6.414787` |
+
+Decision:
+
+- `v0.3-h4-5j scorer-agreement confidence`: `PASS` as confidence
+  instrumentation
+- agreement confidence has a positive separation signal
+  (`agreement_conf_gap > 0`) under corruption
+- agreement scaling reduces wrong hint strength relative to unscaled margin
+  strength
+- this is only a limited mitigation: qacc does not consistently improve over
+  unscaled/value-support, and stronger `confidence_power = 2.0` suppresses wrong
+  hints further while also weakening useful signal
+- next: test confidence-gated aggregation, where low-confidence buckets switch
+  to broader vote/fallback behavior instead of only scaling route strength
+
+## Confidence-gated Aggregation
+
+`v0.3-h4-5k` adds confidence-gated aggregation:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_gated_agg.sh
+```
+
+This slice does not use confidence as a strength multiplier. Instead, it uses
+confidence to choose the aggregation policy:
+
+```text
+--route-hint-agg confidence-gated
+--route-aggregation-confidence agreement
+--route-confidence-threshold 0.75
+--route-lowconf-agg vote
+--route-highconf-agg weighted-vote
+```
+
+Additional diagnostics:
+
+- `route_lowconf_query_rate`
+- `route_highconf_query_rate`
+- `route_lowconf_qacc`
+- `route_highconf_qacc`
+- `route_lowconf_wrong_strength_mean`
+- `route_highconf_wrong_strength_mean`
+- `route_agg_policy_vote_rate`
+- `route_agg_policy_weighted_rate`
+
+Reference 128-key preserve-correct standard readout, last-5:
+
+| Scenario | corrupt rate | qacc | damage | lowconf rate | highconf rate | low qacc | high qacc | vote policy | weighted policy | wrong strength |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `corrupt-unscaled` | `0.10` | `0.953125` | `0.046875` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `6.742592` |
+| `corrupt-valueconf` | `0.10` | `0.940625` | `0.059375` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `3.881346` |
+| `corrupt-agreement` | `0.10` | `0.950000` | `0.050000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `4.684187` |
+| `corrupt-gated-agg` | `0.10` | `0.953125` | `0.046875` | `0.070312` | `0.929688` | `0.333333` | `1.000000` | `0.070312` | `0.929688` | `6.742592` |
+| `corrupt-unscaled` | `0.25` | `0.850000` | `0.150000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `5.286897` |
+| `corrupt-valueconf` | `0.25` | `0.831250` | `0.168750` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `3.242260` |
+| `corrupt-agreement` | `0.25` | `0.834375` | `0.165625` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `0.000000` | `3.987625` |
+| `corrupt-gated-agg` | `0.25` | `0.851563` | `0.148437` | `0.187500` | `0.812500` | `0.250000` | `0.990385` | `0.187500` | `0.812500` | `5.806380` |
+
+Decision:
+
+- `v0.3-h4-5k confidence-gated aggregation`: `PASS` as aggregation-policy
+  instrumentation
+- the low/high confidence split is observable, and the policy switch uses both
+  `vote` and `weighted-vote`
+- the preserve-correct corruption `0.25` run is a limited mitigation:
+  `qacc` is slightly above unscaled (`0.851563` vs `0.850000`) and above the
+  value-support/agreement strength-scaled arms
+- wrong hint strength is not reliably reduced by this policy, so this is still
+  not wrong-candidate robustness solved
+- next: compare remove-correct vs preserve-correct in the full runner and test
+  redundant candidate sources or a learned scorer that preserves correct
+  support while lowering wrong support
+
+## Low-confidence Subset Diagnostics
+
+`v0.3-h4-5l` adds low/high confidence subset diagnostics:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_lowconf_diagnostics.sh
+```
+
+This slice does not change route behavior. It keeps the h4-5k policy and splits
+the remaining query failures into low-confidence and high-confidence buckets.
+
+Additional diagnostics:
+
+- `route_lowconf_candidate_recall`
+- `route_highconf_candidate_recall`
+- `route_lowconf_top1`
+- `route_highconf_top1`
+- `route_lowconf_correct_value_vote_share`
+- `route_highconf_correct_value_vote_share`
+- `route_lowconf_unique_values`
+- `route_highconf_unique_values`
+- `route_lowconf_vote_entropy`
+- `route_highconf_vote_entropy`
+- `route_lowconf_route_margin`
+- `route_highconf_route_margin`
+- `route_lowconf_local_margin`
+- `route_highconf_local_margin`
+- `route_lowconf_hi_acc`
+- `route_highconf_hi_acc`
+- `route_lowconf_lo_acc`
+- `route_highconf_lo_acc`
+
+Reference 128-key smoke readout, last-5, corruption `0.25`:
+
+| Scenario | qacc | damage | low rate | high rate | low qacc | high qacc | low recall | high recall | low top1 | high top1 | low share | high share | low entropy | high entropy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `preserve-correct` | `0.853125` | `0.146875` | `0.187500` | `0.812500` | `0.258333` | `0.990385` | `1.000000` | `1.000000` | `0.000000` | `0.971154` | `0.500000` | `0.993590` | `1.000000` | `0.008830` |
+| `remove-correct` | `0.804688` | `0.195312` | `0.000000` | `1.000000` | `0.000000` | `0.804688` | `0.000000` | `0.789062` | `0.000000` | `0.789062` | `0.000000` | `0.804688` | `0.000000` | `0.000000` |
+
+Decision:
+
+- `v0.3-h4-5l low-confidence subset diagnostics`: `PASS` as diagnostics and
+  actionable split
+- in preserve-correct corruption, low-confidence failures are not retrieval
+  failures: `lowconf_candidate_recall = 1.000000`
+- the preserve-correct low-confidence subset is an aggregation/ranking problem:
+  `lowconf_top1 = 0.000000`, `correct_value_vote_share = 0.500000`, and
+  `vote_entropy = 1.000000`
+- in remove-correct corruption, recall drops because the correct candidate is
+  removed, so recovery requires fallback/redundant candidate sources or abstain
+  behavior
+- this is still not wrong-candidate robustness solved; it identifies the next
+  intervention target
+
+## Low-confidence Policy Split
+
+`v0.3-h4-5m` adds the low-confidence policy instrumentation slice:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_lowconf_policy.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_lowconf_policy.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_lowconf_policy.sh --full
+```
+
+This slice keeps the same confidence-gated route setup as h4-5k/h4-5l:
+
+```text
+--route-hint-agg confidence-gated
+--route-aggregation-confidence agreement
+--route-confidence-threshold 0.75
+--route-highconf-agg weighted-vote
+--route-strength-confidence weight
+--route-strength-mode margin
+--route-lowconf-policy aggregate|none|weak-vote
+--route-lowconf-weak-scale 0.5
+```
+
+Additional diagnostics:
+
+- `route_lowconf_policy_none_rate`
+- `route_lowconf_policy_weak_vote_rate`
+- `route_lowconf_policy_aggregate_rate`
+- `route_lowconf_effective_strength_mean`
+- `route_highconf_effective_strength_mean`
+
+Smoke readout at preserve/remove corruption `0.25`:
+
+- preserve-correct `aggregate`: `qacc = 0.854688`, `damage = 0.145312`,
+  `lowconf_qacc = 0.275000`, `highconf_qacc = 0.988462`,
+  `lowconf_candidate_recall = 1.000000`, `lowconf_top1 = 0.000000`
+- preserve-correct `none`: `qacc = 0.812500`, `damage = 0.187500`,
+  `lowconf_effective_strength_mean = 0.000000`
+- preserve-correct `weak-vote`: `qacc = 0.848438`, `damage = 0.151562`,
+  `lowconf_effective_strength_mean = 4.623492`
+- remove-correct rows stay at `qacc = 0.804688`; the agreement threshold puts
+  all queries in the high-confidence bucket, but candidate recall drops to
+  `0.789062`, so this branch still needs fallback or redundant candidate source
+  work
+
+Decision:
+
+- `v0.3-h4-5m low-confidence policy split`: `PASS` as policy
+  instrumentation and actionable split
+- preserve-correct is an aggregation/ranking problem: the correct candidate is
+  present, `none` hurts, and `weak-vote` is close to aggregate but weaker
+- remove-correct is a candidate availability problem: changing low-confidence
+  aggregation cannot help when the correct candidate is absent from the bucket
+- this is not wrong-candidate robustness solved; the next intervention should
+  separate aggregation/ranking improvements from fallback/abstain or redundant
+  source work

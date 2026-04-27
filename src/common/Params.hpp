@@ -1,0 +1,118 @@
+#pragma once
+
+#include <string>
+
+namespace dle {
+
+struct V01Params {
+    int N = 1000;
+    int S = 16;
+    int R = 4;
+    int K = 8;
+    int C_colors = 9;
+    int cycles = 1000;
+    int seed = 1;
+
+    float lambda_u = 1.0f;
+    float lambda_v = 0.25f;
+    float lambda_m = 0.05f;
+
+    float eta_r = 0.10f;
+    float eta_tau = 0.25f;
+    float tau_max = 4.0f;
+    float tau_decay = 0.05f;
+    float reservoir_decay = 0.01f;
+
+    float T0 = 0.0f;
+    float alpha_T = 0.20f;
+    float eps_T = 1e-6f;
+
+    int stagnation_window = 8;
+    int stagnation_threshold = 2;
+    int proposal_count = 4;
+
+    float mass_init = 1.0f;
+    std::string csv_path;
+};
+
+struct V02PreParams {
+    int N = 256;
+    int S = 16;
+    int channels = 2;
+
+    int R = 4;
+    int K = 8;
+    int C_colors = 9;
+
+    int epochs = 300;
+    int cycles_per_epoch = 20;
+    int seed = 1;
+
+    float lambda_v = 0.0f;
+    float lambda_u = 1.0f;
+    float lambda_b = 0.0f;
+    float lambda_m = 0.05f;
+
+    float eta_r = 0.10f;
+    float eta_tau = 0.25f;
+    float tau_max = 4.0f;
+    float tau_decay = 0.05f;
+    float reservoir_decay = 0.01f;
+
+    float T0 = 0.0f;
+    float alpha_T = 0.20f;
+    float eps_T = 1e-6f;
+
+    int stagnation_window = 8;
+    int stagnation_threshold = 2;
+    int proposal_count = 4;
+
+    float eta_h = 0.05f;
+    float eta_b = 0.0f;
+    float lambda_h = 1e-4f;
+    float H_clip = 8.0f;
+    float mass_init = 0.0f;
+    int K_jump = 0;
+    float route_reservoir_threshold = 0.10f;
+    float route_min_anchor_gap = -1.0f;
+    float route_adaptive_gap_scale = 0.0f;
+    float route_confidence_gap_scale = 0.0f;
+    float route_accept_confidence_gain = 0.0f;
+    float lambda_route = 0.0f;
+    std::string route_strength_mode = "fixed";
+    float lambda_route_base = 0.0f;
+    float lambda_route_max = 10.0f;
+    float route_margin_alpha = 1.0f;
+    float route_confidence_power = 1.0f;
+    float route_min_confidence = 0.0f;
+    float route_corrupt_candidate_rate = 0.0f;
+    std::string route_corrupt_confidence = "keep";
+    float route_corrupt_confidence_value = 0.1f;
+    int route_corrupt_preserve_correct = 0;
+    std::string route_strength_confidence = "weight";
+    float route_confidence_threshold = 0.50f;
+    std::string route_lowconf_policy = "aggregate";
+    float route_lowconf_weak_scale = 0.50f;
+    std::string route_lowconf_agg = "vote";
+    std::string route_highconf_agg = "weighted-vote";
+    std::string route_aggregation_confidence = "agreement";
+    int K_route = 1;
+    int route_hash_bits = 16;
+    std::string route_hash_source = "raw-key";
+    int route_code_aux = 0;
+    int route_code_key_region_only = 1;
+    float eta_route_code = 0.05f;
+    float lambda_route_code_id = 1.0f;
+    int route_target_proposals = 0;
+    std::string route_hint_agg = "top1";
+    std::string route_candidate_score = "insertion";
+    std::string routing_source = "none";
+    std::string route_mode = "probe";
+    std::string route_refresh = "epoch";
+
+    std::string dataset = "counter";
+    std::string input_path;
+    std::string csv_path;
+};
+
+}  // namespace dle

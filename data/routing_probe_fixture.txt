@@ -1,0 +1,23 @@
+chapter alpha begin
+gate token red keeps a narrow corridor of symbols and repeated turns.
+noise window one drifts through the archive and returns to the same gate token red.
+query red waits after a long tail of filler and punctuation before the block closes.
+chapter alpha end
+
+chapter beta begin
+gate token blue keeps a narrow corridor of symbols and repeated turns.
+noise window two drifts through the archive and returns to the same gate token blue.
+query blue waits after a long tail of filler and punctuation before the block closes.
+chapter beta end
+
+chapter gamma begin
+gate token green keeps a narrow corridor of symbols and repeated turns.
+noise window three drifts through the archive and returns to the same gate token green.
+query green waits after a long tail of filler and punctuation before the block closes.
+chapter gamma end
+
+chapter delta begin
+gate token amber keeps a narrow corridor of symbols and repeated turns.
+noise window four drifts through the archive and returns to the same gate token amber.
+query amber waits after a long tail of filler and punctuation before the block closes.
+chapter delta end

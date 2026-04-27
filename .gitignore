@@ -1,0 +1,8 @@
+build/
+results/*
+!results/.gitkeep
+
+*.log
+*.tmp
+*.swp
+

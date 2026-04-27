@@ -1,0 +1,10 @@
+route hint oracle fixture begin
+@17=Q; neutral filler carries the key but does not sit next to the query.
+long neutral span alpha alpha alpha alpha alpha before ?17=Q closes.
+@23=Z; neutral filler carries the key but does not sit next to the query.
+long neutral span beta beta beta beta beta before ?23=Z closes.
+@31=M; neutral filler carries the key but does not sit next to the query.
+long neutral span gamma gamma gamma gamma gamma before ?31=M closes.
+@42=K; neutral filler carries the key but does not sit next to the query.
+long neutral span delta delta delta delta delta before ?42=K closes.
+route hint oracle fixture end
