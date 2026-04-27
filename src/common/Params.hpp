@@ -96,6 +96,7 @@ struct V02PreParams {
     std::string route_lowconf_agg = "vote";
     std::string route_highconf_agg = "weighted-vote";
     std::string route_aggregation_confidence = "agreement";
+    std::string route_fallback_source = "off";
     int K_route = 1;
     int route_hash_bits = 16;
     std::string route_hash_source = "raw-key";

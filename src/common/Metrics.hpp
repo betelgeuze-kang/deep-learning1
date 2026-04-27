@@ -158,6 +158,13 @@ struct EpochMetricsV02 {
     double route_lowconf_policy_aggregate_rate = 0.0;
     double route_lowconf_effective_strength_mean = 0.0;
     double route_highconf_effective_strength_mean = 0.0;
+    double route_primary_recall = 0.0;
+    double route_primary_lowconf_rate = 0.0;
+    double route_fallback_used_rate = 0.0;
+    double route_fallback_recall = 0.0;
+    double route_fallback_qacc = 0.0;
+    double route_fallback_success_rate = 0.0;
+    double route_abstain_rate = 0.0;
     double route_hint_strength_mean = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_candidate_hit_rate = 0.0;
@@ -264,6 +271,9 @@ inline std::string v02_csv_header() {
            "route_lowconf_policy_aggregate_rate,"
            "route_lowconf_effective_strength_mean,"
            "route_highconf_effective_strength_mean,"
+           "route_primary_recall,route_primary_lowconf_rate,"
+           "route_fallback_used_rate,route_fallback_recall,route_fallback_qacc,"
+           "route_fallback_success_rate,route_abstain_rate,"
            "route_hint_strength_mean,"
            "route_hint_candidate_lookup_count,route_hint_candidate_hit_rate,"
            "route_hint_value_read_distance_mean,kv_record_count,kv_query_count,"
@@ -412,6 +422,13 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_lowconf_policy_aggregate_rate << ','
         << metrics.route_lowconf_effective_strength_mean << ','
         << metrics.route_highconf_effective_strength_mean << ','
+        << metrics.route_primary_recall << ','
+        << metrics.route_primary_lowconf_rate << ','
+        << metrics.route_fallback_used_rate << ','
+        << metrics.route_fallback_recall << ','
+        << metrics.route_fallback_qacc << ','
+        << metrics.route_fallback_success_rate << ','
+        << metrics.route_abstain_rate << ','
         << metrics.route_hint_strength_mean << ','
         << metrics.route_hint_candidate_lookup_count << ','
         << metrics.route_hint_candidate_hit_rate << ','

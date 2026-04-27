@@ -122,6 +122,9 @@ void GraphV02::begin_epoch(const ByteDataset::Window& window) {
     route_strength_cache_.assign(static_cast<std::size_t>(params_.N), 0.0f);
     route_hint_correct_value_positions_.assign(static_cast<std::size_t>(params_.N), -1);
     route_hint_corrupted_.assign(static_cast<std::size_t>(params_.N), false);
+    route_hint_primary_has_correct_.assign(static_cast<std::size_t>(params_.N), false);
+    route_hint_fallback_used_.assign(static_cast<std::size_t>(params_.N), false);
+    route_hint_fallback_recovered_.assign(static_cast<std::size_t>(params_.N), false);
     route_value_positions_.clear();
     route_value_position_keys_.assign(static_cast<std::size_t>(params_.N), {});
     route_hint_query_keys_.assign(static_cast<std::size_t>(params_.N), {});
@@ -207,6 +210,7 @@ void GraphV02::begin_epoch(const ByteDataset::Window& window) {
     }
     refresh_route_hint_candidate_keys();
     apply_route_candidate_corruption();
+    apply_route_fallback_source(window);
 
     refresh_route_confidence_cache();
     refresh_route_anchor_cache();
@@ -405,6 +409,12 @@ void GraphV02::validate_params() const {
         params_.route_aggregation_confidence != "agreement") {
         throw std::runtime_error(
             "route-aggregation-confidence must be one of: value-support, agreement");
+    }
+    if (params_.route_fallback_source != "off" &&
+        params_.route_fallback_source != "raw-key" &&
+        params_.route_fallback_source != "key-shape") {
+        throw std::runtime_error(
+            "route-fallback-source must be one of: off, raw-key, key-shape");
     }
     if (params_.K_route <= 0) {
         throw std::runtime_error("K-route must be positive");
@@ -1367,6 +1377,130 @@ void GraphV02::apply_route_candidate_corruption() {
     }
 }
 
+bool GraphV02::candidate_positions_contain_correct(int index) const {
+    const int correct =
+        route_hint_correct_value_positions_[static_cast<std::size_t>(index)];
+    if (correct < 0) {
+        return false;
+    }
+    const auto& candidates =
+        route_hint_candidate_value_positions_[static_cast<std::size_t>(index)];
+    if (std::find(candidates.begin(), candidates.end(), correct) != candidates.end()) {
+        return true;
+    }
+    return route_hint_value_positions_[static_cast<std::size_t>(index)] == correct;
+}
+
+void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
+    if (!route_hint_active()) {
+        return;
+    }
+
+    for (const auto& query : window.kv_queries) {
+        if (query.query_pos < 0 || query.query_pos >= params_.N) {
+            continue;
+        }
+        route_hint_primary_has_correct_[static_cast<std::size_t>(query.query_pos)] =
+            candidate_positions_contain_correct(query.query_pos);
+    }
+
+    if (params_.route_fallback_source == "off") {
+        return;
+    }
+
+    std::unordered_map<int, std::vector<int>> raw_candidates_by_query;
+    for (const auto& hint : window.route_hints) {
+        if (hint.query_pos >= 0 && hint.query_pos < params_.N) {
+            raw_candidates_by_query[hint.query_pos] = hint.candidate_value_positions;
+        }
+    }
+
+    for (const auto& query : window.kv_queries) {
+        if (query.query_pos < 0 || query.query_pos >= params_.N) {
+            continue;
+        }
+        const auto query_index = static_cast<std::size_t>(query.query_pos);
+        if (route_hint_primary_has_correct_[query_index]) {
+            continue;
+        }
+
+        std::vector<int> fallback_positions;
+        if (params_.route_fallback_source == "raw-key") {
+            const auto found = raw_candidates_by_query.find(query.query_pos);
+            if (found != raw_candidates_by_query.end()) {
+                fallback_positions = found->second;
+            }
+            if (fallback_positions.empty() && query.hit && query.value_pos >= 0) {
+                fallback_positions.push_back(query.value_pos);
+            }
+        } else if (params_.route_fallback_source == "key-shape") {
+            std::vector<const ByteDataset::KVRecord*> scored_records;
+            for (const auto& record : window.kv_records) {
+                if (record.marker_pos < 0 || record.value_pos < 0 ||
+                    record.marker_pos >= query.query_pos) {
+                    continue;
+                }
+                scored_records.push_back(&record);
+            }
+            std::stable_sort(
+                scored_records.begin(),
+                scored_records.end(),
+                [&query](const ByteDataset::KVRecord* lhs,
+                         const ByteDataset::KVRecord* rhs) {
+                    const double lhs_score = key_shape_score(query.key, lhs->key);
+                    const double rhs_score = key_shape_score(query.key, rhs->key);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                    return lhs->marker_pos > rhs->marker_pos;
+                });
+            const int limit =
+                std::min(params_.K_route, static_cast<int>(scored_records.size()));
+            for (int rank = 0; rank < limit; ++rank) {
+                fallback_positions.push_back(
+                    scored_records[static_cast<std::size_t>(rank)]->value_pos);
+            }
+        }
+
+        auto& candidates = route_hint_candidate_value_positions_[query_index];
+        auto& candidate_keys = route_hint_candidate_keys_[query_index];
+        std::vector<int> inserted_positions;
+        std::vector<std::string> inserted_keys;
+        for (const int value_pos : fallback_positions) {
+            if (value_pos < 0 || value_pos >= params_.N) {
+                continue;
+            }
+            if (std::find(candidates.begin(), candidates.end(), value_pos) !=
+                candidates.end()) {
+                continue;
+            }
+            inserted_positions.push_back(value_pos);
+            inserted_keys.push_back(
+                route_value_position_keys_[static_cast<std::size_t>(value_pos)]);
+        }
+        if (inserted_positions.empty()) {
+            continue;
+        }
+
+        candidates.insert(candidates.begin(), inserted_positions.begin(), inserted_positions.end());
+        candidate_keys.insert(candidate_keys.begin(), inserted_keys.begin(), inserted_keys.end());
+        if (static_cast<int>(candidates.size()) > params_.K_route) {
+            candidates.resize(static_cast<std::size_t>(params_.K_route));
+        }
+        if (static_cast<int>(candidate_keys.size()) > params_.K_route) {
+            candidate_keys.resize(static_cast<std::size_t>(params_.K_route));
+        }
+        const int selected_pos = candidates.front();
+        route_hint_value_positions_[query_index] = selected_pos;
+        route_hint_values_[query_index] =
+            nodes_[static_cast<std::size_t>(selected_pos)].input_byte;
+        route_hint_weights_[query_index] = std::max(route_hint_weights_[query_index], 1.0f);
+        route_hint_fallback_used_[query_index] = true;
+        route_hint_fallback_recovered_[query_index] =
+            candidate_positions_contain_correct(query.query_pos);
+    }
+}
+
 std::string GraphV02::joint_code_signature_for_key(const std::string& key) const {
     std::string signature;
     signature.reserve(key.size());
@@ -2244,6 +2378,13 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_lowconf_policy_aggregate_count = 0.0;
     double route_lowconf_effective_strength_sum = 0.0;
     double route_highconf_effective_strength_sum = 0.0;
+    double route_primary_recall_sum = 0.0;
+    double route_primary_lowconf_count = 0.0;
+    double route_fallback_used_count = 0.0;
+    double route_fallback_recall_sum = 0.0;
+    double route_fallback_qacc_sum = 0.0;
+    double route_fallback_success_count = 0.0;
+    double route_abstain_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_value_read_distance_sum = 0.0;
     double route_hint_vote_query_count = 0.0;
@@ -2419,6 +2560,28 @@ EpochMetricsV02 GraphV02::collect_metrics(
             const bool has_correct_candidate = correct_value_pos >= 0;
             const bool candidate_is_correct =
                 has_correct_candidate && route_hint_value_pos == correct_value_pos;
+            const bool final_candidate_recall =
+                has_correct_candidate && candidate_positions_contain_correct(i);
+            const bool primary_has_correct =
+                !route_hint_primary_has_correct_.empty() &&
+                route_hint_primary_has_correct_[static_cast<std::size_t>(i)];
+            const bool fallback_used =
+                !route_hint_fallback_used_.empty() &&
+                route_hint_fallback_used_[static_cast<std::size_t>(i)];
+            const bool fallback_recovered =
+                !route_hint_fallback_recovered_.empty() &&
+                route_hint_fallback_recovered_[static_cast<std::size_t>(i)];
+            const double query_hit =
+                relaxed_byte == static_cast<int>(node.target_byte) ? 1.0 : 0.0;
+            route_primary_recall_sum += primary_has_correct ? 1.0 : 0.0;
+            if (fallback_used) {
+                route_fallback_used_count += 1.0;
+                route_fallback_qacc_sum += query_hit;
+                route_fallback_recall_sum += final_candidate_recall ? 1.0 : 0.0;
+                if (!primary_has_correct && fallback_recovered) {
+                    route_fallback_success_count += 1.0;
+                }
+            }
             const bool candidate_is_corrupted =
                 !route_hint_corrupted_.empty() &&
                 route_hint_corrupted_[static_cast<std::size_t>(i)];
@@ -2465,8 +2628,12 @@ EpochMetricsV02 GraphV02::collect_metrics(
                     static_cast<double>(params_.route_confidence_threshold);
                 const std::string effective_agg =
                     route_effective_hint_agg_for_node(i, route_hint_value);
-                const double query_hit =
-                    relaxed_byte == static_cast<int>(node.target_byte) ? 1.0 : 0.0;
+                if (!high_confidence) {
+                    route_primary_lowconf_count += 1.0;
+                }
+                if (effective_agg == "none") {
+                    route_abstain_count += 1.0;
+                }
                 double candidate_recall = 0.0;
                 if (has_correct_candidate) {
                     if (!vote_positions.empty()) {
@@ -2842,6 +3009,20 @@ EpochMetricsV02 GraphV02::collect_metrics(
             route_correct_candidate_count / route_hint_query_count;
         metrics.route_wrong_hint_applied_rate =
             route_wrong_hint_count / route_hint_query_count;
+        metrics.route_primary_recall = route_primary_recall_sum / route_hint_query_count;
+        metrics.route_primary_lowconf_rate =
+            route_primary_lowconf_count / route_hint_query_count;
+        metrics.route_fallback_used_rate =
+            route_fallback_used_count / route_hint_query_count;
+        metrics.route_abstain_rate = route_abstain_count / route_hint_query_count;
+        if (route_fallback_used_count > 0.0) {
+            metrics.route_fallback_recall =
+                route_fallback_recall_sum / route_fallback_used_count;
+            metrics.route_fallback_qacc =
+                route_fallback_qacc_sum / route_fallback_used_count;
+            metrics.route_fallback_success_rate =
+                route_fallback_success_count / route_fallback_used_count;
+        }
         if (route_wrong_hint_count > 0.0) {
             metrics.route_wrong_hint_strength_mean =
                 route_wrong_hint_strength_sum / route_wrong_hint_count;

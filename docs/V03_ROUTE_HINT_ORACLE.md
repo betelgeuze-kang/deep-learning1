@@ -1130,3 +1130,50 @@ Decision:
 - this is not wrong-candidate robustness solved; the next intervention should
   separate aggregation/ranking improvements from fallback/abstain or redundant
   source work
+
+## Low-confidence Fallback Source
+
+`v0.3-h4-5n` adds a diagnostic fallback source:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_source.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_source.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_source.sh --full
+```
+
+New option:
+
+```text
+--route-fallback-source off|raw-key|key-shape
+```
+
+New diagnostics:
+
+- `route_primary_recall`
+- `route_primary_lowconf_rate`
+- `route_fallback_used_rate`
+- `route_fallback_recall`
+- `route_fallback_qacc`
+- `route_fallback_success_rate`
+- `route_abstain_rate`
+
+Smoke readout at corruption `0.25`:
+
+- preserve-correct: fallback remains unused because primary recall is already
+  `1.000000`; `key-shape` matches `off` at `qacc = 0.854688`
+- remove-correct `off`: `qacc = 0.804688`, `route_primary_recall = 0.789062`
+- remove-correct `key-shape`: `qacc = 0.839062`,
+  `route_fallback_used_rate = 0.210938`, `route_fallback_recall = 1.000000`,
+  `route_fallback_success_rate = 1.000000`
+- fallback-used subset qacc is still low (`0.237037`), so the source recovers
+  candidate availability but does not by itself solve state convergence
+
+Decision:
+
+- `v0.3-h4-5n low-confidence fallback source`: `PASS` as fallback-source
+  instrumentation and limited mitigation
+- the key-shape fallback is a symbolic diagnostic upper-bound, not learned
+  routing
+- remove-correct now has recovered candidate recall, but the low fallback-used
+  qacc shows that the next bottleneck is fallback hint integration/dynamics, not
+  candidate discovery alone

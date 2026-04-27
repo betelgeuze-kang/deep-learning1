@@ -40,6 +40,7 @@ Current helper:
 - `experiments/run_v03_route_hint_kv_hash_route_code_gated_agg.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_lowconf_diagnostics.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_lowconf_policy.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_source.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -47,6 +48,7 @@ Current helper:
 - `experiments/test_v03_route_hint_kv_hash_route_code_gated_agg.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_lowconf_diagnostics.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_lowconf_policy.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_source.sh`
 
 State-code route-signal probe:
 
@@ -195,6 +197,7 @@ Reference route-hint readout, seed `1`, last-10:
 - scorer-agreement confidence and confidence-gated aggregation extend the guardrail instrumentation: agreement creates a real confidence split and `confidence-gated` switches low-confidence queries to broad vote aggregation, but the current readout is only limited mitigation and does not solve wrong-candidate robustness
 - low-confidence subset diagnostics keep the same value-bearing route-hint path and show two different failure modes: preserve-correct low-confidence queries keep top-K recall but lose top1/value support, while remove-correct corruption lowers recall and needs fallback or abstain behavior
 - low-confidence policy split (`--route-lowconf-policy aggregate|none|weak-vote`) is policy instrumentation only: preserve-correct confirms the low-confidence branch is an aggregation/ranking problem (`none` hurts, `weak-vote` stays close to aggregate), while remove-correct remains a candidate availability problem that needs fallback, abstain, or redundant sources
+- fallback source diagnostics (`--route-fallback-source key-shape`) are symbolic upper-bound instrumentation: remove-correct candidate availability can be recovered (`fallback_recall = 1.000000`) and qacc improves slightly, but fallback-used qacc remains low, so this is not wrong-candidate robustness solved and not learned routing
 
 State-code route-signal probe:
 

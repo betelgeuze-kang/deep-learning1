@@ -512,3 +512,30 @@ Expected:
 - h4-5m passes as low-confidence policy instrumentation/actionable split only:
   preserve-correct points to aggregation/ranking, remove-correct points to
   abstain, fallback, or redundant candidate sources
+
+- h4-5n fallback source smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_source.sh
+```
+
+- h4-5n standard fallback source sweep:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_source.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_source.sh --full
+```
+
+- h4-5n writes
+  `results/v03_route_hint_kv_hash_route_code_fallback_source_summary.csv`
+- h4-5n compares `--route-fallback-source off`, `key-shape`, and in
+  standard/full mode `raw-key`; fallback is a diagnostic secondary candidate
+  source and must not be described as learned routing
+- current h4-5n smoke readout at corruption `0.25`: preserve-correct keeps
+  fallback unused and unchanged (`qacc = 0.854688`), while remove-correct
+  `key-shape` improves `qacc = 0.804688 -> 0.839062`
+- key-shape fallback recovers candidate availability in remove-correct
+  (`fallback_used_rate = 0.210938`, `fallback_recall = 1.000000`,
+  `fallback_success_rate = 1.000000`), but fallback-used qacc remains low
+  (`0.237037`), so this is fallback instrumentation / limited mitigation, not
+  robustness solved
