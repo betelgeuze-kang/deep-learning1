@@ -566,3 +566,32 @@ Expected:
 - h4-5o passes as projected-delta instrumentation / limited mitigation only:
   it verifies the local query-node route-delta hook and fallback subset metrics,
   but it does not solve fallback integration or wrong-candidate robustness
+
+- h4-5p fallback hint strength smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_strength.sh
+```
+
+- h4-5p standard fallback hint strength sweep:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_strength.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_strength.sh --full
+```
+
+- h4-5p writes
+  `results/v03_route_hint_kv_hash_route_code_fallback_strength_summary.csv`
+- h4-5p compares `--route-fallback-strength-mult` on remove-correct
+  key-shape fallback, with target-only and projected `pull=2.0` baselines when
+  cheap; this is diagnostics-only and should be read as a bottleneck probe,
+  not as a new robustness claim
+- h4-5p smoke decision: `PASS` as fallback-strength diagnostics / limited
+  mitigation. Target-only key-shape fallback improves from qacc `0.839062` and
+  fallback_qacc `0.237037` at `mult=1.0` to qacc `0.898437` and fallback_qacc
+  `0.518518` at `mult=10.0`. Projected `pull=2.0` improves at moderate
+  multipliers but is less monotonic (`mult=5.0` qacc `0.868750`,
+  fallback_qacc `0.377777`; `mult=10.0` qacc `0.846875`,
+  fallback_qacc `0.274074`). This shows fallback-used failures are partly
+  strength / hint-integration limited, but it is still not learned routing or
+  wrong-candidate robustness solved.

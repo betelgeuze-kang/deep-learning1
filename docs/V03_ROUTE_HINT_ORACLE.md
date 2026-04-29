@@ -1235,3 +1235,58 @@ Decision:
   solved
 - spatial dragging / neighbor reaction remains out of scope and should stay
   deferred
+
+## Fallback Hint Strength Diagnostics
+
+`v0.3-h4-5p` extends the h4-5n/h4-5o scaffold with a fallback-used-query-only
+strength multiplier. It is diagnostic-only and exists to test whether the last
+bottleneck is hint integration/strength rather than fallback-source discovery.
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_strength.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_strength.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_strength.sh --full
+```
+
+New option:
+
+```text
+--route-fallback-strength-mult <float>
+```
+
+New summary columns:
+
+- `route_fallback_strength_mult`
+- `route_fallback_effective_strength_mean`
+
+The runner keeps the h4-5n fallback source and the h4-5o delta scaffold, then
+sweeps `1.0`, `2.0`, `5.0`, and `10.0` on remove-correct key-shape rows. It
+also keeps target-only and projected `pull=2.0` baselines when that extra check
+is cheap. Read the result as a bottleneck diagnostic only; it does not imply
+fallback robustness is solved.
+
+Smoke readout at preserve/remove corruption `0.25`:
+
+- target-only key-shape fallback improves with fallback-only strength:
+  - `mult=1.0`: qacc `0.839062`, fallback_qacc `0.237037`,
+    fallback effective strength `5.446080`
+  - `mult=5.0`: qacc `0.876563`, fallback_qacc `0.414815`,
+    fallback effective strength `27.167871`
+  - `mult=10.0`: qacc `0.898437`, fallback_qacc `0.518518`,
+    fallback effective strength `55.376972`
+- projected `pull=2.0` also improves at moderate multiplier, but is less
+  monotonic:
+  - `mult=1.0`: qacc `0.839062`, fallback_qacc `0.237037`
+  - `mult=2.0`: qacc `0.862500`, fallback_qacc `0.348148`
+  - `mult=5.0`: qacc `0.868750`, fallback_qacc `0.377777`
+  - `mult=10.0`: qacc `0.846875`, fallback_qacc `0.274074`
+
+Decision:
+
+- `v0.3-h4-5p fallback hint strength`: `PASS` as fallback-strength
+  diagnostics and limited mitigation
+- the fallback candidate is already recovered; the improvement shows that
+  fallback-used query failure is partly strength / hint-integration limited
+- this still uses symbolic key-shape fallback and a hand-set multiplier, so it
+  is not learned routing, not fallback robustness solved, and not a general
+  wrong-candidate robustness solution

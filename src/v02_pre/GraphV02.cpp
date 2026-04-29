@@ -438,6 +438,9 @@ void GraphV02::validate_params() const {
         throw std::runtime_error(
             "route-fallback-source must be one of: off, raw-key, key-shape");
     }
+    if (params_.route_fallback_strength_mult < 0.0f) {
+        throw std::runtime_error("route-fallback-strength-mult must be non-negative");
+    }
     if (params_.K_route <= 0) {
         throw std::runtime_error("K-route must be positive");
     }
@@ -1252,8 +1255,13 @@ float GraphV02::compute_route_effective_strength_for_node(
     if (policy_scale <= 0.0f) {
         return 0.0f;
     }
+    float fallback_scale = 1.0f;
+    if (index >= 0 && index < static_cast<int>(route_hint_fallback_used_.size()) &&
+        route_hint_fallback_used_[static_cast<std::size_t>(index)]) {
+        fallback_scale = params_.route_fallback_strength_mult;
+    }
     if (params_.route_strength_mode == "fixed") {
-        return params_.lambda_route * policy_scale;
+        return params_.lambda_route * policy_scale * fallback_scale;
     }
 
     const float confidence = route_hint_weights_[static_cast<std::size_t>(index)];
@@ -1282,7 +1290,7 @@ float GraphV02::compute_route_effective_strength_for_node(
             std::max(strength_confidence, 0.0),
             static_cast<double>(params_.route_confidence_power));
     }
-    return static_cast<float>(std::max(0.0, strength)) * policy_scale;
+    return static_cast<float>(std::max(0.0, strength)) * policy_scale * fallback_scale;
 }
 
 float GraphV02::route_effective_strength_for_node(

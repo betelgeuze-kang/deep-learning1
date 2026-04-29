@@ -42,6 +42,7 @@ Current helper:
 - `experiments/run_v03_route_hint_kv_hash_route_code_lowconf_policy.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_source.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_projected_delta.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -51,6 +52,15 @@ Current helper:
 - `experiments/test_v03_route_hint_kv_hash_route_code_lowconf_policy.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_source.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_projected_delta.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
+
+The h4-5n/o/p route-hint diagnostics stay ancillary to this static-routing
+slice. In particular, h4-5p only scales fallback-used queries via
+`--route-fallback-strength-mult` and should be read as a bottleneck probe, not
+as a new routing mechanism. The smoke does show limited mitigation for the
+value-bearing route-hint path (`fallback_qacc 0.237037 -> 0.518518` under
+target-only key-shape fallback at multiplier `10.0`), but this remains
+query-local hint integration and does not revive jump-neighbor replacement.
 
 State-code route-signal probe:
 
