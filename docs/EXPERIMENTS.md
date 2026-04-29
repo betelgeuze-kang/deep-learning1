@@ -595,3 +595,29 @@ Expected:
   fallback_qacc `0.274074`). This shows fallback-used failures are partly
   strength / hint-integration limited, but it is still not learned routing or
   wrong-candidate robustness solved.
+
+- h4-5q fallback adaptive strength smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh
+```
+
+- h4-5q standard fallback adaptive strength sweep:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh --full
+```
+
+- h4-5q writes
+  `results/v03_route_hint_kv_hash_route_code_fallback_adaptive_summary.csv`
+- h4-5q adds `--route-fallback-strength-mode fixed|margin`,
+  `--route-fallback-lambda-base`, `--route-fallback-lambda-max`, and
+  `--route-fallback-margin-alpha`, plus fallback subset strength distribution
+  columns
+- h4-5q smoke decision: `PASS` as fallback-adaptive diagnostics /
+  lower-strength limited mitigation. Fixed `mult=10.0` remains stronger
+  (`fallback_qacc=0.518518`, mean strength `55.376972`), while margin
+  `alpha=8.0`, max `40.0` improves over fixed `mult=1.0` with lower mean
+  strength (`fallback_qacc=0.400000`, mean strength `25.902632`). This does
+  not solve fallback robustness; next probe is fallback persistence / TTL.

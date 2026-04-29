@@ -1290,3 +1290,64 @@ Decision:
 - this still uses symbolic key-shape fallback and a hand-set multiplier, so it
   is not learned routing, not fallback robustness solved, and not a general
   wrong-candidate robustness solution
+
+## Fallback Adaptive Strength
+
+`v0.3-h4-5q` replaces the hand-set fallback-only multiplier with a fallback-
+specific margin strength mode:
+
+```text
+--route-fallback-strength-mode fixed|margin
+--route-fallback-strength-mult <float>
+--route-fallback-lambda-base <float>
+--route-fallback-lambda-max <float>
+--route-fallback-margin-alpha <float>
+```
+
+In `fixed` mode, fallback-used queries keep the h4-5p behavior: the normal
+route strength is multiplied by `route_fallback_strength_mult`. In `margin`
+mode, fallback-used queries use a separate local-margin strength:
+
+```text
+fallback_strength =
+  route_fallback_lambda_base
+  + route_fallback_margin_alpha * max(0, local_margin_against_route)
+```
+
+then apply `route_fallback_lambda_max` as a cap. This affects only fallback-used
+query nodes; primary route nodes and local topology are unchanged.
+
+Additional fallback subset diagnostics:
+
+- `route_fallback_strength_p50`
+- `route_fallback_strength_p90`
+- `route_fallback_strength_max`
+- `route_fallback_local_margin_against_route_mean`
+
+Smoke command:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh
+```
+
+Smoke readout at remove-correct corruption `0.25`:
+
+- fixed `mult=1.0`: qacc `0.839062`, fallback_qacc `0.237037`,
+  fallback strength mean `5.446080`
+- fixed `mult=10.0`: qacc `0.898437`, fallback_qacc `0.518518`,
+  fallback strength mean `55.376972`
+- fallback margin `alpha=6.0`, max `40.0`: qacc `0.864062`,
+  fallback_qacc `0.355555`, fallback strength mean `21.749088`
+- fallback margin `alpha=8.0`, max `40.0`: qacc `0.873437`,
+  fallback_qacc `0.400000`, fallback strength mean `25.902632`
+
+Decision:
+
+- `v0.3-h4-5q fallback adaptive strength`: `PASS` as fallback-adaptive
+  diagnostics and lower-strength limited mitigation
+- fallback-specific margin strength improves fallback-used qacc with much lower
+  mean strength than fixed `mult=10.0`
+- it does not match fixed strong performance yet, so the next candidate remains
+  fallback persistence / TTL rather than claiming fallback robustness
+- this still uses symbolic key-shape fallback and is not learned routing,
+  fallback robustness solved, or wrong-candidate robustness solved

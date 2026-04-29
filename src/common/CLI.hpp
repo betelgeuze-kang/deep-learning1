@@ -233,9 +233,21 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
             params.route_aggregation_confidence = value;
         } else if (key == "route-fallback-source" || key == "route_fallback_source") {
             params.route_fallback_source = value;
+        } else if (key == "route-fallback-strength-mode" ||
+                   key == "route_fallback_strength_mode") {
+            params.route_fallback_strength_mode = value;
         } else if (key == "route-fallback-strength-mult" ||
                    key == "route_fallback_strength_mult") {
             params.route_fallback_strength_mult = cli_to_float(value, key);
+        } else if (key == "route-fallback-lambda-base" ||
+                   key == "route_fallback_lambda_base") {
+            params.route_fallback_lambda_base = cli_to_float(value, key);
+        } else if (key == "route-fallback-lambda-max" ||
+                   key == "route_fallback_lambda_max") {
+            params.route_fallback_lambda_max = cli_to_float(value, key);
+        } else if (key == "route-fallback-margin-alpha" ||
+                   key == "route_fallback_margin_alpha") {
+            params.route_fallback_margin_alpha = cli_to_float(value, key);
         } else if (key == "K-route" || key == "K_route") {
             params.K_route = cli_to_int(value, key);
         } else if (key == "route-hash-bits" || key == "route_hash_bits") {
@@ -366,7 +378,11 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-highconf-agg <top1|vote|weighted-vote>\n"
        << "  --route-aggregation-confidence <value-support|agreement>\n"
        << "  --route-fallback-source <off|raw-key|key-shape>\n"
+       << "  --route-fallback-strength-mode <fixed|margin>\n"
        << "  --route-fallback-strength-mult <float>\n"
+       << "  --route-fallback-lambda-base <float>\n"
+       << "  --route-fallback-lambda-max <float>\n"
+       << "  --route-fallback-margin-alpha <float>\n"
        << "  --K-route <int>\n"
        << "  --route-hash-bits <int>\n"
        << "  --route-hash-source <raw-key|joint-code-key|route-code-key>\n"

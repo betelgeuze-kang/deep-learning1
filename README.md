@@ -30,6 +30,12 @@ Current status:
   This keeps the finding narrow: fallback-used failures are partly
   strength-limited, but learned routing and wrong-candidate robustness are not
   solved
+- h4-5q adds fallback-specific adaptive strength via
+  `--route-fallback-strength-mode fixed|margin`; margin mode improves over
+  fixed `mult=1.0` with much lower mean strength than fixed `mult=10.0`
+  (`alpha=8.0,max=40.0`: qacc `0.873437`, fallback_qacc `0.400000`, mean
+  fallback strength `25.902632`), but it does not match fixed strong and is
+  still diagnostics / limited mitigation only
 
 ## Build
 
@@ -129,6 +135,7 @@ Experiment helpers:
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_source.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_projected_delta.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -143,6 +150,7 @@ Experiment helpers:
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_source.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_projected_delta.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
 
 Key docs:
 

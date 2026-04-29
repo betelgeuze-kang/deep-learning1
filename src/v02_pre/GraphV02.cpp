@@ -438,8 +438,22 @@ void GraphV02::validate_params() const {
         throw std::runtime_error(
             "route-fallback-source must be one of: off, raw-key, key-shape");
     }
+    if (params_.route_fallback_strength_mode != "fixed" &&
+        params_.route_fallback_strength_mode != "margin") {
+        throw std::runtime_error(
+            "route-fallback-strength-mode must be one of: fixed, margin");
+    }
     if (params_.route_fallback_strength_mult < 0.0f) {
         throw std::runtime_error("route-fallback-strength-mult must be non-negative");
+    }
+    if (params_.route_fallback_lambda_base < 0.0f) {
+        throw std::runtime_error("route-fallback-lambda-base must be non-negative");
+    }
+    if (params_.route_fallback_lambda_max < 0.0f) {
+        throw std::runtime_error("route-fallback-lambda-max must be non-negative");
+    }
+    if (params_.route_fallback_margin_alpha < 0.0f) {
+        throw std::runtime_error("route-fallback-margin-alpha must be non-negative");
     }
     if (params_.K_route <= 0) {
         throw std::runtime_error("K-route must be positive");
@@ -1255,12 +1269,16 @@ float GraphV02::compute_route_effective_strength_for_node(
     if (policy_scale <= 0.0f) {
         return 0.0f;
     }
+    const bool fallback_used =
+        index >= 0 && index < static_cast<int>(route_hint_fallback_used_.size()) &&
+        route_hint_fallback_used_[static_cast<std::size_t>(index)];
+    const bool fallback_margin_mode =
+        fallback_used && params_.route_fallback_strength_mode == "margin";
     float fallback_scale = 1.0f;
-    if (index >= 0 && index < static_cast<int>(route_hint_fallback_used_.size()) &&
-        route_hint_fallback_used_[static_cast<std::size_t>(index)]) {
+    if (fallback_used && !fallback_margin_mode) {
         fallback_scale = params_.route_fallback_strength_mult;
     }
-    if (params_.route_strength_mode == "fixed") {
+    if (params_.route_strength_mode == "fixed" && !fallback_margin_mode) {
         return params_.lambda_route * policy_scale * fallback_scale;
     }
 
@@ -1279,11 +1297,24 @@ float GraphV02::compute_route_effective_strength_for_node(
     }
 
     const double local_margin = local_margin_against_route(index, target_value);
-    double strength =
-        static_cast<double>(params_.lambda_route_base) +
-        static_cast<double>(params_.route_margin_alpha) * std::max(0.0, local_margin);
-    if (params_.lambda_route_max > 0.0f) {
-        strength = std::min(strength, static_cast<double>(params_.lambda_route_max));
+    double strength = 0.0;
+    if (fallback_margin_mode) {
+        strength =
+            static_cast<double>(params_.route_fallback_lambda_base) +
+            static_cast<double>(params_.route_fallback_margin_alpha) *
+                std::max(0.0, local_margin);
+        if (params_.route_fallback_lambda_max > 0.0f) {
+            strength =
+                std::min(strength, static_cast<double>(params_.route_fallback_lambda_max));
+        }
+        strength *= static_cast<double>(params_.route_fallback_strength_mult);
+    } else {
+        strength =
+            static_cast<double>(params_.lambda_route_base) +
+            static_cast<double>(params_.route_margin_alpha) * std::max(0.0, local_margin);
+        if (params_.lambda_route_max > 0.0f) {
+            strength = std::min(strength, static_cast<double>(params_.lambda_route_max));
+        }
     }
     if (params_.route_confidence_power > 0.0f) {
         strength *= std::pow(
@@ -2444,6 +2475,9 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_fallback_lo_acc_sum = 0.0;
     double route_fallback_route_margin_sum = 0.0;
     double route_fallback_effective_strength_sum = 0.0;
+    double route_fallback_strength_max = 0.0;
+    double route_fallback_local_margin_sum = 0.0;
+    std::vector<double> route_fallback_strength_values;
     double route_abstain_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_value_read_distance_sum = 0.0;
@@ -2644,6 +2678,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
                     node.state[1] == target_low ? 1.0 : 0.0;
                 route_fallback_route_margin_sum += route_margin;
                 route_fallback_effective_strength_sum += route_strength;
+                route_fallback_strength_max =
+                    std::max(route_fallback_strength_max, route_strength);
+                route_fallback_strength_values.push_back(route_strength);
+                route_fallback_local_margin_sum += local_margin;
                 if (!primary_has_correct && fallback_recovered) {
                     route_fallback_success_count += 1.0;
                 }
@@ -3096,6 +3134,13 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_fallback_route_margin_sum / route_fallback_used_count;
             metrics.route_fallback_effective_strength_mean =
                 route_fallback_effective_strength_sum / route_fallback_used_count;
+            metrics.route_fallback_strength_p50 =
+                nearest_rank_quantile(route_fallback_strength_values, 0.50);
+            metrics.route_fallback_strength_p90 =
+                nearest_rank_quantile(route_fallback_strength_values, 0.90);
+            metrics.route_fallback_strength_max = route_fallback_strength_max;
+            metrics.route_fallback_local_margin_against_route_mean =
+                route_fallback_local_margin_sum / route_fallback_used_count;
         }
         if (route_wrong_hint_count > 0.0) {
             metrics.route_wrong_hint_strength_mean =
