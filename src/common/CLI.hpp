@@ -252,6 +252,12 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
             params.route_target_proposals = cli_to_int(value, key);
         } else if (key == "route-hint-agg" || key == "route_hint_agg") {
             params.route_hint_agg = value;
+        } else if (key == "route-delta-mode" || key == "route_delta_mode") {
+            params.route_delta_mode = value;
+        } else if (key == "route-pull-scale" || key == "route_pull_scale") {
+            params.route_pull_scale = cli_to_float(value, key);
+        } else if (key == "route-push-scale" || key == "route_push_scale") {
+            params.route_push_scale = cli_to_float(value, key);
         } else if (key == "route-candidate-score" || key == "route_candidate_score") {
             params.route_candidate_score = value;
         } else if (key == "route-source") {
@@ -366,6 +372,9 @@ inline void print_v02_help(std::ostream& os) {
        << "  --lambda-route-code-id <float>\n"
        << "  --route-target-proposals <0|1>\n"
        << "  --route-hint-agg <top1|vote|weighted-vote|confidence-gated>\n"
+       << "  --route-delta-mode <target-only|projected>\n"
+       << "  --route-pull-scale <float>\n"
+       << "  --route-push-scale <float>\n"
        << "  --route-candidate-score <insertion|recency|value-vote|key-shape>\n"
        << "  --route-source <none|input-byte|joint-code|state-code>\n"
        << "  --route-mode <off|probe|jump-neighbors|hint-oracle|hint-parsed|hint-kv-exact|hint-kv-hash>\n"

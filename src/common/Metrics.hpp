@@ -164,6 +164,10 @@ struct EpochMetricsV02 {
     double route_fallback_recall = 0.0;
     double route_fallback_qacc = 0.0;
     double route_fallback_success_rate = 0.0;
+    double route_fallback_hi_acc = 0.0;
+    double route_fallback_lo_acc = 0.0;
+    double route_fallback_route_margin_mean = 0.0;
+    double route_fallback_effective_strength_mean = 0.0;
     double route_abstain_rate = 0.0;
     double route_hint_strength_mean = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
@@ -273,7 +277,9 @@ inline std::string v02_csv_header() {
            "route_highconf_effective_strength_mean,"
            "route_primary_recall,route_primary_lowconf_rate,"
            "route_fallback_used_rate,route_fallback_recall,route_fallback_qacc,"
-           "route_fallback_success_rate,route_abstain_rate,"
+           "route_fallback_success_rate,route_fallback_hi_acc,route_fallback_lo_acc,"
+           "route_fallback_route_margin_mean,"
+           "route_fallback_effective_strength_mean,route_abstain_rate,"
            "route_hint_strength_mean,"
            "route_hint_candidate_lookup_count,route_hint_candidate_hit_rate,"
            "route_hint_value_read_distance_mean,kv_record_count,kv_query_count,"
@@ -428,6 +434,10 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_fallback_recall << ','
         << metrics.route_fallback_qacc << ','
         << metrics.route_fallback_success_rate << ','
+        << metrics.route_fallback_hi_acc << ','
+        << metrics.route_fallback_lo_acc << ','
+        << metrics.route_fallback_route_margin_mean << ','
+        << metrics.route_fallback_effective_strength_mean << ','
         << metrics.route_abstain_rate << ','
         << metrics.route_hint_strength_mean << ','
         << metrics.route_hint_candidate_lookup_count << ','

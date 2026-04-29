@@ -1177,3 +1177,61 @@ Decision:
 - remove-correct now has recovered candidate recall, but the low fallback-used
   qacc shows that the next bottleneck is fallback hint integration/dynamics, not
   candidate discovery alone
+
+## Projected Route-hint Delta
+
+`v0.3-h4-5o` keeps the route reaction inside the query node's proposal delta.
+It does not distribute reaction into neighbors and does not modify local
+topology.
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_projected_delta.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_projected_delta.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_projected_delta.sh --full
+```
+
+New options:
+
+```text
+--route-delta-mode target-only|projected
+--route-pull-scale <float>
+--route-push-scale <float>
+```
+
+Implementation:
+
+- `target-only` is the default and preserves the previous route-hint behavior
+- `projected` is the C-version projected delta:
+  - entering the routed target nibble gets route reward
+  - leaving the routed target nibble gets route penalty
+  - all other route-hint contribution is neutral
+- this is local to the query node's proposal energy and preserves the
+  `candidate value_pos -> value byte read -> proposal hint` path
+
+Additional fallback subset diagnostics:
+
+- `route_fallback_hi_acc`
+- `route_fallback_lo_acc`
+- `route_fallback_route_margin_mean`
+- `route_fallback_effective_strength_mean`
+
+Smoke readout at corruption `0.25`:
+
+- `projected 1.0/1.0` matches `target-only`, as expected for the C-version at
+  equal scales
+- preserve-correct: `target-only qacc = 0.854688`; `projected pull=2.0 push=1.0`
+  reaches `qacc = 0.875000`
+- remove-correct with key-shape fallback: `target-only qacc = 0.839062`,
+  `fallback_qacc = 0.237037`; `projected pull=2.0 push=1.0` stays at
+  `qacc = 0.839062`, `fallback_qacc = 0.237037`
+- fallback subset remains asymmetric (`hi_acc` high, `lo_acc` low), so the
+  remaining bottleneck is not solved by a stronger projected pull alone
+
+Decision:
+
+- `v0.3-h4-5o projected route-hint delta`: `PASS` as projected-delta
+  instrumentation and limited mitigation
+- it is not fallback integration solved and not wrong-candidate robustness
+  solved
+- spatial dragging / neighbor reaction remains out of scope and should stay
+  deferred

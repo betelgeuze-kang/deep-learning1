@@ -82,6 +82,28 @@ double nearest_rank_quantile(std::vector<double> values, double quantile) {
     return values[std::min(rank > 0 ? rank - 1 : 0, values.size() - 1)];
 }
 
+float route_channel_delta(
+    const std::string& mode,
+    float pull_scale,
+    float push_scale,
+    std::uint8_t old_state,
+    std::uint8_t new_state,
+    std::uint8_t target_state) {
+    if (mode == "target-only") {
+        const float old_match = old_state == target_state ? 1.0f : 0.0f;
+        const float new_match = new_state == target_state ? 1.0f : 0.0f;
+        return -(new_match - old_match);
+    }
+
+    if (new_state == target_state && old_state != target_state) {
+        return -pull_scale;
+    }
+    if (old_state == target_state && new_state != target_state) {
+        return push_scale;
+    }
+    return 0.0f;
+}
+
 std::uint32_t fnv1a_update(std::uint32_t hash, std::uint8_t byte) {
     hash ^= static_cast<std::uint32_t>(byte);
     hash *= 16777619u;
@@ -448,6 +470,16 @@ void GraphV02::validate_params() const {
         params_.route_hint_agg != "confidence-gated") {
         throw std::runtime_error(
             "route-hint-agg must be one of: top1, vote, weighted-vote, confidence-gated");
+    }
+    if (params_.route_delta_mode != "target-only" &&
+        params_.route_delta_mode != "projected") {
+        throw std::runtime_error("route-delta-mode must be one of: target-only, projected");
+    }
+    if (params_.route_pull_scale < 0.0f) {
+        throw std::runtime_error("route-pull-scale must be non-negative");
+    }
+    if (params_.route_push_scale < 0.0f) {
+        throw std::runtime_error("route-push-scale must be non-negative");
     }
     if (params_.route_candidate_score != "insertion" &&
         params_.route_candidate_score != "recency" &&
@@ -2075,8 +2107,7 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
 
         int valid_count = 0;
         float weight_sum = 0.0f;
-        float old_vote_match = 0.0f;
-        float new_vote_match = 0.0f;
+        float route_vote_delta = 0.0f;
         for (std::size_t rank_index = 0; rank_index < vote_positions.size(); ++rank_index) {
             const int value_pos = vote_positions[rank_index];
             if (value_pos < 0 || value_pos >= params_.N) {
@@ -2098,12 +2129,21 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                 static_cast<std::uint8_t>(candidate_value / FieldTable::States);
             const auto value_low =
                 static_cast<std::uint8_t>(candidate_value % FieldTable::States);
-            old_vote_match += candidate_weight *
-                              ((node.state[0] == value_high ? 1.0f : 0.0f) +
-                               (node.state[1] == value_low ? 1.0f : 0.0f));
-            new_vote_match += candidate_weight *
-                              ((new_high == value_high ? 1.0f : 0.0f) +
-                               (new_low == value_low ? 1.0f : 0.0f));
+            route_vote_delta += candidate_weight *
+                                (route_channel_delta(
+                                     params_.route_delta_mode,
+                                     params_.route_pull_scale,
+                                     params_.route_push_scale,
+                                     node.state[0],
+                                     new_high,
+                                     value_high) +
+                                 route_channel_delta(
+                                     params_.route_delta_mode,
+                                     params_.route_pull_scale,
+                                     params_.route_push_scale,
+                                     node.state[1],
+                                     new_low,
+                                     value_low));
             weight_sum += candidate_weight;
             ++valid_count;
         }
@@ -2114,8 +2154,7 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                 route_hint_proposal_value_for_node(index, target_value)
                     ? route_effective_strength_for_node(index, target_value)
                     : params_.lambda_route;
-            delta += -route_strength * weight *
-                     ((new_vote_match - old_vote_match) / weight_sum);
+            delta += route_strength * weight * (route_vote_delta / weight_sum);
         }
     } else if (route_hint_active() && effective_agg != "none" &&
                route_hint_value_for_node(index, value)) {
@@ -2123,13 +2162,22 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
         const auto value_low = static_cast<std::uint8_t>(value % FieldTable::States);
         const float weight = route_hint_weights_[static_cast<std::size_t>(index)];
         const float route_strength = route_effective_strength_for_node(index, value);
-        const float old_match =
-            (node.state[0] == value_high ? 1.0f : 0.0f) +
-            (node.state[1] == value_low ? 1.0f : 0.0f);
-        const float new_match =
-            (new_high == value_high ? 1.0f : 0.0f) +
-            (new_low == value_low ? 1.0f : 0.0f);
-        delta += -route_strength * weight * (new_match - old_match);
+        const float route_delta =
+            route_channel_delta(
+                params_.route_delta_mode,
+                params_.route_pull_scale,
+                params_.route_push_scale,
+                node.state[0],
+                new_high,
+                value_high) +
+            route_channel_delta(
+                params_.route_delta_mode,
+                params_.route_pull_scale,
+                params_.route_push_scale,
+                node.state[1],
+                new_low,
+                value_low);
+        delta += route_strength * weight * route_delta;
     }
 
     return delta;
@@ -2384,6 +2432,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_fallback_recall_sum = 0.0;
     double route_fallback_qacc_sum = 0.0;
     double route_fallback_success_count = 0.0;
+    double route_fallback_hi_acc_sum = 0.0;
+    double route_fallback_lo_acc_sum = 0.0;
+    double route_fallback_route_margin_sum = 0.0;
+    double route_fallback_effective_strength_sum = 0.0;
     double route_abstain_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_value_read_distance_sum = 0.0;
@@ -2578,6 +2630,12 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_fallback_used_count += 1.0;
                 route_fallback_qacc_sum += query_hit;
                 route_fallback_recall_sum += final_candidate_recall ? 1.0 : 0.0;
+                route_fallback_hi_acc_sum +=
+                    node.state[0] == target_high ? 1.0 : 0.0;
+                route_fallback_lo_acc_sum +=
+                    node.state[1] == target_low ? 1.0 : 0.0;
+                route_fallback_route_margin_sum += route_margin;
+                route_fallback_effective_strength_sum += route_strength;
                 if (!primary_has_correct && fallback_recovered) {
                     route_fallback_success_count += 1.0;
                 }
@@ -3022,6 +3080,14 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_fallback_qacc_sum / route_fallback_used_count;
             metrics.route_fallback_success_rate =
                 route_fallback_success_count / route_fallback_used_count;
+            metrics.route_fallback_hi_acc =
+                route_fallback_hi_acc_sum / route_fallback_used_count;
+            metrics.route_fallback_lo_acc =
+                route_fallback_lo_acc_sum / route_fallback_used_count;
+            metrics.route_fallback_route_margin_mean =
+                route_fallback_route_margin_sum / route_fallback_used_count;
+            metrics.route_fallback_effective_strength_mean =
+                route_fallback_effective_strength_sum / route_fallback_used_count;
         }
         if (route_wrong_hint_count > 0.0) {
             metrics.route_wrong_hint_strength_mean =

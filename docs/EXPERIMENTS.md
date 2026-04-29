@@ -539,3 +539,30 @@ Expected:
   `fallback_success_rate = 1.000000`), but fallback-used qacc remains low
   (`0.237037`), so this is fallback instrumentation / limited mitigation, not
   robustness solved
+
+- h4-5o projected route-hint delta smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_projected_delta.sh
+```
+
+- h4-5o standard projected delta sweep:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_projected_delta.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_projected_delta.sh --full
+```
+
+- h4-5o writes
+  `results/v03_route_hint_kv_hash_route_code_projected_delta_summary.csv`
+- h4-5o compares `--route-delta-mode target-only` with `projected`, plus
+  `--route-pull-scale` / `--route-push-scale`; projected C-version only rewards
+  direct transitions into the routed target nibble and penalizes direct
+  transitions away from it
+- current h4-5o smoke readout at corruption `0.25`: `projected 1.0/1.0`
+  matches `target-only`; `projected pull=2.0 push=1.0` improves preserve-correct
+  qacc (`0.854688 -> 0.875000`) but does not improve remove-correct
+  key-shape fallback qacc (`0.237037 -> 0.237037`)
+- h4-5o passes as projected-delta instrumentation / limited mitigation only:
+  it verifies the local query-node route-delta hook and fallback subset metrics,
+  but it does not solve fallback integration or wrong-candidate robustness
