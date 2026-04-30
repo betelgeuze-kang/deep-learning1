@@ -100,6 +100,7 @@ class GraphV02 {
     void refresh_route_hint_candidate_keys();
     bool candidate_positions_contain_correct(int index) const;
     bool should_corrupt_route_candidate(int index) const;
+    bool route_fallback_persistence_active(int index) const;
     int wrong_route_value_position_for_node(int index) const;
     std::string joint_code_signature_for_key(const std::string& key) const;
     std::uint32_t joint_code_hash_for_key(const std::string& key) const;
@@ -171,6 +172,8 @@ class GraphV02 {
     std::vector<bool> route_hint_primary_has_correct_;
     std::vector<bool> route_hint_fallback_used_;
     std::vector<bool> route_hint_fallback_recovered_;
+    std::vector<int> route_fallback_persist_remaining_;
+    std::vector<int> route_fallback_persist_visits_;
     std::vector<int> route_value_positions_;
     std::vector<std::string> route_value_position_keys_;
     std::vector<std::string> route_hint_query_keys_;

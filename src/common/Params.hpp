@@ -111,6 +111,7 @@ struct V02PreParams {
     float route_fallback_lo_lambda_max = 50.0f;
     float route_fallback_hi_margin_alpha = 1.0f;
     float route_fallback_lo_margin_alpha = 1.0f;
+    int route_fallback_persist_cycles = 0;
     int K_route = 1;
     int route_hash_bits = 16;
     std::string route_hash_source = "raw-key";

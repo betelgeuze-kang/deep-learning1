@@ -147,6 +147,8 @@ void GraphV02::begin_epoch(const ByteDataset::Window& window) {
     route_hint_primary_has_correct_.assign(static_cast<std::size_t>(params_.N), false);
     route_hint_fallback_used_.assign(static_cast<std::size_t>(params_.N), false);
     route_hint_fallback_recovered_.assign(static_cast<std::size_t>(params_.N), false);
+    route_fallback_persist_remaining_.assign(static_cast<std::size_t>(params_.N), 0);
+    route_fallback_persist_visits_.assign(static_cast<std::size_t>(params_.N), 0);
     route_value_positions_.clear();
     route_value_position_keys_.assign(static_cast<std::size_t>(params_.N), {});
     route_hint_query_keys_.assign(static_cast<std::size_t>(params_.N), {});
@@ -233,6 +235,14 @@ void GraphV02::begin_epoch(const ByteDataset::Window& window) {
     refresh_route_hint_candidate_keys();
     apply_route_candidate_corruption();
     apply_route_fallback_source(window);
+    if (params_.route_fallback_persist_cycles > 0) {
+        for (int index = 0; index < params_.N; ++index) {
+            if (route_hint_fallback_used_[static_cast<std::size_t>(index)]) {
+                route_fallback_persist_remaining_[static_cast<std::size_t>(index)] =
+                    params_.route_fallback_persist_cycles;
+            }
+        }
+    }
 
     refresh_route_confidence_cache();
     refresh_route_anchor_cache();
@@ -264,6 +274,12 @@ EpochMetricsV02 GraphV02::run_epoch(
         for (int color = 0; color < params_.C_colors; ++color) {
             for (int index = color; index < params_.N; index += params_.C_colors) {
                 try_update_node(index, accepted, downhill, uphill, rejected, skipped);
+            }
+        }
+
+        for (int& remaining : route_fallback_persist_remaining_) {
+            if (remaining > 0) {
+                --remaining;
             }
         }
 
@@ -477,6 +493,9 @@ void GraphV02::validate_params() const {
     if (params_.route_fallback_hi_margin_alpha < 0.0f ||
         params_.route_fallback_lo_margin_alpha < 0.0f) {
         throw std::runtime_error("route-fallback channel margin alphas must be non-negative");
+    }
+    if (params_.route_fallback_persist_cycles < 0) {
+        throw std::runtime_error("route-fallback-persist-cycles must be non-negative");
     }
     if (params_.K_route <= 0) {
         throw std::runtime_error("K-route must be positive");
@@ -1562,6 +1581,14 @@ bool GraphV02::candidate_positions_contain_correct(int index) const {
     return route_hint_value_positions_[static_cast<std::size_t>(index)] == correct;
 }
 
+bool GraphV02::route_fallback_persistence_active(int index) const {
+    if (index < 0 ||
+        index >= static_cast<int>(route_fallback_persist_remaining_.size())) {
+        return false;
+    }
+    return route_fallback_persist_remaining_[static_cast<std::size_t>(index)] > 0;
+}
+
 void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
     if (!route_hint_active()) {
         return;
@@ -2384,7 +2411,13 @@ void GraphV02::try_update_node(
     int& rejected,
     int& skipped) {
     const NodeV02& node = nodes_[static_cast<std::size_t>(index)];
-    const float p_try = std::min(1.0f, 1.0f / std::max(1.0f, node.tick));
+    const bool fallback_persist_active = route_fallback_persistence_active(index);
+    if (fallback_persist_active) {
+        ++route_fallback_persist_visits_[static_cast<std::size_t>(index)];
+    }
+    const float p_try =
+        fallback_persist_active ? 1.0f
+                                : std::min(1.0f, 1.0f / std::max(1.0f, node.tick));
     if (!rng_.bernoulli(p_try)) {
         ++skipped;
         return;
@@ -2612,6 +2645,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_fallback_local_margin_sum = 0.0;
     double route_fallback_hi_local_margin_sum = 0.0;
     double route_fallback_lo_local_margin_sum = 0.0;
+    double route_fallback_persist_used_sum = 0.0;
+    double route_fallback_persist_cycles_sum = 0.0;
     std::vector<double> route_fallback_strength_values;
     double route_abstain_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
@@ -2835,6 +2870,12 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_fallback_local_margin_sum += local_margin;
                 route_fallback_hi_local_margin_sum += hi_local_margin;
                 route_fallback_lo_local_margin_sum += lo_local_margin;
+                const int persist_visits =
+                    route_fallback_persist_visits_.empty()
+                        ? 0
+                        : route_fallback_persist_visits_[static_cast<std::size_t>(i)];
+                route_fallback_persist_used_sum += persist_visits > 0 ? 1.0 : 0.0;
+                route_fallback_persist_cycles_sum += static_cast<double>(persist_visits);
                 if (!primary_has_correct && fallback_recovered) {
                     route_fallback_success_count += 1.0;
                 }
@@ -3302,6 +3343,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_fallback_hi_local_margin_sum / route_fallback_used_count;
             metrics.route_fallback_lo_local_margin_against_route_mean =
                 route_fallback_lo_local_margin_sum / route_fallback_used_count;
+            metrics.route_fallback_persist_used_rate =
+                route_fallback_persist_used_sum / route_fallback_used_count;
+            metrics.route_fallback_persist_cycles_mean =
+                route_fallback_persist_cycles_sum / route_fallback_used_count;
         }
         if (route_wrong_hint_count > 0.0) {
             metrics.route_wrong_hint_strength_mean =

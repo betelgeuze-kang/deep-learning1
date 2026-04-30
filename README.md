@@ -56,6 +56,12 @@ Current status:
   mild degradation by `lo_mult=15` (`0.533333`). This calibrates low-channel
   strength before any TTL/persistence work; it is still diagnostics / limited
   mitigation only
+- h4-5u adds fallback persistence / TTL diagnostics via
+  `--route-fallback-persist-cycles`. In the current smoke, TTL metrics are
+  wired (`ttl=3` gives persist used rate `1.000000` and mean cycles
+  `3.000000`), but qacc is neutral or slightly worse (`lo7.5: 0.540741 ->
+  0.525926`, `lo10: 0.548148 -> 0.548148`). Treat this as persistence
+  instrumentation, not fallback robustness solved
 
 ## Build
 
@@ -159,6 +165,7 @@ Experiment helpers:
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -177,6 +184,7 @@ Experiment helpers:
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
 
 Key docs:
 

@@ -307,6 +307,8 @@ Current decision:
   diagnostics, not as evidence for neighbor-replacement routing
 - treat low-nibble fallback strength grids as route-hint integration
   calibration, not as static-routing promotion
+- treat fallback persistence / TTL diagnostics as query-local route-hint update
+  priority instrumentation, not as static-routing promotion
 
 Allowed wording:
 
@@ -317,6 +319,7 @@ Allowed wording:
 - `fallback channel-strength diagnostics`
 - `fallback channel-adaptive diagnostics`
 - `low-nibble fallback strength calibration`
+- `fallback persistence diagnostics`
 
 Do not say:
 

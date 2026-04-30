@@ -1493,3 +1493,46 @@ Decision:
   to `15.0` mildly degrades fallback_qacc
 - this does not solve fallback robustness, but it gives a calibrated static
   strength target for the next fallback persistence / TTL slice
+
+## Fallback Persistence / TTL Diagnostics
+
+`v0.3-h4-5u` tests whether the calibrated fallback low-channel strength still
+needs a short persistence window. Since route hints already affect proposal
+delta on every cycle, this slice interprets TTL narrowly as fallback-used query
+update-priority persistence: fallback-used nodes bypass tick throttling for the
+first `route_fallback_persist_cycles` cycles of the epoch.
+
+```text
+--route-fallback-persist-cycles <int>
+```
+
+Additional diagnostics:
+
+- `route_fallback_persist_used_rate`
+- `route_fallback_persist_cycles_mean`
+
+Smoke command:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_persistence.sh
+```
+
+Smoke readout at remove-correct corruption `0.25`:
+
+- `lo7.5 ttl0`: qacc `0.903125`, fallback_qacc `0.540741`,
+  persist_used `0.000000`, persist_cycles `0.000000`
+- `lo7.5 ttl3`: qacc `0.900000`, fallback_qacc `0.525926`,
+  persist_used `1.000000`, persist_cycles `3.000000`
+- `lo10 ttl0`: qacc `0.904688`, fallback_qacc `0.548148`,
+  persist_used `0.000000`, persist_cycles `0.000000`
+- `lo10 ttl3`: qacc `0.904688`, fallback_qacc `0.548148`,
+  persist_used `1.000000`, persist_cycles `3.000000`
+
+Decision:
+
+- `v0.3-h4-5u fallback persistence / TTL`: `PASS` as persistence
+  instrumentation and neutral diagnostics
+- the persistence hook and metrics are wired, but the current short TTL
+  priority policy does not improve fallback_qacc over the h4-5t static
+  low-channel sweet spot
+- this is not fallback robustness solved and not learned routing solved

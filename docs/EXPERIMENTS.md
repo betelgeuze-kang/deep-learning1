@@ -699,3 +699,30 @@ Expected:
   `lo15=0.533333`. This supports the low-nibble bottleneck interpretation and
   suggests the next TTL/persistence probe should compare against the
   `lo_mult=7.5..10` sweet spot.
+
+- h4-5u fallback persistence / TTL smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_persistence.sh
+```
+
+- h4-5u standard fallback persistence / TTL sweep:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_persistence.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_persistence.sh --full
+```
+
+- h4-5u writes
+  `results/v03_route_hint_kv_hash_route_code_fallback_persistence_summary.csv`
+- h4-5u adds `--route-fallback-persist-cycles`, plus
+  `route_fallback_persist_used_rate` and
+  `route_fallback_persist_cycles_mean`
+- h4-5u smoke decision: `PASS` as fallback persistence instrumentation /
+  neutral diagnostics. Persistence accounting is wired (`ttl=3` reports
+  used rate `1.000000` and mean cycles `3.000000`), but the current policy
+  does not improve the calibrated low-channel baselines:
+  `lo7.5 ttl0 -> ttl3` fallback_qacc `0.540741 -> 0.525926`, and
+  `lo10 ttl0 -> ttl3` remains `0.548148 -> 0.548148`. This suggests the
+  current short TTL update-priority hook is not the missing lever for
+  fallback robustness.
