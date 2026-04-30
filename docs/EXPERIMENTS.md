@@ -648,3 +648,29 @@ Expected:
   fallback_qacc `0.377778`. This suggests the residual fallback-used
   integration bottleneck is more low-nibble sensitive, but it still uses
   symbolic key-shape fallback and hand-set channel multipliers.
+
+- h4-5s fallback channel-adaptive strength smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh
+```
+
+- h4-5s standard fallback channel-adaptive strength sweep:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh --full
+```
+
+- h4-5s writes
+  `results/v03_route_hint_kv_hash_route_code_fallback_channel_adaptive_summary.csv`
+- h4-5s adds `--route-fallback-channel-strength-mode fixed|margin`,
+  `--route-fallback-hi-margin-alpha`, `--route-fallback-lo-margin-alpha`,
+  `--route-fallback-hi-lambda-max`, and `--route-fallback-lo-lambda-max`, plus
+  channel-local margin diagnostics
+- h4-5s smoke decision: `PASS` as fallback channel-adaptive instrumentation /
+  lower-strength limited mitigation. Margin-balanced reaches qacc `0.864062`
+  and fallback_qacc `0.355555`; lo-biased margin reaches qacc `0.871875` and
+  fallback_qacc `0.392592` by increasing low-channel effective strength
+  (`16.427150 -> 23.382717`). Fixed lo-boost remains stronger
+  (`fallback_qacc = 0.525926`), so this is not fallback robustness solved.

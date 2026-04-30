@@ -452,6 +452,11 @@ void GraphV02::validate_params() const {
     if (params_.route_fallback_lo_strength_mult < 0.0f) {
         throw std::runtime_error("route-fallback-lo-strength-mult must be non-negative");
     }
+    if (params_.route_fallback_channel_strength_mode != "fixed" &&
+        params_.route_fallback_channel_strength_mode != "margin") {
+        throw std::runtime_error(
+            "route-fallback-channel-strength-mode must be one of: fixed, margin");
+    }
     if (params_.route_fallback_lambda_base < 0.0f) {
         throw std::runtime_error("route-fallback-lambda-base must be non-negative");
     }
@@ -460,6 +465,18 @@ void GraphV02::validate_params() const {
     }
     if (params_.route_fallback_margin_alpha < 0.0f) {
         throw std::runtime_error("route-fallback-margin-alpha must be non-negative");
+    }
+    if (params_.route_fallback_hi_lambda_base < 0.0f ||
+        params_.route_fallback_lo_lambda_base < 0.0f) {
+        throw std::runtime_error("route-fallback channel lambda bases must be non-negative");
+    }
+    if (params_.route_fallback_hi_lambda_max < 0.0f ||
+        params_.route_fallback_lo_lambda_max < 0.0f) {
+        throw std::runtime_error("route-fallback channel lambda max values must be non-negative");
+    }
+    if (params_.route_fallback_hi_margin_alpha < 0.0f ||
+        params_.route_fallback_lo_margin_alpha < 0.0f) {
+        throw std::runtime_error("route-fallback channel margin alphas must be non-negative");
     }
     if (params_.K_route <= 0) {
         throw std::runtime_error("K-route must be positive");
@@ -1268,6 +1285,37 @@ double GraphV02::local_margin_against_route(int index, std::uint8_t target_value
     return target_energy - best_other_energy;
 }
 
+double GraphV02::local_channel_margin_against_route(
+    int index,
+    int channel,
+    std::uint8_t target_state) const {
+    const NodeV02& node = nodes_[static_cast<std::size_t>(index)];
+    const auto current_high = node.state[0];
+    const auto current_low = node.state[1];
+    const double target_energy =
+        channel == 0
+            ? local_energy_without_route(index, target_state, current_low)
+            : local_energy_without_route(index, current_high, target_state);
+    double best_other_energy = std::numeric_limits<double>::infinity();
+    for (int state = 0; state < FieldTable::States; ++state) {
+        if (state == target_state) {
+            continue;
+        }
+        const double candidate_energy =
+            channel == 0
+                ? local_energy_without_route(
+                      index,
+                      static_cast<std::uint8_t>(state),
+                      current_low)
+                : local_energy_without_route(
+                      index,
+                      current_high,
+                      static_cast<std::uint8_t>(state));
+        best_other_energy = std::min(best_other_energy, candidate_energy);
+    }
+    return target_energy - best_other_energy;
+}
+
 float GraphV02::compute_route_effective_strength_for_node(
     int index,
     std::uint8_t target_value) const {
@@ -1348,6 +1396,41 @@ float GraphV02::route_fallback_channel_strength_scale_for_node(
     }
     return channel == 0 ? params_.route_fallback_hi_strength_mult
                         : params_.route_fallback_lo_strength_mult;
+}
+
+float GraphV02::route_fallback_channel_effective_strength_for_node(
+    int index,
+    int channel,
+    std::uint8_t target_value,
+    float base_strength) const {
+    if (index < 0 || index >= static_cast<int>(route_hint_fallback_used_.size()) ||
+        !route_hint_fallback_used_[static_cast<std::size_t>(index)]) {
+        return base_strength;
+    }
+    if (params_.route_fallback_channel_strength_mode != "margin") {
+        return base_strength * route_fallback_channel_strength_scale_for_node(index, channel);
+    }
+
+    const auto target_state =
+        channel == 0 ? static_cast<std::uint8_t>(target_value / FieldTable::States)
+                     : static_cast<std::uint8_t>(target_value % FieldTable::States);
+    const double local_margin =
+        std::max(0.0, local_channel_margin_against_route(index, channel, target_state));
+    const double base =
+        channel == 0 ? params_.route_fallback_hi_lambda_base
+                     : params_.route_fallback_lo_lambda_base;
+    const double alpha =
+        channel == 0 ? params_.route_fallback_hi_margin_alpha
+                     : params_.route_fallback_lo_margin_alpha;
+    const double cap =
+        channel == 0 ? params_.route_fallback_hi_lambda_max
+                     : params_.route_fallback_lo_lambda_max;
+    double strength = base + alpha * local_margin;
+    if (cap > 0.0) {
+        strength = std::min(strength, cap);
+    }
+    strength *= static_cast<double>(params_.route_fallback_strength_mult);
+    return static_cast<float>(std::max(0.0, strength));
 }
 
 void GraphV02::refresh_route_hint_candidate_keys() {
@@ -2212,13 +2295,21 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                 route_hint_proposal_value_for_node(index, target_value)
                     ? route_effective_strength_for_node(index, target_value)
                     : params_.lambda_route;
-            const float high_scale =
-                route_fallback_channel_strength_scale_for_node(index, 0);
-            const float low_scale =
-                route_fallback_channel_strength_scale_for_node(index, 1);
+            const float high_strength =
+                route_fallback_channel_effective_strength_for_node(
+                    index,
+                    0,
+                    target_value,
+                    route_strength);
+            const float low_strength =
+                route_fallback_channel_effective_strength_for_node(
+                    index,
+                    1,
+                    target_value,
+                    route_strength);
             const float route_vote_delta =
-                high_scale * route_vote_delta_high + low_scale * route_vote_delta_low;
-            delta += route_strength * weight * (route_vote_delta / weight_sum);
+                high_strength * route_vote_delta_high + low_strength * route_vote_delta_low;
+            delta += weight * (route_vote_delta / weight_sum);
         }
     } else if (route_hint_active() && effective_agg != "none" &&
                route_hint_value_for_node(index, value)) {
@@ -2242,10 +2333,21 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                 node.state[1],
                 new_low,
                 value_low);
+        const float high_strength =
+            route_fallback_channel_effective_strength_for_node(
+                index,
+                0,
+                value,
+                route_strength);
+        const float low_strength =
+            route_fallback_channel_effective_strength_for_node(
+                index,
+                1,
+                value,
+                route_strength);
         const float route_delta =
-            route_fallback_channel_strength_scale_for_node(index, 0) * high_delta +
-            route_fallback_channel_strength_scale_for_node(index, 1) * low_delta;
-        delta += route_strength * weight * route_delta;
+            high_strength * high_delta + low_strength * low_delta;
+        delta += weight * route_delta;
     }
 
     return delta;
@@ -2508,6 +2610,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_fallback_lo_effective_strength_sum = 0.0;
     double route_fallback_strength_max = 0.0;
     double route_fallback_local_margin_sum = 0.0;
+    double route_fallback_hi_local_margin_sum = 0.0;
+    double route_fallback_lo_local_margin_sum = 0.0;
     std::vector<double> route_fallback_strength_values;
     double route_abstain_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
@@ -2676,6 +2780,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
             fixture_query_lo_hits += node.state[1] == target_low ? 1.0 : 0.0;
             const double route_margin = route_hint_margin_for_node(i, node.target_byte);
             const double local_margin = local_margin_against_route(i, node.target_byte);
+            const double hi_local_margin =
+                local_channel_margin_against_route(i, 0, target_high);
+            const double lo_local_margin =
+                local_channel_margin_against_route(i, 1, target_low);
             const double route_strength =
                 static_cast<double>(route_effective_strength_for_node(i, node.target_byte));
             const int correct_value_pos =
@@ -2710,13 +2818,23 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_fallback_route_margin_sum += route_margin;
                 route_fallback_effective_strength_sum += route_strength;
                 route_fallback_hi_effective_strength_sum +=
-                    route_strength * route_fallback_channel_strength_scale_for_node(i, 0);
+                    route_fallback_channel_effective_strength_for_node(
+                        i,
+                        0,
+                        node.target_byte,
+                        static_cast<float>(route_strength));
                 route_fallback_lo_effective_strength_sum +=
-                    route_strength * route_fallback_channel_strength_scale_for_node(i, 1);
+                    route_fallback_channel_effective_strength_for_node(
+                        i,
+                        1,
+                        node.target_byte,
+                        static_cast<float>(route_strength));
                 route_fallback_strength_max =
                     std::max(route_fallback_strength_max, route_strength);
                 route_fallback_strength_values.push_back(route_strength);
                 route_fallback_local_margin_sum += local_margin;
+                route_fallback_hi_local_margin_sum += hi_local_margin;
+                route_fallback_lo_local_margin_sum += lo_local_margin;
                 if (!primary_has_correct && fallback_recovered) {
                     route_fallback_success_count += 1.0;
                 }
@@ -3180,6 +3298,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
             metrics.route_fallback_strength_max = route_fallback_strength_max;
             metrics.route_fallback_local_margin_against_route_mean =
                 route_fallback_local_margin_sum / route_fallback_used_count;
+            metrics.route_fallback_hi_local_margin_against_route_mean =
+                route_fallback_hi_local_margin_sum / route_fallback_used_count;
+            metrics.route_fallback_lo_local_margin_against_route_mean =
+                route_fallback_lo_local_margin_sum / route_fallback_used_count;
         }
         if (route_wrong_hint_count > 0.0) {
             metrics.route_wrong_hint_strength_mean =

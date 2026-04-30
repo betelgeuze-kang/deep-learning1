@@ -82,9 +82,18 @@ class GraphV02 {
     float route_effective_policy_scale_for_node(int index, std::uint8_t target_value) const;
     double local_energy_without_route(int index, std::uint8_t high, std::uint8_t low) const;
     double local_margin_against_route(int index, std::uint8_t target_value) const;
+    double local_channel_margin_against_route(
+        int index,
+        int channel,
+        std::uint8_t target_state) const;
     float compute_route_effective_strength_for_node(int index, std::uint8_t target_value) const;
     float route_effective_strength_for_node(int index, std::uint8_t target_value) const;
     float route_fallback_channel_strength_scale_for_node(int index, int channel) const;
+    float route_fallback_channel_effective_strength_for_node(
+        int index,
+        int channel,
+        std::uint8_t target_value,
+        float base_strength) const;
     void refresh_route_strength_cache();
     void apply_route_candidate_corruption();
     void apply_route_fallback_source(const ByteDataset::Window& window);

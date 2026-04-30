@@ -303,6 +303,8 @@ Current decision:
 - keep route-hint fallback/channel-strength work on the value-bearing hint path;
   it does not revive jump-neighbor replacement and should not be read as a
   static-routing promotion
+- treat fallback channel-adaptive strength as value-hint integration
+  diagnostics, not as evidence for neighbor-replacement routing
 
 Allowed wording:
 
@@ -311,6 +313,7 @@ Allowed wording:
 - `O(1)-candidate route coverage`
 - `oracle value-bearing route hint`
 - `fallback channel-strength diagnostics`
+- `fallback channel-adaptive diagnostics`
 
 Do not say:
 

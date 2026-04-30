@@ -43,6 +43,13 @@ Current status:
   low-channel boost reaches `0.548148` and high-channel boost falls to
   `0.377778`. This is a narrow fallback-channel diagnostic, not fallback
   robustness solved
+- h4-5s adds fallback channel-adaptive strength via
+  `--route-fallback-channel-strength-mode margin` with separate high/low
+  channel margin alphas and caps. It confirms the adaptive channel path is
+  wired: lo-biased margin raises fallback_qacc over balanced margin
+  (`0.355555 -> 0.392592`) by increasing low-channel effective strength, but
+  fixed lo-boost remains stronger (`fallback_qacc = 0.525926`). Treat this as
+  channel-adaptive instrumentation / lower-strength limited mitigation only
 
 ## Build
 
@@ -144,6 +151,7 @@ Experiment helpers:
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -160,6 +168,7 @@ Experiment helpers:
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
 
 Key docs:
 

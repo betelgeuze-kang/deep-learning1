@@ -1399,3 +1399,60 @@ Decision:
 - this is not fallback robustness solved, not learned routing, and not
   wrong-candidate robustness solved; it is a hand-set channel diagnostic on top
   of symbolic key-shape fallback
+
+## Fallback Channel-adaptive Strength
+
+`v0.3-h4-5s` extends h4-5r from hand-set channel multipliers to fallback-used
+channel-local margin strength. The goal is not to solve fallback robustness; it
+is to test whether the low-nibble-sensitive path can be calibrated by a
+channel-specific local margin.
+
+```text
+--route-fallback-channel-strength-mode fixed|margin
+--route-fallback-hi-margin-alpha <float>
+--route-fallback-lo-margin-alpha <float>
+--route-fallback-hi-lambda-base <float>
+--route-fallback-lo-lambda-base <float>
+--route-fallback-hi-lambda-max <float>
+--route-fallback-lo-lambda-max <float>
+```
+
+In `margin` mode, fallback-used query nodes use channel-specific strength:
+
+```text
+fallback_strength_c =
+  route_fallback_{hi,lo}_lambda_base
+  + route_fallback_{hi,lo}_margin_alpha * max(0, local_channel_margin_c)
+```
+
+then apply the corresponding channel cap. Primary route nodes and the local
+topology remain unchanged.
+
+Additional diagnostics:
+
+- `route_fallback_hi_local_margin_against_route_mean`
+- `route_fallback_lo_local_margin_against_route_mean`
+
+Smoke command:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh
+```
+
+Smoke readout at remove-correct corruption `0.25`:
+
+- fixed lo-boost: qacc `0.900000`, fallback_qacc `0.525926`,
+  hi_eff `26.685386`, lo_eff `53.370773`
+- margin-balanced: qacc `0.864062`, fallback_qacc `0.355555`,
+  hi_eff `9.961847`, lo_eff `16.427150`
+- margin-lo-biased: qacc `0.871875`, fallback_qacc `0.392592`,
+  hi_eff `9.980158`, lo_eff `23.382717`
+
+Decision:
+
+- `v0.3-h4-5s fallback channel-adaptive strength`: `PASS` as
+  channel-adaptive instrumentation and lower-strength limited mitigation
+- lo-biased channel margin improves over balanced channel margin, confirming
+  that the low-channel adaptive path is wired and relevant
+- fixed lo-boost remains stronger, so this is not fallback robustness solved
+  and not learned routing solved
