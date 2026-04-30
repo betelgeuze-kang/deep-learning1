@@ -1,0 +1,221 @@
+# discrete-local-energy 한국어 README
+
+[English README](README.md)
+
+이 저장소는 단계적으로 확장 중인 deterministic C++17 이산 local-energy 연구 프로토타입입니다.
+
+## 현재 한 줄 요약
+
+현재 프로젝트는 **이산 local-energy learner + value-bearing route-hint memory** 연구 프로토타입으로 보는 것이 가장 정확합니다. v0.3에서 가장 강하게 확인된 결론은 장거리 정보가 `remote node as neighbor`로 들어오면 안 되고, `candidate value_pos -> value byte read -> proposal hint` 형태로 들어와야 한다는 점입니다.
+
+아직 다음을 주장하는 단계는 아닙니다.
+
+- learned sparse routing solved
+- long-context retrieval solved
+- wrong-candidate robustness solved
+- Transformer replacement
+
+현재 live path는 controlled fixture/research scaffold이며, candidate discovery, identity preservation, hint strength, confidence, fallback, route credit을 분리해서 계측하는 단계입니다.
+
+## 현재 상태
+
+- `v0.1`: `dmv01`로 구현된 discrete local-energy dynamics 기준 구현입니다.
+- `v0.2-pre`: `dmv02`로 구현된 shared field `H[channel][input_byte][state]` 기반 byte-level contrastive learning baseline입니다.
+- `v0.2-b`: block-local coupled proposal과 `B[x, high, low]` coupling을 포함합니다. 기본 weak-coupling path는 `counter`와 `repeating-text` 5-seed regression을 통과했습니다.
+- `v0.3 static routing`: `jump-neighbors`, confidence gate/acceptance, `state-code`, `input-byte` route source 계열은 diagnostic/default-off입니다. 현재 결론은 routing success가 아니라 **neighbor replacement no-go**입니다.
+- `v0.3 route-hint`: 살아남은 장거리 경로입니다. 핵심 경로는 `candidate value_pos -> value byte read -> proposal hint`입니다.
+- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했습니다. 셋 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
+
+## 중요한 아키텍처 결론
+
+### 1. Remote node as neighbor: NO-GO
+
+`jump-neighbors` 계열은 active long-distance edge를 만들 수는 있었지만 fixture regression 또는 no-op 경계로 갔습니다. 현재 문서와 실험에서는 이 경로를 promotion 대상이 아니라 diagnostic/default-off branch로 유지합니다.
+
+### 2. Remote value as proposal hint: WORKS
+
+route-hint 계열은 다음 경로를 유지합니다.
+
+```text
+candidate value_pos
+-> value byte read
+-> proposal hint
+```
+
+oracle, parsed value-position, exact KV, hashed candidate, route-code identity, fallback source까지 이 경로가 이어졌습니다.
+
+### 3. Prediction code와 route identity code는 다릅니다
+
+`joint-code-key`는 plumbing은 통과했지만 key identity를 충분히 보존하지 못했습니다.
+
+```text
+key_region_joint_decode_acc = 0.093750
+joint_signature_collision_rate = 0.625000
+```
+
+별도 route-code identity auxiliary를 넣으면 32-key route-code run에서 query accuracy/recall/top1이 `1.000000`까지 회복됩니다. 현재 결론은 **prediction joint-code is not a routing identity-code**입니다.
+
+### 4. Retrieval과 state convergence는 별도 병목입니다
+
+128-key stress에서는 candidate retrieval, top1, route decode가 모두 `1.000000`이어도 query accuracy가 낮아질 수 있었습니다. `lambda_route`와 margin-adaptive strength가 이를 회복했기 때문에, 후보 찾기와 value를 state로 밀어 넣는 dynamics margin은 별도 문제입니다.
+
+### 5. Low-confidence failure는 둘로 나뉩니다
+
+```text
+preserve-correct:
+  정답 후보는 있음 -> ranking / aggregation 문제
+
+remove-correct:
+  정답 후보가 없음 -> fallback / abstain / secondary source 문제
+```
+
+이 구분은 fallback, route-credit, future route plasticity 설계의 기준입니다.
+
+## 최근 h4-5 계열 요약
+
+- h4-5g adaptive strength: 128-key correct-candidate setting에서 fixed strong보다 낮은 평균 strength로 qacc를 거의 회복했습니다.
+- h4-5h/i/j: confidence guard, value-support confidence, scorer-agreement confidence는 wrong hint strength를 낮추는 instrumentation으로는 작동하지만 wrong-candidate robustness는 해결하지 못했습니다.
+- h4-5k: confidence-gated aggregation은 high/low confidence split을 만들고 limited mitigation을 보였지만 robustness solved는 아닙니다.
+- h4-5l/m: low-confidence failure를 preserve-correct aggregation/ranking 문제와 remove-correct candidate availability 문제로 분리했습니다.
+- h4-5n: key-shape fallback은 remove-correct candidate availability를 회복했지만 fallback-used qacc는 낮았습니다.
+- h4-5o: projected delta는 preserve-correct에 제한적 개선을 보였지만 fallback integration을 해결하지 못했습니다.
+- h4-5p: fallback-only strength multiplier가 fallback qacc를 실제로 움직였습니다.
+- h4-5q: fallback adaptive strength는 fixed strong보다 낮은 평균 strength로 일부 개선했지만 fixed strong을 대체하지는 못했습니다.
+- h4-5r/s/t: fallback-used query는 low nibble 쪽이 더 큰 병목이며, `hi_mult=5`, `lo_mult=7.5..10` 근처에 sweet spot이 있습니다.
+- h4-5u: 짧은 fallback persistence / TTL 계측은 정상 연결됐지만 qacc 개선은 neutral입니다.
+- h4-5v: value-position route credit은 correct/wrong candidate credit을 분리합니다 (`credit_gap = 1.110268`) 그리고 qacc를 아주 작게 움직입니다 (`0.845312 -> 0.850000`). 이는 route-credit separation instrumentation / tiny mitigation이지 robustness solved가 아닙니다.
+
+## 빌드
+
+```bash
+cmake -S . -B build
+cmake --build build -j
+```
+
+## 실행 예시
+
+`v0.1`은 기본적으로 CSV를 stdout에 씁니다.
+
+```bash
+./build/dmv01 --cycles 100 --N 256 > results/v01_smoke.csv
+```
+
+파일로 직접 저장할 수도 있습니다.
+
+```bash
+./build/dmv01 --cycles 100 --N 256 --csv results/v01_smoke.csv
+```
+
+`v0.2-pre` / `v0.2-b` 예시:
+
+```bash
+./build/dmv02 --dataset counter --N 128 --epochs 200 --cycles-per-epoch 20 --lambda-v 0 \
+  --csv results/counter_lv0.csv
+```
+
+## Baseline 해석
+
+- `counter` with `lambda_v = 0`은 첫 locked correctness gate이며 강하게 성공해야 합니다.
+- `repeating-text`는 초기/중기 학습에서 `field_byte_acc`가 `oracle1_acc`보다 낮지만 `byte_acc`보다 분명히 높아야 합니다.
+- `v0.2-b` 기본 weak-coupling run은 `repeating-text`에서 대략 `field/joint/byte = 0.687500/0.687500/0.687500` 근처에 도달하고 `counter` gate는 `1.000000/1.000000/1.000000`을 유지합니다.
+- 5-seed 기본 weak-coupling regression은 `counter byte/field/joint = 0.999688/1.000000/1.000000`, `repeating-text byte/field/joint = 0.685625/0.681094/0.685703` 평균을 기록합니다.
+- 같은 5-seed `repeating-text` regression에서 weak coupling은 no-coupling control 대비 평균 `byte_acc +0.177578` 개선을 보입니다.
+
+## 대표 실험 스크립트
+
+전체 실험 목록은 [README.md](README.md)와 [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md)를 참고하세요. 주요 helper는 아래와 같습니다.
+
+### v0.2 / v0.2-b
+
+- `experiments/run_v02_counter.sh`
+- `experiments/run_v02_ablation.sh`
+- `experiments/run_v02_repeating.sh`
+- `experiments/run_v02b_tuned.sh`
+- `experiments/run_v02b_counter_compare.sh`
+- `experiments/run_v02b_repeating_compare.sh`
+- `experiments/run_v02b_counter_multiseed_compare.sh`
+- `experiments/run_v02b_repeating_multiseed_compare.sh`
+
+### v0.3 static routing diagnostics
+
+- `experiments/run_v03_routing_probe.sh`
+- `experiments/run_v03_routing_fixture_compare.sh`
+- `experiments/run_v03_static_routing_compare.sh`
+- `experiments/run_v03_gap_gate_ablation.sh`
+- `experiments/run_v03_gate_diagnostics.sh`
+- `experiments/run_v03_confidence_gate_ablation.sh`
+- `experiments/run_v03_confidence_acceptance_ablation.sh`
+- `experiments/run_v03_input_byte_jump_compare.sh`
+- `experiments/run_v03_route_key_diagnostics.sh`
+- `experiments/run_v03_rejection_diagnostics.sh`
+
+### v0.3 value-bearing route-hint
+
+- `experiments/run_v03_route_hint_oracle.sh`
+- `experiments/run_v03_route_hint_parsed.sh`
+- `experiments/run_v03_route_hint_kv_exact.sh`
+- `experiments/run_v03_route_hint_kv_hash.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_stress.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_dynamics.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_adaptive.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_corruption.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_confidence.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_agreement.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_gated_agg.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_lowconf_diagnostics.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_lowconf_policy.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_source.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_projected_delta.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_route_credit.sh`
+
+## 대표 smoke test
+
+- `experiments/test_v03_route_hint_oracle.sh`
+- `experiments/test_v03_route_hint_parsed.sh`
+- `experiments/test_v03_route_hint_kv_exact.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_dynamics.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_adaptive.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_corruption.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_confidence.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_agreement.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_gated_agg.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_lowconf_diagnostics.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_lowconf_policy.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_source.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_projected_delta.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_route_credit.sh`
+
+## 핵심 문서
+
+- [Master Prompt](DISCRETE_MANIFOLD_MASTER_CODEX_PROMPT.md)
+- [Architecture Plan](docs/DISCRETE_MANIFOLD_ARCHITECTURE_PLAN_A_TO_Z.md)
+- [v0.1 Design](docs/DESIGN_V01.md)
+- [v0.2-pre Design](docs/DESIGN_V02_PRE.md)
+- [v0.2-b Results](docs/V02B_RESULTS.md)
+- [v0.2-b Decision Boundary](docs/V02B_DECISION_BOUNDARY.md)
+- [v0.2-b 5-Seed Protocol](docs/V02B_MULTI_SEED_PROTOCOL.md)
+- [v0.3 Routing Probe](docs/V03_ROUTING_PROBE.md)
+- [v0.3 Static Routing Slice](docs/V03_STATIC_ROUTING.md)
+- [v0.3 Route-Hint Oracle](docs/V03_ROUTE_HINT_ORACLE.md)
+- [Roadmap](docs/ROADMAP.md)
+
+## 다음 연구 방향
+
+- fallback-used query에서 low nibble integration을 더 안정화합니다.
+- route credit을 candidate ranking/aggregation에 더 안전하게 연결합니다.
+- preserve-correct와 remove-correct failure를 분리한 route plasticity를 설계합니다.
+- learned/noisy candidate robustness를 route-code identity와 fallback source 위에서 다시 검증합니다.
+- synthetic fixture를 넘어 real long-context / chunk-level task와 외부 baseline 비교로 확장합니다.

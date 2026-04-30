@@ -2,6 +2,8 @@
 
 Deterministic C++17 reference code for a staged discrete local-energy research prototype.
 
+Korean README: [README.ko.md](README.ko.md)
+
 Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
