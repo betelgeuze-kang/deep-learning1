@@ -309,6 +309,8 @@ Current decision:
   calibration, not as static-routing promotion
 - treat fallback persistence / TTL diagnostics as query-local route-hint update
   priority instrumentation, not as static-routing promotion
+- treat route-credit diagnostics as value-hint candidate/edge instrumentation,
+  not as static-routing promotion
 
 Allowed wording:
 
@@ -320,6 +322,7 @@ Allowed wording:
 - `fallback channel-adaptive diagnostics`
 - `low-nibble fallback strength calibration`
 - `fallback persistence diagnostics`
+- `route-credit separation diagnostics`
 
 Do not say:
 

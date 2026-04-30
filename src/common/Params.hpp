@@ -112,6 +112,13 @@ struct V02PreParams {
     float route_fallback_hi_margin_alpha = 1.0f;
     float route_fallback_lo_margin_alpha = 1.0f;
     int route_fallback_persist_cycles = 0;
+    int route_credit_learning = 0;
+    std::string route_credit_mode = "value-pos";
+    float route_credit_score_weight = 1.0f;
+    float route_credit_eta_reward = 0.05f;
+    float route_credit_eta_slash = 0.10f;
+    float route_credit_decay = 0.001f;
+    float route_credit_clip = 4.0f;
     int K_route = 1;
     int route_hash_bits = 16;
     std::string route_hash_source = "raw-key";

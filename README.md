@@ -62,6 +62,11 @@ Current status:
   `3.000000`), but qacc is neutral or slightly worse (`lo7.5: 0.540741 ->
   0.525926`, `lo10: 0.548148 -> 0.548148`). Treat this as persistence
   instrumentation, not fallback robustness solved
+- h4-5v adds value-position route-credit diagnostics via
+  `--route-credit-learning`. On preserve-correct corruption, credit separates
+  correct and wrong candidates (`credit_gap = 1.110268`) and gives a tiny qacc
+  move (`0.845312 -> 0.850000`). Treat this as route-credit separation
+  instrumentation / tiny mitigation only, not wrong-candidate robustness solved
 
 ## Build
 
@@ -166,6 +171,7 @@ Experiment helpers:
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_route_credit.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -185,6 +191,7 @@ Experiment helpers:
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_route_credit.sh`
 
 Key docs:
 

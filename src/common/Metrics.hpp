@@ -178,6 +178,13 @@ struct EpochMetricsV02 {
     double route_fallback_lo_local_margin_against_route_mean = 0.0;
     double route_fallback_persist_used_rate = 0.0;
     double route_fallback_persist_cycles_mean = 0.0;
+    double route_credit_correct_mean = 0.0;
+    double route_credit_wrong_mean = 0.0;
+    double route_credit_gap = 0.0;
+    double route_credit_rewarded_rate = 0.0;
+    double route_credit_slashed_rate = 0.0;
+    double route_credit_top1_rate = 0.0;
+    double route_credit_qacc = 0.0;
     double route_abstain_rate = 0.0;
     double route_hint_strength_mean = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
@@ -297,6 +304,9 @@ inline std::string v02_csv_header() {
            "route_fallback_hi_local_margin_against_route_mean,"
            "route_fallback_lo_local_margin_against_route_mean,"
            "route_fallback_persist_used_rate,route_fallback_persist_cycles_mean,"
+           "route_credit_correct_mean,route_credit_wrong_mean,route_credit_gap,"
+           "route_credit_rewarded_rate,route_credit_slashed_rate,"
+           "route_credit_top1_rate,route_credit_qacc,"
            "route_abstain_rate,"
            "route_hint_strength_mean,"
            "route_hint_candidate_lookup_count,route_hint_candidate_hit_rate,"
@@ -466,6 +476,13 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_fallback_lo_local_margin_against_route_mean << ','
         << metrics.route_fallback_persist_used_rate << ','
         << metrics.route_fallback_persist_cycles_mean << ','
+        << metrics.route_credit_correct_mean << ','
+        << metrics.route_credit_wrong_mean << ','
+        << metrics.route_credit_gap << ','
+        << metrics.route_credit_rewarded_rate << ','
+        << metrics.route_credit_slashed_rate << ','
+        << metrics.route_credit_top1_rate << ','
+        << metrics.route_credit_qacc << ','
         << metrics.route_abstain_rate << ','
         << metrics.route_hint_strength_mean << ','
         << metrics.route_hint_candidate_lookup_count << ','

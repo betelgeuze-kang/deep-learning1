@@ -1536,3 +1536,69 @@ Decision:
   priority policy does not improve fallback_qacc over the h4-5t static
   low-channel sweet spot
 - this is not fallback robustness solved and not learned routing solved
+
+## Route-credit Slashing / Binding Diagnostics
+
+`v0.3-h4-5v` starts route-credit learning as a diagnostic ledger over
+candidate value positions. It does not touch tick/reservoir credit, local
+topology, or `route_field_` identity code. The successful path remains:
+
+```text
+candidate value_pos
+-> value byte read
+-> proposal hint
+```
+
+Initial credit scope:
+
+```text
+--route-credit-learning <0|1>
+--route-credit-mode value-pos
+--route-credit-score-weight <float>
+--route-credit-eta-reward <float>
+--route-credit-eta-slash <float>
+--route-credit-decay <float>
+--route-credit-clip <float>
+```
+
+Credit update:
+
+```text
+candidate value byte == target byte -> reward value_pos credit
+candidate value byte != target byte -> slash value_pos credit
+```
+
+When enabled, weighted-vote candidate weights are multiplied by
+`exp(route_credit_score_weight * credit[value_pos])`.
+
+Additional diagnostics:
+
+- `route_credit_correct_mean`
+- `route_credit_wrong_mean`
+- `route_credit_gap`
+- `route_credit_rewarded_rate`
+- `route_credit_slashed_rate`
+- `route_credit_top1_rate`
+- `route_credit_qacc`
+
+Smoke command:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_route_credit.sh
+```
+
+Smoke readout on preserve-correct corruption:
+
+- `credit_off`: qacc `0.845312`, credit gap `0.000000`
+- `credit_on`: qacc `0.850000`, correct credit `0.313938`,
+  wrong credit `-0.796331`, credit gap `1.110268`,
+  rewarded rate `0.696774`, slashed rate `0.283871`
+
+Decision:
+
+- `v0.3-h4-5v route-credit`: `PASS` as route-credit separation
+  instrumentation and tiny mitigation
+- the ledger distinguishes correct and wrong value-position candidates, and
+  the weighting path is active
+- the qacc move is small, so this is not wrong-candidate robustness solved and
+  not learned routing solved

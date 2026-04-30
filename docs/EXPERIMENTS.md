@@ -726,3 +726,29 @@ Expected:
   `lo10 ttl0 -> ttl3` remains `0.548148 -> 0.548148`. This suggests the
   current short TTL update-priority hook is not the missing lever for
   fallback robustness.
+
+- h4-5v route-credit smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_route_credit.sh
+```
+
+- h4-5v standard route-credit run:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_route_credit.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_route_credit.sh --full
+```
+
+- h4-5v writes
+  `results/v03_route_hint_kv_hash_route_code_route_credit_summary.csv`
+- h4-5v adds value-position credit options:
+  `--route-credit-learning`, `--route-credit-score-weight`,
+  `--route-credit-eta-reward`, `--route-credit-eta-slash`,
+  `--route-credit-decay`, and `--route-credit-clip`
+- h4-5v smoke decision: `PASS` as route-credit separation instrumentation /
+  tiny mitigation. Preserve-correct corruption with credit learning produces
+  a positive credit separation (`correct_mean=0.313938`,
+  `wrong_mean=-0.796331`, `gap=1.110268`) and a small qacc move
+  (`0.845312 -> 0.850000`). This validates the credit ledger and weighting
+  path but does not solve wrong-candidate robustness.

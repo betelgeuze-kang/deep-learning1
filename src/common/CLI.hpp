@@ -282,6 +282,23 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-fallback-persist-cycles" ||
                    key == "route_fallback_persist_cycles") {
             params.route_fallback_persist_cycles = cli_to_int(value, key);
+        } else if (key == "route-credit-learning" || key == "route_credit_learning") {
+            params.route_credit_learning = cli_to_int(value, key);
+        } else if (key == "route-credit-mode" || key == "route_credit_mode") {
+            params.route_credit_mode = value;
+        } else if (key == "route-credit-score-weight" ||
+                   key == "route_credit_score_weight") {
+            params.route_credit_score_weight = cli_to_float(value, key);
+        } else if (key == "route-credit-eta-reward" ||
+                   key == "route_credit_eta_reward") {
+            params.route_credit_eta_reward = cli_to_float(value, key);
+        } else if (key == "route-credit-eta-slash" ||
+                   key == "route_credit_eta_slash") {
+            params.route_credit_eta_slash = cli_to_float(value, key);
+        } else if (key == "route-credit-decay" || key == "route_credit_decay") {
+            params.route_credit_decay = cli_to_float(value, key);
+        } else if (key == "route-credit-clip" || key == "route_credit_clip") {
+            params.route_credit_clip = cli_to_float(value, key);
         } else if (key == "K-route" || key == "K_route") {
             params.K_route = cli_to_int(value, key);
         } else if (key == "route-hash-bits" || key == "route_hash_bits") {
@@ -427,6 +444,13 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-fallback-hi-margin-alpha <float>\n"
        << "  --route-fallback-lo-margin-alpha <float>\n"
        << "  --route-fallback-persist-cycles <int>\n"
+       << "  --route-credit-learning <0|1>\n"
+       << "  --route-credit-mode <value-pos>\n"
+       << "  --route-credit-score-weight <float>\n"
+       << "  --route-credit-eta-reward <float>\n"
+       << "  --route-credit-eta-slash <float>\n"
+       << "  --route-credit-decay <float>\n"
+       << "  --route-credit-clip <float>\n"
        << "  --K-route <int>\n"
        << "  --route-hash-bits <int>\n"
        << "  --route-hash-source <raw-key|joint-code-key|route-code-key>\n"

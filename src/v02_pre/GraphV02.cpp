@@ -149,6 +149,9 @@ void GraphV02::begin_epoch(const ByteDataset::Window& window) {
     route_hint_fallback_recovered_.assign(static_cast<std::size_t>(params_.N), false);
     route_fallback_persist_remaining_.assign(static_cast<std::size_t>(params_.N), 0);
     route_fallback_persist_visits_.assign(static_cast<std::size_t>(params_.N), 0);
+    if (route_credit_by_value_pos_.size() != static_cast<std::size_t>(params_.N)) {
+        route_credit_by_value_pos_.assign(static_cast<std::size_t>(params_.N), 0.0f);
+    }
     route_value_positions_.clear();
     route_value_position_keys_.assign(static_cast<std::size_t>(params_.N), {});
     route_hint_query_keys_.assign(static_cast<std::size_t>(params_.N), {});
@@ -285,6 +288,10 @@ EpochMetricsV02 GraphV02::run_epoch(
 
         relax_tick_and_reservoir();
         update_age();
+    }
+
+    if (params_.route_credit_learning != 0) {
+        apply_route_credit_learning();
     }
 
     return collect_metrics(epoch, oracle_next, accepted, downhill, uphill, rejected, skipped);
@@ -496,6 +503,25 @@ void GraphV02::validate_params() const {
     }
     if (params_.route_fallback_persist_cycles < 0) {
         throw std::runtime_error("route-fallback-persist-cycles must be non-negative");
+    }
+    if (params_.route_credit_learning < 0 || params_.route_credit_learning > 1) {
+        throw std::runtime_error("route-credit-learning must be 0 or 1");
+    }
+    if (params_.route_credit_mode != "value-pos") {
+        throw std::runtime_error("route-credit-mode must be one of: value-pos");
+    }
+    if (params_.route_credit_score_weight < 0.0f) {
+        throw std::runtime_error("route-credit-score-weight must be non-negative");
+    }
+    if (params_.route_credit_eta_reward < 0.0f ||
+        params_.route_credit_eta_slash < 0.0f) {
+        throw std::runtime_error("route-credit eta values must be non-negative");
+    }
+    if (params_.route_credit_decay < 0.0f || params_.route_credit_decay > 1.0f) {
+        throw std::runtime_error("route-credit-decay must be in [0, 1]");
+    }
+    if (params_.route_credit_clip < 0.0f) {
+        throw std::runtime_error("route-credit-clip must be non-negative");
     }
     if (params_.K_route <= 0) {
         throw std::runtime_error("K-route must be positive");
@@ -789,6 +815,7 @@ bool GraphV02::route_hint_proposal_value_for_node(int index, std::uint8_t& out_v
                     candidate_weight =
                         static_cast<float>(value_counts[static_cast<std::size_t>(value)]);
                 }
+                candidate_weight *= route_credit_weight_for_value_pos(value_pos);
             }
             value_votes[static_cast<std::size_t>(value)] += candidate_weight;
         }
@@ -858,6 +885,7 @@ double GraphV02::route_hint_margin_for_node(int index, std::uint8_t target_value
                     candidate_weight =
                         static_cast<float>(value_counts[static_cast<std::size_t>(value)]);
                 }
+                candidate_weight *= route_credit_weight_for_value_pos(value_pos);
             }
             high_votes[static_cast<std::size_t>(value / FieldTable::States)] +=
                 candidate_weight;
@@ -939,6 +967,7 @@ double GraphV02::route_value_support_confidence_for_node(
                     candidate_weight =
                         static_cast<float>(value_counts[static_cast<std::size_t>(value)]);
                 }
+                candidate_weight *= route_credit_weight_for_value_pos(value_pos);
             }
             value_votes[static_cast<std::size_t>(value)] += candidate_weight;
             vote_weight_sum += candidate_weight;
@@ -1587,6 +1616,68 @@ bool GraphV02::route_fallback_persistence_active(int index) const {
         return false;
     }
     return route_fallback_persist_remaining_[static_cast<std::size_t>(index)] > 0;
+}
+
+float GraphV02::route_credit_for_value_pos(int value_pos) const {
+    if (value_pos < 0 ||
+        value_pos >= static_cast<int>(route_credit_by_value_pos_.size())) {
+        return 0.0f;
+    }
+    return route_credit_by_value_pos_[static_cast<std::size_t>(value_pos)];
+}
+
+float GraphV02::route_credit_weight_for_value_pos(int value_pos) const {
+    if (params_.route_credit_learning == 0 ||
+        params_.route_credit_score_weight <= 0.0f) {
+        return 1.0f;
+    }
+    const double scaled =
+        static_cast<double>(params_.route_credit_score_weight) *
+        static_cast<double>(route_credit_for_value_pos(value_pos));
+    return static_cast<float>(std::exp(std::clamp(scaled, -8.0, 8.0)));
+}
+
+void GraphV02::apply_route_credit_learning() {
+    if (route_credit_by_value_pos_.empty()) {
+        return;
+    }
+    const float decay_scale = 1.0f - params_.route_credit_decay;
+    for (float& credit : route_credit_by_value_pos_) {
+        credit *= decay_scale;
+    }
+
+    for (int index = 0; index < params_.N; ++index) {
+        if (route_hint_weights_[static_cast<std::size_t>(index)] <= 0.0f) {
+            continue;
+        }
+        const auto target_value = nodes_[static_cast<std::size_t>(index)].target_byte;
+        std::vector<int> candidates =
+            route_hint_candidate_value_positions_[static_cast<std::size_t>(index)];
+        if (candidates.empty()) {
+            const int selected_pos =
+                route_hint_value_positions_[static_cast<std::size_t>(index)];
+            if (selected_pos >= 0) {
+                candidates.push_back(selected_pos);
+            }
+        }
+        for (const int value_pos : candidates) {
+            if (value_pos < 0 ||
+                value_pos >= static_cast<int>(route_credit_by_value_pos_.size())) {
+                continue;
+            }
+            const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
+            float& credit = route_credit_by_value_pos_[static_cast<std::size_t>(value_pos)];
+            if (value == target_value) {
+                credit += params_.route_credit_eta_reward;
+            } else {
+                credit -= params_.route_credit_eta_slash;
+            }
+            credit = std::clamp(
+                credit,
+                -params_.route_credit_clip,
+                params_.route_credit_clip);
+        }
+    }
 }
 
 void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
@@ -2291,6 +2382,7 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                     candidate_weight = static_cast<float>(
                         value_counts[static_cast<std::size_t>(candidate_value)]);
                 }
+                candidate_weight *= route_credit_weight_for_value_pos(value_pos);
             }
             const auto value_high =
                 static_cast<std::uint8_t>(candidate_value / FieldTable::States);
@@ -2648,6 +2740,16 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_fallback_persist_used_sum = 0.0;
     double route_fallback_persist_cycles_sum = 0.0;
     std::vector<double> route_fallback_strength_values;
+    double route_credit_correct_sum = 0.0;
+    double route_credit_wrong_sum = 0.0;
+    double route_credit_correct_count = 0.0;
+    double route_credit_wrong_count = 0.0;
+    double route_credit_rewarded_count = 0.0;
+    double route_credit_slashed_count = 0.0;
+    double route_credit_candidate_count = 0.0;
+    double route_credit_top1_sum = 0.0;
+    double route_credit_qacc_sum = 0.0;
+    double route_credit_query_count = 0.0;
     double route_abstain_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_value_read_distance_sum = 0.0;
@@ -2740,6 +2842,7 @@ EpochMetricsV02 GraphV02::collect_metrics(
                             candidate_weight = static_cast<float>(
                                 value_counts[static_cast<std::size_t>(value)]);
                         }
+                        candidate_weight *= route_credit_weight_for_value_pos(value_pos);
                     }
                     high_votes[static_cast<std::size_t>(value / FieldTable::States)] +=
                         candidate_weight;
@@ -2880,6 +2983,49 @@ EpochMetricsV02 GraphV02::collect_metrics(
                     route_fallback_success_count += 1.0;
                 }
             }
+            if (params_.route_credit_learning != 0) {
+                std::vector<int> credit_positions = vote_positions;
+                if (credit_positions.empty() && route_hint_value_pos >= 0) {
+                    credit_positions.push_back(route_hint_value_pos);
+                }
+                if (!credit_positions.empty()) {
+                    route_credit_query_count += 1.0;
+                    route_credit_qacc_sum += query_hit;
+                    int best_credit_pos = -1;
+                    float best_credit = -std::numeric_limits<float>::infinity();
+                    for (const int value_pos : credit_positions) {
+                        if (value_pos < 0 || value_pos >= params_.N) {
+                            continue;
+                        }
+                        const float credit = route_credit_for_value_pos(value_pos);
+                        const auto value =
+                            nodes_[static_cast<std::size_t>(value_pos)].input_byte;
+                        route_credit_candidate_count += 1.0;
+                        if (credit > 0.0f) {
+                            route_credit_rewarded_count += 1.0;
+                        }
+                        if (credit < 0.0f) {
+                            route_credit_slashed_count += 1.0;
+                        }
+                        if (value == node.target_byte) {
+                            route_credit_correct_sum += static_cast<double>(credit);
+                            route_credit_correct_count += 1.0;
+                        } else {
+                            route_credit_wrong_sum += static_cast<double>(credit);
+                            route_credit_wrong_count += 1.0;
+                        }
+                        if (credit > best_credit) {
+                            best_credit = credit;
+                            best_credit_pos = value_pos;
+                        }
+                    }
+                    if (best_credit_pos >= 0 &&
+                        nodes_[static_cast<std::size_t>(best_credit_pos)].input_byte ==
+                            node.target_byte) {
+                        route_credit_top1_sum += 1.0;
+                    }
+                }
+            }
             const bool candidate_is_corrupted =
                 !route_hint_corrupted_.empty() &&
                 route_hint_corrupted_[static_cast<std::size_t>(i)];
@@ -2983,6 +3129,7 @@ EpochMetricsV02 GraphV02::collect_metrics(
                                 candidate_weight = static_cast<float>(
                                     subset_value_counts[static_cast<std::size_t>(value)]);
                             }
+                            candidate_weight *= route_credit_weight_for_value_pos(value_pos);
                         }
                         subset_value_votes[static_cast<std::size_t>(value)] +=
                             candidate_weight;
@@ -3347,6 +3494,28 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_fallback_persist_used_sum / route_fallback_used_count;
             metrics.route_fallback_persist_cycles_mean =
                 route_fallback_persist_cycles_sum / route_fallback_used_count;
+        }
+        if (route_credit_correct_count > 0.0) {
+            metrics.route_credit_correct_mean =
+                route_credit_correct_sum / route_credit_correct_count;
+        }
+        if (route_credit_wrong_count > 0.0) {
+            metrics.route_credit_wrong_mean =
+                route_credit_wrong_sum / route_credit_wrong_count;
+        }
+        metrics.route_credit_gap =
+            metrics.route_credit_correct_mean - metrics.route_credit_wrong_mean;
+        if (route_credit_candidate_count > 0.0) {
+            metrics.route_credit_rewarded_rate =
+                route_credit_rewarded_count / route_credit_candidate_count;
+            metrics.route_credit_slashed_rate =
+                route_credit_slashed_count / route_credit_candidate_count;
+        }
+        if (route_credit_query_count > 0.0) {
+            metrics.route_credit_top1_rate =
+                route_credit_top1_sum / route_credit_query_count;
+            metrics.route_credit_qacc =
+                route_credit_qacc_sum / route_credit_query_count;
         }
         if (route_wrong_hint_count > 0.0) {
             metrics.route_wrong_hint_strength_mean =
