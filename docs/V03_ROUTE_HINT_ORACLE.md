@@ -1351,3 +1351,51 @@ Decision:
   fallback persistence / TTL rather than claiming fallback robustness
 - this still uses symbolic key-shape fallback and is not learned routing,
   fallback robustness solved, or wrong-candidate robustness solved
+
+## Fallback Channel-specific Strength
+
+`v0.3-h4-5r` follows the h4-5p/q finding that fallback-used query states move
+when their route hint is stronger. The core already applies route hints on every
+cycle within an epoch, so this slice keeps behavior query-local and instead
+separates fallback-used high/low nibble route delta strength:
+
+```text
+--route-fallback-hi-strength-mult <float>
+--route-fallback-lo-strength-mult <float>
+```
+
+These multipliers affect only fallback-used query nodes. Primary route nodes,
+candidate retrieval, fallback source selection, and local topology are
+unchanged.
+
+Additional fallback subset diagnostics:
+
+- `route_fallback_hi_effective_strength_mean`
+- `route_fallback_lo_effective_strength_mean`
+
+Smoke command:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel.sh
+```
+
+Smoke readout at remove-correct corruption `0.25`, fixed fallback `mult=5.0`:
+
+- balanced hi/lo `1.0/1.0`: qacc `0.887500`, fallback_qacc `0.466666`,
+  fallback_hi_acc `0.800000`, fallback_lo_acc `0.600000`
+- low-channel boost hi/lo `1.0/2.0`: qacc `0.904687`,
+  fallback_qacc `0.548148`, fallback_hi_acc `0.800000`,
+  fallback_lo_acc `0.674074`
+- high-channel boost hi/lo `2.0/1.0`: qacc `0.868750`,
+  fallback_qacc `0.377778`, fallback_hi_acc `0.785185`,
+  fallback_lo_acc `0.533333`
+
+Decision:
+
+- `v0.3-h4-5r fallback channel strength`: `PASS` as fallback-channel
+  diagnostics and limited mitigation
+- the residual fallback-used integration bottleneck appears more low-nibble
+  sensitive in this smoke
+- this is not fallback robustness solved, not learned routing, and not
+  wrong-candidate robustness solved; it is a hand-set channel diagnostic on top
+  of symbolic key-shape fallback

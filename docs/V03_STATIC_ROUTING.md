@@ -300,6 +300,9 @@ Current decision:
 - treat `route-accept-confidence-gain` as a diagnostic guardrail tool for now, not as a promoted routing path
 - treat `state-code` and `route-refresh` as diagnostic route-signal tools for now, not as a promoted routing path
 - keep `hint-oracle` experimental and oracle-only until a learned key/value candidate can reproduce the query-position gain
+- keep route-hint fallback/channel-strength work on the value-bearing hint path;
+  it does not revive jump-neighbor replacement and should not be read as a
+  static-routing promotion
 
 Allowed wording:
 
@@ -307,6 +310,7 @@ Allowed wording:
 - `default-off jump-neighbor dynamics`
 - `O(1)-candidate route coverage`
 - `oracle value-bearing route hint`
+- `fallback channel-strength diagnostics`
 
 Do not say:
 

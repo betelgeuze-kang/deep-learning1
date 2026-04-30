@@ -446,6 +446,12 @@ void GraphV02::validate_params() const {
     if (params_.route_fallback_strength_mult < 0.0f) {
         throw std::runtime_error("route-fallback-strength-mult must be non-negative");
     }
+    if (params_.route_fallback_hi_strength_mult < 0.0f) {
+        throw std::runtime_error("route-fallback-hi-strength-mult must be non-negative");
+    }
+    if (params_.route_fallback_lo_strength_mult < 0.0f) {
+        throw std::runtime_error("route-fallback-lo-strength-mult must be non-negative");
+    }
     if (params_.route_fallback_lambda_base < 0.0f) {
         throw std::runtime_error("route-fallback-lambda-base must be non-negative");
     }
@@ -1333,6 +1339,17 @@ float GraphV02::route_effective_strength_for_node(
     return compute_route_effective_strength_for_node(index, target_value);
 }
 
+float GraphV02::route_fallback_channel_strength_scale_for_node(
+    int index,
+    int channel) const {
+    if (index < 0 || index >= static_cast<int>(route_hint_fallback_used_.size()) ||
+        !route_hint_fallback_used_[static_cast<std::size_t>(index)]) {
+        return 1.0f;
+    }
+    return channel == 0 ? params_.route_fallback_hi_strength_mult
+                        : params_.route_fallback_lo_strength_mult;
+}
+
 void GraphV02::refresh_route_hint_candidate_keys() {
     if (route_hint_candidate_keys_.size() != static_cast<std::size_t>(params_.N)) {
         route_hint_candidate_keys_.assign(static_cast<std::size_t>(params_.N), {});
@@ -2146,7 +2163,8 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
 
         int valid_count = 0;
         float weight_sum = 0.0f;
-        float route_vote_delta = 0.0f;
+        float route_vote_delta_high = 0.0f;
+        float route_vote_delta_low = 0.0f;
         for (std::size_t rank_index = 0; rank_index < vote_positions.size(); ++rank_index) {
             const int value_pos = vote_positions[rank_index];
             if (value_pos < 0 || value_pos >= params_.N) {
@@ -2168,21 +2186,22 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                 static_cast<std::uint8_t>(candidate_value / FieldTable::States);
             const auto value_low =
                 static_cast<std::uint8_t>(candidate_value % FieldTable::States);
-            route_vote_delta += candidate_weight *
-                                (route_channel_delta(
-                                     params_.route_delta_mode,
-                                     params_.route_pull_scale,
-                                     params_.route_push_scale,
-                                     node.state[0],
-                                     new_high,
-                                     value_high) +
-                                 route_channel_delta(
-                                     params_.route_delta_mode,
-                                     params_.route_pull_scale,
-                                     params_.route_push_scale,
-                                     node.state[1],
-                                     new_low,
-                                     value_low));
+            route_vote_delta_high += candidate_weight *
+                                     route_channel_delta(
+                                         params_.route_delta_mode,
+                                         params_.route_pull_scale,
+                                         params_.route_push_scale,
+                                         node.state[0],
+                                         new_high,
+                                         value_high);
+            route_vote_delta_low += candidate_weight *
+                                    route_channel_delta(
+                                        params_.route_delta_mode,
+                                        params_.route_pull_scale,
+                                        params_.route_push_scale,
+                                        node.state[1],
+                                        new_low,
+                                        value_low);
             weight_sum += candidate_weight;
             ++valid_count;
         }
@@ -2193,6 +2212,12 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                 route_hint_proposal_value_for_node(index, target_value)
                     ? route_effective_strength_for_node(index, target_value)
                     : params_.lambda_route;
+            const float high_scale =
+                route_fallback_channel_strength_scale_for_node(index, 0);
+            const float low_scale =
+                route_fallback_channel_strength_scale_for_node(index, 1);
+            const float route_vote_delta =
+                high_scale * route_vote_delta_high + low_scale * route_vote_delta_low;
             delta += route_strength * weight * (route_vote_delta / weight_sum);
         }
     } else if (route_hint_active() && effective_agg != "none" &&
@@ -2201,14 +2226,15 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
         const auto value_low = static_cast<std::uint8_t>(value % FieldTable::States);
         const float weight = route_hint_weights_[static_cast<std::size_t>(index)];
         const float route_strength = route_effective_strength_for_node(index, value);
-        const float route_delta =
+        const float high_delta =
             route_channel_delta(
                 params_.route_delta_mode,
                 params_.route_pull_scale,
                 params_.route_push_scale,
                 node.state[0],
                 new_high,
-                value_high) +
+                value_high);
+        const float low_delta =
             route_channel_delta(
                 params_.route_delta_mode,
                 params_.route_pull_scale,
@@ -2216,6 +2242,9 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                 node.state[1],
                 new_low,
                 value_low);
+        const float route_delta =
+            route_fallback_channel_strength_scale_for_node(index, 0) * high_delta +
+            route_fallback_channel_strength_scale_for_node(index, 1) * low_delta;
         delta += route_strength * weight * route_delta;
     }
 
@@ -2475,6 +2504,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_fallback_lo_acc_sum = 0.0;
     double route_fallback_route_margin_sum = 0.0;
     double route_fallback_effective_strength_sum = 0.0;
+    double route_fallback_hi_effective_strength_sum = 0.0;
+    double route_fallback_lo_effective_strength_sum = 0.0;
     double route_fallback_strength_max = 0.0;
     double route_fallback_local_margin_sum = 0.0;
     std::vector<double> route_fallback_strength_values;
@@ -2678,6 +2709,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
                     node.state[1] == target_low ? 1.0 : 0.0;
                 route_fallback_route_margin_sum += route_margin;
                 route_fallback_effective_strength_sum += route_strength;
+                route_fallback_hi_effective_strength_sum +=
+                    route_strength * route_fallback_channel_strength_scale_for_node(i, 0);
+                route_fallback_lo_effective_strength_sum +=
+                    route_strength * route_fallback_channel_strength_scale_for_node(i, 1);
                 route_fallback_strength_max =
                     std::max(route_fallback_strength_max, route_strength);
                 route_fallback_strength_values.push_back(route_strength);
@@ -3134,6 +3169,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_fallback_route_margin_sum / route_fallback_used_count;
             metrics.route_fallback_effective_strength_mean =
                 route_fallback_effective_strength_sum / route_fallback_used_count;
+            metrics.route_fallback_hi_effective_strength_mean =
+                route_fallback_hi_effective_strength_sum / route_fallback_used_count;
+            metrics.route_fallback_lo_effective_strength_mean =
+                route_fallback_lo_effective_strength_sum / route_fallback_used_count;
             metrics.route_fallback_strength_p50 =
                 nearest_rank_quantile(route_fallback_strength_values, 0.50);
             metrics.route_fallback_strength_p90 =

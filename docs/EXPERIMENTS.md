@@ -621,3 +621,30 @@ Expected:
   `alpha=8.0`, max `40.0` improves over fixed `mult=1.0` with lower mean
   strength (`fallback_qacc=0.400000`, mean strength `25.902632`). This does
   not solve fallback robustness; next probe is fallback persistence / TTL.
+
+- h4-5r fallback channel-specific strength smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel.sh
+```
+
+- h4-5r standard fallback channel-specific strength sweep:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel.sh --full
+```
+
+- h4-5r writes
+  `results/v03_route_hint_kv_hash_route_code_fallback_channel_summary.csv`
+- h4-5r adds `--route-fallback-hi-strength-mult` and
+  `--route-fallback-lo-strength-mult`, plus
+  `route_fallback_hi_effective_strength_mean` and
+  `route_fallback_lo_effective_strength_mean`
+- h4-5r smoke decision: `PASS` as fallback-channel diagnostics / limited
+  mitigation. Balanced fallback `mult=5` reaches qacc `0.887500` and
+  fallback_qacc `0.466666`; low-channel boost reaches qacc `0.904687` and
+  fallback_qacc `0.548148`; high-channel boost falls to qacc `0.868750` and
+  fallback_qacc `0.377778`. This suggests the residual fallback-used
+  integration bottleneck is more low-nibble sensitive, but it still uses
+  symbolic key-shape fallback and hand-set channel multipliers.

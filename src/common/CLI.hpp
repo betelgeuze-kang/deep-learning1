@@ -239,6 +239,12 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-fallback-strength-mult" ||
                    key == "route_fallback_strength_mult") {
             params.route_fallback_strength_mult = cli_to_float(value, key);
+        } else if (key == "route-fallback-hi-strength-mult" ||
+                   key == "route_fallback_hi_strength_mult") {
+            params.route_fallback_hi_strength_mult = cli_to_float(value, key);
+        } else if (key == "route-fallback-lo-strength-mult" ||
+                   key == "route_fallback_lo_strength_mult") {
+            params.route_fallback_lo_strength_mult = cli_to_float(value, key);
         } else if (key == "route-fallback-lambda-base" ||
                    key == "route_fallback_lambda_base") {
             params.route_fallback_lambda_base = cli_to_float(value, key);
@@ -380,6 +386,8 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-fallback-source <off|raw-key|key-shape>\n"
        << "  --route-fallback-strength-mode <fixed|margin>\n"
        << "  --route-fallback-strength-mult <float>\n"
+       << "  --route-fallback-hi-strength-mult <float>\n"
+       << "  --route-fallback-lo-strength-mult <float>\n"
        << "  --route-fallback-lambda-base <float>\n"
        << "  --route-fallback-lambda-max <float>\n"
        << "  --route-fallback-margin-alpha <float>\n"

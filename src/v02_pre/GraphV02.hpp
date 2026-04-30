@@ -84,6 +84,7 @@ class GraphV02 {
     double local_margin_against_route(int index, std::uint8_t target_value) const;
     float compute_route_effective_strength_for_node(int index, std::uint8_t target_value) const;
     float route_effective_strength_for_node(int index, std::uint8_t target_value) const;
+    float route_fallback_channel_strength_scale_for_node(int index, int channel) const;
     void refresh_route_strength_cache();
     void apply_route_candidate_corruption();
     void apply_route_fallback_source(const ByteDataset::Window& window);

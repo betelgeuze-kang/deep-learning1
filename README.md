@@ -36,6 +36,13 @@ Current status:
   (`alpha=8.0,max=40.0`: qacc `0.873437`, fallback_qacc `0.400000`, mean
   fallback strength `25.902632`), but it does not match fixed strong and is
   still diagnostics / limited mitigation only
+- h4-5r adds fallback-used channel-specific strength diagnostics via
+  `--route-fallback-hi-strength-mult` and `--route-fallback-lo-strength-mult`.
+  The smoke indicates the residual fallback integration bottleneck is more
+  low-nibble sensitive: balanced `m=5` reaches fallback_qacc `0.466666`, while
+  low-channel boost reaches `0.548148` and high-channel boost falls to
+  `0.377778`. This is a narrow fallback-channel diagnostic, not fallback
+  robustness solved
 
 ## Build
 
@@ -136,6 +143,7 @@ Experiment helpers:
 - `experiments/run_v03_route_hint_kv_hash_route_code_projected_delta.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -151,6 +159,7 @@ Experiment helpers:
 - `experiments/test_v03_route_hint_kv_hash_route_code_projected_delta.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
 
 Key docs:
 
