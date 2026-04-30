@@ -1456,3 +1456,40 @@ Decision:
   that the low-channel adaptive path is wired and relevant
 - fixed lo-boost remains stronger, so this is not fallback robustness solved
   and not learned routing solved
+
+## Low-nibble Fallback Strength Grid
+
+`v0.3-h4-5t` is a calibration slice before fallback persistence / TTL. It uses
+the existing h4-5r fallback channel multipliers and keeps high-channel
+multiplier fixed while sweeping low-channel multiplier:
+
+```text
+route_fallback_hi_strength_mult = 5.0
+route_fallback_lo_strength_mult = 5.0, 7.5, 10.0, 15.0
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh
+```
+
+Smoke readout at remove-correct corruption `0.25`:
+
+- `lo5`: qacc `0.873438`, fallback_qacc `0.400000`,
+  fallback_hi_acc `0.800000`, fallback_lo_acc `0.533333`
+- `lo7.5`: qacc `0.903125`, fallback_qacc `0.540741`,
+  fallback_hi_acc `0.800000`, fallback_lo_acc `0.666667`
+- `lo10`: qacc `0.904688`, fallback_qacc `0.548148`,
+  fallback_hi_acc `0.800000`, fallback_lo_acc `0.674074`
+- `lo15`: qacc `0.901562`, fallback_qacc `0.533333`,
+  fallback_hi_acc `0.800000`, fallback_lo_acc `0.659260`
+
+Decision:
+
+- `v0.3-h4-5t low-nibble fallback strength grid`: `PASS` as low-channel
+  strength calibration and limited mitigation
+- the current smoke has a narrow sweet spot around `lo_mult=7.5..10.0`; pushing
+  to `15.0` mildly degrades fallback_qacc
+- this does not solve fallback robustness, but it gives a calibrated static
+  strength target for the next fallback persistence / TTL slice

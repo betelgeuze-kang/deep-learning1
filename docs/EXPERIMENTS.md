@@ -674,3 +674,28 @@ Expected:
   fallback_qacc `0.392592` by increasing low-channel effective strength
   (`16.427150 -> 23.382717`). Fixed lo-boost remains stronger
   (`fallback_qacc = 0.525926`), so this is not fallback robustness solved.
+
+- h4-5t low-nibble fallback strength grid smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh
+```
+
+- h4-5t standard low-nibble fallback strength grid:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh --full
+```
+
+- h4-5t writes
+  `results/v03_route_hint_kv_hash_route_code_fallback_low_grid_summary.csv`
+- h4-5t keeps `route_fallback_hi_strength_mult = 5.0` and sweeps the low
+  channel multiplier; it uses the existing h4-5r channel-strength options and
+  does not add new C++ behavior
+- h4-5t smoke decision: `PASS` as low-channel strength calibration /
+  limited mitigation. The current smoke peaks around `lo_mult=10.0`:
+  `lo5 fallback_qacc=0.400000`, `lo7.5=0.540741`, `lo10=0.548148`,
+  `lo15=0.533333`. This supports the low-nibble bottleneck interpretation and
+  suggests the next TTL/persistence probe should compare against the
+  `lo_mult=7.5..10` sweet spot.

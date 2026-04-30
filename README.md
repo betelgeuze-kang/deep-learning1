@@ -50,6 +50,12 @@ Current status:
   (`0.355555 -> 0.392592`) by increasing low-channel effective strength, but
   fixed lo-boost remains stronger (`fallback_qacc = 0.525926`). Treat this as
   channel-adaptive instrumentation / lower-strength limited mitigation only
+- h4-5t adds a low-nibble fallback strength grid using the existing
+  fallback-channel multipliers. With `hi_mult=5`, the smoke shows a narrow
+  sweet spot around `lo_mult=7.5..10` (`fallback_qacc 0.540741..0.548148`) and
+  mild degradation by `lo_mult=15` (`0.533333`). This calibrates low-channel
+  strength before any TTL/persistence work; it is still diagnostics / limited
+  mitigation only
 
 ## Build
 
@@ -152,6 +158,7 @@ Experiment helpers:
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -169,6 +176,7 @@ Experiment helpers:
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_channel_adaptive.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
 
 Key docs:
 

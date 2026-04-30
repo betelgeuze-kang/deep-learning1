@@ -305,6 +305,8 @@ Current decision:
   static-routing promotion
 - treat fallback channel-adaptive strength as value-hint integration
   diagnostics, not as evidence for neighbor-replacement routing
+- treat low-nibble fallback strength grids as route-hint integration
+  calibration, not as static-routing promotion
 
 Allowed wording:
 
@@ -314,6 +316,7 @@ Allowed wording:
 - `oracle value-bearing route hint`
 - `fallback channel-strength diagnostics`
 - `fallback channel-adaptive diagnostics`
+- `low-nibble fallback strength calibration`
 
 Do not say:
 
