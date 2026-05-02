@@ -302,6 +302,9 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-source-credit-learning" ||
                    key == "route_source_credit_learning") {
             params.route_source_credit_learning = cli_to_int(value, key);
+        } else if (key == "route-source-credit-apply-mode" ||
+                   key == "route_source_credit_apply_mode") {
+            params.route_source_credit_apply_mode = value;
         } else if (key == "route-source-credit-score-weight" ||
                    key == "route_source_credit_score_weight") {
             params.route_source_credit_score_weight = cli_to_float(value, key);
@@ -482,6 +485,7 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-credit-decay <float>\n"
        << "  --route-credit-clip <float>\n"
        << "  --route-source-credit-learning <0|1>\n"
+       << "  --route-source-credit-apply-mode <off|ranking|strength|ranking-strength>\n"
        << "  --route-source-credit-score-weight <float>\n"
        << "  --route-source-credit-eta-reward <float>\n"
        << "  --route-source-credit-eta-slash <float>\n"

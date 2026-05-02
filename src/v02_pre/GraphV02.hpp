@@ -116,10 +116,15 @@ class GraphV02 {
     float route_credit_for_candidate(int query_index, int value_pos) const;
     float route_credit_weight_for_candidate(int query_index, int value_pos) const;
     float route_source_credit_for_candidate(int query_index, int value_pos) const;
+    float route_source_credit_for_source(int query_index, const std::string& source_id) const;
     float route_source_credit_weight_for_candidate(int query_index, int value_pos) const;
+    float route_source_credit_strength_scale_for_node(int index) const;
     bool route_credit_learn_active() const;
     bool route_credit_apply_active() const;
     bool route_source_credit_active() const;
+    bool route_source_credit_apply_active() const;
+    bool route_source_credit_ranking_apply_active() const;
+    bool route_source_credit_strength_apply_active() const;
     void apply_route_credit_learning();
     int wrong_route_value_position_for_node(int index) const;
     std::string joint_code_signature_for_key(const std::string& key) const;

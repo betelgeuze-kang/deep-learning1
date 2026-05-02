@@ -148,7 +148,7 @@ Current state:
 Recommended next stages:
 
 - stronger candidate ranking/confidence features before noisy learned routing
-- `v0.3-h5`: route plasticity
+- `v0.3-h5`: route plasticity / source-credit calibration
 
 The center of v0.3 is no longer whether to jump. The question is which value to
 bring into the local dynamics.
@@ -1867,3 +1867,70 @@ This is source/bucket responsibility instrumentation. qacc is neutral in the
 smoke, so it is not a fallback robustness or learned-routing claim. The next
 step is to calibrate whether source/bucket credit should influence fallback
 selection more strongly or combine with the persistent query/value ledger.
+
+## h5-c Source-credit Policy Calibration Decision
+
+`h5-c` passes as source-credit / persistent-ledger policy calibration
+instrumentation, but it does not solve fallback robustness, wrong-candidate
+robustness, or learned routing.
+
+The slice separates source-credit learning from how the learned
+source/bucket responsibility signal is applied:
+
+- `--route-source-credit-learning`
+- `--route-source-credit-score-weight`
+- `--route-source-credit-eta-reward`
+- `--route-source-credit-eta-slash`
+- `--route-plasticity-ledger`
+- `--route-credit-learning`
+- `--route-credit-mode query-value`
+- `--route-credit-learn-after-epoch`
+- `--route-credit-apply-after-epoch`
+
+The successful nonlocal path remains unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_ledger.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_ledger.sh
+./experiments/run_v05_route_source_credit_ledger.sh --full
+```
+
+Current narrow readout on remove-correct corruption:
+
+- source-off: qacc `0.000000`, source credit size `0.000000`, source gap
+  `0.000000`
+- learn-only: qacc `0.000000`, source credit size `73.000000`, source gap
+  `0.276563`, source apply active `0.000000`
+- ranking: qacc `0.000000`, source gap `0.276563`, source apply active
+  `1.000000`
+- ranking-strength: qacc `0.000000`, source gap `0.553125`, source apply
+  active `1.000000`
+- ledger-off: qacc `0.931250`, credit gap `1.500000`, ledger size `0.000000`
+- ledger-on: qacc `0.931250`, credit gap `1.500000`, ledger size `59.000000`,
+  ledger mean abs credit `0.711864`
+
+Guardrails:
+the smoke verifies `route_hint_candidate_lookup_count > 0`,
+`route_hint_value_read_distance_mean > 0`, `routing_trigger_rate = 0.000000`,
+and `active_jump_rate = 0.000000`. This keeps h5-c on the value-bearing
+route-hint path and does not revive neighbor replacement.
+
+Interpretation:
+source credit now has separate learn-only, ranking, strength, and persistent
+ledger policy controls. In the current smoke, the source-only rows are
+qacc-neutral while the ledger rows stay at `0.931250`; the knobs are wired and
+measurable, but this is still policy instrumentation, not a robustness
+solution. The next step is to test whether stronger source-credit policy
+application improves fallback choice or to introduce noisier learned candidate
+sources where source preference can matter more.

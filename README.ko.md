@@ -24,7 +24,7 @@
 - `v0.2-b`: block-local coupled proposal과 `B[x, high, low]` coupling을 포함합니다. 기본 weak-coupling path는 `counter`와 `repeating-text` 5-seed regression을 통과했습니다.
 - `v0.3 static routing`: `jump-neighbors`, confidence gate/acceptance, `state-code`, `input-byte` route source 계열은 diagnostic/default-off입니다. 현재 결론은 routing success가 아니라 **neighbor replacement no-go**입니다.
 - `v0.3 route-hint`: 살아남은 장거리 경로입니다. 핵심 경로는 `candidate value_pos -> value byte read -> proposal hint`입니다.
-- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했으며, h4-5w는 route-credit ablation diagnostics이고, h4-5x는 credit × fallback integration ablation이며, h4-5y는 credit strength/stability calibration이고, h5-a는 persistent route-plasticity ledger와 learn/apply warmup gate이며, h5-b는 source/bucket route-credit responsibility instrumentation입니다. 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
+- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했으며, h4-5w는 route-credit ablation diagnostics이고, h4-5x는 credit × fallback integration ablation이며, h4-5y는 credit strength/stability calibration이고, h5-a는 persistent route-plasticity ledger와 learn/apply warmup gate이며, h5-b는 source/bucket route-credit responsibility instrumentation이고, h5-c는 key-shape fallback `hi_mult=5` / `lo_mult=10` 주변의 source-credit policy calibration입니다. 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
 
 ## 중요한 아키텍처 결론
 
@@ -89,6 +89,7 @@ remove-correct:
 - h4-5y: credit strength/stability calibration을 추가했습니다. Smoke는 active `value-pos/query-value` credit의 score weight와 slash 강도, corruption rate를 대각선 셀로 점검하고 true `off` baseline을 포함합니다. Query-value credit은 preserve rows에서 강한 gap을 유지하고, remove rows는 fallback diagnostics를 채웁니다. 이는 calibration diagnostics / limited mitigation이지 robustness solved가 아닙니다.
 - h5-a: `--route-plasticity-ledger` persistent ledger와 `--route-credit-learn-after-epoch` / `--route-credit-apply-after-epoch` warmup gate를 추가했습니다. Smoke는 value-bearing path가 유지되는지, candidate lookup/read distance가 채워지는지, `routing_trigger_rate`와 `active_jump_rate`가 `0.000000`인지 확인합니다. 이는 route-plasticity instrumentation이지 learned routing solved나 wrong-candidate robustness solved가 아닙니다.
 - h5-b: `--route-source-credit-learning` source/bucket credit을 추가했습니다. Smoke는 remove-correct에서 fallback source가 primary보다 높은 책임 신호를 얻는지 확인합니다 (`source gap = 0.276563`, fallback mean `0.300000`, primary mean `0.023438`, primary slashed rate `0.281250`, fallback rewarded rate `1.000000`). qacc는 neutral이므로 source/bucket responsibility instrumentation이지 fallback robustness solved나 learned routing solved가 아닙니다.
+- h5-c: `--route-source-credit-learning`, `--route-source-credit-score-weight`, `--route-source-credit-eta-reward`, `--route-source-credit-eta-slash`, `--route-plasticity-ledger`를 더해 source-credit policy calibration을 추가했습니다. Smoke는 remove-correct corruption `0.25`와 key-shape fallback `hi_mult=5` / `lo_mult=10`을 고정한 채 learn-only, ranking, ranking+strength, ledger row를 분리합니다. Learn-only는 source gap `0.276563`을 만들지만 적용하지 않고, ranking-strength는 그 gap을 `0.553125`로 키우며, ledger row는 persistent state만 채워서 ledger size `59.000000`, mean abs credit `0.711864`를 보입니다. 이건 policy instrumentation이지 robustness solved가 아닙니다.
 
 ## 빌드
 
@@ -182,6 +183,8 @@ cmake --build build -j
 - `experiments/run_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_credit_calibration.sh`
 - `experiments/run_v05_route_credit_plasticity.sh`
+- `experiments/run_v05_route_source_credit.sh`
+- `experiments/run_v05_route_source_credit_ledger.sh`
 
 ## 대표 smoke test
 
@@ -208,6 +211,8 @@ cmake --build build -j
 - `experiments/test_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_credit_calibration.sh`
 - `experiments/test_v05_route_credit_plasticity.sh`
+- `experiments/test_v05_route_source_credit.sh`
+- `experiments/test_v05_route_source_credit_ledger.sh`
 
 ## 핵심 문서
 

@@ -120,6 +120,7 @@ struct V02PreParams {
     float route_credit_decay = 0.001f;
     float route_credit_clip = 4.0f;
     int route_source_credit_learning = 0;
+    std::string route_source_credit_apply_mode = "ranking";
     float route_source_credit_score_weight = 1.0f;
     float route_source_credit_eta_reward = 0.05f;
     float route_source_credit_eta_slash = 0.10f;

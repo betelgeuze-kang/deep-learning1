@@ -894,3 +894,31 @@ Expected:
   `routing_trigger_rate = 0.000000` and `active_jump_rate = 0.000000`. qacc is
   neutral in this smoke, so this is not fallback robustness solved and not
   learned routing solved.
+- h5-c source-credit policy smoke:
+
+```bash
+./experiments/test_v05_route_source_credit_ledger.sh
+```
+
+- h5-c standard source-credit policy run:
+
+```bash
+./experiments/run_v05_route_source_credit_ledger.sh
+./experiments/run_v05_route_source_credit_ledger.sh --full
+```
+
+- h5-c writes `results/v05_route_source_credit_ledger_summary.csv`
+- h5-c adds `--route-source-credit-learning`,
+  `--route-source-credit-score-weight`,
+  `--route-source-credit-eta-reward`,
+  `--route-source-credit-eta-slash`, and the persistent
+  `--route-plasticity-ledger` carry-forward cell. The smoke keeps remove-correct
+  corruption at `0.25` with key-shape fallback `hi_mult=5`, `lo_mult=10`.
+- h5-c smoke decision: `PASS` as source-credit policy calibration
+  instrumentation / neutral diagnostics. Learn-only creates a source gap
+  (`0.276563`) without applying it; source ranking keeps the same gap but
+  turns on `source_apply_active = 1.000000`; source ranking+strength doubles
+  the gap to `0.553125`; and the persistent-ledger row only changes persistent
+  state (`ledger_size = 0 -> 59`, `mean_abs_credit = 0.711864`) while qacc
+  stays `0.931250` on the ledger rows. This is policy calibration, not
+  robustness solved.

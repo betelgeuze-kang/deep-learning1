@@ -335,6 +335,9 @@ Current decision:
   instrumentation; it assigns responsibility to primary/fallback candidate
   sources and buckets, but it still does not promote static neighbor
   replacement
+- treat source-credit policy calibration as value-bearing route-hint memory
+  instrumentation; it changes whether source credit affects ranking and/or
+  fallback strength, but it still does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -354,6 +357,7 @@ Allowed wording:
 - `route-credit learn/apply warmup diagnostics`
 - `source/bucket route-credit instrumentation`
 - `source-level fallback responsibility diagnostics`
+- `source-credit policy calibration diagnostics`
 
 Do not say:
 
