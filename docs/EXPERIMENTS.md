@@ -782,3 +782,29 @@ Expected:
   fallback can move the fallback subset (`fallback-lo7p5-off` fallback_qacc
   `0.688889`, `fallback-lo10-on` fallback_qacc `0.777778`). This is not
   wrong-candidate robustness solved and not learned routing solved.
+- h4-5x credit × fallback factorial smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh
+```
+
+- h4-5x standard credit × fallback factorial run:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh --full
+```
+
+- h4-5x writes
+  `results/v03_route_hint_kv_hash_route_code_credit_fallback_factorial_summary.csv`
+- h4-5x crosses true `--route-credit-mode off`, `value-pos`, and
+  `query-value` with key-shape fallback `hi_mult=5`, low-channel multipliers
+  `7.5/10/15`, and both preserve-correct and remove-correct corruption rows
+- h4-5x smoke decision: `PASS` as credit × fallback integration diagnostics /
+  limited mitigation. Preserve-correct qacc stays neutral (`0.862500`) while
+  credit separates candidates (`value-pos gap 0.463636`, `query-value gap
+  0.750000`). In remove-correct rows, credit lifts qacc from `0.912500` to
+  `0.925000` at `lo=7.5/10` and fallback_qacc from `0.688889` to `0.733334`;
+  `lo=15` remains weaker (`off qacc 0.906250`, credit-on qacc 0.918750,
+  fallback_qacc 0.711111). This is not wrong-candidate robustness solved and
+  not learned routing solved.

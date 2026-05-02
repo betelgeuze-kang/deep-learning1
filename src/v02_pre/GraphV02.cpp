@@ -507,10 +507,11 @@ void GraphV02::validate_params() const {
     if (params_.route_credit_learning < 0 || params_.route_credit_learning > 1) {
         throw std::runtime_error("route-credit-learning must be 0 or 1");
     }
-    if (params_.route_credit_mode != "value-pos" &&
+    if (params_.route_credit_mode != "off" &&
+        params_.route_credit_mode != "value-pos" &&
         params_.route_credit_mode != "query-value") {
         throw std::runtime_error(
-            "route-credit-mode must be one of: value-pos, query-value");
+            "route-credit-mode must be one of: off, value-pos, query-value");
     }
     if (params_.route_credit_score_weight < 0.0f) {
         throw std::runtime_error("route-credit-score-weight must be non-negative");
@@ -1641,6 +1642,9 @@ float GraphV02::route_credit_for_candidate(int query_index, int value_pos) const
     if (value_pos < 0 || value_pos >= params_.N) {
         return 0.0f;
     }
+    if (params_.route_credit_mode == "off") {
+        return 0.0f;
+    }
     if (params_.route_credit_mode == "query-value") {
         const auto found =
             route_credit_by_query_value_.find(route_credit_edge_key(query_index, value_pos));
@@ -1654,6 +1658,7 @@ float GraphV02::route_credit_for_candidate(int query_index, int value_pos) const
 
 float GraphV02::route_credit_weight_for_candidate(int query_index, int value_pos) const {
     if (params_.route_credit_learning == 0 ||
+        params_.route_credit_mode == "off" ||
         params_.route_credit_score_weight <= 0.0f) {
         return 1.0f;
     }
@@ -1664,6 +1669,9 @@ float GraphV02::route_credit_weight_for_candidate(int query_index, int value_pos
 }
 
 void GraphV02::apply_route_credit_learning() {
+    if (params_.route_credit_mode == "off") {
+        return;
+    }
     const float decay_scale = 1.0f - params_.route_credit_decay;
     if (params_.route_credit_mode == "query-value") {
         for (auto& entry : route_credit_by_query_value_) {

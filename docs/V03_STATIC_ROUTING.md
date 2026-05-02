@@ -322,6 +322,9 @@ Current decision:
 - `query-value` route credit is still edge-credit instrumentation on the
   value-bearing route-hint path; do not reinterpret it as static routing
   success
+- treat credit × fallback integration factorials as value-bearing route-hint
+  memory diagnostics; they combine candidate/edge credit with fallback
+  low-channel strength but still do not revive neighbor replacement
 
 Allowed wording:
 
@@ -335,6 +338,7 @@ Allowed wording:
 - `fallback persistence diagnostics`
 - `route-credit separation diagnostics`
 - `route-credit ablation diagnostics`
+- `credit × fallback integration diagnostics`
 
 Do not say:
 

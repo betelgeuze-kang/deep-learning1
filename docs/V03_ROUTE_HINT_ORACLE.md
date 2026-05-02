@@ -1682,3 +1682,45 @@ Interpretation:
 
 This is still not wrong-candidate robustness solved and not learned routing
 solved. Treat it as ablation diagnostics plus limited mitigation.
+
+## h4-5x Credit × Fallback Integration Factorial Decision
+
+`v0.3-h4-5x` passes as credit × fallback integration diagnostics and limited
+mitigation, but it does not solve wrong-candidate robustness or learned
+routing.
+
+The factorial smoke reuses the key-shape fallback sweet spot at `hi_mult=5`
+and `lo_mult=7.5/10/15`, then compares true `off`, `value-pos`, and
+`query-value` route credit on both preserve-correct and remove-correct rows.
+The C++ core now accepts `--route-credit-mode off` as a real no-credit control.
+
+Key smoke readouts:
+
+- preserve-correct rows remain neutral in qacc (`0.862500`) while credit
+  separates candidates (`value-pos gap = 0.463636`, `query-value gap =
+  0.750000`)
+- remove-correct `lo=7.5`: `off qacc = 0.912500`, credit-on qacc =
+  `0.925000`
+- remove-correct `lo=10`: `off qacc = 0.912500`, credit-on qacc =
+  `0.925000`
+- remove-correct `lo=15`: `off qacc = 0.906250`, credit-on qacc =
+  `0.918750`
+- remove-correct fallback_qacc improves from `0.688889` off to `0.733334`
+  with credit at `lo=7.5/10`, but falls to `0.711111` at `lo=15`
+
+Interpretation:
+route credit provides a candidate-quality separation signal, and it gives a
+small qacc/fallback_qacc lift when combined with key-shape fallback low-channel
+integration. The effect is still narrow and non-final: `lo=15` remains weaker
+than the `7.5/10` region, and this is still symbolic fallback instrumentation.
+
+Smoke command:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh
+```
+
+Next:
+run score/slash calibration around the `lo=7.5..10` region before promoting
+route credit toward a persistent h5 route-plasticity mechanism.

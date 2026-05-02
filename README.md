@@ -8,7 +8,7 @@ Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, and h4-5w is the route-credit ablation diagnostics sweep. Treat them as diagnostics / limited mitigation, not robustness solved.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, and h4-5x is the credit × fallback integration ablation. Treat them as diagnostics / limited mitigation, not robustness solved.
 
 Current status:
 
@@ -79,6 +79,13 @@ Current status:
   low-channel fallback can move the fallback subset (`fallback_qacc 0.688889 ->
   0.777778` in the smoke). Treat this as ablation instrumentation / limited
   mitigation only, not robustness solved
+- h4-5x adds the credit × fallback integration factorial: true
+  `--route-credit-mode off`, `value-pos`, and `query-value` crossed with
+  key-shape fallback `hi_mult=5`, `lo_mult=7.5/10/15`, and preserve/remove
+  corruption. Smoke shows credit separates candidates while preserve-correct
+  qacc stays neutral, and remove-correct qacc moves from `0.912500` to
+  `0.925000` at `lo=7.5/10`. This is integration diagnostics / limited
+  mitigation only.
 
 ## Build
 
@@ -184,6 +191,7 @@ Experiment helpers:
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_route_credit.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -204,6 +212,7 @@ Experiment helpers:
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_low_grid.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_route_credit.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh`
 
 Key docs:
 
