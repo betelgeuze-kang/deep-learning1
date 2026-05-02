@@ -8,7 +8,7 @@ Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, and h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`. Treat them as diagnostics / limited mitigation, not robustness solved.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, and h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress. Treat them as diagnostics / limited mitigation, not robustness solved.
 
 Current status:
 
@@ -117,6 +117,16 @@ Current status:
   source weighting) and the ledger row only changes persistent state (`ledger
   size 0 -> 59`, `mean_abs_credit = 0.711864`) while qacc stays `0.931250` on
   the ledger rows. This is policy instrumentation, not robustness solved.
+- h5-d adds noisy / learned-like source policy diagnostics on remove-correct
+  corruption `0.25`. The smoke has two controlled branches: weak
+  `joint-code-key` primary with `key-shape` fallback, and explicit
+  `noisy-route-code` fallback/source stress with `--route-noisy-source-rate
+  1.0`. It keeps `route_hint_candidate_lookup_count` and
+  `route_hint_value_read_distance_mean` populated, leaves
+  `routing_trigger_rate` / `active_jump_rate` at `0.000000`, gives positive
+  source gap for useful key-shape fallback, and gives negative noisy-source
+  credit/slash diagnostics for bad noisy candidates. This is source-quality
+  separation instrumentation, not robustness solved.
 
 ## Build
 
@@ -226,7 +236,8 @@ Experiment helpers:
 - `experiments/run_v03_route_hint_kv_hash_route_code_credit_calibration.sh`
 - `experiments/run_v05_route_credit_plasticity.sh`
 - `experiments/run_v05_route_source_credit.sh`
-- `experiments/run_v05_route_source_credit_ledger.sh`
+- `experiments/run_v05_route_source_credit_policy.sh`
+- `experiments/run_v05_route_source_credit_noisy_source.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -251,7 +262,8 @@ Experiment helpers:
 - `experiments/test_v03_route_hint_kv_hash_route_code_credit_calibration.sh`
 - `experiments/test_v05_route_credit_plasticity.sh`
 - `experiments/test_v05_route_source_credit.sh`
-- `experiments/test_v05_route_source_credit_ledger.sh`
+- `experiments/test_v05_route_source_credit_policy.sh`
+- `experiments/test_v05_route_source_credit_noisy_source.sh`
 
 Key docs:
 

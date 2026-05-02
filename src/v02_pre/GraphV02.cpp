@@ -249,6 +249,7 @@ void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
     apply_route_candidate_corruption();
     refresh_route_hint_candidate_sources();
     apply_route_fallback_source(window);
+    apply_route_noisy_source(window);
     if (params_.route_fallback_persist_cycles > 0) {
         for (int index = 0; index < params_.N; ++index) {
             if (route_hint_fallback_used_[static_cast<std::size_t>(index)]) {
@@ -423,6 +424,10 @@ void GraphV02::validate_params() const {
         params_.route_corrupt_candidate_rate > 1.0f) {
         throw std::runtime_error("route-corrupt-candidate-rate must be in [0, 1]");
     }
+    if (params_.route_noisy_source_rate < 0.0f ||
+        params_.route_noisy_source_rate > 1.0f) {
+        throw std::runtime_error("route-noisy-source-rate must be in [0, 1]");
+    }
     if (params_.route_corrupt_confidence != "keep" &&
         params_.route_corrupt_confidence != "low") {
         throw std::runtime_error("route-corrupt-confidence must be one of: keep, low");
@@ -468,9 +473,11 @@ void GraphV02::validate_params() const {
     }
     if (params_.route_fallback_source != "off" &&
         params_.route_fallback_source != "raw-key" &&
-        params_.route_fallback_source != "key-shape") {
+        params_.route_fallback_source != "key-shape" &&
+        params_.route_fallback_source != "joint-code-key" &&
+        params_.route_fallback_source != "noisy-route-code") {
         throw std::runtime_error(
-            "route-fallback-source must be one of: off, raw-key, key-shape");
+            "route-fallback-source must be one of: off, raw-key, key-shape, joint-code-key, noisy-route-code");
     }
     if (params_.route_fallback_strength_mode != "fixed" &&
         params_.route_fallback_strength_mode != "margin") {
@@ -1603,6 +1610,24 @@ bool GraphV02::should_corrupt_route_candidate(int index) const {
     return sample < static_cast<double>(params_.route_corrupt_candidate_rate);
 }
 
+bool GraphV02::should_inject_noisy_route_source(int index) const {
+    if (params_.route_noisy_source_rate <= 0.0f) {
+        return false;
+    }
+    if (params_.route_noisy_source_rate >= 1.0f) {
+        return true;
+    }
+    std::uint32_t hash = 2166136261u;
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>(index & 0xff));
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>((index >> 8) & 0xff));
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>(params_.seed & 0xff));
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>((params_.seed >> 8) & 0xff));
+    hash = fnv1a_update(hash, 0x9du);
+    const double sample =
+        static_cast<double>(hash % 1000000u) / 1000000.0;
+    return sample < static_cast<double>(params_.route_noisy_source_rate);
+}
+
 int GraphV02::wrong_route_value_position_for_node(int index) const {
     const int correct =
         route_hint_correct_value_positions_[static_cast<std::size_t>(index)];
@@ -1738,6 +1763,10 @@ std::string GraphV02::fallback_route_source_id() const {
     return "fallback-" + params_.route_fallback_source;
 }
 
+std::string GraphV02::noisy_route_source_id() const {
+    return "noisy-route-code";
+}
+
 std::string GraphV02::route_source_credit_bucket_for_query(
     int query_index,
     const std::string& source_id) const {
@@ -1764,10 +1793,29 @@ std::string GraphV02::route_source_credit_bucket_for_query(
                "|bucket:" + std::to_string(bucket);
     }
 
+    if (source_id == noisy_route_source_id()) {
+        return "noisy-source:route-code-key|bits:" +
+               std::to_string(params_.route_hash_bits) +
+               "|bucket:" + std::to_string(route_code_hash_for_key(query_key));
+    }
+
     if (params_.route_fallback_source == "key-shape") {
         return "fallback-source:key-shape|len:" +
                std::to_string(query_key.size()) +
                "|digits:" + std::to_string(digit_count(query_key));
+    }
+    if (params_.route_fallback_source == "joint-code-key") {
+        return "fallback-source:joint-code-key|bits:" +
+               std::to_string(params_.route_hash_bits) +
+               "|bucket:" +
+               std::to_string(joint_code_hash_for_key(query_key));
+    }
+    if (params_.route_fallback_source == "noisy-route-code") {
+        return "fallback-source:noisy-route-code|bits:" +
+               std::to_string(params_.route_hash_bits) +
+               "|bucket:" +
+               std::to_string(route_code_hash_for_key(query_key)) +
+               "|rate:" + std::to_string(params_.route_noisy_source_rate);
     }
     if (params_.route_fallback_source == "raw-key") {
         return "fallback-source:raw-key|bits:" +
@@ -1999,6 +2047,27 @@ void GraphV02::apply_route_credit_learning() {
                                            : -params_.route_source_credit_eta_slash);
                 }
             }
+
+            const auto& candidates =
+                route_hint_candidate_value_positions_[static_cast<std::size_t>(index)];
+            const auto& candidate_sources =
+                route_hint_candidate_source_ids_[static_cast<std::size_t>(index)];
+            for (std::size_t rank = 0; rank < candidates.size(); ++rank) {
+                if (rank >= candidate_sources.size() ||
+                    candidate_sources[rank] != noisy_route_source_id()) {
+                    continue;
+                }
+                const int value_pos = candidates[rank];
+                if (value_pos < 0 || value_pos >= params_.N) {
+                    continue;
+                }
+                const auto value =
+                    nodes_[static_cast<std::size_t>(value_pos)].input_byte;
+                update_source_credit(
+                    noisy_route_source_id(),
+                    value == target_value ? params_.route_source_credit_eta_reward
+                                          : -params_.route_source_credit_eta_slash);
+            }
         }
 
         if (!route_credit_learn_active()) {
@@ -2063,6 +2132,33 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
             raw_candidates_by_query[hint.query_pos] = hint.candidate_value_positions;
         }
     }
+    std::unordered_map<std::uint32_t, std::vector<const ByteDataset::KVRecord*>>
+        joint_records_by_bucket;
+    if (params_.route_fallback_source == "joint-code-key") {
+        for (const auto& record : window.kv_records) {
+            if (record.marker_pos < 0 || record.value_pos < 0) {
+                continue;
+            }
+            joint_records_by_bucket[joint_code_hash_for_key(record.key)].push_back(&record);
+        }
+    }
+    const auto noisy_source_uses_wrong = [this](int query_pos) {
+        if (params_.route_noisy_source_rate <= 0.0f) {
+            return false;
+        }
+        if (params_.route_noisy_source_rate >= 1.0f) {
+            return true;
+        }
+        std::uint32_t hash = 2166136261u;
+        hash = fnv1a_update(hash, static_cast<std::uint8_t>(query_pos & 0xff));
+        hash = fnv1a_update(hash, static_cast<std::uint8_t>((query_pos >> 8) & 0xff));
+        hash = fnv1a_update(hash, static_cast<std::uint8_t>(params_.seed & 0xff));
+        hash = fnv1a_update(hash, static_cast<std::uint8_t>((params_.seed >> 8) & 0xff));
+        hash = fnv1a_update(hash, 0x9du);
+        const double sample =
+            static_cast<double>(hash % 1000000u) / 1000000.0;
+        return sample < static_cast<double>(params_.route_noisy_source_rate);
+    };
 
     for (const auto& query : window.kv_queries) {
         if (query.query_pos < 0 || query.query_pos >= params_.N) {
@@ -2108,6 +2204,59 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
             for (int rank = 0; rank < limit; ++rank) {
                 fallback_positions.push_back(
                     scored_records[static_cast<std::size_t>(rank)]->value_pos);
+            }
+        } else if (params_.route_fallback_source == "joint-code-key") {
+            const auto bucket_found =
+                joint_records_by_bucket.find(joint_code_hash_for_key(query.key));
+            if (bucket_found != joint_records_by_bucket.end()) {
+                std::vector<const ByteDataset::KVRecord*> joint_records;
+                for (const auto* record : bucket_found->second) {
+                    if (record->marker_pos >= 0 && record->marker_pos < query.query_pos) {
+                        joint_records.push_back(record);
+                    }
+                }
+                std::stable_sort(
+                    joint_records.begin(),
+                    joint_records.end(),
+                    [](const ByteDataset::KVRecord* lhs,
+                       const ByteDataset::KVRecord* rhs) {
+                        return lhs->marker_pos > rhs->marker_pos;
+                    });
+                const int limit =
+                    std::min(params_.K_route, static_cast<int>(joint_records.size()));
+                for (int rank = 0; rank < limit; ++rank) {
+                    fallback_positions.push_back(
+                        joint_records[static_cast<std::size_t>(rank)]->value_pos);
+                }
+            }
+        } else if (params_.route_fallback_source == "noisy-route-code") {
+            if (!noisy_source_uses_wrong(query.query_pos) && query.hit &&
+                query.value_pos >= 0) {
+                fallback_positions.push_back(query.value_pos);
+            } else {
+                std::vector<const ByteDataset::KVRecord*> wrong_records;
+                for (const auto& record : window.kv_records) {
+                    if (record.marker_pos < 0 || record.value_pos < 0 ||
+                        record.marker_pos >= query.query_pos ||
+                        (query.hit && record.value_pos == query.value_pos)) {
+                        continue;
+                    }
+                    wrong_records.push_back(&record);
+                }
+                if (!wrong_records.empty()) {
+                    const std::size_t start =
+                        (static_cast<std::size_t>(query.query_pos) +
+                         static_cast<std::size_t>(params_.seed)) %
+                        wrong_records.size();
+                    const int limit =
+                        std::min(params_.K_route, static_cast<int>(wrong_records.size()));
+                    for (int offset = 0; offset < limit; ++offset) {
+                        fallback_positions.push_back(
+                            wrong_records[(start + static_cast<std::size_t>(offset)) %
+                                          wrong_records.size()]
+                                ->value_pos);
+                    }
+                }
             }
         }
 
@@ -2160,6 +2309,77 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
         route_hint_fallback_used_[query_index] = true;
         route_hint_fallback_recovered_[query_index] =
             candidate_positions_contain_correct(query.query_pos);
+    }
+}
+
+void GraphV02::apply_route_noisy_source(const ByteDataset::Window& window) {
+    if (!route_hint_active() || params_.route_noisy_source_rate <= 0.0f) {
+        return;
+    }
+
+    std::unordered_map<std::uint32_t, std::vector<const ByteDataset::KVRecord*>> buckets;
+    for (const auto& record : window.kv_records) {
+        if (record.marker_pos < 0 || record.value_pos < 0) {
+            continue;
+        }
+        buckets[route_code_hash_for_key(record.key)].push_back(&record);
+    }
+
+    for (const auto& query : window.kv_queries) {
+        if (query.query_pos < 0 || query.query_pos >= params_.N ||
+            !should_inject_noisy_route_source(query.query_pos)) {
+            continue;
+        }
+
+        const auto query_index = static_cast<std::size_t>(query.query_pos);
+        auto& candidates = route_hint_candidate_value_positions_[query_index];
+        auto& candidate_keys = route_hint_candidate_keys_[query_index];
+        auto& candidate_sources = route_hint_candidate_source_ids_[query_index];
+        if (candidate_sources.size() != candidates.size()) {
+            candidate_sources.assign(candidates.size(), primary_route_source_id());
+        }
+
+        int noisy_pos = -1;
+        const auto bucket_found = buckets.find(route_code_hash_for_key(query.key));
+        if (bucket_found != buckets.end()) {
+            std::vector<const ByteDataset::KVRecord*> records;
+            for (const auto* record : bucket_found->second) {
+                if (record->marker_pos < query.query_pos &&
+                    record->value_pos != query.value_pos &&
+                    std::find(candidates.begin(), candidates.end(), record->value_pos) ==
+                        candidates.end()) {
+                    records.push_back(record);
+                }
+            }
+            std::stable_sort(
+                records.begin(),
+                records.end(),
+                [](const ByteDataset::KVRecord* lhs, const ByteDataset::KVRecord* rhs) {
+                    return lhs->marker_pos > rhs->marker_pos;
+                });
+            if (!records.empty()) {
+                noisy_pos = records.front()->value_pos;
+            }
+        }
+        if (noisy_pos < 0) {
+            noisy_pos = wrong_route_value_position_for_node(query.query_pos);
+        }
+        if (noisy_pos < 0 || noisy_pos >= params_.N ||
+            std::find(candidates.begin(), candidates.end(), noisy_pos) !=
+                candidates.end()) {
+            continue;
+        }
+
+        candidates.push_back(noisy_pos);
+        candidate_keys.push_back(route_value_position_keys_[static_cast<std::size_t>(noisy_pos)]);
+        candidate_sources.push_back(noisy_route_source_id());
+
+        if (route_hint_weights_[query_index] <= 0.0f) {
+            route_hint_value_positions_[query_index] = noisy_pos;
+            route_hint_values_[query_index] =
+                nodes_[static_cast<std::size_t>(noisy_pos)].input_byte;
+            route_hint_weights_[query_index] = 1.0f;
+        }
     }
 }
 
@@ -3129,15 +3349,21 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_source_credit_primary_count = 0.0;
     double route_source_credit_fallback_sum = 0.0;
     double route_source_credit_fallback_count = 0.0;
+    double route_source_credit_noisy_sum = 0.0;
+    double route_source_credit_noisy_count = 0.0;
     double route_source_credit_primary_slashed_count = 0.0;
     double route_source_credit_primary_candidate_count = 0.0;
     double route_source_credit_fallback_rewarded_count = 0.0;
     double route_source_credit_fallback_candidate_count = 0.0;
+    double route_source_credit_noisy_slashed_count = 0.0;
+    double route_source_credit_noisy_candidate_count = 0.0;
     double route_source_credit_ranking_query_count = 0.0;
     double route_source_credit_override_count = 0.0;
     double route_source_credit_selected_fallback_count = 0.0;
     double route_source_credit_strength_sum = 0.0;
     double route_source_credit_strength_count = 0.0;
+    double route_noisy_source_used_count = 0.0;
+    double route_noisy_source_selected_count = 0.0;
     double route_abstain_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_value_read_distance_sum = 0.0;
@@ -3332,6 +3558,19 @@ EpochMetricsV02 GraphV02::collect_metrics(
             const bool fallback_recovered =
                 !route_hint_fallback_recovered_.empty() &&
                 route_hint_fallback_recovered_[static_cast<std::size_t>(i)];
+            const auto& candidate_sources =
+                route_hint_candidate_source_ids_[static_cast<std::size_t>(i)];
+            const bool noisy_source_used =
+                std::find(candidate_sources.begin(),
+                          candidate_sources.end(),
+                          noisy_route_source_id()) != candidate_sources.end();
+            if (noisy_source_used) {
+                route_noisy_source_used_count += 1.0;
+            }
+            if (route_source_id_for_candidate(i, route_hint_value_pos) ==
+                noisy_route_source_id()) {
+                route_noisy_source_selected_count += 1.0;
+            }
             if (route_source_credit_apply_active()) {
                 const float source_strength_scale =
                     route_source_credit_strength_scale_for_node(i);
@@ -3944,6 +4183,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
             route_primary_lowconf_count / route_hint_query_count;
         metrics.route_fallback_used_rate =
             route_fallback_used_count / route_hint_query_count;
+        metrics.route_noisy_source_used_rate =
+            route_noisy_source_used_count / route_hint_query_count;
+        metrics.route_noisy_source_selected_rate =
+            route_noisy_source_selected_count / route_hint_query_count;
         metrics.route_abstain_rate = route_abstain_count / route_hint_query_count;
         if (route_fallback_used_count > 0.0) {
             metrics.route_fallback_recall =
@@ -4009,6 +4252,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 entry.first.find("|source:primary-") != std::string::npos;
             const bool is_fallback =
                 entry.first.find("|source:fallback-") != std::string::npos;
+            const bool is_noisy =
+                entry.first.find("|source:noisy-route-code") != std::string::npos;
             if (is_primary) {
                 route_source_credit_primary_sum += static_cast<double>(entry.second);
                 route_source_credit_primary_count += 1.0;
@@ -4022,6 +4267,13 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_source_credit_fallback_candidate_count += 1.0;
                 if (entry.second > 0.0f) {
                     route_source_credit_fallback_rewarded_count += 1.0;
+                }
+            } else if (is_noisy) {
+                route_source_credit_noisy_sum += static_cast<double>(entry.second);
+                route_source_credit_noisy_count += 1.0;
+                route_source_credit_noisy_candidate_count += 1.0;
+                if (entry.second < 0.0f) {
+                    route_source_credit_noisy_slashed_count += 1.0;
                 }
             }
         }
@@ -4049,6 +4301,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
             metrics.route_source_credit_fallback_mean =
                 route_source_credit_fallback_sum / route_source_credit_fallback_count;
         }
+        if (route_source_credit_noisy_count > 0.0) {
+            metrics.route_source_credit_noisy_mean =
+                route_source_credit_noisy_sum / route_source_credit_noisy_count;
+        }
         metrics.route_source_credit_gap =
             metrics.route_source_credit_fallback_mean -
             metrics.route_source_credit_primary_mean;
@@ -4061,6 +4317,11 @@ EpochMetricsV02 GraphV02::collect_metrics(
             metrics.route_source_credit_fallback_rewarded_rate =
                 route_source_credit_fallback_rewarded_count /
                 route_source_credit_fallback_candidate_count;
+        }
+        if (route_source_credit_noisy_candidate_count > 0.0) {
+            metrics.route_source_credit_noisy_slashed_rate =
+                route_source_credit_noisy_slashed_count /
+                route_source_credit_noisy_candidate_count;
         }
         if (params_.route_plasticity_ledger != 0) {
             metrics.route_plasticity_ledger_size =

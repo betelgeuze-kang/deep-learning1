@@ -204,6 +204,9 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-corrupt-candidate-rate" ||
                    key == "route_corrupt_candidate_rate") {
             params.route_corrupt_candidate_rate = cli_to_float(value, key);
+        } else if (key == "route-noisy-source-rate" ||
+                   key == "route_noisy_source_rate") {
+            params.route_noisy_source_rate = cli_to_float(value, key);
         } else if (key == "route-corrupt-confidence" ||
                    key == "route_corrupt_confidence") {
             params.route_corrupt_confidence = value;
@@ -461,7 +464,8 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-lowconf-agg <top1|vote|weighted-vote>\n"
        << "  --route-highconf-agg <top1|vote|weighted-vote>\n"
        << "  --route-aggregation-confidence <value-support|agreement>\n"
-       << "  --route-fallback-source <off|raw-key|key-shape>\n"
+       << "  --route-fallback-source <off|raw-key|key-shape|joint-code-key|noisy-route-code>\n"
+       << "  --route-noisy-source-rate <float>\n"
        << "  --route-fallback-strength-mode <fixed|margin>\n"
        << "  --route-fallback-strength-mult <float>\n"
        << "  --route-fallback-hi-strength-mult <float>\n"

@@ -1896,14 +1896,14 @@ candidate value_pos -> value byte read -> proposal hint
 Smoke command:
 
 ```bash
-./experiments/test_v05_route_source_credit_ledger.sh
+./experiments/test_v05_route_source_credit_policy.sh
 ```
 
 Standard run:
 
 ```bash
-./experiments/run_v05_route_source_credit_ledger.sh
-./experiments/run_v05_route_source_credit_ledger.sh --full
+./experiments/run_v05_route_source_credit_policy.sh
+./experiments/run_v05_route_source_credit_policy.sh --full
 ```
 
 Current narrow readout on remove-correct corruption:
@@ -1934,3 +1934,60 @@ measurable, but this is still policy instrumentation, not a robustness
 solution. The next step is to test whether stronger source-credit policy
 application improves fallback choice or to introduce noisier learned candidate
 sources where source preference can matter more.
+
+## h5-d Noisy / Learned-like Source Policy Diagnostics Decision
+
+`h5-d` passes as noisy / learned-like source policy diagnostics and
+source-quality separation instrumentation, but it does not solve fallback
+robustness, wrong-candidate robustness, or learned routing.
+
+The slice keeps the successful path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+New knobs and branches:
+
+- `--route-hash-source joint-code-key`
+- `--route-fallback-source key-shape`
+- `--route-fallback-source noisy-route-code`
+- `--route-noisy-source-rate`
+- `--route-source-credit-learning`
+- `--route-source-credit-apply-mode off|ranking|ranking-strength`
+- `--route-plasticity-ledger`
+- `--route-corrupt-candidate-rate 0.25`
+- `--route-corrupt-preserve-correct 0`
+
+Interpretation:
+the smoke has two controlled source-quality branches. The weak learned-like
+branch uses `joint-code-key` as primary and symbolic `key-shape` as fallback;
+it should learn a positive source gap for the useful fallback source. The bad
+source branch uses `route-code-key` primary plus `noisy-route-code` fallback
+and `--route-noisy-source-rate 1.0`; it should learn a negative source gap and
+populate the noisy-source credit/slash diagnostics. Both branches remain
+diagnostic fixtures and keep key-shape as a symbolic upper-bound fallback, not
+a learned routing claim.
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_noisy_source.sh
+```
+
+Current narrow readout:
+
+- joint-source off stays neutral
+- joint-source learn-only accumulates fallback source credit without applying it
+- joint-source ranking selects the key-shape fallback more often, and
+  ranking-strength adds source weighting
+- noisy-source learn-only/ranking rows learn a negative source gap for bad
+  noisy candidates
+- noisy-source rows expose `route_source_credit_noisy_mean < 0` and nonzero
+  `route_source_credit_noisy_slashed_rate`
+- ledger-on rows add persistent state only
+- all rows keep `route_hint_candidate_lookup_count > 0`,
+  `route_hint_value_read_distance_mean > 0`, `routing_trigger_rate = 0.000000`,
+  and `active_jump_rate = 0.000000`
+
+This is source-quality instrumentation, not a robustness claim.

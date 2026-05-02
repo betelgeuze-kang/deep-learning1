@@ -338,6 +338,10 @@ Current decision:
 - treat source-credit policy calibration as value-bearing route-hint memory
   instrumentation; it changes whether source credit affects ranking and/or
   fallback strength, but it still does not promote static neighbor replacement
+- treat noisy / learned-like source policy diagnostics as value-bearing
+  route-hint memory instrumentation; they compare weak/noisy candidate sources
+  through source credit while preserving `value_pos -> value byte -> proposal
+  hint`, and they still do not promote static neighbor replacement
 
 Allowed wording:
 
@@ -358,6 +362,8 @@ Allowed wording:
 - `source/bucket route-credit instrumentation`
 - `source-level fallback responsibility diagnostics`
 - `source-credit policy calibration diagnostics`
+- `noisy-source policy diagnostics`
+- `source-quality separation instrumentation`
 
 Do not say:
 
@@ -367,3 +373,4 @@ Do not say:
 - `routing plasticity works`
 - `route plasticity solved`
 - `source credit solves routing`
+- `noisy source credit solves robustness`

@@ -86,6 +86,7 @@ struct V02PreParams {
     float route_confidence_power = 1.0f;
     float route_min_confidence = 0.0f;
     float route_corrupt_candidate_rate = 0.0f;
+    float route_noisy_source_rate = 0.0f;
     std::string route_corrupt_confidence = "keep";
     float route_corrupt_confidence_value = 0.1f;
     int route_corrupt_preserve_correct = 0;

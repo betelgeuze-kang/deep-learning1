@@ -98,16 +98,19 @@ class GraphV02 {
     void refresh_route_strength_cache();
     void apply_route_candidate_corruption();
     void apply_route_fallback_source(const ByteDataset::Window& window);
+    void apply_route_noisy_source(const ByteDataset::Window& window);
     void refresh_route_hint_candidate_keys();
     void refresh_route_hint_candidate_sources();
     bool candidate_positions_contain_correct(int index) const;
     bool should_corrupt_route_candidate(int index) const;
+    bool should_inject_noisy_route_source(int index) const;
     bool route_fallback_persistence_active(int index) const;
     std::string route_credit_query_signature(int query_index) const;
     std::string route_credit_edge_key(int query_index, int value_pos) const;
     std::string route_plasticity_ledger_key(int query_index, int value_pos) const;
     std::string primary_route_source_id() const;
     std::string fallback_route_source_id() const;
+    std::string noisy_route_source_id() const;
     std::string route_source_credit_bucket_for_query(
         int query_index,
         const std::string& source_id) const;

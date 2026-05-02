@@ -897,17 +897,17 @@ Expected:
 - h5-c source-credit policy smoke:
 
 ```bash
-./experiments/test_v05_route_source_credit_ledger.sh
+./experiments/test_v05_route_source_credit_policy.sh
 ```
 
 - h5-c standard source-credit policy run:
 
 ```bash
-./experiments/run_v05_route_source_credit_ledger.sh
-./experiments/run_v05_route_source_credit_ledger.sh --full
+./experiments/run_v05_route_source_credit_policy.sh
+./experiments/run_v05_route_source_credit_policy.sh --full
 ```
 
-- h5-c writes `results/v05_route_source_credit_ledger_summary.csv`
+- h5-c writes `results/v05_route_source_credit_policy_summary.csv`
 - h5-c adds `--route-source-credit-learning`,
   `--route-source-credit-score-weight`,
   `--route-source-credit-eta-reward`,
@@ -922,3 +922,29 @@ Expected:
   state (`ledger_size = 0 -> 59`, `mean_abs_credit = 0.711864`) while qacc
   stays `0.931250` on the ledger rows. This is policy calibration, not
   robustness solved.
+- h5-d noisy-source policy smoke:
+
+```bash
+./experiments/test_v05_route_source_credit_noisy_source.sh
+```
+
+- h5-d standard noisy-source policy run:
+
+```bash
+./experiments/run_v05_route_source_credit_noisy_source.sh
+./experiments/run_v05_route_source_credit_noisy_source.sh --full
+```
+
+- h5-d writes `results/v05_route_source_credit_noisy_source_summary.csv`
+- h5-d keeps remove-correct corruption at `0.25` and probes two source-quality
+  branches: weak `joint-code-key` primary with symbolic `key-shape` fallback,
+  and explicit `noisy-route-code` fallback/source stress with
+  `--route-noisy-source-rate 1.0`.
+- h5-d smoke decision: `PASS` as noisy / learned-like source policy
+  diagnostics. The smoke keeps `route_hint_candidate_lookup_count > 0`,
+  `route_hint_value_read_distance_mean > 0`, `routing_trigger_rate = 0.000000`,
+  and `active_jump_rate = 0.000000`. The weak joint branch learns a positive
+  source gap for useful key-shape fallback, while the explicit noisy branch
+  learns a negative source gap and populates
+  `route_source_credit_noisy_mean < 0` plus nonzero noisy slash diagnostics.
+  This is source-quality separation instrumentation, not robustness solved.
