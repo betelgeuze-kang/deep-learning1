@@ -948,3 +948,30 @@ Expected:
   learns a negative source gap and populates
   `route_source_credit_noisy_mean < 0` plus nonzero noisy slash diagnostics.
   This is source-quality separation instrumentation, not robustness solved.
+- h5-e noisy-source scale smoke:
+
+```bash
+./experiments/test_v05_route_source_credit_noisy_scale.sh
+```
+
+- h5-e standard noisy-source scale run:
+
+```bash
+./experiments/run_v05_route_source_credit_noisy_scale.sh
+./experiments/run_v05_route_source_credit_noisy_scale.sh --full
+```
+
+- h5-e writes `results/v05_route_source_credit_noisy_scale_summary.csv`
+- h5-e smoke crosses key counts `32/64`, seeds `1/2`, and noisy rates
+  `0.50/1.00`. Standard mode uses key counts `64/128`, seeds `1..3`, and
+  noisy rates `0.25/0.50`; full mode expands to key counts `64/128/256`,
+  seeds `1..5`, and noisy rates `0.10/0.25/0.50/1.00`.
+- h5-e smoke decision: `PASS` as noisy-source multi-seed / scale stability
+  instrumentation. The weak `joint-code-key` primary plus `key-shape`
+  fallback branch keeps positive fallback source gaps across the smoke. The
+  explicit `noisy-route-code` branch keeps negative noisy-candidate credit and
+  nonzero noisy slash diagnostics across key counts and seeds. At
+  `noise=1.0`, source gap is also negative; at mixed `noise=0.5`, source gap
+  can be positive because the source still contains correct fallback support,
+  so the noisy-candidate credit/slash metrics are the sharper signal. This is
+  stability instrumentation, not source-credit robustness solved.

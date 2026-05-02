@@ -1991,3 +1991,56 @@ Current narrow readout:
   and `active_jump_rate = 0.000000`
 
 This is source-quality instrumentation, not a robustness claim.
+
+## h5-e Noisy-source Multi-seed / Scale Stability Decision
+
+`h5-e` passes as noisy-source multi-seed / scale stability instrumentation,
+but it does not solve source-credit robustness, wrong-candidate robustness, or
+learned routing.
+
+The slice keeps the successful path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_noisy_scale.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_noisy_scale.sh
+./experiments/run_v05_route_source_credit_noisy_scale.sh --full
+```
+
+Smoke grid:
+
+- key counts `32/64`
+- seeds `1/2`
+- noisy-source rates `0.50/1.00`
+- weak branch: `joint-code-key` primary with `key-shape` fallback
+- bad-source branch: `route-code-key` primary with `noisy-route-code` fallback
+
+Current narrow readout:
+
+- weak joint/key-shape rows keep positive source gap across key counts and
+  seeds
+- explicit noisy rows keep `route_source_credit_noisy_mean < 0`
+- explicit noisy rows keep nonzero `route_source_credit_noisy_slashed_rate`
+- fully noisy `noise=1.0` rows also get negative source gap
+- mixed noisy `noise=0.5` rows may keep positive source gap because the source
+  still contains correct fallback support; in those rows the noisy-candidate
+  credit/slash metrics are the sharper separation signal
+- all rows keep `route_hint_candidate_lookup_count > 0`,
+  `route_hint_value_read_distance_mean > 0`, `routing_trigger_rate = 0.000000`,
+  and `active_jump_rate = 0.000000`
+
+Interpretation:
+h5-e shows that h5-d's source-quality separation is not only a single-row
+smoke artifact. It repeats over the small key/seed scale smoke. This remains a
+controlled diagnostic with symbolic fallback and explicit noisy-source stress,
+not learned sparse routing.

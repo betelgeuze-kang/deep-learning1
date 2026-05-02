@@ -8,7 +8,7 @@ Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, and h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress. Treat them as diagnostics / limited mitigation, not robustness solved.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, and h5-e adds noisy-source multi-seed / scale stability smoke. Treat them as diagnostics / limited mitigation, not robustness solved.
 
 Current status:
 
@@ -127,6 +127,12 @@ Current status:
   source gap for useful key-shape fallback, and gives negative noisy-source
   credit/slash diagnostics for bad noisy candidates. This is source-quality
   separation instrumentation, not robustness solved.
+- h5-e adds noisy-source multi-seed / scale stability diagnostics. The smoke
+  crosses key counts `32/64`, seeds `1/2`, and noisy rates `0.50/1.00`.
+  The weak joint branch keeps positive key-shape fallback source gaps across
+  the smoke, while the noisy branch keeps negative noisy-candidate credit and
+  nonzero noisy slash diagnostics. Fully noisy rows also get negative source
+  gap. This is stability instrumentation, not source-credit robustness solved.
 
 ## Build
 
@@ -238,6 +244,7 @@ Experiment helpers:
 - `experiments/run_v05_route_source_credit.sh`
 - `experiments/run_v05_route_source_credit_policy.sh`
 - `experiments/run_v05_route_source_credit_noisy_source.sh`
+- `experiments/run_v05_route_source_credit_noisy_scale.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -264,6 +271,7 @@ Experiment helpers:
 - `experiments/test_v05_route_source_credit.sh`
 - `experiments/test_v05_route_source_credit_policy.sh`
 - `experiments/test_v05_route_source_credit_noisy_source.sh`
+- `experiments/test_v05_route_source_credit_noisy_scale.sh`
 
 Key docs:
 

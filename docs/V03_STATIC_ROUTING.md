@@ -342,6 +342,10 @@ Current decision:
   route-hint memory instrumentation; they compare weak/noisy candidate sources
   through source credit while preserving `value_pos -> value byte -> proposal
   hint`, and they still do not promote static neighbor replacement
+- treat noisy-source multi-seed / scale stability as value-bearing route-hint
+  memory instrumentation; it checks whether source-quality separation repeats
+  across small key/seed/noise sweeps, but it still does not promote static
+  neighbor replacement
 
 Allowed wording:
 
@@ -364,6 +368,7 @@ Allowed wording:
 - `source-credit policy calibration diagnostics`
 - `noisy-source policy diagnostics`
 - `source-quality separation instrumentation`
+- `noisy-source scale stability diagnostics`
 
 Do not say:
 
@@ -374,3 +379,4 @@ Do not say:
 - `route plasticity solved`
 - `source credit solves routing`
 - `noisy source credit solves robustness`
+- `source-quality separation solves learned routing`
