@@ -185,6 +185,10 @@ struct EpochMetricsV02 {
     double route_credit_slashed_rate = 0.0;
     double route_credit_top1_rate = 0.0;
     double route_credit_qacc = 0.0;
+    double route_credit_learn_active = 0.0;
+    double route_credit_apply_active = 0.0;
+    double route_plasticity_ledger_size = 0.0;
+    double route_plasticity_ledger_mean_abs_credit = 0.0;
     double route_abstain_rate = 0.0;
     double route_hint_strength_mean = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
@@ -307,6 +311,8 @@ inline std::string v02_csv_header() {
            "route_credit_correct_mean,route_credit_wrong_mean,route_credit_gap,"
            "route_credit_rewarded_rate,route_credit_slashed_rate,"
            "route_credit_top1_rate,route_credit_qacc,"
+           "route_credit_learn_active,route_credit_apply_active,"
+           "route_plasticity_ledger_size,route_plasticity_ledger_mean_abs_credit,"
            "route_abstain_rate,"
            "route_hint_strength_mean,"
            "route_hint_candidate_lookup_count,route_hint_candidate_hit_rate,"
@@ -483,6 +489,10 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_credit_slashed_rate << ','
         << metrics.route_credit_top1_rate << ','
         << metrics.route_credit_qacc << ','
+        << metrics.route_credit_learn_active << ','
+        << metrics.route_credit_apply_active << ','
+        << metrics.route_plasticity_ledger_size << ','
+        << metrics.route_plasticity_ledger_mean_abs_credit << ','
         << metrics.route_abstain_rate << ','
         << metrics.route_hint_strength_mean << ','
         << metrics.route_hint_candidate_lookup_count << ','

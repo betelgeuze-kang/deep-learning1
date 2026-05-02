@@ -24,7 +24,7 @@
 - `v0.2-b`: block-local coupled proposal과 `B[x, high, low]` coupling을 포함합니다. 기본 weak-coupling path는 `counter`와 `repeating-text` 5-seed regression을 통과했습니다.
 - `v0.3 static routing`: `jump-neighbors`, confidence gate/acceptance, `state-code`, `input-byte` route source 계열은 diagnostic/default-off입니다. 현재 결론은 routing success가 아니라 **neighbor replacement no-go**입니다.
 - `v0.3 route-hint`: 살아남은 장거리 경로입니다. 핵심 경로는 `candidate value_pos -> value byte read -> proposal hint`입니다.
-- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했으며, h4-5w는 route-credit ablation diagnostics이고, h4-5x는 credit × fallback integration ablation입니다. 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
+- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했으며, h4-5w는 route-credit ablation diagnostics이고, h4-5x는 credit × fallback integration ablation이며, h4-5y는 credit strength/stability calibration이고, h5-a는 persistent route-plasticity ledger와 learn/apply warmup gate입니다. 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
 
 ## 중요한 아키텍처 결론
 
@@ -86,6 +86,8 @@ remove-correct:
 - h4-5v: value-position route credit은 correct/wrong candidate credit을 분리합니다 (`credit_gap = 1.110268`) 그리고 qacc를 아주 작게 움직입니다 (`0.845312 -> 0.850000`). 이는 route-credit separation instrumentation / tiny mitigation이지 wrong-candidate robustness solved나 learned routing solved가 아닙니다. 다음 route-credit 작업은 score weight, reward/slash 비율, decay, clip, value-pos 대비 query-value edge credit, 그리고 fallback low-channel strength sweet spot과의 조합 ablation입니다.
 - h4-5w: route-credit ablation diagnostics와 `--route-credit-mode query-value`를 추가했습니다. Smoke에서 value-pos credit은 유지되고, query-value edge credit도 동작합니다 (`query-value-probe` gap `0.598951`). credit + low-channel fallback 조합은 fallback subset을 움직입니다 (`fallback_qacc 0.688889 -> 0.777778`). 이는 ablation instrumentation / limited mitigation이지 robustness solved가 아닙니다.
 - h4-5x: credit × fallback integration factorial을 추가했습니다. true `--route-credit-mode off`, `value-pos`, `query-value`를 key-shape fallback `hi_mult=5`, `lo_mult=7.5/10/15`, preserve/remove corruption과 교차합니다. Smoke에서는 preserve-correct qacc는 중립이지만 credit gap이 생기고, remove-correct qacc가 `lo=7.5/10`에서 `0.912500 -> 0.925000`으로 움직입니다. 이는 integration diagnostics / limited mitigation입니다.
+- h4-5y: credit strength/stability calibration을 추가했습니다. Smoke는 active `value-pos/query-value` credit의 score weight와 slash 강도, corruption rate를 대각선 셀로 점검하고 true `off` baseline을 포함합니다. Query-value credit은 preserve rows에서 강한 gap을 유지하고, remove rows는 fallback diagnostics를 채웁니다. 이는 calibration diagnostics / limited mitigation이지 robustness solved가 아닙니다.
+- h5-a: `--route-plasticity-ledger` persistent ledger와 `--route-credit-learn-after-epoch` / `--route-credit-apply-after-epoch` warmup gate를 추가했습니다. Smoke는 value-bearing path가 유지되는지, candidate lookup/read distance가 채워지는지, `routing_trigger_rate`와 `active_jump_rate`가 `0.000000`인지 확인합니다. 이는 route-plasticity instrumentation이지 learned routing solved나 wrong-candidate robustness solved가 아닙니다.
 
 ## 빌드
 
@@ -177,6 +179,8 @@ cmake --build build -j
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_route_credit.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_credit_calibration.sh`
+- `experiments/run_v05_route_credit_plasticity.sh`
 
 ## 대표 smoke test
 
@@ -201,6 +205,8 @@ cmake --build build -j
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_route_credit.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_credit_calibration.sh`
+- `experiments/test_v05_route_credit_plasticity.sh`
 
 ## 핵심 문서
 

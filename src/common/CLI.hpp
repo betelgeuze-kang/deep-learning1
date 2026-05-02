@@ -299,6 +299,18 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
             params.route_credit_decay = cli_to_float(value, key);
         } else if (key == "route-credit-clip" || key == "route_credit_clip") {
             params.route_credit_clip = cli_to_float(value, key);
+        } else if (key == "route-plasticity-ledger" ||
+                   key == "route_plasticity_ledger") {
+            params.route_plasticity_ledger = cli_to_int(value, key);
+        } else if (key == "route-plasticity-ledger-decay" ||
+                   key == "route_plasticity_ledger_decay") {
+            params.route_plasticity_ledger_decay = cli_to_float(value, key);
+        } else if (key == "route-credit-learn-after-epoch" ||
+                   key == "route_credit_learn_after_epoch") {
+            params.route_credit_learn_after_epoch = cli_to_int(value, key);
+        } else if (key == "route-credit-apply-after-epoch" ||
+                   key == "route_credit_apply_after_epoch") {
+            params.route_credit_apply_after_epoch = cli_to_int(value, key);
         } else if (key == "K-route" || key == "K_route") {
             params.K_route = cli_to_int(value, key);
         } else if (key == "route-hash-bits" || key == "route_hash_bits") {
@@ -451,6 +463,10 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-credit-eta-slash <float>\n"
        << "  --route-credit-decay <float>\n"
        << "  --route-credit-clip <float>\n"
+       << "  --route-plasticity-ledger <0|1>\n"
+       << "  --route-plasticity-ledger-decay <float>\n"
+       << "  --route-credit-learn-after-epoch <int>\n"
+       << "  --route-credit-apply-after-epoch <int>\n"
        << "  --K-route <int>\n"
        << "  --route-hash-bits <int>\n"
        << "  --route-hash-source <raw-key|joint-code-key|route-code-key>\n"

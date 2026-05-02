@@ -129,7 +129,8 @@ GraphV02::GraphV02(const V02PreParams& params)
     refresh_route_anchor_cache();
 }
 
-void GraphV02::begin_epoch(const ByteDataset::Window& window) {
+void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
+    current_epoch_ = epoch;
     if (window.inputs.size() != static_cast<std::size_t>(params_.N) ||
         window.targets.size() != static_cast<std::size_t>(params_.N)) {
         throw std::runtime_error("dataset window size does not match N");
@@ -290,7 +291,7 @@ EpochMetricsV02 GraphV02::run_epoch(
         update_age();
     }
 
-    if (params_.route_credit_learning != 0) {
+    if (route_credit_learn_active()) {
         apply_route_credit_learning();
     }
 
@@ -525,6 +526,18 @@ void GraphV02::validate_params() const {
     }
     if (params_.route_credit_clip < 0.0f) {
         throw std::runtime_error("route-credit-clip must be non-negative");
+    }
+    if (params_.route_plasticity_ledger < 0 ||
+        params_.route_plasticity_ledger > 1) {
+        throw std::runtime_error("route-plasticity-ledger must be 0 or 1");
+    }
+    if (params_.route_plasticity_ledger_decay < 0.0f ||
+        params_.route_plasticity_ledger_decay > 1.0f) {
+        throw std::runtime_error("route-plasticity-ledger-decay must be in [0, 1]");
+    }
+    if (params_.route_credit_learn_after_epoch < 0 ||
+        params_.route_credit_apply_after_epoch < 0) {
+        throw std::runtime_error("route-credit epoch gates must be non-negative");
     }
     if (params_.K_route <= 0) {
         throw std::runtime_error("K-route must be positive");
@@ -1638,12 +1651,40 @@ std::string GraphV02::route_credit_edge_key(int query_index, int value_pos) cons
            "|value-pos:" + std::to_string(value_pos);
 }
 
+std::string GraphV02::route_plasticity_ledger_key(int query_index, int value_pos) const {
+    std::string query_key = route_credit_query_signature(query_index);
+    if (query_index >= 0 &&
+        query_index < static_cast<int>(route_hint_query_keys_.size()) &&
+        !route_hint_query_keys_[static_cast<std::size_t>(query_index)].empty()) {
+        query_key =
+            "key:" + route_hint_query_keys_[static_cast<std::size_t>(query_index)];
+    }
+
+    std::string value_key = "value-pos:" + std::to_string(value_pos);
+    if (value_pos >= 0 &&
+        value_pos < static_cast<int>(route_value_position_keys_.size()) &&
+        !route_value_position_keys_[static_cast<std::size_t>(value_pos)].empty()) {
+        value_key =
+            "value-key:" + route_value_position_keys_[static_cast<std::size_t>(value_pos)];
+    }
+    const auto value_byte = value_pos >= 0 && value_pos < params_.N
+                                ? nodes_[static_cast<std::size_t>(value_pos)].input_byte
+                                : 0;
+    return query_key + "|" + value_key +
+           "|value-byte:" + std::to_string(static_cast<int>(value_byte));
+}
+
 float GraphV02::route_credit_for_candidate(int query_index, int value_pos) const {
     if (value_pos < 0 || value_pos >= params_.N) {
         return 0.0f;
     }
     if (params_.route_credit_mode == "off") {
         return 0.0f;
+    }
+    if (params_.route_plasticity_ledger != 0) {
+        const auto found =
+            route_plasticity_ledger_.find(route_plasticity_ledger_key(query_index, value_pos));
+        return found == route_plasticity_ledger_.end() ? 0.0f : found->second;
     }
     if (params_.route_credit_mode == "query-value") {
         const auto found =
@@ -1657,9 +1698,7 @@ float GraphV02::route_credit_for_candidate(int query_index, int value_pos) const
 }
 
 float GraphV02::route_credit_weight_for_candidate(int query_index, int value_pos) const {
-    if (params_.route_credit_learning == 0 ||
-        params_.route_credit_mode == "off" ||
-        params_.route_credit_score_weight <= 0.0f) {
+    if (!route_credit_apply_active() || params_.route_credit_score_weight <= 0.0f) {
         return 1.0f;
     }
     const double scaled =
@@ -1668,12 +1707,30 @@ float GraphV02::route_credit_weight_for_candidate(int query_index, int value_pos
     return static_cast<float>(std::exp(std::clamp(scaled, -8.0, 8.0)));
 }
 
+bool GraphV02::route_credit_learn_active() const {
+    return params_.route_credit_learning != 0 &&
+           params_.route_credit_mode != "off" &&
+           current_epoch_ >= params_.route_credit_learn_after_epoch;
+}
+
+bool GraphV02::route_credit_apply_active() const {
+    return params_.route_credit_learning != 0 &&
+           params_.route_credit_mode != "off" &&
+           current_epoch_ >= params_.route_credit_apply_after_epoch;
+}
+
 void GraphV02::apply_route_credit_learning() {
     if (params_.route_credit_mode == "off") {
         return;
     }
     const float decay_scale = 1.0f - params_.route_credit_decay;
-    if (params_.route_credit_mode == "query-value") {
+    if (params_.route_plasticity_ledger != 0) {
+        const float ledger_decay_scale =
+            1.0f - params_.route_plasticity_ledger_decay;
+        for (auto& entry : route_plasticity_ledger_) {
+            entry.second *= ledger_decay_scale;
+        }
+    } else if (params_.route_credit_mode == "query-value") {
         for (auto& entry : route_credit_by_query_value_) {
             entry.second *= decay_scale;
         }
@@ -1705,10 +1762,14 @@ void GraphV02::apply_route_credit_learning() {
                 continue;
             }
             const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
-            float& credit =
-                params_.route_credit_mode == "query-value"
-                    ? route_credit_by_query_value_[route_credit_edge_key(index, value_pos)]
-                    : route_credit_by_value_pos_[static_cast<std::size_t>(value_pos)];
+            float& credit = params_.route_plasticity_ledger != 0
+                                ? route_plasticity_ledger_[
+                                      route_plasticity_ledger_key(index, value_pos)]
+                            : params_.route_credit_mode == "query-value"
+                                ? route_credit_by_query_value_[
+                                      route_credit_edge_key(index, value_pos)]
+                                : route_credit_by_value_pos_[
+                                      static_cast<std::size_t>(value_pos)];
             if (value == target_value) {
                 credit += params_.route_credit_eta_reward;
             } else {
@@ -3558,6 +3619,21 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_credit_top1_sum / route_credit_query_count;
             metrics.route_credit_qacc =
                 route_credit_qacc_sum / route_credit_query_count;
+        }
+        metrics.route_credit_learn_active = route_credit_learn_active() ? 1.0 : 0.0;
+        metrics.route_credit_apply_active = route_credit_apply_active() ? 1.0 : 0.0;
+        if (params_.route_plasticity_ledger != 0) {
+            metrics.route_plasticity_ledger_size =
+                static_cast<double>(route_plasticity_ledger_.size());
+            double ledger_abs_sum = 0.0;
+            for (const auto& entry : route_plasticity_ledger_) {
+                ledger_abs_sum += static_cast<double>(std::abs(entry.second));
+            }
+            if (!route_plasticity_ledger_.empty()) {
+                metrics.route_plasticity_ledger_mean_abs_credit =
+                    ledger_abs_sum /
+                    static_cast<double>(route_plasticity_ledger_.size());
+            }
         }
         if (route_wrong_hint_count > 0.0) {
             metrics.route_wrong_hint_strength_mean =

@@ -119,6 +119,10 @@ struct V02PreParams {
     float route_credit_eta_slash = 0.10f;
     float route_credit_decay = 0.001f;
     float route_credit_clip = 4.0f;
+    int route_plasticity_ledger = 0;
+    float route_plasticity_ledger_decay = 0.0f;
+    int route_credit_learn_after_epoch = 0;
+    int route_credit_apply_after_epoch = 0;
     int K_route = 1;
     int route_hash_bits = 16;
     std::string route_hash_source = "raw-key";

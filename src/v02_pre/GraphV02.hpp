@@ -21,7 +21,7 @@ class GraphV02 {
   public:
     explicit GraphV02(const V02PreParams& params);
 
-    void begin_epoch(const ByteDataset::Window& window);
+    void begin_epoch(int epoch, const ByteDataset::Window& window);
     EpochMetricsV02 run_epoch(
         int epoch,
         const std::array<std::uint8_t, FieldTable::ByteValues>& oracle_next);
@@ -104,8 +104,11 @@ class GraphV02 {
     bool route_fallback_persistence_active(int index) const;
     std::string route_credit_query_signature(int query_index) const;
     std::string route_credit_edge_key(int query_index, int value_pos) const;
+    std::string route_plasticity_ledger_key(int query_index, int value_pos) const;
     float route_credit_for_candidate(int query_index, int value_pos) const;
     float route_credit_weight_for_candidate(int query_index, int value_pos) const;
+    bool route_credit_learn_active() const;
+    bool route_credit_apply_active() const;
     void apply_route_credit_learning();
     int wrong_route_value_position_for_node(int index) const;
     std::string joint_code_signature_for_key(const std::string& key) const;
@@ -182,6 +185,8 @@ class GraphV02 {
     std::vector<int> route_fallback_persist_visits_;
     std::vector<float> route_credit_by_value_pos_;
     std::unordered_map<std::string, float> route_credit_by_query_value_;
+    std::unordered_map<std::string, float> route_plasticity_ledger_;
+    int current_epoch_ = 0;
     std::vector<int> route_value_positions_;
     std::vector<std::string> route_value_position_keys_;
     std::vector<std::string> route_hint_query_keys_;

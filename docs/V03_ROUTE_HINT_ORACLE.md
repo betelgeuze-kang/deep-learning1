@@ -1724,3 +1724,91 @@ Smoke command:
 Next:
 run score/slash calibration around the `lo=7.5..10` region before promoting
 route credit toward a persistent h5 route-plasticity mechanism.
+
+## h4-5y Route-credit Strength/Stability Calibration Decision
+
+`v0.3-h4-5y` passes as route-credit strength/stability calibration diagnostics
+and limited mitigation, but it does not solve wrong-candidate robustness or
+learned routing.
+
+The calibration smoke keeps the value-bearing path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+It probes active `value-pos` and `query-value` route credit around the
+key-shape fallback sweet spot, while retaining true `off` rows as no-credit
+baselines.
+
+Key smoke readouts:
+
+- off baselines remain credit-neutral (`route_credit_gap = 0.000000`)
+- `query-value` preserve rows keep a strong credit gap (`0.750000`)
+- value-pos preserve rows are positive but smaller (`0.290625` at one low
+  corruption row and `0.236364` at one higher corruption row)
+- remove-correct rows populate fallback diagnostics; for example:
+  - value-pos `lo=10`, score weight `1.0`, slash `0.20`, corruption `0.25`:
+    qacc `0.925000`, credit gap `0.642326`, fallback_qacc `0.733334`
+  - query-value `lo=7.5`, score weight `2.0`, slash `0.10`, corruption
+    `0.25`: qacc `0.925000`, credit gap `0.450000`, fallback_qacc `0.733334`
+
+Interpretation:
+query-value credit continues to be the cleaner separation signal, but the
+qacc/fallback_qacc effect remains condition-dependent and limited. This keeps
+h4-5y in the calibration/instrumentation category. It is not a learned routing
+or robustness claim.
+
+Next:
+either run the full h4-5y grid to choose a stable carry-forward cell, or move
+to a very narrow h5-a route-plasticity slice using the best query-value credit
+settings as the diagnostic baseline.
+
+## h5-a Persistent Route-plasticity Ledger Decision
+
+`h5-a` passes as route-plasticity ledger instrumentation, but it does not solve
+wrong-candidate robustness or learned routing.
+
+The slice keeps the successful path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+New knobs:
+
+- `--route-plasticity-ledger <0|1>`
+- `--route-plasticity-ledger-decay <float>`
+- `--route-credit-learn-after-epoch <int>`
+- `--route-credit-apply-after-epoch <int>`
+
+Interpretation:
+the ledger makes route credit a persistent query/value identity memory, while
+the learn/apply gates separate when credit is accumulated from when it is used
+to weight candidate votes. The h5-a smoke verifies that ledger size and mean
+absolute credit become nonzero, that route credit keeps a positive
+correct/wrong gap, and that candidate lookup/read distance remain populated.
+
+Guardrails:
+the smoke also verifies `routing_trigger_rate = 0.000000` and
+`active_jump_rate = 0.000000`. This means h5-a remains on the value-bearing
+route-hint path and does not revive neighbor replacement.
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_credit_plasticity.sh
+```
+
+Current narrow readout:
+
+- immediate remove-correct row: qacc `0.931250`, credit gap `1.500000`,
+  ledger size `59.000000`, fallback_qacc `0.755556`
+- warmup-apply remove-correct row: qacc `0.918750`, apply-active rate
+  `0.400000`, fallback_qacc `0.711111`
+- delayed-learn remove-correct row: qacc `0.918750`, credit gap `0.750000`,
+  fallback_qacc `0.711111`
+
+This is instrumentation, not a robustness claim. The next step is to run the
+full h5-a grid or add a narrow h5-b source-level credit/fallback policy only
+after the ledger schedule behavior is stable.

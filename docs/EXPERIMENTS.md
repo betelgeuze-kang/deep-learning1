@@ -808,3 +808,59 @@ Expected:
   `lo=15` remains weaker (`off qacc 0.906250`, credit-on qacc 0.918750,
   fallback_qacc 0.711111). This is not wrong-candidate robustness solved and
   not learned routing solved.
+- h4-5y route-credit calibration smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_credit_calibration.sh
+```
+
+- h4-5y standard route-credit calibration run:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_credit_calibration.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_credit_calibration.sh --full
+```
+
+- h4-5y writes
+  `results/v03_route_hint_kv_hash_route_code_credit_calibration_summary.csv`
+- h4-5y calibrates active `value-pos` versus `query-value` credit around
+  key-shape fallback with `hi_mult=5`, `lo_mult=7.5/10`, score weight,
+  slash strength, corruption rate, and preserve/remove rows; smoke also keeps
+  true `off` baselines
+- h4-5y smoke decision: `PASS` as route-credit strength/stability
+  calibration diagnostics and limited mitigation. Off baselines remain
+  credit-neutral. Active credit rows all produce positive gaps. Query-value
+  preserve rows show larger separation (`gap=0.750000`) than comparable
+  value-pos rows (`0.290625` or `0.236364` in the smoke). Remove rows populate
+  fallback metrics; examples include `value-pos remove lo10 sw1 slash0.20
+  cr0.25` with qacc `0.925000`, gap `0.642326`, fallback_qacc `0.733334`,
+  and `query-value remove lo7.5 sw2 slash0.10 cr0.25` with qacc `0.925000`,
+  gap `0.450000`, fallback_qacc `0.733334`. This is calibration only, not
+  wrong-candidate robustness solved.
+- h5-a route-plasticity smoke:
+
+```bash
+./experiments/test_v05_route_credit_plasticity.sh
+```
+
+- h5-a standard route-plasticity run:
+
+```bash
+./experiments/run_v05_route_credit_plasticity.sh
+./experiments/run_v05_route_credit_plasticity.sh --full
+```
+
+- h5-a writes `results/v05_route_credit_plasticity_summary.csv`
+- h5-a adds a persistent `--route-plasticity-ledger` plus
+  `--route-credit-learn-after-epoch` / `--route-credit-apply-after-epoch`
+  warmup gates. The smoke uses the h4-5y query-value credit carry-forward cell
+  with key-shape fallback `hi_mult=5`, `lo_mult=10`.
+- h5-a smoke decision: `PASS` as route-plasticity ledger instrumentation.
+  Ledger rows populate `route_plasticity_ledger_size` and
+  `route_plasticity_ledger_mean_abs_credit`, while learn/apply gates separate
+  accumulated credit from when it affects weighted candidate votes. The smoke
+  also asserts `route_hint_candidate_lookup_count > 0`,
+  `route_hint_value_read_distance_mean > 0`, `routing_trigger_rate = 0.000000`,
+  and `active_jump_rate = 0.000000`, preserving the value-bearing path and not
+  reviving jump-neighbor replacement. This is not learned routing solved and
+  not wrong-candidate robustness solved.

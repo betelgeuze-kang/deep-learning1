@@ -325,6 +325,12 @@ Current decision:
 - treat credit × fallback integration factorials as value-bearing route-hint
   memory diagnostics; they combine candidate/edge credit with fallback
   low-channel strength but still do not revive neighbor replacement
+- treat route-credit strength/stability calibration as value-bearing route-hint
+  memory diagnostics; it tunes candidate/edge weighting and does not promote
+  static neighbor replacement
+- treat persistent route-plasticity ledger work as value-bearing route-hint
+  memory instrumentation; it changes candidate/edge credit over time but does
+  not promote static neighbor replacement
 
 Allowed wording:
 
@@ -339,6 +345,9 @@ Allowed wording:
 - `route-credit separation diagnostics`
 - `route-credit ablation diagnostics`
 - `credit × fallback integration diagnostics`
+- `route-credit strength/stability calibration`
+- `route-plasticity ledger instrumentation`
+- `route-credit learn/apply warmup diagnostics`
 
 Do not say:
 
@@ -346,3 +355,4 @@ Do not say:
 - `long-context retrieval works`
 - `chunk/token routing works`
 - `routing plasticity works`
+- `route plasticity solved`

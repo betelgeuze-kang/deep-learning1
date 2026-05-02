@@ -8,7 +8,7 @@ Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, and h4-5x is the credit × fallback integration ablation. Treat them as diagnostics / limited mitigation, not robustness solved.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, and h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates. Treat them as diagnostics / limited mitigation, not robustness solved.
 
 Current status:
 
@@ -86,6 +86,22 @@ Current status:
   qacc stays neutral, and remove-correct qacc moves from `0.912500` to
   `0.925000` at `lo=7.5/10`. This is integration diagnostics / limited
   mitigation only.
+- h4-5y adds route-credit strength/stability calibration. The smoke keeps true
+  no-credit `off` baselines and diagonal active `value-pos/query-value` cells
+  over score weight, slash strength, corruption rate, and low-channel fallback
+  multiplier. Off rows remain credit-neutral, active rows produce positive
+  gaps, and query-value preserve rows show stronger separation (`0.750000`)
+  than comparable value-pos rows (`0.290625` / `0.236364`). Remove-correct rows
+  populate fallback diagnostics, but the qacc/fallback_qacc effect remains
+  condition-dependent. This is calibration diagnostics / limited mitigation
+  only, not wrong-candidate robustness solved.
+- h5-a adds a persistent route-plasticity ledger via
+  `--route-plasticity-ledger`, plus `--route-credit-learn-after-epoch` and
+  `--route-credit-apply-after-epoch` warmup gates. The smoke keeps the same
+  value-bearing path, verifies candidate lookup/read distance stays populated,
+  and verifies `routing_trigger_rate` / `active_jump_rate` stay `0.000000`.
+  Treat this as route-plasticity instrumentation only, not learned routing
+  solved and not wrong-candidate robustness solved.
 
 ## Build
 
@@ -192,6 +208,8 @@ Experiment helpers:
 - `experiments/run_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_route_credit.sh`
 - `experiments/run_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_credit_calibration.sh`
+- `experiments/run_v05_route_credit_plasticity.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -213,6 +231,8 @@ Experiment helpers:
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_persistence.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_route_credit.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_credit_fallback_factorial.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_credit_calibration.sh`
+- `experiments/test_v05_route_credit_plasticity.sh`
 
 Key docs:
 

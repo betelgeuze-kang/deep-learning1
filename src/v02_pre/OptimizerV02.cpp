@@ -14,7 +14,7 @@ int OptimizerV02::run() {
 
     for (int epoch = 0; epoch < params_.epochs; ++epoch) {
         const auto window = dataset_.window_for_epoch(epoch, params_.N);
-        graph_.begin_epoch(window);
+        graph_.begin_epoch(epoch, window);
         logger.write_row(to_csv_row(graph_.run_epoch(epoch, dataset_.oracle_table())));
         graph_.apply_contrastive_learning();
     }

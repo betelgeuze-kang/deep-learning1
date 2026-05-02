@@ -38,7 +38,7 @@ else
 fi
 
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
-printf 'scenario,route_credit_learning,fixture_query_byte_acc,route_credit_correct_mean,route_credit_wrong_mean,route_credit_gap,route_credit_rewarded_rate,route_credit_slashed_rate,route_credit_top1_rate,route_credit_qacc,route_value_top_correct_rate,route_hint_correct_value_vote_share_mean\n' >"$SUMMARY_CSV"
+printf 'scenario,route_credit_learning,route_plasticity_ledger,fixture_query_byte_acc,route_credit_correct_mean,route_credit_wrong_mean,route_credit_gap,route_credit_rewarded_rate,route_credit_slashed_rate,route_credit_top1_rate,route_credit_qacc,route_plasticity_ledger_size,route_plasticity_ledger_mean_abs_credit,route_value_top_correct_rate,route_hint_correct_value_vote_share_mean\n' >"$SUMMARY_CSV"
 
 value_for_index() {
   local index="$1"
@@ -70,6 +70,7 @@ run_dmv02() {
   local fixture="$1"
   local csv_path="$2"
   local credit_learning="$3"
+  local plasticity_ledger="$4"
   local n
 
   n="$(wc -c <"$fixture")"
@@ -121,19 +122,22 @@ run_dmv02() {
     --route-credit-eta-slash 0.10 \
     --route-credit-decay 0.001 \
     --route-credit-clip 4.0 \
+    --route-plasticity-ledger "$plasticity_ledger" \
     --csv "$csv_path"
 }
 
 append_summary() {
   local scenario="$1"
   local credit_learning="$2"
-  local csv_path="$3"
+  local plasticity_ledger="$3"
+  local csv_path="$4"
 
   awk -F, \
     -v scenario="$scenario" \
-    -v credit_learning="$credit_learning" '
+    -v credit_learning="$credit_learning" \
+    -v plasticity_ledger="$plasticity_ledger" '
     BEGIN {
-      split("fixture_query_byte_acc route_credit_correct_mean route_credit_wrong_mean route_credit_gap route_credit_rewarded_rate route_credit_slashed_rate route_credit_top1_rate route_credit_qacc route_value_top_correct_rate route_hint_correct_value_vote_share_mean", names, " ")
+      split("fixture_query_byte_acc route_credit_correct_mean route_credit_wrong_mean route_credit_gap route_credit_rewarded_rate route_credit_slashed_rate route_credit_top1_rate route_credit_qacc route_plasticity_ledger_size route_plasticity_ledger_mean_abs_credit route_value_top_correct_rate route_hint_correct_value_vote_share_mean", names, " ")
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
@@ -149,7 +153,7 @@ append_summary() {
     END {
       start = (row_count > 5 ? row_count - 4 : 1)
       count = row_count - start + 1
-      printf "%s,%d", scenario, credit_learning
+      printf "%s,%d,%d", scenario, credit_learning, plasticity_ledger
       for (n = 1; n <= length(names); n++) {
         name = names[n]
         sum = 0.0
@@ -167,15 +171,16 @@ append_summary() {
 run_case() {
   local scenario="$1"
   local credit_learning="$2"
+  local plasticity_ledger="$3"
   local fixture="$TMP_DIR/${scenario}.txt"
   local csv_path="$RESULTS_DIR/${PREFIX}_${scenario}.csv"
 
   make_fixture "$fixture" "$KEY_COUNT"
-  run_dmv02 "$fixture" "$csv_path" "$credit_learning"
-  append_summary "$scenario" "$credit_learning" "$csv_path"
+  run_dmv02 "$fixture" "$csv_path" "$credit_learning" "$plasticity_ledger"
+  append_summary "$scenario" "$credit_learning" "$plasticity_ledger" "$csv_path"
 }
 
-run_case "credit_off" 0
-run_case "credit_on" 1
+run_case "credit_off" 0 0
+run_case "credit_on" 1 1
 
 echo "wrote $SUMMARY_CSV"
