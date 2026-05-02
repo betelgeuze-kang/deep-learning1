@@ -119,6 +119,12 @@ struct V02PreParams {
     float route_credit_eta_slash = 0.10f;
     float route_credit_decay = 0.001f;
     float route_credit_clip = 4.0f;
+    int route_source_credit_learning = 0;
+    float route_source_credit_score_weight = 1.0f;
+    float route_source_credit_eta_reward = 0.05f;
+    float route_source_credit_eta_slash = 0.10f;
+    float route_source_credit_decay = 0.001f;
+    float route_source_credit_clip = 4.0f;
     int route_plasticity_ledger = 0;
     float route_plasticity_ledger_decay = 0.0f;
     int route_credit_learn_after_epoch = 0;

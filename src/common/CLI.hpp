@@ -299,6 +299,24 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
             params.route_credit_decay = cli_to_float(value, key);
         } else if (key == "route-credit-clip" || key == "route_credit_clip") {
             params.route_credit_clip = cli_to_float(value, key);
+        } else if (key == "route-source-credit-learning" ||
+                   key == "route_source_credit_learning") {
+            params.route_source_credit_learning = cli_to_int(value, key);
+        } else if (key == "route-source-credit-score-weight" ||
+                   key == "route_source_credit_score_weight") {
+            params.route_source_credit_score_weight = cli_to_float(value, key);
+        } else if (key == "route-source-credit-eta-reward" ||
+                   key == "route_source_credit_eta_reward") {
+            params.route_source_credit_eta_reward = cli_to_float(value, key);
+        } else if (key == "route-source-credit-eta-slash" ||
+                   key == "route_source_credit_eta_slash") {
+            params.route_source_credit_eta_slash = cli_to_float(value, key);
+        } else if (key == "route-source-credit-decay" ||
+                   key == "route_source_credit_decay") {
+            params.route_source_credit_decay = cli_to_float(value, key);
+        } else if (key == "route-source-credit-clip" ||
+                   key == "route_source_credit_clip") {
+            params.route_source_credit_clip = cli_to_float(value, key);
         } else if (key == "route-plasticity-ledger" ||
                    key == "route_plasticity_ledger") {
             params.route_plasticity_ledger = cli_to_int(value, key);
@@ -463,6 +481,12 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-credit-eta-slash <float>\n"
        << "  --route-credit-decay <float>\n"
        << "  --route-credit-clip <float>\n"
+       << "  --route-source-credit-learning <0|1>\n"
+       << "  --route-source-credit-score-weight <float>\n"
+       << "  --route-source-credit-eta-reward <float>\n"
+       << "  --route-source-credit-eta-slash <float>\n"
+       << "  --route-source-credit-decay <float>\n"
+       << "  --route-source-credit-clip <float>\n"
        << "  --route-plasticity-ledger <0|1>\n"
        << "  --route-plasticity-ledger-decay <float>\n"
        << "  --route-credit-learn-after-epoch <int>\n"

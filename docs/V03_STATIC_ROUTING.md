@@ -331,6 +331,10 @@ Current decision:
 - treat persistent route-plasticity ledger work as value-bearing route-hint
   memory instrumentation; it changes candidate/edge credit over time but does
   not promote static neighbor replacement
+- treat source/bucket route-credit work as value-bearing route-hint memory
+  instrumentation; it assigns responsibility to primary/fallback candidate
+  sources and buckets, but it still does not promote static neighbor
+  replacement
 
 Allowed wording:
 
@@ -348,6 +352,8 @@ Allowed wording:
 - `route-credit strength/stability calibration`
 - `route-plasticity ledger instrumentation`
 - `route-credit learn/apply warmup diagnostics`
+- `source/bucket route-credit instrumentation`
+- `source-level fallback responsibility diagnostics`
 
 Do not say:
 
@@ -356,3 +362,4 @@ Do not say:
 - `chunk/token routing works`
 - `routing plasticity works`
 - `route plasticity solved`
+- `source credit solves routing`

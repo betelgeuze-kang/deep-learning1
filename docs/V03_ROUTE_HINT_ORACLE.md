@@ -1812,3 +1812,58 @@ Current narrow readout:
 This is instrumentation, not a robustness claim. The next step is to run the
 full h5-a grid or add a narrow h5-b source-level credit/fallback policy only
 after the ledger schedule behavior is stable.
+
+## h5-b Source/Bucket Route-credit Decision
+
+`h5-b` passes as source/bucket route-credit instrumentation and a responsibility
+signal, but it does not solve fallback robustness, wrong-candidate robustness,
+or learned routing.
+
+The slice keeps the successful path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+New knobs:
+
+- `--route-source-credit-learning <0|1>`
+- `--route-source-credit-score-weight <float>`
+- `--route-source-credit-eta-reward <float>`
+- `--route-source-credit-eta-slash <float>`
+- `--route-source-credit-decay <float>`
+- `--route-source-credit-clip <float>`
+
+Interpretation:
+source credit is keyed by query/source/bucket rather than by `value_pos`, so it
+tracks whether the primary route-code source provided the correct candidate and
+whether the fallback source recovered a missing candidate. Candidate/edge
+ranking remains the job of `value-pos`, `query-value`, and persistent
+route-plasticity ledgers.
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit.sh
+```
+
+Current narrow readout:
+
+- source-off remove-correct: qacc `0.912500`, source credit size `0.000000`,
+  source gap `0.000000`
+- source-on remove-correct: qacc `0.912500`, source credit size `73.000000`,
+  primary mean `0.023438`, fallback mean `0.300000`, source gap `0.276563`,
+  primary slashed rate `0.281250`, fallback rewarded rate `1.000000`
+- source-on preserve-correct: qacc `0.818750`, fallback used rate `0.000000`,
+  primary mean `0.150000`
+
+Guardrails:
+the smoke verifies `route_hint_candidate_lookup_count > 0`,
+`route_hint_value_read_distance_mean > 0`, `routing_trigger_rate = 0.000000`,
+and `active_jump_rate = 0.000000`. This keeps h5-b on the value-bearing
+route-hint path and does not revive neighbor replacement.
+
+This is source/bucket responsibility instrumentation. qacc is neutral in the
+smoke, so it is not a fallback robustness or learned-routing claim. The next
+step is to calibrate whether source/bucket credit should influence fallback
+selection more strongly or combine with the persistent query/value ledger.

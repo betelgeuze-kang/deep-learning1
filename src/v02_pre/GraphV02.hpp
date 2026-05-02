@@ -99,16 +99,27 @@ class GraphV02 {
     void apply_route_candidate_corruption();
     void apply_route_fallback_source(const ByteDataset::Window& window);
     void refresh_route_hint_candidate_keys();
+    void refresh_route_hint_candidate_sources();
     bool candidate_positions_contain_correct(int index) const;
     bool should_corrupt_route_candidate(int index) const;
     bool route_fallback_persistence_active(int index) const;
     std::string route_credit_query_signature(int query_index) const;
     std::string route_credit_edge_key(int query_index, int value_pos) const;
     std::string route_plasticity_ledger_key(int query_index, int value_pos) const;
+    std::string primary_route_source_id() const;
+    std::string fallback_route_source_id() const;
+    std::string route_source_credit_bucket_for_query(
+        int query_index,
+        const std::string& source_id) const;
+    std::string route_source_credit_key(int query_index, const std::string& source_id) const;
+    std::string route_source_id_for_candidate(int query_index, int value_pos) const;
     float route_credit_for_candidate(int query_index, int value_pos) const;
     float route_credit_weight_for_candidate(int query_index, int value_pos) const;
+    float route_source_credit_for_candidate(int query_index, int value_pos) const;
+    float route_source_credit_weight_for_candidate(int query_index, int value_pos) const;
     bool route_credit_learn_active() const;
     bool route_credit_apply_active() const;
+    bool route_source_credit_active() const;
     void apply_route_credit_learning();
     int wrong_route_value_position_for_node(int index) const;
     std::string joint_code_signature_for_key(const std::string& key) const;
@@ -186,11 +197,13 @@ class GraphV02 {
     std::vector<float> route_credit_by_value_pos_;
     std::unordered_map<std::string, float> route_credit_by_query_value_;
     std::unordered_map<std::string, float> route_plasticity_ledger_;
+    std::unordered_map<std::string, float> route_source_credit_by_bucket_;
     int current_epoch_ = 0;
     std::vector<int> route_value_positions_;
     std::vector<std::string> route_value_position_keys_;
     std::vector<std::string> route_hint_query_keys_;
     std::vector<std::vector<std::string>> route_hint_candidate_keys_;
+    std::vector<std::vector<std::string>> route_hint_candidate_source_ids_;
     std::vector<bool> key_region_mask_;
     int kv_record_count_ = 0;
     int kv_duplicate_key_count_ = 0;

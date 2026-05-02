@@ -189,6 +189,12 @@ struct EpochMetricsV02 {
     double route_credit_apply_active = 0.0;
     double route_plasticity_ledger_size = 0.0;
     double route_plasticity_ledger_mean_abs_credit = 0.0;
+    double route_source_credit_size = 0.0;
+    double route_source_credit_primary_mean = 0.0;
+    double route_source_credit_fallback_mean = 0.0;
+    double route_source_credit_gap = 0.0;
+    double route_source_credit_primary_slashed_rate = 0.0;
+    double route_source_credit_fallback_rewarded_rate = 0.0;
     double route_abstain_rate = 0.0;
     double route_hint_strength_mean = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
@@ -313,6 +319,10 @@ inline std::string v02_csv_header() {
            "route_credit_top1_rate,route_credit_qacc,"
            "route_credit_learn_active,route_credit_apply_active,"
            "route_plasticity_ledger_size,route_plasticity_ledger_mean_abs_credit,"
+           "route_source_credit_size,route_source_credit_primary_mean,"
+           "route_source_credit_fallback_mean,route_source_credit_gap,"
+           "route_source_credit_primary_slashed_rate,"
+           "route_source_credit_fallback_rewarded_rate,"
            "route_abstain_rate,"
            "route_hint_strength_mean,"
            "route_hint_candidate_lookup_count,route_hint_candidate_hit_rate,"
@@ -493,6 +503,12 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_credit_apply_active << ','
         << metrics.route_plasticity_ledger_size << ','
         << metrics.route_plasticity_ledger_mean_abs_credit << ','
+        << metrics.route_source_credit_size << ','
+        << metrics.route_source_credit_primary_mean << ','
+        << metrics.route_source_credit_fallback_mean << ','
+        << metrics.route_source_credit_gap << ','
+        << metrics.route_source_credit_primary_slashed_rate << ','
+        << metrics.route_source_credit_fallback_rewarded_rate << ','
         << metrics.route_abstain_rate << ','
         << metrics.route_hint_strength_mean << ','
         << metrics.route_hint_candidate_lookup_count << ','

@@ -864,3 +864,33 @@ Expected:
   and `active_jump_rate = 0.000000`, preserving the value-bearing path and not
   reviving jump-neighbor replacement. This is not learned routing solved and
   not wrong-candidate robustness solved.
+- h5-b source/bucket route-credit smoke:
+
+```bash
+./experiments/test_v05_route_source_credit.sh
+```
+
+- h5-b standard source/bucket route-credit run:
+
+```bash
+./experiments/run_v05_route_source_credit.sh
+./experiments/run_v05_route_source_credit.sh --full
+```
+
+- h5-b writes `results/v05_route_source_credit_summary.csv`
+- h5-b adds disabled-by-default source/bucket credit knobs:
+  `--route-source-credit-learning`,
+  `--route-source-credit-score-weight`,
+  `--route-source-credit-eta-reward`,
+  `--route-source-credit-eta-slash`,
+  `--route-source-credit-decay`, and
+  `--route-source-credit-clip`
+- h5-b smoke decision: `PASS` as source/bucket route-credit
+  instrumentation / responsibility signal. In remove-correct corruption,
+  source-on keeps the value-bearing lookup/read path populated and separates
+  source responsibility: source credit size `73.000000`, primary mean
+  `0.023438`, fallback mean `0.300000`, gap `0.276563`, primary slashed rate
+  `0.281250`, and fallback rewarded rate `1.000000`. The smoke also verifies
+  `routing_trigger_rate = 0.000000` and `active_jump_rate = 0.000000`. qacc is
+  neutral in this smoke, so this is not fallback robustness solved and not
+  learned routing solved.

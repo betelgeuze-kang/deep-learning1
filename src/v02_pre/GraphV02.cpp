@@ -118,6 +118,14 @@ std::uint32_t mask_hash(std::uint32_t hash, int hash_bits) {
     return hash & mask;
 }
 
+std::uint32_t hash_string_bucket(const std::string& text, int hash_bits) {
+    std::uint32_t hash = 2166136261u;
+    for (const unsigned char byte : text) {
+        hash = fnv1a_update(hash, static_cast<std::uint8_t>(byte));
+    }
+    return mask_hash(hash, hash_bits);
+}
+
 }  // namespace
 
 GraphV02::GraphV02(const V02PreParams& params)
@@ -157,6 +165,7 @@ void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
     route_value_position_keys_.assign(static_cast<std::size_t>(params_.N), {});
     route_hint_query_keys_.assign(static_cast<std::size_t>(params_.N), {});
     route_hint_candidate_keys_.assign(static_cast<std::size_t>(params_.N), {});
+    route_hint_candidate_source_ids_.assign(static_cast<std::size_t>(params_.N), {});
     key_region_mask_.assign(static_cast<std::size_t>(params_.N), false);
     kv_record_count_ = window.kv_record_count;
     kv_duplicate_key_count_ = window.kv_duplicate_key_count;
@@ -238,6 +247,7 @@ void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
     }
     refresh_route_hint_candidate_keys();
     apply_route_candidate_corruption();
+    refresh_route_hint_candidate_sources();
     apply_route_fallback_source(window);
     if (params_.route_fallback_persist_cycles > 0) {
         for (int index = 0; index < params_.N; ++index) {
@@ -291,7 +301,7 @@ EpochMetricsV02 GraphV02::run_epoch(
         update_age();
     }
 
-    if (route_credit_learn_active()) {
+    if (route_credit_learn_active() || route_source_credit_active()) {
         apply_route_credit_learning();
     }
 
@@ -526,6 +536,24 @@ void GraphV02::validate_params() const {
     }
     if (params_.route_credit_clip < 0.0f) {
         throw std::runtime_error("route-credit-clip must be non-negative");
+    }
+    if (params_.route_source_credit_learning < 0 ||
+        params_.route_source_credit_learning > 1) {
+        throw std::runtime_error("route-source-credit-learning must be 0 or 1");
+    }
+    if (params_.route_source_credit_score_weight < 0.0f) {
+        throw std::runtime_error("route-source-credit-score-weight must be non-negative");
+    }
+    if (params_.route_source_credit_eta_reward < 0.0f ||
+        params_.route_source_credit_eta_slash < 0.0f) {
+        throw std::runtime_error("route-source-credit eta values must be non-negative");
+    }
+    if (params_.route_source_credit_decay < 0.0f ||
+        params_.route_source_credit_decay > 1.0f) {
+        throw std::runtime_error("route-source-credit-decay must be in [0, 1]");
+    }
+    if (params_.route_source_credit_clip < 0.0f) {
+        throw std::runtime_error("route-source-credit-clip must be non-negative");
     }
     if (params_.route_plasticity_ledger < 0 ||
         params_.route_plasticity_ledger > 1) {
@@ -832,6 +860,8 @@ bool GraphV02::route_hint_proposal_value_for_node(int index, std::uint8_t& out_v
                         static_cast<float>(value_counts[static_cast<std::size_t>(value)]);
                 }
                 candidate_weight *= route_credit_weight_for_candidate(index, value_pos);
+                candidate_weight *=
+                    route_source_credit_weight_for_candidate(index, value_pos);
             }
             value_votes[static_cast<std::size_t>(value)] += candidate_weight;
         }
@@ -902,6 +932,7 @@ double GraphV02::route_hint_margin_for_node(int index, std::uint8_t target_value
                         static_cast<float>(value_counts[static_cast<std::size_t>(value)]);
                 }
                 candidate_weight *= route_credit_weight_for_candidate(index, value_pos);
+                candidate_weight *= route_source_credit_weight_for_candidate(index, value_pos);
             }
             high_votes[static_cast<std::size_t>(value / FieldTable::States)] +=
                 candidate_weight;
@@ -984,6 +1015,7 @@ double GraphV02::route_value_support_confidence_for_node(
                         static_cast<float>(value_counts[static_cast<std::size_t>(value)]);
                 }
                 candidate_weight *= route_credit_weight_for_candidate(index, value_pos);
+                candidate_weight *= route_source_credit_weight_for_candidate(index, value_pos);
             }
             value_votes[static_cast<std::size_t>(value)] += candidate_weight;
             vote_weight_sum += candidate_weight;
@@ -1517,6 +1549,21 @@ void GraphV02::refresh_route_hint_candidate_keys() {
     }
 }
 
+void GraphV02::refresh_route_hint_candidate_sources() {
+    if (route_hint_candidate_source_ids_.size() !=
+        static_cast<std::size_t>(params_.N)) {
+        route_hint_candidate_source_ids_.assign(static_cast<std::size_t>(params_.N), {});
+    }
+    const std::string primary_source = primary_route_source_id();
+    for (int index = 0; index < params_.N; ++index) {
+        const auto& positions =
+            route_hint_candidate_value_positions_[static_cast<std::size_t>(index)];
+        route_hint_candidate_source_ids_[static_cast<std::size_t>(index)].assign(
+            positions.size(),
+            primary_source);
+    }
+}
+
 void GraphV02::refresh_route_strength_cache() {
     if (route_strength_cache_.size() != static_cast<std::size_t>(params_.N)) {
         route_strength_cache_.assign(static_cast<std::size_t>(params_.N), 0.0f);
@@ -1674,6 +1721,82 @@ std::string GraphV02::route_plasticity_ledger_key(int query_index, int value_pos
            "|value-byte:" + std::to_string(static_cast<int>(value_byte));
 }
 
+std::string GraphV02::primary_route_source_id() const {
+    return "primary-" + params_.route_hash_source;
+}
+
+std::string GraphV02::fallback_route_source_id() const {
+    return "fallback-" + params_.route_fallback_source;
+}
+
+std::string GraphV02::route_source_credit_bucket_for_query(
+    int query_index,
+    const std::string& source_id) const {
+    std::string query_key;
+    if (query_index >= 0 &&
+        query_index < static_cast<int>(route_hint_query_keys_.size())) {
+        query_key = route_hint_query_keys_[static_cast<std::size_t>(query_index)];
+    }
+    if (query_key.empty()) {
+        return "query-pos:" + std::to_string(query_index);
+    }
+
+    if (source_id.rfind("primary-", 0) == 0) {
+        std::uint32_t bucket = 0;
+        if (params_.route_hash_source == "route-code-key") {
+            bucket = route_code_hash_for_key(query_key);
+        } else if (params_.route_hash_source == "joint-code-key") {
+            bucket = joint_code_hash_for_key(query_key);
+        } else {
+            bucket = hash_string_bucket(query_key, params_.route_hash_bits);
+        }
+        return "hash-source:" + params_.route_hash_source +
+               "|bits:" + std::to_string(params_.route_hash_bits) +
+               "|bucket:" + std::to_string(bucket);
+    }
+
+    if (params_.route_fallback_source == "key-shape") {
+        return "fallback-source:key-shape|len:" +
+               std::to_string(query_key.size()) +
+               "|digits:" + std::to_string(digit_count(query_key));
+    }
+    if (params_.route_fallback_source == "raw-key") {
+        return "fallback-source:raw-key|bits:" +
+               std::to_string(params_.route_hash_bits) +
+               "|bucket:" +
+               std::to_string(hash_string_bucket(query_key, params_.route_hash_bits));
+    }
+    return "fallback-source:" + params_.route_fallback_source;
+}
+
+std::string GraphV02::route_source_credit_key(
+    int query_index,
+    const std::string& source_id) const {
+    return route_credit_query_signature(query_index) +
+           "|source:" + source_id +
+           "|bucket:" + route_source_credit_bucket_for_query(query_index, source_id);
+}
+
+std::string GraphV02::route_source_id_for_candidate(
+    int query_index,
+    int value_pos) const {
+    if (query_index >= 0 &&
+        query_index < static_cast<int>(route_hint_candidate_value_positions_.size()) &&
+        query_index < static_cast<int>(route_hint_candidate_source_ids_.size())) {
+        const auto& positions =
+            route_hint_candidate_value_positions_[static_cast<std::size_t>(query_index)];
+        const auto& sources =
+            route_hint_candidate_source_ids_[static_cast<std::size_t>(query_index)];
+        for (std::size_t rank = 0; rank < positions.size(); ++rank) {
+            if (positions[rank] == value_pos && rank < sources.size() &&
+                !sources[rank].empty()) {
+                return sources[rank];
+            }
+        }
+    }
+    return primary_route_source_id();
+}
+
 float GraphV02::route_credit_for_candidate(int query_index, int value_pos) const {
     if (value_pos < 0 || value_pos >= params_.N) {
         return 0.0f;
@@ -1697,6 +1820,16 @@ float GraphV02::route_credit_for_candidate(int query_index, int value_pos) const
     return route_credit_by_value_pos_[static_cast<std::size_t>(value_pos)];
 }
 
+float GraphV02::route_source_credit_for_candidate(int query_index, int value_pos) const {
+    if (!route_source_credit_active() || value_pos < 0 || value_pos >= params_.N) {
+        return 0.0f;
+    }
+    const std::string source_id = route_source_id_for_candidate(query_index, value_pos);
+    const auto found =
+        route_source_credit_by_bucket_.find(route_source_credit_key(query_index, source_id));
+    return found == route_source_credit_by_bucket_.end() ? 0.0f : found->second;
+}
+
 float GraphV02::route_credit_weight_for_candidate(int query_index, int value_pos) const {
     if (!route_credit_apply_active() || params_.route_credit_score_weight <= 0.0f) {
         return 1.0f;
@@ -1704,6 +1837,19 @@ float GraphV02::route_credit_weight_for_candidate(int query_index, int value_pos
     const double scaled =
         static_cast<double>(params_.route_credit_score_weight) *
         static_cast<double>(route_credit_for_candidate(query_index, value_pos));
+    return static_cast<float>(std::exp(std::clamp(scaled, -8.0, 8.0)));
+}
+
+float GraphV02::route_source_credit_weight_for_candidate(
+    int query_index,
+    int value_pos) const {
+    if (!route_source_credit_active() ||
+        params_.route_source_credit_score_weight <= 0.0f) {
+        return 1.0f;
+    }
+    const double scaled =
+        static_cast<double>(params_.route_source_credit_score_weight) *
+        static_cast<double>(route_source_credit_for_candidate(query_index, value_pos));
     return static_cast<float>(std::exp(std::clamp(scaled, -8.0, 8.0)));
 }
 
@@ -1719,27 +1865,36 @@ bool GraphV02::route_credit_apply_active() const {
            current_epoch_ >= params_.route_credit_apply_after_epoch;
 }
 
+bool GraphV02::route_source_credit_active() const {
+    return params_.route_source_credit_learning != 0;
+}
+
 void GraphV02::apply_route_credit_learning() {
-    if (params_.route_credit_mode == "off") {
-        return;
-    }
     const float decay_scale = 1.0f - params_.route_credit_decay;
-    if (params_.route_plasticity_ledger != 0) {
-        const float ledger_decay_scale =
-            1.0f - params_.route_plasticity_ledger_decay;
-        for (auto& entry : route_plasticity_ledger_) {
-            entry.second *= ledger_decay_scale;
+    if (route_credit_learn_active()) {
+        if (params_.route_plasticity_ledger != 0) {
+            const float ledger_decay_scale =
+                1.0f - params_.route_plasticity_ledger_decay;
+            for (auto& entry : route_plasticity_ledger_) {
+                entry.second *= ledger_decay_scale;
+            }
+        } else if (params_.route_credit_mode == "query-value") {
+            for (auto& entry : route_credit_by_query_value_) {
+                entry.second *= decay_scale;
+            }
+        } else {
+            if (route_credit_by_value_pos_.empty()) {
+                return;
+            }
+            for (float& credit : route_credit_by_value_pos_) {
+                credit *= decay_scale;
+            }
         }
-    } else if (params_.route_credit_mode == "query-value") {
-        for (auto& entry : route_credit_by_query_value_) {
-            entry.second *= decay_scale;
-        }
-    } else {
-        if (route_credit_by_value_pos_.empty()) {
-            return;
-        }
-        for (float& credit : route_credit_by_value_pos_) {
-            credit *= decay_scale;
+    }
+    if (route_source_credit_active()) {
+        const float source_decay_scale = 1.0f - params_.route_source_credit_decay;
+        for (auto& entry : route_source_credit_by_bucket_) {
+            entry.second *= source_decay_scale;
         }
     }
 
@@ -1748,6 +1903,51 @@ void GraphV02::apply_route_credit_learning() {
             continue;
         }
         const auto target_value = nodes_[static_cast<std::size_t>(index)].target_byte;
+
+        if (route_source_credit_active() &&
+            route_hint_correct_value_positions_[static_cast<std::size_t>(index)] >= 0) {
+            auto update_source_credit = [this, index](const std::string& source_id,
+                                                       float delta) {
+                float& credit =
+                    route_source_credit_by_bucket_[route_source_credit_key(index, source_id)];
+                credit += delta;
+                credit = std::clamp(
+                    credit,
+                    -params_.route_source_credit_clip,
+                    params_.route_source_credit_clip);
+            };
+
+            const bool primary_has_correct =
+                !route_hint_primary_has_correct_.empty() &&
+                route_hint_primary_has_correct_[static_cast<std::size_t>(index)];
+            if (primary_has_correct) {
+                update_source_credit(
+                    primary_route_source_id(),
+                    params_.route_source_credit_eta_reward);
+            } else {
+                update_source_credit(
+                    primary_route_source_id(),
+                    -params_.route_source_credit_eta_slash);
+
+                const bool fallback_used =
+                    !route_hint_fallback_used_.empty() &&
+                    route_hint_fallback_used_[static_cast<std::size_t>(index)];
+                if (fallback_used) {
+                    const bool fallback_recovered =
+                        !route_hint_fallback_recovered_.empty() &&
+                        route_hint_fallback_recovered_[static_cast<std::size_t>(index)];
+                    update_source_credit(
+                        fallback_route_source_id(),
+                        fallback_recovered ? params_.route_source_credit_eta_reward
+                                           : -params_.route_source_credit_eta_slash);
+                }
+            }
+        }
+
+        if (!route_credit_learn_active()) {
+            continue;
+        }
+
         std::vector<int> candidates =
             route_hint_candidate_value_positions_[static_cast<std::size_t>(index)];
         if (candidates.empty()) {
@@ -1856,8 +2056,13 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
 
         auto& candidates = route_hint_candidate_value_positions_[query_index];
         auto& candidate_keys = route_hint_candidate_keys_[query_index];
+        auto& candidate_sources = route_hint_candidate_source_ids_[query_index];
+        if (candidate_sources.size() != candidates.size()) {
+            candidate_sources.assign(candidates.size(), primary_route_source_id());
+        }
         std::vector<int> inserted_positions;
         std::vector<std::string> inserted_keys;
+        std::vector<std::string> inserted_sources;
         for (const int value_pos : fallback_positions) {
             if (value_pos < 0 || value_pos >= params_.N) {
                 continue;
@@ -1869,6 +2074,7 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
             inserted_positions.push_back(value_pos);
             inserted_keys.push_back(
                 route_value_position_keys_[static_cast<std::size_t>(value_pos)]);
+            inserted_sources.push_back(fallback_route_source_id());
         }
         if (inserted_positions.empty()) {
             continue;
@@ -1876,11 +2082,18 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
 
         candidates.insert(candidates.begin(), inserted_positions.begin(), inserted_positions.end());
         candidate_keys.insert(candidate_keys.begin(), inserted_keys.begin(), inserted_keys.end());
+        candidate_sources.insert(
+            candidate_sources.begin(),
+            inserted_sources.begin(),
+            inserted_sources.end());
         if (static_cast<int>(candidates.size()) > params_.K_route) {
             candidates.resize(static_cast<std::size_t>(params_.K_route));
         }
         if (static_cast<int>(candidate_keys.size()) > params_.K_route) {
             candidate_keys.resize(static_cast<std::size_t>(params_.K_route));
+        }
+        if (static_cast<int>(candidate_sources.size()) > params_.K_route) {
+            candidate_sources.resize(static_cast<std::size_t>(params_.K_route));
         }
         const int selected_pos = candidates.front();
         route_hint_value_positions_[query_index] = selected_pos;
@@ -2486,6 +2699,8 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                         value_counts[static_cast<std::size_t>(candidate_value)]);
                 }
                 candidate_weight *= route_credit_weight_for_candidate(index, value_pos);
+                candidate_weight *=
+                    route_source_credit_weight_for_candidate(index, value_pos);
             }
             const auto value_high =
                 static_cast<std::uint8_t>(candidate_value / FieldTable::States);
@@ -2853,6 +3068,14 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_credit_top1_sum = 0.0;
     double route_credit_qacc_sum = 0.0;
     double route_credit_query_count = 0.0;
+    double route_source_credit_primary_sum = 0.0;
+    double route_source_credit_primary_count = 0.0;
+    double route_source_credit_fallback_sum = 0.0;
+    double route_source_credit_fallback_count = 0.0;
+    double route_source_credit_primary_slashed_count = 0.0;
+    double route_source_credit_primary_candidate_count = 0.0;
+    double route_source_credit_fallback_rewarded_count = 0.0;
+    double route_source_credit_fallback_candidate_count = 0.0;
     double route_abstain_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_value_read_distance_sum = 0.0;
@@ -2946,6 +3169,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
                                 value_counts[static_cast<std::size_t>(value)]);
                         }
                         candidate_weight *= route_credit_weight_for_candidate(i, value_pos);
+                        candidate_weight *=
+                            route_source_credit_weight_for_candidate(i, value_pos);
                     }
                     high_votes[static_cast<std::size_t>(value / FieldTable::States)] +=
                         candidate_weight;
@@ -3233,6 +3458,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
                                     subset_value_counts[static_cast<std::size_t>(value)]);
                             }
                             candidate_weight *= route_credit_weight_for_candidate(i, value_pos);
+                            candidate_weight *=
+                                route_source_credit_weight_for_candidate(i, value_pos);
                         }
                         subset_value_votes[static_cast<std::size_t>(value)] +=
                             candidate_weight;
@@ -3622,6 +3849,50 @@ EpochMetricsV02 GraphV02::collect_metrics(
         }
         metrics.route_credit_learn_active = route_credit_learn_active() ? 1.0 : 0.0;
         metrics.route_credit_apply_active = route_credit_apply_active() ? 1.0 : 0.0;
+        for (const auto& entry : route_source_credit_by_bucket_) {
+            const bool is_primary =
+                entry.first.find("|source:primary-") != std::string::npos;
+            const bool is_fallback =
+                entry.first.find("|source:fallback-") != std::string::npos;
+            if (is_primary) {
+                route_source_credit_primary_sum += static_cast<double>(entry.second);
+                route_source_credit_primary_count += 1.0;
+                route_source_credit_primary_candidate_count += 1.0;
+                if (entry.second < 0.0f) {
+                    route_source_credit_primary_slashed_count += 1.0;
+                }
+            } else if (is_fallback) {
+                route_source_credit_fallback_sum += static_cast<double>(entry.second);
+                route_source_credit_fallback_count += 1.0;
+                route_source_credit_fallback_candidate_count += 1.0;
+                if (entry.second > 0.0f) {
+                    route_source_credit_fallback_rewarded_count += 1.0;
+                }
+            }
+        }
+        metrics.route_source_credit_size =
+            static_cast<double>(route_source_credit_by_bucket_.size());
+        if (route_source_credit_primary_count > 0.0) {
+            metrics.route_source_credit_primary_mean =
+                route_source_credit_primary_sum / route_source_credit_primary_count;
+        }
+        if (route_source_credit_fallback_count > 0.0) {
+            metrics.route_source_credit_fallback_mean =
+                route_source_credit_fallback_sum / route_source_credit_fallback_count;
+        }
+        metrics.route_source_credit_gap =
+            metrics.route_source_credit_fallback_mean -
+            metrics.route_source_credit_primary_mean;
+        if (route_source_credit_primary_candidate_count > 0.0) {
+            metrics.route_source_credit_primary_slashed_rate =
+                route_source_credit_primary_slashed_count /
+                route_source_credit_primary_candidate_count;
+        }
+        if (route_source_credit_fallback_candidate_count > 0.0) {
+            metrics.route_source_credit_fallback_rewarded_rate =
+                route_source_credit_fallback_rewarded_count /
+                route_source_credit_fallback_candidate_count;
+        }
         if (params_.route_plasticity_ledger != 0) {
             metrics.route_plasticity_ledger_size =
                 static_cast<double>(route_plasticity_ledger_.size());
