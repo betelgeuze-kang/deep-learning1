@@ -24,7 +24,7 @@
 - `v0.2-b`: block-local coupled proposal과 `B[x, high, low]` coupling을 포함합니다. 기본 weak-coupling path는 `counter`와 `repeating-text` 5-seed regression을 통과했습니다.
 - `v0.3 static routing`: `jump-neighbors`, confidence gate/acceptance, `state-code`, `input-byte` route source 계열은 diagnostic/default-off입니다. 현재 결론은 routing success가 아니라 **neighbor replacement no-go**입니다.
 - `v0.3 route-hint`: 살아남은 장거리 경로입니다. 핵심 경로는 `candidate value_pos -> value byte read -> proposal hint`입니다.
-- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했습니다. 셋 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
+- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했으며, h4-5w는 route-credit ablation diagnostics입니다. 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
 
 ## 중요한 아키텍처 결론
 
@@ -83,7 +83,8 @@ remove-correct:
 - h4-5q: fallback adaptive strength는 fixed strong보다 낮은 평균 strength로 일부 개선했지만 fixed strong을 대체하지는 못했습니다.
 - h4-5r/s/t: fallback-used query는 low nibble 쪽이 더 큰 병목이며, `hi_mult=5`, `lo_mult=7.5..10` 근처에 sweet spot이 있습니다.
 - h4-5u: 짧은 fallback persistence / TTL 계측은 정상 연결됐지만 qacc 개선은 neutral입니다.
-- h4-5v: value-position route credit은 correct/wrong candidate credit을 분리합니다 (`credit_gap = 1.110268`) 그리고 qacc를 아주 작게 움직입니다 (`0.845312 -> 0.850000`). 이는 route-credit separation instrumentation / tiny mitigation이지 robustness solved가 아닙니다.
+- h4-5v: value-position route credit은 correct/wrong candidate credit을 분리합니다 (`credit_gap = 1.110268`) 그리고 qacc를 아주 작게 움직입니다 (`0.845312 -> 0.850000`). 이는 route-credit separation instrumentation / tiny mitigation이지 wrong-candidate robustness solved나 learned routing solved가 아닙니다. 다음 route-credit 작업은 score weight, reward/slash 비율, decay, clip, value-pos 대비 query-value edge credit, 그리고 fallback low-channel strength sweet spot과의 조합 ablation입니다.
+- h4-5w: route-credit ablation diagnostics와 `--route-credit-mode query-value`를 추가했습니다. Smoke에서 value-pos credit은 유지되고, query-value edge credit도 동작합니다 (`query-value-probe` gap `0.598951`). credit + low-channel fallback 조합은 fallback subset을 움직입니다 (`fallback_qacc 0.688889 -> 0.777778`). 이는 ablation instrumentation / limited mitigation이지 robustness solved가 아닙니다.
 
 ## 빌드
 

@@ -445,7 +445,7 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-fallback-lo-margin-alpha <float>\n"
        << "  --route-fallback-persist-cycles <int>\n"
        << "  --route-credit-learning <0|1>\n"
-       << "  --route-credit-mode <value-pos>\n"
+       << "  --route-credit-mode <value-pos|query-value>\n"
        << "  --route-credit-score-weight <float>\n"
        << "  --route-credit-eta-reward <float>\n"
        << "  --route-credit-eta-slash <float>\n"

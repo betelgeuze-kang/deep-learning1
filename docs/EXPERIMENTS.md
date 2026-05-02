@@ -752,3 +752,33 @@ Expected:
   `wrong_mean=-0.796331`, `gap=1.110268`) and a small qacc move
   (`0.845312 -> 0.850000`). This validates the credit ledger and weighting
   path but does not solve wrong-candidate robustness.
+- h4-5v interpretation: route credit can learn a candidate-quality signal, but
+  the current effect on query accuracy is small. The remaining bottleneck is
+  likely a combination of credit strength, credit granularity, and fallback
+  hint integration dynamics.
+- h4-5w route-credit ablation smoke:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_route_credit_ablation.sh
+```
+
+- h4-5w standard route-credit ablation run:
+
+```bash
+./experiments/run_v03_route_hint_kv_hash_route_code_route_credit_ablation.sh
+./experiments/run_v03_route_hint_kv_hash_route_code_route_credit_ablation.sh --full
+```
+
+- h4-5w writes
+  `results/v03_route_hint_kv_hash_route_code_route_credit_ablation_summary.csv`
+- h4-5w is route-credit ablation diagnostics only: it sweeps value-pos credit
+  knobs, compares fallback low-channel strength combinations, and keeps a
+  query-value probe wired into the smoke; do not read it as robustness solved
+  or learned routing solved
+- h4-5w smoke decision: `PASS` as route-credit ablation instrumentation /
+  limited mitigation. The smoke keeps value-pos credit active
+  (`value-pos-strong-slash` gap `0.618182`), wires query-value edge credit
+  (`query-value-probe` gap `0.598951`), and shows credit plus low-channel
+  fallback can move the fallback subset (`fallback-lo7p5-off` fallback_qacc
+  `0.688889`, `fallback-lo10-on` fallback_qacc `0.777778`). This is not
+  wrong-candidate robustness solved and not learned routing solved.

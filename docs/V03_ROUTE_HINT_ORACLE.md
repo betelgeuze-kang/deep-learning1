@@ -1602,3 +1602,83 @@ Decision:
   the weighting path is active
 - the qacc move is small, so this is not wrong-candidate robustness solved and
   not learned routing solved
+
+Interpretation:
+
+- route credit can accumulate a candidate-quality signal: correct candidate
+  value positions move positive, while wrong candidate value positions move
+  negative
+- the small qacc move means the current ledger is not yet enough to turn credit
+  separation into robust query prediction
+- likely remaining issues are credit score strength, reward/slash balance,
+  credit memory/clip settings, value-position granularity, and fallback hint
+  integration dynamics
+
+Next route-credit ablation:
+
+```text
+v0.3-h4-5w route-credit ablation
+```
+
+Recommended knobs:
+
+- `--route-credit-score-weight`: `0.5`, `1.0`, `2.0`, `4.0`
+- `--route-credit-eta-reward` / `--route-credit-eta-slash` ratios, especially
+  stronger slash settings such as `0.05/0.20` and `0.10/0.20`
+- `--route-credit-decay`: `0.0`, `0.001`, `0.01`
+- `--route-credit-clip`: `2`, `4`, `8`
+- compare value-position credit with future `(query_signature, value_pos)`
+  edge credit
+- combine credit with fallback low-channel strength, especially the h4-5t
+  `hi_mult=5`, `lo_mult=7.5..10` sweet spot
+
+Success criteria for h4-5w should be modest:
+
+- `credit_gap` remains positive or increases
+- qacc rises more reliably above credit-off
+- wrong hint/value influence decreases without suppressing correct support
+- query-value probe stays wired in the smoke so the mode split remains visible
+- if qacc still does not move, document that route credit is connected but
+  needs stronger granularity or integration with fallback/channel dynamics
+
+## h4-5w Route-credit Ablation Decision
+
+`v0.3-h4-5w` passes as route-credit ablation instrumentation and limited
+mitigation.
+
+New behavior:
+
+- `--route-credit-mode value-pos|query-value`
+- value-pos credit keeps the h4-5v ledger behavior
+- query-value mode stores credit on a deterministic query signature plus
+  candidate `value_pos` edge
+- weighted-vote uses the same exp-scaled credit weight, but looks up the ledger
+  according to the selected mode
+
+Smoke command:
+
+```bash
+./experiments/test_v03_route_hint_kv_hash_route_code_route_credit_ablation.sh
+```
+
+Smoke readout:
+
+- `value-pos-base`: qacc `0.862500`, credit gap `0.000000`
+- `value-pos-strong-slash`: qacc `0.862500`, credit gap `0.618182`
+- `query-value-probe`: qacc `0.862500`, credit gap `0.598951`
+- `fallback-lo7p5-off`: qacc `0.912500`, fallback_qacc `0.688889`
+- `fallback-lo10-on`: qacc `0.937500`, fallback_qacc `0.777778`,
+  credit gap `0.812801`
+
+Interpretation:
+
+- query-value edge credit is now wired and can separate correct/wrong
+  candidate edges in the smoke
+- stronger slash/weight settings change credit separation, but the clean
+  preserve-correct qacc is neutral in this small smoke
+- combining credit with the low-channel fallback sweet spot can improve the
+  fallback subset, suggesting credit/ranking and fallback integration may need
+  to be tuned together
+
+This is still not wrong-candidate robustness solved and not learned routing
+solved. Treat it as ablation diagnostics plus limited mitigation.

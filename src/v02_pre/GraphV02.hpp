@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "common/Metrics.hpp"
@@ -101,8 +102,10 @@ class GraphV02 {
     bool candidate_positions_contain_correct(int index) const;
     bool should_corrupt_route_candidate(int index) const;
     bool route_fallback_persistence_active(int index) const;
-    float route_credit_for_value_pos(int value_pos) const;
-    float route_credit_weight_for_value_pos(int value_pos) const;
+    std::string route_credit_query_signature(int query_index) const;
+    std::string route_credit_edge_key(int query_index, int value_pos) const;
+    float route_credit_for_candidate(int query_index, int value_pos) const;
+    float route_credit_weight_for_candidate(int query_index, int value_pos) const;
     void apply_route_credit_learning();
     int wrong_route_value_position_for_node(int index) const;
     std::string joint_code_signature_for_key(const std::string& key) const;
@@ -178,6 +181,7 @@ class GraphV02 {
     std::vector<int> route_fallback_persist_remaining_;
     std::vector<int> route_fallback_persist_visits_;
     std::vector<float> route_credit_by_value_pos_;
+    std::unordered_map<std::string, float> route_credit_by_query_value_;
     std::vector<int> route_value_positions_;
     std::vector<std::string> route_value_position_keys_;
     std::vector<std::string> route_hint_query_keys_;

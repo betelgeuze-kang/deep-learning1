@@ -507,8 +507,10 @@ void GraphV02::validate_params() const {
     if (params_.route_credit_learning < 0 || params_.route_credit_learning > 1) {
         throw std::runtime_error("route-credit-learning must be 0 or 1");
     }
-    if (params_.route_credit_mode != "value-pos") {
-        throw std::runtime_error("route-credit-mode must be one of: value-pos");
+    if (params_.route_credit_mode != "value-pos" &&
+        params_.route_credit_mode != "query-value") {
+        throw std::runtime_error(
+            "route-credit-mode must be one of: value-pos, query-value");
     }
     if (params_.route_credit_score_weight < 0.0f) {
         throw std::runtime_error("route-credit-score-weight must be non-negative");
@@ -815,7 +817,7 @@ bool GraphV02::route_hint_proposal_value_for_node(int index, std::uint8_t& out_v
                     candidate_weight =
                         static_cast<float>(value_counts[static_cast<std::size_t>(value)]);
                 }
-                candidate_weight *= route_credit_weight_for_value_pos(value_pos);
+                candidate_weight *= route_credit_weight_for_candidate(index, value_pos);
             }
             value_votes[static_cast<std::size_t>(value)] += candidate_weight;
         }
@@ -885,7 +887,7 @@ double GraphV02::route_hint_margin_for_node(int index, std::uint8_t target_value
                     candidate_weight =
                         static_cast<float>(value_counts[static_cast<std::size_t>(value)]);
                 }
-                candidate_weight *= route_credit_weight_for_value_pos(value_pos);
+                candidate_weight *= route_credit_weight_for_candidate(index, value_pos);
             }
             high_votes[static_cast<std::size_t>(value / FieldTable::States)] +=
                 candidate_weight;
@@ -967,7 +969,7 @@ double GraphV02::route_value_support_confidence_for_node(
                     candidate_weight =
                         static_cast<float>(value_counts[static_cast<std::size_t>(value)]);
                 }
-                candidate_weight *= route_credit_weight_for_value_pos(value_pos);
+                candidate_weight *= route_credit_weight_for_candidate(index, value_pos);
             }
             value_votes[static_cast<std::size_t>(value)] += candidate_weight;
             vote_weight_sum += candidate_weight;
@@ -1618,32 +1620,62 @@ bool GraphV02::route_fallback_persistence_active(int index) const {
     return route_fallback_persist_remaining_[static_cast<std::size_t>(index)] > 0;
 }
 
-float GraphV02::route_credit_for_value_pos(int value_pos) const {
-    if (value_pos < 0 ||
-        value_pos >= static_cast<int>(route_credit_by_value_pos_.size())) {
+std::string GraphV02::route_credit_query_signature(int query_index) const {
+    if (query_index >= 0 &&
+        query_index < static_cast<int>(route_hint_query_keys_.size())) {
+        const std::string& key =
+            route_hint_query_keys_[static_cast<std::size_t>(query_index)];
+        if (!key.empty()) {
+            return "key:" + key + "@pos:" + std::to_string(query_index);
+        }
+    }
+    return "pos:" + std::to_string(query_index);
+}
+
+std::string GraphV02::route_credit_edge_key(int query_index, int value_pos) const {
+    return route_credit_query_signature(query_index) +
+           "|value-pos:" + std::to_string(value_pos);
+}
+
+float GraphV02::route_credit_for_candidate(int query_index, int value_pos) const {
+    if (value_pos < 0 || value_pos >= params_.N) {
+        return 0.0f;
+    }
+    if (params_.route_credit_mode == "query-value") {
+        const auto found =
+            route_credit_by_query_value_.find(route_credit_edge_key(query_index, value_pos));
+        return found == route_credit_by_query_value_.end() ? 0.0f : found->second;
+    }
+    if (value_pos >= static_cast<int>(route_credit_by_value_pos_.size())) {
         return 0.0f;
     }
     return route_credit_by_value_pos_[static_cast<std::size_t>(value_pos)];
 }
 
-float GraphV02::route_credit_weight_for_value_pos(int value_pos) const {
+float GraphV02::route_credit_weight_for_candidate(int query_index, int value_pos) const {
     if (params_.route_credit_learning == 0 ||
         params_.route_credit_score_weight <= 0.0f) {
         return 1.0f;
     }
     const double scaled =
         static_cast<double>(params_.route_credit_score_weight) *
-        static_cast<double>(route_credit_for_value_pos(value_pos));
+        static_cast<double>(route_credit_for_candidate(query_index, value_pos));
     return static_cast<float>(std::exp(std::clamp(scaled, -8.0, 8.0)));
 }
 
 void GraphV02::apply_route_credit_learning() {
-    if (route_credit_by_value_pos_.empty()) {
-        return;
-    }
     const float decay_scale = 1.0f - params_.route_credit_decay;
-    for (float& credit : route_credit_by_value_pos_) {
-        credit *= decay_scale;
+    if (params_.route_credit_mode == "query-value") {
+        for (auto& entry : route_credit_by_query_value_) {
+            entry.second *= decay_scale;
+        }
+    } else {
+        if (route_credit_by_value_pos_.empty()) {
+            return;
+        }
+        for (float& credit : route_credit_by_value_pos_) {
+            credit *= decay_scale;
+        }
     }
 
     for (int index = 0; index < params_.N; ++index) {
@@ -1661,12 +1693,14 @@ void GraphV02::apply_route_credit_learning() {
             }
         }
         for (const int value_pos : candidates) {
-            if (value_pos < 0 ||
-                value_pos >= static_cast<int>(route_credit_by_value_pos_.size())) {
+            if (value_pos < 0 || value_pos >= params_.N) {
                 continue;
             }
             const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
-            float& credit = route_credit_by_value_pos_[static_cast<std::size_t>(value_pos)];
+            float& credit =
+                params_.route_credit_mode == "query-value"
+                    ? route_credit_by_query_value_[route_credit_edge_key(index, value_pos)]
+                    : route_credit_by_value_pos_[static_cast<std::size_t>(value_pos)];
             if (value == target_value) {
                 credit += params_.route_credit_eta_reward;
             } else {
@@ -2382,7 +2416,7 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                     candidate_weight = static_cast<float>(
                         value_counts[static_cast<std::size_t>(candidate_value)]);
                 }
-                candidate_weight *= route_credit_weight_for_value_pos(value_pos);
+                candidate_weight *= route_credit_weight_for_candidate(index, value_pos);
             }
             const auto value_high =
                 static_cast<std::uint8_t>(candidate_value / FieldTable::States);
@@ -2842,7 +2876,7 @@ EpochMetricsV02 GraphV02::collect_metrics(
                             candidate_weight = static_cast<float>(
                                 value_counts[static_cast<std::size_t>(value)]);
                         }
-                        candidate_weight *= route_credit_weight_for_value_pos(value_pos);
+                        candidate_weight *= route_credit_weight_for_candidate(i, value_pos);
                     }
                     high_votes[static_cast<std::size_t>(value / FieldTable::States)] +=
                         candidate_weight;
@@ -2997,7 +3031,7 @@ EpochMetricsV02 GraphV02::collect_metrics(
                         if (value_pos < 0 || value_pos >= params_.N) {
                             continue;
                         }
-                        const float credit = route_credit_for_value_pos(value_pos);
+                        const float credit = route_credit_for_candidate(i, value_pos);
                         const auto value =
                             nodes_[static_cast<std::size_t>(value_pos)].input_byte;
                         route_credit_candidate_count += 1.0;
@@ -3129,7 +3163,7 @@ EpochMetricsV02 GraphV02::collect_metrics(
                                 candidate_weight = static_cast<float>(
                                     subset_value_counts[static_cast<std::size_t>(value)]);
                             }
-                            candidate_weight *= route_credit_weight_for_value_pos(value_pos);
+                            candidate_weight *= route_credit_weight_for_candidate(i, value_pos);
                         }
                         subset_value_votes[static_cast<std::size_t>(value)] +=
                             candidate_weight;

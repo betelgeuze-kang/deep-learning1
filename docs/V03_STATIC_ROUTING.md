@@ -54,6 +54,8 @@ Current helper:
 - `experiments/test_v03_route_hint_kv_hash_route_code_projected_delta.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_strength.sh`
 - `experiments/test_v03_route_hint_kv_hash_route_code_fallback_adaptive.sh`
+- `experiments/run_v03_route_hint_kv_hash_route_code_route_credit_ablation.sh`
+- `experiments/test_v03_route_hint_kv_hash_route_code_route_credit_ablation.sh`
 
 The h4-5n/o/p/q route-hint diagnostics stay ancillary to this static-routing
 slice. In particular, h4-5p only scales fallback-used queries via
@@ -65,6 +67,9 @@ query-local hint integration and does not revive jump-neighbor replacement.
 h4-5q adds fallback-specific margin strength and lowers the mean fallback
 strength needed for limited mitigation, but it remains query-local and
 diagnostic; it still does not promote jump-neighbor replacement.
+h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
+slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
+promotion.
 
 State-code route-signal probe:
 
@@ -311,6 +316,12 @@ Current decision:
   priority instrumentation, not as static-routing promotion
 - treat route-credit diagnostics as value-hint candidate/edge instrumentation,
   not as static-routing promotion
+- treat route-credit ablations as value-bearing route-hint memory diagnostics;
+  they may change candidate ranking/aggregation weights, but they do not
+  revive neighbor replacement or prove learned routing
+- `query-value` route credit is still edge-credit instrumentation on the
+  value-bearing route-hint path; do not reinterpret it as static routing
+  success
 
 Allowed wording:
 
@@ -323,6 +334,7 @@ Allowed wording:
 - `low-nibble fallback strength calibration`
 - `fallback persistence diagnostics`
 - `route-credit separation diagnostics`
+- `route-credit ablation diagnostics`
 
 Do not say:
 

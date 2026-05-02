@@ -8,7 +8,7 @@ Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, and h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation. Treat all three as diagnostics / limited mitigation, not robustness solved.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, and h4-5w is the route-credit ablation diagnostics sweep. Treat them as diagnostics / limited mitigation, not robustness solved.
 
 Current status:
 
@@ -70,6 +70,15 @@ Current status:
   correct and wrong candidates (`credit_gap = 1.110268`) and gives a tiny qacc
   move (`0.845312 -> 0.850000`). Treat this as route-credit separation
   instrumentation / tiny mitigation only, not wrong-candidate robustness solved
+  and not learned routing solved. Next route-credit work should ablate score
+  weight, reward/slash ratio, decay, clip, value-pos versus query-value edge
+  credit, and credit combined with the fallback low-channel strength sweet spot
+- h4-5w adds route-credit ablation diagnostics and `--route-credit-mode
+  query-value`. The smoke keeps value-pos credit working, wires query-value
+  edge credit (`query-value-probe` gap `0.598951`), and shows credit plus
+  low-channel fallback can move the fallback subset (`fallback_qacc 0.688889 ->
+  0.777778` in the smoke). Treat this as ablation instrumentation / limited
+  mitigation only, not robustness solved
 
 ## Build
 
