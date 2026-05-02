@@ -126,6 +126,47 @@ std::uint32_t hash_string_bucket(const std::string& text, int hash_bits) {
     return mask_hash(hash, hash_bits);
 }
 
+std::uint32_t deterministic_route_code_hash(
+    int seed,
+    int index,
+    std::uint8_t key_byte,
+    std::uint8_t salt) {
+    std::uint32_t hash = 2166136261u;
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>(seed & 0xff));
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>((seed >> 8) & 0xff));
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>((seed >> 16) & 0xff));
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>((seed >> 24) & 0xff));
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>(index & 0xff));
+    hash = fnv1a_update(hash, static_cast<std::uint8_t>((index >> 8) & 0xff));
+    hash = fnv1a_update(hash, key_byte);
+    hash = fnv1a_update(hash, salt);
+    return hash;
+}
+
+double deterministic_route_code_unit(
+    int seed,
+    int index,
+    std::uint8_t key_byte,
+    std::uint8_t salt) {
+    return static_cast<double>(
+               deterministic_route_code_hash(seed, index, key_byte, salt)) /
+           4294967296.0;
+}
+
+std::uint8_t deterministic_corrupt_byte(
+    int seed,
+    int index,
+    std::uint8_t key_byte,
+    std::uint8_t target_byte) {
+    const auto hash = deterministic_route_code_hash(seed, index, key_byte, 0xa7U);
+    const auto wrong_target =
+        static_cast<std::uint8_t>((hash & 1U) == 0U ? 0x00U : 0x0fU);
+    if (wrong_target != target_byte) {
+        return wrong_target;
+    }
+    return static_cast<std::uint8_t>(wrong_target ^ 0xf0U);
+}
+
 }  // namespace
 
 GraphV02::GraphV02(const V02PreParams& params)
@@ -333,11 +374,12 @@ void GraphV02::apply_contrastive_learning() {
         }
         if (params_.route_code_aux != 0 &&
             (params_.route_code_key_region_only == 0 ||
-             key_region_mask_[static_cast<std::size_t>(index)])) {
-            const auto id_high =
-                static_cast<std::uint8_t>(node.input_byte / FieldTable::States);
-            const auto id_low =
-                static_cast<std::uint8_t>(node.input_byte % FieldTable::States);
+             key_region_mask_[static_cast<std::size_t>(index)]) &&
+            route_code_aux_kept(index, node.input_byte)) {
+            const auto target =
+                route_code_aux_target(index, node.input_byte, node.input_byte);
+            const auto id_high = static_cast<std::uint8_t>(target / FieldTable::States);
+            const auto id_low = static_cast<std::uint8_t>(target % FieldTable::States);
             const float delta = params_.eta_route_code * params_.lambda_route_code_id;
             route_field_.add(0, node.input_byte, id_high, delta);
             route_field_.add(1, node.input_byte, id_low, delta);
@@ -599,6 +641,14 @@ void GraphV02::validate_params() const {
     if (params_.route_code_key_region_only < 0 ||
         params_.route_code_key_region_only > 1) {
         throw std::runtime_error("route-code-key-region-only must be 0 or 1");
+    }
+    if (params_.route_code_key_region_keep_prob < 0.0f ||
+        params_.route_code_key_region_keep_prob > 1.0f) {
+        throw std::runtime_error("route-code-key-region-keep-prob must be in [0, 1]");
+    }
+    if (params_.route_code_aux_noise_rate < 0.0f ||
+        params_.route_code_aux_noise_rate > 1.0f) {
+        throw std::runtime_error("route-code-aux-noise-rate must be in [0, 1]");
     }
     if (params_.eta_route_code < 0.0f) {
         throw std::runtime_error("eta-route-code must be non-negative");
@@ -2399,6 +2449,32 @@ std::uint32_t GraphV02::joint_code_hash_for_key(const std::string& key) const {
         hash = fnv1a_update(hash, static_cast<std::uint8_t>(byte));
     }
     return mask_hash(hash, params_.route_hash_bits);
+}
+
+bool GraphV02::route_code_aux_kept(int index, std::uint8_t input_byte) const {
+    if (params_.route_code_key_region_keep_prob >= 1.0f) {
+        return true;
+    }
+    if (params_.route_code_key_region_keep_prob <= 0.0f) {
+        return false;
+    }
+    return deterministic_route_code_unit(params_.seed, index, input_byte, 0x5bU) <
+           static_cast<double>(params_.route_code_key_region_keep_prob);
+}
+
+std::uint8_t GraphV02::route_code_aux_target(
+    int index,
+    std::uint8_t key_byte,
+    std::uint8_t target_byte) const {
+    if (params_.route_code_aux_noise_rate <= 0.0f) {
+        return target_byte;
+    }
+    if (params_.route_code_aux_noise_rate >= 1.0f ||
+        deterministic_route_code_unit(params_.seed, index, key_byte, 0xc3U) <
+            static_cast<double>(params_.route_code_aux_noise_rate)) {
+        return deterministic_corrupt_byte(params_.seed, index, key_byte, target_byte);
+    }
+    return target_byte;
 }
 
 std::uint8_t GraphV02::route_code_for_byte(std::uint8_t input_byte) const {

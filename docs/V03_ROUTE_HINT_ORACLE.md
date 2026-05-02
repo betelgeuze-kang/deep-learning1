@@ -2044,3 +2044,63 @@ h5-e shows that h5-d's source-quality separation is not only a single-row
 smoke artifact. It repeats over the small key/seed scale smoke. This remains a
 controlled diagnostic with symbolic fallback and explicit noisy-source stress,
 not learned sparse routing.
+
+## h5-f Weaker Learned-source Stress Decision
+
+`h5-f` passes as weaker learned-source stress instrumentation, but it does not
+solve learned routing, source-credit robustness, or wrong-candidate robustness.
+
+This slice weakens the `route-code-key` source itself rather than only adding a
+separate bad noisy source:
+
+- `--route-code-key-region-keep-prob <0..1>` skips a deterministic fraction of
+  key-region route-code identity auxiliary updates
+- `--route-code-aux-noise-rate <0..1>` trains a deterministic fraction of kept
+  route-code identity updates toward a low-entropy wrong target
+
+The value-bearing route-hint path remains unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_learned_source_stress.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_learned_source_stress.sh
+./experiments/run_v05_route_source_credit_learned_source_stress.sh --full
+```
+
+Smoke grid:
+
+- key counts `32/64`
+- seeds `1/2`
+- clean branch: `keep=1.0`, `aux_noise=0.0`
+- weak branch: `keep=0.25`, `aux_noise=0.75`
+- primary source: `route-code-key`
+- fallback source: symbolic `key-shape`
+
+Current narrow readout:
+
+- clean rows keep `key_region_route_decode_acc`, `route_primary_recall`, and
+  query accuracy at `1.000000`
+- weak rows lower route-code decode and primary recall
+- weak rows trigger key-shape fallback and keep fallback recall at `1.000000`
+- weak rows produce positive source-credit gap, nonzero primary slash, and
+  nonzero fallback reward diagnostics
+- all rows keep `route_hint_candidate_lookup_count > 0`,
+  `route_hint_value_read_distance_mean > 0`, `routing_trigger_rate = 0.000000`,
+  and `active_jump_rate = 0.000000`
+
+Interpretation:
+h5-f creates an intermediate point between the strong explicit route-code
+identity auxiliary and the weak prediction-oriented joint-code source. Source
+credit can detect the degraded route-code source and route responsibility
+toward the symbolic fallback in this controlled fixture. This is still an
+instrumentation result with key-shape fallback, not learned sparse routing.

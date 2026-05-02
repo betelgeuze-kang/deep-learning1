@@ -132,6 +132,11 @@ class GraphV02 {
     int wrong_route_value_position_for_node(int index) const;
     std::string joint_code_signature_for_key(const std::string& key) const;
     std::uint32_t joint_code_hash_for_key(const std::string& key) const;
+    bool route_code_aux_kept(int index, std::uint8_t input_byte) const;
+    std::uint8_t route_code_aux_target(
+        int index,
+        std::uint8_t key_byte,
+        std::uint8_t target_byte) const;
     std::uint8_t route_code_for_byte(std::uint8_t input_byte) const;
     std::string route_code_signature_for_key(const std::string& key) const;
     std::uint32_t route_code_hash_for_key(const std::string& key) const;

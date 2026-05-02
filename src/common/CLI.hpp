@@ -346,6 +346,12 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-code-key-region-only" ||
                    key == "route_code_key_region_only") {
             params.route_code_key_region_only = cli_to_int(value, key);
+        } else if (key == "route-code-key-region-keep-prob" ||
+                   key == "route_code_key_region_keep_prob") {
+            params.route_code_key_region_keep_prob = cli_to_float(value, key);
+        } else if (key == "route-code-aux-noise-rate" ||
+                   key == "route_code_aux_noise_rate") {
+            params.route_code_aux_noise_rate = cli_to_float(value, key);
         } else if (key == "eta-route-code" || key == "eta_route_code") {
             params.eta_route_code = cli_to_float(value, key);
         } else if (key == "lambda-route-code-id" || key == "lambda_route_code_id") {
@@ -504,6 +510,8 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-hash-source <raw-key|joint-code-key|route-code-key>\n"
        << "  --route-code-aux <0|1>\n"
        << "  --route-code-key-region-only <0|1>\n"
+       << "  --route-code-key-region-keep-prob <float>\n"
+       << "  --route-code-aux-noise-rate <float>\n"
        << "  --eta-route-code <float>\n"
        << "  --lambda-route-code-id <float>\n"
        << "  --route-target-proposals <0|1>\n"

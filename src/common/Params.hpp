@@ -136,6 +136,8 @@ struct V02PreParams {
     std::string route_hash_source = "raw-key";
     int route_code_aux = 0;
     int route_code_key_region_only = 1;
+    float route_code_key_region_keep_prob = 1.0f;
+    float route_code_aux_noise_rate = 0.0f;
     float eta_route_code = 0.05f;
     float lambda_route_code_id = 1.0f;
     int route_target_proposals = 0;

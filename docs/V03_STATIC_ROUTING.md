@@ -346,6 +346,10 @@ Current decision:
   memory instrumentation; it checks whether source-quality separation repeats
   across small key/seed/noise sweeps, but it still does not promote static
   neighbor replacement
+- treat weaker learned-source stress as value-bearing route-hint memory
+  instrumentation; it weakens the route-code identity auxiliary and measures
+  source-credit/fallback response while preserving `value_pos -> value byte ->
+  proposal hint`, but it still does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -369,6 +373,7 @@ Allowed wording:
 - `noisy-source policy diagnostics`
 - `source-quality separation instrumentation`
 - `noisy-source scale stability diagnostics`
+- `weaker learned-source stress instrumentation`
 
 Do not say:
 
@@ -380,3 +385,4 @@ Do not say:
 - `source credit solves routing`
 - `noisy source credit solves robustness`
 - `source-quality separation solves learned routing`
+- `weakened route-code source solves learned routing`

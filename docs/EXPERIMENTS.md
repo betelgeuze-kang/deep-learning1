@@ -975,3 +975,33 @@ Expected:
   can be positive because the source still contains correct fallback support,
   so the noisy-candidate credit/slash metrics are the sharper signal. This is
   stability instrumentation, not source-credit robustness solved.
+- h5-f learned-source stress smoke:
+
+```bash
+./experiments/test_v05_route_source_credit_learned_source_stress.sh
+```
+
+- h5-f standard learned-source stress run:
+
+```bash
+./experiments/run_v05_route_source_credit_learned_source_stress.sh
+./experiments/run_v05_route_source_credit_learned_source_stress.sh --full
+```
+
+- h5-f writes
+  `results/v05_route_source_credit_learned_source_stress_summary.csv`
+- h5-f adds `--route-code-key-region-keep-prob` and
+  `--route-code-aux-noise-rate` as default-off route-code identity weakening
+  controls. They apply only to the route-code identity auxiliary update, so
+  key signature readout still reads the learned route field rather than
+  directly corrupting the route key.
+- h5-f smoke crosses key counts `32/64`, seeds `1/2`, and two branches:
+  clean full route-code identity supervision and weak learned-source stress
+  (`keep=0.25`, `aux_noise=0.75`). Clean rows keep route decode, primary
+  recall, and qacc at `1.000000`. Weak rows lower route-code decode and
+  primary recall, trigger key-shape fallback, and populate positive
+  source-credit gap, primary slash, and fallback reward diagnostics.
+- h5-f smoke decision: `PASS` as weaker learned-source stress
+  instrumentation. This is source-quality detection under controlled route-code
+  identity weakening, not learned routing solved and not source-credit
+  robustness solved.
