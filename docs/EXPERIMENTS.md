@@ -1305,9 +1305,9 @@ key-shape:
 
 noisy-route-code:
   vote qacc=0.059375, fallback_recall=0.000000
-  source-aware qacc=0.193750, fallback_recall=0.000000,
+  source-aware qacc=0.189062, fallback_recall=0.000000,
   source_gap=-0.140244, noisy_mean=-0.197850,
-  noisy_slashed=0.972107, noisy_selected=0.000000,
+  noisy_slashed=1.000000, noisy_selected=0.000000,
   strength_mean=1.000000
 ```
 
@@ -1360,9 +1360,9 @@ key-shape:
 
 noisy-route-code:
   vote qacc=0.099219, fallback_recall=0.000000
-  source-aware qacc=0.320703, fallback_recall=0.000000,
+  source-aware qacc=0.317969, fallback_recall=0.000000,
   source_gap=-0.268339, noisy_mean=-0.231653,
-  noisy_slashed=0.973848, strength_mean=1.000000
+  noisy_slashed=1.000000, strength_mean=1.000000
 ```
 
 Decision:
@@ -1416,11 +1416,11 @@ symbolic fallback:
   source_gap=0.328890, source_filter_abstain=0.000000
 
 noisy fallback:
-  noisy-unfiltered qacc=0.187500, source_gap=-0.116147,
+  noisy-unfiltered qacc=0.185937, source_gap=-0.116147,
   noisy_mean=-0.177831, noisy_slashed=0.974458
 
-  noisy-filter qacc=0.125000, fallback_recall=0.000000,
-  source_filter_filtered=0.929220, source_filter_abstain=0.846875,
+  noisy-filter qacc=0.100000, fallback_recall=0.000000,
+  source_filter_filtered=0.935065, source_filter_abstain=0.875000,
   strength_mean=1.000000
 ```
 
@@ -1437,3 +1437,71 @@ fallback. However, filtering bad candidates does not recover missing correct
 candidates: noisy fallback qacc decreases rather than improves. The next
 bottleneck is a replacement/fallback source or source-quality retry policy,
 not stronger filtering alone.
+
+## h5-o Retry-source Replacement Decision
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_retry_source.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_retry_source.sh
+```
+
+The h5-o smoke adds a secondary retry source:
+
+```bash
+--route-source-retry-source off|raw-key|key-shape|joint-code-key|noisy-route-code
+```
+
+The retry source is inserted into the same value-bearing candidate path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+It does not activate jump-neighbor replacement. The goal is narrow: after
+negative-credit filtering removes a bad/noisy source, can a secondary source
+restore candidate availability and query accuracy?
+
+Reference smoke readout:
+
+```text
+noisy-filter:
+  qacc=0.103125, fallback_recall=0.000000,
+  source_filter_filtered=0.937013,
+  source_filter_abstain=0.876562,
+  source_retry_used=0.000000
+
+retry-raw:
+  qacc=0.950000, fallback_recall=1.000000,
+  fallback_qacc=0.991071,
+  source_filter_abstain=0.003125,
+  source_retry_used=0.875000,
+  source_retry_success=0.875000
+
+retry-keyshape:
+  qacc=0.962500, fallback_recall=1.000000,
+  fallback_qacc=1.000000,
+  source_filter_abstain=0.003125,
+  source_retry_used=0.875000,
+  source_retry_success=0.875000
+```
+
+Decision:
+`h5-o` passes as retry-source replacement instrumentation and limited
+mitigation, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+Interpretation:
+h5-n showed that filtering can suppress bad/noisy candidates but cannot recover
+missing correct candidates. h5-o shows the complementary mechanism: once bad
+source candidates are filtered, a secondary symbolic retry source can restore
+candidate recall and qacc. This is still a controlled diagnostic because the
+successful retry sources are symbolic `raw-key` / `key-shape` upper bounds.
+The next bottleneck is making retry-source selection less symbolic and more
+credit/policy driven.

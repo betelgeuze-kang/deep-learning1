@@ -2490,9 +2490,9 @@ key-shape:
   source_gap=0.355541, strength_mean=1.544219
 
 noisy-route-code:
-  source-aware qacc=0.193750, fallback_recall=0.000000,
+  source-aware qacc=0.189062, fallback_recall=0.000000,
   source_gap=-0.140244, noisy_mean=-0.197850,
-  noisy_slashed=0.972107, noisy_selected=0.000000,
+  noisy_slashed=1.000000, noisy_selected=0.000000,
   strength_mean=1.000000
 ```
 
@@ -2547,9 +2547,9 @@ key-shape:
   source_gap=0.314231, strength_mean=1.439082
 
 noisy-route-code:
-  source-aware qacc=0.320703, fallback_recall=0.000000,
+  source-aware qacc=0.317969, fallback_recall=0.000000,
   source_gap=-0.268339, noisy_mean=-0.231653,
-  noisy_slashed=0.973848, strength_mean=1.000000
+  noisy_slashed=1.000000, strength_mean=1.000000
 ```
 
 Interpretation:
@@ -2607,11 +2607,11 @@ keyshape-filter:
   source_gap=0.328890, source_filter_abstain=0.000000
 
 noisy-filter:
-  qacc=0.125000, fallback_recall=0.000000,
+  qacc=0.100000, fallback_recall=0.000000,
   source_gap=-0.116147, noisy_mean=-0.177831,
   noisy_slashed=0.974458,
-  source_filter_filtered=0.929220,
-  source_filter_abstain=0.846875,
+  source_filter_filtered=0.935065,
+  source_filter_abstain=0.875000,
   strength_mean=1.000000
 ```
 
@@ -2621,3 +2621,73 @@ fallback candidates from the proposal hint path. This is useful
 instrumentation and a guardrail, but it is not a robustness solution. When a
 bad source is filtered, the system still needs a replacement source or retry
 policy to recover the correct candidate.
+
+## h5-o Retry-source Replacement Decision
+
+`h5-o` passes as retry-source replacement instrumentation and limited
+mitigation, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice keeps the successful route path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+It adds:
+
+```bash
+--route-source-retry-source off|raw-key|key-shape|joint-code-key|noisy-route-code
+```
+
+The retry source is a secondary candidate source inserted after the primary
+fallback path. It is useful when a bad/noisy fallback source is detected and
+removed by `--route-source-filter-mode negative-credit`.
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_retry_source.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_retry_source.sh
+```
+
+Reference smoke readout:
+
+```text
+noisy-filter:
+  qacc=0.103125, fallback_recall=0.000000,
+  source_filter_filtered=0.937013,
+  source_filter_abstain=0.876562
+
+retry-raw:
+  qacc=0.950000, fallback_recall=1.000000,
+  fallback_qacc=0.991071,
+  source_retry_used=0.875000,
+  source_retry_success=0.875000,
+  source_filter_abstain=0.003125
+
+retry-keyshape:
+  qacc=0.962500, fallback_recall=1.000000,
+  fallback_qacc=1.000000,
+  source_retry_used=0.875000,
+  source_retry_success=0.875000,
+  source_filter_abstain=0.003125
+```
+
+Interpretation:
+h5-n connected bad-source filtering, but filtering alone only abstains when
+the correct candidate is missing. h5-o shows that a secondary symbolic retry
+source can fill that gap: after noisy candidates are filtered, raw-key or
+key-shape retry candidates restore recall and qacc. This is a controlled
+retry/replacement diagnostic with symbolic upper-bound sources, not learned
+routing solved.
+
+Next:
+calibrate retry-source policy selection so source credit chooses when to retry
+and which retry source to use, rather than always relying on a fixed symbolic
+retry source.

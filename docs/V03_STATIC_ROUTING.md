@@ -388,6 +388,10 @@ Current decision:
   candidates from proposal-hint voting while preserving `value_pos -> value
   byte -> proposal hint`, but it still does not promote static neighbor
   replacement
+- treat h5-o retry-source replacement diagnostics as value-bearing route-hint
+  memory instrumentation; it inserts a secondary source after bad/noisy source
+  filtering while preserving `value_pos -> value byte -> proposal hint`, but it
+  still does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -421,6 +425,7 @@ Allowed wording:
 - `source/noise-aware fallback aggregation diagnostics`
 - `source/noise-aware aggregation scale stability diagnostics`
 - `bad-source filter / abstain diagnostics`
+- `retry-source replacement diagnostics`
 
 Do not say:
 

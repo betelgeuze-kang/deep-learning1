@@ -110,6 +110,7 @@ class GraphV02 {
     std::string route_plasticity_ledger_key(int query_index, int value_pos) const;
     std::string primary_route_source_id() const;
     std::string fallback_route_source_id() const;
+    std::string retry_route_source_id() const;
     std::string noisy_route_source_id() const;
     std::string route_source_credit_bucket_for_query(
         int query_index,
@@ -208,6 +209,8 @@ class GraphV02 {
     std::vector<bool> route_hint_primary_has_correct_;
     std::vector<bool> route_hint_fallback_used_;
     std::vector<bool> route_hint_fallback_recovered_;
+    std::vector<bool> route_hint_retry_used_;
+    std::vector<bool> route_hint_retry_recovered_;
     std::vector<int> route_fallback_persist_remaining_;
     std::vector<int> route_fallback_persist_visits_;
     std::vector<float> route_credit_by_value_pos_;
