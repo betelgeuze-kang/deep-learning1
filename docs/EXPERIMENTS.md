@@ -1652,3 +1652,70 @@ the new tie-break layer makes source-order versus source-prior explicit for the
 retry path. It can route around the noisy retry and preserve the symbolic
 retry-source path, but the fixed key-shape reference remains the upper bound.
 That makes h5-q a calibration/guardrail result, not a new routing capability.
+
+## h5-r Source-prior Schedule / Retry Tie-break Calibration
+
+`h5-r` passes as source-prior schedule calibration diagnostics / limited
+mitigation on top of `h5-q`. It does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```bash
+--route-source-retry-prior-mode none|static|decay|warmup
+--route-source-retry-prior-decay <float>
+--route-source-retry-prior-warmup-epochs <int>
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_retry_prior_schedule.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_retry_prior_schedule.sh
+```
+
+The smoke keeps the same value-bearing route path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Reference smoke readout:
+
+```text
+source-order:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+static-keyshape-prior:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+decay-keyshape-prior:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+warmup-keyshape-prior:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+fixed-keyshape:
+  qacc=0.970313, fallback_recall=1.000000,
+  fallback_qacc=1.000000
+```
+
+Interpretation:
+the source-prior schedule layer can make the source-order/static/decay/warmup
+choice explicit and steer the retry policy away from noisy retry candidates.
+However, the scheduled-prior rows still do not reach the fixed key-shape
+symbolic reference. This remains calibration / limited mitigation, not learned
+source selection solved.

@@ -2826,3 +2826,72 @@ the tie-break layer makes source-order versus source-prior explicit for the
 retry path. It can route around the noisy retry and preserve the symbolic
 retry-source path, but the fixed key-shape reference remains the upper bound.
 That makes h5-q a calibration/guardrail result, not a new routing capability.
+
+## h5-r Source-prior Schedule / Retry Tie-break Calibration
+
+`h5-r` passes as source-prior schedule calibration diagnostics / limited
+mitigation. It keeps the same value-bearing route path and compares whether
+source-order, static source-prior, decaying source-prior, or warmup source-prior
+controls retry-source selection.
+
+The slice adds:
+
+```bash
+--route-source-retry-prior-mode none|static|decay|warmup
+--route-source-retry-prior-decay <float>
+--route-source-retry-prior-warmup-epochs <int>
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_retry_prior_schedule.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_retry_prior_schedule.sh
+```
+
+Reference smoke readout:
+
+```text
+source-order:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+static-keyshape-prior:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+decay-keyshape-prior:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+warmup-keyshape-prior:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+fixed-keyshape:
+  qacc=0.970313, fallback_recall=1.000000,
+  fallback_qacc=1.000000
+```
+
+Decision:
+
+- `v0.3-h5-r source-prior retry schedule`: `PASS` as source-prior schedule
+  calibration diagnostics / limited mitigation
+- it is not learned routing solved, not source-credit robustness solved, and
+  not wrong-candidate/fallback robustness solved
+
+Interpretation:
+static, decaying, and warmup key-shape priors all steer retry selection toward
+key-shape and avoid the bad/noisy retry source, but they do not exceed the
+fixed key-shape reference. The next useful question is not another tie-break
+switch; it is whether source-credit evidence can eventually dominate or decay
+away the symbolic prior under scale/seed stress.

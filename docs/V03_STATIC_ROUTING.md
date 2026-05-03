@@ -71,6 +71,10 @@ h5-q source-credit retry-policy tie-break diagnostics are also ancillary to
 this static-routing slice; they keep the same `candidate value_pos -> value
 byte read -> proposal hint` path while choosing retry sources, but they do
 not promote jump-neighbor replacement.
+h5-r source-prior retry schedule diagnostics remain in the same category: they
+scale or warm up retry-source priors for source-credit tie-breaks while
+preserving `candidate value_pos -> value byte read -> proposal hint`, but they
+still do not promote jump-neighbor replacement.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -405,6 +409,10 @@ Current decision:
   byte read -> proposal hint` while deciding source-order versus source-prior
   for retry candidates, but it still does not promote static neighbor
   replacement
+- treat h5-r source-prior retry schedule diagnostics as value-bearing
+  route-hint memory instrumentation; it changes retry-source prior scaling
+  while preserving `candidate value_pos -> value byte read -> proposal hint`,
+  but it still does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -426,6 +434,7 @@ Allowed wording:
 - `source-level fallback responsibility diagnostics`
 - `source-credit policy calibration diagnostics`
 - `source-credit retry-policy tie-break calibration diagnostics`
+- `source-prior retry schedule calibration diagnostics`
 - `noisy-source policy diagnostics`
 - `source-quality separation instrumentation`
 - `noisy-source scale stability diagnostics`

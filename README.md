@@ -9,6 +9,7 @@ Current headline:
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is the `candidate value_pos -> value byte read -> proposal hint` route-hint path, and jump-neighbor replacement stays no-go/default-off/diagnostic-only.
 - Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, h5-j diagnoses fallback candidate-quality gaps, h5-k calibrates fallback aggregation policy, h5-l adds source/noise-aware fallback aggregation diagnostics, h5-m scales that source/noise-aware aggregation pattern over key/seed smoke arms, h5-n adds source-credit bad-source filter / abstain diagnostics, h5-o adds retry-source replacement after bad-source filtering, h5-p adds source-credit retry-policy calibration, and h5-q passes as source-credit retry-policy tie-break calibration diagnostics / limited mitigation: `noisy-filter` stays at `qacc=0.103125`, `fallback_recall=0.000000`, `noisy_slashed=1.000000`, `source_retry_used=0.000000`; `policy-source-order`, `policy-keyshape-prior`, and `policy-noisy-penalty/mixed` all recover at `qacc=0.957813`, `fallback_recall=1.000000`, with `retry_noisy_selected=0.000000`; `fixed-keyshape` remains the upper bound at `qacc=0.970313`, `fallback_qacc=1.000000`. NOT learned routing solved, NOT source-credit robustness solved, NOT wrong-candidate/fallback robustness solved.
+- h5-r adds source-prior schedule diagnostics for retry tie-breaks via `--route-source-retry-prior-mode none|static|decay|warmup`, `--route-source-retry-prior-decay`, and `--route-source-retry-prior-warmup-epochs`. The smoke keeps noisy retry selection at `0.000000`: source-order recovers through raw-key (`qacc=0.957813`, `retry_raw_selected=0.875000`), while static/decay/warmup key-shape priors recover through key-shape (`qacc=0.957813`, `retry_keyshape_selected=0.875000`). The fixed key-shape reference remains higher (`qacc=0.970313`, `fallback_qacc=1.000000`), so this is prior-schedule calibration / limited mitigation, not learned routing or robustness solved.
 
 Current status:
 
@@ -252,6 +253,15 @@ Current status:
   calibration / limited mitigation, not learned routing solved,
   source-credit robustness solved, or wrong-candidate/fallback robustness
   solved.
+- h5-r adds source-prior schedule diagnostics on the same retry path via
+  `--route-source-retry-prior-mode none|static|decay|warmup`,
+  `--route-source-retry-prior-decay`, and
+  `--route-source-retry-prior-warmup-epochs`. The smoke compares source-order,
+  static key-shape prior, decaying key-shape prior, warmup key-shape prior, and
+  fixed key-shape reference rows. The scheduled-prior rows switch retry
+  selection to key-shape and avoid noisy retry selection, but still match
+  `qacc=0.957813` rather than the fixed key-shape reference `0.970313`; read
+  this as source-prior schedule calibration / limited mitigation only.
 
 ## Build
 
@@ -375,6 +385,7 @@ Experiment helpers:
 - `experiments/run_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/run_v05_route_source_credit_retry_source.sh`
 - `experiments/run_v05_route_source_credit_retry_tiebreak.sh`
+- `experiments/run_v05_route_source_credit_retry_prior_schedule.sh`
 - `experiments/run_v05_route_source_credit_retry_policy.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
@@ -414,6 +425,7 @@ Experiment helpers:
 - `experiments/test_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/test_v05_route_source_credit_retry_source.sh`
 - `experiments/test_v05_route_source_credit_retry_tiebreak.sh`
+- `experiments/test_v05_route_source_credit_retry_prior_schedule.sh`
 - `experiments/test_v05_route_source_credit_retry_policy.sh`
 
 Key docs:

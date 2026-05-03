@@ -341,6 +341,15 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-source-retry-priorities" ||
                    key == "route_source_retry_priorities") {
             params.route_source_retry_priorities = value;
+        } else if (key == "route-source-retry-prior-mode" ||
+                   key == "route_source_retry_prior_mode") {
+            params.route_source_retry_prior_mode = value;
+        } else if (key == "route-source-retry-prior-decay" ||
+                   key == "route_source_retry_prior_decay") {
+            params.route_source_retry_prior_decay = cli_to_float(value, key);
+        } else if (key == "route-source-retry-prior-warmup-epochs" ||
+                   key == "route_source_retry_prior_warmup_epochs") {
+            params.route_source_retry_prior_warmup_epochs = cli_to_int(value, key);
         } else if (key == "route-source-retry-candidates" ||
                    key == "route_source_retry_candidates") {
             params.route_source_retry_candidates = value;
@@ -531,6 +540,9 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-source-retry-policy <fixed|source-credit>\n"
        << "  --route-source-retry-tiebreak <source-order|source-prior>\n"
        << "  --route-source-retry-priorities <csv source:prior>\n"
+       << "  --route-source-retry-prior-mode <none|static|decay|warmup>\n"
+       << "  --route-source-retry-prior-decay <float>\n"
+       << "  --route-source-retry-prior-warmup-epochs <int>\n"
        << "  --route-source-retry-candidates <csv of raw-key|key-shape|joint-code-key|noisy-route-code>\n"
        << "  --route-source-retry-per-source-limit <int>\n"
        << "  --route-plasticity-ledger <0|1>\n"

@@ -720,6 +720,21 @@ void GraphV02::validate_params() const {
             "route-source-retry-tiebreak must be one of: source-order, source-prior");
     }
     parse_retry_source_priorities(params_.route_source_retry_priorities);
+    if (params_.route_source_retry_prior_mode != "none" &&
+        params_.route_source_retry_prior_mode != "static" &&
+        params_.route_source_retry_prior_mode != "decay" &&
+        params_.route_source_retry_prior_mode != "warmup") {
+        throw std::runtime_error(
+            "route-source-retry-prior-mode must be one of: none, static, decay, warmup");
+    }
+    if (params_.route_source_retry_prior_decay < 0.0f ||
+        params_.route_source_retry_prior_decay > 1.0f) {
+        throw std::runtime_error("route-source-retry-prior-decay must be in [0, 1]");
+    }
+    if (params_.route_source_retry_prior_warmup_epochs < 0) {
+        throw std::runtime_error(
+            "route-source-retry-prior-warmup-epochs must be non-negative");
+    }
     if (params_.route_source_retry_per_source_limit <= 0) {
         throw std::runtime_error("route-source-retry-per-source-limit must be positive");
     }
@@ -2121,16 +2136,35 @@ float GraphV02::route_source_credit_for_source(
     return found == route_source_credit_by_bucket_.end() ? 0.0f : found->second;
 }
 
+float GraphV02::route_source_retry_prior_scale() const {
+    if (params_.route_source_retry_prior_mode == "none") {
+        return 0.0f;
+    }
+    if (params_.route_source_retry_prior_mode == "decay") {
+        return static_cast<float>(
+            std::pow(params_.route_source_retry_prior_decay, current_epoch_));
+    }
+    if (params_.route_source_retry_prior_mode == "warmup") {
+        return current_epoch_ < params_.route_source_retry_prior_warmup_epochs ? 1.0f
+                                                                               : 0.0f;
+    }
+    return 1.0f;
+}
+
 float GraphV02::route_source_retry_prior_for_source(
     const std::string& source) const {
     if (params_.route_source_retry_policy != "source-credit" ||
         params_.route_source_retry_tiebreak != "source-prior") {
         return 0.0f;
     }
+    const float prior_scale = route_source_retry_prior_scale();
+    if (prior_scale == 0.0f) {
+        return 0.0f;
+    }
     const auto priorities =
         parse_retry_source_priorities(params_.route_source_retry_priorities);
     const auto found = priorities.find(source);
-    return found == priorities.end() ? 0.0f : found->second;
+    return found == priorities.end() ? 0.0f : found->second * prior_scale;
 }
 
 float GraphV02::route_credit_weight_for_candidate(int query_index, int value_pos) const {
