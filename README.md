@@ -8,7 +8,7 @@ Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, h5-j diagnoses fallback candidate-quality gaps, h5-k calibrates fallback aggregation policy, h5-l adds source/noise-aware fallback aggregation diagnostics, h5-m scales that source/noise-aware aggregation pattern over key/seed smoke arms, h5-n adds source-credit bad-source filter / abstain diagnostics, and h5-o adds retry-source replacement after bad-source filtering. Treat them as diagnostics / limited mitigation, not robustness solved.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, h5-j diagnoses fallback candidate-quality gaps, h5-k calibrates fallback aggregation policy, h5-l adds source/noise-aware fallback aggregation diagnostics, h5-m scales that source/noise-aware aggregation pattern over key/seed smoke arms, h5-n adds source-credit bad-source filter / abstain diagnostics, h5-o adds retry-source replacement after bad-source filtering, and h5-p adds source-credit retry-policy calibration. Treat them as diagnostics / limited mitigation, not robustness solved.
 
 Current status:
 
@@ -223,6 +223,18 @@ Current status:
   `0.962500`, `fallback_recall=1.000000`) while keeping jump-neighbor routing
   inactive. This is retry/replacement instrumentation with symbolic retry
   sources, not learned routing or fallback robustness solved.
+- h5-p adds source-credit retry-policy calibration via
+  `--route-source-retry-policy source-credit`,
+  `--route-source-retry-candidates`, and
+  `--route-source-retry-per-source-limit`. The smoke compares fixed retry
+  sources with policy-selected retry candidates after noisy-source filtering.
+  The noisy-filter baseline abstains without recovery (`qacc=0.103125`,
+  `fallback_recall=0.000000`), fixed symbolic retry recovers (`fixed-raw`
+  qacc `0.957813`, `fixed-keyshape` qacc `0.970313`), and the source-credit
+  mixed policy recovers while avoiding noisy retry selection (`policy-mixed`
+  qacc `0.957813`, `retry_noisy_selected=0.000000`). This wires retry-source
+  policy selection, but the policy still relies on symbolic retry candidates
+  and does not solve learned routing or fallback robustness.
 
 ## Build
 
@@ -345,6 +357,7 @@ Experiment helpers:
 - `experiments/run_v05_route_source_credit_source_aware_scale.sh`
 - `experiments/run_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/run_v05_route_source_credit_retry_source.sh`
+- `experiments/run_v05_route_source_credit_retry_policy.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -382,6 +395,7 @@ Experiment helpers:
 - `experiments/test_v05_route_source_credit_source_aware_scale.sh`
 - `experiments/test_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/test_v05_route_source_credit_retry_source.sh`
+- `experiments/test_v05_route_source_credit_retry_policy.sh`
 
 Key docs:
 

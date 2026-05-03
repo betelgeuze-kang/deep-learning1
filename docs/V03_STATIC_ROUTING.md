@@ -392,6 +392,10 @@ Current decision:
   memory instrumentation; it inserts a secondary source after bad/noisy source
   filtering while preserving `value_pos -> value byte -> proposal hint`, but it
   still does not promote static neighbor replacement
+- treat h5-p source-credit retry-policy diagnostics as value-bearing route-hint
+  memory instrumentation; it chooses retry candidates from source-credit policy
+  candidates while preserving `value_pos -> value byte -> proposal hint`, but
+  it still does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -426,6 +430,7 @@ Allowed wording:
 - `source/noise-aware aggregation scale stability diagnostics`
 - `bad-source filter / abstain diagnostics`
 - `retry-source replacement diagnostics`
+- `source-credit retry-policy calibration diagnostics`
 
 Do not say:
 

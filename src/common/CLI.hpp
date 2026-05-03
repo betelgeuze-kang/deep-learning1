@@ -332,6 +332,15 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-source-retry-source" ||
                    key == "route_source_retry_source") {
             params.route_source_retry_source = value;
+        } else if (key == "route-source-retry-policy" ||
+                   key == "route_source_retry_policy") {
+            params.route_source_retry_policy = value;
+        } else if (key == "route-source-retry-candidates" ||
+                   key == "route_source_retry_candidates") {
+            params.route_source_retry_candidates = value;
+        } else if (key == "route-source-retry-per-source-limit" ||
+                   key == "route_source_retry_per_source_limit") {
+            params.route_source_retry_per_source_limit = cli_to_int(value, key);
         } else if (key == "route-plasticity-ledger" ||
                    key == "route_plasticity_ledger") {
             params.route_plasticity_ledger = cli_to_int(value, key);
@@ -513,6 +522,9 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-source-filter-mode <off|negative-credit>\n"
        << "  --route-source-filter-threshold <float>\n"
        << "  --route-source-retry-source <off|raw-key|key-shape|joint-code-key|noisy-route-code>\n"
+       << "  --route-source-retry-policy <fixed|source-credit>\n"
+       << "  --route-source-retry-candidates <csv of raw-key|key-shape|joint-code-key|noisy-route-code>\n"
+       << "  --route-source-retry-per-source-limit <int>\n"
        << "  --route-plasticity-ledger <0|1>\n"
        << "  --route-plasticity-ledger-decay <float>\n"
        << "  --route-credit-learn-after-epoch <int>\n"

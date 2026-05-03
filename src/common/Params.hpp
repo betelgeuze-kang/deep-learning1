@@ -130,6 +130,9 @@ struct V02PreParams {
     std::string route_source_filter_mode = "off";
     float route_source_filter_threshold = 0.0f;
     std::string route_source_retry_source = "off";
+    std::string route_source_retry_policy = "fixed";
+    std::string route_source_retry_candidates = "raw-key,key-shape";
+    int route_source_retry_per_source_limit = 1;
     int route_plasticity_ledger = 0;
     float route_plasticity_ledger_decay = 0.0f;
     int route_credit_learn_after_epoch = 0;

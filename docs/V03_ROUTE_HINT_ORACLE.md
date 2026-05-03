@@ -2691,3 +2691,74 @@ Next:
 calibrate retry-source policy selection so source credit chooses when to retry
 and which retry source to use, rather than always relying on a fixed symbolic
 retry source.
+
+## h5-p Source-credit Retry-policy Decision
+
+`h5-p` passes as source-credit retry-policy calibration instrumentation and
+limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```bash
+--route-source-retry-policy fixed|source-credit
+--route-source-retry-candidates <csv>
+--route-source-retry-per-source-limit <int>
+```
+
+The policy-selected retry path still uses only:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_retry_policy.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_retry_policy.sh
+```
+
+Reference smoke readout:
+
+```text
+noisy-filter:
+  qacc=0.103125, fallback_recall=0.000000,
+  source_filter_abstain=0.878125
+
+fixed-raw:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000
+
+fixed-keyshape:
+  qacc=0.970313, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000
+
+policy-mixed:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+policy-raw-noisy:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_noisy_selected=0.000000
+```
+
+Interpretation:
+h5-p confirms that retry-source selection is now policy-visible: a
+source-credit retry policy can recover after noisy-source filtering while
+avoiding the bad/noisy retry source in the smoke. The current policy is still
+limited. Under equal initial source credit it selects the raw-key retry first,
+so it recovers but does not beat the fixed key-shape symbolic upper bound. This
+is calibration instrumentation, not learned retry-source selection solved.
+
+Next:
+test retry-policy stability over seeds/keys and add a tie-break or warmup
+strategy that can learn when key-shape should beat raw-key instead of relying
+on fixed source order.

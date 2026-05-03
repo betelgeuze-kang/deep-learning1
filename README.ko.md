@@ -24,7 +24,7 @@
 - `v0.2-b`: block-local coupled proposal과 `B[x, high, low]` coupling을 포함합니다. 기본 weak-coupling path는 `counter`와 `repeating-text` 5-seed regression을 통과했습니다.
 - `v0.3 static routing`: `jump-neighbors`, confidence gate/acceptance, `state-code`, `input-byte` route source 계열은 diagnostic/default-off입니다. 현재 결론은 routing success가 아니라 **neighbor replacement no-go**입니다.
 - `v0.3 route-hint`: 살아남은 장거리 경로입니다. 핵심 경로는 `candidate value_pos -> value byte read -> proposal hint`입니다.
-- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했으며, h4-5w는 route-credit ablation diagnostics이고, h4-5x는 credit × fallback integration ablation이며, h4-5y는 credit strength/stability calibration이고, h5-a는 persistent route-plasticity ledger와 learn/apply warmup gate이며, h5-b는 source/bucket route-credit responsibility instrumentation이고, h5-c는 key-shape fallback `hi_mult=5` / `lo_mult=10` 주변의 source-credit policy calibration이며, h5-d는 weak `joint-code-key` primary, symbolic `key-shape` fallback, explicit `noisy-route-code` stress를 비교하는 noisy / learned-like source policy diagnostics이고, h5-e는 noisy-source multi-seed / scale stability smoke이며, h5-f는 `route-code-key` identity auxiliary 자체를 약하게 만드는 learned-source stress이고, h5-g는 이 weak learned-source stress를 key/seed 축으로 확장하며, h5-h는 fallback `off`, `raw-key`, `key-shape`, `noisy-route-code` 의존성을 비교하고, h5-i는 source-credit fallback policy mode를 보정하며, h5-j는 fallback candidate-quality gap을 진단하고, h5-k는 fallback aggregation policy를 보정하며, h5-l은 source/noise-aware fallback aggregation diagnostics를 추가했고, h5-m은 그 source/noise-aware aggregation 패턴을 key/seed smoke로 확장하며, h5-n은 source-credit bad-source filter / abstain diagnostics를 추가하고, h5-o는 bad-source filtering 이후 retry-source replacement diagnostics를 추가합니다. 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
+- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했으며, h4-5w는 route-credit ablation diagnostics이고, h4-5x는 credit × fallback integration ablation이며, h4-5y는 credit strength/stability calibration이고, h5-a는 persistent route-plasticity ledger와 learn/apply warmup gate이며, h5-b는 source/bucket route-credit responsibility instrumentation이고, h5-c는 key-shape fallback `hi_mult=5` / `lo_mult=10` 주변의 source-credit policy calibration이며, h5-d는 weak `joint-code-key` primary, symbolic `key-shape` fallback, explicit `noisy-route-code` stress를 비교하는 noisy / learned-like source policy diagnostics이고, h5-e는 noisy-source multi-seed / scale stability smoke이며, h5-f는 `route-code-key` identity auxiliary 자체를 약하게 만드는 learned-source stress이고, h5-g는 이 weak learned-source stress를 key/seed 축으로 확장하며, h5-h는 fallback `off`, `raw-key`, `key-shape`, `noisy-route-code` 의존성을 비교하고, h5-i는 source-credit fallback policy mode를 보정하며, h5-j는 fallback candidate-quality gap을 진단하고, h5-k는 fallback aggregation policy를 보정하며, h5-l은 source/noise-aware fallback aggregation diagnostics를 추가했고, h5-m은 그 source/noise-aware aggregation 패턴을 key/seed smoke로 확장하며, h5-n은 source-credit bad-source filter / abstain diagnostics를 추가하고, h5-o는 bad-source filtering 이후 retry-source replacement diagnostics를 추가하며, h5-p는 source-credit retry-policy calibration을 추가합니다. 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
 
 ## 중요한 아키텍처 결론
 
@@ -102,6 +102,7 @@ remove-correct:
 - h5-m: source/noise-aware aggregation scale stability diagnostics를 추가했습니다. Smoke는 key count `64/128`, seed `1/2`를 교차하고 `raw-key`, `key-shape`, `noisy-route-code` fallback에서 vote와 source-aware weighted aggregation을 비교합니다. 평균적으로 raw-key는 qacc `0.378516 -> 0.925391`, key-shape는 `0.275781 -> 0.932813`으로 개선되고 둘 다 `fallback_recall=1.000000`을 유지합니다. Noisy branch는 여전히 해결되지 않지만 (`fallback_recall=0.000000`), negative source/noisy credit으로 감지됩니다 (`source_gap=-0.268339`, noisy slash `1.000000`) 그리고 strength amplification은 없습니다 (`strength_mean=1.000000`).
 - h5-n: bad-source filtering / abstain diagnostics를 추가했습니다. 새 `--route-source-filter-mode negative-credit`는 source credit이 `--route-source-filter-threshold`보다 낮은 candidate를 제거합니다. Smoke에서 symbolic fallback은 계속 사용 가능합니다 (`raw-filter` qacc `0.951562`, `keyshape-filter` qacc `0.965625`). 반면 noisy fallback은 강하게 필터링됩니다 (`source_filter_filtered=0.935065`, `source_filter_abstain=0.875000`). 하지만 noisy qacc는 개선되지 않습니다 (`0.185937 -> 0.100000`). 따라서 이는 bad-source abstention instrumentation이지 fallback robustness solved가 아닙니다.
 - h5-o: retry-source replacement diagnostics를 추가했습니다. 새 `--route-source-retry-source`는 bad/noisy fallback 후보가 negative-credit filter로 제거된 뒤 secondary source 후보를 같은 value-bearing route-hint path에 넣습니다. Smoke에서 noisy-filter baseline은 회복 없이 abstain합니다 (`qacc=0.103125`, `fallback_recall=0.000000`, `source_filter_abstain=0.876562`). 반면 symbolic retry를 붙이면 recall과 qacc가 회복됩니다 (`retry-raw` qacc `0.950000`, `fallback_recall=1.000000`; `retry-keyshape` qacc `0.962500`, `fallback_recall=1.000000`). 이는 retry/replacement instrumentation이지 learned routing이나 fallback robustness solved가 아닙니다.
+- h5-p: source-credit retry-policy calibration을 추가했습니다. 새 `--route-source-retry-policy source-credit`, `--route-source-retry-candidates`, `--route-source-retry-per-source-limit`는 bad/noisy source filtering 이후 여러 retry source 후보를 source-credit 순서로 넣습니다. Smoke에서 noisy-filter baseline은 회복 없이 abstain합니다 (`qacc=0.103125`, `fallback_recall=0.000000`). fixed symbolic retry는 회복합니다 (`fixed-raw` qacc `0.957813`, `fixed-keyshape` qacc `0.970313`). source-credit mixed policy도 noisy retry 선택 없이 회복합니다 (`policy-mixed` qacc `0.957813`, `retry_noisy_selected=0.000000`). 이는 retry policy selection 배관이지 learned routing이나 fallback robustness solved가 아닙니다.
 
 ## 빌드
 
@@ -209,6 +210,7 @@ cmake --build build -j
 - `experiments/run_v05_route_source_credit_source_aware_scale.sh`
 - `experiments/run_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/run_v05_route_source_credit_retry_source.sh`
+- `experiments/run_v05_route_source_credit_retry_policy.sh`
 
 ## 대표 smoke test
 
@@ -249,6 +251,7 @@ cmake --build build -j
 - `experiments/test_v05_route_source_credit_source_aware_scale.sh`
 - `experiments/test_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/test_v05_route_source_credit_retry_source.sh`
+- `experiments/test_v05_route_source_credit_retry_policy.sh`
 
 ## 핵심 문서
 

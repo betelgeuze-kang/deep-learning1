@@ -111,6 +111,7 @@ class GraphV02 {
     std::string primary_route_source_id() const;
     std::string fallback_route_source_id() const;
     std::string retry_route_source_id() const;
+    std::string retry_route_source_id_for_source(const std::string& source) const;
     std::string noisy_route_source_id() const;
     std::string route_source_credit_bucket_for_query(
         int query_index,

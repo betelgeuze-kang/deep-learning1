@@ -38,6 +38,45 @@ int digit_count(const std::string& key) {
     return count;
 }
 
+bool valid_retry_source_name(const std::string& source) {
+    return source == "raw-key" ||
+           source == "key-shape" ||
+           source == "joint-code-key" ||
+           source == "noisy-route-code";
+}
+
+std::string trim_ascii(const std::string& value) {
+    std::size_t begin = 0;
+    while (begin < value.size() &&
+           std::isspace(static_cast<unsigned char>(value[begin]))) {
+        ++begin;
+    }
+    std::size_t end = value.size();
+    while (end > begin &&
+           std::isspace(static_cast<unsigned char>(value[end - 1U]))) {
+        --end;
+    }
+    return value.substr(begin, end - begin);
+}
+
+std::vector<std::string> split_source_list(const std::string& csv) {
+    std::vector<std::string> sources;
+    std::size_t begin = 0;
+    while (begin <= csv.size()) {
+        const std::size_t comma = csv.find(',', begin);
+        const std::size_t end = comma == std::string::npos ? csv.size() : comma;
+        std::string source = trim_ascii(csv.substr(begin, end - begin));
+        if (!source.empty()) {
+            sources.push_back(source);
+        }
+        if (comma == std::string::npos) {
+            break;
+        }
+        begin = comma + 1U;
+    }
+    return sources;
+}
+
 int common_prefix_count(const std::string& lhs, const std::string& rhs) {
     const auto limit = std::min(lhs.size(), rhs.size());
     std::size_t count = 0;
@@ -619,12 +658,29 @@ void GraphV02::validate_params() const {
             "route-source-filter-mode must be one of: off, negative-credit");
     }
     if (params_.route_source_retry_source != "off" &&
-        params_.route_source_retry_source != "raw-key" &&
-        params_.route_source_retry_source != "key-shape" &&
-        params_.route_source_retry_source != "joint-code-key" &&
-        params_.route_source_retry_source != "noisy-route-code") {
+        !valid_retry_source_name(params_.route_source_retry_source)) {
         throw std::runtime_error(
             "route-source-retry-source must be one of: off, raw-key, key-shape, joint-code-key, noisy-route-code");
+    }
+    if (params_.route_source_retry_policy != "fixed" &&
+        params_.route_source_retry_policy != "source-credit") {
+        throw std::runtime_error(
+            "route-source-retry-policy must be one of: fixed, source-credit");
+    }
+    if (params_.route_source_retry_per_source_limit <= 0) {
+        throw std::runtime_error("route-source-retry-per-source-limit must be positive");
+    }
+    for (const std::string& source :
+         split_source_list(params_.route_source_retry_candidates)) {
+        if (!valid_retry_source_name(source)) {
+            throw std::runtime_error(
+                "route-source-retry-candidates entries must be one of: raw-key, key-shape, joint-code-key, noisy-route-code");
+        }
+    }
+    if (params_.route_source_retry_policy == "source-credit" &&
+        split_source_list(params_.route_source_retry_candidates).empty()) {
+        throw std::runtime_error(
+            "route-source-retry-candidates must be non-empty when route-source-retry-policy=source-credit");
     }
     if (params_.route_plasticity_ledger < 0 ||
         params_.route_plasticity_ledger > 1) {
@@ -1842,7 +1898,12 @@ std::string GraphV02::fallback_route_source_id() const {
 }
 
 std::string GraphV02::retry_route_source_id() const {
-    return "retry-" + params_.route_source_retry_source;
+    return retry_route_source_id_for_source(params_.route_source_retry_source);
+}
+
+std::string GraphV02::retry_route_source_id_for_source(
+    const std::string& source) const {
+    return "retry-" + source;
 }
 
 std::string GraphV02::noisy_route_source_id() const {
@@ -2300,10 +2361,19 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
             raw_candidates_by_query[hint.query_pos] = hint.candidate_value_positions;
         }
     }
+    std::vector<std::string> retry_sources;
+    if (params_.route_source_retry_policy == "source-credit") {
+        retry_sources = split_source_list(params_.route_source_retry_candidates);
+    } else if (params_.route_source_retry_source != "off") {
+        retry_sources.push_back(params_.route_source_retry_source);
+    }
+    const bool retry_uses_joint =
+        std::find(retry_sources.begin(), retry_sources.end(), "joint-code-key") !=
+        retry_sources.end();
     std::unordered_map<std::uint32_t, std::vector<const ByteDataset::KVRecord*>>
         joint_records_by_bucket;
     if (params_.route_fallback_source == "joint-code-key" ||
-        params_.route_source_retry_source == "joint-code-key") {
+        retry_uses_joint) {
         for (const auto& record : window.kv_records) {
             if (record.marker_pos < 0 || record.value_pos < 0) {
                 continue;
@@ -2442,8 +2512,62 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
 
         const std::vector<int> fallback_positions =
             collect_source_positions(params_.route_fallback_source, query);
-        const std::vector<int> retry_positions =
-            collect_source_positions(params_.route_source_retry_source, query);
+        struct RetryCandidateEntry {
+            int value_pos = -1;
+            std::string source_id;
+            float source_credit = 0.0f;
+            int source_order = 0;
+            int rank = 0;
+        };
+        std::vector<RetryCandidateEntry> retry_entries;
+        if (params_.route_source_retry_policy == "source-credit") {
+            for (std::size_t source_index = 0; source_index < retry_sources.size();
+                 ++source_index) {
+                const std::string& retry_source = retry_sources[source_index];
+                const std::string retry_source_id =
+                    retry_route_source_id_for_source(retry_source);
+                const float source_credit =
+                    route_source_credit_for_source(query.query_pos, retry_source_id);
+                const std::vector<int> positions =
+                    collect_source_positions(retry_source, query);
+                const int limit = std::min(
+                    params_.route_source_retry_per_source_limit,
+                    static_cast<int>(positions.size()));
+                for (int rank = 0; rank < limit; ++rank) {
+                    retry_entries.push_back(
+                        {positions[static_cast<std::size_t>(rank)],
+                         retry_source_id,
+                         source_credit,
+                         static_cast<int>(source_index),
+                         rank});
+                }
+            }
+            std::stable_sort(
+                retry_entries.begin(),
+                retry_entries.end(),
+                [](const RetryCandidateEntry& lhs,
+                   const RetryCandidateEntry& rhs) {
+                    if (lhs.source_credit != rhs.source_credit) {
+                        return lhs.source_credit > rhs.source_credit;
+                    }
+                    if (lhs.source_order != rhs.source_order) {
+                        return lhs.source_order < rhs.source_order;
+                    }
+                    return lhs.rank < rhs.rank;
+                });
+        } else {
+            const std::vector<int> retry_positions =
+                collect_source_positions(params_.route_source_retry_source, query);
+            const std::string retry_source_id = retry_route_source_id();
+            for (int rank = 0; rank < static_cast<int>(retry_positions.size()); ++rank) {
+                retry_entries.push_back(
+                    {retry_positions[static_cast<std::size_t>(rank)],
+                     retry_source_id,
+                     route_source_credit_for_source(query.query_pos, retry_source_id),
+                     0,
+                     rank});
+            }
+        }
 
         auto& candidates = route_hint_candidate_value_positions_[query_index];
         auto& candidate_keys = route_hint_candidate_keys_[query_index];
@@ -2456,31 +2580,39 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
         std::vector<std::string> inserted_sources;
         bool retry_inserted = false;
         bool retry_recovered = false;
+        auto append_position = [&](int value_pos, const std::string& source_id) {
+            if (value_pos < 0 || value_pos >= params_.N) {
+                return;
+            }
+            if (std::find(candidates.begin(), candidates.end(), value_pos) !=
+                    candidates.end() ||
+                std::find(inserted_positions.begin(), inserted_positions.end(), value_pos) !=
+                    inserted_positions.end()) {
+                return;
+            }
+            inserted_positions.push_back(value_pos);
+            inserted_keys.push_back(
+                route_value_position_keys_[static_cast<std::size_t>(value_pos)]);
+            inserted_sources.push_back(source_id);
+            if (source_id.rfind("retry-", 0) == 0) {
+                retry_inserted = true;
+                if (query.hit && value_pos == query.value_pos) {
+                    retry_recovered = true;
+                }
+            }
+        };
         auto append_positions = [&](const std::vector<int>& positions,
                                     const std::string& source_id) {
             for (const int value_pos : positions) {
                 if (value_pos < 0 || value_pos >= params_.N) {
                     continue;
                 }
-                if (std::find(candidates.begin(), candidates.end(), value_pos) !=
-                        candidates.end() ||
-                    std::find(inserted_positions.begin(), inserted_positions.end(), value_pos) !=
-                        inserted_positions.end()) {
-                    continue;
-                }
-                inserted_positions.push_back(value_pos);
-                inserted_keys.push_back(
-                    route_value_position_keys_[static_cast<std::size_t>(value_pos)]);
-                inserted_sources.push_back(source_id);
-                if (source_id == retry_route_source_id()) {
-                    retry_inserted = true;
-                    if (query.hit && value_pos == query.value_pos) {
-                        retry_recovered = true;
-                    }
-                }
+                append_position(value_pos, source_id);
             }
         };
-        append_positions(retry_positions, retry_route_source_id());
+        for (const RetryCandidateEntry& entry : retry_entries) {
+            append_position(entry.value_pos, entry.source_id);
+        }
         append_positions(fallback_positions, fallback_route_source_id());
         if (inserted_positions.empty()) {
             continue;
@@ -3602,6 +3734,9 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_source_filter_abstain_count = 0.0;
     double route_source_retry_used_count = 0.0;
     double route_source_retry_success_count = 0.0;
+    double route_source_retry_raw_selected_count = 0.0;
+    double route_source_retry_keyshape_selected_count = 0.0;
+    double route_source_retry_noisy_selected_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_value_read_distance_sum = 0.0;
     double route_hint_vote_query_count = 0.0;
@@ -3806,6 +3941,15 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 if (retry_recovered) {
                     route_source_retry_success_count += 1.0;
                 }
+            }
+            const std::string selected_source_id =
+                route_source_id_for_candidate(i, route_hint_value_pos);
+            if (selected_source_id == "retry-raw-key") {
+                route_source_retry_raw_selected_count += 1.0;
+            } else if (selected_source_id == "retry-key-shape") {
+                route_source_retry_keyshape_selected_count += 1.0;
+            } else if (selected_source_id == "retry-noisy-route-code") {
+                route_source_retry_noisy_selected_count += 1.0;
             }
             const auto& candidate_sources =
                 route_hint_candidate_source_ids_[static_cast<std::size_t>(i)];
@@ -4478,6 +4622,12 @@ EpochMetricsV02 GraphV02::collect_metrics(
             route_source_retry_used_count / route_hint_query_count;
         metrics.route_source_retry_success_rate =
             route_source_retry_success_count / route_hint_query_count;
+        metrics.route_source_retry_raw_selected_rate =
+            route_source_retry_raw_selected_count / route_hint_query_count;
+        metrics.route_source_retry_keyshape_selected_rate =
+            route_source_retry_keyshape_selected_count / route_hint_query_count;
+        metrics.route_source_retry_noisy_selected_rate =
+            route_source_retry_noisy_selected_count / route_hint_query_count;
         if (route_fallback_used_count > 0.0) {
             metrics.route_fallback_recall =
                 route_fallback_recall_sum / route_fallback_used_count;

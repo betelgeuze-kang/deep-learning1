@@ -205,6 +205,9 @@ struct EpochMetricsV02 {
     double route_source_filter_abstain_rate = 0.0;
     double route_source_retry_used_rate = 0.0;
     double route_source_retry_success_rate = 0.0;
+    double route_source_retry_raw_selected_rate = 0.0;
+    double route_source_retry_keyshape_selected_rate = 0.0;
+    double route_source_retry_noisy_selected_rate = 0.0;
     double route_noisy_source_used_rate = 0.0;
     double route_noisy_source_selected_rate = 0.0;
     double route_abstain_rate = 0.0;
@@ -342,6 +345,9 @@ inline std::string v02_csv_header() {
            "route_source_credit_noisy_slashed_rate,"
            "route_source_filter_filtered_rate,route_source_filter_abstain_rate,"
            "route_source_retry_used_rate,route_source_retry_success_rate,"
+           "route_source_retry_raw_selected_rate,"
+           "route_source_retry_keyshape_selected_rate,"
+           "route_source_retry_noisy_selected_rate,"
            "route_noisy_source_used_rate,route_noisy_source_selected_rate,"
            "route_abstain_rate,"
            "route_hint_strength_mean,"
@@ -539,6 +545,9 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_source_filter_abstain_rate << ','
         << metrics.route_source_retry_used_rate << ','
         << metrics.route_source_retry_success_rate << ','
+        << metrics.route_source_retry_raw_selected_rate << ','
+        << metrics.route_source_retry_keyshape_selected_rate << ','
+        << metrics.route_source_retry_noisy_selected_rate << ','
         << metrics.route_noisy_source_used_rate << ','
         << metrics.route_noisy_source_selected_rate << ','
         << metrics.route_abstain_rate << ','

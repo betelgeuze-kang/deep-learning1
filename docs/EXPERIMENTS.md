@@ -1505,3 +1505,70 @@ candidate recall and qacc. This is still a controlled diagnostic because the
 successful retry sources are symbolic `raw-key` / `key-shape` upper bounds.
 The next bottleneck is making retry-source selection less symbolic and more
 credit/policy driven.
+
+## h5-p Source-credit Retry-policy Decision
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_retry_policy.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_retry_policy.sh
+```
+
+The h5-p smoke adds policy-selected retry candidates:
+
+```bash
+--route-source-retry-policy fixed|source-credit
+--route-source-retry-candidates raw-key,key-shape,noisy-route-code
+--route-source-retry-per-source-limit 1
+```
+
+The route path remains unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Reference smoke readout:
+
+```text
+noisy-filter:
+  qacc=0.103125, fallback_recall=0.000000,
+  source_filter_abstain=0.878125
+
+fixed-raw:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000
+
+fixed-keyshape:
+  qacc=0.970313, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000
+
+policy-mixed:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+policy-raw-noisy:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_noisy_selected=0.000000
+```
+
+Decision:
+`h5-p` passes as source-credit retry-policy calibration instrumentation and
+limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+Interpretation:
+h5-p moves beyond a single fixed retry source. The source-credit retry policy
+can insert retry candidates from a candidate source list and avoid selecting
+the bad/noisy retry source in the smoke. However, the mixed policy currently
+falls back to the raw-key retry under equal initial source credit and does not
+beat the fixed key-shape symbolic upper bound. The result is policy-selection
+plumbing and calibration, not learned retry-source selection solved.
