@@ -24,7 +24,7 @@
 - `v0.2-b`: block-local coupled proposal과 `B[x, high, low]` coupling을 포함합니다. 기본 weak-coupling path는 `counter`와 `repeating-text` 5-seed regression을 통과했습니다.
 - `v0.3 static routing`: `jump-neighbors`, confidence gate/acceptance, `state-code`, `input-byte` route source 계열은 diagnostic/default-off입니다. 현재 결론은 routing success가 아니라 **neighbor replacement no-go**입니다.
 - `v0.3 route-hint`: 살아남은 장거리 경로입니다. 핵심 경로는 `candidate value_pos -> value byte read -> proposal hint`입니다.
-- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했으며, h4-5w는 route-credit ablation diagnostics이고, h4-5x는 credit × fallback integration ablation이며, h4-5y는 credit strength/stability calibration이고, h5-a는 persistent route-plasticity ledger와 learn/apply warmup gate이며, h5-b는 source/bucket route-credit responsibility instrumentation이고, h5-c는 key-shape fallback `hi_mult=5` / `lo_mult=10` 주변의 source-credit policy calibration이며, h5-d는 weak `joint-code-key` primary, symbolic `key-shape` fallback, explicit `noisy-route-code` stress를 비교하는 noisy / learned-like source policy diagnostics이고, h5-e는 noisy-source multi-seed / scale stability smoke이며, h5-f는 `route-code-key` identity auxiliary 자체를 약하게 만드는 learned-source stress입니다. 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
+- 최신 route-hint 상태: h4-5t는 fallback low-channel strength sweet spot을 보정했고, h4-5u는 짧은 fallback TTL/persistence가 현재 조건에서 neutral임을 보였고, h4-5v는 route-credit separation instrumentation을 추가했으며, h4-5w는 route-credit ablation diagnostics이고, h4-5x는 credit × fallback integration ablation이며, h4-5y는 credit strength/stability calibration이고, h5-a는 persistent route-plasticity ledger와 learn/apply warmup gate이며, h5-b는 source/bucket route-credit responsibility instrumentation이고, h5-c는 key-shape fallback `hi_mult=5` / `lo_mult=10` 주변의 source-credit policy calibration이며, h5-d는 weak `joint-code-key` primary, symbolic `key-shape` fallback, explicit `noisy-route-code` stress를 비교하는 noisy / learned-like source policy diagnostics이고, h5-e는 noisy-source multi-seed / scale stability smoke이며, h5-f는 `route-code-key` identity auxiliary 자체를 약하게 만드는 learned-source stress이고, h5-g는 이 weak learned-source stress를 key/seed 축으로 확장하며, h5-h는 fallback `off`, `raw-key`, `key-shape`, `noisy-route-code` 의존성을 비교합니다. 모두 diagnostics / limited mitigation이며 robustness solved가 아닙니다.
 
 ## 중요한 아키텍처 결론
 
@@ -93,6 +93,8 @@ remove-correct:
 - h5-d: remove-correct corruption `0.25`에서 noisy / learned-like source policy diagnostics를 추가했습니다. Smoke는 두 branch를 봅니다. 하나는 weak `joint-code-key` primary와 `key-shape` fallback이고, 다른 하나는 `--route-noisy-source-rate 1.0`의 명시적 `noisy-route-code` stress입니다. `route_hint_candidate_lookup_count > 0`, `route_hint_value_read_distance_mean > 0`, `routing_trigger_rate = 0.000000`, `active_jump_rate = 0.000000`를 유지하면서, 유용한 key-shape fallback에는 positive source gap이 생기고 나쁜 noisy candidate에는 negative noisy-source credit/slash가 생기는지 확인합니다. 이는 source-quality separation instrumentation이지 robustness solved가 아닙니다.
 - h5-e: noisy-source multi-seed / scale stability diagnostics를 추가했습니다. Smoke는 key count `32/64`, seed `1/2`, noisy rate `0.50/1.00`을 교차합니다. Weak joint branch는 key-shape fallback positive source gap을 유지하고, noisy branch는 negative noisy-candidate credit과 noisy slash diagnostic을 유지합니다. Fully noisy row에서는 source gap도 음수입니다. 이는 stability instrumentation이지 source-credit robustness solved가 아닙니다.
 - h5-f: `--route-code-key-region-keep-prob`와 `--route-code-aux-noise-rate`로 `route-code-key` identity auxiliary 자체를 약하게 만드는 learned-source stress diagnostics를 추가했습니다. Smoke는 key count `32/64`, seed `1/2`에서 clean full-supervision branch와 weak branch(`keep=0.25`, `aux_noise=0.75`)를 비교합니다. Clean row는 decode/primary recall/qacc `1.000000`을 유지하고, weak row는 route-code decode와 primary recall이 낮아지며 key-shape fallback, source-credit gap, primary slash / fallback reward signal이 켜집니다. 이는 weaker learned-source instrumentation이지 learned routing solved가 아닙니다.
+- h5-g: weak learned-source multi-seed / scale stability diagnostics를 추가했습니다. Smoke는 key count `64/128`, seed `1/2`, clean/mid/weak route-code weakening arm을 교차하고, weak fallback-off와 key-shape fallback + source-credit `ranking-strength` + ledger arm을 비교합니다. 평균 readout은 clean-off qacc/decode/recall `1.000000`, mid-off qacc `0.970313`, decode `0.630937`, recall `0.994531`, weak-off qacc `0.185938`, decode `0.000000`, recall `0.285938`, weak fallback-ledger qacc `0.460156`, fallback_used `0.714063`입니다. source gap/slash/reward도 켜집니다. 이는 scale/stability instrumentation이지 source-credit robustness solved가 아닙니다.
+- h5-h: fallback-source dependence / stability diagnostics를 추가했습니다. Smoke는 weak route-code source를 고정하고 fallback `off`, exact symbolic `raw-key`, source-credit `ranking-strength`가 붙은 symbolic `key-shape`, bad `noisy-route-code`를 비교합니다. 평균 readout은 fallback-off qacc `0.213281`, raw-key qacc `0.650000` 및 fallback_recall `1.000000`, key-shape qacc `0.437500` 및 source_gap `0.299223`, noisy-route-code qacc `0.173437`, source_gap `-0.207562`, noisy_mean `-0.201440`, noisy_slash `0.979234`입니다. 이는 symbolic fallback dependence와 bad-source diagnostics를 분리하는 계측이지 learned routing solved가 아닙니다.
 
 ## 빌드
 
@@ -191,6 +193,8 @@ cmake --build build -j
 - `experiments/run_v05_route_source_credit_noisy_source.sh`
 - `experiments/run_v05_route_source_credit_noisy_scale.sh`
 - `experiments/run_v05_route_source_credit_learned_source_stress.sh`
+- `experiments/run_v05_route_source_credit_learned_source_scale.sh`
+- `experiments/run_v05_route_source_credit_fallback_ablation.sh`
 
 ## 대표 smoke test
 
@@ -222,6 +226,8 @@ cmake --build build -j
 - `experiments/test_v05_route_source_credit_noisy_source.sh`
 - `experiments/test_v05_route_source_credit_noisy_scale.sh`
 - `experiments/test_v05_route_source_credit_learned_source_stress.sh`
+- `experiments/test_v05_route_source_credit_learned_source_scale.sh`
+- `experiments/test_v05_route_source_credit_fallback_ablation.sh`
 
 ## 핵심 문서
 

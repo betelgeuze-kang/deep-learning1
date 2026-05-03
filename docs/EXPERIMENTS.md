@@ -1005,3 +1005,85 @@ Expected:
   instrumentation. This is source-quality detection under controlled route-code
   identity weakening, not learned routing solved and not source-credit
   robustness solved.
+- h5-g weak learned-source scale smoke:
+
+```bash
+./experiments/test_v05_route_source_credit_learned_source_scale.sh
+```
+
+- h5-g standard weak learned-source scale run:
+
+```bash
+./experiments/run_v05_route_source_credit_learned_source_scale.sh
+./experiments/run_v05_route_source_credit_learned_source_scale.sh --full
+```
+
+- h5-g writes
+  `results/v05_route_source_credit_learned_source_scale_summary.csv`
+- h5-g smoke crosses key counts `64/128`, seeds `1/2`, and four arms:
+  `clean-off`, `mid-off`, `weak-off`, and `weak-fallback-ledger`.
+- h5-g uses clean route-code identity (`keep=1.0`, `aux_noise=0.0`), mid
+  weakening (`keep=0.5`, `aux_noise=0.25`), and weak learned-source stress
+  (`keep=0.25`, `aux_noise=0.75`).
+- h5-g smoke decision: `PASS` as weak learned-source multi-seed / scale
+  stability diagnostics. Mean smoke readout:
+
+```text
+clean-off:
+  qacc=1.000000, decode=1.000000, primary_recall=1.000000
+mid-off:
+  qacc=0.970313, decode=0.630937, primary_recall=0.994531
+weak-off:
+  qacc=0.185938, decode=0.000000, primary_recall=0.285938
+weak-fallback-ledger:
+  qacc=0.460156, decode=0.000000, primary_recall=0.285938,
+  fallback_used=0.714063, source_gap=0.305619,
+  primary_slash=0.467693, fallback_reward=1.000000
+```
+
+Interpretation:
+source weakening produces a stable degradation curve over the small key/seed
+smoke, and key-shape fallback plus source-credit ledger partially mitigates
+the weak-source damage while populating responsibility signals. This remains
+controlled scale/stability instrumentation with symbolic fallback, not learned
+routing solved and not source-credit robustness solved.
+- h5-h fallback-source ablation smoke:
+
+```bash
+./experiments/test_v05_route_source_credit_fallback_ablation.sh
+```
+
+- h5-h standard fallback-source ablation run:
+
+```bash
+./experiments/run_v05_route_source_credit_fallback_ablation.sh
+./experiments/run_v05_route_source_credit_fallback_ablation.sh --full
+```
+
+- h5-h writes
+  `results/v05_route_source_credit_fallback_ablation_summary.csv`
+- h5-h smoke keeps the weak route-code source fixed (`keep=0.25`,
+  `aux_noise=0.75`) and crosses key counts `64/128`, seeds `1/2`, and
+  fallback sources `off`, `raw-key`, `key-shape`, and `noisy-route-code`.
+- h5-h smoke decision: `PASS` as fallback-source dependence / stability
+  diagnostics. Mean smoke readout:
+
+```text
+fallback-off:
+  qacc=0.213281, primary_recall=0.316406, fallback_used=0.000000
+fallback-raw-key:
+  qacc=0.650000, fallback_used=0.683594, fallback_recall=1.000000
+fallback-key-shape:
+  qacc=0.437500, fallback_used=0.683594, fallback_recall=1.000000,
+  source_gap=0.299223
+fallback-noisy-route-code:
+  qacc=0.173437, fallback_used=0.683594, fallback_recall=0.000000,
+  source_gap=-0.207562, noisy_mean=-0.201440, noisy_slash=0.979234
+```
+
+Interpretation:
+`raw-key` and `key-shape` are symbolic fallback controls, with `key-shape`
+remaining the symbolic upper-bound source-credit branch. `noisy-route-code`
+acts as a bad fallback stress and gets negative source/noisy credit. This
+separates fallback-source dependence from learned-source quality, but it is not
+learned routing solved and not source-credit robustness solved.

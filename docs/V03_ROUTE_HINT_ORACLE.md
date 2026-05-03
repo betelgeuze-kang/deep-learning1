@@ -2104,3 +2104,165 @@ identity auxiliary and the weak prediction-oriented joint-code source. Source
 credit can detect the degraded route-code source and route responsibility
 toward the symbolic fallback in this controlled fixture. This is still an
 instrumentation result with key-shape fallback, not learned sparse routing.
+
+## h5-g Weak Learned-source Scale Stability Decision
+
+`h5-g` passes as weak learned-source multi-seed / scale stability
+instrumentation, but it does not solve learned routing, source-credit
+robustness, or wrong-candidate robustness.
+
+This slice extends h5-f from a clean/weak smoke into a small degradation curve:
+
+- `clean-off`: `keep=1.0`, `aux_noise=0.0`, fallback off
+- `mid-off`: `keep=0.5`, `aux_noise=0.25`, fallback off
+- `weak-off`: `keep=0.25`, `aux_noise=0.75`, fallback off
+- `weak-fallback-ledger`: `keep=0.25`, `aux_noise=0.75`,
+  symbolic `key-shape` fallback, source-credit `ranking-strength`, and ledger
+  enabled
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_learned_source_scale.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_learned_source_scale.sh
+./experiments/run_v05_route_source_credit_learned_source_scale.sh --full
+```
+
+Smoke grid:
+
+- key counts `64/128`
+- seeds `1/2`
+- four arms per key/seed pair
+
+Mean smoke readout:
+
+```text
+clean-off:
+  qacc = 1.000000
+  key_region_route_decode_acc = 1.000000
+  route_primary_recall = 1.000000
+
+mid-off:
+  qacc = 0.970313
+  key_region_route_decode_acc = 0.630937
+  route_primary_recall = 0.994531
+
+weak-off:
+  qacc = 0.185938
+  key_region_route_decode_acc = 0.000000
+  route_primary_recall = 0.285938
+
+weak-fallback-ledger:
+  qacc = 0.460156
+  key_region_route_decode_acc = 0.000000
+  route_primary_recall = 0.285938
+  route_fallback_used_rate = 0.714063
+  route_source_credit_gap = 0.305619
+  route_source_credit_primary_slashed_rate = 0.467693
+  route_source_credit_fallback_rewarded_rate = 1.000000
+```
+
+All rows keep the value-bearing route-hint path active:
+
+- `route_hint_candidate_lookup_count > 0`
+- `route_hint_value_read_distance_mean > 0`
+- `routing_trigger_rate = 0.000000`
+- `active_jump_rate = 0.000000`
+
+Interpretation:
+weakening the route-code identity auxiliary produces a stable degradation curve
+over the small key/seed smoke. Key-shape fallback plus source-credit ledger
+partially mitigates the weak-source damage and assigns responsibility to the
+fallback source. This is still controlled instrumentation with symbolic
+fallback, not learned sparse routing.
+
+## h5-h Fallback-source Dependence / Stability Decision
+
+`h5-h` passes as fallback-source dependence / stability diagnostics, but it
+does not solve learned routing, source-credit robustness, or wrong-candidate
+robustness.
+
+This slice keeps the weak route-code source from h5-g fixed and compares four
+fallback-source arms:
+
+- `off`: no fallback
+- `raw-key`: exact symbolic raw-key fallback
+- `key-shape`: symbolic key-shape fallback with source-credit
+  `ranking-strength`
+- `noisy-route-code`: bad fallback-source stress with source-credit
+  `ranking-strength`
+
+The value-bearing route-hint path remains unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_fallback_ablation.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_fallback_ablation.sh
+./experiments/run_v05_route_source_credit_fallback_ablation.sh --full
+```
+
+Smoke grid:
+
+- key counts `64/128`
+- seeds `1/2`
+- weak route-code source: `keep=0.25`, `aux_noise=0.75`
+- fallback sources `off`, `raw-key`, `key-shape`, `noisy-route-code`
+
+Mean smoke readout:
+
+```text
+fallback-off:
+  qacc = 0.213281
+  route_primary_recall = 0.316406
+  route_fallback_used_rate = 0.000000
+
+fallback-raw-key:
+  qacc = 0.650000
+  route_fallback_used_rate = 0.683594
+  route_fallback_recall = 1.000000
+  route_fallback_qacc = 0.670102
+
+fallback-key-shape:
+  qacc = 0.437500
+  route_fallback_used_rate = 0.683594
+  route_fallback_recall = 1.000000
+  route_source_credit_gap = 0.299223
+
+fallback-noisy-route-code:
+  qacc = 0.173437
+  route_fallback_used_rate = 0.683594
+  route_fallback_recall = 0.000000
+  route_source_credit_gap = -0.207562
+  route_source_credit_noisy_mean = -0.201440
+  route_source_credit_noisy_slashed_rate = 0.979234
+```
+
+All rows keep the route-hint safety guard:
+
+- `route_hint_candidate_lookup_count > 0`
+- `route_hint_value_read_distance_mean > 0`
+- `routing_trigger_rate = 0.000000`
+- `active_jump_rate = 0.000000`
+
+Interpretation:
+raw-key and key-shape show that symbolic fallback sources can recover
+candidate availability when the learned-like route-code source is weak.
+Noisy-route-code shows the opposite branch: a bad fallback source receives
+negative source/noisy credit and does not recover recall. This separates
+fallback-source dependence from learned-source quality, but it remains
+controlled diagnostics with symbolic fallbacks, not learned sparse routing.

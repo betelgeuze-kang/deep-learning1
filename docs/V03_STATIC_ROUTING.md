@@ -350,6 +350,14 @@ Current decision:
   instrumentation; it weakens the route-code identity auxiliary and measures
   source-credit/fallback response while preserving `value_pos -> value byte ->
   proposal hint`, but it still does not promote static neighbor replacement
+- treat weak learned-source scale stability as value-bearing route-hint memory
+  instrumentation; it scales the route-code weakening over key/seed arms and
+  measures fallback/source-credit response, but it still does not promote
+  static neighbor replacement
+- treat fallback-source ablation / stability as value-bearing route-hint memory
+  instrumentation; it compares `off`, `raw-key`, `key-shape`, and
+  `noisy-route-code` fallback arms while preserving `value_pos -> value byte ->
+  proposal hint`, but it still does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -374,6 +382,9 @@ Allowed wording:
 - `source-quality separation instrumentation`
 - `noisy-source scale stability diagnostics`
 - `weaker learned-source stress instrumentation`
+- `weak learned-source scale stability diagnostics`
+- `fallback-source dependence diagnostics`
+- `fallback-source ablation diagnostics`
 
 Do not say:
 
@@ -386,3 +397,6 @@ Do not say:
 - `noisy source credit solves robustness`
 - `source-quality separation solves learned routing`
 - `weakened route-code source solves learned routing`
+- `weak learned-source scale proves learned routing`
+- `fallback-source ablation solves learned routing`
+- `key-shape fallback is learned routing`
