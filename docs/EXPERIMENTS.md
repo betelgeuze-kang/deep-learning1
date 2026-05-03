@@ -1323,3 +1323,59 @@ fallback sources in this controlled setting. A noisy fallback source is still
 not recoverable by aggregation, but it is assigned negative source/noisy credit
 and is not strength-amplified. This confirms that good-source aggregation and
 bad-source detection are separable mechanisms.
+
+## h5-m Source/noise-aware Aggregation Scale Stability Decision
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_source_aware_scale.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_source_aware_scale.sh
+```
+
+The h5-m smoke extends h5-l over key count and seed arms. It crosses
+`key_count=64/128` with `seed=1/2` and compares plain vote with source-aware
+weighted aggregation for `raw-key`, `key-shape`, and `noisy-route-code`
+fallback sources.
+
+Reference smoke averages:
+
+```text
+raw-key:
+  vote qacc=0.378516, fallback_qacc=0.297216
+  source-aware qacc=0.925391, fallback_qacc=0.996875,
+  correct_vote_share=0.860390, entropy=0.641214,
+  source_gap=0.314231, strength_mean=1.439082
+
+key-shape:
+  vote qacc=0.275781, fallback_qacc=0.115804
+  source-aware qacc=0.932813, fallback_qacc=1.000000,
+  correct_vote_share=0.848875, entropy=0.696635,
+  source_gap=0.314231, strength_mean=1.439082
+
+noisy-route-code:
+  vote qacc=0.099219, fallback_recall=0.000000
+  source-aware qacc=0.320703, fallback_recall=0.000000,
+  source_gap=-0.268339, noisy_mean=-0.231653,
+  noisy_slashed=0.973848, strength_mean=1.000000
+```
+
+Decision:
+`h5-m` passes as source/noise-aware aggregation scale stability diagnostics and
+limited mitigation for symbolic fallback controls, but it does not solve
+learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+Interpretation:
+the h5-l pattern is not a single-smoke artifact. Source-aware weighted
+aggregation repeatedly improves symbolic fallback integration over broad vote
+across the tested key/seed smoke arms. The noisy fallback branch remains
+unresolved, but it is consistently down-signaled by negative source/noisy
+credit and is not strength-amplified. The next bottleneck is bad-source
+abstention/filtering or replacing the noisy candidate source, not stronger
+aggregation alone.

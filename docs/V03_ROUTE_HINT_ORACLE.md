@@ -2503,3 +2503,59 @@ important split is now clear: source-credit can detect bad fallback sources,
 and weighted aggregation can integrate good fallback candidates, but missing
 or noisy candidates still require source quality improvements rather than
 stronger aggregation alone.
+
+## h5-m Source/noise-aware Aggregation Scale Stability Decision
+
+`h5-m` passes as source/noise-aware aggregation scale stability diagnostics and
+limited mitigation for symbolic fallback controls, but it does not solve
+learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+The slice keeps the successful path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_source_aware_scale.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_source_aware_scale.sh
+```
+
+The smoke crosses `key_count=64/128` with `seed=1/2` and compares vote against
+source-aware weighted aggregation for symbolic fallback sources and an explicit
+noisy fallback negative control.
+
+Reference smoke averages:
+
+```text
+raw-key:
+  vote qacc=0.378516, fallback_qacc=0.297216
+  source-aware qacc=0.925391, fallback_qacc=0.996875,
+  source_gap=0.314231, strength_mean=1.439082
+
+key-shape:
+  vote qacc=0.275781, fallback_qacc=0.115804
+  source-aware qacc=0.932813, fallback_qacc=1.000000,
+  source_gap=0.314231, strength_mean=1.439082
+
+noisy-route-code:
+  source-aware qacc=0.320703, fallback_recall=0.000000,
+  source_gap=-0.268339, noisy_mean=-0.231653,
+  noisy_slashed=0.973848, strength_mean=1.000000
+```
+
+Interpretation:
+the source-aware aggregation pattern from h5-l repeats across the tested
+key/seed smoke arms. Good symbolic fallback candidates are integrated by
+weighted/source-aware aggregation, while a noisy fallback remains unsolved but
+is assigned negative source/noisy credit and receives no strength
+amplification. This is still controlled diagnostics with symbolic fallback
+controls, not learned routing solved.

@@ -378,6 +378,11 @@ Current decision:
   good-source weighted aggregation from noisy bad-source detection while
   preserving `value_pos -> value byte -> proposal hint`, but it still does not
   promote static neighbor replacement
+- treat h5-m source/noise-aware aggregation scale stability diagnostics as
+  value-bearing route-hint memory instrumentation; it checks that the h5-l
+  good-source aggregation / bad-source detection split repeats over key/seed
+  smoke arms while preserving `value_pos -> value byte -> proposal hint`, but
+  it still does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -409,6 +414,7 @@ Allowed wording:
 - `fallback candidate-quality gap diagnostics`
 - `fallback aggregation policy calibration diagnostics`
 - `source/noise-aware fallback aggregation diagnostics`
+- `source/noise-aware aggregation scale stability diagnostics`
 
 Do not say:
 
