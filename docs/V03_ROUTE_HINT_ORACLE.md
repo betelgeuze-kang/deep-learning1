@@ -2450,3 +2450,56 @@ confidence-gated aggregation degrades when low-confidence queries are routed to
 plain vote. Setting low/high confidence aggregation to weighted-vote preserves
 the weighted baseline. This motivates the next slice: source/noise-aware
 aggregation policy, rather than a single broad-vote fallback rule.
+
+## h5-l Source/noise-aware Fallback Aggregation Decision
+
+`h5-l` passes as source/noise-aware fallback aggregation diagnostics and
+limited mitigation for symbolic fallback controls, but it does not solve
+learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+The slice keeps the successful path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_source_aware_aggregation.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_source_aware_aggregation.sh
+```
+
+Reference smoke readout:
+
+```text
+raw-key:
+  vote qacc=0.401563, fallback_qacc=0.391071
+  source-aware qacc=0.965625, fallback_qacc=1.000000,
+  source_gap=0.355541, strength_mean=1.544219
+
+key-shape:
+  vote qacc=0.218750, fallback_qacc=0.176786
+  source-aware qacc=0.964063, fallback_qacc=1.000000,
+  source_gap=0.355541, strength_mean=1.544219
+
+noisy-route-code:
+  source-aware qacc=0.193750, fallback_recall=0.000000,
+  source_gap=-0.140244, noisy_mean=-0.197850,
+  noisy_slashed=0.972107, noisy_selected=0.000000,
+  strength_mean=1.000000
+```
+
+Interpretation:
+symbolic fallback sources benefit from weighted/source-aware aggregation, while
+the noisy fallback source remains unsolved but is correctly down-signaled. The
+important split is now clear: source-credit can detect bad fallback sources,
+and weighted aggregation can integrate good fallback candidates, but missing
+or noisy candidates still require source quality improvements rather than
+stronger aggregation alone.

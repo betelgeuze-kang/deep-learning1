@@ -373,6 +373,11 @@ Current decision:
   and confidence-gated fallback aggregation policies while preserving
   `value_pos -> value byte -> proposal hint`, but it still does not promote
   static neighbor replacement
+- treat h5-l source/noise-aware fallback aggregation diagnostics as
+  value-bearing route-hint memory instrumentation; it separates symbolic
+  good-source weighted aggregation from noisy bad-source detection while
+  preserving `value_pos -> value byte -> proposal hint`, but it still does not
+  promote static neighbor replacement
 
 Allowed wording:
 
@@ -403,6 +408,7 @@ Allowed wording:
 - `fallback-source policy calibration diagnostics`
 - `fallback candidate-quality gap diagnostics`
 - `fallback aggregation policy calibration diagnostics`
+- `source/noise-aware fallback aggregation diagnostics`
 
 Do not say:
 

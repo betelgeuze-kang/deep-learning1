@@ -1268,3 +1268,58 @@ only as good as the low-confidence policy: low=`vote` inherits the vote
 failure, while low=`weighted-vote` preserves the weighted-vote baseline. This
 is aggregation-policy calibration, not fallback robustness or learned routing
 solved.
+
+## h5-l Source/noise-aware Fallback Aggregation Decision
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_source_aware_aggregation.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_source_aware_aggregation.sh
+```
+
+The h5-l smoke keeps the weak route-code source fixed and compares symbolic
+fallback sources against an explicit noisy fallback negative control. Symbolic
+fallback arms use weighted aggregation and source-credit policy; noisy arms
+verify that a bad fallback source is detected but not solved.
+
+Reference smoke readout:
+
+```text
+raw-key:
+  vote qacc=0.401563, fallback_qacc=0.391071
+  source-aware qacc=0.965625, fallback_qacc=1.000000,
+  correct_vote_share=0.872579, entropy=0.646051,
+  source_gap=0.355541, strength_mean=1.544219
+
+key-shape:
+  vote qacc=0.218750, fallback_qacc=0.176786
+  source-aware qacc=0.964063, fallback_qacc=1.000000,
+  correct_vote_share=0.852162, entropy=0.734797,
+  source_gap=0.355541, strength_mean=1.544219
+
+noisy-route-code:
+  vote qacc=0.059375, fallback_recall=0.000000
+  source-aware qacc=0.193750, fallback_recall=0.000000,
+  source_gap=-0.140244, noisy_mean=-0.197850,
+  noisy_slashed=0.972107, noisy_selected=0.000000,
+  strength_mean=1.000000
+```
+
+Decision:
+`h5-l` passes as source/noise-aware fallback aggregation diagnostics and
+limited mitigation for symbolic fallback controls, but it does not solve
+learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+Interpretation:
+weighted/source-aware aggregation is a strong integration policy for symbolic
+fallback sources in this controlled setting. A noisy fallback source is still
+not recoverable by aggregation, but it is assigned negative source/noisy credit
+and is not strength-amplified. This confirms that good-source aggregation and
+bad-source detection are separable mechanisms.
