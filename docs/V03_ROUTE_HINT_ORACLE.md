@@ -2348,3 +2348,54 @@ negative noisy/source credit and high noisy slash, does not recover fallback
 recall, and does not receive strength amplification. `raw-key` remains a
 symbolic ceiling. This is fallback-policy calibration instrumentation, not
 learned sparse routing.
+
+## h5-j Fallback Candidate-quality Gap Decision
+
+`h5-j` passes as fallback candidate-quality gap diagnostics, but it does not
+solve learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+The slice keeps the successful path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_fallback_quality.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_fallback_quality.sh
+```
+
+Reference smoke readout:
+
+```text
+raw-vote-off:
+  qacc=0.225000, fallback_qacc=0.198214,
+  correct_vote_share=0.296354, entropy=1.868280
+
+keyshape-vote-off:
+  qacc=0.200000, fallback_qacc=0.167857,
+  correct_vote_share=0.287760, entropy=1.881561
+
+raw-weighted-off:
+  qacc=0.942188, fallback_qacc=0.996429,
+  correct_vote_share=0.789853, entropy=0.958879
+
+keyshape-weighted-off:
+  qacc=0.960938, fallback_qacc=1.000000,
+  correct_vote_share=0.842201, entropy=0.766750
+```
+
+Candidate top1 remains low for both fallback sources (`0.031250`, mean rank
+`2.500000`). The useful explanatory signal is aggregation quality:
+weighted-vote raises correct-value support and lowers vote entropy, rescuing
+both raw-key and key-shape fallback. This means fallback recall alone is not
+the current bottleneck; the next question is how to choose or learn the
+fallback aggregation/reranking policy without relying on symbolic controls.

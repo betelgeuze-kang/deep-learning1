@@ -1162,3 +1162,60 @@ credit and high noisy slash, does not recover fallback recall, and strength
 does not increase beyond `1.0`. `raw-key` remains a symbolic ceiling. This is
 policy calibration instrumentation on the value-bearing route-hint path, not
 learned routing solved.
+
+## h5-j Fallback Candidate-quality Gap Decision
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_fallback_quality.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_fallback_quality.sh
+```
+
+The h5-j smoke fixes the weak route-code source and compares `raw-key` and
+`key-shape` fallback candidate quality under `vote`, `weighted-vote`, and
+source-credit `ranking-strength`.
+
+Reference smoke readout:
+
+```text
+raw-vote-off:
+  qacc=0.225000, fallback_qacc=0.198214,
+  correct_vote_share=0.296354, entropy=1.868280
+
+keyshape-vote-off:
+  qacc=0.200000, fallback_qacc=0.167857,
+  correct_vote_share=0.287760, entropy=1.881561
+
+raw-weighted-off:
+  qacc=0.942188, fallback_qacc=0.996429,
+  correct_vote_share=0.789853, entropy=0.958879
+
+keyshape-weighted-off:
+  qacc=0.960938, fallback_qacc=1.000000,
+  correct_vote_share=0.842201, entropy=0.766750
+
+raw-weighted-policy:
+  qacc=0.943750, fallback_qacc=1.000000,
+  source_gap=0.325494, selected_fallback=0.875000
+
+keyshape-weighted-policy:
+  qacc=0.960938, fallback_qacc=1.000000,
+  source_gap=0.325494, selected_fallback=0.875000
+```
+
+Both fallback sources keep low top1 (`candidate_top1=0.031250`) and mean rank
+`2.500000`, so the smoke does not support a top1-solved interpretation.
+Instead, weighted-vote raises correct-value support and lowers entropy enough
+to rescue both sources. The immediate bottleneck is fallback aggregation
+quality, not fallback recall alone.
+
+Decision:
+`h5-j` passes as fallback candidate-quality gap diagnostics, but it does not
+solve learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.

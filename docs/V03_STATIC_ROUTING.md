@@ -363,6 +363,11 @@ Current decision:
   strength, ranking-strength, and noisy negative-control fallback policy arms
   while preserving `value_pos -> value byte -> proposal hint`, but it still
   does not promote static neighbor replacement
+- treat h5-j fallback candidate-quality gap diagnostics as value-bearing
+  route-hint memory instrumentation; it separates fallback recall from
+  top1/rank/vote-support/entropy and shows aggregation quality can dominate
+  the fallback source gap, but it still does not promote static neighbor
+  replacement
 
 Allowed wording:
 
@@ -391,6 +396,7 @@ Allowed wording:
 - `fallback-source dependence diagnostics`
 - `fallback-source ablation diagnostics`
 - `fallback-source policy calibration diagnostics`
+- `fallback candidate-quality gap diagnostics`
 
 Do not say:
 
