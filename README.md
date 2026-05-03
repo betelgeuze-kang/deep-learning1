@@ -8,7 +8,7 @@ Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, and h5-j diagnoses fallback candidate-quality gaps via vote/weighted-vote support, entropy, rank, and fallback subset qacc. Treat them as diagnostics / limited mitigation, not robustness solved.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, h5-j diagnoses fallback candidate-quality gaps, and h5-k calibrates fallback aggregation policy. Treat them as diagnostics / limited mitigation, not robustness solved.
 
 Current status:
 
@@ -180,6 +180,14 @@ Current status:
   both (`raw` qacc `0.942188`, `key-shape` qacc `0.960938`). This says the
   exposed bottleneck is fallback aggregation quality, not fallback recall
   alone.
+- h5-k adds fallback aggregation policy calibration. The smoke compares
+  `top1`, `vote`, `weighted-vote`, and confidence-gated policies for `raw-key`
+  and `key-shape` fallback. Plain vote is the weak policy (`raw` qacc
+  `0.328125`, `key-shape` qacc `0.204688`), while top1 and weighted-vote are
+  strong in this controlled fallback setting (`top1` qacc `0.906250` for both;
+  weighted qacc `0.943750` / `0.956250`). Confidence-gated
+  low=`vote`, high=`weighted-vote` inherits the vote weakness, while
+  low=`weighted-vote`, high=`weighted-vote` preserves the weighted baseline.
 
 ## Build
 

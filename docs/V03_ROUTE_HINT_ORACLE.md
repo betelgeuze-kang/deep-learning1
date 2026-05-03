@@ -2399,3 +2399,54 @@ weighted-vote raises correct-value support and lowers vote entropy, rescuing
 both raw-key and key-shape fallback. This means fallback recall alone is not
 the current bottleneck; the next question is how to choose or learn the
 fallback aggregation/reranking policy without relying on symbolic controls.
+
+## h5-k Fallback Aggregation Policy Calibration Decision
+
+`h5-k` passes as fallback aggregation-policy calibration diagnostics, but it
+does not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+The slice keeps the successful path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_fallback_aggregation.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_fallback_aggregation.sh
+```
+
+Reference smoke readout:
+
+```text
+raw-key:
+  top1 qacc=0.906250, fallback_qacc=1.000000
+  vote qacc=0.328125, fallback_qacc=0.312500
+  weighted qacc=0.943750, fallback_qacc=0.987500
+  gated vote/weighted qacc=0.739062
+  gated weighted/weighted qacc=0.943750
+
+key-shape:
+  top1 qacc=0.906250, fallback_qacc=1.000000
+  vote qacc=0.204688, fallback_qacc=0.166071
+  weighted qacc=0.956250, fallback_qacc=0.996429
+  gated vote/weighted qacc=0.443750
+  gated weighted/weighted qacc=0.956250
+```
+
+Interpretation:
+fallback aggregation quality is policy-sensitive. In this controlled fallback
+setting, broad unweighted vote is not the safe default; it washes out the
+usable candidate signal. Top1 and weighted-vote are strong baselines, and
+confidence-gated aggregation degrades when low-confidence queries are routed to
+plain vote. Setting low/high confidence aggregation to weighted-vote preserves
+the weighted baseline. This motivates the next slice: source/noise-aware
+aggregation policy, rather than a single broad-vote fallback rule.

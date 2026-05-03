@@ -1219,3 +1219,52 @@ Decision:
 `h5-j` passes as fallback candidate-quality gap diagnostics, but it does not
 solve learned routing, source-credit robustness, wrong-candidate robustness, or
 fallback robustness.
+
+## h5-k Fallback Aggregation Policy Calibration Decision
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_fallback_aggregation.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_fallback_aggregation.sh
+```
+
+The h5-k smoke keeps the weak route-code source fixed and compares fallback
+aggregation policies for `raw-key` and `key-shape` fallback:
+
+- `top1`
+- `vote`
+- `weighted-vote`
+- confidence-gated low=`vote`, high=`weighted-vote`
+- confidence-gated low=`weighted-vote`, high=`weighted-vote`
+
+Reference smoke readout:
+
+```text
+raw-key:
+  top1 qacc=0.906250, fallback_qacc=1.000000
+  vote qacc=0.328125, fallback_qacc=0.312500
+  weighted qacc=0.943750, fallback_qacc=0.987500
+  gated vote/weighted qacc=0.739062, vote_rate=0.317188
+  gated weighted/weighted qacc=0.943750
+
+key-shape:
+  top1 qacc=0.906250, fallback_qacc=1.000000
+  vote qacc=0.204688, fallback_qacc=0.166071
+  weighted qacc=0.956250, fallback_qacc=0.996429
+  gated vote/weighted qacc=0.443750, vote_rate=0.678125
+  gated weighted/weighted qacc=0.956250
+```
+
+Interpretation:
+plain unweighted vote is the weak policy in this fallback setting. Top1 and
+weighted-vote are strong controlled baselines. Confidence-gated aggregation is
+only as good as the low-confidence policy: low=`vote` inherits the vote
+failure, while low=`weighted-vote` preserves the weighted-vote baseline. This
+is aggregation-policy calibration, not fallback robustness or learned routing
+solved.

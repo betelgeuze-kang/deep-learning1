@@ -368,6 +368,11 @@ Current decision:
   top1/rank/vote-support/entropy and shows aggregation quality can dominate
   the fallback source gap, but it still does not promote static neighbor
   replacement
+- treat h5-k fallback aggregation policy calibration as value-bearing
+  route-hint memory instrumentation; it compares top1, vote, weighted-vote,
+  and confidence-gated fallback aggregation policies while preserving
+  `value_pos -> value byte -> proposal hint`, but it still does not promote
+  static neighbor replacement
 
 Allowed wording:
 
@@ -397,6 +402,7 @@ Allowed wording:
 - `fallback-source ablation diagnostics`
 - `fallback-source policy calibration diagnostics`
 - `fallback candidate-quality gap diagnostics`
+- `fallback aggregation policy calibration diagnostics`
 
 Do not say:
 
