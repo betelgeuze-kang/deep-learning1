@@ -64,7 +64,7 @@ Expected:
 - `repeating-text` weak coupling stays around `0.686` on average and beats the default no-coupling control across all five seeds
 - `proposal_count = 30` remains a control for isolation, not the main `v0.2-b` gate
 
-7. Probe the routing scaffold without changing dynamics.
+7. Probe the routing path without changing dynamics.
 
 ```bash
 ./experiments/run_v03_routing_probe.sh
@@ -76,7 +76,7 @@ Expected:
 - `byte_acc`, `field_byte_acc`, and `joint_byte_acc` stay unchanged between probe off/on
 - routing columns stay at zero when routing is off
 - with `--route-source input-byte` or `--route-source joint-code` and `--K-jump 2`, routing columns become nonzero and show O(1)-candidate coverage only
-- do not read this probe as a sparse-routing win; it is diagnostics scaffolding for a later chunk/token stage
+- do not read this probe as a sparse-routing win; it is diagnostics for a later chunk/token stage
 
 8. Run the experimental static routing slice separately from the probe.
 
@@ -1572,3 +1572,83 @@ the bad/noisy retry source in the smoke. However, the mixed policy currently
 falls back to the raw-key retry under equal initial source credit and does not
 beat the fixed key-shape symbolic upper bound. The result is policy-selection
 plumbing and calibration, not learned retry-source selection solved.
+
+## h5-q Source-credit Retry-policy Tie-break Calibration
+
+`h5-q` passes as source-credit retry-policy tie-break calibration diagnostics
+/ limited mitigation on top of `h5-p`. It keeps the same value-bearing route
+path and tests whether source-order or source-prior should win when retry
+sources are available.
+
+The slice adds:
+
+```bash
+--route-source-retry-tiebreak source-order|source-prior
+--route-source-retry-priorities <csv>
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_retry_tiebreak.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_retry_tiebreak.sh
+```
+
+The smoke keeps the same value-bearing route path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and compares these rows:
+
+```text
+noisy-filter
+policy-source-order
+policy-keyshape-prior
+policy-noisy-penalty/mixed
+fixed-keyshape
+```
+
+Reference smoke readout:
+
+```text
+noisy-filter:
+  qacc=0.103125, fallback_recall=0.000000,
+  noisy_slashed=1.000000, source_retry_used=0.000000
+
+policy-source-order:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+policy-keyshape-prior:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+policy-noisy-penalty/mixed:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+fixed-keyshape:
+  qacc=0.970313, fallback_recall=1.000000,
+  fallback_qacc=1.000000
+```
+
+Decision:
+`h5-q` passes as source-credit retry-policy tie-break calibration diagnostics /
+limited mitigation, but it is not learned routing solved, not source-credit
+robustness solved, and not wrong-candidate/fallback robustness solved.
+
+Interpretation:
+the new tie-break layer makes source-order versus source-prior explicit for the
+retry path. It can route around the noisy retry and preserve the symbolic
+retry-source path, but the fixed key-shape reference remains the upper bound.
+That makes h5-q a calibration/guardrail result, not a new routing capability.

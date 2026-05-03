@@ -131,6 +131,8 @@ struct V02PreParams {
     float route_source_filter_threshold = 0.0f;
     std::string route_source_retry_source = "off";
     std::string route_source_retry_policy = "fixed";
+    std::string route_source_retry_tiebreak = "source-order";
+    std::string route_source_retry_priorities;
     std::string route_source_retry_candidates = "raw-key,key-shape";
     int route_source_retry_per_source_limit = 1;
     int route_plasticity_ledger = 0;

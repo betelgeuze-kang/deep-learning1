@@ -149,7 +149,7 @@ Recommended next stages:
 
 - stronger candidate ranking/confidence features before noisy learned routing
 - `v0.3-h5`: route plasticity / source-credit calibration
-- `v0.3-h5-i`: fallback-source policy calibration, planned/target; pair with
+- `v0.3-h5-i`: fallback-source policy calibration; pair with
   `./experiments/test_v05_route_source_credit_fallback_policy.sh` and
   `./experiments/run_v05_route_source_credit_fallback_policy.sh`
 
@@ -1241,7 +1241,7 @@ Decision:
 
 ## Fallback Hint Strength Diagnostics
 
-`v0.3-h4-5p` extends the h4-5n/h4-5o scaffold with a fallback-used-query-only
+`v0.3-h4-5p` extends the h4-5n/h4-5o setup with a fallback-used-query-only
 strength multiplier. It is diagnostic-only and exists to test whether the last
 bottleneck is hint integration/strength rather than fallback-source discovery.
 
@@ -1262,7 +1262,7 @@ New summary columns:
 - `route_fallback_strength_mult`
 - `route_fallback_effective_strength_mean`
 
-The runner keeps the h4-5n fallback source and the h4-5o delta scaffold, then
+The runner keeps the h4-5n fallback source and the h4-5o delta setup, then
 sweeps `1.0`, `2.0`, `5.0`, and `10.0` on remove-correct key-shape rows. It
 also keeps target-only and projected `pull=2.0` baselines when that extra check
 is cheap. Read the result as a bottleneck diagnostic only; it does not imply
@@ -2758,7 +2758,71 @@ limited. Under equal initial source credit it selects the raw-key retry first,
 so it recovers but does not beat the fixed key-shape symbolic upper bound. This
 is calibration instrumentation, not learned retry-source selection solved.
 
-Next:
-test retry-policy stability over seeds/keys and add a tie-break or warmup
-strategy that can learn when key-shape should beat raw-key instead of relying
-on fixed source order.
+Follow-up:
+h5-q closes the tie-break layer and measures whether source-order or
+source-prior wins without selecting the noisy retry source.
+
+## h5-q Source-credit Retry-policy Tie-break Calibration
+
+`h5-q` passes as source-credit retry-policy tie-break calibration diagnostics
+/ limited mitigation. It keeps the same value-bearing path and tests whether
+source-order or source-prior should win when retry sources are available.
+
+The slice adds:
+
+```bash
+--route-source-retry-tiebreak source-order|source-prior
+--route-source-retry-priorities <csv>
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_retry_tiebreak.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_retry_tiebreak.sh
+```
+
+Reference smoke readout:
+
+```text
+noisy-filter:
+  qacc=0.103125, fallback_recall=0.000000,
+  noisy_slashed=1.000000, source_retry_used=0.000000
+
+policy-source-order:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+policy-keyshape-prior:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+policy-noisy-penalty/mixed:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+fixed-keyshape:
+  qacc=0.970313, fallback_recall=1.000000,
+  fallback_qacc=1.000000
+```
+
+Decision:
+
+- `v0.3-h5-q source-credit retry-policy tie-break`: `PASS` as source-credit
+  retry-policy tie-break calibration diagnostics / limited mitigation
+- it is not learned routing solved, not source-credit robustness solved, and
+  not wrong-candidate/fallback robustness solved
+
+Interpretation:
+the tie-break layer makes source-order versus source-prior explicit for the
+retry path. It can route around the noisy retry and preserve the symbolic
+retry-source path, but the fixed key-shape reference remains the upper bound.
+That makes h5-q a calibration/guardrail result, not a new routing capability.

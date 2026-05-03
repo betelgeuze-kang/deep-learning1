@@ -335,6 +335,12 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-source-retry-policy" ||
                    key == "route_source_retry_policy") {
             params.route_source_retry_policy = value;
+        } else if (key == "route-source-retry-tiebreak" ||
+                   key == "route_source_retry_tiebreak") {
+            params.route_source_retry_tiebreak = value;
+        } else if (key == "route-source-retry-priorities" ||
+                   key == "route_source_retry_priorities") {
+            params.route_source_retry_priorities = value;
         } else if (key == "route-source-retry-candidates" ||
                    key == "route_source_retry_candidates") {
             params.route_source_retry_candidates = value;
@@ -523,6 +529,8 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-source-filter-threshold <float>\n"
        << "  --route-source-retry-source <off|raw-key|key-shape|joint-code-key|noisy-route-code>\n"
        << "  --route-source-retry-policy <fixed|source-credit>\n"
+       << "  --route-source-retry-tiebreak <source-order|source-prior>\n"
+       << "  --route-source-retry-priorities <csv source:prior>\n"
        << "  --route-source-retry-candidates <csv of raw-key|key-shape|joint-code-key|noisy-route-code>\n"
        << "  --route-source-retry-per-source-limit <int>\n"
        << "  --route-plasticity-ledger <0|1>\n"

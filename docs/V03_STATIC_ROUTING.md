@@ -18,7 +18,7 @@ Current scope:
 
 - keep `v0.2-b` as the shipped default path
 - keep `probe` mode as the passive routing diagnostics path
-- keep `--route-mode jump-neighbors` default-off; the original active path uses `joint-code`, while `input-byte` and `state-code` remain diagnostic candidate-source controls
+- keep `--route-mode jump-neighbors` default-off; the original active path uses `joint-code`, while `input-byte` and `state-code` remain diagnostic candidate-source controls; jump-neighbor replacement stays no-go/default-off/diagnostic-only
 - keep total degree bounded by reusing the existing `K` slots
 
 Current helper:
@@ -67,6 +67,10 @@ query-local hint integration and does not revive jump-neighbor replacement.
 h4-5q adds fallback-specific margin strength and lowers the mean fallback
 strength needed for limited mitigation, but it remains query-local and
 diagnostic; it still does not promote jump-neighbor replacement.
+h5-q source-credit retry-policy tie-break diagnostics are also ancillary to
+this static-routing slice; they keep the same `candidate value_pos -> value
+byte read -> proposal hint` path while choosing retry sources, but they do
+not promote jump-neighbor replacement.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -81,7 +85,7 @@ State-code route-signal probe:
 - the helper prints the final row and last-10 means for `byte/field/joint` plus every column from `routing_trigger_rate` onward, so any triggered-only route-key diagnostics columns already present in the CSV schema are surfaced automatically
 
 The confidence-aware acceptance probe keeps the same `jump-neighbors` /
-`joint-code` scaffold but applies `--route-accept-confidence-gain` after the
+`joint-code` path but applies `--route-accept-confidence-gain` after the
 existing node gate and candidate anchor-gap filter. It stays default-off and
 is only evaluated with `--route-min-anchor-gap 0.0` so the acceptance slice is
 observable.
@@ -285,7 +289,7 @@ Interpretation:
 - confidence-aware acceptance is better behaved than confidence-aware gate lowering, but it still acts as a suppression guard on the fixture rather than as a selective opener for `repeating-text`
 - in other words, the acceptance family can reduce bad active usage, but it does not produce a routing lift worth carrying forward yet
 - the route-hint oracle slice changes the semantics from "which remote node becomes a neighbor" to "which value-byte biases the local proposal"; the first oracle fixture passes at `lambda_route = 0.30`
-- `state-code` does not create a meaningfully new route signal on `repeating-text` in the current scaffold
+- `state-code` does not create a meaningfully new route signal on `repeating-text` in the current static-routing slice
 - the route-key diagnostics explain the no-go: cycle-refreshed `state-code` is already almost equal to the learned anchor on all nodes and on triggered nodes, while epoch-refreshed `state-code` is stale and inactive
 - `cycle` refresh changes fixture-side guarded routing slightly, but not in a way that produces a repeat-side win
 - `epoch` refresh collapses the state-key experiment back to the baseline/no-op boundary
@@ -296,7 +300,7 @@ Interpretation:
 Current decision:
 
 - do not promote `jump-neighbors` to the main path yet
-- keep `probe` mode as the safe routing scaffold
+- keep `probe` mode as the safe routing diagnostics path
 - treat any probe-equivalent fallback as a conservative boundary, not as a routing win
 - keep the slice experimental until a later gate or diagnostic step produces a clear `repeating-text` lift while the fixture stays neutral
 - treat `route-min-anchor-gap` ablation as a diagnostic tool for now, not as a default tuning path
@@ -396,6 +400,11 @@ Current decision:
   memory instrumentation; it chooses retry candidates from source-credit policy
   candidates while preserving `value_pos -> value byte -> proposal hint`, but
   it still does not promote static neighbor replacement
+- treat h5-q source-credit retry-policy tie-break diagnostics as value-bearing
+  route-hint memory instrumentation; it keeps `candidate value_pos -> value
+  byte read -> proposal hint` while deciding source-order versus source-prior
+  for retry candidates, but it still does not promote static neighbor
+  replacement
 
 Allowed wording:
 
@@ -416,6 +425,7 @@ Allowed wording:
 - `source/bucket route-credit instrumentation`
 - `source-level fallback responsibility diagnostics`
 - `source-credit policy calibration diagnostics`
+- `source-credit retry-policy tie-break calibration diagnostics`
 - `noisy-source policy diagnostics`
 - `source-quality separation instrumentation`
 - `noisy-source scale stability diagnostics`

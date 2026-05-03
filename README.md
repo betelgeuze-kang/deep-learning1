@@ -7,15 +7,15 @@ Korean README: [README.ko.md](README.ko.md)
 Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
-- This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, h5-j diagnoses fallback candidate-quality gaps, h5-k calibrates fallback aggregation policy, h5-l adds source/noise-aware fallback aggregation diagnostics, h5-m scales that source/noise-aware aggregation pattern over key/seed smoke arms, h5-n adds source-credit bad-source filter / abstain diagnostics, h5-o adds retry-source replacement after bad-source filtering, and h5-p adds source-credit retry-policy calibration. Treat them as diagnostics / limited mitigation, not robustness solved.
+- This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is the `candidate value_pos -> value byte read -> proposal hint` route-hint path, and jump-neighbor replacement stays no-go/default-off/diagnostic-only.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, h5-j diagnoses fallback candidate-quality gaps, h5-k calibrates fallback aggregation policy, h5-l adds source/noise-aware fallback aggregation diagnostics, h5-m scales that source/noise-aware aggregation pattern over key/seed smoke arms, h5-n adds source-credit bad-source filter / abstain diagnostics, h5-o adds retry-source replacement after bad-source filtering, h5-p adds source-credit retry-policy calibration, and h5-q passes as source-credit retry-policy tie-break calibration diagnostics / limited mitigation: `noisy-filter` stays at `qacc=0.103125`, `fallback_recall=0.000000`, `noisy_slashed=1.000000`, `source_retry_used=0.000000`; `policy-source-order`, `policy-keyshape-prior`, and `policy-noisy-penalty/mixed` all recover at `qacc=0.957813`, `fallback_recall=1.000000`, with `retry_noisy_selected=0.000000`; `fixed-keyshape` remains the upper bound at `qacc=0.970313`, `fallback_qacc=1.000000`. NOT learned routing solved, NOT source-credit robustness solved, NOT wrong-candidate/fallback robustness solved.
 
 Current status:
 
 - `v0.1` implemented as `dmv01`
 - `v0.2-pre` implemented as `dmv02` and treated as the locked baseline
 - `v0.2-b` now includes a block-local coupled proposal path, and the default weak-coupling path clears a 5-seed regression on both `counter` and `repeating-text`
-- a routing probe scaffold now exists behind `--K-jump` and `--route-source`, including `input-byte` and `joint-code` candidate sources, but it only logs O(1)-candidate diagnostics and does not yet change graph dynamics
+- a routing probe path now exists behind `--K-jump` and `--route-source`, including `input-byte` and `joint-code` candidate sources, but it only logs O(1)-candidate diagnostics, does not change graph dynamics, and keeps jump-neighbor replacement no-go/default-off/diagnostic-only
 - an experimental `--route-mode jump-neighbors` candidate-ranking slice now exists behind `joint-code`; the current conservative gate removes the fixture regression on the reference runs, and the new `gap_pass` diagnostics show that this happens because triggered nodes still fail the default anchor-gap gate. Reservoir/tick adaptive gating, confidence-aware gating, and confidence-aware acceptance were all tested as default-off slices. The acceptance slice can suppress fixture-side active jumps and recover the sentinel close to baseline under `--route-min-anchor-gap 0.0`, but it still leaves `repeating-text` effectively closed, so it is a guardrail probe rather than a routing win and the whole slice remains experimental
 - a default-off `state-code` route-signal probe now exists behind `--route-source state-code` and optional `--route-refresh cycle`; candidate buckets use the current node state while the route anchor stays on learned `joint-code`. On the reference runs this slice is still no-go: `repeating-text` stays probe-equivalent, `cycle` refresh only perturbs the fixture-side guarded jump slightly, and `epoch` refresh collapses back to the baseline/no-op boundary. The route-key diagnostics confirm why: `state-code + cycle` stays almost identical to the learned anchor on all nodes and on triggered nodes (`triggered_key_anchor ~= 0.996` on repeating text and `~= 0.994` on the fixture, last-10 mean), so it is not a meaningfully new routing signal. The diagnostics helper reads every column from `routing_trigger_rate` onward; keep reading these fields as diagnostic output only, not as a routing-success claim
 - a diagnostic-only candidate-source compare helper now exists behind `experiments/run_v03_input_byte_jump_compare.sh`; it compares `joint-code`, `input-byte`, and `state-code + cycle` buckets across probe, forced-open `gap0`, and confidence-accepted jump cases on `repeating-text` and the routing fixture. The reference run confirms `input-byte` is a genuinely anchor-different bucket key (`triggered_key_anchor = 0.000` on `repeating-text`, `~= 0.019` on the fixture). In `gap0`, it opens a few jumps but produces no repeat-side lift and hurts the fixture; with positive confidence gain it is structurally suppressed because same-input candidates have the same confidence. Treat it as a candidate-source probe only, not as a routing-success claim
@@ -235,6 +235,23 @@ Current status:
   qacc `0.957813`, `retry_noisy_selected=0.000000`). This wires retry-source
   policy selection, but the policy still relies on symbolic retry candidates
   and does not solve learned routing or fallback robustness.
+- h5-q adds source-credit retry-policy tie-break calibration via
+  `--route-source-retry-tiebreak source-order|source-prior` and
+  `--route-source-retry-priorities <csv>`. The smoke keeps the same
+  `candidate value_pos -> value byte read -> proposal hint` path and compares
+  noisy-filter, policy-source-order, policy-keyshape-prior,
+  policy-noisy-penalty/mixed, and fixed-keyshape reference rows. Noisy-filter
+  stays at `qacc=0.103125`, `fallback_recall=0.000000`,
+  `noisy_slashed=1.000000`, `source_retry_used=0.000000`; policy-source-order
+  recovers through raw-key (`qacc=0.957813`, `fallback_recall=1.000000`,
+  `retry_raw_selected=0.875000`), while key-shape prior and
+  noisy-penalty/mixed switch selection to key-shape
+  (`retry_keyshape_selected=0.875000`, `retry_noisy_selected=0.000000`) with
+  no qacc regression. The fixed key-shape reference remains higher
+  (`qacc=0.970313`, `fallback_qacc=1.000000`), so this is tie-break
+  calibration / limited mitigation, not learned routing solved,
+  source-credit robustness solved, or wrong-candidate/fallback robustness
+  solved.
 
 ## Build
 
@@ -357,6 +374,7 @@ Experiment helpers:
 - `experiments/run_v05_route_source_credit_source_aware_scale.sh`
 - `experiments/run_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/run_v05_route_source_credit_retry_source.sh`
+- `experiments/run_v05_route_source_credit_retry_tiebreak.sh`
 - `experiments/run_v05_route_source_credit_retry_policy.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
@@ -395,6 +413,7 @@ Experiment helpers:
 - `experiments/test_v05_route_source_credit_source_aware_scale.sh`
 - `experiments/test_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/test_v05_route_source_credit_retry_source.sh`
+- `experiments/test_v05_route_source_credit_retry_tiebreak.sh`
 - `experiments/test_v05_route_source_credit_retry_policy.sh`
 
 Key docs:

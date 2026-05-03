@@ -77,6 +77,53 @@ std::vector<std::string> split_source_list(const std::string& csv) {
     return sources;
 }
 
+std::unordered_map<std::string, float> parse_retry_source_priorities(
+    const std::string& csv) {
+    std::unordered_map<std::string, float> priorities;
+    if (trim_ascii(csv).empty()) {
+        return priorities;
+    }
+    std::size_t begin = 0;
+    while (begin <= csv.size()) {
+        const std::size_t comma = csv.find(',', begin);
+        const std::size_t end = comma == std::string::npos ? csv.size() : comma;
+        const std::string entry = trim_ascii(csv.substr(begin, end - begin));
+        if (entry.empty()) {
+            throw std::runtime_error(
+                "route-source-retry-priorities entries must be source:float");
+        }
+        const std::size_t colon = entry.find(':');
+        if (colon == std::string::npos || entry.find(':', colon + 1U) != std::string::npos) {
+            throw std::runtime_error(
+                "route-source-retry-priorities entries must be source:float");
+        }
+        const std::string source = trim_ascii(entry.substr(0, colon));
+        const std::string value = trim_ascii(entry.substr(colon + 1U));
+        if (!valid_retry_source_name(source) || value.empty()) {
+            throw std::runtime_error(
+                "route-source-retry-priorities entries must use raw-key, key-shape, joint-code-key, or noisy-route-code");
+        }
+        std::size_t parsed = 0;
+        float prior = 0.0f;
+        try {
+            prior = std::stof(value, &parsed);
+        } catch (const std::exception&) {
+            throw std::runtime_error(
+                "route-source-retry-priorities entries must have finite float values");
+        }
+        if (parsed != value.size() || !std::isfinite(prior)) {
+            throw std::runtime_error(
+                "route-source-retry-priorities entries must have finite float values");
+        }
+        priorities[source] = prior;
+        if (comma == std::string::npos) {
+            break;
+        }
+        begin = comma + 1U;
+    }
+    return priorities;
+}
+
 int common_prefix_count(const std::string& lhs, const std::string& rhs) {
     const auto limit = std::min(lhs.size(), rhs.size());
     std::size_t count = 0;
@@ -667,6 +714,12 @@ void GraphV02::validate_params() const {
         throw std::runtime_error(
             "route-source-retry-policy must be one of: fixed, source-credit");
     }
+    if (params_.route_source_retry_tiebreak != "source-order" &&
+        params_.route_source_retry_tiebreak != "source-prior") {
+        throw std::runtime_error(
+            "route-source-retry-tiebreak must be one of: source-order, source-prior");
+    }
+    parse_retry_source_priorities(params_.route_source_retry_priorities);
     if (params_.route_source_retry_per_source_limit <= 0) {
         throw std::runtime_error("route-source-retry-per-source-limit must be positive");
     }
@@ -2068,6 +2121,18 @@ float GraphV02::route_source_credit_for_source(
     return found == route_source_credit_by_bucket_.end() ? 0.0f : found->second;
 }
 
+float GraphV02::route_source_retry_prior_for_source(
+    const std::string& source) const {
+    if (params_.route_source_retry_policy != "source-credit" ||
+        params_.route_source_retry_tiebreak != "source-prior") {
+        return 0.0f;
+    }
+    const auto priorities =
+        parse_retry_source_priorities(params_.route_source_retry_priorities);
+    const auto found = priorities.find(source);
+    return found == priorities.end() ? 0.0f : found->second;
+}
+
 float GraphV02::route_credit_weight_for_candidate(int query_index, int value_pos) const {
     if (!route_credit_apply_active() || params_.route_credit_score_weight <= 0.0f) {
         return 1.0f;
@@ -2516,6 +2581,7 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
             int value_pos = -1;
             std::string source_id;
             float source_credit = 0.0f;
+            float source_prior = 0.0f;
             int source_order = 0;
             int rank = 0;
         };
@@ -2538,6 +2604,7 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                         {positions[static_cast<std::size_t>(rank)],
                          retry_source_id,
                          source_credit,
+                         route_source_retry_prior_for_source(retry_source),
                          static_cast<int>(source_index),
                          rank});
                 }
@@ -2549,6 +2616,9 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                    const RetryCandidateEntry& rhs) {
                     if (lhs.source_credit != rhs.source_credit) {
                         return lhs.source_credit > rhs.source_credit;
+                    }
+                    if (lhs.source_prior != rhs.source_prior) {
+                        return lhs.source_prior > rhs.source_prior;
                     }
                     if (lhs.source_order != rhs.source_order) {
                         return lhs.source_order < rhs.source_order;
@@ -2564,6 +2634,7 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                     {retry_positions[static_cast<std::size_t>(rank)],
                      retry_source_id,
                      route_source_credit_for_source(query.query_pos, retry_source_id),
+                     0.0f,
                      0,
                      rank});
             }
