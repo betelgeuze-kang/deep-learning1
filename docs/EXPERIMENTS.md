@@ -1087,3 +1087,78 @@ remaining the symbolic upper-bound source-credit branch. `noisy-route-code`
 acts as a bad fallback stress and gets negative source/noisy credit. This
 separates fallback-source dependence from learned-source quality, but it is not
 learned routing solved and not source-credit robustness solved.
+
+## h5-i Source-credit Fallback Policy Calibration Decision
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_fallback_policy.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_fallback_policy.sh
+```
+
+The h5-i smoke keeps the weak route-code source from h5-g/h5-h fixed and
+compares source-credit fallback policy modes:
+
+- key counts `64/128`
+- seeds `1/2`
+- `off-control`
+- `raw-key-ceiling`
+- `key-shape-learn-only`
+- `key-shape-ranking`
+- `key-shape-strength`
+- `key-shape-ranking-strength`
+- `noisy-learn-only`
+- `noisy-ranking-strength`
+
+Average smoke readout:
+
+```text
+off-control:
+  qacc=0.206250, primary_recall=0.309375, fallback_recall=0.000000
+
+raw-key-ceiling:
+  qacc=0.661328, fallback_recall=1.000000, fallback_qacc=0.689142
+
+key-shape-learn-only:
+  qacc=0.473437, fallback_recall=1.000000, source_gap=0.299047
+
+key-shape-ranking:
+  qacc=0.473437, selected_fallback=0.660209, strength_mean=1.000000
+
+key-shape-strength:
+  qacc=0.473437, selected_fallback=0.000000, strength_mean=1.402324
+
+key-shape-ranking-strength:
+  qacc=0.473437, selected_fallback=0.660209, strength_mean=1.402324
+
+noisy-learn-only:
+  qacc=0.170703, fallback_recall=0.000000, source_gap=-0.182191,
+  noisy_mean=-0.189995, noisy_slashed=0.976094
+
+noisy-ranking-strength:
+  qacc=0.170703, fallback_recall=0.000000, source_gap=-0.182191,
+  selected_fallback=0.363317, strength_mean=1.000000,
+  noisy_mean=-0.189995, noisy_slashed=0.976094
+```
+
+Decision:
+`h5-i` passes as source-credit fallback-policy calibration diagnostics, but it
+does not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+Interpretation:
+`key-shape` source credit produces a positive source gap and the apply modes
+are wired separately: ranking changes selected-fallback diagnostics, strength
+raises route-source strength, and ranking-strength combines both. However,
+qacc remains neutral across these key-shape policy modes. `noisy-route-code`
+is correctly treated as a bad fallback stress: it gets negative noisy/source
+credit and high noisy slash, does not recover fallback recall, and strength
+does not increase beyond `1.0`. `raw-key` remains a symbolic ceiling. This is
+policy calibration instrumentation on the value-bearing route-hint path, not
+learned routing solved.

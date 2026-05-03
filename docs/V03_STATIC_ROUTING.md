@@ -358,6 +358,11 @@ Current decision:
   instrumentation; it compares `off`, `raw-key`, `key-shape`, and
   `noisy-route-code` fallback arms while preserving `value_pos -> value byte ->
   proposal hint`, but it still does not promote static neighbor replacement
+- treat h5-i source-credit fallback policy calibration as value-bearing
+  route-hint memory instrumentation; it separates learn-only, ranking,
+  strength, ranking-strength, and noisy negative-control fallback policy arms
+  while preserving `value_pos -> value byte -> proposal hint`, but it still
+  does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -385,6 +390,7 @@ Allowed wording:
 - `weak learned-source scale stability diagnostics`
 - `fallback-source dependence diagnostics`
 - `fallback-source ablation diagnostics`
+- `fallback-source policy calibration diagnostics`
 
 Do not say:
 

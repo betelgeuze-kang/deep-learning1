@@ -8,7 +8,7 @@ Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, and h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`. Treat them as diagnostics / limited mitigation, not robustness solved.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, and h5-i calibrates source-credit fallback policy modes across learn-only, ranking, strength, ranking-strength, and noisy negative-control arms. Treat them as diagnostics / limited mitigation, not robustness solved.
 
 Current status:
 
@@ -161,6 +161,16 @@ Current status:
   source_gap `-0.207562`, noisy_mean `-0.201440`, noisy_slash `0.979234`.
   This separates symbolic fallback dependence from bad-source diagnostics; it
   is not learned routing solved.
+- h5-i adds source-credit fallback-policy calibration diagnostics. The smoke
+  keeps the weak route-code source fixed, then separates `key-shape`
+  learn-only, ranking, strength, and ranking-strength apply modes against
+  `raw-key` symbolic ceiling and `noisy-route-code` negative control. Mean
+  smoke readout: off-control qacc `0.206250`; raw-key qacc `0.661328`,
+  fallback_recall `1.000000`; key-shape source_gap `0.299047`, selected
+  fallback `0.660209` under ranking, strength mean `1.402324` under strength;
+  noisy-route-code source_gap `-0.182191`, noisy_mean `-0.189995`, noisy_slash
+  `0.976094`, fallback_recall `0.000000`. This is policy calibration
+  instrumentation, not fallback robustness or learned routing solved.
 
 ## Build
 
