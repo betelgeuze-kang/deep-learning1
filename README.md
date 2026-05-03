@@ -262,6 +262,14 @@ Current status:
   selection to key-shape and avoid noisy retry selection, but still match
   `qacc=0.957813` rather than the fixed key-shape reference `0.970313`; read
   this as source-prior schedule calibration / limited mitigation only.
+- h5-s adds source-prior handoff diagnostics on the same retry path. The smoke
+  compares source-order, static key-shape prior, warmup-short/long, decay-fast,
+  and fixed key-shape reference rows. Short warmup exposes a partial handoff
+  (`retry_raw_selected=0.062500`, `retry_keyshape_selected=0.812500`), while
+  long warmup/decay/static prior keep key-shape selected
+  (`retry_keyshape_selected=0.875000`). Noisy retry remains unused, and qacc
+  remains `0.957813`, below fixed key-shape `0.970313`; read this as
+  source-prior handoff calibration / limited mitigation only.
 
 ## Build
 

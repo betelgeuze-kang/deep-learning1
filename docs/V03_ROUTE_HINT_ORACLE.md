@@ -2895,3 +2895,57 @@ key-shape and avoid the bad/noisy retry source, but they do not exceed the
 fixed key-shape reference. The next useful question is not another tie-break
 switch; it is whether source-credit evidence can eventually dominate or decay
 away the symbolic prior under scale/seed stress.
+
+## h5-s Source-prior Handoff Diagnostics
+
+`h5-s` passes as source-prior handoff calibration diagnostics / limited
+mitigation. It remains on the same value-bearing route-hint path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The slice compares source-order, static key-shape prior, short/long warmup,
+fast decay, and fixed key-shape reference rows:
+
+```text
+source-order:
+  qacc=0.957813, retry_raw_selected=0.875000,
+  retry_keyshape_selected=0.000000,
+  retry_noisy_selected=0.000000
+
+static-keyshape-prior:
+  qacc=0.957813, retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+warmup-short:
+  qacc=0.957813, retry_raw_selected=0.062500,
+  retry_keyshape_selected=0.812500,
+  retry_noisy_selected=0.000000
+
+warmup-long:
+  qacc=0.957813, retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+decay-fast:
+  qacc=0.957813, retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+fixed-keyshape:
+  qacc=0.970313, fallback_qacc=1.000000
+```
+
+Decision:
+
+- `v0.3-h5-s source-prior handoff`: `PASS` as source-prior handoff
+  calibration diagnostics / limited mitigation
+- it is not learned routing solved, not source-credit robustness solved, and
+  not wrong-candidate/fallback robustness solved
+
+Interpretation:
+short warmup exposes a small handoff effect from key-shape back toward raw-key,
+while long warmup/static/decay schedules keep key-shape selected. Noisy retry
+selection remains suppressed. The scheduled-prior rows still do not match the
+fixed key-shape reference, so the remaining issue is not tie-break plumbing; it
+is source-credit evidence quality and whether it can eventually choose the
+better source without a persistent symbolic prior.

@@ -75,6 +75,10 @@ h5-r source-prior retry schedule diagnostics remain in the same category: they
 scale or warm up retry-source priors for source-credit tie-breaks while
 preserving `candidate value_pos -> value byte read -> proposal hint`, but they
 still do not promote jump-neighbor replacement.
+h5-s source-prior handoff diagnostics stay ancillary in the same way: they
+compare static, warmup, and decay source priors for retry-source selection
+while keeping the value-bearing retry path and still do not promote
+jump-neighbor replacement.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -413,6 +417,10 @@ Current decision:
   route-hint memory instrumentation; it changes retry-source prior scaling
   while preserving `candidate value_pos -> value byte read -> proposal hint`,
   but it still does not promote static neighbor replacement
+- treat h5-s source-prior handoff diagnostics as value-bearing route-hint
+  memory instrumentation; it compares short/long warmup and decay handoff
+  behavior while preserving `candidate value_pos -> value byte read ->
+  proposal hint`, but it still does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -435,6 +443,7 @@ Allowed wording:
 - `source-credit policy calibration diagnostics`
 - `source-credit retry-policy tie-break calibration diagnostics`
 - `source-prior retry schedule calibration diagnostics`
+- `source-prior handoff calibration diagnostics`
 - `noisy-source policy diagnostics`
 - `source-quality separation instrumentation`
 - `noisy-source scale stability diagnostics`

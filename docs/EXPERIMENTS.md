@@ -1719,3 +1719,70 @@ choice explicit and steer the retry policy away from noisy retry candidates.
 However, the scheduled-prior rows still do not reach the fixed key-shape
 symbolic reference. This remains calibration / limited mitigation, not learned
 source selection solved.
+
+## h5-s Source-prior Handoff Diagnostics
+
+`h5-s` passes as source-prior handoff calibration diagnostics / limited
+mitigation on top of `h5-r`. It does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice keeps the same value-bearing retry path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_retry_prior_handoff.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_retry_prior_handoff.sh
+```
+
+Reference smoke readout:
+
+```text
+source-order:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+static-keyshape-prior:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+warmup-short:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_raw_selected=0.062500,
+  retry_keyshape_selected=0.812500,
+  retry_noisy_selected=0.000000
+
+warmup-long:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+decay-fast:
+  qacc=0.957813, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_noisy_selected=0.000000
+
+fixed-keyshape:
+  qacc=0.970313, fallback_recall=1.000000,
+  fallback_qacc=1.000000
+```
+
+Interpretation:
+the handoff instrumentation is wired. Short warmup partially relaxes the
+key-shape prior and allows a small raw-key retry selection rate, while long
+warmup, static prior, and fast decay keep key-shape selected and still avoid
+the noisy retry source. However, all scheduled-prior rows remain at
+`qacc=0.957813`, below the fixed key-shape reference. This is evidence that
+source-prior scheduling is controllable, but source-credit evidence still does
+not independently close the symbolic key-shape upper-bound gap.
