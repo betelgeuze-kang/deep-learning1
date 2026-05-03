@@ -383,6 +383,11 @@ Current decision:
   good-source aggregation / bad-source detection split repeats over key/seed
   smoke arms while preserving `value_pos -> value byte -> proposal hint`, but
   it still does not promote static neighbor replacement
+- treat h5-n bad-source filter / abstain diagnostics as value-bearing
+  route-hint memory instrumentation; it removes negative-credit source
+  candidates from proposal-hint voting while preserving `value_pos -> value
+  byte -> proposal hint`, but it still does not promote static neighbor
+  replacement
 
 Allowed wording:
 
@@ -415,6 +420,7 @@ Allowed wording:
 - `fallback aggregation policy calibration diagnostics`
 - `source/noise-aware fallback aggregation diagnostics`
 - `source/noise-aware aggregation scale stability diagnostics`
+- `bad-source filter / abstain diagnostics`
 
 Do not say:
 

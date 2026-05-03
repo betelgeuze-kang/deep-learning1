@@ -8,7 +8,7 @@ Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is a controlled fixture/research scaffold with careful diagnostics around candidate discovery, identity preservation, hint strength, confidence, fallback, and route credit.
-- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, h5-j diagnoses fallback candidate-quality gaps, h5-k calibrates fallback aggregation policy, h5-l adds source/noise-aware fallback aggregation diagnostics, and h5-m scales that source/noise-aware aggregation pattern over key/seed smoke arms. Treat them as diagnostics / limited mitigation, not robustness solved.
+- Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, h5-j diagnoses fallback candidate-quality gaps, h5-k calibrates fallback aggregation policy, h5-l adds source/noise-aware fallback aggregation diagnostics, h5-m scales that source/noise-aware aggregation pattern over key/seed smoke arms, and h5-n adds source-credit bad-source filter / abstain diagnostics. Treat them as diagnostics / limited mitigation, not robustness solved.
 
 Current status:
 
@@ -205,6 +205,14 @@ Current status:
   unresolved (`fallback_recall=0.000000`) while keeping negative source/noisy
   credit (`source_gap=-0.268339`, noisy slash `0.973848`) and no strength
   amplification (`strength_mean=1.000000`).
+- h5-n adds bad-source filtering / abstain diagnostics. New
+  `--route-source-filter-mode negative-credit` drops candidates whose source
+  credit is below `--route-source-filter-threshold`. In the smoke, symbolic
+  fallbacks stay usable (`raw-filter` qacc `0.951562`, `keyshape-filter` qacc
+  `0.965625`), while noisy fallback candidates are heavily filtered
+  (`source_filter_filtered=0.929220`, `source_filter_abstain=0.846875`).
+  Noisy qacc does not improve (`0.187500 -> 0.125000`), so this is bad-source
+  abstention instrumentation, not fallback robustness solved.
 
 ## Build
 
@@ -320,6 +328,12 @@ Experiment helpers:
 - `experiments/run_v05_route_source_credit_learned_source_stress.sh`
 - `experiments/run_v05_route_source_credit_learned_source_scale.sh`
 - `experiments/run_v05_route_source_credit_fallback_ablation.sh`
+- `experiments/run_v05_route_source_credit_fallback_policy.sh`
+- `experiments/run_v05_route_source_credit_fallback_quality.sh`
+- `experiments/run_v05_route_source_credit_fallback_aggregation.sh`
+- `experiments/run_v05_route_source_credit_source_aware_aggregation.sh`
+- `experiments/run_v05_route_source_credit_source_aware_scale.sh`
+- `experiments/run_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -350,6 +364,12 @@ Experiment helpers:
 - `experiments/test_v05_route_source_credit_learned_source_stress.sh`
 - `experiments/test_v05_route_source_credit_learned_source_scale.sh`
 - `experiments/test_v05_route_source_credit_fallback_ablation.sh`
+- `experiments/test_v05_route_source_credit_fallback_policy.sh`
+- `experiments/test_v05_route_source_credit_fallback_quality.sh`
+- `experiments/test_v05_route_source_credit_fallback_aggregation.sh`
+- `experiments/test_v05_route_source_credit_source_aware_aggregation.sh`
+- `experiments/test_v05_route_source_credit_source_aware_scale.sh`
+- `experiments/test_v05_route_source_credit_bad_source_filter.sh`
 
 Key docs:
 

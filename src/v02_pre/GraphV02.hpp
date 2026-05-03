@@ -122,6 +122,9 @@ class GraphV02 {
     float route_source_credit_for_source(int query_index, const std::string& source_id) const;
     float route_source_credit_weight_for_candidate(int query_index, int value_pos) const;
     float route_source_credit_strength_scale_for_node(int index) const;
+    bool route_source_filter_active() const;
+    bool route_source_candidate_allowed(int query_index, int value_pos) const;
+    bool route_source_node_has_allowed_candidate(int index) const;
     bool route_credit_learn_active() const;
     bool route_credit_apply_active() const;
     bool route_source_credit_active() const;

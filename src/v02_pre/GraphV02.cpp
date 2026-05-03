@@ -611,6 +611,11 @@ void GraphV02::validate_params() const {
     if (params_.route_source_credit_clip < 0.0f) {
         throw std::runtime_error("route-source-credit-clip must be non-negative");
     }
+    if (params_.route_source_filter_mode != "off" &&
+        params_.route_source_filter_mode != "negative-credit") {
+        throw std::runtime_error(
+            "route-source-filter-mode must be one of: off, negative-credit");
+    }
     if (params_.route_plasticity_ledger < 0 ||
         params_.route_plasticity_ledger > 1) {
         throw std::runtime_error("route-plasticity-ledger must be 0 or 1");
@@ -872,6 +877,9 @@ bool GraphV02::route_hint_value_for_node(int index, std::uint8_t& out_value) con
         if (value_pos < 0 || value_pos >= params_.N) {
             return false;
         }
+        if (!route_source_candidate_allowed(index, value_pos)) {
+            return false;
+        }
         out_value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
         return true;
     }
@@ -911,6 +919,9 @@ bool GraphV02::route_hint_proposal_value_for_node(int index, std::uint8_t& out_v
         for (std::size_t rank_index = 0; rank_index < vote_positions.size(); ++rank_index) {
             const int value_pos = vote_positions[rank_index];
             if (value_pos < 0 || value_pos >= params_.N) {
+                continue;
+            }
+            if (!route_source_candidate_allowed(index, value_pos)) {
                 continue;
             }
             const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
@@ -983,6 +994,9 @@ double GraphV02::route_hint_margin_for_node(int index, std::uint8_t target_value
         for (std::size_t rank_index = 0; rank_index < vote_positions.size(); ++rank_index) {
             const int value_pos = vote_positions[rank_index];
             if (value_pos < 0 || value_pos >= params_.N) {
+                continue;
+            }
+            if (!route_source_candidate_allowed(index, value_pos)) {
                 continue;
             }
             const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
@@ -1356,6 +1370,10 @@ double GraphV02::route_aggregation_confidence_for_node(
 std::string GraphV02::route_effective_hint_agg_for_node(
     int index,
     std::uint8_t target_value) const {
+    (void)target_value;
+    if (route_source_filter_active() && !route_source_node_has_allowed_candidate(index)) {
+        return "none";
+    }
     if (params_.route_hint_agg != "confidence-gated") {
         return params_.route_hint_agg;
     }
@@ -1988,6 +2006,58 @@ float GraphV02::route_source_credit_strength_scale_for_node(int index) const {
         0.0,
         1.0);
     return static_cast<float>(1.0 + bounded_signal);
+}
+
+bool GraphV02::route_source_filter_active() const {
+    return route_source_credit_apply_active() &&
+           params_.route_source_filter_mode != "off";
+}
+
+bool GraphV02::route_source_candidate_allowed(int query_index, int value_pos) const {
+    if (!route_source_filter_active()) {
+        return true;
+    }
+    if (value_pos < 0 || value_pos >= params_.N) {
+        return false;
+    }
+    if (params_.route_source_filter_mode == "negative-credit") {
+        const float credit = route_source_credit_for_candidate(query_index, value_pos);
+        return credit >= params_.route_source_filter_threshold;
+    }
+    return true;
+}
+
+bool GraphV02::route_source_node_has_allowed_candidate(int index) const {
+    if (!route_source_filter_active()) {
+        return true;
+    }
+    if (index < 0 ||
+        index >= static_cast<int>(route_hint_candidate_value_positions_.size())) {
+        return true;
+    }
+    const auto& candidates =
+        route_hint_candidate_value_positions_[static_cast<std::size_t>(index)];
+    bool saw_candidate = false;
+    for (const int value_pos : candidates) {
+        if (value_pos < 0 || value_pos >= params_.N) {
+            continue;
+        }
+        saw_candidate = true;
+        if (route_source_candidate_allowed(index, value_pos)) {
+            return true;
+        }
+    }
+    if (!saw_candidate &&
+        index < static_cast<int>(route_hint_value_positions_.size())) {
+        const int value_pos = route_hint_value_positions_[static_cast<std::size_t>(index)];
+        if (value_pos >= 0 && value_pos < params_.N) {
+            saw_candidate = true;
+            if (route_source_candidate_allowed(index, value_pos)) {
+                return true;
+            }
+        }
+    }
+    return !saw_candidate;
 }
 
 bool GraphV02::route_credit_learn_active() const {
@@ -3040,6 +3110,9 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
             if (value_pos < 0 || value_pos >= params_.N) {
                 continue;
             }
+            if (!route_source_candidate_allowed(index, value_pos)) {
+                continue;
+            }
             const auto candidate_value =
                 nodes_[static_cast<std::size_t>(value_pos)].input_byte;
             float candidate_weight = 1.0f;
@@ -3441,6 +3514,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_noisy_source_used_count = 0.0;
     double route_noisy_source_selected_count = 0.0;
     double route_abstain_count = 0.0;
+    double route_source_filter_candidate_count = 0.0;
+    double route_source_filter_filtered_count = 0.0;
+    double route_source_filter_query_count = 0.0;
+    double route_source_filter_abstain_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_value_read_distance_sum = 0.0;
     double route_hint_vote_query_count = 0.0;
@@ -3636,6 +3713,35 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_hint_fallback_recovered_[static_cast<std::size_t>(i)];
             const auto& candidate_sources =
                 route_hint_candidate_source_ids_[static_cast<std::size_t>(i)];
+            if (route_source_filter_active()) {
+                bool filter_saw_candidate = false;
+                bool filter_saw_allowed = false;
+                auto observe_filter_candidate = [&](int value_pos) {
+                    if (value_pos < 0 || value_pos >= params_.N) {
+                        return;
+                    }
+                    filter_saw_candidate = true;
+                    route_source_filter_candidate_count += 1.0;
+                    if (route_source_candidate_allowed(i, value_pos)) {
+                        filter_saw_allowed = true;
+                    } else {
+                        route_source_filter_filtered_count += 1.0;
+                    }
+                };
+                if (!vote_positions.empty()) {
+                    for (const int value_pos : vote_positions) {
+                        observe_filter_candidate(value_pos);
+                    }
+                } else {
+                    observe_filter_candidate(route_hint_value_pos);
+                }
+                if (filter_saw_candidate) {
+                    route_source_filter_query_count += 1.0;
+                    if (!filter_saw_allowed) {
+                        route_source_filter_abstain_count += 1.0;
+                    }
+                }
+            }
             const bool noisy_source_used =
                 std::find(candidate_sources.begin(),
                           candidate_sources.end(),
@@ -4264,6 +4370,14 @@ EpochMetricsV02 GraphV02::collect_metrics(
         metrics.route_noisy_source_selected_rate =
             route_noisy_source_selected_count / route_hint_query_count;
         metrics.route_abstain_rate = route_abstain_count / route_hint_query_count;
+        if (route_source_filter_candidate_count > 0.0) {
+            metrics.route_source_filter_filtered_rate =
+                route_source_filter_filtered_count / route_source_filter_candidate_count;
+        }
+        if (route_source_filter_query_count > 0.0) {
+            metrics.route_source_filter_abstain_rate =
+                route_source_filter_abstain_count / route_source_filter_query_count;
+        }
         if (route_fallback_used_count > 0.0) {
             metrics.route_fallback_recall =
                 route_fallback_recall_sum / route_fallback_used_count;

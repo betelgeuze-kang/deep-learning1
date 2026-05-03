@@ -323,6 +323,12 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-source-credit-clip" ||
                    key == "route_source_credit_clip") {
             params.route_source_credit_clip = cli_to_float(value, key);
+        } else if (key == "route-source-filter-mode" ||
+                   key == "route_source_filter_mode") {
+            params.route_source_filter_mode = value;
+        } else if (key == "route-source-filter-threshold" ||
+                   key == "route_source_filter_threshold") {
+            params.route_source_filter_threshold = cli_to_float(value, key);
         } else if (key == "route-plasticity-ledger" ||
                    key == "route_plasticity_ledger") {
             params.route_plasticity_ledger = cli_to_int(value, key);
@@ -501,6 +507,8 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-source-credit-eta-slash <float>\n"
        << "  --route-source-credit-decay <float>\n"
        << "  --route-source-credit-clip <float>\n"
+       << "  --route-source-filter-mode <off|negative-credit>\n"
+       << "  --route-source-filter-threshold <float>\n"
        << "  --route-plasticity-ledger <0|1>\n"
        << "  --route-plasticity-ledger-decay <float>\n"
        << "  --route-credit-learn-after-epoch <int>\n"

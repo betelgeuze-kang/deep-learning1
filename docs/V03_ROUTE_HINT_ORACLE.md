@@ -2559,3 +2559,65 @@ weighted/source-aware aggregation, while a noisy fallback remains unsolved but
 is assigned negative source/noisy credit and receives no strength
 amplification. This is still controlled diagnostics with symbolic fallback
 controls, not learned routing solved.
+
+## h5-n Bad-source Filter / Abstain Decision
+
+`h5-n` passes as bad-source filtering / abstention instrumentation, but it does
+not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+The slice keeps the successful path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+It adds:
+
+```bash
+--route-source-filter-mode negative-credit
+--route-source-filter-threshold <float>
+```
+
+Candidates from sources with credit below the threshold are removed from route
+hint voting/proposal energy. If all candidates for a routed query are removed,
+the source-filter abstain metric is populated.
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_bad_source_filter.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_bad_source_filter.sh
+```
+
+Reference smoke readout:
+
+```text
+raw-filter:
+  qacc=0.951562, fallback_recall=1.000000,
+  source_gap=0.328890, source_filter_abstain=0.000000
+
+keyshape-filter:
+  qacc=0.965625, fallback_recall=1.000000,
+  source_gap=0.328890, source_filter_abstain=0.000000
+
+noisy-filter:
+  qacc=0.125000, fallback_recall=0.000000,
+  source_gap=-0.116147, noisy_mean=-0.177831,
+  noisy_slashed=0.974458,
+  source_filter_filtered=0.929220,
+  source_filter_abstain=0.846875,
+  strength_mean=1.000000
+```
+
+Interpretation:
+bad-source filtering is now connected: negative source credit can remove noisy
+fallback candidates from the proposal hint path. This is useful
+instrumentation and a guardrail, but it is not a robustness solution. When a
+bad source is filtered, the system still needs a replacement source or retry
+policy to recover the correct candidate.
