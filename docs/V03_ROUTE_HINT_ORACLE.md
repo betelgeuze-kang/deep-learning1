@@ -3097,3 +3097,42 @@ soft source-ranking is wired and avoids noisy retry selection, but the qacc
 readout is neutral-to-slightly worse than apply-none. The useful conclusion is
 calibration: quality metrics can drive source ordering, but the current proxy
 should be tuned before trying candidate-weight or strength application.
+
+## h5-w Source-quality Calibration Decision
+
+The h5-w slice passes as source-quality calibration diagnostics, but it does
+not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+It keeps the h5-v source-ranking path and adds source-specific quality proxy,
+delta, and selected-source qacc readouts:
+
+```text
+apply-none-source-order:
+  qacc = 0.568750
+  raw_proxy = 2.277099
+  keyshape_proxy = -0.472130
+  noisy_proxy = -0.513364
+  selected_raw_qacc = 0.611905
+
+source-ranking-b0p10:
+  qacc = 0.560938
+  raw_delta = 0.227710
+  keyshape_delta = -0.047213
+  noisy_delta = -0.051336
+  selected_raw_qacc = 0.600298
+  selected_noisy = 0.000000
+
+source-ranking-b0p25:
+  qacc = 0.560938
+  raw_delta = 0.250000
+  keyshape_delta = -0.118032
+  noisy_delta = -0.128341
+```
+
+Interpretation:
+the quality proxy is not inert; it strongly favors raw-key and suppresses
+key-shape/noisy in the source-ranking score. That explains the observed source
+selection, but it does not improve qacc. The next step is to calibrate the
+quality proxy against selected-source qacc and fallback subset quality before
+using stronger candidate-weight or route-strength applications.

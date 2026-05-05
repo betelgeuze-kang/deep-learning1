@@ -92,6 +92,10 @@ threshold/filter while keeping `candidate value_pos -> value byte read ->
 proposal hint`, and still does not promote jump-neighbor replacement. The
 reference smoke is neutral-to-slight-regression, so it is calibration
 instrumentation rather than a routing win.
+h5-w source-quality calibration diagnostics stay in the same category: they
+split the h5-v source-ranking proxy/delta/qacc by retry source while preserving
+the value-bearing route path and still do not promote jump-neighbor
+replacement.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -465,6 +469,7 @@ Allowed wording:
 - `retry-source evidence-quality instrumentation`
 - `candidate-quality diagnostics`
 - `weak quality source-ranking application diagnostics`
+- `source-quality calibration diagnostics`
 - `noisy-source policy diagnostics`
 - `source-quality separation instrumentation`
 - `noisy-source scale stability diagnostics`

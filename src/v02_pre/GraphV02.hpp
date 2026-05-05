@@ -215,6 +215,12 @@ class GraphV02 {
     std::vector<bool> route_hint_retry_used_;
     std::vector<bool> route_hint_retry_recovered_;
     std::vector<float> route_hint_quality_source_ranking_delta_;
+    std::vector<float> route_quality_retry_raw_proxy_;
+    std::vector<float> route_quality_retry_keyshape_proxy_;
+    std::vector<float> route_quality_retry_noisy_proxy_;
+    std::vector<float> route_quality_retry_raw_delta_;
+    std::vector<float> route_quality_retry_keyshape_delta_;
+    std::vector<float> route_quality_retry_noisy_delta_;
     std::vector<int> route_fallback_persist_remaining_;
     std::vector<int> route_fallback_persist_visits_;
     std::vector<float> route_credit_by_value_pos_;

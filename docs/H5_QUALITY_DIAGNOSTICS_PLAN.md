@@ -86,6 +86,46 @@ source-ranking quality application is wired and avoids noisy retry selection,
 but it slightly lowers qacc in this smoke. Treat it as calibration diagnostics,
 not limited mitigation.
 
+### h5-w Source-quality Calibration Decision
+
+`h5-w` passes as source-quality calibration diagnostics. It does not solve
+learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+The slice keeps the h5-v behavior path but exposes the per-source quality
+proxy, soft delta, and selected-source qacc:
+
+```text
+apply-none-source-order:
+  qacc = 0.568750
+  raw_proxy = 2.277099
+  keyshape_proxy = -0.472130
+  noisy_proxy = -0.513364
+  selected_raw_qacc = 0.611905
+
+source-ranking-b0p10:
+  qacc = 0.560938
+  raw_delta = 0.227710
+  keyshape_delta = -0.047213
+  noisy_delta = -0.051336
+  selected_raw_qacc = 0.600298
+  selected_noisy = 0.000000
+
+source-ranking-b0p25:
+  qacc = 0.560938
+  raw_delta = 0.250000
+  keyshape_delta = -0.118032
+  noisy_delta = -0.128341
+```
+
+Interpretation:
+the current quality proxy is active and explains the source choice: it strongly
+prefers raw-key over key-shape/noisy and continues to avoid noisy retry.
+However, this raw-key preference is not qacc-optimal in the current smoke. The
+next step is source-quality proxy calibration: normalize or reweight the
+vote/logdet/entropy/channel terms against selected-source qacc before trying
+stronger application modes.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:
@@ -227,6 +267,15 @@ raw_quality_logdet_mean
 keyshape_quality_logdet_mean
 policy_keyshape_logdet_mean
 fixed_keyshape_logdet_mean
+route_quality_retry_raw_proxy_mean
+route_quality_retry_keyshape_proxy_mean
+route_quality_retry_noisy_proxy_mean
+route_quality_retry_raw_delta_mean
+route_quality_retry_keyshape_delta_mean
+route_quality_retry_noisy_delta_mean
+route_quality_selected_raw_qacc
+route_quality_selected_keyshape_qacc
+route_quality_selected_noisy_qacc
 ```
 
 ## h5-u Runner

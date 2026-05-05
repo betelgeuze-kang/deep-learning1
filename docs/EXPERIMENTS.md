@@ -1931,3 +1931,42 @@ quality source-ranking is wired and keeps the value-bearing route path active,
 but it does not improve qacc in this smoke. The next step should be calibration
 of the quality proxy/sign and source-specific evidence before trying
 `candidate-weight` or `strength`.
+
+## h5-w Source-quality Calibration Decision
+
+`h5-w` passes as source-quality calibration diagnostics, but it does not solve
+learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+The slice extends the h5-v summary with source-specific quality proxy, soft
+delta, and selected-source qacc columns:
+
+```text
+apply-none-source-order:
+  qacc = 0.568750
+  raw_proxy = 2.277099
+  keyshape_proxy = -0.472130
+  noisy_proxy = -0.513364
+  selected_raw_qacc = 0.611905
+
+source-ranking-b0p10:
+  qacc = 0.560938
+  raw_delta = 0.227710
+  keyshape_delta = -0.047213
+  noisy_delta = -0.051336
+  selected_raw_qacc = 0.600298
+  selected_noisy = 0.000000
+
+source-ranking-b0p25:
+  qacc = 0.560938
+  raw_delta = 0.250000
+  keyshape_delta = -0.118032
+  noisy_delta = -0.128341
+```
+
+Interpretation:
+the current quality proxy strongly prefers raw-key over key-shape/noisy and
+therefore explains why source-ranking keeps selecting raw-key while avoiding
+the noisy retry source. However, the resulting qacc is neutral-to-slightly
+worse than apply-none. This identifies proxy calibration, not application
+strength, as the next bottleneck.

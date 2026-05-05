@@ -247,6 +247,12 @@ bool route_quality_source_ranking_apply_active(const V02PreParams& params) {
            params.route_quality_source_ranking_beta > 0.0f;
 }
 
+bool route_quality_source_proxy_diagnostics_active(const V02PreParams& params) {
+    return params.route_quality_diagnostics != 0 ||
+           params.route_quality_score != 0 ||
+           route_quality_source_ranking_apply_active(params);
+}
+
 float route_quality_source_ranking_proxy(
     const V02PreParams& params,
     const std::vector<NodeV02>& nodes,
@@ -434,6 +440,13 @@ void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
     route_hint_quality_source_ranking_delta_.assign(
         static_cast<std::size_t>(params_.N),
         0.0f);
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    route_quality_retry_raw_proxy_.assign(static_cast<std::size_t>(params_.N), nan);
+    route_quality_retry_keyshape_proxy_.assign(static_cast<std::size_t>(params_.N), nan);
+    route_quality_retry_noisy_proxy_.assign(static_cast<std::size_t>(params_.N), nan);
+    route_quality_retry_raw_delta_.assign(static_cast<std::size_t>(params_.N), nan);
+    route_quality_retry_keyshape_delta_.assign(static_cast<std::size_t>(params_.N), nan);
+    route_quality_retry_noisy_delta_.assign(static_cast<std::size_t>(params_.N), nan);
     route_fallback_persist_remaining_.assign(static_cast<std::size_t>(params_.N), 0);
     route_fallback_persist_visits_.assign(static_cast<std::size_t>(params_.N), 0);
     if (route_credit_by_value_pos_.size() != static_cast<std::size_t>(params_.N)) {
@@ -2820,6 +2833,23 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
             int rank = 0;
         };
         std::vector<RetryCandidateEntry> retry_entries;
+        auto store_retry_source_quality = [&](const std::string& source_id,
+                                              float quality_proxy,
+                                              float quality_delta) {
+            if (!route_quality_source_proxy_diagnostics_active(params_)) {
+                return;
+            }
+            if (source_id == "retry-raw-key") {
+                route_quality_retry_raw_proxy_[query_index] = quality_proxy;
+                route_quality_retry_raw_delta_[query_index] = quality_delta;
+            } else if (source_id == "retry-key-shape") {
+                route_quality_retry_keyshape_proxy_[query_index] = quality_proxy;
+                route_quality_retry_keyshape_delta_[query_index] = quality_delta;
+            } else if (source_id == "retry-noisy-route-code") {
+                route_quality_retry_noisy_proxy_[query_index] = quality_proxy;
+                route_quality_retry_noisy_delta_[query_index] = quality_delta;
+            }
+        };
         if (params_.route_source_retry_policy == "source-credit") {
             for (std::size_t source_index = 0; source_index < retry_sources.size();
                  ++source_index) {
@@ -2831,9 +2861,21 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                 const std::vector<int> positions =
                     collect_source_positions(retry_source, query);
                 const float quality_proxy =
-                    route_quality_source_ranking_apply_active(params_)
+                    route_quality_source_proxy_diagnostics_active(params_)
                         ? route_quality_source_ranking_proxy(params_, nodes_, positions)
                         : 0.0f;
+                const float source_quality_delta =
+                    route_quality_source_ranking_apply_active(params_)
+                        ? std::clamp(
+                              params_.route_quality_source_ranking_beta *
+                                  quality_proxy,
+                              -0.25f,
+                              0.25f)
+                        : 0.0f;
+                store_retry_source_quality(
+                    retry_source_id,
+                    quality_proxy,
+                    source_quality_delta);
                 const int limit = std::min(
                     params_.route_source_retry_per_source_limit,
                     static_cast<int>(positions.size()));
@@ -2841,14 +2883,7 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                     const int value_pos = positions[static_cast<std::size_t>(rank)];
                     const float source_prior =
                         route_source_retry_prior_for_source(retry_source);
-                    const float quality_delta =
-                        route_quality_source_ranking_apply_active(params_)
-                            ? std::clamp(
-                                  params_.route_quality_source_ranking_beta *
-                                      quality_proxy,
-                                  -0.25f,
-                                  0.25f)
-                            : 0.0f;
+                    const float quality_delta = source_quality_delta;
                     const float source_score =
                         route_quality_source_ranking_apply_active(params_)
                             ? source_credit + quality_delta
@@ -4099,6 +4134,24 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_quality_condition_sum = 0.0;
     double route_quality_source_ranking_delta_sum = 0.0;
     double route_quality_source_ranking_delta_count = 0.0;
+    double route_quality_retry_raw_proxy_sum = 0.0;
+    double route_quality_retry_raw_proxy_count = 0.0;
+    double route_quality_retry_keyshape_proxy_sum = 0.0;
+    double route_quality_retry_keyshape_proxy_count = 0.0;
+    double route_quality_retry_noisy_proxy_sum = 0.0;
+    double route_quality_retry_noisy_proxy_count = 0.0;
+    double route_quality_retry_raw_delta_sum = 0.0;
+    double route_quality_retry_raw_delta_count = 0.0;
+    double route_quality_retry_keyshape_delta_sum = 0.0;
+    double route_quality_retry_keyshape_delta_count = 0.0;
+    double route_quality_retry_noisy_delta_sum = 0.0;
+    double route_quality_retry_noisy_delta_count = 0.0;
+    double route_quality_selected_raw_qacc_sum = 0.0;
+    double route_quality_selected_raw_qacc_count = 0.0;
+    double route_quality_selected_keyshape_qacc_sum = 0.0;
+    double route_quality_selected_keyshape_qacc_count = 0.0;
+    double route_quality_selected_noisy_qacc_sum = 0.0;
+    double route_quality_selected_noisy_qacc_count = 0.0;
     double route_quality_score_sum = 0.0;
     double route_quality_score_correct_sum = 0.0;
     double route_quality_score_correct_count = 0.0;
@@ -4111,6 +4164,12 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_channel_hi_margin_sum = 0.0;
     double route_channel_lo_margin_sum = 0.0;
     double route_channel_margin_imbalance_sum = 0.0;
+    auto observe_finite_metric = [](float value, double& sum, double& count) {
+        if (std::isfinite(value)) {
+            sum += static_cast<double>(value);
+            count += 1.0;
+        }
+    };
     double gate_pass_active_jump_sum = 0.0;
     double jump_filter_node_count = 0.0;
     double jump_candidate_slots_examined_sum = 0.0;
@@ -4387,6 +4446,45 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_source_retry_keyshape_selected_count += 1.0;
             } else if (selected_source_id == "retry-noisy-route-code") {
                 route_source_retry_noisy_selected_count += 1.0;
+            }
+            if (!route_quality_retry_raw_proxy_.empty()) {
+                const auto idx = static_cast<std::size_t>(i);
+                observe_finite_metric(
+                    route_quality_retry_raw_proxy_[idx],
+                    route_quality_retry_raw_proxy_sum,
+                    route_quality_retry_raw_proxy_count);
+                observe_finite_metric(
+                    route_quality_retry_keyshape_proxy_[idx],
+                    route_quality_retry_keyshape_proxy_sum,
+                    route_quality_retry_keyshape_proxy_count);
+                observe_finite_metric(
+                    route_quality_retry_noisy_proxy_[idx],
+                    route_quality_retry_noisy_proxy_sum,
+                    route_quality_retry_noisy_proxy_count);
+                observe_finite_metric(
+                    route_quality_retry_raw_delta_[idx],
+                    route_quality_retry_raw_delta_sum,
+                    route_quality_retry_raw_delta_count);
+                observe_finite_metric(
+                    route_quality_retry_keyshape_delta_[idx],
+                    route_quality_retry_keyshape_delta_sum,
+                    route_quality_retry_keyshape_delta_count);
+                observe_finite_metric(
+                    route_quality_retry_noisy_delta_[idx],
+                    route_quality_retry_noisy_delta_sum,
+                    route_quality_retry_noisy_delta_count);
+            }
+            const double selected_query_hit =
+                relaxed_byte == static_cast<int>(node.target_byte) ? 1.0 : 0.0;
+            if (selected_source_id == "retry-raw-key") {
+                route_quality_selected_raw_qacc_sum += selected_query_hit;
+                route_quality_selected_raw_qacc_count += 1.0;
+            } else if (selected_source_id == "retry-key-shape") {
+                route_quality_selected_keyshape_qacc_sum += selected_query_hit;
+                route_quality_selected_keyshape_qacc_count += 1.0;
+            } else if (selected_source_id == "retry-noisy-route-code") {
+                route_quality_selected_noisy_qacc_sum += selected_query_hit;
+                route_quality_selected_noisy_qacc_count += 1.0;
             }
             const auto& candidate_sources =
                 route_hint_candidate_source_ids_[static_cast<std::size_t>(i)];
@@ -5428,6 +5526,51 @@ EpochMetricsV02 GraphV02::collect_metrics(
             route_source_retry_keyshape_selected_count / route_hint_query_count;
         metrics.route_quality_selected_noisy_rate =
             route_source_retry_noisy_selected_count / route_hint_query_count;
+    }
+    if (route_quality_retry_raw_proxy_count > 0.0) {
+        metrics.route_quality_retry_raw_proxy_mean =
+            route_quality_retry_raw_proxy_sum /
+            route_quality_retry_raw_proxy_count;
+    }
+    if (route_quality_retry_keyshape_proxy_count > 0.0) {
+        metrics.route_quality_retry_keyshape_proxy_mean =
+            route_quality_retry_keyshape_proxy_sum /
+            route_quality_retry_keyshape_proxy_count;
+    }
+    if (route_quality_retry_noisy_proxy_count > 0.0) {
+        metrics.route_quality_retry_noisy_proxy_mean =
+            route_quality_retry_noisy_proxy_sum /
+            route_quality_retry_noisy_proxy_count;
+    }
+    if (route_quality_retry_raw_delta_count > 0.0) {
+        metrics.route_quality_retry_raw_delta_mean =
+            route_quality_retry_raw_delta_sum /
+            route_quality_retry_raw_delta_count;
+    }
+    if (route_quality_retry_keyshape_delta_count > 0.0) {
+        metrics.route_quality_retry_keyshape_delta_mean =
+            route_quality_retry_keyshape_delta_sum /
+            route_quality_retry_keyshape_delta_count;
+    }
+    if (route_quality_retry_noisy_delta_count > 0.0) {
+        metrics.route_quality_retry_noisy_delta_mean =
+            route_quality_retry_noisy_delta_sum /
+            route_quality_retry_noisy_delta_count;
+    }
+    if (route_quality_selected_raw_qacc_count > 0.0) {
+        metrics.route_quality_selected_raw_qacc =
+            route_quality_selected_raw_qacc_sum /
+            route_quality_selected_raw_qacc_count;
+    }
+    if (route_quality_selected_keyshape_qacc_count > 0.0) {
+        metrics.route_quality_selected_keyshape_qacc =
+            route_quality_selected_keyshape_qacc_sum /
+            route_quality_selected_keyshape_qacc_count;
+    }
+    if (route_quality_selected_noisy_qacc_count > 0.0) {
+        metrics.route_quality_selected_noisy_qacc =
+            route_quality_selected_noisy_qacc_sum /
+            route_quality_selected_noisy_qacc_count;
     }
     if (route_quality_score_correct_count > 0.0) {
         metrics.route_quality_score_correct_mean =

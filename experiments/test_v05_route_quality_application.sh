@@ -16,7 +16,7 @@ awk -F, '
   }
   BEGIN { expected_rows = 5 }
   NR == 1 {
-    required_count = split("scenario arm quality_apply quality_beta key_count seed qacc route_quality_apply_active route_quality_source_ranking_beta route_quality_source_ranking_delta_mean route_quality_selected_raw_rate route_quality_selected_keyshape_rate route_quality_selected_noisy_rate route_source_retry_raw_selected_rate route_source_retry_keyshape_selected_rate route_source_retry_noisy_selected_rate route_quality_logdet_mean route_quality_score_mean lookup_count read_distance routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("scenario arm quality_apply quality_beta key_count seed qacc route_quality_apply_active route_quality_source_ranking_beta route_quality_source_ranking_delta_mean route_quality_selected_raw_rate route_quality_selected_keyshape_rate route_quality_selected_noisy_rate route_quality_retry_raw_proxy_mean route_quality_retry_keyshape_proxy_mean route_quality_retry_noisy_proxy_mean route_quality_retry_raw_delta_mean route_quality_retry_keyshape_delta_mean route_quality_retry_noisy_delta_mean route_quality_selected_raw_qacc route_quality_selected_keyshape_qacc route_quality_selected_noisy_qacc route_source_retry_raw_selected_rate route_source_retry_keyshape_selected_rate route_source_retry_noisy_selected_rate route_quality_logdet_mean route_quality_score_mean lookup_count read_distance routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= NF; i++) idx[$i] = i
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) {
