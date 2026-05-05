@@ -96,6 +96,9 @@ h5-w source-quality calibration diagnostics stay in the same category: they
 split the h5-v source-ranking proxy/delta/qacc by retry source while preserving
 the value-bearing route path and still do not promote jump-neighbor
 replacement.
+h5-x proxy weight/sign calibration stays in the same category: it reweights or
+sign-flips the same source-quality proxy terms while preserving the
+value-bearing route path and still does not promote jump-neighbor replacement.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -443,6 +446,10 @@ Current decision:
   source credit evidence while preserving `candidate value_pos -> value byte
   read -> proposal hint`, but it still does not promote static neighbor
   replacement
+- treat h5-x proxy weight/sign calibration as value-bearing route-hint memory
+  instrumentation; it reweights or sign-flips the source-quality proxy terms
+  while preserving `candidate value_pos -> value byte read -> proposal hint`,
+  but it still does not promote static neighbor replacement
 
 Allowed wording:
 
@@ -470,6 +477,7 @@ Allowed wording:
 - `candidate-quality diagnostics`
 - `weak quality source-ranking application diagnostics`
 - `source-quality calibration diagnostics`
+- `proxy weight/sign calibration diagnostics`
 - `noisy-source policy diagnostics`
 - `source-quality separation instrumentation`
 - `noisy-source scale stability diagnostics`

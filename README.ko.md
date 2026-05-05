@@ -17,7 +17,7 @@
 
 현재 live path는 `candidate value_pos -> value byte read -> proposal hint` 경로이며, candidate discovery, identity preservation, hint strength, confidence, fallback, route credit을 분리해서 계측하는 단계입니다.
 
-- h5-u는 candidate-quality logdet/channel/quality-score instrumentation으로 PASS했고, h5-v는 weak quality source-ranking application diagnostics / neutral-to-slight-regression으로 PASS했으며, h5-w는 source-quality calibration diagnostics로 PASS했습니다. `route_quality_apply=source-ranking`은 soft bounded delta를 활성화하지만 qacc는 `0.568750 -> 0.560938`로 소폭 낮아집니다. h5-w는 현재 proxy가 raw-key를 강하게 선호한다는 점을 드러냅니다 (`raw_proxy=2.277099`, key-shape/noisy `-0.472130/-0.513364`). 따라서 이는 mitigation이 아니라 calibration입니다.
+- h5-u는 candidate-quality logdet/channel/quality-score instrumentation으로 PASS했고, h5-v는 weak quality source-ranking application diagnostics / neutral-to-slight-regression으로 PASS했으며, h5-w는 source-quality calibration diagnostics로 PASS했고, h5-x는 proxy weight/sign calibration diagnostics / single-smoke limited mitigation으로 PASS했습니다. `route_quality_apply=source-ranking`은 soft bounded delta만 쓰며 noisy retry 선택은 `0.000000`으로 유지됩니다. h5-x의 channel-sign row는 qacc를 proxy-default `0.560938`에서 `0.662500`으로 올렸지만 selected source는 여전히 raw-key입니다. 따라서 이는 calibration / limited mitigation이지 learned routing이나 robustness solved가 아닙니다.
 
 ## 현재 상태
 
@@ -33,7 +33,8 @@
 - h5-t: retry-source evidence-quality diagnostics를 추가했습니다. 새 CSV metric은 raw-key, key-shape, noisy retry source의 source-credit mean과 reward/slash rate를 분리합니다. Smoke에서 source-order는 raw-key를 reward합니다 (`retry_raw_mean=0.222951`), static/warmup key-shape prior는 key-shape를 reward합니다 (`retry_keyshape_mean=0.222951`), noisy retry는 음수로 남습니다 (`retry_noisy_mean=-0.206811`, `retry_noisy_slashed=1.000000`). 이는 evidence-quality instrumentation이지 source-credit ranking solved가 아닙니다. raw-key와 key-shape는 선택되면 둘 다 positive credit을 받기 때문에, source-credit evidence만으로 더 좋은 symbolic retry source를 독립적으로 고르는 단계는 아직 아닙니다.
 - h5-u는 candidate-quality logdet/channel/quality-score instrumentation을 추가했습니다. `route_quality_apply=none`에서 `quality-off-source-order`와 `quality-on-source-order`가 모두 `qacc=0.645313`이라 행동 변경 없이 계측만 된 것이 확인됐고, fixed raw-key와 fixed key-shape는 `qacc=0.742187` vs `0.645313`, `logdet=-5.818573` vs `-15.330912`, condition `7.050210` vs `52.270703`으로 분리됩니다. 이는 instrumentation이지 learned routing이나 robustness win이 아닙니다.
 - h5-v는 첫 약한 quality 적용입니다. `route_quality_apply=source-ranking`에서 `route_quality_apply_active=1.000000`, delta `0.227710..0.250000`이 관측되고 noisy retry 선택은 `0.000000`으로 유지됩니다. 그러나 qacc는 apply-none `0.568750`에서 `0.560938`로 소폭 낮아졌으므로 weak application calibration diagnostics이지 robustness win이 아닙니다.
-- h5-w는 이 약한 적용 경로의 source-quality calibration diagnostics입니다. source별 proxy/delta/qacc를 분리해 보니 raw-key proxy는 강하게 양수 (`2.277099`)이고 key-shape/noisy는 음수 (`-0.472130`, `-0.513364`)입니다. 즉 source-ranking이 raw-key를 고르고 noisy를 피하는 이유는 설명되지만, 그 선택이 qacc 개선으로 이어지지는 않습니다. 다음은 proxy weight/sign calibration이지 candidate-weight나 route-strength를 더 세게 쓰는 단계가 아닙니다.
+- h5-w는 이 약한 적용 경로의 source-quality calibration diagnostics입니다. source별 proxy/delta/qacc를 분리해 보니 raw-key proxy는 강하게 양수 (`2.277099`)이고 key-shape/noisy는 음수 (`-0.472130`, `-0.513364`)입니다. 즉 source-ranking이 raw-key를 고르고 noisy를 피하는 이유는 설명되지만, 그 선택이 qacc 개선으로 이어지지는 않습니다.
+- h5-x는 proxy sign을 보정했습니다. channel-sign row가 단일 smoke에서 가장 좋았습니다 (`qacc=0.662500`, `selected_raw_qacc=0.720536`)이며 proxy-default `qacc=0.560938`보다 높습니다. 하지만 source 선택 자체는 여전히 raw-key 중심이므로, 다음은 multi-seed/scale stability이지 candidate-weight나 route-strength를 더 세게 쓰는 단계가 아닙니다.
 
 ## 중요한 아키텍처 결론
 

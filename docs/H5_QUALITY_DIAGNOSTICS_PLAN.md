@@ -122,9 +122,58 @@ Interpretation:
 the current quality proxy is active and explains the source choice: it strongly
 prefers raw-key over key-shape/noisy and continues to avoid noisy retry.
 However, this raw-key preference is not qacc-optimal in the current smoke. The
-next step is source-quality proxy calibration: normalize or reweight the
+next step is h5-x proxy weight/sign calibration: normalize or reweight the
 vote/logdet/entropy/channel terms against selected-source qacc before trying
 stronger application modes.
+
+### h5-x Proxy Weight/Sign Calibration Decision
+
+`h5-x` passes as proxy weight/sign calibration diagnostics and single-smoke
+limited mitigation. It keeps the live path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+It keeps the h5-v source-ranking path fixed and calibrates the proxy term
+signs and weights against selected-source qacc.
+
+```text
+proxy_score =
+    w_raw * raw_proxy
+  + w_keyshape * keyshape_proxy
+  + w_noisy * noisy_proxy
+```
+
+Reference smoke:
+
+```text
+proxy-default:
+  qacc = 0.560938
+  raw_proxy = 2.277099
+  keyshape_proxy = -0.472130
+  noisy_proxy = -0.513364
+
+logdet-sign-flip:
+  qacc = 0.567187
+  raw_proxy = 1.722901
+  keyshape_proxy = -1.084626
+  noisy_proxy = -1.118645
+
+channel-sign-flip:
+  qacc = 0.662500
+  raw_proxy = 2.277099
+  keyshape_proxy = -0.412249
+  noisy_proxy = -0.381355
+  selected_raw_qacc = 0.720536
+```
+
+Interpretation:
+the channel term sign is a useful calibration handle in this smoke. The
+best row improves qacc without selecting noisy retry, but it still keeps the
+same broad source choice. Treat this as single-smoke limited mitigation and
+diagnostics, not source-credit robustness or learned routing solved. Next:
+multi-seed/scale stability for the channel-sign calibration.
 
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
@@ -313,6 +362,8 @@ Allowed:
 - `PASS as candidate-quality logdet/channel/quality-score instrumentation`
 - `PASS as candidate-quality diagnostics`
 - `PASS as logdet/channel/quality-score instrumentation`
+- `PASS as quality proxy calibration diagnostics`
+- `PASS as proxy weight/sign calibration diagnostics`
 - `limited mitigation` only if qacc improves without behavior-changing apply
   modes, which is unlikely and should be treated cautiously
 
@@ -323,3 +374,4 @@ Forbidden:
 - `fallback robustness solved`
 - `wrong-candidate robustness solved`
 - `jump-neighbor routing revived`
+- `proxy weight/sign calibration solved`

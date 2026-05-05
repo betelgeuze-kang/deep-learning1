@@ -1969,4 +1969,48 @@ the current quality proxy strongly prefers raw-key over key-shape/noisy and
 therefore explains why source-ranking keeps selecting raw-key while avoiding
 the noisy retry source. However, the resulting qacc is neutral-to-slightly
 worse than apply-none. This identifies proxy calibration, not application
-strength, as the next bottleneck.
+strength, as the next bottleneck. The next step is h5-x proxy weight/sign
+calibration before trying stronger candidate-weight or route-strength
+applications.
+
+## h5-x Proxy Weight/Sign Calibration Decision
+
+`h5-x` passes as proxy weight/sign calibration diagnostics and single-smoke
+limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice keeps `route_quality_apply=source-ranking` fixed and sweeps proxy
+term signs. It continues to preserve the value-bearing route path and keeps
+`routing_trigger_rate=active_jump_rate=0`.
+
+Reference smoke:
+
+```text
+proxy-default:
+  qacc = 0.560938
+  raw_proxy = 2.277099
+  keyshape_proxy = -0.472130
+  noisy_proxy = -0.513364
+
+logdet-sign-flip:
+  qacc = 0.567187
+  raw_proxy = 1.722901
+  keyshape_proxy = -1.084626
+  noisy_proxy = -1.118645
+
+channel-sign-flip:
+  qacc = 0.662500
+  raw_proxy = 2.277099
+  keyshape_proxy = -0.412249
+  noisy_proxy = -0.381355
+  selected_raw_qacc = 0.720536
+```
+
+Interpretation:
+the channel term sign is a real calibration handle in this smoke. The best
+row improves qacc without selecting the noisy retry source, but the selected
+source remains raw-key. Therefore this is not learned source selection solved;
+it is a single-smoke indication that the quality proxy can change the retained
+candidate tail / weighted-vote mixture enough to affect qacc. Next: run
+multi-seed/scale stability for the channel-sign calibration before trying
+candidate-weight or route-strength application.

@@ -3133,6 +3133,43 @@ source-ranking-b0p25:
 Interpretation:
 the quality proxy is not inert; it strongly favors raw-key and suppresses
 key-shape/noisy in the source-ranking score. That explains the observed source
-selection, but it does not improve qacc. The next step is to calibrate the
-quality proxy against selected-source qacc and fallback subset quality before
-using stronger candidate-weight or route-strength applications.
+selection, but it does not improve qacc. The next step is h5-x proxy
+weight/sign calibration before using stronger candidate-weight or
+route-strength applications.
+
+## h5-x Proxy Weight/Sign Calibration
+
+The h5-x slice passes as proxy weight/sign calibration diagnostics and
+single-smoke limited mitigation. It keeps the same `candidate value_pos ->
+value byte read -> proposal hint` path and calibrates the proxy term signs
+against selected-source qacc.
+
+Reference smoke:
+
+```text
+proxy-default:
+  qacc = 0.560938
+  raw_proxy = 2.277099
+  keyshape_proxy = -0.472130
+  noisy_proxy = -0.513364
+
+logdet-sign-flip:
+  qacc = 0.567187
+  raw_proxy = 1.722901
+  keyshape_proxy = -1.084626
+  noisy_proxy = -1.118645
+
+channel-sign-flip:
+  qacc = 0.662500
+  raw_proxy = 2.277099
+  keyshape_proxy = -0.412249
+  noisy_proxy = -0.381355
+  selected_raw_qacc = 0.720536
+```
+
+Interpretation:
+the channel term sign is a real calibration handle in this smoke. The best row
+improves qacc and still avoids noisy retry, but selected source remains raw-key.
+So this is not learned source selection solved; it is a sign that quality proxy
+calibration can change the retained candidate mixture enough to matter. Next:
+multi-seed/scale stability for the channel-sign calibration.
