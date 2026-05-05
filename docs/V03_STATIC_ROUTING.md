@@ -108,6 +108,9 @@ candidate collection, and route strength unchanged.
 h5-aa candidate-level quality diagnostics remain there as well: they only
 measure correct/wrong candidate weight separation and best-candidate
 correctness inside the existing value-bearing route-hint path.
+h5-ab weak candidate-level quality application remains there too: it only
+sharpens candidate weights inside value-bearing aggregation and does not change
+graph topology, route strength, or jump-neighbor gating.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -467,6 +470,9 @@ Current decision:
 - treat h5-aa candidate-level quality diagnostics the same way: correct/wrong
   candidate weight separation inside value-bearing route-hint memory, not
   topology replacement or static routing promotion
+- treat h5-ab weak candidate-level quality application the same way: bounded
+  candidate weight sharpening inside value-bearing aggregation, not topology
+  replacement or static routing promotion
 
 Allowed wording:
 

@@ -377,6 +377,15 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-quality-source-ranking-beta" ||
                    key == "route_quality_source_ranking_beta") {
             params.route_quality_source_ranking_beta = cli_to_float(value, key);
+        } else if (key == "route-quality-candidate-weight-beta" ||
+                   key == "route_quality_candidate_weight_beta") {
+            params.route_quality_candidate_weight_beta = cli_to_float(value, key);
+        } else if (key == "route-quality-candidate-weight-min" ||
+                   key == "route_quality_candidate_weight_min") {
+            params.route_quality_candidate_weight_min = cli_to_float(value, key);
+        } else if (key == "route-quality-candidate-weight-max" ||
+                   key == "route_quality_candidate_weight_max") {
+            params.route_quality_candidate_weight_max = cli_to_float(value, key);
         } else if (key == "route-quality-source-normalization" ||
                    key == "route_quality_source_normalization") {
             params.route_quality_source_normalization = value;
@@ -601,6 +610,9 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-channel-tension-mode <margin>\n"
        << "  --route-quality-score <0|1>\n"
        << "  --route-quality-source-ranking-beta <float>\n"
+       << "  --route-quality-candidate-weight-beta <float>\n"
+       << "  --route-quality-candidate-weight-min <float>\n"
+       << "  --route-quality-candidate-weight-max <float>\n"
        << "  --route-quality-source-normalization <none|center|zscore>\n"
        << "  --route-quality-source-norm-eps <float>\n"
        << "  --route-quality-logdet-weight <float>\n"

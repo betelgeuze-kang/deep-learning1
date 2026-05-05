@@ -125,6 +125,30 @@ class GraphV02 {
     float route_source_retry_prior_scale() const;
     float route_source_retry_prior_for_source(const std::string& source) const;
     float route_source_credit_weight_for_candidate(int query_index, int value_pos) const;
+    float route_candidate_base_weight_for_vote(
+        int query_index,
+        int value_pos,
+        std::size_t rank_index,
+        std::size_t candidate_count,
+        const std::array<int, FieldTable::ByteValues>& value_counts,
+        const std::string& effective_agg,
+        bool include_source_credit = true) const;
+    float route_quality_candidate_weight_factor(float base_weight, float mean_base_weight) const;
+    float route_candidate_mean_base_weight_for_vote(
+        int query_index,
+        const std::vector<int>& vote_positions,
+        const std::array<int, FieldTable::ByteValues>& value_counts,
+        const std::string& effective_agg,
+        bool include_source_credit = true) const;
+    float route_candidate_effective_weight_for_vote(
+        int query_index,
+        int value_pos,
+        std::size_t rank_index,
+        std::size_t candidate_count,
+        const std::array<int, FieldTable::ByteValues>& value_counts,
+        const std::string& effective_agg,
+        float mean_base_weight,
+        bool include_source_credit = true) const;
     float route_source_credit_strength_scale_for_node(int index) const;
     bool route_source_filter_active() const;
     bool route_source_candidate_allowed(int query_index, int value_pos) const;

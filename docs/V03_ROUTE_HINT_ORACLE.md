@@ -3312,3 +3312,56 @@ conversion from candidate support into aggregation, proposal acceptance, or
 stable query-state convergence. The next slice should apply candidate-level
 quality weakly and boundedly; route-strength modulation should remain a later
 step.
+
+## h5-ab Weak Candidate-level Quality Application
+
+The h5-ab slice passes as weak bounded candidate-level quality application
+diagnostics and limited mitigation. It does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+It enables:
+
+```text
+--route-quality-apply candidate-weight
+--route-quality-candidate-weight-beta <float>
+--route-quality-candidate-weight-min <float>
+--route-quality-candidate-weight-max <float>
+```
+
+The application is target-free and bounded. It uses each candidate's existing
+base weight relative to the candidate-set mean:
+
+```text
+factor = clamp(
+  1 + beta * (base_weight / mean_base_weight - 1),
+  min_factor,
+  max_factor
+)
+```
+
+Reference standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off qacc_mean       = 0.622656
+source-ranking qacc_mean  = 0.636198
+candidate-b0p10 qacc_mean = 0.635156
+candidate-b0p25 qacc_mean = 0.663542
+candidate-b0p50 qacc_mean = 0.725261
+
+candidate-b0p50:
+  factor_gap = 0.263136
+  candidate_weight_gap = 0.241817
+  candidate_best_correct_rate = 0.838021
+```
+
+Interpretation:
+h5-ab is the first quality-application slice where candidate-level quality
+clearly improves qacc over both proxy-off and source-ranking in the first
+multi-seed/key smoke. The result remains below best-candidate correctness, so
+the remaining gap is still aggregation-to-state / hint-integration limited.
+Keep this as limited mitigation and continue to avoid route-strength
+modulation until scale stability is checked.

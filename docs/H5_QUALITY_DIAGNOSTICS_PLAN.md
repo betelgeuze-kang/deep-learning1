@@ -325,6 +325,73 @@ aggregation, or hint integration. Source normalization does not change these
 candidate-level metrics in this smoke, so the next application slice should be
 candidate-level and weakly bounded, not route-strength modulation.
 
+### h5-ab Weak Candidate-level Quality Application Decision
+
+`h5-ab` passes as weak bounded candidate-level quality application diagnostics
+and limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice enables the previously reserved `candidate-weight` apply path. It
+does not use target labels and does not change route strength. It sharpens
+candidate weights using only each candidate's base weight relative to the
+candidate-set mean:
+
+```text
+factor = clamp(
+  1 + beta * (base_weight / mean_base_weight - 1),
+  min_factor,
+  max_factor
+)
+```
+
+New knobs:
+
+```text
+--route-quality-apply candidate-weight
+--route-quality-candidate-weight-beta <float>
+--route-quality-candidate-weight-min <float>
+--route-quality-candidate-weight-max <float>
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off:
+  qacc_mean = 0.622656
+  candidate_weight_gap = 0.180509
+
+source-ranking:
+  qacc_mean = 0.636198
+  candidate_weight_gap = 0.179034
+
+candidate-b0p10:
+  qacc_mean = 0.635156
+  factor_gap = 0.052627
+  candidate_weight_gap = 0.193792
+
+candidate-b0p25:
+  qacc_mean = 0.663542
+  factor_gap = 0.131568
+  candidate_weight_gap = 0.212711
+
+candidate-b0p50:
+  qacc_mean = 0.725261
+  factor_gap = 0.263136
+  candidate_weight_gap = 0.241817
+```
+
+Interpretation:
+candidate-level application converts the h5-aa candidate correctness signal
+into a clear qacc lift on this first multi-seed/key smoke. The best row remains
+below `candidate_best_correct_rate = 0.838021`, so the remaining gap is still
+aggregation-to-state or hint-integration limited. This is limited mitigation,
+not learned routing or robustness solved. Next: test candidate-weight scale
+stability and whether it composes with source-ranking without over-sharpening.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

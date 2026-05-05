@@ -264,6 +264,11 @@ struct EpochMetricsV02 {
     double route_quality_candidate_weight_wrong_mean = 0.0;
     double route_quality_candidate_weight_gap = 0.0;
     double route_quality_candidate_best_correct_rate = 0.0;
+    double route_quality_candidate_weight_beta = 0.0;
+    double route_quality_candidate_weight_factor_mean = 0.0;
+    double route_quality_candidate_weight_factor_correct_mean = 0.0;
+    double route_quality_candidate_weight_factor_wrong_mean = 0.0;
+    double route_quality_candidate_weight_factor_gap = 0.0;
     double route_quality_score_mean = 0.0;
     double route_quality_score_correct_mean = 0.0;
     double route_quality_score_wrong_mean = 0.0;
@@ -429,6 +434,11 @@ inline std::string v02_csv_header() {
            "route_quality_candidate_weight_wrong_mean,"
            "route_quality_candidate_weight_gap,"
            "route_quality_candidate_best_correct_rate,"
+           "route_quality_candidate_weight_beta,"
+           "route_quality_candidate_weight_factor_mean,"
+           "route_quality_candidate_weight_factor_correct_mean,"
+           "route_quality_candidate_weight_factor_wrong_mean,"
+           "route_quality_candidate_weight_factor_gap,"
            "route_quality_score_mean,route_quality_score_correct_mean,"
            "route_quality_score_wrong_mean,route_quality_score_gap,"
            "route_channel_tension_det_mean,route_channel_tension_trace_mean,"
@@ -679,6 +689,11 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_quality_candidate_weight_wrong_mean << ','
         << metrics.route_quality_candidate_weight_gap << ','
         << metrics.route_quality_candidate_best_correct_rate << ','
+        << metrics.route_quality_candidate_weight_beta << ','
+        << metrics.route_quality_candidate_weight_factor_mean << ','
+        << metrics.route_quality_candidate_weight_factor_correct_mean << ','
+        << metrics.route_quality_candidate_weight_factor_wrong_mean << ','
+        << metrics.route_quality_candidate_weight_factor_gap << ','
         << metrics.route_quality_score_mean << ','
         << metrics.route_quality_score_correct_mean << ','
         << metrics.route_quality_score_wrong_mean << ','

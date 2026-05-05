@@ -2179,3 +2179,63 @@ away from source-level normalization as the main remaining bottleneck and
 toward candidate-level application, aggregation, or hint-integration dynamics.
 The next slice should test a weak bounded candidate-level quality application
 while keeping route-strength modulation off.
+
+## h5-ab Weak Candidate-level Quality Application Decision
+
+`h5-ab` passes as weak bounded candidate-level quality application diagnostics
+and limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice enables `--route-quality-apply candidate-weight` with a bounded
+relative-weight factor:
+
+```text
+factor = clamp(
+  1 + beta * (base_weight / mean_base_weight - 1),
+  min_factor,
+  max_factor
+)
+```
+
+It keeps the route-strength path off and preserves:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off:
+  qacc_mean = 0.622656
+
+source-ranking:
+  qacc_mean = 0.636198
+
+candidate-b0p10:
+  qacc_mean = 0.635156
+  factor_gap = 0.052627
+  candidate_weight_gap = 0.193792
+
+candidate-b0p25:
+  qacc_mean = 0.663542
+  factor_gap = 0.131568
+  candidate_weight_gap = 0.212711
+
+candidate-b0p50:
+  qacc_mean = 0.725261
+  factor_gap = 0.263136
+  candidate_weight_gap = 0.241817
+```
+
+Interpretation:
+bounded candidate-level sharpening turns the candidate correctness signal from
+h5-aa into a real qacc lift in this smoke. The effect is still controlled and
+does not solve robustness: qacc remains below `candidate_best_correct_rate =
+0.838021`, and the result still depends on controlled route-hint fixtures. The
+next slice should test scale stability and source-ranking composition before
+any route-strength modulation.

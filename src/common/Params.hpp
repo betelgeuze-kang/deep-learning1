@@ -146,6 +146,9 @@ struct V02PreParams {
     std::string route_channel_tension_mode = "margin";
     int route_quality_score = 0;
     float route_quality_source_ranking_beta = 0.10f;
+    float route_quality_candidate_weight_beta = 0.25f;
+    float route_quality_candidate_weight_min = 0.5f;
+    float route_quality_candidate_weight_max = 2.0f;
     std::string route_quality_source_normalization = "none";
     float route_quality_source_norm_eps = 1e-6f;
     float route_quality_logdet_weight = 0.1f;
