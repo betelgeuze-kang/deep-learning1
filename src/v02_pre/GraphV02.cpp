@@ -243,12 +243,14 @@ double nearest_rank_quantile(std::vector<double> values, double quantile) {
 }
 
 bool route_quality_source_ranking_apply_active(const V02PreParams& params) {
-    return params.route_quality_apply == "source-ranking" &&
+    return (params.route_quality_apply == "source-ranking" ||
+            params.route_quality_apply == "source-candidate") &&
            params.route_quality_source_ranking_beta > 0.0f;
 }
 
 bool route_quality_candidate_weight_apply_active(const V02PreParams& params) {
-    return params.route_quality_apply == "candidate-weight" &&
+    return (params.route_quality_apply == "candidate-weight" ||
+            params.route_quality_apply == "source-candidate") &&
            params.route_quality_candidate_weight_beta > 0.0f;
 }
 
@@ -944,18 +946,20 @@ void GraphV02::validate_params() const {
     if (params_.route_quality_apply != "none" &&
         params_.route_quality_apply != "candidate-weight" &&
         params_.route_quality_apply != "source-ranking" &&
+        params_.route_quality_apply != "source-candidate" &&
         params_.route_quality_apply != "strength") {
         throw std::runtime_error(
-            "route-quality-apply must be one of: none, candidate-weight, source-ranking, strength");
+            "route-quality-apply must be one of: none, candidate-weight, source-ranking, source-candidate, strength");
     }
     if (params_.route_quality_apply == "strength") {
         throw std::runtime_error(
             "route-quality-apply=strength is reserved; use none, candidate-weight, or source-ranking");
     }
-    if (params_.route_quality_apply == "source-ranking" &&
+    if ((params_.route_quality_apply == "source-ranking" ||
+         params_.route_quality_apply == "source-candidate") &&
         params_.route_source_retry_policy != "source-credit") {
         throw std::runtime_error(
-            "route-quality-apply=source-ranking requires route-source-retry-policy=source-credit");
+            "route-quality-apply=source-ranking/source-candidate requires route-source-retry-policy=source-credit");
     }
     if (!std::isfinite(params_.route_quality_source_ranking_beta) ||
         params_.route_quality_source_ranking_beta < 0.0f) {

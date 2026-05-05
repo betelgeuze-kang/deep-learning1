@@ -2239,3 +2239,40 @@ does not solve robustness: qacc remains below `candidate_best_correct_rate =
 0.838021`, and the result still depends on controlled route-hint fixtures. The
 next slice should test scale stability and source-ranking composition before
 any route-strength modulation.
+
+## h5-ac Candidate-weight Composition Decision
+
+`h5-ac` passes as candidate-weight scale/composition diagnostics and limited
+mitigation, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+--route-quality-apply source-candidate
+```
+
+This combined mode applies both source-ranking and candidate-weight quality
+paths, without changing route strength or topology.
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off qacc_mean              = 0.622656
+source-ranking qacc_mean         = 0.636198
+candidate-b0p25 qacc_mean        = 0.663542
+candidate-b0p50 qacc_mean        = 0.725261
+source-candidate-b0p25 qacc_mean = 0.667708
+source-candidate-b0p50 qacc_mean = 0.717708
+```
+
+Interpretation:
+candidate-only application remains the strongest current quality path. The
+combined source-candidate mode is wired and safe, but it does not improve over
+candidate-b0p50 in this smoke. This suggests the immediate next target is
+candidate-only beta/scale stability, not stronger source-ranking composition or
+route-strength modulation.

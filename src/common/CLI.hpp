@@ -604,7 +604,7 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-source-retry-per-source-limit <int>\n"
        << "  --route-quality-diagnostics <0|1>\n"
        << "  --route-quality-feature-set <value-only> (dynamics/full planned)\n"
-       << "  --route-quality-apply <none|candidate-weight|source-ranking|strength>\n"
+       << "  --route-quality-apply <none|candidate-weight|source-ranking|source-candidate|strength>\n"
        << "  --route-quality-eps <float>\n"
        << "  --route-channel-tension-diagnostics <0|1>\n"
        << "  --route-channel-tension-mode <margin>\n"

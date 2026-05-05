@@ -3365,3 +3365,40 @@ multi-seed/key smoke. The result remains below best-candidate correctness, so
 the remaining gap is still aggregation-to-state / hint-integration limited.
 Keep this as limited mitigation and continue to avoid route-strength
 modulation until scale stability is checked.
+
+## h5-ac Candidate-weight Composition
+
+The h5-ac slice passes as candidate-weight scale/composition diagnostics and
+limited mitigation. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds the combined apply mode:
+
+```text
+--route-quality-apply source-candidate
+```
+
+This mode applies source-ranking and candidate-weight quality at the same time.
+It still leaves graph topology and route strength unchanged.
+
+Reference standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off qacc_mean              = 0.622656
+source-ranking qacc_mean         = 0.636198
+candidate-b0p25 qacc_mean        = 0.663542
+candidate-b0p50 qacc_mean        = 0.725261
+source-candidate-b0p25 qacc_mean = 0.667708
+source-candidate-b0p50 qacc_mean = 0.717708
+```
+
+Interpretation:
+the candidate-weight path continues to be the strongest quality application
+path in this smoke. Source-ranking composition is active and avoids noisy
+retry, but it does not add to `candidate-b0p50`. Keep the current conclusion
+narrow: candidate-only quality application is the next scale target; learned
+routing and robustness remain unsolved.

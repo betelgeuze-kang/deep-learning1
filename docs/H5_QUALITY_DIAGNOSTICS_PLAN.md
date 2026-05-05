@@ -392,6 +392,59 @@ aggregation-to-state or hint-integration limited. This is limited mitigation,
 not learned routing or robustness solved. Next: test candidate-weight scale
 stability and whether it composes with source-ranking without over-sharpening.
 
+### h5-ac Candidate-weight Composition Decision
+
+`h5-ac` passes as candidate-weight scale/composition diagnostics and limited
+mitigation, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds a combined quality apply mode:
+
+```text
+--route-quality-apply source-candidate
+```
+
+This turns on both soft source-ranking and bounded candidate-weight sharpening
+while still preserving:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off:
+  qacc_mean = 0.622656
+
+source-ranking:
+  qacc_mean = 0.636198
+
+candidate-b0p25:
+  qacc_mean = 0.663542
+
+candidate-b0p50:
+  qacc_mean = 0.725261
+
+source-candidate-b0p25:
+  qacc_mean = 0.667708
+
+source-candidate-b0p50:
+  qacc_mean = 0.717708
+```
+
+Interpretation:
+candidate-level sharpening remains the cleaner improvement path in this smoke.
+Composing source-ranking with candidate-weight is active and safe, but it does
+not add to `candidate-b0p50`; it slightly underperforms candidate-only
+application. Noisy retry selection and jump-neighbor activity remain zero.
+Therefore the next slice should scale candidate-only `beta=0.50` across more
+keys/seeds/noise before making source-composition or route-strength claims.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

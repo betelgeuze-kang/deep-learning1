@@ -111,6 +111,9 @@ correctness inside the existing value-bearing route-hint path.
 h5-ab weak candidate-level quality application remains there too: it only
 sharpens candidate weights inside value-bearing aggregation and does not change
 graph topology, route strength, or jump-neighbor gating.
+h5-ac candidate-weight composition diagnostics remain there as well: the
+combined source/candidate quality mode changes only value-bearing source and
+candidate weights, not static topology.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -472,6 +475,9 @@ Current decision:
   topology replacement or static routing promotion
 - treat h5-ab weak candidate-level quality application the same way: bounded
   candidate weight sharpening inside value-bearing aggregation, not topology
+  replacement or static routing promotion
+- treat h5-ac candidate-weight composition diagnostics the same way: source and
+  candidate quality weights inside value-bearing route hints, not topology
   replacement or static routing promotion
 
 Allowed wording:
