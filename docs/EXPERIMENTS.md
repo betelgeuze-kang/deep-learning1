@@ -1786,3 +1786,74 @@ the noisy retry source. However, all scheduled-prior rows remain at
 `qacc=0.957813`, below the fixed key-shape reference. This is evidence that
 source-prior scheduling is controllable, but source-credit evidence still does
 not independently close the symbolic key-shape upper-bound gap.
+
+## h5-t Retry-source Evidence-quality Diagnostics
+
+`h5-t` passes as retry-source evidence-quality instrumentation, but it does not
+solve learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+The slice adds retry-source credit readouts:
+
+```text
+route_source_retry_raw_mean
+route_source_retry_keyshape_mean
+route_source_retry_noisy_mean
+route_source_retry_raw_rewarded_rate
+route_source_retry_keyshape_rewarded_rate
+route_source_retry_noisy_slashed_rate
+```
+
+Smoke command:
+
+```bash
+./experiments/test_v05_route_source_credit_evidence_quality.sh
+```
+
+Standard run:
+
+```bash
+./experiments/run_v05_route_source_credit_evidence_quality.sh
+```
+
+Reference smoke readout:
+
+```text
+source-order:
+  qacc=0.960937, fallback_recall=1.000000,
+  retry_raw_selected=0.875000,
+  retry_raw_mean=0.222951,
+  retry_keyshape_mean=0.000000,
+  retry_noisy_mean=-0.206811
+
+static-keyshape-prior:
+  qacc=0.960937, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_raw_mean=0.000000,
+  retry_keyshape_mean=0.222951,
+  retry_noisy_mean=-0.206811
+
+warmup-keyshape-prior:
+  qacc=0.960937, fallback_recall=1.000000,
+  retry_keyshape_selected=0.875000,
+  retry_keyshape_mean=0.222951,
+  retry_noisy_mean=-0.206811
+
+raw-quality-evidence:
+  retry_raw_mean=0.222951,
+  retry_raw_rewarded=1.000000,
+  retry_noisy_slashed=1.000000
+
+keyshape-quality-evidence:
+  retry_keyshape_mean=0.222951,
+  retry_keyshape_rewarded=1.000000,
+  retry_noisy_slashed=1.000000
+```
+
+Interpretation:
+the retry-source evidence ledger is now visible. It reliably assigns positive
+credit to the selected non-noisy retry source and negative/slash signal to the
+noisy source. However, raw-key and key-shape receive the same positive credit
+when each is the selected clean retry source. Therefore source-credit evidence
+currently detects bad/noisy retry sources, but it does not independently rank
+raw-key versus key-shape or close the symbolic source-selection problem.

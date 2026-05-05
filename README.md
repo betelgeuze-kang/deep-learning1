@@ -270,6 +270,16 @@ Current status:
   (`retry_keyshape_selected=0.875000`). Noisy retry remains unused, and qacc
   remains `0.957813`, below fixed key-shape `0.970313`; read this as
   source-prior handoff calibration / limited mitigation only.
+- h5-t adds retry-source evidence-quality diagnostics. New CSV metrics expose
+  retry-source credit means and reward/slash rates for raw-key, key-shape, and
+  noisy retry sources. The smoke keeps the value-bearing path active and
+  noisy retry suppressed: source-order rewards raw-key
+  (`retry_raw_mean=0.222951`), static/warmup key-shape prior rewards key-shape
+  (`retry_keyshape_mean=0.222951`), and noisy retry stays negative
+  (`retry_noisy_mean=-0.206811`, `retry_noisy_slashed=1.000000`). This is
+  evidence-quality instrumentation only: raw-key and key-shape both receive
+  positive credit when selected, so source-credit evidence still does not
+  independently rank the better symbolic retry source.
 
 ## Build
 

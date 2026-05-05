@@ -2949,3 +2949,64 @@ selection remains suppressed. The scheduled-prior rows still do not match the
 fixed key-shape reference, so the remaining issue is not tie-break plumbing; it
 is source-credit evidence quality and whether it can eventually choose the
 better source without a persistent symbolic prior.
+
+## h5-t Retry-source Evidence-quality Diagnostics
+
+`h5-t` passes as retry-source evidence-quality instrumentation. It keeps the
+same value-bearing route-hint path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The slice adds retry-source credit evidence metrics for raw-key, key-shape, and
+noisy retry sources:
+
+```text
+route_source_retry_raw_mean
+route_source_retry_keyshape_mean
+route_source_retry_noisy_mean
+route_source_retry_raw_rewarded_rate
+route_source_retry_keyshape_rewarded_rate
+route_source_retry_noisy_slashed_rate
+```
+
+Reference smoke readout:
+
+```text
+source-order:
+  qacc=0.960937,
+  retry_raw_selected=0.875000,
+  retry_raw_mean=0.222951,
+  retry_noisy_mean=-0.206811
+
+static-keyshape-prior:
+  qacc=0.960937,
+  retry_keyshape_selected=0.875000,
+  retry_keyshape_mean=0.222951,
+  retry_noisy_mean=-0.206811
+
+raw-quality-evidence:
+  retry_raw_mean=0.222951,
+  retry_raw_rewarded=1.000000,
+  retry_noisy_slashed=1.000000
+
+keyshape-quality-evidence:
+  retry_keyshape_mean=0.222951,
+  retry_keyshape_rewarded=1.000000,
+  retry_noisy_slashed=1.000000
+```
+
+Decision:
+
+- `v0.3-h5-t retry-source evidence quality`: `PASS` as retry-source evidence
+  instrumentation
+- it is not learned routing solved, not source-credit robustness solved, and
+  not wrong-candidate/fallback robustness solved
+
+Interpretation:
+source-credit evidence is now observable at retry-source granularity. It can
+separate clean retry sources from noisy retry sources, but raw-key and
+key-shape both receive positive credit when selected. Thus h5-t exposes the
+next bottleneck: source-credit evidence still needs richer quality features if
+it is to choose the better symbolic retry source without a prior.

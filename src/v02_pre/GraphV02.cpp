@@ -3842,6 +3842,15 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_source_retry_raw_selected_count = 0.0;
     double route_source_retry_keyshape_selected_count = 0.0;
     double route_source_retry_noisy_selected_count = 0.0;
+    double route_source_retry_raw_sum = 0.0;
+    double route_source_retry_raw_count = 0.0;
+    double route_source_retry_keyshape_sum = 0.0;
+    double route_source_retry_keyshape_count = 0.0;
+    double route_source_retry_noisy_sum = 0.0;
+    double route_source_retry_noisy_count = 0.0;
+    double route_source_retry_raw_rewarded_count = 0.0;
+    double route_source_retry_keyshape_rewarded_count = 0.0;
+    double route_source_retry_noisy_slashed_count = 0.0;
     double route_hint_candidate_lookup_count = 0.0;
     double route_hint_value_read_distance_sum = 0.0;
     double route_hint_vote_query_count = 0.0;
@@ -4799,6 +4808,12 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 entry.first.find("|source:fallback-") != std::string::npos;
             const bool is_noisy =
                 entry.first.find("|source:noisy-route-code") != std::string::npos;
+            const bool is_retry_raw =
+                entry.first.find("|source:retry-raw-key") != std::string::npos;
+            const bool is_retry_keyshape =
+                entry.first.find("|source:retry-key-shape") != std::string::npos;
+            const bool is_retry_noisy =
+                entry.first.find("|source:retry-noisy-route-code") != std::string::npos;
             if (is_primary) {
                 route_source_credit_primary_sum += static_cast<double>(entry.second);
                 route_source_credit_primary_count += 1.0;
@@ -4819,6 +4834,25 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 route_source_credit_noisy_candidate_count += 1.0;
                 if (entry.second < 0.0f) {
                     route_source_credit_noisy_slashed_count += 1.0;
+                }
+            }
+            if (is_retry_raw) {
+                route_source_retry_raw_sum += static_cast<double>(entry.second);
+                route_source_retry_raw_count += 1.0;
+                if (entry.second > 0.0f) {
+                    route_source_retry_raw_rewarded_count += 1.0;
+                }
+            } else if (is_retry_keyshape) {
+                route_source_retry_keyshape_sum += static_cast<double>(entry.second);
+                route_source_retry_keyshape_count += 1.0;
+                if (entry.second > 0.0f) {
+                    route_source_retry_keyshape_rewarded_count += 1.0;
+                }
+            } else if (is_retry_noisy) {
+                route_source_retry_noisy_sum += static_cast<double>(entry.second);
+                route_source_retry_noisy_count += 1.0;
+                if (entry.second < 0.0f) {
+                    route_source_retry_noisy_slashed_count += 1.0;
                 }
             }
         }
@@ -4867,6 +4901,25 @@ EpochMetricsV02 GraphV02::collect_metrics(
             metrics.route_source_credit_noisy_slashed_rate =
                 route_source_credit_noisy_slashed_count /
                 route_source_credit_noisy_candidate_count;
+        }
+        if (route_source_retry_raw_count > 0.0) {
+            metrics.route_source_retry_raw_mean =
+                route_source_retry_raw_sum / route_source_retry_raw_count;
+            metrics.route_source_retry_raw_rewarded_rate =
+                route_source_retry_raw_rewarded_count / route_source_retry_raw_count;
+        }
+        if (route_source_retry_keyshape_count > 0.0) {
+            metrics.route_source_retry_keyshape_mean =
+                route_source_retry_keyshape_sum / route_source_retry_keyshape_count;
+            metrics.route_source_retry_keyshape_rewarded_rate =
+                route_source_retry_keyshape_rewarded_count /
+                route_source_retry_keyshape_count;
+        }
+        if (route_source_retry_noisy_count > 0.0) {
+            metrics.route_source_retry_noisy_mean =
+                route_source_retry_noisy_sum / route_source_retry_noisy_count;
+            metrics.route_source_retry_noisy_slashed_rate =
+                route_source_retry_noisy_slashed_count / route_source_retry_noisy_count;
         }
         if (params_.route_plasticity_ledger != 0) {
             metrics.route_plasticity_ledger_size =
