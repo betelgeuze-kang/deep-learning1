@@ -105,6 +105,9 @@ only affect value-bearing source ranking and never revive topology replacement.
 h5-z source-normalization diagnostics remain there too: they rescale the same
 source-quality proxy before soft source ranking and leave graph topology,
 candidate collection, and route strength unchanged.
+h5-aa candidate-level quality diagnostics remain there as well: they only
+measure correct/wrong candidate weight separation and best-candidate
+correctness inside the existing value-bearing route-hint path.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -461,6 +464,9 @@ Current decision:
   neighbor-routing promotion
 - treat h5-z source-normalization diagnostics the same way: proxy rescaling for
   source ranking only, not topology replacement or static routing promotion
+- treat h5-aa candidate-level quality diagnostics the same way: correct/wrong
+  candidate weight separation inside value-bearing route-hint memory, not
+  topology replacement or static routing promotion
 
 Allowed wording:
 

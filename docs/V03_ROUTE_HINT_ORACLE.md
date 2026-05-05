@@ -3259,3 +3259,56 @@ normalization controls the source-quality proxy scale and reduces raw-key
 pressure, but it does not change selected source or qacc relative to
 channel-sign. This points away from source-level scaling alone and toward
 candidate-level quality diagnostics/application as the next step.
+
+## h5-aa Candidate-level Quality Diagnostics
+
+The h5-aa slice passes as candidate-level quality diagnostics and an
+actionable split. It does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The route behavior remains unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The slice adds candidate-level quality readouts:
+
+```text
+route_quality_candidate_weight_correct_mean
+route_quality_candidate_weight_wrong_mean
+route_quality_candidate_weight_gap
+route_quality_candidate_best_correct_rate
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off:
+  qacc_mean = 0.622656
+  candidate_weight_correct = 0.398027
+  candidate_weight_wrong = 0.217518
+  candidate_weight_gap = 0.180509
+  candidate_best_correct_rate = 0.838021
+
+channel-sign-none:
+  qacc_mean = 0.636198
+  candidate_weight_correct = 0.396566
+  candidate_weight_wrong = 0.217533
+  candidate_weight_gap = 0.179034
+  candidate_best_correct_rate = 0.838021
+```
+
+Interpretation:
+candidate quality already contains a positive correctness signal: correct
+candidates receive higher normalized weight than wrong candidates, and the best
+weighted candidate is correct more often than final query accuracy. Therefore
+the remaining bottleneck is not candidate ranking alone. It is more likely the
+conversion from candidate support into aggregation, proposal acceptance, or
+stable query-state convergence. The next slice should apply candidate-level
+quality weakly and boundedly; route-strength modulation should remain a later
+step.

@@ -266,6 +266,65 @@ proxy scale is now controllable, but source selection quality is still not
 solved. Next: candidate-level quality diagnostics/application with
 route-strength modulation still off.
 
+### h5-aa Candidate-level Quality Diagnostics Decision
+
+`h5-aa` passes as candidate-level quality diagnostics and an actionable split,
+but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds candidate-level readouts while preserving the existing
+value-bearing path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+New metrics:
+
+```text
+route_quality_candidate_weight_correct_mean
+route_quality_candidate_weight_wrong_mean
+route_quality_candidate_weight_gap
+route_quality_candidate_best_correct_rate
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off:
+  qacc_mean = 0.622656
+  candidate_weight_correct = 0.398027
+  candidate_weight_wrong = 0.217518
+  candidate_weight_gap = 0.180509
+  candidate_best_correct_rate = 0.838021
+
+channel-sign-none:
+  qacc_mean = 0.636198
+  candidate_weight_correct = 0.396566
+  candidate_weight_wrong = 0.217533
+  candidate_weight_gap = 0.179034
+  candidate_best_correct_rate = 0.838021
+
+channel-sign-center/zscore:
+  qacc_mean = 0.636198
+  candidate_weight_gap = 0.179034
+  candidate_best_correct_rate = 0.838021
+```
+
+Interpretation:
+candidate weights already contain a positive correctness signal: correct
+candidate weight is higher than wrong candidate weight, and the best weighted
+candidate is correct more often than final query accuracy. Therefore the
+remaining bottleneck is not raw candidate ranking alone. It is likely the
+conversion from candidate-level support into stable query-state convergence,
+aggregation, or hint integration. Source normalization does not change these
+candidate-level metrics in this smoke, so the next application slice should be
+candidate-level and weakly bounded, not route-strength modulation.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

@@ -2129,3 +2129,53 @@ However, it does not change the selected source: the policy remains raw-key
 centered. Therefore the remaining bottleneck is not only source-level proxy
 scale. The next slice should test candidate-level quality diagnostics or
 candidate-level application while keeping strength modulation off.
+
+## h5-aa Candidate-level Quality Diagnostics Decision
+
+`h5-aa` passes as candidate-level quality diagnostics and an actionable split,
+but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds candidate-level quality metrics without changing route behavior:
+
+```text
+route_quality_candidate_weight_correct_mean
+route_quality_candidate_weight_wrong_mean
+route_quality_candidate_weight_gap
+route_quality_candidate_best_correct_rate
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off:
+  qacc_mean = 0.622656
+  candidate_weight_correct = 0.398027
+  candidate_weight_wrong = 0.217518
+  candidate_weight_gap = 0.180509
+  candidate_best_correct_rate = 0.838021
+
+channel-sign-none:
+  qacc_mean = 0.636198
+  candidate_weight_correct = 0.396566
+  candidate_weight_wrong = 0.217533
+  candidate_weight_gap = 0.179034
+  candidate_best_correct_rate = 0.838021
+
+channel-sign-center/zscore:
+  qacc_mean = 0.636198
+  candidate_weight_gap = 0.179034
+  candidate_best_correct_rate = 0.838021
+```
+
+Interpretation:
+the candidate-level weight signal separates correct from wrong candidates, and
+the best weighted candidate is correct more often than final qacc. This points
+away from source-level normalization as the main remaining bottleneck and
+toward candidate-level application, aggregation, or hint-integration dynamics.
+The next slice should test a weak bounded candidate-level quality application
+while keeping route-strength modulation off.

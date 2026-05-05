@@ -4255,6 +4255,12 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_quality_selected_keyshape_qacc_count = 0.0;
     double route_quality_selected_noisy_qacc_sum = 0.0;
     double route_quality_selected_noisy_qacc_count = 0.0;
+    double route_quality_candidate_weight_correct_sum = 0.0;
+    double route_quality_candidate_weight_correct_count = 0.0;
+    double route_quality_candidate_weight_wrong_sum = 0.0;
+    double route_quality_candidate_weight_wrong_count = 0.0;
+    double route_quality_candidate_best_correct_sum = 0.0;
+    double route_quality_candidate_best_correct_count = 0.0;
     double route_quality_score_sum = 0.0;
     double route_quality_score_correct_sum = 0.0;
     double route_quality_score_correct_count = 0.0;
@@ -4341,6 +4347,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 float vote_weight_sum = 0.0f;
                 std::vector<std::uint8_t> candidate_values;
                 candidate_values.reserve(vote_positions.size());
+                std::vector<std::pair<std::uint8_t, float>> candidate_quality_weights;
+                candidate_quality_weights.reserve(vote_positions.size());
                 for (std::size_t rank_index = 0; rank_index < vote_positions.size();
                      ++rank_index) {
                     const int value_pos = vote_positions[rank_index];
@@ -4368,6 +4376,7 @@ EpochMetricsV02 GraphV02::collect_metrics(
                         candidate_weight;
                     value_votes[static_cast<std::size_t>(value)] += candidate_weight;
                     candidate_values.push_back(value);
+                    candidate_quality_weights.push_back({value, candidate_weight});
                     vote_weight_sum += candidate_weight;
                     ++valid_vote_count;
                 }
@@ -4426,6 +4435,32 @@ EpochMetricsV02 GraphV02::collect_metrics(
                     const double channel_offdiag = std::abs(hi_margin - lo_margin);
                     if (params_.route_quality_diagnostics != 0 ||
                         params_.route_quality_score != 0) {
+                        float best_candidate_weight = -1.0f;
+                        std::uint8_t best_candidate_value = 0;
+                        for (const auto& candidate_quality :
+                             candidate_quality_weights) {
+                            const double normalized_weight =
+                                static_cast<double>(
+                                    candidate_quality.second / vote_weight_sum);
+                            if (candidate_quality.first == target_value) {
+                                route_quality_candidate_weight_correct_sum +=
+                                    normalized_weight;
+                                route_quality_candidate_weight_correct_count += 1.0;
+                            } else {
+                                route_quality_candidate_weight_wrong_sum +=
+                                    normalized_weight;
+                                route_quality_candidate_weight_wrong_count += 1.0;
+                            }
+                            if (candidate_quality.second > best_candidate_weight) {
+                                best_candidate_weight = candidate_quality.second;
+                                best_candidate_value = candidate_quality.first;
+                            }
+                        }
+                        if (best_candidate_weight >= 0.0f) {
+                            route_quality_candidate_best_correct_sum +=
+                                best_candidate_value == target_value ? 1.0 : 0.0;
+                            route_quality_candidate_best_correct_count += 1.0;
+                        }
                         const QualityGramStats gram = candidate_value_gram_stats(
                             candidate_values,
                             static_cast<double>(params_.route_quality_eps));
@@ -5703,6 +5738,24 @@ EpochMetricsV02 GraphV02::collect_metrics(
         metrics.route_quality_selected_noisy_qacc =
             route_quality_selected_noisy_qacc_sum /
             route_quality_selected_noisy_qacc_count;
+    }
+    if (route_quality_candidate_weight_correct_count > 0.0) {
+        metrics.route_quality_candidate_weight_correct_mean =
+            route_quality_candidate_weight_correct_sum /
+            route_quality_candidate_weight_correct_count;
+    }
+    if (route_quality_candidate_weight_wrong_count > 0.0) {
+        metrics.route_quality_candidate_weight_wrong_mean =
+            route_quality_candidate_weight_wrong_sum /
+            route_quality_candidate_weight_wrong_count;
+    }
+    metrics.route_quality_candidate_weight_gap =
+        metrics.route_quality_candidate_weight_correct_mean -
+        metrics.route_quality_candidate_weight_wrong_mean;
+    if (route_quality_candidate_best_correct_count > 0.0) {
+        metrics.route_quality_candidate_best_correct_rate =
+            route_quality_candidate_best_correct_sum /
+            route_quality_candidate_best_correct_count;
     }
     if (route_quality_score_correct_count > 0.0) {
         metrics.route_quality_score_correct_mean =
