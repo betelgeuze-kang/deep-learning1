@@ -247,9 +247,13 @@ struct EpochMetricsV02 {
     double route_quality_selected_raw_rate = 0.0;
     double route_quality_selected_keyshape_rate = 0.0;
     double route_quality_selected_noisy_rate = 0.0;
+    double route_quality_source_normalization_active = 0.0;
     double route_quality_retry_raw_proxy_mean = 0.0;
     double route_quality_retry_keyshape_proxy_mean = 0.0;
     double route_quality_retry_noisy_proxy_mean = 0.0;
+    double route_quality_retry_raw_norm_proxy_mean = 0.0;
+    double route_quality_retry_keyshape_norm_proxy_mean = 0.0;
+    double route_quality_retry_noisy_norm_proxy_mean = 0.0;
     double route_quality_retry_raw_delta_mean = 0.0;
     double route_quality_retry_keyshape_delta_mean = 0.0;
     double route_quality_retry_noisy_delta_mean = 0.0;
@@ -404,9 +408,13 @@ inline std::string v02_csv_header() {
            "route_quality_source_ranking_delta_mean,"
            "route_quality_selected_raw_rate,route_quality_selected_keyshape_rate,"
            "route_quality_selected_noisy_rate,"
+           "route_quality_source_normalization_active,"
            "route_quality_retry_raw_proxy_mean,"
            "route_quality_retry_keyshape_proxy_mean,"
            "route_quality_retry_noisy_proxy_mean,"
+           "route_quality_retry_raw_norm_proxy_mean,"
+           "route_quality_retry_keyshape_norm_proxy_mean,"
+           "route_quality_retry_noisy_norm_proxy_mean,"
            "route_quality_retry_raw_delta_mean,"
            "route_quality_retry_keyshape_delta_mean,"
            "route_quality_retry_noisy_delta_mean,"
@@ -646,9 +654,13 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_quality_selected_raw_rate << ','
         << metrics.route_quality_selected_keyshape_rate << ','
         << metrics.route_quality_selected_noisy_rate << ','
+        << metrics.route_quality_source_normalization_active << ','
         << metrics.route_quality_retry_raw_proxy_mean << ','
         << metrics.route_quality_retry_keyshape_proxy_mean << ','
         << metrics.route_quality_retry_noisy_proxy_mean << ','
+        << metrics.route_quality_retry_raw_norm_proxy_mean << ','
+        << metrics.route_quality_retry_keyshape_norm_proxy_mean << ','
+        << metrics.route_quality_retry_noisy_norm_proxy_mean << ','
         << metrics.route_quality_retry_raw_delta_mean << ','
         << metrics.route_quality_retry_keyshape_delta_mean << ','
         << metrics.route_quality_retry_noisy_delta_mean << ','

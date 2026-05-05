@@ -218,6 +218,9 @@ class GraphV02 {
     std::vector<float> route_quality_retry_raw_proxy_;
     std::vector<float> route_quality_retry_keyshape_proxy_;
     std::vector<float> route_quality_retry_noisy_proxy_;
+    std::vector<float> route_quality_retry_raw_norm_proxy_;
+    std::vector<float> route_quality_retry_keyshape_norm_proxy_;
+    std::vector<float> route_quality_retry_noisy_norm_proxy_;
     std::vector<float> route_quality_retry_raw_delta_;
     std::vector<float> route_quality_retry_keyshape_delta_;
     std::vector<float> route_quality_retry_noisy_delta_;

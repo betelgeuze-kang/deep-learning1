@@ -214,6 +214,58 @@ raw-key, so h5-y does not solve source selection quality. The next calibration
 target is source-specific normalization or candidate-level quality scoring,
 not stronger route-strength application.
 
+### h5-z Source-normalization Decision
+
+`h5-z` passes as source-normalization instrumentation and neutral diagnostics,
+but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+New diagnostic knobs:
+
+```text
+--route-quality-source-normalization none|center|zscore
+--route-quality-source-norm-eps <float>
+```
+
+The raw source proxy remains visible, while normalized proxy metrics show the
+actual score used by source-ranking:
+
+```text
+route_quality_retry_raw_norm_proxy_mean
+route_quality_retry_keyshape_norm_proxy_mean
+route_quality_retry_noisy_norm_proxy_mean
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+channel-sign-none:
+  qacc_mean = 0.636198
+  raw_norm_proxy_mean = 2.277099
+  delta_mean = 0.227710
+
+channel-sign-center:
+  qacc_mean = 0.636198
+  raw_norm_proxy_mean = 1.104578
+  delta_mean = 0.110458
+
+channel-sign-zscore:
+  qacc_mean = 0.636198
+  raw_norm_proxy_mean = 0.873139
+  delta_mean = 0.087314
+```
+
+Interpretation:
+center/zscore normalization lowers raw-key pressure, but source choice and qacc
+remain unchanged relative to unnormalized channel-sign. This is useful plumbing:
+proxy scale is now controllable, but source selection quality is still not
+solved. Next: candidate-level quality diagnostics/application with
+route-strength modulation still off.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

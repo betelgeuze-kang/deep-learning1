@@ -2069,3 +2069,63 @@ stability diagnostics and weak limited mitigation, not source selection solved.
 Next:
 test source-specific normalization or candidate-level quality application
 before using stronger route-strength modulation.
+
+## h5-z Source-normalization Decision
+
+`h5-z` passes as source-normalization instrumentation and neutral diagnostics,
+but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+--route-quality-source-normalization none|center|zscore
+--route-quality-source-norm-eps <float>
+```
+
+The existing raw proxy metrics are preserved, and new normalized-proxy metrics
+show the score actually used by the source-ranking delta:
+
+```text
+route_quality_retry_raw_norm_proxy_mean
+route_quality_retry_keyshape_norm_proxy_mean
+route_quality_retry_noisy_norm_proxy_mean
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off:
+  qacc_mean = 0.622656
+
+channel-sign-none:
+  qacc_mean = 0.636198
+  raw_norm_proxy_mean = 2.277099
+  delta_mean = 0.227710
+  selected_raw_rate_mean = 0.753385
+  selected_noisy_rate_mean = 0.000000
+
+channel-sign-center:
+  qacc_mean = 0.636198
+  raw_norm_proxy_mean = 1.104578
+  delta_mean = 0.110458
+  selected_raw_rate_mean = 0.753385
+
+channel-sign-zscore:
+  qacc_mean = 0.636198
+  raw_norm_proxy_mean = 0.873139
+  delta_mean = 0.087314
+  selected_raw_rate_mean = 0.753385
+```
+
+Interpretation:
+source normalization successfully reduces raw-key ranking pressure without
+reintroducing noisy retry and without regressing qacc relative to channel-sign.
+However, it does not change the selected source: the policy remains raw-key
+centered. Therefore the remaining bottleneck is not only source-level proxy
+scale. The next slice should test candidate-level quality diagnostics or
+candidate-level application while keeping strength modulation off.

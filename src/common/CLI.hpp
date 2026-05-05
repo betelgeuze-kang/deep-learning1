@@ -377,6 +377,12 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-quality-source-ranking-beta" ||
                    key == "route_quality_source_ranking_beta") {
             params.route_quality_source_ranking_beta = cli_to_float(value, key);
+        } else if (key == "route-quality-source-normalization" ||
+                   key == "route_quality_source_normalization") {
+            params.route_quality_source_normalization = value;
+        } else if (key == "route-quality-source-norm-eps" ||
+                   key == "route_quality_source_norm_eps") {
+            params.route_quality_source_norm_eps = cli_to_float(value, key);
         } else if (key == "route-quality-logdet-weight" ||
                    key == "route_quality_logdet_weight") {
             params.route_quality_logdet_weight = cli_to_float(value, key);
@@ -595,6 +601,8 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-channel-tension-mode <margin>\n"
        << "  --route-quality-score <0|1>\n"
        << "  --route-quality-source-ranking-beta <float>\n"
+       << "  --route-quality-source-normalization <none|center|zscore>\n"
+       << "  --route-quality-source-norm-eps <float>\n"
        << "  --route-quality-logdet-weight <float>\n"
        << "  --route-quality-entropy-weight <float>\n"
        << "  --route-quality-vote-margin-weight <float>\n"

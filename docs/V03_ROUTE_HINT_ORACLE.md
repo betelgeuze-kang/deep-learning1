@@ -3215,3 +3215,47 @@ across the first key/seed smoke and still avoids noisy retry. But selected
 source remains raw-key, so this is not source selection solved. The next step
 should test source-specific normalization or candidate-level quality scoring
 before applying quality to route strength.
+
+## h5-z Source-normalization Diagnostics
+
+The h5-z slice passes as source-normalization instrumentation and neutral
+diagnostics. It does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+It adds source-level normalization for the quality proxy:
+
+```text
+--route-quality-source-normalization none|center|zscore
+```
+
+The normalization is still only used in the source-ranking path. It does not
+change graph topology, candidate collection, or route strength.
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+channel-sign-none:
+  qacc_mean = 0.636198
+  raw_norm_proxy_mean = 2.277099
+  delta_mean = 0.227710
+
+channel-sign-center:
+  qacc_mean = 0.636198
+  raw_norm_proxy_mean = 1.104578
+  delta_mean = 0.110458
+
+channel-sign-zscore:
+  qacc_mean = 0.636198
+  raw_norm_proxy_mean = 0.873139
+  delta_mean = 0.087314
+```
+
+Interpretation:
+normalization controls the source-quality proxy scale and reduces raw-key
+pressure, but it does not change selected source or qacc relative to
+channel-sign. This points away from source-level scaling alone and toward
+candidate-level quality diagnostics/application as the next step.
