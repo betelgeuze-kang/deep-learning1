@@ -10,6 +10,7 @@ Current headline:
 - This is not yet learned sparse routing, long-context retrieval solved, wrong-candidate robustness solved, or a Transformer replacement claim. The current live path is the `candidate value_pos -> value byte read -> proposal hint` route-hint path, and jump-neighbor replacement stays no-go/default-off/diagnostic-only.
 - Latest route-hint status: h4-5t calibrated the fallback low-channel strength sweet spot, h4-5u showed short fallback TTL/persistence is neutral, h4-5v added route-credit separation instrumentation with only a tiny qacc mitigation, h4-5w is the route-credit ablation diagnostics sweep, h4-5x is the credit × fallback integration ablation, h4-5y is the credit strength/stability calibration sweep, h5-a adds a persistent route-plasticity ledger plus learn/apply warmup gates, h5-b adds source/bucket route-credit responsibility instrumentation, h5-c adds source-credit policy calibration around key-shape fallback `hi_mult=5` / `lo_mult=10`, h5-d adds noisy / learned-like source policy diagnostics across weak `joint-code-key` primary, symbolic `key-shape` fallback, and explicit `noisy-route-code` stress, h5-e adds noisy-source multi-seed / scale stability smoke, h5-f weakens the `route-code-key` identity auxiliary itself, h5-g scales that weak learned-source stress over key/seed arms, h5-h compares fallback-source dependence across `off`, `raw-key`, `key-shape`, and `noisy-route-code`, h5-i calibrates source-credit fallback policy modes, h5-j diagnoses fallback candidate-quality gaps, h5-k calibrates fallback aggregation policy, h5-l adds source/noise-aware fallback aggregation diagnostics, h5-m scales that source/noise-aware aggregation pattern over key/seed smoke arms, h5-n adds source-credit bad-source filter / abstain diagnostics, h5-o adds retry-source replacement after bad-source filtering, h5-p adds source-credit retry-policy calibration, and h5-q passes as source-credit retry-policy tie-break calibration diagnostics / limited mitigation: `noisy-filter` stays at `qacc=0.103125`, `fallback_recall=0.000000`, `noisy_slashed=1.000000`, `source_retry_used=0.000000`; `policy-source-order`, `policy-keyshape-prior`, and `policy-noisy-penalty/mixed` all recover at `qacc=0.957813`, `fallback_recall=1.000000`, with `retry_noisy_selected=0.000000`; `fixed-keyshape` remains the upper bound at `qacc=0.970313`, `fallback_qacc=1.000000`. NOT learned routing solved, NOT source-credit robustness solved, NOT wrong-candidate/fallback robustness solved.
 - h5-r adds source-prior schedule diagnostics for retry tie-breaks via `--route-source-retry-prior-mode none|static|decay|warmup`, `--route-source-retry-prior-decay`, and `--route-source-retry-prior-warmup-epochs`. The smoke keeps noisy retry selection at `0.000000`: source-order recovers through raw-key (`qacc=0.957813`, `retry_raw_selected=0.875000`), while static/decay/warmup key-shape priors recover through key-shape (`qacc=0.957813`, `retry_keyshape_selected=0.875000`). The fixed key-shape reference remains higher (`qacc=0.970313`, `fallback_qacc=1.000000`), so this is prior-schedule calibration / limited mitigation, not learned routing or robustness solved.
+- h5-u passes as candidate-quality logdet/channel/quality-score instrumentation, and h5-v passes as weak quality source-ranking application diagnostics / neutral-to-slight-regression. `route_quality_apply=source-ranking` activates a soft bounded source-ranking delta while keeping noisy retry selection at `0.000000`, but qacc shifts from `0.568750` to `0.560938`; read it as calibration, not mitigation or robustness solved.
 
 Current status:
 
@@ -280,14 +281,20 @@ Current status:
   evidence-quality instrumentation only: raw-key and key-shape both receive
   positive credit when selected, so source-credit evidence still does not
   independently rank the better symbolic retry source.
-- h5-u adds candidate-quality diagnostics with `route_quality_apply=none`.
-  The smoke keeps behavior unchanged (`quality-off-source-order` and
-  `quality-on-source-order` both `qacc=0.645313`) while exposing candidate-set
-  quality signals. In this diagnostic setup, fixed raw-key separates from
-  fixed key-shape (`qacc=0.742187` vs `0.645313`,
+- h5-u passes as candidate-quality logdet/channel/quality-score instrumentation
+  with `route_quality_apply=none`. The smoke keeps behavior unchanged
+  (`quality-off-source-order` and `quality-on-source-order` both `qacc=0.645313`)
+  while exposing candidate-set quality signals. In this diagnostic setup, fixed
+  raw-key separates from fixed key-shape (`qacc=0.742187` vs `0.645313`,
   `logdet=-5.818573` vs `-15.330912`, condition `7.050210` vs `52.270703`).
-  Read this only as logdet/channel/quality-score instrumentation, not learned
-  routing or robustness solved.
+  Read this only as instrumentation, not a learned-routing or robustness win.
+- h5-v adds the first weak quality application via `route_quality_apply=source-ranking`.
+  It uses a bounded soft delta only; no hard threshold/filter is used and the
+  value-bearing route path stays active. The smoke activates the path
+  (`route_quality_apply_active=1.000000`, delta `0.227710..0.250000`) and avoids
+  noisy retry selection, but qacc is slightly lower than apply-none
+  (`0.560938` vs `0.568750`). Read this as calibration diagnostics, not a
+  robustness win.
 
 ## Build
 

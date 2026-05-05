@@ -1892,3 +1892,42 @@ candidate set has measurable internal quality: value-only Gram logdet,
 condition proxy, channel margin imbalance, and continuous quality score expose
 the raw-key versus key-shape difference in this smoke. These metrics remain
 diagnostic-only and must not be used as hard filters.
+
+## h5-v Weak Quality Application Decision
+
+`h5-v` passes as weak quality source-ranking application diagnostics and
+neutral-to-slight-regression. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice is the first behavior-changing use of the h5-u quality diagnostics,
+but it stays deliberately soft: `route_quality_apply=source-ranking` adds a
+bounded source-ranking delta only. It does not hard-filter candidates and does
+not change route strength.
+
+Reference smoke:
+
+```text
+apply-none-source-order:
+  qacc = 0.568750
+  route_quality_apply_active = 0.000000
+
+source-ranking-b0p10:
+  qacc = 0.560938
+  route_quality_apply_active = 1.000000
+  route_quality_source_ranking_delta_mean = 0.227710
+  route_quality_selected_raw_rate = 0.850000
+  route_quality_selected_noisy_rate = 0.000000
+
+source-ranking-b0p25:
+  qacc = 0.560938
+  route_quality_apply_active = 1.000000
+  route_quality_source_ranking_delta_mean = 0.250000
+  route_quality_selected_raw_rate = 0.850000
+  route_quality_selected_noisy_rate = 0.000000
+```
+
+Interpretation:
+quality source-ranking is wired and keeps the value-bearing route path active,
+but it does not improve qacc in this smoke. The next step should be calibration
+of the quality proxy/sign and source-specific evidence before trying
+`candidate-weight` or `strength`.

@@ -214,6 +214,7 @@ class GraphV02 {
     std::vector<bool> route_hint_fallback_recovered_;
     std::vector<bool> route_hint_retry_used_;
     std::vector<bool> route_hint_retry_recovered_;
+    std::vector<float> route_hint_quality_source_ranking_delta_;
     std::vector<int> route_fallback_persist_remaining_;
     std::vector<int> route_fallback_persist_visits_;
     std::vector<float> route_credit_by_value_pos_;

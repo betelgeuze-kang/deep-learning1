@@ -83,9 +83,15 @@ h5-t retry-source evidence-quality diagnostics stay ancillary in the same way:
 they expose retry-source credit means and reward/slash rates while preserving
 the value-bearing retry path, but they still do not promote jump-neighbor
 replacement.
-h5-u candidate-quality diagnostics stay outside this slice as well: they add
-metric-only logdet/channel/quality-score readouts on value-bearing route-hint
-candidates, not jump-neighbor promotion.
+h5-u candidate-quality logdet/channel/quality-score instrumentation stays
+outside this slice as well: it adds metric-only readouts on value-bearing
+route-hint candidates, not jump-neighbor promotion.
+h5-v weak quality source-ranking application stays outside this slice as well:
+it starts with `route_quality_apply=source-ranking`, stays soft with no hard
+threshold/filter while keeping `candidate value_pos -> value byte read ->
+proposal hint`, and still does not promote jump-neighbor replacement. The
+reference smoke is neutral-to-slight-regression, so it is calibration
+instrumentation rather than a routing win.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -458,6 +464,7 @@ Allowed wording:
 - `source-prior handoff calibration diagnostics`
 - `retry-source evidence-quality instrumentation`
 - `candidate-quality diagnostics`
+- `weak quality source-ranking application diagnostics`
 - `noisy-source policy diagnostics`
 - `source-quality separation instrumentation`
 - `noisy-source scale stability diagnostics`

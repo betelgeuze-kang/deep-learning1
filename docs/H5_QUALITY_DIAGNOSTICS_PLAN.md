@@ -15,9 +15,11 @@ without changing route behavior.
   ```
 
 - Keep jump-neighbor replacement default-off / diagnostic-only.
+- For the first application slice, use soft `route_quality_apply=source-ranking`
+  only; do not use hard threshold/filter.
 - Do not use these metrics to drop candidates in the first slice.
 - Do not claim learned routing, source-credit robustness, fallback robustness,
-  or wrong-candidate robustness solved.
+  or wrong-candidate robustness.
 - Treat `key-shape` as symbolic diagnostic evidence, not learned routing.
 
 ## Slice Order
@@ -30,7 +32,8 @@ Implement three metric-only diagnostics:
 2. Multi-channel Coupling Margin Matrix proxies
 3. Continuous Quality/Credit Score, computed only with `apply=none`
 
-The h5-u acceptance target is instrumentation:
+The h5-u acceptance target is PASS as candidate-quality
+logdet/channel/quality-score instrumentation:
 
 - New CLI flags parse correctly.
 - New CSV columns are populated when diagnostics are enabled.
@@ -39,15 +42,49 @@ The h5-u acceptance target is instrumentation:
 - The value-bearing route path remains populated.
 - `routing_trigger_rate=0` and `active_jump_rate=0`.
 
-### h5-v Weak Quality Application
+### h5-v Weak Quality Application Decision
 
-Only after h5-u shows interpretable signals, test weak application:
+`h5-v` passes as weak quality source-ranking application diagnostics /
+neutral-to-slight-regression. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
 
-- `source-ranking` first.
-- `candidate-weight` second.
-- `strength` last, if needed.
+- `route_quality_apply=source-ranking` is active and uses a bounded soft delta.
+- The live path stays unchanged:
 
-The first application should use a clamp, not a hard threshold.
+  ```text
+  candidate value_pos -> value byte read -> proposal hint
+  ```
+
+- No hard thresholding or hard filtering is used.
+- Jump-neighbor replacement remains default-off / no-go.
+- Candidate-weight and strength remain follow-ups only.
+
+Readout:
+
+```text
+apply-none-source-order:
+  qacc = 0.568750
+  apply_active = 0.000000
+
+source-ranking-b0p10:
+  qacc = 0.560938
+  apply_active = 1.000000
+  source_ranking_delta = 0.227710
+  selected_raw = 0.850000
+  selected_noisy = 0.000000
+
+source-ranking-b0p25:
+  qacc = 0.560938
+  apply_active = 1.000000
+  source_ranking_delta = 0.250000
+  selected_raw = 0.850000
+  selected_noisy = 0.000000
+```
+
+Interpretation:
+source-ranking quality application is wired and avoids noisy retry selection,
+but it slightly lowers qacc in this smoke. Treat it as calibration diagnostics,
+not limited mitigation.
 
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
@@ -129,11 +166,14 @@ channel_weight = 0.1
 
 For h5-u, only `feature-set=value-only` and `apply=none` are valid for behavior.
 The `dynamics` and `full` feature sets are planned follow-ups, not accepted
-by the current h5-u implementation. Other apply modes are reserved for h5-v.
+by the current implementation. h5-v opens only the first weak apply path:
+`source-ranking`, with a bounded soft delta and no hard threshold/filter.
+`candidate-weight` and `strength` remain reserved for later slices.
 
 ## h5-u Decision
 
-The first implementation passes as candidate-quality diagnostics:
+The h5-u slice passes as candidate-quality logdet/channel/quality-score
+instrumentation:
 
 ```text
 quality-off-source-order qacc = 0.645313
@@ -221,6 +261,7 @@ Acceptance:
 
 Allowed:
 
+- `PASS as candidate-quality logdet/channel/quality-score instrumentation`
 - `PASS as candidate-quality diagnostics`
 - `PASS as logdet/channel/quality-score instrumentation`
 - `limited mitigation` only if qacc improves without behavior-changing apply

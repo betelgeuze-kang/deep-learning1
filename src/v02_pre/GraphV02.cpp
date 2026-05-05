@@ -242,6 +242,78 @@ double nearest_rank_quantile(std::vector<double> values, double quantile) {
     return values[std::min(rank > 0 ? rank - 1 : 0, values.size() - 1)];
 }
 
+bool route_quality_source_ranking_apply_active(const V02PreParams& params) {
+    return params.route_quality_apply == "source-ranking" &&
+           params.route_quality_source_ranking_beta > 0.0f;
+}
+
+float route_quality_source_ranking_proxy(
+    const V02PreParams& params,
+    const std::vector<NodeV02>& nodes,
+    const std::vector<int>& positions) {
+    std::array<int, FieldTable::ByteValues> value_counts{};
+    std::array<int, FieldTable::States> hi_counts{};
+    std::array<int, FieldTable::States> lo_counts{};
+    std::vector<std::uint8_t> values;
+    values.reserve(positions.size());
+    for (const int value_pos : positions) {
+        if (value_pos < 0 || value_pos >= params.N) {
+            continue;
+        }
+        const auto value = nodes[static_cast<std::size_t>(value_pos)].input_byte;
+        values.push_back(value);
+        ++value_counts[static_cast<std::size_t>(value)];
+        ++hi_counts[static_cast<std::size_t>(value / FieldTable::States)];
+        ++lo_counts[static_cast<std::size_t>(value % FieldTable::States)];
+    }
+    const int count = static_cast<int>(values.size());
+    if (count <= 0) {
+        return 0.0f;
+    }
+    int top_count = 0;
+    int second_count = 0;
+    double entropy = 0.0;
+    for (const int bucket_count : value_counts) {
+        if (bucket_count <= 0) {
+            continue;
+        }
+        if (bucket_count > top_count) {
+            second_count = top_count;
+            top_count = bucket_count;
+        } else if (bucket_count > second_count) {
+            second_count = bucket_count;
+        }
+        const double p = static_cast<double>(bucket_count) / static_cast<double>(count);
+        entropy -= p * (std::log(p) / std::log(2.0));
+    }
+    const int hi_top_count =
+        *std::max_element(hi_counts.begin(), hi_counts.end());
+    const int lo_top_count =
+        *std::max_element(lo_counts.begin(), lo_counts.end());
+    const double top_share =
+        static_cast<double>(top_count) / static_cast<double>(count);
+    const double vote_margin =
+        static_cast<double>(top_count - second_count) / static_cast<double>(count);
+    const double channel_offdiag =
+        std::abs(static_cast<double>(hi_top_count - lo_top_count)) /
+        static_cast<double>(count);
+    const QualityGramStats gram = candidate_value_gram_stats(
+        values,
+        static_cast<double>(params.route_quality_eps));
+    const double score =
+        static_cast<double>(params.route_quality_vote_margin_weight) *
+            vote_margin +
+        static_cast<double>(params.route_quality_top_share_weight) *
+            top_share -
+        static_cast<double>(params.route_quality_entropy_weight) *
+            entropy -
+        static_cast<double>(params.route_quality_logdet_weight) *
+            gram.logdet_norm -
+        static_cast<double>(params.route_quality_channel_weight) *
+            channel_offdiag;
+    return static_cast<float>(score);
+}
+
 float route_channel_delta(
     const std::string& mode,
     float pull_scale,
@@ -359,6 +431,9 @@ void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
     route_hint_fallback_recovered_.assign(static_cast<std::size_t>(params_.N), false);
     route_hint_retry_used_.assign(static_cast<std::size_t>(params_.N), false);
     route_hint_retry_recovered_.assign(static_cast<std::size_t>(params_.N), false);
+    route_hint_quality_source_ranking_delta_.assign(
+        static_cast<std::size_t>(params_.N),
+        0.0f);
     route_fallback_persist_remaining_.assign(static_cast<std::size_t>(params_.N), 0);
     route_fallback_persist_visits_.assign(static_cast<std::size_t>(params_.N), 0);
     if (route_credit_by_value_pos_.size() != static_cast<std::size_t>(params_.N)) {
@@ -845,8 +920,20 @@ void GraphV02::validate_params() const {
         throw std::runtime_error(
             "route-quality-apply must be one of: none, candidate-weight, source-ranking, strength");
     }
-    if (params_.route_quality_apply != "none") {
-        throw std::runtime_error("h5-u only supports route-quality-apply=none");
+    if (params_.route_quality_apply == "candidate-weight" ||
+        params_.route_quality_apply == "strength") {
+        throw std::runtime_error(
+            "h5-v reserves route-quality-apply=candidate-weight/strength; use none or source-ranking");
+    }
+    if (params_.route_quality_apply == "source-ranking" &&
+        params_.route_source_retry_policy != "source-credit") {
+        throw std::runtime_error(
+            "route-quality-apply=source-ranking requires route-source-retry-policy=source-credit");
+    }
+    if (!std::isfinite(params_.route_quality_source_ranking_beta) ||
+        params_.route_quality_source_ranking_beta < 0.0f) {
+        throw std::runtime_error(
+            "route-quality-source-ranking-beta must be finite and non-negative");
     }
     if (params_.route_quality_eps <= 0.0f) {
         throw std::runtime_error("route-quality-eps must be positive");
@@ -2727,6 +2814,8 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
             std::string source_id;
             float source_credit = 0.0f;
             float source_prior = 0.0f;
+            float quality_delta = 0.0f;
+            float source_score = 0.0f;
             int source_order = 0;
             int rank = 0;
         };
@@ -2741,15 +2830,36 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                     route_source_credit_for_source(query.query_pos, retry_source_id);
                 const std::vector<int> positions =
                     collect_source_positions(retry_source, query);
+                const float quality_proxy =
+                    route_quality_source_ranking_apply_active(params_)
+                        ? route_quality_source_ranking_proxy(params_, nodes_, positions)
+                        : 0.0f;
                 const int limit = std::min(
                     params_.route_source_retry_per_source_limit,
                     static_cast<int>(positions.size()));
                 for (int rank = 0; rank < limit; ++rank) {
+                    const int value_pos = positions[static_cast<std::size_t>(rank)];
+                    const float source_prior =
+                        route_source_retry_prior_for_source(retry_source);
+                    const float quality_delta =
+                        route_quality_source_ranking_apply_active(params_)
+                            ? std::clamp(
+                                  params_.route_quality_source_ranking_beta *
+                                      quality_proxy,
+                                  -0.25f,
+                                  0.25f)
+                            : 0.0f;
+                    const float source_score =
+                        route_quality_source_ranking_apply_active(params_)
+                            ? source_credit + quality_delta
+                            : source_credit;
                     retry_entries.push_back(
-                        {positions[static_cast<std::size_t>(rank)],
+                        {value_pos,
                          retry_source_id,
                          source_credit,
-                         route_source_retry_prior_for_source(retry_source),
+                         source_prior,
+                         quality_delta,
+                         source_score,
                          static_cast<int>(source_index),
                          rank});
                 }
@@ -2759,6 +2869,9 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                 retry_entries.end(),
                 [](const RetryCandidateEntry& lhs,
                    const RetryCandidateEntry& rhs) {
+                    if (lhs.source_score != rhs.source_score) {
+                        return lhs.source_score > rhs.source_score;
+                    }
                     if (lhs.source_credit != rhs.source_credit) {
                         return lhs.source_credit > rhs.source_credit;
                     }
@@ -2780,6 +2893,8 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                      retry_source_id,
                      route_source_credit_for_source(query.query_pos, retry_source_id),
                      0.0f,
+                     0.0f,
+                     route_source_credit_for_source(query.query_pos, retry_source_id),
                      0,
                      rank});
             }
@@ -2794,9 +2909,12 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
         std::vector<int> inserted_positions;
         std::vector<std::string> inserted_keys;
         std::vector<std::string> inserted_sources;
+        std::vector<float> inserted_quality_deltas;
         bool retry_inserted = false;
         bool retry_recovered = false;
-        auto append_position = [&](int value_pos, const std::string& source_id) {
+        auto append_position = [&](int value_pos,
+                                   const std::string& source_id,
+                                   float quality_delta) {
             if (value_pos < 0 || value_pos >= params_.N) {
                 return;
             }
@@ -2810,6 +2928,7 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
             inserted_keys.push_back(
                 route_value_position_keys_[static_cast<std::size_t>(value_pos)]);
             inserted_sources.push_back(source_id);
+            inserted_quality_deltas.push_back(quality_delta);
             if (source_id.rfind("retry-", 0) == 0) {
                 retry_inserted = true;
                 if (query.hit && value_pos == query.value_pos) {
@@ -2823,11 +2942,11 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                 if (value_pos < 0 || value_pos >= params_.N) {
                     continue;
                 }
-                append_position(value_pos, source_id);
+                append_position(value_pos, source_id, 0.0f);
             }
         };
         for (const RetryCandidateEntry& entry : retry_entries) {
-            append_position(entry.value_pos, entry.source_id);
+            append_position(entry.value_pos, entry.source_id, entry.quality_delta);
         }
         append_positions(fallback_positions, fallback_route_source_id());
         if (inserted_positions.empty()) {
@@ -2859,6 +2978,10 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
             candidate_positions_contain_correct(query.query_pos);
         route_hint_retry_used_[query_index] = retry_inserted;
         route_hint_retry_recovered_[query_index] = retry_recovered;
+        if (!inserted_quality_deltas.empty()) {
+            route_hint_quality_source_ranking_delta_[query_index] =
+                inserted_quality_deltas.front();
+        }
     }
 }
 
@@ -3974,6 +4097,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_quality_logdet_sum = 0.0;
     double route_quality_logdet_norm_sum = 0.0;
     double route_quality_condition_sum = 0.0;
+    double route_quality_source_ranking_delta_sum = 0.0;
+    double route_quality_source_ranking_delta_count = 0.0;
     double route_quality_score_sum = 0.0;
     double route_quality_score_correct_sum = 0.0;
     double route_quality_score_correct_count = 0.0;
@@ -4265,6 +4390,13 @@ EpochMetricsV02 GraphV02::collect_metrics(
             }
             const auto& candidate_sources =
                 route_hint_candidate_source_ids_[static_cast<std::size_t>(i)];
+            if (route_quality_source_ranking_apply_active(params_) && retry_used &&
+                !route_hint_quality_source_ranking_delta_.empty()) {
+                route_quality_source_ranking_delta_sum +=
+                    route_hint_quality_source_ranking_delta_[
+                        static_cast<std::size_t>(i)];
+                route_quality_source_ranking_delta_count += 1.0;
+            }
             if (route_source_filter_active()) {
                 bool filter_saw_candidate = false;
                 bool filter_saw_allowed = false;
@@ -5278,6 +5410,24 @@ EpochMetricsV02 GraphV02::collect_metrics(
             route_quality_condition_sum / route_quality_query_count;
         metrics.route_quality_score_mean =
             route_quality_score_sum / route_quality_query_count;
+    }
+    metrics.route_quality_apply_active =
+        route_quality_source_ranking_apply_active(params_) ? 1.0 : 0.0;
+    metrics.route_quality_source_ranking_beta =
+        static_cast<double>(params_.route_quality_source_ranking_beta);
+    if (route_quality_source_ranking_delta_count > 0.0) {
+        metrics.route_quality_source_ranking_delta_mean =
+            route_quality_source_ranking_delta_sum /
+            route_quality_source_ranking_delta_count;
+    }
+    if (route_hint_query_count > 0.0 &&
+        route_quality_source_ranking_apply_active(params_)) {
+        metrics.route_quality_selected_raw_rate =
+            route_source_retry_raw_selected_count / route_hint_query_count;
+        metrics.route_quality_selected_keyshape_rate =
+            route_source_retry_keyshape_selected_count / route_hint_query_count;
+        metrics.route_quality_selected_noisy_rate =
+            route_source_retry_noisy_selected_count / route_hint_query_count;
     }
     if (route_quality_score_correct_count > 0.0) {
         metrics.route_quality_score_correct_mean =

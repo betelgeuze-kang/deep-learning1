@@ -3013,7 +3013,7 @@ it is to choose the better symbolic retry source without a prior.
 
 ## h5-u Candidate-quality Diagnostics Decision
 
-The candidate-quality diagnostics slice passes as logdet/channel/quality-score
+The h5-u slice passes as candidate-quality logdet/channel/quality-score
 instrumentation, but it does not solve learned routing, source-credit
 robustness, wrong-candidate robustness, or fallback robustness.
 
@@ -3055,5 +3055,45 @@ Interpretation:
 fallback/retry recall is not the whole story. Candidate-set geometry and
 channel margin diagnostics can explain quality differences between sources
 without changing the successful `candidate value_pos -> value byte read ->
-proposal hint` path. The next slice may test weak continuous application, but
-hard logdet thresholding and jump-neighbor revival remain forbidden.
+proposal hint` path. The next slice may test weak continuous application with
+`route_quality_apply=source-ranking` first, but hard threshold/filter and
+jump-neighbor revival remain forbidden.
+
+## h5-v Weak Quality Application Decision
+
+The h5-v slice passes as weak quality source-ranking application diagnostics and
+neutral-to-slight-regression. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It starts with `route_quality_apply=source-ranking` and keeps the same
+`candidate value_pos -> value byte read -> proposal hint` path. No hard
+thresholding or hard filtering is used, and `jump-neighbor` remains default-off
+/ no-go.
+
+Reference smoke:
+
+```text
+apply-none-source-order:
+  qacc = 0.568750
+  apply_active = 0.000000
+
+source-ranking-b0p10:
+  qacc = 0.560938
+  apply_active = 1.000000
+  source_ranking_delta = 0.227710
+  selected_raw = 0.850000
+  selected_noisy = 0.000000
+
+source-ranking-b0p25:
+  qacc = 0.560938
+  apply_active = 1.000000
+  source_ranking_delta = 0.250000
+  selected_raw = 0.850000
+  selected_noisy = 0.000000
+```
+
+Interpretation:
+soft source-ranking is wired and avoids noisy retry selection, but the qacc
+readout is neutral-to-slightly worse than apply-none. The useful conclusion is
+calibration: quality metrics can drive source ordering, but the current proxy
+should be tuned before trying candidate-weight or strength application.
