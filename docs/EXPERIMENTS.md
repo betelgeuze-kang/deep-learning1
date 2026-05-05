@@ -2014,3 +2014,58 @@ it is a single-smoke indication that the quality proxy can change the retained
 candidate tail / weighted-vote mixture enough to affect qacc. Next: run
 multi-seed/scale stability for the channel-sign calibration before trying
 candidate-weight or route-strength application.
+
+## h5-y Channel-sign Multi-seed / Scale Stability Decision
+
+`h5-y` passes as channel-sign calibration multi-seed/scale diagnostics and
+weak limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice compares three arms while keeping the value-bearing route path
+unchanged:
+
+```text
+proxy-off:
+  route_quality_apply = none
+
+proxy-default:
+  route_quality_apply = source-ranking
+  channel_weight = +0.1
+
+proxy-channel-sign:
+  route_quality_apply = source-ranking
+  channel_weight = -0.1
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off:
+  qacc_mean = 0.622656
+
+proxy-default:
+  qacc_mean = 0.621094
+  selected_raw_rate_mean = 0.753385
+  selected_noisy_rate_mean = 0.000000
+
+proxy-channel-sign:
+  qacc_mean = 0.636198
+  selected_raw_rate_mean = 0.753385
+  selected_noisy_rate_mean = 0.000000
+  selected_raw_qacc_mean = 0.672334
+```
+
+Interpretation:
+the channel-sign calibration from h5-x is not only a single-row artifact in
+this first scale smoke: it remains better than proxy-default and proxy-off on
+mean qacc while continuing to avoid noisy retry. However, source selection
+does not move toward key-shape; it remains raw-key-centered. Therefore h5-y is
+stability diagnostics and weak limited mitigation, not source selection solved.
+
+Next:
+test source-specific normalization or candidate-level quality application
+before using stronger route-strength modulation.

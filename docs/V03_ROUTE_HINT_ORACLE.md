@@ -3173,3 +3173,45 @@ improves qacc and still avoids noisy retry, but selected source remains raw-key.
 So this is not learned source selection solved; it is a sign that quality proxy
 calibration can change the retained candidate mixture enough to matter. Next:
 multi-seed/scale stability for the channel-sign calibration.
+
+## h5-y Channel-sign Multi-seed / Scale Stability
+
+The h5-y slice passes as channel-sign calibration multi-seed/scale diagnostics
+and weak limited mitigation. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice keeps the route-hint path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off:
+  qacc_mean = 0.622656
+
+proxy-default:
+  qacc_mean = 0.621094
+  selected_raw_rate_mean = 0.753385
+  selected_noisy_rate_mean = 0.000000
+
+proxy-channel-sign:
+  qacc_mean = 0.636198
+  selected_raw_rate_mean = 0.753385
+  selected_keyshape_rate_mean = 0.000000
+  selected_noisy_rate_mean = 0.000000
+  selected_raw_qacc_mean = 0.672334
+```
+
+Interpretation:
+h5-y confirms that the channel-sign proxy calibration is at least stable
+across the first key/seed smoke and still avoids noisy retry. But selected
+source remains raw-key, so this is not source selection solved. The next step
+should test source-specific normalization or candidate-level quality scoring
+before applying quality to route strength.

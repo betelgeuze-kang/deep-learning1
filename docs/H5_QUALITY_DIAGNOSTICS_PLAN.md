@@ -175,6 +175,45 @@ same broad source choice. Treat this as single-smoke limited mitigation and
 diagnostics, not source-credit robustness or learned routing solved. Next:
 multi-seed/scale stability for the channel-sign calibration.
 
+### h5-y Channel-sign Multi-seed / Scale Stability Decision
+
+`h5-y` passes as channel-sign calibration multi-seed/scale diagnostics and
+weak limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It keeps the same safety boundaries:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+jump-neighbor replacement stays inactive
+route_quality_apply is limited to none/source-ranking
+```
+
+Standard smoke:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25
+
+proxy-off qacc_mean          = 0.622656
+proxy-default qacc_mean      = 0.621094
+proxy-channel-sign qacc_mean = 0.636198
+
+proxy-channel-sign:
+  selected_raw_rate_mean = 0.753385
+  selected_keyshape_rate_mean = 0.000000
+  selected_noisy_rate_mean = 0.000000
+  selected_raw_qacc_mean = 0.672334
+```
+
+Interpretation:
+the negative channel term remains useful on the first multi-seed/key smoke and
+does not reintroduce noisy retry selection. But the selected source remains
+raw-key, so h5-y does not solve source selection quality. The next calibration
+target is source-specific normalization or candidate-level quality scoring,
+not stronger route-strength application.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

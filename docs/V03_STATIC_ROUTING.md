@@ -99,6 +99,9 @@ replacement.
 h5-x proxy weight/sign calibration stays in the same category: it reweights or
 sign-flips the same source-quality proxy terms while preserving the
 value-bearing route path and still does not promote jump-neighbor replacement.
+h5-y channel-sign scale diagnostics also stay in the same category: they test
+that calibrated source-quality proxy over several key/seed cells, but still
+only affect value-bearing source ranking and never revive topology replacement.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -450,6 +453,9 @@ Current decision:
   instrumentation; it reweights or sign-flips the source-quality proxy terms
   while preserving `candidate value_pos -> value byte read -> proposal hint`,
   but it still does not promote static neighbor replacement
+- treat h5-y channel-sign multi-seed/scale diagnostics the same way: a soft
+  source-quality calibration over value-bearing route hints, not a static
+  neighbor-routing promotion
 
 Allowed wording:
 
