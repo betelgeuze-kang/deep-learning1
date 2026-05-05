@@ -114,6 +114,9 @@ graph topology, route strength, or jump-neighbor gating.
 h5-ac candidate-weight composition diagnostics remain there as well: the
 combined source/candidate quality mode changes only value-bearing source and
 candidate weights, not static topology.
+h5-ad candidate-only beta/noise scale diagnostics remain there as well:
+candidate quality still only sharpens value-bearing aggregation weights, with
+route strength, graph topology, and jump-neighbor gates unchanged.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -479,6 +482,9 @@ Current decision:
 - treat h5-ac candidate-weight composition diagnostics the same way: source and
   candidate quality weights inside value-bearing route hints, not topology
   replacement or static routing promotion
+- treat h5-ad candidate-only beta/noise scale diagnostics the same way:
+  candidate quality beta calibration inside value-bearing aggregation, not
+  topology replacement, route-strength promotion, or static routing promotion
 
 Allowed wording:
 

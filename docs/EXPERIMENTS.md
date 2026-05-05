@@ -2276,3 +2276,54 @@ combined source-candidate mode is wired and safe, but it does not improve over
 candidate-b0p50 in this smoke. This suggests the immediate next target is
 candidate-only beta/scale stability, not stronger source-ranking composition or
 route-strength modulation.
+
+## h5-ad Candidate-only Beta / Noise Scale Decision
+
+`h5-ad` passes as candidate-only beta/noise scale diagnostics and limited
+mitigation, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds `experiments/run_v05_route_quality_candidate_scale.sh` and
+`experiments/test_v05_route_quality_candidate_scale.sh`. It keeps
+`route_quality_apply=candidate-weight`, does not change route strength, and
+preserves the value-bearing route-hint path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Standard sweep:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.10, 0.25, 0.50
+
+proxy-off qacc_mean        = 0.615799
+candidate-b0p25 qacc_mean  = 0.666580
+candidate-b0p50 qacc_mean  = 0.722222
+candidate-b0p75 qacc_mean  = 0.775434
+```
+
+The candidate-weight separation also scales with beta:
+
+```text
+candidate-b0p25 factor_gap = 0.132544
+candidate-b0p50 factor_gap = 0.265089
+candidate-b0p75 factor_gap = 0.397633
+```
+
+Safety guards:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+candidate-only quality weighting is not merely a single-noise smoke artifact in
+this controlled setting. `beta=0.75` is the best tested point and does not yet
+show over-sharpening. This remains limited mitigation, not learned routing or
+robustness solved. The next step should find the saturation/cap boundary before
+using quality scores for route-strength modulation.

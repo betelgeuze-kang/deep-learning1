@@ -445,6 +445,70 @@ application. Noisy retry selection and jump-neighbor activity remain zero.
 Therefore the next slice should scale candidate-only `beta=0.50` across more
 keys/seeds/noise before making source-composition or route-strength claims.
 
+### h5-ad Candidate-only Beta / Noise Scale Decision
+
+`h5-ad` passes as candidate-only beta/noise scale diagnostics and limited
+mitigation, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_scale.sh
+experiments/test_v05_route_quality_candidate_scale.sh
+```
+
+It keeps the behavior-changing surface narrow:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The standard sweep expands h5-ab/h5-ac over:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.10, 0.25, 0.50
+```
+
+Reference aggregate:
+
+```text
+proxy-off:
+  qacc_mean = 0.615799
+
+candidate-b0p25:
+  qacc_mean = 0.666580
+  factor_gap = 0.132544
+
+candidate-b0p50:
+  qacc_mean = 0.722222
+  factor_gap = 0.265089
+
+candidate-b0p75:
+  qacc_mean = 0.775434
+  factor_gap = 0.397633
+  candidate_weight_gap = 0.266717
+```
+
+All arms preserve the non-topological guard:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+candidate-only quality application remains the cleanest quality path. Within
+the tested bounded factor range, `beta=0.75` continues to improve qacc rather
+than showing an over-sharpening regression. This is still controlled route-hint
+mitigation: qacc remains below the best-candidate diagnostic ceiling, and no
+learned routing or robustness claim is warranted. The next slice should test
+candidate-weight saturation/cap behavior before applying route-quality to route
+strength.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

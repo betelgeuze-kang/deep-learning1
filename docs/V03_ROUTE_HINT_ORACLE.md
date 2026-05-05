@@ -3402,3 +3402,62 @@ path in this smoke. Source-ranking composition is active and avoids noisy
 retry, but it does not add to `candidate-b0p50`. Keep the current conclusion
 narrow: candidate-only quality application is the next scale target; learned
 routing and robustness remain unsolved.
+
+## h5-ad Candidate-only Beta / Noise Scale
+
+The h5-ad slice passes as candidate-only beta/noise scale diagnostics and
+limited mitigation. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_scale.sh
+experiments/test_v05_route_quality_candidate_scale.sh
+```
+
+The route path is unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The standard sweep tests candidate-only quality application over:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.10, 0.25, 0.50
+```
+
+Reference aggregate:
+
+```text
+proxy-off qacc_mean        = 0.615799
+candidate-b0p25 qacc_mean  = 0.666580
+candidate-b0p50 qacc_mean  = 0.722222
+candidate-b0p75 qacc_mean  = 0.775434
+```
+
+`candidate-b0p75` also keeps the expected correctness separation:
+
+```text
+factor_gap = 0.397633
+candidate_weight_gap = 0.266717
+candidate_best_correct_rate = 0.838021
+```
+
+And the safety guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+candidate-only quality application remains the cleanest quality path in the
+current route-hint fixture. Within the tested bounded factor range, increasing
+candidate beta through `0.75` improves qacc rather than over-sharpening. This
+is still controlled limited mitigation and should not be described as learned
+routing or robustness solved.
