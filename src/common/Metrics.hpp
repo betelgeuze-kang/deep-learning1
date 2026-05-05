@@ -238,6 +238,19 @@ struct EpochMetricsV02 {
     double route_hint_correct_value_vote_share_mean = 0.0;
     double route_hint_vote_entropy_mean = 0.0;
     double route_hint_unique_values_mean = 0.0;
+    double route_quality_logdet_mean = 0.0;
+    double route_quality_logdet_norm_mean = 0.0;
+    double route_quality_condition_mean = 0.0;
+    double route_quality_score_mean = 0.0;
+    double route_quality_score_correct_mean = 0.0;
+    double route_quality_score_wrong_mean = 0.0;
+    double route_quality_score_gap = 0.0;
+    double route_channel_tension_det_mean = 0.0;
+    double route_channel_tension_trace_mean = 0.0;
+    double route_channel_tension_offdiag_mean = 0.0;
+    double route_channel_hi_margin_mean = 0.0;
+    double route_channel_lo_margin_mean = 0.0;
+    double route_channel_margin_imbalance_mean = 0.0;
     double key_region_count = 0.0;
     double key_region_joint_decode_acc = 0.0;
     double raw_key_unique_count = 0.0;
@@ -370,7 +383,14 @@ inline std::string v02_csv_header() {
            "route_bucket_load_mean,route_bucket_load_max,route_bucket_collision_rate,"
            "route_hint_vote_candidate_count_mean,route_hint_vote_margin_mean,"
            "route_hint_correct_value_vote_share_mean,route_hint_vote_entropy_mean,"
-           "route_hint_unique_values_mean,key_region_count,key_region_joint_decode_acc,"
+           "route_hint_unique_values_mean,route_quality_logdet_mean,"
+           "route_quality_logdet_norm_mean,route_quality_condition_mean,"
+           "route_quality_score_mean,route_quality_score_correct_mean,"
+           "route_quality_score_wrong_mean,route_quality_score_gap,"
+           "route_channel_tension_det_mean,route_channel_tension_trace_mean,"
+           "route_channel_tension_offdiag_mean,route_channel_hi_margin_mean,"
+           "route_channel_lo_margin_mean,route_channel_margin_imbalance_mean,"
+           "key_region_count,key_region_joint_decode_acc,"
            "raw_key_unique_count,joint_key_unique_count,joint_signature_collision_rate,"
            "joint_vs_raw_candidate_overlap_rate,key_region_route_decode_acc,"
            "route_key_unique_count,route_signature_collision_rate,"
@@ -589,6 +609,19 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_hint_correct_value_vote_share_mean << ','
         << metrics.route_hint_vote_entropy_mean << ','
         << metrics.route_hint_unique_values_mean << ','
+        << metrics.route_quality_logdet_mean << ','
+        << metrics.route_quality_logdet_norm_mean << ','
+        << metrics.route_quality_condition_mean << ','
+        << metrics.route_quality_score_mean << ','
+        << metrics.route_quality_score_correct_mean << ','
+        << metrics.route_quality_score_wrong_mean << ','
+        << metrics.route_quality_score_gap << ','
+        << metrics.route_channel_tension_det_mean << ','
+        << metrics.route_channel_tension_trace_mean << ','
+        << metrics.route_channel_tension_offdiag_mean << ','
+        << metrics.route_channel_hi_margin_mean << ','
+        << metrics.route_channel_lo_margin_mean << ','
+        << metrics.route_channel_margin_imbalance_mean << ','
         << metrics.key_region_count << ','
         << metrics.key_region_joint_decode_acc << ','
         << metrics.raw_key_unique_count << ','

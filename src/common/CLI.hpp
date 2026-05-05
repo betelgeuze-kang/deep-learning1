@@ -356,6 +356,45 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-source-retry-per-source-limit" ||
                    key == "route_source_retry_per_source_limit") {
             params.route_source_retry_per_source_limit = cli_to_int(value, key);
+        } else if (key == "route-quality-diagnostics" ||
+                   key == "route_quality_diagnostics") {
+            params.route_quality_diagnostics = cli_to_int(value, key);
+        } else if (key == "route-quality-feature-set" ||
+                   key == "route_quality_feature_set") {
+            params.route_quality_feature_set = value;
+        } else if (key == "route-quality-apply" || key == "route_quality_apply") {
+            params.route_quality_apply = value;
+        } else if (key == "route-quality-eps" || key == "route_quality_eps") {
+            params.route_quality_eps = cli_to_float(value, key);
+        } else if (key == "route-channel-tension-diagnostics" ||
+                   key == "route_channel_tension_diagnostics") {
+            params.route_channel_tension_diagnostics = cli_to_int(value, key);
+        } else if (key == "route-channel-tension-mode" ||
+                   key == "route_channel_tension_mode") {
+            params.route_channel_tension_mode = value;
+        } else if (key == "route-quality-score" || key == "route_quality_score") {
+            params.route_quality_score = cli_to_int(value, key);
+        } else if (key == "route-quality-logdet-weight" ||
+                   key == "route_quality_logdet_weight") {
+            params.route_quality_logdet_weight = cli_to_float(value, key);
+        } else if (key == "route-quality-entropy-weight" ||
+                   key == "route_quality_entropy_weight") {
+            params.route_quality_entropy_weight = cli_to_float(value, key);
+        } else if (key == "route-quality-vote-margin-weight" ||
+                   key == "route_quality_vote_margin_weight") {
+            params.route_quality_vote_margin_weight = cli_to_float(value, key);
+        } else if (key == "route-quality-top-share-weight" ||
+                   key == "route_quality_top_share_weight") {
+            params.route_quality_top_share_weight = cli_to_float(value, key);
+        } else if (key == "route-quality-source-credit-weight" ||
+                   key == "route_quality_source_credit_weight") {
+            params.route_quality_source_credit_weight = cli_to_float(value, key);
+        } else if (key == "route-quality-edge-credit-weight" ||
+                   key == "route_quality_edge_credit_weight") {
+            params.route_quality_edge_credit_weight = cli_to_float(value, key);
+        } else if (key == "route-quality-channel-weight" ||
+                   key == "route_quality_channel_weight") {
+            params.route_quality_channel_weight = cli_to_float(value, key);
         } else if (key == "route-plasticity-ledger" ||
                    key == "route_plasticity_ledger") {
             params.route_plasticity_ledger = cli_to_int(value, key);
@@ -545,6 +584,20 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-source-retry-prior-warmup-epochs <int>\n"
        << "  --route-source-retry-candidates <csv of raw-key|key-shape|joint-code-key|noisy-route-code>\n"
        << "  --route-source-retry-per-source-limit <int>\n"
+       << "  --route-quality-diagnostics <0|1>\n"
+       << "  --route-quality-feature-set <value-only> (dynamics/full planned)\n"
+       << "  --route-quality-apply <none|candidate-weight|source-ranking|strength>\n"
+       << "  --route-quality-eps <float>\n"
+       << "  --route-channel-tension-diagnostics <0|1>\n"
+       << "  --route-channel-tension-mode <margin>\n"
+       << "  --route-quality-score <0|1>\n"
+       << "  --route-quality-logdet-weight <float>\n"
+       << "  --route-quality-entropy-weight <float>\n"
+       << "  --route-quality-vote-margin-weight <float>\n"
+       << "  --route-quality-top-share-weight <float>\n"
+       << "  --route-quality-source-credit-weight <float>\n"
+       << "  --route-quality-edge-credit-weight <float>\n"
+       << "  --route-quality-channel-weight <float>\n"
        << "  --route-plasticity-ledger <0|1>\n"
        << "  --route-plasticity-ledger-decay <float>\n"
        << "  --route-credit-learn-after-epoch <int>\n"

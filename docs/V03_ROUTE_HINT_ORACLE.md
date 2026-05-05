@@ -3010,3 +3010,50 @@ separate clean retry sources from noisy retry sources, but raw-key and
 key-shape both receive positive credit when selected. Thus h5-t exposes the
 next bottleneck: source-credit evidence still needs richer quality features if
 it is to choose the better symbolic retry source without a prior.
+
+## h5-u Candidate-quality Diagnostics Decision
+
+The candidate-quality diagnostics slice passes as logdet/channel/quality-score
+instrumentation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The implementation is deliberately metric-only. `route_quality_apply=none` is
+required in h5-u, and the smoke confirms no behavior change for the source-order
+control:
+
+```text
+quality-off-source-order qacc = 0.645313
+quality-on-source-order  qacc = 0.645313
+```
+
+The value-bearing route-hint guard remains active:
+
+```text
+route_hint_candidate_lookup_count = 128
+route_hint_value_read_distance_mean > 0
+routing_trigger_rate = 0.000000
+active_jump_rate     = 0.000000
+```
+
+The fixed-source diagnostics expose a candidate-quality gap:
+
+```text
+fixed-raw:
+  qacc = 0.742187
+  logdet = -5.818573
+  condition = 7.050210
+  quality_score = 2.016223
+
+fixed-keyshape:
+  qacc = 0.645313
+  logdet = -15.330912
+  condition = 52.270703
+  quality_score = 0.852792
+```
+
+Interpretation:
+fallback/retry recall is not the whole story. Candidate-set geometry and
+channel margin diagnostics can explain quality differences between sources
+without changing the successful `candidate value_pos -> value byte read ->
+proposal hint` path. The next slice may test weak continuous application, but
+hard logdet thresholding and jump-neighbor revival remain forbidden.

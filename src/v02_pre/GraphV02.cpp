@@ -77,6 +77,80 @@ std::vector<std::string> split_source_list(const std::string& csv) {
     return sources;
 }
 
+struct QualityGramStats {
+    double logdet = 0.0;
+    double logdet_norm = 0.0;
+    double condition = 0.0;
+};
+
+QualityGramStats candidate_value_gram_stats(
+    const std::vector<std::uint8_t>& values,
+    double eps) {
+    QualityGramStats stats;
+    const int k = static_cast<int>(values.size());
+    if (k <= 0) {
+        return stats;
+    }
+    std::vector<double> matrix(static_cast<std::size_t>(k * k), 0.0);
+    for (int row = 0; row < k; ++row) {
+        for (int col = 0; col < k; ++col) {
+            const bool hi_match =
+                (values[static_cast<std::size_t>(row)] / FieldTable::States) ==
+                (values[static_cast<std::size_t>(col)] / FieldTable::States);
+            const bool lo_match =
+                (values[static_cast<std::size_t>(row)] % FieldTable::States) ==
+                (values[static_cast<std::size_t>(col)] % FieldTable::States);
+            matrix[static_cast<std::size_t>(row * k + col)] =
+                (static_cast<double>(hi_match) + static_cast<double>(lo_match)) / 32.0;
+        }
+        matrix[static_cast<std::size_t>(row * k + row)] += eps;
+    }
+
+    double logdet = 0.0;
+    double min_pivot = std::numeric_limits<double>::infinity();
+    double max_pivot = 0.0;
+    for (int pivot_index = 0; pivot_index < k; ++pivot_index) {
+        int best = pivot_index;
+        double best_abs =
+            std::abs(matrix[static_cast<std::size_t>(pivot_index * k + pivot_index)]);
+        for (int row = pivot_index + 1; row < k; ++row) {
+            const double candidate =
+                std::abs(matrix[static_cast<std::size_t>(row * k + pivot_index)]);
+            if (candidate > best_abs) {
+                best = row;
+                best_abs = candidate;
+            }
+        }
+        if (best != pivot_index) {
+            for (int col = 0; col < k; ++col) {
+                std::swap(matrix[static_cast<std::size_t>(pivot_index * k + col)],
+                          matrix[static_cast<std::size_t>(best * k + col)]);
+            }
+        }
+        const double pivot =
+            std::max(std::abs(matrix[static_cast<std::size_t>(pivot_index * k + pivot_index)]),
+                     std::numeric_limits<double>::min());
+        logdet += std::log(pivot);
+        min_pivot = std::min(min_pivot, pivot);
+        max_pivot = std::max(max_pivot, pivot);
+        for (int row = pivot_index + 1; row < k; ++row) {
+            const double factor =
+                matrix[static_cast<std::size_t>(row * k + pivot_index)] /
+                matrix[static_cast<std::size_t>(pivot_index * k + pivot_index)];
+            for (int col = pivot_index + 1; col < k; ++col) {
+                matrix[static_cast<std::size_t>(row * k + col)] -=
+                    factor * matrix[static_cast<std::size_t>(pivot_index * k + col)];
+            }
+        }
+    }
+    stats.logdet = logdet;
+    stats.logdet_norm = logdet / static_cast<double>(k);
+    if (std::isfinite(min_pivot) && min_pivot > 0.0) {
+        stats.condition = max_pivot / min_pivot;
+    }
+    return stats;
+}
+
 std::unordered_map<std::string, float> parse_retry_source_priorities(
     const std::string& csv) {
     std::unordered_map<std::string, float> priorities;
@@ -749,6 +823,43 @@ void GraphV02::validate_params() const {
         split_source_list(params_.route_source_retry_candidates).empty()) {
         throw std::runtime_error(
             "route-source-retry-candidates must be non-empty when route-source-retry-policy=source-credit");
+    }
+    if (params_.route_quality_diagnostics < 0 ||
+        params_.route_quality_diagnostics > 1) {
+        throw std::runtime_error("route-quality-diagnostics must be 0 or 1");
+    }
+    if (params_.route_quality_feature_set != "value-only" &&
+        params_.route_quality_feature_set != "dynamics" &&
+        params_.route_quality_feature_set != "full") {
+        throw std::runtime_error(
+            "route-quality-feature-set must be one of: value-only, dynamics, full");
+    }
+    if (params_.route_quality_feature_set != "value-only") {
+        throw std::runtime_error(
+            "h5-u only supports route-quality-feature-set=value-only");
+    }
+    if (params_.route_quality_apply != "none" &&
+        params_.route_quality_apply != "candidate-weight" &&
+        params_.route_quality_apply != "source-ranking" &&
+        params_.route_quality_apply != "strength") {
+        throw std::runtime_error(
+            "route-quality-apply must be one of: none, candidate-weight, source-ranking, strength");
+    }
+    if (params_.route_quality_apply != "none") {
+        throw std::runtime_error("h5-u only supports route-quality-apply=none");
+    }
+    if (params_.route_quality_eps <= 0.0f) {
+        throw std::runtime_error("route-quality-eps must be positive");
+    }
+    if (params_.route_channel_tension_diagnostics < 0 ||
+        params_.route_channel_tension_diagnostics > 1) {
+        throw std::runtime_error("route-channel-tension-diagnostics must be 0 or 1");
+    }
+    if (params_.route_channel_tension_mode != "margin") {
+        throw std::runtime_error("route-channel-tension-mode must be margin");
+    }
+    if (params_.route_quality_score < 0 || params_.route_quality_score > 1) {
+        throw std::runtime_error("route-quality-score must be 0 or 1");
     }
     if (params_.route_plasticity_ledger < 0 ||
         params_.route_plasticity_ledger > 1) {
@@ -3859,6 +3970,22 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_hint_correct_value_vote_share_sum = 0.0;
     double route_hint_vote_entropy_sum = 0.0;
     double route_hint_unique_values_sum = 0.0;
+    double route_quality_query_count = 0.0;
+    double route_quality_logdet_sum = 0.0;
+    double route_quality_logdet_norm_sum = 0.0;
+    double route_quality_condition_sum = 0.0;
+    double route_quality_score_sum = 0.0;
+    double route_quality_score_correct_sum = 0.0;
+    double route_quality_score_correct_count = 0.0;
+    double route_quality_score_wrong_sum = 0.0;
+    double route_quality_score_wrong_count = 0.0;
+    double route_channel_query_count = 0.0;
+    double route_channel_tension_det_sum = 0.0;
+    double route_channel_tension_trace_sum = 0.0;
+    double route_channel_tension_offdiag_sum = 0.0;
+    double route_channel_hi_margin_sum = 0.0;
+    double route_channel_lo_margin_sum = 0.0;
+    double route_channel_margin_imbalance_sum = 0.0;
     double gate_pass_active_jump_sum = 0.0;
     double jump_filter_node_count = 0.0;
     double jump_candidate_slots_examined_sum = 0.0;
@@ -3925,6 +4052,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 }
                 int valid_vote_count = 0;
                 float vote_weight_sum = 0.0f;
+                std::vector<std::uint8_t> candidate_values;
+                candidate_values.reserve(vote_positions.size());
                 for (std::size_t rank_index = 0; rank_index < vote_positions.size();
                      ++rank_index) {
                     const int value_pos = vote_positions[rank_index];
@@ -3951,6 +4080,7 @@ EpochMetricsV02 GraphV02::collect_metrics(
                     low_votes[static_cast<std::size_t>(value % FieldTable::States)] +=
                         candidate_weight;
                     value_votes[static_cast<std::size_t>(value)] += candidate_weight;
+                    candidate_values.push_back(value);
                     vote_weight_sum += candidate_weight;
                     ++valid_vote_count;
                 }
@@ -3971,21 +4101,28 @@ EpochMetricsV02 GraphV02::collect_metrics(
                                 std::max(low_other, low_votes[static_cast<std::size_t>(state)]);
                         }
                     }
+                    const double hi_margin =
+                        static_cast<double>(
+                            (high_votes[static_cast<std::size_t>(target_high)] -
+                             high_other) /
+                            vote_weight_sum);
+                    const double lo_margin =
+                        static_cast<double>(
+                            (low_votes[static_cast<std::size_t>(target_low)] -
+                             low_other) /
+                            vote_weight_sum);
+                    const double vote_margin = 0.5 * (hi_margin + lo_margin);
                     route_hint_vote_query_count += 1.0;
                     route_hint_vote_candidate_count_sum +=
                         static_cast<double>(valid_vote_count);
-                    route_hint_vote_margin_sum +=
-                        0.5 * static_cast<double>(
-                                  (high_votes[static_cast<std::size_t>(target_high)] -
-                                   high_other +
-                                   low_votes[static_cast<std::size_t>(target_low)] -
-                                   low_other) /
-                                  vote_weight_sum);
+                    route_hint_vote_margin_sum += vote_margin;
                     const auto target_value = node.target_byte;
-                    route_hint_correct_value_vote_share_sum +=
+                    const double top_value_share =
                         static_cast<double>(
                             value_votes[static_cast<std::size_t>(target_value)] /
                             vote_weight_sum);
+                    route_hint_correct_value_vote_share_sum +=
+                        top_value_share;
                     double entropy = 0.0;
                     double unique_values = 0.0;
                     for (float value_vote : value_votes) {
@@ -3999,6 +4136,67 @@ EpochMetricsV02 GraphV02::collect_metrics(
                     }
                     route_hint_vote_entropy_sum += entropy;
                     route_hint_unique_values_sum += unique_values;
+                    const double channel_offdiag = std::abs(hi_margin - lo_margin);
+                    if (params_.route_quality_diagnostics != 0 ||
+                        params_.route_quality_score != 0) {
+                        const QualityGramStats gram = candidate_value_gram_stats(
+                            candidate_values,
+                            static_cast<double>(params_.route_quality_eps));
+                        const double source_credit_proxy =
+                            static_cast<double>(
+                                route_source_credit_weight_for_candidate(
+                                    i, route_hint_value_pos));
+                        const double edge_credit_proxy =
+                            static_cast<double>(
+                                route_credit_weight_for_candidate(
+                                    i, route_hint_value_pos));
+                        const double quality_score =
+                            static_cast<double>(
+                                params_.route_quality_vote_margin_weight) *
+                                vote_margin +
+                            static_cast<double>(
+                                params_.route_quality_top_share_weight) *
+                                top_value_share +
+                            static_cast<double>(
+                                params_.route_quality_source_credit_weight) *
+                                source_credit_proxy +
+                            static_cast<double>(
+                                params_.route_quality_edge_credit_weight) *
+                                edge_credit_proxy -
+                            static_cast<double>(
+                                params_.route_quality_entropy_weight) *
+                                entropy -
+                            static_cast<double>(
+                                params_.route_quality_logdet_weight) *
+                                gram.logdet_norm -
+                            static_cast<double>(
+                                params_.route_quality_channel_weight) *
+                                channel_offdiag;
+                        route_quality_query_count += 1.0;
+                        route_quality_logdet_sum += gram.logdet;
+                        route_quality_logdet_norm_sum += gram.logdet_norm;
+                        route_quality_condition_sum += gram.condition;
+                        route_quality_score_sum += quality_score;
+                        if (route_hint_value == target_value) {
+                            route_quality_score_correct_sum += quality_score;
+                            route_quality_score_correct_count += 1.0;
+                        } else {
+                            route_quality_score_wrong_sum += quality_score;
+                            route_quality_score_wrong_count += 1.0;
+                        }
+                    }
+                    if (params_.route_channel_tension_diagnostics != 0) {
+                        const double trace = hi_margin + lo_margin;
+                        const double det =
+                            hi_margin * lo_margin - channel_offdiag * channel_offdiag;
+                        route_channel_query_count += 1.0;
+                        route_channel_tension_det_sum += det;
+                        route_channel_tension_trace_sum += trace;
+                        route_channel_tension_offdiag_sum += channel_offdiag;
+                        route_channel_hi_margin_sum += hi_margin;
+                        route_channel_lo_margin_sum += lo_margin;
+                        route_channel_margin_imbalance_sum += channel_offdiag;
+                    }
                 }
             }
             if (route_hint_value_pos >= 0 && route_hint_value_pos < params_.N) {
@@ -5070,6 +5268,41 @@ EpochMetricsV02 GraphV02::collect_metrics(
             route_hint_vote_entropy_sum / route_hint_vote_query_count;
         metrics.route_hint_unique_values_mean =
             route_hint_unique_values_sum / route_hint_vote_query_count;
+    }
+    if (route_quality_query_count > 0.0) {
+        metrics.route_quality_logdet_mean =
+            route_quality_logdet_sum / route_quality_query_count;
+        metrics.route_quality_logdet_norm_mean =
+            route_quality_logdet_norm_sum / route_quality_query_count;
+        metrics.route_quality_condition_mean =
+            route_quality_condition_sum / route_quality_query_count;
+        metrics.route_quality_score_mean =
+            route_quality_score_sum / route_quality_query_count;
+    }
+    if (route_quality_score_correct_count > 0.0) {
+        metrics.route_quality_score_correct_mean =
+            route_quality_score_correct_sum / route_quality_score_correct_count;
+    }
+    if (route_quality_score_wrong_count > 0.0) {
+        metrics.route_quality_score_wrong_mean =
+            route_quality_score_wrong_sum / route_quality_score_wrong_count;
+    }
+    metrics.route_quality_score_gap =
+        metrics.route_quality_score_correct_mean -
+        metrics.route_quality_score_wrong_mean;
+    if (route_channel_query_count > 0.0) {
+        metrics.route_channel_tension_det_mean =
+            route_channel_tension_det_sum / route_channel_query_count;
+        metrics.route_channel_tension_trace_mean =
+            route_channel_tension_trace_sum / route_channel_query_count;
+        metrics.route_channel_tension_offdiag_mean =
+            route_channel_tension_offdiag_sum / route_channel_query_count;
+        metrics.route_channel_hi_margin_mean =
+            route_channel_hi_margin_sum / route_channel_query_count;
+        metrics.route_channel_lo_margin_mean =
+            route_channel_lo_margin_sum / route_channel_query_count;
+        metrics.route_channel_margin_imbalance_mean =
+            route_channel_margin_imbalance_sum / route_channel_query_count;
     }
     metrics.kv_record_count = static_cast<double>(kv_record_count_);
     metrics.kv_query_count = static_cast<double>(kv_query_count_);

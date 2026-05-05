@@ -1857,3 +1857,38 @@ noisy source. However, raw-key and key-shape receive the same positive credit
 when each is the selected clean retry source. Therefore source-credit evidence
 currently detects bad/noisy retry sources, but it does not independently rank
 raw-key versus key-shape or close the symbolic source-selection problem.
+
+## h5-u Candidate-quality Diagnostics Decision
+
+`h5-u` passes as candidate-quality logdet/channel/quality-score
+instrumentation. It does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds metric-only candidate-quality diagnostics behind
+`route_quality_apply=none`. The smoke verifies that instrumentation does not
+change behavior: `quality-off-source-order` and `quality-on-source-order` both
+produce `qacc=0.645313`, with `route_hint_candidate_lookup_count=128`,
+positive value-read distance, and `routing_trigger_rate=active_jump_rate=0`.
+
+The diagnostics separate candidate-set quality in the fixed-source arms:
+
+```text
+fixed-raw:
+  qacc = 0.742187
+  route_quality_logdet_mean = -5.818573
+  route_quality_condition_mean = 7.050210
+  route_quality_score_mean = 2.016223
+
+fixed-keyshape:
+  qacc = 0.645313
+  route_quality_logdet_mean = -15.330912
+  route_quality_condition_mean = 52.270703
+  route_quality_score_mean = 0.852792
+```
+
+Interpretation:
+candidate recall and retry source credit are not enough. The fallback/retry
+candidate set has measurable internal quality: value-only Gram logdet,
+condition proxy, channel margin imbalance, and continuous quality score expose
+the raw-key versus key-shape difference in this smoke. These metrics remain
+diagnostic-only and must not be used as hard filters.

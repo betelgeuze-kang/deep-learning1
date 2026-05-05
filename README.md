@@ -280,6 +280,14 @@ Current status:
   evidence-quality instrumentation only: raw-key and key-shape both receive
   positive credit when selected, so source-credit evidence still does not
   independently rank the better symbolic retry source.
+- h5-u adds candidate-quality diagnostics with `route_quality_apply=none`.
+  The smoke keeps behavior unchanged (`quality-off-source-order` and
+  `quality-on-source-order` both `qacc=0.645313`) while exposing candidate-set
+  quality signals. In this diagnostic setup, fixed raw-key separates from
+  fixed key-shape (`qacc=0.742187` vs `0.645313`,
+  `logdet=-5.818573` vs `-15.330912`, condition `7.050210` vs `52.270703`).
+  Read this only as logdet/channel/quality-score instrumentation, not learned
+  routing or robustness solved.
 
 ## Build
 
