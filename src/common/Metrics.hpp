@@ -269,6 +269,10 @@ struct EpochMetricsV02 {
     double route_quality_candidate_weight_factor_correct_mean = 0.0;
     double route_quality_candidate_weight_factor_wrong_mean = 0.0;
     double route_quality_candidate_weight_factor_gap = 0.0;
+    double route_quality_candidate_weight_factor_p90 = 0.0;
+    double route_quality_candidate_weight_factor_max = 0.0;
+    double route_quality_candidate_weight_entropy_mean = 0.0;
+    double route_quality_candidate_weight_top_share_mean = 0.0;
     double route_quality_score_mean = 0.0;
     double route_quality_score_correct_mean = 0.0;
     double route_quality_score_wrong_mean = 0.0;
@@ -439,6 +443,10 @@ inline std::string v02_csv_header() {
            "route_quality_candidate_weight_factor_correct_mean,"
            "route_quality_candidate_weight_factor_wrong_mean,"
            "route_quality_candidate_weight_factor_gap,"
+           "route_quality_candidate_weight_factor_p90,"
+           "route_quality_candidate_weight_factor_max,"
+           "route_quality_candidate_weight_entropy_mean,"
+           "route_quality_candidate_weight_top_share_mean,"
            "route_quality_score_mean,route_quality_score_correct_mean,"
            "route_quality_score_wrong_mean,route_quality_score_gap,"
            "route_channel_tension_det_mean,route_channel_tension_trace_mean,"
@@ -694,6 +702,10 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_quality_candidate_weight_factor_correct_mean << ','
         << metrics.route_quality_candidate_weight_factor_wrong_mean << ','
         << metrics.route_quality_candidate_weight_factor_gap << ','
+        << metrics.route_quality_candidate_weight_factor_p90 << ','
+        << metrics.route_quality_candidate_weight_factor_max << ','
+        << metrics.route_quality_candidate_weight_entropy_mean << ','
+        << metrics.route_quality_candidate_weight_top_share_mean << ','
         << metrics.route_quality_score_mean << ','
         << metrics.route_quality_score_correct_mean << ','
         << metrics.route_quality_score_wrong_mean << ','

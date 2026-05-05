@@ -117,6 +117,9 @@ candidate weights, not static topology.
 h5-ad candidate-only beta/noise scale diagnostics remain there as well:
 candidate quality still only sharpens value-bearing aggregation weights, with
 route strength, graph topology, and jump-neighbor gates unchanged.
+h5-ae candidate-weight saturation/cap diagnostics remain there as well: they
+calibrate bounded candidate-weight sharpening and concentration metrics inside
+value-bearing aggregation only, with no topology or jump-neighbor changes.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -485,6 +488,10 @@ Current decision:
 - treat h5-ad candidate-only beta/noise scale diagnostics the same way:
   candidate quality beta calibration inside value-bearing aggregation, not
   topology replacement, route-strength promotion, or static routing promotion
+- treat h5-ae candidate-weight saturation/cap diagnostics the same way:
+  bounded candidate-weight cap calibration inside value-bearing aggregation,
+  not topology replacement, route-strength promotion, or static routing
+  promotion
 
 Allowed wording:
 

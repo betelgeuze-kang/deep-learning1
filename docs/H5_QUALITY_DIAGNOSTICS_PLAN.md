@@ -509,6 +509,83 @@ learned routing or robustness claim is warranted. The next slice should test
 candidate-weight saturation/cap behavior before applying route-quality to route
 strength.
 
+### h5-ae Candidate-weight Saturation / Cap Decision
+
+`h5-ae` passes as candidate-weight saturation/cap diagnostics and limited
+mitigation, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds concentration metrics for candidate-weight sharpening:
+
+```text
+route_quality_candidate_weight_factor_p90
+route_quality_candidate_weight_factor_max
+route_quality_candidate_weight_entropy_mean
+route_quality_candidate_weight_top_share_mean
+```
+
+It also adds:
+
+```text
+experiments/run_v05_route_quality_candidate_saturation.sh
+experiments/test_v05_route_quality_candidate_saturation.sh
+```
+
+The standard sweep keeps the route path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and tests:
+
+```text
+keys = 128
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+beta = 0.75, 1.00, 1.25, 1.50, 2.00
+cap = 2.0, 3.0, 4.0
+```
+
+Reference aggregate:
+
+```text
+b0p75-cap2/3/4:
+  qacc_mean = 0.867188
+  factor_max = 1.500000
+
+b1p50-cap2/3/4:
+  qacc_mean = 0.913542
+  factor_max = 2.000000
+
+b2p00-cap2:
+  qacc_mean = 0.905729
+  factor_max = 2.000000
+  top_share = 0.558924
+
+b2p00-cap3/4:
+  qacc_mean = 0.922396
+  factor_max = 2.333333
+  top_share = 0.585550
+```
+
+The safety guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the tested range still does not expose an over-sharpening collapse. Instead,
+it exposes a cap boundary: at `beta=2.0`, cap `2.0` clips useful candidate
+separation and underperforms cap `3.0/4.0`. Candidate-weight top share rises
+and entropy falls smoothly as beta increases, while qacc continues to improve.
+The next slice should either test higher beta / larger fixtures for the actual
+over-sharpening boundary or promote the current best candidate-weight setting
+into a broader regression sweep. Route-strength modulation is still premature.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

@@ -3461,3 +3461,71 @@ current route-hint fixture. Within the tested bounded factor range, increasing
 candidate beta through `0.75` improves qacc rather than over-sharpening. This
 is still controlled limited mitigation and should not be described as learned
 routing or robustness solved.
+
+## h5-ae Candidate-weight Saturation / Cap
+
+The h5-ae slice passes as candidate-weight saturation/cap diagnostics and
+limited mitigation. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds candidate-weight concentration diagnostics:
+
+```text
+route_quality_candidate_weight_factor_p90
+route_quality_candidate_weight_factor_max
+route_quality_candidate_weight_entropy_mean
+route_quality_candidate_weight_top_share_mean
+```
+
+and:
+
+```text
+experiments/run_v05_route_quality_candidate_saturation.sh
+experiments/test_v05_route_quality_candidate_saturation.sh
+```
+
+The standard sweep keeps:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and compares:
+
+```text
+keys = 128
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+beta = 0.75, 1.00, 1.25, 1.50, 2.00
+cap = 2.0, 3.0, 4.0
+```
+
+Reference readout:
+
+```text
+b0p75-cap2/3/4 qacc = 0.867188
+b1p50-cap2/3/4 qacc = 0.913542
+b2p00-cap2 qacc     = 0.905729
+b2p00-cap3/4 qacc   = 0.922396
+
+b2p00-cap3/4:
+  factor_p90 = 2.222222
+  factor_max = 2.333333
+  entropy = 1.465697
+  top_share = 0.585550
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h5-ae does not find an over-sharpening collapse in the tested range. It finds
+that cap `2.0` becomes too tight at `beta=2.0`, while cap `3.0/4.0` allows a
+stronger useful separation. This keeps candidate-quality weighting as the
+strongest current quality application path, but still only inside controlled
+route-hint fixtures.

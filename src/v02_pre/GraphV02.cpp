@@ -4384,6 +4384,11 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_quality_candidate_factor_correct_count = 0.0;
     double route_quality_candidate_factor_wrong_sum = 0.0;
     double route_quality_candidate_factor_wrong_count = 0.0;
+    std::vector<double> route_quality_candidate_factors;
+    double route_quality_candidate_factor_max = 0.0;
+    double route_quality_candidate_weight_entropy_sum = 0.0;
+    double route_quality_candidate_weight_top_share_sum = 0.0;
+    double route_quality_candidate_weight_concentration_count = 0.0;
     double route_quality_score_sum = 0.0;
     double route_quality_score_correct_sum = 0.0;
     double route_quality_score_correct_count = 0.0;
@@ -4573,22 +4578,27 @@ EpochMetricsV02 GraphV02::collect_metrics(
                                 static_cast<double>(
                                     candidate_quality.effective_weight /
                                     vote_weight_sum);
-                            route_quality_candidate_factor_sum +=
+                            const double factor =
                                 static_cast<double>(candidate_quality.factor);
+                            route_quality_candidate_factor_sum +=
+                                factor;
                             route_quality_candidate_factor_count += 1.0;
+                            route_quality_candidate_factors.push_back(factor);
+                            route_quality_candidate_factor_max =
+                                std::max(route_quality_candidate_factor_max, factor);
                             if (candidate_quality.value == target_value) {
                                 route_quality_candidate_weight_correct_sum +=
                                     normalized_weight;
                                 route_quality_candidate_weight_correct_count += 1.0;
                                 route_quality_candidate_factor_correct_sum +=
-                                    static_cast<double>(candidate_quality.factor);
+                                    factor;
                                 route_quality_candidate_factor_correct_count += 1.0;
                             } else {
                                 route_quality_candidate_weight_wrong_sum +=
                                     normalized_weight;
                                 route_quality_candidate_weight_wrong_count += 1.0;
                                 route_quality_candidate_factor_wrong_sum +=
-                                    static_cast<double>(candidate_quality.factor);
+                                    factor;
                                 route_quality_candidate_factor_wrong_count += 1.0;
                             }
                             if (candidate_quality.effective_weight >
@@ -4598,6 +4608,23 @@ EpochMetricsV02 GraphV02::collect_metrics(
                                 best_candidate_value = candidate_quality.value;
                             }
                         }
+                        double weight_entropy = 0.0;
+                        double weight_top_share = 0.0;
+                        for (const auto& candidate_quality :
+                             candidate_quality_weights) {
+                            if (candidate_quality.effective_weight <= 0.0f) {
+                                continue;
+                            }
+                            const double p =
+                                static_cast<double>(
+                                    candidate_quality.effective_weight /
+                                    vote_weight_sum);
+                            weight_top_share = std::max(weight_top_share, p);
+                            weight_entropy -= p * (std::log(p) / std::log(2.0));
+                        }
+                        route_quality_candidate_weight_entropy_sum += weight_entropy;
+                        route_quality_candidate_weight_top_share_sum += weight_top_share;
+                        route_quality_candidate_weight_concentration_count += 1.0;
                         if (best_candidate_weight >= 0.0f) {
                             route_quality_candidate_best_correct_sum +=
                                 best_candidate_value == target_value ? 1.0 : 0.0;
@@ -5924,6 +5951,27 @@ EpochMetricsV02 GraphV02::collect_metrics(
     metrics.route_quality_candidate_weight_factor_gap =
         metrics.route_quality_candidate_weight_factor_correct_mean -
         metrics.route_quality_candidate_weight_factor_wrong_mean;
+    if (!route_quality_candidate_factors.empty()) {
+        std::sort(
+            route_quality_candidate_factors.begin(),
+            route_quality_candidate_factors.end());
+        const std::size_t p90_index = static_cast<std::size_t>(
+            std::ceil(0.90 * static_cast<double>(route_quality_candidate_factors.size())) -
+            1.0);
+        metrics.route_quality_candidate_weight_factor_p90 =
+            route_quality_candidate_factors[std::min(
+                p90_index, route_quality_candidate_factors.size() - 1)];
+        metrics.route_quality_candidate_weight_factor_max =
+            route_quality_candidate_factor_max;
+    }
+    if (route_quality_candidate_weight_concentration_count > 0.0) {
+        metrics.route_quality_candidate_weight_entropy_mean =
+            route_quality_candidate_weight_entropy_sum /
+            route_quality_candidate_weight_concentration_count;
+        metrics.route_quality_candidate_weight_top_share_mean =
+            route_quality_candidate_weight_top_share_sum /
+            route_quality_candidate_weight_concentration_count;
+    }
     if (route_quality_score_correct_count > 0.0) {
         metrics.route_quality_score_correct_mean =
             route_quality_score_correct_sum / route_quality_score_correct_count;
