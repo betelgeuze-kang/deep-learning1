@@ -124,6 +124,10 @@ h5-af candidate-quality regression diagnostics remain there as well: they
 promote the best bounded candidate-weight setting into a broader key/seed/noise
 regression sweep while keeping route strength, graph topology, and
 jump-neighbor gates unchanged.
+h5-ag candidate-quality over-sharpen boundary diagnostics remain there as well:
+they increase only bounded candidate-weight beta/cap inside value-bearing
+aggregation and keep route strength, graph topology, and jump-neighbor gates
+unchanged.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -498,6 +502,9 @@ Current decision:
   promotion
 - treat h5-af candidate-quality regression diagnostics the same way: broader
   key/seed/noise regression for bounded candidate weighting, not topology
+  replacement, route-strength promotion, or static routing promotion
+- treat h5-ag candidate-quality over-sharpen boundary diagnostics the same
+  way: higher bounded candidate-weight beta/cap calibration, not topology
   replacement, route-strength promotion, or static routing promotion
 
 Allowed wording:

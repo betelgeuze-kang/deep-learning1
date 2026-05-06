@@ -644,6 +644,63 @@ beta, lowering qacc relative to `cap=3.0`. This is controlled limited
 mitigation inside the value-bearing route-hint path, not learned routing or
 robustness solved.
 
+### h5-ag Candidate-quality Over-sharpen Boundary Decision
+
+`h5-ag` passes as candidate-quality over-sharpen boundary diagnostics and
+limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_boundary.sh
+experiments/test_v05_route_quality_candidate_boundary.sh
+```
+
+The standard sweep keeps:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and tests:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+beta/cap = 2.0/3.0, 2.5/3.0, 2.5/4.0, 3.0/3.0, 3.0/4.0, 3.0/6.0
+```
+
+Reference aggregate:
+
+```text
+b2p00-cap3 qacc_mean   = 0.934896
+b2p50-cap3/4 qacc_mean = 0.942448
+b3p00-cap3/4/6 qacc_mean = 0.947331
+
+b3p00-cap3/4/6:
+  factor_max = 3.000000
+  top_share = 0.615203
+  entropy = 1.389753
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h5-ag still does not find an over-sharpen collapse through `beta=3.0`.
+Instead, qacc continues to improve while entropy decreases and top-share rises
+smoothly. Caps above `3.0` do not change the tested `beta=3.0` rows because the
+observed factor max is already `3.0`. The next boundary test should move beta
+higher, preferably with a full 5-seed guardrail, before any route-strength
+modulation.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

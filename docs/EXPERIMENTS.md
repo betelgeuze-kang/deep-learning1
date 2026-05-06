@@ -2447,3 +2447,53 @@ candidate-quality setting tested across key count and noisy-source rate, while
 cap `2.0` still clips useful separation at high beta. This is limited
 mitigation inside controlled route-hint fixtures, not learned routing or
 robustness solved.
+
+## h5-ag Candidate-quality Over-sharpen Boundary Decision
+
+`h5-ag` passes as candidate-quality over-sharpen boundary diagnostics and
+limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_boundary.sh
+experiments/test_v05_route_quality_candidate_boundary.sh
+```
+
+Standard sweep:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+beta/cap = 2.0/3.0, 2.5/3.0, 2.5/4.0, 3.0/3.0, 3.0/4.0, 3.0/6.0
+```
+
+Readout:
+
+```text
+candidate-b2p00-cap3 qacc_mean     = 0.934896
+candidate-b2p50-cap3/4 qacc_mean   = 0.942448
+candidate-b3p00-cap3/4/6 qacc_mean = 0.947331
+
+candidate-b3p00-cap3/4/6:
+  factor_max = 3.000000
+  top_share = 0.615203
+  entropy = 1.389753
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the tested range still does not expose over-sharpen collapse. `beta=3.0`
+continues to improve qacc over the h5-af `beta=2.0` baseline, and caps
+`3.0/4.0/6.0` are identical because the quality factor max reaches only
+`3.000000`. This is limited mitigation inside controlled route-hint fixtures,
+not learned routing or robustness solved.

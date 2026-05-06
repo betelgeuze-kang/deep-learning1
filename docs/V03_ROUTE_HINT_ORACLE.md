@@ -3589,3 +3589,67 @@ h5-af confirms that the current best candidate-quality setting is
 useful separation at high beta. This remains bounded candidate weighting over
 the value-bearing route-hint path; it is not learned routing, source-credit
 robustness, or wrong-candidate/fallback robustness solved.
+
+## h5-ag Candidate-quality Over-sharpen Boundary
+
+The h5-ag slice passes as candidate-quality over-sharpen boundary diagnostics
+and limited mitigation. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_boundary.sh
+experiments/test_v05_route_quality_candidate_boundary.sh
+```
+
+The route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The standard sweep tests:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+```
+
+Reference aggregate:
+
+```text
+candidate-b2p00-cap3 qacc_mean     = 0.934896
+candidate-b2p50-cap3/4 qacc_mean   = 0.942448
+candidate-b3p00-cap3/4/6 qacc_mean = 0.947331
+```
+
+Concentration moves smoothly:
+
+```text
+b2p00-cap3:
+  factor_max = 2.333333
+  top_share = 0.576942
+  entropy = 1.494419
+
+b3p00-cap3/4/6:
+  factor_max = 3.000000
+  top_share = 0.615203
+  entropy = 1.389753
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h5-ag does not find an over-sharpen collapse through `beta=3.0`; it extends the
+candidate-quality limited mitigation curve. Caps above `3.0` do not matter in
+this range because the observed factor max is already `3.0`. The next safe
+step is a higher-beta or full 5-seed guardrail before considering any
+route-strength modulation.
