@@ -586,6 +586,64 @@ The next slice should either test higher beta / larger fixtures for the actual
 over-sharpening boundary or promote the current best candidate-weight setting
 into a broader regression sweep. Route-strength modulation is still premature.
 
+### h5-af Candidate-quality Regression / Scale Decision
+
+`h5-af` passes as candidate-quality best-setting scale regression diagnostics
+and limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_regression.sh
+experiments/test_v05_route_quality_candidate_regression.sh
+```
+
+The standard sweep keeps the route path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and tests the h5-ae best-setting family over:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+arms = proxy-off, b0.75/cap2, b1.5/cap2, b2.0/cap2, b2.0/cap3
+```
+
+Reference aggregate:
+
+```text
+proxy-off qacc_mean              = 0.637153
+candidate-b0p75-cap2 qacc_mean   = 0.800478
+candidate-b1p50-cap2 qacc_mean   = 0.854948
+candidate-b2p00-cap2 qacc_mean   = 0.843620
+candidate-b2p00-cap3 qacc_mean   = 0.869965
+
+candidate-b2p00-cap3:
+  factor_max = 2.333333
+  top_share = 0.603140
+```
+
+The guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the h5-ae best-setting pattern scales across the tested key/seed/noise grid.
+`beta=2.0, cap=3.0` is the best tested regression arm and wins every
+key/noise bucket in the standard sweep. Cap `2.0` remains too tight at high
+beta, lowering qacc relative to `cap=3.0`. This is controlled limited
+mitigation inside the value-bearing route-hint path, not learned routing or
+robustness solved.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

@@ -2388,3 +2388,62 @@ through `beta=2.0` when the cap is not too tight. The first boundary observed
 is not over-sharpening but clipping: cap `2.0` suppresses the best `beta=2.0`
 setting relative to cap `3.0/4.0`. This is still limited mitigation in
 route-hint fixtures, not learned routing or robustness solved.
+
+## h5-af Candidate-quality Regression / Scale Decision
+
+`h5-af` passes as candidate-quality best-setting scale regression diagnostics
+and limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds the runner/test pair:
+
+```text
+experiments/run_v05_route_quality_candidate_regression.sh
+experiments/test_v05_route_quality_candidate_regression.sh
+```
+
+Standard sweep:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+arms = proxy-off, b0.75/cap2, b1.5/cap2, b2.0/cap2, b2.0/cap3
+```
+
+Readout:
+
+```text
+proxy-off qacc_mean              = 0.637153
+candidate-b0p75-cap2 qacc_mean   = 0.800478
+candidate-b1p50-cap2 qacc_mean   = 0.854948
+candidate-b2p00-cap2 qacc_mean   = 0.843620
+candidate-b2p00-cap3 qacc_mean   = 0.869965
+```
+
+`candidate-b2p00-cap3` is the best tested arm in every key/noise bucket:
+
+```text
+k64  n0.25 qacc = 0.741667
+k64  n0.50 qacc = 0.738542
+k128 n0.25 qacc = 0.925000
+k128 n0.50 qacc = 0.919792
+k256 n0.25 qacc = 0.958073
+k256 n0.50 qacc = 0.936719
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the h5-ae best-setting pattern is not just a 128-key saturation artifact in
+this standard regression sweep. `beta=2.0, cap=3.0` remains the strongest
+candidate-quality setting tested across key count and noisy-source rate, while
+cap `2.0` still clips useful separation at high beta. This is limited
+mitigation inside controlled route-hint fixtures, not learned routing or
+robustness solved.

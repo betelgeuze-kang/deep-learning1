@@ -3529,3 +3529,63 @@ that cap `2.0` becomes too tight at `beta=2.0`, while cap `3.0/4.0` allows a
 stronger useful separation. This keeps candidate-quality weighting as the
 strongest current quality application path, but still only inside controlled
 route-hint fixtures.
+
+## h5-af Candidate-quality Regression / Scale
+
+The h5-af slice passes as candidate-quality best-setting scale regression
+diagnostics and limited mitigation. It does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_regression.sh
+experiments/test_v05_route_quality_candidate_regression.sh
+```
+
+The route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The standard sweep tests:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+```
+
+Reference aggregate:
+
+```text
+proxy-off qacc_mean              = 0.637153
+candidate-b0p75-cap2 qacc_mean   = 0.800478
+candidate-b1p50-cap2 qacc_mean   = 0.854948
+candidate-b2p00-cap2 qacc_mean   = 0.843620
+candidate-b2p00-cap3 qacc_mean   = 0.869965
+```
+
+`candidate-b2p00-cap3` is also best in every tested key/noise bucket, including
+the larger 256-key rows:
+
+```text
+k256 n0.25 qacc = 0.958073
+k256 n0.50 qacc = 0.936719
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h5-af confirms that the current best candidate-quality setting is
+`beta=2.0, cap=3.0` in the tested regression grid. The lower cap `2.0` clips
+useful separation at high beta. This remains bounded candidate weighting over
+the value-bearing route-hint path; it is not learned routing, source-credit
+robustness, or wrong-candidate/fallback robustness solved.
