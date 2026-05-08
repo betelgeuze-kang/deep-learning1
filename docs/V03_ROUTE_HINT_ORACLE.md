@@ -3783,3 +3783,68 @@ improve over cap `8.0` because the observed factor max is already `6.333333`.
 The finding remains a bounded candidate-weighting result over the
 value-bearing route-hint path. Rising concentration and wrong hint strength
 make this a boundary diagnostic, not learned routing or robustness solved.
+
+## h5-aj Ultra-beta Candidate-quality Plateau
+
+The h5-aj slice passes as ultra-beta candidate-quality plateau/boundary
+diagnostics and limited mitigation. It does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_ultra_beta.sh
+experiments/test_v05_route_quality_candidate_ultra_beta.sh
+```
+
+The route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The standard sweep tests:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+```
+
+Reference aggregate:
+
+```text
+candidate-b8p00-cap8 qacc_mean       = 0.957813
+candidate-b10p00-cap10/12 qacc_mean  = 0.957813
+candidate-b12p00-cap12/16 qacc_mean  = 0.958008
+```
+
+Concentration continues to rise:
+
+```text
+b8p00-cap8:
+  factor_max = 6.333333
+  top_share = 0.689736
+  entropy = 1.157891
+
+b12p00-cap12/16:
+  factor_max = 9.000000
+  top_share = 0.713297
+  entropy = 1.069426
+  wrong_strength = 7.697217
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h5-aj still does not expose over-sharpen collapse through `beta=12.0`, but it
+does show a practical plateau. The `beta=12.0` arm improves aggregate qacc by
+only `0.000195` over `beta=8.0`, while candidate concentration continues to
+increase. The finding remains bounded candidate-weighting diagnostics over the
+value-bearing route-hint path, not learned routing or robustness solved.

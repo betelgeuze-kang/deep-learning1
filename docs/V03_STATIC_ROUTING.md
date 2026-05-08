@@ -134,6 +134,9 @@ route strength, graph topology, or jump-neighbor gates.
 h5-ai extreme-beta candidate-quality boundary diagnostics remain there as well:
 they push only bounded candidate-weight beta/cap higher while keeping route
 strength, graph topology, and jump-neighbor gates unchanged.
+h5-aj ultra-beta candidate-quality plateau/boundary diagnostics remain there as
+well: they continue only bounded candidate-weight beta/cap calibration and keep
+route strength, graph topology, and jump-neighbor gates unchanged.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -517,6 +520,9 @@ Current decision:
   replacement, route-strength promotion, or static routing promotion
 - treat h5-ai extreme-beta candidate-quality boundary diagnostics the same way:
   higher bounded candidate-weight beta/cap boundary calibration, not topology
+  replacement, route-strength promotion, or static routing promotion
+- treat h5-aj ultra-beta candidate-quality plateau/boundary diagnostics the
+  same way: bounded candidate-weight plateau calibration, not topology
   replacement, route-strength promotion, or static routing promotion
 
 Allowed wording:

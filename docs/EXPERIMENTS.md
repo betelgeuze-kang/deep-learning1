@@ -2599,3 +2599,55 @@ with cap `8.0/12.0` is the best tested setting, while cap `12.0` does not
 improve over cap `8.0` because the observed factor max is already `6.333333`.
 Concentration and wrong hint strength rise, so this is a boundary diagnostic
 and limited mitigation, not learned routing or robustness solved.
+
+## h5-aj Ultra-beta Candidate-quality Plateau Decision
+
+`h5-aj` passes as ultra-beta candidate-quality plateau/boundary diagnostics
+and limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_ultra_beta.sh
+experiments/test_v05_route_quality_candidate_ultra_beta.sh
+```
+
+Standard sweep:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+beta/cap = 8.0/8.0, 10.0/10.0, 10.0/12.0,
+           12.0/12.0, 12.0/16.0
+```
+
+Readout:
+
+```text
+candidate-b8p00-cap8 qacc_mean       = 0.957813
+candidate-b10p00-cap10/12 qacc_mean  = 0.957813
+candidate-b12p00-cap12/16 qacc_mean  = 0.958008
+
+candidate-b12p00-cap12/16:
+  factor_max = 9.000000
+  top_share = 0.713297
+  entropy = 1.069426
+  wrong_strength = 7.697217
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the ultra-beta sweep still does not find over-sharpen collapse through
+`beta=12.0`, but the curve is effectively plateaued. The `beta=12.0` arm
+improves aggregate qacc by only `0.000195` over `beta=8.0`, while
+concentration continues to rise. This is bounded candidate-weight
+plateau/boundary diagnostics, not learned routing or robustness solved.
