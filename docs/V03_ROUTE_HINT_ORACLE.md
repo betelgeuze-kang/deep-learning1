@@ -3653,3 +3653,67 @@ candidate-quality limited mitigation curve. Caps above `3.0` do not matter in
 this range because the observed factor max is already `3.0`. The next safe
 step is a higher-beta or full 5-seed guardrail before considering any
 route-strength modulation.
+
+## h5-ah High-beta Candidate-quality Boundary
+
+The h5-ah slice passes as high-beta candidate-quality boundary diagnostics and
+limited mitigation. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_high_beta.sh
+experiments/test_v05_route_quality_candidate_high_beta.sh
+```
+
+The route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The standard sweep tests:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+```
+
+Reference aggregate:
+
+```text
+candidate-b3p00-cap3 qacc_mean   = 0.947331
+candidate-b4p00-cap4/6 qacc_mean = 0.950781
+candidate-b5p00-cap4 qacc_mean   = 0.950195
+candidate-b5p00-cap6/8 qacc_mean = 0.952669
+```
+
+Concentration increases but remains controlled:
+
+```text
+b3p00-cap3:
+  factor_max = 3.000000
+  top_share = 0.615203
+  entropy = 1.389753
+
+b5p00-cap6/8:
+  factor_max = 4.333333
+  top_share = 0.656368
+  entropy = 1.269519
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h5-ah still does not expose over-sharpen collapse through `beta=5.0`. The
+highest tested useful setting is `beta=5.0, cap=6.0/8.0`; cap `4.0` slightly
+clips this beta. The finding remains a bounded candidate-weighting result over
+the value-bearing route-hint path, not learned routing or robustness solved.

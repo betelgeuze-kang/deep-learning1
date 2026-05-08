@@ -701,6 +701,64 @@ observed factor max is already `3.0`. The next boundary test should move beta
 higher, preferably with a full 5-seed guardrail, before any route-strength
 modulation.
 
+### h5-ah High-beta Candidate-quality Boundary Decision
+
+`h5-ah` passes as high-beta candidate-quality boundary diagnostics and limited
+mitigation, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_high_beta.sh
+experiments/test_v05_route_quality_candidate_high_beta.sh
+```
+
+The standard sweep keeps:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and tests:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+beta/cap = 3.0/3.0, 4.0/4.0, 4.0/6.0, 5.0/4.0, 5.0/6.0, 5.0/8.0
+```
+
+Reference aggregate:
+
+```text
+b3p00-cap3 qacc_mean   = 0.947331
+b4p00-cap4/6 qacc_mean = 0.950781
+b5p00-cap4 qacc_mean   = 0.950195
+b5p00-cap6/8 qacc_mean = 0.952669
+
+b5p00-cap6/8:
+  factor_max = 4.333333
+  top_share = 0.656368
+  entropy = 1.269519
+```
+
+The guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h5-ah still does not expose an over-sharpen collapse through `beta=5.0`.
+The best tested arm is `beta=5.0, cap=6.0/8.0`. Cap `4.0` slightly clips the
+strongest beta, while cap `6.0` and `8.0` tie because the observed factor max
+is `4.333333`. Candidate-weight sharpening remains the strongest current
+quality application path, but the result is still controlled limited
+mitigation and should not be promoted to learned routing or robustness solved.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:

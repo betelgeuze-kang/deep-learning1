@@ -128,6 +128,9 @@ h5-ag candidate-quality over-sharpen boundary diagnostics remain there as well:
 they increase only bounded candidate-weight beta/cap inside value-bearing
 aggregation and keep route strength, graph topology, and jump-neighbor gates
 unchanged.
+h5-ah high-beta candidate-quality boundary diagnostics remain there as well:
+they continue the bounded candidate-weight beta/cap sweep without changing
+route strength, graph topology, or jump-neighbor gates.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -505,6 +508,9 @@ Current decision:
   replacement, route-strength promotion, or static routing promotion
 - treat h5-ag candidate-quality over-sharpen boundary diagnostics the same
   way: higher bounded candidate-weight beta/cap calibration, not topology
+  replacement, route-strength promotion, or static routing promotion
+- treat h5-ah high-beta candidate-quality boundary diagnostics the same way:
+  continued bounded candidate-weight beta/cap calibration, not topology
   replacement, route-strength promotion, or static routing promotion
 
 Allowed wording:

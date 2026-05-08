@@ -2497,3 +2497,53 @@ continues to improve qacc over the h5-af `beta=2.0` baseline, and caps
 `3.0/4.0/6.0` are identical because the quality factor max reaches only
 `3.000000`. This is limited mitigation inside controlled route-hint fixtures,
 not learned routing or robustness solved.
+
+## h5-ah High-beta Candidate-quality Boundary Decision
+
+`h5-ah` passes as high-beta candidate-quality boundary diagnostics and limited
+mitigation, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_high_beta.sh
+experiments/test_v05_route_quality_candidate_high_beta.sh
+```
+
+Standard sweep:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+beta/cap = 3.0/3.0, 4.0/4.0, 4.0/6.0, 5.0/4.0, 5.0/6.0, 5.0/8.0
+```
+
+Readout:
+
+```text
+candidate-b3p00-cap3 qacc_mean   = 0.947331
+candidate-b4p00-cap4/6 qacc_mean = 0.950781
+candidate-b5p00-cap4 qacc_mean   = 0.950195
+candidate-b5p00-cap6/8 qacc_mean = 0.952669
+
+candidate-b5p00-cap6/8:
+  factor_max = 4.333333
+  top_share = 0.656368
+  entropy = 1.269519
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the high-beta sweep still does not find over-sharpen collapse. `beta=5.0`
+with cap `6.0/8.0` is the best tested setting, while cap `4.0` slightly clips
+the same beta. This remains bounded candidate weighting inside controlled
+route-hint fixtures, not learned routing or robustness solved.
