@@ -3717,3 +3717,69 @@ h5-ah still does not expose over-sharpen collapse through `beta=5.0`. The
 highest tested useful setting is `beta=5.0, cap=6.0/8.0`; cap `4.0` slightly
 clips this beta. The finding remains a bounded candidate-weighting result over
 the value-bearing route-hint path, not learned routing or robustness solved.
+
+## h5-ai Extreme-beta Candidate-quality Boundary
+
+The h5-ai slice passes as extreme-beta candidate-quality boundary diagnostics
+and limited mitigation. It does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_extreme_beta.sh
+experiments/test_v05_route_quality_candidate_extreme_beta.sh
+```
+
+The route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The standard sweep tests:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+```
+
+Reference aggregate:
+
+```text
+candidate-b5p00-cap6 qacc_mean       = 0.952669
+candidate-b6p00-cap6/8/12 qacc_mean  = 0.956250
+candidate-b8p00-cap8/12 qacc_mean    = 0.957813
+```
+
+Concentration increases but no collapse appears:
+
+```text
+b5p00-cap6:
+  factor_max = 4.333333
+  top_share = 0.656368
+  entropy = 1.269519
+
+b8p00-cap8/12:
+  factor_max = 6.333333
+  top_share = 0.689736
+  entropy = 1.157891
+  wrong_strength = 7.690873
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h5-ai still does not expose over-sharpen collapse through `beta=8.0`. The
+highest tested useful setting is `beta=8.0, cap=8.0/12.0`; cap `12.0` does not
+improve over cap `8.0` because the observed factor max is already `6.333333`.
+The finding remains a bounded candidate-weighting result over the
+value-bearing route-hint path. Rising concentration and wrong hint strength
+make this a boundary diagnostic, not learned routing or robustness solved.

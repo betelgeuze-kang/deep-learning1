@@ -2547,3 +2547,55 @@ the high-beta sweep still does not find over-sharpen collapse. `beta=5.0`
 with cap `6.0/8.0` is the best tested setting, while cap `4.0` slightly clips
 the same beta. This remains bounded candidate weighting inside controlled
 route-hint fixtures, not learned routing or robustness solved.
+
+## h5-ai Extreme-beta Candidate-quality Boundary Decision
+
+`h5-ai` passes as extreme-beta candidate-quality boundary diagnostics and
+limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_extreme_beta.sh
+experiments/test_v05_route_quality_candidate_extreme_beta.sh
+```
+
+Standard sweep:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+beta/cap = 5.0/6.0, 6.0/6.0, 6.0/8.0, 6.0/12.0,
+           8.0/8.0, 8.0/12.0
+```
+
+Readout:
+
+```text
+candidate-b5p00-cap6 qacc_mean       = 0.952669
+candidate-b6p00-cap6/8/12 qacc_mean  = 0.956250
+candidate-b8p00-cap8/12 qacc_mean    = 0.957813
+
+candidate-b8p00-cap8/12:
+  factor_max = 6.333333
+  top_share = 0.689736
+  entropy = 1.157891
+  wrong_strength = 7.690873
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the extreme-beta sweep still does not find over-sharpen collapse. `beta=8.0`
+with cap `8.0/12.0` is the best tested setting, while cap `12.0` does not
+improve over cap `8.0` because the observed factor max is already `6.333333`.
+Concentration and wrong hint strength rise, so this is a boundary diagnostic
+and limited mitigation, not learned routing or robustness solved.

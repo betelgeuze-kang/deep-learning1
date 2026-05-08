@@ -759,6 +759,66 @@ is `4.333333`. Candidate-weight sharpening remains the strongest current
 quality application path, but the result is still controlled limited
 mitigation and should not be promoted to learned routing or robustness solved.
 
+### h5-ai Extreme-beta Candidate-quality Boundary Decision
+
+`h5-ai` passes as extreme-beta candidate-quality boundary diagnostics and
+limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_extreme_beta.sh
+experiments/test_v05_route_quality_candidate_extreme_beta.sh
+```
+
+The standard sweep keeps the route path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and tests:
+
+```text
+keys = 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+beta/cap = 5.0/6.0, 6.0/6.0, 6.0/8.0, 6.0/12.0,
+           8.0/8.0, 8.0/12.0
+```
+
+Reference aggregate:
+
+```text
+candidate-b5p00-cap6 qacc_mean       = 0.952669
+candidate-b6p00-cap6/8/12 qacc_mean  = 0.956250
+candidate-b8p00-cap8/12 qacc_mean    = 0.957813
+
+candidate-b8p00-cap8/12:
+  factor_max = 6.333333
+  top_share = 0.689736
+  entropy = 1.157891
+  wrong_strength = 7.690873
+```
+
+The guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h5-ai still does not expose an over-sharpen collapse through `beta=8.0`.
+The best tested arm is `beta=8.0, cap=8.0/12.0`; cap `12.0` does not improve
+over cap `8.0` because the observed factor max is already `6.333333`.
+Candidate-weight sharpening remains useful, but concentration and wrong hint
+strength rise with beta. Treat this as an extreme-beta boundary diagnostic and
+limited mitigation inside controlled value-bearing route-hint fixtures, not as
+learned routing or robustness solved.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:
