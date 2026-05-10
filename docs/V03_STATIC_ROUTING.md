@@ -137,6 +137,9 @@ strength, graph topology, and jump-neighbor gates unchanged.
 h5-aj ultra-beta candidate-quality plateau/boundary diagnostics remain there as
 well: they continue only bounded candidate-weight beta/cap calibration and keep
 route strength, graph topology, and jump-neighbor gates unchanged.
+h5-ak candidate-quality guardrail selection diagnostics remain there as well:
+they compare bounded candidate-weight settings over key/seed/noise guardrails
+without changing route strength, graph topology, or jump-neighbor gates.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -524,6 +527,9 @@ Current decision:
 - treat h5-aj ultra-beta candidate-quality plateau/boundary diagnostics the
   same way: bounded candidate-weight plateau calibration, not topology
   replacement, route-strength promotion, or static routing promotion
+- treat h5-ak candidate-quality guardrail selection diagnostics the same way:
+  safe bounded candidate-weight setting selection, not topology replacement,
+  route-strength promotion, or static routing promotion
 
 Allowed wording:
 

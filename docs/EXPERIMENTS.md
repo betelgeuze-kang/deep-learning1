@@ -2651,3 +2651,59 @@ the ultra-beta sweep still does not find over-sharpen collapse through
 improves aggregate qacc by only `0.000195` over `beta=8.0`, while
 concentration continues to rise. This is bounded candidate-weight
 plateau/boundary diagnostics, not learned routing or robustness solved.
+
+## h5-ak Candidate-quality Guardrail Selection Decision
+
+`h5-ak` passes as candidate-quality guardrail selection diagnostics, but it
+does not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_guardrail.sh
+experiments/test_v05_route_quality_candidate_guardrail.sh
+```
+
+Standard guardrail:
+
+```text
+keys = 64, 128, 256
+seeds = 1..5
+noisy_source_rate = 0.10, 0.25, 0.50
+beta/cap = 8.0/8.0, 12.0/12.0
+```
+
+Readout:
+
+```text
+candidate-b8p00-cap8:
+  qacc_mean = 0.885747
+  qacc_std = 0.110010
+  factor_max = 6.333333
+  top_share = 0.718199
+  entropy = 1.064693
+  wrong_strength = 5.852729
+
+candidate-b12p00-cap12:
+  qacc_mean = 0.885573
+  qacc_std = 0.109432
+  factor_max = 9.000000
+  top_share = 0.741223
+  entropy = 0.979652
+  wrong_strength = 5.951053
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the 5-seed/key/noise guardrail selects `beta=8.0, cap=8.0` as the safer
+bounded candidate-weight setting. It slightly beats `beta=12.0, cap=12.0` on
+aggregate qacc and has lower concentration and wrong hint strength. This is a
+guardrail selection result, not learned routing or robustness solved.

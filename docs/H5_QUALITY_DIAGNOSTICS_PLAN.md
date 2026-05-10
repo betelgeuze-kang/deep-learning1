@@ -879,6 +879,70 @@ observed factor max is already `9.000000`. Treat this as plateau/boundary
 diagnostics for bounded candidate weighting, not as learned routing or
 robustness solved.
 
+### h5-ak Candidate-quality Guardrail Selection Decision
+
+`h5-ak` passes as candidate-quality guardrail selection diagnostics, but it
+does not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_guardrail.sh
+experiments/test_v05_route_quality_candidate_guardrail.sh
+```
+
+The standard guardrail keeps the route path unchanged:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and compares only the plateau candidates:
+
+```text
+keys = 64, 128, 256
+seeds = 1..5
+noisy_source_rate = 0.10, 0.25, 0.50
+beta/cap = 8.0/8.0, 12.0/12.0
+```
+
+Reference aggregate:
+
+```text
+candidate-b8p00-cap8:
+  qacc_mean = 0.885747
+  qacc_std = 0.110010
+  factor_max = 6.333333
+  top_share = 0.718199
+  entropy = 1.064693
+  wrong_strength = 5.852729
+
+candidate-b12p00-cap12:
+  qacc_mean = 0.885573
+  qacc_std = 0.109432
+  factor_max = 9.000000
+  top_share = 0.741223
+  entropy = 0.979652
+  wrong_strength = 5.951053
+```
+
+The guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the broader guardrail reverses the tiny h5-aj advantage of `beta=12.0`.
+`beta=8.0, cap=8.0` has slightly better aggregate qacc and lower concentration
+and wrong hint strength. The current safe bounded candidate-weight setting is
+therefore `beta=8.0, cap=8.0`. This is a guardrail selection result inside
+controlled value-bearing route-hint fixtures, not learned routing or
+robustness solved.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:
