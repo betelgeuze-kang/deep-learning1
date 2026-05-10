@@ -2707,3 +2707,53 @@ the 5-seed/key/noise guardrail selects `beta=8.0, cap=8.0` as the safer
 bounded candidate-weight setting. It slightly beats `beta=12.0, cap=12.0` on
 aggregate qacc and has lower concentration and wrong hint strength. This is a
 guardrail selection result, not learned routing or robustness solved.
+
+## h5-al Candidate-quality Safe-default Application Decision
+
+`h5-al` passes as candidate-quality safe-default application diagnostics and
+limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_default.sh
+experiments/test_v05_route_quality_candidate_default.sh
+```
+
+Standard comparison:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.10, 0.25, 0.50
+arms = proxy-off, candidate-default, source-candidate-default
+```
+
+Readout:
+
+```text
+proxy-off qacc_mean                 = 0.646962
+candidate-default qacc_mean         = 0.886429
+source-candidate-default qacc_mean  = 0.884896
+
+candidate-default:
+  factor_max = 6.333333
+  top_share = 0.720014
+  entropy = 1.057869
+  wrong_strength = 6.224125
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+`route_quality_apply=candidate-weight` with `beta=8.0, cap=8.0` is the current
+safe default quality-application arm. Combining source-ranking with
+candidate-weight is wired, but it does not beat candidate-only in this default
+check, so source-candidate is not promoted.

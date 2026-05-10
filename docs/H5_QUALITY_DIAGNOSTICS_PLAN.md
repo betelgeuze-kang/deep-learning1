@@ -943,6 +943,64 @@ therefore `beta=8.0, cap=8.0`. This is a guardrail selection result inside
 controlled value-bearing route-hint fixtures, not learned routing or
 robustness solved.
 
+### h5-al Candidate-quality Safe-default Application Decision
+
+`h5-al` passes as candidate-quality safe-default application diagnostics and
+limited mitigation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_default.sh
+experiments/test_v05_route_quality_candidate_default.sh
+```
+
+The standard default check compares three arms over `keys=64,128,256`, seeds
+`1..3`, and noisy source rates `0.10,0.25,0.50`:
+
+```text
+proxy-off
+candidate-default: beta=8.0, cap=8.0
+source-candidate-default: source_beta=0.10, beta=8.0, cap=8.0
+```
+
+Reference aggregate:
+
+```text
+proxy-off:
+  qacc_mean = 0.646962
+
+candidate-default:
+  qacc_mean = 0.886429
+  factor_max = 6.333333
+  top_share = 0.720014
+  entropy = 1.057869
+  wrong_strength = 6.224125
+
+source-candidate-default:
+  qacc_mean = 0.884896
+  factor_max = 6.333333
+  top_share = 0.720014
+  entropy = 1.057869
+  wrong_strength = 6.140892
+```
+
+The guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the h5-ak guardrail setting transfers cleanly into a default application check.
+`candidate-weight` with `beta=8.0, cap=8.0` gives a large lift over proxy-off
+and slightly beats the combined `source-candidate` arm. Therefore the safe
+default remains candidate-weight-only. Source-ranking composition is wired but
+is not promoted.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:
@@ -1132,6 +1190,7 @@ Allowed:
 - `PASS as logdet/channel/quality-score instrumentation`
 - `PASS as quality proxy calibration diagnostics`
 - `PASS as proxy weight/sign calibration diagnostics`
+- `PASS as candidate-quality safe-default application diagnostics`
 - `limited mitigation` only if qacc improves without behavior-changing apply
   modes, which is unlikely and should be treated cautiously
 

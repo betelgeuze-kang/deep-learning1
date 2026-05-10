@@ -140,6 +140,10 @@ route strength, graph topology, and jump-neighbor gates unchanged.
 h5-ak candidate-quality guardrail selection diagnostics remain there as well:
 they compare bounded candidate-weight settings over key/seed/noise guardrails
 without changing route strength, graph topology, or jump-neighbor gates.
+h5-al candidate-quality safe-default application diagnostics remain there as
+well: they select candidate-weight-only `beta=8, cap=8` as the current safe
+quality default and do not promote source-ranking composition, route strength,
+graph topology, or jump-neighbor gates.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -530,6 +534,9 @@ Current decision:
 - treat h5-ak candidate-quality guardrail selection diagnostics the same way:
   safe bounded candidate-weight setting selection, not topology replacement,
   route-strength promotion, or static routing promotion
+- treat h5-al candidate-quality safe-default application diagnostics the same
+  way: candidate-weight-only default selection, not source-ranking promotion,
+  topology replacement, route-strength promotion, or static routing promotion
 
 Allowed wording:
 
@@ -573,6 +580,7 @@ Allowed wording:
 - `bad-source filter / abstain diagnostics`
 - `retry-source replacement diagnostics`
 - `source-credit retry-policy calibration diagnostics`
+- `candidate-quality safe-default application diagnostics`
 
 Do not say:
 
