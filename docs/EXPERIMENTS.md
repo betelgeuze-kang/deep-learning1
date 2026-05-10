@@ -2816,3 +2816,64 @@ the new `quality-score` candidate-weight basis is connected and safe, but it
 does not beat the existing base-weight sharpening default. Feature-score bases
 lower wrong hint strength but also reduce candidate factor separation and qacc.
 Keep `candidate-weight-basis=base` as the default.
+
+## h5-an Hybrid Candidate-basis Calibration Decision
+
+`h5-an` passes as hybrid candidate-basis calibration diagnostics and
+lower-concentration limited mitigation, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+--route-quality-candidate-weight-basis base|quality-score|hybrid
+--route-quality-candidate-weight-basis-mix
+experiments/run_v05_route_quality_candidate_hybrid_basis.sh
+experiments/test_v05_route_quality_candidate_hybrid_basis.sh
+```
+
+Standard comparison:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+candidate_beta/cap = 8.0/8.0
+arms = base-default, feature-margin, hybrid-m0p10, hybrid-m0p25,
+       hybrid-m0p50, hybrid-m0p75
+```
+
+Readout:
+
+```text
+base-default qacc_mean     = 0.837630
+feature-margin qacc_mean   = 0.800000
+hybrid-m0p10 qacc_mean     = 0.837500
+hybrid-m0p25 qacc_mean     = 0.837760
+hybrid-m0p50 qacc_mean     = 0.837630
+hybrid-m0p75 qacc_mean     = 0.835938
+
+base-default:
+  factor_gap = 3.154903
+  factor_max = 6.333333
+  wrong_strength = 4.837817
+
+hybrid-m0p25:
+  factor_gap = 2.859539
+  factor_max = 5.928332
+  wrong_strength = 4.779110
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+hybrid basis can reduce candidate-weight concentration while preserving the
+base qacc in this controlled sweep. The effect is small, so the safe default
+remains `candidate-weight-basis=base`; `hybrid-m0p25` is a useful
+lower-concentration diagnostic arm, not a robustness solution.

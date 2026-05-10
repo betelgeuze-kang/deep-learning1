@@ -4037,3 +4037,70 @@ feature-score candidate weighting is wired, but it is currently too soft for
 this fixture. It lowers wrong hint strength but also weakens correct support
 and lowers qacc relative to the base default. The default remains
 `candidate-weight-basis=base`, not `quality-score`.
+
+## h5-an Hybrid Candidate-basis Calibration Decision
+
+The h5-an slice passes as hybrid candidate-basis calibration diagnostics and
+lower-concentration limited mitigation. It does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+--route-quality-candidate-weight-basis base|quality-score|hybrid
+--route-quality-candidate-weight-basis-mix <float>
+experiments/run_v05_route_quality_candidate_hybrid_basis.sh
+experiments/test_v05_route_quality_candidate_hybrid_basis.sh
+```
+
+The route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The standard check keeps `route_quality_apply=candidate-weight`, `beta=8.0`,
+and `cap=8.0`, then blends the h5-al base-weight basis with the best h5-am
+margin feature-score basis over `keys=64,128`, seeds `1..3`, and noisy source
+rates `0.25,0.50`.
+
+Reference aggregate:
+
+```text
+base-default:
+  qacc_mean = 0.837630
+  factor_gap = 3.154903
+  factor_max = 6.333333
+  top_share = 0.727296
+  entropy = 1.031879
+  wrong_strength = 4.837817
+
+feature-margin:
+  qacc_mean = 0.800000
+  factor_gap = 0.706567
+  factor_max = 3.482540
+  wrong_strength = 4.613126
+
+hybrid-m0p25:
+  qacc_mean = 0.837760
+  factor_gap = 2.859539
+  factor_max = 5.928332
+  top_share = 0.720490
+  entropy = 1.055624
+  wrong_strength = 4.779110
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+small hybrid mixes preserve the base qacc while reducing candidate-weight
+concentration. `hybrid-m0p25` is the cleanest current lower-concentration arm,
+but the improvement is tiny and does not justify changing the safe default.
+Keep `candidate-weight-basis=base` as the default and treat hybrid as a
+diagnostic/ablation arm.

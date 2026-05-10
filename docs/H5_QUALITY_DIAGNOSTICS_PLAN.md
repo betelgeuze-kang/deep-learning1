@@ -1263,8 +1263,40 @@ Allowed:
 - `PASS as proxy weight/sign calibration diagnostics`
 - `PASS as candidate-quality safe-default application diagnostics`
 - `PASS as candidate-feature basis calibration diagnostics`
+- `PASS as hybrid candidate-basis calibration diagnostics`
 - `limited mitigation` only if qacc improves without behavior-changing apply
   modes, which is unlikely and should be treated cautiously
+
+## h5-an Hybrid Candidate-basis Calibration
+
+h5-an keeps the h5-al safe default in place and tests whether a small feature
+score contribution can reduce concentration without giving up qacc.
+
+CLI:
+
+```text
+--route-quality-candidate-weight-basis base|quality-score|hybrid
+--route-quality-candidate-weight-basis-mix <0..1>
+```
+
+Definition:
+
+```text
+hybrid_basis = (1 - mix) * base_basis + mix * quality_score_basis
+```
+
+Reference standard sweep:
+
+```text
+base-default qacc = 0.837630, factor_gap = 3.154903, factor_max = 6.333333
+hybrid-m0p25 qacc = 0.837760, factor_gap = 2.859539, factor_max = 5.928332
+feature-margin qacc = 0.800000, factor_gap = 0.706567
+```
+
+Interpretation:
+`hybrid-m0p25` preserves qacc while lowering concentration, but the effect is
+small. Keep `basis=base` as the safe default and use hybrid as a diagnostic
+arm unless a larger guardrail sweep shows a durable advantage.
 
 Forbidden:
 

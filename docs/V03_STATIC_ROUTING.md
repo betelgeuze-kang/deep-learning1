@@ -589,6 +589,7 @@ Allowed wording:
 - `source-credit retry-policy calibration diagnostics`
 - `candidate-quality safe-default application diagnostics`
 - `candidate-feature basis calibration diagnostics`
+- `hybrid candidate-basis calibration diagnostics`
 
 Do not say:
 

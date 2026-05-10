@@ -983,9 +983,16 @@ void GraphV02::validate_params() const {
             "route-quality-candidate-weight-max must be finite and >= min");
     }
     if (params_.route_quality_candidate_weight_basis != "base" &&
-        params_.route_quality_candidate_weight_basis != "quality-score") {
+        params_.route_quality_candidate_weight_basis != "quality-score" &&
+        params_.route_quality_candidate_weight_basis != "hybrid") {
         throw std::runtime_error(
-            "route-quality-candidate-weight-basis must be one of: base, quality-score");
+            "route-quality-candidate-weight-basis must be one of: base, quality-score, hybrid");
+    }
+    if (!std::isfinite(params_.route_quality_candidate_weight_basis_mix) ||
+        params_.route_quality_candidate_weight_basis_mix < 0.0f ||
+        params_.route_quality_candidate_weight_basis_mix > 1.0f) {
+        throw std::runtime_error(
+            "route-quality-candidate-weight-basis-mix must be finite and in [0, 1]");
     }
     if (params_.route_quality_source_normalization != "none" &&
         params_.route_quality_source_normalization != "center" &&
@@ -2479,8 +2486,7 @@ float GraphV02::route_quality_candidate_weight_basis_for_vote(
         !route_quality_candidate_weight_apply_active(params_)) {
         return base_weight;
     }
-    if (params_.route_quality_candidate_weight_basis != "quality-score" ||
-        value_pos < 0 ||
+    if (value_pos < 0 ||
         value_pos >= params_.N ||
         candidate_count == 0) {
         return base_weight;
@@ -2533,7 +2539,22 @@ float GraphV02::route_quality_candidate_weight_basis_for_vote(
     if (!std::isfinite(score)) {
         return 0.0f;
     }
-    return static_cast<float>(std::max(0.0, score));
+    const float quality_basis = static_cast<float>(std::max(0.0, score));
+    if (params_.route_quality_candidate_weight_basis == "quality-score") {
+        return quality_basis;
+    }
+    if (params_.route_quality_candidate_weight_basis == "hybrid") {
+        const double mix =
+            static_cast<double>(params_.route_quality_candidate_weight_basis_mix);
+        const double blended =
+            (1.0 - mix) * static_cast<double>(base_weight) +
+            mix * static_cast<double>(quality_basis);
+        if (!std::isfinite(blended)) {
+            return base_weight;
+        }
+        return static_cast<float>(std::max(0.0, blended));
+    }
+    return base_weight;
 }
 
 float GraphV02::route_quality_candidate_weight_factor(

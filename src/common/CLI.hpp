@@ -389,6 +389,9 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-quality-candidate-weight-basis" ||
                    key == "route_quality_candidate_weight_basis") {
             params.route_quality_candidate_weight_basis = value;
+        } else if (key == "route-quality-candidate-weight-basis-mix" ||
+                   key == "route_quality_candidate_weight_basis_mix") {
+            params.route_quality_candidate_weight_basis_mix = cli_to_float(value, key);
         } else if (key == "route-quality-source-normalization" ||
                    key == "route_quality_source_normalization") {
             params.route_quality_source_normalization = value;
@@ -616,7 +619,8 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-quality-candidate-weight-beta <float>\n"
        << "  --route-quality-candidate-weight-min <float>\n"
        << "  --route-quality-candidate-weight-max <float>\n"
-       << "  --route-quality-candidate-weight-basis <base|quality-score>\n"
+       << "  --route-quality-candidate-weight-basis <base|quality-score|hybrid>\n"
+       << "  --route-quality-candidate-weight-basis-mix <float>\n"
        << "  --route-quality-source-normalization <none|center|zscore>\n"
        << "  --route-quality-source-norm-eps <float>\n"
        << "  --route-quality-logdet-weight <float>\n"
