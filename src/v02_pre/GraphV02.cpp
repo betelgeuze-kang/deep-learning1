@@ -982,6 +982,11 @@ void GraphV02::validate_params() const {
         throw std::runtime_error(
             "route-quality-candidate-weight-max must be finite and >= min");
     }
+    if (params_.route_quality_candidate_weight_basis != "base" &&
+        params_.route_quality_candidate_weight_basis != "quality-score") {
+        throw std::runtime_error(
+            "route-quality-candidate-weight-basis must be one of: base, quality-score");
+    }
     if (params_.route_quality_source_normalization != "none" &&
         params_.route_quality_source_normalization != "center" &&
         params_.route_quality_source_normalization != "zscore") {
@@ -1295,14 +1300,12 @@ bool GraphV02::route_hint_proposal_value_for_node(int index, std::uint8_t& out_v
         (effective_agg == "vote" || effective_agg == "weighted-vote") &&
         !vote_positions.empty()) {
         std::array<int, FieldTable::ByteValues> value_counts{};
-        if (params_.route_candidate_score == "value-vote") {
-            for (const int value_pos : vote_positions) {
-                if (value_pos < 0 || value_pos >= params_.N) {
-                    continue;
-                }
-                const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
-                ++value_counts[static_cast<std::size_t>(value)];
+        for (const int value_pos : vote_positions) {
+            if (value_pos < 0 || value_pos >= params_.N) {
+                continue;
             }
+            const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
+            ++value_counts[static_cast<std::size_t>(value)];
         }
 
         std::array<float, FieldTable::ByteValues> value_votes{};
@@ -1368,14 +1371,12 @@ double GraphV02::route_hint_margin_for_node(int index, std::uint8_t target_value
         (effective_agg == "vote" || effective_agg == "weighted-vote") &&
         !vote_positions.empty()) {
         std::array<int, FieldTable::ByteValues> value_counts{};
-        if (params_.route_candidate_score == "value-vote") {
-            for (const int value_pos : vote_positions) {
-                if (value_pos < 0 || value_pos >= params_.N) {
-                    continue;
-                }
-                const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
-                ++value_counts[static_cast<std::size_t>(value)];
+        for (const int value_pos : vote_positions) {
+            if (value_pos < 0 || value_pos >= params_.N) {
+                continue;
             }
+            const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
+            ++value_counts[static_cast<std::size_t>(value)];
         }
 
         const float mean_base_weight = route_candidate_mean_base_weight_for_vote(
@@ -1453,14 +1454,12 @@ double GraphV02::route_value_support_confidence_for_node(
         route_hint_candidate_value_positions_[static_cast<std::size_t>(index)];
     if (!vote_positions.empty()) {
         std::array<int, FieldTable::ByteValues> value_counts{};
-        if (params_.route_candidate_score == "value-vote") {
-            for (const int value_pos : vote_positions) {
-                if (value_pos < 0 || value_pos >= params_.N) {
-                    continue;
-                }
-                const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
-                ++value_counts[static_cast<std::size_t>(value)];
+        for (const int value_pos : vote_positions) {
+            if (value_pos < 0 || value_pos >= params_.N) {
+                continue;
             }
+            const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
+            ++value_counts[static_cast<std::size_t>(value)];
         }
         const float mean_base_weight = route_candidate_mean_base_weight_for_vote(
             index, vote_positions, value_counts, params_.route_hint_agg);
@@ -2469,6 +2468,74 @@ float GraphV02::route_candidate_base_weight_for_vote(
     return candidate_weight;
 }
 
+float GraphV02::route_quality_candidate_weight_basis_for_vote(
+    int query_index,
+    int value_pos,
+    std::size_t rank_index,
+    std::size_t candidate_count,
+    const std::array<int, FieldTable::ByteValues>& value_counts,
+    float base_weight) const {
+    if (params_.route_quality_candidate_weight_basis == "base" ||
+        !route_quality_candidate_weight_apply_active(params_)) {
+        return base_weight;
+    }
+    if (params_.route_quality_candidate_weight_basis != "quality-score" ||
+        value_pos < 0 ||
+        value_pos >= params_.N ||
+        candidate_count == 0) {
+        return base_weight;
+    }
+
+    const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
+    const int value_count =
+        value_counts[static_cast<std::size_t>(value)];
+    int best_other_count = 0;
+    for (std::size_t candidate_value = 0;
+         candidate_value < value_counts.size();
+         ++candidate_value) {
+        if (candidate_value == static_cast<std::size_t>(value)) {
+            continue;
+        }
+        best_other_count =
+            std::max(best_other_count, value_counts[candidate_value]);
+    }
+    const double denom =
+        static_cast<double>(std::max<std::size_t>(1U, candidate_count));
+    const double value_share =
+        static_cast<double>(value_count) / denom;
+    const double value_margin =
+        static_cast<double>(value_count - best_other_count) / denom;
+    const double rank_share =
+        candidate_count <= 1
+            ? 1.0
+            : 1.0 -
+                  static_cast<double>(rank_index) /
+                      static_cast<double>(candidate_count - 1);
+    const double source_delta =
+        static_cast<double>(
+            route_source_credit_weight_for_candidate(query_index, value_pos)) -
+        1.0;
+    const double edge_delta =
+        static_cast<double>(
+            route_credit_weight_for_candidate(query_index, value_pos)) -
+        1.0;
+    const double score =
+        1.0 +
+        static_cast<double>(params_.route_quality_vote_margin_weight) *
+            value_margin +
+        static_cast<double>(params_.route_quality_top_share_weight) *
+            value_share +
+        static_cast<double>(params_.route_quality_source_credit_weight) *
+            source_delta +
+        static_cast<double>(params_.route_quality_edge_credit_weight) *
+            edge_delta +
+        0.25 * rank_share;
+    if (!std::isfinite(score)) {
+        return 0.0f;
+    }
+    return static_cast<float>(std::max(0.0, score));
+}
+
 float GraphV02::route_quality_candidate_weight_factor(
     float base_weight,
     float mean_base_weight) const {
@@ -2507,14 +2574,20 @@ float GraphV02::route_candidate_mean_base_weight_for_vote(
             continue;
         }
         sum += static_cast<double>(
-            route_candidate_base_weight_for_vote(
+            route_quality_candidate_weight_basis_for_vote(
                 query_index,
                 value_pos,
                 rank_index,
                 vote_positions.size(),
                 value_counts,
-                effective_agg,
-                include_source_credit));
+                route_candidate_base_weight_for_vote(
+                    query_index,
+                    value_pos,
+                    rank_index,
+                    vote_positions.size(),
+                    value_counts,
+                    effective_agg,
+                    include_source_credit)));
         ++count;
     }
     return count > 0 ? static_cast<float>(sum / static_cast<double>(count)) : 0.0f;
@@ -2537,8 +2610,15 @@ float GraphV02::route_candidate_effective_weight_for_vote(
         value_counts,
         effective_agg,
         include_source_credit);
+    const float basis_weight = route_quality_candidate_weight_basis_for_vote(
+        query_index,
+        value_pos,
+        rank_index,
+        candidate_count,
+        value_counts,
+        base_weight);
     return base_weight *
-           route_quality_candidate_weight_factor(base_weight, mean_base_weight);
+           route_quality_candidate_weight_factor(basis_weight, mean_base_weight);
 }
 
 float GraphV02::route_source_credit_strength_scale_for_node(int index) const {
@@ -3895,15 +3975,13 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
         (effective_agg == "vote" || effective_agg == "weighted-vote") &&
         !vote_positions.empty()) {
         std::array<int, FieldTable::ByteValues> value_counts{};
-        if (params_.route_candidate_score == "value-vote") {
-            for (const int value_pos : vote_positions) {
-                if (value_pos < 0 || value_pos >= params_.N) {
-                    continue;
-                }
-                const auto candidate_value =
-                    nodes_[static_cast<std::size_t>(value_pos)].input_byte;
-                ++value_counts[static_cast<std::size_t>(candidate_value)];
+        for (const int value_pos : vote_positions) {
+            if (value_pos < 0 || value_pos >= params_.N) {
+                continue;
             }
+            const auto candidate_value =
+                nodes_[static_cast<std::size_t>(value_pos)].input_byte;
+            ++value_counts[static_cast<std::size_t>(candidate_value)];
         }
 
         int valid_count = 0;
@@ -4461,15 +4539,13 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 std::array<float, FieldTable::States> low_votes{};
                 std::array<float, FieldTable::ByteValues> value_votes{};
                 std::array<int, FieldTable::ByteValues> value_counts{};
-                if (params_.route_candidate_score == "value-vote") {
-                    for (const int value_pos : vote_positions) {
-                        if (value_pos < 0 || value_pos >= params_.N) {
-                            continue;
-                        }
-                        const auto value =
-                            nodes_[static_cast<std::size_t>(value_pos)].input_byte;
-                        ++value_counts[static_cast<std::size_t>(value)];
+                for (const int value_pos : vote_positions) {
+                    if (value_pos < 0 || value_pos >= params_.N) {
+                        continue;
                     }
+                    const auto value =
+                        nodes_[static_cast<std::size_t>(value_pos)].input_byte;
+                    ++value_counts[static_cast<std::size_t>(value)];
                 }
                 int valid_vote_count = 0;
                 float vote_weight_sum = 0.0f;
@@ -4500,9 +4576,17 @@ EpochMetricsV02 GraphV02::collect_metrics(
                         vote_positions.size(),
                         value_counts,
                         params_.route_hint_agg);
+                    const float basis_weight =
+                        route_quality_candidate_weight_basis_for_vote(
+                            i,
+                            value_pos,
+                            rank_index,
+                            vote_positions.size(),
+                            value_counts,
+                            base_weight);
                     const float candidate_factor =
                         route_quality_candidate_weight_factor(
-                            base_weight, mean_base_weight);
+                            basis_weight, mean_base_weight);
                     const float candidate_weight = base_weight * candidate_factor;
                     high_votes[static_cast<std::size_t>(value / FieldTable::States)] +=
                         candidate_weight;

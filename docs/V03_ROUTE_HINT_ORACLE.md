@@ -3975,3 +3975,65 @@ h5-al makes the practical default explicit. The candidate-only quality path at
 and outperforms both proxy-off and the combined source-candidate arm. The
 source-ranking composition path remains useful instrumentation, but it is not
 promoted as the default.
+
+## h5-am Candidate-feature Basis Calibration
+
+The h5-am slice passes as candidate-feature basis calibration diagnostics. It
+does not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+It adds:
+
+```text
+--route-quality-candidate-weight-basis base|quality-score
+experiments/run_v05_route_quality_candidate_feature_calibration.sh
+experiments/test_v05_route_quality_candidate_feature_calibration.sh
+```
+
+The route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The standard check keeps `route_quality_apply=candidate-weight`,
+`beta=8.0`, and `cap=8.0`, then compares the existing base-weight sharpening
+against several feature-score bases over `keys=64,128`, seeds `1..3`, and noisy
+source rates `0.25,0.50`.
+
+Reference aggregate:
+
+```text
+base-default:
+  qacc_mean = 0.837630
+  factor_gap = 3.154903
+  factor_max = 6.333333
+  top_share = 0.727296
+  entropy = 1.031879
+  quality_score_gap = 1.107729
+  wrong_strength = 4.837817
+
+feature-default:
+  qacc_mean = 0.791146
+  factor_gap = 0.608342
+  factor_max = 3.574677
+  wrong_strength = 4.364212
+
+feature-margin:
+  qacc_mean = 0.800000
+  factor_gap = 0.706567
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+feature-score candidate weighting is wired, but it is currently too soft for
+this fixture. It lowers wrong hint strength but also weakens correct support
+and lowers qacc relative to the base default. The default remains
+`candidate-weight-basis=base`, not `quality-score`.

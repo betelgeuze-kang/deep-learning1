@@ -133,6 +133,13 @@ class GraphV02 {
         const std::array<int, FieldTable::ByteValues>& value_counts,
         const std::string& effective_agg,
         bool include_source_credit = true) const;
+    float route_quality_candidate_weight_basis_for_vote(
+        int query_index,
+        int value_pos,
+        std::size_t rank_index,
+        std::size_t candidate_count,
+        const std::array<int, FieldTable::ByteValues>& value_counts,
+        float base_weight) const;
     float route_quality_candidate_weight_factor(float base_weight, float mean_base_weight) const;
     float route_candidate_mean_base_weight_for_vote(
         int query_index,

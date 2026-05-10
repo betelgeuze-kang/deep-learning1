@@ -2757,3 +2757,62 @@ Interpretation:
 safe default quality-application arm. Combining source-ranking with
 candidate-weight is wired, but it does not beat candidate-only in this default
 check, so source-candidate is not promoted.
+
+## h5-am Candidate-feature Basis Calibration Decision
+
+`h5-am` passes as candidate-feature basis calibration diagnostics, but it does
+not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+--route-quality-candidate-weight-basis base|quality-score
+experiments/run_v05_route_quality_candidate_feature_calibration.sh
+experiments/test_v05_route_quality_candidate_feature_calibration.sh
+```
+
+Standard comparison:
+
+```text
+keys = 64, 128
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+candidate_beta/cap = 8.0/8.0
+arms = base-default, feature-default, feature-value, feature-share, feature-margin
+```
+
+Readout:
+
+```text
+base-default qacc_mean     = 0.837630
+feature-default qacc_mean  = 0.791146
+feature-value qacc_mean    = 0.791146
+feature-share qacc_mean    = 0.791276
+feature-margin qacc_mean   = 0.800000
+
+base-default:
+  factor_gap = 3.154903
+  factor_max = 6.333333
+  quality_score_gap = 1.107729
+  wrong_strength = 4.837817
+
+feature-default:
+  factor_gap = 0.608342
+  factor_max = 3.574677
+  wrong_strength = 4.364212
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the new `quality-score` candidate-weight basis is connected and safe, but it
+does not beat the existing base-weight sharpening default. Feature-score bases
+lower wrong hint strength but also reduce candidate factor separation and qacc.
+Keep `candidate-weight-basis=base` as the default.

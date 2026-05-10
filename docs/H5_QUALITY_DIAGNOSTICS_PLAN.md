@@ -351,6 +351,7 @@ New knobs:
 --route-quality-candidate-weight-beta <float>
 --route-quality-candidate-weight-min <float>
 --route-quality-candidate-weight-max <float>
+--route-quality-candidate-weight-basis base|quality-score
 ```
 
 Standard smoke:
@@ -1001,6 +1002,76 @@ and slightly beats the combined `source-candidate` arm. Therefore the safe
 default remains candidate-weight-only. Source-ranking composition is wired but
 is not promoted.
 
+### h5-am Candidate-feature Basis Calibration Decision
+
+`h5-am` passes as candidate-feature basis calibration diagnostics, but it does
+not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+It adds a candidate-weight basis switch:
+
+```text
+--route-quality-candidate-weight-basis base|quality-score
+```
+
+and the runner/test:
+
+```text
+experiments/run_v05_route_quality_candidate_feature_calibration.sh
+experiments/test_v05_route_quality_candidate_feature_calibration.sh
+```
+
+The standard feature-basis check uses `beta=8.0, cap=8.0` and compares
+base-weight sharpening against `quality-score` bases over `keys=64,128`, seeds
+`1..3`, and noisy source rates `0.25,0.50`.
+
+Reference aggregate:
+
+```text
+base-default:
+  qacc_mean = 0.837630
+  factor_gap = 3.154903
+  factor_max = 6.333333
+  top_share = 0.727296
+  entropy = 1.031879
+  quality_score_gap = 1.107729
+  wrong_strength = 4.837817
+
+feature-default:
+  qacc_mean = 0.791146
+  factor_gap = 0.608342
+  factor_max = 3.574677
+  wrong_strength = 4.364212
+
+feature-value:
+  qacc_mean = 0.791146
+  quality_score_gap = 0.856350
+
+feature-share:
+  qacc_mean = 0.791276
+  factor_max = 2.270911
+
+feature-margin:
+  qacc_mean = 0.800000
+  factor_gap = 0.706567
+```
+
+The guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the feature-score basis is wired and safe, but it weakens the candidate factor
+gap and lowers qacc relative to the base default. It can reduce wrong hint
+strength, but not in a way that improves query accuracy in this setup. The
+current default remains `candidate-weight-basis=base` with `beta=8.0, cap=8.0`.
+Future feature work should improve the feature basis before replacing the base
+default.
+
 ## Diagnostic 1: Candidate-feature Gram LogDet
 
 Start with `value-only` features:
@@ -1191,6 +1262,7 @@ Allowed:
 - `PASS as quality proxy calibration diagnostics`
 - `PASS as proxy weight/sign calibration diagnostics`
 - `PASS as candidate-quality safe-default application diagnostics`
+- `PASS as candidate-feature basis calibration diagnostics`
 - `limited mitigation` only if qacc improves without behavior-changing apply
   modes, which is unlikely and should be treated cautiously
 

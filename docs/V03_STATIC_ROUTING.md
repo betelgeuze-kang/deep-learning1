@@ -144,6 +144,10 @@ h5-al candidate-quality safe-default application diagnostics remain there as
 well: they select candidate-weight-only `beta=8, cap=8` as the current safe
 quality default and do not promote source-ranking composition, route strength,
 graph topology, or jump-neighbor gates.
+h5-am candidate-feature basis calibration diagnostics remain there as well:
+they compare `candidate-weight-basis=base` against `quality-score` bases, keep
+the base default, and do not promote source-ranking, route strength, graph
+topology, or jump-neighbor gates.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -537,6 +541,9 @@ Current decision:
 - treat h5-al candidate-quality safe-default application diagnostics the same
   way: candidate-weight-only default selection, not source-ranking promotion,
   topology replacement, route-strength promotion, or static routing promotion
+- treat h5-am candidate-feature basis calibration diagnostics the same way:
+  candidate-weight basis calibration, not quality-score default promotion,
+  topology replacement, route-strength promotion, or static routing promotion
 
 Allowed wording:
 
@@ -581,6 +588,7 @@ Allowed wording:
 - `retry-source replacement diagnostics`
 - `source-credit retry-policy calibration diagnostics`
 - `candidate-quality safe-default application diagnostics`
+- `candidate-feature basis calibration diagnostics`
 
 Do not say:
 
