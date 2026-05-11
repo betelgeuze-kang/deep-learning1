@@ -1264,6 +1264,7 @@ Allowed:
 - `PASS as candidate-quality safe-default application diagnostics`
 - `PASS as candidate-feature basis calibration diagnostics`
 - `PASS as hybrid candidate-basis calibration diagnostics`
+- `PASS as hybrid candidate-basis guardrail scale diagnostics`
 - `limited mitigation` only if qacc improves without behavior-changing apply
   modes, which is unlikely and should be treated cautiously
 
@@ -1297,6 +1298,26 @@ Interpretation:
 `hybrid-m0p25` preserves qacc while lowering concentration, but the effect is
 small. Keep `basis=base` as the safe default and use hybrid as a diagnostic
 arm unless a larger guardrail sweep shows a durable advantage.
+
+## h5-ao Hybrid Candidate-basis Guardrail Scale
+
+h5-ao expands h5-an to `keys=64,128,256`, seeds `1..3`, and noisy rates
+`0.25/0.50`.
+
+Reference standard sweep:
+
+```text
+base-default qacc = 0.886458, factor_gap = 3.596599, factor_max = 6.333333
+hybrid-m0p10 qacc = 0.886372, factor_gap = 3.469870, factor_max = 6.202220
+hybrid-m0p25 qacc = 0.886545, factor_gap = 3.247608, factor_max = 5.968582
+hybrid-m0p50 qacc = 0.884071, factor_gap = 2.756076, factor_max = 5.438107
+```
+
+Interpretation:
+`hybrid-m0p25` is the current best lower-concentration arm. It keeps qacc at
+the base level and reduces concentration, while `hybrid-m0p50` starts to trade
+away qacc. The safe default remains `basis=base` until a broader full guardrail
+shows the hybrid advantage is durable enough to promote.
 
 Forbidden:
 

@@ -590,6 +590,7 @@ Allowed wording:
 - `candidate-quality safe-default application diagnostics`
 - `candidate-feature basis calibration diagnostics`
 - `hybrid candidate-basis calibration diagnostics`
+- `hybrid candidate-basis guardrail scale diagnostics`
 
 Do not say:
 

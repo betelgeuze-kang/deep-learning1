@@ -4104,3 +4104,75 @@ concentration. `hybrid-m0p25` is the cleanest current lower-concentration arm,
 but the improvement is tiny and does not justify changing the safe default.
 Keep `candidate-weight-basis=base` as the default and treat hybrid as a
 diagnostic/ablation arm.
+
+## h5-ao Hybrid Candidate-basis Guardrail Scale Decision
+
+The h5-ao slice passes as hybrid candidate-basis guardrail scale diagnostics
+and lower-concentration limited mitigation. It does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+It adds:
+
+```text
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh
+experiments/test_v05_route_quality_candidate_hybrid_guardrail.sh
+```
+
+The standard guardrail expands h5-an over:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+candidate_beta/cap = 8.0/8.0
+arms = base-default, hybrid-m0p10, hybrid-m0p25, hybrid-m0p50
+```
+
+Reference aggregate:
+
+```text
+base-default:
+  qacc_mean = 0.886458
+  qacc_std = 0.120952
+  factor_gap = 3.596599
+  factor_max = 6.333333
+  top_share = 0.712137
+  entropy = 1.082397
+  wrong_strength = 6.210653
+
+hybrid-m0p10:
+  qacc_mean = 0.886372
+  factor_gap = 3.469870
+  factor_max = 6.202220
+  wrong_strength = 6.153818
+
+hybrid-m0p25:
+  qacc_mean = 0.886545
+  qacc_std = 0.120533
+  factor_gap = 3.247608
+  factor_max = 5.968582
+  top_share = 0.704366
+  entropy = 1.107710
+  wrong_strength = 6.162082
+
+hybrid-m0p50:
+  qacc_mean = 0.884071
+  factor_gap = 2.756076
+  factor_max = 5.438107
+  wrong_strength = 6.147595
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+`hybrid-m0p25` is the best current compromise: it preserves qacc at the base
+level and lowers candidate-weight concentration. `hybrid-m0p50` lowers
+concentration further but starts to lose qacc. The improvement is still tiny,
+so the safe default remains `candidate-weight-basis=base`; use `hybrid-m0p25`
+as the lower-concentration guardrail/ablation arm.

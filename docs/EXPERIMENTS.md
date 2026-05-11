@@ -2877,3 +2877,59 @@ hybrid basis can reduce candidate-weight concentration while preserving the
 base qacc in this controlled sweep. The effect is small, so the safe default
 remains `candidate-weight-basis=base`; `hybrid-m0p25` is a useful
 lower-concentration diagnostic arm, not a robustness solution.
+
+## h5-ao Hybrid Candidate-basis Guardrail Scale Decision
+
+`h5-ao` passes as hybrid candidate-basis guardrail scale diagnostics and
+lower-concentration limited mitigation, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh
+experiments/test_v05_route_quality_candidate_hybrid_guardrail.sh
+```
+
+Standard comparison:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+candidate_beta/cap = 8.0/8.0
+arms = base-default, hybrid-m0p10, hybrid-m0p25, hybrid-m0p50
+```
+
+Readout:
+
+```text
+base-default qacc_mean   = 0.886458
+hybrid-m0p10 qacc_mean   = 0.886372
+hybrid-m0p25 qacc_mean   = 0.886545
+hybrid-m0p50 qacc_mean   = 0.884071
+
+base-default:
+  factor_gap = 3.596599
+  factor_max = 6.333333
+  wrong_strength = 6.210653
+
+hybrid-m0p25:
+  factor_gap = 3.247608
+  factor_max = 5.968582
+  wrong_strength = 6.162082
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+`hybrid-m0p25` preserves qacc while reducing candidate concentration across the
+guardrail scale. The effect is small, so this is not a default promotion or a
+robustness solution. Keep `basis=base` as the safe default and use
+`hybrid-m0p25` as a lower-concentration ablation arm.
