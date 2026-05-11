@@ -12,8 +12,12 @@ if [[ "${1:-}" == "--smoke" ]]; then
   MODE="smoke"
 elif [[ "${1:-}" == "--full" ]]; then
   MODE="full"
+elif [[ "${1:-}" == "--promotion" ]]; then
+  MODE="promotion"
+elif [[ "${1:-}" == "--promotion-smoke" ]]; then
+  MODE="promotion-smoke"
 elif [[ "${1:-}" != "" ]]; then
-  echo "usage: $0 [--smoke|--full]" >&2
+  echo "usage: $0 [--smoke|--full|--promotion|--promotion-smoke]" >&2
   exit 2
 fi
 
@@ -51,6 +55,27 @@ elif [[ "$MODE" == "full" ]]; then
   KEY_COUNTS=(64 128 256)
   SEEDS=(1 2 3 4 5)
   NOISY_RATES=(0.10 0.25 0.50)
+elif [[ "$MODE" == "promotion" ]]; then
+  PREFIX="v05_route_quality_candidate_hybrid_promotion"
+  KEY_COUNTS=(64 128 256)
+  SEEDS=(1 2 3 4 5)
+  NOISY_RATES=(0.10 0.25 0.50)
+  ARMS=(
+    "base-default:base:0.00"
+    "hybrid-m0p25:hybrid:0.25"
+  )
+elif [[ "$MODE" == "promotion-smoke" ]]; then
+  EPOCHS=6
+  CYCLES_PER_EPOCH=6
+  PROPOSAL_COUNT=18
+  PREFIX="v05_route_quality_candidate_hybrid_promotion_smoke"
+  KEY_COUNTS=(128)
+  SEEDS=(1)
+  NOISY_RATES=(0.25)
+  ARMS=(
+    "base-default:base:0.00"
+    "hybrid-m0p25:hybrid:0.25"
+  )
 fi
 
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"

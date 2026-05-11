@@ -1265,6 +1265,7 @@ Allowed:
 - `PASS as candidate-feature basis calibration diagnostics`
 - `PASS as hybrid candidate-basis calibration diagnostics`
 - `PASS as hybrid candidate-basis guardrail scale diagnostics`
+- `PASS as hybrid candidate-basis promotion-check diagnostics`
 - `limited mitigation` only if qacc improves without behavior-changing apply
   modes, which is unlikely and should be treated cautiously
 
@@ -1318,6 +1319,23 @@ Interpretation:
 the base level and reduces concentration, while `hybrid-m0p50` starts to trade
 away qacc. The safe default remains `basis=base` until a broader full guardrail
 shows the hybrid advantage is durable enough to promote.
+
+## h5-ap Hybrid Candidate-basis Promotion Check
+
+h5-ap compares only the safe default and `hybrid-m0p25` over `keys=64,128,256`,
+seeds `1..5`, and noisy rates `0.10/0.25/0.50`.
+
+Reference promotion sweep:
+
+```text
+base-default qacc = 0.885747, factor_gap = 3.607673, factor_max = 6.333333
+hybrid-m0p25 qacc = 0.885747, factor_gap = 3.252903, factor_max = 5.954676
+```
+
+Interpretation:
+`hybrid-m0p25` is safe and lower-concentration, but it does not improve qacc.
+Keep `basis=base` as the default and reserve `hybrid-m0p25` for
+concentration-aware ablations or future policy switching.
 
 Forbidden:
 

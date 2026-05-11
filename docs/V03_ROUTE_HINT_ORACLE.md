@@ -4176,3 +4176,63 @@ level and lowers candidate-weight concentration. `hybrid-m0p50` lowers
 concentration further but starts to lose qacc. The improvement is still tiny,
 so the safe default remains `candidate-weight-basis=base`; use `hybrid-m0p25`
 as the lower-concentration guardrail/ablation arm.
+
+## h5-ap Hybrid Candidate-basis Promotion Check Decision
+
+The h5-ap slice passes as hybrid candidate-basis promotion-check diagnostics
+and safe-alternative instrumentation. It does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The same h5-ao runner now supports:
+
+```text
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --promotion
+experiments/test_v05_route_quality_candidate_hybrid_promotion.sh
+```
+
+The promotion check narrows the arms to `base-default` and `hybrid-m0p25` and
+expands the guardrail to:
+
+```text
+keys = 64, 128, 256
+seeds = 1..5
+noisy_source_rate = 0.10, 0.25, 0.50
+candidate_beta/cap = 8.0/8.0
+```
+
+Reference aggregate:
+
+```text
+base-default:
+  qacc_mean = 0.885747
+  qacc_std = 0.110010
+  factor_gap = 3.607673
+  factor_max = 6.333333
+  top_share = 0.718199
+  entropy = 1.064693
+  wrong_strength = 5.852729
+
+hybrid-m0p25:
+  qacc_mean = 0.885747
+  qacc_std = 0.109796
+  factor_gap = 3.252903
+  factor_max = 5.954676
+  top_share = 0.710272
+  entropy = 1.090162
+  wrong_strength = 5.779043
+```
+
+The guard remains:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+`hybrid-m0p25` ties the base qacc exactly in the 5-seed promotion check while
+lowering concentration and wrong hint strength. This is enough to keep
+`hybrid-m0p25` as a safe lower-concentration alternative, but not enough to
+promote it as the default. The default remains `candidate-weight-basis=base`
+unless a later concentration-aware policy needs the lower-concentration arm.

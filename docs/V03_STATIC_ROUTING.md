@@ -591,6 +591,7 @@ Allowed wording:
 - `candidate-feature basis calibration diagnostics`
 - `hybrid candidate-basis calibration diagnostics`
 - `hybrid candidate-basis guardrail scale diagnostics`
+- `hybrid candidate-basis promotion-check diagnostics`
 
 Do not say:
 
