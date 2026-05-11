@@ -16,8 +16,12 @@ elif [[ "${1:-}" == "--promotion" ]]; then
   MODE="promotion"
 elif [[ "${1:-}" == "--promotion-smoke" ]]; then
   MODE="promotion-smoke"
+elif [[ "${1:-}" == "--auto" ]]; then
+  MODE="auto"
+elif [[ "${1:-}" == "--auto-smoke" ]]; then
+  MODE="auto-smoke"
 elif [[ "${1:-}" != "" ]]; then
-  echo "usage: $0 [--smoke|--full|--promotion|--promotion-smoke]" >&2
+  echo "usage: $0 [--smoke|--full|--promotion|--promotion-smoke|--auto|--auto-smoke]" >&2
   exit 2
 fi
 
@@ -76,12 +80,35 @@ elif [[ "$MODE" == "promotion-smoke" ]]; then
     "base-default:base:0.00"
     "hybrid-m0p25:hybrid:0.25"
   )
+elif [[ "$MODE" == "auto" ]]; then
+  PREFIX="v05_route_quality_candidate_auto_basis"
+  KEY_COUNTS=(64 128 256)
+  SEEDS=(1 2 3)
+  NOISY_RATES=(0.25 0.50)
+  ARMS=(
+    "base-default:base:0.00"
+    "hybrid-m0p25:hybrid:0.25"
+    "auto-f6p0-t0p72:auto:0.25"
+  )
+elif [[ "$MODE" == "auto-smoke" ]]; then
+  EPOCHS=6
+  CYCLES_PER_EPOCH=6
+  PROPOSAL_COUNT=18
+  PREFIX="v05_route_quality_candidate_auto_basis_smoke"
+  KEY_COUNTS=(128)
+  SEEDS=(1)
+  NOISY_RATES=(0.25)
+  ARMS=(
+    "base-default:base:0.00"
+    "hybrid-m0p25:hybrid:0.25"
+    "auto-f6p0-t0p72:auto:0.25"
+  )
 fi
 
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 AGG_CSV="$RESULTS_DIR/${PREFIX}_aggregate.csv"
 BY_KEY_CSV="$RESULTS_DIR/${PREFIX}_by_key_noise.csv"
-printf 'scenario,arm,candidate_basis,basis_mix,key_count,seed,noisy_source_rate,qacc,route_quality_apply_active,route_quality_candidate_weight_beta,route_quality_candidate_weight_factor_mean,route_quality_candidate_weight_factor_correct_mean,route_quality_candidate_weight_factor_wrong_mean,route_quality_candidate_weight_factor_gap,route_quality_candidate_weight_factor_p90,route_quality_candidate_weight_factor_max,route_quality_candidate_weight_entropy_mean,route_quality_candidate_weight_top_share_mean,route_quality_candidate_weight_correct_mean,route_quality_candidate_weight_wrong_mean,route_quality_candidate_weight_gap,route_quality_candidate_best_correct_rate,route_quality_score_mean,route_quality_score_correct_mean,route_quality_score_wrong_mean,route_quality_score_gap,route_quality_selected_noisy_rate,route_quality_selected_raw_qacc,route_wrong_hint_strength_mean,route_correct_hint_strength_mean,lookup_count,read_distance,routing_trigger_rate,active_jump_rate\n' >"$SUMMARY_CSV"
+printf 'scenario,arm,candidate_basis,basis_mix,key_count,seed,noisy_source_rate,qacc,route_quality_apply_active,route_quality_candidate_weight_beta,route_quality_candidate_weight_factor_mean,route_quality_candidate_weight_factor_correct_mean,route_quality_candidate_weight_factor_wrong_mean,route_quality_candidate_weight_factor_gap,route_quality_candidate_weight_factor_p90,route_quality_candidate_weight_factor_max,route_quality_candidate_weight_entropy_mean,route_quality_candidate_weight_top_share_mean,route_quality_candidate_weight_auto_hybrid_rate,route_quality_candidate_weight_correct_mean,route_quality_candidate_weight_wrong_mean,route_quality_candidate_weight_gap,route_quality_candidate_best_correct_rate,route_quality_score_mean,route_quality_score_correct_mean,route_quality_score_wrong_mean,route_quality_score_gap,route_quality_selected_noisy_rate,route_quality_selected_raw_qacc,route_wrong_hint_strength_mean,route_correct_hint_strength_mean,lookup_count,read_distance,routing_trigger_rate,active_jump_rate\n' >"$SUMMARY_CSV"
 
 value_for_index() {
   local index="$1"
@@ -114,7 +141,7 @@ compute_metrics() {
 
   awk -F, '
     BEGIN {
-      name_count = split("fixture_query_byte_acc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_mean route_quality_candidate_weight_factor_correct_mean route_quality_candidate_weight_factor_wrong_mean route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_p90 route_quality_candidate_weight_factor_max route_quality_candidate_weight_entropy_mean route_quality_candidate_weight_top_share_mean route_quality_candidate_weight_correct_mean route_quality_candidate_weight_wrong_mean route_quality_candidate_weight_gap route_quality_candidate_best_correct_rate route_quality_score_mean route_quality_score_correct_mean route_quality_score_wrong_mean route_quality_score_gap route_quality_selected_noisy_rate route_quality_selected_raw_qacc route_wrong_hint_strength_mean route_correct_hint_strength_mean route_hint_candidate_lookup_count route_hint_value_read_distance_mean routing_trigger_rate active_jump_rate", names, " ")
+      name_count = split("fixture_query_byte_acc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_mean route_quality_candidate_weight_factor_correct_mean route_quality_candidate_weight_factor_wrong_mean route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_p90 route_quality_candidate_weight_factor_max route_quality_candidate_weight_entropy_mean route_quality_candidate_weight_top_share_mean route_quality_candidate_weight_auto_hybrid_rate route_quality_candidate_weight_correct_mean route_quality_candidate_weight_wrong_mean route_quality_candidate_weight_gap route_quality_candidate_best_correct_rate route_quality_score_mean route_quality_score_correct_mean route_quality_score_wrong_mean route_quality_score_gap route_quality_selected_noisy_rate route_quality_selected_raw_qacc route_wrong_hint_strength_mean route_correct_hint_strength_mean route_hint_candidate_lookup_count route_hint_value_read_distance_mean routing_trigger_rate active_jump_rate", names, " ")
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
@@ -160,7 +187,7 @@ emit_aggregate() {
       return sqrt(var < 0 ? 0 : var)
     }
     BEGIN {
-      metric_count = split("qacc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_mean route_quality_candidate_weight_factor_correct_mean route_quality_candidate_weight_factor_wrong_mean route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_p90 route_quality_candidate_weight_factor_max route_quality_candidate_weight_entropy_mean route_quality_candidate_weight_top_share_mean route_quality_candidate_weight_correct_mean route_quality_candidate_weight_wrong_mean route_quality_candidate_weight_gap route_quality_candidate_best_correct_rate route_quality_score_mean route_quality_score_correct_mean route_quality_score_wrong_mean route_quality_score_gap route_quality_selected_noisy_rate route_quality_selected_raw_qacc route_wrong_hint_strength_mean route_correct_hint_strength_mean lookup_count read_distance routing_trigger_rate active_jump_rate", metrics, " ")
+      metric_count = split("qacc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_mean route_quality_candidate_weight_factor_correct_mean route_quality_candidate_weight_factor_wrong_mean route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_p90 route_quality_candidate_weight_factor_max route_quality_candidate_weight_entropy_mean route_quality_candidate_weight_top_share_mean route_quality_candidate_weight_auto_hybrid_rate route_quality_candidate_weight_correct_mean route_quality_candidate_weight_wrong_mean route_quality_candidate_weight_gap route_quality_candidate_best_correct_rate route_quality_score_mean route_quality_score_correct_mean route_quality_score_wrong_mean route_quality_score_gap route_quality_selected_noisy_rate route_quality_selected_raw_qacc route_wrong_hint_strength_mean route_correct_hint_strength_mean lookup_count read_distance routing_trigger_rate active_jump_rate", metrics, " ")
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
@@ -203,7 +230,7 @@ emit_aggregate() {
   awk -F, '
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
-      print "arm,candidate_basis,basis_mix,key_count,noisy_source_rate,rows,qacc_mean,qacc_std,factor_gap_mean,factor_max_mean,top_share_mean,entropy_mean,wrong_strength_mean,selected_noisy_rate_mean,active_jump_rate_mean"
+      print "arm,candidate_basis,basis_mix,key_count,noisy_source_rate,rows,qacc_mean,qacc_std,factor_gap_mean,factor_max_mean,top_share_mean,entropy_mean,auto_hybrid_rate_mean,wrong_strength_mean,selected_noisy_rate_mean,active_jump_rate_mean"
       next
     }
     {
@@ -220,6 +247,7 @@ emit_aggregate() {
       sum_fmax[key] += $idx["route_quality_candidate_weight_factor_max"] + 0
       sum_top[key] += $idx["route_quality_candidate_weight_top_share_mean"] + 0
       sum_entropy[key] += $idx["route_quality_candidate_weight_entropy_mean"] + 0
+      sum_auto[key] += $idx["route_quality_candidate_weight_auto_hybrid_rate"] + 0
       sum_wrong[key] += $idx["route_wrong_hint_strength_mean"] + 0
       sum_noisy[key] += $idx["route_quality_selected_noisy_rate"] + 0
       sum_jump[key] += $idx["active_jump_rate"] + 0
@@ -230,12 +258,13 @@ emit_aggregate() {
         split(key, parts, ",")
         mean_q = sum_q[key] / count[key]
         var_q = (sum_q_sq[key] / count[key]) - (mean_q * mean_q)
-        printf "%s,%s,%s,%s,%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
+        printf "%s,%s,%s,%s,%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
           parts[1], parts[2], parts[3], parts[4], parts[5], count[key],
           mean_q, sqrt(var_q < 0 ? 0 : var_q), sum_gap[key] / count[key],
           sum_fmax[key] / count[key], sum_top[key] / count[key],
-          sum_entropy[key] / count[key], sum_wrong[key] / count[key],
-          sum_noisy[key] / count[key], sum_jump[key] / count[key]
+          sum_entropy[key] / count[key], sum_auto[key] / count[key],
+          sum_wrong[key] / count[key], sum_noisy[key] / count[key],
+          sum_jump[key] / count[key]
       }
     }
   ' "$SUMMARY_CSV" >"$BY_KEY_CSV"
@@ -315,6 +344,8 @@ run_case() {
     --route-quality-candidate-weight-max 8.0 \
     --route-quality-candidate-weight-basis "$candidate_basis" \
     --route-quality-candidate-weight-basis-mix "$basis_mix" \
+    --route-quality-candidate-weight-auto-factor-max 6.0 \
+    --route-quality-candidate-weight-auto-top-share 0.72 \
     --route-quality-source-normalization none \
     --route-quality-eps 1e-4 \
     --route-channel-tension-diagnostics 1 \

@@ -1266,6 +1266,7 @@ Allowed:
 - `PASS as hybrid candidate-basis calibration diagnostics`
 - `PASS as hybrid candidate-basis guardrail scale diagnostics`
 - `PASS as hybrid candidate-basis promotion-check diagnostics`
+- `PASS as concentration-aware candidate-basis switching diagnostics`
 - `limited mitigation` only if qacc improves without behavior-changing apply
   modes, which is unlikely and should be treated cautiously
 
@@ -1336,6 +1337,50 @@ Interpretation:
 `hybrid-m0p25` is safe and lower-concentration, but it does not improve qacc.
 Keep `basis=base` as the default and reserve `hybrid-m0p25` for
 concentration-aware ablations or future policy switching.
+
+## h5-aq Concentration-aware Candidate-basis Switching
+
+h5-aq adds a diagnostic `auto` candidate-weight basis:
+
+```text
+--route-quality-candidate-weight-basis auto
+--route-quality-candidate-weight-auto-factor-max <float>
+--route-quality-candidate-weight-auto-top-share <float>
+```
+
+The policy computes the base candidate-weight concentration first. If the
+query-level factor max or top-share exceeds the configured thresholds, that
+query uses the `hybrid-m0p25` basis; otherwise it keeps the base basis.
+
+Reference scale check:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+auto thresholds = factor_max 6.0, top_share 0.72
+```
+
+Readout:
+
+```text
+base-default qacc = 0.886458, factor_gap = 3.596599,
+factor_max = 6.333333, wrong_strength = 6.210653
+
+hybrid-m0p25 qacc = 0.886545, factor_gap = 3.247608,
+factor_max = 5.968582, wrong_strength = 6.162082
+
+auto-f6p0-t0p72 qacc = 0.886502, factor_gap = 3.477531,
+factor_max = 5.968582, auto_hybrid_rate = 0.440365,
+wrong_strength = 6.173549
+```
+
+Interpretation:
+the auto policy is behaviorally connected and safe. It lowers concentration and
+wrong hint strength relative to the base default while preserving qacc, but it
+does not outperform always-hybrid. Keep `basis=base` as the default and treat
+`basis=auto` as concentration-aware policy instrumentation for threshold
+tuning.
 
 Forbidden:
 

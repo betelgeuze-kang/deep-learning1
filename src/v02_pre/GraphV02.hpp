@@ -139,14 +139,22 @@ class GraphV02 {
         std::size_t rank_index,
         std::size_t candidate_count,
         const std::array<int, FieldTable::ByteValues>& value_counts,
-        float base_weight) const;
+        float base_weight,
+        bool auto_use_hybrid = false) const;
+    bool route_quality_candidate_auto_hybrid_for_vote(
+        int query_index,
+        const std::vector<int>& vote_positions,
+        const std::array<int, FieldTable::ByteValues>& value_counts,
+        const std::string& effective_agg,
+        bool include_source_credit = true) const;
     float route_quality_candidate_weight_factor(float base_weight, float mean_base_weight) const;
     float route_candidate_mean_base_weight_for_vote(
         int query_index,
         const std::vector<int>& vote_positions,
         const std::array<int, FieldTable::ByteValues>& value_counts,
         const std::string& effective_agg,
-        bool include_source_credit = true) const;
+        bool include_source_credit = true,
+        bool auto_use_hybrid = false) const;
     float route_candidate_effective_weight_for_vote(
         int query_index,
         int value_pos,
@@ -155,7 +163,8 @@ class GraphV02 {
         const std::array<int, FieldTable::ByteValues>& value_counts,
         const std::string& effective_agg,
         float mean_base_weight,
-        bool include_source_credit = true) const;
+        bool include_source_credit = true,
+        bool auto_use_hybrid = false) const;
     float route_source_credit_strength_scale_for_node(int index) const;
     bool route_source_filter_active() const;
     bool route_source_candidate_allowed(int query_index, int value_pos) const;

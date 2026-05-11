@@ -392,6 +392,14 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-quality-candidate-weight-basis-mix" ||
                    key == "route_quality_candidate_weight_basis_mix") {
             params.route_quality_candidate_weight_basis_mix = cli_to_float(value, key);
+        } else if (key == "route-quality-candidate-weight-auto-factor-max" ||
+                   key == "route_quality_candidate_weight_auto_factor_max") {
+            params.route_quality_candidate_weight_auto_factor_max =
+                cli_to_float(value, key);
+        } else if (key == "route-quality-candidate-weight-auto-top-share" ||
+                   key == "route_quality_candidate_weight_auto_top_share") {
+            params.route_quality_candidate_weight_auto_top_share =
+                cli_to_float(value, key);
         } else if (key == "route-quality-source-normalization" ||
                    key == "route_quality_source_normalization") {
             params.route_quality_source_normalization = value;
@@ -619,8 +627,10 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-quality-candidate-weight-beta <float>\n"
        << "  --route-quality-candidate-weight-min <float>\n"
        << "  --route-quality-candidate-weight-max <float>\n"
-       << "  --route-quality-candidate-weight-basis <base|quality-score|hybrid>\n"
+       << "  --route-quality-candidate-weight-basis <base|quality-score|hybrid|auto>\n"
        << "  --route-quality-candidate-weight-basis-mix <float>\n"
+       << "  --route-quality-candidate-weight-auto-factor-max <float>\n"
+       << "  --route-quality-candidate-weight-auto-top-share <float>\n"
        << "  --route-quality-source-normalization <none|center|zscore>\n"
        << "  --route-quality-source-norm-eps <float>\n"
        << "  --route-quality-logdet-weight <float>\n"

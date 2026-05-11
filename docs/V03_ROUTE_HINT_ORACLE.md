@@ -4236,3 +4236,66 @@ lowering concentration and wrong hint strength. This is enough to keep
 `hybrid-m0p25` as a safe lower-concentration alternative, but not enough to
 promote it as the default. The default remains `candidate-weight-basis=base`
 unless a later concentration-aware policy needs the lower-concentration arm.
+
+## h5-aq Concentration-aware Candidate-basis Switching Decision
+
+The h5-aq slice passes as concentration-aware candidate-basis switching
+diagnostics and safe-alternative instrumentation, but it does not solve learned
+routing, source-credit robustness, wrong-candidate robustness, or fallback
+robustness.
+
+The slice adds an `auto` candidate-weight basis:
+
+```text
+--route-quality-candidate-weight-basis auto
+--route-quality-candidate-weight-auto-factor-max
+--route-quality-candidate-weight-auto-top-share
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --auto
+experiments/test_v05_route_quality_candidate_auto_basis.sh
+```
+
+The auto policy keeps the base basis unless the base candidate-weight
+concentration crosses the configured query-level thresholds, then uses the
+`hybrid-m0p25` basis for that query.
+
+Reference scale check:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+candidate_beta/cap = 8.0/8.0
+```
+
+Readout:
+
+```text
+base-default qacc_mean    = 0.886458
+hybrid-m0p25 qacc_mean    = 0.886545
+auto-f6p0-t0p72 qacc_mean = 0.886502
+
+base-default:
+  factor_gap = 3.596599
+  factor_max = 6.333333
+  wrong_strength = 6.210653
+
+auto-f6p0-t0p72:
+  factor_gap = 3.477531
+  factor_max = 5.968582
+  auto_hybrid_rate = 0.440365
+  wrong_strength = 6.173549
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+`auto-f6p0-t0p72` is safe and reduces concentration relative to the base
+default while preserving qacc, but it does not outperform always-hybrid. Keep
+`candidate-weight-basis=base` as the default and treat `auto` as a diagnostic
+policy arm for threshold tuning.

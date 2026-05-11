@@ -984,15 +984,27 @@ void GraphV02::validate_params() const {
     }
     if (params_.route_quality_candidate_weight_basis != "base" &&
         params_.route_quality_candidate_weight_basis != "quality-score" &&
-        params_.route_quality_candidate_weight_basis != "hybrid") {
+        params_.route_quality_candidate_weight_basis != "hybrid" &&
+        params_.route_quality_candidate_weight_basis != "auto") {
         throw std::runtime_error(
-            "route-quality-candidate-weight-basis must be one of: base, quality-score, hybrid");
+            "route-quality-candidate-weight-basis must be one of: base, quality-score, hybrid, auto");
     }
     if (!std::isfinite(params_.route_quality_candidate_weight_basis_mix) ||
         params_.route_quality_candidate_weight_basis_mix < 0.0f ||
         params_.route_quality_candidate_weight_basis_mix > 1.0f) {
         throw std::runtime_error(
             "route-quality-candidate-weight-basis-mix must be finite and in [0, 1]");
+    }
+    if (!std::isfinite(params_.route_quality_candidate_weight_auto_factor_max) ||
+        params_.route_quality_candidate_weight_auto_factor_max <= 0.0f) {
+        throw std::runtime_error(
+            "route-quality-candidate-weight-auto-factor-max must be finite and positive");
+    }
+    if (!std::isfinite(params_.route_quality_candidate_weight_auto_top_share) ||
+        params_.route_quality_candidate_weight_auto_top_share < 0.0f ||
+        params_.route_quality_candidate_weight_auto_top_share > 1.0f) {
+        throw std::runtime_error(
+            "route-quality-candidate-weight-auto-top-share must be finite and in [0, 1]");
     }
     if (params_.route_quality_source_normalization != "none" &&
         params_.route_quality_source_normalization != "center" &&
@@ -1316,8 +1328,11 @@ bool GraphV02::route_hint_proposal_value_for_node(int index, std::uint8_t& out_v
         }
 
         std::array<float, FieldTable::ByteValues> value_votes{};
+        const bool auto_hybrid =
+            route_quality_candidate_auto_hybrid_for_vote(
+                index, vote_positions, value_counts, effective_agg);
         const float mean_base_weight = route_candidate_mean_base_weight_for_vote(
-            index, vote_positions, value_counts, effective_agg);
+            index, vote_positions, value_counts, effective_agg, true, auto_hybrid);
         for (std::size_t rank_index = 0; rank_index < vote_positions.size(); ++rank_index) {
             const int value_pos = vote_positions[rank_index];
             if (value_pos < 0 || value_pos >= params_.N) {
@@ -1334,7 +1349,9 @@ bool GraphV02::route_hint_proposal_value_for_node(int index, std::uint8_t& out_v
                 vote_positions.size(),
                 value_counts,
                 effective_agg,
-                mean_base_weight);
+                mean_base_weight,
+                true,
+                auto_hybrid);
             value_votes[static_cast<std::size_t>(value)] += candidate_weight;
         }
 
@@ -1386,8 +1403,11 @@ double GraphV02::route_hint_margin_for_node(int index, std::uint8_t target_value
             ++value_counts[static_cast<std::size_t>(value)];
         }
 
+        const bool auto_hybrid =
+            route_quality_candidate_auto_hybrid_for_vote(
+                index, vote_positions, value_counts, effective_agg);
         const float mean_base_weight = route_candidate_mean_base_weight_for_vote(
-            index, vote_positions, value_counts, effective_agg);
+            index, vote_positions, value_counts, effective_agg, true, auto_hybrid);
         for (std::size_t rank_index = 0; rank_index < vote_positions.size(); ++rank_index) {
             const int value_pos = vote_positions[rank_index];
             if (value_pos < 0 || value_pos >= params_.N) {
@@ -1404,7 +1424,9 @@ double GraphV02::route_hint_margin_for_node(int index, std::uint8_t target_value
                 vote_positions.size(),
                 value_counts,
                 effective_agg,
-                mean_base_weight);
+                mean_base_weight,
+                true,
+                auto_hybrid);
             high_votes[static_cast<std::size_t>(value / FieldTable::States)] +=
                 candidate_weight;
             low_votes[static_cast<std::size_t>(value % FieldTable::States)] +=
@@ -1468,8 +1490,16 @@ double GraphV02::route_value_support_confidence_for_node(
             const auto value = nodes_[static_cast<std::size_t>(value_pos)].input_byte;
             ++value_counts[static_cast<std::size_t>(value)];
         }
+        const bool auto_hybrid =
+            route_quality_candidate_auto_hybrid_for_vote(
+                index, vote_positions, value_counts, params_.route_hint_agg);
         const float mean_base_weight = route_candidate_mean_base_weight_for_vote(
-            index, vote_positions, value_counts, params_.route_hint_agg);
+            index,
+            vote_positions,
+            value_counts,
+            params_.route_hint_agg,
+            true,
+            auto_hybrid);
         for (std::size_t rank_index = 0; rank_index < vote_positions.size(); ++rank_index) {
             const int value_pos = vote_positions[rank_index];
             if (value_pos < 0 || value_pos >= params_.N) {
@@ -1486,7 +1516,9 @@ double GraphV02::route_value_support_confidence_for_node(
                 vote_positions.size(),
                 value_counts,
                 params_.route_hint_agg,
-                mean_base_weight);
+                mean_base_weight,
+                true,
+                auto_hybrid);
             value_votes[static_cast<std::size_t>(value)] += candidate_weight;
             vote_weight_sum += candidate_weight;
         }
@@ -2481,7 +2513,8 @@ float GraphV02::route_quality_candidate_weight_basis_for_vote(
     std::size_t rank_index,
     std::size_t candidate_count,
     const std::array<int, FieldTable::ByteValues>& value_counts,
-    float base_weight) const {
+    float base_weight,
+    bool auto_use_hybrid) const {
     if (params_.route_quality_candidate_weight_basis == "base" ||
         !route_quality_candidate_weight_apply_active(params_)) {
         return base_weight;
@@ -2543,7 +2576,9 @@ float GraphV02::route_quality_candidate_weight_basis_for_vote(
     if (params_.route_quality_candidate_weight_basis == "quality-score") {
         return quality_basis;
     }
-    if (params_.route_quality_candidate_weight_basis == "hybrid") {
+    if (params_.route_quality_candidate_weight_basis == "hybrid" ||
+        (params_.route_quality_candidate_weight_basis == "auto" &&
+         auto_use_hybrid)) {
         const double mix =
             static_cast<double>(params_.route_quality_candidate_weight_basis_mix);
         const double blended =
@@ -2555,6 +2590,68 @@ float GraphV02::route_quality_candidate_weight_basis_for_vote(
         return static_cast<float>(std::max(0.0, blended));
     }
     return base_weight;
+}
+
+bool GraphV02::route_quality_candidate_auto_hybrid_for_vote(
+    int query_index,
+    const std::vector<int>& vote_positions,
+    const std::array<int, FieldTable::ByteValues>& value_counts,
+    const std::string& effective_agg,
+    bool include_source_credit) const {
+    if (params_.route_quality_candidate_weight_basis != "auto" ||
+        !route_quality_candidate_weight_apply_active(params_) ||
+        vote_positions.empty()) {
+        return false;
+    }
+
+    std::vector<float> base_weights;
+    base_weights.reserve(vote_positions.size());
+    double base_sum = 0.0;
+    for (std::size_t rank_index = 0; rank_index < vote_positions.size();
+         ++rank_index) {
+        const int value_pos = vote_positions[rank_index];
+        if (value_pos < 0 || value_pos >= params_.N) {
+            continue;
+        }
+        if (!route_source_candidate_allowed(query_index, value_pos)) {
+            continue;
+        }
+        const float base_weight = route_candidate_base_weight_for_vote(
+            query_index,
+            value_pos,
+            rank_index,
+            vote_positions.size(),
+            value_counts,
+            effective_agg,
+            include_source_credit);
+        if (base_weight < 0.0f || !std::isfinite(base_weight)) {
+            continue;
+        }
+        base_weights.push_back(base_weight);
+        base_sum += static_cast<double>(base_weight);
+    }
+    if (base_weights.empty() || base_sum <= 0.0) {
+        return false;
+    }
+
+    const float mean_base_weight =
+        static_cast<float>(base_sum / static_cast<double>(base_weights.size()));
+    float factor_max = 0.0f;
+    double effective_sum = 0.0;
+    double effective_max = 0.0;
+    for (const float base_weight : base_weights) {
+        const float factor =
+            route_quality_candidate_weight_factor(base_weight, mean_base_weight);
+        factor_max = std::max(factor_max, factor);
+        const double effective =
+            static_cast<double>(base_weight) * static_cast<double>(factor);
+        effective_sum += effective;
+        effective_max = std::max(effective_max, effective);
+    }
+    const double top_share =
+        effective_sum > 0.0 ? effective_max / effective_sum : 0.0;
+    return factor_max >= params_.route_quality_candidate_weight_auto_factor_max ||
+           top_share >= params_.route_quality_candidate_weight_auto_top_share;
 }
 
 float GraphV02::route_quality_candidate_weight_factor(
@@ -2583,7 +2680,8 @@ float GraphV02::route_candidate_mean_base_weight_for_vote(
     const std::vector<int>& vote_positions,
     const std::array<int, FieldTable::ByteValues>& value_counts,
     const std::string& effective_agg,
-    bool include_source_credit) const {
+    bool include_source_credit,
+    bool auto_use_hybrid) const {
     double sum = 0.0;
     int count = 0;
     for (std::size_t rank_index = 0; rank_index < vote_positions.size(); ++rank_index) {
@@ -2608,7 +2706,8 @@ float GraphV02::route_candidate_mean_base_weight_for_vote(
                     vote_positions.size(),
                     value_counts,
                     effective_agg,
-                    include_source_credit)));
+                    include_source_credit),
+                auto_use_hybrid));
         ++count;
     }
     return count > 0 ? static_cast<float>(sum / static_cast<double>(count)) : 0.0f;
@@ -2622,7 +2721,8 @@ float GraphV02::route_candidate_effective_weight_for_vote(
     const std::array<int, FieldTable::ByteValues>& value_counts,
     const std::string& effective_agg,
     float mean_base_weight,
-    bool include_source_credit) const {
+    bool include_source_credit,
+    bool auto_use_hybrid) const {
     const float base_weight = route_candidate_base_weight_for_vote(
         query_index,
         value_pos,
@@ -2637,7 +2737,8 @@ float GraphV02::route_candidate_effective_weight_for_vote(
         rank_index,
         candidate_count,
         value_counts,
-        base_weight);
+        base_weight,
+        auto_use_hybrid);
     return base_weight *
            route_quality_candidate_weight_factor(basis_weight, mean_base_weight);
 }
@@ -4009,8 +4110,11 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
         float weight_sum = 0.0f;
         float route_vote_delta_high = 0.0f;
         float route_vote_delta_low = 0.0f;
+        const bool auto_hybrid =
+            route_quality_candidate_auto_hybrid_for_vote(
+                index, vote_positions, value_counts, effective_agg);
         const float mean_base_weight = route_candidate_mean_base_weight_for_vote(
-            index, vote_positions, value_counts, effective_agg);
+            index, vote_positions, value_counts, effective_agg, true, auto_hybrid);
         for (std::size_t rank_index = 0; rank_index < vote_positions.size(); ++rank_index) {
             const int value_pos = vote_positions[rank_index];
             if (value_pos < 0 || value_pos >= params_.N) {
@@ -4028,7 +4132,9 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
                 vote_positions.size(),
                 value_counts,
                 effective_agg,
-                mean_base_weight);
+                mean_base_weight,
+                true,
+                auto_hybrid);
             const auto value_high =
                 static_cast<std::uint8_t>(candidate_value / FieldTable::States);
             const auto value_low =
@@ -4488,6 +4594,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_quality_candidate_weight_entropy_sum = 0.0;
     double route_quality_candidate_weight_top_share_sum = 0.0;
     double route_quality_candidate_weight_concentration_count = 0.0;
+    double route_quality_candidate_auto_hybrid_sum = 0.0;
+    double route_quality_candidate_auto_hybrid_count = 0.0;
     double route_quality_score_sum = 0.0;
     double route_quality_score_correct_sum = 0.0;
     double route_quality_score_correct_count = 0.0;
@@ -4580,8 +4688,24 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 };
                 std::vector<CandidateQualityWeight> candidate_quality_weights;
                 candidate_quality_weights.reserve(vote_positions.size());
+                const bool auto_hybrid =
+                    route_quality_candidate_auto_hybrid_for_vote(
+                        i,
+                        vote_positions,
+                        value_counts,
+                        params_.route_hint_agg);
+                if (params_.route_quality_candidate_weight_basis == "auto") {
+                    route_quality_candidate_auto_hybrid_sum +=
+                        auto_hybrid ? 1.0 : 0.0;
+                    route_quality_candidate_auto_hybrid_count += 1.0;
+                }
                 const float mean_base_weight = route_candidate_mean_base_weight_for_vote(
-                    i, vote_positions, value_counts, params_.route_hint_agg);
+                    i,
+                    vote_positions,
+                    value_counts,
+                    params_.route_hint_agg,
+                    true,
+                    auto_hybrid);
                 for (std::size_t rank_index = 0; rank_index < vote_positions.size();
                      ++rank_index) {
                     const int value_pos = vote_positions[rank_index];
@@ -4604,7 +4728,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
                             rank_index,
                             vote_positions.size(),
                             value_counts,
-                            base_weight);
+                            base_weight,
+                            auto_hybrid);
                     const float candidate_factor =
                         route_quality_candidate_weight_factor(
                             basis_weight, mean_base_weight);
@@ -6076,6 +6201,11 @@ EpochMetricsV02 GraphV02::collect_metrics(
         metrics.route_quality_candidate_weight_top_share_mean =
             route_quality_candidate_weight_top_share_sum /
             route_quality_candidate_weight_concentration_count;
+    }
+    if (route_quality_candidate_auto_hybrid_count > 0.0) {
+        metrics.route_quality_candidate_weight_auto_hybrid_rate =
+            route_quality_candidate_auto_hybrid_sum /
+            route_quality_candidate_auto_hybrid_count;
     }
     if (route_quality_score_correct_count > 0.0) {
         metrics.route_quality_score_correct_mean =

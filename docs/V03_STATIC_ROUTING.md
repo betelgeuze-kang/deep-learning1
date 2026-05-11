@@ -148,6 +148,14 @@ h5-am candidate-feature basis calibration diagnostics remain there as well:
 they compare `candidate-weight-basis=base` against `quality-score` bases, keep
 the base default, and do not promote source-ranking, route strength, graph
 topology, or jump-neighbor gates.
+h5-an/h5-ao/h5-ap hybrid candidate-basis diagnostics remain there as well:
+they compare `base` and `hybrid` candidate-weight bases, keep `base` as the
+default, and do not promote source-ranking, route strength, graph topology, or
+jump-neighbor gates.
+h5-aq concentration-aware candidate-basis switching remains there as well:
+`basis=auto` switches only the candidate-weight basis between base and
+`hybrid-m0p25` under concentration thresholds, with no route-strength,
+topology, or jump-neighbor changes.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -592,6 +600,12 @@ Allowed wording:
 - `hybrid candidate-basis calibration diagnostics`
 - `hybrid candidate-basis guardrail scale diagnostics`
 - `hybrid candidate-basis promotion-check diagnostics`
+- `concentration-aware candidate-basis switching diagnostics`
+
+h5-aq concentration-aware candidate-basis switching also stays on the
+non-topological route-hint path. `basis=auto` switches only the candidate-weight
+basis between base and `hybrid-m0p25`; it does not create remote neighbors,
+route triggers, or active jumps.
 
 Do not say:
 

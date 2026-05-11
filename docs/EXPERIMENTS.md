@@ -2986,3 +2986,83 @@ Interpretation:
 `hybrid-m0p25` is a safe lower-concentration alternative to the base default,
 but the qacc result is an exact tie rather than a lift. Do not promote it as
 the default yet; keep it available for concentration-aware ablations.
+
+## h5-aq Concentration-aware Candidate-basis Switching Decision
+
+`h5-aq` passes as concentration-aware candidate-basis switching diagnostics
+and safe-alternative instrumentation, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The h5-ao guardrail runner now supports:
+
+```text
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --auto
+experiments/test_v05_route_quality_candidate_auto_basis.sh
+```
+
+The slice adds:
+
+```text
+--route-quality-candidate-weight-basis auto
+--route-quality-candidate-weight-auto-factor-max
+--route-quality-candidate-weight-auto-top-share
+route_quality_candidate_weight_auto_hybrid_rate
+```
+
+Policy:
+use the base candidate-weight basis by default, but switch a query summary to
+the `hybrid-m0p25` basis when the base candidate weights are too concentrated.
+This keeps the behavior on the existing value-bearing route-hint path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Reference scale check:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+candidate_beta/cap = 8.0/8.0
+arms = base-default, hybrid-m0p25, auto-f6p0-t0p72
+```
+
+Readout:
+
+```text
+base-default qacc_mean       = 0.886458
+hybrid-m0p25 qacc_mean       = 0.886545
+auto-f6p0-t0p72 qacc_mean    = 0.886502
+
+base-default:
+  factor_gap = 3.596599
+  factor_max = 6.333333
+  wrong_strength = 6.210653
+
+hybrid-m0p25:
+  factor_gap = 3.247608
+  factor_max = 5.968582
+  wrong_strength = 6.162082
+
+auto-f6p0-t0p72:
+  factor_gap = 3.477531
+  factor_max = 5.968582
+  auto_hybrid_rate = 0.440365
+  wrong_strength = 6.173549
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+`auto-f6p0-t0p72` is wired and safe. It preserves qacc while reducing
+candidate-weight concentration and wrong hint strength relative to the base
+default, but it does not beat the always-hybrid arm. The default remains
+`candidate-weight-basis=base`; `auto` is a diagnostic policy arm for
+concentration-aware switching and threshold tuning.
