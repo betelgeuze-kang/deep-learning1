@@ -4299,3 +4299,42 @@ Interpretation:
 default while preserving qacc, but it does not outperform always-hybrid. Keep
 `candidate-weight-basis=base` as the default and treat `auto` as a diagnostic
 policy arm for threshold tuning.
+
+## h5-ar Auto-threshold Calibration Decision
+
+The h5-ar slice passes as auto-threshold calibration diagnostics and
+safe-alternative instrumentation, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The same guardrail runner now supports:
+
+```text
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --auto-threshold
+experiments/test_v05_route_quality_candidate_auto_threshold.sh
+```
+
+Reference sweep:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+candidate_beta/cap = 8.0/8.0
+```
+
+Readout:
+
+```text
+base-default qacc       = 0.886458
+hybrid-m0p25 qacc       = 0.886545
+auto-f5p8-t0p70 qacc    = 0.886545, auto_hybrid_rate = 1.000000
+auto-f6p0-t0p72 qacc    = 0.886502, auto_hybrid_rate = 0.440365
+auto-f6p2-t0p74 qacc    = 0.886502, auto_hybrid_rate = 0.440365
+auto-f6p4-t0p76 qacc    = 0.886632, auto_hybrid_rate = 0.124696
+```
+
+Interpretation:
+`auto-f5p8-t0p70` is too broad and collapses to always-hybrid. `auto-f6p0`
+and `auto-f6p2` are the balanced lower-concentration thresholds. `auto-f6p4`
+is more selective and has the best tiny qacc, but it gives up most
+concentration relief. Keep the default at `candidate-weight-basis=base`.

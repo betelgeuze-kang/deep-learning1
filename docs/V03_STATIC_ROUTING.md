@@ -156,6 +156,9 @@ h5-aq concentration-aware candidate-basis switching remains there as well:
 `basis=auto` switches only the candidate-weight basis between base and
 `hybrid-m0p25` under concentration thresholds, with no route-strength,
 topology, or jump-neighbor changes.
+h5-ar auto-threshold calibration remains there as well: it only changes the
+thresholds used by `basis=auto` and keeps the same value-bearing aggregation
+path, with no route-strength, topology, or jump-neighbor changes.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -601,6 +604,7 @@ Allowed wording:
 - `hybrid candidate-basis guardrail scale diagnostics`
 - `hybrid candidate-basis promotion-check diagnostics`
 - `concentration-aware candidate-basis switching diagnostics`
+- `auto-threshold calibration diagnostics`
 
 h5-aq concentration-aware candidate-basis switching also stays on the
 non-topological route-hint path. `basis=auto` switches only the candidate-weight

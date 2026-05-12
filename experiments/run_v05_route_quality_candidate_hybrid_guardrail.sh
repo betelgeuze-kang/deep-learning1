@@ -20,8 +20,12 @@ elif [[ "${1:-}" == "--auto" ]]; then
   MODE="auto"
 elif [[ "${1:-}" == "--auto-smoke" ]]; then
   MODE="auto-smoke"
+elif [[ "${1:-}" == "--auto-threshold" ]]; then
+  MODE="auto-threshold"
+elif [[ "${1:-}" == "--auto-threshold-smoke" ]]; then
+  MODE="auto-threshold-smoke"
 elif [[ "${1:-}" != "" ]]; then
-  echo "usage: $0 [--smoke|--full|--promotion|--promotion-smoke|--auto|--auto-smoke]" >&2
+  echo "usage: $0 [--smoke|--full|--promotion|--promotion-smoke|--auto|--auto-smoke|--auto-threshold|--auto-threshold-smoke]" >&2
   exit 2
 fi
 
@@ -103,12 +107,41 @@ elif [[ "$MODE" == "auto-smoke" ]]; then
     "hybrid-m0p25:hybrid:0.25"
     "auto-f6p0-t0p72:auto:0.25"
   )
+elif [[ "$MODE" == "auto-threshold" ]]; then
+  PREFIX="v05_route_quality_candidate_auto_threshold"
+  KEY_COUNTS=(64 128 256)
+  SEEDS=(1 2 3)
+  NOISY_RATES=(0.25 0.50)
+  ARMS=(
+    "base-default:base:0.00"
+    "hybrid-m0p25:hybrid:0.25"
+    "auto-f5p8-t0p70:auto:0.25:5.8:0.70"
+    "auto-f6p0-t0p72:auto:0.25:6.0:0.72"
+    "auto-f6p2-t0p74:auto:0.25:6.2:0.74"
+    "auto-f6p4-t0p76:auto:0.25:6.4:0.76"
+  )
+elif [[ "$MODE" == "auto-threshold-smoke" ]]; then
+  EPOCHS=6
+  CYCLES_PER_EPOCH=6
+  PROPOSAL_COUNT=18
+  PREFIX="v05_route_quality_candidate_auto_threshold_smoke"
+  KEY_COUNTS=(128)
+  SEEDS=(1)
+  NOISY_RATES=(0.25)
+  ARMS=(
+    "base-default:base:0.00"
+    "hybrid-m0p25:hybrid:0.25"
+    "auto-f5p8-t0p70:auto:0.25:5.8:0.70"
+    "auto-f6p0-t0p72:auto:0.25:6.0:0.72"
+    "auto-f6p2-t0p74:auto:0.25:6.2:0.74"
+    "auto-f6p4-t0p76:auto:0.25:6.4:0.76"
+  )
 fi
 
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 AGG_CSV="$RESULTS_DIR/${PREFIX}_aggregate.csv"
 BY_KEY_CSV="$RESULTS_DIR/${PREFIX}_by_key_noise.csv"
-printf 'scenario,arm,candidate_basis,basis_mix,key_count,seed,noisy_source_rate,qacc,route_quality_apply_active,route_quality_candidate_weight_beta,route_quality_candidate_weight_factor_mean,route_quality_candidate_weight_factor_correct_mean,route_quality_candidate_weight_factor_wrong_mean,route_quality_candidate_weight_factor_gap,route_quality_candidate_weight_factor_p90,route_quality_candidate_weight_factor_max,route_quality_candidate_weight_entropy_mean,route_quality_candidate_weight_top_share_mean,route_quality_candidate_weight_auto_hybrid_rate,route_quality_candidate_weight_correct_mean,route_quality_candidate_weight_wrong_mean,route_quality_candidate_weight_gap,route_quality_candidate_best_correct_rate,route_quality_score_mean,route_quality_score_correct_mean,route_quality_score_wrong_mean,route_quality_score_gap,route_quality_selected_noisy_rate,route_quality_selected_raw_qacc,route_wrong_hint_strength_mean,route_correct_hint_strength_mean,lookup_count,read_distance,routing_trigger_rate,active_jump_rate\n' >"$SUMMARY_CSV"
+printf 'scenario,arm,candidate_basis,basis_mix,auto_factor_max,auto_top_share,key_count,seed,noisy_source_rate,qacc,route_quality_apply_active,route_quality_candidate_weight_beta,route_quality_candidate_weight_factor_mean,route_quality_candidate_weight_factor_correct_mean,route_quality_candidate_weight_factor_wrong_mean,route_quality_candidate_weight_factor_gap,route_quality_candidate_weight_factor_p90,route_quality_candidate_weight_factor_max,route_quality_candidate_weight_entropy_mean,route_quality_candidate_weight_top_share_mean,route_quality_candidate_weight_auto_hybrid_rate,route_quality_candidate_weight_correct_mean,route_quality_candidate_weight_wrong_mean,route_quality_candidate_weight_gap,route_quality_candidate_best_correct_rate,route_quality_score_mean,route_quality_score_correct_mean,route_quality_score_wrong_mean,route_quality_score_gap,route_quality_selected_noisy_rate,route_quality_selected_raw_qacc,route_wrong_hint_strength_mean,route_correct_hint_strength_mean,lookup_count,read_distance,routing_trigger_rate,active_jump_rate\n' >"$SUMMARY_CSV"
 
 value_for_index() {
   local index="$1"
@@ -191,7 +224,7 @@ emit_aggregate() {
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
-      printf "arm,candidate_basis,basis_mix,rows"
+      printf "arm,candidate_basis,basis_mix,auto_factor_max,auto_top_share,rows"
       for (i = 1; i <= metric_count; i++) {
         printf ",%s_mean,%s_std", metrics[i], metrics[i]
       }
@@ -202,6 +235,8 @@ emit_aggregate() {
       arm = $idx["arm"]
       basis[arm] = $idx["candidate_basis"]
       mix[arm] = $idx["basis_mix"]
+      auto_factor[arm] = $idx["auto_factor_max"]
+      auto_top[arm] = $idx["auto_top_share"]
       if (!(arm in seen)) {
         seen[arm] = 1
         arms[++arm_count] = arm
@@ -217,7 +252,8 @@ emit_aggregate() {
     END {
       for (a = 1; a <= arm_count; a++) {
         arm = arms[a]
-        printf "%s,%s,%s,%d", arm, basis[arm], mix[arm], counts[arm]
+        printf "%s,%s,%s,%s,%s,%d", arm, basis[arm], mix[arm],
+          auto_factor[arm], auto_top[arm], counts[arm]
         for (i = 1; i <= metric_count; i++) {
           metric = metrics[i]
           printf ",%.6f,%.6f", mean(metric, arm), stddev(metric, arm)
@@ -230,11 +266,11 @@ emit_aggregate() {
   awk -F, '
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
-      print "arm,candidate_basis,basis_mix,key_count,noisy_source_rate,rows,qacc_mean,qacc_std,factor_gap_mean,factor_max_mean,top_share_mean,entropy_mean,auto_hybrid_rate_mean,wrong_strength_mean,selected_noisy_rate_mean,active_jump_rate_mean"
+      print "arm,candidate_basis,basis_mix,auto_factor_max,auto_top_share,key_count,noisy_source_rate,rows,qacc_mean,qacc_std,factor_gap_mean,factor_max_mean,top_share_mean,entropy_mean,auto_hybrid_rate_mean,wrong_strength_mean,selected_noisy_rate_mean,active_jump_rate_mean"
       next
     }
     {
-      key = $idx["arm"] "," $idx["candidate_basis"] "," $idx["basis_mix"] "," $idx["key_count"] "," $idx["noisy_source_rate"]
+      key = $idx["arm"] "," $idx["candidate_basis"] "," $idx["basis_mix"] "," $idx["auto_factor_max"] "," $idx["auto_top_share"] "," $idx["key_count"] "," $idx["noisy_source_rate"]
       if (!(key in seen)) {
         seen[key] = 1
         keys[++key_count_seen] = key
@@ -258,8 +294,9 @@ emit_aggregate() {
         split(key, parts, ",")
         mean_q = sum_q[key] / count[key]
         var_q = (sum_q_sq[key] / count[key]) - (mean_q * mean_q)
-        printf "%s,%s,%s,%s,%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
-          parts[1], parts[2], parts[3], parts[4], parts[5], count[key],
+        printf "%s,%s,%s,%s,%s,%s,%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
+          parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7],
+          count[key],
           mean_q, sqrt(var_q < 0 ? 0 : var_q), sum_gap[key] / count[key],
           sum_fmax[key] / count[key], sum_top[key] / count[key],
           sum_entropy[key] / count[key], sum_auto[key] / count[key],
@@ -274,9 +311,11 @@ run_case() {
   local arm="$1"
   local candidate_basis="$2"
   local basis_mix="$3"
-  local key_count="$4"
-  local seed="$5"
-  local noisy_rate="$6"
+  local auto_factor_max="$4"
+  local auto_top_share="$5"
+  local key_count="$6"
+  local seed="$7"
+  local noisy_rate="$8"
 
   local scenario="${arm}-k${key_count}-s${seed}-n${noisy_rate//./p}"
   local fixture="$TMP_DIR/${scenario}.txt"
@@ -287,7 +326,7 @@ run_case() {
   make_fixture "$fixture" "$key_count"
   n="$(wc -c <"$fixture")"
 
-  echo "quality-candidate-hybrid-guardrail: ${scenario} basis=${candidate_basis} mix=${basis_mix}" >&2
+  echo "quality-candidate-hybrid-guardrail: ${scenario} basis=${candidate_basis} mix=${basis_mix} auto_factor=${auto_factor_max} auto_top=${auto_top_share}" >&2
   "$BUILD_DIR/dmv02" \
     --input "$fixture" \
     --N "$n" \
@@ -344,8 +383,8 @@ run_case() {
     --route-quality-candidate-weight-max 8.0 \
     --route-quality-candidate-weight-basis "$candidate_basis" \
     --route-quality-candidate-weight-basis-mix "$basis_mix" \
-    --route-quality-candidate-weight-auto-factor-max 6.0 \
-    --route-quality-candidate-weight-auto-top-share 0.72 \
+    --route-quality-candidate-weight-auto-factor-max "$auto_factor_max" \
+    --route-quality-candidate-weight-auto-top-share "$auto_top_share" \
     --route-quality-source-normalization none \
     --route-quality-eps 1e-4 \
     --route-channel-tension-diagnostics 1 \
@@ -361,11 +400,13 @@ run_case() {
     --csv "$csv_path"
 
   metrics="$(compute_metrics "$csv_path")"
-  printf '%s,%s,%s,%s,%d,%d,%s,%s\n' \
+  printf '%s,%s,%s,%s,%s,%s,%d,%d,%s,%s\n' \
     "$scenario" \
     "$arm" \
     "$candidate_basis" \
     "$basis_mix" \
+    "$auto_factor_max" \
+    "$auto_top_share" \
     "$key_count" \
     "$seed" \
     "$noisy_rate" \
@@ -376,8 +417,11 @@ for key_count in "${KEY_COUNTS[@]}"; do
   for seed in "${SEEDS[@]}"; do
     for noisy_rate in "${NOISY_RATES[@]}"; do
       for arm_spec in "${ARMS[@]}"; do
-        IFS=: read -r arm candidate_basis basis_mix <<<"$arm_spec"
+        IFS=: read -r arm candidate_basis basis_mix auto_factor_max auto_top_share <<<"$arm_spec"
+        auto_factor_max="${auto_factor_max:-6.0}"
+        auto_top_share="${auto_top_share:-0.72}"
         run_case "$arm" "$candidate_basis" "$basis_mix" \
+          "$auto_factor_max" "$auto_top_share" \
           "$key_count" "$seed" "$noisy_rate"
       done
     done

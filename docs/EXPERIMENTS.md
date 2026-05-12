@@ -3066,3 +3066,84 @@ candidate-weight concentration and wrong hint strength relative to the base
 default, but it does not beat the always-hybrid arm. The default remains
 `candidate-weight-basis=base`; `auto` is a diagnostic policy arm for
 concentration-aware switching and threshold tuning.
+
+## h5-ar Auto-threshold Calibration Decision
+
+`h5-ar` passes as auto-threshold calibration diagnostics and safe-alternative
+instrumentation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The h5-ao guardrail runner now supports:
+
+```text
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --auto-threshold
+experiments/test_v05_route_quality_candidate_auto_threshold.sh
+```
+
+Reference threshold sweep:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+candidate_beta/cap = 8.0/8.0
+arms = base-default, hybrid-m0p25,
+       auto-f5p8-t0p70, auto-f6p0-t0p72,
+       auto-f6p2-t0p74, auto-f6p4-t0p76
+```
+
+Readout:
+
+```text
+base-default:
+  qacc = 0.886458
+  factor_gap = 3.596599
+  factor_max = 6.333333
+  wrong_strength = 6.210653
+
+hybrid-m0p25:
+  qacc = 0.886545
+  factor_gap = 3.247608
+  factor_max = 5.968582
+  wrong_strength = 6.162082
+
+auto-f5p8-t0p70:
+  qacc = 0.886545
+  auto_hybrid_rate = 1.000000
+
+auto-f6p0-t0p72:
+  qacc = 0.886502
+  factor_gap = 3.477531
+  factor_max = 5.968582
+  auto_hybrid_rate = 0.440365
+  wrong_strength = 6.173549
+
+auto-f6p2-t0p74:
+  qacc = 0.886502
+  factor_gap = 3.477531
+  factor_max = 5.968582
+  auto_hybrid_rate = 0.440365
+  wrong_strength = 6.173549
+
+auto-f6p4-t0p76:
+  qacc = 0.886632
+  factor_gap = 3.602753
+  factor_max = 6.333333
+  auto_hybrid_rate = 0.124696
+  wrong_strength = 6.208443
+```
+
+The non-topological guard remains intact:
+
+```text
+route_quality_selected_noisy_rate = 0.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+`auto-f5p8-t0p70` is too broad and degenerates into always-hybrid.
+`auto-f6p0-t0p72` and `auto-f6p2-t0p74` are the balanced lower-concentration
+thresholds. `auto-f6p4-t0p76` is more selective and has the best tiny qacc, but
+it gives up most concentration relief. Keep `basis=base` as the default and use
+the auto-threshold arms as diagnostic alternatives.
