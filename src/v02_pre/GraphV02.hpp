@@ -48,6 +48,14 @@ class GraphV02 {
         bool underfilled = false;
     };
 
+    struct RouteQualityAutoHybridStats {
+        bool use_hybrid = false;
+        bool factor_trigger = false;
+        bool top_share_trigger = false;
+        float factor_max = 0.0f;
+        double top_share = 0.0;
+    };
+
     void validate_params() const;
     Candidate sample_best_candidate(int index);
     Candidate best_block_candidate(int index) const;
@@ -142,6 +150,12 @@ class GraphV02 {
         float base_weight,
         bool auto_use_hybrid = false) const;
     bool route_quality_candidate_auto_hybrid_for_vote(
+        int query_index,
+        const std::vector<int>& vote_positions,
+        const std::array<int, FieldTable::ByteValues>& value_counts,
+        const std::string& effective_agg,
+        bool include_source_credit = true) const;
+    RouteQualityAutoHybridStats route_quality_candidate_auto_hybrid_stats_for_vote(
         int query_index,
         const std::vector<int>& vote_positions,
         const std::array<int, FieldTable::ByteValues>& value_counts,

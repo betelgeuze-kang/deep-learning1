@@ -3147,3 +3147,67 @@ Interpretation:
 thresholds. `auto-f6p4-t0p76` is more selective and has the best tiny qacc, but
 it gives up most concentration relief. Keep `basis=base` as the default and use
 the auto-threshold arms as diagnostic alternatives.
+
+## h5-as Auto-trigger Decomposition Decision
+
+`h5-as` passes as auto-trigger decomposition diagnostics, but it does not solve
+learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+The auto-threshold test now emits trigger breakdown columns:
+
+```text
+route_quality_candidate_weight_auto_factor_trigger_rate
+route_quality_candidate_weight_auto_top_share_trigger_rate
+route_quality_candidate_weight_auto_factor_max_probe_mean
+route_quality_candidate_weight_auto_top_share_probe_mean
+```
+
+These columns explain why the balanced h5-ar thresholds collapse into identical
+rows and why the narrow arm becomes mostly base-like.
+
+Reference readout:
+
+```text
+base-default:
+  qacc = 0.886458
+  factor_gap = 3.596599
+  factor_max = 6.333333
+
+hybrid-m0p25:
+  qacc = 0.886545
+  factor_gap = 3.247608
+  factor_max = 5.968582
+
+auto-f5p8-t0p70:
+  qacc = 0.886545
+  auto_hybrid_rate = 1.000000
+  factor_trigger_rate = 0.875304
+  top_share_trigger_rate = 0.684332
+
+auto-f6p0-t0p72:
+  qacc = 0.886502
+  auto_hybrid_rate = 0.440365
+  factor_trigger_rate = 0.315668
+  top_share_trigger_rate = 0.124696
+
+auto-f6p2-t0p74:
+  qacc = 0.886502
+  auto_hybrid_rate = 0.440365
+  factor_trigger_rate = 0.315668
+  top_share_trigger_rate = 0.124696
+
+auto-f6p4-t0p76:
+  qacc = 0.886632
+  auto_hybrid_rate = 0.124696
+  factor_trigger_rate = 0.000000
+  top_share_trigger_rate = 0.124696
+```
+
+Interpretation:
+`f6.0/t0.72` and `f6.2/t0.74` are identical because the observed trigger
+distribution has no additional factor/top-share mass between those thresholds.
+`f6.4/t0.76` disables the factor trigger entirely and keeps only the top-share
+trigger, so it gives up most concentration relief while preserving a tiny qacc
+edge. This keeps the auto arm as diagnostic instrumentation. The safe default
+remains `candidate-weight-basis=base`.

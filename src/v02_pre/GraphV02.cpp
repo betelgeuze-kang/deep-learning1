@@ -2598,10 +2598,27 @@ bool GraphV02::route_quality_candidate_auto_hybrid_for_vote(
     const std::array<int, FieldTable::ByteValues>& value_counts,
     const std::string& effective_agg,
     bool include_source_credit) const {
+    return route_quality_candidate_auto_hybrid_stats_for_vote(
+        query_index,
+        vote_positions,
+        value_counts,
+        effective_agg,
+        include_source_credit)
+        .use_hybrid;
+}
+
+GraphV02::RouteQualityAutoHybridStats
+GraphV02::route_quality_candidate_auto_hybrid_stats_for_vote(
+    int query_index,
+    const std::vector<int>& vote_positions,
+    const std::array<int, FieldTable::ByteValues>& value_counts,
+    const std::string& effective_agg,
+    bool include_source_credit) const {
+    RouteQualityAutoHybridStats stats;
     if (params_.route_quality_candidate_weight_basis != "auto" ||
         !route_quality_candidate_weight_apply_active(params_) ||
         vote_positions.empty()) {
-        return false;
+        return stats;
     }
 
     std::vector<float> base_weights;
@@ -2631,7 +2648,7 @@ bool GraphV02::route_quality_candidate_auto_hybrid_for_vote(
         base_sum += static_cast<double>(base_weight);
     }
     if (base_weights.empty() || base_sum <= 0.0) {
-        return false;
+        return stats;
     }
 
     const float mean_base_weight =
@@ -2650,8 +2667,14 @@ bool GraphV02::route_quality_candidate_auto_hybrid_for_vote(
     }
     const double top_share =
         effective_sum > 0.0 ? effective_max / effective_sum : 0.0;
-    return factor_max >= params_.route_quality_candidate_weight_auto_factor_max ||
-           top_share >= params_.route_quality_candidate_weight_auto_top_share;
+    stats.factor_max = factor_max;
+    stats.top_share = top_share;
+    stats.factor_trigger =
+        factor_max >= params_.route_quality_candidate_weight_auto_factor_max;
+    stats.top_share_trigger =
+        top_share >= params_.route_quality_candidate_weight_auto_top_share;
+    stats.use_hybrid = stats.factor_trigger || stats.top_share_trigger;
+    return stats;
 }
 
 float GraphV02::route_quality_candidate_weight_factor(
@@ -4595,6 +4618,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_quality_candidate_weight_top_share_sum = 0.0;
     double route_quality_candidate_weight_concentration_count = 0.0;
     double route_quality_candidate_auto_hybrid_sum = 0.0;
+    double route_quality_candidate_auto_factor_trigger_sum = 0.0;
+    double route_quality_candidate_auto_top_share_trigger_sum = 0.0;
+    double route_quality_candidate_auto_factor_max_probe_sum = 0.0;
+    double route_quality_candidate_auto_top_share_probe_sum = 0.0;
     double route_quality_candidate_auto_hybrid_count = 0.0;
     double route_quality_score_sum = 0.0;
     double route_quality_score_correct_sum = 0.0;
@@ -4688,15 +4715,21 @@ EpochMetricsV02 GraphV02::collect_metrics(
                 };
                 std::vector<CandidateQualityWeight> candidate_quality_weights;
                 candidate_quality_weights.reserve(vote_positions.size());
-                const bool auto_hybrid =
-                    route_quality_candidate_auto_hybrid_for_vote(
-                        i,
-                        vote_positions,
-                        value_counts,
-                        params_.route_hint_agg);
+                const auto auto_stats =
+                    route_quality_candidate_auto_hybrid_stats_for_vote(
+                        i, vote_positions, value_counts, params_.route_hint_agg);
+                const bool auto_hybrid = auto_stats.use_hybrid;
                 if (params_.route_quality_candidate_weight_basis == "auto") {
                     route_quality_candidate_auto_hybrid_sum +=
                         auto_hybrid ? 1.0 : 0.0;
+                    route_quality_candidate_auto_factor_trigger_sum +=
+                        auto_stats.factor_trigger ? 1.0 : 0.0;
+                    route_quality_candidate_auto_top_share_trigger_sum +=
+                        auto_stats.top_share_trigger ? 1.0 : 0.0;
+                    route_quality_candidate_auto_factor_max_probe_sum +=
+                        static_cast<double>(auto_stats.factor_max);
+                    route_quality_candidate_auto_top_share_probe_sum +=
+                        auto_stats.top_share;
                     route_quality_candidate_auto_hybrid_count += 1.0;
                 }
                 const float mean_base_weight = route_candidate_mean_base_weight_for_vote(
@@ -6205,6 +6238,18 @@ EpochMetricsV02 GraphV02::collect_metrics(
     if (route_quality_candidate_auto_hybrid_count > 0.0) {
         metrics.route_quality_candidate_weight_auto_hybrid_rate =
             route_quality_candidate_auto_hybrid_sum /
+            route_quality_candidate_auto_hybrid_count;
+        metrics.route_quality_candidate_weight_auto_factor_trigger_rate =
+            route_quality_candidate_auto_factor_trigger_sum /
+            route_quality_candidate_auto_hybrid_count;
+        metrics.route_quality_candidate_weight_auto_top_share_trigger_rate =
+            route_quality_candidate_auto_top_share_trigger_sum /
+            route_quality_candidate_auto_hybrid_count;
+        metrics.route_quality_candidate_weight_auto_factor_max_probe_mean =
+            route_quality_candidate_auto_factor_max_probe_sum /
+            route_quality_candidate_auto_hybrid_count;
+        metrics.route_quality_candidate_weight_auto_top_share_probe_mean =
+            route_quality_candidate_auto_top_share_probe_sum /
             route_quality_candidate_auto_hybrid_count;
     }
     if (route_quality_score_correct_count > 0.0) {

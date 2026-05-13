@@ -1435,6 +1435,53 @@ Interpretation:
 has a tiny qacc edge, but it is mostly base-like and does not reduce
 concentration. This is threshold calibration, not default promotion.
 
+## h5-as Auto-trigger Decomposition
+
+h5-as adds trigger decomposition to the auto basis diagnostics. The behavior is
+unchanged: auto still switches only the candidate-weight basis between `base`
+and `hybrid`, and it does not change route strength, source retry policy, graph
+topology, or jump-neighbor gates.
+
+New metrics:
+
+```text
+route_quality_candidate_weight_auto_factor_trigger_rate
+route_quality_candidate_weight_auto_top_share_trigger_rate
+route_quality_candidate_weight_auto_factor_max_probe_mean
+route_quality_candidate_weight_auto_top_share_probe_mean
+```
+
+Reference sweep:
+
+```text
+keys = 64, 128, 256
+seeds = 1..3
+noisy_source_rate = 0.25, 0.50
+```
+
+Readout:
+
+```text
+auto-f5p8-t0p70 qacc = 0.886545, auto_hybrid_rate = 1.000000,
+factor_trigger = 0.875304, top_share_trigger = 0.684332
+
+auto-f6p0-t0p72 qacc = 0.886502, auto_hybrid_rate = 0.440365,
+factor_trigger = 0.315668, top_share_trigger = 0.124696
+
+auto-f6p2-t0p74 qacc = 0.886502, auto_hybrid_rate = 0.440365,
+factor_trigger = 0.315668, top_share_trigger = 0.124696
+
+auto-f6p4-t0p76 qacc = 0.886632, auto_hybrid_rate = 0.124696,
+factor_trigger = 0.000000, top_share_trigger = 0.124696
+```
+
+Interpretation:
+`f6.0/t0.72` and `f6.2/t0.74` are identical because the trigger distribution
+has no extra mass between those thresholds. `f6.4/t0.76` is top-share-only: the
+factor trigger is zero, so the arm behaves mostly like the base basis and loses
+most concentration relief. h5-as passes as auto-trigger decomposition
+diagnostics, not learned routing or robustness solved.
+
 Forbidden:
 
 - `learned routing solved`

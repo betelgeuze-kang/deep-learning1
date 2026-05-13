@@ -4338,3 +4338,57 @@ Interpretation:
 and `auto-f6p2` are the balanced lower-concentration thresholds. `auto-f6p4`
 is more selective and has the best tiny qacc, but it gives up most
 concentration relief. Keep the default at `candidate-weight-basis=base`.
+
+## h5-as Auto-trigger Decomposition Decision
+
+The h5-as slice passes as auto-trigger decomposition diagnostics, but it does
+not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+The slice adds trigger/probe metrics for `candidate-weight-basis=auto`:
+
+```text
+route_quality_candidate_weight_auto_factor_trigger_rate
+route_quality_candidate_weight_auto_top_share_trigger_rate
+route_quality_candidate_weight_auto_factor_max_probe_mean
+route_quality_candidate_weight_auto_top_share_probe_mean
+```
+
+Reference readout:
+
+```text
+auto-f5p8-t0p70:
+  qacc = 0.886545
+  auto_hybrid_rate = 1.000000
+  factor_trigger = 0.875304
+  top_share_trigger = 0.684332
+
+auto-f6p0-t0p72:
+  qacc = 0.886502
+  auto_hybrid_rate = 0.440365
+  factor_trigger = 0.315668
+  top_share_trigger = 0.124696
+
+auto-f6p2-t0p74:
+  qacc = 0.886502
+  auto_hybrid_rate = 0.440365
+  factor_trigger = 0.315668
+  top_share_trigger = 0.124696
+
+auto-f6p4-t0p76:
+  qacc = 0.886632
+  auto_hybrid_rate = 0.124696
+  factor_trigger = 0.000000
+  top_share_trigger = 0.124696
+```
+
+Interpretation:
+`auto-f6p0-t0p72` and `auto-f6p2-t0p74` are identical because no additional
+queries fall between the two threshold pairs. `auto-f6p4-t0p76` is
+top-share-only: the factor trigger is zero, so the arm is mostly base-like and
+does not reduce factor max. This is useful threshold instrumentation, not a
+default promotion. The live route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```

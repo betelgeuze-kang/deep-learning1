@@ -141,7 +141,9 @@ fi
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 AGG_CSV="$RESULTS_DIR/${PREFIX}_aggregate.csv"
 BY_KEY_CSV="$RESULTS_DIR/${PREFIX}_by_key_noise.csv"
-printf 'scenario,arm,candidate_basis,basis_mix,auto_factor_max,auto_top_share,key_count,seed,noisy_source_rate,qacc,route_quality_apply_active,route_quality_candidate_weight_beta,route_quality_candidate_weight_factor_mean,route_quality_candidate_weight_factor_correct_mean,route_quality_candidate_weight_factor_wrong_mean,route_quality_candidate_weight_factor_gap,route_quality_candidate_weight_factor_p90,route_quality_candidate_weight_factor_max,route_quality_candidate_weight_entropy_mean,route_quality_candidate_weight_top_share_mean,route_quality_candidate_weight_auto_hybrid_rate,route_quality_candidate_weight_correct_mean,route_quality_candidate_weight_wrong_mean,route_quality_candidate_weight_gap,route_quality_candidate_best_correct_rate,route_quality_score_mean,route_quality_score_correct_mean,route_quality_score_wrong_mean,route_quality_score_gap,route_quality_selected_noisy_rate,route_quality_selected_raw_qacc,route_wrong_hint_strength_mean,route_correct_hint_strength_mean,lookup_count,read_distance,routing_trigger_rate,active_jump_rate\n' >"$SUMMARY_CSV"
+if [[ "${RESUME:-0}" != "1" || ! -f "$SUMMARY_CSV" ]]; then
+  printf 'scenario,arm,candidate_basis,basis_mix,auto_factor_max,auto_top_share,key_count,seed,noisy_source_rate,qacc,route_quality_apply_active,route_quality_candidate_weight_beta,route_quality_candidate_weight_factor_mean,route_quality_candidate_weight_factor_correct_mean,route_quality_candidate_weight_factor_wrong_mean,route_quality_candidate_weight_factor_gap,route_quality_candidate_weight_factor_p90,route_quality_candidate_weight_factor_max,route_quality_candidate_weight_entropy_mean,route_quality_candidate_weight_top_share_mean,route_quality_candidate_weight_auto_hybrid_rate,route_quality_candidate_weight_auto_factor_trigger_rate,route_quality_candidate_weight_auto_top_share_trigger_rate,route_quality_candidate_weight_auto_factor_max_probe_mean,route_quality_candidate_weight_auto_top_share_probe_mean,route_quality_candidate_weight_correct_mean,route_quality_candidate_weight_wrong_mean,route_quality_candidate_weight_gap,route_quality_candidate_best_correct_rate,route_quality_score_mean,route_quality_score_correct_mean,route_quality_score_wrong_mean,route_quality_score_gap,route_quality_selected_noisy_rate,route_quality_selected_raw_qacc,route_wrong_hint_strength_mean,route_correct_hint_strength_mean,lookup_count,read_distance,routing_trigger_rate,active_jump_rate\n' >"$SUMMARY_CSV"
+fi
 
 value_for_index() {
   local index="$1"
@@ -174,7 +176,7 @@ compute_metrics() {
 
   awk -F, '
     BEGIN {
-      name_count = split("fixture_query_byte_acc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_mean route_quality_candidate_weight_factor_correct_mean route_quality_candidate_weight_factor_wrong_mean route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_p90 route_quality_candidate_weight_factor_max route_quality_candidate_weight_entropy_mean route_quality_candidate_weight_top_share_mean route_quality_candidate_weight_auto_hybrid_rate route_quality_candidate_weight_correct_mean route_quality_candidate_weight_wrong_mean route_quality_candidate_weight_gap route_quality_candidate_best_correct_rate route_quality_score_mean route_quality_score_correct_mean route_quality_score_wrong_mean route_quality_score_gap route_quality_selected_noisy_rate route_quality_selected_raw_qacc route_wrong_hint_strength_mean route_correct_hint_strength_mean route_hint_candidate_lookup_count route_hint_value_read_distance_mean routing_trigger_rate active_jump_rate", names, " ")
+      name_count = split("fixture_query_byte_acc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_mean route_quality_candidate_weight_factor_correct_mean route_quality_candidate_weight_factor_wrong_mean route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_p90 route_quality_candidate_weight_factor_max route_quality_candidate_weight_entropy_mean route_quality_candidate_weight_top_share_mean route_quality_candidate_weight_auto_hybrid_rate route_quality_candidate_weight_auto_factor_trigger_rate route_quality_candidate_weight_auto_top_share_trigger_rate route_quality_candidate_weight_auto_factor_max_probe_mean route_quality_candidate_weight_auto_top_share_probe_mean route_quality_candidate_weight_correct_mean route_quality_candidate_weight_wrong_mean route_quality_candidate_weight_gap route_quality_candidate_best_correct_rate route_quality_score_mean route_quality_score_correct_mean route_quality_score_wrong_mean route_quality_score_gap route_quality_selected_noisy_rate route_quality_selected_raw_qacc route_wrong_hint_strength_mean route_correct_hint_strength_mean route_hint_candidate_lookup_count route_hint_value_read_distance_mean routing_trigger_rate active_jump_rate", names, " ")
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
@@ -220,7 +222,7 @@ emit_aggregate() {
       return sqrt(var < 0 ? 0 : var)
     }
     BEGIN {
-      metric_count = split("qacc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_mean route_quality_candidate_weight_factor_correct_mean route_quality_candidate_weight_factor_wrong_mean route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_p90 route_quality_candidate_weight_factor_max route_quality_candidate_weight_entropy_mean route_quality_candidate_weight_top_share_mean route_quality_candidate_weight_auto_hybrid_rate route_quality_candidate_weight_correct_mean route_quality_candidate_weight_wrong_mean route_quality_candidate_weight_gap route_quality_candidate_best_correct_rate route_quality_score_mean route_quality_score_correct_mean route_quality_score_wrong_mean route_quality_score_gap route_quality_selected_noisy_rate route_quality_selected_raw_qacc route_wrong_hint_strength_mean route_correct_hint_strength_mean lookup_count read_distance routing_trigger_rate active_jump_rate", metrics, " ")
+      metric_count = split("qacc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_mean route_quality_candidate_weight_factor_correct_mean route_quality_candidate_weight_factor_wrong_mean route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_p90 route_quality_candidate_weight_factor_max route_quality_candidate_weight_entropy_mean route_quality_candidate_weight_top_share_mean route_quality_candidate_weight_auto_hybrid_rate route_quality_candidate_weight_auto_factor_trigger_rate route_quality_candidate_weight_auto_top_share_trigger_rate route_quality_candidate_weight_auto_factor_max_probe_mean route_quality_candidate_weight_auto_top_share_probe_mean route_quality_candidate_weight_correct_mean route_quality_candidate_weight_wrong_mean route_quality_candidate_weight_gap route_quality_candidate_best_correct_rate route_quality_score_mean route_quality_score_correct_mean route_quality_score_wrong_mean route_quality_score_gap route_quality_selected_noisy_rate route_quality_selected_raw_qacc route_wrong_hint_strength_mean route_correct_hint_strength_mean lookup_count read_distance routing_trigger_rate active_jump_rate", metrics, " ")
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
@@ -266,7 +268,7 @@ emit_aggregate() {
   awk -F, '
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
-      print "arm,candidate_basis,basis_mix,auto_factor_max,auto_top_share,key_count,noisy_source_rate,rows,qacc_mean,qacc_std,factor_gap_mean,factor_max_mean,top_share_mean,entropy_mean,auto_hybrid_rate_mean,wrong_strength_mean,selected_noisy_rate_mean,active_jump_rate_mean"
+      print "arm,candidate_basis,basis_mix,auto_factor_max,auto_top_share,key_count,noisy_source_rate,rows,qacc_mean,qacc_std,factor_gap_mean,factor_max_mean,top_share_mean,entropy_mean,auto_hybrid_rate_mean,auto_factor_trigger_rate_mean,auto_top_share_trigger_rate_mean,auto_factor_max_probe_mean,auto_top_share_probe_mean,wrong_strength_mean,selected_noisy_rate_mean,active_jump_rate_mean"
       next
     }
     {
@@ -284,6 +286,10 @@ emit_aggregate() {
       sum_top[key] += $idx["route_quality_candidate_weight_top_share_mean"] + 0
       sum_entropy[key] += $idx["route_quality_candidate_weight_entropy_mean"] + 0
       sum_auto[key] += $idx["route_quality_candidate_weight_auto_hybrid_rate"] + 0
+      sum_auto_factor_trigger[key] += $idx["route_quality_candidate_weight_auto_factor_trigger_rate"] + 0
+      sum_auto_top_share_trigger[key] += $idx["route_quality_candidate_weight_auto_top_share_trigger_rate"] + 0
+      sum_auto_factor_probe[key] += $idx["route_quality_candidate_weight_auto_factor_max_probe_mean"] + 0
+      sum_auto_top_share_probe[key] += $idx["route_quality_candidate_weight_auto_top_share_probe_mean"] + 0
       sum_wrong[key] += $idx["route_wrong_hint_strength_mean"] + 0
       sum_noisy[key] += $idx["route_quality_selected_noisy_rate"] + 0
       sum_jump[key] += $idx["active_jump_rate"] + 0
@@ -294,12 +300,16 @@ emit_aggregate() {
         split(key, parts, ",")
         mean_q = sum_q[key] / count[key]
         var_q = (sum_q_sq[key] / count[key]) - (mean_q * mean_q)
-        printf "%s,%s,%s,%s,%s,%s,%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
+        printf "%s,%s,%s,%s,%s,%s,%s,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
           parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7],
           count[key],
           mean_q, sqrt(var_q < 0 ? 0 : var_q), sum_gap[key] / count[key],
           sum_fmax[key] / count[key], sum_top[key] / count[key],
           sum_entropy[key] / count[key], sum_auto[key] / count[key],
+          sum_auto_factor_trigger[key] / count[key],
+          sum_auto_top_share_trigger[key] / count[key],
+          sum_auto_factor_probe[key] / count[key],
+          sum_auto_top_share_probe[key] / count[key],
           sum_wrong[key] / count[key], sum_noisy[key] / count[key],
           sum_jump[key] / count[key]
       }
@@ -322,6 +332,11 @@ run_case() {
   local csv_path="$RESULTS_DIR/${PREFIX}_${scenario}.csv"
   local n
   local metrics
+
+  if [[ "${RESUME:-0}" == "1" ]] && grep -q "^${scenario}," "$SUMMARY_CSV"; then
+    echo "quality-candidate-hybrid-guardrail: skipping existing ${scenario}" >&2
+    return
+  fi
 
   make_fixture "$fixture" "$key_count"
   n="$(wc -c <"$fixture")"

@@ -16,7 +16,7 @@ awk -F, '
   function metric(name) { return $idx[name] + 0 }
   BEGIN { expected_rows = 6 }
   NR == 1 {
-    required_count = split("scenario arm candidate_basis basis_mix auto_factor_max auto_top_share key_count seed noisy_source_rate qacc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_max route_quality_candidate_weight_auto_hybrid_rate route_quality_selected_noisy_rate lookup_count read_distance routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("scenario arm candidate_basis basis_mix auto_factor_max auto_top_share key_count seed noisy_source_rate qacc route_quality_apply_active route_quality_candidate_weight_beta route_quality_candidate_weight_factor_gap route_quality_candidate_weight_factor_max route_quality_candidate_weight_auto_hybrid_rate route_quality_candidate_weight_auto_factor_trigger_rate route_quality_candidate_weight_auto_top_share_trigger_rate route_quality_candidate_weight_auto_factor_max_probe_mean route_quality_candidate_weight_auto_top_share_probe_mean route_quality_selected_noisy_rate lookup_count read_distance routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= NF; i++) idx[$i] = i
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) {
@@ -48,6 +48,13 @@ awk -F, '
         metric("route_quality_candidate_weight_auto_hybrid_rate") > 1)) {
       die("auto hybrid rate out of range", 8)
     }
+    if (basis == "auto" &&
+        (metric("route_quality_candidate_weight_auto_factor_trigger_rate") < 0 ||
+         metric("route_quality_candidate_weight_auto_factor_trigger_rate") > 1 ||
+         metric("route_quality_candidate_weight_auto_top_share_trigger_rate") < 0 ||
+         metric("route_quality_candidate_weight_auto_top_share_trigger_rate") > 1)) {
+      die("auto trigger rate out of range", 8)
+    }
     if (metric("lookup_count") <= 0 || metric("read_distance") <= 0) {
       die("value-bearing route path should remain populated: " arm, 9)
     }
@@ -78,7 +85,7 @@ awk -F, '
     exit code
   }
   NR == 1 {
-    required_count = split("arm candidate_basis basis_mix auto_factor_max auto_top_share rows qacc_mean qacc_std route_quality_candidate_weight_factor_gap_mean route_quality_candidate_weight_factor_max_mean route_quality_candidate_weight_auto_hybrid_rate_mean route_quality_selected_noisy_rate_mean lookup_count_mean read_distance_mean routing_trigger_rate_mean active_jump_rate_mean", required, " ")
+    required_count = split("arm candidate_basis basis_mix auto_factor_max auto_top_share rows qacc_mean qacc_std route_quality_candidate_weight_factor_gap_mean route_quality_candidate_weight_factor_max_mean route_quality_candidate_weight_auto_hybrid_rate_mean route_quality_candidate_weight_auto_factor_trigger_rate_mean route_quality_candidate_weight_auto_top_share_trigger_rate_mean route_quality_candidate_weight_auto_factor_max_probe_mean_mean route_quality_candidate_weight_auto_top_share_probe_mean_mean route_quality_selected_noisy_rate_mean lookup_count_mean read_distance_mean routing_trigger_rate_mean active_jump_rate_mean", required, " ")
     for (i = 1; i <= NF; i++) idx[$i] = i
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) {
@@ -107,7 +114,7 @@ awk -F, '
     exit code
   }
   NR == 1 {
-    required_count = split("arm candidate_basis basis_mix auto_factor_max auto_top_share key_count noisy_source_rate rows qacc_mean qacc_std factor_gap_mean factor_max_mean top_share_mean entropy_mean auto_hybrid_rate_mean wrong_strength_mean selected_noisy_rate_mean active_jump_rate_mean", required, " ")
+    required_count = split("arm candidate_basis basis_mix auto_factor_max auto_top_share key_count noisy_source_rate rows qacc_mean qacc_std factor_gap_mean factor_max_mean top_share_mean entropy_mean auto_hybrid_rate_mean auto_factor_trigger_rate_mean auto_top_share_trigger_rate_mean auto_factor_max_probe_mean auto_top_share_probe_mean wrong_strength_mean selected_noisy_rate_mean active_jump_rate_mean", required, " ")
     for (i = 1; i <= NF; i++) idx[$i] = i
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) {
