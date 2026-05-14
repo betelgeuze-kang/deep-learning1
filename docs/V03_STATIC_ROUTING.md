@@ -168,6 +168,9 @@ h5-at auto-trigger policy ablation remains there as well: it restricts the
 `basis=auto` switch to `any`, `factor`, or `top-share` trigger modes, still
 only changing candidate-weight basis selection with no route-strength,
 topology, or jump-neighbor changes.
+h5-au factor-trigger threshold refinement remains there as well: it sweeps the
+factor-only auto threshold and still only changes candidate-weight basis
+selection with no route-strength, topology, or jump-neighbor changes.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -616,6 +619,7 @@ Allowed wording:
 - `auto-threshold calibration diagnostics`
 - `auto-trigger decomposition diagnostics`
 - `auto-trigger policy ablation diagnostics`
+- `factor-trigger threshold refinement diagnostics`
 
 h5-aq concentration-aware candidate-basis switching also stays on the
 non-topological route-hint path. `basis=auto` switches only the candidate-weight
@@ -626,6 +630,8 @@ rates. It does not create remote neighbors, route triggers, or active jumps.
 h5-at only selects which of those non-topological triggers is allowed to switch
 the candidate-weight basis. It does not create remote neighbors, route triggers,
 or active jumps.
+h5-au only changes the factor threshold in that non-topological switch. It does
+not create remote neighbors, route triggers, or active jumps.
 
 Do not say:
 

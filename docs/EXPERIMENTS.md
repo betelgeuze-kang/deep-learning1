@@ -3283,3 +3283,75 @@ basis for factor concentration. Combined `any` remains the better balanced auto
 diagnostic arm. Keep the production/default path at `candidate-weight-basis=base`;
 use `hybrid-m0p25` and `auto-any-f6p0-t0p72` as safe lower-concentration
 diagnostic alternatives.
+
+## h5-au Factor-trigger Threshold Refinement Decision
+
+`h5-au` passes as factor-trigger threshold refinement diagnostics, but it does
+not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+The runner now supports:
+
+```text
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --auto-factor-threshold
+experiments/test_v05_route_quality_candidate_auto_factor_threshold.sh
+```
+
+Reference readout:
+
+```text
+base-default:
+  qacc = 0.886458
+  factor_gap = 3.596599
+  factor_max = 6.333333
+  wrong_strength = 6.210653
+
+hybrid-m0p25:
+  qacc = 0.886545
+  factor_gap = 3.247608
+  factor_max = 5.968582
+  wrong_strength = 6.162082
+
+factor-f5p6:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.875304
+  factor_gap = 3.241454
+  factor_max = 5.968582
+  wrong_strength = 6.181858
+
+factor-f5p8:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.875304
+  factor_gap = 3.241454
+  factor_max = 5.968582
+  wrong_strength = 6.181858
+
+factor-f6p0:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.315668
+  factor_gap = 3.471377
+  factor_max = 5.968582
+  wrong_strength = 6.199233
+
+factor-f6p2:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.315668
+  factor_gap = 3.471377
+  factor_max = 5.968582
+  wrong_strength = 6.199233
+
+factor-f6p4:
+  qacc = 0.886458
+  auto_hybrid_rate = 0.000000
+  factor_gap = 3.596599
+  factor_max = 6.333333
+  wrong_strength = 6.210653
+```
+
+Interpretation:
+factor-only thresholds are coarse in this fixture. `5.6/5.8` are broad and
+behave almost like always-hybrid for concentration. `6.0/6.2` are the balanced
+factor-only thresholds. `6.4` disables factor switching and collapses to the
+base default. Factor-only auto is useful for explaining concentration relief,
+but it does not outperform `hybrid-m0p25` or the base default on qacc. Keep
+`basis=base` as the default and treat factor-only thresholding as diagnostics.

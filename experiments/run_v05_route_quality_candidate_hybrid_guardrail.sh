@@ -28,8 +28,12 @@ elif [[ "${1:-}" == "--auto-trigger" ]]; then
   MODE="auto-trigger"
 elif [[ "${1:-}" == "--auto-trigger-smoke" ]]; then
   MODE="auto-trigger-smoke"
+elif [[ "${1:-}" == "--auto-factor-threshold" ]]; then
+  MODE="auto-factor-threshold"
+elif [[ "${1:-}" == "--auto-factor-threshold-smoke" ]]; then
+  MODE="auto-factor-threshold-smoke"
 elif [[ "${1:-}" != "" ]]; then
-  echo "usage: $0 [--smoke|--full|--promotion|--promotion-smoke|--auto|--auto-smoke|--auto-threshold|--auto-threshold-smoke|--auto-trigger|--auto-trigger-smoke]" >&2
+  echo "usage: $0 [--smoke|--full|--promotion|--promotion-smoke|--auto|--auto-smoke|--auto-threshold|--auto-threshold-smoke|--auto-trigger|--auto-trigger-smoke|--auto-factor-threshold|--auto-factor-threshold-smoke]" >&2
   exit 2
 fi
 
@@ -168,6 +172,37 @@ elif [[ "$MODE" == "auto-trigger-smoke" ]]; then
     "auto-factor-f6p0:auto:0.25:6.0:0.72:factor"
     "auto-top-t0p72:auto:0.25:6.0:0.72:top-share"
     "auto-any-f6p4-t0p76:auto:0.25:6.4:0.76:any"
+  )
+elif [[ "$MODE" == "auto-factor-threshold" ]]; then
+  PREFIX="v05_route_quality_candidate_auto_factor_threshold"
+  KEY_COUNTS=(64 128 256)
+  SEEDS=(1 2 3)
+  NOISY_RATES=(0.25 0.50)
+  ARMS=(
+    "base-default:base:0.00:6.0:0.72:any"
+    "hybrid-m0p25:hybrid:0.25:6.0:0.72:any"
+    "factor-f5p6:auto:0.25:5.6:0.72:factor"
+    "factor-f5p8:auto:0.25:5.8:0.72:factor"
+    "factor-f6p0:auto:0.25:6.0:0.72:factor"
+    "factor-f6p2:auto:0.25:6.2:0.72:factor"
+    "factor-f6p4:auto:0.25:6.4:0.72:factor"
+  )
+elif [[ "$MODE" == "auto-factor-threshold-smoke" ]]; then
+  EPOCHS=6
+  CYCLES_PER_EPOCH=6
+  PROPOSAL_COUNT=18
+  PREFIX="v05_route_quality_candidate_auto_factor_threshold_smoke"
+  KEY_COUNTS=(128)
+  SEEDS=(1)
+  NOISY_RATES=(0.25)
+  ARMS=(
+    "base-default:base:0.00:6.0:0.72:any"
+    "hybrid-m0p25:hybrid:0.25:6.0:0.72:any"
+    "factor-f5p6:auto:0.25:5.6:0.72:factor"
+    "factor-f5p8:auto:0.25:5.8:0.72:factor"
+    "factor-f6p0:auto:0.25:6.0:0.72:factor"
+    "factor-f6p2:auto:0.25:6.2:0.72:factor"
+    "factor-f6p4:auto:0.25:6.4:0.72:factor"
   )
 fi
 

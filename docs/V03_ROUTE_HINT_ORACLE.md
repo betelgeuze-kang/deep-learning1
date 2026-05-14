@@ -4439,3 +4439,61 @@ remains:
 ```text
 candidate value_pos -> value byte read -> proposal hint
 ```
+
+## h5-au Factor-trigger Threshold Refinement Decision
+
+The h5-au slice passes as factor-trigger threshold refinement diagnostics, but
+it does not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --auto-factor-threshold
+experiments/test_v05_route_quality_candidate_auto_factor_threshold.sh
+```
+
+Reference readout:
+
+```text
+factor-f5p6:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.875304
+  factor_gap = 3.241454
+  factor_max = 5.968582
+
+factor-f5p8:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.875304
+  factor_gap = 3.241454
+  factor_max = 5.968582
+
+factor-f6p0:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.315668
+  factor_gap = 3.471377
+  factor_max = 5.968582
+
+factor-f6p2:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.315668
+  factor_gap = 3.471377
+  factor_max = 5.968582
+
+factor-f6p4:
+  qacc = 0.886458
+  auto_hybrid_rate = 0.000000
+  factor_gap = 3.596599
+  factor_max = 6.333333
+```
+
+Interpretation:
+the factor-only threshold distribution is coarse: `5.6/5.8` are broad,
+`6.0/6.2` are balanced, and `6.4` is base-like. Factor-only switching explains
+the concentration-relief mechanism, but it does not outperform the cleaner
+`hybrid-m0p25` lower-concentration arm or the base default on qacc. The default
+remains `candidate-weight-basis=base`, and the live route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```

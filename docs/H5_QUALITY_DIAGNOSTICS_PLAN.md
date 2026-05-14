@@ -1520,6 +1520,50 @@ the factor trigger carries the concentration relief. The top-share trigger
 gives the tiny qacc edge but is base-like for factor concentration. The
 combined `any` trigger is the balanced diagnostic arm, not a default promotion.
 
+## h5-au Factor-trigger Threshold Refinement
+
+h5-au refines the factor-only branch from h5-at:
+
+```text
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --auto-factor-threshold
+```
+
+Reference readout:
+
+```text
+base-default qacc = 0.886458, factor_gap = 3.596599,
+factor_max = 6.333333, wrong_strength = 6.210653
+
+hybrid-m0p25 qacc = 0.886545, factor_gap = 3.247608,
+factor_max = 5.968582, wrong_strength = 6.162082
+
+factor-f5p6 qacc = 0.886328, auto_hybrid_rate = 0.875304,
+factor_gap = 3.241454, factor_max = 5.968582,
+wrong_strength = 6.181858
+
+factor-f5p8 qacc = 0.886328, auto_hybrid_rate = 0.875304,
+factor_gap = 3.241454, factor_max = 5.968582,
+wrong_strength = 6.181858
+
+factor-f6p0 qacc = 0.886328, auto_hybrid_rate = 0.315668,
+factor_gap = 3.471377, factor_max = 5.968582,
+wrong_strength = 6.199233
+
+factor-f6p2 qacc = 0.886328, auto_hybrid_rate = 0.315668,
+factor_gap = 3.471377, factor_max = 5.968582,
+wrong_strength = 6.199233
+
+factor-f6p4 qacc = 0.886458, auto_hybrid_rate = 0.000000,
+factor_gap = 3.596599, factor_max = 6.333333,
+wrong_strength = 6.210653
+```
+
+Interpretation:
+the factor trigger distribution is quantized. Thresholds `5.6/5.8` are broad,
+`6.0/6.2` are balanced, and `6.4` disables factor switching. Factor-only auto
+does not beat `hybrid-m0p25` or the base default on qacc, so it remains
+threshold diagnostics rather than a default policy.
+
 Forbidden:
 
 - `learned routing solved`
