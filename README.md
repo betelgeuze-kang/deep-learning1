@@ -12,6 +12,21 @@ Current headline:
 - h5-r adds source-prior schedule diagnostics for retry tie-breaks via `--route-source-retry-prior-mode none|static|decay|warmup`, `--route-source-retry-prior-decay`, and `--route-source-retry-prior-warmup-epochs`. The smoke keeps noisy retry selection at `0.000000`: source-order recovers through raw-key (`qacc=0.957813`, `retry_raw_selected=0.875000`), while static/decay/warmup key-shape priors recover through key-shape (`qacc=0.957813`, `retry_keyshape_selected=0.875000`). The fixed key-shape reference remains higher (`qacc=0.970313`, `fallback_qacc=1.000000`), so this is prior-schedule calibration / limited mitigation, not learned routing or robustness solved.
 - h5-u passes as candidate-quality logdet/channel/quality-score instrumentation, h5-v passes as weak quality source-ranking application diagnostics / neutral-to-slight-regression, h5-w passes as source-quality calibration diagnostics, h5-x passes as proxy weight/sign calibration diagnostics / single-smoke limited mitigation, h5-y passes as channel-sign multi-seed/scale stability diagnostics / weak limited mitigation, h5-z passes as source-normalization instrumentation / neutral diagnostics, h5-aa passes as candidate-level quality diagnostics / actionable split, h5-ab passes as weak bounded candidate-level quality application / limited mitigation, h5-ac passes as candidate-weight composition diagnostics / limited mitigation, h5-ad passes as candidate-only beta/noise scale diagnostics / limited mitigation, h5-ae passes as candidate-weight saturation/cap diagnostics / limited mitigation, h5-af passes as candidate-quality best-setting scale regression diagnostics / limited mitigation, h5-ag passes as candidate-quality over-sharpen boundary diagnostics / limited mitigation, h5-ah passes as high-beta candidate-quality boundary diagnostics / limited mitigation, h5-ai passes as extreme-beta candidate-quality boundary diagnostics / limited mitigation, h5-aj passes as ultra-beta candidate-quality plateau/boundary diagnostics / limited mitigation, h5-ak passes as candidate-quality guardrail selection diagnostics, h5-al passes as candidate-quality safe-default application diagnostics / limited mitigation, h5-am passes as candidate-feature basis calibration diagnostics, h5-an passes as hybrid candidate-basis calibration diagnostics / lower-concentration limited mitigation, h5-ao passes as hybrid candidate-basis guardrail scale diagnostics / lower-concentration limited mitigation, h5-ap passes as hybrid candidate-basis promotion check / safe alternative diagnostics, h5-aq passes as concentration-aware candidate-basis switching diagnostics / safe alternative instrumentation, h5-ar passes as auto-threshold calibration diagnostics / safe alternative instrumentation, h5-as passes as auto-trigger decomposition diagnostics, h5-at passes as auto-trigger policy ablation diagnostics, and h5-au passes as factor-trigger threshold refinement diagnostics. `route_quality_apply=source-ranking` activates a soft bounded source-ranking delta while keeping noisy retry selection at `0.000000`; `route_quality_apply=candidate-weight` applies a bounded relative candidate-weight factor without changing route strength; `route_quality_apply=source-candidate` combines both. In h5-ak (`keys=64,128,256`, seeds `1..5`, noisy source rates `0.10,0.25,0.50`), `beta=8, cap=8` is the safer guardrail setting: aggregate qacc is `0.885747` versus `0.885573` for `beta=12, cap=12`. h5-al then checks the safe setting as a default application arm over `keys=64,128,256`, seeds `1..3`, and noisy rates `0.10,0.25,0.50`: `candidate-default` reaches qacc `0.886429`, versus `proxy-off` `0.646962` and `source-candidate-default` `0.884896`. h5-am adds `--route-quality-candidate-weight-basis base|quality-score`; the quality-score basis is wired but lower than the base default (`feature-margin qacc=0.800000` vs `base-default qacc=0.837630`). h5-an adds `hybrid` basis with `--route-quality-candidate-weight-basis-mix`; h5-ao/h5-ap scale the comparison. h5-aq through h5-au add and dissect `--route-quality-candidate-weight-basis auto` plus concentration thresholds. h5-au shows factor-trigger thresholds are quantized: `5.6/5.8` are broad (`auto_hybrid_rate=0.875304`, `factor_gap=3.241454`, `qacc=0.886328`), `6.0/6.2` are balanced (`auto_hybrid_rate=0.315668`, `factor_gap=3.471377`, `qacc=0.886328`), and `6.4` is base-like (`auto_hybrid_rate=0.000000`, `factor_gap=3.596599`, `qacc=0.886458`). The safe default remains `basis=base`; `hybrid-m0p25` remains the cleaner lower-concentration alternative, and factor-only auto stays diagnostic.
 
+Current calibrated route-quality default:
+
+- Keep `--route-quality-apply candidate-weight` on the value-bearing route-hint path only; do not use quality features to revive jump-neighbor topology replacement.
+- Keep `--route-quality-candidate-weight-basis base` as the default. It remains the best qacc default in the latest h5-au threshold refinement (`base-default qacc=0.886458`).
+- Use `hybrid-m0p25` as the safer lower-concentration alternative when factor concentration matters: it keeps qacc essentially tied (`0.886545`) while lowering `factor_gap` and `wrong_strength` relative to base.
+- Keep factor-only `auto` thresholds diagnostic-only. h5-au shows they explain broad/balanced/base-like concentration regimes, but they do not beat the base default or the `hybrid-m0p25` alternative.
+- This is still a controlled route-hint fixture result. It is not learned routing solved, source-credit robustness solved, wrong-candidate robustness solved, fallback robustness solved, or a long-context benchmark claim.
+
+Current next steps:
+
+- Treat candidate-quality weighting as the main performance path for now, and source-credit/source-ranking as supporting diagnostics unless they improve qacc without increasing wrong strength.
+- Do not keep increasing route strength by default; the current active question is candidate-weight basis and concentration calibration, not topology or brute force route energy.
+- If h5-av/h5-aw continue from h5-au, prefer per-key/per-noise base-vs-hybrid policy diagnostics over promoting factor-only `auto`.
+- Real learned/noisy source robustness, chunk-level tasks, and external long-context baselines remain future work.
+
 Current status:
 
 - `v0.1` implemented as `dmv01`
@@ -578,6 +593,25 @@ Experiment helpers:
 - `experiments/run_v05_route_source_credit_retry_tiebreak.sh`
 - `experiments/run_v05_route_source_credit_retry_prior_schedule.sh`
 - `experiments/run_v05_route_source_credit_retry_policy.sh`
+- `experiments/run_v05_route_candidate_quality_logdet.sh`
+- `experiments/run_v05_route_quality_application.sh`
+- `experiments/run_v05_route_quality_proxy_calibration.sh`
+- `experiments/run_v05_route_quality_source_norm.sh`
+- `experiments/run_v05_route_quality_candidate_apply.sh`
+- `experiments/run_v05_route_quality_candidate_scale.sh`
+- `experiments/run_v05_route_quality_candidate_saturation.sh`
+- `experiments/run_v05_route_quality_candidate_boundary.sh`
+- `experiments/run_v05_route_quality_candidate_high_beta.sh`
+- `experiments/run_v05_route_quality_candidate_extreme_beta.sh`
+- `experiments/run_v05_route_quality_candidate_ultra_beta.sh`
+- `experiments/run_v05_route_quality_candidate_guardrail.sh`
+- `experiments/run_v05_route_quality_candidate_default.sh`
+- `experiments/run_v05_route_quality_candidate_feature_calibration.sh`
+- `experiments/run_v05_route_quality_candidate_hybrid_basis.sh`
+- `experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh`
+- `experiments/run_v05_route_quality_candidate_regression.sh`
+- `experiments/run_v05_route_quality_candidate_level.sh`
+- `experiments/run_v05_route_quality_candidate_composition.sh`
 - `experiments/test_v03_route_hint_oracle.sh`
 - `experiments/test_v03_route_hint_parsed.sh`
 - `experiments/test_v03_route_hint_kv_exact.sh`
@@ -618,6 +652,32 @@ Experiment helpers:
 - `experiments/test_v05_route_source_credit_retry_tiebreak.sh`
 - `experiments/test_v05_route_source_credit_retry_prior_schedule.sh`
 - `experiments/test_v05_route_source_credit_retry_policy.sh`
+- `experiments/test_v05_route_candidate_quality_logdet.sh`
+- `experiments/test_v05_route_quality_application.sh`
+- `experiments/test_v05_route_quality_proxy_calibration.sh`
+- `experiments/test_v05_route_quality_source_calibration.sh`
+- `experiments/test_v05_route_quality_source_norm.sh`
+- `experiments/test_v05_route_quality_channel_scale.sh`
+- `experiments/test_v05_route_quality_candidate_level.sh`
+- `experiments/test_v05_route_quality_candidate_apply.sh`
+- `experiments/test_v05_route_quality_candidate_scale.sh`
+- `experiments/test_v05_route_quality_candidate_saturation.sh`
+- `experiments/test_v05_route_quality_candidate_boundary.sh`
+- `experiments/test_v05_route_quality_candidate_high_beta.sh`
+- `experiments/test_v05_route_quality_candidate_extreme_beta.sh`
+- `experiments/test_v05_route_quality_candidate_ultra_beta.sh`
+- `experiments/test_v05_route_quality_candidate_guardrail.sh`
+- `experiments/test_v05_route_quality_candidate_default.sh`
+- `experiments/test_v05_route_quality_candidate_feature_calibration.sh`
+- `experiments/test_v05_route_quality_candidate_hybrid_basis.sh`
+- `experiments/test_v05_route_quality_candidate_hybrid_guardrail.sh`
+- `experiments/test_v05_route_quality_candidate_hybrid_promotion.sh`
+- `experiments/test_v05_route_quality_candidate_auto_basis.sh`
+- `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
+- `experiments/test_v05_route_quality_candidate_auto_trigger.sh`
+- `experiments/test_v05_route_quality_candidate_auto_factor_threshold.sh`
+- `experiments/test_v05_route_quality_candidate_composition.sh`
+- `experiments/test_v05_route_quality_candidate_regression.sh`
 
 Key docs:
 

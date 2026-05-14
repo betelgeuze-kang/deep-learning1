@@ -19,6 +19,14 @@
 
 - h5-u는 candidate-quality logdet/channel/quality-score instrumentation으로 PASS했고, h5-v는 weak quality source-ranking application diagnostics / neutral-to-slight-regression으로 PASS했으며, h5-w는 source-quality calibration diagnostics로 PASS했고, h5-x는 proxy weight/sign calibration diagnostics / single-smoke limited mitigation으로 PASS했으며, h5-y는 channel-sign multi-seed/scale stability diagnostics / weak limited mitigation으로 PASS했고, h5-z는 source-normalization instrumentation / neutral diagnostics로 PASS했으며, h5-aa는 candidate-level quality diagnostics / actionable split으로 PASS했고, h5-ab는 weak bounded candidate-level quality application / limited mitigation으로 PASS했으며, h5-ac는 candidate-weight composition diagnostics / limited mitigation으로 PASS했고, h5-ad는 candidate-only beta/noise scale diagnostics / limited mitigation으로 PASS했으며, h5-ae는 candidate-weight saturation/cap diagnostics / limited mitigation으로 PASS했고, h5-af는 candidate-quality best-setting scale regression diagnostics / limited mitigation으로 PASS했으며, h5-ag는 candidate-quality over-sharpen boundary diagnostics / limited mitigation으로 PASS했고, h5-ah는 high-beta candidate-quality boundary diagnostics / limited mitigation으로 PASS했으며, h5-ai는 extreme-beta candidate-quality boundary diagnostics / limited mitigation으로 PASS했고, h5-aj는 ultra-beta candidate-quality plateau/boundary diagnostics / limited mitigation으로 PASS했으며, h5-ak는 candidate-quality guardrail selection diagnostics로 PASS했고, h5-al은 candidate-quality safe-default application diagnostics / limited mitigation으로 PASS했으며, h5-am은 candidate-feature basis calibration diagnostics로 PASS했고, h5-an은 hybrid candidate-basis calibration diagnostics / lower-concentration limited mitigation으로 PASS했으며, h5-ao는 hybrid candidate-basis guardrail scale diagnostics / lower-concentration limited mitigation으로 PASS했고, h5-ap는 hybrid candidate-basis promotion check / safe alternative diagnostics로 PASS했으며, h5-aq는 concentration-aware candidate-basis switching diagnostics / safe alternative instrumentation으로 PASS했고, h5-ar는 auto-threshold calibration diagnostics / safe alternative instrumentation으로 PASS했으며, h5-as는 auto-trigger decomposition diagnostics로 PASS했고, h5-at는 auto-trigger policy ablation diagnostics로 PASS했으며, h5-au는 factor-trigger threshold refinement diagnostics로 PASS했습니다. `route_quality_apply=source-ranking`은 soft bounded delta만 쓰며 noisy retry 선택은 `0.000000`으로 유지됩니다. `route_quality_apply=candidate-weight`는 route strength를 바꾸지 않고 후보 weight만 clamped relative factor로 약하게 sharpen합니다. `route_quality_apply=source-candidate`는 source-ranking과 candidate-weight를 같이 켭니다. h5-ak standard sweep(`keys=64,128,256`, seeds `1..5`, noisy source rates `0.10,0.25,0.50`)에서는 `beta=8, cap=8`이 더 안전한 guardrail 설정입니다. h5-al은 이 설정을 default arm으로 확인했고, `candidate-default` qacc는 `0.886429`, `proxy-off`는 `0.646962`, `source-candidate-default`는 `0.884896`입니다. h5-am은 `--route-quality-candidate-weight-basis base|quality-score`를 추가했고, feature-score basis는 연결됐지만 `base-default qacc=0.837630`보다 낮습니다(`feature-margin qacc=0.800000`). h5-an/h5-ao/h5-ap는 `hybrid` basis와 `--route-quality-candidate-weight-basis-mix`를 추가/확장했고, h5-aq부터 h5-au까지는 `--route-quality-candidate-weight-basis auto`와 concentration threshold 옵션을 추가/분해했습니다. h5-au에서 factor threshold는 거칠게 양자화됩니다. `5.6/5.8`은 같은 broad arm입니다(`auto_hybrid_rate=0.875304`, `factor_gap=3.241454`, `qacc=0.886328`). `6.0/6.2`는 같은 balanced arm입니다(`auto_hybrid_rate=0.315668`, `factor_gap=3.471377`, `qacc=0.886328`). `6.4`는 factor switching이 꺼져 base-like입니다(`auto_hybrid_rate=0.000000`, `factor_gap=3.596599`, `qacc=0.886458`). noisy source 선택, routing trigger, active jump는 계속 `0.000000`입니다. 따라서 이는 controlled route-hint fixture 내부의 bounded candidate-weight default/basis calibration이지 learned routing이나 robustness solved가 아닙니다.
 
+## 현재 권장 기본 해석
+
+- 기본 경로는 계속 `candidate value_pos -> value byte read -> proposal hint`입니다. quality proxy, source credit, candidate weight는 이 경로 위에서만 사용하며, `jump-neighbor` topology replacement는 부활시키지 않습니다.
+- 현재 candidate-quality 기본값은 `--route-quality-apply candidate-weight`와 `--route-quality-candidate-weight-basis base`입니다. h5-au 기준 `base-default qacc=0.886458`로 여전히 가장 단순하고 안전한 기본값입니다.
+- concentration을 낮춰야 할 때는 `hybrid-m0p25`를 안전한 대안으로 봅니다. qacc는 사실상 동률(`0.886545`)이고, factor concentration과 wrong strength를 base보다 낮춥니다.
+- factor-only `auto` threshold는 diagnostic-only입니다. h5-au는 `5.6/5.8`, `6.0/6.2`, `6.4` threshold가 broad / balanced / base-like regime을 설명한다는 점을 보여줬지만, base default나 `hybrid-m0p25`를 성능 기준으로 넘지는 못했습니다.
+- 따라서 현재 상태는 candidate-quality weighting과 basis calibration의 controlled fixture 성과입니다. learned routing solved, source-credit robustness solved, wrong-candidate robustness solved, fallback robustness solved, long-context retrieval solved로 주장하면 안 됩니다.
+
 ## 현재 상태
 
 - `v0.1`: `dmv01`로 구현된 discrete local-energy dynamics 기준 구현입니다.
@@ -34,7 +42,7 @@
 - h5-u는 candidate-quality logdet/channel/quality-score instrumentation을 추가했습니다. `route_quality_apply=none`에서 `quality-off-source-order`와 `quality-on-source-order`가 모두 `qacc=0.645313`이라 행동 변경 없이 계측만 된 것이 확인됐고, fixed raw-key와 fixed key-shape는 `qacc=0.742187` vs `0.645313`, `logdet=-5.818573` vs `-15.330912`, condition `7.050210` vs `52.270703`으로 분리됩니다. 이는 instrumentation이지 learned routing이나 robustness win이 아닙니다.
 - h5-v는 첫 약한 quality 적용입니다. `route_quality_apply=source-ranking`에서 `route_quality_apply_active=1.000000`, delta `0.227710..0.250000`이 관측되고 noisy retry 선택은 `0.000000`으로 유지됩니다. 그러나 qacc는 apply-none `0.568750`에서 `0.560938`로 소폭 낮아졌으므로 weak application calibration diagnostics이지 robustness win이 아닙니다.
 - h5-w는 이 약한 적용 경로의 source-quality calibration diagnostics입니다. source별 proxy/delta/qacc를 분리해 보니 raw-key proxy는 강하게 양수 (`2.277099`)이고 key-shape/noisy는 음수 (`-0.472130`, `-0.513364`)입니다. 즉 source-ranking이 raw-key를 고르고 noisy를 피하는 이유는 설명되지만, 그 선택이 qacc 개선으로 이어지지는 않습니다.
-- h5-x는 proxy sign을 보정했습니다. channel-sign row가 단일 smoke에서 가장 좋았습니다 (`qacc=0.662500`, `selected_raw_qacc=0.720536`)이며 proxy-default `qacc=0.560938`보다 높습니다. h5-y는 이 channel-sign을 multi-seed/key smoke로 확장했고, 평균 qacc는 channel-sign `0.636198`, proxy-default `0.621094`, proxy-off `0.622656`입니다. h5-z는 `--route-quality-source-normalization none|center|zscore`를 추가했고, 정규화가 raw delta를 낮추는 것은 확인했지만 source 선택은 여전히 raw-key 중심입니다. h5-aa는 후보 단위 weight에 이미 correct/wrong 분리 신호가 있음을 확인했고, h5-ab는 그 신호를 후보 weight에 약하게 반영하면 qacc가 실제로 오른다는 것을 확인했습니다. h5-ac에서는 source-ranking 조합이 candidate-only를 넘지 못했습니다. h5-ad에서는 candidate-only beta를 noise/key/seed 축으로 확장했고, h5-ae에서는 `beta=2.0, cap=3.0/4.0`까지는 over-sharpen 신호 없이 qacc가 계속 상승했습니다. h5-af에서는 `keys=64,128,256`까지 확장해 `b2p00-cap3`이 평균 qacc `0.869965`로 가장 안정적인 regression setting임을 확인했습니다. h5-ag에서는 `beta=3.0`까지도 over-sharpen collapse가 나오지 않았고, h5-ah에서는 `beta=5.0, cap=6/8`까지 qacc가 `0.952669`로 더 올랐습니다. h5-ai에서는 `beta=8.0, cap=8/12`까지 qacc가 `0.957813`로 더 올라갔고, h5-aj에서는 `beta=12.0, cap=12/16`이 `0.958008`로 아주 약간 더 높지만 concentration 비용이 큽니다. h5-ak 5-seed guardrail에서는 `beta=8, cap=8`이 더 안전한 설정으로 정리됐고, h5-al에서는 이 설정을 candidate-weight-only default로 확인했습니다. h5-am에서는 feature-score basis가 현재 base-weight default를 대체하지 못함을 확인했습니다. h5-an/h5-ao/h5-ap에서는 hybrid basis가 base qacc를 유지하면서 concentration을 낮출 수 있음을 확인했고, h5-aq/h5-ar에서는 concentration-aware auto switching이 base qacc를 유지하면서 threshold별 concentration tradeoff를 드러냈습니다. 다음은 route-strength가 아니라 balanced auto threshold를 선택하거나, 더 나은 per-key/per-noise threshold policy를 분리하는 단계입니다.
+- h5-x는 proxy sign을 보정했습니다. channel-sign row가 단일 smoke에서 가장 좋았습니다 (`qacc=0.662500`, `selected_raw_qacc=0.720536`)이며 proxy-default `qacc=0.560938`보다 높습니다. h5-y는 이 channel-sign을 multi-seed/key smoke로 확장했고, 평균 qacc는 channel-sign `0.636198`, proxy-default `0.621094`, proxy-off `0.622656`입니다. h5-z는 `--route-quality-source-normalization none|center|zscore`를 추가했고, 정규화가 raw delta를 낮추는 것은 확인했지만 source 선택은 여전히 raw-key 중심입니다. h5-aa는 후보 단위 weight에 이미 correct/wrong 분리 신호가 있음을 확인했고, h5-ab는 그 신호를 후보 weight에 약하게 반영하면 qacc가 실제로 오른다는 것을 확인했습니다. h5-ac에서는 source-ranking 조합이 candidate-only를 넘지 못했습니다. h5-ad에서는 candidate-only beta를 noise/key/seed 축으로 확장했고, h5-ae에서는 `beta=2.0, cap=3.0/4.0`까지는 over-sharpen 신호 없이 qacc가 계속 상승했습니다. h5-af에서는 `keys=64,128,256`까지 확장해 `b2p00-cap3`이 평균 qacc `0.869965`로 가장 안정적인 regression setting임을 확인했습니다. h5-ag에서는 `beta=3.0`까지도 over-sharpen collapse가 나오지 않았고, h5-ah에서는 `beta=5.0, cap=6/8`까지 qacc가 `0.952669`로 더 올랐습니다. h5-ai에서는 `beta=8.0, cap=8/12`까지 qacc가 `0.957813`로 더 올라갔고, h5-aj에서는 `beta=12.0, cap=12/16`이 `0.958008`로 아주 약간 더 높지만 concentration 비용이 큽니다. h5-ak 5-seed guardrail에서는 `beta=8, cap=8`이 더 안전한 설정으로 정리됐고, h5-al에서는 이 설정을 candidate-weight-only default로 확인했습니다. h5-am에서는 feature-score basis가 현재 base-weight default를 대체하지 못함을 확인했습니다. h5-an/h5-ao/h5-ap에서는 hybrid basis가 base qacc를 유지하면서 concentration을 낮출 수 있음을 확인했고, h5-aq/h5-ar에서는 concentration-aware auto switching이 base qacc를 유지하면서 threshold별 concentration tradeoff를 드러냈습니다. h5-as는 auto trigger를 factor와 top-share로 분해했고, h5-at는 factor/top/any trigger policy를 비교했으며, h5-au는 factor-only threshold를 더 촘촘히 보정했습니다. 현재 결론은 `basis=base`가 기본값이고, `hybrid-m0p25`가 lower-concentration safe alternative이며, factor-only auto는 threshold regime을 설명하는 diagnostic이라는 것입니다.
 
 ## 중요한 아키텍처 결론
 
@@ -222,7 +230,28 @@ cmake --build build -j
 - `experiments/run_v05_route_source_credit_source_aware_scale.sh`
 - `experiments/run_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/run_v05_route_source_credit_retry_source.sh`
+- `experiments/run_v05_route_source_credit_retry_tiebreak.sh`
+- `experiments/run_v05_route_source_credit_retry_prior_schedule.sh`
 - `experiments/run_v05_route_source_credit_retry_policy.sh`
+- `experiments/run_v05_route_candidate_quality_logdet.sh`
+- `experiments/run_v05_route_quality_application.sh`
+- `experiments/run_v05_route_quality_proxy_calibration.sh`
+- `experiments/run_v05_route_quality_source_norm.sh`
+- `experiments/run_v05_route_quality_candidate_apply.sh`
+- `experiments/run_v05_route_quality_candidate_scale.sh`
+- `experiments/run_v05_route_quality_candidate_saturation.sh`
+- `experiments/run_v05_route_quality_candidate_boundary.sh`
+- `experiments/run_v05_route_quality_candidate_high_beta.sh`
+- `experiments/run_v05_route_quality_candidate_extreme_beta.sh`
+- `experiments/run_v05_route_quality_candidate_ultra_beta.sh`
+- `experiments/run_v05_route_quality_candidate_guardrail.sh`
+- `experiments/run_v05_route_quality_candidate_default.sh`
+- `experiments/run_v05_route_quality_candidate_feature_calibration.sh`
+- `experiments/run_v05_route_quality_candidate_hybrid_basis.sh`
+- `experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh`
+- `experiments/run_v05_route_quality_candidate_regression.sh`
+- `experiments/run_v05_route_quality_candidate_level.sh`
+- `experiments/run_v05_route_quality_candidate_composition.sh`
 
 ## 대표 smoke test
 
@@ -263,7 +292,35 @@ cmake --build build -j
 - `experiments/test_v05_route_source_credit_source_aware_scale.sh`
 - `experiments/test_v05_route_source_credit_bad_source_filter.sh`
 - `experiments/test_v05_route_source_credit_retry_source.sh`
+- `experiments/test_v05_route_source_credit_retry_tiebreak.sh`
+- `experiments/test_v05_route_source_credit_retry_prior_schedule.sh`
 - `experiments/test_v05_route_source_credit_retry_policy.sh`
+- `experiments/test_v05_route_candidate_quality_logdet.sh`
+- `experiments/test_v05_route_quality_application.sh`
+- `experiments/test_v05_route_quality_proxy_calibration.sh`
+- `experiments/test_v05_route_quality_source_calibration.sh`
+- `experiments/test_v05_route_quality_source_norm.sh`
+- `experiments/test_v05_route_quality_channel_scale.sh`
+- `experiments/test_v05_route_quality_candidate_level.sh`
+- `experiments/test_v05_route_quality_candidate_apply.sh`
+- `experiments/test_v05_route_quality_candidate_scale.sh`
+- `experiments/test_v05_route_quality_candidate_saturation.sh`
+- `experiments/test_v05_route_quality_candidate_boundary.sh`
+- `experiments/test_v05_route_quality_candidate_high_beta.sh`
+- `experiments/test_v05_route_quality_candidate_extreme_beta.sh`
+- `experiments/test_v05_route_quality_candidate_ultra_beta.sh`
+- `experiments/test_v05_route_quality_candidate_guardrail.sh`
+- `experiments/test_v05_route_quality_candidate_default.sh`
+- `experiments/test_v05_route_quality_candidate_feature_calibration.sh`
+- `experiments/test_v05_route_quality_candidate_hybrid_basis.sh`
+- `experiments/test_v05_route_quality_candidate_hybrid_guardrail.sh`
+- `experiments/test_v05_route_quality_candidate_hybrid_promotion.sh`
+- `experiments/test_v05_route_quality_candidate_auto_basis.sh`
+- `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
+- `experiments/test_v05_route_quality_candidate_auto_trigger.sh`
+- `experiments/test_v05_route_quality_candidate_auto_factor_threshold.sh`
+- `experiments/test_v05_route_quality_candidate_composition.sh`
+- `experiments/test_v05_route_quality_candidate_regression.sh`
 
 ## 핵심 문서
 
@@ -281,8 +338,8 @@ cmake --build build -j
 
 ## 다음 연구 방향
 
-- fallback-used query에서 low nibble integration을 더 안정화합니다.
-- route credit을 candidate ranking/aggregation에 더 안전하게 연결합니다.
-- preserve-correct와 remove-correct failure를 분리한 route plasticity를 설계합니다.
-- learned/noisy candidate robustness를 route-code identity와 fallback source 위에서 다시 검증합니다.
-- synthetic fixture를 넘어 real long-context / chunk-level task와 외부 baseline 비교로 확장합니다.
+- h5-au 이후 기본값은 `candidate-weight + base basis`로 유지하고, `hybrid-m0p25`는 concentration을 낮추는 안전 대안으로 남깁니다.
+- factor-only `auto`는 당분간 diagnostic-only로 유지합니다. 다음 개선은 auto threshold를 더 키우기보다, per-key/per-noise 조건에서 base와 hybrid를 언제 바꿀지 분리하는 쪽이 안전합니다.
+- candidate-quality weighting은 현재 가장 강한 route-quality 적용 경로입니다. 다만 learned routing solved나 robustness solved가 아니므로, noisy/weak learned-like source에서 qacc와 wrong-strength가 같이 안정되는지 계속 봐야 합니다.
+- source-credit은 좋은/나쁜 source responsibility signal로 유용하지만, 현재 성능 기본축은 source-ranking보다 candidate-weighting 쪽입니다. source-credit은 candidate-quality default와 결합한 보조 신호로 유지합니다.
+- synthetic fixture를 넘어 real long-context / chunk-level task와 외부 baseline 비교로 확장하기 전까지는 Transformer replacement나 long-context retrieval solved claim을 하지 않습니다.
