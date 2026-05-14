@@ -153,6 +153,7 @@ struct V02PreParams {
     float route_quality_candidate_weight_basis_mix = 0.25f;
     float route_quality_candidate_weight_auto_factor_max = 6.0f;
     float route_quality_candidate_weight_auto_top_share = 0.72f;
+    std::string route_quality_candidate_weight_auto_trigger_mode = "any";
     std::string route_quality_source_normalization = "none";
     float route_quality_source_norm_eps = 1e-6f;
     float route_quality_logdet_weight = 0.1f;

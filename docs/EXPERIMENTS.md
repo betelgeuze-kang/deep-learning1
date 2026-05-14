@@ -3211,3 +3211,75 @@ distribution has no additional factor/top-share mass between those thresholds.
 trigger, so it gives up most concentration relief while preserving a tiny qacc
 edge. This keeps the auto arm as diagnostic instrumentation. The safe default
 remains `candidate-weight-basis=base`.
+
+## h5-at Auto-trigger Policy Ablation Decision
+
+`h5-at` passes as auto-trigger policy ablation diagnostics, but it does not
+solve learned routing, source-credit robustness, wrong-candidate robustness, or
+fallback robustness.
+
+The runner now supports:
+
+```text
+--route-quality-candidate-weight-auto-trigger-mode any|factor|top-share
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --auto-trigger
+experiments/test_v05_route_quality_candidate_auto_trigger.sh
+```
+
+`any` preserves the previous behavior. `factor` switches to the hybrid basis
+only when the factor concentration trigger fires. `top-share` switches only
+when the top-share concentration trigger fires.
+
+Reference readout:
+
+```text
+base-default:
+  qacc = 0.886458
+  factor_gap = 3.596599
+  factor_max = 6.333333
+  wrong_strength = 6.210653
+
+hybrid-m0p25:
+  qacc = 0.886545
+  factor_gap = 3.247608
+  factor_max = 5.968582
+  wrong_strength = 6.162082
+
+auto-any-f6p0-t0p72:
+  qacc = 0.886502
+  auto_hybrid_rate = 0.440365
+  factor_trigger_rate = 0.315668
+  top_share_trigger_rate = 0.124696
+  factor_gap = 3.477531
+  factor_max = 5.968582
+  wrong_strength = 6.173549
+
+auto-factor-f6p0:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.315668
+  factor_gap = 3.471377
+  factor_max = 5.968582
+  wrong_strength = 6.199233
+
+auto-top-t0p72:
+  qacc = 0.886632
+  auto_hybrid_rate = 0.124696
+  factor_gap = 3.602753
+  factor_max = 6.333333
+  wrong_strength = 6.208443
+
+auto-any-f6p4-t0p76:
+  qacc = 0.886632
+  auto_hybrid_rate = 0.124696
+  factor_gap = 3.602753
+  factor_max = 6.333333
+  wrong_strength = 6.208443
+```
+
+Interpretation:
+factor-triggered switching is responsible for the useful concentration relief.
+Top-share-only switching preserves the tiny qacc edge but behaves like the base
+basis for factor concentration. Combined `any` remains the better balanced auto
+diagnostic arm. Keep the production/default path at `candidate-weight-basis=base`;
+use `hybrid-m0p25` and `auto-any-f6p0-t0p72` as safe lower-concentration
+diagnostic alternatives.

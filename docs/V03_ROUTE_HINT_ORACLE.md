@@ -4392,3 +4392,50 @@ default promotion. The live route path remains:
 ```text
 candidate value_pos -> value byte read -> proposal hint
 ```
+
+## h5-at Auto-trigger Policy Ablation Decision
+
+The h5-at slice passes as auto-trigger policy ablation diagnostics, but it does
+not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+--route-quality-candidate-weight-auto-trigger-mode any|factor|top-share
+experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh --auto-trigger
+experiments/test_v05_route_quality_candidate_auto_trigger.sh
+```
+
+Reference readout:
+
+```text
+auto-any-f6p0-t0p72:
+  qacc = 0.886502
+  auto_hybrid_rate = 0.440365
+  factor_gap = 3.477531
+  factor_max = 5.968582
+
+auto-factor-f6p0:
+  qacc = 0.886328
+  auto_hybrid_rate = 0.315668
+  factor_gap = 3.471377
+  factor_max = 5.968582
+
+auto-top-t0p72:
+  qacc = 0.886632
+  auto_hybrid_rate = 0.124696
+  factor_gap = 3.602753
+  factor_max = 6.333333
+```
+
+Interpretation:
+factor-triggered switching produces the lower concentration path. Top-share-only
+switching matches the tiny qacc edge of the narrow auto arm but remains
+base-like for factor concentration. `any` is the balanced diagnostic setting.
+The default remains `candidate-weight-basis=base`, and the live route path
+remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```

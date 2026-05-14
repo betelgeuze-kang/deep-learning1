@@ -1482,6 +1482,44 @@ factor trigger is zero, so the arm behaves mostly like the base basis and loses
 most concentration relief. h5-as passes as auto-trigger decomposition
 diagnostics, not learned routing or robustness solved.
 
+## h5-at Auto-trigger Policy Ablation
+
+h5-at turns the h5-as trigger decomposition into a policy ablation:
+
+```text
+--route-quality-candidate-weight-auto-trigger-mode any|factor|top-share
+```
+
+`any` is the existing auto behavior. `factor` uses only
+`factor_trigger_rate`. `top-share` uses only `top_share_trigger_rate`.
+
+Reference readout:
+
+```text
+base-default qacc = 0.886458, factor_gap = 3.596599,
+factor_max = 6.333333, wrong_strength = 6.210653
+
+hybrid-m0p25 qacc = 0.886545, factor_gap = 3.247608,
+factor_max = 5.968582, wrong_strength = 6.162082
+
+auto-any-f6p0-t0p72 qacc = 0.886502, auto_hybrid_rate = 0.440365,
+factor_gap = 3.477531, factor_max = 5.968582,
+wrong_strength = 6.173549
+
+auto-factor-f6p0 qacc = 0.886328, auto_hybrid_rate = 0.315668,
+factor_gap = 3.471377, factor_max = 5.968582,
+wrong_strength = 6.199233
+
+auto-top-t0p72 qacc = 0.886632, auto_hybrid_rate = 0.124696,
+factor_gap = 3.602753, factor_max = 6.333333,
+wrong_strength = 6.208443
+```
+
+Interpretation:
+the factor trigger carries the concentration relief. The top-share trigger
+gives the tiny qacc edge but is base-like for factor concentration. The
+combined `any` trigger is the balanced diagnostic arm, not a default promotion.
+
 Forbidden:
 
 - `learned routing solved`

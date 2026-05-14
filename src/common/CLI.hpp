@@ -400,6 +400,9 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
                    key == "route_quality_candidate_weight_auto_top_share") {
             params.route_quality_candidate_weight_auto_top_share =
                 cli_to_float(value, key);
+        } else if (key == "route-quality-candidate-weight-auto-trigger-mode" ||
+                   key == "route_quality_candidate_weight_auto_trigger_mode") {
+            params.route_quality_candidate_weight_auto_trigger_mode = value;
         } else if (key == "route-quality-source-normalization" ||
                    key == "route_quality_source_normalization") {
             params.route_quality_source_normalization = value;
@@ -631,6 +634,7 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-quality-candidate-weight-basis-mix <float>\n"
        << "  --route-quality-candidate-weight-auto-factor-max <float>\n"
        << "  --route-quality-candidate-weight-auto-top-share <float>\n"
+       << "  --route-quality-candidate-weight-auto-trigger-mode <any|factor|top-share>\n"
        << "  --route-quality-source-normalization <none|center|zscore>\n"
        << "  --route-quality-source-norm-eps <float>\n"
        << "  --route-quality-logdet-weight <float>\n"

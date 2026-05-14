@@ -1006,6 +1006,12 @@ void GraphV02::validate_params() const {
         throw std::runtime_error(
             "route-quality-candidate-weight-auto-top-share must be finite and in [0, 1]");
     }
+    if (params_.route_quality_candidate_weight_auto_trigger_mode != "any" &&
+        params_.route_quality_candidate_weight_auto_trigger_mode != "factor" &&
+        params_.route_quality_candidate_weight_auto_trigger_mode != "top-share") {
+        throw std::runtime_error(
+            "route-quality-candidate-weight-auto-trigger-mode must be one of: any, factor, top-share");
+    }
     if (params_.route_quality_source_normalization != "none" &&
         params_.route_quality_source_normalization != "center" &&
         params_.route_quality_source_normalization != "zscore") {
@@ -2673,7 +2679,13 @@ GraphV02::route_quality_candidate_auto_hybrid_stats_for_vote(
         factor_max >= params_.route_quality_candidate_weight_auto_factor_max;
     stats.top_share_trigger =
         top_share >= params_.route_quality_candidate_weight_auto_top_share;
-    stats.use_hybrid = stats.factor_trigger || stats.top_share_trigger;
+    if (params_.route_quality_candidate_weight_auto_trigger_mode == "factor") {
+        stats.use_hybrid = stats.factor_trigger;
+    } else if (params_.route_quality_candidate_weight_auto_trigger_mode == "top-share") {
+        stats.use_hybrid = stats.top_share_trigger;
+    } else {
+        stats.use_hybrid = stats.factor_trigger || stats.top_share_trigger;
+    }
     return stats;
 }
 
