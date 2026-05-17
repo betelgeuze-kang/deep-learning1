@@ -3693,3 +3693,40 @@ Interpretation:
 h5-bb turns the h5-ba preset-only policy comparison into a reusable regression
 guard. It is still a controlled candidate-weight preset guard on the
 value-bearing route-hint path, not a learned routing or robustness claim.
+
+## h5-bc Route-quality Closure Smoke Decision
+
+`h5-bc` passes as route-quality closure instrumentation. It does not solve
+learned routing, source-credit robustness, wrong-candidate robustness, fallback
+robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/test_v05_route_quality_closure.sh
+```
+
+The default closure smoke runs:
+
+```text
+bash -n experiments/*.sh
+cmake --build build --target dmv02 -j2
+experiments/test_v03_route_hint_oracle.sh
+experiments/test_v05_route_quality_candidate_preset.sh
+experiments/test_v05_route_quality_candidate_preset_policy.sh
+RUN_SOURCE=0 experiments/test_v05_route_quality_candidate_preset_policy_scale.sh
+```
+
+`--extended` additionally runs:
+
+```text
+experiments/test_v03_route_hint_kv_hash_route_code_adaptive.sh
+experiments/test_v05_route_quality_candidate_preset_regression.sh
+RUN_SOURCE=0 experiments/test_v05_route_quality_candidate_basis_guardrail.sh --scale
+```
+
+Interpretation:
+h5-bc is a release-style safety net for the current route-quality stack. It
+checks that the value-bearing route-hint path remains live, candidate-weight
+presets remain equivalent/policy-guarded, and jump-neighbor routing remains
+inactive. It adds no new route behavior.

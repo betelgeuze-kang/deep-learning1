@@ -675,6 +675,37 @@ the preset-only base-vs-hybrid-safe comparison is now protected by a scale
 guardrail. This is still candidate-weight preset calibration on the
 value-bearing route-hint path, not a new routing mechanism.
 
+## h5-bc Route-quality Closure Smoke Decision
+
+The h5-bc slice passes as route-quality closure instrumentation. It does not
+solve learned routing, source-credit robustness, wrong-candidate robustness,
+fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/test_v05_route_quality_closure.sh
+```
+
+Default closure checks:
+
+```text
+bash -n experiments/*.sh
+cmake --build build --target dmv02 -j2
+experiments/test_v03_route_hint_oracle.sh
+experiments/test_v05_route_quality_candidate_preset.sh
+experiments/test_v05_route_quality_candidate_preset_policy.sh
+RUN_SOURCE=0 experiments/test_v05_route_quality_candidate_preset_policy_scale.sh
+```
+
+Extended closure adds route-code adaptive, preset regression, and
+candidate-basis guardrail scale checks.
+
+Interpretation:
+h5-bc closes the current route-quality stack with a single smoke entrypoint.
+It verifies the live value-bearing route-hint path and guarded candidate-weight
+preset policy while keeping jump-neighbor replacement inactive.
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then
