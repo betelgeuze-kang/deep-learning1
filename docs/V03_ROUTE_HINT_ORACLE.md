@@ -586,6 +586,62 @@ copying long option blocks. The live route path remains:
 candidate value_pos -> value byte read -> proposal hint
 ```
 
+## h5-ba Candidate-weight Preset Policy Decision
+
+The h5-ba slice passes as candidate-weight preset policy diagnostics and
+lower-concentration limited mitigation, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_preset_policy.sh
+experiments/test_v05_route_quality_candidate_preset_policy.sh
+```
+
+This runner compares the preset arms directly:
+
+```text
+base-default
+hybrid-safe
+```
+
+Standard matrix:
+
+```text
+keys = 64, 128
+seeds = 1, 2
+noisy_source_rate = 0.25, 0.50
+```
+
+Aggregate readout:
+
+```text
+rows = 8
+base_qacc_mean = 0.863281
+hybrid_qacc_mean = 0.864258
+qacc_delta_mean = 0.000977
+base_factor_gap_mean = 3.440251
+hybrid_factor_gap_mean = 3.118539
+factor_gap_delta_mean = -0.321711
+base_factor_max_mean = 6.333333
+hybrid_factor_max_mean = 6.049084
+factor_max_delta_mean = -0.284249
+wrong_strength_delta_mean = 0.000000
+lookup_count_mean = 96.000000
+read_distance_mean = 956.410156
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+hybrid_recommended_rate = 1.000000
+```
+
+Interpretation:
+`hybrid-safe` now works as a first-class preset policy arm. In the tested
+matrix it remains qacc-neutral/slightly positive, lowers candidate-weight
+concentration, does not raise wrong strength, and keeps jump-neighbor routing
+inactive. `base-default` remains the default; `hybrid-safe` remains a guarded
+lower-concentration alternative on the same value-bearing route-hint path.
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

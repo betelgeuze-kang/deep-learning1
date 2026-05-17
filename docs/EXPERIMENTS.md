@@ -3599,3 +3599,64 @@ matrix. It is now safe to use `base-default` and `hybrid-safe` presets in future
 route-quality experiments without changing behavior. This remains a usability
 and regression-safety finding; `base` remains the default and `hybrid-safe`
 remains a guarded lower-concentration alternative.
+
+## h5-ba Candidate-weight Preset Policy Decision
+
+`h5-ba` passes as candidate-weight preset policy diagnostics / lower-
+concentration limited mitigation, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_preset_policy.sh
+experiments/test_v05_route_quality_candidate_preset_policy.sh
+```
+
+Unlike h5-az, this runner does not compare explicit long-form options against
+presets. It treats the presets themselves as the experiment arms:
+
+```text
+base-default
+hybrid-safe
+```
+
+Standard matrix:
+
+```text
+keys = 64, 128
+seeds = 1, 2
+noisy_source_rate = 0.25, 0.50
+```
+
+Aggregate readout:
+
+```text
+rows = 8
+base_qacc_mean = 0.863281
+hybrid_qacc_mean = 0.864258
+qacc_delta_mean = 0.000977
+base_factor_gap_mean = 3.440251
+hybrid_factor_gap_mean = 3.118539
+factor_gap_delta_mean = -0.321711
+base_factor_max_mean = 6.333333
+hybrid_factor_max_mean = 6.049084
+factor_max_delta_mean = -0.284249
+wrong_strength_delta_mean = 0.000000
+lookup_count_mean = 96.000000
+read_distance_mean = 956.410156
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+hybrid_recommended_rate = 1.000000
+```
+
+Interpretation:
+the preset interface now reproduces the h5-aw lower-concentration policy
+conclusion directly. `base-default` remains the default preset, while
+`hybrid-safe` remains a guarded lower-concentration alternative that lowers
+factor concentration without qacc regression in the tested matrix. The live
+route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```

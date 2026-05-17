@@ -31,6 +31,7 @@ Current next steps:
 - h5-ax turns that safe-alternative conclusion into a regression guard: `hybrid-m0p25` must stay within `0.001` qacc of base, lower factor gap, not raise factor max, keep aggregate wrong-strength no-regression, and keep jump-neighbor routing inactive.
 - h5-ay adds `--route-quality-candidate-weight-preset none|base-default|hybrid-safe` so the guarded base and hybrid-safe candidate-weight settings can be selected without copying long option blocks. The preset smoke shows exact metric equivalence with explicit settings and keeps `routing_trigger_rate = active_jump_rate = 0.000000`.
 - h5-az scales preset adoption over a small key/seed/noise matrix: explicit settings and presets match exactly across 16 rows (`equivalent_rate=1.000000`, all metric deltas `0.000000`), while lookup/read stay populated and jump-neighbor routing remains inactive.
+- h5-ba compares the presets directly as experiment arms over the same small key/seed/noise matrix. `hybrid-safe` is recommended in every row: qacc moves `0.863281 -> 0.864258`, factor gap drops `3.440251 -> 3.118539`, factor max drops `6.333333 -> 6.049084`, and jump-neighbor routing remains inactive.
 
 Current status:
 
@@ -616,6 +617,7 @@ Experiment helpers:
 - `experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh`
 - `experiments/run_v05_route_quality_candidate_basis_policy.sh`
 - `experiments/run_v05_route_quality_candidate_preset_regression.sh`
+- `experiments/run_v05_route_quality_candidate_preset_policy.sh`
 - `experiments/run_v05_route_quality_candidate_regression.sh`
 - `experiments/run_v05_route_quality_candidate_level.sh`
 - `experiments/run_v05_route_quality_candidate_composition.sh`
@@ -684,6 +686,7 @@ Experiment helpers:
 - `experiments/test_v05_route_quality_candidate_basis_guardrail.sh`
 - `experiments/test_v05_route_quality_candidate_preset.sh`
 - `experiments/test_v05_route_quality_candidate_preset_regression.sh`
+- `experiments/test_v05_route_quality_candidate_preset_policy.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`

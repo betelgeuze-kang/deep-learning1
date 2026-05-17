@@ -171,6 +171,11 @@ topology, or jump-neighbor changes.
 h5-au factor-trigger threshold refinement remains there as well: it sweeps the
 factor-only auto threshold and still only changes candidate-weight basis
 selection with no route-strength, topology, or jump-neighbor changes.
+h5-av through h5-ba also remain on this non-topological path: they summarize,
+guard, preset, regression-test, and directly compare the `base-default` and
+`hybrid-safe` candidate-weight presets. These slices only change candidate
+weighting inside value-bearing aggregation. They do not create remote
+neighbors, route triggers, active jumps, or any jump-neighbor promotion.
 h4-5v/w route-credit diagnostics also stay ancillary to this static-routing
 slice; they are value-bearing route-hint memory diagnostics, not jump-neighbor
 promotion.
@@ -632,6 +637,9 @@ the candidate-weight basis. It does not create remote neighbors, route triggers,
 or active jumps.
 h5-au only changes the factor threshold in that non-topological switch. It does
 not create remote neighbors, route triggers, or active jumps.
+h5-av/h5-aw/h5-ax/h5-ay/h5-az/h5-ba only make the base-vs-hybrid-safe
+candidate-weight policy easier to summarize, guard, preset, and compare. They
+do not create remote neighbors, route triggers, or active jumps.
 
 Do not say:
 
