@@ -4553,3 +4553,51 @@ The live route path remains:
 ```text
 candidate value_pos -> value byte read -> proposal hint
 ```
+
+## h5-aw Candidate-basis Policy Scale Decision
+
+The h5-aw slice passes as candidate-basis policy scale diagnostics /
+lower-concentration limited mitigation, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/test_v05_route_quality_candidate_basis_policy_scale.sh
+```
+
+The scale check reuses the full h5-ap base-vs-hybrid promotion summary and
+emits a compact policy table across key/noise cells.
+
+Aggregate readout:
+
+```text
+rows = 9
+base_qacc_mean = 0.885746
+hybrid_qacc_mean = 0.885747
+qacc_delta_mean = 0.000000
+
+base_factor_gap_mean = 3.607673
+hybrid_factor_gap_mean = 3.252902
+factor_gap_delta_mean = -0.354770
+
+base_wrong_strength_mean = 5.852729
+hybrid_wrong_strength_mean = 5.779043
+wrong_strength_delta_mean = -0.073686
+
+hybrid_recommended_rate = 1.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+`hybrid-m0p25` preserves aggregate qacc while lowering candidate-weight factor
+concentration and wrong strength in the scale summary. The policy layer
+therefore recommends `hybrid-m0p25-safe` across all nine tested key/noise cells.
+This is a stable lower-concentration alternative, not an automatic default
+promotion and not a learned routing result.
+
+The live route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```

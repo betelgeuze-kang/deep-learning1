@@ -3404,3 +3404,52 @@ factor concentration. This supports keeping `basis=base` as the default and
 using `hybrid-m0p25` as a safe lower-concentration alternative. The new policy
 CSV is diagnostic-only; it summarizes when hybrid is safe under a qacc tolerance
 and lower factor concentration, rather than promoting automatic switching.
+
+## h5-aw Candidate-basis Policy Scale Decision
+
+`h5-aw` passes as candidate-basis policy scale diagnostics /
+lower-concentration limited mitigation, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The scale check reuses the full base-vs-hybrid promotion summary over:
+
+```text
+keys = 64, 128, 256
+seeds = 1..5
+noisy_source_rate = 0.10, 0.25, 0.50
+```
+
+It adds:
+
+```text
+experiments/test_v05_route_quality_candidate_basis_policy_scale.sh
+```
+
+Aggregate readout:
+
+```text
+rows = 9
+base_qacc_mean = 0.885746
+hybrid_qacc_mean = 0.885747
+qacc_delta_mean = 0.000000
+
+base_factor_gap_mean = 3.607673
+hybrid_factor_gap_mean = 3.252902
+factor_gap_delta_mean = -0.354770
+
+base_wrong_strength_mean = 5.852729
+hybrid_wrong_strength_mean = 5.779043
+wrong_strength_delta_mean = -0.073686
+
+hybrid_recommended_rate = 1.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+across the tested key/noise cells, `hybrid-m0p25` is qacc-neutral on average
+and consistently lowers factor concentration. The policy summary recommends
+`hybrid-m0p25-safe` in all nine cells. This strengthens the previous conclusion:
+keep `basis=base` as the simplest default, but treat `hybrid-m0p25` as the
+preferred lower-concentration alternative when factor concentration matters.
+This still remains controlled route-hint fixture diagnostics, not learned
+routing or robustness solved.
