@@ -4554,6 +4554,41 @@ The live route path remains:
 candidate value_pos -> value byte read -> proposal hint
 ```
 
+## h5-ax Candidate-basis Guardrail Decision
+
+The h5-ax slice passes as candidate-basis guardrail diagnostics /
+safe-alternative regression protection, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/test_v05_route_quality_candidate_basis_guardrail.sh
+experiments/test_v05_route_quality_candidate_basis_guardrail.sh --scale
+```
+
+The guardrail checks the documented `hybrid-m0p25-safe` claim. It keeps route
+behavior unchanged and verifies:
+
+```text
+hybrid qacc >= base qacc - 0.001
+hybrid factor_gap < base factor_gap
+hybrid factor_max <= base factor_max
+aggregate wrong_strength_delta <= 0.001
+hybrid_recommended_rate = 1.0
+routing_trigger_rate = 0.0
+active_jump_rate = 0.0
+```
+
+Interpretation:
+this turns the h5-aw policy conclusion into a regression guard. `basis=base`
+remains the simplest default; `hybrid-m0p25` remains a lower-concentration
+alternative only while it passes the guard. The live route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
 ## h5-aw Candidate-basis Policy Scale Decision
 
 The h5-aw slice passes as candidate-basis policy scale diagnostics /

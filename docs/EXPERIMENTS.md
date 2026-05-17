@@ -3453,3 +3453,35 @@ keep `basis=base` as the simplest default, but treat `hybrid-m0p25` as the
 preferred lower-concentration alternative when factor concentration matters.
 This still remains controlled route-hint fixture diagnostics, not learned
 routing or robustness solved.
+
+## h5-ax Candidate-basis Guardrail Decision
+
+`h5-ax` passes as candidate-basis guardrail diagnostics /
+safe-alternative regression protection, but it does not solve learned routing,
+source-credit robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/test_v05_route_quality_candidate_basis_guardrail.sh
+experiments/test_v05_route_quality_candidate_basis_guardrail.sh --scale
+```
+
+The guardrail formalizes the h5-aw decision. It requires:
+
+```text
+hybrid qacc >= base qacc - 0.001
+hybrid factor_gap < base factor_gap in every checked cell
+hybrid factor_max <= base factor_max in every checked cell
+aggregate wrong_strength_delta <= 0.001
+hybrid_recommended_rate = 1.0
+routing_trigger_rate = 0.0
+active_jump_rate = 0.0
+```
+
+Interpretation:
+`hybrid-m0p25` remains a safe lower-concentration alternative only while it
+passes the qacc tolerance and concentration guardrails. This does not promote
+`hybrid` as the default. The default remains `candidate-weight-basis=base`, and
+the guard protects the documented safe-alternative claim from future
+candidate-quality changes.
