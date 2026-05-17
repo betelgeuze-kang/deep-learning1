@@ -30,6 +30,7 @@
 - h5-aw는 같은 policy summary를 9개 key/noise cell(`keys=64,128,256`, noisy rates `0.10,0.25,0.50`, seeds `1..5`)로 확장했습니다. 평균 qacc는 `0.885746 -> 0.885747`로 동률이고, factor gap은 `3.607673 -> 3.252902`, wrong strength는 `5.852729 -> 5.779043`으로 내려가며, 모든 cell에서 `hybrid-m0p25-safe` 추천이 나옵니다.
 - h5-ax는 이 safe-alternative 결론을 regression guard로 고정합니다. `hybrid-m0p25`는 base 대비 qacc `0.001` 이내, factor gap 감소, factor max no-increase, aggregate wrong-strength no-regression, jump-neighbor 비활성 조건을 계속 통과해야 합니다.
 - h5-ay는 `--route-quality-candidate-weight-preset none|base-default|hybrid-safe`를 추가해 긴 candidate-weight 옵션 묶음을 안전하게 줄입니다. Preset smoke에서 explicit 설정과 preset 설정이 metric 단위로 일치했고, `routing_trigger_rate = active_jump_rate = 0.000000`을 유지합니다.
+- h5-az는 preset adoption을 작은 key/seed/noise matrix로 확장했습니다. 16개 row에서 explicit 설정과 preset 설정이 완전히 일치합니다(`equivalent_rate=1.000000`, 모든 metric delta `0.000000`). lookup/read는 살아 있고 jump-neighbor routing은 계속 비활성입니다.
 
 ## 현재 상태
 
@@ -254,6 +255,7 @@ cmake --build build -j
 - `experiments/run_v05_route_quality_candidate_hybrid_basis.sh`
 - `experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh`
 - `experiments/run_v05_route_quality_candidate_basis_policy.sh`
+- `experiments/run_v05_route_quality_candidate_preset_regression.sh`
 - `experiments/run_v05_route_quality_candidate_regression.sh`
 - `experiments/run_v05_route_quality_candidate_level.sh`
 - `experiments/run_v05_route_quality_candidate_composition.sh`
@@ -324,6 +326,7 @@ cmake --build build -j
 - `experiments/test_v05_route_quality_candidate_basis_policy_scale.sh`
 - `experiments/test_v05_route_quality_candidate_basis_guardrail.sh`
 - `experiments/test_v05_route_quality_candidate_preset.sh`
+- `experiments/test_v05_route_quality_candidate_preset_regression.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`

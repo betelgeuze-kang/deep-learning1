@@ -537,6 +537,55 @@ route strength, source choice, or topology. The live route path remains:
 candidate value_pos -> value byte read -> proposal hint
 ```
 
+## h5-az Candidate-weight Preset Regression Matrix Decision
+
+The h5-az slice passes as candidate-weight preset adoption regression
+diagnostics, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_preset_regression.sh
+experiments/test_v05_route_quality_candidate_preset_regression.sh
+```
+
+The standard matrix compares explicit long-form candidate-quality options
+against the new `base-default` and `hybrid-safe` presets:
+
+```text
+keys = 64, 128
+seeds = 1, 2
+noisy_source_rate = 0.25, 0.50
+basis = base, hybrid
+```
+
+Aggregate readout:
+
+```text
+rows = 16
+equivalent_rate = 1.000000
+qacc_delta_mean = 0.000000
+factor_gap_delta_mean = 0.000000
+factor_max_delta_mean = 0.000000
+quality_score_gap_delta_mean = 0.000000
+wrong_strength_delta_mean = 0.000000
+lookup_count_mean = 96.000000
+read_distance_mean = 956.410156
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+the preset layer is behaviorally equivalent to the explicit settings across the
+tested matrix. Future experiments can use `--route-quality-candidate-weight-preset
+base-default` or `--route-quality-candidate-weight-preset hybrid-safe` to avoid
+copying long option blocks. The live route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

@@ -30,6 +30,7 @@ Current next steps:
 - h5-aw scales the same policy summary across 9 key/noise cells (`keys=64,128,256`, noisy rates `0.10,0.25,0.50`, seeds `1..5`): `hybrid-m0p25` remains qacc-neutral on average (`0.885746 -> 0.885747`), lowers factor gap (`3.607673 -> 3.252902`), lowers wrong strength (`5.852729 -> 5.779043`), and is recommended as `hybrid-m0p25-safe` in all cells.
 - h5-ax turns that safe-alternative conclusion into a regression guard: `hybrid-m0p25` must stay within `0.001` qacc of base, lower factor gap, not raise factor max, keep aggregate wrong-strength no-regression, and keep jump-neighbor routing inactive.
 - h5-ay adds `--route-quality-candidate-weight-preset none|base-default|hybrid-safe` so the guarded base and hybrid-safe candidate-weight settings can be selected without copying long option blocks. The preset smoke shows exact metric equivalence with explicit settings and keeps `routing_trigger_rate = active_jump_rate = 0.000000`.
+- h5-az scales preset adoption over a small key/seed/noise matrix: explicit settings and presets match exactly across 16 rows (`equivalent_rate=1.000000`, all metric deltas `0.000000`), while lookup/read stay populated and jump-neighbor routing remains inactive.
 
 Current status:
 
@@ -614,6 +615,7 @@ Experiment helpers:
 - `experiments/run_v05_route_quality_candidate_hybrid_basis.sh`
 - `experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh`
 - `experiments/run_v05_route_quality_candidate_basis_policy.sh`
+- `experiments/run_v05_route_quality_candidate_preset_regression.sh`
 - `experiments/run_v05_route_quality_candidate_regression.sh`
 - `experiments/run_v05_route_quality_candidate_level.sh`
 - `experiments/run_v05_route_quality_candidate_composition.sh`
@@ -681,6 +683,7 @@ Experiment helpers:
 - `experiments/test_v05_route_quality_candidate_basis_policy_scale.sh`
 - `experiments/test_v05_route_quality_candidate_basis_guardrail.sh`
 - `experiments/test_v05_route_quality_candidate_preset.sh`
+- `experiments/test_v05_route_quality_candidate_preset_regression.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`
