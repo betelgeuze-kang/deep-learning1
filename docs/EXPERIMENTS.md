@@ -3901,3 +3901,42 @@ span hash candidates move h6 beyond exact span lookup while preserving the
 same value-bearing proposal path. The no-collision smoke verifies per-offset
 candidate recall/top1, but this is still controlled symbolic span routing, not
 learned chunk retrieval.
+
+## h6-e Span Hash Scale Decision
+
+`h6-e` passes as span hash scale diagnostics. It does not solve chunk routing,
+learned routing, source-credit robustness, wrong-candidate robustness, fallback
+robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_hash_scale.sh
+experiments/test_v06_route_memory_span_hash_scale.sh
+```
+
+The runner scales h6-d over key count, value length, and hash-bit settings while
+recording span-level candidate recall/top1, bucket load, collision rate, qacc,
+and jump-neighbor inactivity.
+
+Standard scale readout:
+
+```text
+rows = 8
+qacc_mean = 1.000000
+query_count_mean = 12.000000
+expected_match_rate = 1.000000
+hit_rate_mean = 1.000000
+applied_rate_mean = 1.000000
+recall_mean = 1.000000
+top1_mean = 1.000000
+bucket_load_mean = 1.000000
+collision_rate_mean = 0.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+offset-aware hash candidates now scale over a small symbolic span matrix while
+preserving the same value-bearing proposal path. This is a span-candidate scale
+guard, not learned chunk retrieval.

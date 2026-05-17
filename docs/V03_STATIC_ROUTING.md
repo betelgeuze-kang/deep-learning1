@@ -654,6 +654,9 @@ h6-d extends the same span-offset route hints to hashed symbolic candidate
 lookup. Hash bucket entries carry span offsets and each query offset compares
 same-offset candidates only; this still does not create remote neighbors, route
 triggers, or active jumps.
+h6-e scales that span-hash candidate diagnostic over key-count/value-length and
+hash-bit arms. It remains a value-bearing proposal-hint scale guard and still
+does not create remote neighbors, route triggers, or active jumps.
 
 Do not say:
 

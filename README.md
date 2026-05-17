@@ -38,6 +38,7 @@ Current next steps:
 - h6-b adds `--route-span-hints 0|1` for exact KV span hints. With `--route-mode hint-kv-exact --route-span-hints 1`, the same `HELLO` / `WORLD` fixture exposes `kv_query_count = route_hint_query_count = 10`, one route hint per value-span offset, while preserving the value-bearing proposal path and keeping jump-neighbor routing inactive.
 - h6-c adds exact span scale diagnostics. The smoke compares first-byte and span arms at `key_count=2`, `value_len=5`; route hint query count expands from `2` to `10` under `--route-span-hints 1`, with exact hits/applied hints and jump-neighbor routing inactive.
 - h6-d extends span hints to hashed symbolic candidates. With `--route-mode hint-kv-hash --route-span-hints 1`, hash bucket entries retain span offsets and each query offset only compares against same-offset candidates. The smoke exposes `kv_query_count = route_hint_query_count = route_candidate_query_count = 10`, candidate recall/top1 `1.000000`, and keeps `routing_trigger_rate = active_jump_rate = 0.000000`. This is controlled symbolic span-candidate routing, not learned chunk retrieval.
+- h6-e adds span hash scale diagnostics. The standard matrix has 8 rows over key count, value length, and hash bits; offset-aware hash candidates keep `qacc_mean = recall_mean = top1_mean = 1.000000`, `collision_rate_mean = 0.000000`, and jump-neighbor routing inactive. This is a span-candidate scale guard, not learned chunk retrieval.
 
 Current status:
 
@@ -699,6 +700,7 @@ Experiment helpers:
 - `experiments/test_v06_route_memory_span_exact.sh`
 - `experiments/test_v06_route_memory_span_exact_scale.sh`
 - `experiments/test_v06_route_memory_span_hash.sh`
+- `experiments/test_v06_route_memory_span_hash_scale.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`

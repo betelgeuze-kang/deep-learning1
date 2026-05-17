@@ -853,6 +853,38 @@ candidate value_pos -> value byte read -> proposal hint
 
 It is not learned span/chunk routing.
 
+## h6-e Span Hash Scale Decision
+
+The h6-e slice passes as span hash scale diagnostics. It does not solve chunk
+routing, learned routing, source-credit robustness, wrong-candidate robustness,
+fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_hash_scale.sh
+experiments/test_v06_route_memory_span_hash_scale.sh
+```
+
+Standard scale readout:
+
+```text
+rows = 8
+qacc_mean = 1.000000
+query_count_mean = 12.000000
+expected_match_rate = 1.000000
+recall_mean = 1.000000
+top1_mean = 1.000000
+collision_rate_mean = 0.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+h6-e verifies that the offset-aware hashed span-candidate path scales over a
+small symbolic matrix without reviving topology replacement. It is still a
+controlled span-candidate diagnostic, not learned chunk retrieval.
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

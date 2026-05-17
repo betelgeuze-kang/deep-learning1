@@ -65,8 +65,8 @@ single-byte boundary is explicit and tested.
    existing route-hint dynamics.
 4. `h6-d span hash candidates`: move from exact span lookup to hashed candidate
    span retrieval.
-5. `h6-e chunk-quality diagnostics`: extend candidate-quality metrics from
-   value bytes to span/chunk candidate sets.
+5. `h6-e span hash scale diagnostics`: scale hashed span-candidate lookup over
+   key-count/value-length/hash-bit arms before moving to chunk-quality metrics.
 
 Do not claim:
 
@@ -249,3 +249,58 @@ h6-d moves the span mechanism from exact symbolic lookup to hashed symbolic
 candidate lookup while keeping per-offset candidate recall/top1 exact in the
 no-collision smoke. This is still controlled symbolic span routing, not learned
 chunk retrieval.
+
+## h6-e Span Hash Scale Decision
+
+`h6-e` passes as span hash scale diagnostics. It does not solve chunk routing,
+learned routing, source-credit robustness, wrong-candidate robustness, fallback
+robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_hash_scale.sh
+experiments/test_v06_route_memory_span_hash_scale.sh
+```
+
+The runner scales h6-d over key count, value length, and hash-bit settings while
+recording span-level candidate recall/top1, bucket load, collision rate, qacc,
+and the existing jump-neighbor inactivity guards.
+
+Smoke readout:
+
+```text
+key_count = 2
+value_len = 5
+hash_bits = 16
+route_hint_query_count = 10
+route_candidate_query_count = 10
+route_candidate_recall_rate = 1.000000
+route_candidate_top1_rate = 1.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Standard scale readout:
+
+```text
+rows = 8
+qacc_mean = 1.000000
+query_count_mean = 12.000000
+expected_match_rate = 1.000000
+hit_rate_mean = 1.000000
+applied_rate_mean = 1.000000
+recall_mean = 1.000000
+top1_mean = 1.000000
+bucket_load_mean = 1.000000
+collision_rate_mean = 0.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+h6-e is a span-candidate scale guard for the symbolic hashed path. It verifies
+that offset-aware hash candidates preserve exact per-offset recall/top1 in the
+current no-collision matrix. It is still not learned chunk retrieval; the next
+real boundary is chunk-quality diagnostics over ambiguous or learned-like span
+candidate sets.

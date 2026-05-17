@@ -38,6 +38,7 @@
 - h6-b는 exact KV용 `--route-span-hints 0|1`을 추가합니다. `--route-mode hint-kv-exact --route-span-hints 1`에서 같은 `HELLO` / `WORLD` fixture는 `kv_query_count = route_hint_query_count = 10`으로 확장되어 value-span offset마다 route hint를 가집니다. 경로는 여전히 value-bearing proposal hint이고 jump-neighbor routing은 비활성입니다.
 - h6-c는 exact span scale diagnostics를 추가합니다. Smoke는 `key_count=2`, `value_len=5`에서 first-byte arm과 span arm을 비교하며, `--route-span-hints 1`에서 route hint query count가 `2 -> 10`으로 확장되고 exact hit/apply와 jump-neighbor 비활성을 유지합니다.
 - h6-d는 hashed symbolic candidate에도 span hint를 확장합니다. `--route-mode hint-kv-hash --route-span-hints 1`에서 hash bucket entry가 span offset을 보존하고 query offset마다 같은 offset candidate만 비교합니다. Smoke는 `kv_query_count = route_hint_query_count = route_candidate_query_count = 10`, candidate recall/top1 `1.000000`, `routing_trigger_rate = active_jump_rate = 0.000000`을 확인합니다. 이는 controlled symbolic span-candidate routing이지 learned chunk retrieval은 아닙니다.
+- h6-e는 span hash scale diagnostics를 추가합니다. 표준 matrix는 key count, value length, hash bits를 교차한 8개 row이며, offset-aware hash candidate가 `qacc_mean = recall_mean = top1_mean = 1.000000`, `collision_rate_mean = 0.000000`, jump-neighbor 비활성을 유지합니다. 이는 span-candidate scale guard이지 learned chunk retrieval은 아닙니다.
 
 ## 현재 상태
 
@@ -342,6 +343,7 @@ cmake --build build -j
 - `experiments/test_v06_route_memory_span_exact.sh`
 - `experiments/test_v06_route_memory_span_exact_scale.sh`
 - `experiments/test_v06_route_memory_span_hash.sh`
+- `experiments/test_v06_route_memory_span_hash_scale.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`
