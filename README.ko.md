@@ -26,6 +26,7 @@
 - concentration을 낮춰야 할 때는 `hybrid-m0p25`를 안전한 대안으로 봅니다. qacc는 사실상 동률(`0.886545`)이고, factor concentration과 wrong strength를 base보다 낮춥니다.
 - factor-only `auto` threshold는 diagnostic-only입니다. h5-au는 `5.6/5.8`, `6.0/6.2`, `6.4` threshold가 broad / balanced / base-like regime을 설명한다는 점을 보여줬지만, base default나 `hybrid-m0p25`를 성능 기준으로 넘지는 못했습니다.
 - 따라서 현재 상태는 candidate-quality weighting과 basis calibration의 controlled fixture 성과입니다. learned routing solved, source-credit robustness solved, wrong-candidate robustness solved, fallback robustness solved, long-context retrieval solved로 주장하면 안 됩니다.
+- h5-av는 이 결론을 key/noise cell별 policy CSV로 읽기 쉽게 만든 slice입니다. Smoke에서는 `base-default`와 `hybrid-m0p25` qacc가 `0.887500`으로 같고, `hybrid-m0p25`가 factor gap을 `3.650981 -> 3.304388`로 낮춰 `hybrid-m0p25-safe` 추천을 받습니다.
 
 ## 현재 상태
 
@@ -249,6 +250,7 @@ cmake --build build -j
 - `experiments/run_v05_route_quality_candidate_feature_calibration.sh`
 - `experiments/run_v05_route_quality_candidate_hybrid_basis.sh`
 - `experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh`
+- `experiments/run_v05_route_quality_candidate_basis_policy.sh`
 - `experiments/run_v05_route_quality_candidate_regression.sh`
 - `experiments/run_v05_route_quality_candidate_level.sh`
 - `experiments/run_v05_route_quality_candidate_composition.sh`
@@ -315,6 +317,7 @@ cmake --build build -j
 - `experiments/test_v05_route_quality_candidate_hybrid_basis.sh`
 - `experiments/test_v05_route_quality_candidate_hybrid_guardrail.sh`
 - `experiments/test_v05_route_quality_candidate_hybrid_promotion.sh`
+- `experiments/test_v05_route_quality_candidate_basis_policy.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`
@@ -338,7 +341,7 @@ cmake --build build -j
 
 ## 다음 연구 방향
 
-- h5-au 이후 기본값은 `candidate-weight + base basis`로 유지하고, `hybrid-m0p25`는 concentration을 낮추는 안전 대안으로 남깁니다.
+- h5-au/h5-av 이후 기본값은 `candidate-weight + base basis`로 유지하고, `hybrid-m0p25`는 concentration을 낮추는 안전 대안으로 남깁니다.
 - factor-only `auto`는 당분간 diagnostic-only로 유지합니다. 다음 개선은 auto threshold를 더 키우기보다, per-key/per-noise 조건에서 base와 hybrid를 언제 바꿀지 분리하는 쪽이 안전합니다.
 - candidate-quality weighting은 현재 가장 강한 route-quality 적용 경로입니다. 다만 learned routing solved나 robustness solved가 아니므로, noisy/weak learned-like source에서 qacc와 wrong-strength가 같이 안정되는지 계속 봐야 합니다.
 - source-credit은 좋은/나쁜 source responsibility signal로 유용하지만, 현재 성능 기본축은 source-ranking보다 candidate-weighting 쪽입니다. source-credit은 candidate-quality default와 결합한 보조 신호로 유지합니다.

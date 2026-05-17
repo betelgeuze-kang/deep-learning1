@@ -4497,3 +4497,59 @@ remains `candidate-weight-basis=base`, and the live route path remains:
 ```text
 candidate value_pos -> value byte read -> proposal hint
 ```
+
+## h5-av Candidate-basis Policy Diagnostics Decision
+
+The h5-av slice passes as candidate-basis policy diagnostics / safe-alternative
+instrumentation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/run_v05_route_quality_candidate_basis_policy.sh
+experiments/test_v05_route_quality_candidate_basis_policy.sh
+```
+
+It reuses the existing base-vs-hybrid promotion runner and emits a compact
+policy CSV by key count and noisy-source rate. The policy compares qacc,
+factor gap, factor max, wrong strength, and jump-neighbor inactivity for:
+
+```text
+base-default
+hybrid-m0p25
+```
+
+Reference smoke:
+
+```text
+key_count = 128
+noisy_source_rate = 0.25
+
+base-default:
+  qacc = 0.887500
+  factor_gap = 3.650981
+  factor_max = 6.333333
+  wrong_strength = 5.471811
+
+hybrid-m0p25:
+  qacc = 0.887500
+  factor_gap = 3.304388
+  factor_max = 6.049084
+  wrong_strength = 5.471811
+
+recommendation = hybrid-m0p25-safe
+```
+
+Interpretation:
+the smoke preserves qacc while reducing candidate-weight factor concentration,
+so the policy layer recommends `hybrid-m0p25-safe` for that key/noise cell. This
+does not promote factor-only `auto` and does not change route behavior. Keep the
+default at `candidate-weight-basis=base`; use the policy CSV to identify
+key/noise cells where `hybrid-m0p25` is a safe lower-concentration alternative.
+
+The live route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```

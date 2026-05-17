@@ -3355,3 +3355,52 @@ factor-only thresholds. `6.4` disables factor switching and collapses to the
 base default. Factor-only auto is useful for explaining concentration relief,
 but it does not outperform `hybrid-m0p25` or the base default on qacc. Keep
 `basis=base` as the default and treat factor-only thresholding as diagnostics.
+
+## h5-av Candidate-basis Policy Diagnostics Decision
+
+`h5-av` passes as candidate-basis policy diagnostics / safe-alternative
+instrumentation, but it does not solve learned routing, source-credit
+robustness, wrong-candidate robustness, or fallback robustness.
+
+The slice adds a policy-summary layer on top of the existing base-vs-hybrid
+promotion runner:
+
+```text
+experiments/run_v05_route_quality_candidate_basis_policy.sh
+experiments/test_v05_route_quality_candidate_basis_policy.sh
+```
+
+It does not change route behavior. It reuses the existing value-bearing path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Reference smoke:
+
+```text
+key_count = 128
+noisy_source_rate = 0.25
+
+base-default:
+  qacc = 0.887500
+  factor_gap = 3.650981
+  factor_max = 6.333333
+  wrong_strength = 5.471811
+
+hybrid-m0p25:
+  qacc = 0.887500
+  factor_gap = 3.304388
+  factor_max = 6.049084
+  wrong_strength = 5.471811
+
+policy recommendation:
+  hybrid-m0p25-safe
+```
+
+Interpretation:
+in the smoke, `hybrid-m0p25` preserves qacc while lowering candidate-weight
+factor concentration. This supports keeping `basis=base` as the default and
+using `hybrid-m0p25` as a safe lower-concentration alternative. The new policy
+CSV is diagnostic-only; it summarizes when hybrid is safe under a qacc tolerance
+and lower factor concentration, rather than promoting automatic switching.

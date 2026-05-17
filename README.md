@@ -26,6 +26,7 @@ Current next steps:
 - Do not keep increasing route strength by default; the current active question is candidate-weight basis and concentration calibration, not topology or brute force route energy.
 - If h5-av/h5-aw continue from h5-au, prefer per-key/per-noise base-vs-hybrid policy diagnostics over promoting factor-only `auto`.
 - Real learned/noisy source robustness, chunk-level tasks, and external long-context baselines remain future work.
+- h5-av now adds that policy-summary layer: the smoke ties qacc between `base-default` and `hybrid-m0p25` at `0.887500`, while `hybrid-m0p25` lowers `factor_gap` from `3.650981` to `3.304388` and receives the diagnostic recommendation `hybrid-m0p25-safe`.
 
 Current status:
 
@@ -609,6 +610,7 @@ Experiment helpers:
 - `experiments/run_v05_route_quality_candidate_feature_calibration.sh`
 - `experiments/run_v05_route_quality_candidate_hybrid_basis.sh`
 - `experiments/run_v05_route_quality_candidate_hybrid_guardrail.sh`
+- `experiments/run_v05_route_quality_candidate_basis_policy.sh`
 - `experiments/run_v05_route_quality_candidate_regression.sh`
 - `experiments/run_v05_route_quality_candidate_level.sh`
 - `experiments/run_v05_route_quality_candidate_composition.sh`
@@ -672,6 +674,7 @@ Experiment helpers:
 - `experiments/test_v05_route_quality_candidate_hybrid_basis.sh`
 - `experiments/test_v05_route_quality_candidate_hybrid_guardrail.sh`
 - `experiments/test_v05_route_quality_candidate_hybrid_promotion.sh`
+- `experiments/test_v05_route_quality_candidate_basis_policy.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`
