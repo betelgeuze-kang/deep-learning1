@@ -129,3 +129,64 @@ candidate value_pos -> value byte read -> proposal hint
 ```
 
 No remote-neighbor replacement is introduced.
+
+## h6-c Exact Span Scale Decision
+
+`h6-c` passes as exact span scale diagnostics. It does not solve hashed span
+retrieval, chunk routing, learned routing, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_exact_scale.sh
+experiments/test_v06_route_memory_span_exact_scale.sh
+```
+
+The runner compares:
+
+```text
+first-byte:
+  --route-span-hints 0
+
+span:
+  --route-span-hints 1
+```
+
+over exact symbolic KV fixtures with variable key count and value length.
+
+Smoke fixture:
+
+```text
+key_count = 2
+value_len = 5
+first-byte route_hint_query_count = 2
+span route_hint_query_count = 10
+```
+
+Standard scale readout:
+
+```text
+rows = 8
+first_byte_rows = 4
+span_rows = 4
+first_byte_qacc_mean = 1.000000
+span_qacc_mean = 1.000000
+first_byte_query_count_mean = 3.000000
+span_query_count_mean = 12.000000
+span_expected_match_rate = 1.000000
+span_hit_rate_mean = 1.000000
+span_applied_rate_mean = 1.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+the exact span parser scales from the single h6-b fixture into a small
+key-count/value-length matrix while preserving the same route mechanism:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+This remains exact symbolic span routing, not learned chunk retrieval.

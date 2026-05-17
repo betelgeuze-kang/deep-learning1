@@ -782,6 +782,37 @@ The route path is still:
 candidate value_pos -> value byte read -> proposal hint
 ```
 
+## h6-c Exact Span Scale Decision
+
+The h6-c slice passes as exact span scale diagnostics. It does not solve hashed
+span retrieval, chunk routing, learned routing, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_exact_scale.sh
+experiments/test_v06_route_memory_span_exact_scale.sh
+```
+
+Smoke readout:
+
+```text
+key_count = 2
+value_len = 5
+first_byte_query_count_mean = 2
+span_query_count_mean = 10
+span_expected_match_rate = 1.000000
+span_hit_rate_mean = 1.000000
+span_applied_rate_mean = 1.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+exact span route hints scale the h6-b parser beyond a single fixture while
+preserving the same value-bearing proposal path.
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

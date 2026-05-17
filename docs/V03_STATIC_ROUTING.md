@@ -648,6 +648,8 @@ neighbors, route triggers, or active jumps.
 h6-b continues the same rule while adding exact span hints: it expands matched
 KV values into per-offset value-bearing proposal hints, not remote neighbors.
 It does not create route triggers or active jumps.
+h6-c only scales that exact span diagnostic over key-count/value-length
+fixtures. It does not create remote neighbors, route triggers, or active jumps.
 
 Do not say:
 

@@ -3811,3 +3811,55 @@ Interpretation:
 h6-b is the first span-memory mechanism, but it is still exact symbolic KV
 routing. It preserves the same value-bearing path and does not revive
 jump-neighbor replacement.
+
+## h6-c Exact Span Scale Decision
+
+`h6-c` passes as exact span scale diagnostics. It does not solve hashed span
+retrieval, chunk routing, learned routing, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_exact_scale.sh
+experiments/test_v06_route_memory_span_exact_scale.sh
+```
+
+The runner compares `--route-span-hints 0` against `--route-span-hints 1` over
+exact symbolic KV fixtures with variable key count and value length.
+
+Smoke readout:
+
+```text
+key_count = 2
+value_len = 5
+first_byte_query_count_mean = 2
+span_query_count_mean = 10
+span_expected_match_rate = 1.000000
+span_hit_rate_mean = 1.000000
+span_applied_rate_mean = 1.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Standard scale readout:
+
+```text
+rows = 8
+first_byte_rows = 4
+span_rows = 4
+first_byte_qacc_mean = 1.000000
+span_qacc_mean = 1.000000
+first_byte_query_count_mean = 3.000000
+span_query_count_mean = 12.000000
+span_expected_match_rate = 1.000000
+span_hit_rate_mean = 1.000000
+span_applied_rate_mean = 1.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+the exact span parser scales beyond one fixture and keeps the same
+value-bearing route-hint mechanism. This remains symbolic exact span routing,
+not learned chunk retrieval.

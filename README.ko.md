@@ -36,6 +36,7 @@
 - h5-bc는 현재 route-quality stack을 닫는 closure smoke입니다. shell syntax, `dmv02` build, oracle route-hint, preset equivalence, preset policy smoke, preset policy scale guardrail을 한 번에 확인합니다. `--extended`는 route-code adaptive, preset regression, candidate-basis guardrail scale까지 추가로 확인합니다.
 - h6-a는 route-memory phase를 여는 span-boundary diagnostic입니다. multi-byte fixture(`HELLO` / `WORLD`)에서도 현재 stack은 `kv_query_count = route_hint_query_count = 2`로 key당 첫 value byte 하나만 route hint로 노출합니다. 이는 span/chunk routing solved가 아니라 h6의 시작 경계를 명시하는 instrumentation입니다.
 - h6-b는 exact KV용 `--route-span-hints 0|1`을 추가합니다. `--route-mode hint-kv-exact --route-span-hints 1`에서 같은 `HELLO` / `WORLD` fixture는 `kv_query_count = route_hint_query_count = 10`으로 확장되어 value-span offset마다 route hint를 가집니다. 경로는 여전히 value-bearing proposal hint이고 jump-neighbor routing은 비활성입니다.
+- h6-c는 exact span scale diagnostics를 추가합니다. Smoke는 `key_count=2`, `value_len=5`에서 first-byte arm과 span arm을 비교하며, `--route-span-hints 1`에서 route hint query count가 `2 -> 10`으로 확장되고 exact hit/apply와 jump-neighbor 비활성을 유지합니다.
 
 ## 현재 상태
 
@@ -338,6 +339,7 @@ cmake --build build -j
 - `experiments/test_v05_route_quality_closure.sh`
 - `experiments/test_v06_route_memory_span_boundary.sh`
 - `experiments/test_v06_route_memory_span_exact.sh`
+- `experiments/test_v06_route_memory_span_exact_scale.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`
