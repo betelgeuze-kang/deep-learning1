@@ -371,8 +371,8 @@ cmake --build build -j
 
 ## 다음 연구 방향
 
-- h5-au/h5-av/h5-aw 이후 기본값은 `candidate-weight + base basis`로 유지하고, `hybrid-m0p25`는 concentration을 낮추는 안전 대안으로 남깁니다.
-- factor-only `auto`는 당분간 diagnostic-only로 유지합니다. 다음 개선은 auto threshold를 더 키우기보다, per-key/per-noise 조건에서 base와 hybrid를 언제 바꿀지 분리하는 쪽이 안전합니다.
-- candidate-quality weighting은 현재 가장 강한 route-quality 적용 경로입니다. 다만 learned routing solved나 robustness solved가 아니므로, noisy/weak learned-like source에서 qacc와 wrong-strength가 같이 안정되는지 계속 봐야 합니다.
-- source-credit은 좋은/나쁜 source responsibility signal로 유용하지만, 현재 성능 기본축은 source-ranking보다 candidate-weighting 쪽입니다. source-credit은 candidate-quality default와 결합한 보조 신호로 유지합니다.
+- h5 route-quality stack은 `experiments/test_v05_route_quality_closure.sh`와 h7 goal closure로 닫힌 checkpoint로 봅니다.
+- h6 exact/hash span path는 symbolic route-memory instrumentation입니다. value-span offset별 hint와 offset-aware hash candidate는 검증됐지만, learned chunk retrieval solved는 아닙니다.
+- candidate-quality weighting은 현재 가장 강한 route-quality 적용 경로입니다. 기본값은 `base`, concentration을 낮추는 안전 대안은 `hybrid-safe`입니다.
+- route strength를 계속 키우거나 topology replacement를 되살리는 방향은 기본값으로 두지 않습니다. 다음 실제 연구 질문은 ambiguous 또는 learned-like span/chunk candidate quality입니다.
 - synthetic fixture를 넘어 real long-context / chunk-level task와 외부 baseline 비교로 확장하기 전까지는 Transformer replacement나 long-context retrieval solved claim을 하지 않습니다.

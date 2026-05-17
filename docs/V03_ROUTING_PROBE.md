@@ -2,6 +2,21 @@
 
 This is not the real sparse-routing stage yet.
 
+Current status:
+
+The active jump-neighbor line remains no-go/default-off/diagnostic-only. The
+later successful nonlocal path is not this probe and not remote-neighbor
+replacement. It is:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+As of h7-a, route-quality and symbolic span route-memory diagnostics are
+covered by [V03_ROUTE_HINT_ORACLE.md](V03_ROUTE_HINT_ORACLE.md),
+[V06_ROUTE_MEMORY.md](V06_ROUTE_MEMORY.md), and [V07_GOAL.md](V07_GOAL.md).
+This document remains the historical read-only routing-probe record.
+
 Current scope:
 
 - add an O(1)-candidate `RoutingTable` keyed by a fixed per-epoch route source

@@ -22,9 +22,10 @@ Current calibrated route-quality default:
 
 Current next steps:
 
-- Treat candidate-quality weighting as the main performance path for now, and source-credit/source-ranking as supporting diagnostics unless they improve qacc without increasing wrong strength.
-- Do not keep increasing route strength by default; the current active question is candidate-weight basis and concentration calibration, not topology or brute force route energy.
-- If h5-av/h5-aw continue from h5-au, prefer per-key/per-noise base-vs-hybrid policy diagnostics over promoting factor-only `auto`.
+- Treat the h5 route-quality stack as closed by `experiments/test_v05_route_quality_closure.sh` and the h7 goal closure.
+- Treat the h6 exact/hash span path as symbolic route-memory instrumentation. It proves per-offset value-bearing hints and offset-aware hash candidates under controlled fixtures, not learned chunk retrieval.
+- Keep candidate-quality weighting as the strongest route-quality application path so far, with `base` as the default and `hybrid-safe` as the lower-concentration alternative.
+- Do not keep increasing route strength or revive topology replacement by default. The next active question is span/chunk candidate quality under ambiguous or learned-like sources.
 - Real learned/noisy source robustness, chunk-level tasks, and external long-context baselines remain future work.
 - h5-av now adds that policy-summary layer: the smoke ties qacc between `base-default` and `hybrid-m0p25` at `0.887500`, while `hybrid-m0p25` lowers `factor_gap` from `3.650981` to `3.304388` and receives the diagnostic recommendation `hybrid-m0p25-safe`.
 - h5-aw scales the same policy summary across 9 key/noise cells (`keys=64,128,256`, noisy rates `0.10,0.25,0.50`, seeds `1..5`): `hybrid-m0p25` remains qacc-neutral on average (`0.885746 -> 0.885747`), lowers factor gap (`3.607673 -> 3.252902`), lowers wrong strength (`5.852729 -> 5.779043`), and is recommended as `hybrid-m0p25-safe` in all cells.

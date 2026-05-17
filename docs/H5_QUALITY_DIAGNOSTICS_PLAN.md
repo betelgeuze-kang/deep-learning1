@@ -1572,3 +1572,53 @@ Forbidden:
 - `wrong-candidate robustness solved`
 - `jump-neighbor routing revived`
 - `proxy weight/sign calibration solved`
+
+## Post h5-au Closure Addendum
+
+The later h5 route-quality work closed the candidate-weight calibration stack
+without changing the core safety boundary:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Summary:
+
+- h5-av/h5-aw compare base-default versus `hybrid-m0p25` as a lower
+  concentration alternative.
+- h5-ax turns the comparison into a regression guard.
+- h5-ay/h5-az add and scale presets:
+  `--route-quality-candidate-weight-preset none|base-default|hybrid-safe`.
+- h5-ba/h5-bb compare and guard the presets directly.
+- h5-bc adds the route-quality closure smoke.
+
+Current calibrated route-quality default:
+
+```text
+route_quality_apply = candidate-weight
+route_quality_candidate_weight_basis = base
+```
+
+`hybrid-safe` remains the lower-concentration safe alternative. Factor-only
+auto thresholds remain diagnostic-only.
+
+The route-quality closure entrypoint is:
+
+```text
+experiments/test_v05_route_quality_closure.sh
+```
+
+The h7 goal closure wraps that h5 closure together with h6 span route-memory
+smokes:
+
+```text
+experiments/test_v07_goal_route_memory_closure.sh
+```
+
+Still not solved:
+
+- learned routing
+- source-credit robustness
+- fallback robustness
+- wrong-candidate robustness
+- chunk-level long-context retrieval

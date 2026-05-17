@@ -1,8 +1,17 @@
 # v0.2-pre Design Notes
 
-This stage is now implemented as `dmv02` and treated as the locked baseline for the next milestone.
+This stage is implemented as `dmv02` and remains the locked baseline for the
+later route-hint and route-memory work.
 
-`v0.2-b` is next, but only after the current diagnostics stay healthy.
+Current status update:
+
+- `v0.2-b` has passed and is the stable local learner baseline.
+- v0.3/h5 built the value-bearing route-hint path on top of that baseline.
+- h6 added symbolic exact/hash span route-memory diagnostics.
+- h7 adds the current `/goal` closure smoke.
+
+This file is therefore a historical baseline note, not the current project
+frontier.
 
 Implemented choices:
 

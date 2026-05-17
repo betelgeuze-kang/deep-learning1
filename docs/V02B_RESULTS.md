@@ -2,6 +2,12 @@
 
 Current `v0.2-b` readout: weak coupling now works under the default run settings because the stage includes a block-local coupled proposal path. The tuned `proposal_count = 30` control is still useful for isolating coupling from proposal coverage, but it is no longer required just to keep `counter` healthy.
 
+Current status:
+
+`v0.2-b` remains the stable local substrate used by the later route-hint,
+route-quality, and h6/h7 route-memory work. The later routing experiments do
+not change the interpretation of these local baseline results.
+
 ## Setup
 
 Core coupling knobs:
@@ -113,7 +119,8 @@ Interpretation:
 
 ## Current Takeaway
 
-`v0.2-b` now looks strong enough to treat as the next live stage.
+`v0.2-b` is the stable local learner stage used by the later route-hint and
+route-memory work.
 
 - uncoupled exactness is preserved
 - default weak coupling clears a 5-seed `counter` regression with average last-10 `byte_acc = 0.999688`

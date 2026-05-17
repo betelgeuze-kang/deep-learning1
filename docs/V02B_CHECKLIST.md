@@ -2,6 +2,12 @@
 
 No-go unless the `v0.2-pre` baselines in [V02_BASELINES.md](V02_BASELINES.md) stay locked and the new coupling produces a real metric gain on the same benchmarks.
 
+Current status:
+
+`v0.2-b` has passed and is treated as the stable local learner baseline. Later
+v0.3/h5/h6/h7 work builds on this baseline but does not change the pass meaning
+of this checklist.
+
 ## Gate
 
 - Compare against `counter_lv0.csv`, `counter_lv005.csv`, `counter_lv025.csv`, and `text_lv0.csv`.

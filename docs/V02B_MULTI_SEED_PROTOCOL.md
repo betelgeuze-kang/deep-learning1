@@ -2,6 +2,12 @@
 
 Goal: check that the shipped default weak-coupling settings (`lambda_b=0.1`, `eta_b=0.02`, default proposal count) stay stable on `counter` and beat the default no-coupling control on `repeating-text` across five fixed seeds.
 
+Current status:
+
+This protocol is the historical local-learner regression gate. It remains
+useful whenever `dmv02` local dynamics change, but the current h7 closure is
+handled separately by `experiments/test_v07_goal_route_memory_closure.sh`.
+
 ## Run Matrix
 
 Use the same code revision for all runs, keep `lambda_v = 0`, and fan out the default v0.2-b path over seeds `1 2 3 4 5`.

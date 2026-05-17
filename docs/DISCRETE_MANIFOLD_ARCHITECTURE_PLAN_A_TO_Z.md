@@ -10,6 +10,46 @@ Korean thesis:
 
 ---
 
+## Current Implementation Status
+
+The original A-to-Z plan remains the architectural north star, but the current
+implemented checkpoint is narrower and more precise:
+
+```text
+v0.2-b:
+  stable discrete local-energy byte learner
+
+v0.3/h5:
+  value-bearing route-hint memory, route-quality diagnostics,
+  candidate-weight guardrails, source/fallback diagnostics
+
+h6:
+  symbolic exact/hash span route-memory diagnostics
+
+h7:
+  route-quality + route-memory goal closure smoke
+```
+
+The strongest routing conclusion so far is:
+
+```text
+remote node as neighbor: no-go / diagnostic-only
+remote value as proposal hint: works under controlled fixtures
+```
+
+Therefore the live nonlocal path is:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Do not read the current implementation as learned sparse routing, robust
+fallback routing, chunk-level long-context retrieval, or a Transformer
+replacement. The next research boundary is learned-like span/chunk candidate
+quality and external benchmarks.
+
+---
+
 # 1. Core Implementation Philosophy
 
 ## 1.1 What This Architecture Is
@@ -91,9 +131,12 @@ Each version should add exactly one major capability.
 - v0.1: fixed local dynamics
 - v0.2-pre: shared field learning
 - v0.2-b: intra-node channel coupling
-- v0.3: sparse routing
-- v0.4: routing plasticity
-- v0.5: continual learning
+- v0.3/h5: value-bearing route hints, route-code identity, route quality,
+  fallback/source-credit diagnostics
+- h6: exact/hash span route-memory diagnostics
+- h7: route-quality + route-memory goal closure
+- future: learned span/chunk routing, routing plasticity beyond symbolic
+  upper-bound sources, continual learning
 
 ### Principle 6 — Diagnostics before claims
 
