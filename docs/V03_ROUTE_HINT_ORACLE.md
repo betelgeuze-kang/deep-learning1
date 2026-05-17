@@ -642,6 +642,39 @@ concentration, does not raise wrong strength, and keeps jump-neighbor routing
 inactive. `base-default` remains the default; `hybrid-safe` remains a guarded
 lower-concentration alternative on the same value-bearing route-hint path.
 
+## h5-bb Candidate-weight Preset Policy Scale Guardrail Decision
+
+The h5-bb slice passes as candidate-weight preset policy scale guardrail
+diagnostics, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/test_v05_route_quality_candidate_preset_policy_scale.sh
+```
+
+The guard reuses the h5-ba standard matrix and requires:
+
+```text
+summary rows = 16
+policy rows = 8
+base-default rows = 8
+hybrid-safe rows = 8
+hybrid qacc delta >= -0.001 in every policy row
+hybrid factor_gap_delta < 0 in every policy row
+hybrid factor_max_delta <= 0 in every policy row
+aggregate wrong_strength_delta_mean <= 0.001
+hybrid_recommended_rate = 1.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+the preset-only base-vs-hybrid-safe comparison is now protected by a scale
+guardrail. This is still candidate-weight preset calibration on the
+value-bearing route-hint path, not a new routing mechanism.
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

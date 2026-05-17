@@ -3660,3 +3660,36 @@ route path remains:
 ```text
 candidate value_pos -> value byte read -> proposal hint
 ```
+
+## h5-bb Candidate-weight Preset Policy Scale Guardrail Decision
+
+`h5-bb` passes as candidate-weight preset policy scale guardrail diagnostics,
+but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+experiments/test_v05_route_quality_candidate_preset_policy_scale.sh
+```
+
+The test guards the h5-ba standard matrix. It requires:
+
+```text
+summary rows = 16
+policy rows = 8
+base-default rows = 8
+hybrid-safe rows = 8
+hybrid qacc delta >= -0.001 in every policy row
+hybrid factor_gap_delta < 0 in every policy row
+hybrid factor_max_delta <= 0 in every policy row
+aggregate wrong_strength_delta_mean <= 0.001
+hybrid_recommended_rate = 1.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+h5-bb turns the h5-ba preset-only policy comparison into a reusable regression
+guard. It is still a controlled candidate-weight preset guard on the
+value-bearing route-hint path, not a learned routing or robustness claim.
