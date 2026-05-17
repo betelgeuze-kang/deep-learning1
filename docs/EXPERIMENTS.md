@@ -3771,3 +3771,43 @@ can appear in the fixture, but the active parser exposes one route hint per
 key, not one route hint per value-span offset. h6 starts from this explicit
 boundary and should extend span metadata without reviving jump-neighbor
 replacement.
+
+## h6-b Exact Span Parser Decision
+
+`h6-b` passes as exact span parser instrumentation and first exact-span
+mitigation. It does not solve chunk routing, learned routing, source-credit
+robustness, wrong-candidate robustness, fallback robustness, or long-context
+retrieval.
+
+The slice adds:
+
+```text
+--route-span-hints 0|1
+experiments/test_v06_route_memory_span_exact.sh
+```
+
+Default behavior remains unchanged with `--route-span-hints 0`. When enabled
+with exact KV routing:
+
+```text
+--route-mode hint-kv-exact
+--route-span-hints 1
+```
+
+the parser expands each matched multi-byte value into one route hint per value
+offset. On the `HELLO` / `WORLD` fixture:
+
+```text
+kv_record_count = 2
+kv_query_count = 10
+route_hint_query_count = 10
+kv_query_hit_rate = 1.000000
+route_hint_applied_rate = 1.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h6-b is the first span-memory mechanism, but it is still exact symbolic KV
+routing. It preserves the same value-bearing path and does not revive
+jump-neighbor replacement.

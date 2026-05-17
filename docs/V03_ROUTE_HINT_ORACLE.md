@@ -746,6 +746,42 @@ the current route-hint parser is first-byte value memory. It reads the first
 byte after `=` as the candidate value and exposes one route hint per key. h6
 starts by making that boundary explicit before adding span-offset route hints.
 
+## h6-b Exact Span Parser Decision
+
+The h6-b slice passes as exact span parser instrumentation and first
+exact-span mitigation. It does not solve chunk routing, learned routing,
+source-credit robustness, wrong-candidate robustness, fallback robustness, or
+long-context retrieval.
+
+The slice adds:
+
+```text
+--route-span-hints 0|1
+experiments/test_v06_route_memory_span_exact.sh
+```
+
+Default behavior remains unchanged with `--route-span-hints 0`. With exact KV
+routing and `--route-span-hints 1`, the parser expands each matched value into
+one route hint per value-span offset.
+
+Reference `HELLO` / `WORLD` fixture:
+
+```text
+kv_record_count = 2
+kv_query_count = 10
+route_hint_query_count = 10
+kv_query_hit_rate = 1.000000
+route_hint_applied_rate = 1.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+The route path is still:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

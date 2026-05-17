@@ -519,6 +519,8 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
             params.lambda_route_code_id = cli_to_float(value, key);
         } else if (key == "route-target-proposals" || key == "route_target_proposals") {
             params.route_target_proposals = cli_to_int(value, key);
+        } else if (key == "route-span-hints" || key == "route_span_hints") {
+            params.route_span_hints = cli_to_int(value, key);
         } else if (key == "route-hint-agg" || key == "route_hint_agg") {
             params.route_hint_agg = value;
         } else if (key == "route-delta-mode" || key == "route_delta_mode") {
@@ -713,6 +715,7 @@ inline void print_v02_help(std::ostream& os) {
        << "  --eta-route-code <float>\n"
        << "  --lambda-route-code-id <float>\n"
        << "  --route-target-proposals <0|1>\n"
+       << "  --route-span-hints <0|1>\n"
        << "  --route-hint-agg <top1|vote|weighted-vote|confidence-gated>\n"
        << "  --route-delta-mode <target-only|projected>\n"
        << "  --route-pull-scale <float>\n"

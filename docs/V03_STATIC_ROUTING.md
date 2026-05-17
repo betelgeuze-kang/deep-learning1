@@ -645,6 +645,9 @@ route triggers, or active jumps.
 h6-a continues this rule for the next route-memory phase: it only documents
 and tests the current first-byte span boundary. It does not create remote
 neighbors, route triggers, or active jumps.
+h6-b continues the same rule while adding exact span hints: it expands matched
+KV values into per-offset value-bearing proposal hints, not remote neighbors.
+It does not create route triggers or active jumps.
 
 Do not say:
 

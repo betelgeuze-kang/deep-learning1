@@ -281,6 +281,7 @@ void ByteDataset::build_route_hints() {
     struct RecordValue {
         std::uint8_t value = 0;
         int value_pos = -1;
+        std::vector<std::uint8_t> span_values;
     };
     struct BucketEntry {
         std::string key;
@@ -289,6 +290,16 @@ void ByteDataset::build_route_hints() {
     };
     std::unordered_map<std::string, RecordValue> record_values;
     std::unordered_map<std::uint32_t, std::vector<BucketEntry>> hash_buckets;
+    const auto value_end = [&](std::size_t start) {
+        std::size_t end = start;
+        while (end < data_.size() &&
+               data_[end] != static_cast<std::uint8_t>(';') &&
+               data_[end] != static_cast<std::uint8_t>('.') &&
+               !std::isspace(static_cast<unsigned char>(data_[end]))) {
+            ++end;
+        }
+        return end;
+    };
     for (std::size_t i = 0; i < data_.size(); ++i) {
         const bool is_record = data_[i] == static_cast<std::uint8_t>('@');
         const bool is_query = data_[i] == static_cast<std::uint8_t>('?');
@@ -310,34 +321,74 @@ void ByteDataset::build_route_hints() {
         }
 
         if (is_record) {
-            if (pos + 1U >= data_.size()) {
+            const std::size_t record_value_start = pos + 1U;
+            const std::size_t record_value_end = value_end(record_value_start);
+            if (record_value_start >= record_value_end) {
                 continue;
+            }
+            std::vector<std::uint8_t> span_values;
+            span_values.reserve(record_value_end - record_value_start);
+            for (std::size_t value_index = record_value_start;
+                 value_index < record_value_end;
+                 ++value_index) {
+                span_values.push_back(data_[value_index]);
             }
             kv_record_present_[i] = true;
             if (record_values.find(key) != record_values.end()) {
                 kv_duplicate_record_present_[i] = true;
             }
             kv_record_keys_[i] = key;
-            kv_record_value_positions_[i] = static_cast<int>(pos + 1U);
-            kv_record_values_[i] = data_[pos + 1U];
+            kv_record_value_positions_[i] = static_cast<int>(record_value_start);
+            kv_record_values_[i] = data_[record_value_start];
             record_values[key] = RecordValue{
-                data_[pos + 1U],
-                static_cast<int>(pos + 1U),
+                data_[record_value_start],
+                static_cast<int>(record_value_start),
+                span_values,
             };
             if (params_.route_mode == "hint-kv-hash") {
                 const auto bucket_key = stable_key_hash(key, params_.route_hash_bits);
                 hash_buckets[bucket_key].push_back(BucketEntry{
                     key,
-                    data_[pos + 1U],
-                    static_cast<int>(pos + 1U),
+                    data_[record_value_start],
+                    static_cast<int>(record_value_start),
                 });
+            }
+            continue;
+        }
+
+        const auto found = record_values.find(key);
+        const std::size_t query_value_start = pos + 1U;
+        const std::size_t query_value_end = value_end(query_value_start);
+        const std::size_t query_value_len =
+            query_value_end > query_value_start ? query_value_end - query_value_start : 0U;
+        const bool span_exact_active =
+            params_.route_span_hints != 0 && params_.route_mode == "hint-kv-exact" &&
+            found != record_values.end() && query_value_len > 0U;
+        if (span_exact_active) {
+            const std::size_t span_len =
+                std::min(query_value_len, found->second.span_values.size());
+            for (std::size_t offset = 0; offset < span_len; ++offset) {
+                const std::size_t query_pos = pos + offset;
+                const int value_pos = found->second.value_pos + static_cast<int>(offset);
+                if (query_pos >= data_.size() || value_pos < 0 ||
+                    value_pos >= static_cast<int>(data_.size())) {
+                    continue;
+                }
+                kv_query_present_[query_pos] = true;
+                kv_query_keys_[query_pos] = key;
+                kv_query_hit_[query_pos] = true;
+                kv_query_value_positions_[query_pos] = value_pos;
+                kv_query_values_[query_pos] = found->second.span_values[offset];
+                route_hint_present_[query_pos] = true;
+                route_hint_values_[query_pos] = found->second.span_values[offset];
+                route_hint_value_positions_[query_pos] = value_pos;
+                route_hint_weights_[query_pos] = 1.0f;
             }
             continue;
         }
 
         kv_query_present_[pos] = true;
         kv_query_keys_[pos] = key;
-        const auto found = record_values.find(key);
         if (found != record_values.end()) {
             kv_query_hit_[pos] = true;
             kv_query_value_positions_[pos] = found->second.value_pos;

@@ -35,6 +35,7 @@ Current next steps:
 - h5-bb turns the h5-ba preset-policy matrix into a scale guardrail test: summary rows must contain both preset arms, every policy row must recommend `hybrid-safe`, factor gap/max must not regress, aggregate wrong strength must not rise, and `routing_trigger_rate = active_jump_rate = 0.000000`.
 - h5-bc adds a closure smoke for the current route-quality stack. It runs shell syntax, `dmv02` build, oracle route-hint, preset equivalence, preset policy smoke, and preset policy scale guardrail together; `--extended` also runs route-code adaptive, preset regression, and candidate-basis guardrail scale checks.
 - h6-a opens the route-memory phase with a span-boundary diagnostic. A multi-byte fixture (`HELLO` / `WORLD`) still produces `kv_query_count = route_hint_query_count = 2`, confirming the current stack exposes one first-byte route hint per key, not per span offset. This is explicit boundary instrumentation, not span/chunk routing solved.
+- h6-b adds `--route-span-hints 0|1` for exact KV span hints. With `--route-mode hint-kv-exact --route-span-hints 1`, the same `HELLO` / `WORLD` fixture exposes `kv_query_count = route_hint_query_count = 10`, one route hint per value-span offset, while preserving the value-bearing proposal path and keeping jump-neighbor routing inactive.
 
 Current status:
 
@@ -693,6 +694,7 @@ Experiment helpers:
 - `experiments/test_v05_route_quality_candidate_preset_policy_scale.sh`
 - `experiments/test_v05_route_quality_closure.sh`
 - `experiments/test_v06_route_memory_span_boundary.sh`
+- `experiments/test_v06_route_memory_span_exact.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`

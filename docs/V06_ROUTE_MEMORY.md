@@ -59,9 +59,9 @@ single-byte boundary is explicit and tested.
 
 1. `h6-a span boundary`: document and guard the current single-byte route-memory
    boundary.
-2. `h6-b span parser`: add value-span metadata and query offset hints while
-   preserving the same value-bearing proposal path.
-3. `h6-c exact span KV`: solve exact symbolic multi-byte span recall under the
+2. `h6-b exact span parser`: add value-span metadata and query offset hints
+   while preserving the same value-bearing proposal path.
+3. `h6-c exact span KV scale`: solve exact symbolic multi-byte span recall under the
    existing route-hint dynamics.
 4. `h6-d span hash candidates`: move from exact span lookup to hashed candidate
    span retrieval.
@@ -78,3 +78,54 @@ Transformer replacement
 
 until span/chunk routing works without symbolic upper-bound shortcuts and is
 validated against external baselines.
+
+## h6-b Exact Span Parser Decision
+
+`h6-b` passes as exact span parser instrumentation and first exact-span
+mitigation. It does not solve chunk routing, learned routing, source-credit
+robustness, wrong-candidate robustness, fallback robustness, or long-context
+retrieval.
+
+The slice adds:
+
+```text
+--route-span-hints 0|1
+experiments/test_v06_route_memory_span_exact.sh
+```
+
+Default behavior remains unchanged:
+
+```text
+--route-span-hints 0
+```
+
+When enabled with exact KV routing:
+
+```text
+--route-mode hint-kv-exact
+--route-span-hints 1
+```
+
+the parser expands a multi-byte value into one route hint per value-span
+offset. For the `HELLO` / `WORLD` fixture this changes the exposed route hints
+from:
+
+```text
+kv_query_count = 2
+route_hint_query_count = 2
+```
+
+to:
+
+```text
+kv_query_count = 10
+route_hint_query_count = 10
+```
+
+The route mechanism is still the same value-bearing path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+No remote-neighbor replacement is introduced.

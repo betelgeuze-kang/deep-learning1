@@ -178,6 +178,7 @@ struct V02PreParams {
     float eta_route_code = 0.05f;
     float lambda_route_code_id = 1.0f;
     int route_target_proposals = 0;
+    int route_span_hints = 0;
     std::string route_hint_agg = "top1";
     std::string route_delta_mode = "target-only";
     float route_pull_scale = 1.0f;
