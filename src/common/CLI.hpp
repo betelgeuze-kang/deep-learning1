@@ -54,6 +54,49 @@ inline float cli_to_float(const std::string& value, const std::string& key) {
     }
 }
 
+inline void apply_route_quality_candidate_weight_preset(
+    V02PreParams& params,
+    const std::string& value,
+    const std::string& key) {
+    if (value == "none" || value == "off") {
+        params.route_quality_candidate_weight_preset = "none";
+        return;
+    }
+
+    if (value != "base" && value != "base-default" &&
+        value != "hybrid-safe" && value != "hybrid-m0p25") {
+        throw std::runtime_error(
+            "route-quality-candidate-weight-preset must be one of: none, base-default, hybrid-safe");
+    }
+
+    params.route_quality_candidate_weight_preset =
+        (value == "base" || value == "base-default") ? "base-default"
+                                                      : "hybrid-safe";
+    params.route_quality_diagnostics = 1;
+    params.route_quality_feature_set = "value-only";
+    params.route_quality_apply = "candidate-weight";
+    params.route_quality_score = 1;
+    params.route_quality_candidate_weight_beta = 8.0f;
+    params.route_quality_candidate_weight_min = 0.5f;
+    params.route_quality_candidate_weight_max = 8.0f;
+    params.route_quality_candidate_weight_basis =
+        params.route_quality_candidate_weight_preset == "base-default" ? "base"
+                                                                       : "hybrid";
+    params.route_quality_candidate_weight_basis_mix =
+        params.route_quality_candidate_weight_preset == "base-default" ? 0.0f
+                                                                       : 0.25f;
+    params.route_quality_source_normalization = "none";
+    params.route_quality_logdet_weight = 0.0f;
+    params.route_quality_entropy_weight = 0.0f;
+    params.route_quality_vote_margin_weight = 1.0f;
+    params.route_quality_top_share_weight = 0.0f;
+    params.route_quality_source_credit_weight = 0.0f;
+    params.route_quality_edge_credit_weight = 0.0f;
+    params.route_quality_channel_weight = 0.0f;
+
+    (void)key;
+}
+
 inline void apply_v01_overrides(V01Params& params, const CliArgs& args) {
     for (const auto& [key, value] : args) {
         if (key == "help") {
@@ -112,6 +155,14 @@ inline void apply_v01_overrides(V01Params& params, const CliArgs& args) {
 }
 
 inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
+    if (const auto it = args.find("route-quality-candidate-weight-preset");
+        it != args.end()) {
+        apply_route_quality_candidate_weight_preset(params, it->second, it->first);
+    } else if (const auto it2 = args.find("route_quality_candidate_weight_preset");
+               it2 != args.end()) {
+        apply_route_quality_candidate_weight_preset(params, it2->second, it2->first);
+    }
+
     for (const auto& [key, value] : args) {
         if (key == "help") {
             continue;
@@ -386,6 +437,9 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
         } else if (key == "route-quality-candidate-weight-max" ||
                    key == "route_quality_candidate_weight_max") {
             params.route_quality_candidate_weight_max = cli_to_float(value, key);
+        } else if (key == "route-quality-candidate-weight-preset" ||
+                   key == "route_quality_candidate_weight_preset") {
+            params.route_quality_candidate_weight_preset = value;
         } else if (key == "route-quality-candidate-weight-basis" ||
                    key == "route_quality_candidate_weight_basis") {
             params.route_quality_candidate_weight_basis = value;
@@ -630,6 +684,7 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-quality-candidate-weight-beta <float>\n"
        << "  --route-quality-candidate-weight-min <float>\n"
        << "  --route-quality-candidate-weight-max <float>\n"
+       << "  --route-quality-candidate-weight-preset <none|base-default|hybrid-safe>\n"
        << "  --route-quality-candidate-weight-basis <base|quality-score|hybrid|auto>\n"
        << "  --route-quality-candidate-weight-basis-mix <float>\n"
        << "  --route-quality-candidate-weight-auto-factor-max <float>\n"

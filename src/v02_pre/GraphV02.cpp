@@ -982,6 +982,15 @@ void GraphV02::validate_params() const {
         throw std::runtime_error(
             "route-quality-candidate-weight-max must be finite and >= min");
     }
+    if (params_.route_quality_candidate_weight_preset != "none" &&
+        params_.route_quality_candidate_weight_preset != "off" &&
+        params_.route_quality_candidate_weight_preset != "base" &&
+        params_.route_quality_candidate_weight_preset != "base-default" &&
+        params_.route_quality_candidate_weight_preset != "hybrid-safe" &&
+        params_.route_quality_candidate_weight_preset != "hybrid-m0p25") {
+        throw std::runtime_error(
+            "route-quality-candidate-weight-preset must be one of: none, base-default, hybrid-safe");
+    }
     if (params_.route_quality_candidate_weight_basis != "base" &&
         params_.route_quality_candidate_weight_basis != "quality-score" &&
         params_.route_quality_candidate_weight_basis != "hybrid" &&

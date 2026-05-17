@@ -482,6 +482,61 @@ The scorer does not change the successful route-hint path:
 candidate value_pos -> value byte read -> proposal hint
 ```
 
+## h5-ay Candidate-weight Preset Decision
+
+The h5-ay slice passes as candidate-weight preset plumbing / usability
+guardrail, but it does not solve learned routing, source-credit robustness,
+wrong-candidate robustness, or fallback robustness.
+
+The slice adds:
+
+```text
+--route-quality-candidate-weight-preset none|base-default|hybrid-safe
+experiments/test_v05_route_quality_candidate_preset.sh
+```
+
+`base-default` expands to the current bounded candidate-weight default:
+
+```text
+route_quality_apply = candidate-weight
+candidate_weight_beta = 8.0
+candidate_weight_min/max = 0.5/8.0
+candidate_weight_basis = base
+```
+
+`hybrid-safe` expands to the guarded lower-concentration alternative:
+
+```text
+route_quality_apply = candidate-weight
+candidate_weight_beta = 8.0
+candidate_weight_min/max = 0.5/8.0
+candidate_weight_basis = hybrid
+candidate_weight_basis_mix = 0.25
+```
+
+Reference smoke:
+
+```text
+explicit-base and preset-base:
+  qacc = 0.625000
+  factor_gap = 1.205750
+  factor_max = 6.333333
+
+explicit-hybrid and preset-hybrid:
+  qacc = 0.625000
+  factor_gap = 1.093769
+  factor_max = 5.839506
+```
+
+Interpretation:
+the preset layer exactly reproduces the explicit candidate-weight settings in
+the smoke. It only reduces CLI error risk; it does not alter route behavior,
+route strength, source choice, or topology. The live route path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

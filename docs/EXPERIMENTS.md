@@ -3485,3 +3485,71 @@ passes the qacc tolerance and concentration guardrails. This does not promote
 `hybrid` as the default. The default remains `candidate-weight-basis=base`, and
 the guard protects the documented safe-alternative claim from future
 candidate-quality changes.
+
+## h5-ay Candidate-weight Preset Decision
+
+`h5-ay` passes as candidate-weight preset plumbing / usability guardrail, but it
+does not solve learned routing, source-credit robustness, wrong-candidate
+robustness, or fallback robustness.
+
+The slice adds a shorthand CLI option:
+
+```text
+--route-quality-candidate-weight-preset none|base-default|hybrid-safe
+```
+
+Preset semantics:
+
+```text
+base-default:
+  route_quality_apply = candidate-weight
+  candidate_weight_beta = 8.0
+  candidate_weight_min/max = 0.5/8.0
+  candidate_weight_basis = base
+
+hybrid-safe:
+  same bounded candidate-weight setting
+  candidate_weight_basis = hybrid
+  candidate_weight_basis_mix = 0.25
+```
+
+The preset only configures candidate-quality weighting. It does not change the
+route source, route mode, aggregation mode, fallback source, route strength, or
+graph topology. Explicit CLI overrides can still be supplied after selecting a
+preset.
+
+Verification:
+
+```text
+experiments/test_v05_route_quality_candidate_preset.sh
+```
+
+Reference smoke:
+
+```text
+explicit-base:
+  qacc = 0.625000
+  factor_gap = 1.205750
+  factor_max = 6.333333
+
+preset-base:
+  qacc = 0.625000
+  factor_gap = 1.205750
+  factor_max = 6.333333
+
+explicit-hybrid:
+  qacc = 0.625000
+  factor_gap = 1.093769
+  factor_max = 5.839506
+
+preset-hybrid:
+  qacc = 0.625000
+  factor_gap = 1.093769
+  factor_max = 5.839506
+```
+
+Interpretation:
+the presets exactly reproduce the explicit h5-ax candidate-weight settings in
+the smoke and keep `routing_trigger_rate = active_jump_rate = 0.0`. This is a
+usability and regression-safety layer for the existing route-hint path, not a
+new routing mechanism.
