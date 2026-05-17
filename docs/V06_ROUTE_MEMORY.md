@@ -190,3 +190,62 @@ candidate value_pos -> value byte read -> proposal hint
 ```
 
 This remains exact symbolic span routing, not learned chunk retrieval.
+
+## h6-d Span Hash Candidate Decision
+
+`h6-d` passes as span hash candidate instrumentation and controlled symbolic
+span-candidate mitigation. It does not solve chunk routing, learned routing,
+source-credit robustness, wrong-candidate robustness, fallback robustness, or
+long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/test_v06_route_memory_span_hash.sh
+```
+
+When both options are enabled:
+
+```text
+--route-mode hint-kv-hash
+--route-span-hints 1
+```
+
+hash bucket records now retain value-span offsets. Query value spans are
+expanded into one routed candidate lookup per offset, and each offset only
+compares against candidates from the same record offset. This preserves the
+existing value-bearing route-hint path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+Smoke fixture:
+
+```text
+@37000=HELLO;
+@37001=WORLD;
+?37000=HELLO.
+?37001=WORLD.
+```
+
+Reference smoke readout:
+
+```text
+kv_record_count = 2
+kv_query_count = 10
+route_hint_query_count = 10
+route_candidate_query_count = 10
+kv_query_hit_rate = 1.000000
+route_hint_applied_rate = 1.000000
+route_candidate_recall_rate = 1.000000
+route_candidate_top1_rate = 1.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h6-d moves the span mechanism from exact symbolic lookup to hashed symbolic
+candidate lookup while keeping per-offset candidate recall/top1 exact in the
+no-collision smoke. This is still controlled symbolic span routing, not learned
+chunk retrieval.

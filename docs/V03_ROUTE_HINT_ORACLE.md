@@ -813,6 +813,46 @@ Interpretation:
 exact span route hints scale the h6-b parser beyond a single fixture while
 preserving the same value-bearing proposal path.
 
+## h6-d Span Hash Candidate Decision
+
+The h6-d slice passes as span hash candidate instrumentation and controlled
+symbolic span-candidate mitigation. It does not solve chunk routing, learned
+routing, source-credit robustness, wrong-candidate robustness, fallback
+robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/test_v06_route_memory_span_hash.sh
+```
+
+With `--route-mode hint-kv-hash --route-span-hints 1`, hash bucket candidates
+carry span-offset metadata. Query spans are expanded into one candidate lookup
+per value offset, and each offset compares against matching-offset bucket
+entries only.
+
+Reference smoke:
+
+```text
+kv_query_count = 10
+route_hint_query_count = 10
+route_candidate_query_count = 10
+route_candidate_recall_rate = 1.000000
+route_candidate_top1_rate = 1.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+h6-d extends the h6 exact span parser into hashed symbolic candidate retrieval
+while preserving the route-hint path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+It is not learned span/chunk routing.
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

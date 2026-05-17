@@ -3863,3 +3863,41 @@ Interpretation:
 the exact span parser scales beyond one fixture and keeps the same
 value-bearing route-hint mechanism. This remains symbolic exact span routing,
 not learned chunk retrieval.
+
+## h6-d Span Hash Candidate Decision
+
+`h6-d` passes as span hash candidate instrumentation and controlled symbolic
+span-candidate mitigation. It does not solve chunk routing, learned routing,
+source-credit robustness, wrong-candidate robustness, fallback robustness, or
+long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/test_v06_route_memory_span_hash.sh
+```
+
+When `--route-mode hint-kv-hash --route-span-hints 1` is enabled, hash bucket
+records retain value-span offsets and each query span offset performs a hashed
+candidate lookup against matching-offset records only.
+
+Smoke readout:
+
+```text
+kv_record_count = 2
+kv_query_count = 10
+route_hint_query_count = 10
+route_candidate_query_count = 10
+kv_query_hit_rate = 1.000000
+route_hint_applied_rate = 1.000000
+route_candidate_recall_rate = 1.000000
+route_candidate_top1_rate = 1.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+span hash candidates move h6 beyond exact span lookup while preserving the
+same value-bearing proposal path. The no-collision smoke verifies per-offset
+candidate recall/top1, but this is still controlled symbolic span routing, not
+learned chunk retrieval.

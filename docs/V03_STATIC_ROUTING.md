@@ -650,6 +650,10 @@ KV values into per-offset value-bearing proposal hints, not remote neighbors.
 It does not create route triggers or active jumps.
 h6-c only scales that exact span diagnostic over key-count/value-length
 fixtures. It does not create remote neighbors, route triggers, or active jumps.
+h6-d extends the same span-offset route hints to hashed symbolic candidate
+lookup. Hash bucket entries carry span offsets and each query offset compares
+same-offset candidates only; this still does not create remote neighbors, route
+triggers, or active jumps.
 
 Do not say:
 

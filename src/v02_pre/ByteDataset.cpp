@@ -287,6 +287,7 @@ void ByteDataset::build_route_hints() {
         std::string key;
         std::uint8_t value = 0;
         int value_pos = -1;
+        int span_offset = 0;
     };
     std::unordered_map<std::string, RecordValue> record_values;
     std::unordered_map<std::uint32_t, std::vector<BucketEntry>> hash_buckets;
@@ -300,6 +301,77 @@ void ByteDataset::build_route_hints() {
         }
         return end;
     };
+    const auto apply_hash_candidates =
+        [&](std::size_t query_pos,
+            const std::string& key,
+            int correct_value_pos,
+            int span_offset_filter) {
+            if (query_pos >= data_.size()) {
+                return;
+            }
+            route_candidate_query_present_[query_pos] = true;
+            const auto bucket_key = stable_key_hash(key, params_.route_hash_bits);
+            const auto bucket_found = hash_buckets.find(bucket_key);
+            if (bucket_found == hash_buckets.end() || bucket_found->second.empty()) {
+                return;
+            }
+
+            bool has_other_key = false;
+            std::vector<const BucketEntry*> ordered_bucket;
+            ordered_bucket.reserve(bucket_found->second.size());
+            for (const auto& entry : bucket_found->second) {
+                if (span_offset_filter >= 0 && entry.span_offset != span_offset_filter) {
+                    continue;
+                }
+                if (entry.key != key) {
+                    has_other_key = true;
+                }
+                ordered_bucket.push_back(&entry);
+            }
+            if (ordered_bucket.empty()) {
+                return;
+            }
+
+            route_bucket_load_[query_pos] = static_cast<int>(ordered_bucket.size());
+            route_bucket_collision_[query_pos] = has_other_key;
+
+            const int candidate_limit =
+                std::min(params_.K_route, static_cast<int>(ordered_bucket.size()));
+            std::stable_sort(
+                ordered_bucket.begin(),
+                ordered_bucket.end(),
+                [&](const BucketEntry* lhs, const BucketEntry* rhs) {
+                    const auto latest_first = [&]() {
+                        return lhs->value_pos > rhs->value_pos;
+                    };
+                    if (params_.route_candidate_score == "key-shape") {
+                        const double lhs_score = key_shape_score(key, lhs->key);
+                        const double rhs_score = key_shape_score(key, rhs->key);
+                        if (lhs_score != rhs_score) {
+                            return lhs_score > rhs_score;
+                        }
+                    }
+                    return latest_first();
+                });
+
+            bool selected = false;
+            for (int rank = 1; rank <= candidate_limit; ++rank) {
+                const auto& entry = *ordered_bucket[static_cast<std::size_t>(rank - 1)];
+                if (!selected) {
+                    route_hint_present_[query_pos] = true;
+                    route_hint_values_[query_pos] = entry.value;
+                    route_hint_value_positions_[query_pos] = entry.value_pos;
+                    route_hint_weights_[query_pos] = 1.0f;
+                    selected = true;
+                }
+                route_hint_candidate_value_positions_[query_pos].push_back(entry.value_pos);
+                if (correct_value_pos >= 0 && entry.value_pos == correct_value_pos) {
+                    route_candidate_hit_[query_pos] = true;
+                    route_candidate_rank_[query_pos] = rank;
+                    break;
+                }
+            }
+        };
     for (std::size_t i = 0; i < data_.size(); ++i) {
         const bool is_record = data_[i] == static_cast<std::uint8_t>('@');
         const bool is_query = data_[i] == static_cast<std::uint8_t>('?');
@@ -347,11 +419,23 @@ void ByteDataset::build_route_hints() {
             };
             if (params_.route_mode == "hint-kv-hash") {
                 const auto bucket_key = stable_key_hash(key, params_.route_hash_bits);
-                hash_buckets[bucket_key].push_back(BucketEntry{
-                    key,
-                    data_[record_value_start],
-                    static_cast<int>(record_value_start),
-                });
+                if (params_.route_span_hints != 0) {
+                    for (std::size_t offset = 0; offset < span_values.size(); ++offset) {
+                        hash_buckets[bucket_key].push_back(BucketEntry{
+                            key,
+                            span_values[offset],
+                            static_cast<int>(record_value_start + offset),
+                            static_cast<int>(offset),
+                        });
+                    }
+                } else {
+                    hash_buckets[bucket_key].push_back(BucketEntry{
+                        key,
+                        data_[record_value_start],
+                        static_cast<int>(record_value_start),
+                        0,
+                    });
+                }
             }
             continue;
         }
@@ -387,6 +471,33 @@ void ByteDataset::build_route_hints() {
             continue;
         }
 
+        const bool span_hash_active =
+            params_.route_span_hints != 0 && params_.route_mode == "hint-kv-hash" &&
+            found != record_values.end() && query_value_len > 0U;
+        if (span_hash_active) {
+            const std::size_t span_len =
+                std::min(query_value_len, found->second.span_values.size());
+            for (std::size_t offset = 0; offset < span_len; ++offset) {
+                const std::size_t query_pos = pos + offset;
+                const int value_pos = found->second.value_pos + static_cast<int>(offset);
+                if (query_pos >= data_.size() || value_pos < 0 ||
+                    value_pos >= static_cast<int>(data_.size())) {
+                    continue;
+                }
+                kv_query_present_[query_pos] = true;
+                kv_query_keys_[query_pos] = key;
+                kv_query_hit_[query_pos] = true;
+                kv_query_value_positions_[query_pos] = value_pos;
+                kv_query_values_[query_pos] = found->second.span_values[offset];
+                apply_hash_candidates(
+                    query_pos,
+                    key,
+                    value_pos,
+                    static_cast<int>(offset));
+            }
+            continue;
+        }
+
         kv_query_present_[pos] = true;
         kv_query_keys_[pos] = key;
         if (found != record_values.end()) {
@@ -396,65 +507,11 @@ void ByteDataset::build_route_hints() {
         }
 
         if (params_.route_mode == "hint-kv-hash") {
-            route_candidate_query_present_[pos] = true;
-            const auto bucket_key = stable_key_hash(key, params_.route_hash_bits);
-            const auto bucket_found = hash_buckets.find(bucket_key);
-            if (bucket_found == hash_buckets.end() || bucket_found->second.empty()) {
-                continue;
-            }
-
-            const auto& bucket = bucket_found->second;
-            route_bucket_load_[pos] = static_cast<int>(bucket.size());
-            bool has_other_key = false;
-            for (const auto& entry : bucket) {
-                if (entry.key != key) {
-                    has_other_key = true;
-                    break;
-                }
-            }
-            route_bucket_collision_[pos] = has_other_key;
-
-            const int candidate_limit =
-                std::min(params_.K_route, static_cast<int>(bucket.size()));
-            std::vector<const BucketEntry*> ordered_bucket;
-            ordered_bucket.reserve(bucket.size());
-            for (const auto& entry : bucket) {
-                ordered_bucket.push_back(&entry);
-            }
-            std::stable_sort(
-                ordered_bucket.begin(),
-                ordered_bucket.end(),
-                [&](const BucketEntry* lhs, const BucketEntry* rhs) {
-                    const auto latest_first = [&]() {
-                        return lhs->value_pos > rhs->value_pos;
-                    };
-                    if (params_.route_candidate_score == "key-shape") {
-                        const double lhs_score = key_shape_score(key, lhs->key);
-                        const double rhs_score = key_shape_score(key, rhs->key);
-                        if (lhs_score != rhs_score) {
-                            return lhs_score > rhs_score;
-                        }
-                    }
-                    return latest_first();
-                });
-            bool selected = false;
-            for (int rank = 1; rank <= candidate_limit; ++rank) {
-                const auto& entry = *ordered_bucket[static_cast<std::size_t>(rank - 1)];
-                if (!selected) {
-                    route_hint_present_[pos] = true;
-                    route_hint_values_[pos] = entry.value;
-                    route_hint_value_positions_[pos] = entry.value_pos;
-                    route_hint_weights_[pos] = 1.0f;
-                    selected = true;
-                }
-                route_hint_candidate_value_positions_[pos].push_back(entry.value_pos);
-                if (found != record_values.end() &&
-                    entry.value_pos == found->second.value_pos) {
-                    route_candidate_hit_[pos] = true;
-                    route_candidate_rank_[pos] = rank;
-                    break;
-                }
-            }
+            apply_hash_candidates(
+                pos,
+                key,
+                found != record_values.end() ? found->second.value_pos : -1,
+                -1);
             continue;
         }
 
