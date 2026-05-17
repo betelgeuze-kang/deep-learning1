@@ -3940,3 +3940,31 @@ Interpretation:
 offset-aware hash candidates now scale over a small symbolic span matrix while
 preserving the same value-bearing proposal path. This is a span-candidate scale
 guard, not learned chunk retrieval.
+
+## h7-a Route-memory Goal Closure Decision
+
+`h7-a` passes as route-memory goal closure instrumentation. It does not solve
+learned sparse routing, source-credit robustness, wrong-candidate robustness,
+fallback robustness, chunk-level retrieval, long-context retrieval, or
+Transformer replacement.
+
+The slice adds:
+
+```text
+experiments/test_v07_goal_route_memory_closure.sh
+```
+
+The quick closure runs shell syntax checks, the `dmv02` build, h5 route-quality
+closure, and every h6 span boundary/exact/hash smoke. The optional `--extended`
+mode additionally runs the extended h5 closure plus standard h6 exact/hash span
+scale runners.
+
+Interpretation:
+h7 closes the current route-quality plus route-memory scaffold as a tested
+research prototype boundary. The live nonlocal path remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and jump-neighbor replacement remains inactive/default-off.

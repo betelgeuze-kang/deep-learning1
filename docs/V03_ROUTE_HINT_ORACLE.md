@@ -885,6 +885,29 @@ h6-e verifies that the offset-aware hashed span-candidate path scales over a
 small symbolic matrix without reviving topology replacement. It is still a
 controlled span-candidate diagnostic, not learned chunk retrieval.
 
+## h7-a Route-memory Goal Closure Decision
+
+The h7-a slice passes as route-memory goal closure instrumentation. It does not
+solve learned sparse routing, source-credit robustness, wrong-candidate
+robustness, fallback robustness, chunk-level retrieval, long-context retrieval,
+or Transformer replacement.
+
+The slice adds:
+
+```text
+experiments/test_v07_goal_route_memory_closure.sh
+```
+
+Interpretation:
+h7-a is a single entrypoint for the current h5 route-quality and h6
+route-memory smoke suite. It preserves the live route-hint path:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+and does not revive jump-neighbor topology replacement.
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

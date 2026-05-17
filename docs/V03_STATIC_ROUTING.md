@@ -657,6 +657,9 @@ triggers, or active jumps.
 h6-e scales that span-hash candidate diagnostic over key-count/value-length and
 hash-bit arms. It remains a value-bearing proposal-hint scale guard and still
 does not create remote neighbors, route triggers, or active jumps.
+h7-a closes the current goal with a route-quality/route-memory smoke suite. It
+is a regression guard for the non-topological path, not a promotion of
+jump-neighbor routing.
 
 Do not say:
 
