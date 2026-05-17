@@ -3730,3 +3730,44 @@ h5-bc is a release-style safety net for the current route-quality stack. It
 checks that the value-bearing route-hint path remains live, candidate-weight
 presets remain equivalent/policy-guarded, and jump-neighbor routing remains
 inactive. It adds no new route behavior.
+
+## h6-a Route-memory Span Boundary Decision
+
+`h6-a` passes as route-memory span-boundary instrumentation. It does not solve
+span routing, chunk routing, learned routing, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+docs/V06_ROUTE_MEMORY.md
+experiments/test_v06_route_memory_span_boundary.sh
+```
+
+The fixture contains multi-byte values:
+
+```text
+@37000=HELLO;
+@37001=WORLD;
+?37000=HELLO.
+?37001=WORLD.
+```
+
+Reference check:
+
+```text
+kv_record_count = 2
+kv_query_count = 2
+route_hint_query_count = 2
+kv_query_hit_rate = 1.000000
+route_hint_applied_rate = 1.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the current h5 route-memory stack is first-byte value memory. Multi-byte values
+can appear in the fixture, but the active parser exposes one route hint per
+key, not one route hint per value-span offset. h6 starts from this explicit
+boundary and should extend span metadata without reviving jump-neighbor
+replacement.

@@ -642,6 +642,9 @@ h5-av/h5-aw/h5-ax/h5-ay/h5-az/h5-ba/h5-bb/h5-bc only make the
 base-vs-hybrid-safe candidate-weight policy easier to summarize, guard,
 preset, compare, and regression-test. They do not create remote neighbors,
 route triggers, or active jumps.
+h6-a continues this rule for the next route-memory phase: it only documents
+and tests the current first-byte span boundary. It does not create remote
+neighbors, route triggers, or active jumps.
 
 Do not say:
 

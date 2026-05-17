@@ -706,6 +706,46 @@ h5-bc closes the current route-quality stack with a single smoke entrypoint.
 It verifies the live value-bearing route-hint path and guarded candidate-weight
 preset policy while keeping jump-neighbor replacement inactive.
 
+## h6-a Route-memory Span Boundary Decision
+
+The h6-a slice opens the next route-memory phase and passes as span-boundary
+instrumentation. It does not solve span routing, chunk routing, learned
+routing, source-credit robustness, wrong-candidate robustness, fallback
+robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+docs/V06_ROUTE_MEMORY.md
+experiments/test_v06_route_memory_span_boundary.sh
+```
+
+The diagnostic fixture contains multi-byte values:
+
+```text
+@37000=HELLO;
+@37001=WORLD;
+?37000=HELLO.
+?37001=WORLD.
+```
+
+Reference check:
+
+```text
+kv_record_count = 2
+kv_query_count = 2
+route_hint_query_count = 2
+kv_query_hit_rate = 1.000000
+route_hint_applied_rate = 1.000000
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+the current route-hint parser is first-byte value memory. It reads the first
+byte after `=` as the candidate value and exposes one route hint per key. h6
+starts by making that boundary explicit before adding span-offset route hints.
+
 It only changes candidate order inside a hash bucket. Candidates whose record
 key has stronger shape agreement with the query key are ranked first. The score
 uses length match, digit-count match, common prefix, and common suffix, then

@@ -34,6 +34,7 @@ Current next steps:
 - h5-ba compares the presets directly as experiment arms over the same small key/seed/noise matrix. `hybrid-safe` is recommended in every row: qacc moves `0.863281 -> 0.864258`, factor gap drops `3.440251 -> 3.118539`, factor max drops `6.333333 -> 6.049084`, and jump-neighbor routing remains inactive.
 - h5-bb turns the h5-ba preset-policy matrix into a scale guardrail test: summary rows must contain both preset arms, every policy row must recommend `hybrid-safe`, factor gap/max must not regress, aggregate wrong strength must not rise, and `routing_trigger_rate = active_jump_rate = 0.000000`.
 - h5-bc adds a closure smoke for the current route-quality stack. It runs shell syntax, `dmv02` build, oracle route-hint, preset equivalence, preset policy smoke, and preset policy scale guardrail together; `--extended` also runs route-code adaptive, preset regression, and candidate-basis guardrail scale checks.
+- h6-a opens the route-memory phase with a span-boundary diagnostic. A multi-byte fixture (`HELLO` / `WORLD`) still produces `kv_query_count = route_hint_query_count = 2`, confirming the current stack exposes one first-byte route hint per key, not per span offset. This is explicit boundary instrumentation, not span/chunk routing solved.
 
 Current status:
 
@@ -691,6 +692,7 @@ Experiment helpers:
 - `experiments/test_v05_route_quality_candidate_preset_policy.sh`
 - `experiments/test_v05_route_quality_candidate_preset_policy_scale.sh`
 - `experiments/test_v05_route_quality_closure.sh`
+- `experiments/test_v06_route_memory_span_boundary.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`
@@ -710,4 +712,5 @@ Key docs:
 - [v0.3 Routing Probe](docs/V03_ROUTING_PROBE.md)
 - [v0.3 Static Routing Slice](docs/V03_STATIC_ROUTING.md)
 - [v0.3 Route-Hint Oracle](docs/V03_ROUTE_HINT_ORACLE.md)
+- [v0.6 / h6 Route Memory](docs/V06_ROUTE_MEMORY.md)
 - [Roadmap](docs/ROADMAP.md)

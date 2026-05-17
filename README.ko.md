@@ -34,6 +34,7 @@
 - h5-ba는 preset 자체를 실험 arm으로 직접 비교합니다. 같은 작은 key/seed/noise matrix에서 `hybrid-safe`가 모든 row에서 추천됩니다. qacc는 `0.863281 -> 0.864258`, factor gap은 `3.440251 -> 3.118539`, factor max는 `6.333333 -> 6.049084`로 내려가며 jump-neighbor routing은 계속 비활성입니다.
 - h5-bb는 h5-ba preset-policy matrix를 scale guardrail test로 고정합니다. 두 preset arm이 모두 있어야 하고, 모든 policy row가 `hybrid-safe`를 추천해야 하며, factor gap/max와 aggregate wrong strength가 악화되지 않고 `routing_trigger_rate = active_jump_rate = 0.000000`을 유지해야 합니다.
 - h5-bc는 현재 route-quality stack을 닫는 closure smoke입니다. shell syntax, `dmv02` build, oracle route-hint, preset equivalence, preset policy smoke, preset policy scale guardrail을 한 번에 확인합니다. `--extended`는 route-code adaptive, preset regression, candidate-basis guardrail scale까지 추가로 확인합니다.
+- h6-a는 route-memory phase를 여는 span-boundary diagnostic입니다. multi-byte fixture(`HELLO` / `WORLD`)에서도 현재 stack은 `kv_query_count = route_hint_query_count = 2`로 key당 첫 value byte 하나만 route hint로 노출합니다. 이는 span/chunk routing solved가 아니라 h6의 시작 경계를 명시하는 instrumentation입니다.
 
 ## 현재 상태
 
@@ -334,6 +335,7 @@ cmake --build build -j
 - `experiments/test_v05_route_quality_candidate_preset_policy.sh`
 - `experiments/test_v05_route_quality_candidate_preset_policy_scale.sh`
 - `experiments/test_v05_route_quality_closure.sh`
+- `experiments/test_v06_route_memory_span_boundary.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
 - `experiments/test_v05_route_quality_candidate_auto_trigger.sh`
@@ -353,6 +355,7 @@ cmake --build build -j
 - [v0.3 Routing Probe](docs/V03_ROUTING_PROBE.md)
 - [v0.3 Static Routing Slice](docs/V03_STATIC_ROUTING.md)
 - [v0.3 Route-Hint Oracle](docs/V03_ROUTE_HINT_ORACLE.md)
+- [v0.6 / h6 Route Memory](docs/V06_ROUTE_MEMORY.md)
 - [Roadmap](docs/ROADMAP.md)
 
 ## 다음 연구 방향
