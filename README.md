@@ -40,7 +40,19 @@ Current next steps:
 - h6-c adds exact span scale diagnostics. The smoke compares first-byte and span arms at `key_count=2`, `value_len=5`; route hint query count expands from `2` to `10` under `--route-span-hints 1`, with exact hits/applied hints and jump-neighbor routing inactive.
 - h6-d extends span hints to hashed symbolic candidates. With `--route-mode hint-kv-hash --route-span-hints 1`, hash bucket entries retain span offsets and each query offset only compares against same-offset candidates. The smoke exposes `kv_query_count = route_hint_query_count = route_candidate_query_count = 10`, candidate recall/top1 `1.000000`, and keeps `routing_trigger_rate = active_jump_rate = 0.000000`. This is controlled symbolic span-candidate routing, not learned chunk retrieval.
 - h6-e adds span hash scale diagnostics. The standard matrix has 8 rows over key count, value length, and hash bits; offset-aware hash candidates keep `qacc_mean = recall_mean = top1_mean = 1.000000`, `collision_rate_mean = 0.000000`, and jump-neighbor routing inactive. This is a span-candidate scale guard, not learned chunk retrieval.
-- h7-a adds a goal closure smoke. It runs the h5 route-quality closure plus all h6 span boundary/exact/hash smoke tests in one entrypoint and keeps the same value-bearing route-hint invariant. This closes the current route-quality/route-memory scaffold as instrumentation, not learned routing or long-context retrieval solved.
+- h6-f adds span ambiguity / collision diagnostics. With `hash_bits=2`, span bucket collision reaches `1.000000`; `K_route=4` drops recall/top1/qacc to `0.500000/0.125000/0.237500`, while `K_route=16` recovers recall to `1.000000` but leaves top1/qacc low at `0.125000/0.293750`. The symbolic `key-shape` scorer recovers `top1=qacc=1.000000`, but the current byte-level candidate-quality preset does not. This is an actionable span-candidate quality split, not learned chunk retrieval solved.
+- h6-g adds learned-like span-source stress and span exact-match instrumentation. Clean `route-code-key` span lookup keeps decode/recall/top1 high (`decode=1.000000`, `recall=1.000000`, `top1=1.000000`, `qacc=0.987500`, `span_exact=0.937500`), while weakened route-code identity collapses decode (`0.000000`), creates collisions (`0.750000`), and drops top1/qacc/span-exact (`0.250000/0.606250/0.281250`). Larger `K_route` restores recall to `1.000000` without fixing top1 or span exact-match, and the byte-level candidate-quality preset remains neutral. This is learned-like source stress instrumentation, not learned chunk retrieval solved.
+- h6-h adds span-level candidate-quality diagnostics. In weak route-code span stress, `K_route=16` restores all-span recall to `1.000000` but all-span top1 and span exact-match stay at `0.250000`; the byte-level quality preset is neutral, while symbolic `key-shape` recovers all-span top1/span exact-match to `1.000000`. This confirms the next bottleneck is span-level ranking/quality, not recall alone.
+- h6-i adds span candidate-quality gap diagnostics. Under weak route-code identity, `K_route=16` restores all-span recall to `1.000000`, but the top candidate is often a coherent wrong key across the whole span (`top_key_consistency=1.000000`, `top_key_correct=0.250000`, `coherent_wrong_top_key=0.750000`). Byte-level `base-default` remains neutral and `hybrid-safe` can be worse in this stress; symbolic `key-shape` restores correct-key share/key entropy/top1 as an upper bound. The next span bottleneck is learned span-record ranking or consistency features, not recall alone.
+- h6-j adds `--route-candidate-score span-prefix`, a first non-key-shape span-record ranking probe based only on already-visible query span prefix agreement. It preserves all-span recall but regresses qacc/span exact-match in the smoke (`qacc 0.625000 -> 0.587500`, `span_exact 0.281250 -> 0.218750`) while reducing coherent wrong-key selection (`0.750000 -> 0.593750`). This is useful negative instrumentation: visible prefix consistency alone is not enough to replace symbolic key-shape.
+- h6-k adds `--route-candidate-score span-key-support`, a second non-key-shape span-record ranking probe based on candidate keys that appear across multiple offsets in the recovered span candidate set. It preserves all-span recall but is neutral in the current coherent wrong-key stress (`qacc=0.625000`, `span_exact=0.281250`, `coherent_wrong_top_key=0.750000`, unchanged from weak-k16). Same-key support alone is therefore not enough to replace symbolic `key-shape`; a wrong key can also be coherently supported across offsets.
+- h6-l adds `--route-candidate-score span-local-energy`, which ranks candidate records by how well their full value span fits the current query span under local energy without route-hint energy. It is the first non-`key-shape` span-record scorer in this series with a limited positive signal: `qacc 0.625000 -> 0.675000`, `span_exact 0.281250 -> 0.406250`, `correct_key_share 0.503125 -> 0.631250`, and `key_entropy 1.238921 -> 0.862081`. It still remains well below symbolic `key-shape`.
+- h6-m scales `span-local-energy` over a small key/seed matrix. The limited lift survives on average: `weak_qacc_mean=0.546094`, `local_energy_qacc_mean=0.571875`, `local_energy_qacc_delta_mean=0.025781`; `span_exact_mean` improves `0.273438 -> 0.378906`, while symbolic `key-shape` remains much higher at `qacc_mean=0.984375`, `span_exact_mean=0.921875`.
+- h6-n composes `span-local-energy` with h5 candidate-quality presets. `base-default` is neutral on top of local-energy, while `hybrid-safe` improves span-level quality (`span_exact 0.406250 -> 0.593750`, `correct_key_share 0.631250 -> 0.768229`, `key_entropy 0.862081 -> 0.510620`) but lowers byte qacc (`0.675000 -> 0.631250`). This exposes a span exact-match versus byte-qacc policy split.
+- h6-o turns that split into an explicit policy artifact. Byte-qacc objective selects `local-energy` (`qacc=0.675000`, `span_exact=0.406250`), while span-exact and balanced objectives select `local-energy-hybrid` (`qacc=0.631250`, `span_exact=0.593750`). The span objective gains `+0.187500` span exact-match while giving back `-0.043750` qacc.
+- h6-p scales the h6-o policy artifact over a small key/seed matrix. Byte-qacc selects `local-energy` in every group, while span-exact selects `local-energy-hybrid` in 3/4 groups. The span policy trades mean qacc `-0.033594` for mean span exact-match `+0.062500`; objective split rate is `0.750000`.
+- h7-a adds a goal closure smoke. It runs the h5 route-quality closure plus all h6 span boundary/exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale smoke tests in one entrypoint and keeps the same value-bearing route-hint invariant. This closes the current route-quality/route-memory scaffold as instrumentation, not learned routing or long-context retrieval solved.
+- h9-a/h9-b/h9-d add an optional ROCm/HIP backend scaffold behind `-DDLE_ENABLE_HIP=ON` and `--backend hip`. CPU remains canonical and default. The first HIP boundaries are bounded route-quality candidate-weight factor parity and diagnostic-only 16x16 proposal-score parity; KV parsing, hash/source-credit orchestration, update acceptance, RNG, age/tick/reservoir mutation, and CSV stay on CPU. `--backend hip` in a CPU-only binary fails clearly with a `DLE_ENABLE_HIP=ON` error. This is backend/parity instrumentation, not GPU acceleration proven and not learned routing solved.
 
 Current status:
 
@@ -491,6 +503,24 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
+Optional ROCm/HIP scaffold build:
+
+```bash
+cmake -S . -B build-hip -DDLE_ENABLE_HIP=ON
+cmake --build build-hip --target dmv02 hip_candidate_weight_parity -j
+```
+
+Runtime backend selection is explicit:
+
+```bash
+./build/dmv02 --backend cpu ...
+./build-hip/dmv02 --backend hip --hip-device 0 ...
+```
+
+h9 is scaffold/parity only. It does not move string/KV parsing,
+source-credit ledgers, update acceptance, RNG, route strength, or topology onto
+GPU.
+
 ## Run
 
 `v0.1` logs CSV to stdout by default:
@@ -703,6 +733,17 @@ Experiment helpers:
 - `experiments/test_v06_route_memory_span_exact_scale.sh`
 - `experiments/test_v06_route_memory_span_hash.sh`
 - `experiments/test_v06_route_memory_span_hash_scale.sh`
+- `experiments/test_v06_route_memory_span_ambiguity.sh`
+- `experiments/test_v06_route_memory_span_learned_source.sh`
+- `experiments/test_v06_route_memory_span_quality_diagnostics.sh`
+- `experiments/test_v06_route_memory_span_candidate_quality_gap.sh`
+- `experiments/test_v06_route_memory_span_prefix_ranking.sh`
+- `experiments/test_v06_route_memory_span_key_support_ranking.sh`
+- `experiments/test_v06_route_memory_span_local_energy_ranking.sh`
+- `experiments/test_v06_route_memory_span_local_energy_scale.sh`
+- `experiments/test_v06_route_memory_span_local_energy_composition.sh`
+- `experiments/test_v06_route_memory_span_local_energy_policy.sh`
+- `experiments/test_v06_route_memory_span_local_energy_policy_scale.sh`
 - `experiments/test_v07_goal_route_memory_closure.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
@@ -725,4 +766,5 @@ Key docs:
 - [v0.3 Route-Hint Oracle](docs/V03_ROUTE_HINT_ORACLE.md)
 - [v0.6 / h6 Route Memory](docs/V06_ROUTE_MEMORY.md)
 - [v0.7 / h7 Goal Closure](docs/V07_GOAL.md)
+- [h9 ROCm/HIP Backend Scaffold](docs/V09_GPU_BACKEND.md)
 - [Roadmap](docs/ROADMAP.md)

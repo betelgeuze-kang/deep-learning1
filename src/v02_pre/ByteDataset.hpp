@@ -23,6 +23,7 @@ class ByteDataset {
         std::string key;
         int marker_pos = -1;
         int value_pos = -1;
+        int value_len = 1;
         std::uint8_t value = 0;
     };
 
@@ -79,6 +80,7 @@ class ByteDataset {
     std::vector<bool> kv_duplicate_record_present_;
     std::vector<std::string> kv_record_keys_;
     std::vector<int> kv_record_value_positions_;
+    std::vector<int> kv_record_value_lengths_;
     std::vector<std::uint8_t> kv_record_values_;
     std::vector<bool> kv_query_present_;
     std::vector<bool> kv_query_hit_;

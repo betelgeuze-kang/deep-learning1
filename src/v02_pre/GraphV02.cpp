@@ -13,6 +13,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "backend/RouteQualityBackend.hpp"
+
 namespace dle {
 
 namespace {
@@ -43,6 +45,70 @@ bool valid_retry_source_name(const std::string& source) {
            source == "key-shape" ||
            source == "joint-code-key" ||
            source == "noisy-route-code";
+}
+
+int span_offset_for_query(
+    const ByteDataset::Window& window,
+    const ByteDataset::KVQuery& query,
+    int route_span_hints) {
+    if (route_span_hints == 0 || !query.hit || query.value_pos < 0) {
+        return 0;
+    }
+    for (const auto& record : window.kv_records) {
+        if (record.key != query.key || record.marker_pos >= query.query_pos ||
+            record.value_pos < 0 || record.value_len <= 0) {
+            continue;
+        }
+        const int span_end = record.value_pos + record.value_len;
+        if (query.value_pos >= record.value_pos && query.value_pos < span_end) {
+            return query.value_pos - record.value_pos;
+        }
+    }
+    return 0;
+}
+
+int record_value_pos_at_span_offset(
+    const ByteDataset::KVRecord& record,
+    int span_offset,
+    int n) {
+    if (span_offset < 0 || record.value_pos < 0 || record.value_len <= 0 ||
+        span_offset >= record.value_len) {
+        return -1;
+    }
+    const int value_pos = record.value_pos + span_offset;
+    return value_pos >= 0 && value_pos < n ? value_pos : -1;
+}
+
+double span_prefix_score_for_record(
+    const std::vector<NodeV02>& nodes,
+    int n,
+    int query_pos,
+    int span_offset,
+    const ByteDataset::KVRecord& record) {
+    if (span_offset <= 0 || query_pos < 0 || query_pos >= n ||
+        record.value_pos < 0 || record.value_pos >= n ||
+        record.value_len <= 0 || span_offset > record.value_len) {
+        return 0.0;
+    }
+    const int query_value_start = query_pos - span_offset;
+    if (query_value_start < 0) {
+        return 0.0;
+    }
+    int matches = 0;
+    for (int offset = 0; offset < span_offset; ++offset) {
+        const int query_prefix_pos = query_value_start + offset;
+        const int record_prefix_pos = record.value_pos + offset;
+        if (query_prefix_pos < 0 || query_prefix_pos >= n ||
+            record_prefix_pos < 0 || record_prefix_pos >= n) {
+            continue;
+        }
+        if (nodes[static_cast<std::size_t>(query_prefix_pos)].input_byte ==
+            nodes[static_cast<std::size_t>(record_prefix_pos)].input_byte) {
+            ++matches;
+        }
+    }
+    return static_cast<double>(matches) /
+           static_cast<double>(std::max(1, span_offset));
 }
 
 std::string trim_ascii(const std::string& value) {
@@ -418,6 +484,7 @@ std::uint8_t deterministic_corrupt_byte(
 GraphV02::GraphV02(const V02PreParams& params)
     : params_(params), rng_(static_cast<std::uint32_t>(params.seed)) {
     validate_params();
+    configure_numeric_backend(params_);
     field_.initialize(rng_);
     route_field_.initialize(rng_);
     refresh_route_confidence_cache();
@@ -426,6 +493,7 @@ GraphV02::GraphV02(const V02PreParams& params)
 
 void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
     current_epoch_ = epoch;
+    reset_numeric_backend_epoch_stats();
     if (window.inputs.size() != static_cast<std::size_t>(params_.N) ||
         window.targets.size() != static_cast<std::size_t>(params_.N)) {
         throw std::runtime_error("dataset window size does not match N");
@@ -521,10 +589,14 @@ void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
         route_hint_weights_[static_cast<std::size_t>(hint.query_pos)] = hint.weight;
     }
     for (const auto& record : window.kv_records) {
-        if (record.value_pos >= 0 && record.value_pos < params_.N) {
-            route_value_positions_.push_back(record.value_pos);
-            route_value_position_keys_[static_cast<std::size_t>(record.value_pos)] =
-                record.key;
+        const int value_len = std::max(1, record.value_len);
+        for (int span_offset = 0; span_offset < value_len; ++span_offset) {
+            const int value_pos = record.value_pos + span_offset;
+            if (value_pos >= 0 && value_pos < params_.N) {
+                route_value_positions_.push_back(value_pos);
+                route_value_position_keys_[static_cast<std::size_t>(value_pos)] =
+                    record.key;
+            }
         }
         for (int offset = 0; offset < static_cast<int>(record.key.size()); ++offset) {
             const int pos = record.marker_pos + 1 + offset;
@@ -558,6 +630,7 @@ void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
     refresh_route_hint_candidate_sources();
     apply_route_fallback_source(window);
     apply_route_noisy_source(window);
+    apply_span_key_support_candidate_score();
     if (params_.route_fallback_persist_cycles > 0) {
         for (int index = 0; index < params_.N; ++index) {
             if (route_hint_fallback_used_[static_cast<std::size_t>(index)]) {
@@ -667,6 +740,17 @@ void GraphV02::validate_params() const {
 
     if (params_.N <= 0) {
         throw std::runtime_error("N must be positive");
+    }
+    if (params_.backend != "cpu" && params_.backend != "hip") {
+        throw std::runtime_error("--backend must be one of: cpu, hip");
+    }
+    if (params_.hip_device < 0) {
+        throw std::runtime_error("--hip-device must be non-negative");
+    }
+    if (params_.backend == "hip" && !hip_backend_compiled()) {
+        throw std::runtime_error(
+            "--backend hip requested, but this binary was built without "
+            "DLE_ENABLE_HIP=ON");
     }
     if (params_.S != FieldTable::States) {
         throw std::runtime_error("v0.2-pre reference requires S = 16");
@@ -1111,9 +1195,12 @@ void GraphV02::validate_params() const {
     if (params_.route_candidate_score != "insertion" &&
         params_.route_candidate_score != "recency" &&
         params_.route_candidate_score != "value-vote" &&
-        params_.route_candidate_score != "key-shape") {
+        params_.route_candidate_score != "key-shape" &&
+        params_.route_candidate_score != "span-prefix" &&
+        params_.route_candidate_score != "span-key-support" &&
+        params_.route_candidate_score != "span-local-energy") {
         throw std::runtime_error(
-            "route-candidate-score must be one of: insertion, recency, value-vote, key-shape");
+            "route-candidate-score must be one of: insertion, recency, value-vote, key-shape, span-prefix, span-key-support, span-local-energy");
     }
     if (params_.routing_source != "none" && params_.routing_source != "input-byte" &&
         params_.routing_source != "joint-code" && params_.routing_source != "state-code") {
@@ -2706,17 +2793,10 @@ float GraphV02::route_quality_candidate_weight_factor(
         base_weight < 0.0f) {
         return 1.0f;
     }
-    const double relative =
-        static_cast<double>(base_weight / mean_base_weight) - 1.0;
-    const double unclamped =
-        1.0 +
-        static_cast<double>(params_.route_quality_candidate_weight_beta) *
-            relative;
-    return static_cast<float>(
-        std::clamp(
-            unclamped,
-            static_cast<double>(params_.route_quality_candidate_weight_min),
-            static_cast<double>(params_.route_quality_candidate_weight_max)));
+    return route_quality_candidate_weight_factor_backend(
+        params_,
+        base_weight,
+        mean_base_weight);
 }
 
 float GraphV02::route_candidate_mean_base_weight_for_vote(
@@ -3102,6 +3182,8 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
          &noisy_source_uses_wrong](const std::string& source,
                                    const ByteDataset::KVQuery& query) {
             std::vector<int> positions;
+            const int span_offset =
+                span_offset_for_query(window, query, params_.route_span_hints);
             if (source == "off") {
                 return positions;
             }
@@ -3137,8 +3219,13 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                 const int limit =
                     std::min(params_.K_route, static_cast<int>(scored_records.size()));
                 for (int rank = 0; rank < limit; ++rank) {
-                    positions.push_back(
-                        scored_records[static_cast<std::size_t>(rank)]->value_pos);
+                    const int value_pos = record_value_pos_at_span_offset(
+                        *scored_records[static_cast<std::size_t>(rank)],
+                        span_offset,
+                        params_.N);
+                    if (value_pos >= 0) {
+                        positions.push_back(value_pos);
+                    }
                 }
             } else if (source == "joint-code-key") {
                 const auto bucket_found =
@@ -3160,8 +3247,13 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                     const int limit =
                         std::min(params_.K_route, static_cast<int>(joint_records.size()));
                     for (int rank = 0; rank < limit; ++rank) {
-                        positions.push_back(
-                            joint_records[static_cast<std::size_t>(rank)]->value_pos);
+                        const int value_pos = record_value_pos_at_span_offset(
+                            *joint_records[static_cast<std::size_t>(rank)],
+                            span_offset,
+                            params_.N);
+                        if (value_pos >= 0) {
+                            positions.push_back(value_pos);
+                        }
                     }
                 }
             } else if (source == "noisy-route-code") {
@@ -3171,9 +3263,12 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                 } else {
                     std::vector<const ByteDataset::KVRecord*> wrong_records;
                     for (const auto& record : window.kv_records) {
+                        const int value_pos =
+                            record_value_pos_at_span_offset(record, span_offset, params_.N);
                         if (record.marker_pos < 0 || record.value_pos < 0 ||
                             record.marker_pos >= query.query_pos ||
-                            (query.hit && record.value_pos == query.value_pos)) {
+                            value_pos < 0 ||
+                            (query.hit && value_pos == query.value_pos)) {
                             continue;
                         }
                         wrong_records.push_back(&record);
@@ -3186,10 +3281,16 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                         const int limit =
                             std::min(params_.K_route, static_cast<int>(wrong_records.size()));
                         for (int offset = 0; offset < limit; ++offset) {
-                            positions.push_back(
+                            const auto* record =
                                 wrong_records[(start + static_cast<std::size_t>(offset)) %
-                                              wrong_records.size()]
-                                    ->value_pos);
+                                              wrong_records.size()];
+                            const int value_pos = record_value_pos_at_span_offset(
+                                *record,
+                                span_offset,
+                                params_.N);
+                            if (value_pos >= 0) {
+                                positions.push_back(value_pos);
+                            }
                         }
                     }
                 }
@@ -3511,13 +3612,18 @@ void GraphV02::apply_route_noisy_source(const ByteDataset::Window& window) {
         }
 
         int noisy_pos = -1;
+        const int span_offset =
+            span_offset_for_query(window, query, params_.route_span_hints);
         const auto bucket_found = buckets.find(route_code_hash_for_key(query.key));
         if (bucket_found != buckets.end()) {
             std::vector<const ByteDataset::KVRecord*> records;
             for (const auto* record : bucket_found->second) {
+                const int candidate_pos =
+                    record_value_pos_at_span_offset(*record, span_offset, params_.N);
                 if (record->marker_pos < query.query_pos &&
-                    record->value_pos != query.value_pos &&
-                    std::find(candidates.begin(), candidates.end(), record->value_pos) ==
+                    candidate_pos >= 0 &&
+                    candidate_pos != query.value_pos &&
+                    std::find(candidates.begin(), candidates.end(), candidate_pos) ==
                         candidates.end()) {
                     records.push_back(record);
                 }
@@ -3529,7 +3635,10 @@ void GraphV02::apply_route_noisy_source(const ByteDataset::Window& window) {
                     return lhs->marker_pos > rhs->marker_pos;
                 });
             if (!records.empty()) {
-                noisy_pos = records.front()->value_pos;
+                noisy_pos = record_value_pos_at_span_offset(
+                    *records.front(),
+                    span_offset,
+                    params_.N);
             }
         }
         if (noisy_pos < 0) {
@@ -3717,9 +3826,12 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
             continue;
         }
 
+        const int span_offset =
+            span_offset_for_query(window, query, params_.route_span_hints);
         std::vector<const ByteDataset::KVRecord*> candidates;
         for (const auto* record : bucket_found->second) {
-            if (record->marker_pos < query.query_pos) {
+            if (record->marker_pos < query.query_pos &&
+                record_value_pos_at_span_offset(*record, span_offset, params_.N) >= 0) {
                 candidates.push_back(record);
             }
         }
@@ -3730,7 +3842,66 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
         std::stable_sort(
             candidates.begin(),
             candidates.end(),
-            [](const ByteDataset::KVRecord* lhs, const ByteDataset::KVRecord* rhs) {
+            [this, &query, span_offset](
+                const ByteDataset::KVRecord* lhs,
+                const ByteDataset::KVRecord* rhs) {
+                const auto span_local_energy_score =
+                    [this, &query, span_offset](const ByteDataset::KVRecord& record) {
+                        if (record.value_pos < 0 || record.value_len <= 0 ||
+                            query.query_pos < 0 || query.query_pos >= params_.N) {
+                            return -std::numeric_limits<double>::infinity();
+                        }
+                        const int query_value_start = query.query_pos - span_offset;
+                        if (query_value_start < 0) {
+                            return -std::numeric_limits<double>::infinity();
+                        }
+                        double energy_sum = 0.0;
+                        int scored_offsets = 0;
+                        for (int offset = 0; offset < record.value_len; ++offset) {
+                            const int query_pos = query_value_start + offset;
+                            const int record_pos = record.value_pos + offset;
+                            if (query_pos < 0 || query_pos >= params_.N ||
+                                record_pos < 0 || record_pos >= params_.N) {
+                                continue;
+                            }
+                            const auto candidate_byte =
+                                nodes_[static_cast<std::size_t>(record_pos)].input_byte;
+                            const auto candidate_high = static_cast<std::uint8_t>(
+                                candidate_byte / FieldTable::States);
+                            const auto candidate_low = static_cast<std::uint8_t>(
+                                candidate_byte % FieldTable::States);
+                            energy_sum += local_energy_without_route(
+                                query_pos,
+                                candidate_high,
+                                candidate_low);
+                            ++scored_offsets;
+                        }
+                        if (scored_offsets == 0) {
+                            return -std::numeric_limits<double>::infinity();
+                        }
+                        return -energy_sum / static_cast<double>(scored_offsets);
+                    };
+                if (params_.route_candidate_score == "key-shape") {
+                    const double lhs_score = key_shape_score(query.key, lhs->key);
+                    const double rhs_score = key_shape_score(query.key, rhs->key);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (params_.route_candidate_score == "span-prefix") {
+                    const double lhs_score = span_prefix_score_for_record(
+                        nodes_, params_.N, query.query_pos, span_offset, *lhs);
+                    const double rhs_score = span_prefix_score_for_record(
+                        nodes_, params_.N, query.query_pos, span_offset, *rhs);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (params_.route_candidate_score == "span-local-energy") {
+                    const double lhs_score = span_local_energy_score(*lhs);
+                    const double rhs_score = span_local_energy_score(*rhs);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                }
                 return lhs->marker_pos > rhs->marker_pos;
             });
 
@@ -3755,17 +3926,23 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
         joint_candidate_positions.reserve(static_cast<std::size_t>(candidate_limit));
         for (int rank = 1; rank <= candidate_limit; ++rank) {
             const auto* entry = candidates[static_cast<std::size_t>(rank - 1)];
+            const int candidate_pos =
+                record_value_pos_at_span_offset(*entry, span_offset, params_.N);
+            if (candidate_pos < 0) {
+                continue;
+            }
             if (!selected) {
-                route_hint_values_[static_cast<std::size_t>(query.query_pos)] = entry->value;
+                route_hint_values_[static_cast<std::size_t>(query.query_pos)] =
+                    nodes_[static_cast<std::size_t>(candidate_pos)].input_byte;
                 route_hint_value_positions_[static_cast<std::size_t>(query.query_pos)] =
-                    entry->value_pos;
+                    candidate_pos;
                 route_hint_weights_[static_cast<std::size_t>(query.query_pos)] = 1.0f;
                 selected = true;
             }
-            joint_candidate_positions.push_back(entry->value_pos);
+            joint_candidate_positions.push_back(candidate_pos);
             route_hint_candidate_value_positions_[static_cast<std::size_t>(query.query_pos)]
-                .push_back(entry->value_pos);
-            if (query.hit && entry->value_pos == query.value_pos) {
+                .push_back(candidate_pos);
+            if (query.hit && candidate_pos == query.value_pos) {
                 ++route_candidate_hit_count_;
                 route_candidate_rank_sum_ += static_cast<double>(rank);
                 if (rank == 1) {
@@ -3795,6 +3972,124 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
                     static_cast<double>(overlap) /
                     static_cast<double>(raw_found->second.size());
                 ++route_vs_raw_candidate_overlap_count_;
+            }
+        }
+    }
+}
+
+void GraphV02::apply_span_key_support_candidate_score() {
+    if (params_.route_candidate_score != "span-key-support" ||
+        params_.route_span_hints == 0 ||
+        !route_hint_active()) {
+        return;
+    }
+
+    struct SpanSupportGroup {
+        std::vector<int> query_indices;
+        std::unordered_map<std::string, int> key_offset_support;
+    };
+
+    std::unordered_map<std::string, SpanSupportGroup> groups;
+    for (int index = 0; index < params_.N; ++index) {
+        const auto idx = static_cast<std::size_t>(index);
+        if (route_hint_weights_[idx] <= 0.0f ||
+            route_hint_query_keys_[idx].empty() ||
+            route_hint_candidate_value_positions_[idx].empty()) {
+            continue;
+        }
+
+        SpanSupportGroup& group = groups[route_hint_query_keys_[idx]];
+        group.query_indices.push_back(index);
+
+        std::unordered_set<std::string> unique_keys_for_offset;
+        for (const int value_pos : route_hint_candidate_value_positions_[idx]) {
+            if (value_pos < 0 || value_pos >= params_.N ||
+                value_pos >= static_cast<int>(route_value_position_keys_.size())) {
+                unique_keys_for_offset.insert("<none>");
+                continue;
+            }
+            const std::string& key =
+                route_value_position_keys_[static_cast<std::size_t>(value_pos)];
+            unique_keys_for_offset.insert(key.empty() ? std::string("<none>") : key);
+        }
+        for (const auto& key : unique_keys_for_offset) {
+            group.key_offset_support[key] += 1;
+        }
+    }
+
+    const auto key_for_value_pos = [&](int value_pos) {
+        if (value_pos >= 0 && value_pos < params_.N &&
+            value_pos < static_cast<int>(route_value_position_keys_.size()) &&
+            !route_value_position_keys_[static_cast<std::size_t>(value_pos)].empty()) {
+            return route_value_position_keys_[static_cast<std::size_t>(value_pos)];
+        }
+        return std::string("<none>");
+    };
+
+    for (const auto& group_entry : groups) {
+        const SpanSupportGroup& group = group_entry.second;
+        for (const int index : group.query_indices) {
+            const auto idx = static_cast<std::size_t>(index);
+            auto& candidates = route_hint_candidate_value_positions_[idx];
+            auto& candidate_keys = route_hint_candidate_keys_[idx];
+            auto& candidate_sources = route_hint_candidate_source_ids_[idx];
+            if (candidates.empty()) {
+                continue;
+            }
+            if (candidate_keys.size() != candidates.size()) {
+                candidate_keys.clear();
+                candidate_keys.reserve(candidates.size());
+                for (const int value_pos : candidates) {
+                    candidate_keys.push_back(key_for_value_pos(value_pos));
+                }
+            }
+            if (candidate_sources.size() != candidates.size()) {
+                candidate_sources.assign(candidates.size(), primary_route_source_id());
+            }
+
+            std::vector<std::size_t> order(candidates.size());
+            for (std::size_t rank = 0; rank < order.size(); ++rank) {
+                order[rank] = rank;
+            }
+
+            std::stable_sort(
+                order.begin(),
+                order.end(),
+                [&](std::size_t lhs, std::size_t rhs) {
+                    const std::string lhs_key = key_for_value_pos(candidates[lhs]);
+                    const std::string rhs_key = key_for_value_pos(candidates[rhs]);
+                    const auto lhs_found = group.key_offset_support.find(lhs_key);
+                    const auto rhs_found = group.key_offset_support.find(rhs_key);
+                    const int lhs_support =
+                        lhs_found == group.key_offset_support.end() ? 0 : lhs_found->second;
+                    const int rhs_support =
+                        rhs_found == group.key_offset_support.end() ? 0 : rhs_found->second;
+                    if (lhs_support != rhs_support) {
+                        return lhs_support > rhs_support;
+                    }
+                    return false;
+                });
+
+            std::vector<int> reordered_candidates;
+            std::vector<std::string> reordered_keys;
+            std::vector<std::string> reordered_sources;
+            reordered_candidates.reserve(candidates.size());
+            reordered_keys.reserve(candidate_keys.size());
+            reordered_sources.reserve(candidate_sources.size());
+            for (const std::size_t old_index : order) {
+                reordered_candidates.push_back(candidates[old_index]);
+                reordered_keys.push_back(candidate_keys[old_index]);
+                reordered_sources.push_back(candidate_sources[old_index]);
+            }
+            candidates = std::move(reordered_candidates);
+            candidate_keys = std::move(reordered_keys);
+            candidate_sources = std::move(reordered_sources);
+
+            const int selected_pos = candidates.front();
+            if (selected_pos >= 0 && selected_pos < params_.N) {
+                route_hint_value_positions_[idx] = selected_pos;
+                route_hint_values_[idx] =
+                    nodes_[static_cast<std::size_t>(selected_pos)].input_byte;
             }
         }
     }
@@ -5636,6 +5931,91 @@ EpochMetricsV02 GraphV02::collect_metrics(
         }
     }
 
+    struct RouteSpanGroupStats {
+        int query_count = 0;
+        int byte_hits = 0;
+        int selected_correct_key_count = 0;
+        int candidate_recall_count = 0;
+        int candidate_top1_count = 0;
+        int candidate_slot_count = 0;
+        int candidate_correct_key_count = 0;
+        int top_candidate_valid_count = 0;
+        int top_candidate_correct_key_count = 0;
+        std::unordered_set<std::string> selected_keys;
+        std::unordered_set<std::string> top_candidate_keys;
+        std::unordered_map<std::string, int> candidate_key_counts;
+    };
+    std::unordered_map<std::string, RouteSpanGroupStats> route_span_groups;
+    for (int i = 0; i < params_.N; ++i) {
+        if (route_hint_weights_[static_cast<std::size_t>(i)] <= 0.0f) {
+            continue;
+        }
+        if (route_hint_query_keys_.empty() ||
+            route_hint_query_keys_[static_cast<std::size_t>(i)].empty()) {
+            continue;
+        }
+        const std::string& query_key =
+            route_hint_query_keys_[static_cast<std::size_t>(i)];
+        RouteSpanGroupStats& group = route_span_groups[query_key];
+        const NodeV02& node = nodes_[static_cast<std::size_t>(i)];
+        const auto relaxed_byte =
+            static_cast<int>(node.state[0]) * 16 + static_cast<int>(node.state[1]);
+        group.query_count += 1;
+        if (relaxed_byte == static_cast<int>(node.target_byte)) {
+            group.byte_hits += 1;
+        }
+        const int selected_pos =
+            route_hint_value_positions_[static_cast<std::size_t>(i)];
+        std::string selected_key = "<none>";
+        if (selected_pos >= 0 && selected_pos < params_.N &&
+            selected_pos < static_cast<int>(route_value_position_keys_.size()) &&
+            !route_value_position_keys_[static_cast<std::size_t>(selected_pos)].empty()) {
+            selected_key = route_value_position_keys_[static_cast<std::size_t>(selected_pos)];
+        }
+        group.selected_keys.insert(selected_key);
+        if (selected_key == query_key) {
+            group.selected_correct_key_count += 1;
+        }
+        const int correct_pos =
+            route_hint_correct_value_positions_.empty()
+                ? -1
+                : route_hint_correct_value_positions_[static_cast<std::size_t>(i)];
+        const auto& candidates =
+            route_hint_candidate_value_positions_[static_cast<std::size_t>(i)];
+        auto key_for_value_pos = [&](int value_pos) {
+            if (value_pos >= 0 && value_pos < params_.N &&
+                value_pos < static_cast<int>(route_value_position_keys_.size()) &&
+                !route_value_position_keys_[static_cast<std::size_t>(value_pos)].empty()) {
+                return route_value_position_keys_[static_cast<std::size_t>(value_pos)];
+            }
+            return std::string("<none>");
+        };
+        for (const int candidate_pos : candidates) {
+            const std::string candidate_key = key_for_value_pos(candidate_pos);
+            group.candidate_key_counts[candidate_key] += 1;
+            group.candidate_slot_count += 1;
+            if (candidate_key == query_key) {
+                group.candidate_correct_key_count += 1;
+            }
+        }
+        if (!candidates.empty()) {
+            const std::string top_candidate_key = key_for_value_pos(candidates.front());
+            group.top_candidate_keys.insert(top_candidate_key);
+            group.top_candidate_valid_count += 1;
+            if (top_candidate_key == query_key) {
+                group.top_candidate_correct_key_count += 1;
+            }
+        }
+        if (correct_pos >= 0 &&
+            std::find(candidates.begin(), candidates.end(), correct_pos) !=
+                candidates.end()) {
+            group.candidate_recall_count += 1;
+        }
+        if (correct_pos >= 0 && !candidates.empty() && candidates.front() == correct_pos) {
+            group.candidate_top1_count += 1;
+        }
+    }
+
     EpochMetricsV02 metrics;
     metrics.epoch = epoch;
     metrics.H = total_energy();
@@ -5716,6 +6096,96 @@ EpochMetricsV02 GraphV02::collect_metrics(
     if (triggered_zero_gap_count > 0.0) {
         metrics.triggered_route_zero_gap_state_anchor_mismatch_rate =
             triggered_zero_gap_state_anchor_mismatch_sum / triggered_zero_gap_count;
+    }
+    if (!route_span_groups.empty()) {
+        double exact_match_sum = 0.0;
+        double consistency_sum = 0.0;
+        double correct_key_sum = 0.0;
+        double all_recall_sum = 0.0;
+        double all_top1_sum = 0.0;
+        double offset_recall_sum = 0.0;
+        double offset_top1_sum = 0.0;
+        double correct_key_share_sum = 0.0;
+        double unique_key_count_sum = 0.0;
+        double key_entropy_sum = 0.0;
+        double top_key_consistency_sum = 0.0;
+        double top_key_correct_sum = 0.0;
+        double coherent_wrong_top_key_sum = 0.0;
+        double query_count_sum = 0.0;
+        for (const auto& entry : route_span_groups) {
+            const RouteSpanGroupStats& group = entry.second;
+            if (group.query_count <= 0) {
+                continue;
+            }
+            query_count_sum += static_cast<double>(group.query_count);
+            exact_match_sum += group.byte_hits == group.query_count ? 1.0 : 0.0;
+            consistency_sum += group.selected_keys.size() == 1U ? 1.0 : 0.0;
+            correct_key_sum += group.selected_correct_key_count == group.query_count
+                                   ? 1.0
+                                   : 0.0;
+            all_recall_sum += group.candidate_recall_count == group.query_count ? 1.0 : 0.0;
+            all_top1_sum += group.candidate_top1_count == group.query_count ? 1.0 : 0.0;
+            offset_recall_sum += static_cast<double>(group.candidate_recall_count) /
+                                 static_cast<double>(group.query_count);
+            offset_top1_sum += static_cast<double>(group.candidate_top1_count) /
+                               static_cast<double>(group.query_count);
+            if (group.candidate_slot_count > 0) {
+                correct_key_share_sum +=
+                    static_cast<double>(group.candidate_correct_key_count) /
+                    static_cast<double>(group.candidate_slot_count);
+                unique_key_count_sum +=
+                    static_cast<double>(group.candidate_key_counts.size());
+                double entropy = 0.0;
+                for (const auto& key_count : group.candidate_key_counts) {
+                    if (key_count.second <= 0) {
+                        continue;
+                    }
+                    const double p = static_cast<double>(key_count.second) /
+                                     static_cast<double>(group.candidate_slot_count);
+                    entropy -= p * (std::log(p) / std::log(2.0));
+                }
+                key_entropy_sum += entropy;
+            }
+            const bool has_top_for_all_offsets =
+                group.top_candidate_valid_count == group.query_count;
+            const bool top_key_consistent =
+                has_top_for_all_offsets && group.top_candidate_keys.size() == 1U;
+            top_key_consistency_sum += top_key_consistent ? 1.0 : 0.0;
+            top_key_correct_sum +=
+                group.top_candidate_correct_key_count == group.query_count ? 1.0 : 0.0;
+            coherent_wrong_top_key_sum +=
+                top_key_consistent && group.top_candidate_correct_key_count == 0 ? 1.0 : 0.0;
+        }
+        metrics.route_span_group_count =
+            static_cast<double>(route_span_groups.size());
+        metrics.route_span_mean_query_count =
+            query_count_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_exact_match_rate =
+            exact_match_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_selected_key_consistency_rate =
+            consistency_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_selected_correct_key_rate =
+            correct_key_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_all_recall_rate =
+            all_recall_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_all_top1_rate =
+            all_top1_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_offset_recall_rate =
+            offset_recall_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_offset_top1_rate =
+            offset_top1_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_correct_key_share_mean =
+            correct_key_share_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_unique_key_count_mean =
+            unique_key_count_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_key_entropy_mean =
+            key_entropy_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_top_key_consistency_rate =
+            top_key_consistency_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_top_key_correct_rate =
+            top_key_correct_sum / static_cast<double>(route_span_groups.size());
+        metrics.route_span_candidate_coherent_wrong_top_key_rate =
+            coherent_wrong_top_key_sum / static_cast<double>(route_span_groups.size());
     }
     if (route_hint_query_count > 0.0) {
         metrics.route_hint_applied_rate = route_hint_applied_count / route_hint_query_count;
@@ -6409,6 +6879,12 @@ EpochMetricsV02 GraphV02::collect_metrics(
     if (jump_distance_count > 0.0) {
         metrics.mean_jump_distance = jump_distance_sum / jump_distance_count;
     }
+    const auto backend_stats = numeric_backend_stats();
+    metrics.backend_active = backend_stats.backend_active ? 1.0 : 0.0;
+    metrics.hip_enabled = backend_stats.hip_enabled ? 1.0 : 0.0;
+    metrics.hip_device = static_cast<double>(backend_stats.hip_device);
+    metrics.hip_kernel_calls = static_cast<double>(backend_stats.hip_kernel_calls);
+    metrics.hip_fallback_count = static_cast<double>(backend_stats.hip_fallback_count);
     return metrics;
 }
 

@@ -4,6 +4,254 @@
 
 The current baseline is `dmv02` with `v0.2-pre` behavior locked. `v0.2-b` now adds coupling plus a block-local coupled proposal path, so the default weak-coupling run is no longer expected to fail the `counter` gate.
 
+## h9 ROCm/HIP Backend Scaffold
+
+h9 adds an optional backend boundary for ROCm/HIP without changing the CPU
+reference path. `DLE_ENABLE_HIP` is off by default, `--backend cpu` is the
+default runtime backend, and the first HIP targets are the route-quality
+candidate-weight factor parity kernel plus a diagnostic-only 16x16
+proposal-score parity kernel.
+
+CPU-only checks:
+
+```bash
+experiments/test_v09_gpu_backend_cpu_smoke.sh
+experiments/test_v09_gpu_backend_nohip_error.sh
+```
+
+Optional HIP check:
+
+```bash
+experiments/test_v09_gpu_backend_candidate_weight_parity.sh
+```
+
+Closure:
+
+```bash
+experiments/test_v09_gpu_backend_closure.sh
+experiments/test_v09_gpu_backend_closure.sh --extended
+```
+
+Expected:
+
+- CPU builds remain unchanged.
+- CPU-only `--backend hip` fails clearly with a `DLE_ENABLE_HIP=ON` message.
+- HIP parity skips cleanly when ROCm/HIP is unavailable or incomplete.
+- When HIP is available, candidate-weight factors and diagnostic proposal
+  scores match CPU within `1e-5`.
+- `routing_trigger_rate = 0` and `active_jump_rate = 0` remain closed.
+- This is backend/parity instrumentation, not GPU acceleration proven and not learned routing solved.
+
+## h6 Span Ambiguity
+
+h6-f intentionally lowers hash bits to create offset-aware span-candidate
+collisions.
+
+```bash
+experiments/run_v06_route_memory_span_ambiguity.sh
+experiments/test_v06_route_memory_span_ambiguity.sh
+```
+
+Expected:
+
+- high-bit hash control remains collision-free and exact
+- low-bit hash buckets produce collision and top1/qacc degradation
+- larger `K_route` can recover recall without fixing top1
+- symbolic `key-shape` resolves the controlled ambiguity
+- current byte-level candidate-quality preset does not solve span ambiguity
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Learned-like Span Source
+
+h6-g weakens the route-code span source after making learned/source fallback
+paths span-offset aware.
+
+```bash
+experiments/run_v06_route_memory_span_learned_source.sh
+experiments/test_v06_route_memory_span_learned_source.sh
+```
+
+Expected:
+
+- clean `route-code-key` span lookup keeps decode/recall/top1 high
+- weak route-code identity lowers decode and creates learned-source collisions
+- larger `K_route` can recover recall without fixing top1
+- span exact-match diagnostics expose that byte qacc can hide full-span failure
+- byte-level candidate-quality preset remains neutral in this stress
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-level Candidate Quality
+
+h6-h compares span-level recall, top1, exact-match, and selected-key consistency
+under clean and weak route-code span sources.
+
+```bash
+experiments/run_v06_route_memory_span_quality_diagnostics.sh
+experiments/test_v06_route_memory_span_quality_diagnostics.sh
+```
+
+Expected:
+
+- clean route-code span source keeps all-span recall/top1/exact-match high
+- weak route-code source separates recall from all-span top1 and exact-match
+- larger `K_route` can recover all-span recall without fixing all-span top1
+- byte-level candidate-quality preset is neutral in this span stress
+- symbolic `key-shape` exposes the upper bound for span-level ranking
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span Candidate-quality Gap
+
+h6-i adds span record/key quality metrics to explain why recall-restored weak
+span candidates still fail.
+
+```bash
+experiments/run_v06_route_memory_span_candidate_quality_gap.sh
+experiments/test_v06_route_memory_span_candidate_quality_gap.sh
+```
+
+Expected:
+
+- weak route-code `K_route=16` restores all-span recall but leaves top1 and
+  span exact-match low
+- top-key consistency can be high while top-key correctness is low, exposing
+  coherent wrong-key span selection
+- byte-level `base-default` remains neutral and `hybrid-safe` is not promoted
+  for this stress
+- symbolic `key-shape` stays an upper-bound span record-ranking diagnostic
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-prefix Ranking
+
+h6-j adds a first non-key-shape span-record ranking probe.
+
+```bash
+experiments/run_v06_route_memory_span_prefix_ranking.sh
+experiments/test_v06_route_memory_span_prefix_ranking.sh
+```
+
+Expected:
+
+- `--route-candidate-score span-prefix` is accepted and keeps all-span recall
+  populated
+- span-prefix may reduce coherent wrong-key selection, but it is not promoted
+  unless qacc/span exact-match also improve
+- symbolic `key-shape` remains an upper-bound diagnostic
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-key-support Ranking
+
+h6-k adds a second non-key-shape span-record ranking probe.
+
+```bash
+experiments/run_v06_route_memory_span_key_support_ranking.sh
+experiments/test_v06_route_memory_span_key_support_ranking.sh
+```
+
+Expected:
+
+- `--route-candidate-score span-key-support` is accepted and keeps all-span
+  recall populated
+- cross-offset candidate-key support is measured through the existing span
+  candidate-quality metrics
+- span-key-support may be neutral when a coherent wrong key has broad support
+  across offsets
+- symbolic `key-shape` remains an upper-bound diagnostic
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Ranking
+
+h6-l adds the first non-`key-shape` span-record ranking probe that uses the
+existing local energy as a record-quality signal.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_ranking.sh
+experiments/test_v06_route_memory_span_local_energy_ranking.sh
+```
+
+Expected:
+
+- `--route-candidate-score span-local-energy` is accepted and keeps all-span
+  recall populated
+- span-local-energy improves qacc/span exact-match over the weak route-code
+  baseline in the smoke, while remaining below symbolic `key-shape`
+- candidate-key entropy and coherent wrong-key metrics explain how much of the
+  span-ranking gap remains
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Scale
+
+h6-m checks whether the h6-l local-energy record-ranking signal survives a
+small key/seed matrix.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_scale.sh
+experiments/test_v06_route_memory_span_local_energy_scale.sh
+```
+
+Expected:
+
+- weak, `span-local-energy`, and symbolic `key-shape` arms are present
+- `span-local-energy` keeps all-span recall populated
+- `span-local-energy` qacc/span exact-match are not below the weak baseline in
+  the smoke
+- standard mode reports mean qacc/span-exact/top1/key-quality deltas
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Composition
+
+h6-n compares span-local-energy record ranking with the existing h5
+candidate-quality presets.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_composition.sh
+experiments/test_v06_route_memory_span_local_energy_composition.sh
+```
+
+Expected:
+
+- weak, local-energy, local-energy+base, local-energy+hybrid, and key-shape
+  arms are present
+- all arms keep all-span recall populated
+- local-energy remains no worse than weak in the smoke
+- h5 presets are treated as composition diagnostics, not promotion defaults
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Policy
+
+h6-o turns the h6-n qacc/span-exact tradeoff into an explicit policy
+calibration artifact.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_policy.sh
+experiments/test_v06_route_memory_span_local_energy_policy.sh
+```
+
+Expected:
+
+- byte-qacc, span-exact, and balanced objective rows are present
+- byte-qacc selects `local-energy`
+- span-exact selects `local-energy-hybrid`
+- span-exact improves span exact-match while trading off byte qacc
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Policy Scale
+
+h6-p scales the h6-o policy split over a small key/seed matrix.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_policy_scale.sh
+experiments/test_v06_route_memory_span_local_energy_policy_scale.sh
+```
+
+Expected:
+
+- byte-qacc, span-exact, and balanced objective rows are emitted for each group
+- byte-qacc consistently selects `local-energy` in the smoke
+- span-exact selects `local-energy-hybrid` in the smoke
+- standard mode reports objective-difference rates and mean qacc/span-exact
+  tradeoffs
+- `routing_trigger_rate = active_jump_rate = 0`
+
 ## Staged Flow 1-5
 
 1. Run the counter baseline.
@@ -3941,6 +4189,466 @@ offset-aware hash candidates now scale over a small symbolic span matrix while
 preserving the same value-bearing proposal path. This is a span-candidate scale
 guard, not learned chunk retrieval.
 
+## h6-g Learned-like Span-source Stress Decision
+
+`h6-g` passes as learned-like span-source stress instrumentation. It does not
+solve learned chunk retrieval, source-credit robustness, wrong-candidate
+robustness, fallback robustness, or long-context retrieval.
+
+The slice makes learned/source fallback route paths span-offset aware and adds:
+
+```text
+experiments/run_v06_route_memory_span_learned_source.sh
+experiments/test_v06_route_memory_span_learned_source.sh
+```
+
+Reference smoke:
+
+```text
+clean-route-code-span:
+  qacc = 0.987500
+  span_exact = 0.937500
+  route_decode = 1.000000
+  recall = 1.000000
+  top1 = 1.000000
+
+weak-route-code-k4:
+  qacc = 0.606250
+  span_exact = 0.281250
+  route_decode = 0.000000
+  recall = 0.843750
+  top1 = 0.250000
+  route_collision = 0.750000
+
+weak-route-code-k16:
+  qacc = 0.637500
+  span_exact = 0.375000
+  recall = 1.000000
+  top1 = 0.250000
+
+weak-route-code-quality:
+  qacc = 0.637500
+  span_exact = 0.375000
+  recall = 1.000000
+  top1 = 0.250000
+```
+
+Interpretation:
+clean route-code identity supports span-offset route hints. Weakened
+route-code identity creates a learned-like span-source failure: decode
+collapses, collisions appear, and top1/qacc/span exact-match degrade.
+Increasing `K_route` recovers recall but not top1 or span exact-match, and the
+current byte-level candidate-quality preset is neutral. This is an actionable
+learned-like source split, not learned chunk retrieval solved.
+
+## h6-h Span-level Candidate-quality Diagnostics Decision
+
+`h6-h` passes as span-level candidate-quality diagnostics and actionable split.
+It does not solve learned chunk retrieval, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_quality_diagnostics.sh
+experiments/test_v06_route_memory_span_quality_diagnostics.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.556250
+  span_exact = 0.250000
+  all_recall = 1.000000
+  all_top1 = 0.250000
+
+weak-quality:
+  qacc = 0.556250
+  span_exact = 0.250000
+  all_recall = 1.000000
+  all_top1 = 0.250000
+
+weak-keyshape:
+  qacc = 1.000000
+  span_exact = 1.000000
+  all_recall = 1.000000
+  all_top1 = 1.000000
+```
+
+Interpretation:
+span recall is not span quality. The weak route-code source can recover
+all-span recall at larger `K_route`, but all-span top1 and span exact-match
+remain low. The current byte-level candidate-quality preset is neutral, while
+symbolic `key-shape` recovers the upper bound. The next step should test
+learned span-level ranking/consistency features.
+
+## h6-i Span Candidate-quality Gap Decision
+
+`h6-i` passes as span candidate-quality gap diagnostics and actionable split.
+It does not solve learned chunk retrieval, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_candidate_quality_gap.sh
+experiments/test_v06_route_memory_span_candidate_quality_gap.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  correct_key_share = 0.503125
+  unique_key_count = 2.750000
+  key_entropy = 1.238921
+  top_key_consistency = 1.000000
+  top_key_correct = 0.250000
+  coherent_wrong_top_key = 0.750000
+
+weak-base-default:
+  qacc = 0.625000
+  span_exact = 0.281250
+
+weak-hybrid-safe:
+  qacc = 0.368750
+  span_exact = 0.250000
+
+weak-keyshape:
+  qacc = 0.993750
+  span_exact = 0.968750
+  all_top1 = 1.000000
+  correct_key_share = 1.000000
+  key_entropy = 0.000000
+```
+
+Interpretation:
+span recall is not span record quality. Under weak route-code identity, all
+offsets often select a coherent but wrong key: top-key consistency stays high,
+but top-key correctness is low. Existing byte-level candidate-quality presets
+do not fix this, so the next route-memory work should add learned
+span-record-ranking or consistency features. Symbolic key-shape remains an
+upper-bound diagnostic, not learned chunk retrieval.
+
+## h6-j Span-prefix Ranking Decision
+
+`h6-j` passes as span-prefix ranking diagnostics and negative/limited
+instrumentation. It does not solve learned chunk retrieval, source-credit
+robustness, wrong-candidate robustness, fallback robustness, or long-context
+retrieval.
+
+The slice adds:
+
+```text
+--route-candidate-score span-prefix
+experiments/run_v06_route_memory_span_prefix_ranking.sh
+experiments/test_v06_route_memory_span_prefix_ranking.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  coherent_wrong_top_key = 0.750000
+
+weak-span-prefix:
+  qacc = 0.587500
+  span_exact = 0.218750
+  all_recall = 1.000000
+  all_top1 = 0.218750
+  coherent_wrong_top_key = 0.593750
+
+weak-keyshape:
+  qacc = 0.993750
+  span_exact = 0.968750
+  all_top1 = 1.000000
+```
+
+Interpretation:
+the visible-prefix scorer is wired and keeps route topology closed, but it is
+not strong enough to replace symbolic key-shape. It reduces coherent wrong-key
+selection somewhat while hurting qacc/span exact-match in this smoke. The next
+span step needs a stronger learned record-ranking signal.
+
+## h6-k Span-key-support Ranking Decision
+
+`h6-k` passes as span-key-support ranking diagnostics and neutral
+instrumentation. It does not solve learned chunk retrieval, source-credit
+robustness, wrong-candidate robustness, fallback robustness, or long-context
+retrieval.
+
+The slice adds:
+
+```text
+--route-candidate-score span-key-support
+experiments/run_v06_route_memory_span_key_support_ranking.sh
+experiments/test_v06_route_memory_span_key_support_ranking.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  coherent_wrong_top_key = 0.750000
+
+weak-span-key-support:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  coherent_wrong_top_key = 0.750000
+
+weak-keyshape:
+  qacc = 0.993750
+  span_exact = 0.968750
+  all_top1 = 1.000000
+```
+
+Interpretation:
+span-key-support is wired and preserves all-span recall, but it is neutral in
+this smoke. A coherent wrong key can be supported across offsets just as
+strongly as the correct key, so same-key support alone is not enough to replace
+symbolic key-shape. The next span step needs learned record-quality evidence
+that separates correct-key support from coherent wrong-key support.
+
+## h6-l Span-local-energy Ranking Decision
+
+`h6-l` passes as span-local-energy ranking diagnostics and limited mitigation.
+It does not solve learned chunk retrieval, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+--route-candidate-score span-local-energy
+experiments/run_v06_route_memory_span_local_energy_ranking.sh
+experiments/test_v06_route_memory_span_local_energy_ranking.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  correct_key_share = 0.503125
+  key_entropy = 1.238921
+  coherent_wrong_top_key = 0.750000
+
+weak-span-local-energy:
+  qacc = 0.675000
+  span_exact = 0.406250
+  all_recall = 1.000000
+  all_top1 = 0.406250
+  correct_key_share = 0.631250
+  key_entropy = 0.862081
+  coherent_wrong_top_key = 0.593750
+
+weak-keyshape:
+  qacc = 0.993750
+  span_exact = 0.968750
+  all_top1 = 1.000000
+```
+
+Interpretation:
+unlike visible-prefix and same-key-support probes, local-energy span ranking
+produces a limited but real lift in the weak route-code span stress. It is
+still not enough to replace symbolic key-shape, but it identifies local
+dynamics compatibility as the first useful non-symbolic record-quality signal
+for h6 span memory.
+
+## h6-m Span-local-energy Scale Decision
+
+`h6-m` passes as span-local-energy scale/stability diagnostics and limited
+mitigation. It does not solve learned chunk retrieval, source-credit
+robustness, wrong-candidate robustness, fallback robustness, or long-context
+retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_local_energy_scale.sh
+experiments/test_v06_route_memory_span_local_energy_scale.sh
+```
+
+Reference standard aggregate:
+
+```text
+rows = 12
+groups = 4
+weak_qacc_mean = 0.546094
+local_energy_qacc_mean = 0.571875
+keyshape_qacc_mean = 0.984375
+local_energy_qacc_delta_mean = 0.025781
+
+weak_span_exact_mean = 0.273438
+local_energy_span_exact_mean = 0.378906
+keyshape_span_exact_mean = 0.921875
+local_energy_span_exact_delta_mean = 0.105469
+
+weak_all_recall_mean = 0.992188
+local_energy_all_recall_mean = 0.992188
+weak_all_top1_mean = 0.277344
+local_energy_all_top1_mean = 0.382812
+
+weak_correct_key_share_mean = 0.492722
+local_energy_correct_key_share_mean = 0.565547
+weak_key_entropy_mean = 1.406354
+local_energy_key_entropy_mean = 1.200587
+weak_coherent_wrong_mean = 0.722656
+local_energy_coherent_wrong_mean = 0.617188
+```
+
+Interpretation:
+local-energy span ranking keeps the h6-l lift across a small key/seed matrix.
+It improves span exact-match more than byte qacc, which is the right direction
+for route-memory work. It remains a limited mitigation because symbolic
+`key-shape` is still much stronger and the effect weakens as key count rises.
+
+## h6-n Span-local-energy Composition Decision
+
+`h6-n` passes as span-local-energy / candidate-quality composition diagnostics
+and mixed limited mitigation. It does not solve learned chunk retrieval,
+source-credit robustness, wrong-candidate robustness, fallback robustness, or
+long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_local_energy_composition.sh
+experiments/test_v06_route_memory_span_local_energy_composition.sh
+```
+
+Reference smoke:
+
+```text
+weak:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_top1 = 0.250000
+  correct_key_share = 0.503125
+  key_entropy = 1.238921
+
+local-energy:
+  qacc = 0.675000
+  span_exact = 0.406250
+  all_top1 = 0.406250
+  correct_key_share = 0.631250
+  key_entropy = 0.862081
+
+local-energy-base:
+  qacc = 0.675000
+  span_exact = 0.406250
+  all_top1 = 0.406250
+  correct_key_share = 0.631250
+  key_entropy = 0.862081
+
+local-energy-hybrid:
+  qacc = 0.631250
+  span_exact = 0.593750
+  all_top1 = 0.593750
+  correct_key_share = 0.768229
+  key_entropy = 0.510620
+```
+
+Interpretation:
+`hybrid-safe` combined with local-energy ranking improves span-level record
+quality but lowers byte qacc relative to local-energy alone. h6-n therefore
+marks a span-objective calibration split: span exact-match and byte qacc should
+be reported separately rather than compressed into a single pass/fail.
+
+## h6-o Span-local-energy Policy Calibration Decision
+
+`h6-o` passes as span-local-energy policy calibration diagnostics. It does not
+solve learned chunk retrieval, source-credit robustness, wrong-candidate
+robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_local_energy_policy.sh
+experiments/test_v06_route_memory_span_local_energy_policy.sh
+```
+
+Reference smoke policy:
+
+```text
+byte-qacc:
+  selected = local-energy
+  qacc = 0.675000
+  span_exact = 0.406250
+
+span-exact:
+  selected = local-energy-hybrid
+  qacc = 0.631250
+  span_exact = 0.593750
+
+balanced:
+  selected = local-energy-hybrid
+  qacc = 0.631250
+  span_exact = 0.593750
+```
+
+Interpretation:
+policy calibration makes the h6-n tradeoff explicit. A byte-qacc objective and
+a span-exact objective select different local-energy policies. The span-exact
+policy gains `+0.187500` span exact-match over the byte-qacc policy while
+giving back `-0.043750` qacc. Future span-memory diagnostics should therefore
+name which objective is being optimized.
+
+## h6-p Span-local-energy Policy Scale Decision
+
+`h6-p` passes as span-local-energy policy-scale diagnostics. It does not solve
+learned chunk retrieval, source-credit robustness, wrong-candidate robustness,
+fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_local_energy_policy_scale.sh
+experiments/test_v06_route_memory_span_local_energy_policy_scale.sh
+```
+
+Reference standard aggregate:
+
+```text
+rows = 20
+groups = 4
+objectives_differ_rate = 0.750000
+qacc_policy_local_energy_rate = 1.000000
+span_policy_hybrid_rate = 0.750000
+balanced_policy_hybrid_rate = 0.500000
+
+qacc_policy_qacc_mean = 0.571875
+qacc_policy_span_exact_mean = 0.378906
+span_policy_qacc_mean = 0.538281
+span_policy_span_exact_mean = 0.441406
+span_policy_qacc_delta_vs_qacc_policy_mean = -0.033594
+span_policy_span_exact_delta_vs_qacc_policy_mean = 0.062500
+```
+
+Interpretation:
+the h6-o policy split survives across the small key/seed matrix. It is not
+absolute: one group has the same qacc/span policy, and the balanced objective
+only selects hybrid in half the groups. The stable takeaway is narrower and
+useful: qacc-optimized and span-optimized policy selection must be reported as
+separate axes for future route-memory work.
+
 ## h7-a Route-memory Goal Closure Decision
 
 `h7-a` passes as route-memory goal closure instrumentation. It does not solve
@@ -3955,9 +4663,11 @@ experiments/test_v07_goal_route_memory_closure.sh
 ```
 
 The quick closure runs shell syntax checks, the `dmv02` build, h5 route-quality
-closure, and every h6 span boundary/exact/hash smoke. The optional `--extended`
-mode additionally runs the extended h5 closure plus standard h6 exact/hash span
-scale runners.
+closure, and every h6 span boundary/exact/hash/ambiguity/learned-source/quality
+candidate-quality-gap/prefix-ranking/key-support smoke. The optional
+`--extended` mode additionally runs the extended h5 closure plus standard h6
+exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support
+span runners.
 
 Interpretation:
 h7 closes the current route-quality plus route-memory scaffold as a tested

@@ -188,6 +188,9 @@ struct V02PreParams {
     std::string route_mode = "probe";
     std::string route_refresh = "epoch";
 
+    std::string backend = "cpu";
+    int hip_device = 0;
+
     std::string dataset = "counter";
     std::string input_path;
     std::string csv_path;

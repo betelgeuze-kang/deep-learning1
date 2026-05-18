@@ -109,6 +109,7 @@ class GraphV02 {
     void apply_route_noisy_source(const ByteDataset::Window& window);
     void refresh_route_hint_candidate_keys();
     void refresh_route_hint_candidate_sources();
+    void apply_span_key_support_candidate_score();
     bool candidate_positions_contain_correct(int index) const;
     bool should_corrupt_route_candidate(int index) const;
     bool should_inject_noisy_route_source(int index) const;

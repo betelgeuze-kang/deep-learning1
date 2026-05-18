@@ -39,7 +39,19 @@
 - h6-c는 exact span scale diagnostics를 추가합니다. Smoke는 `key_count=2`, `value_len=5`에서 first-byte arm과 span arm을 비교하며, `--route-span-hints 1`에서 route hint query count가 `2 -> 10`으로 확장되고 exact hit/apply와 jump-neighbor 비활성을 유지합니다.
 - h6-d는 hashed symbolic candidate에도 span hint를 확장합니다. `--route-mode hint-kv-hash --route-span-hints 1`에서 hash bucket entry가 span offset을 보존하고 query offset마다 같은 offset candidate만 비교합니다. Smoke는 `kv_query_count = route_hint_query_count = route_candidate_query_count = 10`, candidate recall/top1 `1.000000`, `routing_trigger_rate = active_jump_rate = 0.000000`을 확인합니다. 이는 controlled symbolic span-candidate routing이지 learned chunk retrieval은 아닙니다.
 - h6-e는 span hash scale diagnostics를 추가합니다. 표준 matrix는 key count, value length, hash bits를 교차한 8개 row이며, offset-aware hash candidate가 `qacc_mean = recall_mean = top1_mean = 1.000000`, `collision_rate_mean = 0.000000`, jump-neighbor 비활성을 유지합니다. 이는 span-candidate scale guard이지 learned chunk retrieval은 아닙니다.
-- h7-a는 goal closure smoke를 추가합니다. h5 route-quality closure와 h6 span boundary/exact/hash smoke를 한 entrypoint에서 실행하며, 같은 value-bearing route-hint invariant를 유지합니다. 이는 현재 route-quality/route-memory scaffold를 instrumentation으로 닫는 것이지 learned routing이나 long-context retrieval solved가 아닙니다.
+- h6-f는 span ambiguity / collision diagnostics를 추가합니다. `hash_bits=2`에서는 span bucket collision이 `1.000000`이 되고, `K_route=4`는 recall/top1/qacc가 `0.500000/0.125000/0.237500`으로 내려갑니다. `K_route=16`은 recall을 `1.000000`으로 회복하지만 top1/qacc는 `0.125000/0.293750`에 머뭅니다. Symbolic `key-shape` scorer는 `top1=qacc=1.000000`으로 회복하지만 현재 byte-level candidate-quality preset은 이 span ambiguity를 고치지 못합니다. 이는 actionable span-candidate quality split이지 learned chunk retrieval solved가 아닙니다.
+- h6-g는 learned-like span-source stress와 span exact-match instrumentation을 추가합니다. Clean `route-code-key` span lookup은 decode/recall/top1을 높게 유지합니다(`decode=1.000000`, `recall=1.000000`, `top1=1.000000`, `qacc=0.987500`, `span_exact=0.937500`). 반면 약화된 route-code identity는 decode가 붕괴하고(`0.000000`), collision이 생기며(`0.750000`), top1/qacc/span-exact가 `0.250000/0.606250/0.281250`으로 떨어집니다. `K_route`를 키우면 recall은 `1.000000`으로 회복되지만 top1과 span exact-match는 고쳐지지 않고, byte-level candidate-quality preset도 중립입니다. 이는 learned-like source stress instrumentation이지 learned chunk retrieval solved가 아닙니다.
+- h6-h는 span-level candidate-quality diagnostics를 추가합니다. Weak route-code span stress에서 `K_route=16`은 all-span recall을 `1.000000`으로 회복하지만 all-span top1과 span exact-match는 `0.250000`에 머뭅니다. Byte-level quality preset은 중립이고, symbolic `key-shape`는 all-span top1/span exact-match를 `1.000000`으로 회복합니다. 즉 다음 병목은 recall이 아니라 span-level ranking/quality입니다.
+- h6-i는 span candidate-quality gap diagnostics를 추가합니다. 약화된 route-code identity에서 `K_route=16`은 all-span recall을 `1.000000`으로 회복하지만, span 전체가 같은 오답 key를 일관되게 고르는 패턴이 나타납니다(`top_key_consistency=1.000000`, `top_key_correct=0.250000`, `coherent_wrong_top_key=0.750000`). Byte-level `base-default`는 중립이고 `hybrid-safe`는 이 stress에서 더 나쁠 수 있으며, symbolic `key-shape`는 correct-key share/key entropy/top1을 upper bound로 회복합니다. 다음 병목은 recall이 아니라 learned span-record ranking / consistency feature입니다.
+- h6-j는 `--route-candidate-score span-prefix`를 추가합니다. 이는 key-shape를 쓰지 않고 이미 보이는 query span prefix와 candidate record prefix의 일치만 보는 첫 span-record ranking probe입니다. Smoke에서는 all-span recall은 유지하지만 qacc/span exact-match는 낮아집니다(`qacc 0.625000 -> 0.587500`, `span_exact 0.281250 -> 0.218750`). coherent wrong-key selection은 줄지만(`0.750000 -> 0.593750`), visible prefix consistency만으로 symbolic key-shape를 대체하기에는 부족합니다.
+- h6-k는 `--route-candidate-score span-key-support`를 추가합니다. 이는 recovered span candidate set 안에서 여러 offset에 걸쳐 등장하는 candidate key를 우선하는 두 번째 non-key-shape span-record ranking probe입니다. 현재 coherent wrong-key stress에서는 all-span recall을 유지하지만 중립입니다(`qacc=0.625000`, `span_exact=0.281250`, `coherent_wrong_top_key=0.750000`, weak-k16과 동일). 즉 오답 key도 offset 전체에서 일관되게 지지될 수 있으므로 same-key support만으로 symbolic `key-shape`를 대체하기에는 부족합니다.
+- h6-l은 `--route-candidate-score span-local-energy`를 추가합니다. 이는 route-hint energy를 제외한 현재 local energy 아래에서 candidate record의 전체 value span이 query span에 얼마나 맞는지로 record를 정렬합니다. 이 계열에서 처음으로 non-`key-shape` span-record scorer가 제한적 개선을 냈습니다: `qacc 0.625000 -> 0.675000`, `span_exact 0.281250 -> 0.406250`, `correct_key_share 0.503125 -> 0.631250`, `key_entropy 1.238921 -> 0.862081`. 그래도 symbolic `key-shape` 상한과는 아직 거리가 큽니다.
+- h6-m은 `span-local-energy`를 작은 key/seed matrix로 확장합니다. 제한적 개선은 평균에서도 유지됩니다: `weak_qacc_mean=0.546094`, `local_energy_qacc_mean=0.571875`, `local_energy_qacc_delta_mean=0.025781`; `span_exact_mean`은 `0.273438 -> 0.378906`으로 개선되지만, symbolic `key-shape`는 여전히 `qacc_mean=0.984375`, `span_exact_mean=0.921875`로 훨씬 높습니다.
+- h6-n은 `span-local-energy`와 h5 candidate-quality preset을 조합합니다. `base-default`는 local-energy 위에서 중립이고, `hybrid-safe`는 span-level 품질을 올립니다(`span_exact 0.406250 -> 0.593750`, `correct_key_share 0.631250 -> 0.768229`, `key_entropy 0.862081 -> 0.510620`). 하지만 byte qacc는 낮춥니다(`0.675000 -> 0.631250`). 즉 span exact-match와 byte qacc가 선호하는 policy가 갈릴 수 있습니다.
+- h6-o는 이 분리를 명시적 policy artifact로 고정합니다. Byte-qacc objective는 `local-energy`를 선택합니다(`qacc=0.675000`, `span_exact=0.406250`). Span-exact와 balanced objective는 `local-energy-hybrid`를 선택합니다(`qacc=0.631250`, `span_exact=0.593750`). Span objective는 span exact-match를 `+0.187500` 올리는 대신 qacc를 `-0.043750` 낮춥니다.
+- h6-p는 h6-o policy artifact를 작은 key/seed matrix로 확장합니다. Byte-qacc는 모든 group에서 `local-energy`를 선택하고, span-exact는 4개 중 3개 group에서 `local-energy-hybrid`를 선택합니다. Span policy는 평균 qacc `-0.033594`를 내주고 평균 span exact-match `+0.062500`을 얻습니다. Objective split rate는 `0.750000`입니다.
+- h7-a는 goal closure smoke를 추가합니다. h5 route-quality closure와 h6 span boundary/exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale smoke를 한 entrypoint에서 실행하며, 같은 value-bearing route-hint invariant를 유지합니다. 이는 현재 route-quality/route-memory scaffold를 instrumentation으로 닫는 것이지 learned routing이나 long-context retrieval solved가 아닙니다.
+- h9-a/h9-b/h9-d는 `-DDLE_ENABLE_HIP=ON`과 `--backend hip` 뒤에 optional ROCm/HIP backend scaffold를 추가합니다. CPU가 여전히 canonical/default입니다. 첫 HIP 경계는 bounded route-quality candidate-weight factor parity와 diagnostic-only 16x16 proposal-score parity이며, KV parsing, hash/source-credit orchestration, update acceptance, RNG, age/tick/reservoir mutation, CSV는 CPU에 남습니다. CPU-only binary에서 `--backend hip`를 요청하면 `DLE_ENABLE_HIP=ON` error로 명확히 실패합니다. 이는 backend/parity instrumentation이지 GPU acceleration proven이나 learned routing solved가 아닙니다.
 
 ## 현재 상태
 
@@ -144,6 +156,23 @@ remove-correct:
 cmake -S . -B build
 cmake --build build -j
 ```
+
+Optional ROCm/HIP scaffold build:
+
+```bash
+cmake -S . -B build-hip -DDLE_ENABLE_HIP=ON
+cmake --build build-hip --target dmv02 hip_candidate_weight_parity -j
+```
+
+Runtime backend 선택은 명시적입니다.
+
+```bash
+./build/dmv02 --backend cpu ...
+./build-hip/dmv02 --backend hip --hip-device 0 ...
+```
+
+h9는 scaffold/parity 단계입니다. string/KV parsing, source-credit ledger,
+update acceptance, RNG, route strength, topology는 GPU로 옮기지 않았습니다.
 
 ## 실행 예시
 
@@ -345,6 +374,17 @@ cmake --build build -j
 - `experiments/test_v06_route_memory_span_exact_scale.sh`
 - `experiments/test_v06_route_memory_span_hash.sh`
 - `experiments/test_v06_route_memory_span_hash_scale.sh`
+- `experiments/test_v06_route_memory_span_ambiguity.sh`
+- `experiments/test_v06_route_memory_span_learned_source.sh`
+- `experiments/test_v06_route_memory_span_quality_diagnostics.sh`
+- `experiments/test_v06_route_memory_span_candidate_quality_gap.sh`
+- `experiments/test_v06_route_memory_span_prefix_ranking.sh`
+- `experiments/test_v06_route_memory_span_key_support_ranking.sh`
+- `experiments/test_v06_route_memory_span_local_energy_ranking.sh`
+- `experiments/test_v06_route_memory_span_local_energy_scale.sh`
+- `experiments/test_v06_route_memory_span_local_energy_composition.sh`
+- `experiments/test_v06_route_memory_span_local_energy_policy.sh`
+- `experiments/test_v06_route_memory_span_local_energy_policy_scale.sh`
 - `experiments/test_v07_goal_route_memory_closure.sh`
 - `experiments/test_v05_route_quality_candidate_auto_basis.sh`
 - `experiments/test_v05_route_quality_candidate_auto_threshold.sh`
@@ -367,6 +407,7 @@ cmake --build build -j
 - [v0.3 Route-Hint Oracle](docs/V03_ROUTE_HINT_ORACLE.md)
 - [v0.6 / h6 Route Memory](docs/V06_ROUTE_MEMORY.md)
 - [v0.7 / h7 Goal Closure](docs/V07_GOAL.md)
+- [h9 ROCm/HIP Backend Scaffold](docs/V09_GPU_BACKEND.md)
 - [Roadmap](docs/ROADMAP.md)
 
 ## 다음 연구 방향

@@ -41,12 +41,78 @@ bash "$ROOT_DIR/experiments/test_v06_route_memory_span_hash.sh"
 echo "goal: h6-hash-span-scale"
 bash "$ROOT_DIR/experiments/test_v06_route_memory_span_hash_scale.sh"
 
+echo "goal: h6-span-ambiguity"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_ambiguity.sh"
+
+echo "goal: h6-span-learned-source"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_learned_source.sh"
+
+echo "goal: h6-span-quality"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_quality_diagnostics.sh"
+
+echo "goal: h6-span-candidate-quality-gap"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_candidate_quality_gap.sh"
+
+echo "goal: h6-span-prefix-ranking"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_prefix_ranking.sh"
+
+echo "goal: h6-span-key-support-ranking"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_key_support_ranking.sh"
+
+echo "goal: h6-span-local-energy-ranking"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_local_energy_ranking.sh"
+
+echo "goal: h6-span-local-energy-scale"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_local_energy_scale.sh"
+
+echo "goal: h6-span-local-energy-composition"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_local_energy_composition.sh"
+
+echo "goal: h6-span-local-energy-policy"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_local_energy_policy.sh"
+
+echo "goal: h6-span-local-energy-policy-scale"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_span_local_energy_policy_scale.sh"
+
 if [[ "$MODE" == "extended" ]]; then
   echo "goal: h6-exact-span-scale-standard"
   bash "$ROOT_DIR/experiments/run_v06_route_memory_span_exact_scale.sh" >/dev/null
 
   echo "goal: h6-hash-span-scale-standard"
   bash "$ROOT_DIR/experiments/run_v06_route_memory_span_hash_scale.sh" >/dev/null
+
+  echo "goal: h6-span-ambiguity-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_ambiguity.sh" >/dev/null
+
+  echo "goal: h6-span-learned-source-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_learned_source.sh" >/dev/null
+
+  echo "goal: h6-span-quality-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_quality_diagnostics.sh" >/dev/null
+
+  echo "goal: h6-span-candidate-quality-gap-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_candidate_quality_gap.sh" >/dev/null
+
+  echo "goal: h6-span-prefix-ranking-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_prefix_ranking.sh" >/dev/null
+
+  echo "goal: h6-span-key-support-ranking-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_key_support_ranking.sh" >/dev/null
+
+  echo "goal: h6-span-local-energy-ranking-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_local_energy_ranking.sh" >/dev/null
+
+  echo "goal: h6-span-local-energy-scale-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_local_energy_scale.sh" >/dev/null
+
+  echo "goal: h6-span-local-energy-composition-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_local_energy_composition.sh" >/dev/null
+
+  echo "goal: h6-span-local-energy-policy-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_local_energy_policy.sh" >/dev/null
+
+  echo "goal: h6-span-local-energy-policy-scale-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_span_local_energy_policy_scale.sh" >/dev/null
 fi
 
 echo "v07 goal route-memory closure passed"
