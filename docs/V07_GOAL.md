@@ -50,6 +50,15 @@ experiments/test_v06_route_memory_span_local_energy_scale.sh
 experiments/test_v06_route_memory_span_local_energy_composition.sh
 experiments/test_v06_route_memory_span_local_energy_policy.sh
 experiments/test_v06_route_memory_span_local_energy_policy_scale.sh
+experiments/test_v06_route_memory_span_first_guardrail.sh
+experiments/test_v06_route_memory_span_first_guardrail_degradation.sh
+experiments/test_v06_route_memory_span_adaptive_guardrail.sh
+experiments/test_v06_route_memory_span_adaptive_guardrail_scale.sh
+experiments/test_v06_route_memory_chunk_quality_diagnostics.sh
+experiments/test_v06_route_memory_chunk_local_scorers.sh
+experiments/test_v06_route_memory_wrong_candidate_robustness.sh
+experiments/test_v06_route_memory_abstain_retry_guardrail.sh
+experiments/test_v07_route_memory_promotion_gate.sh
 ```
 
 The optional extended closure:
@@ -59,8 +68,9 @@ experiments/test_v07_goal_route_memory_closure.sh --extended
 ```
 
 also runs the extended h5 route-quality closure and the standard h6
-exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale
-span runners.
+exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale/span-first-guardrail/span-first-guardrail-degradation/adaptive-guardrail
+span/adaptive-scale/chunk-quality/chunk-local-scorers/wrong-candidate/abstain-retry/promotion-gate
+runners.
 
 ## Current Closed Scope
 
@@ -100,6 +110,20 @@ route-memory:
   objective split explicit
   span-local-energy policy-scale diagnostics show the objective split survives
   across a small key/seed matrix
+  span-first guardrail diagnostics recover most of the span-exact lift while
+  bounding byte-qacc loss under the h6-p policy artifact
+  span-first guardrail degradation diagnostics show fixed guardrail thresholds
+  are regime-sensitive under learned-like source degradation
+  adaptive guardrail diagnostics calibrate qacc loss versus span gain and select
+  utility-w0p75 as the current diagnostic candidate
+  adaptive guardrail scale diagnostics keep utility-w0p75 safe but diagnostic
+  chunk-quality diagnostics expose coherent wrong-key and top1/recall gaps
+  chunk-local scorer diagnostics keep plain span-local-energy as the best
+  current non-key-shape scorer
+  wrong-candidate/fallback gates keep source retry noisy-clean but block
+  combined readiness
+  abstain/retry guardrails route the current policy to weak-hint/abstain
+  h7-b promotion gate keeps default promotion blocked
 ```
 
 ## Still Open
@@ -115,27 +139,26 @@ source-credit robustness solved: no
 external benchmark solved: no
 ```
 
-The next research boundary after h7 should be true chunk-quality diagnostics:
-span-level ranking or consistency features that can replace the symbolic
-`key-shape` upper bound when a recovered learned-like span candidate is
-coherently wrong. h6-j shows that simple visible-prefix ranking is not enough,
-and h6-k shows that same-key support across offsets is also not enough on its
-own. h6-l is the first useful non-`key-shape` signal, but it still needs
-harsher scale/stability checks and integration with route-quality weighting.
-h6-n shows that this integration must report span exact-match separately from
-byte qacc. h6-o turns that into an explicit policy artifact, and h6-p shows
-the split is not just a single-row artifact.
+The next research boundary after h6-x is stronger chunk-level ranking:
+coherent wrong-key and top1/recall gaps must shrink without using symbolic
+`key-shape` as the policy. h6-t/u/v/w/x show that adaptive span guardrails,
+source-credit retry, and simple local scalar transforms are not enough by
+themselves: source retry can be noisy-clean, but chunk-quality still blocks
+combined readiness. The current policy therefore stays diagnostic-only and
+routes uncertain cases to weak-hint/abstain.
 
-## Post-closure h9 GPU Scaffold
+## Current Post-closure h9 GPU Scaffold
 
 h9 starts after this goal closure as optional backend instrumentation. It adds
-`DLE_ENABLE_HIP`, `--backend cpu|hip`, and a HIP candidate-weight factor parity
-kernel, but it does not change the h7 route-memory invariant:
+`DLE_ENABLE_HIP`, `--backend cpu|hip`, a HIP candidate-weight factor parity
+kernel, and a diagnostic-only proposal-score parity kernel, but it does not
+change the h7 route-memory invariant:
 
 ```text
 candidate value_pos -> value byte read -> proposal hint
 ```
 
 and it still keeps jump-neighbor replacement inactive. Treat h9 as backend
-scaffold/parity only until CPU/HIP route-quality fixture parity is proven on a
-complete ROCm/HIP install.
+scaffold/parity only. The h9 quick closure now verifies CPU default behavior,
+CPU-only HIP error handling, and the h7 goal closure. CPU/HIP parity remains an
+optional extended check until a complete ROCm/HIP install proves fixture parity.

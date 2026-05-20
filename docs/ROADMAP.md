@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h9-a/h9-b and h6-k, the project should be read as:
+As of h6-s plus the h7 and h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -54,10 +54,43 @@ Current closure:
   selects local-energy, while span-exact selects local-energy-hybrid.
 - `h6-p` scales the policy artifact over key/seed and shows the objective split
   survives on average, though not in every group.
+- `h6-q` adds a span-first policy guardrail: only accept the span-exact policy
+  when span exact-match gain clears a floor and byte-qacc loss stays within a
+  cap. The strict guardrail recovers most of the span lift with much smaller
+  qacc loss than the fully span-first policy.
+- `h6-r` scales that guardrail over weak and harsher learned-like source
+  degradation. The guardrail is useful as a diagnostic, but the accept/reject
+  pattern depends on degradation regime and is not yet a learned robust policy.
+- `h6-s` calibrates an adaptive utility guardrail over the same degradation
+  matrix: `utility-w0p75` rejects weak high-loss span policies while accepting
+  the lower-loss harsher split.
+- `h6-t` scales the adaptive guardrail as a diagnostic and keeps
+  `utility-w0p75` safe but not promoted in the quick gate.
+- `h6-u` adds chunk-quality diagnostics over the value span: chunk exact,
+  per-offset consistency, coherent wrong-key, and top1/recall gap.
+- `h6-v/h6-w` combine chunk-quality with source-credit retry. Source retry is
+  noisy-clean in the smoke, but chunk-quality blocks promotion and routes the
+  policy to weak-hint/abstain.
+- `h6-x` compares prefix/worst-offset/margin local scorer variants and keeps
+  plain `span-local-energy` as the best current non-key-shape chunk scorer.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
-- `h9-a/h9-b` add optional ROCm/HIP backend scaffolding:
+- `h7-b` adds the route-memory promotion gate and keeps default promotion
+  blocked.
+- `v08` adds an external benchmark readiness gate that defers comparison until
+  promotion passes.
+- `h9-a/h9-b/h9-d/h9-e` add optional ROCm/HIP backend scaffolding:
   `experiments/test_v09_gpu_backend_closure.sh`.
+- Current verification has h6-t/u/v/w/x, h7-b, v08 readiness, and h9-e included
+  in quick closure paths. HIP parity remains optional and environment-dependent.
+
+Current next boundary:
+
+- The next research step should improve chunk-level ranking beyond simple local
+  scalar transforms so coherent wrong-key and top1/recall gaps shrink without
+  using symbolic `key-shape` as the policy.
+- Any stronger claim must beat or approach the symbolic `key-shape` upper bound
+  without using key-shape as the policy itself.
 
 Still not solved:
 
@@ -88,10 +121,10 @@ Status update:
 - steps 1-8 are complete and documented.
 - step 9 split into two findings: active jump-neighbor replacement remains
   no-go, while value-bearing route hints work under controlled fixtures.
-- the current next research boundary is span/chunk candidate quality, not
-  topology replacement.
-- GPU work starts as backend/parity instrumentation only. CPU remains
-  canonical until a complete ROCm/HIP install proves fixture parity.
+- the current next research boundary is adaptive span/chunk guardrail scaling
+  under learned-like ambiguity, not topology replacement.
+- GPU work is backend/parity instrumentation only. CPU remains canonical until
+  a complete ROCm/HIP install proves fixture parity.
 
 ## Positioning
 

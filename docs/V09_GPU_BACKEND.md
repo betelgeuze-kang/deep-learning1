@@ -15,6 +15,22 @@ The forbidden route remains closed:
 remote node as neighbor / jump-neighbor replacement
 ```
 
+## Current Stage
+
+h9 is currently a quick-closure backend scaffold layered after the h7
+route-memory goal closure:
+
+```text
+h6-t/u/v/w route-memory diagnostics and h7-b promotion gates are wired into h7.
+h9 quick closure passes CPU default behavior, CPU-only HIP error handling, h9-e
+extended-boundary checks, h7, and v08 benchmark readiness.
+HIP parity remains optional and environment-dependent.
+```
+
+This means the active research boundary returns to adaptive route-memory
+guardrail scaling, not GPU acceleration claims. CPU remains the reference
+behavior.
+
 ## h9-a Backend Scaffold Decision
 
 `h9-a` passes as HIP backend scaffold instrumentation when the CPU build,
@@ -96,8 +112,10 @@ bash -n experiments/*.sh
 cmake --build build --target dmv02 -j2
 experiments/test_v09_gpu_backend_cpu_smoke.sh
 experiments/test_v09_gpu_backend_nohip_error.sh
+experiments/test_v09_gpu_backend_extended_boundary.sh
 experiments/test_v05_route_quality_closure.sh
 experiments/test_v07_goal_route_memory_closure.sh
+experiments/test_v08_external_benchmark_readiness.sh
 ```
 
 Optional HIP check:
@@ -125,7 +143,17 @@ The extended closure includes the optional HIP parity check.
 h9 is:
 
 ```text
-PASS as optional HIP backend scaffold / candidate-weight and proposal-score parity instrumentation
+PASS as optional HIP backend scaffold / candidate-weight and proposal-score parity instrumentation,
+with h9-e extended-boundary checks in quick closure
+```
+
+Do not read this as:
+
+```text
+GPU acceleration proven
+CPU/HIP full training parity proven on this machine
+learned routing solved
+long-context retrieval solved
 ```
 
 It is not:

@@ -1,0 +1,6 @@
+{"event":"status","summary":"Deep recursive improvement loop started for post-h7-b chunk-ranking roadmap."}
+{"event":"observation","summary":"Current open blocker is chunk-quality: coherent wrong-key and top1/recall gaps remain high while source retry is noisy-clean."}
+{"event":"decision","summary":"Next bounded edit will add a non-key-shape scorer combining span-local-energy with visible prefix consistency; topology replacement remains no-go."}
+{"event":"observation","summary":"h6-x smoke: span-local-energy-prefix slightly regresses qacc/chunk exact, local-margin ties plain local-energy, worst-offset variants regress."}
+{"event":"decision","summary":"Gate h6-x as diagnostic-only; plain span-local-energy remains the best current non-key-shape chunk scorer and promotion stays blocked."}
+{"event":"verification","summary":"bash -n, h7 goal closure, h9 quick closure, and git diff --check passed after h6-x wiring."}

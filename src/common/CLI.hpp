@@ -724,7 +724,7 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-delta-mode <target-only|projected>\n"
        << "  --route-pull-scale <float>\n"
        << "  --route-push-scale <float>\n"
-       << "  --route-candidate-score <insertion|recency|value-vote|key-shape|span-prefix|span-key-support|span-local-energy>\n"
+       << "  --route-candidate-score <insertion|recency|value-vote|key-shape|span-prefix|span-key-support|span-local-energy|span-local-energy-prefix|span-local-energy-worst|span-local-margin|span-local-margin-worst>\n"
        << "  --route-source <none|input-byte|joint-code|state-code>\n"
        << "  --route-mode <off|probe|jump-neighbors|hint-oracle|hint-parsed|hint-kv-exact|hint-kv-hash>\n"
        << "     jump-neighbors may use input-byte, joint-code, or state-code route keys\n"

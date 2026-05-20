@@ -1198,9 +1198,13 @@ void GraphV02::validate_params() const {
         params_.route_candidate_score != "key-shape" &&
         params_.route_candidate_score != "span-prefix" &&
         params_.route_candidate_score != "span-key-support" &&
-        params_.route_candidate_score != "span-local-energy") {
+        params_.route_candidate_score != "span-local-energy" &&
+        params_.route_candidate_score != "span-local-energy-prefix" &&
+        params_.route_candidate_score != "span-local-energy-worst" &&
+        params_.route_candidate_score != "span-local-margin" &&
+        params_.route_candidate_score != "span-local-margin-worst") {
         throw std::runtime_error(
-            "route-candidate-score must be one of: insertion, recency, value-vote, key-shape, span-prefix, span-key-support, span-local-energy");
+            "route-candidate-score must be one of: insertion, recency, value-vote, key-shape, span-prefix, span-key-support, span-local-energy, span-local-energy-prefix, span-local-energy-worst, span-local-margin, span-local-margin-worst");
     }
     if (params_.routing_source != "none" && params_.routing_source != "input-byte" &&
         params_.routing_source != "joint-code" && params_.routing_source != "state-code") {
@@ -3881,6 +3885,81 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
                         }
                         return -energy_sum / static_cast<double>(scored_offsets);
                     };
+                const auto span_local_energy_worst_score =
+                    [this, &query, span_offset](const ByteDataset::KVRecord& record) {
+                        if (record.value_pos < 0 || record.value_len <= 0 ||
+                            query.query_pos < 0 || query.query_pos >= params_.N) {
+                            return -std::numeric_limits<double>::infinity();
+                        }
+                        const int query_value_start = query.query_pos - span_offset;
+                        if (query_value_start < 0) {
+                            return -std::numeric_limits<double>::infinity();
+                        }
+                        double worst_score = std::numeric_limits<double>::infinity();
+                        int scored_offsets = 0;
+                        for (int offset = 0; offset < record.value_len; ++offset) {
+                            const int query_pos = query_value_start + offset;
+                            const int record_pos = record.value_pos + offset;
+                            if (query_pos < 0 || query_pos >= params_.N ||
+                                record_pos < 0 || record_pos >= params_.N) {
+                                continue;
+                            }
+                            const auto candidate_byte =
+                                nodes_[static_cast<std::size_t>(record_pos)].input_byte;
+                            const auto candidate_high = static_cast<std::uint8_t>(
+                                candidate_byte / FieldTable::States);
+                            const auto candidate_low = static_cast<std::uint8_t>(
+                                candidate_byte % FieldTable::States);
+                            const double score = -local_energy_without_route(
+                                query_pos,
+                                candidate_high,
+                                candidate_low);
+                            worst_score = std::min(worst_score, score);
+                            ++scored_offsets;
+                        }
+                        if (scored_offsets == 0) {
+                            return -std::numeric_limits<double>::infinity();
+                        }
+                        return worst_score;
+                    };
+                const auto span_local_margin_score =
+                    [this, &query, span_offset](
+                        const ByteDataset::KVRecord& record,
+                        bool worst_only) {
+                        if (record.value_pos < 0 || record.value_len <= 0 ||
+                            query.query_pos < 0 || query.query_pos >= params_.N) {
+                            return -std::numeric_limits<double>::infinity();
+                        }
+                        const int query_value_start = query.query_pos - span_offset;
+                        if (query_value_start < 0) {
+                            return -std::numeric_limits<double>::infinity();
+                        }
+                        double score_sum = 0.0;
+                        double worst_score = std::numeric_limits<double>::infinity();
+                        int scored_offsets = 0;
+                        for (int offset = 0; offset < record.value_len; ++offset) {
+                            const int query_pos = query_value_start + offset;
+                            const int record_pos = record.value_pos + offset;
+                            if (query_pos < 0 || query_pos >= params_.N ||
+                                record_pos < 0 || record_pos >= params_.N) {
+                                continue;
+                            }
+                            const auto candidate_byte =
+                                nodes_[static_cast<std::size_t>(record_pos)].input_byte;
+                            const double score =
+                                -local_margin_against_route(query_pos, candidate_byte);
+                            score_sum += score;
+                            worst_score = std::min(worst_score, score);
+                            ++scored_offsets;
+                        }
+                        if (scored_offsets == 0) {
+                            return -std::numeric_limits<double>::infinity();
+                        }
+                        if (worst_only) {
+                            return worst_score;
+                        }
+                        return score_sum / static_cast<double>(scored_offsets);
+                    };
                 if (params_.route_candidate_score == "key-shape") {
                     const double lhs_score = key_shape_score(query.key, lhs->key);
                     const double rhs_score = key_shape_score(query.key, rhs->key);
@@ -3898,6 +3977,36 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
                 } else if (params_.route_candidate_score == "span-local-energy") {
                     const double lhs_score = span_local_energy_score(*lhs);
                     const double rhs_score = span_local_energy_score(*rhs);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (params_.route_candidate_score == "span-local-energy-prefix") {
+                    const double lhs_score =
+                        span_local_energy_score(*lhs) +
+                        0.25 * span_prefix_score_for_record(
+                                   nodes_, params_.N, query.query_pos, span_offset, *lhs);
+                    const double rhs_score =
+                        span_local_energy_score(*rhs) +
+                        0.25 * span_prefix_score_for_record(
+                                   nodes_, params_.N, query.query_pos, span_offset, *rhs);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (params_.route_candidate_score == "span-local-energy-worst") {
+                    const double lhs_score = span_local_energy_worst_score(*lhs);
+                    const double rhs_score = span_local_energy_worst_score(*rhs);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (params_.route_candidate_score == "span-local-margin") {
+                    const double lhs_score = span_local_margin_score(*lhs, false);
+                    const double rhs_score = span_local_margin_score(*rhs, false);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (params_.route_candidate_score == "span-local-margin-worst") {
+                    const double lhs_score = span_local_margin_score(*lhs, true);
+                    const double rhs_score = span_local_margin_score(*rhs, true);
                     if (lhs_score != rhs_score) {
                         return lhs_score > rhs_score;
                     }

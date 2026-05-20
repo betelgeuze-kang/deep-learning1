@@ -55,7 +55,7 @@ parser exposes one query hint per key, not one hint per value-span offset.
 This is the correct h6 starting point: before claiming span/chunk memory, the
 single-byte boundary is explicit and tested.
 
-## Proposed h6 Progression
+## Current h6 Progression
 
 1. `h6-a span boundary`: document and guard the current single-byte route-memory
    boundary.
@@ -67,6 +67,34 @@ single-byte boundary is explicit and tested.
    span retrieval.
 5. `h6-e span hash scale diagnostics`: scale hashed span-candidate lookup over
    key-count/value-length/hash-bit arms before moving to chunk-quality metrics.
+6. `h6-f..h6-i`: expose span ambiguity, learned-like source collapse, recall/top1
+   separation, and coherent wrong-key span selection.
+7. `h6-j..h6-k`: test non-key-shape prefix and same-key-support ranking probes;
+   both are useful diagnostics but not sufficient replacements for key-shape.
+8. `h6-l..h6-m`: add and scale `span-local-energy`, the first non-key-shape
+   span-record scorer with limited positive signal.
+9. `h6-n..h6-p`: compose local-energy with h5 candidate-quality presets, then
+   record byte-qacc versus span-exact policy selection as separate objectives.
+10. `h6-q`: add a span-first guardrail over the h6-p policy artifact.
+11. `h6-r`: scale the guardrail over weak and harsher learned-like source
+    degradation.
+12. `h6-s`: calibrate an adaptive utility guardrail over qacc loss versus span
+    exact-match gain.
+
+Current checkpoint:
+
+```text
+h6-s passes as adaptive guardrail calibration diagnostics.
+h7 quick closure includes h6-s.
+h9 quick closure passes with HIP parity optional.
+```
+
+Next h6 boundary:
+
+```text
+h6-t should scale the `utility-w0p75` adaptive guardrail across broader
+degradation regimes while reporting byte qacc and span exact-match separately.
+```
 
 Do not claim:
 
@@ -929,3 +957,283 @@ selects plain `span-local-energy`, while span-exact selects
 exactness by giving back byte qacc on average. This confirms h6-o is not a
 one-off, but it also shows a future policy needs an explicit objective knob or
 guardrail instead of a single universal preset.
+
+## h6-q Span-first Guardrail
+
+`h6-q` passes as span-first policy guardrail diagnostics. It does not solve
+chunk retrieval or learned source robustness.
+
+Entry points:
+
+```bash
+experiments/run_v06_route_memory_span_first_guardrail.sh
+experiments/test_v06_route_memory_span_first_guardrail.sh
+```
+
+The runner consumes the h6-p policy artifact and compares four policies:
+
+```text
+qacc-default
+strict-g0p050-cap0p050
+balanced-g0p025-cap0p050
+span-first-g0p025-cap0p075
+```
+
+Reference standard aggregate:
+
+```text
+qacc-default:
+  qacc_mean = 0.571875
+  span_exact_mean = 0.378906
+
+strict-g0p050-cap0p050:
+  span_accept_rate = 0.250000
+  selected_hybrid_rate = 0.250000
+  qacc_mean = 0.560937
+  span_exact_mean = 0.425781
+  qacc_delta_vs_qacc_policy_mean = -0.010938
+  span_exact_delta_vs_qacc_policy_mean = 0.046875
+
+balanced-g0p025-cap0p050:
+  span_accept_rate = 0.500000
+  qacc_mean = 0.553125
+  span_exact_mean = 0.433594
+
+span-first-g0p025-cap0p075:
+  span_accept_rate = 0.750000
+  qacc_mean = 0.538281
+  span_exact_mean = 0.441406
+```
+
+Interpretation:
+the strict guardrail captures most of the span-exact gain while avoiding the
+small-gain / high-qacc-loss cells. Looser guardrails converge toward the raw
+span-exact policy. This is the first useful policy-level guardrail over the
+h6-p objective split, but it is still calibrated on controlled symbolic span
+fixtures.
+
+## h6-r Span-first Guardrail Degradation
+
+`h6-r` passes as span-first policy guardrail degradation diagnostics. It does
+not solve learned source robustness or chunk retrieval.
+
+Entry points:
+
+```bash
+experiments/run_v06_route_memory_span_first_guardrail_degradation.sh
+experiments/test_v06_route_memory_span_first_guardrail_degradation.sh
+```
+
+The runner repeats the h6-q guardrail policy readout over two degradation
+levels:
+
+```text
+weak: keep=0.25, aux_noise=0.75
+harsher: keep=0.125, aux_noise=0.875
+```
+
+Reference standard aggregate:
+
+```text
+weak:
+  groups = 2
+  objective_split_rate = 1.000000
+  strict span_accept_rate = 0.000000
+  strict qacc_mean = 0.517187
+  strict span_exact_mean = 0.289062
+
+harsher:
+  groups = 2
+  objective_split_rate = 0.500000
+  strict span_accept_rate = 0.000000
+  span-first-g0p025-cap0p075 span_accept_rate = 0.500000
+  span-first-g0p025-cap0p075 qacc_delta = -0.029688
+  span-first-g0p025-cap0p075 span_delta = 0.023438
+```
+
+Interpretation:
+the fixed h6-q guardrails are regime-sensitive. Weak degradation still exposes
+the byte-qacc versus span-exact split, but the span policy qacc loss is too high
+for every configured cap. Harsher degradation collapses the split in one group
+and leaves only the looser span-first guardrail active in the other. The next
+slice should calibrate or adapt the guardrail thresholds instead of promoting a
+single fixed policy.
+
+## h6-s Adaptive Guardrail Calibration
+
+`h6-s` passes as adaptive guardrail calibration diagnostics. It does not solve
+learned source robustness or chunk retrieval.
+
+Entry points:
+
+```bash
+experiments/run_v06_route_memory_span_adaptive_guardrail.sh
+experiments/test_v06_route_memory_span_adaptive_guardrail.sh
+```
+
+The runner consumes the h6-r policy artifact and tests:
+
+```text
+span_gain - loss_weight * qacc_loss > 0
+```
+
+Reference standard aggregate:
+
+```text
+weak utility-w0p50:
+  span_accept_rate = 1.000000
+  qacc_delta = -0.109375
+  span_delta = 0.062500
+
+weak utility-w0p75:
+  span_accept_rate = 0.000000
+
+harsher utility-w0p75:
+  span_accept_rate = 0.500000
+  qacc_delta = -0.029688
+  span_delta = 0.023438
+
+harsher utility-w1p00:
+  span_accept_rate = 0.000000
+```
+
+Interpretation:
+`utility-w0p50` is too permissive for weak high-loss splits. `utility-w0p75`
+rejects those weak splits while accepting the lower-loss harsher split. This
+makes `utility-w0p75` the current diagnostic candidate, but it needs broader
+scale before promotion beyond a controlled fixture calibration.
+
+## h6-t Adaptive Guardrail Scale
+
+`h6-t` passes as adaptive guardrail scale diagnostics. It does not promote the
+span policy.
+
+Entry points:
+
+```bash
+experiments/run_v06_route_memory_span_adaptive_guardrail_scale.sh
+experiments/test_v06_route_memory_span_adaptive_guardrail_scale.sh
+```
+
+Smoke result:
+
+```text
+all utility-w0p75:
+  groups = 2
+  bad_accept_rate = 0.000000
+  span_accept_rate = 0.000000
+  top1_recall_gap = 0.796875
+  coherent_wrong_top_key = 0.828125
+```
+
+Interpretation:
+`utility-w0p75` stays safe in the smoke gate, but the large top1/recall gap and
+coherent wrong-key rate show that adaptive span acceptance is not enough for a
+chunk-level claim.
+
+## h6-u Chunk-quality Diagnostics
+
+`h6-u` passes as chunk-quality diagnostics over the value span.
+
+Entry points:
+
+```bash
+experiments/run_v06_route_memory_chunk_quality_diagnostics.sh
+experiments/test_v06_route_memory_chunk_quality_diagnostics.sh
+```
+
+Smoke result:
+
+```text
+chunk_exact_mean = 0.156250
+coherent_wrong_key_mean = 0.828125
+top1_recall_gap_mean = 0.796875
+keyshape_gap_mean = 0.734375
+```
+
+Interpretation:
+the recovered candidate set still contains a coherent wrong-key failure mode.
+Symbolic `key-shape` remains a large upper-bound gap, so the current local-energy
+policy is not a learned chunk retrieval policy.
+
+## h6-v/h6-w Wrong-candidate and Abstain Gates
+
+`h6-v` and `h6-w` pass as wrong-candidate/fallback robustness gates.
+
+Entry points:
+
+```bash
+experiments/run_v06_route_memory_wrong_candidate_robustness.sh
+experiments/test_v06_route_memory_wrong_candidate_robustness.sh
+experiments/run_v06_route_memory_abstain_retry_guardrail.sh
+experiments/test_v06_route_memory_abstain_retry_guardrail.sh
+```
+
+Smoke result:
+
+```text
+source_arm = policy-source-order
+source_qacc = 0.957813
+source_retry_noisy_selected = 0.000000
+chunk_ready = 0
+combined_ready = 0
+guardrail_action = abstain-or-weak-hint
+```
+
+Interpretation:
+source-credit retry can avoid noisy retry selection, but chunk quality still
+blocks promotion. The correct route-memory action is to keep the policy
+diagnostic-only and separate weak-hint/abstain behavior from default promotion.
+
+## h6-x Chunk-local Scorer Diagnostics
+
+`h6-x` passes as chunk-local scorer diagnostics and closes the first recursive
+post-promotion-gate probe as diagnostic-only.
+
+Entry points:
+
+```bash
+experiments/run_v06_route_memory_chunk_local_energy_prefix.sh
+experiments/test_v06_route_memory_chunk_local_scorers.sh
+```
+
+The slice compares the current `span-local-energy` scorer against visible-prefix
+composition, worst-offset local energy, mean local margin, and worst-offset local
+margin. None of the non-key-shape variants beats plain `span-local-energy` on
+the smoke chunk metric:
+
+```text
+best_non_keyshape_scorer = span-local-energy
+local_energy_qacc = 0.700000
+local_energy_chunk_exact = 0.531250
+local_energy_coherent_wrong = 0.468750
+local_energy_prefix_qacc_delta = -0.006250
+local_energy_prefix_chunk_delta = -0.031250
+local_margin_chunk_exact = 0.531250
+keyshape_chunk_gap = 0.468750
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+simple prefix, worst-offset, and margin transforms do not break the coherent
+wrong-key mode. `span-local-energy` remains the best current non-key-shape
+record scorer, while symbolic `key-shape` remains an upper-bound diagnostic only.
+
+## Current h6 Handoff
+
+h6-x is the current route-memory checkpoint. It is wired into the h7-b
+promotion gate and the h9 quick closure path. The live invariant remains:
+
+```text
+candidate value_pos -> value byte read -> proposal hint
+```
+
+The next h6 slice should not claim chunk retrieval. It should instead reduce
+the coherent wrong-key and top1/recall gaps without using symbolic `key-shape`
+as the policy, while preserving the h6-p objective split:
+
+```text
+byte-qacc objective: optimize local-energy policy
+span-exact objective: allow local-energy-hybrid when full-span correctness wins
+```
