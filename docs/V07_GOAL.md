@@ -56,6 +56,11 @@ experiments/test_v06_route_memory_span_adaptive_guardrail.sh
 experiments/test_v06_route_memory_span_adaptive_guardrail_scale.sh
 experiments/test_v06_route_memory_chunk_quality_diagnostics.sh
 experiments/test_v06_route_memory_chunk_local_scorers.sh
+experiments/test_v06_route_memory_chunk_code_similarity.sh
+experiments/test_v10_teacher_free_chunk_ranker.sh
+experiments/test_v10_chunk_credit_source_robustness.sh
+experiments/test_v10_chunk_credit_abstain_policy.sh
+experiments/test_v10_chunk_credit_distillation_gate.sh
 experiments/test_v06_route_memory_wrong_candidate_robustness.sh
 experiments/test_v06_route_memory_abstain_retry_guardrail.sh
 experiments/test_v07_route_memory_promotion_gate.sh
@@ -69,7 +74,7 @@ experiments/test_v07_goal_route_memory_closure.sh --extended
 
 also runs the extended h5 route-quality closure and the standard h6
 exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale/span-first-guardrail/span-first-guardrail-degradation/adaptive-guardrail
-span/adaptive-scale/chunk-quality/chunk-local-scorers/wrong-candidate/abstain-retry/promotion-gate
+span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-abstain-policy/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
 runners.
 
 ## Current Closed Scope
@@ -120,6 +125,15 @@ route-memory:
   chunk-quality diagnostics expose coherent wrong-key and top1/recall gaps
   chunk-local scorer diagnostics keep plain span-local-energy as the best
   current non-key-shape scorer
+  chunk-code similarity diagnostics show direct learned route-code signature
+  scoring is neutral-to-worse under high signature collision
+  h10-a teacher-free chunk-credit ranker smoke shows route-credit reward/slash
+  can break coherent wrong-key in the controlled fixture
+  h10-b chunk-credit abstain policy keeps default promotion blocked until a
+  joint fallback/retry gate exists
+  h10-c joint source/distillation gates show noisy wrong candidates are
+  injected but not selected, while fallback/retry remains unexercised and
+  distillation remains blocked
   wrong-candidate/fallback gates keep source retry noisy-clean but block
   combined readiness
   abstain/retry guardrails route the current policy to weak-hint/abstain
@@ -139,13 +153,12 @@ source-credit robustness solved: no
 external benchmark solved: no
 ```
 
-The next research boundary after h6-x is stronger chunk-level ranking:
-coherent wrong-key and top1/recall gaps must shrink without using symbolic
-`key-shape` as the policy. h6-t/u/v/w/x show that adaptive span guardrails,
-source-credit retry, and simple local scalar transforms are not enough by
-themselves: source retry can be noisy-clean, but chunk-quality still blocks
-combined readiness. The current policy therefore stays diagnostic-only and
-routes uncertain cases to weak-hint/abstain.
+The next research boundary after h10-c is fallback/retry exercise on the
+chunk-credit path: the teacher-free chunk-credit ranker already survives
+injected noisy wrong candidates in smoke, but fallback/retry still does not fire
+when chunk-credit succeeds. Until a non-keyshape fallback/retry gate is real,
+the current default policy stays diagnostic-only and routes uncertain cases to
+weak-hint/abstain.
 
 ## Current Post-closure h9 GPU Scaffold
 

@@ -18,6 +18,17 @@
   is not ready for promotion.
 - h6-x chunk-local scorer diagnostics passed: prefix, worst-offset, and margin
   transforms do not beat plain `span-local-energy`.
+- h6-y chunk-code similarity diagnostics passed: direct learned route-code
+  signature scoring is neutral-to-worse under high signature collision.
+- h10-a teacher-free chunk-credit ranker smoke and standard scale passed:
+  span-level route-credit reward/slash can select the correct record without
+  symbolic `key-shape` in the controlled fixture.
+- h10-b chunk-credit abstain policy smoke passed: chunk credit can be ready
+  while default promotion remains blocked by the joint chunk/source gate.
+- h10-c joint/noisy/distillation gate passed as diagnostic-only: chunk-credit
+  survives injected noisy candidates without selecting them, but fallback/retry
+  is unexercised on the successful chunk-credit path, so distillation remains
+  blocked.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -95,6 +106,76 @@ h6-x chunk-local scorer smoke:
   routing_trigger_rate_mean = 0.000000
   active_jump_rate_mean = 0.000000
 
+h6-y chunk-code similarity smoke:
+  best_non_keyshape_scorer = span-local-energy
+  local_energy_qacc = 0.706250
+  local_energy_chunk_exact = 0.531250
+  local_energy_coherent_wrong = 0.468750
+  route_code_qacc = 0.587500
+  route_code_chunk_exact = 0.281250
+  local_energy_route_code_chunk_exact = 0.531250
+  route_signature_collision_mean = 0.750000
+  keyshape_chunk_gap = 0.406250
+  routing_trigger_rate_mean = 0.000000
+  active_jump_rate_mean = 0.000000
+
+h10-a teacher-free chunk ranker smoke:
+  best_non_keyshape_scorer = span-chunk-credit
+  local_energy_qacc = 0.700000
+  local_energy_chunk_exact = 0.562500
+  local_energy_coherent_wrong = 0.437500
+  chunk_credit_qacc = 1.000000
+  chunk_credit_chunk_exact = 1.000000
+  chunk_credit_coherent_wrong = 0.000000
+  route_credit_gap_mean = 0.800000
+  route_credit_top1_mean = 1.000000
+  chunk_credit_gap_mean = 0.800000
+  chunk_credit_top1_mean = 1.000000
+  routing_trigger_rate_mean = 0.000000
+  active_jump_rate_mean = 0.000000
+
+h10-a teacher-free chunk ranker scale:
+  groups = 2
+  chunk_credit_qacc = 0.992188
+  chunk_credit_chunk_exact = 0.960938
+  chunk_credit_coherent_wrong = 0.000000
+  local_energy_qacc = 0.512500
+  local_energy_chunk_exact = 0.351562
+  best_qacc_delta_vs_local_energy = 0.479688
+  best_chunk_delta_vs_local_energy = 0.609375
+  route_credit_gap_mean = 0.799219
+  chunk_credit_top1_mean = 1.000000
+  keyshape_chunk_gap = 0.000000
+  routing_trigger_rate_mean = 0.000000
+  active_jump_rate_mean = 0.000000
+
+h10-b chunk-credit abstain policy smoke:
+  guardrail_action = weak-hint-with-abstain
+  default_promotion = 0
+  diagnostic_only = 1
+  weak_hint_or_abstain = 1
+  chunk_credit_ready = 1
+  source_safe = 1
+  joint_chunk_source_ready = 0
+  combined_ready = 0
+  noisy_selection_clean = 1
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+h10-c joint source/distillation smoke:
+  best_joint_arm = chunk-credit-source-order
+  joint_chunk_ready = 1
+  joint_source_safe = 1
+  noisy_clean = 1
+  joint_noisy_used = 1.000000
+  noisy_selected = 0.000000
+  fallback_retry_exercised = 0
+  joint_chunk_source_ready = 0
+  distillation_ready = 0
+  reason = fallback-retry-unexercised
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
 h7-b/v08:
   default_promotion = 0
   h7 status = diagnostic-only
@@ -106,15 +187,37 @@ h7-b/v08:
 - Final verification after h6-t/u/v/w/x, h7-b, h9-e, and v08 wiring passed:
   `bash -n experiments/*.sh`, `bash experiments/test_v07_goal_route_memory_closure.sh`,
   `bash experiments/test_v09_gpu_backend_closure.sh`, and `git diff --check`.
+- Focused h6-y verification passed: `cmake --build build --target dmv02 -j2`,
+  `bash experiments/test_v06_route_memory_chunk_code_similarity.sh`, and
+  `bash experiments/test_v07_route_memory_promotion_gate.sh`.
+- Focused h10-a verification passed: `bash -n
+  experiments/run_v10_teacher_free_chunk_ranker.sh`, `bash -n
+  experiments/test_v10_teacher_free_chunk_ranker.sh`, and `bash
+  experiments/test_v10_teacher_free_chunk_ranker.sh`.
+- Closure verification after wiring h10-a passed: `bash -n experiments/*.sh`,
+  `bash experiments/test_v07_goal_route_memory_closure.sh`, and
+  `git diff --check`.
+- Full quick verification with backend wrapper passed after h10-a wiring:
+  `bash experiments/test_v09_gpu_backend_closure.sh`.
+- h10-a scale guard passed: `bash
+  experiments/test_v10_teacher_free_chunk_ranker_scale.sh`.
+- h10-b abstain policy smoke passed: `bash
+  experiments/test_v10_chunk_credit_abstain_policy.sh`.
+- h10-c joint robustness and distillation gates passed: `bash
+  experiments/test_v10_chunk_credit_source_robustness.sh`, `bash
+  experiments/test_v10_chunk_credit_distillation_gate.sh`.
+- h10-c closure wiring passed: `bash
+  experiments/test_v07_goal_route_memory_closure.sh`, `bash
+  experiments/test_v09_gpu_backend_closure.sh`.
 
 ## Open Boundary
 
-- NOT learned chunk retrieval solved.
+- NOT scaled learned chunk retrieval solved.
 - NOT wrong-candidate/fallback robustness solved.
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion and external comparison.
-- Next research should improve chunk-level ranking so coherent wrong-key and
-  top1/recall gaps shrink without using symbolic `key-shape` as the policy.
-- Active next loop: move beyond simple local scalar record scoring. Prefix,
-  worst-offset, and margin transforms did not shrink the coherent wrong-key gap
-  beyond plain `span-local-energy`.
+- Next research should make fallback/retry exercise on the chunk-credit path,
+  or add an explicit non-keyshape fallback integration arm before any
+  promotion/default claim.
+- Active next loop: h10-d fallback-retry exercise for chunk-credit; h10-c
+  distillation stays blocked until that gate is real.

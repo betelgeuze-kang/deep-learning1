@@ -1220,18 +1220,205 @@ simple prefix, worst-offset, and margin transforms do not break the coherent
 wrong-key mode. `span-local-energy` remains the best current non-key-shape
 record scorer, while symbolic `key-shape` remains an upper-bound diagnostic only.
 
-## Current h6 Handoff
+## h6-y Chunk-code Similarity Diagnostics
 
-h6-x is the current route-memory checkpoint. It is wired into the h7-b
-promotion gate and the h9 quick closure path. The live invariant remains:
+`h6-y` passes as chunk-code similarity diagnostics and closes the learned-code
+signature reranking probe as diagnostic-only.
+
+Entry points:
+
+```bash
+experiments/run_v06_route_memory_chunk_code_similarity.sh
+experiments/test_v06_route_memory_chunk_code_similarity.sh
+```
+
+The slice adds:
+
+```text
+--route-candidate-score span-route-code
+--route-candidate-score span-local-energy-route-code
+```
+
+`span-route-code` compares learned code signatures rather than raw key strings.
+`span-local-energy-route-code` adds that signature score to the existing
+`span-local-energy` score. On the weak route-code smoke, route-code signature
+collision remains high and the new scorer does not improve the local-energy
+chunk result:
+
+```text
+best_non_keyshape_scorer = span-local-energy
+local_energy_qacc = 0.706250
+local_energy_chunk_exact = 0.531250
+local_energy_coherent_wrong = 0.468750
+route_code_qacc = 0.587500
+route_code_chunk_exact = 0.281250
+local_energy_route_code_chunk_exact = 0.531250
+route_signature_collision_mean = 0.750000
+keyshape_chunk_gap = 0.406250
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Interpretation:
+learned route-code signatures are wired as a non-symbolic ranking diagnostic,
+but this weak-source regime has too much signature collision for code similarity
+to break the coherent wrong-key mode. The best current non-key-shape scorer is
+still plain `span-local-energy`.
+
+## h10-a Teacher-free Chunk-credit Ranker
+
+`h10-a` passes as the first teacher-free chunk-ranker smoke. It reuses the
+existing route-credit reward/slash loop and reads the candidate record span as a
+single unit. The new rankers are:
+
+```text
+--route-candidate-score span-chunk-credit
+--route-candidate-score span-local-energy-chunk-credit
+```
+
+Entry points:
+
+```bash
+experiments/run_v10_teacher_free_chunk_ranker.sh
+experiments/test_v10_teacher_free_chunk_ranker.sh
+experiments/test_v10_teacher_free_chunk_ranker_scale.sh
+```
+
+Smoke result:
+
+```text
+best_non_keyshape_scorer = span-chunk-credit
+local_energy_qacc = 0.700000
+local_energy_chunk_exact = 0.562500
+local_energy_coherent_wrong = 0.437500
+chunk_credit_qacc = 1.000000
+chunk_credit_chunk_exact = 1.000000
+chunk_credit_coherent_wrong = 0.000000
+local_energy_chunk_credit_chunk_exact = 1.000000
+route_credit_gap_mean = 0.800000
+route_credit_top1_mean = 1.000000
+chunk_credit_gap_mean = 0.800000
+chunk_credit_top1_mean = 1.000000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Standard scale result:
+
+```text
+groups = 2
+chunk_credit_qacc = 0.992188
+chunk_credit_chunk_exact = 0.960938
+chunk_credit_coherent_wrong = 0.000000
+local_energy_qacc = 0.512500
+local_energy_chunk_exact = 0.351562
+best_chunk_delta_vs_local_energy = 0.609375
+route_credit_gap_mean = 0.799219
+chunk_credit_top1_mean = 1.000000
+keyshape_chunk_gap = 0.000000
+```
+
+Interpretation:
+this is the first controlled positive chunk-ranker result after h6-x/h6-y. It
+does not use symbolic `key-shape` as the scorer and it preserves the
+value-bearing route-hint path. It is not yet default promotion: it must be
+scaled through key/seed/degradation/noisy/fallback regimes and then pass a new
+promotion gate.
+
+## h10-b Chunk-credit Abstain Policy
+
+`h10-b` passes as the first policy layer above h10-a. It deliberately separates
+chunk-credit readiness from default promotion.
+
+Entry points:
+
+```bash
+experiments/run_v10_chunk_credit_abstain_policy.sh
+experiments/test_v10_chunk_credit_abstain_policy.sh
+```
+
+Smoke result:
+
+```text
+guardrail_action = weak-hint-with-abstain
+default_promotion = 0
+diagnostic_only = 1
+weak_hint_or_abstain = 1
+chunk_credit_ready = 1
+source_safe = 1
+fallback_not_keyshape_only = 1
+joint_chunk_source_ready = 0
+joint_noisy_used = 1.000000
+joint_fallback_retry_exercised = 0
+distillation_ready = 0
+combined_ready = 0
+noisy_selection_clean = 1
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+chunk credit is strong enough in the controlled fixture, and the existing source
+gate is noisy-clean. The joint noisy gate now injects noisy wrong candidates and
+keeps them unselected, but fallback/retry is still unexercised on the successful
+chunk-credit path. The correct action is therefore weak-hint/abstain, not
+default promotion.
+
+## h10-c Joint Source and Distillation Gate
+
+`h10-c` adds two gates:
+
+- `run_v10_chunk_credit_source_robustness.sh` injects noisy candidates while
+  using the teacher-free chunk-credit scorer.
+- `run_v10_chunk_credit_distillation_gate.sh` decides whether chunk credit can
+  be distilled or promoted above the diagnostic policy layer.
+
+Entry points:
+
+```bash
+experiments/run_v10_chunk_credit_source_robustness.sh
+experiments/test_v10_chunk_credit_source_robustness.sh
+experiments/run_v10_chunk_credit_distillation_gate.sh
+experiments/test_v10_chunk_credit_distillation_gate.sh
+```
+
+Smoke result:
+
+```text
+best_joint_arm = chunk-credit-source-order
+joint_chunk_ready = 1
+joint_source_safe = 1
+noisy_clean = 1
+joint_noisy_used = 1.000000
+noisy_selected = 0.000000
+fallback_retry_exercised = 0
+joint_chunk_source_ready = 0
+distillation_ready = 0
+reason = fallback-retry-unexercised
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Interpretation:
+this is positive wrong-candidate evidence for chunk credit, but not fallback
+robustness. The current successful chunk-credit path keeps the correct candidate
+available and ranks it above injected noisy candidates, so fallback/retry does
+not fire. Distillation is blocked until a non-keyshape fallback/retry exercise
+is real.
+
+## Current Route-memory Handoff
+
+h10-a/b/c are the current route-memory checkpoint. h6-y remains diagnostic-only,
+h10-a/b/c are wired into the route-memory closure path, and h7-b still blocks
+default promotion until fallback/retry robustness evidence exists. The live
+invariant remains:
 
 ```text
 candidate value_pos -> value byte read -> proposal hint
 ```
 
-The next h6 slice should not claim chunk retrieval. It should instead reduce
-the coherent wrong-key and top1/recall gaps without using symbolic `key-shape`
-as the policy, while preserving the h6-p objective split:
+The next slice should force or implement non-keyshape fallback/retry exercise on
+the chunk-credit path, while preserving the h6-p objective split:
 
 ```text
 byte-qacc objective: optimize local-energy policy

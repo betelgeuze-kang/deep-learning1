@@ -92,6 +92,21 @@ bash "$ROOT_DIR/experiments/test_v06_route_memory_chunk_quality_diagnostics.sh"
 echo "goal: h6-chunk-local-scorers"
 bash "$ROOT_DIR/experiments/test_v06_route_memory_chunk_local_scorers.sh"
 
+echo "goal: h6-chunk-code-similarity"
+bash "$ROOT_DIR/experiments/test_v06_route_memory_chunk_code_similarity.sh"
+
+echo "goal: h10-teacher-free-chunk-ranker"
+bash "$ROOT_DIR/experiments/test_v10_teacher_free_chunk_ranker.sh"
+
+echo "goal: h10-chunk-credit-source-robustness"
+bash "$ROOT_DIR/experiments/test_v10_chunk_credit_source_robustness.sh"
+
+echo "goal: h10-chunk-credit-abstain-policy"
+bash "$ROOT_DIR/experiments/test_v10_chunk_credit_abstain_policy.sh"
+
+echo "goal: h10-chunk-credit-distillation-gate"
+bash "$ROOT_DIR/experiments/test_v10_chunk_credit_distillation_gate.sh"
+
 echo "goal: h6-wrong-candidate-robustness"
 bash "$ROOT_DIR/experiments/test_v06_route_memory_wrong_candidate_robustness.sh"
 
@@ -158,6 +173,21 @@ if [[ "$MODE" == "extended" ]]; then
 
   echo "goal: h6-chunk-local-scorers-standard"
   bash "$ROOT_DIR/experiments/run_v06_route_memory_chunk_local_energy_prefix.sh" >/dev/null
+
+  echo "goal: h6-chunk-code-similarity-standard"
+  bash "$ROOT_DIR/experiments/run_v06_route_memory_chunk_code_similarity.sh" >/dev/null
+
+  echo "goal: h10-teacher-free-chunk-ranker-standard"
+  bash "$ROOT_DIR/experiments/test_v10_teacher_free_chunk_ranker_scale.sh" >/dev/null
+
+  echo "goal: h10-chunk-credit-source-robustness-standard"
+  bash "$ROOT_DIR/experiments/run_v10_chunk_credit_source_robustness.sh" >/dev/null
+
+  echo "goal: h10-chunk-credit-abstain-policy-standard"
+  bash "$ROOT_DIR/experiments/run_v10_chunk_credit_abstain_policy.sh" >/dev/null
+
+  echo "goal: h10-chunk-credit-distillation-gate-standard"
+  bash "$ROOT_DIR/experiments/run_v10_chunk_credit_distillation_gate.sh" >/dev/null
 
   echo "goal: h6-wrong-candidate-robustness-standard"
   bash "$ROOT_DIR/experiments/run_v06_route_memory_wrong_candidate_robustness.sh" >/dev/null

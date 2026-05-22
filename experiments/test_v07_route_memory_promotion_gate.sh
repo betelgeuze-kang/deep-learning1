@@ -16,7 +16,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("adaptive_scale_safe chunk_local_safe chunk_local_best_scorer chunk_local_chunk_delta chunk_local_qacc_delta chunk_local_wrong_delta chunk_ready source_safe fallback_not_keyshape_only combined_ready abstain_action weak_hint_or_abstain default_promotion status routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("adaptive_scale_safe chunk_local_safe chunk_local_best_scorer chunk_local_chunk_delta chunk_local_qacc_delta chunk_local_wrong_delta chunk_code_safe chunk_code_best_scorer chunk_code_chunk_delta chunk_code_qacc_delta chunk_code_wrong_delta chunk_ready source_safe fallback_not_keyshape_only combined_ready abstain_action weak_hint_or_abstain default_promotion status routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing h7 promotion summary column: " required[i], 2)
     }
@@ -33,6 +33,15 @@ awk -F, '
         ($idx["chunk_local_qacc_delta"] + 0) < -0.020001 ||
         ($idx["chunk_local_wrong_delta"] + 0) > 0.000001) {
       die("chunk-local scorer should not leak unsafe deltas", 11)
+    }
+    if (($idx["chunk_code_safe"] + 0) != 1 ||
+        $idx["chunk_code_best_scorer"] == "") {
+      die("chunk code-similarity gate should be safe and populated", 12)
+    }
+    if (($idx["chunk_code_chunk_delta"] + 0) < -0.000001 ||
+        ($idx["chunk_code_qacc_delta"] + 0) < -0.050001 ||
+        ($idx["chunk_code_wrong_delta"] + 0) > 0.000001) {
+      die("chunk code-similarity scorer should not leak unsafe deltas", 13)
     }
     if (($idx["source_safe"] + 0) != 1 ||
         ($idx["fallback_not_keyshape_only"] + 0) != 1) {

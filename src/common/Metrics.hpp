@@ -202,6 +202,10 @@ struct EpochMetricsV02 {
     double route_credit_qacc = 0.0;
     double route_credit_learn_active = 0.0;
     double route_credit_apply_active = 0.0;
+    double route_chunk_credit_correct_mean = 0.0;
+    double route_chunk_credit_wrong_mean = 0.0;
+    double route_chunk_credit_gap = 0.0;
+    double route_chunk_credit_top1_rate = 0.0;
     double route_plasticity_ledger_size = 0.0;
     double route_plasticity_ledger_mean_abs_credit = 0.0;
     double route_source_credit_size = 0.0;
@@ -422,6 +426,8 @@ inline std::string v02_csv_header() {
            "route_credit_rewarded_rate,route_credit_slashed_rate,"
            "route_credit_top1_rate,route_credit_qacc,"
            "route_credit_learn_active,route_credit_apply_active,"
+           "route_chunk_credit_correct_mean,route_chunk_credit_wrong_mean,"
+           "route_chunk_credit_gap,route_chunk_credit_top1_rate,"
            "route_plasticity_ledger_size,route_plasticity_ledger_mean_abs_credit,"
            "route_source_credit_size,route_source_credit_apply_active,"
            "route_source_credit_override_rate,"
@@ -679,6 +685,10 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_credit_qacc << ','
         << metrics.route_credit_learn_active << ','
         << metrics.route_credit_apply_active << ','
+        << metrics.route_chunk_credit_correct_mean << ','
+        << metrics.route_chunk_credit_wrong_mean << ','
+        << metrics.route_chunk_credit_gap << ','
+        << metrics.route_chunk_credit_top1_rate << ','
         << metrics.route_plasticity_ledger_size << ','
         << metrics.route_plasticity_ledger_mean_abs_credit << ','
         << metrics.route_source_credit_size << ','

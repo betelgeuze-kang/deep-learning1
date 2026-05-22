@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-The current checkpoint is h6-x plus h7-b, v08 readiness, and h9-e quick
+The current checkpoint is h10-a/b/c plus h7-b, v08 readiness, and h9-e quick
 closure:
 
 ```text
@@ -14,6 +14,10 @@ h6-t: adaptive guardrail scale diagnostics pass as safe diagnostic-only.
 h6-u: chunk-quality diagnostics pass and expose coherent wrong-key/top1 gaps.
 h6-v/h6-w: wrong-candidate/fallback robustness gates pass diagnostic-only.
 h6-x: chunk-local scorer diagnostics keep plain span-local-energy as best current non-key-shape scorer.
+h6-y: chunk-code similarity diagnostics show learned route-code signature collision is too high to improve chunk ranking.
+h10-a: teacher-free chunk-credit ranker smoke breaks the coherent wrong-key mode in the controlled fixture.
+h10-b: chunk-credit abstain policy routes positive chunk credit to weak-hint/abstain, not default promotion.
+h10-c: joint noisy/distillation gate keeps promotion blocked because fallback/retry is unexercised on the successful chunk-credit path.
 h7-b: promotion gate blocks default route-memory promotion.
 v08: external benchmark readiness defers comparison.
 h9-e: quick GPU-backend extended boundary passes with HIP parity optional.
@@ -27,9 +31,8 @@ byte-qacc objective -> local-energy
 span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
-The next h6-style experiment should go beyond simple local scalar transforms:
-prefix, worst-offset, and margin variants do not shrink the coherent wrong-key
-gap beyond plain `span-local-energy`.
+The next h10-style experiment should force or implement non-keyshape
+fallback/retry exercise on the chunk-credit path before any promotion claim.
 
 ## h6 Span-first Guardrail
 
@@ -261,10 +264,171 @@ Expected:
 - symbolic `key-shape` remains an upper-bound diagnostic
 - `routing_trigger_rate = active_jump_rate = 0`
 
+## h6-y Chunk-code Similarity Diagnostics
+
+h6-y compares learned route-code signature similarity against plain local-energy
+chunk ranking.
+
+```bash
+experiments/run_v06_route_memory_chunk_code_similarity.sh
+experiments/test_v06_route_memory_chunk_code_similarity.sh
+```
+
+Smoke aggregate:
+
+```text
+best_non_keyshape_scorer = span-local-energy
+local_energy_qacc = 0.706250
+local_energy_chunk_exact = 0.531250
+route_code_qacc = 0.587500
+route_code_chunk_exact = 0.281250
+local_energy_route_code_chunk_exact = 0.531250
+route_signature_collision_mean = 0.750000
+keyshape_chunk_gap = 0.406250
+```
+
+Expected:
+
+- learned route-code signature scoring remains diagnostic-only unless it beats
+  plain `span-local-energy` without qacc leakage
+- high route signature collision explains why direct code similarity is not yet
+  a replacement for symbolic `key-shape`
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h10-a Teacher-free Chunk Ranker
+
+h10-a turns the existing route-credit reward/slash loop into a chunk-ranking
+signal by averaging candidate credit over the full candidate record span.
+The scorer does not use symbolic `key-shape`; it reorders candidates with
+`span-chunk-credit` or combines that signal with local energy via
+`span-local-energy-chunk-credit`.
+
+```bash
+experiments/run_v10_teacher_free_chunk_ranker.sh
+experiments/test_v10_teacher_free_chunk_ranker.sh
+experiments/test_v10_teacher_free_chunk_ranker_scale.sh
+```
+
+Smoke aggregate:
+
+```text
+best_non_keyshape_scorer = span-chunk-credit
+local_energy_qacc = 0.700000
+local_energy_chunk_exact = 0.562500
+chunk_credit_qacc = 1.000000
+chunk_credit_chunk_exact = 1.000000
+chunk_credit_coherent_wrong = 0.000000
+route_credit_gap_mean = 0.800000
+chunk_credit_gap_mean = 0.800000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Expected:
+
+- chunk credit must improve qacc/chunk exact over plain `span-local-energy`
+- coherent wrong-key must fall rather than merely preserving recall
+- credit gap and credit top1 metrics must show correct/wrong separation
+- this is a first positive chunk-ranker smoke, not default promotion until it
+  scales across degradation/noisy/fallback regimes
+
+Standard scale aggregate over 32/64-key arms:
+
+```text
+groups = 2
+chunk_credit_qacc = 0.992188
+chunk_credit_chunk_exact = 0.960938
+chunk_credit_coherent_wrong = 0.000000
+local_energy_qacc = 0.512500
+local_energy_chunk_exact = 0.351562
+route_credit_gap_mean = 0.799219
+chunk_credit_top1_mean = 1.000000
+keyshape_chunk_gap = 0.000000
+```
+
+## h10-b Chunk-credit Abstain Policy
+
+h10-b keeps the positive chunk-credit result from becoming a default promotion
+too early. The gate treats chunk credit as ready in the controlled fixture, but
+requires joint fallback/retry and distillation evidence before promotion.
+
+```bash
+experiments/run_v10_chunk_credit_abstain_policy.sh
+experiments/test_v10_chunk_credit_abstain_policy.sh
+```
+
+Smoke policy:
+
+```text
+guardrail_action = weak-hint-with-abstain
+default_promotion = 0
+diagnostic_only = 1
+weak_hint_or_abstain = 1
+chunk_credit_ready = 1
+source_safe = 1
+joint_chunk_source_ready = 0
+joint_noisy_used = 1.000000
+joint_fallback_retry_exercised = 0
+distillation_ready = 0
+combined_ready = 0
+noisy_selection_clean = 1
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Expected:
+
+- chunk-credit readiness alone is not enough for default promotion
+- noisy-clean evidence stays visible, but fallback/retry and distillation stay
+  blocked until they are actually exercised on the chunk-credit path
+- uncertain cases route to weak-hint/abstain
+
+## h10-c Joint Source and Distillation Gate
+
+h10-c adds the first joint source/noisy matrix above the teacher-free chunk
+ranker and a separate distillation gate. The current result is deliberately
+diagnostic-only: chunk-credit survives injected noisy wrong candidates without
+selecting them, but the successful chunk-credit path does not need fallback or
+retry, so no distillation/default claim is allowed.
+
+```bash
+experiments/run_v10_chunk_credit_source_robustness.sh
+experiments/test_v10_chunk_credit_source_robustness.sh
+experiments/run_v10_chunk_credit_distillation_gate.sh
+experiments/test_v10_chunk_credit_distillation_gate.sh
+```
+
+Smoke summary:
+
+```text
+best_joint_arm = chunk-credit-source-order
+chunk_credit_ready = 1
+joint_chunk_ready = 1
+joint_source_safe = 1
+noisy_clean = 1
+joint_noisy_used = 1.000000
+noisy_selected = 0.000000
+fallback_retry_exercised = 0
+joint_chunk_source_ready = 0
+distillation_ready = 0
+reason = fallback-retry-unexercised
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Expected:
+
+- injected noisy candidates must be present and not selected
+- chunk-credit must remain stronger than the local-energy baseline
+- fallback/retry must not be silently inferred from a path that never exercised it
+- distillation remains blocked until a non-keyshape fallback/retry arm is real
+
 ## h7-b Promotion Gate and v08 Readiness
 
-h7-b aggregates h6-t/u/v/w/x into a single promotion gate. v08 uses that gate to
-decide whether an external benchmark comparison is ready.
+h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a is wired into
+the route-memory closure as a later chunk-ranker smoke, but it is not yet a
+default-promotion input. v08 uses the h7-b gate to decide whether an external
+benchmark comparison is ready.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
@@ -279,6 +443,8 @@ Smoke result:
 h7-b:
   chunk_local_safe = 1
   chunk_local_best_scorer = span-local-energy
+  chunk_code_safe = 1
+  chunk_code_best_scorer = span-local-energy
   default_promotion = 0
   status = diagnostic-only
 

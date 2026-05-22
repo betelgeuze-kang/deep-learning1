@@ -21,6 +21,7 @@ SCALE_PREFIX="v06_route_memory_span_adaptive_guardrail_scale"
 ROBUST_PREFIX="v06_route_memory_wrong_candidate_robustness"
 ABSTAIN_PREFIX="v06_route_memory_abstain_retry_guardrail"
 LOCAL_PREFIX="v06_route_memory_chunk_local_energy_prefix"
+CODE_PREFIX="v06_route_memory_chunk_code_similarity"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v07_route_memory_promotion_gate_smoke"
@@ -28,6 +29,7 @@ if [[ "$MODE" == "smoke" ]]; then
   ROBUST_PREFIX="v06_route_memory_wrong_candidate_robustness_smoke"
   ABSTAIN_PREFIX="v06_route_memory_abstain_retry_guardrail_smoke"
   LOCAL_PREFIX="v06_route_memory_chunk_local_energy_prefix_smoke"
+  CODE_PREFIX="v06_route_memory_chunk_code_similarity_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -37,6 +39,7 @@ SCALE_AGG_CSV="$RESULTS_DIR/${SCALE_PREFIX}_aggregate.csv"
 ROBUST_SUMMARY_CSV="$RESULTS_DIR/${ROBUST_PREFIX}_summary.csv"
 ABSTAIN_POLICY_CSV="$RESULTS_DIR/${ABSTAIN_PREFIX}_policy.csv"
 LOCAL_AGG_CSV="$RESULTS_DIR/${LOCAL_PREFIX}_aggregate.csv"
+CODE_AGG_CSV="$RESULTS_DIR/${CODE_PREFIX}_aggregate.csv"
 
 if [[ ! -s "$SCALE_AGG_CSV" ]]; then
   "$ROOT_DIR/experiments/run_v06_route_memory_span_adaptive_guardrail_scale.sh" "${RUN_ARGS[@]}" >/dev/null
@@ -49,6 +52,9 @@ if [[ ! -s "$ABSTAIN_POLICY_CSV" ]]; then
 fi
 if [[ ! -s "$LOCAL_AGG_CSV" ]]; then
   "$ROOT_DIR/experiments/run_v06_route_memory_chunk_local_energy_prefix.sh" "${RUN_ARGS[@]}" >/dev/null
+fi
+if [[ ! -s "$CODE_AGG_CSV" ]]; then
+  "$ROOT_DIR/experiments/run_v06_route_memory_chunk_code_similarity.sh" "${RUN_ARGS[@]}" >/dev/null
 fi
 
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
@@ -114,8 +120,22 @@ awk -F, -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
     local_jump = $lidx["active_jump_rate_mean"] + 0
     next
   }
+  FILENAME == ARGV[5] {
+    if (FNR == 1) {
+      for (i = 1; i <= NF; i++) cidx[$i] = i
+      next
+    }
+    code_seen = 1
+    chunk_code_best_scorer = $cidx["best_non_keyshape_scorer"]
+    chunk_code_chunk_delta = $cidx["best_chunk_delta_vs_local_energy"] + 0
+    chunk_code_qacc_delta = $cidx["best_qacc_delta_vs_local_energy"] + 0
+    chunk_code_wrong_delta = $cidx["best_wrong_delta_vs_local_energy"] + 0
+    code_routing = $cidx["routing_trigger_rate_mean"] + 0
+    code_jump = $cidx["active_jump_rate_mean"] + 0
+    next
+  }
   END {
-    if (!scale_seen || !robust_seen || !abstain_seen || !local_seen) {
+    if (!scale_seen || !robust_seen || !abstain_seen || !local_seen || !code_seen) {
       print "missing promotion gate input" > "/dev/stderr"
       exit 2
     }
@@ -128,12 +148,20 @@ awk -F, -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
       chunk_local_wrong_delta <= 0.000001 &&
       local_routing == 0.0 &&
       local_jump == 0.0 ? 1 : 0
+    chunk_code_safe = chunk_code_best_scorer != "" &&
+      chunk_code_chunk_delta >= -0.000001 &&
+      chunk_code_qacc_delta >= -0.050001 &&
+      chunk_code_wrong_delta <= 0.000001 &&
+      code_routing == 0.0 &&
+      code_jump == 0.0 ? 1 : 0
     no_jump = scale_routing == 0.0 && scale_jump == 0.0 &&
       robust_routing == 0.0 && robust_jump == 0.0 &&
       abstain_routing == 0.0 && abstain_jump == 0.0 &&
-      local_routing == 0.0 && local_jump == 0.0 ? 1 : 0
+      local_routing == 0.0 && local_jump == 0.0 &&
+      code_routing == 0.0 && code_jump == 0.0 ? 1 : 0
     default_promotion = adaptive_scale_safe &&
       chunk_local_safe &&
+      chunk_code_safe &&
       chunk_ready &&
       source_safe &&
       fallback_not_keyshape_only &&
@@ -142,8 +170,8 @@ awk -F, -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
       no_jump ? 1 : 0
     status = default_promotion ? "promotion-candidate" : "diagnostic-only"
 
-    print "scale_groups,adaptive_scale_safe,scale_accept_rate,scale_sane_accept_rate,scale_bad_accept_rate,chunk_local_safe,chunk_local_best_scorer,chunk_local_chunk_delta,chunk_local_qacc_delta,chunk_local_wrong_delta,chunk_ready,source_safe,fallback_not_keyshape_only,combined_ready,abstain_action,weak_hint_or_abstain,default_promotion,status,routing_trigger_rate,active_jump_rate" > summary_csv
-    printf "%d,%d,%.6f,%.6f,%.6f,%d,%s,%.6f,%.6f,%.6f,%d,%d,%d,%d,%s,%d,%d,%s,%.6f,%.6f\n",
+    print "scale_groups,adaptive_scale_safe,scale_accept_rate,scale_sane_accept_rate,scale_bad_accept_rate,chunk_local_safe,chunk_local_best_scorer,chunk_local_chunk_delta,chunk_local_qacc_delta,chunk_local_wrong_delta,chunk_code_safe,chunk_code_best_scorer,chunk_code_chunk_delta,chunk_code_qacc_delta,chunk_code_wrong_delta,chunk_ready,source_safe,fallback_not_keyshape_only,combined_ready,abstain_action,weak_hint_or_abstain,default_promotion,status,routing_trigger_rate,active_jump_rate" > summary_csv
+    printf "%d,%d,%.6f,%.6f,%.6f,%d,%s,%.6f,%.6f,%.6f,%d,%s,%.6f,%.6f,%.6f,%d,%d,%d,%d,%s,%d,%d,%s,%.6f,%.6f\n",
       scale_groups,
       adaptive_scale_safe,
       scale_accept,
@@ -154,6 +182,11 @@ awk -F, -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
       chunk_local_chunk_delta,
       chunk_local_qacc_delta,
       chunk_local_wrong_delta,
+      chunk_code_safe,
+      chunk_code_best_scorer,
+      chunk_code_chunk_delta,
+      chunk_code_qacc_delta,
+      chunk_code_wrong_delta,
       chunk_ready,
       source_safe,
       fallback_not_keyshape_only,
@@ -162,8 +195,8 @@ awk -F, -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
       weak_hint_or_abstain,
       default_promotion,
       status,
-      scale_routing + robust_routing + abstain_routing + local_routing,
-      scale_jump + robust_jump + abstain_jump + local_jump >> summary_csv
+      scale_routing + robust_routing + abstain_routing + local_routing + code_routing,
+      scale_jump + robust_jump + abstain_jump + local_jump + code_jump >> summary_csv
 
     print "gate,status,reason" > decision_csv
     printf "adaptive-scale,%s,bad_accept_rate=%.6f\n",
@@ -177,6 +210,11 @@ awk -F, -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
       chunk_local_best_scorer,
       chunk_local_chunk_delta,
       chunk_local_wrong_delta >> decision_csv
+    printf "chunk-code-similarity,%s,best=%s chunk_delta=%.6f wrong_delta=%.6f\n",
+      chunk_code_safe ? "pass" : "blocked",
+      chunk_code_best_scorer,
+      chunk_code_chunk_delta,
+      chunk_code_wrong_delta >> decision_csv
     printf "source-credit,%s,source_safe=%d fallback_not_keyshape_only=%d\n",
       source_safe && fallback_not_keyshape_only ? "pass" : "blocked",
       source_safe,
@@ -188,7 +226,7 @@ awk -F, -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
       default_promotion ? "pass" : "blocked",
       status >> decision_csv
   }
-' "$SCALE_AGG_CSV" "$ROBUST_SUMMARY_CSV" "$ABSTAIN_POLICY_CSV" "$LOCAL_AGG_CSV"
+' "$SCALE_AGG_CSV" "$ROBUST_SUMMARY_CSV" "$ABSTAIN_POLICY_CSV" "$LOCAL_AGG_CSV" "$CODE_AGG_CSV"
 
 echo "summary: $SUMMARY_CSV"
 echo "decision: $DECISION_CSV"

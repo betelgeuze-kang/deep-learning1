@@ -298,6 +298,31 @@ double key_shape_score(const std::string& query_key, const std::string& record_k
     return score;
 }
 
+double byte_signature_shape_score(
+    const std::string& query_signature,
+    const std::string& record_signature) {
+    const auto max_len = static_cast<double>(
+        std::max<std::size_t>(
+            1U,
+            std::max(query_signature.size(), record_signature.size())));
+    const auto limit = std::min(query_signature.size(), record_signature.size());
+    int positional_matches = 0;
+    for (std::size_t index = 0; index < limit; ++index) {
+        if (query_signature[index] == record_signature[index]) {
+            ++positional_matches;
+        }
+    }
+    double score = query_signature.size() == record_signature.size() ? 1.0 : 0.0;
+    score += 2.0 * static_cast<double>(positional_matches) / max_len;
+    score += static_cast<double>(
+                 common_prefix_count(query_signature, record_signature)) /
+             max_len;
+    score += static_cast<double>(
+                 common_suffix_count(query_signature, record_signature)) /
+             max_len;
+    return score;
+}
+
 double nearest_rank_quantile(std::vector<double> values, double quantile) {
     if (values.empty()) {
         return 0.0;
@@ -538,6 +563,8 @@ void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
         route_credit_by_value_pos_.assign(static_cast<std::size_t>(params_.N), 0.0f);
     }
     route_value_positions_.clear();
+    route_value_position_starts_.assign(static_cast<std::size_t>(params_.N), -1);
+    route_value_position_lengths_.assign(static_cast<std::size_t>(params_.N), 0);
     route_value_position_keys_.assign(static_cast<std::size_t>(params_.N), {});
     route_hint_query_keys_.assign(static_cast<std::size_t>(params_.N), {});
     route_hint_candidate_keys_.assign(static_cast<std::size_t>(params_.N), {});
@@ -594,6 +621,10 @@ void GraphV02::begin_epoch(int epoch, const ByteDataset::Window& window) {
             const int value_pos = record.value_pos + span_offset;
             if (value_pos >= 0 && value_pos < params_.N) {
                 route_value_positions_.push_back(value_pos);
+                route_value_position_starts_[static_cast<std::size_t>(value_pos)] =
+                    record.value_pos;
+                route_value_position_lengths_[static_cast<std::size_t>(value_pos)] =
+                    value_len;
                 route_value_position_keys_[static_cast<std::size_t>(value_pos)] =
                     record.key;
             }
@@ -1202,9 +1233,13 @@ void GraphV02::validate_params() const {
         params_.route_candidate_score != "span-local-energy-prefix" &&
         params_.route_candidate_score != "span-local-energy-worst" &&
         params_.route_candidate_score != "span-local-margin" &&
-        params_.route_candidate_score != "span-local-margin-worst") {
+        params_.route_candidate_score != "span-local-margin-worst" &&
+        params_.route_candidate_score != "span-route-code" &&
+        params_.route_candidate_score != "span-local-energy-route-code" &&
+        params_.route_candidate_score != "span-chunk-credit" &&
+        params_.route_candidate_score != "span-local-energy-chunk-credit") {
         throw std::runtime_error(
-            "route-candidate-score must be one of: insertion, recency, value-vote, key-shape, span-prefix, span-key-support, span-local-energy, span-local-energy-prefix, span-local-energy-worst, span-local-margin, span-local-margin-worst");
+            "route-candidate-score must be one of: insertion, recency, value-vote, key-shape, span-prefix, span-key-support, span-local-energy, span-local-energy-prefix, span-local-energy-worst, span-local-margin, span-local-margin-worst, span-route-code, span-local-energy-route-code, span-chunk-credit, span-local-energy-chunk-credit");
     }
     if (params_.routing_source != "none" && params_.routing_source != "input-byte" &&
         params_.routing_source != "joint-code" && params_.routing_source != "state-code") {
@@ -2511,6 +2546,43 @@ float GraphV02::route_credit_for_candidate(int query_index, int value_pos) const
         return 0.0f;
     }
     return route_credit_by_value_pos_[static_cast<std::size_t>(value_pos)];
+}
+
+float GraphV02::route_chunk_credit_for_candidate(int query_index, int value_pos) const {
+    if (!route_credit_apply_active() || value_pos < 0 || value_pos >= params_.N) {
+        return 0.0f;
+    }
+    if (value_pos >= static_cast<int>(route_value_position_starts_.size()) ||
+        value_pos >= static_cast<int>(route_value_position_lengths_.size())) {
+        return route_credit_for_candidate(query_index, value_pos);
+    }
+
+    const int value_start =
+        route_value_position_starts_[static_cast<std::size_t>(value_pos)];
+    const int value_len =
+        route_value_position_lengths_[static_cast<std::size_t>(value_pos)];
+    if (value_start < 0 || value_len <= 0) {
+        return route_credit_for_candidate(query_index, value_pos);
+    }
+
+    const int span_offset = value_pos - value_start;
+    const int query_start = query_index - span_offset;
+    double credit_sum = 0.0;
+    int credit_count = 0;
+    for (int offset = 0; offset < value_len; ++offset) {
+        const int query_pos = query_start + offset;
+        const int record_pos = value_start + offset;
+        if (query_pos < 0 || query_pos >= params_.N ||
+            record_pos < 0 || record_pos >= params_.N) {
+            continue;
+        }
+        credit_sum += static_cast<double>(route_credit_for_candidate(query_pos, record_pos));
+        ++credit_count;
+    }
+    if (credit_count == 0) {
+        return route_credit_for_candidate(query_index, value_pos);
+    }
+    return static_cast<float>(credit_sum / static_cast<double>(credit_count));
 }
 
 float GraphV02::route_source_credit_for_candidate(int query_index, int value_pos) const {
@@ -3849,6 +3921,21 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
             [this, &query, span_offset](
                 const ByteDataset::KVRecord* lhs,
                 const ByteDataset::KVRecord* rhs) {
+                const std::string query_code_signature =
+                    route_code_key_hash_active()
+                        ? route_code_signature_for_key(query.key)
+                        : joint_code_signature_for_key(query.key);
+                const auto span_route_code_score =
+                    [this, &query_code_signature](
+                        const ByteDataset::KVRecord& record) {
+                        const std::string record_code_signature =
+                            route_code_key_hash_active()
+                                ? route_code_signature_for_key(record.key)
+                                : joint_code_signature_for_key(record.key);
+                        return byte_signature_shape_score(
+                            query_code_signature,
+                            record_code_signature);
+                    };
                 const auto span_local_energy_score =
                     [this, &query, span_offset](const ByteDataset::KVRecord& record) {
                         if (record.value_pos < 0 || record.value_len <= 0 ||
@@ -3960,6 +4047,16 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
                         }
                         return score_sum / static_cast<double>(scored_offsets);
                     };
+                const auto span_chunk_credit_score =
+                    [this, &query, span_offset](const ByteDataset::KVRecord& record) {
+                        const int candidate_pos =
+                            record_value_pos_at_span_offset(record, span_offset, params_.N);
+                        if (candidate_pos < 0) {
+                            return 0.0;
+                        }
+                        return static_cast<double>(
+                            route_chunk_credit_for_candidate(query.query_pos, candidate_pos));
+                    };
                 if (params_.route_candidate_score == "key-shape") {
                     const double lhs_score = key_shape_score(query.key, lhs->key);
                     const double rhs_score = key_shape_score(query.key, rhs->key);
@@ -4007,6 +4104,42 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
                 } else if (params_.route_candidate_score == "span-local-margin-worst") {
                     const double lhs_score = span_local_margin_score(*lhs, true);
                     const double rhs_score = span_local_margin_score(*rhs, true);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (params_.route_candidate_score == "span-route-code") {
+                    const double lhs_score = span_route_code_score(*lhs);
+                    const double rhs_score = span_route_code_score(*rhs);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (
+                    params_.route_candidate_score == "span-local-energy-route-code") {
+                    const double lhs_score =
+                        span_local_energy_score(*lhs) +
+                        0.5 * span_route_code_score(*lhs);
+                    const double rhs_score =
+                        span_local_energy_score(*rhs) +
+                        0.5 * span_route_code_score(*rhs);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (params_.route_candidate_score == "span-chunk-credit") {
+                    const double lhs_score = span_chunk_credit_score(*lhs);
+                    const double rhs_score = span_chunk_credit_score(*rhs);
+                    if (lhs_score != rhs_score) {
+                        return lhs_score > rhs_score;
+                    }
+                } else if (
+                    params_.route_candidate_score == "span-local-energy-chunk-credit") {
+                    const double lhs_score =
+                        span_local_energy_score(*lhs) +
+                        static_cast<double>(params_.route_credit_score_weight) *
+                            span_chunk_credit_score(*lhs);
+                    const double rhs_score =
+                        span_local_energy_score(*rhs) +
+                        static_cast<double>(params_.route_credit_score_weight) *
+                            span_chunk_credit_score(*rhs);
                     if (lhs_score != rhs_score) {
                         return lhs_score > rhs_score;
                     }
@@ -4949,6 +5082,12 @@ EpochMetricsV02 GraphV02::collect_metrics(
     double route_credit_top1_sum = 0.0;
     double route_credit_qacc_sum = 0.0;
     double route_credit_query_count = 0.0;
+    double route_chunk_credit_correct_sum = 0.0;
+    double route_chunk_credit_wrong_sum = 0.0;
+    double route_chunk_credit_correct_count = 0.0;
+    double route_chunk_credit_wrong_count = 0.0;
+    double route_chunk_credit_top1_sum = 0.0;
+    double route_chunk_credit_query_count = 0.0;
     double route_source_credit_primary_sum = 0.0;
     double route_source_credit_primary_count = 0.0;
     double route_source_credit_fallback_sum = 0.0;
@@ -5686,11 +5825,19 @@ EpochMetricsV02 GraphV02::collect_metrics(
                     route_credit_qacc_sum += query_hit;
                     int best_credit_pos = -1;
                     float best_credit = -std::numeric_limits<float>::infinity();
+                    int best_chunk_credit_pos = -1;
+                    float best_chunk_credit = -std::numeric_limits<float>::infinity();
+                    const int correct_pos =
+                        route_hint_correct_value_positions_.empty()
+                            ? -1
+                            : route_hint_correct_value_positions_[static_cast<std::size_t>(i)];
                     for (const int value_pos : credit_positions) {
                         if (value_pos < 0 || value_pos >= params_.N) {
                             continue;
                         }
                         const float credit = route_credit_for_candidate(i, value_pos);
+                        const float chunk_credit =
+                            route_chunk_credit_for_candidate(i, value_pos);
                         const auto value =
                             nodes_[static_cast<std::size_t>(value_pos)].input_byte;
                         route_credit_candidate_count += 1.0;
@@ -5711,11 +5858,32 @@ EpochMetricsV02 GraphV02::collect_metrics(
                             best_credit = credit;
                             best_credit_pos = value_pos;
                         }
+                        if (correct_pos >= 0) {
+                            if (value_pos == correct_pos) {
+                                route_chunk_credit_correct_sum +=
+                                    static_cast<double>(chunk_credit);
+                                route_chunk_credit_correct_count += 1.0;
+                            } else {
+                                route_chunk_credit_wrong_sum +=
+                                    static_cast<double>(chunk_credit);
+                                route_chunk_credit_wrong_count += 1.0;
+                            }
+                        }
+                        if (chunk_credit > best_chunk_credit) {
+                            best_chunk_credit = chunk_credit;
+                            best_chunk_credit_pos = value_pos;
+                        }
                     }
                     if (best_credit_pos >= 0 &&
                         nodes_[static_cast<std::size_t>(best_credit_pos)].input_byte ==
                             node.target_byte) {
                         route_credit_top1_sum += 1.0;
+                    }
+                    if (correct_pos >= 0) {
+                        route_chunk_credit_query_count += 1.0;
+                        if (best_chunk_credit_pos == correct_pos) {
+                            route_chunk_credit_top1_sum += 1.0;
+                        }
                     }
                 }
             }
@@ -6411,6 +6579,21 @@ EpochMetricsV02 GraphV02::collect_metrics(
         }
         metrics.route_credit_learn_active = route_credit_learn_active() ? 1.0 : 0.0;
         metrics.route_credit_apply_active = route_credit_apply_active() ? 1.0 : 0.0;
+        if (route_chunk_credit_correct_count > 0.0) {
+            metrics.route_chunk_credit_correct_mean =
+                route_chunk_credit_correct_sum / route_chunk_credit_correct_count;
+        }
+        if (route_chunk_credit_wrong_count > 0.0) {
+            metrics.route_chunk_credit_wrong_mean =
+                route_chunk_credit_wrong_sum / route_chunk_credit_wrong_count;
+        }
+        metrics.route_chunk_credit_gap =
+            metrics.route_chunk_credit_correct_mean -
+            metrics.route_chunk_credit_wrong_mean;
+        if (route_chunk_credit_query_count > 0.0) {
+            metrics.route_chunk_credit_top1_rate =
+                route_chunk_credit_top1_sum / route_chunk_credit_query_count;
+        }
         for (const auto& entry : route_source_credit_by_bucket_) {
             const bool is_primary =
                 entry.first.find("|source:primary-") != std::string::npos;
