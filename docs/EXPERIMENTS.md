@@ -3,8 +3,8 @@
 ## Current Stage
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i plus h7-b,
-v08-b/v08-c/v08-d/v08-e adapter/evidence/import/comparison/readiness, and h9-e
-quick closure:
+v08-b/v08-c/v08-d/v08-e adapter/evidence/import/comparison/readiness, h11-a
+prototype readiness/import, and h9-f quick closure:
 
 ```text
 h6-p: span-local-energy policy-scale diagnostics pass.
@@ -30,6 +30,9 @@ v08-b/v08-c/v08-d/v08-e/v08: external benchmark adapter/evidence schemas pass,
 a supplied evidence CSV can be imported and compared against baselines, while
 default source/result evidence remains blocked and publishable comparison is
 deferred.
+h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
+can reach diagnostic prototype readiness, while real prototype/publish stays
+blocked by promotion, benchmark, and GPU speed evidence gates.
 h9-f: quick GPU-backend boundary runs CPU numeric parity and keeps speedup claims deferred; HIP parity remains optional.
 ```
 
@@ -42,8 +45,9 @@ span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
 The next h10/v08-style experiment should connect a real external teacher-label
-source above the h10-i import contract and real benchmark source/result evidence through
-the v08-d/v08-e import/comparison path before any promotion claim or external
+source above the h10-i import contract, real benchmark source/result evidence
+through the v08-d/v08-e import/comparison path, and measured PC RouteLM/NLG
+prototype evidence through h11-a before any promotion claim or external
 benchmark comparison.
 
 ## h6 Span-first Guardrail
@@ -573,6 +577,57 @@ Expected:
 - supplied evidence CSV comparison can compute baseline deltas while staying
   unpublished before promotion
 - external benchmark comparison is deferred rather than overclaimed
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h11-a PC RouteLM Prototype Readiness
+
+h11-a opens the PC RouteLM / NLG prototype boundary without claiming that a
+real prototype exists. The contract requires supplied evidence for:
+
+- a quantized 3B-14B small generator adapter
+- CPU RAM or NVMe resident O(n) route memory
+- GPU candidate scoring
+- GPU decoder binding
+- an NLG smoke result URI
+- license and provenance evidence
+
+```bash
+experiments/run_v11_pc_routelm_prototype_readiness.sh
+experiments/test_v11_pc_routelm_prototype_readiness.sh
+experiments/test_v11_pc_routelm_prototype_import.sh
+```
+
+Default result:
+
+```text
+prototype_contract_schema_ready = 1
+component_evidence_ready = 0
+nlg_smoke_ready = 0
+pc_routelm_prototype_ready = 0
+publishable_pc_routelm_ready = 0
+action = pc-routelm-components-missing
+```
+
+Supplied component fixture:
+
+```text
+small_generator_adapter_ready = 1
+route_memory_residency_ready = 1
+candidate_scoring_ready = 1
+decoder_binding_ready = 1
+nlg_smoke_ready = 1
+component_evidence_ready = 1
+diagnostic_prototype_ready = 1
+pc_routelm_prototype_ready = 0
+publishable_pc_routelm_ready = 0
+action = diagnostic-prototype-only
+```
+
+Expected:
+
+- supplied component evidence can exercise the prototype contract
+- real PC RouteLM remains blocked until default promotion, external benchmark
+  comparison, and measured GPU speed evidence exist
 - `routing_trigger_rate = active_jump_rate = 0`
 
 ## v0.2-pre Locked Baseline

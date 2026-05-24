@@ -2,13 +2,14 @@
 
 ## Current Checkpoint
 
-As of h10-i plus v08-b/v08-c/v08-d/v08-e and the h7/h9 quick closures, the project should be read as:
+As of h10-i plus v08-b/v08-c/v08-d/v08-e, h11-a, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
 + value-bearing route-hint memory
 + candidate-quality guardrails
 + symbolic span route-memory diagnostics
++ PC RouteLM / NLG prototype readiness contract
 + optional HIP backend scaffold / parity instrumentation
 ```
 
@@ -122,12 +123,18 @@ Current closure:
 - `v08-e` adds baseline-vs-route-memory comparison deltas over supplied
   evidence. The supplied fixture is diagnostic-only and unpublished because
   default promotion remains blocked.
-- `h9-a/h9-b/h9-d/h9-e` add optional ROCm/HIP backend scaffolding:
+- `h11-a` opens the PC RouteLM / NLG prototype readiness gate. It can consume
+  supplied component evidence for a quantized 3B-14B generator, CPU RAM/NVMe
+  O(n) route memory, GPU candidate scoring, GPU decoder binding, and an NLG
+  smoke URI. The supplied fixture reaches diagnostic prototype readiness only;
+  real prototype/publish remains blocked by promotion, benchmark comparison,
+  and GPU speed evidence.
+- `h9-a/h9-b/h9-d/h9-e/h9-f` add optional ROCm/HIP backend scaffolding:
   `experiments/test_v09_gpu_backend_closure.sh`.
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i, h7-b,
-  v08-b/v08-c/v08-d/v08-e adapter/evidence/import/comparison/readiness, and
-  h9-e included in quick closure paths. HIP parity remains optional and
-  environment-dependent.
+  v08-b/v08-c/v08-d/v08-e adapter/evidence/import/comparison/readiness,
+  h11-a prototype readiness/import, and h9-f included in quick closure paths.
+  HIP parity remains optional and environment-dependent.
 
 Current next boundary:
 
@@ -138,6 +145,8 @@ Current next boundary:
   default promotion or external benchmark comparison.
 - Provide or connect real external benchmark sources/results through the
   v08-d/v08-e import/comparison path before any v0.8 comparison claim.
+- Provide a real PC RouteLM prototype above the h11-a contract before any NLG
+  or personal-PC LLM claim.
 - Any stronger claim must survive those matrices without using symbolic
   `key-shape` as the policy itself.
 
@@ -149,6 +158,7 @@ Still not solved:
 - source-credit robustness
 - external benchmark comparison
 - GPU acceleration proven
+- real natural language generation / PC RouteLM prototype
 - Transformer replacement
 
 ## Historical Execution Order

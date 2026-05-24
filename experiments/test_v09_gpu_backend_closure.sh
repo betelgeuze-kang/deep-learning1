@@ -46,6 +46,10 @@ run_check v08-external-benchmark-comparison-gate \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_comparison_gate.sh"
 run_check v08-external-benchmark-comparison-import \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_comparison_import.sh"
+run_check v11-pc-routelm-prototype-readiness \
+  "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_readiness.sh"
+run_check v11-pc-routelm-prototype-import \
+  "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_import.sh"
 
 if [[ "$MODE" == "extended" ]]; then
   run_check h9-hip-candidate-weight-parity \

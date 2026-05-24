@@ -68,6 +68,10 @@
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
   evidence remains no-claim with `gpu_speedup_claim=deferred`. HIP runtime
   parity remains optional and environment dependent.
+- h11-a PC RouteLM / NLG prototype readiness gate passed: default run is
+  contract-schema-ready but component-blocked; supplied component fixture can
+  reach diagnostic prototype readiness while real prototype/publish remains
+  blocked by promotion, benchmark, and speed-evidence gates.
 
 ## Key Metrics
 
@@ -282,6 +286,21 @@ v08-e supplied comparison fixture:
   route_memory_losses = 4
   route_memory_ties = 0
   action = diagnostic-comparison-only
+
+h11-a supplied prototype fixture:
+  prototype_contract_schema_ready = 1
+  small_generator_adapter_ready = 1
+  route_memory_residency_ready = 1
+  candidate_scoring_ready = 1
+  decoder_binding_ready = 1
+  nlg_smoke_ready = 1
+  component_evidence_ready = 1
+  diagnostic_prototype_ready = 1
+  pc_routelm_prototype_ready = 0
+  publishable_pc_routelm_ready = 0
+  action = diagnostic-prototype-only
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
 ```
 
 ## Verification
@@ -356,6 +375,10 @@ v08-e supplied comparison fixture:
   --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
   `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash
   experiments/test_v09_gpu_backend_closure.sh`.
+- h11-a focused and wrapper verification passed: `bash
+  experiments/test_v11_pc_routelm_prototype_readiness.sh`, `bash
+  experiments/test_v11_pc_routelm_prototype_import.sh`, and `bash
+  experiments/test_v09_gpu_backend_closure.sh`.
 - Focused v08-b verification passed: `bash -n experiments/*.sh`, `bash
   experiments/test_v08_external_benchmark_adapter.sh`, `bash
   experiments/test_v08_external_benchmark_readiness.sh`, and `git diff
@@ -378,8 +401,10 @@ v08-e supplied comparison fixture:
 - NOT teacher-distilled chunk retrieval solved.
 - NOT wrong-candidate/fallback robustness solved beyond the h10-d forced smoke.
 - NOT long-context retrieval solved.
-- Current gate explicitly blocks default promotion and external comparison.
+- Current gate explicitly blocks default promotion, external comparison, and
+  publishable PC RouteLM / NLG prototype claims.
 - Active next loop: connect a real external teacher-label source above the
   h10-i import contract, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence through the v08-d/v08-e import/comparison path, then revisit
-  external benchmark readiness and h11 PC RouteLM prototype design.
+  evidence through the v08-d/v08-e import/comparison path, add measured GPU
+  speed evidence, then replace the h11-a fixture with a real local PC RouteLM
+  prototype smoke.

@@ -165,10 +165,13 @@ wrong-candidate robustness solved: no
 fallback robustness solved: no
 source-credit robustness solved: no
 external benchmark solved: no
+real natural language generation solved: no
+PC RouteLM prototype solved: no
 ```
 
-The next research boundary after h10-i/v08-b/v08-c/v08-d/v08-e is real external teacher-label source
-evidence plus real external benchmark source/result evidence:
+The next research boundary after h10-i/v08-b/v08-c/v08-d/v08-e/h11-a is real external teacher-label source
+evidence plus real external benchmark source/result evidence and real PC RouteLM
+prototype evidence:
 the teacher-free chunk-credit ranker already survives injected noisy wrong
 candidates, forced fallback/retry now recovers through raw retry without noisy
 selection, the label schema is defined, local collection is ready, local
@@ -177,7 +180,9 @@ supplied-label import path exists.
 The benchmark adapter/evidence schemas, supplied-CSV import path, and
 comparison gate now cover RULER, LongBench, codebase retrieval, and real
 document QA, but the default run has no real dataset/result/baseline/license
-evidence yet. Until external-label and benchmark evidence exist, the current
+evidence yet. h11-a adds a PC RouteLM / NLG component contract and supplied
+fixture import, but no real generator/route-memory NLG smoke exists yet. Until
+external-label, benchmark, speed, and prototype evidence exist, the current
 default policy stays diagnostic-only and routes uncertain cases to
 weak-hint/abstain.
 
