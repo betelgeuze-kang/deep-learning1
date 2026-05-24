@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-i plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h, h11-a, and the h7/h9 quick closures, the project should be read as:
+As of h10-i plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i, h11-a, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -134,6 +134,9 @@ Current closure:
 - `v08-h` adds benchmark authenticity and evaluator contract evidence. Supplied
   local fixtures can pass identity/canonical URI/evaluator hash/metric checks,
   but still block as `external-benchmark-execution-missing`.
+- `v08-i` adds evaluator execution/output artifact evidence. Supplied local
+  fixtures can pass output/log hash and metric-output checks, but still block
+  as `external-benchmark-attestation-missing`.
 - `h11-a` opens the PC RouteLM / NLG prototype readiness gate. It can consume
   supplied component evidence for a quantized 3B-14B generator, CPU RAM/NVMe
   O(n) route memory, GPU candidate scoring, GPU decoder binding, and an NLG
@@ -143,7 +146,7 @@ Current closure:
 - `h9-a/h9-b/h9-d/h9-e/h9-f` add optional ROCm/HIP backend scaffolding:
   `experiments/test_v09_gpu_backend_closure.sh`.
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i, h7-b,
-  v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/readiness,
+  v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/readiness,
   h11-a prototype readiness/import, and h9-f included in quick closure paths.
   HIP parity remains optional and environment-dependent.
 
@@ -155,9 +158,9 @@ Current next boundary:
   next blocker is real source evidence before any
   default promotion or external benchmark comparison.
 - Provide or connect real external benchmark sources/results through the
-  v08-d/v08-e/v08-f/v08-g/v08-h
-  import/comparison/real-evidence/artifact-verifier/authenticity path, then add
-  benchmark execution/evaluator-output evidence before any v0.8 comparison
+  v08-d/v08-e/v08-f/v08-g/v08-h/v08-i
+  import/comparison/real-evidence/artifact-verifier/authenticity/execution
+  path, then add independent external attestation before any v0.8 comparison
   claim.
 - Provide a real PC RouteLM prototype above the h11-a contract before any NLG
   or personal-PC LLM claim.
