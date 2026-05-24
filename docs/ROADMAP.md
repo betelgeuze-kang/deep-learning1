@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-h plus v08-b/v08-c/v08-d/v08-e and the h7/h9 quick closures, the project should be read as:
+As of h10-i plus v08-b/v08-c/v08-d/v08-e and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -99,6 +99,10 @@ Current closure:
   external teacher-label ingestion remains blocked.
 - `h10-h` adds the external teacher-label ingestion schema contract. The schema
   passes, but `external_label_source_ready=0` keeps distillation diagnostic-only.
+- `h10-i` adds a supplied external teacher-label CSV import contract. The
+  fixture can mark `teacher_external_label_source_ready=1`,
+  `teacher_external_labels_ready=1`, and `distillation_ready=1`, but
+  `default_promotion=0` remains in force.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
 - `h7-b` adds the route-memory promotion gate and keeps default promotion
@@ -120,17 +124,17 @@ Current closure:
   default promotion remains blocked.
 - `h9-a/h9-b/h9-d/h9-e` add optional ROCm/HIP backend scaffolding:
   `experiments/test_v09_gpu_backend_closure.sh`.
-- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h, h7-b,
+- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i, h7-b,
   v08-b/v08-c/v08-d/v08-e adapter/evidence/import/comparison/readiness, and
   h9-e included in quick closure paths. HIP parity remains optional and
   environment-dependent.
 
 Current next boundary:
 
-- Provide or connect a real external teacher-label source above the h10-h schema
+- Provide or connect a real external teacher-label source above the h10-i import
   contract. The local contract, local collection harness, local distilled-rule
-  learner, and external ingestion schema are now present; the next blocker is
-  source evidence before any
+  learner, external ingestion schema, and supplied CSV path are now present; the
+  next blocker is real source evidence before any
   default promotion or external benchmark comparison.
 - Provide or connect real external benchmark sources/results through the
   v08-d/v08-e import/comparison path before any v0.8 comparison claim.
@@ -167,7 +171,7 @@ Status update:
 - step 9 split into two findings: active jump-neighbor replacement remains
   no-go, while value-bearing route hints work under controlled fixtures.
 - the current next research boundary is a real external teacher-label source
-  above the h10-h schema contract, not topology replacement.
+  above the h10-i import contract, not topology replacement.
 - GPU work is backend/parity instrumentation only. CPU remains canonical until
   a complete ROCm/HIP install proves fixture parity.
 

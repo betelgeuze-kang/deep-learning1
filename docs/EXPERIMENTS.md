@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-The current checkpoint is h10-a/b/c/d/e/f/g/h plus h7-b,
+The current checkpoint is h10-a/b/c/d/e/f/g/h/i plus h7-b,
 v08-b/v08-c/v08-d/v08-e adapter/evidence/import/comparison/readiness, and h9-e
 quick closure:
 
@@ -23,7 +23,8 @@ h10-d: fallback/retry exercise forces primary-candidate corruption and shows raw
 h10-e: teacher-label contract covers correct/wrong/near-miss/missing/abstain grounded-span labels, while external collection/training remains blocked.
 h10-f: local teacher-label collection harness passes, while external labels/training remains blocked.
 h10-g: local distilled-rule learner fits the h10-f labels, while external label ingestion remains blocked.
-h10-h: external teacher-label ingestion schema passes, while external source remains blocked.
+h10-h: external teacher-label ingestion schema passes, while default external source remains blocked.
+h10-i: supplied external teacher-label CSV import passes and can raise the distillation gate to diagnostic candidate without default promotion.
 h7-b: promotion gate blocks default route-memory promotion.
 v08-b/v08-c/v08-d/v08-e/v08: external benchmark adapter/evidence schemas pass,
 a supplied evidence CSV can be imported and compared against baselines, while
@@ -41,7 +42,7 @@ span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
 The next h10/v08-style experiment should connect a real external teacher-label
-source above the h10-h schema and real benchmark source/result evidence through
+source above the h10-i import contract and real benchmark source/result evidence through
 the v08-d/v08-e import/comparison path before any promotion claim or external
 benchmark comparison.
 
@@ -394,7 +395,7 @@ Expected:
   blocked until they are actually exercised on the chunk-credit path
 - uncertain cases route to weak-hint/abstain
 
-## h10-c/d/e/f/g/h Joint Source, Fallback, and Teacher Gates
+## h10-c/d/e/f/g/h/i Joint Source, Fallback, and Teacher Gates
 
 h10-c adds the first joint source/noisy matrix above the teacher-free chunk
 ranker and a separate distillation gate. h10-d adds the missing forced
@@ -403,10 +404,13 @@ the retry path to recover from raw-key evidence without selecting noisy sources.
 h10-e adds the teacher-label contract for distillation labels. h10-f adds the
 local teacher-label collection harness. h10-g fits a local distilled-rule
 learner over those labels. h10-h defines the external teacher-label ingestion
-schema. The current result is deliberately diagnostic-only: noisy wrong
-candidates are not selected, fallback/retry is now exercised, local collection
-is ready, local distillation training/eval is ready, and external ingestion
-schema is ready, but no external teacher-label source exists.
+schema. h10-i adds a supplied external teacher-label CSV import path. The
+default result is deliberately diagnostic-only: noisy wrong candidates are not
+selected, fallback/retry is now exercised, local collection is ready, local
+distillation training/eval is ready, and external ingestion schema is ready,
+but no default external teacher-label source exists. With the supplied fixture,
+the import contract marks external labels ready and the distillation gate
+becomes a diagnostic candidate, still with `default_promotion=0`.
 
 ```bash
 experiments/run_v10_chunk_credit_source_robustness.sh
@@ -421,6 +425,7 @@ experiments/run_v10_teacher_distillation_learner.sh
 experiments/test_v10_teacher_distillation_learner.sh
 experiments/run_v10_teacher_external_label_ingestion.sh
 experiments/test_v10_teacher_external_label_ingestion.sh
+experiments/test_v10_teacher_external_label_import.sh
 experiments/run_v10_chunk_credit_distillation_gate.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 ```
@@ -460,6 +465,24 @@ routing_trigger_rate = 0.000000
 active_jump_rate = 0.000000
 ```
 
+Supplied external-label fixture:
+
+```text
+external_label_source_ready = 1
+teacher_external_labels_ready = 1
+label_source = provided-external-csv
+ingestion_mode = provided-csv
+external_label_rows = 5
+correct_labels = 1
+wrong_labels = 1
+near_miss_labels = 1
+missing_query_labels = 1
+abstain_labels = 1
+distillation_ready = 1
+status = distillation-candidate
+default_promotion = 0
+```
+
 Expected:
 
 - injected noisy candidates must be present and not selected
@@ -471,12 +494,16 @@ Expected:
 - local teacher-label collection must pass without claiming external labels
 - local teacher-distillation training/eval must pass without claiming external
   labels
-- external teacher-label ingestion schema must pass without claiming a source
-- distillation remains blocked until external-label source evidence exists
+- default external teacher-label ingestion schema must pass without claiming a
+  source
+- supplied external labels must make the source/labels ready without enabling
+  default promotion
+- default distillation remains blocked until real external-label source evidence
+  exists
 
 ## h7-b Promotion Gate and v08 Readiness
 
-h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h are
+h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i are
 wired into the route-memory closure as later chunk-ranking/source/fallback
 smokes, but they are not yet default-promotion inputs. v08 uses the h7-b gate
 to decide whether an external benchmark comparison is ready. v08-b adds the

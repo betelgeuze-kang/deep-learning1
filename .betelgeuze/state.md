@@ -42,6 +42,10 @@
 - h10-h external teacher-label ingestion schema passed:
   `teacher_external_schema_ready=1`, `teacher_external_label_source_ready=0`;
   distillation remains diagnostic-only until a real external source is ready.
+- h10-i supplied external teacher-label import passed:
+  fixture CSV raises `teacher_external_label_source_ready=1`,
+  `teacher_external_labels_ready=1`, and `distillation_ready=1` as
+  `status=distillation-candidate`, while `default_promotion=0` remains.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -189,7 +193,7 @@ h10-b chunk-credit abstain policy smoke:
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
-h10-c/h10-d/h10-e/h10-f/h10-g/h10-h joint source/distillation smoke:
+h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i joint source/distillation smoke:
   best_joint_arm = chunk-credit-source-order
   fallback_exercise_arm = raw-retry
   joint_chunk_ready = 1
@@ -224,6 +228,27 @@ h10-c/h10-d/h10-e/h10-f/h10-g/h10-h joint source/distillation smoke:
   teacher_abstain_labels = 1
   distillation_ready = 0
   reason = teacher-external-label-source-missing
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+h10-i supplied external-label import fixture:
+  external_label_rows = 5
+  source_uri_rows = 5
+  teacher_id_rows = 5
+  confidence_rows = 5
+  provenance_rows = 5
+  license_rows = 5
+  correct_labels = 1
+  wrong_labels = 1
+  near_miss_labels = 1
+  missing_query_labels = 1
+  abstain_labels = 1
+  teacher_external_label_source_ready = 1
+  teacher_external_labels_ready = 1
+  teacher_external_label_source = provided-external-csv
+  distillation_ready = 1
+  status = distillation-candidate
+  default_promotion = 0
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
@@ -318,6 +343,13 @@ v08-e supplied comparison fixture:
 - h10-h backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, with HIP runtime parity still
   optional.
+- h10-i focused gates passed: `bash
+  experiments/test_v10_teacher_external_label_ingestion.sh`, `bash
+  experiments/test_v10_teacher_external_label_import.sh`, and `bash
+  experiments/test_v10_chunk_credit_distillation_gate.sh`.
+- h10-i backend wrapper verification passed: `bash
+  experiments/test_v09_gpu_backend_closure.sh`, confirming h7 route-memory
+  closure plus h10-i import and v08-e comparison in h9 quick closure.
 - Focused v08-b verification passed: `bash -n experiments/*.sh`, `bash
   experiments/test_v08_external_benchmark_adapter.sh`, `bash
   experiments/test_v08_external_benchmark_readiness.sh`, and `git diff
@@ -342,6 +374,6 @@ v08-e supplied comparison fixture:
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion and external comparison.
 - Active next loop: connect a real external teacher-label source above the
-  h10-h schema, connect real RULER/LongBench/codebase/doc-QA source and result
+  h10-i import contract, connect real RULER/LongBench/codebase/doc-QA source and result
   evidence through the v08-d/v08-e import/comparison path, then revisit
   external benchmark readiness and h11 PC RouteLM prototype design.

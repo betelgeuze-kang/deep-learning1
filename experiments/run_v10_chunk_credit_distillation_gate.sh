@@ -67,9 +67,7 @@ fi
 if [[ ! -s "$TRAINING_SUMMARY_CSV" ]]; then
   "$ROOT_DIR/experiments/run_v10_teacher_distillation_learner.sh" "${RUN_ARGS[@]}" >/dev/null
 fi
-if [[ ! -s "$EXTERNAL_SUMMARY_CSV" ]]; then
-  "$ROOT_DIR/experiments/run_v10_teacher_external_label_ingestion.sh" "${RUN_ARGS[@]}" >/dev/null
-fi
+"$ROOT_DIR/experiments/run_v10_teacher_external_label_ingestion.sh" "${RUN_ARGS[@]}" >/dev/null
 
 awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_csv="$FALLBACK_AGG_CSV" -v contract_csv="$CONTRACT_SUMMARY_CSV" -v collection_csv="$COLLECTION_SUMMARY_CSV" -v training_csv="$TRAINING_SUMMARY_CSV" -v external_csv="$EXTERNAL_SUMMARY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
   function die(message, code) {

@@ -62,6 +62,10 @@ experiments/test_v10_chunk_credit_source_robustness.sh
 experiments/test_v10_chunk_credit_fallback_retry_exercise.sh
 experiments/test_v10_chunk_credit_abstain_policy.sh
 experiments/test_v10_teacher_label_contract.sh
+experiments/test_v10_teacher_label_collection_harness.sh
+experiments/test_v10_teacher_distillation_learner.sh
+experiments/test_v10_teacher_external_label_ingestion.sh
+experiments/test_v10_teacher_external_label_import.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 experiments/test_v06_route_memory_wrong_candidate_robustness.sh
 experiments/test_v06_route_memory_abstain_retry_guardrail.sh
@@ -76,7 +80,7 @@ experiments/test_v07_goal_route_memory_closure.sh --extended
 
 also runs the extended h5 route-quality closure and the standard h6
 exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale/span-first-guardrail/span-first-guardrail-degradation/adaptive-guardrail
-span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-fallback-retry-exercise/chunk-credit-abstain-policy/teacher-label-contract/teacher-label-collection-harness/teacher-distillation-learner/teacher-external-label-ingestion/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
+span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-fallback-retry-exercise/chunk-credit-abstain-policy/teacher-label-contract/teacher-label-collection-harness/teacher-distillation-learner/teacher-external-label-ingestion/teacher-external-label-import/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
 runners.
 
 ## Current Closed Scope
@@ -140,9 +144,10 @@ route-memory:
   h10-e teacher-label contract covers correct, wrong, near-miss, missing-query,
   abstain, and grounded-span labels
   h10-f local teacher-label collection harness marks local collection ready,
-  and h10-g local teacher-distillation learner marks local training/eval ready,
-  and h10-h external ingestion schema marks schema ready, while distillation
-  remains blocked by missing external source
+  h10-g local teacher-distillation learner marks local training/eval ready,
+  h10-h external ingestion schema marks schema ready, and h10-i supplied-label
+  import can raise distillation to a diagnostic candidate without default
+  promotion, while the default run remains blocked by missing external source
   wrong-candidate/fallback gates keep source retry noisy-clean but block
   combined readiness
   abstain/retry guardrails route the current policy to weak-hint/abstain
@@ -162,12 +167,13 @@ source-credit robustness solved: no
 external benchmark solved: no
 ```
 
-The next research boundary after h10-h/v08-b/v08-c/v08-d/v08-e is external teacher-label source
+The next research boundary after h10-i/v08-b/v08-c/v08-d/v08-e is real external teacher-label source
 evidence plus real external benchmark source/result evidence:
 the teacher-free chunk-credit ranker already survives injected noisy wrong
 candidates, forced fallback/retry now recovers through raw retry without noisy
 selection, the label schema is defined, local collection is ready, local
-distillation training/eval is ready, and external ingestion schema is ready.
+distillation training/eval is ready, external ingestion schema is ready, and a
+supplied-label import path exists.
 The benchmark adapter/evidence schemas, supplied-CSV import path, and
 comparison gate now cover RULER, LongBench, codebase retrieval, and real
 document QA, but the default run has no real dataset/result/baseline/license
