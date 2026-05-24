@@ -49,6 +49,10 @@
   codebase retrieval, and real document QA:
   `benchmark_adapter_ready=1`, `benchmark_families=4`, while source/result
   evidence remains blocked.
+- v08-c external benchmark evidence-ingestion schema passed for dataset,
+  license, baseline, result, evaluator, and provenance evidence:
+  `benchmark_evidence_schema_ready=1`, while source/result evidence remains
+  blocked.
 - h9-e extended backend boundary passed as CPU-canonical/static parity
   instrumentation; HIP runtime parity remains optional and environment
   dependent.
@@ -222,6 +226,7 @@ h7-b/v08:
   h7 status = diagnostic-only
   benchmark_families = 4
   benchmark_adapter_ready = 1
+  benchmark_evidence_schema_ready = 1
   external_benchmark_source_ready = 0
   external_benchmark_result_ready = 0
   external_benchmark_ready = 0
@@ -293,9 +298,12 @@ h7-b/v08:
   experiments/test_v08_external_benchmark_adapter.sh`, `bash
   experiments/test_v08_external_benchmark_readiness.sh`, and `git diff
   --check`.
-- v08-b backend wrapper verification passed: `bash
-  experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08 adapter
-  and readiness in h9 quick closure.
+- Focused v08-c verification passed: `bash
+  experiments/test_v08_external_benchmark_evidence_ingestion.sh` and `bash
+  experiments/test_v08_external_benchmark_readiness.sh`.
+- v08-b/v08-c backend wrapper verification passed: `bash
+  experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
+  adapter/evidence/readiness in h9 quick closure.
 
 ## Open Boundary
 
@@ -306,5 +314,5 @@ h7-b/v08:
 - Current gate explicitly blocks default promotion and external comparison.
 - Active next loop: connect a real external teacher-label source above the
   h10-h schema, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence above the v08-b adapter, then revisit external benchmark readiness
-  and h11 PC RouteLM prototype design.
+  evidence above the v08-b/v08-c schemas, then revisit external benchmark
+  readiness and h11 PC RouteLM prototype design.

@@ -35,6 +35,8 @@ run_check h5-route-quality-closure "$ROOT_DIR/experiments/test_v05_route_quality
 run_check h7-goal-closure "$ROOT_DIR/experiments/test_v07_goal_route_memory_closure.sh"
 run_check v08-external-benchmark-adapter \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_adapter.sh"
+run_check v08-external-benchmark-evidence-ingestion \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_evidence_ingestion.sh"
 run_check v08-external-benchmark-readiness \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_readiness.sh"
 
