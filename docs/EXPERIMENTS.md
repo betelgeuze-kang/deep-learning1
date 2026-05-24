@@ -3,8 +3,8 @@
 ## Current Stage
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i plus h7-b,
-v08-b/v08-c/v08-d/v08-e adapter/evidence/import/comparison/readiness, h11-a
-prototype readiness/import, and h9-f quick closure:
+v08-b/v08-c/v08-d/v08-e/v08-f adapter/evidence/import/comparison/real-evidence/readiness,
+h11-a prototype readiness/import, and h9-f quick closure:
 
 ```text
 h6-p: span-local-energy policy-scale diagnostics pass.
@@ -26,10 +26,10 @@ h10-g: local distilled-rule learner fits the h10-f labels, while external label 
 h10-h: external teacher-label ingestion schema passes, while default external source remains blocked.
 h10-i: supplied external teacher-label CSV import passes and can raise the distillation gate to diagnostic candidate without default promotion.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08-e/v08: external benchmark adapter/evidence schemas pass,
-a supplied evidence CSV can be imported and compared against baselines, while
-default source/result evidence remains blocked and publishable comparison is
-deferred.
+v08-b/v08-c/v08-d/v08-e/v08-f/v08: external benchmark adapter/evidence
+schemas pass, a supplied evidence CSV can be imported and compared against
+baselines, while placeholder evidence is blocked from counting as real
+benchmark evidence and publishable comparison is deferred.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, benchmark, and GPU speed evidence gates.
@@ -46,9 +46,9 @@ span-exact objective -> local-energy-hybrid in most tested groups
 
 The next h10/v08-style experiment should connect a real external teacher-label
 source above the h10-i import contract, real benchmark source/result evidence
-through the v08-d/v08-e import/comparison path, and measured PC RouteLM/NLG
-prototype evidence through h11-a before any promotion claim or external
-benchmark comparison.
+through the v08-d/v08-e/v08-f import/comparison/real-evidence path, and
+measured PC RouteLM/NLG prototype evidence through h11-a before any promotion
+claim or external benchmark comparison.
 
 ## h6 Span-first Guardrail
 
@@ -515,9 +515,11 @@ external benchmark adapter manifest for RULER, LongBench, codebase retrieval,
 and real document QA. v08-c adds the evidence-ingestion schema for dataset,
 license, baseline, result, evaluator, and provenance evidence. v08-d adds a
 `V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV` import path and a positive supplied-CSV
-fixture gate. v08-e adds baseline-vs-route-memory comparison deltas. The
-default path still validates schema/comparison coverage without claiming source
-or result evidence.
+fixture gate. v08-e adds baseline-vs-route-memory comparison deltas. v08-f
+separates supplied placeholder evidence from real benchmark evidence by
+requiring non-placeholder artifact URIs and `sha256:<64 hex>` provenance
+hashes before any real benchmark claim. The default path still validates
+schema/comparison coverage without claiming source or result evidence.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
@@ -530,6 +532,10 @@ experiments/test_v08_external_benchmark_evidence_import.sh
 experiments/run_v08_external_benchmark_comparison_gate.sh
 experiments/test_v08_external_benchmark_comparison_gate.sh
 experiments/test_v08_external_benchmark_comparison_import.sh
+experiments/run_v08_external_benchmark_real_evidence_gate.sh
+experiments/test_v08_external_benchmark_real_evidence_gate.sh
+experiments/test_v08_external_benchmark_real_evidence_placeholder.sh
+experiments/test_v08_external_benchmark_real_evidence_format.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -566,6 +572,35 @@ v08-e supplied CSV comparison fixture:
   publishable_comparison_ready = 0
   route_memory_losses = 4
   action = diagnostic-comparison-only
+
+v08-f default real-evidence gate:
+  real_evidence_format_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-real-evidence-missing
+
+v08-f supplied placeholder fixture:
+  evidence_source = provided-csv
+  external_benchmark_ready = 1
+  ready_rows = 4
+  real_dataset_uri_rows = 0
+  real_result_uri_rows = 0
+  source_hash_rows = 0
+  provenance_hash_rows = 0
+  real_evidence_format_ready = 0
+  real_external_benchmark_verified = 0
+  action = fixture-evidence-not-real-benchmark
+
+v08-f supplied real-format fixture:
+  evidence_source = provided-csv
+  external_benchmark_ready = 1
+  ready_rows = 4
+  real_dataset_uri_rows = 4
+  real_result_uri_rows = 4
+  source_hash_rows = 4
+  provenance_hash_rows = 4
+  real_evidence_format_ready = 1
+  real_external_benchmark_verified = 0
+  action = real-benchmark-verifier-missing
 ```
 
 Expected:
@@ -576,6 +611,9 @@ Expected:
   evidence fields are populated
 - supplied evidence CSV comparison can compute baseline deltas while staying
   unpublished before promotion
+- supplied placeholder evidence is rejected as real benchmark evidence until
+  artifact URIs, provenance hashes, and a verifier exist; real-format evidence
+  still blocks publishable claims until the verifier exists
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 

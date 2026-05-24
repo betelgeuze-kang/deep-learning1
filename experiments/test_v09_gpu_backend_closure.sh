@@ -46,6 +46,12 @@ run_check v08-external-benchmark-comparison-gate \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_comparison_gate.sh"
 run_check v08-external-benchmark-comparison-import \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_comparison_import.sh"
+run_check v08-external-benchmark-real-evidence \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_real_evidence_gate.sh"
+run_check v08-external-benchmark-real-evidence-placeholder \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_real_evidence_placeholder.sh"
+run_check v08-external-benchmark-real-evidence-format \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_real_evidence_format.sh"
 run_check v11-pc-routelm-prototype-readiness \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_readiness.sh"
 run_check v11-pc-routelm-prototype-import \

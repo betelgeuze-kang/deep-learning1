@@ -63,6 +63,9 @@
 - v08-e external benchmark comparison gate passed: supplied evidence can produce
   baseline-vs-route-memory deltas, while publishable comparison remains blocked
   before promotion.
+- v08-f external benchmark real-evidence gate passed: default evidence remains
+  real-evidence blocked, and the supplied placeholder fixture is explicitly not
+  counted as real benchmark evidence.
 - h9-f backend boundary passed as CPU-canonical executable parity
   instrumentation: CPU parity tool reports `max_abs_delta=0`,
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
@@ -287,6 +290,30 @@ v08-e supplied comparison fixture:
   route_memory_ties = 0
   action = diagnostic-comparison-only
 
+v08-f supplied placeholder real-evidence gate:
+  evidence_source = provided-csv
+  external_benchmark_ready = 1
+  ready_rows = 4
+  real_dataset_uri_rows = 0
+  real_result_uri_rows = 0
+  source_hash_rows = 0
+  provenance_hash_rows = 0
+  real_evidence_format_ready = 0
+  real_external_benchmark_verified = 0
+  action = fixture-evidence-not-real-benchmark
+
+v08-f supplied real-format gate:
+  evidence_source = provided-csv
+  external_benchmark_ready = 1
+  ready_rows = 4
+  real_dataset_uri_rows = 4
+  real_result_uri_rows = 4
+  source_hash_rows = 4
+  provenance_hash_rows = 4
+  real_evidence_format_ready = 1
+  real_external_benchmark_verified = 0
+  action = real-benchmark-verifier-missing
+
 h11-a supplied prototype fixture:
   prototype_contract_schema_ready = 1
   small_generator_adapter_ready = 1
@@ -391,9 +418,14 @@ h11-a supplied prototype fixture:
 - Focused v08-e verification passed: `bash
   experiments/test_v08_external_benchmark_comparison_gate.sh` and `bash
   experiments/test_v08_external_benchmark_comparison_import.sh`.
-- v08-b/v08-c/v08-d/v08-e backend wrapper verification passed: `bash
+- Focused v08-f verification passed: `bash
+  experiments/test_v08_external_benchmark_real_evidence_gate.sh`, `bash
+  experiments/test_v08_external_benchmark_real_evidence_placeholder.sh`, and
+  `bash experiments/test_v08_external_benchmark_real_evidence_format.sh`.
+- v08-b/v08-c/v08-d/v08-e/v08-f backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
-  adapter/evidence/import/comparison/readiness in h9 quick closure.
+  adapter/evidence/import/comparison/real-evidence/readiness in h9 quick
+  closure.
 
 ## Open Boundary
 
@@ -405,6 +437,6 @@ h11-a supplied prototype fixture:
   publishable PC RouteLM / NLG prototype claims.
 - Active next loop: connect a real external teacher-label source above the
   h10-i import contract, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence through the v08-d/v08-e import/comparison path, add measured GPU
-  speed evidence, then replace the h11-a fixture with a real local PC RouteLM
-  prototype smoke.
+  evidence through the v08-d/v08-e/v08-f import/comparison/real-evidence path,
+  add measured GPU speed evidence, then replace the h11-a fixture with a real
+  local PC RouteLM prototype smoke.
