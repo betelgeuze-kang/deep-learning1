@@ -21,11 +21,15 @@ cmake -S "$ROOT_DIR" -B "$BUILD_DIR" >/dev/null
 cmake --build "$BUILD_DIR" --target dmv02 hip_candidate_weight_parity -j2 >/dev/null
 printf 'cpu-and-parity-tool-build,pass\n' >>"$SUMMARY_CSV"
 
-rg -q 'proposal_max_abs_delta' "$ROOT_DIR/src/tools/hip_candidate_weight_parity.cpp"
-rg -q 'cpu_best' "$ROOT_DIR/src/tools/hip_candidate_weight_parity.cpp"
-rg -q 'hip_best' "$ROOT_DIR/src/tools/hip_candidate_weight_parity.cpp"
-rg -q 'final_stats\.hip_kernel_calls < 2' "$ROOT_DIR/src/tools/hip_candidate_weight_parity.cpp"
-printf 'proposal-score-parity-tool-boundary,pass\n' >>"$SUMMARY_CSV"
+PARITY_OUTPUT="$("$BUILD_DIR/hip_candidate_weight_parity" --backend cpu)"
+if [[ "$PARITY_OUTPUT" != *"requested_backend=cpu"* ||
+      "$PARITY_OUTPUT" != *"backend_active=0"* ||
+      "$PARITY_OUTPUT" != *"hip_kernel_calls=0"* ||
+      "$PARITY_OUTPUT" != *"hip_fallback_count=0"* ]]; then
+  echo "unexpected CPU parity-tool output: $PARITY_OUTPUT" >&2
+  exit 1
+fi
+printf 'cpu-numeric-parity-tool-run,pass\n' >>"$SUMMARY_CSV"
 
 rg -q 'route_quality_candidate_weight_factor_mean' "$ROOT_DIR/experiments/test_v09_gpu_backend_candidate_weight_parity.sh"
 rg -q 'fixture_query_byte_acc' "$ROOT_DIR/experiments/test_v09_gpu_backend_candidate_weight_parity.sh"

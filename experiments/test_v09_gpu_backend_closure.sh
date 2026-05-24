@@ -31,6 +31,7 @@ run_check build-dmv02 cmake --build "$BUILD_DIR" --target dmv02 -j2
 run_check h9-cpu-smoke "$ROOT_DIR/experiments/test_v09_gpu_backend_cpu_smoke.sh"
 run_check h9-nohip-error "$ROOT_DIR/experiments/test_v09_gpu_backend_nohip_error.sh"
 run_check h9-extended-boundary "$ROOT_DIR/experiments/test_v09_gpu_backend_extended_boundary.sh"
+run_check h9-speed-evidence "$ROOT_DIR/experiments/test_v09_gpu_backend_speed_evidence.sh"
 run_check h5-route-quality-closure "$ROOT_DIR/experiments/test_v05_route_quality_closure.sh"
 run_check h7-goal-closure "$ROOT_DIR/experiments/test_v07_goal_route_memory_closure.sh"
 run_check v08-external-benchmark-adapter \

@@ -22,9 +22,9 @@ route-memory goal closure:
 
 ```text
 h6-t/u/v/w route-memory diagnostics and h7-b promotion gates are wired into h7.
-h9 quick closure passes CPU default behavior, CPU-only HIP error handling, h9-e
-extended-boundary checks, h7, and v08-b/v08-c/v08-d/v08-e benchmark
-adapter/evidence/import/comparison/readiness.
+h9 quick closure passes CPU default behavior, CPU-only HIP error handling, h9-f
+CPU numeric parity and speed-evidence no-claim checks, h7, and
+v08-b/v08-c/v08-d/v08-e benchmark adapter/evidence/import/comparison/readiness.
 HIP parity remains optional and environment-dependent.
 ```
 
@@ -114,6 +114,7 @@ cmake --build build --target dmv02 -j2
 experiments/test_v09_gpu_backend_cpu_smoke.sh
 experiments/test_v09_gpu_backend_nohip_error.sh
 experiments/test_v09_gpu_backend_extended_boundary.sh
+experiments/test_v09_gpu_backend_speed_evidence.sh
 experiments/test_v05_route_quality_closure.sh
 experiments/test_v07_goal_route_memory_closure.sh
 experiments/test_v08_external_benchmark_adapter.sh
@@ -135,6 +136,20 @@ libraries are unavailable. On a usable ROCm/HIP install, it builds with
 `DLE_ENABLE_HIP=ON`, runs fixed synthetic candidate-weight and proposal-score
 parity checks, then compares a small route-quality fixture under CPU and HIP.
 
+CPU quick closure also runs the same parity tool in `--backend cpu` mode. This
+turns the previous static boundary check into an executable numeric check for
+candidate-weight factors and the diagnostic 16x16 proposal-score grid on
+CPU-only machines.
+
+Speed evidence is a separate no-overclaim gate:
+
+```bash
+experiments/test_v09_gpu_backend_speed_evidence.sh
+```
+
+It marks `speed_schema_ready=1`, but keeps `speed_evidence_ready=0` and
+`gpu_speedup_claim=deferred` until measured CPU/HIP timings exist.
+
 Closure entrypoint:
 
 ```bash
@@ -150,7 +165,7 @@ h9 is:
 
 ```text
 PASS as optional HIP backend scaffold / candidate-weight and proposal-score parity instrumentation,
-with h9-e extended-boundary checks in quick closure
+with h9-f executable CPU numeric parity and no-speedup-claim checks in quick closure
 ```
 
 Do not read this as:

@@ -63,9 +63,11 @@
 - v08-e external benchmark comparison gate passed: supplied evidence can produce
   baseline-vs-route-memory deltas, while publishable comparison remains blocked
   before promotion.
-- h9-e extended backend boundary passed as CPU-canonical/static parity
-  instrumentation; HIP runtime parity remains optional and environment
-  dependent.
+- h9-f backend boundary passed as CPU-canonical executable parity
+  instrumentation: CPU parity tool reports `max_abs_delta=0`,
+  `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
+  evidence remains no-claim with `gpu_speedup_claim=deferred`. HIP runtime
+  parity remains optional and environment dependent.
 
 ## Key Metrics
 
@@ -350,6 +352,10 @@ v08-e supplied comparison fixture:
 - h10-i backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 route-memory
   closure plus h10-i import and v08-e comparison in h9 quick closure.
+- h9-f focused and wrapper verification passed: `build/hip_candidate_weight_parity
+  --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
+  `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash
+  experiments/test_v09_gpu_backend_closure.sh`.
 - Focused v08-b verification passed: `bash -n experiments/*.sh`, `bash
   experiments/test_v08_external_benchmark_adapter.sh`, `bash
   experiments/test_v08_external_benchmark_readiness.sh`, and `git diff

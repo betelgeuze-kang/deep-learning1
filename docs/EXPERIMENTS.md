@@ -30,7 +30,7 @@ v08-b/v08-c/v08-d/v08-e/v08: external benchmark adapter/evidence schemas pass,
 a supplied evidence CSV can be imported and compared against baselines, while
 default source/result evidence remains blocked and publishable comparison is
 deferred.
-h9-e: quick GPU-backend extended boundary passes with HIP parity optional.
+h9-f: quick GPU-backend boundary runs CPU numeric parity and keeps speedup claims deferred; HIP parity remains optional.
 ```
 
 Read the current route-memory result as an objective split, not a solved
@@ -592,6 +592,8 @@ CPU-only checks:
 ```bash
 experiments/test_v09_gpu_backend_cpu_smoke.sh
 experiments/test_v09_gpu_backend_nohip_error.sh
+experiments/test_v09_gpu_backend_extended_boundary.sh
+experiments/test_v09_gpu_backend_speed_evidence.sh
 ```
 
 Optional HIP check:
@@ -611,6 +613,9 @@ Expected:
 
 - CPU builds remain unchanged.
 - CPU-only `--backend hip` fails clearly with a `DLE_ENABLE_HIP=ON` message.
+- CPU quick closure executes candidate-weight and proposal-score numeric parity
+  through the parity tool, not only static grep checks.
+- GPU speedup claims remain deferred until measured CPU/HIP timings exist.
 - HIP parity skips cleanly when ROCm/HIP is unavailable or incomplete.
 - When HIP is available, candidate-weight factors and diagnostic proposal
   scores match CPU within `1e-5`.

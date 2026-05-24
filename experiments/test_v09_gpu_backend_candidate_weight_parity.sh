@@ -29,7 +29,7 @@ if ! cmake --build "$BUILD_DIR" --target dmv02 hip_candidate_weight_parity -j2 >
   exit 0
 fi
 
-"$BUILD_DIR/hip_candidate_weight_parity" --hip-device "${HIP_DEVICE:-0}"
+"$BUILD_DIR/hip_candidate_weight_parity" --backend hip --hip-device "${HIP_DEVICE:-0}"
 
 value_for_index() {
   local index="$1"

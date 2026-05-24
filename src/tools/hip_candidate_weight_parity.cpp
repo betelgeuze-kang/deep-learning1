@@ -3,6 +3,7 @@
 #include <cmath>
 #include <exception>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include "backend/RouteQualityBackend.hpp"
@@ -10,19 +11,27 @@
 
 int main(int argc, char** argv) {
     try {
+        std::string backend = "cpu";
         int device = 0;
         for (int i = 1; i < argc; ++i) {
             const std::string arg = argv[i];
-            if (arg == "--hip-device" && i + 1 < argc) {
+            if (arg == "--backend" && i + 1 < argc) {
+                backend = argv[++i];
+            } else if (arg == "--hip-device" && i + 1 < argc) {
                 device = std::stoi(argv[++i]);
             } else {
-                std::cerr << "usage: hip_candidate_weight_parity [--hip-device <int>]\n";
+                std::cerr << "usage: hip_candidate_weight_parity "
+                             "[--backend cpu|hip] [--hip-device <int>]\n";
                 return 2;
             }
         }
+        if (backend != "cpu" && backend != "hip") {
+            std::cerr << "--backend must be one of: cpu, hip\n";
+            return 2;
+        }
 
         dle::V02PreParams params;
-        params.backend = "hip";
+        params.backend = backend;
         params.hip_device = device;
         params.route_quality_candidate_weight_beta = 8.0f;
         params.route_quality_candidate_weight_min = 0.5f;
@@ -32,7 +41,7 @@ int main(int argc, char** argv) {
         const std::vector<float> base_weights{
             0.0f, 0.25f, 0.5f, 1.0f, 1.75f, 2.5f, 4.0f, 8.0f};
         const float mean_base_weight = 1.75f;
-        std::vector<float> hip_factors(base_weights.size(), 0.0f);
+        std::vector<float> backend_factors(base_weights.size(), 0.0f);
         std::vector<float> cpu_factors(base_weights.size(), 0.0f);
 
         dle::route_quality_candidate_weight_factors(
@@ -40,7 +49,7 @@ int main(int argc, char** argv) {
             base_weights.data(),
             base_weights.size(),
             mean_base_weight,
-            hip_factors.data());
+            backend_factors.data());
         for (std::size_t i = 0; i < base_weights.size(); ++i) {
             cpu_factors[i] = dle::route_quality_candidate_weight_factor_cpu(
                 base_weights[i],
@@ -54,7 +63,7 @@ int main(int argc, char** argv) {
         for (std::size_t i = 0; i < base_weights.size(); ++i) {
             max_abs_delta = std::max(
                 max_abs_delta,
-                std::fabs(static_cast<double>(hip_factors[i] - cpu_factors[i])));
+                std::fabs(static_cast<double>(backend_factors[i] - cpu_factors[i])));
         }
         const auto stats = dle::numeric_backend_stats();
         std::array<float, 16> high_scores{};
@@ -72,7 +81,7 @@ int main(int argc, char** argv) {
                     static_cast<float>(((high * 17 + low * 11) % 9) - 4) * 0.05f;
             }
         }
-        std::array<float, 256> hip_scores{};
+        std::array<float, 256> backend_scores{};
         std::array<float, 256> cpu_scores{};
         dle::route_proposal_energy_scores(
             params,
@@ -81,7 +90,7 @@ int main(int argc, char** argv) {
             coupling_scores.data(),
             1.3f,
             0.4f,
-            hip_scores.data());
+            backend_scores.data());
         for (int high = 0; high < 16; ++high) {
             for (int low = 0; low < 16; ++low) {
                 const int idx = high * 16 + low;
@@ -95,33 +104,42 @@ int main(int argc, char** argv) {
             }
         }
         double proposal_max_abs_delta = 0.0;
-        int hip_best = 0;
+        int backend_best = 0;
         int cpu_best = 0;
-        for (std::size_t i = 0; i < hip_scores.size(); ++i) {
+        for (std::size_t i = 0; i < backend_scores.size(); ++i) {
             proposal_max_abs_delta = std::max(
                 proposal_max_abs_delta,
-                std::fabs(static_cast<double>(hip_scores[i] - cpu_scores[i])));
-            if (hip_scores[i] < hip_scores[static_cast<std::size_t>(hip_best)]) {
-                hip_best = static_cast<int>(i);
+                std::fabs(static_cast<double>(backend_scores[i] - cpu_scores[i])));
+            if (backend_scores[i] <
+                backend_scores[static_cast<std::size_t>(backend_best)]) {
+                backend_best = static_cast<int>(i);
             }
             if (cpu_scores[i] < cpu_scores[static_cast<std::size_t>(cpu_best)]) {
                 cpu_best = static_cast<int>(i);
             }
         }
         const auto final_stats = dle::numeric_backend_stats();
-        std::cout << "hip_enabled=" << (stats.hip_enabled ? 1 : 0)
+        std::cout << "requested_backend=" << backend
+                  << ",hip_enabled=" << (stats.hip_enabled ? 1 : 0)
                   << ",backend_active=" << (stats.backend_active ? 1 : 0)
                   << ",hip_kernel_calls=" << final_stats.hip_kernel_calls
                   << ",hip_fallback_count=" << final_stats.hip_fallback_count
                   << ",max_abs_delta=" << max_abs_delta
                   << ",proposal_max_abs_delta=" << proposal_max_abs_delta
                   << ",cpu_best=" << cpu_best
-                  << ",hip_best=" << hip_best << "\n";
+                  << ",backend_best=" << backend_best << "\n";
 
-        if (!stats.hip_enabled || !stats.backend_active ||
-            final_stats.hip_kernel_calls < 2 ||
-            final_stats.hip_fallback_count != 0 || max_abs_delta > 1e-5 ||
-            proposal_max_abs_delta > 1e-5 || cpu_best != hip_best) {
+        if (backend == "hip" &&
+            (!stats.hip_enabled || !stats.backend_active ||
+             final_stats.hip_kernel_calls < 2)) {
+            return 1;
+        }
+        if (backend == "cpu" &&
+            (stats.backend_active || final_stats.hip_kernel_calls != 0)) {
+            return 1;
+        }
+        if (final_stats.hip_fallback_count != 0 || max_abs_delta > 1e-5 ||
+            proposal_max_abs_delta > 1e-5 || cpu_best != backend_best) {
             return 1;
         }
         return 0;
