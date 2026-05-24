@@ -1368,8 +1368,9 @@ promotion.
 
 `h10-c` adds the joint noisy gate, h10-d adds the forced fallback/retry
 exercise, h10-e adds the teacher-label contract, h10-f adds the local
-teacher-label collection harness, and h10-g adds the local distilled-rule
-learner consumed by the distillation gate:
+teacher-label collection harness, h10-g adds the local distilled-rule learner,
+and h10-h adds the external ingestion schema contract consumed by the
+distillation gate:
 
 - `run_v10_chunk_credit_source_robustness.sh` injects noisy candidates while
   using the teacher-free chunk-credit scorer.
@@ -1383,6 +1384,8 @@ learner consumed by the distillation gate:
   blocked.
 - `run_v10_teacher_distillation_learner.sh` fits a local distilled-rule learner
   over the h10-f labels and keeps external-label readiness blocked.
+- `run_v10_teacher_external_label_ingestion.sh` defines the external
+  teacher-label ingestion manifest and keeps source readiness blocked.
 - `run_v10_chunk_credit_distillation_gate.sh` decides whether chunk credit can
   be distilled or promoted above the diagnostic policy layer.
 
@@ -1399,6 +1402,8 @@ experiments/run_v10_teacher_label_collection_harness.sh
 experiments/test_v10_teacher_label_collection_harness.sh
 experiments/run_v10_teacher_distillation_learner.sh
 experiments/test_v10_teacher_distillation_learner.sh
+experiments/run_v10_teacher_external_label_ingestion.sh
+experiments/test_v10_teacher_external_label_ingestion.sh
 experiments/run_v10_chunk_credit_distillation_gate.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 ```
@@ -1421,7 +1426,10 @@ fallback_retry_noisy_selected = 0.000000
 joint_chunk_source_ready = 0
 teacher_label_contract_ready = 1
 teacher_label_collection_ready = 1
+teacher_external_schema_ready = 1
+teacher_external_label_source_ready = 0
 teacher_external_labels_ready = 0
+teacher_external_label_source = external-teacher-pending
 teacher_distillation_training_ready = 1
 teacher_distillation_eval_ready = 1
 teacher_distillation_action_accuracy = 1.000000
@@ -1429,7 +1437,7 @@ teacher_learner_id = distilled-rule-v1
 teacher_grounded_span_coverage = 1.000000
 teacher_label_source = local-teacher-harness
 distillation_ready = 0
-reason = teacher-external-labels-missing
+reason = teacher-external-label-source-missing
 routing_trigger_rate = 0.000000
 active_jump_rate = 0.000000
 ```
@@ -1441,13 +1449,14 @@ primary path recovers through raw retry evidence and does not select noisy
 retry/source candidates. The contract covers correct, wrong, near-miss,
 missing-query, abstain, and grounded-span labels. The h10-f local collection
 harness now marks local supervision ready, and h10-g marks local
-distillation training/eval ready. Distillation is still blocked because
-external teacher-label ingestion is not ready.
+distillation training/eval ready. h10-h also marks the external ingestion schema
+ready. Distillation is still blocked because no external teacher-label source is
+ready.
 
 ## Current Route-memory Handoff
 
-h10-a/b/c/d/e/f/g are the current route-memory checkpoint. h6-y remains
-diagnostic-only, h10-a/b/c/d/e/f/g are wired into the route-memory closure path, and
+h10-a/b/c/d/e/f/g/h are the current route-memory checkpoint. h6-y remains
+diagnostic-only, h10-a/b/c/d/e/f/g/h are wired into the route-memory closure path, and
 h7-b still blocks default promotion until teacher-label distillation evidence
 exists. The live invariant remains:
 
@@ -1455,8 +1464,8 @@ exists. The live invariant remains:
 candidate value_pos -> value byte read -> proposal hint
 ```
 
-The next slice should ingest external teacher labels above the h10-g local
-learner while preserving the h6-p objective split:
+The next slice should connect a real external teacher-label source above the
+h10-h schema while preserving the h6-p objective split:
 
 ```text
 byte-qacc objective: optimize local-energy policy

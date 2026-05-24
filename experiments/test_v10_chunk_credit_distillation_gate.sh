@@ -17,7 +17,7 @@ awk -F, '
   NR == 1 {
     header_fields = NF
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("best_joint_arm fallback_exercise_arm guardrail_action chunk_credit_ready joint_chunk_ready source_safe joint_source_safe noisy_clean fallback_not_keyshape_only fallback_retry_exercised fallback_exercise_ready fallback_qacc_delta_vs_corrupt fallback_retry_used fallback_retry_success fallback_retry_raw_selected fallback_retry_noisy_selected fallback_noisy_selected joint_chunk_source_ready teacher_label_contract_ready teacher_label_collection_ready teacher_external_labels_ready teacher_distillation_training_ready teacher_distillation_eval_ready teacher_distillation_action_accuracy teacher_learner_id teacher_grounded_span_coverage teacher_label_source teacher_correct_labels teacher_wrong_labels teacher_near_miss_labels teacher_missing_query_labels teacher_abstain_labels policy_distillation_ready combined_ready distillation_ready default_promotion diagnostic_only weak_hint_or_abstain status reason routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("best_joint_arm fallback_exercise_arm guardrail_action chunk_credit_ready joint_chunk_ready source_safe joint_source_safe noisy_clean fallback_not_keyshape_only fallback_retry_exercised fallback_exercise_ready fallback_qacc_delta_vs_corrupt fallback_retry_used fallback_retry_success fallback_retry_raw_selected fallback_retry_noisy_selected fallback_noisy_selected joint_chunk_source_ready teacher_label_contract_ready teacher_label_collection_ready teacher_external_schema_ready teacher_external_label_source_ready teacher_external_labels_ready teacher_external_label_source teacher_distillation_training_ready teacher_distillation_eval_ready teacher_distillation_action_accuracy teacher_learner_id teacher_grounded_span_coverage teacher_label_source teacher_correct_labels teacher_wrong_labels teacher_near_miss_labels teacher_missing_query_labels teacher_abstain_labels policy_distillation_ready combined_ready distillation_ready default_promotion diagnostic_only weak_hint_or_abstain status reason routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing h10 distillation summary column: " required[i], 2)
     }
@@ -50,7 +50,10 @@ awk -F, '
         ($idx["joint_chunk_source_ready"] + 0) != 0 ||
         ($idx["teacher_label_contract_ready"] + 0) != 1 ||
         ($idx["teacher_label_collection_ready"] + 0) != 1 ||
+        ($idx["teacher_external_schema_ready"] + 0) != 1 ||
+        ($idx["teacher_external_label_source_ready"] + 0) != 0 ||
         ($idx["teacher_external_labels_ready"] + 0) != 0 ||
+        $idx["teacher_external_label_source"] != "external-teacher-pending" ||
         ($idx["teacher_distillation_training_ready"] + 0) != 1 ||
         ($idx["teacher_distillation_eval_ready"] + 0) != 1 ||
         ($idx["teacher_distillation_action_accuracy"] + 0) != 1.0 ||
@@ -65,13 +68,13 @@ awk -F, '
         ($idx["policy_distillation_ready"] + 0) != 0 ||
         ($idx["combined_ready"] + 0) != 0 ||
         ($idx["distillation_ready"] + 0) != 0) {
-      die("h10 distillation must stay blocked after local teacher distillation until external labels exist", 6)
+      die("h10 distillation must stay blocked after local teacher distillation until external source exists", 6)
     }
     if (($idx["default_promotion"] + 0) != 0 ||
         ($idx["diagnostic_only"] + 0) != 1 ||
         ($idx["weak_hint_or_abstain"] + 0) != 1 ||
         $idx["status"] != "diagnostic-only" ||
-        $idx["reason"] != "teacher-external-labels-missing") {
+        $idx["reason"] != "teacher-external-label-source-missing") {
       die("h10 distillation should remain weak-hint diagnostic-only", 7)
     }
     if (($idx["routing_trigger_rate"] + 0) != 0.0 ||
@@ -109,6 +112,12 @@ awk -F, '
     }
     if ($idx["gate"] == "teacher-distillation-training" && $idx["status"] != "pass") {
       die("teacher distillation training should pass after h10-g local learner", 26)
+    }
+    if ($idx["gate"] == "external-label-schema" && $idx["status"] != "pass") {
+      die("external label schema should pass after h10-h contract", 28)
+    }
+    if ($idx["gate"] == "external-label-source" && $idx["status"] != "blocked") {
+      die("external label source should block distillation", 29)
     }
     if ($idx["gate"] == "external-label-ingestion" && $idx["status"] != "blocked") {
       die("external label ingestion should block distillation", 27)
