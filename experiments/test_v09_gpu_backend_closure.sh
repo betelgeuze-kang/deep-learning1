@@ -37,6 +37,8 @@ run_check v08-external-benchmark-adapter \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_adapter.sh"
 run_check v08-external-benchmark-evidence-ingestion \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_evidence_ingestion.sh"
+run_check v08-external-benchmark-evidence-import \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_evidence_import.sh"
 run_check v08-external-benchmark-readiness \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_readiness.sh"
 

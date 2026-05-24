@@ -35,16 +35,26 @@ fi
 EVIDENCE_CSV="$RESULTS_DIR/${PREFIX}_evidence.csv"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+EVIDENCE_SOURCE="pending-fixture"
 
-cat >"$EVIDENCE_CSV" <<'CSV'
+if [[ -n "${V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV:-}" ]]; then
+  EVIDENCE_CSV="$V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV"
+  EVIDENCE_SOURCE="provided-csv"
+  if [[ ! -s "$EVIDENCE_CSV" ]]; then
+    echo "V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV must point to a non-empty CSV" >&2
+    exit 9
+  fi
+else
+  cat >"$EVIDENCE_CSV" <<'CSV'
 benchmark_family,dataset_uri,split_name,license,source_hash,baseline_name,baseline_metric,route_memory_metric,result_uri,evaluator_version,provenance_hash,source_ready,result_ready,baseline_ready,license_ready,routing_trigger_rate,active_jump_rate
 RULER,pending,pending,pending,pending,pending,pending,pending,pending,v08-evidence-v1,pending,0,0,0,0,0,0
 LongBench,pending,pending,pending,pending,pending,pending,pending,pending,v08-evidence-v1,pending,0,0,0,0,0,0
 codebase-retrieval,pending,pending,pending,pending,pending,pending,pending,pending,v08-evidence-v1,pending,0,0,0,0,0,0
 real-document-qa,pending,pending,pending,pending,pending,pending,pending,pending,v08-evidence-v1,pending,0,0,0,0,0,0
 CSV
+fi
 
-awk -F, -v evidence_csv="$EVIDENCE_CSV" -v adapter_csv="$ADAPTER_SUMMARY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
+awk -F, -v evidence_csv="$EVIDENCE_CSV" -v adapter_csv="$ADAPTER_SUMMARY_CSV" -v evidence_source="$EVIDENCE_SOURCE" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
   function die(message, code) {
     print message > "/dev/stderr"
     exit code
@@ -79,6 +89,10 @@ awk -F, -v evidence_csv="$EVIDENCE_CSV" -v adapter_csv="$ADAPTER_SUMMARY_CSV" -v
     if (NF != header_fields) die("v08 benchmark evidence row has wrong column count", 4)
     family = $eidx["benchmark_family"]
     families[family] = 1
+    if ($eidx["dataset_uri"] != "pending" && $eidx["source_hash"] != "pending") populated_source_rows++
+    if ($eidx["result_uri"] != "pending" && $eidx["route_memory_metric"] != "pending") populated_result_rows++
+    if ($eidx["baseline_name"] != "pending" && $eidx["baseline_metric"] != "pending") populated_baseline_rows++
+    if ($eidx["license"] != "pending" && $eidx["provenance_hash"] != "pending") populated_license_rows++
     if ($eidx["source_ready"] + 0 == 1) source_ready_rows++
     if ($eidx["result_ready"] + 0 == 1) result_ready_rows++
     if ($eidx["baseline_ready"] + 0 == 1) baseline_ready_rows++
@@ -108,9 +122,19 @@ awk -F, -v evidence_csv="$EVIDENCE_CSV" -v adapter_csv="$ADAPTER_SUMMARY_CSV" -v
     }
 
     external_benchmark_source_ready = 0
-    if (source_ready_rows == evidence_rows && license_ready_rows == evidence_rows) external_benchmark_source_ready = 1
+    if (source_ready_rows == evidence_rows &&
+        license_ready_rows == evidence_rows &&
+        populated_source_rows == evidence_rows &&
+        populated_license_rows == evidence_rows) {
+      external_benchmark_source_ready = 1
+    }
     external_benchmark_result_ready = 0
-    if (result_ready_rows == evidence_rows && baseline_ready_rows == evidence_rows) external_benchmark_result_ready = 1
+    if (result_ready_rows == evidence_rows &&
+        baseline_ready_rows == evidence_rows &&
+        populated_result_rows == evidence_rows &&
+        populated_baseline_rows == evidence_rows) {
+      external_benchmark_result_ready = 1
+    }
     external_benchmark_ready = 0
     if (evidence_schema_ready && external_benchmark_source_ready && external_benchmark_result_ready) external_benchmark_ready = 1
 
@@ -125,8 +149,8 @@ awk -F, -v evidence_csv="$EVIDENCE_CSV" -v adapter_csv="$ADAPTER_SUMMARY_CSV" -v
       action = "external-benchmark-results-missing"
     }
 
-    print "benchmark_scope,benchmark_families,benchmark_adapter_ready,benchmark_evidence_schema_ready,external_benchmark_source_ready,external_benchmark_result_ready,external_benchmark_ready,source_evidence_rows,result_evidence_rows,baseline_evidence_rows,license_evidence_rows,action,routing_trigger_rate,active_jump_rate" > summary_csv
-    printf "route-memory-v08c,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n",
+    print "benchmark_scope,benchmark_families,benchmark_adapter_ready,benchmark_evidence_schema_ready,external_benchmark_source_ready,external_benchmark_result_ready,external_benchmark_ready,source_evidence_rows,result_evidence_rows,baseline_evidence_rows,license_evidence_rows,populated_source_rows,populated_result_rows,populated_baseline_rows,populated_license_rows,evidence_source,action,routing_trigger_rate,active_jump_rate" > summary_csv
+    printf "route-memory-v08c,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%.6f,%.6f\n",
       family_count,
       benchmark_adapter_ready,
       evidence_schema_ready,
@@ -137,6 +161,11 @@ awk -F, -v evidence_csv="$EVIDENCE_CSV" -v adapter_csv="$ADAPTER_SUMMARY_CSV" -v
       result_ready_rows,
       baseline_ready_rows,
       license_ready_rows,
+      populated_source_rows,
+      populated_result_rows,
+      populated_baseline_rows,
+      populated_license_rows,
+      evidence_source,
       action,
       adapter_routing + evidence_routing,
       adapter_jump + evidence_jump >> summary_csv

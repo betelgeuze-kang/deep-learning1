@@ -162,17 +162,17 @@ source-credit robustness solved: no
 external benchmark solved: no
 ```
 
-The next research boundary after h10-h/v08-b/v08-c is external teacher-label source
+The next research boundary after h10-h/v08-b/v08-c/v08-d is external teacher-label source
 evidence plus real external benchmark source/result evidence:
 the teacher-free chunk-credit ranker already survives injected noisy wrong
 candidates, forced fallback/retry now recovers through raw retry without noisy
 selection, the label schema is defined, local collection is ready, local
 distillation training/eval is ready, and external ingestion schema is ready.
-The benchmark adapter and evidence schemas now cover RULER, LongBench,
-codebase retrieval, and real document QA, but they have no
-dataset/result/baseline/license evidence yet. Until external-label and
-benchmark evidence exist, the current default policy stays diagnostic-only and
-routes uncertain cases to weak-hint/abstain.
+The benchmark adapter/evidence schemas and supplied-CSV import path now cover
+RULER, LongBench, codebase retrieval, and real document QA, but the default run
+has no real dataset/result/baseline/license evidence yet. Until external-label
+and benchmark evidence exist, the current default policy stays diagnostic-only
+and routes uncertain cases to weak-hint/abstain.
 
 ## Current Post-closure h9 GPU Scaffold
 
@@ -187,6 +187,6 @@ candidate value_pos -> value byte read -> proposal hint
 
 and it still keeps jump-neighbor replacement inactive. Treat h9 as backend
 scaffold/parity only. The h9 quick closure now verifies CPU default behavior,
-CPU-only HIP error handling, the h7 goal closure, and v08-b/v08-c benchmark
-adapter/evidence/readiness. CPU/HIP parity remains an optional extended check
-until a complete ROCm/HIP install proves fixture parity.
+CPU-only HIP error handling, the h7 goal closure, and v08-b/v08-c/v08-d
+benchmark adapter/evidence/import/readiness. CPU/HIP parity remains an optional
+extended check until a complete ROCm/HIP install proves fixture parity.

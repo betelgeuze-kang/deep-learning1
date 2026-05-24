@@ -53,6 +53,9 @@
   license, baseline, result, evaluator, and provenance evidence:
   `benchmark_evidence_schema_ready=1`, while source/result evidence remains
   blocked.
+- v08-d external benchmark evidence import gate passed: a supplied
+  `V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV` can raise benchmark source/result
+  readiness to `1`, while the default run remains pending.
 - h9-e extended backend boundary passed as CPU-canonical/static parity
   instrumentation; HIP runtime parity remains optional and environment
   dependent.
@@ -231,6 +234,14 @@ h7-b/v08:
   external_benchmark_result_ready = 0
   external_benchmark_ready = 0
   v08 action = defer-external-comparison
+
+v08-d supplied evidence fixture:
+  evidence_source = provided-csv
+  external_benchmark_source_ready = 1
+  external_benchmark_result_ready = 1
+  external_benchmark_ready = 1
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
 ```
 
 ## Verification
@@ -301,9 +312,11 @@ h7-b/v08:
 - Focused v08-c verification passed: `bash
   experiments/test_v08_external_benchmark_evidence_ingestion.sh` and `bash
   experiments/test_v08_external_benchmark_readiness.sh`.
-- v08-b/v08-c backend wrapper verification passed: `bash
+- Focused v08-d verification passed: `bash
+  experiments/test_v08_external_benchmark_evidence_import.sh`.
+- v08-b/v08-c/v08-d backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
-  adapter/evidence/readiness in h9 quick closure.
+  adapter/evidence/import/readiness in h9 quick closure.
 
 ## Open Boundary
 
@@ -314,5 +327,5 @@ h7-b/v08:
 - Current gate explicitly blocks default promotion and external comparison.
 - Active next loop: connect a real external teacher-label source above the
   h10-h schema, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence above the v08-b/v08-c schemas, then revisit external benchmark
+  evidence through the v08-d import path, then revisit external benchmark
   readiness and h11 PC RouteLM prototype design.
