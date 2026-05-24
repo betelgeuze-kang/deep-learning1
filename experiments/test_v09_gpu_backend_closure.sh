@@ -52,6 +52,10 @@ run_check v08-external-benchmark-real-evidence-placeholder \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_real_evidence_placeholder.sh"
 run_check v08-external-benchmark-real-evidence-format \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_real_evidence_format.sh"
+run_check v08-external-benchmark-artifact-verifier \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_artifact_verifier.sh"
+run_check v08-external-benchmark-artifact-verifier-local \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_artifact_verifier_local.sh"
 run_check v11-pc-routelm-prototype-readiness \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_readiness.sh"
 run_check v11-pc-routelm-prototype-import \

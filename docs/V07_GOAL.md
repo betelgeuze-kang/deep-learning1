@@ -169,7 +169,7 @@ real natural language generation solved: no
 PC RouteLM prototype solved: no
 ```
 
-The next research boundary after h10-i/v08-b/v08-c/v08-d/v08-e/v08-f/h11-a is real external teacher-label source
+The next research boundary after h10-i/v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/h11-a is real external teacher-label source
 evidence plus real external benchmark source/result evidence and real PC RouteLM
 prototype evidence:
 the teacher-free chunk-credit ranker already survives injected noisy wrong
@@ -181,12 +181,14 @@ The benchmark adapter/evidence schemas, supplied-CSV import path, and
 comparison gate now cover RULER, LongBench, codebase retrieval, and real
 document QA, but the default run has no real dataset/result/baseline/license
 evidence yet. v08-f also blocks the existing supplied placeholder fixture from
-counting as real benchmark evidence until non-placeholder artifact URIs,
-standard sha256 provenance hashes, and a verifier exist. h11-a adds a PC
-RouteLM / NLG component contract and supplied fixture import, but no real
-generator/route-memory NLG smoke exists yet. Until external-label, benchmark,
-speed, and prototype evidence exist, the current default policy stays
-diagnostic-only and routes uncertain cases to weak-hint/abstain.
+counting as real benchmark evidence until non-placeholder artifact URIs and
+standard sha256 provenance hashes exist. v08-g verifies local `file://`
+artifact hashes, but keeps real benchmark verification blocked until benchmark
+authenticity/evaluator evidence exists. h11-a adds a PC RouteLM / NLG component
+contract and supplied fixture import, but no real generator/route-memory NLG
+smoke exists yet. Until external-label, benchmark, speed, and prototype
+evidence exist, the current default policy stays diagnostic-only and routes
+uncertain cases to weak-hint/abstain.
 
 ## Current Post-closure h9 GPU Scaffold
 
@@ -201,7 +203,7 @@ candidate value_pos -> value byte read -> proposal hint
 
 and it still keeps jump-neighbor replacement inactive. Treat h9 as backend
 scaffold/parity only. The h9 quick closure now verifies CPU default behavior,
-CPU-only HIP error handling, the h7 goal closure, and v08-b/v08-c/v08-d/v08-e/v08-f
-benchmark adapter/evidence/import/comparison/real-evidence/readiness. CPU/HIP parity remains
+CPU-only HIP error handling, the h7 goal closure, and v08-b/v08-c/v08-d/v08-e/v08-f/v08-g
+benchmark adapter/evidence/import/comparison/real-evidence/artifact-verifier/readiness. CPU/HIP parity remains
 an optional extended check until a complete ROCm/HIP install proves fixture
 parity.
