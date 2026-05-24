@@ -4,7 +4,7 @@
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i plus h7-b,
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/readiness,
-h11-a prototype readiness/import, and h9-f quick closure:
+h11-a prototype readiness/import, and h9-g quick closure:
 
 ```text
 h6-p: span-local-energy policy-scale diagnostics pass.
@@ -36,7 +36,7 @@ real independent verification exists.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, benchmark, and GPU speed evidence gates.
-h9-f: quick GPU-backend boundary runs CPU numeric parity and keeps speedup claims deferred; HIP parity remains optional.
+h9-f/h9-g: quick GPU-backend boundary runs CPU numeric parity, verifies timing/environment artifact contracts, and keeps speedup claims deferred unless real HIP-backed measurements exist; HIP parity remains optional.
 ```
 
 Read the current route-memory result as an objective split, not a solved
@@ -781,6 +781,8 @@ experiments/test_v09_gpu_backend_cpu_smoke.sh
 experiments/test_v09_gpu_backend_nohip_error.sh
 experiments/test_v09_gpu_backend_extended_boundary.sh
 experiments/test_v09_gpu_backend_speed_evidence.sh
+experiments/test_v09_gpu_backend_measured_speed_gate.sh
+experiments/test_v09_gpu_backend_measured_speed_import.sh
 ```
 
 Optional HIP check:
@@ -802,7 +804,9 @@ Expected:
 - CPU-only `--backend hip` fails clearly with a `DLE_ENABLE_HIP=ON` message.
 - CPU quick closure executes candidate-weight and proposal-score numeric parity
   through the parity tool, not only static grep checks.
-- GPU speedup claims remain deferred until measured CPU/HIP timings exist.
+- GPU speedup claims remain deferred until measured CPU/HIP timings are backed
+  by real HIP measurement source evidence; local fixture timing artifacts remain
+  diagnostic-only.
 - HIP parity skips cleanly when ROCm/HIP is unavailable or incomplete.
 - When HIP is available, candidate-weight factors and diagnostic proposal
   scores match CPU within `1e-5`.

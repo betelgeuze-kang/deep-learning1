@@ -22,8 +22,8 @@ route-memory goal closure:
 
 ```text
 h6-t/u/v/w route-memory diagnostics and h7-b promotion gates are wired into h7.
-h9 quick closure passes CPU default behavior, CPU-only HIP error handling, h9-f
-CPU numeric parity and speed-evidence no-claim checks, h7, and
+h9 quick closure passes CPU default behavior, CPU-only HIP error handling,
+h9-f CPU numeric parity, h9-g measured-speed no-claim checks, h7, and
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j benchmark
 adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/readiness
 plus h11-a PC RouteLM prototype readiness/import.
@@ -117,6 +117,8 @@ experiments/test_v09_gpu_backend_cpu_smoke.sh
 experiments/test_v09_gpu_backend_nohip_error.sh
 experiments/test_v09_gpu_backend_extended_boundary.sh
 experiments/test_v09_gpu_backend_speed_evidence.sh
+experiments/test_v09_gpu_backend_measured_speed_gate.sh
+experiments/test_v09_gpu_backend_measured_speed_import.sh
 experiments/test_v05_route_quality_closure.sh
 experiments/test_v07_goal_route_memory_closure.sh
 experiments/test_v08_external_benchmark_adapter.sh
@@ -160,10 +162,14 @@ Speed evidence is a separate no-overclaim gate:
 
 ```bash
 experiments/test_v09_gpu_backend_speed_evidence.sh
+experiments/test_v09_gpu_backend_measured_speed_gate.sh
+experiments/test_v09_gpu_backend_measured_speed_import.sh
 ```
 
-It marks `speed_schema_ready=1`, but keeps `speed_evidence_ready=0` and
-`gpu_speedup_claim=deferred` until measured CPU/HIP timings exist.
+h9-f marks `speed_schema_ready=1`, but keeps `speed_evidence_ready=0`.
+h9-g then verifies timing and environment artifacts, warmup/measured-run
+counts, and positive CPU/HIP timing ratios. Local fixtures remain no-claim:
+`gpu_speedup_claim=deferred` until the measurement source is real HIP-backed.
 
 Closure entrypoint:
 
@@ -180,7 +186,7 @@ h9 is:
 
 ```text
 PASS as optional HIP backend scaffold / candidate-weight and proposal-score parity instrumentation,
-with h9-f executable CPU numeric parity and no-speedup-claim checks in quick closure
+with h9-f executable CPU numeric parity plus h9-g measured-speed no-claim checks in quick closure
 ```
 
 Do not read this as:

@@ -20,13 +20,14 @@ PREFIX="v11_pc_routelm_prototype_readiness"
 PROMOTION_PREFIX="v07_route_memory_promotion_gate"
 DISTILLATION_PREFIX="v10_chunk_credit_distillation_gate"
 COMPARISON_PREFIX="v08_external_benchmark_comparison_gate"
-SPEED_PREFIX="v09_gpu_backend_speed_evidence"
+SPEED_PREFIX="v09_gpu_backend_measured_speed_gate"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v11_pc_routelm_prototype_readiness_smoke"
   PROMOTION_PREFIX="v07_route_memory_promotion_gate_smoke"
   DISTILLATION_PREFIX="v10_chunk_credit_distillation_gate_smoke"
   COMPARISON_PREFIX="v08_external_benchmark_comparison_gate_smoke"
+  SPEED_PREFIX="v09_gpu_backend_measured_speed_gate_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -48,7 +49,8 @@ env -u V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV \
   "$ROOT_DIR/experiments/run_v08_external_benchmark_evidence_ingestion.sh" "${RUN_ARGS[@]}" >/dev/null
 env -u V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV \
   "$ROOT_DIR/experiments/run_v08_external_benchmark_comparison_gate.sh" "${RUN_ARGS[@]}" >/dev/null
-"$ROOT_DIR/experiments/test_v09_gpu_backend_speed_evidence.sh" >/dev/null
+env -u V09_GPU_BACKEND_SPEED_MEASUREMENT_CSV \
+  "$ROOT_DIR/experiments/run_v09_gpu_backend_measured_speed_gate.sh" "${RUN_ARGS[@]}" >/dev/null
 
 if [[ -n "$PROTOTYPE_CSV" && ! -s "$PROTOTYPE_CSV" ]]; then
   echo "V11_PC_ROUTELM_PROTOTYPE_CSV is set but not readable/non-empty: $PROTOTYPE_CSV" >&2

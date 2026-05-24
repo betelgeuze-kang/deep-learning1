@@ -213,4 +213,5 @@ scaffold/parity only. The h9 quick closure now verifies CPU default behavior,
 CPU-only HIP error handling, the h7 goal closure, and v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j
 benchmark adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/readiness. CPU/HIP parity remains
 an optional extended check until a complete ROCm/HIP install proves fixture
-parity.
+parity. h9-g adds measured-speed artifact verification, but fixture/local
+timing evidence remains no-claim until real HIP-backed measurements exist.

@@ -146,11 +146,12 @@ Current closure:
   smoke URI. The supplied fixture reaches diagnostic prototype readiness only;
   real prototype/publish remains blocked by promotion, benchmark comparison,
   and GPU speed evidence.
-- `h9-a/h9-b/h9-d/h9-e/h9-f` add optional ROCm/HIP backend scaffolding:
+- `h9-a/h9-b/h9-d/h9-e/h9-f/h9-g` add optional ROCm/HIP backend scaffolding
+  plus measured-speed evidence contracts:
   `experiments/test_v09_gpu_backend_closure.sh`.
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i, h7-b,
   v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/readiness,
-  h11-a prototype readiness/import, and h9-f included in quick closure paths.
+  h11-a prototype readiness/import, and h9-g included in quick closure paths.
   HIP parity remains optional and environment-dependent.
 
 Current next boundary:

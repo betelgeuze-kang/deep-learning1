@@ -86,6 +86,10 @@
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
   evidence remains no-claim with `gpu_speedup_claim=deferred`. HIP runtime
   parity remains optional and environment dependent.
+- h9-g measured speed gate passed: timing/environment artifact hashes and
+  positive speedup ratios can be verified from a supplied CSV, but fixture
+  measurements remain no-claim with `gpu_speedup_claim=deferred` until real
+  HIP-backed measurement source evidence exists.
 - h11-a PC RouteLM / NLG prototype readiness gate passed: default run is
   contract-schema-ready but component-blocked; supplied component fixture can
   reach diagnostic prototype readiness while real prototype/publish remains
@@ -396,6 +400,19 @@ h11-a supplied prototype fixture:
   pc_routelm_prototype_ready = 0
   publishable_pc_routelm_ready = 0
   action = diagnostic-prototype-only
+
+h9-g supplied measured-speed fixture:
+  measurement_source = provided-csv
+  timing_artifact_hash_verified_rows = 1
+  environment_hash_verified_rows = 1
+  timing_ready_rows = 1
+  real_hip_measurement_rows = 0
+  speedup_positive_rows = 1
+  measured_speed_evidence_ready = 0
+  speed_evidence_ready = 0
+  gpu_speedup_claim = deferred
+  median_speedup = 1.250000
+  action = real-hip-measurement-missing
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 ```
@@ -472,6 +489,9 @@ h11-a supplied prototype fixture:
   --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
   `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash
   experiments/test_v09_gpu_backend_closure.sh`.
+- h9-g focused verification passed: `bash
+  experiments/test_v09_gpu_backend_measured_speed_gate.sh` and `bash
+  experiments/test_v09_gpu_backend_measured_speed_import.sh`.
 - h11-a focused and wrapper verification passed: `bash
   experiments/test_v11_pc_routelm_prototype_readiness.sh`, `bash
   experiments/test_v11_pc_routelm_prototype_import.sh`, and `bash
@@ -521,5 +541,6 @@ h11-a supplied prototype fixture:
   h10-i import contract, connect real RULER/LongBench/codebase/doc-QA source and result
   evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation
-  path, pass v08-j independent external attestation, add measured GPU speed evidence,
+  path, pass v08-j independent external attestation, replace h9-g fixture timing
+  with real HIP-backed measured GPU speed evidence,
   then replace the h11-a fixture with a real local PC RouteLM prototype smoke.
