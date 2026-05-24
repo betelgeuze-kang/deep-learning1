@@ -26,9 +26,10 @@
 - h10-b chunk-credit abstain policy smoke passed: chunk credit can be ready
   while default promotion remains blocked by the joint chunk/source gate.
 - h10-c joint/noisy/distillation gate passed as diagnostic-only: chunk-credit
-  survives injected noisy candidates without selecting them, but fallback/retry
-  is unexercised on the successful chunk-credit path, so distillation remains
-  blocked.
+  survives injected noisy candidates without selecting them.
+- h10-d fallback/retry exercise passed: forced primary-candidate corruption
+  drives the retry path, raw retry recovers the corrupt baseline without noisy
+  selection, and distillation now blocks on the missing teacher-label contract.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -162,17 +163,25 @@ h10-b chunk-credit abstain policy smoke:
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
-h10-c joint source/distillation smoke:
+h10-c/h10-d joint source/distillation smoke:
   best_joint_arm = chunk-credit-source-order
+  fallback_exercise_arm = raw-retry
   joint_chunk_ready = 1
   joint_source_safe = 1
   noisy_clean = 1
   joint_noisy_used = 1.000000
   noisy_selected = 0.000000
-  fallback_retry_exercised = 0
+  fallback_baseline_qacc = 0.290000
+  fallback_best_qacc = 0.910000
+  fallback_qacc_delta_vs_corrupt = 0.620000
+  fallback_retry_exercised = 1
+  fallback_exercise_ready = 1
+  fallback_retry_raw_selected = 1.000000
+  fallback_retry_noisy_selected = 0.000000
   joint_chunk_source_ready = 0
+  teacher_label_contract_ready = 0
   distillation_ready = 0
-  reason = fallback-retry-unexercised
+  reason = teacher-label-contract-missing
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
@@ -209,15 +218,20 @@ h7-b/v08:
 - h10-c closure wiring passed: `bash
   experiments/test_v07_goal_route_memory_closure.sh`, `bash
   experiments/test_v09_gpu_backend_closure.sh`.
+- h10-d focused gates passed: `bash
+  experiments/test_v10_chunk_credit_fallback_retry_exercise.sh`, `bash
+  experiments/test_v10_chunk_credit_distillation_gate.sh`.
+- h10-d closure verification passed: `bash
+  experiments/test_v07_goal_route_memory_closure.sh`, `bash
+  experiments/test_v09_gpu_backend_closure.sh`, with v08 still deferred.
 
 ## Open Boundary
 
 - NOT scaled learned chunk retrieval solved.
-- NOT wrong-candidate/fallback robustness solved.
+- NOT teacher-distilled chunk retrieval solved.
+- NOT wrong-candidate/fallback robustness solved beyond the h10-d forced smoke.
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion and external comparison.
-- Next research should make fallback/retry exercise on the chunk-credit path,
-  or add an explicit non-keyshape fallback integration arm before any
-  promotion/default claim.
-- Active next loop: h10-d fallback-retry exercise for chunk-credit; h10-c
-  distillation stays blocked until that gate is real.
+- Active next loop: define the h10-e teacher-label contract for chunk-credit
+  distillation, then revisit external benchmark readiness and h11 PC RouteLM
+  prototype design.

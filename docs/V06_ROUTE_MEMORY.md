@@ -1359,17 +1359,21 @@ active_jump_rate = 0.000000
 
 Interpretation:
 chunk credit is strong enough in the controlled fixture, and the existing source
-gate is noisy-clean. The joint noisy gate now injects noisy wrong candidates and
-keeps them unselected, but fallback/retry is still unexercised on the successful
-chunk-credit path. The correct action is therefore weak-hint/abstain, not
-default promotion.
+gate is noisy-clean. At the h10-b layer, fallback/retry is intentionally not
+claimed from the successful chunk-credit path. h10-d exercises that path
+separately; the correct action here remains weak-hint/abstain, not default
+promotion.
 
 ## h10-c Joint Source and Distillation Gate
 
-`h10-c` adds two gates:
+`h10-c` adds the joint noisy gate and h10-d adds the forced fallback/retry
+exercise consumed by the distillation gate:
 
 - `run_v10_chunk_credit_source_robustness.sh` injects noisy candidates while
   using the teacher-free chunk-credit scorer.
+- `run_v10_chunk_credit_fallback_retry_exercise.sh` clears correct primary
+  candidates and requires source retry to recover without selecting noisy
+  sources.
 - `run_v10_chunk_credit_distillation_gate.sh` decides whether chunk credit can
   be distilled or promoted above the diagnostic policy layer.
 
@@ -1378,6 +1382,8 @@ Entry points:
 ```bash
 experiments/run_v10_chunk_credit_source_robustness.sh
 experiments/test_v10_chunk_credit_source_robustness.sh
+experiments/run_v10_chunk_credit_fallback_retry_exercise.sh
+experiments/test_v10_chunk_credit_fallback_retry_exercise.sh
 experiments/run_v10_chunk_credit_distillation_gate.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 ```
@@ -1386,39 +1392,45 @@ Smoke result:
 
 ```text
 best_joint_arm = chunk-credit-source-order
+fallback_exercise_arm = raw-retry
 joint_chunk_ready = 1
 joint_source_safe = 1
 noisy_clean = 1
 joint_noisy_used = 1.000000
 noisy_selected = 0.000000
-fallback_retry_exercised = 0
+fallback_retry_exercised = 1
+fallback_exercise_ready = 1
+fallback_qacc_delta_vs_corrupt = 0.620000
+fallback_retry_raw_selected = 1.000000
+fallback_retry_noisy_selected = 0.000000
 joint_chunk_source_ready = 0
+teacher_label_contract_ready = 0
 distillation_ready = 0
-reason = fallback-retry-unexercised
+reason = teacher-label-contract-missing
 routing_trigger_rate = 0.000000
 active_jump_rate = 0.000000
 ```
 
 Interpretation:
-this is positive wrong-candidate evidence for chunk credit, but not fallback
-robustness. The current successful chunk-credit path keeps the correct candidate
-available and ranks it above injected noisy candidates, so fallback/retry does
-not fire. Distillation is blocked until a non-keyshape fallback/retry exercise
-is real.
+this is positive wrong-candidate evidence for chunk credit plus a real
+fallback/retry exercise. The forced-corrupt primary path recovers through raw
+retry evidence and does not select noisy retry/source candidates. Distillation
+is still blocked because the project has not defined the teacher-label contract
+for correct, wrong, near-miss, missing, and abstain span labels.
 
 ## Current Route-memory Handoff
 
-h10-a/b/c are the current route-memory checkpoint. h6-y remains diagnostic-only,
-h10-a/b/c are wired into the route-memory closure path, and h7-b still blocks
-default promotion until fallback/retry robustness evidence exists. The live
-invariant remains:
+h10-a/b/c/d are the current route-memory checkpoint. h6-y remains
+diagnostic-only, h10-a/b/c/d are wired into the route-memory closure path, and
+h7-b still blocks default promotion until teacher-label distillation evidence
+exists. The live invariant remains:
 
 ```text
 candidate value_pos -> value byte read -> proposal hint
 ```
 
-The next slice should force or implement non-keyshape fallback/retry exercise on
-the chunk-credit path, while preserving the h6-p objective split:
+The next slice should define the teacher-label contract for chunk-credit
+distillation while preserving the h6-p objective split:
 
 ```text
 byte-qacc objective: optimize local-energy policy

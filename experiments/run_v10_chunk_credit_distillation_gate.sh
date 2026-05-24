@@ -19,11 +19,13 @@ mkdir -p "$RESULTS_DIR"
 PREFIX="v10_chunk_credit_distillation_gate"
 POLICY_PREFIX="v10_chunk_credit_abstain_policy"
 JOINT_PREFIX="v10_chunk_credit_source_robustness"
+FALLBACK_PREFIX="v10_chunk_credit_fallback_retry_exercise"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v10_chunk_credit_distillation_gate_smoke"
   POLICY_PREFIX="v10_chunk_credit_abstain_policy_smoke"
   JOINT_PREFIX="v10_chunk_credit_source_robustness_smoke"
+  FALLBACK_PREFIX="v10_chunk_credit_fallback_retry_exercise_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -31,6 +33,7 @@ fi
 
 POLICY_CSV="$RESULTS_DIR/${POLICY_PREFIX}_policy.csv"
 JOINT_AGG_CSV="$RESULTS_DIR/${JOINT_PREFIX}_aggregate.csv"
+FALLBACK_AGG_CSV="$RESULTS_DIR/${FALLBACK_PREFIX}_aggregate.csv"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
@@ -40,8 +43,11 @@ fi
 if [[ ! -s "$JOINT_AGG_CSV" ]]; then
   "$ROOT_DIR/experiments/run_v10_chunk_credit_source_robustness.sh" "${RUN_ARGS[@]}" >/dev/null
 fi
+if [[ ! -s "$FALLBACK_AGG_CSV" ]]; then
+  "$ROOT_DIR/experiments/run_v10_chunk_credit_fallback_retry_exercise.sh" "${RUN_ARGS[@]}" >/dev/null
+fi
 
-awk -F, -v policy_csv="$POLICY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
+awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_csv="$FALLBACK_AGG_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
   function die(message, code) {
     print message > "/dev/stderr"
     exit code
@@ -73,7 +79,7 @@ awk -F, -v policy_csv="$POLICY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_cs
     policy_jump = $pidx["active_jump_rate"] + 0
     next
   }
-  FILENAME != policy_csv && FNR == 1 {
+  FILENAME == joint_csv && FNR == 1 {
     for (i = 1; i <= NF; i++) jidx[$i] = i
     required_count = split("best_joint_arm chunk_ready source_safe fallback_not_keyshape_only fallback_retry_exercised joint_chunk_source_ready noisy_used noisy_selected retry_noisy_selected routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
@@ -81,7 +87,7 @@ awk -F, -v policy_csv="$POLICY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_cs
     }
     next
   }
-  FILENAME != policy_csv {
+  FILENAME == joint_csv {
     joint_rows++
     best_joint_arm = $jidx["best_joint_arm"]
     joint_chunk_ready = $jidx["chunk_ready"] + 0
@@ -96,46 +102,110 @@ awk -F, -v policy_csv="$POLICY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_cs
     joint_jump = $jidx["active_jump_rate"] + 0
     next
   }
+  FILENAME == fallback_csv && FNR == 1 {
+    for (i = 1; i <= NF; i++) fidx[$i] = i
+    required_count = split("best_arm baseline_qacc best_qacc best_qacc_delta_vs_corrupt fallback_retry_exercised fallback_not_keyshape_only fallback_ready source_retry_used source_retry_success retry_raw_selected retry_noisy_selected noisy_selected routing_trigger_rate active_jump_rate", required, " ")
+    for (i = 1; i <= required_count; i++) {
+      if (!(required[i] in fidx)) die("missing h10 distillation fallback column: " required[i], 6)
+    }
+    next
+  }
+  FILENAME == fallback_csv {
+    fallback_rows++
+    fallback_exercise_arm = $fidx["best_arm"]
+    fallback_baseline_qacc = $fidx["baseline_qacc"] + 0
+    fallback_best_qacc = $fidx["best_qacc"] + 0
+    fallback_qacc_delta = $fidx["best_qacc_delta_vs_corrupt"] + 0
+    fallback_retry_exercised = $fidx["fallback_retry_exercised"] + 0
+    fallback_not_keyshape_only_exercise = $fidx["fallback_not_keyshape_only"] + 0
+    fallback_ready = $fidx["fallback_ready"] + 0
+    fallback_retry_used = $fidx["source_retry_used"] + 0
+    fallback_retry_success = $fidx["source_retry_success"] + 0
+    fallback_retry_raw = $fidx["retry_raw_selected"] + 0
+    fallback_retry_noisy = $fidx["retry_noisy_selected"] + 0
+    fallback_noisy_selected = $fidx["noisy_selected"] + 0
+    fallback_routing = $fidx["routing_trigger_rate"] + 0
+    fallback_jump = $fidx["active_jump_rate"] + 0
+    next
+  }
   END {
     if (policy_rows != 1) die("expected one h10 distillation policy row", 4)
     if (joint_rows != 1) die("expected one h10 distillation joint row", 5)
+    if (fallback_rows != 1) die("expected one h10 distillation fallback row", 7)
 
-    noisy_clean = noisy_selection_clean &&
-      joint_noisy_used > 0.0 &&
-      joint_noisy_selected == 0.0 &&
-      joint_retry_noisy_selected == 0.0 ? 1 : 0
-    fallback_gate = joint_fallback_retry_exercised &&
-      joint_fallback_not_keyshape_only &&
-      fallback_not_keyshape_only ? 1 : 0
-    distillation_ready = chunk_credit_ready &&
-      source_safe &&
-      joint_chunk_ready &&
-      joint_source_safe &&
-      noisy_clean &&
-      fallback_gate &&
-      joint_chunk_source_ready &&
-      policy_joint_ready &&
-      policy_distillation_ready &&
-      policy_combined_ready &&
-      policy_routing == 0.0 &&
-      policy_jump == 0.0 &&
-      joint_routing == 0.0 &&
-      joint_jump == 0.0 ? 1 : 0
+    noisy_clean = 0
+    if (noisy_selection_clean &&
+        joint_noisy_used > 0.0 &&
+        joint_noisy_selected == 0.0 &&
+        joint_retry_noisy_selected == 0.0) {
+      noisy_clean = 1
+    }
+
+    fallback_non_keyshape = 0
+    if (fallback_not_keyshape_only &&
+        joint_fallback_not_keyshape_only &&
+        fallback_not_keyshape_only_exercise) {
+      fallback_non_keyshape = 1
+    }
+
+    fallback_gate = 0
+    if (fallback_ready &&
+        fallback_retry_exercised &&
+        fallback_non_keyshape &&
+        fallback_retry_used > 0.0 &&
+        fallback_retry_success > 0.0 &&
+        fallback_retry_raw > 0.0 &&
+        fallback_retry_noisy == 0.0 &&
+        fallback_noisy_selected == 0.0 &&
+        fallback_qacc_delta > 0.05 &&
+        fallback_routing == 0.0 &&
+        fallback_jump == 0.0) {
+      fallback_gate = 1
+    }
+
+    teacher_label_contract_ready = 0
+    distillation_ready = 0
+    if (chunk_credit_ready &&
+        source_safe &&
+        joint_chunk_ready &&
+        joint_source_safe &&
+        noisy_clean &&
+        fallback_gate &&
+        teacher_label_contract_ready &&
+        policy_routing == 0.0 &&
+        policy_jump == 0.0 &&
+        joint_routing == 0.0 &&
+        joint_jump == 0.0 &&
+        fallback_routing == 0.0 &&
+        fallback_jump == 0.0) {
+      distillation_ready = 1
+    }
     status = distillation_ready ? "distillation-candidate" : "diagnostic-only"
-    reason = fallback_gate ? "all-gates-ready" : "fallback-retry-unexercised"
+    reason = fallback_gate ? "teacher-label-contract-missing" : "fallback-retry-unexercised"
 
-    print "best_joint_arm,guardrail_action,chunk_credit_ready,joint_chunk_ready,source_safe,joint_source_safe,noisy_clean,fallback_not_keyshape_only,fallback_retry_exercised,joint_chunk_source_ready,policy_distillation_ready,combined_ready,distillation_ready,default_promotion,diagnostic_only,weak_hint_or_abstain,status,reason,routing_trigger_rate,active_jump_rate" > summary_csv
-    printf "%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%.6f,%.6f\n",
+    print "best_joint_arm,fallback_exercise_arm,guardrail_action,chunk_credit_ready,joint_chunk_ready,source_safe,joint_source_safe,noisy_clean,fallback_not_keyshape_only,fallback_retry_exercised,fallback_exercise_ready,fallback_baseline_qacc,fallback_best_qacc,fallback_qacc_delta_vs_corrupt,fallback_retry_used,fallback_retry_success,fallback_retry_raw_selected,fallback_retry_noisy_selected,fallback_noisy_selected,joint_chunk_source_ready,teacher_label_contract_ready,policy_distillation_ready,combined_ready,distillation_ready,default_promotion,diagnostic_only,weak_hint_or_abstain,status,reason,routing_trigger_rate,active_jump_rate" > summary_csv
+    printf "%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%.6f,%.6f\n",
       best_joint_arm,
+      fallback_exercise_arm,
       guardrail_action,
       chunk_credit_ready,
       joint_chunk_ready,
       source_safe,
       joint_source_safe,
       noisy_clean,
-      fallback_not_keyshape_only && joint_fallback_not_keyshape_only ? 1 : 0,
-      joint_fallback_retry_exercised,
+      fallback_non_keyshape,
+      fallback_retry_exercised,
+      fallback_ready,
+      fallback_baseline_qacc,
+      fallback_best_qacc,
+      fallback_qacc_delta,
+      fallback_retry_used,
+      fallback_retry_success,
+      fallback_retry_raw,
+      fallback_retry_noisy,
+      fallback_noisy_selected,
       joint_chunk_source_ready,
+      teacher_label_contract_ready,
       policy_distillation_ready,
       policy_combined_ready,
       distillation_ready,
@@ -144,8 +214,8 @@ awk -F, -v policy_csv="$POLICY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_cs
       weak_hint_or_abstain,
       status,
       reason,
-      policy_routing + joint_routing,
-      policy_jump + joint_jump >> summary_csv
+      policy_routing + joint_routing + fallback_routing,
+      policy_jump + joint_jump + fallback_jump >> summary_csv
 
     print "gate,status,reason" > decision_csv
     printf "chunk-credit,%s,chunk_credit_ready=%d joint_chunk_ready=%d\n",
@@ -159,14 +229,16 @@ awk -F, -v policy_csv="$POLICY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_cs
       joint_retry_noisy_selected >> decision_csv
     printf "fallback-retry,%s,fallback_retry_exercised=%d fallback_not_keyshape_only=%d\n",
       fallback_gate ? "pass" : "blocked",
-      joint_fallback_retry_exercised,
-      fallback_not_keyshape_only && joint_fallback_not_keyshape_only ? 1 : 0 >> decision_csv
+      fallback_retry_exercised,
+      fallback_non_keyshape >> decision_csv
+    printf "teacher-label-contract,%s,required=correct_wrong_near_miss_missing_abstain_grounded_span\n",
+      teacher_label_contract_ready ? "pass" : "blocked" >> decision_csv
     printf "distillation,%s,status=%s reason=%s\n",
       distillation_ready ? "pass" : "blocked",
       status,
       reason >> decision_csv
   }
-' "$POLICY_CSV" "$JOINT_AGG_CSV"
+' "$POLICY_CSV" "$JOINT_AGG_CSV" "$FALLBACK_AGG_CSV"
 
 echo "summary: $SUMMARY_CSV"
 echo "decision: $DECISION_CSV"

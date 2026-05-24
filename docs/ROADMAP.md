@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-c plus the h7 and h9 quick closures, the project should be read as:
+As of h10-d plus the h7 and h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -83,9 +83,12 @@ Current closure:
   credit can be ready while default promotion remains blocked by the joint
   chunk/source gate.
 - `h10-c` adds the joint noisy/distillation gate. Chunk-credit survives injected
-  noisy wrong candidates without selecting them, but fallback/retry is not
-  exercised on the successful chunk-credit path, so distillation and default
-  promotion remain blocked.
+  noisy wrong candidates without selecting them.
+- `h10-d` adds the forced fallback/retry exercise. With correct primary
+  candidates removed, `raw-retry` recovers the forced-corrupt baseline from
+  `qacc=0.290000` to `0.910000`, keeps `retry_noisy_selected=0.000000`, and
+  leaves routing/jump inactive. Distillation and default promotion remain
+  blocked because the teacher-label contract is missing.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
 - `h7-b` adds the route-memory promotion gate and keeps default promotion
@@ -94,16 +97,16 @@ Current closure:
   promotion passes.
 - `h9-a/h9-b/h9-d/h9-e` add optional ROCm/HIP backend scaffolding:
   `experiments/test_v09_gpu_backend_closure.sh`.
-- Current verification has h6-t/u/v/w/x/y, h10-a/b/c, h7-b, v08 readiness, and
+- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d, h7-b, v08 readiness, and
   h9-e included in quick closure paths. HIP parity remains optional and
   environment-dependent.
 
 Current next boundary:
 
-- Force or implement fallback/retry exercise on the chunk-credit path without
-  relying on symbolic key-shape as the policy. The current joint gate already
-  covers noisy wrong-candidate injection, but fallback/retry is still
-  unexercised when chunk-credit succeeds.
+- Define and collect the teacher-label contract for chunk-credit distillation:
+  correct, wrong, near-miss, missing, and abstain labels over grounded spans.
+  Fallback/retry is now exercised in h10-d, so this is the next blocker before
+  any default promotion or external benchmark comparison.
 - Any stronger claim must survive those matrices without using symbolic
   `key-shape` as the policy itself.
 

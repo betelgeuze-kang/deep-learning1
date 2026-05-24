@@ -59,6 +59,7 @@ experiments/test_v06_route_memory_chunk_local_scorers.sh
 experiments/test_v06_route_memory_chunk_code_similarity.sh
 experiments/test_v10_teacher_free_chunk_ranker.sh
 experiments/test_v10_chunk_credit_source_robustness.sh
+experiments/test_v10_chunk_credit_fallback_retry_exercise.sh
 experiments/test_v10_chunk_credit_abstain_policy.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 experiments/test_v06_route_memory_wrong_candidate_robustness.sh
@@ -74,7 +75,7 @@ experiments/test_v07_goal_route_memory_closure.sh --extended
 
 also runs the extended h5 route-quality closure and the standard h6
 exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale/span-first-guardrail/span-first-guardrail-degradation/adaptive-guardrail
-span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-abstain-policy/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
+span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-fallback-retry-exercise/chunk-credit-abstain-policy/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
 runners.
 
 ## Current Closed Scope
@@ -132,8 +133,10 @@ route-memory:
   h10-b chunk-credit abstain policy keeps default promotion blocked until a
   joint fallback/retry gate exists
   h10-c joint source/distillation gates show noisy wrong candidates are
-  injected but not selected, while fallback/retry remains unexercised and
-  distillation remains blocked
+  injected but not selected
+  h10-d fallback/retry exercise forces correct primary candidates out and
+  recovers through raw retry without selecting noisy sources, while distillation
+  remains blocked by the missing teacher-label contract
   wrong-candidate/fallback gates keep source retry noisy-clean but block
   combined readiness
   abstain/retry guardrails route the current policy to weak-hint/abstain
@@ -153,11 +156,12 @@ source-credit robustness solved: no
 external benchmark solved: no
 ```
 
-The next research boundary after h10-c is fallback/retry exercise on the
-chunk-credit path: the teacher-free chunk-credit ranker already survives
-injected noisy wrong candidates in smoke, but fallback/retry still does not fire
-when chunk-credit succeeds. Until a non-keyshape fallback/retry gate is real,
-the current default policy stays diagnostic-only and routes uncertain cases to
+The next research boundary after h10-d is the teacher-label contract for
+chunk-credit distillation: the teacher-free chunk-credit ranker already
+survives injected noisy wrong candidates, and forced fallback/retry now recovers
+through raw retry without noisy selection. Until correct, wrong, near-miss,
+missing, and abstain labels over grounded spans are defined and collected, the
+current default policy stays diagnostic-only and routes uncertain cases to
 weak-hint/abstain.
 
 ## Current Post-closure h9 GPU Scaffold

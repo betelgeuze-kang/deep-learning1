@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-The current checkpoint is h10-a/b/c plus h7-b, v08 readiness, and h9-e quick
+The current checkpoint is h10-a/b/c/d plus h7-b, v08 readiness, and h9-e quick
 closure:
 
 ```text
@@ -17,7 +17,8 @@ h6-x: chunk-local scorer diagnostics keep plain span-local-energy as best curren
 h6-y: chunk-code similarity diagnostics show learned route-code signature collision is too high to improve chunk ranking.
 h10-a: teacher-free chunk-credit ranker smoke breaks the coherent wrong-key mode in the controlled fixture.
 h10-b: chunk-credit abstain policy routes positive chunk credit to weak-hint/abstain, not default promotion.
-h10-c: joint noisy/distillation gate keeps promotion blocked because fallback/retry is unexercised on the successful chunk-credit path.
+h10-c: joint noisy/distillation gate keeps promotion blocked while proving injected noisy candidates are not selected.
+h10-d: fallback/retry exercise forces primary-candidate corruption and shows raw retry can recover without noisy selection.
 h7-b: promotion gate blocks default route-memory promotion.
 v08: external benchmark readiness defers comparison.
 h9-e: quick GPU-backend extended boundary passes with HIP parity optional.
@@ -31,8 +32,8 @@ byte-qacc objective -> local-energy
 span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
-The next h10-style experiment should force or implement non-keyshape
-fallback/retry exercise on the chunk-credit path before any promotion claim.
+The next h10-style experiment should define the teacher-label contract for
+distillation before any promotion claim or external benchmark comparison.
 
 ## h6 Span-first Guardrail
 
@@ -386,14 +387,18 @@ Expected:
 ## h10-c Joint Source and Distillation Gate
 
 h10-c adds the first joint source/noisy matrix above the teacher-free chunk
-ranker and a separate distillation gate. The current result is deliberately
-diagnostic-only: chunk-credit survives injected noisy wrong candidates without
-selecting them, but the successful chunk-credit path does not need fallback or
-retry, so no distillation/default claim is allowed.
+ranker and a separate distillation gate. h10-d adds the missing forced
+fallback/retry exercise by clearing the correct primary candidates and requiring
+the retry path to recover from raw-key evidence without selecting noisy sources.
+The current result is deliberately diagnostic-only: noisy wrong candidates are
+not selected and fallback/retry is now exercised, but no teacher-label contract
+exists for distillation/default promotion.
 
 ```bash
 experiments/run_v10_chunk_credit_source_robustness.sh
 experiments/test_v10_chunk_credit_source_robustness.sh
+experiments/run_v10_chunk_credit_fallback_retry_exercise.sh
+experiments/test_v10_chunk_credit_fallback_retry_exercise.sh
 experiments/run_v10_chunk_credit_distillation_gate.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 ```
@@ -402,16 +407,22 @@ Smoke summary:
 
 ```text
 best_joint_arm = chunk-credit-source-order
+fallback_exercise_arm = raw-retry
 chunk_credit_ready = 1
 joint_chunk_ready = 1
 joint_source_safe = 1
 noisy_clean = 1
 joint_noisy_used = 1.000000
 noisy_selected = 0.000000
-fallback_retry_exercised = 0
+fallback_retry_exercised = 1
+fallback_exercise_ready = 1
+fallback_qacc_delta_vs_corrupt = 0.620000
+fallback_retry_raw_selected = 1.000000
+fallback_retry_noisy_selected = 0.000000
 joint_chunk_source_ready = 0
+teacher_label_contract_ready = 0
 distillation_ready = 0
-reason = fallback-retry-unexercised
+reason = teacher-label-contract-missing
 routing_trigger_rate = 0.000000
 active_jump_rate = 0.000000
 ```
@@ -420,15 +431,17 @@ Expected:
 
 - injected noisy candidates must be present and not selected
 - chunk-credit must remain stronger than the local-energy baseline
-- fallback/retry must not be silently inferred from a path that never exercised it
-- distillation remains blocked until a non-keyshape fallback/retry arm is real
+- fallback/retry must be forced by corrupting the primary candidates and must
+  recover through non-noisy raw retry evidence
+- distillation remains blocked until the teacher-label contract covers correct,
+  wrong, near-miss, missing, and abstain labels over grounded spans
 
 ## h7-b Promotion Gate and v08 Readiness
 
-h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a is wired into
-the route-memory closure as a later chunk-ranker smoke, but it is not yet a
-default-promotion input. v08 uses the h7-b gate to decide whether an external
-benchmark comparison is ready.
+h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d are
+wired into the route-memory closure as later chunk-ranking/source/fallback
+smokes, but they are not yet default-promotion inputs. v08 uses the h7-b gate
+to decide whether an external benchmark comparison is ready.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh

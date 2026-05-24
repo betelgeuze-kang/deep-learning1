@@ -101,6 +101,9 @@ bash "$ROOT_DIR/experiments/test_v10_teacher_free_chunk_ranker.sh"
 echo "goal: h10-chunk-credit-source-robustness"
 bash "$ROOT_DIR/experiments/test_v10_chunk_credit_source_robustness.sh"
 
+echo "goal: h10-chunk-credit-fallback-retry-exercise"
+bash "$ROOT_DIR/experiments/test_v10_chunk_credit_fallback_retry_exercise.sh"
+
 echo "goal: h10-chunk-credit-abstain-policy"
 bash "$ROOT_DIR/experiments/test_v10_chunk_credit_abstain_policy.sh"
 
@@ -182,6 +185,9 @@ if [[ "$MODE" == "extended" ]]; then
 
   echo "goal: h10-chunk-credit-source-robustness-standard"
   bash "$ROOT_DIR/experiments/run_v10_chunk_credit_source_robustness.sh" >/dev/null
+
+  echo "goal: h10-chunk-credit-fallback-retry-exercise-standard"
+  bash "$ROOT_DIR/experiments/run_v10_chunk_credit_fallback_retry_exercise.sh" >/dev/null
 
   echo "goal: h10-chunk-credit-abstain-policy-standard"
   bash "$ROOT_DIR/experiments/run_v10_chunk_credit_abstain_policy.sh" >/dev/null
