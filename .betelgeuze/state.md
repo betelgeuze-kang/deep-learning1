@@ -45,6 +45,10 @@
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
+- v08-b external benchmark adapter schema passed for RULER, LongBench,
+  codebase retrieval, and real document QA:
+  `benchmark_adapter_ready=1`, `benchmark_families=4`, while source/result
+  evidence remains blocked.
 - h9-e extended backend boundary passed as CPU-canonical/static parity
   instrumentation; HIP runtime parity remains optional and environment
   dependent.
@@ -216,6 +220,11 @@ h10-c/h10-d/h10-e/h10-f/h10-g/h10-h joint source/distillation smoke:
 h7-b/v08:
   default_promotion = 0
   h7 status = diagnostic-only
+  benchmark_families = 4
+  benchmark_adapter_ready = 1
+  external_benchmark_source_ready = 0
+  external_benchmark_result_ready = 0
+  external_benchmark_ready = 0
   v08 action = defer-external-comparison
 ```
 
@@ -280,6 +289,13 @@ h7-b/v08:
 - h10-h backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, with HIP runtime parity still
   optional.
+- Focused v08-b verification passed: `bash -n experiments/*.sh`, `bash
+  experiments/test_v08_external_benchmark_adapter.sh`, `bash
+  experiments/test_v08_external_benchmark_readiness.sh`, and `git diff
+  --check`.
+- v08-b backend wrapper verification passed: `bash
+  experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08 adapter
+  and readiness in h9 quick closure.
 
 ## Open Boundary
 
@@ -289,5 +305,6 @@ h7-b/v08:
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion and external comparison.
 - Active next loop: connect a real external teacher-label source above the
-  h10-h schema, then revisit external benchmark readiness and h11 PC RouteLM
-  prototype design.
+  h10-h schema, connect real RULER/LongBench/codebase/doc-QA source and result
+  evidence above the v08-b adapter, then revisit external benchmark readiness
+  and h11 PC RouteLM prototype design.

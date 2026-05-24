@@ -162,14 +162,16 @@ source-credit robustness solved: no
 external benchmark solved: no
 ```
 
-The next research boundary after h10-h is external teacher-label source
-evidence:
+The next research boundary after h10-h/v08-b is external teacher-label source
+evidence plus real external benchmark source/result evidence:
 the teacher-free chunk-credit ranker already survives injected noisy wrong
 candidates, forced fallback/retry now recovers through raw retry without noisy
 selection, the label schema is defined, local collection is ready, local
 distillation training/eval is ready, and external ingestion schema is ready.
-Until external-label source evidence exists, the current default policy stays
-diagnostic-only and routes uncertain cases to weak-hint/abstain.
+The benchmark adapter schema now covers RULER, LongBench, codebase retrieval,
+and real document QA, but it has no dataset/result/baseline/license evidence
+yet. Until external-label and benchmark evidence exist, the current default
+policy stays diagnostic-only and routes uncertain cases to weak-hint/abstain.
 
 ## Current Post-closure h9 GPU Scaffold
 
@@ -184,5 +186,6 @@ candidate value_pos -> value byte read -> proposal hint
 
 and it still keeps jump-neighbor replacement inactive. Treat h9 as backend
 scaffold/parity only. The h9 quick closure now verifies CPU default behavior,
-CPU-only HIP error handling, and the h7 goal closure. CPU/HIP parity remains an
-optional extended check until a complete ROCm/HIP install proves fixture parity.
+CPU-only HIP error handling, the h7 goal closure, and v08-b benchmark
+adapter/readiness. CPU/HIP parity remains an optional extended check until a
+complete ROCm/HIP install proves fixture parity.

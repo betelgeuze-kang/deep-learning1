@@ -2,8 +2,8 @@
 
 ## Current Stage
 
-The current checkpoint is h10-a/b/c/d/e/f/g/h plus h7-b, v08 readiness, and h9-e quick
-closure:
+The current checkpoint is h10-a/b/c/d/e/f/g/h plus h7-b, v08-b adapter/readiness,
+and h9-e quick closure:
 
 ```text
 h6-p: span-local-energy policy-scale diagnostics pass.
@@ -24,7 +24,8 @@ h10-f: local teacher-label collection harness passes, while external labels/trai
 h10-g: local distilled-rule learner fits the h10-f labels, while external label ingestion remains blocked.
 h10-h: external teacher-label ingestion schema passes, while external source remains blocked.
 h7-b: promotion gate blocks default route-memory promotion.
-v08: external benchmark readiness defers comparison.
+v08-b/v08: external benchmark adapter schema passes, while source/result
+evidence remains blocked and comparison is deferred.
 h9-e: quick GPU-backend extended boundary passes with HIP parity optional.
 ```
 
@@ -36,9 +37,9 @@ byte-qacc objective -> local-energy
 span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
-The next h10-style experiment should connect a real external teacher-label
-source above the h10-h schema before any promotion claim or external benchmark
-comparison.
+The next h10/v08-style experiment should connect a real external teacher-label
+source above the h10-h schema and real benchmark source/result evidence above
+the v08-b adapter before any promotion claim or external benchmark comparison.
 
 ## h6 Span-first Guardrail
 
@@ -474,11 +475,16 @@ Expected:
 h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h are
 wired into the route-memory closure as later chunk-ranking/source/fallback
 smokes, but they are not yet default-promotion inputs. v08 uses the h7-b gate
-to decide whether an external benchmark comparison is ready.
+to decide whether an external benchmark comparison is ready. v08-b adds the
+external benchmark adapter manifest for RULER, LongBench, codebase retrieval,
+and real document QA; it validates schema coverage without claiming source or
+result evidence.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
 experiments/test_v07_route_memory_promotion_gate.sh
+experiments/run_v08_external_benchmark_adapter.sh
+experiments/test_v08_external_benchmark_adapter.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -495,6 +501,10 @@ h7-b:
   status = diagnostic-only
 
 v08:
+  benchmark_families = 4
+  benchmark_adapter_ready = 1
+  external_benchmark_source_ready = 0
+  external_benchmark_result_ready = 0
   external_benchmark_ready = 0
   action = defer-external-comparison
 ```
@@ -502,6 +512,7 @@ v08:
 Expected:
 
 - no route-memory policy is promoted by default before chunk-quality is ready
+- external benchmark adapter schema passes before source/result evidence exists
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 
