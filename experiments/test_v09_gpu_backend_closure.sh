@@ -64,6 +64,10 @@ run_check v08-external-benchmark-execution \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_execution_gate.sh"
 run_check v08-external-benchmark-execution-import \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_execution_import.sh"
+run_check v08-external-benchmark-attestation \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_attestation_gate.sh"
+run_check v08-external-benchmark-attestation-import \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_attestation_import.sh"
 run_check v11-pc-routelm-prototype-readiness \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_readiness.sh"
 run_check v11-pc-routelm-prototype-import \

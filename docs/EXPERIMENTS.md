@@ -3,7 +3,7 @@
 ## Current Stage
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i plus h7-b,
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/readiness,
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/readiness,
 h11-a prototype readiness/import, and h9-f quick closure:
 
 ```text
@@ -26,12 +26,13 @@ h10-g: local distilled-rule learner fits the h10-f labels, while external label 
 h10-h: external teacher-label ingestion schema passes, while default external source remains blocked.
 h10-i: supplied external teacher-label CSV import passes and can raise the distillation gate to diagnostic candidate without default promotion.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08: external benchmark adapter/evidence
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
 baselines, while placeholder evidence is blocked from counting as real
 benchmark evidence, local artifact hashes and authenticity/evaluator contracts
-plus execution/evaluator-output artifacts can be verified, and publishable
-comparison is deferred.
+plus execution/evaluator-output artifacts can be verified, local/fixture
+attestations remain diagnostic, and publishable comparison is deferred until
+real independent verification exists.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, benchmark, and GPU speed evidence gates.
@@ -48,8 +49,8 @@ span-exact objective -> local-energy-hybrid in most tested groups
 
 The next h10/v08-style experiment should connect a real external teacher-label
 source above the h10-i import contract, real benchmark source/result evidence
-through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i
-import/comparison/real-evidence/artifact-verifier/authenticity/execution path,
+through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j
+import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation path,
 and measured PC RouteLM/NLG prototype evidence through h11-a before any
 promotion claim or external benchmark comparison.
 
@@ -530,6 +531,10 @@ validates schema/comparison coverage without claiming source or result evidence.
 v08-i verifies evaluator output and run-log artifacts plus metric output, but
 still blocks real external benchmark claims until independent external
 attestation exists.
+v08-j adds that attestation gate: supplied/local attestations can verify their
+own artifact hashes and match execution hashes/metrics, but they still keep
+`real_external_benchmark_verified=0` until the attestor is independently
+verified.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
@@ -555,6 +560,9 @@ experiments/test_v08_external_benchmark_authenticity_import.sh
 experiments/run_v08_external_benchmark_execution_gate.sh
 experiments/test_v08_external_benchmark_execution_gate.sh
 experiments/test_v08_external_benchmark_execution_import.sh
+experiments/run_v08_external_benchmark_attestation_gate.sh
+experiments/test_v08_external_benchmark_attestation_gate.sh
+experiments/test_v08_external_benchmark_attestation_import.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -665,6 +673,21 @@ v08-i supplied execution fixture:
   evaluator_execution_verified = 1
   real_external_benchmark_verified = 0
   action = external-benchmark-attestation-missing
+
+v08-j supplied attestation fixture:
+  evidence_source = provided-csv
+  authenticity_source = provided-csv
+  execution_source = provided-csv
+  attestation_source = provided-csv
+  evaluator_execution_verified = 1
+  attestation_artifact_rows = 4
+  attestation_hash_verified_rows = 4
+  execution_hash_attested_rows = 4
+  metric_attested_rows = 4
+  independent_attestor_rows = 0
+  independent_attestation_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-independent-attestor-missing
 ```
 
 Expected:
@@ -682,8 +705,9 @@ Expected:
   fixtures as authentic external benchmarks
 - authenticity/evaluator contracts can pass without treating synthetic local
   fixtures as executed external benchmarks
-- execution/evaluator-output artifacts can pass without treating synthetic
-  local fixtures as independently attested external benchmarks
+- execution/evaluator-output artifacts can pass, and local/fixture
+  attestations can match those artifacts, without treating synthetic local
+  fixtures as independently verified external benchmarks
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 
