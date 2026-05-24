@@ -36,6 +36,9 @@
 - h10-f local teacher-label collection harness passed:
   `teacher_label_collection_ready=1`, `label_source=local-teacher-harness`;
   external teacher labels and distillation training remain blocked.
+- h10-g local teacher-distillation learner passed:
+  `teacher_distillation_training_ready=1`, `teacher_learner_id=distilled-rule-v1`;
+  external teacher-label ingestion remains blocked.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -169,7 +172,7 @@ h10-b chunk-credit abstain policy smoke:
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
-h10-c/h10-d/h10-e/h10-f joint source/distillation smoke:
+h10-c/h10-d/h10-e/h10-f/h10-g joint source/distillation smoke:
   best_joint_arm = chunk-credit-source-order
   fallback_exercise_arm = raw-retry
   joint_chunk_ready = 1
@@ -188,7 +191,10 @@ h10-c/h10-d/h10-e/h10-f joint source/distillation smoke:
   teacher_label_contract_ready = 1
   teacher_label_collection_ready = 1
   teacher_external_labels_ready = 0
-  teacher_distillation_training_ready = 0
+  teacher_distillation_training_ready = 1
+  teacher_distillation_eval_ready = 1
+  teacher_distillation_action_accuracy = 1.000000
+  teacher_learner_id = distilled-rule-v1
   teacher_grounded_span_coverage = 1.000000
   teacher_label_source = local-teacher-harness
   teacher_correct_labels = 2
@@ -197,7 +203,7 @@ h10-c/h10-d/h10-e/h10-f joint source/distillation smoke:
   teacher_missing_query_labels = 1
   teacher_abstain_labels = 1
   distillation_ready = 0
-  reason = teacher-distillation-training-missing
+  reason = teacher-external-labels-missing
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
@@ -252,6 +258,14 @@ h7-b/v08:
 - h10-f closure verification passed: `bash
   experiments/test_v07_goal_route_memory_closure.sh`, `bash
   experiments/test_v09_gpu_backend_closure.sh`, with v08 still deferred.
+- h10-g focused gates passed: `bash
+  experiments/test_v10_teacher_distillation_learner.sh`, `bash
+  experiments/test_v10_chunk_credit_distillation_gate.sh`.
+- h10-g h7 closure verification passed: `bash
+  experiments/test_v07_goal_route_memory_closure.sh`, with v08 still deferred.
+- h10-g backend wrapper verification passed: `bash
+  experiments/test_v09_gpu_backend_closure.sh`, with HIP runtime parity still
+  optional.
 
 ## Open Boundary
 
@@ -260,6 +274,6 @@ h7-b/v08:
 - NOT wrong-candidate/fallback robustness solved beyond the h10-d forced smoke.
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion and external comparison.
-- Active next loop: build teacher-distillation learner evidence and/or external
-  teacher-label ingestion above the h10-f local collection harness, then revisit
-  external benchmark readiness and h11 PC RouteLM prototype design.
+- Active next loop: build external teacher-label ingestion above the h10-g local
+  learner harness, then revisit external benchmark readiness and h11 PC RouteLM
+  prototype design.

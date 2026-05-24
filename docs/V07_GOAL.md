@@ -76,7 +76,7 @@ experiments/test_v07_goal_route_memory_closure.sh --extended
 
 also runs the extended h5 route-quality closure and the standard h6
 exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale/span-first-guardrail/span-first-guardrail-degradation/adaptive-guardrail
-span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-fallback-retry-exercise/chunk-credit-abstain-policy/teacher-label-contract/teacher-label-collection-harness/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
+span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-fallback-retry-exercise/chunk-credit-abstain-policy/teacher-label-contract/teacher-label-collection-harness/teacher-distillation-learner/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
 runners.
 
 ## Current Closed Scope
@@ -140,7 +140,8 @@ route-memory:
   h10-e teacher-label contract covers correct, wrong, near-miss, missing-query,
   abstain, and grounded-span labels
   h10-f local teacher-label collection harness marks local collection ready,
-  while distillation remains blocked by missing training/external ingestion
+  and h10-g local teacher-distillation learner marks local training/eval ready,
+  while distillation remains blocked by missing external ingestion
   wrong-candidate/fallback gates keep source retry noisy-clean but block
   combined readiness
   abstain/retry guardrails route the current policy to weak-hint/abstain
@@ -160,13 +161,13 @@ source-credit robustness solved: no
 external benchmark solved: no
 ```
 
-The next research boundary after h10-f is teacher-label distillation evidence:
+The next research boundary after h10-g is external teacher-label ingestion:
 the teacher-free chunk-credit ranker already survives injected noisy wrong
 candidates, forced fallback/retry now recovers through raw retry without noisy
-selection, the label schema is defined, and local collection is ready. Until a
-distillation learner and external-label ingestion evidence exist, the current
-default policy stays diagnostic-only and routes uncertain cases to
-weak-hint/abstain.
+selection, the label schema is defined, local collection is ready, and local
+distillation training/eval is ready. Until external-label ingestion evidence
+exists, the current default policy stays diagnostic-only and routes uncertain
+cases to weak-hint/abstain.
 
 ## Current Post-closure h9 GPU Scaffold
 
