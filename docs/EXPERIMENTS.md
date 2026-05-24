@@ -3,7 +3,7 @@
 ## Current Stage
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i plus h7-b,
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g adapter/evidence/import/comparison/real-evidence/artifact-verifier/readiness,
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/readiness,
 h11-a prototype readiness/import, and h9-f quick closure:
 
 ```text
@@ -26,11 +26,11 @@ h10-g: local distilled-rule learner fits the h10-f labels, while external label 
 h10-h: external teacher-label ingestion schema passes, while default external source remains blocked.
 h10-i: supplied external teacher-label CSV import passes and can raise the distillation gate to diagnostic candidate without default promotion.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08: external benchmark adapter/evidence
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
 baselines, while placeholder evidence is blocked from counting as real
-benchmark evidence, local artifact hashes can be verified, and publishable
-comparison is deferred.
+benchmark evidence, local artifact hashes and authenticity/evaluator contracts
+can be verified, and publishable comparison is deferred.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, benchmark, and GPU speed evidence gates.
@@ -47,9 +47,10 @@ span-exact objective -> local-energy-hybrid in most tested groups
 
 The next h10/v08-style experiment should connect a real external teacher-label
 source above the h10-i import contract, real benchmark source/result evidence
-through the v08-d/v08-e/v08-f/v08-g import/comparison/real-evidence/artifact-verifier
-path, and measured PC RouteLM/NLG prototype evidence through h11-a before any
-promotion claim or external benchmark comparison.
+through the v08-d/v08-e/v08-f/v08-g/v08-h
+import/comparison/real-evidence/artifact-verifier/authenticity path, and
+measured PC RouteLM/NLG prototype evidence through h11-a before any promotion
+claim or external benchmark comparison.
 
 ## h6 Span-first Guardrail
 
@@ -521,8 +522,10 @@ separates supplied placeholder evidence from real benchmark evidence by
 requiring non-placeholder artifact URIs and `sha256:<64 hex>` provenance
 hashes before any real benchmark claim. v08-g adds a local `file://` artifact
 hash verifier, but still blocks publishable claims until benchmark authenticity
-and evaluator verification exist. The default path still validates
-schema/comparison coverage without claiming source or result evidence.
+and evaluator verification exist. v08-h verifies benchmark identity, canonical
+URIs, evaluator hash, and metric contract while still blocking actual external
+benchmark claims until execution evidence exists. The default path still
+validates schema/comparison coverage without claiming source or result evidence.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
@@ -542,6 +545,9 @@ experiments/test_v08_external_benchmark_real_evidence_format.sh
 experiments/run_v08_external_benchmark_artifact_verifier.sh
 experiments/test_v08_external_benchmark_artifact_verifier.sh
 experiments/test_v08_external_benchmark_artifact_verifier_local.sh
+experiments/run_v08_external_benchmark_authenticity_gate.sh
+experiments/test_v08_external_benchmark_authenticity_gate.sh
+experiments/test_v08_external_benchmark_authenticity_import.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -624,6 +630,21 @@ v08-g local file artifact fixture:
   artifact_verifier_ready = 1
   real_external_benchmark_verified = 0
   action = benchmark-authenticity-verifier-missing
+
+v08-h supplied authenticity/evaluator fixture:
+  evidence_source = provided-csv
+  authenticity_source = provided-csv
+  artifact_verifier_ready = 1
+  canonical_uri_match_rows = 4
+  authenticity_ready_rows = 4
+  evaluator_ready_rows = 4
+  evaluator_hash_rows = 4
+  metric_ready_rows = 4
+  benchmark_authenticity_ready = 1
+  evaluator_contract_ready = 1
+  benchmark_authenticity_verified = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-execution-missing
 ```
 
 Expected:
@@ -639,6 +660,8 @@ Expected:
   still blocks publishable claims until the verifier exists
 - local file artifact hashes can be verified without treating synthetic local
   fixtures as authentic external benchmarks
+- authenticity/evaluator contracts can pass without treating synthetic local
+  fixtures as executed external benchmarks
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 
