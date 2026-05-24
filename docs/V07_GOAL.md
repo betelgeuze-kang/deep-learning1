@@ -76,7 +76,7 @@ experiments/test_v07_goal_route_memory_closure.sh --extended
 
 also runs the extended h5 route-quality closure and the standard h6
 exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale/span-first-guardrail/span-first-guardrail-degradation/adaptive-guardrail
-span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-fallback-retry-exercise/chunk-credit-abstain-policy/teacher-label-contract/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
+span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-fallback-retry-exercise/chunk-credit-abstain-policy/teacher-label-contract/teacher-label-collection-harness/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
 runners.
 
 ## Current Closed Scope
@@ -138,8 +138,9 @@ route-memory:
   h10-d fallback/retry exercise forces correct primary candidates out and
   recovers through raw retry without selecting noisy sources
   h10-e teacher-label contract covers correct, wrong, near-miss, missing-query,
-  abstain, and grounded-span labels, while distillation remains blocked by
-  missing external teacher-label collection
+  abstain, and grounded-span labels
+  h10-f local teacher-label collection harness marks local collection ready,
+  while distillation remains blocked by missing training/external ingestion
   wrong-candidate/fallback gates keep source retry noisy-clean but block
   combined readiness
   abstain/retry guardrails route the current policy to weak-hint/abstain
@@ -159,12 +160,13 @@ source-credit robustness solved: no
 external benchmark solved: no
 ```
 
-The next research boundary after h10-e is teacher-label collection for
-chunk-credit distillation: the teacher-free chunk-credit ranker already
-survives injected noisy wrong candidates, forced fallback/retry now recovers
-through raw retry without noisy selection, and the label schema is defined.
-Until real teacher labels are collected and distilled, the current default
-policy stays diagnostic-only and routes uncertain cases to weak-hint/abstain.
+The next research boundary after h10-f is teacher-label distillation evidence:
+the teacher-free chunk-credit ranker already survives injected noisy wrong
+candidates, forced fallback/retry now recovers through raw retry without noisy
+selection, the label schema is defined, and local collection is ready. Until a
+distillation learner and external-label ingestion evidence exist, the current
+default policy stays diagnostic-only and routes uncertain cases to
+weak-hint/abstain.
 
 ## Current Post-closure h9 GPU Scaffold
 

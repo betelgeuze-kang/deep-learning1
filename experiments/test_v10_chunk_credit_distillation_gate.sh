@@ -49,11 +49,11 @@ awk -F, '
         ($idx["fallback_noisy_selected"] + 0) != 0.0 ||
         ($idx["joint_chunk_source_ready"] + 0) != 0 ||
         ($idx["teacher_label_contract_ready"] + 0) != 1 ||
-        ($idx["teacher_label_collection_ready"] + 0) != 0 ||
+        ($idx["teacher_label_collection_ready"] + 0) != 1 ||
         ($idx["teacher_external_labels_ready"] + 0) != 0 ||
         ($idx["teacher_distillation_training_ready"] + 0) != 0 ||
         ($idx["teacher_grounded_span_coverage"] + 0) != 1.0 ||
-        $idx["teacher_label_source"] != "contract-oracle" ||
+        $idx["teacher_label_source"] != "local-teacher-harness" ||
         ($idx["teacher_correct_labels"] + 0) <= 0 ||
         ($idx["teacher_wrong_labels"] + 0) <= 0 ||
         ($idx["teacher_near_miss_labels"] + 0) <= 0 ||
@@ -62,13 +62,13 @@ awk -F, '
         ($idx["policy_distillation_ready"] + 0) != 0 ||
         ($idx["combined_ready"] + 0) != 0 ||
         ($idx["distillation_ready"] + 0) != 0) {
-      die("h10 distillation must stay blocked after schema contract until external teacher labels/training exist", 6)
+      die("h10 distillation must stay blocked after local teacher label collection until training exists", 6)
     }
     if (($idx["default_promotion"] + 0) != 0 ||
         ($idx["diagnostic_only"] + 0) != 1 ||
         ($idx["weak_hint_or_abstain"] + 0) != 1 ||
         $idx["status"] != "diagnostic-only" ||
-        $idx["reason"] != "teacher-label-collection-missing") {
+        $idx["reason"] != "teacher-distillation-training-missing") {
       die("h10 distillation should remain weak-hint diagnostic-only", 7)
     }
     if (($idx["routing_trigger_rate"] + 0) != 0.0 ||
@@ -101,8 +101,8 @@ awk -F, '
     if ($idx["gate"] == "teacher-label-contract" && $idx["status"] != "pass") {
       die("teacher-label contract should pass after h10-e schema evidence", 24)
     }
-    if ($idx["gate"] == "teacher-label-collection" && $idx["status"] != "blocked") {
-      die("teacher-label collection should block distillation", 25)
+    if ($idx["gate"] == "teacher-label-collection" && $idx["status"] != "pass") {
+      die("teacher-label collection should pass after h10-f local collection", 25)
     }
     if ($idx["gate"] == "teacher-distillation-training" && $idx["status"] != "blocked") {
       die("teacher distillation training should block distillation", 26)

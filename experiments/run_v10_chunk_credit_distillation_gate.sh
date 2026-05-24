@@ -21,6 +21,7 @@ POLICY_PREFIX="v10_chunk_credit_abstain_policy"
 JOINT_PREFIX="v10_chunk_credit_source_robustness"
 FALLBACK_PREFIX="v10_chunk_credit_fallback_retry_exercise"
 CONTRACT_PREFIX="v10_teacher_label_contract"
+COLLECTION_PREFIX="v10_teacher_label_collection_harness"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v10_chunk_credit_distillation_gate_smoke"
@@ -28,6 +29,7 @@ if [[ "$MODE" == "smoke" ]]; then
   JOINT_PREFIX="v10_chunk_credit_source_robustness_smoke"
   FALLBACK_PREFIX="v10_chunk_credit_fallback_retry_exercise_smoke"
   CONTRACT_PREFIX="v10_teacher_label_contract_smoke"
+  COLLECTION_PREFIX="v10_teacher_label_collection_harness_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -37,6 +39,7 @@ POLICY_CSV="$RESULTS_DIR/${POLICY_PREFIX}_policy.csv"
 JOINT_AGG_CSV="$RESULTS_DIR/${JOINT_PREFIX}_aggregate.csv"
 FALLBACK_AGG_CSV="$RESULTS_DIR/${FALLBACK_PREFIX}_aggregate.csv"
 CONTRACT_SUMMARY_CSV="$RESULTS_DIR/${CONTRACT_PREFIX}_summary.csv"
+COLLECTION_SUMMARY_CSV="$RESULTS_DIR/${COLLECTION_PREFIX}_summary.csv"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
@@ -52,8 +55,11 @@ fi
 if [[ ! -s "$CONTRACT_SUMMARY_CSV" ]]; then
   "$ROOT_DIR/experiments/run_v10_teacher_label_contract.sh" "${RUN_ARGS[@]}" >/dev/null
 fi
+if [[ ! -s "$COLLECTION_SUMMARY_CSV" ]]; then
+  "$ROOT_DIR/experiments/run_v10_teacher_label_collection_harness.sh" "${RUN_ARGS[@]}" >/dev/null
+fi
 
-awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_csv="$FALLBACK_AGG_CSV" -v contract_csv="$CONTRACT_SUMMARY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
+awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_csv="$FALLBACK_AGG_CSV" -v contract_csv="$CONTRACT_SUMMARY_CSV" -v collection_csv="$COLLECTION_SUMMARY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
   function die(message, code) {
     print message > "/dev/stderr"
     exit code
@@ -144,19 +150,35 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
   }
   FILENAME == contract_csv {
     contract_rows++
-    teacher_correct_labels = $cidx["correct_labels"] + 0
-    teacher_wrong_labels = $cidx["wrong_labels"] + 0
-    teacher_near_miss_labels = $cidx["near_miss_labels"] + 0
-    teacher_missing_query_labels = $cidx["missing_query_labels"] + 0
-    teacher_abstain_labels = $cidx["abstain_labels"] + 0
-    teacher_grounded_span_coverage = $cidx["grounded_span_coverage"] + 0
-    teacher_label_contract_ready = $cidx["teacher_label_contract_ready"] + 0
-    teacher_label_collection_ready = $cidx["teacher_label_collection_ready"] + 0
-    teacher_external_labels_ready = $cidx["teacher_external_labels_ready"] + 0
-    teacher_distillation_training_ready = $cidx["distillation_training_ready"] + 0
-    teacher_label_source = $cidx["label_source"]
-    teacher_routing = $cidx["routing_trigger_rate"] + 0
-    teacher_jump = $cidx["active_jump_rate"] + 0
+    contract_teacher_label_contract_ready = $cidx["teacher_label_contract_ready"] + 0
+    contract_routing = $cidx["routing_trigger_rate"] + 0
+    contract_jump = $cidx["active_jump_rate"] + 0
+    next
+  }
+  FILENAME == collection_csv && FNR == 1 {
+    for (i = 1; i <= NF; i++) lidx[$i] = i
+    required_count = split("correct_labels wrong_labels near_miss_labels missing_query_labels abstain_labels candidate_label_rows grounded_candidate_rows teacher_label_contract_ready teacher_label_collection_ready teacher_external_labels_ready distillation_training_ready label_source routing_trigger_rate active_jump_rate", required, " ")
+    for (i = 1; i <= required_count; i++) {
+      if (!(required[i] in lidx)) die("missing h10 distillation teacher collection column: " required[i], 10)
+    }
+    next
+  }
+  FILENAME == collection_csv {
+    collection_rows++
+    teacher_correct_labels = $lidx["correct_labels"] + 0
+    teacher_wrong_labels = $lidx["wrong_labels"] + 0
+    teacher_near_miss_labels = $lidx["near_miss_labels"] + 0
+    teacher_missing_query_labels = $lidx["missing_query_labels"] + 0
+    teacher_abstain_labels = $lidx["abstain_labels"] + 0
+    teacher_candidate_label_rows = $lidx["candidate_label_rows"] + 0
+    teacher_grounded_candidate_rows = $lidx["grounded_candidate_rows"] + 0
+    teacher_collection_contract_ready = $lidx["teacher_label_contract_ready"] + 0
+    teacher_label_collection_ready = $lidx["teacher_label_collection_ready"] + 0
+    teacher_external_labels_ready = $lidx["teacher_external_labels_ready"] + 0
+    teacher_distillation_training_ready = $lidx["distillation_training_ready"] + 0
+    teacher_label_source = $lidx["label_source"]
+    teacher_routing = $lidx["routing_trigger_rate"] + 0
+    teacher_jump = $lidx["active_jump_rate"] + 0
     next
   }
   END {
@@ -164,6 +186,16 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
     if (joint_rows != 1) die("expected one h10 distillation joint row", 5)
     if (fallback_rows != 1) die("expected one h10 distillation fallback row", 7)
     if (contract_rows != 1) die("expected one h10 distillation teacher contract row", 9)
+    if (collection_rows != 1) die("expected one h10 distillation teacher collection row", 11)
+
+    teacher_label_contract_ready = 0
+    if (contract_teacher_label_contract_ready && teacher_collection_contract_ready) {
+      teacher_label_contract_ready = 1
+    }
+    teacher_grounded_span_coverage = 0.0
+    if (teacher_candidate_label_rows > 0) {
+      teacher_grounded_span_coverage = teacher_grounded_candidate_rows / teacher_candidate_label_rows
+    }
 
     noisy_clean = 0
     if (noisy_selection_clean &&
@@ -204,7 +236,6 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
         fallback_gate &&
         teacher_label_contract_ready &&
         teacher_label_collection_ready &&
-        teacher_external_labels_ready &&
         teacher_distillation_training_ready &&
         teacher_grounded_span_coverage == 1.0 &&
         policy_routing == 0.0 &&
@@ -213,6 +244,8 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
         joint_jump == 0.0 &&
         fallback_routing == 0.0 &&
         fallback_jump == 0.0 &&
+        contract_routing == 0.0 &&
+        contract_jump == 0.0 &&
         teacher_routing == 0.0 &&
         teacher_jump == 0.0) {
       distillation_ready = 1
@@ -223,7 +256,7 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       reason = "fallback-retry-unexercised"
     } else if (!teacher_label_contract_ready) {
       reason = "teacher-label-contract-missing"
-    } else if (!teacher_label_collection_ready || !teacher_external_labels_ready) {
+    } else if (!teacher_label_collection_ready) {
       reason = "teacher-label-collection-missing"
     } else if (!teacher_distillation_training_ready) {
       reason = "teacher-distillation-training-missing"
@@ -290,7 +323,7 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
     printf "teacher-label-contract,%s,required=correct_wrong_near_miss_missing_abstain_grounded_span\n",
       teacher_label_contract_ready ? "pass" : "blocked" >> decision_csv
     printf "teacher-label-collection,%s,source=%s external_ready=%d\n",
-      teacher_label_collection_ready && teacher_external_labels_ready ? "pass" : "blocked",
+      teacher_label_collection_ready ? "pass" : "blocked",
       teacher_label_source,
       teacher_external_labels_ready >> decision_csv
     printf "teacher-distillation-training,%s,learner_ready=%d\n",
@@ -301,7 +334,7 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       status,
       reason >> decision_csv
   }
-' "$POLICY_CSV" "$JOINT_AGG_CSV" "$FALLBACK_AGG_CSV" "$CONTRACT_SUMMARY_CSV"
+' "$POLICY_CSV" "$JOINT_AGG_CSV" "$FALLBACK_AGG_CSV" "$CONTRACT_SUMMARY_CSV" "$COLLECTION_SUMMARY_CSV"
 
 echo "summary: $SUMMARY_CSV"
 echo "decision: $DECISION_CSV"

@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-e plus the h7 and h9 quick closures, the project should be read as:
+As of h10-f plus the h7 and h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -91,6 +91,9 @@ Current closure:
 - `h10-e` adds the teacher-label contract. It covers correct, wrong, near-miss,
   missing-query, and abstain labels with grounded candidate spans, but external
   teacher-label collection and distillation training remain blocked.
+- `h10-f` adds a local teacher-label collection harness. Collection now passes
+  from deterministic local fixture labels (`label_source=local-teacher-harness`)
+  while external teacher labels and distillation training remain blocked.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
 - `h7-b` adds the route-memory promotion gate and keeps default promotion
@@ -99,17 +102,16 @@ Current closure:
   promotion passes.
 - `h9-a/h9-b/h9-d/h9-e` add optional ROCm/HIP backend scaffolding:
   `experiments/test_v09_gpu_backend_closure.sh`.
-- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e, h7-b, v08 readiness, and
+- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f, h7-b, v08 readiness, and
   h9-e included in quick closure paths. HIP parity remains optional and
   environment-dependent.
 
 Current next boundary:
 
-- Collect real teacher labels or build a local teacher-label collection harness
-  for chunk-credit distillation. The schema contract is now present; the next
-  blocker is turning contract labels into collected teacher supervision and a
-  distillation learner before any default promotion or external benchmark
-  comparison.
+- Train or stub the teacher-distillation learner from the h10-f local collection
+  artifact, and/or ingest external teacher labels. The schema contract and local
+  collection harness are now present; the next blocker is distillation evidence
+  before any default promotion or external benchmark comparison.
 - Any stronger claim must survive those matrices without using symbolic
   `key-shape` as the policy itself.
 
@@ -142,8 +144,9 @@ Status update:
 - steps 1-8 are complete and documented.
 - step 9 split into two findings: active jump-neighbor replacement remains
   no-go, while value-bearing route hints work under controlled fixtures.
-- the current next research boundary is adaptive span/chunk guardrail scaling
-  under learned-like ambiguity, not topology replacement.
+- the current next research boundary is teacher-label distillation evidence and
+  external teacher-label ingestion above the h10-f local collection harness, not
+  topology replacement.
 - GPU work is backend/parity instrumentation only. CPU remains canonical until
   a complete ROCm/HIP install proves fixture parity.
 

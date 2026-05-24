@@ -110,6 +110,9 @@ bash "$ROOT_DIR/experiments/test_v10_chunk_credit_abstain_policy.sh"
 echo "goal: h10-teacher-label-contract"
 bash "$ROOT_DIR/experiments/test_v10_teacher_label_contract.sh"
 
+echo "goal: h10-teacher-label-collection-harness"
+bash "$ROOT_DIR/experiments/test_v10_teacher_label_collection_harness.sh"
+
 echo "goal: h10-chunk-credit-distillation-gate"
 bash "$ROOT_DIR/experiments/test_v10_chunk_credit_distillation_gate.sh"
 
@@ -197,6 +200,9 @@ if [[ "$MODE" == "extended" ]]; then
 
   echo "goal: h10-teacher-label-contract-standard"
   bash "$ROOT_DIR/experiments/run_v10_teacher_label_contract.sh" >/dev/null
+
+  echo "goal: h10-teacher-label-collection-harness-standard"
+  bash "$ROOT_DIR/experiments/run_v10_teacher_label_collection_harness.sh" >/dev/null
 
   echo "goal: h10-chunk-credit-distillation-gate-standard"
   bash "$ROOT_DIR/experiments/run_v10_chunk_credit_distillation_gate.sh" >/dev/null
