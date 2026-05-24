@@ -81,6 +81,10 @@
   verify attestation artifact hashes plus attested execution hashes/metrics,
   while fixture attestors keep `real_external_benchmark_verified=0` until real
   independent external verification exists.
+- v08-k external benchmark attestor identity gate passed: supplied local fixture
+  can verify attestor identity, registry, conflict disclosure, and independence
+  provenance artifacts, while real benchmark verification remains blocked by
+  final external review.
 - h9-f backend boundary passed as CPU-canonical executable parity
   instrumentation: CPU parity tool reports `max_abs_delta=0`,
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
@@ -388,6 +392,21 @@ v08-j supplied attestation fixture:
   real_external_benchmark_verified = 0
   action = external-benchmark-independent-attestor-missing
 
+v08-k supplied attestor identity fixture:
+  attestor_identity_source = provided-csv
+  evaluator_execution_verified = 1
+  independent_attestation_verified = 1
+  identity_rows = 4
+  matched_attestation_rows = 4
+  identity_hash_verified_rows = 4
+  registry_hash_verified_rows = 4
+  conflict_disclosure_hash_verified_rows = 4
+  independence_basis_rows = 4
+  no_declared_conflict_rows = 4
+  attestor_identity_verified = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-final-review-missing
+
 h11-a supplied prototype fixture:
   prototype_contract_schema_ready = 1
   small_generator_adapter_ready = 1
@@ -524,9 +543,12 @@ h9-g supplied measured-speed fixture:
 - Focused v08-j verification passed: `bash
   experiments/test_v08_external_benchmark_attestation_gate.sh` and `bash
   experiments/test_v08_external_benchmark_attestation_import.sh`.
-- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j backend wrapper verification passed: `bash
+- Focused v08-k verification passed: `bash
+  experiments/test_v08_external_benchmark_attestor_identity_gate.sh` and `bash
+  experiments/test_v08_external_benchmark_attestor_identity_import.sh`.
+- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
-  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/readiness
+  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/readiness
   in h9 quick closure.
 
 ## Open Boundary
@@ -539,8 +561,8 @@ h9-g supplied measured-speed fixture:
   publishable PC RouteLM / NLG prototype claims.
 - Active next loop: connect a real external teacher-label source above the
   h10-i import contract, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j
-  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation
-  path, pass v08-j independent external attestation, replace h9-g fixture timing
+  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k
+  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity
+  path, pass final external benchmark review, replace h9-g fixture timing
   with real HIP-backed measured GPU speed evidence,
   then replace the h11-a fixture with a real local PC RouteLM prototype smoke.

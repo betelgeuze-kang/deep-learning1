@@ -24,8 +24,8 @@ route-memory goal closure:
 h6-t/u/v/w route-memory diagnostics and h7-b promotion gates are wired into h7.
 h9 quick closure passes CPU default behavior, CPU-only HIP error handling,
 h9-f CPU numeric parity, h9-g measured-speed no-claim checks, h7, and
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j benchmark
-adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/readiness
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k benchmark
+adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/readiness
 plus h11-a PC RouteLM prototype readiness/import.
 HIP parity remains optional and environment-dependent.
 ```
@@ -137,6 +137,8 @@ experiments/test_v08_external_benchmark_execution_gate.sh
 experiments/test_v08_external_benchmark_execution_import.sh
 experiments/test_v08_external_benchmark_attestation_gate.sh
 experiments/test_v08_external_benchmark_attestation_import.sh
+experiments/test_v08_external_benchmark_attestor_identity_gate.sh
+experiments/test_v08_external_benchmark_attestor_identity_import.sh
 experiments/test_v08_external_benchmark_readiness.sh
 experiments/test_v11_pc_routelm_prototype_readiness.sh
 experiments/test_v11_pc_routelm_prototype_import.sh
