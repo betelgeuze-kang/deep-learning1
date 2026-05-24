@@ -2,8 +2,9 @@
 
 ## Current Stage
 
-The current checkpoint is h10-a/b/c/d/e/f/g/h plus h7-b, v08-b/v08-c/v08-d
-adapter/evidence/import/readiness, and h9-e quick closure:
+The current checkpoint is h10-a/b/c/d/e/f/g/h plus h7-b,
+v08-b/v08-c/v08-d/v08-e adapter/evidence/import/comparison/readiness, and h9-e
+quick closure:
 
 ```text
 h6-p: span-local-energy policy-scale diagnostics pass.
@@ -24,9 +25,10 @@ h10-f: local teacher-label collection harness passes, while external labels/trai
 h10-g: local distilled-rule learner fits the h10-f labels, while external label ingestion remains blocked.
 h10-h: external teacher-label ingestion schema passes, while external source remains blocked.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08: external benchmark adapter/evidence schemas pass, a
-supplied evidence CSV can be imported, while default source/result evidence
-remains blocked and comparison is deferred.
+v08-b/v08-c/v08-d/v08-e/v08: external benchmark adapter/evidence schemas pass,
+a supplied evidence CSV can be imported and compared against baselines, while
+default source/result evidence remains blocked and publishable comparison is
+deferred.
 h9-e: quick GPU-backend extended boundary passes with HIP parity optional.
 ```
 
@@ -40,8 +42,8 @@ span-exact objective -> local-energy-hybrid in most tested groups
 
 The next h10/v08-style experiment should connect a real external teacher-label
 source above the h10-h schema and real benchmark source/result evidence through
-the v08-d import path before any promotion claim or external benchmark
-comparison.
+the v08-d/v08-e import/comparison path before any promotion claim or external
+benchmark comparison.
 
 ## h6 Span-first Guardrail
 
@@ -482,8 +484,9 @@ external benchmark adapter manifest for RULER, LongBench, codebase retrieval,
 and real document QA. v08-c adds the evidence-ingestion schema for dataset,
 license, baseline, result, evaluator, and provenance evidence. v08-d adds a
 `V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV` import path and a positive supplied-CSV
-fixture gate. The default path still validates schema coverage without claiming
-source or result evidence.
+fixture gate. v08-e adds baseline-vs-route-memory comparison deltas. The
+default path still validates schema/comparison coverage without claiming source
+or result evidence.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
@@ -493,6 +496,9 @@ experiments/test_v08_external_benchmark_adapter.sh
 experiments/run_v08_external_benchmark_evidence_ingestion.sh
 experiments/test_v08_external_benchmark_evidence_ingestion.sh
 experiments/test_v08_external_benchmark_evidence_import.sh
+experiments/run_v08_external_benchmark_comparison_gate.sh
+experiments/test_v08_external_benchmark_comparison_gate.sh
+experiments/test_v08_external_benchmark_comparison_import.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -522,6 +528,13 @@ v08-d supplied CSV fixture:
   external_benchmark_source_ready = 1
   external_benchmark_result_ready = 1
   external_benchmark_ready = 1
+
+v08-e supplied CSV comparison fixture:
+  comparison_input_ready = 1
+  benchmark_comparison_ready = 1
+  publishable_comparison_ready = 0
+  route_memory_losses = 4
+  action = diagnostic-comparison-only
 ```
 
 Expected:
@@ -530,6 +543,8 @@ Expected:
 - external benchmark adapter/evidence schemas pass before source/result evidence exists
 - supplied evidence CSV import can raise source/result readiness when all
   evidence fields are populated
+- supplied evidence CSV comparison can compute baseline deltas while staying
+  unpublished before promotion
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 

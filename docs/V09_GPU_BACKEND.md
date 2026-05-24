@@ -23,8 +23,8 @@ route-memory goal closure:
 ```text
 h6-t/u/v/w route-memory diagnostics and h7-b promotion gates are wired into h7.
 h9 quick closure passes CPU default behavior, CPU-only HIP error handling, h9-e
-extended-boundary checks, h7, and v08-b/v08-c/v08-d benchmark
-adapter/evidence/import/readiness.
+extended-boundary checks, h7, and v08-b/v08-c/v08-d/v08-e benchmark
+adapter/evidence/import/comparison/readiness.
 HIP parity remains optional and environment-dependent.
 ```
 
@@ -119,6 +119,8 @@ experiments/test_v07_goal_route_memory_closure.sh
 experiments/test_v08_external_benchmark_adapter.sh
 experiments/test_v08_external_benchmark_evidence_ingestion.sh
 experiments/test_v08_external_benchmark_evidence_import.sh
+experiments/test_v08_external_benchmark_comparison_gate.sh
+experiments/test_v08_external_benchmark_comparison_import.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
 

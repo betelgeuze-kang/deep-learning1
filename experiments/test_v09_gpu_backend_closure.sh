@@ -41,6 +41,10 @@ run_check v08-external-benchmark-evidence-import \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_evidence_import.sh"
 run_check v08-external-benchmark-readiness \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_readiness.sh"
+run_check v08-external-benchmark-comparison-gate \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_comparison_gate.sh"
+run_check v08-external-benchmark-comparison-import \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_comparison_import.sh"
 
 if [[ "$MODE" == "extended" ]]; then
   run_check h9-hip-candidate-weight-parity \

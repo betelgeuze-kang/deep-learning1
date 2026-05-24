@@ -56,6 +56,9 @@
 - v08-d external benchmark evidence import gate passed: a supplied
   `V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV` can raise benchmark source/result
   readiness to `1`, while the default run remains pending.
+- v08-e external benchmark comparison gate passed: supplied evidence can produce
+  baseline-vs-route-memory deltas, while publishable comparison remains blocked
+  before promotion.
 - h9-e extended backend boundary passed as CPU-canonical/static parity
   instrumentation; HIP runtime parity remains optional and environment
   dependent.
@@ -242,6 +245,16 @@ v08-d supplied evidence fixture:
   external_benchmark_ready = 1
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
+
+v08-e supplied comparison fixture:
+  evidence_source = provided-csv
+  comparison_input_ready = 1
+  benchmark_comparison_ready = 1
+  publishable_comparison_ready = 0
+  route_memory_wins = 0
+  route_memory_losses = 4
+  route_memory_ties = 0
+  action = diagnostic-comparison-only
 ```
 
 ## Verification
@@ -314,9 +327,12 @@ v08-d supplied evidence fixture:
   experiments/test_v08_external_benchmark_readiness.sh`.
 - Focused v08-d verification passed: `bash
   experiments/test_v08_external_benchmark_evidence_import.sh`.
-- v08-b/v08-c/v08-d backend wrapper verification passed: `bash
+- Focused v08-e verification passed: `bash
+  experiments/test_v08_external_benchmark_comparison_gate.sh` and `bash
+  experiments/test_v08_external_benchmark_comparison_import.sh`.
+- v08-b/v08-c/v08-d/v08-e backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
-  adapter/evidence/import/readiness in h9 quick closure.
+  adapter/evidence/import/comparison/readiness in h9 quick closure.
 
 ## Open Boundary
 
@@ -327,5 +343,5 @@ v08-d supplied evidence fixture:
 - Current gate explicitly blocks default promotion and external comparison.
 - Active next loop: connect a real external teacher-label source above the
   h10-h schema, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence through the v08-d import path, then revisit external benchmark
-  readiness and h11 PC RouteLM prototype design.
+  evidence through the v08-d/v08-e import/comparison path, then revisit
+  external benchmark readiness and h11 PC RouteLM prototype design.

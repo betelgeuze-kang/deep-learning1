@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-h plus v08-b/v08-c/v08-d and the h7/h9 quick closures, the project should be read as:
+As of h10-h plus v08-b/v08-c/v08-d/v08-e and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -115,11 +115,15 @@ Current closure:
 - `v08-d` adds a supplied-CSV evidence import path. A complete fixture can raise
   external benchmark source/result readiness, but no real external benchmark
   evidence has been ingested yet.
+- `v08-e` adds baseline-vs-route-memory comparison deltas over supplied
+  evidence. The supplied fixture is diagnostic-only and unpublished because
+  default promotion remains blocked.
 - `h9-a/h9-b/h9-d/h9-e` add optional ROCm/HIP backend scaffolding:
   `experiments/test_v09_gpu_backend_closure.sh`.
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h, h7-b,
-  v08-b/v08-c/v08-d adapter/evidence/import/readiness, and h9-e included in
-  quick closure paths. HIP parity remains optional and environment-dependent.
+  v08-b/v08-c/v08-d/v08-e adapter/evidence/import/comparison/readiness, and
+  h9-e included in quick closure paths. HIP parity remains optional and
+  environment-dependent.
 
 Current next boundary:
 
@@ -128,8 +132,8 @@ Current next boundary:
   learner, and external ingestion schema are now present; the next blocker is
   source evidence before any
   default promotion or external benchmark comparison.
-- Provide or connect real external benchmark sources/results through the v08-d
-  import path before any v0.8 comparison claim.
+- Provide or connect real external benchmark sources/results through the
+  v08-d/v08-e import/comparison path before any v0.8 comparison claim.
 - Any stronger claim must survive those matrices without using symbolic
   `key-shape` as the policy itself.
 
