@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-d plus the h7 and h9 quick closures, the project should be read as:
+As of h10-e plus the h7 and h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -87,8 +87,10 @@ Current closure:
 - `h10-d` adds the forced fallback/retry exercise. With correct primary
   candidates removed, `raw-retry` recovers the forced-corrupt baseline from
   `qacc=0.290000` to `0.910000`, keeps `retry_noisy_selected=0.000000`, and
-  leaves routing/jump inactive. Distillation and default promotion remain
-  blocked because the teacher-label contract is missing.
+  leaves routing/jump inactive.
+- `h10-e` adds the teacher-label contract. It covers correct, wrong, near-miss,
+  missing-query, and abstain labels with grounded candidate spans, but external
+  teacher-label collection and distillation training remain blocked.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
 - `h7-b` adds the route-memory promotion gate and keeps default promotion
@@ -97,16 +99,17 @@ Current closure:
   promotion passes.
 - `h9-a/h9-b/h9-d/h9-e` add optional ROCm/HIP backend scaffolding:
   `experiments/test_v09_gpu_backend_closure.sh`.
-- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d, h7-b, v08 readiness, and
+- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e, h7-b, v08 readiness, and
   h9-e included in quick closure paths. HIP parity remains optional and
   environment-dependent.
 
 Current next boundary:
 
-- Define and collect the teacher-label contract for chunk-credit distillation:
-  correct, wrong, near-miss, missing, and abstain labels over grounded spans.
-  Fallback/retry is now exercised in h10-d, so this is the next blocker before
-  any default promotion or external benchmark comparison.
+- Collect real teacher labels or build a local teacher-label collection harness
+  for chunk-credit distillation. The schema contract is now present; the next
+  blocker is turning contract labels into collected teacher supervision and a
+  distillation learner before any default promotion or external benchmark
+  comparison.
 - Any stronger claim must survive those matrices without using symbolic
   `key-shape` as the policy itself.
 

@@ -1366,14 +1366,17 @@ promotion.
 
 ## h10-c Joint Source and Distillation Gate
 
-`h10-c` adds the joint noisy gate and h10-d adds the forced fallback/retry
-exercise consumed by the distillation gate:
+`h10-c` adds the joint noisy gate, h10-d adds the forced fallback/retry
+exercise, and h10-e adds the teacher-label contract consumed by the
+distillation gate:
 
 - `run_v10_chunk_credit_source_robustness.sh` injects noisy candidates while
   using the teacher-free chunk-credit scorer.
 - `run_v10_chunk_credit_fallback_retry_exercise.sh` clears correct primary
   candidates and requires source retry to recover without selecting noisy
   sources.
+- `run_v10_teacher_label_contract.sh` defines the label schema for correct,
+  wrong, near-miss, missing-query, abstain, and grounded-span supervision.
 - `run_v10_chunk_credit_distillation_gate.sh` decides whether chunk credit can
   be distilled or promoted above the diagnostic policy layer.
 
@@ -1384,6 +1387,8 @@ experiments/run_v10_chunk_credit_source_robustness.sh
 experiments/test_v10_chunk_credit_source_robustness.sh
 experiments/run_v10_chunk_credit_fallback_retry_exercise.sh
 experiments/test_v10_chunk_credit_fallback_retry_exercise.sh
+experiments/run_v10_teacher_label_contract.sh
+experiments/test_v10_teacher_label_contract.sh
 experiments/run_v10_chunk_credit_distillation_gate.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 ```
@@ -1404,24 +1409,30 @@ fallback_qacc_delta_vs_corrupt = 0.620000
 fallback_retry_raw_selected = 1.000000
 fallback_retry_noisy_selected = 0.000000
 joint_chunk_source_ready = 0
-teacher_label_contract_ready = 0
+teacher_label_contract_ready = 1
+teacher_label_collection_ready = 0
+teacher_external_labels_ready = 0
+teacher_distillation_training_ready = 0
+teacher_grounded_span_coverage = 1.000000
 distillation_ready = 0
-reason = teacher-label-contract-missing
+reason = teacher-label-collection-missing
 routing_trigger_rate = 0.000000
 active_jump_rate = 0.000000
 ```
 
 Interpretation:
 this is positive wrong-candidate evidence for chunk credit plus a real
-fallback/retry exercise. The forced-corrupt primary path recovers through raw
-retry evidence and does not select noisy retry/source candidates. Distillation
-is still blocked because the project has not defined the teacher-label contract
-for correct, wrong, near-miss, missing, and abstain span labels.
+fallback/retry exercise and a concrete teacher-label schema. The forced-corrupt
+primary path recovers through raw retry evidence and does not select noisy
+retry/source candidates. The contract covers correct, wrong, near-miss,
+missing-query, abstain, and grounded-span labels. Distillation is still blocked
+because those labels have not been collected from an external teacher and no
+distillation learner is ready.
 
 ## Current Route-memory Handoff
 
-h10-a/b/c/d are the current route-memory checkpoint. h6-y remains
-diagnostic-only, h10-a/b/c/d are wired into the route-memory closure path, and
+h10-a/b/c/d/e are the current route-memory checkpoint. h6-y remains
+diagnostic-only, h10-a/b/c/d/e are wired into the route-memory closure path, and
 h7-b still blocks default promotion until teacher-label distillation evidence
 exists. The live invariant remains:
 
@@ -1429,8 +1440,8 @@ exists. The live invariant remains:
 candidate value_pos -> value byte read -> proposal hint
 ```
 
-The next slice should define the teacher-label contract for chunk-credit
-distillation while preserving the h6-p objective split:
+The next slice should collect teacher labels or build a local label-collection
+harness for chunk-credit distillation while preserving the h6-p objective split:
 
 ```text
 byte-qacc objective: optimize local-energy policy
