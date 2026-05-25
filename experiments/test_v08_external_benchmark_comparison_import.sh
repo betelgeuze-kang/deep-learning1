@@ -31,7 +31,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("benchmark_scope comparison_input_ready benchmark_comparison_ready publishable_comparison_ready default_promotion evidence_source comparable_rows route_memory_wins route_memory_losses route_memory_ties mean_delta action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("benchmark_scope comparison_input_ready benchmark_comparison_ready publishable_comparison_ready default_promotion final_review_verified real_external_benchmark_verified evidence_source comparable_rows route_memory_wins route_memory_losses route_memory_ties mean_delta action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing v08 comparison import summary column: " required[i], 2)
     }
@@ -44,6 +44,8 @@ awk -F, '
         ($idx["benchmark_comparison_ready"] + 0) != 1 ||
         ($idx["publishable_comparison_ready"] + 0) != 0 ||
         ($idx["default_promotion"] + 0) != 0 ||
+        ($idx["final_review_verified"] + 0) != 0 ||
+        ($idx["real_external_benchmark_verified"] + 0) != 0 ||
         $idx["evidence_source"] != "provided-csv" ||
         ($idx["comparable_rows"] + 0) != 4 ||
         ($idx["route_memory_wins"] + 0) != 0 ||
@@ -96,10 +98,11 @@ awk -F, '
     if ($idx["gate"] == "comparison-input" && $idx["status"] != "pass") die("comparison input should pass", 30)
     if ($idx["gate"] == "comparison-diagnostic" && $idx["status"] != "pass") die("diagnostic comparison should pass", 31)
     if ($idx["gate"] == "comparison-publish" && $idx["status"] != "blocked") die("comparison publish should remain blocked", 32)
-    if ($idx["gate"] == "external-comparison" && $idx["status"] != "deferred") die("external comparison should remain deferred", 33)
+    if ($idx["gate"] == "final-review" && $idx["status"] != "blocked") die("final review should remain blocked", 33)
+    if ($idx["gate"] == "external-comparison" && $idx["status"] != "deferred") die("external comparison should remain deferred", 34)
   }
   END {
-    if (rows != 5) die("expected v08 comparison import decision rows", 34)
+    if (rows != 6) die("expected v08 comparison import decision rows", 35)
   }
 ' "$DECISION_CSV"
 

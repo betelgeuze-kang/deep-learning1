@@ -169,7 +169,7 @@ real natural language generation solved: no
 PC RouteLM prototype solved: no
 ```
 
-The next research boundary after h10-i/v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/h11-a is real external teacher-label source
+The next research boundary after h10-i/v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/h11-a is real external teacher-label source
 evidence plus real external benchmark source/result evidence and real PC RouteLM
 prototype evidence:
 the teacher-free chunk-credit ranker already survives injected noisy wrong
@@ -190,8 +190,11 @@ benchmark verification blocked until execution/evaluator-output evidence exists.
 v08-i verifies execution output, run logs, hashes, and metric output, but keeps
 real benchmark verification blocked until attestation exists. v08-j verifies
 attestation artifact hashes and attested execution hashes/metrics, and v08-k
-verifies attestor identity/registry/conflict-disclosure provenance, but keeps
-real benchmark verification blocked until final external review. h11-a adds a PC RouteLM / NLG component contract and supplied fixture
+verifies attestor identity/registry/conflict-disclosure provenance. v08-l
+verifies final-review artifacts against the source/provenance, execution,
+metric, attestation, reviewer identity, and conflict-disclosure chain, but keeps
+local fixtures blocked until real non-fixture source review evidence exists.
+h11-a adds a PC RouteLM / NLG component contract and supplied fixture
 import, but no real generator/route-memory NLG smoke exists yet. Until
 external-label, benchmark, speed, and prototype evidence exist, the current
 default policy stays diagnostic-only and routes uncertain cases to
@@ -210,8 +213,8 @@ candidate value_pos -> value byte read -> proposal hint
 
 and it still keeps jump-neighbor replacement inactive. Treat h9 as backend
 scaffold/parity only. The h9 quick closure now verifies CPU default behavior,
-CPU-only HIP error handling, the h7 goal closure, and v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k
-benchmark adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/readiness. CPU/HIP parity remains
+CPU-only HIP error handling, the h7 goal closure, and v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
+benchmark adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness. CPU/HIP parity remains
 an optional extended check until a complete ROCm/HIP install proves fixture
 parity. h9-g adds measured-speed artifact verification, but fixture/local
 timing evidence remains no-claim until real HIP-backed measurements exist.

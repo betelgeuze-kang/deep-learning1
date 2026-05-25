@@ -19,11 +19,13 @@ mkdir -p "$RESULTS_DIR"
 PREFIX="v08_external_benchmark_comparison_gate"
 EVIDENCE_PREFIX="v08_external_benchmark_evidence_ingestion"
 PROMOTION_PREFIX="v07_route_memory_promotion_gate"
+FINAL_REVIEW_PREFIX="v08_external_benchmark_final_review_gate"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v08_external_benchmark_comparison_gate_smoke"
   EVIDENCE_PREFIX="v08_external_benchmark_evidence_ingestion_smoke"
   PROMOTION_PREFIX="v07_route_memory_promotion_gate_smoke"
+  FINAL_REVIEW_PREFIX="v08_external_benchmark_final_review_gate_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -31,6 +33,7 @@ fi
 
 PROMOTION_SUMMARY_CSV="$RESULTS_DIR/${PROMOTION_PREFIX}_summary.csv"
 EVIDENCE_SUMMARY_CSV="$RESULTS_DIR/${EVIDENCE_PREFIX}_summary.csv"
+FINAL_REVIEW_SUMMARY_CSV="$RESULTS_DIR/${FINAL_REVIEW_PREFIX}_summary.csv"
 EVIDENCE_CSV="$RESULTS_DIR/${EVIDENCE_PREFIX}_evidence.csv"
 if [[ ! -s "$PROMOTION_SUMMARY_CSV" ]]; then
   "$ROOT_DIR/experiments/run_v07_route_memory_promotion_gate.sh" "${RUN_ARGS[@]}" >/dev/null
@@ -41,12 +44,13 @@ fi
 if [[ -n "${V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV:-}" ]]; then
   EVIDENCE_CSV="$V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV"
 fi
+"$ROOT_DIR/experiments/run_v08_external_benchmark_final_review_gate.sh" "${RUN_ARGS[@]}" >/dev/null
 
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 COMPARISON_CSV="$RESULTS_DIR/${PREFIX}_comparison.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVIDENCE_SUMMARY_CSV" -v evidence_csv="$EVIDENCE_CSV" -v summary_csv="$SUMMARY_CSV" -v comparison_csv="$COMPARISON_CSV" -v decision_csv="$DECISION_CSV" '
+awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVIDENCE_SUMMARY_CSV" -v final_review_summary_csv="$FINAL_REVIEW_SUMMARY_CSV" -v evidence_csv="$EVIDENCE_CSV" -v summary_csv="$SUMMARY_CSV" -v comparison_csv="$COMPARISON_CSV" -v decision_csv="$DECISION_CSV" '
   function die(message, code) {
     print message > "/dev/stderr"
     exit code
@@ -83,6 +87,22 @@ awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVID
     evidence_source = $sidx["evidence_source"]
     evidence_summary_routing = $sidx["routing_trigger_rate"] + 0
     evidence_summary_jump = $sidx["active_jump_rate"] + 0
+    next
+  }
+  FILENAME == final_review_summary_csv && FNR == 1 {
+    for (i = 1; i <= NF; i++) fidx[$i] = i
+    required_count = split("final_review_verified real_external_benchmark_verified routing_trigger_rate active_jump_rate", required, " ")
+    for (i = 1; i <= required_count; i++) {
+      if (!(required[i] in fidx)) die("missing v08 comparison final review summary column: " required[i], 8)
+    }
+    next
+  }
+  FILENAME == final_review_summary_csv {
+    final_review_rows++
+    final_review_verified = $fidx["final_review_verified"] + 0
+    real_external_benchmark_verified = $fidx["real_external_benchmark_verified"] + 0
+    final_review_routing = $fidx["routing_trigger_rate"] + 0
+    final_review_jump = $fidx["active_jump_rate"] + 0
     next
   }
   FILENAME == evidence_csv && FNR == 1 {
@@ -133,6 +153,7 @@ awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVID
     if (promotion_rows != 1) die("expected one v08 comparison promotion row", 5)
     if (evidence_summary_rows != 1) die("expected one v08 comparison evidence summary row", 6)
     if (evidence_rows != 4) die("expected four v08 comparison evidence rows", 7)
+    if (final_review_rows != 1) die("expected one v08 comparison final review summary row", 9)
 
     comparison_schema_ready = benchmark_evidence_schema_ready
     comparison_input_ready = 0
@@ -141,7 +162,10 @@ awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVID
     }
     benchmark_comparison_ready = comparison_schema_ready && comparison_input_ready
     publishable_comparison_ready = 0
-    if (benchmark_comparison_ready && default_promotion == 1 && promotion_status == "promotion-candidate") {
+    if (benchmark_comparison_ready &&
+        default_promotion == 1 &&
+        promotion_status == "promotion-candidate" &&
+        real_external_benchmark_verified == 1) {
       publishable_comparison_ready = 1
     }
 
@@ -157,14 +181,16 @@ awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVID
       action = "diagnostic-comparison-only"
     }
 
-    print "benchmark_scope,benchmark_families,comparison_schema_ready,comparison_input_ready,benchmark_comparison_ready,publishable_comparison_ready,default_promotion,evidence_source,comparable_rows,route_memory_wins,route_memory_losses,route_memory_ties,mean_delta,action,routing_trigger_rate,active_jump_rate" > summary_csv
-    printf "route-memory-v08e,%d,%d,%d,%d,%d,%d,%s,%d,%d,%d,%d,%.6f,%s,%.6f,%.6f\n",
+    print "benchmark_scope,benchmark_families,comparison_schema_ready,comparison_input_ready,benchmark_comparison_ready,publishable_comparison_ready,default_promotion,final_review_verified,real_external_benchmark_verified,evidence_source,comparable_rows,route_memory_wins,route_memory_losses,route_memory_ties,mean_delta,action,routing_trigger_rate,active_jump_rate" > summary_csv
+    printf "route-memory-v08e,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%d,%d,%d,%.6f,%s,%.6f,%.6f\n",
       benchmark_families,
       comparison_schema_ready,
       comparison_input_ready,
       benchmark_comparison_ready,
       publishable_comparison_ready,
       default_promotion,
+      final_review_verified,
+      real_external_benchmark_verified,
       evidence_source,
       comparable_rows,
       wins,
@@ -172,8 +198,8 @@ awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVID
       ties,
       mean_delta,
       action,
-      promotion_routing + evidence_summary_routing + evidence_routing,
-      promotion_jump + evidence_summary_jump + evidence_jump >> summary_csv
+      promotion_routing + evidence_summary_routing + evidence_routing + final_review_routing,
+      promotion_jump + evidence_summary_jump + evidence_jump + final_review_jump >> summary_csv
 
     print "gate,status,reason" > decision_csv
     printf "comparison-schema,%s,schema_ready=%d\n",
@@ -188,11 +214,14 @@ awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVID
     printf "comparison-publish,%s,default_promotion=%d\n",
       publishable_comparison_ready ? "pass" : "blocked",
       default_promotion >> decision_csv
+    printf "final-review,%s,real_external_benchmark_verified=%d\n",
+      real_external_benchmark_verified ? "pass" : "blocked",
+      real_external_benchmark_verified >> decision_csv
     printf "external-comparison,%s,action=%s\n",
       publishable_comparison_ready ? "ready" : "deferred",
       action >> decision_csv
   }
-' "$PROMOTION_SUMMARY_CSV" "$EVIDENCE_SUMMARY_CSV" "$EVIDENCE_CSV"
+' "$PROMOTION_SUMMARY_CSV" "$EVIDENCE_SUMMARY_CSV" "$FINAL_REVIEW_SUMMARY_CSV" "$EVIDENCE_CSV"
 
 echo "summary: $SUMMARY_CSV"
 echo "comparison: $COMPARISON_CSV"

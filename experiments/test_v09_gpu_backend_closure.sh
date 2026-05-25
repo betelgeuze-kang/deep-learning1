@@ -74,6 +74,10 @@ run_check v08-external-benchmark-attestor-identity \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_attestor_identity_gate.sh"
 run_check v08-external-benchmark-attestor-identity-import \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_attestor_identity_import.sh"
+run_check v08-external-benchmark-final-review \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_gate.sh"
+run_check v08-external-benchmark-final-review-import \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_import.sh"
 run_check v11-pc-routelm-prototype-readiness \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_readiness.sh"
 run_check v11-pc-routelm-prototype-import \

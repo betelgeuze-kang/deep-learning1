@@ -3,7 +3,7 @@
 ## Current Stage
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i plus h7-b,
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/readiness,
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
 h11-a prototype readiness/import, and h9-g quick closure:
 
 ```text
@@ -26,13 +26,13 @@ h10-g: local distilled-rule learner fits the h10-f labels, while external label 
 h10-h: external teacher-label ingestion schema passes, while default external source remains blocked.
 h10-i: supplied external teacher-label CSV import passes and can raise the distillation gate to diagnostic candidate without default promotion.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k: external benchmark adapter/evidence
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
 baselines, while placeholder evidence is blocked from counting as real
 benchmark evidence, local artifact hashes and authenticity/evaluator contracts
 plus execution/evaluator-output artifacts can be verified, local/fixture
-attestations remain diagnostic, and publishable comparison is deferred until
-real independent verification exists.
+attestations and final-review artifacts remain diagnostic, and publishable
+comparison is deferred until real independent verification exists.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, benchmark, and GPU speed evidence gates.
@@ -49,8 +49,8 @@ span-exact objective -> local-energy-hybrid in most tested groups
 
 The next h10/v08-style experiment should connect a real external teacher-label
 source above the h10-i import contract, real benchmark source/result evidence
-through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k
-import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity path,
+through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
+import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review path,
 and measured PC RouteLM/NLG prototype evidence through h11-a before any
 promotion claim or external benchmark comparison.
 
@@ -539,6 +539,11 @@ v08-k verifies attestor identity, registry, conflict disclosure, and
 independence provenance artifacts. Passing v08-k still keeps
 `real_external_benchmark_verified=0`; it means the attestor identity chain is
 ready for final review, not that the benchmark claim is publishable.
+v08-l verifies final-review reports against source/provenance hashes, execution
+hashes, metric values, attestation IDs, reviewer identity, and reviewer conflict
+disclosure artifacts. Supplied local review fixtures can pass the mechanical
+checks, but they still keep `real_external_benchmark_verified=0` unless real
+non-fixture source review evidence exists.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
@@ -570,6 +575,9 @@ experiments/test_v08_external_benchmark_attestation_import.sh
 experiments/run_v08_external_benchmark_attestor_identity_gate.sh
 experiments/test_v08_external_benchmark_attestor_identity_gate.sh
 experiments/test_v08_external_benchmark_attestor_identity_import.sh
+experiments/run_v08_external_benchmark_final_review_gate.sh
+experiments/test_v08_external_benchmark_final_review_gate.sh
+experiments/test_v08_external_benchmark_final_review_import.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -604,6 +612,8 @@ v08-e supplied CSV comparison fixture:
   comparison_input_ready = 1
   benchmark_comparison_ready = 1
   publishable_comparison_ready = 0
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
   route_memory_losses = 4
   action = diagnostic-comparison-only
 
@@ -710,6 +720,26 @@ v08-k supplied attestor identity fixture:
   attestor_identity_verified = 1
   real_external_benchmark_verified = 0
   action = external-benchmark-final-review-missing
+
+v08-l supplied final-review fixture:
+  final_review_source = provided-csv
+  evaluator_execution_verified = 1
+  independent_attestation_verified = 1
+  attestor_identity_verified = 1
+  review_rows = 4
+  matched_attestation_rows = 4
+  review_hash_verified_rows = 4
+  reviewer_identity_hash_verified_rows = 4
+  reviewer_conflict_hash_verified_rows = 4
+  critical_hash_match_rows = 4
+  metric_match_rows = 4
+  review_ready_rows = 4
+  review_approved_rows = 4
+  real_source_declared_rows = 0
+  non_fixture_declared_rows = 0
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-real-source-review-missing
 ```
 
 Expected:
@@ -731,7 +761,9 @@ Expected:
   attestations can match those artifacts, without treating synthetic local
   fixtures as independently verified external benchmarks
 - attestor identity/provenance artifacts can pass without treating the whole
-  external benchmark claim as final-review complete
+  external benchmark claim as publishable
+- final-review artifacts can pass mechanical hash/metric/provenance checks
+  without treating fixture/local review as a real publishable external benchmark
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 
