@@ -48,13 +48,22 @@
   missing and distillation remains blocked.
 - h10-j teacher external-label source verifier passed:
   local source/export/identity/policy/license hash-chain mechanics can verify,
-  but `real_teacher_source_verified=0`, `distillation_ready=0`, and
-  `default_promotion=0` remain until non-fixture source evidence exists.
+  but any local `file://` source remains non-real; `real_teacher_source_verified=0`,
+  `distillation_ready=0`, and `default_promotion=0` remain until non-fixture
+  source evidence exists.
 - h10-k local learned chunk-quality scorer passed:
   `linear-contrastive-chunk-v1` separates reward from negative actions on h10-f
   local teacher labels, rejects mixed label-source provenance, and feeds scorer
   readiness into the distillation gate while keeping `external_label_source_ready=0`,
   `distillation_ready=0`, and `default_promotion=0`.
+- h10-l source-verified learned chunk-quality scorer gate passed:
+  source-verified scorer readiness now requires supplied non-local feature
+  labels, teacher-ID linkage to h10-j source evidence, row-level binding to
+  external teacher-label rows by `source_uri`/`provenance_hash`, and real
+  teacher-source verification. Local labels, relabeled local feature rows,
+  external-label row mismatches, malformed feature CSVs, and local source
+  fixtures remain diagnostic-only with
+  `source_verified_learned_chunk_scorer_ready=0`.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -243,7 +252,7 @@ h10-b chunk-credit abstain policy smoke:
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
-h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i/h10-j/h10-k joint source/distillation smoke:
+h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i/h10-j/h10-k/h10-l joint source/distillation smoke:
   best_joint_arm = chunk-credit-source-order
   fallback_exercise_arm = raw-retry
   joint_chunk_ready = 1
@@ -268,6 +277,12 @@ h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i/h10-j/h10-k joint source/distillation 
   learned_chunk_negative_action_rate = 1.000000
   learned_chunk_scorer_id = linear-contrastive-chunk-v1
   learned_chunk_scorer_source = local-teacher-harness
+  source_verified_feature_labels_ready = 0
+  source_verified_learned_chunk_scorer_ready = 0
+  source_verified_feature_source_link_ready = 0
+  source_verified_feature_label_source = local-teacher-harness
+  source_verified_feature_csv_provided = 0
+  source_verified_scorer_reason = source-verified-feature-labels-missing
   teacher_external_schema_ready = 1
   teacher_external_label_source_ready = 0
   teacher_external_labels_ready = 0
@@ -317,6 +332,53 @@ h10-k learned chunk-quality scorer smoke:
   default_promotion = 0
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
+
+h10-l source-verified learned chunk scorer default smoke:
+  feature_csv_provided = 0
+  feature_rows = 6
+  feature_teacher_rows = 1
+  matched_feature_teacher_rows = 0
+  feature_has_binding_fields = 0
+  feature_bound_rows = 0
+  matched_feature_label_rows = 0
+  external_label_rows = 0
+  feature_external_label_link_ready = 0
+  feature_label_source = local-teacher-harness
+  feature_source_link_ready = 0
+  learned_chunk_scorer_ready = 1
+  learned_score_gap = 3.064325
+  source_verified_feature_labels_ready = 0
+  teacher_source_chain_verified = 0
+  real_teacher_source_verified = 0
+  source_verified_learned_chunk_scorer_ready = 0
+  default_promotion = 0
+  status = diagnostic-only
+  reason = source-verified-feature-labels-missing
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+h10-l supplied local source-linked feature fixture:
+  feature_csv_provided = 1
+  feature_rows = 6
+  feature_has_binding_fields = 1
+  feature_bound_rows = 6
+  matched_feature_label_rows = 6
+  external_label_rows = 6
+  feature_external_label_link_ready = 1
+  feature_label_source = provided-external-feature-csv
+  feature_source_link_ready = 1
+  source_verified_feature_labels_ready = 1
+  teacher_source_chain_verified = 1
+  real_teacher_source_verified = 0
+  source_verified_learned_chunk_scorer_ready = 0
+  reason = teacher-real-external-label-source-missing
+
+h10-l negative bypass guards:
+  relabeled_local_rows_without_source_uri_provenance = blocked
+  mismatched_external_label_row_bindings = blocked
+  malformed_feature_label_csv = rejected
+  outside_results_local_file_real_declaration = blocked
+  canonical_h10k_summary_not_overwritten = 1
 
 h10-i supplied external-label import fixture:
   external_label_rows = 5
@@ -646,6 +708,14 @@ h9-g supplied measured-speed fixture:
 - h10-k backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h10-k through h7
   plus v08/h11/h9 quick closure with HIP runtime parity still optional.
+- h10-l focused gates passed after row/provenance hardening: `bash
+  experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh`, `bash
+  experiments/test_v10_teacher_external_label_source_import.sh`, `bash
+  experiments/test_v10_teacher_external_label_source_verifier.sh`, and `bash
+  experiments/test_v10_chunk_credit_distillation_gate.sh`. h10-l is wired into
+  `experiments/test_v07_goal_route_memory_closure.sh`, and final wrapper
+  verification passed through `bash experiments/test_v09_gpu_backend_closure.sh`
+  with h7 goal closure included.
 - h9-f focused and wrapper verification passed: `build/hip_candidate_weight_parity
   --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
   `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash

@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-k plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
+As of h10-l plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -10,6 +10,7 @@ discrete local-energy learner
 + candidate-quality guardrails
 + symbolic span route-memory diagnostics
 + local learned chunk-quality scorer diagnostics
++ source-verified learned scorer binding diagnostics
 + PC RouteLM / NLG prototype readiness and artifact verification contracts
 + optional HIP backend scaffold / parity instrumentation
 ```
@@ -24,7 +25,12 @@ Last completed checkpoint:
   `linear-contrastive-chunk-v1` scorer separates reward from negative chunk
   actions on h10-f local teacher labels, but stays local-only with external
   source and promotion blocked.
-- h7 quick closure is current through h10-k and keeps default promotion blocked.
+- h10-l closes the source-verified learned scorer binding gate. Local learned
+  scorer readiness no longer counts as source-verified distillation readiness
+  unless supplied feature labels are non-local, teacher-ID linked, row-bound to
+  external teacher-label rows by `source_uri` plus `provenance_hash`, and backed
+  by real h10-j source verification.
+- h7 quick closure is current through h10-l and keeps default promotion blocked.
 - v08-l closes the final-review mechanics layer for external benchmarks while
   keeping real benchmark verification blocked until non-fixture source/review
   evidence exists.
@@ -127,14 +133,22 @@ Current closure:
   until a real teacher source is verified.
 - `h10-j` adds teacher source verification over source artifact, label export,
   teacher identity, teacher policy, license, provenance, and hash evidence.
-  Supplied local fixtures can verify the chain mechanics, but
-  `real_teacher_source_verified=0` and `distillation_ready=0` remain in force.
+  Supplied local fixtures can verify the chain mechanics, but any local
+  `file://` evidence, including outside `results/`, keeps
+  `real_teacher_source_verified=0` and `distillation_ready=0`.
 - `h10-k` adds a learned chunk-quality scorer over local teacher-label
   features. The smoke separates reward from negative actions
   (`learned_score_gap=3.064325`, `coherent_wrong_negative_rate=1.000000`) and
   feeds that readiness into the distillation gate, but keeps
   `external_label_source_ready=0`, `distillation_ready=0`, and
   `default_promotion=0`.
+- `h10-l` binds learned scorer readiness to source-verified feature labels.
+  Default/local labels keep `source_verified_feature_labels_ready=0`; relabeled
+  local rows without row provenance and mismatched external-label rows are
+  rejected. Supplied local fixtures can link feature labels and verify
+  source-chain mechanics, but still keep
+  `source_verified_learned_chunk_scorer_ready=0` until
+  `real_teacher_source_verified=1`.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
 - `h7-b` adds the route-memory promotion gate and keeps default promotion
@@ -192,7 +206,7 @@ Current closure:
 - `h9-a/h9-b/h9-d/h9-e/h9-f/h9-g` add optional ROCm/HIP backend scaffolding
   plus measured-speed evidence contracts:
   `experiments/test_v09_gpu_backend_closure.sh`.
-- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k, h7-b,
+- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l, h7-b,
   v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
   h11-a prototype readiness/import, h11-b artifact verifier/import, and h9-g
   included in quick closure paths.
@@ -201,9 +215,10 @@ Current closure:
 Current next boundary:
 
 - Provide or connect a real external teacher-label source through the h10-j
-  source-verification contract and replace h10-k local labels with real
-  source-backed labels. The local contract, local collection harness, local
-  distilled-rule learner, local learned chunk scorer, external ingestion
+  source-verification contract and replace h10-k/h10-l local labels with real
+  source-backed feature labels that row-match external teacher-label evidence.
+  The local contract, local collection harness, local distilled-rule learner,
+  local learned chunk scorer, source-verified scorer binding, external ingestion
   schema, supplied CSV path, and source-chain verifier are now present; the next
   blocker is real source evidence before any default promotion or external
   benchmark comparison.
@@ -248,8 +263,8 @@ Status update:
 - step 9 split into two findings: active jump-neighbor replacement remains
   no-go, while value-bearing route hints work under controlled fixtures.
 - the current next research boundary is a real external teacher-label source
-  through the h10-j source-verification contract and h10-k scorer labels, not
-  topology replacement.
+  through the h10-j source-verification contract and h10-l source-verified
+  scorer labels, not topology replacement.
 - GPU work is backend/parity instrumentation only. CPU remains canonical until
   a complete ROCm/HIP install proves fixture parity.
 

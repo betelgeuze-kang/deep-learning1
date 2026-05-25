@@ -26,6 +26,9 @@ if [[ "$MODE" == "smoke" ]]; then
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
 fi
+if [[ -n "${V10_LEARNED_CHUNK_QUALITY_OUTPUT_PREFIX:-}" ]]; then
+  PREFIX="$V10_LEARNED_CHUNK_QUALITY_OUTPUT_PREFIX"
+fi
 
 LABELS_CSV="${V10_LEARNED_CHUNK_QUALITY_LABELS_CSV:-$RESULTS_DIR/${COLLECTION_PREFIX}_labels.csv}"
 WEIGHTS_CSV="$RESULTS_DIR/${PREFIX}_weights.csv"

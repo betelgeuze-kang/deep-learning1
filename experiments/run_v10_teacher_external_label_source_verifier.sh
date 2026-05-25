@@ -109,7 +109,7 @@ hash_matches() {
 
 is_local_fixture_path() {
   local path="$1"
-  [[ "$path" == "$RESULTS_DIR"/* ]]
+  [[ -n "$path" ]]
 }
 
 INGESTION_VALUES="$(
