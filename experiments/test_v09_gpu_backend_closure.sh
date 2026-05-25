@@ -82,6 +82,10 @@ run_check v11-pc-routelm-prototype-readiness \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_readiness.sh"
 run_check v11-pc-routelm-prototype-import \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_import.sh"
+run_check v11-pc-routelm-prototype-artifact-verifier \
+  "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh"
+run_check v11-pc-routelm-prototype-artifact-import \
+  "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_artifact_import.sh"
 
 if [[ "$MODE" == "extended" ]]; then
   run_check h9-hip-candidate-weight-parity \

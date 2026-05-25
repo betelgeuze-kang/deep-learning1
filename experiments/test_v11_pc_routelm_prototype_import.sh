@@ -26,7 +26,7 @@ awk -F, '
   NR == 1 {
     header_fields = NF
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("prototype_contract_schema_ready prototype_rows small_generator_adapter_ready route_memory_residency_ready candidate_scoring_ready decoder_binding_ready nlg_smoke_ready component_evidence_ready diagnostic_prototype_ready default_promotion teacher_distillation_ready benchmark_comparison_ready speed_evidence_ready gpu_speedup_claim pc_routelm_prototype_ready publishable_pc_routelm_ready action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("prototype_contract_schema_ready prototype_rows small_generator_adapter_ready route_memory_residency_ready candidate_scoring_ready decoder_binding_ready nlg_smoke_ready component_evidence_ready diagnostic_prototype_ready prototype_artifact_chain_verified real_pc_routelm_artifact_verified prototype_artifact_action default_promotion teacher_distillation_ready benchmark_comparison_ready speed_evidence_ready gpu_speedup_claim pc_routelm_prototype_ready publishable_pc_routelm_ready action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing h11 import summary column: " required[i], 2)
     }
@@ -44,6 +44,9 @@ awk -F, '
         ($idx["nlg_smoke_ready"] + 0) != 1 ||
         ($idx["component_evidence_ready"] + 0) != 1 ||
         ($idx["diagnostic_prototype_ready"] + 0) != 1 ||
+        ($idx["prototype_artifact_chain_verified"] + 0) != 0 ||
+        ($idx["real_pc_routelm_artifact_verified"] + 0) != 0 ||
+        $idx["prototype_artifact_action"] != "pc-routelm-artifact-evidence-missing" ||
         ($idx["default_promotion"] + 0) != 0 ||
         ($idx["teacher_distillation_ready"] + 0) != 0 ||
         ($idx["benchmark_comparison_ready"] + 0) != 0 ||
@@ -81,10 +84,11 @@ awk -F, '
     if ($idx["gate"] == "teacher-distillation" && $idx["status"] != "blocked") die("h11 teacher distillation should remain default-blocked", 23)
     if ($idx["gate"] == "external-comparison" && $idx["status"] != "blocked") die("h11 external comparison should remain default-blocked", 24)
     if ($idx["gate"] == "speed-evidence" && $idx["status"] != "blocked") die("h11 speed evidence should remain blocked", 25)
-    if ($idx["gate"] == "pc-routelm-prototype" && $idx["status"] != "blocked") die("h11 prototype should remain blocked", 26)
+    if ($idx["gate"] == "real-prototype-artifacts" && $idx["status"] != "blocked") die("h11 real artifacts should remain blocked", 26)
+    if ($idx["gate"] == "pc-routelm-prototype" && $idx["status"] != "blocked") die("h11 prototype should remain blocked", 27)
   }
   END {
-    if (rows < 8) die("expected h11 import decision rows", 27)
+    if (rows < 9) die("expected h11 import decision rows", 28)
   }
 ' "$DECISION_CSV"
 

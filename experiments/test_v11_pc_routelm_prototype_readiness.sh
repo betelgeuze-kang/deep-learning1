@@ -17,7 +17,7 @@ awk -F, '
   NR == 1 {
     header_fields = NF
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("prototype_scope prototype_contract_schema_ready prototype_rows small_generator_adapter_ready route_memory_residency_ready candidate_scoring_ready decoder_binding_ready nlg_smoke_ready component_evidence_ready diagnostic_prototype_ready default_promotion teacher_external_label_source_ready teacher_external_labels_ready teacher_distillation_ready comparison_input_ready benchmark_comparison_ready publishable_comparison_ready speed_schema_ready speed_evidence_ready gpu_speedup_claim pc_routelm_prototype_ready publishable_pc_routelm_ready action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("prototype_scope prototype_contract_schema_ready prototype_rows small_generator_adapter_ready route_memory_residency_ready candidate_scoring_ready decoder_binding_ready nlg_smoke_ready component_evidence_ready diagnostic_prototype_ready prototype_artifact_chain_verified real_pc_routelm_artifact_verified prototype_artifact_action default_promotion teacher_external_label_source_ready teacher_external_labels_ready teacher_distillation_ready comparison_input_ready benchmark_comparison_ready publishable_comparison_ready speed_schema_ready speed_evidence_ready gpu_speedup_claim pc_routelm_prototype_ready publishable_pc_routelm_ready action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing h11 readiness summary column: " required[i], 2)
     }
@@ -36,6 +36,9 @@ awk -F, '
         ($idx["nlg_smoke_ready"] + 0) != 0 ||
         ($idx["component_evidence_ready"] + 0) != 0 ||
         ($idx["diagnostic_prototype_ready"] + 0) != 0 ||
+        ($idx["prototype_artifact_chain_verified"] + 0) != 0 ||
+        ($idx["real_pc_routelm_artifact_verified"] + 0) != 0 ||
+        $idx["prototype_artifact_action"] != "pc-routelm-components-missing" ||
         ($idx["default_promotion"] + 0) != 0 ||
         ($idx["teacher_external_label_source_ready"] + 0) != 0 ||
         ($idx["teacher_external_labels_ready"] + 0) != 0 ||
@@ -78,11 +81,12 @@ awk -F, '
     if ($idx["gate"] == "prototype-contract" && $idx["status"] != "pass") die("h11 contract should pass", 21)
     if ($idx["gate"] == "component-evidence" && $idx["status"] != "blocked") die("h11 components should block by default", 22)
     if ($idx["gate"] == "nlg-smoke" && $idx["status"] != "blocked") die("h11 NLG smoke should block by default", 23)
-    if ($idx["gate"] == "pc-routelm-prototype" && $idx["status"] != "blocked") die("h11 prototype should block by default", 24)
-    if ($idx["gate"] == "publishable-prototype" && $idx["status"] != "blocked") die("h11 publish should block by default", 25)
+    if ($idx["gate"] == "real-prototype-artifacts" && $idx["status"] != "blocked") die("h11 real artifacts should block by default", 24)
+    if ($idx["gate"] == "pc-routelm-prototype" && $idx["status"] != "blocked") die("h11 prototype should block by default", 25)
+    if ($idx["gate"] == "publishable-prototype" && $idx["status"] != "blocked") die("h11 publish should block by default", 26)
   }
   END {
-    if (rows < 8) die("expected h11 readiness decision rows", 26)
+    if (rows < 9) die("expected h11 readiness decision rows", 27)
   }
 ' "$DECISION_CSV"
 

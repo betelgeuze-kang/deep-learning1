@@ -2,14 +2,14 @@
 
 ## Current Checkpoint
 
-As of h10-j plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a, and the h7/h9 quick closures, the project should be read as:
+As of h10-j plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
 + value-bearing route-hint memory
 + candidate-quality guardrails
 + symbolic span route-memory diagnostics
-+ PC RouteLM / NLG prototype readiness contract
++ PC RouteLM / NLG prototype readiness and artifact verification contracts
 + optional HIP backend scaffold / parity instrumentation
 ```
 
@@ -25,8 +25,9 @@ Last completed checkpoint:
   evidence exists.
 - h9-g closes the measured-speed evidence contract while keeping GPU speedup
   claims deferred until real HIP-backed measurements exist.
-- h11-a closes the PC RouteLM / NLG readiness contract while keeping real
-  prototype and publish claims blocked.
+- h11-a closes the PC RouteLM / NLG readiness contract and h11-b closes the
+  artifact/provenance verification mechanics while keeping real prototype and
+  publish claims blocked.
 
 The live nonlocal path is still:
 
@@ -170,14 +171,20 @@ Current closure:
   supplied component evidence for a quantized 3B-14B generator, CPU RAM/NVMe
   O(n) route memory, GPU candidate scoring, GPU decoder binding, and an NLG
   smoke URI. The supplied fixture reaches diagnostic prototype readiness only;
-  real prototype/publish remains blocked by promotion, benchmark comparison,
-  and GPU speed evidence.
+  real prototype/publish remains blocked by promotion, real teacher-source
+  distillation, benchmark comparison, GPU speed evidence, and artifact review.
+- `h11-b` adds the PC RouteLM artifact/provenance verifier. Supplied local
+  fixtures can verify generator, route-memory, scorer, decoder, NLG-smoke,
+  benchmark, license, and provenance hashes with
+  `prototype_artifact_chain_verified=1`, but local `results/` artifacts and
+  declaration flags still keep `real_pc_routelm_artifact_verified=0`.
 - `h9-a/h9-b/h9-d/h9-e/h9-f/h9-g` add optional ROCm/HIP backend scaffolding
   plus measured-speed evidence contracts:
   `experiments/test_v09_gpu_backend_closure.sh`.
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j, h7-b,
   v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
-  h11-a prototype readiness/import, and h9-g included in quick closure paths.
+  h11-a prototype readiness/import, h11-b artifact verifier/import, and h9-g
+  included in quick closure paths.
   HIP parity remains optional and environment-dependent.
 
 Current next boundary:
@@ -193,8 +200,8 @@ Current next boundary:
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
   path, then replace fixture final-review rows with real non-fixture review
   evidence before any v0.8 comparison claim.
-- Provide a real PC RouteLM prototype above the h11-a contract before any NLG
-  or personal-PC LLM claim.
+- Provide a real PC RouteLM prototype above the h11-a/h11-b contracts before
+  any NLG or personal-PC LLM claim.
 - Any stronger claim must survive those matrices without using symbolic
   `key-shape` as the policy itself.
 

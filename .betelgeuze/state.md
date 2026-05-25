@@ -107,6 +107,10 @@
   contract-schema-ready but component-blocked; supplied component fixture can
   reach diagnostic prototype readiness while real prototype/publish remains
   blocked by promotion, benchmark, and speed-evidence gates.
+- h11-b PC RouteLM / NLG artifact verifier passed: supplied local artifacts can
+  verify generator, route-memory, scorer, decoder, NLG-smoke, benchmark,
+  license, and provenance hash chains, but local fixtures remain non-real with
+  `real_pc_routelm_artifact_verified=0`.
 
 ## Key Metrics
 
@@ -476,6 +480,30 @@ h11-a supplied prototype fixture:
   publishable_pc_routelm_ready = 0
   action = diagnostic-prototype-only
 
+h11-b supplied local artifact fixture:
+  prototype_source = provided-csv
+  artifact_source = provided-csv
+  prototype_rows = 1
+  artifact_rows = 1
+  matched_prototype_rows = 1
+  generator_hash_verified_rows = 1
+  route_memory_hash_verified_rows = 1
+  candidate_scorer_hash_verified_rows = 1
+  decoder_binding_hash_verified_rows = 1
+  nlg_smoke_hash_verified_rows = 1
+  benchmark_result_hash_verified_rows = 1
+  license_hash_verified_rows = 1
+  provenance_hash_verified_rows = 1
+  ready_rows = 1
+  local_fixture_uri_rows = 1
+  real_prototype_declared_rows = 1
+  non_fixture_declared_rows = 1
+  prototype_artifact_chain_verified = 1
+  real_pc_routelm_artifact_verified = 0
+  action = pc-routelm-real-artifact-review-missing
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
 h9-g supplied measured-speed fixture:
   measurement_source = provided-csv
   timing_artifact_hash_verified_rows = 1
@@ -577,6 +605,11 @@ h9-g supplied measured-speed fixture:
   experiments/test_v11_pc_routelm_prototype_readiness.sh`, `bash
   experiments/test_v11_pc_routelm_prototype_import.sh`, and `bash
   experiments/test_v09_gpu_backend_closure.sh`.
+- h11-b focused verification passed: `bash
+  experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh`, `bash
+  experiments/test_v11_pc_routelm_prototype_artifact_import.sh`, `bash
+  experiments/test_v11_pc_routelm_prototype_readiness.sh`, and `bash
+  experiments/test_v11_pc_routelm_prototype_import.sh`.
 - Focused v08-b verification passed: `bash -n experiments/*.sh`, `bash
   experiments/test_v08_external_benchmark_adapter.sh`, `bash
   experiments/test_v08_external_benchmark_readiness.sh`, and `git diff
@@ -630,4 +663,5 @@ h9-g supplied measured-speed fixture:
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
   path, replace fixture final-review rows with real non-fixture review evidence, replace h9-g fixture timing
   with real HIP-backed measured GPU speed evidence,
-  then replace the h11-a fixture with a real local PC RouteLM prototype smoke.
+  then replace the h11-a/h11-b fixtures with a real local PC RouteLM prototype
+  smoke and non-fixture artifact/provenance evidence.

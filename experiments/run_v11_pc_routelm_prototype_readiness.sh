@@ -21,6 +21,7 @@ PROMOTION_PREFIX="v07_route_memory_promotion_gate"
 DISTILLATION_PREFIX="v10_chunk_credit_distillation_gate"
 COMPARISON_PREFIX="v08_external_benchmark_comparison_gate"
 SPEED_PREFIX="v09_gpu_backend_measured_speed_gate"
+ARTIFACT_PREFIX="v11_pc_routelm_prototype_artifact_verifier"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v11_pc_routelm_prototype_readiness_smoke"
@@ -28,6 +29,7 @@ if [[ "$MODE" == "smoke" ]]; then
   DISTILLATION_PREFIX="v10_chunk_credit_distillation_gate_smoke"
   COMPARISON_PREFIX="v08_external_benchmark_comparison_gate_smoke"
   SPEED_PREFIX="v09_gpu_backend_measured_speed_gate_smoke"
+  ARTIFACT_PREFIX="v11_pc_routelm_prototype_artifact_verifier_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -37,6 +39,7 @@ PROMOTION_SUMMARY_CSV="$RESULTS_DIR/${PROMOTION_PREFIX}_summary.csv"
 DISTILLATION_SUMMARY_CSV="$RESULTS_DIR/${DISTILLATION_PREFIX}_summary.csv"
 COMPARISON_SUMMARY_CSV="$RESULTS_DIR/${COMPARISON_PREFIX}_summary.csv"
 SPEED_SUMMARY_CSV="$RESULTS_DIR/${SPEED_PREFIX}_summary.csv"
+ARTIFACT_SUMMARY_CSV="$RESULTS_DIR/${ARTIFACT_PREFIX}_summary.csv"
 MANIFEST_CSV="$RESULTS_DIR/${PREFIX}_manifest.csv"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
@@ -51,6 +54,7 @@ env -u V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV \
   "$ROOT_DIR/experiments/run_v08_external_benchmark_comparison_gate.sh" "${RUN_ARGS[@]}" >/dev/null
 env -u V09_GPU_BACKEND_SPEED_MEASUREMENT_CSV \
   "$ROOT_DIR/experiments/run_v09_gpu_backend_measured_speed_gate.sh" "${RUN_ARGS[@]}" >/dev/null
+"$ROOT_DIR/experiments/run_v11_pc_routelm_prototype_artifact_verifier.sh" "${RUN_ARGS[@]}" >/dev/null
 
 if [[ -n "$PROTOTYPE_CSV" && ! -s "$PROTOTYPE_CSV" ]]; then
   echo "V11_PC_ROUTELM_PROTOTYPE_CSV is set but not readable/non-empty: $PROTOTYPE_CSV" >&2
@@ -83,12 +87,13 @@ AWK_INPUTS=(
   "$DISTILLATION_SUMMARY_CSV"
   "$COMPARISON_SUMMARY_CSV"
   "$SPEED_SUMMARY_CSV"
+  "$ARTIFACT_SUMMARY_CSV"
 )
 if [[ -n "$PROTOTYPE_CSV" ]]; then
   AWK_INPUTS+=("$PROTOTYPE_CSV")
 fi
 
-awk -F, -v manifest_csv="$MANIFEST_CSV" -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v distillation_csv="$DISTILLATION_SUMMARY_CSV" -v comparison_csv="$COMPARISON_SUMMARY_CSV" -v speed_csv="$SPEED_SUMMARY_CSV" -v prototype_csv="$PROTOTYPE_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
+awk -F, -v manifest_csv="$MANIFEST_CSV" -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v distillation_csv="$DISTILLATION_SUMMARY_CSV" -v comparison_csv="$COMPARISON_SUMMARY_CSV" -v speed_csv="$SPEED_SUMMARY_CSV" -v artifact_csv="$ARTIFACT_SUMMARY_CSV" -v prototype_csv="$PROTOTYPE_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
   function die(message, code) {
     print message > "/dev/stderr"
     exit code
@@ -181,6 +186,23 @@ awk -F, -v manifest_csv="$MANIFEST_CSV" -v promotion_csv="$PROMOTION_SUMMARY_CSV
     speed_jump = $sidx["active_jump_rate"] + 0
     next
   }
+  FILENAME == artifact_csv && FNR == 1 {
+    for (i = 1; i <= NF; i++) aidx[$i] = i
+    required_count = split("prototype_artifact_chain_verified real_pc_routelm_artifact_verified action routing_trigger_rate active_jump_rate", required, " ")
+    for (i = 1; i <= required_count; i++) {
+      if (!(required[i] in aidx)) die("missing h11 artifact verifier column: " required[i], 13)
+    }
+    next
+  }
+  FILENAME == artifact_csv {
+    artifact_rows++
+    prototype_artifact_chain_verified = $aidx["prototype_artifact_chain_verified"] + 0
+    real_pc_routelm_artifact_verified = $aidx["real_pc_routelm_artifact_verified"] + 0
+    prototype_artifact_action = $aidx["action"]
+    artifact_routing = $aidx["routing_trigger_rate"] + 0
+    artifact_jump = $aidx["active_jump_rate"] + 0
+    next
+  }
   prototype_csv != "" && FILENAME == prototype_csv && FNR == 1 {
     for (i = 1; i <= NF; i++) vidx[$i] = i
     required_count = split("prototype_id generator_model_uri parameter_class quantization route_memory_store_uri route_memory_residency route_memory_index_policy candidate_scoring_device decoder_device nlg_smoke_uri nlg_smoke_ready benchmark_result_uri license provenance_hash routing_trigger_rate active_jump_rate", required, " ")
@@ -223,6 +245,7 @@ awk -F, -v manifest_csv="$MANIFEST_CSV" -v promotion_csv="$PROMOTION_SUMMARY_CSV
     if (distillation_rows != 1) die("expected one h11 distillation row", 10)
     if (comparison_rows != 1) die("expected one h11 comparison row", 11)
     if (speed_rows != 1) die("expected one h11 speed row", 12)
+    if (artifact_rows != 1) die("expected one h11 artifact verifier row", 13)
 
     prototype_contract_schema_ready = 0
     if (generator_fields >= 3 &&
@@ -268,6 +291,7 @@ awk -F, -v manifest_csv="$MANIFEST_CSV" -v promotion_csv="$PROMOTION_SUMMARY_CSV
         teacher_distillation_ready == 1 &&
         benchmark_comparison_ready == 1 &&
         speed_evidence_ready == 1 &&
+        real_pc_routelm_artifact_verified == 1 &&
         promotion_status == "promotion-candidate") {
       pc_routelm_prototype_ready = 1
     }
@@ -289,15 +313,17 @@ awk -F, -v manifest_csv="$MANIFEST_CSV" -v promotion_csv="$PROMOTION_SUMMARY_CSV
       action = "external-benchmark-comparison-missing"
     } else if (component_evidence_ready && !speed_evidence_ready) {
       action = "gpu-speed-evidence-missing"
+    } else if (component_evidence_ready && !real_pc_routelm_artifact_verified) {
+      action = "pc-routelm-real-artifact-missing"
     } else if (publishable_pc_routelm_ready) {
       action = "publish-pc-routelm-prototype"
     }
 
-    routing = promotion_routing + distillation_routing + comparison_routing + speed_routing + prototype_routing
-    jump = promotion_jump + distillation_jump + comparison_jump + speed_jump + prototype_jump
+    routing = promotion_routing + distillation_routing + comparison_routing + speed_routing + artifact_routing + prototype_routing
+    jump = promotion_jump + distillation_jump + comparison_jump + speed_jump + artifact_jump + prototype_jump
 
-    print "prototype_scope,prototype_contract_schema_ready,prototype_rows,small_generator_adapter_ready,route_memory_residency_ready,candidate_scoring_ready,decoder_binding_ready,nlg_smoke_ready,component_evidence_ready,diagnostic_prototype_ready,default_promotion,teacher_external_label_source_ready,teacher_external_labels_ready,teacher_distillation_ready,comparison_input_ready,benchmark_comparison_ready,publishable_comparison_ready,speed_schema_ready,speed_evidence_ready,gpu_speedup_claim,pc_routelm_prototype_ready,publishable_pc_routelm_ready,action,routing_trigger_rate,active_jump_rate" > summary_csv
-    printf "h11-pc-routelm,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%d,%s,%.6f,%.6f\n",
+    print "prototype_scope,prototype_contract_schema_ready,prototype_rows,small_generator_adapter_ready,route_memory_residency_ready,candidate_scoring_ready,decoder_binding_ready,nlg_smoke_ready,component_evidence_ready,diagnostic_prototype_ready,prototype_artifact_chain_verified,real_pc_routelm_artifact_verified,prototype_artifact_action,default_promotion,teacher_external_label_source_ready,teacher_external_labels_ready,teacher_distillation_ready,comparison_input_ready,benchmark_comparison_ready,publishable_comparison_ready,speed_schema_ready,speed_evidence_ready,gpu_speedup_claim,pc_routelm_prototype_ready,publishable_pc_routelm_ready,action,routing_trigger_rate,active_jump_rate" > summary_csv
+    printf "h11-pc-routelm,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%d,%s,%.6f,%.6f\n",
       prototype_contract_schema_ready,
       prototype_rows,
       small_generator_adapter_ready,
@@ -307,6 +333,9 @@ awk -F, -v manifest_csv="$MANIFEST_CSV" -v promotion_csv="$PROMOTION_SUMMARY_CSV
       nlg_smoke_ready,
       component_evidence_ready,
       diagnostic_prototype_ready,
+      prototype_artifact_chain_verified,
+      real_pc_routelm_artifact_verified,
+      prototype_artifact_action,
       default_promotion,
       teacher_external_label_source_ready,
       teacher_external_labels_ready,
@@ -342,6 +371,9 @@ awk -F, -v manifest_csv="$MANIFEST_CSV" -v promotion_csv="$PROMOTION_SUMMARY_CSV
     printf "speed-evidence,%s,gpu_speedup_claim=%s\n",
       speed_evidence_ready ? "pass" : "blocked",
       gpu_speedup_claim >> decision_csv
+    printf "real-prototype-artifacts,%s,action=%s\n",
+      real_pc_routelm_artifact_verified ? "pass" : "blocked",
+      prototype_artifact_action >> decision_csv
     printf "pc-routelm-prototype,%s,action=%s\n",
       pc_routelm_prototype_ready ? "pass" : "blocked",
       action >> decision_csv

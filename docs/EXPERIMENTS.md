@@ -4,7 +4,7 @@
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j plus h7-b,
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
-h11-a prototype readiness/import, and h9-g quick closure:
+h11-a prototype readiness/import, h11-b artifact verification/import, and h9-g quick closure:
 
 ```text
 h6-p: span-local-energy policy-scale diagnostics pass.
@@ -36,7 +36,8 @@ attestations and final-review artifacts remain diagnostic, and publishable
 comparison is deferred until real independent verification exists.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
-blocked by promotion, benchmark, and GPU speed evidence gates.
+blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
+h11-b: PC RouteLM artifact verifier passes; local generator/route-memory/scorer/decoder/NLG/benchmark/license/provenance artifact chains can be hash-verified, while local fixtures still cannot become real prototype evidence.
 h9-f/h9-g: quick GPU-backend boundary runs CPU numeric parity, verifies timing/environment artifact contracts, and keeps speedup claims deferred unless real HIP-backed measurements exist; HIP parity remains optional.
 ```
 
@@ -49,7 +50,10 @@ bash experiments/test_v10_teacher_external_label_source_verifier.sh
 bash experiments/test_v10_teacher_external_label_source_import.sh
 bash experiments/test_v10_teacher_external_label_import.sh
 bash experiments/test_v10_chunk_credit_distillation_gate.sh
-bash experiments/test_v07_goal_route_memory_closure.sh
+bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
+bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
+bash experiments/test_v11_pc_routelm_prototype_readiness.sh
+bash experiments/test_v11_pc_routelm_prototype_import.sh
 bash experiments/test_v09_gpu_backend_closure.sh
 ```
 
@@ -64,8 +68,9 @@ Latest completed status:
   `real_external_benchmark_verified=0`.
 - h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
   pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
-- h11-a is the latest PC RouteLM / NLG boundary; component evidence can be
-  exercised, but real prototype/publish remains blocked.
+- h11-b is the latest PC RouteLM / NLG boundary; component evidence and local
+  artifact-chain mechanics can be exercised, but real prototype/publish remains
+  blocked with `real_pc_routelm_artifact_verified=0` for local fixtures.
 
 Read the current route-memory result as an objective split, not a solved
 retrieval policy:
@@ -79,7 +84,7 @@ The next h10/v08-style experiment should connect a real external teacher-label
 source through the h10-j source-verification contract, real benchmark source/result evidence
 through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
 import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review path,
-and measured PC RouteLM/NLG prototype evidence through h11-a before any
+and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
 promotion claim or external benchmark comparison.
 
 ## h6 Span-first Guardrail
@@ -879,8 +884,70 @@ action = diagnostic-prototype-only
 Expected:
 
 - supplied component evidence can exercise the prototype contract
-- real PC RouteLM remains blocked until default promotion, external benchmark
-  comparison, and measured GPU speed evidence exist
+- real PC RouteLM remains blocked until default promotion, real teacher-source
+  distillation, external benchmark comparison, measured GPU speed evidence, and
+  non-fixture artifact evidence exist
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h11-b PC RouteLM Prototype Artifact Verification
+
+h11-b adds an artifact/provenance verifier above the h11-a component contract.
+It checks artifact URIs and sha256 hashes for:
+
+- generator model artifact
+- route-memory store artifact
+- candidate scorer artifact
+- decoder binding artifact
+- NLG smoke transcript/result
+- benchmark result artifact
+- license and provenance artifacts
+
+```bash
+experiments/run_v11_pc_routelm_prototype_artifact_verifier.sh
+experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
+experiments/test_v11_pc_routelm_prototype_artifact_import.sh
+```
+
+Default result:
+
+```text
+prototype_rows = 0
+artifact_rows = 0
+prototype_artifact_chain_verified = 0
+real_pc_routelm_artifact_verified = 0
+action = pc-routelm-components-missing
+```
+
+Supplied local artifact fixture:
+
+```text
+prototype_rows = 1
+artifact_rows = 1
+matched_prototype_rows = 1
+generator_hash_verified_rows = 1
+route_memory_hash_verified_rows = 1
+candidate_scorer_hash_verified_rows = 1
+decoder_binding_hash_verified_rows = 1
+nlg_smoke_hash_verified_rows = 1
+benchmark_result_hash_verified_rows = 1
+license_hash_verified_rows = 1
+provenance_hash_verified_rows = 1
+prototype_artifact_chain_verified = 1
+real_pc_routelm_artifact_verified = 0
+action = pc-routelm-real-artifact-review-missing
+```
+
+Expected:
+
+- supplied local artifacts can verify the h11-b hash-chain mechanics
+- a local `results/` fixture cannot become real PC RouteLM evidence by setting
+  `real_prototype_declared=1` or `fixture_or_synthetic_declared=0`
+- the h11-a readiness summary now includes
+  `prototype_artifact_chain_verified`, `real_pc_routelm_artifact_verified`, and
+  `prototype_artifact_action`
+- real PC RouteLM remains blocked until non-fixture artifact evidence, default
+  promotion, teacher-source distillation, external benchmark verification, and
+  measured GPU speed evidence all exist
 - `routing_trigger_rate = active_jump_rate = 0`
 
 ## v0.2-pre Locked Baseline
