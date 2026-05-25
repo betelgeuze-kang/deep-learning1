@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j plus h7-b,
+The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k plus h7-b,
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
 h11-a prototype readiness/import, h11-b artifact verification/import, and h9-g quick closure:
 
@@ -26,6 +26,7 @@ h10-g: local distilled-rule learner fits the h10-f labels, while external label 
 h10-h: external teacher-label ingestion schema passes, while default external source remains blocked.
 h10-i: supplied external teacher-label CSV import passes, but distillation remains blocked until h10-j verifies a real teacher source.
 h10-j: teacher external-label source verification passes for local hash/provenance mechanics while keeping real teacher-source verification blocked.
+h10-k: local learned chunk-quality scorer passes on h10-f labels, while external source and default promotion remain blocked.
 h7-b: promotion gate blocks default route-memory promotion.
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
@@ -49,6 +50,7 @@ git diff --check
 bash experiments/test_v10_teacher_external_label_source_verifier.sh
 bash experiments/test_v10_teacher_external_label_source_import.sh
 bash experiments/test_v10_teacher_external_label_import.sh
+bash experiments/test_v10_learned_chunk_quality_scorer.sh
 bash experiments/test_v10_chunk_credit_distillation_gate.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
@@ -59,10 +61,10 @@ bash experiments/test_v09_gpu_backend_closure.sh
 
 Latest completed status:
 
-- h10-j is the latest route-memory source-verification gate. It verifies local
-  teacher-label source chain mechanics but keeps local fixtures non-real with
-  `real_teacher_source_verified=0`.
-- h7 route-memory closure includes h10-j and still blocks default promotion.
+- h10-k is the latest route-memory learned-scorer gate. It trains a local
+  linear chunk-quality scorer from h10-f labels, separates reward from negative
+  actions, and keeps external source/promotion blocked.
+- h7 route-memory closure includes h10-k and still blocks default promotion.
 - v08-l is the latest external benchmark evidence boundary; final-review
   mechanics pass, but fixture/local review remains non-publishable with
   `real_external_benchmark_verified=0`.
@@ -80,9 +82,10 @@ byte-qacc objective -> local-energy
 span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
-The next h10/v08-style experiment should connect a real external teacher-label
-source through the h10-j source-verification contract, real benchmark source/result evidence
-through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
+The next h10/v08-style experiment should replace the local h10-k labels with a
+real external teacher-label source through the h10-j source-verification
+contract, real benchmark source/result evidence through the
+v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
 import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review path,
 and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
 promotion claim or external benchmark comparison.
@@ -436,7 +439,7 @@ Expected:
   blocked until they are actually exercised on the chunk-credit path
 - uncertain cases route to weak-hint/abstain
 
-## h10-c/d/e/f/g/h/i/j Joint Source, Fallback, and Teacher Gates
+## h10-c/d/e/f/g/h/i/j/k Joint Source, Fallback, and Teacher Gates
 
 h10-c adds the first joint source/noisy matrix above the teacher-free chunk
 ranker and a separate distillation gate. h10-d adds the missing forced
@@ -447,10 +450,12 @@ local teacher-label collection harness. h10-g fits a local distilled-rule
 learner over those labels. h10-h defines the external teacher-label ingestion
 schema. h10-i adds a supplied external teacher-label CSV import path. h10-j adds
 a source-verifier layer over source artifact, label export, teacher identity,
-teacher policy, license, provenance, and hash evidence. The default result is
-deliberately diagnostic-only: noisy wrong candidates are not selected,
-fallback/retry is now exercised, local collection is ready, local distillation
-training/eval is ready, and external ingestion schema is ready, but no default
+teacher policy, license, provenance, and hash evidence. h10-k adds a local
+learned chunk-quality scorer over the h10-f label features and feeds it into
+the distillation gate. The default result is deliberately diagnostic-only:
+noisy wrong candidates are not selected, fallback/retry is now exercised, local
+collection is ready, local distillation training/eval is ready, local learned
+chunk scoring is ready, and external ingestion schema is ready, but no default
 external teacher-label source exists. A supplied label fixture can mark labels
 ready, and a supplied local source fixture can verify the chain mechanics, but
 both remain blocked before real teacher-source verification.
@@ -472,6 +477,8 @@ experiments/test_v10_teacher_external_label_import.sh
 experiments/run_v10_teacher_external_label_source_verifier.sh
 experiments/test_v10_teacher_external_label_source_verifier.sh
 experiments/test_v10_teacher_external_label_source_import.sh
+experiments/run_v10_learned_chunk_quality_scorer.sh
+experiments/test_v10_learned_chunk_quality_scorer.sh
 experiments/run_v10_chunk_credit_distillation_gate.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 ```
@@ -495,6 +502,13 @@ fallback_retry_noisy_selected = 0.000000
 joint_chunk_source_ready = 0
 teacher_label_contract_ready = 1
 teacher_label_collection_ready = 1
+learned_chunk_scorer_ready = 1
+learned_chunk_score_gap = 3.064325
+learned_chunk_coherent_wrong_negative_rate = 1.000000
+learned_chunk_correct_reward_rate = 1.000000
+learned_chunk_negative_action_rate = 1.000000
+learned_chunk_scorer_id = linear-contrastive-chunk-v1
+learned_chunk_scorer_source = local-teacher-harness
 teacher_external_schema_ready = 1
 teacher_external_label_source_ready = 0
 teacher_external_labels_ready = 0
@@ -570,6 +584,8 @@ Expected:
 - local teacher-label collection must pass without claiming external labels
 - local teacher-distillation training/eval must pass without claiming external
   labels
+- local learned chunk scoring must separate reward from negative actions
+  without claiming external source evidence
 - default external teacher-label ingestion schema must pass without claiming a
   source
 - supplied external labels must make the labels ready without enabling
@@ -579,10 +595,66 @@ Expected:
 - default distillation remains blocked until real external-label source evidence
   exists
 
+## h10-k Learned Chunk-quality Scorer
+
+h10-k is the first local learned chunk-quality scorer gate above the teacher
+label harness. It trains a deterministic linear contrastive scorer from h10-f
+labels using chunk score, chunk gap, normalized span overlap, chunk top1,
+coherent-wrong, noisy-source, missing-query, missing-candidate, and near-miss
+features. The learned scorer is deliberately local-only: it can be ready as a
+diagnostic component, but it does not turn local teacher labels into real
+external source evidence or default promotion.
+
+```bash
+experiments/run_v10_learned_chunk_quality_scorer.sh
+experiments/test_v10_learned_chunk_quality_scorer.sh
+```
+
+Smoke summary:
+
+```text
+label_source = local-teacher-harness
+learner_id = linear-contrastive-chunk-v1
+feature_count = 9
+reward_rows = 2
+negative_rows = 4
+wrong_rows = 1
+near_miss_rows = 1
+missing_query_rows = 1
+abstain_rows = 1
+coherent_wrong_rows = 2
+reward_score_min = 1.951978
+negative_score_max = -1.112347
+learned_score_gap = 3.064325
+correct_reward_rate = 1.000000
+negative_action_rate = 1.000000
+coherent_wrong_negative_rate = 1.000000
+slash_negative_rate = 1.000000
+abstain_negative_rate = 1.000000
+weak_negative_rate = 1.000000
+direction_ready = 1
+separation_ready = 1
+learned_chunk_scorer_ready = 1
+external_label_source_ready = 0
+default_promotion = 0
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Expected:
+
+- correct chunk evidence must receive positive feature direction
+- coherent wrong, noisy, missing, and near-miss risk must score negative
+- reward rows must stay above zero score and negative rows below zero score
+- mixed label-source CSVs are rejected so scorer provenance is not silently
+  overwritten
+- local scorer readiness is consumed by the distillation gate, but real
+  distillation still requires h10-j real source verification
+
 ## h7-b Promotion Gate and v08 Readiness
 
-h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i/j are
-wired into the route-memory closure as later chunk-ranking/source/fallback
+h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i/j/k are
+wired into the route-memory closure as later chunk-ranking/source/fallback/scorer
 smokes, but they are not yet default-promotion inputs. v08 uses the h7-b gate
 to decide whether an external benchmark comparison is ready. v08-b adds the
 external benchmark adapter manifest for RULER, LongBench, codebase retrieval,

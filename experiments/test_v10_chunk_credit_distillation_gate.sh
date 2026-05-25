@@ -17,7 +17,7 @@ awk -F, '
   NR == 1 {
     header_fields = NF
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("best_joint_arm fallback_exercise_arm guardrail_action chunk_credit_ready joint_chunk_ready source_safe joint_source_safe noisy_clean fallback_not_keyshape_only fallback_retry_exercised fallback_exercise_ready fallback_qacc_delta_vs_corrupt fallback_retry_used fallback_retry_success fallback_retry_raw_selected fallback_retry_noisy_selected fallback_noisy_selected joint_chunk_source_ready teacher_label_contract_ready teacher_label_collection_ready teacher_external_schema_ready teacher_external_label_source_ready teacher_external_labels_ready teacher_external_label_source teacher_external_source_evidence teacher_source_chain_verified real_teacher_source_verified teacher_source_action teacher_distillation_training_ready teacher_distillation_eval_ready teacher_distillation_action_accuracy teacher_learner_id teacher_grounded_span_coverage teacher_label_source teacher_correct_labels teacher_wrong_labels teacher_near_miss_labels teacher_missing_query_labels teacher_abstain_labels policy_distillation_ready combined_ready distillation_ready default_promotion diagnostic_only weak_hint_or_abstain status reason routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("best_joint_arm fallback_exercise_arm guardrail_action chunk_credit_ready joint_chunk_ready source_safe joint_source_safe noisy_clean fallback_not_keyshape_only fallback_retry_exercised fallback_exercise_ready fallback_qacc_delta_vs_corrupt fallback_retry_used fallback_retry_success fallback_retry_raw_selected fallback_retry_noisy_selected fallback_noisy_selected joint_chunk_source_ready teacher_label_contract_ready teacher_label_collection_ready learned_chunk_scorer_ready learned_chunk_score_gap learned_chunk_coherent_wrong_negative_rate learned_chunk_correct_reward_rate learned_chunk_negative_action_rate learned_chunk_scorer_id learned_chunk_scorer_source teacher_external_schema_ready teacher_external_label_source_ready teacher_external_labels_ready teacher_external_label_source teacher_external_source_evidence teacher_source_chain_verified real_teacher_source_verified teacher_source_action teacher_distillation_training_ready teacher_distillation_eval_ready teacher_distillation_action_accuracy teacher_learner_id teacher_grounded_span_coverage teacher_label_source teacher_correct_labels teacher_wrong_labels teacher_near_miss_labels teacher_missing_query_labels teacher_abstain_labels policy_distillation_ready combined_ready distillation_ready default_promotion diagnostic_only weak_hint_or_abstain status reason routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing h10 distillation summary column: " required[i], 2)
     }
@@ -50,6 +50,13 @@ awk -F, '
         ($idx["joint_chunk_source_ready"] + 0) != 0 ||
         ($idx["teacher_label_contract_ready"] + 0) != 1 ||
         ($idx["teacher_label_collection_ready"] + 0) != 1 ||
+        ($idx["learned_chunk_scorer_ready"] + 0) != 1 ||
+        ($idx["learned_chunk_score_gap"] + 0) <= 0.50 ||
+        ($idx["learned_chunk_coherent_wrong_negative_rate"] + 0) != 1.0 ||
+        ($idx["learned_chunk_correct_reward_rate"] + 0) != 1.0 ||
+        ($idx["learned_chunk_negative_action_rate"] + 0) != 1.0 ||
+        $idx["learned_chunk_scorer_id"] != "linear-contrastive-chunk-v1" ||
+        $idx["learned_chunk_scorer_source"] != "local-teacher-harness" ||
         ($idx["teacher_external_schema_ready"] + 0) != 1 ||
         ($idx["teacher_external_label_source_ready"] + 0) != 0 ||
         ($idx["teacher_external_labels_ready"] + 0) != 0 ||
@@ -117,6 +124,9 @@ awk -F, '
     if ($idx["gate"] == "teacher-distillation-training" && $idx["status"] != "pass") {
       die("teacher distillation training should pass after h10-g local learner", 26)
     }
+    if ($idx["gate"] == "learned-chunk-scorer" && $idx["status"] != "pass") {
+      die("learned chunk scorer should pass after h10-k local scorer training", 31)
+    }
     if ($idx["gate"] == "external-label-schema" && $idx["status"] != "pass") {
       die("external label schema should pass after h10-h contract", 28)
     }
@@ -134,7 +144,7 @@ awk -F, '
     }
   }
   END {
-    if (rows < 5) die("expected h10 distillation decision rows", 23)
+    if (rows < 11) die("expected h10 distillation decision rows", 23)
   }
 ' "$DECISION_CSV"
 

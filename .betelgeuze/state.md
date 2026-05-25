@@ -50,6 +50,11 @@
   local source/export/identity/policy/license hash-chain mechanics can verify,
   but `real_teacher_source_verified=0`, `distillation_ready=0`, and
   `default_promotion=0` remain until non-fixture source evidence exists.
+- h10-k local learned chunk-quality scorer passed:
+  `linear-contrastive-chunk-v1` separates reward from negative actions on h10-f
+  local teacher labels, rejects mixed label-source provenance, and feeds scorer
+  readiness into the distillation gate while keeping `external_label_source_ready=0`,
+  `distillation_ready=0`, and `default_promotion=0`.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -238,7 +243,7 @@ h10-b chunk-credit abstain policy smoke:
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
-h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i/h10-j joint source/distillation smoke:
+h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i/h10-j/h10-k joint source/distillation smoke:
   best_joint_arm = chunk-credit-source-order
   fallback_exercise_arm = raw-retry
   joint_chunk_ready = 1
@@ -256,6 +261,13 @@ h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i/h10-j joint source/distillation smoke:
   joint_chunk_source_ready = 0
   teacher_label_contract_ready = 1
   teacher_label_collection_ready = 1
+  learned_chunk_scorer_ready = 1
+  learned_chunk_score_gap = 3.064325
+  learned_chunk_coherent_wrong_negative_rate = 1.000000
+  learned_chunk_correct_reward_rate = 1.000000
+  learned_chunk_negative_action_rate = 1.000000
+  learned_chunk_scorer_id = linear-contrastive-chunk-v1
+  learned_chunk_scorer_source = local-teacher-harness
   teacher_external_schema_ready = 1
   teacher_external_label_source_ready = 0
   teacher_external_labels_ready = 0
@@ -273,6 +285,36 @@ h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i/h10-j joint source/distillation smoke:
   teacher_abstain_labels = 1
   distillation_ready = 0
   reason = teacher-external-label-source-missing
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+h10-k learned chunk-quality scorer smoke:
+  label_source = local-teacher-harness
+  learner_id = linear-contrastive-chunk-v1
+  feature_count = 9
+  reward_rows = 2
+  negative_rows = 4
+  wrong_rows = 1
+  near_miss_rows = 1
+  missing_query_rows = 1
+  abstain_rows = 1
+  coherent_wrong_rows = 2
+  reward_score_mean = 2.266878
+  negative_score_mean = -2.266878
+  reward_score_min = 1.951978
+  negative_score_max = -1.112347
+  learned_score_gap = 3.064325
+  correct_reward_rate = 1.000000
+  negative_action_rate = 1.000000
+  coherent_wrong_negative_rate = 1.000000
+  slash_negative_rate = 1.000000
+  abstain_negative_rate = 1.000000
+  weak_negative_rate = 1.000000
+  direction_ready = 1
+  separation_ready = 1
+  learned_chunk_scorer_ready = 1
+  external_label_source_ready = 0
+  default_promotion = 0
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
@@ -594,6 +636,16 @@ h9-g supplied measured-speed fixture:
   experiments/test_v07_goal_route_memory_closure.sh` and `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h10-j source
   verification inside the h7 route-memory closure and h9 quick closure.
+- h10-k focused gates passed: `bash
+  experiments/test_v10_learned_chunk_quality_scorer.sh` and `bash
+  experiments/test_v10_chunk_credit_distillation_gate.sh`.
+- h10-k h7 closure verification passed: `bash
+  experiments/test_v07_goal_route_memory_closure.sh`, confirming the learned
+  chunk-quality scorer inside the route-memory closure with default promotion
+  still blocked.
+- h10-k backend wrapper verification passed: `bash
+  experiments/test_v09_gpu_backend_closure.sh`, confirming h10-k through h7
+  plus v08/h11/h9 quick closure with HIP runtime parity still optional.
 - h9-f focused and wrapper verification passed: `build/hip_candidate_weight_parity
   --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
   `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash

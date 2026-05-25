@@ -116,6 +116,9 @@ bash "$ROOT_DIR/experiments/test_v10_teacher_label_collection_harness.sh"
 echo "goal: h10-teacher-distillation-learner"
 bash "$ROOT_DIR/experiments/test_v10_teacher_distillation_learner.sh"
 
+echo "goal: h10-learned-chunk-quality-scorer"
+bash "$ROOT_DIR/experiments/test_v10_learned_chunk_quality_scorer.sh"
+
 echo "goal: h10-teacher-external-label-ingestion"
 bash "$ROOT_DIR/experiments/test_v10_teacher_external_label_ingestion.sh"
 
