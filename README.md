@@ -4,6 +4,23 @@ Deterministic C++17 reference code for a staged discrete local-energy research p
 
 Korean README: [README.ko.md](README.ko.md)
 
+Latest completed checkpoint:
+
+- Branch `codex/route-memory-local-energy-policy` is current through `1f43ba0 Add teacher source verification gate`.
+- h10-j is closed as the latest route-memory teacher-source gate. The new verifier checks teacher source artifact, label export, teacher identity, teacher policy, license, provenance, and sha256 hash-chain mechanics. Default/no-env remains blocked; a supplied external-label CSV can import labels but cannot enable distillation without source evidence; a supplied local source fixture can verify mechanics but stays `real_teacher_source_verified=0`, `distillation_ready=0`, `default_promotion=0`. Local fixture URIs under `results/` cannot become real teacher-source evidence by declaration flags alone.
+- h7 route-memory closure is current through h10-j. The closure still keeps `default_promotion=0`, `status=diagnostic-only`, `routing_trigger_rate=0`, and `active_jump_rate=0`. The positive chunk-credit result is therefore a guarded diagnostic route-memory policy, not a default sparse-routing policy.
+- v08-l is closed as the current external-benchmark evidence boundary. Adapter, evidence schema, supplied CSV import, comparison deltas, real-evidence format, local artifact hash verification, benchmark authenticity, execution-output, independent attestation, attestor identity, and final-review mechanics are all covered. Local/fixture rows remain non-publishable with `real_external_benchmark_verified=0`; v08-e publishability requires v08-l real verification.
+- h9-g is closed as the current GPU/backend evidence boundary. CPU remains canonical, HIP remains optional/environment-dependent, and fixture timing evidence keeps `gpu_speedup_claim=deferred`.
+- h11-a is closed as the current PC RouteLM / NLG readiness contract. A supplied component fixture can exercise the quantized-generator, O(n) route-memory, GPU scoring/decoder, and NLG-smoke contract, but it remains diagnostic-only because default promotion, real benchmark comparison, real teacher-source distillation, and real GPU speed evidence are absent.
+- Latest verified command stack: `bash -n experiments/*.sh`, `git diff --check`, focused h10-j verifier/import/distillation tests, `bash experiments/test_v07_goal_route_memory_closure.sh`, and `bash experiments/test_v09_gpu_backend_closure.sh`.
+
+Current open blockers:
+
+- Real external teacher-label source evidence must pass the h10-j verifier before teacher-distilled chunk retrieval can be claimed.
+- Real external benchmark source/result/review evidence must pass the v08-f through v08-l chain before any v0.8 external comparison can be published.
+- Real HIP-backed measurements must replace fixture timing before any GPU speedup claim.
+- A real PC RouteLM/NLG artifact smoke remains future work; h11-a is a contract/readiness gate, not a working product claim.
+
 Current headline:
 
 - The project is now best described as a discrete local-energy learner plus a value-bearing route-hint memory research prototype. Through v0.3, the strongest routing conclusion is that long-range information should enter as `candidate value_pos -> value byte read -> proposal hint`, not as remote-neighbor replacement.

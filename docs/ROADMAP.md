@@ -13,6 +13,21 @@ discrete local-energy learner
 + optional HIP backend scaffold / parity instrumentation
 ```
 
+Last completed checkpoint:
+
+- h10-j closes the teacher external-label source verifier for the current
+  route-memory path. Local source/export/identity/policy/license/provenance
+  hash-chain mechanics pass, but local fixtures remain non-real and do not
+  unlock distillation.
+- h7 quick closure is current through h10-j and keeps default promotion blocked.
+- v08-l closes the final-review mechanics layer for external benchmarks while
+  keeping real benchmark verification blocked until non-fixture source/review
+  evidence exists.
+- h9-g closes the measured-speed evidence contract while keeping GPU speedup
+  claims deferred until real HIP-backed measurements exist.
+- h11-a closes the PC RouteLM / NLG readiness contract while keeping real
+  prototype and publish claims blocked.
+
 The live nonlocal path is still:
 
 ```text

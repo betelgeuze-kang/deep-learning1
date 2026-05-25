@@ -4,6 +4,23 @@
 
 이 저장소는 단계적으로 확장 중인 deterministic C++17 이산 local-energy 연구 프로토타입입니다.
 
+## 최신 완료 체크포인트
+
+- 현재 브랜치 `codex/route-memory-local-energy-policy`는 `1f43ba0 Add teacher source verification gate`까지 최신입니다.
+- h10-j가 최신 route-memory teacher-source gate로 닫혔습니다. 새 verifier는 teacher source artifact, label export, teacher identity, teacher policy, license, provenance, sha256 hash chain을 검사합니다. 기본 no-env 실행은 여전히 blocked이고, supplied external-label CSV는 label import까지만 통과하며 source evidence 없이는 distillation을 열 수 없습니다. supplied local source fixture는 chain mechanics를 검증하지만 `real_teacher_source_verified=0`, `distillation_ready=0`, `default_promotion=0`을 유지합니다. `results/` 아래 local fixture URI는 declaration flag만 바꿔도 real teacher-source evidence가 되지 않도록 막았습니다.
+- h7 route-memory closure는 h10-j까지 포함한 최신 상태입니다. 여전히 `default_promotion=0`, `status=diagnostic-only`, `routing_trigger_rate=0`, `active_jump_rate=0`입니다. 즉 chunk-credit의 positive result는 guarded diagnostic route-memory policy이지 default sparse-routing policy가 아닙니다.
+- v08-l은 현재 external-benchmark evidence boundary입니다. Adapter, evidence schema, supplied CSV import, comparison delta, real-evidence format, local artifact hash verification, benchmark authenticity, execution-output, independent attestation, attestor identity, final-review mechanics까지 닫혔습니다. 하지만 local/fixture row는 계속 non-publishable이고 `real_external_benchmark_verified=0`입니다. v08-e publishability는 v08-l real verification을 요구합니다.
+- h9-g는 현재 GPU/backend evidence boundary입니다. CPU가 canonical이고, HIP는 optional/environment-dependent입니다. fixture timing evidence는 계속 `gpu_speedup_claim=deferred`를 유지합니다.
+- h11-a는 현재 PC RouteLM / NLG readiness contract입니다. supplied component fixture는 quantized generator, O(n) route memory, GPU scoring/decoder, NLG smoke contract를 exercise할 수 있지만, default promotion, real benchmark comparison, real teacher-source distillation, real GPU speed evidence가 없으므로 diagnostic-only입니다.
+- 최신 검증 스택은 `bash -n experiments/*.sh`, `git diff --check`, focused h10-j verifier/import/distillation tests, `bash experiments/test_v07_goal_route_memory_closure.sh`, `bash experiments/test_v09_gpu_backend_closure.sh`입니다.
+
+## 현재 열린 blocker
+
+- Real external teacher-label source evidence가 h10-j verifier를 통과해야 teacher-distilled chunk retrieval을 주장할 수 있습니다.
+- Real external benchmark source/result/review evidence가 v08-f부터 v08-l까지 통과해야 v0.8 external comparison을 publish할 수 있습니다.
+- Real HIP-backed measurement가 fixture timing을 대체해야 GPU speedup claim을 할 수 있습니다.
+- Real PC RouteLM/NLG artifact smoke는 아직 future work입니다. h11-a는 contract/readiness gate이지 working product claim이 아닙니다.
+
 ## 현재 한 줄 요약
 
 현재 프로젝트는 **이산 local-energy learner + value-bearing route-hint memory** 연구 프로토타입으로 보는 것이 가장 정확합니다. v0.3에서 가장 강하게 확인된 결론은 장거리 정보가 `remote node as neighbor`로 들어오면 안 되고, `candidate value_pos -> value byte read -> proposal hint` 형태로 들어와야 한다는 점입니다.

@@ -3,6 +3,17 @@
 h11 opens the PC RouteLM prototype gate. It is a readiness and evidence
 contract, not a claim that a real local LLM exists yet.
 
+Current completed status:
+
+- h11-a is closed as a schema/readiness and supplied-component import gate.
+- The supplied fixture can exercise the component contract, but it is still
+  diagnostic-only.
+- Real PC RouteLM / NLG remains blocked by h7 promotion, h10-j real
+  teacher-source distillation, v08-l real external benchmark verification, and
+  h9-g real HIP-backed speed evidence.
+- A stricter h11-b artifact verifier is the next useful boundary, but it is not
+  part of the completed checkpoint yet.
+
 The target architecture is:
 
 ```text

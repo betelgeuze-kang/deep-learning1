@@ -40,6 +40,33 @@ blocked by promotion, benchmark, and GPU speed evidence gates.
 h9-f/h9-g: quick GPU-backend boundary runs CPU numeric parity, verifies timing/environment artifact contracts, and keeps speedup claims deferred unless real HIP-backed measurements exist; HIP parity remains optional.
 ```
 
+Latest completed verification:
+
+```bash
+bash -n experiments/*.sh
+git diff --check
+bash experiments/test_v10_teacher_external_label_source_verifier.sh
+bash experiments/test_v10_teacher_external_label_source_import.sh
+bash experiments/test_v10_teacher_external_label_import.sh
+bash experiments/test_v10_chunk_credit_distillation_gate.sh
+bash experiments/test_v07_goal_route_memory_closure.sh
+bash experiments/test_v09_gpu_backend_closure.sh
+```
+
+Latest completed status:
+
+- h10-j is the latest route-memory source-verification gate. It verifies local
+  teacher-label source chain mechanics but keeps local fixtures non-real with
+  `real_teacher_source_verified=0`.
+- h7 route-memory closure includes h10-j and still blocks default promotion.
+- v08-l is the latest external benchmark evidence boundary; final-review
+  mechanics pass, but fixture/local review remains non-publishable with
+  `real_external_benchmark_verified=0`.
+- h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
+  pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
+- h11-a is the latest PC RouteLM / NLG boundary; component evidence can be
+  exercised, but real prototype/publish remains blocked.
+
 Read the current route-memory result as an objective split, not a solved
 retrieval policy:
 
