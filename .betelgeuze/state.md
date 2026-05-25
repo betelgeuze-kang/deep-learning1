@@ -64,6 +64,11 @@
   external-label row mismatches, malformed feature CSVs, and local source
   fixtures remain diagnostic-only with
   `source_verified_learned_chunk_scorer_ready=0`.
+- h10-m remote teacher-source acquisition gate passed:
+  default/no-env blocks before acquisition evidence, local `file://` packages
+  are classified as local/placeholder, and HTTPS non-local packages can pass
+  URI/hash/acquisition/review contract readiness while keeping
+  `real_teacher_source_verified=0` until a real fetch/content verifier exists.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -379,6 +384,34 @@ h10-l negative bypass guards:
   malformed_feature_label_csv = rejected
   outside_results_local_file_real_declaration = blocked
   canonical_h10k_summary_not_overwritten = 1
+
+h10-m remote teacher-source acquisition default smoke:
+  acquisition_rows = 0
+  remote_teacher_source_acquisition_ready = 0
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-acquisition-missing
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+h10-m supplied local acquisition fixture:
+  acquisition_rows = 1
+  required_uri_fields = 6
+  local_uri_fields = 6
+  remote_uri_scheme_ready = 0
+  hash_manifest_ready = 1
+  remote_teacher_source_acquisition_ready = 0
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-local-or-placeholder
+
+h10-m supplied HTTPS acquisition package:
+  acquisition_rows = 1
+  required_uri_fields = 6
+  https_remote_uri_fields = 6
+  remote_uri_scheme_ready = 1
+  hash_manifest_ready = 1
+  remote_teacher_source_acquisition_ready = 1
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-fetcher-missing
 
 h10-i supplied external-label import fixture:
   external_label_rows = 5
@@ -716,6 +749,9 @@ h9-g supplied measured-speed fixture:
   `experiments/test_v07_goal_route_memory_closure.sh`, and final wrapper
   verification passed through `bash experiments/test_v09_gpu_backend_closure.sh`
   with h7 goal closure included.
+- h10-m focused gate passed: `bash
+  experiments/test_v10_remote_teacher_source_acquisition_gate.sh`; it is wired
+  into `experiments/test_v07_goal_route_memory_closure.sh`.
 - h9-f focused and wrapper verification passed: `build/hip_candidate_weight_parity
   --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
   `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash
@@ -779,8 +815,9 @@ h9-g supplied measured-speed fixture:
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion, external comparison, and
   publishable PC RouteLM / NLG prototype claims.
-- Active next loop: connect a real external teacher-label source through the
-  h10-j source-verification contract, connect real RULER/LongBench/codebase/doc-QA source and result
+- Active next loop: add fetch/content verification above h10-m and connect a
+  real external teacher-label source through the h10-j/h10-l source-verification
+  contracts, connect real RULER/LongBench/codebase/doc-QA source and result
   evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
   path, replace fixture final-review rows with real non-fixture review evidence, replace h9-g fixture timing

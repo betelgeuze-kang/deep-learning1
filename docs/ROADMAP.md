@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-l plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
+As of h10-m plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -11,6 +11,7 @@ discrete local-energy learner
 + symbolic span route-memory diagnostics
 + local learned chunk-quality scorer diagnostics
 + source-verified learned scorer binding diagnostics
++ remote teacher-source acquisition contract
 + PC RouteLM / NLG prototype readiness and artifact verification contracts
 + optional HIP backend scaffold / parity instrumentation
 ```
@@ -30,7 +31,11 @@ Last completed checkpoint:
   unless supplied feature labels are non-local, teacher-ID linked, row-bound to
   external teacher-label rows by `source_uri` plus `provenance_hash`, and backed
   by real h10-j source verification.
-- h7 quick closure is current through h10-l and keeps default promotion blocked.
+- h10-m closes the remote teacher-source acquisition contract. HTTPS non-local
+  source packages can pass URI/hash/acquisition/review readiness, while local
+  packages are rejected and real source verification remains blocked until a
+  fetch/content verifier exists.
+- h7 quick closure is current through h10-m and keeps default promotion blocked.
 - v08-l closes the final-review mechanics layer for external benchmarks while
   keeping real benchmark verification blocked until non-fixture source/review
   evidence exists.
@@ -149,6 +154,11 @@ Current closure:
   source-chain mechanics, but still keep
   `source_verified_learned_chunk_scorer_ready=0` until
   `real_teacher_source_verified=1`.
+- `h10-m` adds the remote teacher-source acquisition contract. Default/no-env
+  blocks before acquisition evidence; local `file://` packages block as
+  local/placeholder; HTTPS packages can pass acquisition readiness but still
+  keep `real_teacher_source_verified=0` with
+  `remote-teacher-source-fetcher-missing`.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
 - `h7-b` adds the route-memory promotion gate and keeps default promotion
@@ -206,7 +216,7 @@ Current closure:
 - `h9-a/h9-b/h9-d/h9-e/h9-f/h9-g` add optional ROCm/HIP backend scaffolding
   plus measured-speed evidence contracts:
   `experiments/test_v09_gpu_backend_closure.sh`.
-- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l, h7-b,
+- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m, h7-b,
   v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
   h11-a prototype readiness/import, h11-b artifact verifier/import, and h9-g
   included in quick closure paths.
@@ -219,8 +229,9 @@ Current next boundary:
   source-backed feature labels that row-match external teacher-label evidence.
   The local contract, local collection harness, local distilled-rule learner,
   local learned chunk scorer, source-verified scorer binding, external ingestion
-  schema, supplied CSV path, and source-chain verifier are now present; the next
-  blocker is real source evidence before any default promotion or external
+  schema, supplied CSV path, source-chain verifier, and remote acquisition
+  contract are now present; the next blocker is a real fetch/content verifier
+  for the HTTPS acquisition package before any default promotion or external
   benchmark comparison.
 - Provide or connect real external benchmark sources/results through the
   v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l

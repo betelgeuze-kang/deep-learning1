@@ -122,6 +122,9 @@ bash "$ROOT_DIR/experiments/test_v10_learned_chunk_quality_scorer.sh"
 echo "goal: h10-source-verified-learned-chunk-scorer"
 bash "$ROOT_DIR/experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh"
 
+echo "goal: h10-remote-teacher-source-acquisition"
+bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_acquisition_gate.sh"
+
 echo "goal: h10-teacher-external-label-ingestion"
 bash "$ROOT_DIR/experiments/test_v10_teacher_external_label_ingestion.sh"
 

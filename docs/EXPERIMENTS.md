@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l plus h7-b,
+The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m plus h7-b,
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
 h11-a prototype readiness/import, h11-b artifact verification/import, and h9-g quick closure:
 
@@ -28,6 +28,7 @@ h10-i: supplied external teacher-label CSV import passes, but distillation remai
 h10-j: teacher external-label source verification passes for local hash/provenance mechanics while keeping real teacher-source verification blocked.
 h10-k: local learned chunk-quality scorer passes on h10-f labels, while external source and default promotion remain blocked.
 h10-l: row/provenance-bound source-verified learned scorer binding passes, while local/default labels remain blocked from satisfying source-verified distillation.
+h10-m: remote teacher-source acquisition contract passes for HTTPS evidence packages, while real fetch/content verification remains blocked.
 h7-b: promotion gate blocks default route-memory promotion.
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
@@ -53,6 +54,7 @@ bash experiments/test_v10_teacher_external_label_source_import.sh
 bash experiments/test_v10_teacher_external_label_import.sh
 bash experiments/test_v10_learned_chunk_quality_scorer.sh
 bash experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh
+bash experiments/test_v10_remote_teacher_source_acquisition_gate.sh
 bash experiments/test_v10_chunk_credit_distillation_gate.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
@@ -63,12 +65,16 @@ bash experiments/test_v09_gpu_backend_closure.sh
 
 Latest completed status:
 
-- h10-l is the latest route-memory learned-scorer/source binding gate. It keeps
+- h10-m is the latest route-memory teacher-source boundary. It lets an HTTPS
+  remote acquisition package pass URI/hash/acquisition/review contract checks,
+  while still blocking real teacher-source claims until a fetch/content verifier
+  exists.
+- h10-l remains the route-memory learned-scorer/source binding gate. It keeps
   local learned scorer readiness separate from source-verified learned scorer
   readiness, so distillation cannot pass on a local scorer plus unrelated real
   source evidence, relabeled local feature rows, or mismatched external-label
   rows.
-- h7 route-memory closure includes h10-l and still blocks default promotion.
+- h7 route-memory closure includes h10-m and still blocks default promotion.
 - v08-l is the latest external benchmark evidence boundary; final-review
   mechanics pass, but fixture/local review remains non-publishable with
   `real_external_benchmark_verified=0`.
@@ -86,9 +92,10 @@ byte-qacc objective -> local-energy
 span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
-The next h10/v08-style experiment should replace the local h10-k/h10-l labels
-with real external teacher-label feature labels through the h10-j
-source-verification contract, real benchmark source/result evidence through the
+The next h10/v08-style experiment should add fetch/content verification above
+h10-m, replace the local h10-k/h10-l labels with real external teacher-label
+feature labels through the h10-j source-verification contract, real benchmark
+source/result evidence through the
 v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
 import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review path,
 and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
@@ -460,7 +467,10 @@ the distillation gate. h10-l adds the missing binding check: learned scorer
 readiness only counts for source-verified distillation when supplied feature
 labels are non-local, teacher-ID linked to the source evidence, row-bound to
 external teacher-label rows by `source_uri` and `provenance_hash`, and backed by
-real h10-j teacher-source verification. The default result is deliberately
+real h10-j teacher-source verification. h10-m adds the remote acquisition
+contract above that source gap: local `file://` packages are rejected as
+local/placeholder, and HTTPS packages can become acquisition-ready but still
+block at missing fetch/content verification. The default result is deliberately
 diagnostic-only: noisy wrong candidates are not selected, fallback/retry is now
 exercised, local collection is ready, local distillation training/eval is ready,
 local learned chunk scoring is ready, and external ingestion schema is ready,
@@ -489,6 +499,8 @@ experiments/run_v10_learned_chunk_quality_scorer.sh
 experiments/test_v10_learned_chunk_quality_scorer.sh
 experiments/run_v10_source_verified_learned_chunk_scorer_gate.sh
 experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh
+experiments/run_v10_remote_teacher_source_acquisition_gate.sh
+experiments/test_v10_remote_teacher_source_acquisition_gate.sh
 experiments/run_v10_chunk_credit_distillation_gate.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 ```
@@ -605,6 +617,11 @@ Expected:
 - relabeled local rows, external-label row mismatches, malformed feature CSV
   rows, and local `file://` evidence outside `results/` must not unlock the
   source-verified scorer
+- remote teacher-source acquisition must require HTTPS non-local URI fields,
+  sha256 hash manifests, acquisition metadata, and review evidence
+- local `file://` acquisition packages must block as local/placeholder, while
+  HTTPS packages must still stop before real source verification until a
+  fetch/content verifier exists
 - default external teacher-label ingestion schema must pass without claiming a
   source
 - supplied external labels must make the labels ready without enabling
@@ -741,9 +758,68 @@ Expected:
 - distillation now requires `source_verified_learned_chunk_scorer_ready=1`,
   not just local `learned_chunk_scorer_ready=1`
 
+## h10-m Remote Teacher-source Acquisition
+
+h10-m opens the remote teacher-source acquisition contract without pretending
+that remote source content has already been fetched and verified. It is a
+preflight gate for the next real external teacher-label source step: all
+teacher source, label export, identity, policy, license, and review URIs must
+be HTTPS non-local URIs, all hashes must be `sha256:<64 hex>`, acquisition
+metadata must be non-fixture, and review evidence must be ready. Even when that
+contract is satisfied, the gate keeps `real_teacher_source_verified=0` with
+`remote-teacher-source-fetcher-missing`.
+
+```bash
+experiments/run_v10_remote_teacher_source_acquisition_gate.sh
+experiments/test_v10_remote_teacher_source_acquisition_gate.sh
+```
+
+Default smoke summary:
+
+```text
+acquisition_rows = 0
+remote_teacher_source_acquisition_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-acquisition-missing
+```
+
+Supplied local fixture behavior:
+
+```text
+acquisition_rows = 1
+required_uri_fields = 6
+local_uri_fields = 6
+remote_uri_scheme_ready = 0
+hash_manifest_ready = 1
+remote_teacher_source_acquisition_ready = 0
+action = remote-teacher-source-local-or-placeholder
+```
+
+Supplied HTTPS acquisition package behavior:
+
+```text
+acquisition_rows = 1
+required_uri_fields = 6
+https_remote_uri_fields = 6
+remote_uri_scheme_ready = 1
+hash_manifest_ready = 1
+remote_teacher_source_acquisition_ready = 1
+real_teacher_source_verified = 0
+action = remote-teacher-source-fetcher-missing
+```
+
+Expected:
+
+- local/placeholder/insecure/missing URIs must not pass the remote acquisition
+  contract
+- malformed acquisition CSV rows are rejected
+- HTTPS package readiness is not a real teacher-source claim
+- the next step is a fetch/content verifier that can validate remote artifacts
+  rather than only checking the acquisition manifest
+
 ## h7-b Promotion Gate and v08 Readiness
 
-h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i/j/k/l are
+h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i/j/k/l/m are
 wired into the route-memory closure as later chunk-ranking/source/fallback/scorer
 smokes, but they are not yet default-promotion inputs. v08 uses the h7-b gate
 to decide whether an external benchmark comparison is ready. v08-b adds the
