@@ -66,6 +66,8 @@ experiments/test_v10_teacher_label_collection_harness.sh
 experiments/test_v10_teacher_distillation_learner.sh
 experiments/test_v10_teacher_external_label_ingestion.sh
 experiments/test_v10_teacher_external_label_import.sh
+experiments/test_v10_teacher_external_label_source_verifier.sh
+experiments/test_v10_teacher_external_label_source_import.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 experiments/test_v06_route_memory_wrong_candidate_robustness.sh
 experiments/test_v06_route_memory_abstain_retry_guardrail.sh
@@ -80,7 +82,7 @@ experiments/test_v07_goal_route_memory_closure.sh --extended
 
 also runs the extended h5 route-quality closure and the standard h6
 exact/hash/ambiguity/learned-source/quality/candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale/span-first-guardrail/span-first-guardrail-degradation/adaptive-guardrail
-span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-fallback-retry-exercise/chunk-credit-abstain-policy/teacher-label-contract/teacher-label-collection-harness/teacher-distillation-learner/teacher-external-label-ingestion/teacher-external-label-import/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
+span/adaptive-scale/chunk-quality/chunk-local-scorers/chunk-code-similarity/teacher-free-chunk-ranker/chunk-credit-source-robustness/chunk-credit-fallback-retry-exercise/chunk-credit-abstain-policy/teacher-label-contract/teacher-label-collection-harness/teacher-distillation-learner/teacher-external-label-ingestion/teacher-external-label-import/teacher-external-label-source-verifier/teacher-external-label-source-import/chunk-credit-distillation-gate/wrong-candidate/abstain-retry/promotion-gate
 runners.
 
 ## Current Closed Scope
@@ -145,9 +147,10 @@ route-memory:
   abstain, and grounded-span labels
   h10-f local teacher-label collection harness marks local collection ready,
   h10-g local teacher-distillation learner marks local training/eval ready,
-  h10-h external ingestion schema marks schema ready, and h10-i supplied-label
-  import can raise distillation to a diagnostic candidate without default
-  promotion, while the default run remains blocked by missing external source
+  h10-h external ingestion schema marks schema ready, h10-i supplied-label
+  import can raise label readiness, and h10-j verifies local source-chain
+  mechanics while keeping real teacher-source verification and distillation
+  blocked before non-fixture evidence exists
   wrong-candidate/fallback gates keep source retry noisy-clean but block
   combined readiness
   abstain/retry guardrails route the current policy to weak-hint/abstain
@@ -169,14 +172,15 @@ real natural language generation solved: no
 PC RouteLM prototype solved: no
 ```
 
-The next research boundary after h10-i/v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/h11-a is real external teacher-label source
+The next research boundary after h10-j/v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/h11-a is real external teacher-label source
 evidence plus real external benchmark source/result evidence and real PC RouteLM
 prototype evidence:
 the teacher-free chunk-credit ranker already survives injected noisy wrong
 candidates, forced fallback/retry now recovers through raw retry without noisy
 selection, the label schema is defined, local collection is ready, local
-distillation training/eval is ready, external ingestion schema is ready, and a
-supplied-label import path exists.
+distillation training/eval is ready, external ingestion schema is ready, a
+supplied-label import path exists, and local source-chain mechanics can be
+verified without treating the fixture as real.
 The benchmark adapter/evidence schemas, supplied-CSV import path, and
 comparison gate now cover RULER, LongBench, codebase retrieval, and real
 document QA, but the default run has no real dataset/result/baseline/license

@@ -24,6 +24,7 @@ CONTRACT_PREFIX="v10_teacher_label_contract"
 COLLECTION_PREFIX="v10_teacher_label_collection_harness"
 TRAINING_PREFIX="v10_teacher_distillation_learner"
 EXTERNAL_PREFIX="v10_teacher_external_label_ingestion"
+SOURCE_PREFIX="v10_teacher_external_label_source_verifier"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v10_chunk_credit_distillation_gate_smoke"
@@ -34,6 +35,7 @@ if [[ "$MODE" == "smoke" ]]; then
   COLLECTION_PREFIX="v10_teacher_label_collection_harness_smoke"
   TRAINING_PREFIX="v10_teacher_distillation_learner_smoke"
   EXTERNAL_PREFIX="v10_teacher_external_label_ingestion_smoke"
+  SOURCE_PREFIX="v10_teacher_external_label_source_verifier_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -46,6 +48,7 @@ CONTRACT_SUMMARY_CSV="$RESULTS_DIR/${CONTRACT_PREFIX}_summary.csv"
 COLLECTION_SUMMARY_CSV="$RESULTS_DIR/${COLLECTION_PREFIX}_summary.csv"
 TRAINING_SUMMARY_CSV="$RESULTS_DIR/${TRAINING_PREFIX}_summary.csv"
 EXTERNAL_SUMMARY_CSV="$RESULTS_DIR/${EXTERNAL_PREFIX}_summary.csv"
+SOURCE_SUMMARY_CSV="$RESULTS_DIR/${SOURCE_PREFIX}_summary.csv"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
@@ -68,8 +71,9 @@ if [[ ! -s "$TRAINING_SUMMARY_CSV" ]]; then
   "$ROOT_DIR/experiments/run_v10_teacher_distillation_learner.sh" "${RUN_ARGS[@]}" >/dev/null
 fi
 "$ROOT_DIR/experiments/run_v10_teacher_external_label_ingestion.sh" "${RUN_ARGS[@]}" >/dev/null
+"$ROOT_DIR/experiments/run_v10_teacher_external_label_source_verifier.sh" "${RUN_ARGS[@]}" >/dev/null
 
-awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_csv="$FALLBACK_AGG_CSV" -v contract_csv="$CONTRACT_SUMMARY_CSV" -v collection_csv="$COLLECTION_SUMMARY_CSV" -v training_csv="$TRAINING_SUMMARY_CSV" -v external_csv="$EXTERNAL_SUMMARY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
+awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_csv="$FALLBACK_AGG_CSV" -v contract_csv="$CONTRACT_SUMMARY_CSV" -v collection_csv="$COLLECTION_SUMMARY_CSV" -v training_csv="$TRAINING_SUMMARY_CSV" -v external_csv="$EXTERNAL_SUMMARY_CSV" -v source_csv="$SOURCE_SUMMARY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
   function die(message, code) {
     print message > "/dev/stderr"
     exit code
@@ -226,6 +230,24 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
     external_jump = $eidx["active_jump_rate"] + 0
     next
   }
+  FILENAME == source_csv && FNR == 1 {
+    for (i = 1; i <= NF; i++) sidx[$i] = i
+    required_count = split("teacher_source_source teacher_source_chain_verified real_teacher_source_verified action routing_trigger_rate active_jump_rate", required, " ")
+    for (i = 1; i <= required_count; i++) {
+      if (!(required[i] in sidx)) die("missing h10 distillation source verifier column: " required[i], 16)
+    }
+    next
+  }
+  FILENAME == source_csv {
+    source_rows++
+    teacher_external_source_evidence = $sidx["teacher_source_source"]
+    teacher_source_chain_verified = $sidx["teacher_source_chain_verified"] + 0
+    real_teacher_source_verified = $sidx["real_teacher_source_verified"] + 0
+    teacher_source_action = $sidx["action"]
+    source_routing = $sidx["routing_trigger_rate"] + 0
+    source_jump = $sidx["active_jump_rate"] + 0
+    next
+  }
   END {
     if (policy_rows != 1) die("expected one h10 distillation policy row", 4)
     if (joint_rows != 1) die("expected one h10 distillation joint row", 5)
@@ -234,6 +256,7 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
     if (collection_rows != 1) die("expected one h10 distillation teacher collection row", 11)
     if (training_rows != 1) die("expected one h10 distillation teacher training row", 13)
     if (external_rows != 1) die("expected one h10 distillation external ingestion row", 15)
+    if (source_rows != 1) die("expected one h10 distillation source verifier row", 17)
 
     teacher_label_contract_ready = 0
     if (contract_teacher_label_contract_ready && teacher_collection_contract_ready) {
@@ -286,6 +309,7 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
         teacher_external_schema_ready &&
         teacher_external_label_source_ready &&
         teacher_external_labels_ready &&
+        real_teacher_source_verified &&
         teacher_distillation_training_ready &&
         teacher_distillation_eval_ready &&
         teacher_grounded_span_coverage == 1.0 &&
@@ -302,7 +326,9 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
         training_routing == 0.0 &&
         training_jump == 0.0 &&
         external_routing == 0.0 &&
-        external_jump == 0.0) {
+        external_jump == 0.0 &&
+        source_routing == 0.0 &&
+        source_jump == 0.0) {
       distillation_ready = 1
     }
     status = distillation_ready ? "distillation-candidate" : "diagnostic-only"
@@ -319,10 +345,12 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       reason = "teacher-external-label-schema-missing"
     } else if (!teacher_external_label_source_ready || !teacher_external_labels_ready) {
       reason = "teacher-external-label-source-missing"
+    } else if (!real_teacher_source_verified) {
+      reason = "teacher-real-external-label-source-missing"
     }
 
-    print "best_joint_arm,fallback_exercise_arm,guardrail_action,chunk_credit_ready,joint_chunk_ready,source_safe,joint_source_safe,noisy_clean,fallback_not_keyshape_only,fallback_retry_exercised,fallback_exercise_ready,fallback_baseline_qacc,fallback_best_qacc,fallback_qacc_delta_vs_corrupt,fallback_retry_used,fallback_retry_success,fallback_retry_raw_selected,fallback_retry_noisy_selected,fallback_noisy_selected,joint_chunk_source_ready,teacher_label_contract_ready,teacher_label_collection_ready,teacher_external_schema_ready,teacher_external_label_source_ready,teacher_external_labels_ready,teacher_external_label_source,teacher_distillation_training_ready,teacher_distillation_eval_ready,teacher_distillation_action_accuracy,teacher_learner_id,teacher_grounded_span_coverage,teacher_label_source,teacher_correct_labels,teacher_wrong_labels,teacher_near_miss_labels,teacher_missing_query_labels,teacher_abstain_labels,policy_distillation_ready,combined_ready,distillation_ready,default_promotion,diagnostic_only,weak_hint_or_abstain,status,reason,routing_trigger_rate,active_jump_rate" > summary_csv
-    printf "%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%d,%d,%d,%d,%d,%s,%d,%d,%.6f,%s,%.6f,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%.6f,%.6f\n",
+    print "best_joint_arm,fallback_exercise_arm,guardrail_action,chunk_credit_ready,joint_chunk_ready,source_safe,joint_source_safe,noisy_clean,fallback_not_keyshape_only,fallback_retry_exercised,fallback_exercise_ready,fallback_baseline_qacc,fallback_best_qacc,fallback_qacc_delta_vs_corrupt,fallback_retry_used,fallback_retry_success,fallback_retry_raw_selected,fallback_retry_noisy_selected,fallback_noisy_selected,joint_chunk_source_ready,teacher_label_contract_ready,teacher_label_collection_ready,teacher_external_schema_ready,teacher_external_label_source_ready,teacher_external_labels_ready,teacher_external_label_source,teacher_external_source_evidence,teacher_source_chain_verified,real_teacher_source_verified,teacher_source_action,teacher_distillation_training_ready,teacher_distillation_eval_ready,teacher_distillation_action_accuracy,teacher_learner_id,teacher_grounded_span_coverage,teacher_label_source,teacher_correct_labels,teacher_wrong_labels,teacher_near_miss_labels,teacher_missing_query_labels,teacher_abstain_labels,policy_distillation_ready,combined_ready,distillation_ready,default_promotion,diagnostic_only,weak_hint_or_abstain,status,reason,routing_trigger_rate,active_jump_rate" > summary_csv
+    printf "%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%d,%d,%d,%d,%d,%s,%s,%d,%d,%s,%d,%d,%.6f,%s,%.6f,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%.6f,%.6f\n",
       best_joint_arm,
       fallback_exercise_arm,
       guardrail_action,
@@ -349,6 +377,10 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       teacher_external_label_source_ready,
       teacher_external_labels_ready,
       teacher_external_label_source,
+      teacher_external_source_evidence,
+      teacher_source_chain_verified,
+      real_teacher_source_verified,
+      teacher_source_action,
       teacher_distillation_training_ready,
       teacher_distillation_eval_ready,
       teacher_distillation_action_accuracy,
@@ -368,8 +400,8 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       weak_hint_or_abstain,
       status,
       reason,
-      policy_routing + joint_routing + fallback_routing + contract_routing + teacher_routing + training_routing + external_routing,
-      policy_jump + joint_jump + fallback_jump + contract_jump + teacher_jump + training_jump + external_jump >> summary_csv
+      policy_routing + joint_routing + fallback_routing + contract_routing + teacher_routing + training_routing + external_routing + source_routing,
+      policy_jump + joint_jump + fallback_jump + contract_jump + teacher_jump + training_jump + external_jump + source_jump >> summary_csv
 
     print "gate,status,reason" > decision_csv
     printf "chunk-credit,%s,chunk_credit_ready=%d joint_chunk_ready=%d\n",
@@ -403,12 +435,17 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
     printf "external-label-ingestion,%s,external_ready=%d\n",
       teacher_external_labels_ready ? "pass" : "blocked",
       teacher_external_labels_ready >> decision_csv
+    printf "real-external-teacher-source,%s,chain_verified=%d real_verified=%d action=%s\n",
+      real_teacher_source_verified ? "pass" : "blocked",
+      teacher_source_chain_verified,
+      real_teacher_source_verified,
+      teacher_source_action >> decision_csv
     printf "distillation,%s,status=%s reason=%s\n",
       distillation_ready ? "pass" : "blocked",
       status,
       reason >> decision_csv
   }
-' "$POLICY_CSV" "$JOINT_AGG_CSV" "$FALLBACK_AGG_CSV" "$CONTRACT_SUMMARY_CSV" "$COLLECTION_SUMMARY_CSV" "$TRAINING_SUMMARY_CSV" "$EXTERNAL_SUMMARY_CSV"
+' "$POLICY_CSV" "$JOINT_AGG_CSV" "$FALLBACK_AGG_CSV" "$CONTRACT_SUMMARY_CSV" "$COLLECTION_SUMMARY_CSV" "$TRAINING_SUMMARY_CSV" "$EXTERNAL_SUMMARY_CSV" "$SOURCE_SUMMARY_CSV"
 
 echo "summary: $SUMMARY_CSV"
 echo "decision: $DECISION_CSV"

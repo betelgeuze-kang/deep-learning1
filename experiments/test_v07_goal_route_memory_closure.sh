@@ -122,6 +122,12 @@ bash "$ROOT_DIR/experiments/test_v10_teacher_external_label_ingestion.sh"
 echo "goal: h10-teacher-external-label-import"
 bash "$ROOT_DIR/experiments/test_v10_teacher_external_label_import.sh"
 
+echo "goal: h10-teacher-external-label-source-verifier"
+bash "$ROOT_DIR/experiments/test_v10_teacher_external_label_source_verifier.sh"
+
+echo "goal: h10-teacher-external-label-source-import"
+bash "$ROOT_DIR/experiments/test_v10_teacher_external_label_source_import.sh"
+
 echo "goal: h10-chunk-credit-distillation-gate"
 bash "$ROOT_DIR/experiments/test_v10_chunk_credit_distillation_gate.sh"
 

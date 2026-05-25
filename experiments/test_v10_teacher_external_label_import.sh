@@ -114,7 +114,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("teacher_external_label_source_ready teacher_external_labels_ready teacher_external_label_source distillation_ready default_promotion diagnostic_only weak_hint_or_abstain status reason routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("teacher_external_label_source_ready teacher_external_labels_ready teacher_external_label_source teacher_source_chain_verified real_teacher_source_verified teacher_source_action distillation_ready default_promotion diagnostic_only weak_hint_or_abstain status reason routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing h10 distillation import summary column: " required[i], 40)
     }
@@ -125,13 +125,16 @@ awk -F, '
     if (($idx["teacher_external_label_source_ready"] + 0) != 1 ||
         ($idx["teacher_external_labels_ready"] + 0) != 1 ||
         $idx["teacher_external_label_source"] != "provided-external-csv" ||
-        ($idx["distillation_ready"] + 0) != 1 ||
+        ($idx["teacher_source_chain_verified"] + 0) != 0 ||
+        ($idx["real_teacher_source_verified"] + 0) != 0 ||
+        $idx["teacher_source_action"] != "teacher-external-source-evidence-missing" ||
+        ($idx["distillation_ready"] + 0) != 0 ||
         ($idx["default_promotion"] + 0) != 0 ||
         ($idx["diagnostic_only"] + 0) != 1 ||
         ($idx["weak_hint_or_abstain"] + 0) != 1 ||
-        $idx["status"] != "distillation-candidate" ||
-        $idx["reason"] != "all-gates-ready") {
-      die("supplied h10 external labels should make distillation candidate without default promotion", 41)
+        $idx["status"] != "diagnostic-only" ||
+        $idx["reason"] != "teacher-real-external-label-source-missing") {
+      die("supplied h10 external labels should import but keep distillation blocked before real source verification", 41)
     }
     if (($idx["routing_trigger_rate"] + 0) != 0.0 ||
         ($idx["active_jump_rate"] + 0) != 0.0) {
@@ -156,10 +159,11 @@ awk -F, '
     rows++
     if ($idx["gate"] == "external-label-source" && $idx["status"] != "pass") die("external label source should pass in distillation import", 50)
     if ($idx["gate"] == "external-label-ingestion" && $idx["status"] != "pass") die("external label ingestion should pass in distillation import", 51)
-    if ($idx["gate"] == "distillation" && $idx["status"] != "pass") die("distillation should pass as candidate under supplied labels", 52)
+    if ($idx["gate"] == "real-external-teacher-source" && $idx["status"] != "blocked") die("real teacher source should block in distillation import", 52)
+    if ($idx["gate"] == "distillation" && $idx["status"] != "blocked") die("distillation should block before real teacher source verification", 54)
   }
   END {
-    if (rows < 10) die("expected h10 distillation import decision rows", 53)
+    if (rows < 11) die("expected h10 distillation import decision rows", 53)
   }
 ' "$DISTILLATION_DECISION_CSV"
 

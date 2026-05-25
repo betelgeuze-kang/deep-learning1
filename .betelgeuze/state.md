@@ -44,8 +44,12 @@
   distillation remains diagnostic-only until a real external source is ready.
 - h10-i supplied external teacher-label import passed:
   fixture CSV raises `teacher_external_label_source_ready=1`,
-  `teacher_external_labels_ready=1`, and `distillation_ready=1` as
-  `status=distillation-candidate`, while `default_promotion=0` remains.
+  `teacher_external_labels_ready=1`, while real source evidence is still
+  missing and distillation remains blocked.
+- h10-j teacher external-label source verifier passed:
+  local source/export/identity/policy/license hash-chain mechanics can verify,
+  but `real_teacher_source_verified=0`, `distillation_ready=0`, and
+  `default_promotion=0` remain until non-fixture source evidence exists.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -230,7 +234,7 @@ h10-b chunk-credit abstain policy smoke:
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
 
-h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i joint source/distillation smoke:
+h10-c/h10-d/h10-e/h10-f/h10-g/h10-h/h10-i/h10-j joint source/distillation smoke:
   best_joint_arm = chunk-credit-source-order
   fallback_exercise_arm = raw-retry
   joint_chunk_ready = 1
@@ -283,8 +287,35 @@ h10-i supplied external-label import fixture:
   teacher_external_label_source_ready = 1
   teacher_external_labels_ready = 1
   teacher_external_label_source = provided-external-csv
-  distillation_ready = 1
-  status = distillation-candidate
+  teacher_source_chain_verified = 0
+  real_teacher_source_verified = 0
+  teacher_source_action = teacher-external-source-evidence-missing
+  distillation_ready = 0
+  status = diagnostic-only
+  reason = teacher-real-external-label-source-missing
+  default_promotion = 0
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+h10-j supplied local source-verifier fixture:
+  external_label_source_ready = 1
+  teacher_external_labels_ready = 1
+  teacher_source_source = provided-csv
+  external_label_rows = 5
+  label_teacher_rows = 1
+  source_rows = 1
+  matched_teacher_rows = 1
+  source_hash_verified_rows = 1
+  label_export_hash_verified_rows = 1
+  teacher_identity_hash_verified_rows = 1
+  teacher_policy_hash_verified_rows = 1
+  license_hash_verified_rows = 1
+  local_fixture_uri_rows = 1
+  teacher_source_chain_verified = 1
+  real_teacher_source_verified = 0
+  action = teacher-real-source-review-missing
+  distillation_ready = 0
+  reason = teacher-real-external-label-source-missing
   default_promotion = 0
   routing_trigger_rate = 0.000000
   active_jump_rate = 0.000000
@@ -526,9 +557,15 @@ h9-g supplied measured-speed fixture:
   experiments/test_v10_teacher_external_label_ingestion.sh`, `bash
   experiments/test_v10_teacher_external_label_import.sh`, and `bash
   experiments/test_v10_chunk_credit_distillation_gate.sh`.
-- h10-i backend wrapper verification passed: `bash
-  experiments/test_v09_gpu_backend_closure.sh`, confirming h7 route-memory
-  closure plus h10-i import and v08-e comparison in h9 quick closure.
+- h10-j focused gates passed: `bash
+  experiments/test_v10_teacher_external_label_source_verifier.sh`, `bash
+  experiments/test_v10_teacher_external_label_source_import.sh`, `bash
+  experiments/test_v10_teacher_external_label_import.sh`, and `bash
+  experiments/test_v10_chunk_credit_distillation_gate.sh`.
+- h10-j h7 closure and backend wrapper verification passed: `bash
+  experiments/test_v07_goal_route_memory_closure.sh` and `bash
+  experiments/test_v09_gpu_backend_closure.sh`, confirming h10-j source
+  verification inside the h7 route-memory closure and h9 quick closure.
 - h9-f focused and wrapper verification passed: `build/hip_candidate_weight_parity
   --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
   `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash
@@ -587,8 +624,8 @@ h9-g supplied measured-speed fixture:
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion, external comparison, and
   publishable PC RouteLM / NLG prototype claims.
-- Active next loop: connect a real external teacher-label source above the
-  h10-i import contract, connect real RULER/LongBench/codebase/doc-QA source and result
+- Active next loop: connect a real external teacher-label source through the
+  h10-j source-verification contract, connect real RULER/LongBench/codebase/doc-QA source and result
   evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
   path, replace fixture final-review rows with real non-fixture review evidence, replace h9-g fixture timing
