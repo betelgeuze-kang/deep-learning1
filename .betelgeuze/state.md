@@ -67,8 +67,13 @@
 - h10-m remote teacher-source acquisition gate passed:
   default/no-env blocks before acquisition evidence, local `file://` packages
   are classified as local/placeholder, and HTTPS non-local packages can pass
-  URI/hash/acquisition/review contract readiness while keeping
-  `real_teacher_source_verified=0` until a real fetch/content verifier exists.
+  URI/hash/acquisition/review contract readiness; h10-m alone does not verify
+  fetched source content.
+- h10-n remote teacher-source content verifier passed:
+  supplied local download/cache files can be bound back to the h10-m HTTPS
+  URI/hash manifest and sha256-verified across source/export/identity/policy/
+  license/review artifacts, while keeping `real_teacher_source_verified=0`
+  until live remote fetch/attestation evidence exists.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -413,6 +418,30 @@ h10-m supplied HTTPS acquisition package:
   real_teacher_source_verified = 0
   action = remote-teacher-source-fetcher-missing
 
+h10-n remote teacher-source content default smoke:
+  remote_teacher_source_acquisition_ready = 0
+  remote_teacher_source_content_ready = 0
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-acquisition-not-ready
+
+h10-n supplied HTTPS acquisition without content:
+  remote_teacher_source_acquisition_ready = 1
+  content_rows = 0
+  remote_teacher_source_content_ready = 0
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-content-missing
+
+h10-n supplied matching cache content:
+  content_rows = 1
+  matched_teacher_rows = 1
+  remote_uri_match_rows = 1
+  hash_manifest_match_rows = 1
+  required_content_fields = 6
+  content_hash_verified_fields = 6
+  remote_teacher_source_content_ready = 1
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-live-fetch-missing
+
 h10-i supplied external-label import fixture:
   external_label_rows = 5
   source_uri_rows = 5
@@ -752,6 +781,9 @@ h9-g supplied measured-speed fixture:
 - h10-m focused gate passed: `bash
   experiments/test_v10_remote_teacher_source_acquisition_gate.sh`; it is wired
   into `experiments/test_v07_goal_route_memory_closure.sh`.
+- h10-n focused gate passed: `bash
+  experiments/test_v10_remote_teacher_source_content_verifier.sh`; it is wired
+  into `experiments/test_v07_goal_route_memory_closure.sh`.
 - h9-f focused and wrapper verification passed: `build/hip_candidate_weight_parity
   --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
   `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash
@@ -815,8 +847,8 @@ h9-g supplied measured-speed fixture:
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion, external comparison, and
   publishable PC RouteLM / NLG prototype claims.
-- Active next loop: add fetch/content verification above h10-m and connect a
-  real external teacher-label source through the h10-j/h10-l source-verification
+- Active next loop: add live remote fetch/attestation verification above h10-n
+  and connect a real external teacher-label source through the h10-j/h10-l source-verification
   contracts, connect real RULER/LongBench/codebase/doc-QA source and result
   evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review

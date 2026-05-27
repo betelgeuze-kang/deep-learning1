@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m plus h7-b,
+The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n plus h7-b,
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
 h11-a prototype readiness/import, h11-b artifact verification/import, and h9-g quick closure:
 
@@ -28,7 +28,8 @@ h10-i: supplied external teacher-label CSV import passes, but distillation remai
 h10-j: teacher external-label source verification passes for local hash/provenance mechanics while keeping real teacher-source verification blocked.
 h10-k: local learned chunk-quality scorer passes on h10-f labels, while external source and default promotion remain blocked.
 h10-l: row/provenance-bound source-verified learned scorer binding passes, while local/default labels remain blocked from satisfying source-verified distillation.
-h10-m: remote teacher-source acquisition contract passes for HTTPS evidence packages, while real fetch/content verification remains blocked.
+h10-m: remote teacher-source acquisition contract passes for HTTPS evidence packages.
+h10-n: remote teacher-source content verifier passes for supplied cache files bound to the HTTPS acquisition manifest, while live remote fetch verification remains blocked.
 h7-b: promotion gate blocks default route-memory promotion.
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
@@ -55,6 +56,7 @@ bash experiments/test_v10_teacher_external_label_import.sh
 bash experiments/test_v10_learned_chunk_quality_scorer.sh
 bash experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh
 bash experiments/test_v10_remote_teacher_source_acquisition_gate.sh
+bash experiments/test_v10_remote_teacher_source_content_verifier.sh
 bash experiments/test_v10_chunk_credit_distillation_gate.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
@@ -65,16 +67,17 @@ bash experiments/test_v09_gpu_backend_closure.sh
 
 Latest completed status:
 
-- h10-m is the latest route-memory teacher-source boundary. It lets an HTTPS
+- h10-n is the latest route-memory teacher-source boundary. It lets an HTTPS
   remote acquisition package pass URI/hash/acquisition/review contract checks,
-  while still blocking real teacher-source claims until a fetch/content verifier
-  exists.
+  then verifies supplied local download/cache content against that hash
+  manifest, while still blocking real teacher-source claims until live remote
+  fetch/attestation verification exists.
 - h10-l remains the route-memory learned-scorer/source binding gate. It keeps
   local learned scorer readiness separate from source-verified learned scorer
   readiness, so distillation cannot pass on a local scorer plus unrelated real
   source evidence, relabeled local feature rows, or mismatched external-label
   rows.
-- h7 route-memory closure includes h10-m and still blocks default promotion.
+- h7 route-memory closure includes h10-n and still blocks default promotion.
 - v08-l is the latest external benchmark evidence boundary; final-review
   mechanics pass, but fixture/local review remains non-publishable with
   `real_external_benchmark_verified=0`.
@@ -92,8 +95,8 @@ byte-qacc objective -> local-energy
 span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
-The next h10/v08-style experiment should add fetch/content verification above
-h10-m, replace the local h10-k/h10-l labels with real external teacher-label
+The next h10/v08-style experiment should add live remote fetch/attestation
+verification above h10-n, replace the local h10-k/h10-l labels with real external teacher-label
 feature labels through the h10-j source-verification contract, real benchmark
 source/result evidence through the
 v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
@@ -470,7 +473,8 @@ external teacher-label rows by `source_uri` and `provenance_hash`, and backed by
 real h10-j teacher-source verification. h10-m adds the remote acquisition
 contract above that source gap: local `file://` packages are rejected as
 local/placeholder, and HTTPS packages can become acquisition-ready but still
-block at missing fetch/content verification. The default result is deliberately
+need h10-n content-cache verification and then live remote fetch/attestation
+before a real source claim. The default result is deliberately
 diagnostic-only: noisy wrong candidates are not selected, fallback/retry is now
 exercised, local collection is ready, local distillation training/eval is ready,
 local learned chunk scoring is ready, and external ingestion schema is ready,
@@ -620,8 +624,8 @@ Expected:
 - remote teacher-source acquisition must require HTTPS non-local URI fields,
   sha256 hash manifests, acquisition metadata, and review evidence
 - local `file://` acquisition packages must block as local/placeholder, while
-  HTTPS packages must still stop before real source verification until a
-  fetch/content verifier exists
+  HTTPS packages must still stop before real source verification until h10-n
+  content-cache verification and live remote fetch/attestation evidence exist
 - default external teacher-label ingestion schema must pass without claiming a
   source
 - supplied external labels must make the labels ready without enabling
@@ -814,13 +818,69 @@ Expected:
   contract
 - malformed acquisition CSV rows are rejected
 - HTTPS package readiness is not a real teacher-source claim
-- the next step is a fetch/content verifier that can validate remote artifacts
-  rather than only checking the acquisition manifest
+- h10-n is the next content-cache verifier; live remote fetch/attestation is
+  still required before a real teacher-source claim
+
+## h10-n Remote Teacher-source Content Verification
+
+h10-n adds the content-cache verifier above h10-m. It consumes the HTTPS
+remote acquisition manifest and an optional
+`V10_REMOTE_TEACHER_SOURCE_CONTENT_CSV`. The content CSV must bind every
+teacher source, label export, identity, policy, license, and review URI back to
+the h10-m remote URI/hash manifest, then provide local `file://` download/cache
+files whose sha256 hashes match the remote hashes. This closes the hash/content
+mechanics without claiming that a live remote fetch has happened in this
+sandbox.
+
+```bash
+experiments/run_v10_remote_teacher_source_content_verifier.sh
+experiments/test_v10_remote_teacher_source_content_verifier.sh
+```
+
+Default smoke summary:
+
+```text
+remote_teacher_source_acquisition_ready = 0
+remote_teacher_source_content_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-acquisition-not-ready
+```
+
+Supplied HTTPS acquisition without content:
+
+```text
+remote_teacher_source_acquisition_ready = 1
+content_rows = 0
+remote_teacher_source_content_ready = 0
+action = remote-teacher-source-content-missing
+```
+
+Supplied matching cache content:
+
+```text
+content_rows = 1
+remote_uri_match_rows = 1
+hash_manifest_match_rows = 1
+required_content_fields = 6
+content_hash_verified_fields = 6
+remote_teacher_source_content_ready = 1
+real_teacher_source_verified = 0
+action = remote-teacher-source-live-fetch-missing
+```
+
+Expected:
+
+- content rows must match h10-m teacher IDs, remote URIs, and sha256 hashes
+- cache URIs must be local files whose content hashes match the remote hash
+  manifest
+- malformed content CSV rows and hash/URI mismatches are rejected or blocked
+- cache verification is not a real teacher-source claim until live remote
+  fetch/attestation evidence exists
 
 ## h7-b Promotion Gate and v08 Readiness
 
-h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i/j/k/l/m are
-wired into the route-memory closure as later chunk-ranking/source/fallback/scorer
+h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n are
+wired into the route-memory closure as later chunk-ranking/source/fallback/scorer/content
 smokes, but they are not yet default-promotion inputs. v08 uses the h7-b gate
 to decide whether an external benchmark comparison is ready. v08-b adds the
 external benchmark adapter manifest for RULER, LongBench, codebase retrieval,

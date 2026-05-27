@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-m plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
+As of h10-n plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -12,6 +12,7 @@ discrete local-energy learner
 + local learned chunk-quality scorer diagnostics
 + source-verified learned scorer binding diagnostics
 + remote teacher-source acquisition contract
++ remote teacher-source content-cache verification contract
 + PC RouteLM / NLG prototype readiness and artifact verification contracts
 + optional HIP backend scaffold / parity instrumentation
 ```
@@ -33,9 +34,12 @@ Last completed checkpoint:
   by real h10-j source verification.
 - h10-m closes the remote teacher-source acquisition contract. HTTPS non-local
   source packages can pass URI/hash/acquisition/review readiness, while local
-  packages are rejected and real source verification remains blocked until a
-  fetch/content verifier exists.
-- h7 quick closure is current through h10-m and keeps default promotion blocked.
+  packages are rejected and h10-m alone does not verify fetched source content.
+- h10-n closes the remote teacher-source content verifier. Supplied local
+  download/cache files can be bound back to the h10-m HTTPS URI/hash manifest
+  and sha256-verified, while real source verification remains blocked until
+  live remote fetch/attestation evidence exists.
+- h7 quick closure is current through h10-n and keeps default promotion blocked.
 - v08-l closes the final-review mechanics layer for external benchmarks while
   keeping real benchmark verification blocked until non-fixture source/review
   evidence exists.
@@ -159,6 +163,12 @@ Current closure:
   local/placeholder; HTTPS packages can pass acquisition readiness but still
   keep `real_teacher_source_verified=0` with
   `remote-teacher-source-fetcher-missing`.
+- `h10-n` adds the remote teacher-source content verifier. It binds supplied
+  local cache files to the h10-m HTTPS acquisition URI/hash manifest and
+  verifies source/export/identity/policy/license/review sha256 hashes, but
+  keeps `real_teacher_source_verified=0` with
+  `remote-teacher-source-live-fetch-missing` until live remote fetch/attestation
+  evidence exists.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
 - `h7-b` adds the route-memory promotion gate and keeps default promotion
@@ -216,7 +226,7 @@ Current closure:
 - `h9-a/h9-b/h9-d/h9-e/h9-f/h9-g` add optional ROCm/HIP backend scaffolding
   plus measured-speed evidence contracts:
   `experiments/test_v09_gpu_backend_closure.sh`.
-- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m, h7-b,
+- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n, h7-b,
   v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
   h11-a prototype readiness/import, h11-b artifact verifier/import, and h9-g
   included in quick closure paths.
@@ -229,10 +239,10 @@ Current next boundary:
   source-backed feature labels that row-match external teacher-label evidence.
   The local contract, local collection harness, local distilled-rule learner,
   local learned chunk scorer, source-verified scorer binding, external ingestion
-  schema, supplied CSV path, source-chain verifier, and remote acquisition
-  contract are now present; the next blocker is a real fetch/content verifier
-  for the HTTPS acquisition package before any default promotion or external
-  benchmark comparison.
+  schema, supplied CSV path, source-chain verifier, remote acquisition
+  contract, and content-cache verifier are now present; the next blocker is
+  live remote fetch/attestation evidence for the HTTPS acquisition package
+  before any default promotion or external benchmark comparison.
 - Provide or connect real external benchmark sources/results through the
   v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
