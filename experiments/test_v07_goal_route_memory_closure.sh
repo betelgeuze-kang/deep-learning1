@@ -134,6 +134,9 @@ bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_live_fetch_attestatio
 echo "goal: h10-remote-teacher-source-runtime-fetcher"
 bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_runtime_fetcher.sh"
 
+echo "goal: h10-remote-teacher-source-live-network-import"
+bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_live_network_import_gate.sh"
+
 echo "goal: h10-teacher-external-label-ingestion"
 bash "$ROOT_DIR/experiments/test_v10_teacher_external_label_ingestion.sh"
 

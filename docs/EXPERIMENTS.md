@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p plus h7-b,
+The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q plus h7-b,
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
 h11-a prototype readiness/import, h11-b artifact verification/import, and h9-g quick closure:
 
@@ -32,6 +32,7 @@ h10-m: remote teacher-source acquisition contract passes for HTTPS evidence pack
 h10-n: remote teacher-source content verifier passes for supplied cache files bound to the HTTPS acquisition manifest, while live remote fetch verification remains blocked.
 h10-o: remote teacher-source live-fetch attestation contract passes for supplied artifact-level attestations, while live network fetch remains blocked.
 h10-p: runner-owned runtime fetcher replay contract passes for h10-o attestations, while live network fetch and real source verification remain blocked.
+h10-q: live-network runtime evidence import gate passes for provided live-network rows, while real source import remains blocked.
 h7-b: promotion gate blocks default route-memory promotion.
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
@@ -61,6 +62,7 @@ bash experiments/test_v10_remote_teacher_source_acquisition_gate.sh
 bash experiments/test_v10_remote_teacher_source_content_verifier.sh
 bash experiments/test_v10_remote_teacher_source_live_fetch_attestation.sh
 bash experiments/test_v10_remote_teacher_source_runtime_fetcher.sh
+bash experiments/test_v10_remote_teacher_source_live_network_import_gate.sh
 bash experiments/test_v10_chunk_credit_distillation_gate.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
@@ -71,20 +73,22 @@ bash experiments/test_v09_gpu_backend_closure.sh
 
 Latest completed status:
 
-- h10-p is the latest route-memory teacher-source boundary. It lets an HTTPS
+- h10-q is the latest route-memory teacher-source boundary. It lets an HTTPS
   remote acquisition package pass URI/hash/acquisition/review contract checks,
   verifies supplied local download/cache content against that hash manifest,
   then verifies artifact-level fetch-attestation rows with HTTPS attestation
   URIs and independent attestor flags, and finally lets a runner-owned offline
-  replay manifest bind runtime fetch rows back to those attestations. Real
-  teacher-source claims remain blocked until the replay path is replaced by a
-  live network fetch plus non-fixture source import.
+  replay manifest bind runtime fetch rows back to those attestations. h10-q
+  rejects that replay as non-network evidence and accepts only provided
+  live-network runtime rows up to `remote_teacher_source_live_network_import_ready=1`.
+  Real teacher-source claims remain blocked until a non-fixture source
+  import/review chain is connected.
 - h10-l remains the route-memory learned-scorer/source binding gate. It keeps
   local learned scorer readiness separate from source-verified learned scorer
   readiness, so distillation cannot pass on a local scorer plus unrelated real
   source evidence, relabeled local feature rows, or mismatched external-label
   rows.
-- h7 route-memory closure includes h10-p and still blocks default promotion.
+- h7 route-memory closure includes h10-q and still blocks default promotion.
 - v08-l is the latest external benchmark evidence boundary; final-review
   mechanics pass, but fixture/local review remains non-publishable with
   `real_external_benchmark_verified=0`.
@@ -102,8 +106,8 @@ byte-qacc objective -> local-energy
 span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
-The next h10/v08-style experiment should replace the h10-p offline replay
-runtime fetcher with a live network fetch and non-fixture source import, replace the local h10-k/h10-l labels with real external teacher-label
+The next h10/v08-style experiment should connect h10-q live-network runtime
+evidence to a real non-fixture source import/review chain, replace the local h10-k/h10-l labels with real external teacher-label
 feature labels through the h10-j source-verification contract, real benchmark
 source/result evidence through the
 v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
@@ -460,7 +464,7 @@ Expected:
   blocked until they are actually exercised on the chunk-credit path
 - uncertain cases route to weak-hint/abstain
 
-## h10-c/d/e/f/g/h/i/j/k/l Joint Source, Fallback, and Teacher Gates
+## h10-c/d/e/f/g/h/i/j/k/l/m/n/o/p/q Joint Source, Fallback, and Teacher Gates
 
 h10-c adds the first joint source/noisy matrix above the teacher-free chunk
 ranker and a separate distillation gate. h10-d adds the missing forced
@@ -481,8 +485,9 @@ real h10-j teacher-source verification. h10-m adds the remote acquisition
 contract above that source gap: local `file://` packages are rejected as
 local/placeholder, and HTTPS packages can become acquisition-ready but still
 need h10-n content-cache verification, h10-o fetch-attestation, h10-p
-runtime-fetcher replay, and then live network/non-fixture evidence before a
-real source claim. The default result is deliberately
+runtime-fetcher replay, h10-q live-network import evidence, and then real
+non-fixture source import/review evidence before a real source claim. The
+default result is deliberately
 diagnostic-only: noisy wrong candidates are not selected, fallback/retry is now
 exercised, local collection is ready, local distillation training/eval is ready,
 local learned chunk scoring is ready, and external ingestion schema is ready,
@@ -513,6 +518,14 @@ experiments/run_v10_source_verified_learned_chunk_scorer_gate.sh
 experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh
 experiments/run_v10_remote_teacher_source_acquisition_gate.sh
 experiments/test_v10_remote_teacher_source_acquisition_gate.sh
+experiments/run_v10_remote_teacher_source_content_verifier.sh
+experiments/test_v10_remote_teacher_source_content_verifier.sh
+experiments/run_v10_remote_teacher_source_live_fetch_attestation.sh
+experiments/test_v10_remote_teacher_source_live_fetch_attestation.sh
+experiments/run_v10_remote_teacher_source_runtime_fetcher.sh
+experiments/test_v10_remote_teacher_source_runtime_fetcher.sh
+experiments/run_v10_remote_teacher_source_live_network_import_gate.sh
+experiments/test_v10_remote_teacher_source_live_network_import_gate.sh
 experiments/run_v10_chunk_credit_distillation_gate.sh
 experiments/test_v10_chunk_credit_distillation_gate.sh
 ```
@@ -634,7 +647,8 @@ Expected:
 - local `file://` acquisition packages must block as local/placeholder, while
   HTTPS packages must still stop before real source verification until h10-n
   content-cache verification, h10-o fetch-attestation, h10-p runtime-fetcher
-  replay, and live network evidence exist
+  replay, h10-q live-network import evidence, and real non-fixture source
+  import/review evidence exist
 - default external teacher-label ingestion schema must pass without claiming a
   source
 - supplied external labels must make the labels ready without enabling
@@ -827,9 +841,10 @@ Expected:
   contract
 - malformed acquisition CSV rows are rejected
 - HTTPS package readiness is not a real teacher-source claim
-- h10-o/h10-p provide the next fetch-attestation and runtime-fetcher replay
-  contracts; live network evidence is still required before a real
-  teacher-source claim
+- h10-n/h10-o/h10-p/h10-q provide content-cache verification,
+  fetch-attestation, runtime-fetcher replay, and live-network import evidence
+  contracts; real non-fixture source import/review evidence is still required
+  before a real teacher-source claim
 
 ## h10-n Remote Teacher-source Content Verification
 
@@ -1022,10 +1037,72 @@ Expected:
 - runner-owned offline replay is a fetcher contract check, not a real network
   fetch or real teacher-source claim
 
+## h10-q Remote Teacher-source Live-network Import
+
+h10-q adds the live-network import gate above h10-p. It consumes the h10-p
+runtime fetcher summary plus either h10-p replay evidence or a supplied
+`V10_REMOTE_TEACHER_SOURCE_RUNTIME_FETCH_CSV`. Replay proves the runner-owned
+runtime fetcher path, but h10-q refuses to count replay as live-network
+evidence. A supplied runtime CSV must be all network fetch rows, all real
+runtime declarations, all non-fixture declarations, and still row-complete
+against the six expected remote teacher-source artifacts.
+
+```bash
+experiments/run_v10_remote_teacher_source_live_network_import_gate.sh
+experiments/test_v10_remote_teacher_source_live_network_import_gate.sh
+```
+
+Default smoke summary:
+
+```text
+runner_owned_runtime_fetcher_ready = 0
+live_network_fetch_ready = 0
+remote_teacher_source_live_network_import_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-fetch-attestation-not-ready
+```
+
+Runner-owned offline replay:
+
+```text
+runtime_fetch_source = runner-owned-replay
+runtime_fetch_rows = 6
+network_fetch_rows = 0
+offline_replay_rows = 6
+runner_owned_runtime_fetcher_ready = 1
+live_network_fetch_ready = 0
+remote_teacher_source_live_network_import_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-live-network-fetch-missing
+```
+
+Supplied live-network runtime evidence:
+
+```text
+runtime_fetch_source = provided-csv
+runtime_fetch_rows = 6
+network_fetch_rows = 6
+offline_replay_rows = 0
+declared_real_rows = 6
+non_fixture_declared_rows = 6
+runner_owned_runtime_fetcher_ready = 1
+live_network_fetch_ready = 1
+remote_teacher_source_live_network_import_ready = 1
+real_teacher_source_verified = 0
+action = remote-teacher-source-real-source-import-missing
+```
+
+Expected:
+
+- replay never counts as live-network evidence
+- all six runtime rows must be live-network, real-declared, non-fixture rows
+- live-network import readiness is not a real teacher-source claim until real
+  non-fixture source import/review evidence is connected
+
 ## h7-b Promotion Gate and v08 Readiness
 
-h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p are
-wired into the route-memory closure as later chunk-ranking/source/fallback/scorer/content/fetch-attestation/runtime-fetcher
+h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q are
+wired into the route-memory closure as later chunk-ranking/source/fallback/scorer/content/fetch-attestation/runtime-fetcher/live-network-import
 smokes, but they are not yet default-promotion inputs. v08 uses the h7-b gate
 to decide whether an external benchmark comparison is ready. v08-b adds the
 external benchmark adapter manifest for RULER, LongBench, codebase retrieval,

@@ -87,6 +87,12 @@
   while keeping `live_network_fetch_ready=0` and
   `real_teacher_source_verified=0` until live network fetch and non-fixture
   source import replace replay.
+- h10-q remote teacher-source live-network import gate passed:
+  h10-p offline replay is rejected as live-network evidence; supplied
+  live-network runtime rows can raise
+  `remote_teacher_source_live_network_import_ready=1`, while
+  `real_teacher_source_verified=0` remains blocked until real non-fixture
+  source import/review evidence is connected.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -515,6 +521,37 @@ h10-p runner-owned offline replay:
   real_teacher_source_verified = 0
   action = remote-teacher-source-live-network-fetch-missing
 
+h10-q remote teacher-source live-network import default smoke:
+  runner_owned_runtime_fetcher_ready = 0
+  live_network_fetch_ready = 0
+  remote_teacher_source_live_network_import_ready = 0
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-fetch-attestation-not-ready
+
+h10-q runner-owned offline replay:
+  runtime_fetch_source = runner-owned-replay
+  runtime_fetch_rows = 6
+  network_fetch_rows = 0
+  offline_replay_rows = 6
+  runner_owned_runtime_fetcher_ready = 1
+  live_network_fetch_ready = 0
+  remote_teacher_source_live_network_import_ready = 0
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-live-network-fetch-missing
+
+h10-q supplied live-network runtime evidence:
+  runtime_fetch_source = provided-csv
+  runtime_fetch_rows = 6
+  network_fetch_rows = 6
+  offline_replay_rows = 0
+  declared_real_rows = 6
+  non_fixture_declared_rows = 6
+  runner_owned_runtime_fetcher_ready = 1
+  live_network_fetch_ready = 1
+  remote_teacher_source_live_network_import_ready = 1
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-real-source-import-missing
+
 h10-i supplied external-label import fixture:
   external_label_rows = 5
   source_uri_rows = 5
@@ -863,6 +900,9 @@ h9-g supplied measured-speed fixture:
 - h10-p focused gate passed: `bash
   experiments/test_v10_remote_teacher_source_runtime_fetcher.sh`; it is wired
   into `experiments/test_v07_goal_route_memory_closure.sh`.
+- h10-q focused gate passed: `bash
+  experiments/test_v10_remote_teacher_source_live_network_import_gate.sh`; it is
+  wired into `experiments/test_v07_goal_route_memory_closure.sh`.
 - h9-f focused and wrapper verification passed: `build/hip_candidate_weight_parity
   --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
   `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash
@@ -926,9 +966,9 @@ h9-g supplied measured-speed fixture:
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion, external comparison, and
   publishable PC RouteLM / NLG prototype claims.
-- Active next loop: replace the h10-p offline runtime-fetcher replay path with a
-  live network fetch and connect a real external teacher-label source through
-  the h10-j/h10-l source-verification
+- Active next loop: replace the h10-q supplied live-network evidence
+  fixture/import with a real non-fixture source import/review chain and connect
+  a real external teacher-label source through the h10-j/h10-l source-verification
   contracts, connect real RULER/LongBench/codebase/doc-QA source and result
   evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review

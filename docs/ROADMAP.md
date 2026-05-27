@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-p plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
+As of h10-q plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -15,6 +15,7 @@ discrete local-energy learner
 + remote teacher-source content-cache verification contract
 + remote teacher-source live-fetch attestation contract
 + remote teacher-source runner-owned runtime fetcher contract
++ remote teacher-source live-network import evidence gate
 + PC RouteLM / NLG prototype readiness and artifact verification contracts
 + optional HIP backend scaffold / parity instrumentation
 ```
@@ -51,7 +52,12 @@ Last completed checkpoint:
   attestation rows with fetcher metadata and cache hash verification, while
   real source verification remains blocked until live network fetch and
   non-fixture source import replace replay.
-- h7 quick closure is current through h10-p and keeps default promotion blocked.
+- h10-q closes the remote teacher-source live-network import evidence gate.
+  Offline replay is rejected as live-network evidence; supplied live-network
+  runtime rows can reach `remote_teacher_source_live_network_import_ready=1`,
+  while `real_teacher_source_verified=0` remains blocked until real
+  non-fixture source import/review exists.
+- h7 quick closure is current through h10-q and keeps default promotion blocked.
 - v08-l closes the final-review mechanics layer for external benchmarks while
   keeping real benchmark verification blocked until non-fixture source/review
   evidence exists.
@@ -193,6 +199,12 @@ Current closure:
   can raise `runner_owned_runtime_fetcher_ready=1`, but keeps
   `live_network_fetch_ready=0` and `real_teacher_source_verified=0` until live
   network fetch and non-fixture source import replace replay.
+- `h10-q` adds the remote teacher-source live-network import gate. It rejects
+  h10-p offline replay as live-network evidence, accepts only supplied rows
+  that are all network fetches, real-declared, non-fixture, and runner-owned,
+  and can raise `remote_teacher_source_live_network_import_ready=1` while still
+  keeping `real_teacher_source_verified=0` until real source import/review
+  evidence exists.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
 - `h7-b` adds the route-memory promotion gate and keeps default promotion
@@ -250,7 +262,7 @@ Current closure:
 - `h9-a/h9-b/h9-d/h9-e/h9-f/h9-g` add optional ROCm/HIP backend scaffolding
   plus measured-speed evidence contracts:
   `experiments/test_v09_gpu_backend_closure.sh`.
-- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p, h7-b,
+- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q, h7-b,
   v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
   h11-a prototype readiness/import, h11-b artifact verifier/import, and h9-g
   included in quick closure paths.
@@ -265,8 +277,10 @@ Current next boundary:
   local learned chunk scorer, source-verified scorer binding, external ingestion
   schema, supplied CSV path, source-chain verifier, remote acquisition
   contract, content-cache verifier, fetch-attestation contract, and
-  runner-owned runtime-fetcher replay contract are now present; the next blocker
-  is a live network fetch plus real non-fixture evidence for the HTTPS acquisition package before any default
+  runner-owned runtime-fetcher replay contract, and live-network import
+  evidence gate are now present; the next blocker is replacing the supplied
+  live-network evidence fixture/import with real non-fixture source
+  import/review evidence for the HTTPS acquisition package before any default
   promotion or external benchmark comparison.
 - Provide or connect real external benchmark sources/results through the
   v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
@@ -309,8 +323,8 @@ Status update:
 - step 9 split into two findings: active jump-neighbor replacement remains
   no-go, while value-bearing route hints work under controlled fixtures.
 - the current next research boundary is a real external teacher-label source
-  through the h10-j source-verification contract and h10-l source-verified
-  scorer labels, not topology replacement.
+  through the h10-j/h10-l source-verification contracts above h10-q
+  live-network import evidence, not topology replacement.
 - GPU work is backend/parity instrumentation only. CPU remains canonical until
   a complete ROCm/HIP install proves fixture parity.
 
