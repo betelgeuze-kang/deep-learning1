@@ -128,6 +128,9 @@ bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_acquisition_gate.sh"
 echo "goal: h10-remote-teacher-source-content-verifier"
 bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_content_verifier.sh"
 
+echo "goal: h10-remote-teacher-source-live-fetch-attestation"
+bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_live_fetch_attestation.sh"
+
 echo "goal: h10-teacher-external-label-ingestion"
 bash "$ROOT_DIR/experiments/test_v10_teacher_external_label_ingestion.sh"
 
