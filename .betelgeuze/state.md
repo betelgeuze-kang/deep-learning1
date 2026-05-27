@@ -78,8 +78,15 @@
   artifact-level fetch-attestation rows can be bound back to h10-n content and
   verified against HTTPS attestation URIs, cached attestation hashes, fetch
   metadata, independent attestor flags, and non-fixture declarations, while
-  keeping `real_teacher_source_verified=0` until a runner-owned runtime fetcher
-  exists.
+  keeping `real_teacher_source_verified=0` until runtime-fetcher and
+  live-network evidence exist above it.
+- h10-p remote teacher-source runtime fetcher contract passed:
+  runner-owned offline replay rows can be generated from h10-o attestations and
+  bound back to remote/cache/content hashes with fetcher metadata and downloaded
+  cache hash verification, reaching `runner_owned_runtime_fetcher_ready=1`
+  while keeping `live_network_fetch_ready=0` and
+  `real_teacher_source_verified=0` until live network fetch and non-fixture
+  source import replace replay.
 - h7-b promotion gate passed and blocks default promotion.
 - h8/v08 benchmark readiness gate passed by deferring external comparison until
   promotion is allowed.
@@ -481,6 +488,33 @@ h10-o supplied remote-style attestation package:
   real_teacher_source_verified = 0
   action = remote-teacher-source-runtime-fetcher-missing
 
+h10-p remote teacher-source runtime fetcher default smoke:
+  remote_teacher_source_live_fetch_attestation_ready = 0
+  runner_owned_runtime_fetcher_ready = 0
+  live_network_fetch_ready = 0
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-fetch-attestation-not-ready
+
+h10-p h10-o-ready evidence without runtime fetch rows:
+  remote_teacher_source_live_fetch_attestation_ready = 1
+  expected_runtime_artifact_rows = 6
+  runtime_fetch_rows = 0
+  runner_owned_runtime_fetcher_ready = 0
+  action = remote-teacher-source-runtime-fetch-missing
+
+h10-p runner-owned offline replay:
+  runtime_fetch_source = runner-owned-replay
+  runtime_fetch_rows = 6
+  download_cache_hash_verified_rows = 6
+  fetcher_metadata_rows = 6
+  runner_owned_fetch_rows = 6
+  offline_replay_rows = 6
+  network_fetch_rows = 0
+  runner_owned_runtime_fetcher_ready = 1
+  live_network_fetch_ready = 0
+  real_teacher_source_verified = 0
+  action = remote-teacher-source-live-network-fetch-missing
+
 h10-i supplied external-label import fixture:
   external_label_rows = 5
   source_uri_rows = 5
@@ -826,6 +860,9 @@ h9-g supplied measured-speed fixture:
 - h10-o focused gate passed: `bash
   experiments/test_v10_remote_teacher_source_live_fetch_attestation.sh`; it is
   wired into `experiments/test_v07_goal_route_memory_closure.sh`.
+- h10-p focused gate passed: `bash
+  experiments/test_v10_remote_teacher_source_runtime_fetcher.sh`; it is wired
+  into `experiments/test_v07_goal_route_memory_closure.sh`.
 - h9-f focused and wrapper verification passed: `build/hip_candidate_weight_parity
   --backend cpu`, `bash experiments/test_v09_gpu_backend_extended_boundary.sh`,
   `bash experiments/test_v09_gpu_backend_speed_evidence.sh`, and `bash
@@ -889,9 +926,9 @@ h9-g supplied measured-speed fixture:
 - NOT long-context retrieval solved.
 - Current gate explicitly blocks default promotion, external comparison, and
   publishable PC RouteLM / NLG prototype claims.
-- Active next loop: replace the h10-o attestation-contract fixture with a
-  runner-owned live remote fetcher and connect a real external teacher-label
-  source through the h10-j/h10-l source-verification
+- Active next loop: replace the h10-p offline runtime-fetcher replay path with a
+  live network fetch and connect a real external teacher-label source through
+  the h10-j/h10-l source-verification
   contracts, connect real RULER/LongBench/codebase/doc-QA source and result
   evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
