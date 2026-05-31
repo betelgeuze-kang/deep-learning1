@@ -3,8 +3,8 @@
 ## Current Stage
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q plus h7-b,
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/readiness,
-v08 lower-chain remote-artifact path plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q real-source/remote-review/remote-full source-import guards, h11-a prototype readiness/import, h11-b
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/readiness,
+v08 lower-chain remote-artifact path plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r real-source/remote-review/remote-full source-import guards, h11-a prototype readiness/import, h11-b
 artifact verification/import, and h9-g quick closure:
 
 ```text
@@ -35,7 +35,7 @@ h10-o: remote teacher-source live-fetch attestation contract passes for supplied
 h10-p: runner-owned runtime fetcher replay contract passes for h10-o attestations, while live network fetch and real source verification remain blocked.
 h10-q: live-network runtime evidence import gate passes for provided live-network rows, while real source import remains blocked.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q: external benchmark adapter/evidence
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
 baselines, while placeholder evidence is blocked from counting as real
 benchmark evidence, local artifact hashes and authenticity/evaluator contracts
@@ -48,10 +48,10 @@ if lower-chain benchmark artifacts are local fixtures, and the lower-chain
 evidence/execution/attestation/identity gates can now exercise HTTPS
 hash-attested non-local artifact mechanics without making a final-review or
 publish claim; a fully remote-style lower-chain plus final-review package now
-reaches `source_import_authoritative_review_ready=1` when supplied with the
-v08-m/v08-n/v08-o/v08-p/v08-q fixture chain, but it still blocks at
-`source_import_verified=0` until real public registry/source-import authority
-evidence exists. v08-m now validates the source-import contract around that
+reaches `source_import_public_registry_ready=1` when supplied with the
+v08-m/v08-n/v08-o/v08-p/v08-q/v08-r fixture chain, but it still blocks at
+`source_import_verified=0` until runner-owned live registry query evidence
+exists. v08-m now validates the source-import contract around that
 blocker: remote-style source import rows can match source/result/execution
 URIs and hashes, carry non-local import manifest/fetch-log/reviewer artifacts,
 and reach `source_import_contract_ready=1`, while still keeping
@@ -79,6 +79,14 @@ reviewer registry, conflict disclosure, and verifier artifact hashes, reaching
 and `real_external_benchmark_verified=0` remain blocked with
 `external-benchmark-source-import-real-public-registry-missing` until real
 public registry/source-import authority evidence exists.
+v08-r adds the public-registry/source-import authority layer above v08-q.
+Supplied non-local, hash-attested registry rows can bind source-import IDs,
+verifier run IDs, live-review IDs, authority-review IDs, authority hashes,
+verifier hashes, registry entry artifacts, operator identity, and provenance,
+reaching `source_import_public_registry_ready=1`, but
+`source_import_verified=0` remains blocked with
+`external-benchmark-source-import-live-registry-query-missing` until a
+runner-owned live registry query/fetch path exists.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
@@ -114,6 +122,7 @@ bash experiments/test_v08_external_benchmark_source_import_verifier_gate.sh
 bash experiments/test_v08_external_benchmark_source_import_live_verifier_gate.sh
 bash experiments/test_v08_external_benchmark_source_import_live_review_gate.sh
 bash experiments/test_v08_external_benchmark_source_import_authoritative_review_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_public_registry_gate.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
 bash experiments/test_v11_pc_routelm_prototype_readiness.sh
@@ -151,10 +160,10 @@ Latest completed status:
   through v08-k while still stopping at `external-benchmark-final-review-missing`.
   The remote-full source-import guard combines non-local lower-chain artifacts
   with non-local final-review artifacts and now carries the source-import
-  blocker forward through v08-q: a fully supplied contract/verifier/live-review/
-  authority-review fixture reaches `source_import_authoritative_review_ready=1`
+  blocker forward through v08-r: a fully supplied contract/verifier/live-review/
+  authority-review/public-registry fixture reaches `source_import_public_registry_ready=1`
   but still blocks publication at `source_import_verified=0` with
-  `external-benchmark-source-import-real-public-registry-missing`.
+  `external-benchmark-source-import-live-registry-query-missing`.
 - v08-m is the external benchmark source-import contract boundary. It
   verifies provided source-import rows against lower-chain source/result and
   execution URIs/hashes, import manifest/fetch-log/reviewer hash attestations,
@@ -185,7 +194,7 @@ Latest completed status:
   `source_import_verified=0` and `real_external_benchmark_verified=0` until
   v08-q authoritative review and real public registry/source-import authority
   evidence replace the supplied review package.
-- v08-q is the latest external benchmark source-import authoritative-review
+- v08-q is the external benchmark source-import authoritative-review
   boundary. It binds non-local, hash-attested authority review rows to
   source-import IDs, verifier run IDs, live-review IDs, live-review hashes,
   verifier hashes, reviewer identity, reviewer registry, and conflict
@@ -193,6 +202,14 @@ Latest completed status:
   `source_import_authoritative_review_ready=1`, but still keeps
   `source_import_verified=0` and `real_external_benchmark_verified=0` until
   real public registry/source-import authority evidence replaces the fixture.
+- v08-r is the latest external benchmark source-import public-registry
+  boundary. It binds non-local, hash-attested registry rows to source-import
+  IDs, verifier run IDs, live-review IDs, authority-review IDs, authority
+  hashes, verifier hashes, registry entry artifacts, operator identity, and
+  provenance. The supplied fixture can reach
+  `source_import_public_registry_ready=1`, but still keeps
+  `source_import_verified=0` and `real_external_benchmark_verified=0` until a
+  runner-owned live registry query/fetch path replaces supplied registry rows.
 - h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
   pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
 - h11-b is the latest PC RouteLM / NLG boundary; component evidence and local
@@ -211,10 +228,10 @@ The next h10/v08-style experiment should connect h10-q live-network runtime
 evidence to a real non-fixture source import/review chain, replace the local h10-k/h10-l labels with real external teacher-label
 feature labels through the h10-j source-verification contract, real benchmark
 source/result evidence through the
-v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q
-import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review path,
-with non-local lower-chain and final-review artifacts plus real public
-registry/source-import authority evidence, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
+v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r
+import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry path,
+with non-local lower-chain and final-review artifacts plus live registry query
+evidence, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
 promotion claim or external benchmark comparison.
 
 ## h6 Span-first Guardrail
@@ -1249,6 +1266,8 @@ verification.
 v08-q adds the authoritative-review layer above v08-p, and still refuses to
 treat supplied authority-review mechanics as real public registry-backed
 source-import verification.
+v08-r adds the public-registry layer above v08-q, and still refuses to treat
+supplied registry rows as runner-owned live registry query verification.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
@@ -1298,6 +1317,8 @@ experiments/run_v08_external_benchmark_source_import_live_review_gate.sh
 experiments/test_v08_external_benchmark_source_import_live_review_gate.sh
 experiments/run_v08_external_benchmark_source_import_authoritative_review_gate.sh
 experiments/test_v08_external_benchmark_source_import_authoritative_review_gate.sh
+experiments/run_v08_external_benchmark_source_import_public_registry_gate.sh
+experiments/test_v08_external_benchmark_source_import_public_registry_gate.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -1509,7 +1530,7 @@ v08-l non-local final-review remote-review guard:
   real_external_benchmark_verified = 0
   action = external-benchmark-local-upstream-artifact
 
-v08-l/v08-q fully remote-style source-import guard:
+v08-l/v08-r fully remote-style source-import guard:
   final_review_source = provided-csv
   review_rows = 4
   review_artifact_rows = 4
@@ -1525,10 +1546,11 @@ v08-l/v08-q fully remote-style source-import guard:
   non_fixture_declared_rows = 4
   source_import_independent_live_review_ready = 1
   source_import_authoritative_review_ready = 1
+  source_import_public_registry_ready = 1
   source_import_verified = 0
   final_review_verified = 0
   real_external_benchmark_verified = 0
-  action = external-benchmark-source-import-real-public-registry-missing
+  action = external-benchmark-source-import-live-registry-query-missing
 
 v08-m remote-style source-import contract fixture:
   source_import_source = provided-csv
@@ -1623,6 +1645,26 @@ v08-q supplied source-import authoritative-review fixture:
   source_import_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-source-import-real-public-registry-missing
+
+v08-r supplied source-import public-registry fixture:
+  public_registry_source = provided-csv
+  public_registry_rows = 4
+  matched_authority_review_rows = 4
+  source_import_id_match_rows = 4
+  verifier_run_id_match_rows = 4
+  live_review_id_match_rows = 4
+  authority_review_id_match_rows = 4
+  authority_review_hash_match_rows = 4
+  verifier_hash_match_rows = 4
+  registry_metadata_rows = 4
+  local_registry_artifact_rows = 0
+  nonlocal_registry_artifact_rows = 16
+  official_public_registry_rows = 4
+  registry_entry_approved_rows = 4
+  source_import_public_registry_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-query-missing
 ```
 
 Expected:
