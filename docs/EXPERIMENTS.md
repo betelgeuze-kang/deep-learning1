@@ -4,7 +4,8 @@
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q plus h7-b,
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
-h11-a prototype readiness/import, h11-b artifact verification/import, and h9-g quick closure:
+v08 lower-chain remote-artifact path plus v08-l real-source/remote-review guards, h11-a prototype readiness/import, h11-b
+artifact verification/import, and h9-g quick closure:
 
 ```text
 h6-p: span-local-energy policy-scale diagnostics pass.
@@ -42,7 +43,11 @@ plus execution/evaluator-output artifacts can be verified, local/fixture
 attestations and final-review artifacts remain diagnostic, and publishable
 comparison is deferred until real independent verification exists; local
 final-review artifacts cannot become real benchmark evidence by declaration
-flag rewrite alone.
+flag rewrite alone, HTTPS hash-attested review artifacts still cannot publish
+if lower-chain benchmark artifacts are local fixtures, and the lower-chain
+evidence/execution/attestation/identity gates can now exercise HTTPS
+hash-attested non-local artifact mechanics without making a final-review or
+publish claim.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
@@ -69,6 +74,8 @@ bash experiments/test_v10_chunk_credit_distillation_gate.sh
 bash experiments/test_v08_external_benchmark_final_review_gate.sh
 bash experiments/test_v08_external_benchmark_final_review_import.sh
 bash experiments/test_v08_external_benchmark_final_review_real_source_guard.sh
+bash experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh
+bash experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
 bash experiments/test_v11_pc_routelm_prototype_readiness.sh
@@ -98,7 +105,12 @@ Latest completed status:
   mechanics pass, but fixture/local review remains non-publishable with
   `real_external_benchmark_verified=0`. The real-source guard now also blocks
   local `file://` final-review artifacts even when real/non-fixture declaration
-  flags are rewritten to pass.
+  flags are rewritten to pass, and the remote-review guard blocks HTTPS
+  hash-attested final-review rows if evidence/execution/attestation/identity
+  artifacts underneath are still local fixtures. The lower-chain remote-artifact
+  path now verifies HTTPS hash-attested source/result, evaluator output/run-log,
+  attestation, attestor identity, registry, and conflict-disclosure artifacts
+  through v08-k while still stopping at `external-benchmark-final-review-missing`.
 - h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
   pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
 - h11-b is the latest PC RouteLM / NLG boundary; component evidence and local
@@ -119,7 +131,7 @@ feature labels through the h10-j source-verification contract, real benchmark
 source/result evidence through the
 v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
 import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review path,
-and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
+with non-local lower-chain and final-review artifacts, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
 promotion claim or external benchmark comparison.
 
 ## h6 Span-first Guardrail
@@ -1327,10 +1339,14 @@ v08-l supplied final-review fixture:
   matched_attestation_rows = 4
   review_hash_verified_rows = 4
   local_final_review_artifact_rows = 4
+  nonlocal_final_review_artifact_rows = 0
   reviewer_identity_hash_verified_rows = 4
   local_reviewer_identity_rows = 4
+  nonlocal_reviewer_identity_rows = 0
   reviewer_conflict_hash_verified_rows = 4
   local_reviewer_conflict_rows = 4
+  nonlocal_reviewer_conflict_rows = 0
+  local_upstream_artifact_rows = 32
   critical_hash_match_rows = 4
   metric_match_rows = 4
   review_ready_rows = 4
@@ -1346,13 +1362,38 @@ v08-l local final-review real-source guard:
   review_rows = 4
   review_hash_verified_rows = 4
   local_final_review_artifact_rows = 4
+  nonlocal_final_review_artifact_rows = 0
   local_reviewer_identity_rows = 4
+  nonlocal_reviewer_identity_rows = 0
   local_reviewer_conflict_rows = 4
+  nonlocal_reviewer_conflict_rows = 0
+  local_upstream_artifact_rows = 32
   real_source_declared_rows = 4
   non_fixture_declared_rows = 4
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-local-final-review-artifact
+
+v08-l non-local final-review remote-review guard:
+  final_review_source = provided-csv
+  review_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 0
+  nonlocal_final_review_artifact_rows = 4
+  local_reviewer_identity_rows = 0
+  nonlocal_reviewer_identity_rows = 4
+  local_reviewer_conflict_rows = 0
+  nonlocal_reviewer_conflict_rows = 4
+  local_upstream_evidence_artifact_rows = 8
+  local_upstream_execution_artifact_rows = 8
+  local_upstream_attestation_artifact_rows = 4
+  local_upstream_identity_artifact_rows = 12
+  local_upstream_artifact_rows = 32
+  real_source_declared_rows = 4
+  non_fixture_declared_rows = 4
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-local-upstream-artifact
 ```
 
 Expected:
@@ -1379,6 +1420,9 @@ Expected:
   without treating fixture/local review as a real publishable external benchmark
 - local final-review artifacts must not become publishable external benchmark
   evidence by rewriting real/non-fixture declaration flags
+- HTTPS hash-attested final-review artifacts can count as non-local review
+  evidence, but not while lower-chain evidence/execution/attestation/identity
+  artifacts are still local fixtures
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 

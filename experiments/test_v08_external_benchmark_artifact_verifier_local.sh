@@ -47,7 +47,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("evidence_source real_evidence_format_ready evidence_rows local_dataset_uri_rows local_result_uri_rows source_hash_verified_rows provenance_hash_verified_rows artifact_verifier_ready real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("evidence_source real_evidence_format_ready evidence_rows dataset_artifact_rows local_dataset_uri_rows nonlocal_dataset_uri_rows result_artifact_rows local_result_uri_rows nonlocal_result_uri_rows source_hash_verified_rows provenance_hash_verified_rows artifact_verifier_ready real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing v08 artifact verifier local summary column: " required[i], 2)
     }
@@ -58,8 +58,12 @@ awk -F, '
     if ($idx["evidence_source"] != "provided-csv" ||
         ($idx["real_evidence_format_ready"] + 0) != 1 ||
         ($idx["evidence_rows"] + 0) != 4 ||
+        ($idx["dataset_artifact_rows"] + 0) != 4 ||
         ($idx["local_dataset_uri_rows"] + 0) != 4 ||
+        ($idx["nonlocal_dataset_uri_rows"] + 0) != 0 ||
+        ($idx["result_artifact_rows"] + 0) != 4 ||
         ($idx["local_result_uri_rows"] + 0) != 4 ||
+        ($idx["nonlocal_result_uri_rows"] + 0) != 0 ||
         ($idx["source_hash_verified_rows"] + 0) != 4 ||
         ($idx["provenance_hash_verified_rows"] + 0) != 4 ||
         ($idx["artifact_verifier_ready"] + 0) != 1 ||
@@ -88,14 +92,16 @@ awk -F, '
   }
   {
     rows++
+    if ($idx["gate"] == "artifact-presence" && $idx["status"] != "pass") die("artifact presence should pass", 19)
     if ($idx["gate"] == "local-artifacts" && $idx["status"] != "pass") die("local artifacts should pass", 20)
+    if ($idx["gate"] == "nonlocal-artifacts" && $idx["status"] != "blocked") die("nonlocal artifacts should block for local fixture", 21)
     if ($idx["gate"] == "source-hash" && $idx["status"] != "pass") die("source hashes should pass", 21)
     if ($idx["gate"] == "provenance-hash" && $idx["status"] != "pass") die("provenance hashes should pass", 22)
     if ($idx["gate"] == "artifact-verifier" && $idx["status"] != "pass") die("artifact verifier should pass", 23)
     if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should still block", 24)
   }
   END {
-    if (rows != 6) die("expected local v08 artifact verifier decision rows", 25)
+    if (rows != 8) die("expected local v08 artifact verifier decision rows", 25)
   }
 ' "$DECISION_CSV"
 

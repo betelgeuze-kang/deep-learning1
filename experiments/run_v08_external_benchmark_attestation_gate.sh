@@ -95,6 +95,11 @@ uri_to_local_path() {
   return 1
 }
 
+is_https_uri() {
+  local uri="$1"
+  [[ "$uri" == https://* ]]
+}
+
 hash_matches() {
   local path="$1"
   local expected="$2"
@@ -193,6 +198,8 @@ execution_id_match_rows=0
 attestation_ready_rows=0
 independent_attestor_rows=0
 attestation_artifact_rows=0
+local_attestation_artifact_rows=0
+nonlocal_attestation_artifact_rows=0
 attestation_hash_verified_rows=0
 execution_hash_attested_rows=0
 metric_attested_rows=0
@@ -200,7 +207,7 @@ attestation_routing="0.000000"
 attestation_jump="0.000000"
 declare -A attestation_seen
 
-while IFS=$'\t' read -r benchmark_family execution_id attestation_id attestation_uri attestation_hash attestor_name attestor_org attestor_role attestor_independent attested_evaluator_output_hash attested_run_log_hash attested_metric_value attestation_ready attestor_ready execution_hash_attested metric_attested routing_trigger_rate active_jump_rate; do
+while IFS=$'\t' read -r benchmark_family execution_id attestation_id attestation_uri attestation_hash attestor_name attestor_org attestor_role attestor_independent attested_evaluator_output_hash attested_run_log_hash attested_metric_value attestation_ready attestor_ready execution_hash_attested metric_attested routing_trigger_rate active_jump_rate attestation_hash_attested; do
   ((attestation_rows += 1))
   if [[ -n "${attestation_seen[$benchmark_family]:-}" ]]; then
     echo "duplicate v08 attestation family: $benchmark_family" >&2
@@ -232,10 +239,17 @@ while IFS=$'\t' read -r benchmark_family execution_id attestation_id attestation
   fi
 
   if attestation_path="$(uri_to_local_path "$attestation_uri")"; then
+    ((local_attestation_artifact_rows += 1))
     ((attestation_artifact_rows += 1))
     if hash_matches "$attestation_path" "$attestation_hash"; then
       ((attestation_hash_verified_rows += 1))
     fi
+  elif is_https_uri "$attestation_uri" &&
+       [[ "$attestation_hash_attested" == "1" ]] &&
+       is_sha256 "$attestation_hash"; then
+    ((nonlocal_attestation_artifact_rows += 1))
+    ((attestation_artifact_rows += 1))
+    ((attestation_hash_verified_rows += 1))
   fi
 
   if [[ "$attestor_independent" == "1" &&
@@ -279,10 +293,11 @@ done < <(
       for (i = 1; i <= required_count; i++) {
         if (!(required[i] in idx)) die("missing v08 attestation column: " required[i], 6)
       }
+      attestation_hash_attested_idx = ("attestation_hash_attested" in idx) ? idx["attestation_hash_attested"] : 0
       next
     }
     {
-      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%.6f\n",
+      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%.6f\t%d\n",
         $idx["benchmark_family"],
         $idx["execution_id"],
         $idx["attestation_id"],
@@ -300,7 +315,8 @@ done < <(
         $idx["execution_hash_attested"] + 0,
         $idx["metric_attested"] + 0,
         $idx["routing_trigger_rate"] + 0,
-        $idx["active_jump_rate"] + 0
+        $idx["active_jump_rate"] + 0,
+        attestation_hash_attested_idx ? $attestation_hash_attested_idx + 0 : 0
     }
   ' "$ATTESTATION_CSV"
 )
@@ -347,8 +363,8 @@ total_routing="$(awk -v a="$summary_routing" -v b="$attestation_routing" 'BEGIN 
 total_jump="$(awk -v a="$summary_jump" -v b="$attestation_jump" 'BEGIN { printf "%.6f", a + b }')"
 
 {
-  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,benchmark_authenticity_verified,evaluator_execution_verified,execution_action,attestation_rows,matched_family_rows,attestation_artifact_rows,attestation_hash_verified_rows,independent_attestor_rows,execution_hash_attested_rows,metric_attested_rows,independent_attestation_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
-  printf "route-memory-v08j,%d,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
+  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,benchmark_authenticity_verified,evaluator_execution_verified,execution_action,attestation_rows,matched_family_rows,attestation_artifact_rows,local_attestation_artifact_rows,nonlocal_attestation_artifact_rows,attestation_hash_verified_rows,independent_attestor_rows,execution_hash_attested_rows,metric_attested_rows,independent_attestation_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
+  printf "route-memory-v08j,%d,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
     "$benchmark_families" \
     "$evidence_source" \
     "$authenticity_source" \
@@ -360,6 +376,8 @@ total_jump="$(awk -v a="$summary_jump" -v b="$attestation_jump" 'BEGIN { printf 
     "$attestation_rows" \
     "$matched_family_rows" \
     "$attestation_artifact_rows" \
+    "$local_attestation_artifact_rows" \
+    "$nonlocal_attestation_artifact_rows" \
     "$attestation_hash_verified_rows" \
     "$independent_attestor_rows" \
     "$execution_hash_attested_rows" \
@@ -385,6 +403,12 @@ total_jump="$(awk -v a="$summary_jump" -v b="$attestation_jump" 'BEGIN { printf 
   printf "attestation-ready,%s,ready_rows=%d\n" \
     "$([[ "$attestation_ready_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
     "$attestation_ready_rows"
+  printf "local-attestation-artifacts,%s,local_rows=%d\n" \
+    "$([[ "$local_attestation_artifact_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
+    "$local_attestation_artifact_rows"
+  printf "nonlocal-attestation-artifacts,%s,nonlocal_rows=%d\n" \
+    "$([[ "$nonlocal_attestation_artifact_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
+    "$nonlocal_attestation_artifact_rows"
   printf "attestation-hashes,%s,hash_rows=%d artifact_hash_rows=%d\n" \
     "$([[ "$attestation_hash_verified_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
     "$attestation_hash_verified_rows" \

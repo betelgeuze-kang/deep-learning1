@@ -94,6 +94,11 @@ uri_to_local_path() {
   return 1
 }
 
+is_https_uri() {
+  local uri="$1"
+  [[ "$uri" == https://* ]]
+}
+
 hash_matches() {
   local path="$1"
   local expected="$2"
@@ -182,10 +187,16 @@ identity_rows=0
 matched_attestation_rows=0
 identity_ready_rows=0
 identity_artifact_rows=0
+local_identity_artifact_rows=0
+nonlocal_identity_artifact_rows=0
 identity_hash_verified_rows=0
 registry_artifact_rows=0
+local_registry_artifact_rows=0
+nonlocal_registry_artifact_rows=0
 registry_hash_verified_rows=0
 conflict_disclosure_rows=0
+local_conflict_disclosure_rows=0
+nonlocal_conflict_disclosure_rows=0
 conflict_disclosure_hash_verified_rows=0
 independence_basis_rows=0
 no_declared_conflict_rows=0
@@ -193,7 +204,7 @@ identity_routing="0.000000"
 identity_jump="0.000000"
 declare -A identity_seen
 
-while IFS=$'\t' read -r benchmark_family attestation_id attestor_name attestor_org attestor_identity_uri attestor_identity_hash attestor_registry_id attestor_registry_uri attestor_registry_hash attestor_contact_domain conflict_disclosure_uri conflict_disclosure_hash independence_basis relationship_to_project funding_conflict_declared attestor_identity_ready attestor_registry_ready conflict_disclosure_ready independence_provenance_ready routing_trigger_rate active_jump_rate; do
+while IFS=$'\t' read -r benchmark_family attestation_id attestor_name attestor_org attestor_identity_uri attestor_identity_hash attestor_registry_id attestor_registry_uri attestor_registry_hash attestor_contact_domain conflict_disclosure_uri conflict_disclosure_hash independence_basis relationship_to_project funding_conflict_declared attestor_identity_ready attestor_registry_ready conflict_disclosure_ready independence_provenance_ready routing_trigger_rate active_jump_rate attestor_identity_hash_attested attestor_registry_hash_attested conflict_disclosure_hash_attested; do
   ((identity_rows += 1))
   if [[ -n "${identity_seen[$benchmark_family]:-}" ]]; then
     echo "duplicate v08 attestor identity family: $benchmark_family" >&2
@@ -223,24 +234,45 @@ while IFS=$'\t' read -r benchmark_family attestation_id attestor_name attestor_o
   fi
 
   if identity_path="$(uri_to_local_path "$attestor_identity_uri")"; then
+    ((local_identity_artifact_rows += 1))
     ((identity_artifact_rows += 1))
     if hash_matches "$identity_path" "$attestor_identity_hash"; then
       ((identity_hash_verified_rows += 1))
     fi
+  elif is_https_uri "$attestor_identity_uri" &&
+       [[ "$attestor_identity_hash_attested" == "1" ]] &&
+       is_sha256 "$attestor_identity_hash"; then
+    ((nonlocal_identity_artifact_rows += 1))
+    ((identity_artifact_rows += 1))
+    ((identity_hash_verified_rows += 1))
   fi
 
   if registry_path="$(uri_to_local_path "$attestor_registry_uri")"; then
+    ((local_registry_artifact_rows += 1))
     ((registry_artifact_rows += 1))
     if hash_matches "$registry_path" "$attestor_registry_hash"; then
       ((registry_hash_verified_rows += 1))
     fi
+  elif is_https_uri "$attestor_registry_uri" &&
+       [[ "$attestor_registry_hash_attested" == "1" ]] &&
+       is_sha256 "$attestor_registry_hash"; then
+    ((nonlocal_registry_artifact_rows += 1))
+    ((registry_artifact_rows += 1))
+    ((registry_hash_verified_rows += 1))
   fi
 
   if disclosure_path="$(uri_to_local_path "$conflict_disclosure_uri")"; then
+    ((local_conflict_disclosure_rows += 1))
     ((conflict_disclosure_rows += 1))
     if hash_matches "$disclosure_path" "$conflict_disclosure_hash"; then
       ((conflict_disclosure_hash_verified_rows += 1))
     fi
+  elif is_https_uri "$conflict_disclosure_uri" &&
+       [[ "$conflict_disclosure_hash_attested" == "1" ]] &&
+       is_sha256 "$conflict_disclosure_hash"; then
+    ((nonlocal_conflict_disclosure_rows += 1))
+    ((conflict_disclosure_rows += 1))
+    ((conflict_disclosure_hash_verified_rows += 1))
   fi
 
   if is_present "$independence_basis" &&
@@ -267,10 +299,13 @@ done < <(
       for (i = 1; i <= required_count; i++) {
         if (!(required[i] in idx)) die("missing v08 attestor identity column: " required[i], 6)
       }
+      attestor_identity_hash_attested_idx = ("attestor_identity_hash_attested" in idx) ? idx["attestor_identity_hash_attested"] : 0
+      attestor_registry_hash_attested_idx = ("attestor_registry_hash_attested" in idx) ? idx["attestor_registry_hash_attested"] : 0
+      conflict_disclosure_hash_attested_idx = ("conflict_disclosure_hash_attested" in idx) ? idx["conflict_disclosure_hash_attested"] : 0
       next
     }
     {
-      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%.6f\n",
+      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%.6f\t%d\t%d\t%d\n",
         $idx["benchmark_family"],
         $idx["attestation_id"],
         $idx["attestor_name"],
@@ -291,7 +326,10 @@ done < <(
         $idx["conflict_disclosure_ready"] + 0,
         $idx["independence_provenance_ready"] + 0,
         $idx["routing_trigger_rate"] + 0,
-        $idx["active_jump_rate"] + 0
+        $idx["active_jump_rate"] + 0,
+        attestor_identity_hash_attested_idx ? $attestor_identity_hash_attested_idx + 0 : 0,
+        attestor_registry_hash_attested_idx ? $attestor_registry_hash_attested_idx + 0 : 0,
+        conflict_disclosure_hash_attested_idx ? $conflict_disclosure_hash_attested_idx + 0 : 0
     }
   ' "$IDENTITY_CSV"
 )
@@ -342,8 +380,8 @@ total_routing="$(awk -v a="$summary_routing" -v b="$identity_routing" 'BEGIN { p
 total_jump="$(awk -v a="$summary_jump" -v b="$identity_jump" 'BEGIN { printf "%.6f", a + b }')"
 
 {
-  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,evaluator_execution_verified,independent_attestation_verified,attestation_action,identity_rows,matched_attestation_rows,identity_artifact_rows,identity_hash_verified_rows,registry_artifact_rows,registry_hash_verified_rows,conflict_disclosure_rows,conflict_disclosure_hash_verified_rows,independence_basis_rows,no_declared_conflict_rows,attestor_identity_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
-  printf "route-memory-v08k,%d,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
+  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,evaluator_execution_verified,independent_attestation_verified,attestation_action,identity_rows,matched_attestation_rows,identity_artifact_rows,local_identity_artifact_rows,nonlocal_identity_artifact_rows,identity_hash_verified_rows,registry_artifact_rows,local_registry_artifact_rows,nonlocal_registry_artifact_rows,registry_hash_verified_rows,conflict_disclosure_rows,local_conflict_disclosure_rows,nonlocal_conflict_disclosure_rows,conflict_disclosure_hash_verified_rows,independence_basis_rows,no_declared_conflict_rows,attestor_identity_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
+  printf "route-memory-v08k,%d,%s,%s,%s,%s,%s,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
     "$benchmark_families" \
     "$evidence_source" \
     "$authenticity_source" \
@@ -356,10 +394,16 @@ total_jump="$(awk -v a="$summary_jump" -v b="$identity_jump" 'BEGIN { printf "%.
     "$identity_rows" \
     "$matched_attestation_rows" \
     "$identity_artifact_rows" \
+    "$local_identity_artifact_rows" \
+    "$nonlocal_identity_artifact_rows" \
     "$identity_hash_verified_rows" \
     "$registry_artifact_rows" \
+    "$local_registry_artifact_rows" \
+    "$nonlocal_registry_artifact_rows" \
     "$registry_hash_verified_rows" \
     "$conflict_disclosure_rows" \
+    "$local_conflict_disclosure_rows" \
+    "$nonlocal_conflict_disclosure_rows" \
     "$conflict_disclosure_hash_verified_rows" \
     "$independence_basis_rows" \
     "$no_declared_conflict_rows" \
@@ -379,6 +423,16 @@ total_jump="$(awk -v a="$summary_jump" -v b="$identity_jump" 'BEGIN { printf "%.
     "$([[ "$identity_rows" -eq "$benchmark_families" && "$matched_attestation_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
     "$identity_rows" \
     "$matched_attestation_rows"
+  printf "local-identity-artifacts,%s,identity_local=%d registry_local=%d conflict_local=%d\n" \
+    "$([[ "$local_identity_artifact_rows" -eq "$benchmark_families" && "$local_registry_artifact_rows" -eq "$benchmark_families" && "$local_conflict_disclosure_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
+    "$local_identity_artifact_rows" \
+    "$local_registry_artifact_rows" \
+    "$local_conflict_disclosure_rows"
+  printf "nonlocal-identity-artifacts,%s,identity_nonlocal=%d registry_nonlocal=%d conflict_nonlocal=%d\n" \
+    "$([[ "$nonlocal_identity_artifact_rows" -eq "$benchmark_families" && "$nonlocal_registry_artifact_rows" -eq "$benchmark_families" && "$nonlocal_conflict_disclosure_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
+    "$nonlocal_identity_artifact_rows" \
+    "$nonlocal_registry_artifact_rows" \
+    "$nonlocal_conflict_disclosure_rows"
   printf "identity-artifact-hash,%s,artifact_rows=%d hash_rows=%d\n" \
     "$([[ "$identity_artifact_rows" -eq "$benchmark_families" && "$identity_hash_verified_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
     "$identity_artifact_rows" \

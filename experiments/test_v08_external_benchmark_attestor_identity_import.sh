@@ -123,7 +123,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("attestor_identity_source evaluator_execution_verified independent_attestation_verified identity_rows matched_attestation_rows identity_artifact_rows identity_hash_verified_rows registry_artifact_rows registry_hash_verified_rows conflict_disclosure_rows conflict_disclosure_hash_verified_rows independence_basis_rows no_declared_conflict_rows attestor_identity_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("attestor_identity_source evaluator_execution_verified independent_attestation_verified identity_rows matched_attestation_rows identity_artifact_rows local_identity_artifact_rows nonlocal_identity_artifact_rows identity_hash_verified_rows registry_artifact_rows local_registry_artifact_rows nonlocal_registry_artifact_rows registry_hash_verified_rows conflict_disclosure_rows local_conflict_disclosure_rows nonlocal_conflict_disclosure_rows conflict_disclosure_hash_verified_rows independence_basis_rows no_declared_conflict_rows attestor_identity_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing v08 attestor identity import summary column: " required[i], 2)
     }
@@ -137,10 +137,16 @@ awk -F, '
         ($idx["identity_rows"] + 0) != 4 ||
         ($idx["matched_attestation_rows"] + 0) != 4 ||
         ($idx["identity_artifact_rows"] + 0) != 4 ||
+        ($idx["local_identity_artifact_rows"] + 0) != 4 ||
+        ($idx["nonlocal_identity_artifact_rows"] + 0) != 0 ||
         ($idx["identity_hash_verified_rows"] + 0) != 4 ||
         ($idx["registry_artifact_rows"] + 0) != 4 ||
+        ($idx["local_registry_artifact_rows"] + 0) != 4 ||
+        ($idx["nonlocal_registry_artifact_rows"] + 0) != 0 ||
         ($idx["registry_hash_verified_rows"] + 0) != 4 ||
         ($idx["conflict_disclosure_rows"] + 0) != 4 ||
+        ($idx["local_conflict_disclosure_rows"] + 0) != 4 ||
+        ($idx["nonlocal_conflict_disclosure_rows"] + 0) != 0 ||
         ($idx["conflict_disclosure_hash_verified_rows"] + 0) != 4 ||
         ($idx["independence_basis_rows"] + 0) != 4 ||
         ($idx["no_declared_conflict_rows"] + 0) != 4 ||
@@ -172,6 +178,8 @@ awk -F, '
     rows++
     if ($idx["gate"] == "prior-independent-attestation" && $idx["status"] != "pass") die("prior independent attestation should pass", 20)
     if ($idx["gate"] == "identity-rows" && $idx["status"] != "pass") die("identity rows should pass", 21)
+    if ($idx["gate"] == "local-identity-artifacts" && $idx["status"] != "pass") die("local identity artifacts should pass", 22)
+    if ($idx["gate"] == "nonlocal-identity-artifacts" && $idx["status"] != "blocked") die("nonlocal identity artifacts should block for local fixture", 23)
     if ($idx["gate"] == "identity-artifact-hash" && $idx["status"] != "pass") die("identity artifact hashes should pass", 22)
     if ($idx["gate"] == "registry-artifact-hash" && $idx["status"] != "pass") die("registry artifact hashes should pass", 23)
     if ($idx["gate"] == "conflict-disclosure" && $idx["status"] != "pass") die("conflict disclosure should pass", 24)
@@ -180,7 +188,7 @@ awk -F, '
     if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should still block", 27)
   }
   END {
-    if (rows != 8) die("expected v08 attestor identity import decision rows", 28)
+    if (rows != 10) die("expected v08 attestor identity import decision rows", 28)
   }
 ' "$DECISION_CSV"
 

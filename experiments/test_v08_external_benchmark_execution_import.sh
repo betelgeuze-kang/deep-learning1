@@ -83,7 +83,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("evidence_source authenticity_source execution_source benchmark_authenticity_verified execution_rows matched_family_rows output_artifact_rows run_log_artifact_rows output_hash_verified_rows run_log_hash_verified_rows execution_ready_rows metric_output_rows evaluator_execution_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("evidence_source authenticity_source execution_source benchmark_authenticity_verified execution_rows matched_family_rows output_artifact_rows local_output_artifact_rows nonlocal_output_artifact_rows run_log_artifact_rows local_run_log_artifact_rows nonlocal_run_log_artifact_rows output_hash_verified_rows run_log_hash_verified_rows execution_ready_rows metric_output_rows evaluator_execution_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing v08 execution import summary column: " required[i], 2)
     }
@@ -98,7 +98,11 @@ awk -F, '
         ($idx["execution_rows"] + 0) != 4 ||
         ($idx["matched_family_rows"] + 0) != 4 ||
         ($idx["output_artifact_rows"] + 0) != 4 ||
+        ($idx["local_output_artifact_rows"] + 0) != 4 ||
+        ($idx["nonlocal_output_artifact_rows"] + 0) != 0 ||
         ($idx["run_log_artifact_rows"] + 0) != 4 ||
+        ($idx["local_run_log_artifact_rows"] + 0) != 4 ||
+        ($idx["nonlocal_run_log_artifact_rows"] + 0) != 0 ||
         ($idx["output_hash_verified_rows"] + 0) != 4 ||
         ($idx["run_log_hash_verified_rows"] + 0) != 4 ||
         ($idx["execution_ready_rows"] + 0) != 4 ||
@@ -131,13 +135,15 @@ awk -F, '
     rows++
     if ($idx["gate"] == "benchmark-authenticity" && $idx["status"] != "pass") die("benchmark authenticity should pass", 20)
     if ($idx["gate"] == "execution-artifacts" && $idx["status"] != "pass") die("execution artifacts should pass", 21)
+    if ($idx["gate"] == "local-execution-artifacts" && $idx["status"] != "pass") die("local execution artifacts should pass", 22)
+    if ($idx["gate"] == "nonlocal-execution-artifacts" && $idx["status"] != "blocked") die("nonlocal execution artifacts should block for local fixture", 23)
     if ($idx["gate"] == "execution-hashes" && $idx["status"] != "pass") die("execution hashes should pass", 22)
     if ($idx["gate"] == "metric-output" && $idx["status"] != "pass") die("metric output should pass", 23)
     if ($idx["gate"] == "evaluator-execution" && $idx["status"] != "pass") die("evaluator execution should pass", 24)
     if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should still block", 25)
   }
   END {
-    if (rows != 6) die("expected v08 execution import decision rows", 26)
+    if (rows != 8) die("expected v08 execution import decision rows", 26)
   }
 ' "$DECISION_CSV"
 

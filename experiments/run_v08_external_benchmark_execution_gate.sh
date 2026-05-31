@@ -75,19 +75,30 @@ uri_to_local_path() {
   return 1
 }
 
+is_https_uri() {
+  local uri="$1"
+  [[ "$uri" == https://* ]]
+}
+
+is_sha256() {
+  local value="$1"
+  local hex
+
+  [[ "$value" == sha256:* ]] || return 1
+  hex="${value#sha256:}"
+  [[ ${#hex} -eq 64 && ! "$hex" =~ [^0-9a-fA-F] ]]
+}
+
 hash_matches() {
   local path="$1"
   local expected="$2"
   local expected_hex
   local actual_hex
 
-  if [[ "$expected" != sha256:* || ! -f "$path" ]]; then
+  if ! is_sha256 "$expected" || [[ ! -f "$path" ]]; then
     return 1
   fi
   expected_hex="${expected#sha256:}"
-  if [[ ${#expected_hex} -ne 64 || "$expected_hex" =~ [^0-9a-fA-F] ]]; then
-    return 1
-  fi
   actual_hex="$(sha256sum "$path" | awk '{print $1}')"
   [[ "$actual_hex" == "$expected_hex" ]]
 }
@@ -129,6 +140,10 @@ execution_rows=0
 matched_family_rows=0
 output_artifact_rows=0
 run_log_artifact_rows=0
+local_output_artifact_rows=0
+local_run_log_artifact_rows=0
+nonlocal_output_artifact_rows=0
+nonlocal_run_log_artifact_rows=0
 output_hash_verified_rows=0
 run_log_hash_verified_rows=0
 execution_ready_rows=0
@@ -136,7 +151,7 @@ metric_output_rows=0
 execution_routing="0.000000"
 execution_jump="0.000000"
 
-while IFS=$'\t' read -r benchmark_family execution_id evaluator_output_uri evaluator_output_hash run_log_uri run_log_hash metric_value sample_count execution_ready evaluator_output_ready run_log_ready metric_output_ready routing_trigger_rate active_jump_rate; do
+while IFS=$'\t' read -r benchmark_family execution_id evaluator_output_uri evaluator_output_hash run_log_uri run_log_hash metric_value sample_count execution_ready evaluator_output_ready run_log_ready metric_output_ready routing_trigger_rate active_jump_rate evaluator_output_hash_attested run_log_hash_attested; do
   ((execution_rows += 1))
   case "$benchmark_family" in
     RULER|LongBench|codebase-retrieval|real-document-qa)
@@ -145,17 +160,31 @@ while IFS=$'\t' read -r benchmark_family execution_id evaluator_output_uri evalu
   esac
 
   if output_path="$(uri_to_local_path "$evaluator_output_uri")"; then
+    ((local_output_artifact_rows += 1))
     ((output_artifact_rows += 1))
     if hash_matches "$output_path" "$evaluator_output_hash"; then
       ((output_hash_verified_rows += 1))
     fi
+  elif is_https_uri "$evaluator_output_uri" &&
+       [[ "$evaluator_output_hash_attested" == "1" ]] &&
+       is_sha256 "$evaluator_output_hash"; then
+    ((nonlocal_output_artifact_rows += 1))
+    ((output_artifact_rows += 1))
+    ((output_hash_verified_rows += 1))
   fi
 
   if log_path="$(uri_to_local_path "$run_log_uri")"; then
+    ((local_run_log_artifact_rows += 1))
     ((run_log_artifact_rows += 1))
     if hash_matches "$log_path" "$run_log_hash"; then
       ((run_log_hash_verified_rows += 1))
     fi
+  elif is_https_uri "$run_log_uri" &&
+       [[ "$run_log_hash_attested" == "1" ]] &&
+       is_sha256 "$run_log_hash"; then
+    ((nonlocal_run_log_artifact_rows += 1))
+    ((run_log_artifact_rows += 1))
+    ((run_log_hash_verified_rows += 1))
   fi
 
   if [[ "$execution_ready" == "1" &&
@@ -188,10 +217,12 @@ done < <(
       for (i = 1; i <= required_count; i++) {
         if (!(required[i] in idx)) die("missing v08 execution column: " required[i], 4)
       }
+      evaluator_output_hash_attested_idx = ("evaluator_output_hash_attested" in idx) ? idx["evaluator_output_hash_attested"] : 0
+      run_log_hash_attested_idx = ("run_log_hash_attested" in idx) ? idx["run_log_hash_attested"] : 0
       next
     }
     {
-      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%.6f\n",
+      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%.6f\t%d\t%d\n",
         $idx["benchmark_family"],
         $idx["execution_id"],
         $idx["evaluator_output_uri"],
@@ -205,7 +236,9 @@ done < <(
         $idx["run_log_ready"] + 0,
         $idx["metric_output_ready"] + 0,
         $idx["routing_trigger_rate"] + 0,
-        $idx["active_jump_rate"] + 0
+        $idx["active_jump_rate"] + 0,
+        evaluator_output_hash_attested_idx ? $evaluator_output_hash_attested_idx + 0 : 0,
+        run_log_hash_attested_idx ? $run_log_hash_attested_idx + 0 : 0
     }
   ' "$EXECUTION_CSV"
 )
@@ -237,8 +270,8 @@ total_routing="$(awk -v a="$summary_routing" -v b="$execution_routing" 'BEGIN { 
 total_jump="$(awk -v a="$summary_jump" -v b="$execution_jump" 'BEGIN { printf "%.6f", a + b }')"
 
 {
-  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,benchmark_authenticity_verified,execution_rows,matched_family_rows,output_artifact_rows,run_log_artifact_rows,output_hash_verified_rows,run_log_hash_verified_rows,execution_ready_rows,metric_output_rows,evaluator_execution_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
-  printf "route-memory-v08i,%d,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
+  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,benchmark_authenticity_verified,execution_rows,matched_family_rows,output_artifact_rows,local_output_artifact_rows,nonlocal_output_artifact_rows,run_log_artifact_rows,local_run_log_artifact_rows,nonlocal_run_log_artifact_rows,output_hash_verified_rows,run_log_hash_verified_rows,execution_ready_rows,metric_output_rows,evaluator_execution_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
+  printf "route-memory-v08i,%d,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
     "$benchmark_families" \
     "$evidence_source" \
     "$authenticity_source" \
@@ -247,7 +280,11 @@ total_jump="$(awk -v a="$summary_jump" -v b="$execution_jump" 'BEGIN { printf "%
     "$execution_rows" \
     "$matched_family_rows" \
     "$output_artifact_rows" \
+    "$local_output_artifact_rows" \
+    "$nonlocal_output_artifact_rows" \
     "$run_log_artifact_rows" \
+    "$local_run_log_artifact_rows" \
+    "$nonlocal_run_log_artifact_rows" \
     "$output_hash_verified_rows" \
     "$run_log_hash_verified_rows" \
     "$execution_ready_rows" \
@@ -268,6 +305,14 @@ total_jump="$(awk -v a="$summary_jump" -v b="$execution_jump" 'BEGIN { printf "%
     "$([[ "$output_artifact_rows" -eq "$benchmark_families" && "$run_log_artifact_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
     "$output_artifact_rows" \
     "$run_log_artifact_rows"
+  printf "local-execution-artifacts,%s,output_local=%d log_local=%d\n" \
+    "$([[ "$local_output_artifact_rows" -eq "$benchmark_families" && "$local_run_log_artifact_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
+    "$local_output_artifact_rows" \
+    "$local_run_log_artifact_rows"
+  printf "nonlocal-execution-artifacts,%s,output_nonlocal=%d log_nonlocal=%d\n" \
+    "$([[ "$nonlocal_output_artifact_rows" -eq "$benchmark_families" && "$nonlocal_run_log_artifact_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
+    "$nonlocal_output_artifact_rows" \
+    "$nonlocal_run_log_artifact_rows"
   printf "execution-hashes,%s,output_hash_rows=%d log_hash_rows=%d\n" \
     "$([[ "$output_hash_verified_rows" -eq "$benchmark_families" && "$run_log_hash_verified_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
     "$output_hash_verified_rows" \

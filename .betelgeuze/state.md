@@ -142,6 +142,16 @@
   final-review CSV declares every row real and non-fixture; real benchmark
   verification remains `0` with action
   `external-benchmark-local-final-review-artifact`.
+- v08-l external benchmark remote-review guard passed: HTTPS hash-attested
+  final-review/reviewer artifacts can count as non-local review evidence, but
+  real benchmark verification remains blocked with action
+  `external-benchmark-local-upstream-artifact` if the underlying
+  evidence/execution/attestation/identity artifacts are still local fixtures.
+- v08 lower-chain remote-artifact path passed: HTTPS hash-attested
+  source/result, evaluator output/run-log, attestation, attestor identity,
+  registry, and conflict-disclosure artifacts can pass v08-g/i/j/k mechanics
+  with local artifact counters at `0`, while real benchmark verification still
+  stops before publication with action `external-benchmark-final-review-missing`.
 - h9-f backend boundary passed as CPU-canonical executable parity
   instrumentation: CPU parity tool reports `max_abs_delta=0`,
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
@@ -737,10 +747,14 @@ v08-l supplied final-review fixture:
   matched_attestation_rows = 4
   review_hash_verified_rows = 4
   local_final_review_artifact_rows = 4
+  nonlocal_final_review_artifact_rows = 0
   reviewer_identity_hash_verified_rows = 4
   local_reviewer_identity_rows = 4
+  nonlocal_reviewer_identity_rows = 0
   reviewer_conflict_hash_verified_rows = 4
   local_reviewer_conflict_rows = 4
+  nonlocal_reviewer_conflict_rows = 0
+  local_upstream_artifact_rows = 32
   critical_hash_match_rows = 4
   metric_match_rows = 4
   review_ready_rows = 4
@@ -756,13 +770,68 @@ v08-l local final-review real-source guard:
   review_rows = 4
   review_hash_verified_rows = 4
   local_final_review_artifact_rows = 4
+  nonlocal_final_review_artifact_rows = 0
   local_reviewer_identity_rows = 4
+  nonlocal_reviewer_identity_rows = 0
   local_reviewer_conflict_rows = 4
+  nonlocal_reviewer_conflict_rows = 0
+  local_upstream_artifact_rows = 32
   real_source_declared_rows = 4
   non_fixture_declared_rows = 4
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-local-final-review-artifact
+
+v08-l non-local final-review remote-review guard:
+  final_review_source = provided-csv
+  review_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 0
+  nonlocal_final_review_artifact_rows = 4
+  local_reviewer_identity_rows = 0
+  nonlocal_reviewer_identity_rows = 4
+  local_reviewer_conflict_rows = 0
+  nonlocal_reviewer_conflict_rows = 4
+  local_upstream_evidence_artifact_rows = 8
+  local_upstream_execution_artifact_rows = 8
+  local_upstream_attestation_artifact_rows = 4
+  local_upstream_identity_artifact_rows = 12
+  local_upstream_artifact_rows = 32
+  real_source_declared_rows = 4
+  non_fixture_declared_rows = 4
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-local-upstream-artifact
+
+v08 lower-chain remote-artifact fixture:
+  evidence_source = provided-csv
+  dataset_artifact_rows = 4
+  local_dataset_uri_rows = 0
+  nonlocal_dataset_uri_rows = 4
+  result_artifact_rows = 4
+  local_result_uri_rows = 0
+  nonlocal_result_uri_rows = 4
+  artifact_verifier_ready = 1
+  execution_source = provided-csv
+  local_output_artifact_rows = 0
+  nonlocal_output_artifact_rows = 4
+  local_run_log_artifact_rows = 0
+  nonlocal_run_log_artifact_rows = 4
+  evaluator_execution_verified = 1
+  attestation_source = provided-csv
+  local_attestation_artifact_rows = 0
+  nonlocal_attestation_artifact_rows = 4
+  independent_attestation_verified = 1
+  attestor_identity_source = provided-csv
+  local_identity_artifact_rows = 0
+  nonlocal_identity_artifact_rows = 4
+  local_registry_artifact_rows = 0
+  nonlocal_registry_artifact_rows = 4
+  local_conflict_disclosure_rows = 0
+  nonlocal_conflict_disclosure_rows = 4
+  attestor_identity_verified = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-final-review-missing
 
 h11-a supplied prototype fixture:
   prototype_contract_schema_ready = 1
@@ -976,10 +1045,15 @@ h9-g supplied measured-speed fixture:
   experiments/test_v08_external_benchmark_final_review_import.sh`.
 - Focused v08-l real-source guard verification passed: `bash
   experiments/test_v08_external_benchmark_final_review_real_source_guard.sh`.
+- Focused v08-l remote-review guard verification passed: `bash
+  experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh`.
+- Focused v08 lower-chain remote-artifact verification passed: `bash
+  experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh`.
 - v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
   adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness
-  and the v08-l real-source guard in h9 quick closure.
+  and the v08 lower-chain remote-artifact plus v08-l real-source/remote-review
+  guards in h9 quick closure.
 
 ## Open Boundary
 
@@ -995,8 +1069,8 @@ h9-g supplied measured-speed fixture:
   contracts, connect real RULER/LongBench/codebase/doc-QA source and result
   evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
-  path, replace fixture/local final-review rows with non-local non-fixture
-  review evidence, replace h9-g fixture timing
+  path, replace fixture/local lower-chain and final-review rows with non-local
+  non-fixture evidence, replace h9-g fixture timing
   with real HIP-backed measured GPU speed evidence,
   then replace the h11-a/h11-b fixtures with a real local PC RouteLM prototype
   smoke and non-fixture artifact/provenance evidence.

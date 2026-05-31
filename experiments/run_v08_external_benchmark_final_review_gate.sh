@@ -111,6 +111,11 @@ uri_to_local_path() {
   return 1
 }
 
+is_https_uri() {
+  local uri="$1"
+  [[ "$uri" == https://* ]]
+}
+
 hash_matches() {
   local path="$1"
   local expected="$2"
@@ -165,9 +170,16 @@ IFS=, read -r benchmark_families evidence_source authenticity_source execution_s
 
 declare -A source_hash_by_family
 declare -A provenance_hash_by_family
-while IFS=$'\t' read -r benchmark_family source_hash provenance_hash; do
+local_upstream_evidence_artifact_rows=0
+while IFS=$'\t' read -r benchmark_family dataset_uri source_hash result_uri provenance_hash; do
   source_hash_by_family["$benchmark_family"]="$source_hash"
   provenance_hash_by_family["$benchmark_family"]="$provenance_hash"
+  if uri_to_local_path "$dataset_uri" >/dev/null; then
+    ((local_upstream_evidence_artifact_rows += 1))
+  fi
+  if uri_to_local_path "$result_uri" >/dev/null; then
+    ((local_upstream_evidence_artifact_rows += 1))
+  fi
 done < <(
   awk -F, '
     function die(message, code) {
@@ -176,16 +188,18 @@ done < <(
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
-      required_count = split("benchmark_family source_hash provenance_hash", required, " ")
+      required_count = split("benchmark_family dataset_uri source_hash result_uri provenance_hash", required, " ")
       for (i = 1; i <= required_count; i++) {
         if (!(required[i] in idx)) die("missing v08 final review evidence column: " required[i], 4)
       }
       next
     }
     {
-      printf "%s\t%s\t%s\n",
+      printf "%s\t%s\t%s\t%s\t%s\n",
         $idx["benchmark_family"],
+        $idx["dataset_uri"],
         $idx["source_hash"],
+        $idx["result_uri"],
         $idx["provenance_hash"]
     }
   ' "$EVIDENCE_CSV"
@@ -194,10 +208,17 @@ done < <(
 declare -A evaluator_output_hash_by_family
 declare -A run_log_hash_by_family
 declare -A metric_value_by_family
-while IFS=$'\t' read -r benchmark_family evaluator_output_hash run_log_hash metric_value; do
+local_upstream_execution_artifact_rows=0
+while IFS=$'\t' read -r benchmark_family evaluator_output_uri evaluator_output_hash run_log_uri run_log_hash metric_value; do
   evaluator_output_hash_by_family["$benchmark_family"]="$evaluator_output_hash"
   run_log_hash_by_family["$benchmark_family"]="$run_log_hash"
   metric_value_by_family["$benchmark_family"]="$metric_value"
+  if uri_to_local_path "$evaluator_output_uri" >/dev/null; then
+    ((local_upstream_execution_artifact_rows += 1))
+  fi
+  if uri_to_local_path "$run_log_uri" >/dev/null; then
+    ((local_upstream_execution_artifact_rows += 1))
+  fi
 done < <(
   awk -F, '
     function die(message, code) {
@@ -206,16 +227,18 @@ done < <(
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
-      required_count = split("benchmark_family evaluator_output_hash run_log_hash metric_value", required, " ")
+      required_count = split("benchmark_family evaluator_output_uri evaluator_output_hash run_log_uri run_log_hash metric_value", required, " ")
       for (i = 1; i <= required_count; i++) {
         if (!(required[i] in idx)) die("missing v08 final review execution column: " required[i], 5)
       }
       next
     }
     {
-      printf "%s\t%s\t%s\t%s\n",
+      printf "%s\t%s\t%s\t%s\t%s\t%s\n",
         $idx["benchmark_family"],
+        $idx["evaluator_output_uri"],
         $idx["evaluator_output_hash"],
+        $idx["run_log_uri"],
         $idx["run_log_hash"],
         $idx["metric_value"]
     }
@@ -223,8 +246,12 @@ done < <(
 )
 
 declare -A attestation_id_by_family
-while IFS=$'\t' read -r benchmark_family attestation_id; do
+local_upstream_attestation_artifact_rows=0
+while IFS=$'\t' read -r benchmark_family attestation_id attestation_uri; do
   attestation_id_by_family["$benchmark_family"]="$attestation_id"
+  if uri_to_local_path "$attestation_uri" >/dev/null; then
+    ((local_upstream_attestation_artifact_rows += 1))
+  fi
 done < <(
   awk -F, '
     function die(message, code) {
@@ -233,38 +260,9 @@ done < <(
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
-      required_count = split("benchmark_family attestation_id", required, " ")
+      required_count = split("benchmark_family attestation_id attestation_uri", required, " ")
       for (i = 1; i <= required_count; i++) {
         if (!(required[i] in idx)) die("missing v08 final review attestation column: " required[i], 6)
-      }
-      next
-    }
-    {
-      printf "%s\t%s\n",
-        $idx["benchmark_family"],
-        $idx["attestation_id"]
-    }
-  ' "$ATTESTATION_CSV"
-)
-
-declare -A identity_attestation_id_by_family
-declare -A attestor_registry_id_by_family
-identity_rows=0
-while IFS=$'\t' read -r benchmark_family attestation_id attestor_registry_id; do
-  ((identity_rows += 1))
-  identity_attestation_id_by_family["$benchmark_family"]="$attestation_id"
-  attestor_registry_id_by_family["$benchmark_family"]="$attestor_registry_id"
-done < <(
-  awk -F, '
-    function die(message, code) {
-      print message > "/dev/stderr"
-      exit code
-    }
-    NR == 1 {
-      for (i = 1; i <= NF; i++) idx[$i] = i
-      required_count = split("benchmark_family attestation_id attestor_registry_id", required, " ")
-      for (i = 1; i <= required_count; i++) {
-        if (!(required[i] in idx)) die("missing v08 final review identity column: " required[i], 7)
       }
       next
     }
@@ -272,10 +270,55 @@ done < <(
       printf "%s\t%s\t%s\n",
         $idx["benchmark_family"],
         $idx["attestation_id"],
-        $idx["attestor_registry_id"]
+        $idx["attestation_uri"]
+    }
+  ' "$ATTESTATION_CSV"
+)
+
+declare -A identity_attestation_id_by_family
+declare -A attestor_registry_id_by_family
+identity_rows=0
+local_upstream_identity_artifact_rows=0
+while IFS=$'\t' read -r benchmark_family attestation_id attestor_registry_id attestor_identity_uri attestor_registry_uri conflict_disclosure_uri; do
+  ((identity_rows += 1))
+  identity_attestation_id_by_family["$benchmark_family"]="$attestation_id"
+  attestor_registry_id_by_family["$benchmark_family"]="$attestor_registry_id"
+  if uri_to_local_path "$attestor_identity_uri" >/dev/null; then
+    ((local_upstream_identity_artifact_rows += 1))
+  fi
+  if uri_to_local_path "$attestor_registry_uri" >/dev/null; then
+    ((local_upstream_identity_artifact_rows += 1))
+  fi
+  if uri_to_local_path "$conflict_disclosure_uri" >/dev/null; then
+    ((local_upstream_identity_artifact_rows += 1))
+  fi
+done < <(
+  awk -F, '
+    function die(message, code) {
+      print message > "/dev/stderr"
+      exit code
+    }
+    NR == 1 {
+      for (i = 1; i <= NF; i++) idx[$i] = i
+      required_count = split("benchmark_family attestation_id attestor_registry_id attestor_identity_uri attestor_registry_uri conflict_disclosure_uri", required, " ")
+      for (i = 1; i <= required_count; i++) {
+        if (!(required[i] in idx)) die("missing v08 final review identity column: " required[i], 7)
+      }
+      next
+    }
+    {
+      printf "%s\t%s\t%s\t%s\t%s\t%s\n",
+        $idx["benchmark_family"],
+        $idx["attestation_id"],
+        $idx["attestor_registry_id"],
+        $idx["attestor_identity_uri"],
+        $idx["attestor_registry_uri"],
+        $idx["conflict_disclosure_uri"]
     }
   ' "$IDENTITY_CSV"
 )
+
+local_upstream_artifact_rows=$((local_upstream_evidence_artifact_rows + local_upstream_execution_artifact_rows + local_upstream_attestation_artifact_rows + local_upstream_identity_artifact_rows))
 
 review_rows=0
 matched_attestation_rows=0
@@ -283,12 +326,15 @@ review_ready_rows=0
 review_artifact_rows=0
 review_hash_verified_rows=0
 local_final_review_artifact_rows=0
+nonlocal_final_review_artifact_rows=0
 reviewer_identity_rows=0
 reviewer_identity_hash_verified_rows=0
 local_reviewer_identity_rows=0
+nonlocal_reviewer_identity_rows=0
 reviewer_conflict_rows=0
 reviewer_conflict_hash_verified_rows=0
 local_reviewer_conflict_rows=0
+nonlocal_reviewer_conflict_rows=0
 critical_hash_match_rows=0
 metric_match_rows=0
 review_approved_rows=0
@@ -298,7 +344,7 @@ review_routing="0.000000"
 review_jump="0.000000"
 declare -A review_seen
 
-while IFS=$'\t' read -r benchmark_family attestation_id review_id review_report_uri review_report_hash reviewer_name reviewer_org reviewer_role reviewer_independent reviewer_identity_uri reviewer_identity_hash reviewer_conflict_disclosure_uri reviewer_conflict_disclosure_hash review_scope review_protocol_version reviewed_source_hash reviewed_provenance_hash reviewed_evaluator_output_hash reviewed_run_log_hash reviewed_metric_value reviewed_attestor_registry_id real_benchmark_source_declared fixture_or_synthetic_declared license_review_ready metric_review_ready execution_review_ready attestation_review_ready identity_review_ready conflict_review_ready reproducibility_review_ready review_approved routing_trigger_rate active_jump_rate; do
+while IFS=$'\t' read -r benchmark_family attestation_id review_id review_report_uri review_report_hash reviewer_name reviewer_org reviewer_role reviewer_independent reviewer_identity_uri reviewer_identity_hash reviewer_conflict_disclosure_uri reviewer_conflict_disclosure_hash review_scope review_protocol_version reviewed_source_hash reviewed_provenance_hash reviewed_evaluator_output_hash reviewed_run_log_hash reviewed_metric_value reviewed_attestor_registry_id real_benchmark_source_declared fixture_or_synthetic_declared license_review_ready metric_review_ready execution_review_ready attestation_review_ready identity_review_ready conflict_review_ready reproducibility_review_ready review_approved routing_trigger_rate active_jump_rate review_report_hash_attested reviewer_identity_hash_attested reviewer_conflict_disclosure_hash_attested; do
   ((review_rows += 1))
   if [[ -n "${review_seen[$benchmark_family]:-}" ]]; then
     echo "duplicate v08 final review family: $benchmark_family" >&2
@@ -337,6 +383,12 @@ while IFS=$'\t' read -r benchmark_family attestation_id review_id review_report_
     if hash_matches "$review_path" "$review_report_hash"; then
       ((review_hash_verified_rows += 1))
     fi
+  elif is_https_uri "$review_report_uri" &&
+       [[ "$review_report_hash_attested" == "1" ]] &&
+       is_sha256 "$review_report_hash"; then
+    ((nonlocal_final_review_artifact_rows += 1))
+    ((review_artifact_rows += 1))
+    ((review_hash_verified_rows += 1))
   fi
 
   if reviewer_identity_path="$(uri_to_local_path "$reviewer_identity_uri")"; then
@@ -345,6 +397,12 @@ while IFS=$'\t' read -r benchmark_family attestation_id review_id review_report_
     if hash_matches "$reviewer_identity_path" "$reviewer_identity_hash"; then
       ((reviewer_identity_hash_verified_rows += 1))
     fi
+  elif is_https_uri "$reviewer_identity_uri" &&
+       [[ "$reviewer_identity_hash_attested" == "1" ]] &&
+       is_sha256 "$reviewer_identity_hash"; then
+    ((nonlocal_reviewer_identity_rows += 1))
+    ((reviewer_identity_rows += 1))
+    ((reviewer_identity_hash_verified_rows += 1))
   fi
 
   if reviewer_conflict_path="$(uri_to_local_path "$reviewer_conflict_disclosure_uri")"; then
@@ -353,6 +411,12 @@ while IFS=$'\t' read -r benchmark_family attestation_id review_id review_report_
     if hash_matches "$reviewer_conflict_path" "$reviewer_conflict_disclosure_hash"; then
       ((reviewer_conflict_hash_verified_rows += 1))
     fi
+  elif is_https_uri "$reviewer_conflict_disclosure_uri" &&
+       [[ "$reviewer_conflict_disclosure_hash_attested" == "1" ]] &&
+       is_sha256 "$reviewer_conflict_disclosure_hash"; then
+    ((nonlocal_reviewer_conflict_rows += 1))
+    ((reviewer_conflict_rows += 1))
+    ((reviewer_conflict_hash_verified_rows += 1))
   fi
 
   if [[ -n "${source_hash_by_family[$benchmark_family]:-}" &&
@@ -406,10 +470,13 @@ done < <(
       for (i = 1; i <= required_count; i++) {
         if (!(required[i] in idx)) die("missing v08 final review column: " required[i], 9)
       }
+      review_report_hash_attested_idx = ("review_report_hash_attested" in idx) ? idx["review_report_hash_attested"] : 0
+      reviewer_identity_hash_attested_idx = ("reviewer_identity_hash_attested" in idx) ? idx["reviewer_identity_hash_attested"] : 0
+      reviewer_conflict_disclosure_hash_attested_idx = ("reviewer_conflict_disclosure_hash_attested" in idx) ? idx["reviewer_conflict_disclosure_hash_attested"] : 0
       next
     }
     {
-      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.6f\t%.6f\n",
+      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.6f\t%.6f\t%d\t%d\t%d\n",
         $idx["benchmark_family"],
         $idx["attestation_id"],
         $idx["review_id"],
@@ -442,7 +509,10 @@ done < <(
         $idx["reproducibility_review_ready"] + 0,
         $idx["review_approved"] + 0,
         $idx["routing_trigger_rate"] + 0,
-        $idx["active_jump_rate"] + 0
+        $idx["active_jump_rate"] + 0,
+        review_report_hash_attested_idx ? $review_report_hash_attested_idx + 0 : 0,
+        reviewer_identity_hash_attested_idx ? $reviewer_identity_hash_attested_idx + 0 : 0,
+        reviewer_conflict_disclosure_hash_attested_idx ? $reviewer_conflict_disclosure_hash_attested_idx + 0 : 0
     }
   ' "$REVIEW_CSV"
 )
@@ -466,6 +536,7 @@ if [[ "$attestor_identity_verified" == "1" &&
       "$local_final_review_artifact_rows" -eq 0 &&
       "$local_reviewer_identity_rows" -eq 0 &&
       "$local_reviewer_conflict_rows" -eq 0 &&
+      "$local_upstream_artifact_rows" -eq 0 &&
       "$review_routing" == "0.000000" &&
       "$review_jump" == "0.000000" ]]; then
   final_review_verified=1
@@ -499,6 +570,8 @@ if [[ "$attestor_identity_verified" == "1" ]]; then
           "$local_reviewer_identity_rows" -gt 0 ||
           "$local_reviewer_conflict_rows" -gt 0 ]]; then
     action="external-benchmark-local-final-review-artifact"
+  elif [[ "$local_upstream_artifact_rows" -gt 0 ]]; then
+    action="external-benchmark-local-upstream-artifact"
   elif [[ "$final_review_verified" == "1" ]]; then
     real_external_benchmark_verified=1
     action="external-benchmark-verified"
@@ -509,8 +582,8 @@ total_routing="$(awk -v a="$summary_routing" -v b="$review_routing" 'BEGIN { pri
 total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f", a + b }')"
 
 {
-  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,final_review_source,evaluator_execution_verified,independent_attestation_verified,attestor_identity_verified,identity_action,review_rows,matched_attestation_rows,review_artifact_rows,review_hash_verified_rows,local_final_review_artifact_rows,reviewer_identity_rows,reviewer_identity_hash_verified_rows,local_reviewer_identity_rows,reviewer_conflict_rows,reviewer_conflict_hash_verified_rows,local_reviewer_conflict_rows,critical_hash_match_rows,metric_match_rows,review_ready_rows,review_approved_rows,real_source_declared_rows,non_fixture_declared_rows,final_review_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
-  printf "route-memory-v08l,%d,%s,%s,%s,%s,%s,%s,%d,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
+  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,final_review_source,evaluator_execution_verified,independent_attestation_verified,attestor_identity_verified,identity_action,review_rows,matched_attestation_rows,review_artifact_rows,review_hash_verified_rows,local_final_review_artifact_rows,nonlocal_final_review_artifact_rows,reviewer_identity_rows,reviewer_identity_hash_verified_rows,local_reviewer_identity_rows,nonlocal_reviewer_identity_rows,reviewer_conflict_rows,reviewer_conflict_hash_verified_rows,local_reviewer_conflict_rows,nonlocal_reviewer_conflict_rows,local_upstream_evidence_artifact_rows,local_upstream_execution_artifact_rows,local_upstream_attestation_artifact_rows,local_upstream_identity_artifact_rows,local_upstream_artifact_rows,critical_hash_match_rows,metric_match_rows,review_ready_rows,review_approved_rows,real_source_declared_rows,non_fixture_declared_rows,final_review_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
+  printf "route-memory-v08l,%d,%s,%s,%s,%s,%s,%s,%d,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
     "$benchmark_families" \
     "$evidence_source" \
     "$authenticity_source" \
@@ -527,12 +600,20 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$review_artifact_rows" \
     "$review_hash_verified_rows" \
     "$local_final_review_artifact_rows" \
+    "$nonlocal_final_review_artifact_rows" \
     "$reviewer_identity_rows" \
     "$reviewer_identity_hash_verified_rows" \
     "$local_reviewer_identity_rows" \
+    "$nonlocal_reviewer_identity_rows" \
     "$reviewer_conflict_rows" \
     "$reviewer_conflict_hash_verified_rows" \
     "$local_reviewer_conflict_rows" \
+    "$nonlocal_reviewer_conflict_rows" \
+    "$local_upstream_evidence_artifact_rows" \
+    "$local_upstream_execution_artifact_rows" \
+    "$local_upstream_attestation_artifact_rows" \
+    "$local_upstream_identity_artifact_rows" \
+    "$local_upstream_artifact_rows" \
     "$critical_hash_match_rows" \
     "$metric_match_rows" \
     "$review_ready_rows" \
@@ -586,6 +667,17 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$local_final_review_artifact_rows" \
     "$local_reviewer_identity_rows" \
     "$local_reviewer_conflict_rows"
+  printf "nonlocal-final-review-artifact,%s,review_nonlocal=%d identity_nonlocal=%d conflict_nonlocal=%d\n" \
+    "$([[ "$nonlocal_final_review_artifact_rows" -eq "$benchmark_families" && "$nonlocal_reviewer_identity_rows" -eq "$benchmark_families" && "$nonlocal_reviewer_conflict_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
+    "$nonlocal_final_review_artifact_rows" \
+    "$nonlocal_reviewer_identity_rows" \
+    "$nonlocal_reviewer_conflict_rows"
+  printf "local-upstream-artifact,%s,evidence_local=%d execution_local=%d attestation_local=%d identity_local=%d\n" \
+    "$([[ "$local_upstream_artifact_rows" -eq 0 ]] && echo pass || echo blocked)" \
+    "$local_upstream_evidence_artifact_rows" \
+    "$local_upstream_execution_artifact_rows" \
+    "$local_upstream_attestation_artifact_rows" \
+    "$local_upstream_identity_artifact_rows"
   printf "real-external-benchmark,%s,action=%s\n" \
     "$([[ "$real_external_benchmark_verified" == "1" ]] && echo ready || echo blocked)" \
     "$action"

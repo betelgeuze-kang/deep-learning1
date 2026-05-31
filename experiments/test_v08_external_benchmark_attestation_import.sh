@@ -98,7 +98,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("evidence_source authenticity_source execution_source attestation_source benchmark_authenticity_verified evaluator_execution_verified attestation_rows matched_family_rows attestation_artifact_rows attestation_hash_verified_rows independent_attestor_rows execution_hash_attested_rows metric_attested_rows independent_attestation_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("evidence_source authenticity_source execution_source attestation_source benchmark_authenticity_verified evaluator_execution_verified attestation_rows matched_family_rows attestation_artifact_rows local_attestation_artifact_rows nonlocal_attestation_artifact_rows attestation_hash_verified_rows independent_attestor_rows execution_hash_attested_rows metric_attested_rows independent_attestation_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing v08 attestation import summary column: " required[i], 2)
     }
@@ -115,6 +115,8 @@ awk -F, '
         ($idx["attestation_rows"] + 0) != 4 ||
         ($idx["matched_family_rows"] + 0) != 4 ||
         ($idx["attestation_artifact_rows"] + 0) != 4 ||
+        ($idx["local_attestation_artifact_rows"] + 0) != 4 ||
+        ($idx["nonlocal_attestation_artifact_rows"] + 0) != 0 ||
         ($idx["attestation_hash_verified_rows"] + 0) != 4 ||
         ($idx["independent_attestor_rows"] + 0) != 0 ||
         ($idx["execution_hash_attested_rows"] + 0) != 4 ||
@@ -149,6 +151,8 @@ awk -F, '
     if ($idx["gate"] == "attestation-rows" && $idx["status"] != "pass") die("attestation rows should pass", 21)
     if ($idx["gate"] == "execution-id-match" && $idx["status"] != "pass") die("execution ids should pass", 22)
     if ($idx["gate"] == "attestation-ready" && $idx["status"] != "pass") die("attestation readiness should pass", 23)
+    if ($idx["gate"] == "local-attestation-artifacts" && $idx["status"] != "pass") die("local attestation artifacts should pass", 24)
+    if ($idx["gate"] == "nonlocal-attestation-artifacts" && $idx["status"] != "blocked") die("nonlocal attestation artifacts should block for local fixture", 25)
     if ($idx["gate"] == "attestation-hashes" && $idx["status"] != "pass") die("attestation hashes should pass", 24)
     if ($idx["gate"] == "independent-attestor" && $idx["status"] != "blocked") die("fixture attestor should block independence", 25)
     if ($idx["gate"] == "execution-attested" && $idx["status"] != "pass") die("execution attestation should pass", 26)
@@ -156,7 +160,7 @@ awk -F, '
     if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should still block", 28)
   }
   END {
-    if (rows != 9) die("expected v08 attestation import decision rows", 29)
+    if (rows != 11) die("expected v08 attestation import decision rows", 29)
   }
 ' "$DECISION_CSV"
 

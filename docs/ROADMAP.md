@@ -17,6 +17,8 @@ discrete local-energy learner
 + remote teacher-source runner-owned runtime fetcher contract
 + remote teacher-source live-network import evidence gate
 + external benchmark final-review local-artifact bypass guard
++ external benchmark non-local review / local-upstream guard
++ external benchmark lower-chain HTTPS hash-attested artifact path
 + PC RouteLM / NLG prototype readiness and artifact verification contracts
 + optional HIP backend scaffold / parity instrumentation
 ```
@@ -63,7 +65,11 @@ Last completed checkpoint:
   keeping real benchmark verification blocked until non-fixture source/review
   evidence exists. The real-source guard also prevents local final-review
   artifacts from becoming publishable benchmark evidence by declaration-flag
-  rewrite alone.
+  rewrite alone, and the remote-review guard blocks HTTPS hash-attested reviews
+  when lower-chain artifacts are still local fixtures. The lower-chain
+  remote-artifact path now lets HTTPS hash-attested source/result, execution,
+  attestation, and attestor identity artifacts pass mechanics through v08-k
+  while still blocking publish until final review exists.
 - h9-g closes the measured-speed evidence contract while keeping GPU speedup
   claims deferred until real HIP-backed measurements exist.
 - h11-a closes the PC RouteLM / NLG readiness contract and h11-b closes the
@@ -252,7 +258,13 @@ Current closure:
   IDs, reviewer identity, and conflict disclosure, but fixture/local review
   remains non-publishable without real source review evidence. Its real-source
   guard now blocks local `file://` final-review/reviewer artifacts even when
-  the supplied review CSV declares them real and non-fixture.
+  the supplied review CSV declares them real and non-fixture. The remote-review
+  guard also lets HTTPS hash-attested review artifacts pass the review hash
+  layer while still blocking publication if evidence, execution, attestation,
+  or identity artifacts underneath are local fixtures. The lower-chain remote
+  artifact path now verifies HTTPS hash-attested source/result, execution,
+  attestation, and identity artifacts through v08-k, but still stops before
+  publication until a final review is supplied and real source evidence exists.
 - `h11-a` opens the PC RouteLM / NLG prototype readiness gate. It can consume
   supplied component evidence for a quantized 3B-14B generator, CPU RAM/NVMe
   O(n) route memory, GPU candidate scoring, GPU decoder binding, and an NLG
@@ -269,8 +281,9 @@ Current closure:
   `experiments/test_v09_gpu_backend_closure.sh`.
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q, h7-b,
   v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
-  the v08-l real-source guard, h11-a prototype readiness/import, h11-b artifact
-  verifier/import, and h9-g included in quick closure paths.
+  the v08 lower-chain remote-artifact path and v08-l real-source/remote-review guards, h11-a prototype
+  readiness/import, h11-b artifact verifier/import, and h9-g included in quick
+  closure paths.
   HIP parity remains optional and environment-dependent.
 
 Current next boundary:
@@ -290,8 +303,8 @@ Current next boundary:
 - Provide or connect real external benchmark sources/results through the
   v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
-  path, then replace fixture/local final-review rows with non-local,
-  non-fixture review evidence before any v0.8 comparison claim.
+  path, then replace fixture/local lower-chain rows and final-review rows with
+  non-local, non-fixture evidence before any v0.8 comparison claim.
 - Provide a real PC RouteLM prototype above the h11-a/h11-b contracts before
   any NLG or personal-PC LLM claim.
 - Any stronger claim must survive those matrices without using symbolic
