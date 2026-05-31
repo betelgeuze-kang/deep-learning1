@@ -19,13 +19,13 @@ mkdir -p "$RESULTS_DIR"
 PREFIX="v08_external_benchmark_comparison_gate"
 EVIDENCE_PREFIX="v08_external_benchmark_evidence_ingestion"
 PROMOTION_PREFIX="v07_route_memory_promotion_gate"
-FINAL_REVIEW_PREFIX="v08_external_benchmark_final_review_gate"
+RESULT_AUTHORITY_PREFIX="v08_external_benchmark_result_authority_gate"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v08_external_benchmark_comparison_gate_smoke"
   EVIDENCE_PREFIX="v08_external_benchmark_evidence_ingestion_smoke"
   PROMOTION_PREFIX="v07_route_memory_promotion_gate_smoke"
-  FINAL_REVIEW_PREFIX="v08_external_benchmark_final_review_gate_smoke"
+  RESULT_AUTHORITY_PREFIX="v08_external_benchmark_result_authority_gate_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -33,7 +33,7 @@ fi
 
 PROMOTION_SUMMARY_CSV="$RESULTS_DIR/${PROMOTION_PREFIX}_summary.csv"
 EVIDENCE_SUMMARY_CSV="$RESULTS_DIR/${EVIDENCE_PREFIX}_summary.csv"
-FINAL_REVIEW_SUMMARY_CSV="$RESULTS_DIR/${FINAL_REVIEW_PREFIX}_summary.csv"
+RESULT_AUTHORITY_SUMMARY_CSV="$RESULTS_DIR/${RESULT_AUTHORITY_PREFIX}_summary.csv"
 EVIDENCE_CSV="$RESULTS_DIR/${EVIDENCE_PREFIX}_evidence.csv"
 if [[ ! -s "$PROMOTION_SUMMARY_CSV" ]]; then
   "$ROOT_DIR/experiments/run_v07_route_memory_promotion_gate.sh" "${RUN_ARGS[@]}" >/dev/null
@@ -44,13 +44,13 @@ fi
 if [[ -n "${V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV:-}" ]]; then
   EVIDENCE_CSV="$V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV"
 fi
-"$ROOT_DIR/experiments/run_v08_external_benchmark_final_review_gate.sh" "${RUN_ARGS[@]}" >/dev/null
+"$ROOT_DIR/experiments/run_v08_external_benchmark_result_authority_gate.sh" "${RUN_ARGS[@]}" >/dev/null
 
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 COMPARISON_CSV="$RESULTS_DIR/${PREFIX}_comparison.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVIDENCE_SUMMARY_CSV" -v final_review_summary_csv="$FINAL_REVIEW_SUMMARY_CSV" -v evidence_csv="$EVIDENCE_CSV" -v summary_csv="$SUMMARY_CSV" -v comparison_csv="$COMPARISON_CSV" -v decision_csv="$DECISION_CSV" '
+awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVIDENCE_SUMMARY_CSV" -v final_review_summary_csv="$RESULT_AUTHORITY_SUMMARY_CSV" -v evidence_csv="$EVIDENCE_CSV" -v summary_csv="$SUMMARY_CSV" -v comparison_csv="$COMPARISON_CSV" -v decision_csv="$DECISION_CSV" '
   function die(message, code) {
     print message > "/dev/stderr"
     exit code
@@ -221,7 +221,7 @@ awk -F, -v promotion_csv="$PROMOTION_SUMMARY_CSV" -v evidence_summary_csv="$EVID
       publishable_comparison_ready ? "ready" : "deferred",
       action >> decision_csv
   }
-' "$PROMOTION_SUMMARY_CSV" "$EVIDENCE_SUMMARY_CSV" "$FINAL_REVIEW_SUMMARY_CSV" "$EVIDENCE_CSV"
+' "$PROMOTION_SUMMARY_CSV" "$EVIDENCE_SUMMARY_CSV" "$RESULT_AUTHORITY_SUMMARY_CSV" "$EVIDENCE_CSV"
 
 echo "summary: $SUMMARY_CSV"
 echo "comparison: $COMPARISON_CSV"

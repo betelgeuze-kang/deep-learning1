@@ -152,16 +152,18 @@
   registry, and conflict-disclosure artifacts can pass v08-g/i/j/k mechanics
   with local artifact counters at `0`, while real benchmark verification still
   stops before publication with action `external-benchmark-final-review-missing`.
-- v08-l/v08-s/v08-t/v08-u/v08-v/v08-w remote-full source-import guard passed: fully remote-style
+- v08-l/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x remote-full source-import/result-authority guard passed: fully remote-style
   lower-chain plus final-review fixtures can clear local-artifact counters, and
   supplied contract/verifier/live-review/authority-review/public-registry/live-query/fetch/network-proof/
   real-verification/official-authority fixtures can reach
   `source_import_official_authority_review_ready=1`, but they still keep
-  `source_import_verified=0`, `final_review_verified=0`, and
-  `real_external_benchmark_verified=0` with action
-  `external-benchmark-source-import-official-authority-fixture-only` until
+  `real_external_benchmark_verified=0` unless official result-authority rows
+  also bind the final reviewed result artifacts; supplied result-authority
+  fixtures reach `external_benchmark_result_authority_review_ready=1` but block
+  with action `external-benchmark-result-authority-fixture-only` until
   non-fixture live registry query plus fetch/cache, network proof, and official
-  real-verification plus authority/trust-root records exist.
+  real-verification plus authority/trust-root records and official
+  result-authority/leaderboard records exist.
 - v08-m external benchmark source-import contract gate passed: remote-style
   source-import rows can bind lower-chain source/result/execution URIs and
   hashes to non-local import manifest/fetch-log/reviewer artifacts,
@@ -240,6 +242,14 @@
   still keep `source_import_verified=0` and
   `real_external_benchmark_verified=0` with action
   `external-benchmark-source-import-official-authority-fixture-only`.
+- v08-x external benchmark result-authority gate passed: supplied
+  result-authority rows can bind final-reviewed benchmark result URIs,
+  provenance hashes, evaluator-output hashes, run-log hashes, metric values,
+  official leaderboard/result artifacts, metric/protocol artifacts, submitter
+  identity, authority domains, and result-review flags, reaching
+  `external_benchmark_result_authority_review_ready=1`; fixture result-authority
+  rows still keep `real_external_benchmark_verified=0` with action
+  `external-benchmark-result-authority-fixture-only`.
 - h9-f backend boundary passed as CPU-canonical executable parity
   instrumentation: CPU parity tool reports `max_abs_delta=0`,
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
@@ -1150,6 +1160,29 @@ v08-w supplied fixture source-import official authority fixture:
   real_external_benchmark_verified = 0
   action = external-benchmark-source-import-official-authority-fixture-only
 
+v08-x supplied fixture result authority fixture:
+  external_benchmark_result_authority_source = provided-csv
+  result_authority_rows = 4
+  matched_evidence_rows = 4
+  matched_execution_rows = 4
+  result_uri_match_rows = 4
+  provenance_hash_match_rows = 4
+  evaluator_output_hash_match_rows = 4
+  run_log_hash_match_rows = 4
+  metric_value_match_rows = 4
+  result_authority_artifact_rows = 4
+  nonplaceholder_result_authority_artifact_rows = 4
+  result_authority_hash_attestation_rows = 4
+  result_authority_domain_match_rows = 4
+  official_leaderboard_rows = 4
+  official_metric_rows = 4
+  independent_result_review_rows = 4
+  live_result_observed_rows = 4
+  external_benchmark_result_authority_review_ready = 1
+  external_benchmark_result_authority_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-result-authority-fixture-only
+
 v08 lower-chain remote-artifact fixture:
   evidence_source = provided-csv
   dataset_artifact_rows = 4
@@ -1419,13 +1452,15 @@ h9-g supplied measured-speed fixture:
   `bash experiments/test_v08_external_benchmark_source_import_real_verification_gate.sh`.
 - Focused v08-w source-import official-authority verification passed:
   `bash experiments/test_v08_external_benchmark_source_import_official_authority_gate.sh`.
+- Focused v08-x external benchmark result-authority verification passed:
+  `bash experiments/test_v08_external_benchmark_result_authority_gate.sh`.
 - Focused v08 lower-chain remote-artifact verification passed: `bash
   experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh`.
-- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w backend wrapper verification passed: `bash
+- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x backend wrapper verification passed through `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
-  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/readiness
-  and the v08 lower-chain remote-artifact plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w real-source/remote-review/remote-full
-  source-import guards in h9 quick closure.
+  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/readiness
+  and the v08 lower-chain remote-artifact plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x real-source/remote-review/remote-full
+  source-import/result-authority guards in h9 quick closure.
 
 ## Open Boundary
 
@@ -1439,12 +1474,13 @@ h9-g supplied measured-speed fixture:
   fixture/import with a real non-fixture source import/review chain and connect
   a real external teacher-label source through the h10-j/h10-l source-verification
   contracts, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w
-  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority
+  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x
+  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority
   path, replace fixture/local lower-chain and final-review rows with non-local
   non-fixture evidence plus real public registry/source-import authority review
   and non-fixture live registry query plus fetch/cache, network proof, and
-  official real-verification plus authority/trust-root records, replace h9-g fixture timing
+  official real-verification plus authority/trust-root records and official
+  result-authority/leaderboard records, replace h9-g fixture timing
   with real HIP-backed measured GPU speed evidence,
   then replace the h11-a/h11-b fixtures with a real local PC RouteLM prototype
   smoke and non-fixture artifact/provenance evidence.
