@@ -152,14 +152,16 @@
   registry, and conflict-disclosure artifacts can pass v08-g/i/j/k mechanics
   with local artifact counters at `0`, while real benchmark verification still
   stops before publication with action `external-benchmark-final-review-missing`.
-- v08-l/v08-s/v08-t/v08-u remote-full source-import guard passed: fully remote-style
+- v08-l/v08-s/v08-t/v08-u/v08-v remote-full source-import guard passed: fully remote-style
   lower-chain plus final-review fixtures can clear local-artifact counters, and
-  supplied contract/verifier/live-review/authority-review/public-registry/live-query/fetch/network-proof
-  fixtures can reach `source_import_live_registry_network_proof_ready=1`, but they still keep
+  supplied contract/verifier/live-review/authority-review/public-registry/live-query/fetch/network-proof/
+  real-verification fixtures can reach
+  `source_import_real_verification_review_ready=1`, but they still keep
   `source_import_verified=0`, `final_review_verified=0`, and
   `real_external_benchmark_verified=0` with action
-  `external-benchmark-source-import-live-registry-network-proof-fixture-only` until
-  non-fixture live registry query plus fetch/cache and network proof exists.
+  `external-benchmark-source-import-real-verification-placeholder-domain` until
+  non-fixture live registry query plus fetch/cache, network proof, and official
+  real-verification records exist.
 - v08-m external benchmark source-import contract gate passed: remote-style
   source-import rows can bind lower-chain source/result/execution URIs and
   hashes to non-local import manifest/fetch-log/reviewer artifacts,
@@ -223,6 +225,13 @@
   `source_import_live_registry_network_proof_ready=1` while keeping
   `source_import_verified=0` and `real_external_benchmark_verified=0` with
   action `external-benchmark-source-import-live-registry-network-proof-fixture-only`.
+- v08-v external benchmark source-import real-verification gate passed:
+  supplied verification rows can bind network-proof rows to verification
+  reports, verifier identity artifacts, proof transcripts, and verified cache
+  hashes, reaching `source_import_real_verification_review_ready=1`; placeholder
+  verification domains still keep `source_import_verified=0` and
+  `real_external_benchmark_verified=0` with action
+  `external-benchmark-source-import-real-verification-placeholder-domain`.
 - h9-f backend boundary passed as CPU-canonical executable parity
   instrumentation: CPU parity tool reports `max_abs_delta=0`,
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
@@ -1097,6 +1106,23 @@ v08-u supplied live-style source-import live-registry network-proof fixture:
   real_external_benchmark_verified = 0
   action = external-benchmark-source-import-live-registry-network-proof-fixture-only
 
+v08-v supplied placeholder-domain source-import real verification fixture:
+  source_import_real_verification_source = provided-csv
+  real_verification_rows = 4
+  matched_proof_rows = 4
+  hash_match_rows = 4
+  artifact_metadata_rows = 4
+  nonplaceholder_artifact_rows = 0
+  hash_attestation_rows = 4
+  official_external_registry_rows = 4
+  independent_verifier_rows = 4
+  live_network_observed_rows = 4
+  source_import_real_verification_review_ready = 1
+  source_import_real_verification_ready = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-real-verification-placeholder-domain
+
 v08 lower-chain remote-artifact fixture:
   evidence_source = provided-csv
   dataset_artifact_rows = 4
@@ -1362,12 +1388,14 @@ h9-g supplied measured-speed fixture:
   experiments/test_v08_external_benchmark_source_import_live_registry_fetcher.sh`.
 - Focused v08-u source-import live-registry network-proof verification passed:
   `bash experiments/test_v08_external_benchmark_source_import_live_registry_network_proof.sh`.
+- Focused v08-v source-import real-verification verification passed:
+  `bash experiments/test_v08_external_benchmark_source_import_real_verification_gate.sh`.
 - Focused v08 lower-chain remote-artifact verification passed: `bash
   experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh`.
-- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u backend wrapper verification passed: `bash
+- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
-  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/readiness
-  and the v08 lower-chain remote-artifact plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u real-source/remote-review/remote-full
+  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/readiness
+  and the v08 lower-chain remote-artifact plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v real-source/remote-review/remote-full
   source-import guards in h9 quick closure.
 
 ## Open Boundary
@@ -1382,10 +1410,12 @@ h9-g supplied measured-speed fixture:
   fixture/import with a real non-fixture source import/review chain and connect
   a real external teacher-label source through the h10-j/h10-l source-verification
   contracts, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u
-  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof
+  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v
+  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification
   path, replace fixture/local lower-chain and final-review rows with non-local
-  non-fixture evidence plus real public registry/source-import authority review and non-fixture live registry query plus fetch/cache and network proof, replace h9-g fixture timing
+  non-fixture evidence plus real public registry/source-import authority review
+  and non-fixture live registry query plus fetch/cache, network proof, and
+  official real-verification records, replace h9-g fixture timing
   with real HIP-backed measured GPU speed evidence,
   then replace the h11-a/h11-b fixtures with a real local PC RouteLM prototype
   smoke and non-fixture artifact/provenance evidence.

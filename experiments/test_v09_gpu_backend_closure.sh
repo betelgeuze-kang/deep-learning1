@@ -96,6 +96,8 @@ run_check v08-external-benchmark-source-import-live-registry-fetcher \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_live_registry_fetcher.sh"
 run_check v08-external-benchmark-source-import-live-registry-network-proof \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_live_registry_network_proof.sh"
+run_check v08-external-benchmark-source-import-real-verification \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_real_verification_gate.sh"
 run_check v08-external-benchmark-final-review \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_gate.sh"
 run_check v08-external-benchmark-final-review-import \
