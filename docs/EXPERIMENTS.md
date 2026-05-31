@@ -3,8 +3,8 @@
 ## Current Stage
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q plus h7-b,
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
-v08 lower-chain remote-artifact path plus v08-l real-source/remote-review/remote-full source-import guards, h11-a prototype readiness/import, h11-b
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/readiness,
+v08 lower-chain remote-artifact path plus v08-l/v08-m real-source/remote-review/remote-full source-import guards, h11-a prototype readiness/import, h11-b
 artifact verification/import, and h9-g quick closure:
 
 ```text
@@ -35,7 +35,7 @@ h10-o: remote teacher-source live-fetch attestation contract passes for supplied
 h10-p: runner-owned runtime fetcher replay contract passes for h10-o attestations, while live network fetch and real source verification remain blocked.
 h10-q: live-network runtime evidence import gate passes for provided live-network rows, while real source import remains blocked.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l: external benchmark adapter/evidence
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
 baselines, while placeholder evidence is blocked from counting as real
 benchmark evidence, local artifact hashes and authenticity/evaluator contracts
@@ -49,7 +49,11 @@ evidence/execution/attestation/identity gates can now exercise HTTPS
 hash-attested non-local artifact mechanics without making a final-review or
 publish claim; a fully remote-style lower-chain plus final-review package still
 blocks at `source_import_verified=0` until a real benchmark source import
-verifier exists.
+verifier exists. v08-m now validates the source-import contract around that
+blocker: remote-style source import rows can match source/result/execution
+URIs and hashes, carry non-local import manifest/fetch-log/reviewer artifacts,
+and reach `source_import_contract_ready=1`, while still keeping
+`source_import_verified=0`.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
@@ -79,6 +83,8 @@ bash experiments/test_v08_external_benchmark_final_review_real_source_guard.sh
 bash experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh
 bash experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh
 bash experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh
+bash experiments/test_v08_external_benchmark_source_import_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_remote_contract.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
 bash experiments/test_v11_pc_routelm_prototype_readiness.sh
@@ -104,7 +110,7 @@ Latest completed status:
   source evidence, relabeled local feature rows, or mismatched external-label
   rows.
 - h7 route-memory closure includes h10-q and still blocks default promotion.
-- v08-l is the latest external benchmark evidence boundary; final-review
+- v08-l remains the final-review evidence boundary; final-review
   mechanics pass, but fixture/local review remains non-publishable with
   `real_external_benchmark_verified=0`. The real-source guard now also blocks
   local `file://` final-review artifacts even when real/non-fixture declaration
@@ -117,6 +123,13 @@ Latest completed status:
   The remote-full source-import guard combines non-local lower-chain artifacts
   with non-local final-review artifacts and still blocks publication at
   `source_import_verified=0` with `external-benchmark-source-import-missing`.
+- v08-m is the latest external benchmark source-import contract boundary. It
+  verifies provided source-import rows against lower-chain source/result and
+  execution URIs/hashes, import manifest/fetch-log/reviewer hash attestations,
+  live-network import flags, non-fixture declarations, and independent
+  source-import review. The remote-style fixture reaches
+  `source_import_contract_ready=1`, but `source_import_verified=0` remains with
+  `external-benchmark-source-import-real-verifier-missing`.
 - h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
   pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
 - h11-b is the latest PC RouteLM / NLG boundary; component evidence and local
@@ -135,8 +148,8 @@ The next h10/v08-style experiment should connect h10-q live-network runtime
 evidence to a real non-fixture source import/review chain, replace the local h10-k/h10-l labels with real external teacher-label
 feature labels through the h10-j source-verification contract, real benchmark
 source/result evidence through the
-v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
-import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review path,
+v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m
+import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import path,
 with non-local lower-chain and final-review artifacts plus a real source-import
 verifier, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
 promotion claim or external benchmark comparison.
@@ -1160,6 +1173,8 @@ hashes, metric values, attestation IDs, reviewer identity, and reviewer conflict
 disclosure artifacts. Supplied local review fixtures can pass the mechanical
 checks, but they still keep `real_external_benchmark_verified=0` unless real
 non-fixture source review evidence and a source-import verification path exist.
+v08-m adds that source-import contract path without treating a synthetic
+remote-style fixture as real verification.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
@@ -1198,6 +1213,9 @@ experiments/test_v08_external_benchmark_final_review_real_source_guard.sh
 experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh
 experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh
 experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh
+experiments/run_v08_external_benchmark_source_import_gate.sh
+experiments/test_v08_external_benchmark_source_import_gate.sh
+experiments/test_v08_external_benchmark_source_import_remote_contract.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -1427,6 +1445,27 @@ v08-l fully remote-style source-import guard:
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-source-import-missing
+
+v08-m remote-style source-import contract fixture:
+  source_import_source = provided-csv
+  attestor_identity_verified = 1
+  source_import_rows = 4
+  artifact_uri_match_rows = 4
+  critical_hash_match_rows = 4
+  import_ready_rows = 4
+  import_artifact_rows = 12
+  import_hash_verified_rows = 12
+  local_import_artifact_rows = 0
+  nonlocal_import_artifact_rows = 12
+  live_network_import_rows = 4
+  offline_replay_rows = 0
+  real_source_import_declared_rows = 4
+  non_fixture_declared_rows = 4
+  independent_import_reviewed_rows = 4
+  source_import_contract_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-real-verifier-missing
 ```
 
 Expected:
@@ -1458,6 +1497,8 @@ Expected:
   artifacts are still local fixtures
 - fully remote-style lower-chain and final-review artifacts still cannot become
   publishable without explicit real source-import verification
+- source-import contract mechanics can pass without turning a remote-style
+  fixture into a verified external benchmark
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 

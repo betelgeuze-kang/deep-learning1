@@ -21,6 +21,7 @@ EVIDENCE_PREFIX="v08_external_benchmark_evidence_ingestion"
 EXECUTION_PREFIX="v08_external_benchmark_execution_gate"
 ATTESTATION_PREFIX="v08_external_benchmark_attestation_gate"
 IDENTITY_PREFIX="v08_external_benchmark_attestor_identity_gate"
+SOURCE_IMPORT_PREFIX="v08_external_benchmark_source_import_gate"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v08_external_benchmark_final_review_gate_smoke"
@@ -28,12 +29,14 @@ if [[ "$MODE" == "smoke" ]]; then
   EXECUTION_PREFIX="v08_external_benchmark_execution_gate_smoke"
   ATTESTATION_PREFIX="v08_external_benchmark_attestation_gate_smoke"
   IDENTITY_PREFIX="v08_external_benchmark_attestor_identity_gate_smoke"
+  SOURCE_IMPORT_PREFIX="v08_external_benchmark_source_import_gate_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
 fi
 
 "$ROOT_DIR/experiments/run_v08_external_benchmark_attestor_identity_gate.sh" "${RUN_ARGS[@]}" >/dev/null
+"$ROOT_DIR/experiments/run_v08_external_benchmark_source_import_gate.sh" "${RUN_ARGS[@]}" >/dev/null
 
 EVIDENCE_CSV="$RESULTS_DIR/${EVIDENCE_PREFIX}_evidence.csv"
 EXECUTION_CSV="$RESULTS_DIR/${EXECUTION_PREFIX}_execution.csv"
@@ -85,6 +88,7 @@ else
 fi
 
 IDENTITY_SUMMARY_CSV="$RESULTS_DIR/${IDENTITY_PREFIX}_summary.csv"
+SOURCE_IMPORT_SUMMARY_CSV="$RESULTS_DIR/${SOURCE_IMPORT_PREFIX}_summary.csv"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
@@ -320,11 +324,34 @@ done < <(
 
 local_upstream_artifact_rows=$((local_upstream_evidence_artifact_rows + local_upstream_execution_artifact_rows + local_upstream_attestation_artifact_rows + local_upstream_identity_artifact_rows))
 
-# The current v08-l layer can validate non-local artifact mechanics, but it must
-# not publish an external benchmark claim until a separate real source import
-# verifier proves the benchmark source/result/execution chain is not a replayed
-# or synthetic remote-style fixture.
-source_import_verified=0
+SOURCE_IMPORT_VALUES="$(
+  awk -F, '
+    function die(message, code) {
+      print message > "/dev/stderr"
+      exit code
+    }
+    NR == 1 {
+      for (i = 1; i <= NF; i++) idx[$i] = i
+      required_count = split("source_import_contract_ready source_import_verified action", required, " ")
+      for (i = 1; i <= required_count; i++) {
+        if (!(required[i] in idx)) die("missing v08 final review source import summary column: " required[i], 8)
+      }
+      next
+    }
+    {
+      rows++
+      printf "%d,%d,%s\n",
+        $idx["source_import_contract_ready"] + 0,
+        $idx["source_import_verified"] + 0,
+        $idx["action"]
+    }
+    END {
+      if (rows != 1) die("expected one v08 final review source import summary row", 9)
+    }
+  ' "$SOURCE_IMPORT_SUMMARY_CSV"
+)"
+
+IFS=, read -r source_import_contract_ready source_import_verified source_import_action <<<"$SOURCE_IMPORT_VALUES"
 
 review_rows=0
 matched_attestation_rows=0
@@ -688,9 +715,11 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$local_upstream_execution_artifact_rows" \
     "$local_upstream_attestation_artifact_rows" \
     "$local_upstream_identity_artifact_rows"
-  printf "source-import,%s,verified=%d\n" \
+  printf "source-import,%s,verified=%d contract_ready=%d source_import_action=%s\n" \
     "$([[ "$source_import_verified" == "1" ]] && echo pass || echo blocked)" \
-    "$source_import_verified"
+    "$source_import_verified" \
+    "$source_import_contract_ready" \
+    "$source_import_action"
   printf "real-external-benchmark,%s,action=%s\n" \
     "$([[ "$real_external_benchmark_verified" == "1" ]] && echo ready || echo blocked)" \
     "$action"

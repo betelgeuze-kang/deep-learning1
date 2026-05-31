@@ -158,6 +158,14 @@
   `real_external_benchmark_verified=0` with action
   `external-benchmark-source-import-missing` until a real source import verifier
   exists.
+- v08-m external benchmark source-import contract gate passed: remote-style
+  source-import rows can bind lower-chain source/result/execution URIs and
+  hashes to non-local import manifest/fetch-log/reviewer artifacts,
+  live-network import flags, non-fixture declarations, and independent
+  source-import review, reaching `source_import_contract_ready=1` while
+  keeping `source_import_verified=0` and
+  `real_external_benchmark_verified=0` with action
+  `external-benchmark-source-import-real-verifier-missing`.
 - h9-f backend boundary passed as CPU-canonical executable parity
   instrumentation: CPU parity tool reports `max_abs_delta=0`,
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
@@ -831,6 +839,27 @@ v08-l fully remote-style source-import guard:
   real_external_benchmark_verified = 0
   action = external-benchmark-source-import-missing
 
+v08-m remote-style source-import contract fixture:
+  source_import_source = provided-csv
+  attestor_identity_verified = 1
+  source_import_rows = 4
+  artifact_uri_match_rows = 4
+  critical_hash_match_rows = 4
+  import_ready_rows = 4
+  import_artifact_rows = 12
+  import_hash_verified_rows = 12
+  local_import_artifact_rows = 0
+  nonlocal_import_artifact_rows = 12
+  live_network_import_rows = 4
+  offline_replay_rows = 0
+  real_source_import_declared_rows = 4
+  non_fixture_declared_rows = 4
+  independent_import_reviewed_rows = 4
+  source_import_contract_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-real-verifier-missing
+
 v08 lower-chain remote-artifact fixture:
   evidence_source = provided-csv
   dataset_artifact_rows = 4
@@ -1077,12 +1106,15 @@ h9-g supplied measured-speed fixture:
   experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh`.
 - Focused v08-l remote-full source-import guard verification passed: `bash
   experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh`.
+- Focused v08-m source-import contract verification passed: `bash
+  experiments/test_v08_external_benchmark_source_import_gate.sh` and `bash
+  experiments/test_v08_external_benchmark_source_import_remote_contract.sh`.
 - Focused v08 lower-chain remote-artifact verification passed: `bash
   experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh`.
-- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l backend wrapper verification passed: `bash
+- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
-  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness
-  and the v08 lower-chain remote-artifact plus v08-l real-source/remote-review/remote-full
+  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/readiness
+  and the v08 lower-chain remote-artifact plus v08-l/v08-m real-source/remote-review/remote-full
   source-import guards in h9 quick closure.
 
 ## Open Boundary
@@ -1097,10 +1129,10 @@ h9-g supplied measured-speed fixture:
   fixture/import with a real non-fixture source import/review chain and connect
   a real external teacher-label source through the h10-j/h10-l source-verification
   contracts, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
-  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
+  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m
+  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import
   path, replace fixture/local lower-chain and final-review rows with non-local
-  non-fixture evidence plus a real source-import verifier, replace h9-g fixture timing
+  non-fixture evidence plus real source-import verifier/fetch evidence, replace h9-g fixture timing
   with real HIP-backed measured GPU speed evidence,
   then replace the h11-a/h11-b fixtures with a real local PC RouteLM prototype
   smoke and non-fixture artifact/provenance evidence.

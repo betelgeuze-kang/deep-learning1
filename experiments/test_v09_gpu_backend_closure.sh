@@ -76,6 +76,10 @@ run_check v08-external-benchmark-attestor-identity-import \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_attestor_identity_import.sh"
 run_check v08-external-benchmark-lower-chain-remote-artifacts \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh"
+run_check v08-external-benchmark-source-import-gate \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_gate.sh"
+run_check v08-external-benchmark-source-import-remote-contract \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_remote_contract.sh"
 run_check v08-external-benchmark-final-review \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_gate.sh"
 run_check v08-external-benchmark-final-review-import \

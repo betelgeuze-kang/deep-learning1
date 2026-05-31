@@ -11,8 +11,10 @@ REMOTE_ATTESTATION_CSV="$RESULTS_DIR/v08_external_benchmark_lower_chain_remote_a
 REMOTE_IDENTITY_CSV="$RESULTS_DIR/v08_external_benchmark_lower_chain_remote_identity_fixture.csv"
 LOCAL_REVIEW_CSV="$RESULTS_DIR/v08_external_benchmark_final_review_fixture.csv"
 REMOTE_REVIEW_CSV="$RESULTS_DIR/v08_external_benchmark_final_review_remote_full_fixture.csv"
+SOURCE_IMPORT_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_remote_contract_fixture.csv"
 
 "$ROOT_DIR/experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh" >/dev/null
+"$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_remote_contract.sh" >/dev/null
 "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_import.sh" >/dev/null
 
 awk -F, -v OFS=, '
@@ -51,6 +53,7 @@ V08_EXTERNAL_BENCHMARK_EXECUTION_CSV="$REMOTE_EXECUTION_CSV" \
 V08_EXTERNAL_BENCHMARK_ATTESTATION_CSV="$REMOTE_ATTESTATION_CSV" \
 V08_EXTERNAL_BENCHMARK_ATTESTOR_IDENTITY_CSV="$REMOTE_IDENTITY_CSV" \
 V08_EXTERNAL_BENCHMARK_FINAL_REVIEW_CSV="$REMOTE_REVIEW_CSV" \
+V08_EXTERNAL_BENCHMARK_SOURCE_IMPORT_CSV="$SOURCE_IMPORT_CSV" \
   "$ROOT_DIR/experiments/run_v08_external_benchmark_final_review_gate.sh" --smoke
 
 SUMMARY_CSV="$RESULTS_DIR/v08_external_benchmark_final_review_gate_smoke_summary.csv"
@@ -120,7 +123,7 @@ awk -F, '
     if ($idx["gate"] == "local-final-review-artifact" && $idx["status"] != "pass") die("local final-review artifact guard should pass", 22)
     if ($idx["gate"] == "nonlocal-final-review-artifact" && $idx["status"] != "pass") die("nonlocal final-review artifact guard should pass", 23)
     if ($idx["gate"] == "local-upstream-artifact" && $idx["status"] != "pass") die("local upstream artifact guard should pass", 24)
-    if ($idx["gate"] == "source-import" && $idx["status"] != "blocked") die("source import should block without real import verification", 25)
+    if ($idx["gate"] == "source-import" && ($idx["status"] != "blocked" || $idx["reason"] !~ /contract_ready=1/)) die("source import should block after contract readiness without real verification", 25)
     if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should remain blocked", 26)
   }
   END {
