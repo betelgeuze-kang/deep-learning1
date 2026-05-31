@@ -4,7 +4,7 @@
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q plus h7-b,
 v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
-v08 lower-chain remote-artifact path plus v08-l real-source/remote-review guards, h11-a prototype readiness/import, h11-b
+v08 lower-chain remote-artifact path plus v08-l real-source/remote-review/remote-full source-import guards, h11-a prototype readiness/import, h11-b
 artifact verification/import, and h9-g quick closure:
 
 ```text
@@ -47,7 +47,9 @@ flag rewrite alone, HTTPS hash-attested review artifacts still cannot publish
 if lower-chain benchmark artifacts are local fixtures, and the lower-chain
 evidence/execution/attestation/identity gates can now exercise HTTPS
 hash-attested non-local artifact mechanics without making a final-review or
-publish claim.
+publish claim; a fully remote-style lower-chain plus final-review package still
+blocks at `source_import_verified=0` until a real benchmark source import
+verifier exists.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
@@ -75,6 +77,7 @@ bash experiments/test_v08_external_benchmark_final_review_gate.sh
 bash experiments/test_v08_external_benchmark_final_review_import.sh
 bash experiments/test_v08_external_benchmark_final_review_real_source_guard.sh
 bash experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh
+bash experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh
 bash experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
@@ -111,6 +114,9 @@ Latest completed status:
   path now verifies HTTPS hash-attested source/result, evaluator output/run-log,
   attestation, attestor identity, registry, and conflict-disclosure artifacts
   through v08-k while still stopping at `external-benchmark-final-review-missing`.
+  The remote-full source-import guard combines non-local lower-chain artifacts
+  with non-local final-review artifacts and still blocks publication at
+  `source_import_verified=0` with `external-benchmark-source-import-missing`.
 - h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
   pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
 - h11-b is the latest PC RouteLM / NLG boundary; component evidence and local
@@ -131,7 +137,8 @@ feature labels through the h10-j source-verification contract, real benchmark
 source/result evidence through the
 v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
 import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review path,
-with non-local lower-chain and final-review artifacts, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
+with non-local lower-chain and final-review artifacts plus a real source-import
+verifier, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
 promotion claim or external benchmark comparison.
 
 ## h6 Span-first Guardrail
@@ -1152,7 +1159,7 @@ v08-l verifies final-review reports against source/provenance hashes, execution
 hashes, metric values, attestation IDs, reviewer identity, and reviewer conflict
 disclosure artifacts. Supplied local review fixtures can pass the mechanical
 checks, but they still keep `real_external_benchmark_verified=0` unless real
-non-fixture source review evidence exists.
+non-fixture source review evidence and a source-import verification path exist.
 
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
@@ -1187,6 +1194,10 @@ experiments/test_v08_external_benchmark_attestor_identity_import.sh
 experiments/run_v08_external_benchmark_final_review_gate.sh
 experiments/test_v08_external_benchmark_final_review_gate.sh
 experiments/test_v08_external_benchmark_final_review_import.sh
+experiments/test_v08_external_benchmark_final_review_real_source_guard.sh
+experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh
+experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh
+experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -1353,6 +1364,7 @@ v08-l supplied final-review fixture:
   review_approved_rows = 4
   real_source_declared_rows = 0
   non_fixture_declared_rows = 0
+  source_import_verified = 0
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-real-source-review-missing
@@ -1370,6 +1382,7 @@ v08-l local final-review real-source guard:
   local_upstream_artifact_rows = 32
   real_source_declared_rows = 4
   non_fixture_declared_rows = 4
+  source_import_verified = 0
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-local-final-review-artifact
@@ -1391,9 +1404,29 @@ v08-l non-local final-review remote-review guard:
   local_upstream_artifact_rows = 32
   real_source_declared_rows = 4
   non_fixture_declared_rows = 4
+  source_import_verified = 0
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-local-upstream-artifact
+
+v08-l fully remote-style source-import guard:
+  final_review_source = provided-csv
+  review_rows = 4
+  review_artifact_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 0
+  nonlocal_final_review_artifact_rows = 4
+  local_reviewer_identity_rows = 0
+  nonlocal_reviewer_identity_rows = 4
+  local_reviewer_conflict_rows = 0
+  nonlocal_reviewer_conflict_rows = 4
+  local_upstream_artifact_rows = 0
+  real_source_declared_rows = 4
+  non_fixture_declared_rows = 4
+  source_import_verified = 0
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-missing
 ```
 
 Expected:
@@ -1423,6 +1456,8 @@ Expected:
 - HTTPS hash-attested final-review artifacts can count as non-local review
   evidence, but not while lower-chain evidence/execution/attestation/identity
   artifacts are still local fixtures
+- fully remote-style lower-chain and final-review artifacts still cannot become
+  publishable without explicit real source-import verification
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 

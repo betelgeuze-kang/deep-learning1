@@ -108,7 +108,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("final_review_source evaluator_execution_verified independent_attestation_verified attestor_identity_verified review_rows matched_attestation_rows review_artifact_rows review_hash_verified_rows local_final_review_artifact_rows nonlocal_final_review_artifact_rows reviewer_identity_rows reviewer_identity_hash_verified_rows local_reviewer_identity_rows nonlocal_reviewer_identity_rows reviewer_conflict_rows reviewer_conflict_hash_verified_rows local_reviewer_conflict_rows nonlocal_reviewer_conflict_rows local_upstream_evidence_artifact_rows local_upstream_execution_artifact_rows local_upstream_attestation_artifact_rows local_upstream_identity_artifact_rows local_upstream_artifact_rows critical_hash_match_rows metric_match_rows review_ready_rows review_approved_rows real_source_declared_rows non_fixture_declared_rows final_review_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("final_review_source evaluator_execution_verified independent_attestation_verified attestor_identity_verified review_rows matched_attestation_rows review_artifact_rows review_hash_verified_rows local_final_review_artifact_rows nonlocal_final_review_artifact_rows reviewer_identity_rows reviewer_identity_hash_verified_rows local_reviewer_identity_rows nonlocal_reviewer_identity_rows reviewer_conflict_rows reviewer_conflict_hash_verified_rows local_reviewer_conflict_rows nonlocal_reviewer_conflict_rows local_upstream_evidence_artifact_rows local_upstream_execution_artifact_rows local_upstream_attestation_artifact_rows local_upstream_identity_artifact_rows local_upstream_artifact_rows critical_hash_match_rows metric_match_rows review_ready_rows review_approved_rows real_source_declared_rows non_fixture_declared_rows source_import_verified final_review_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing v08 final review import summary column: " required[i], 2)
     }
@@ -145,6 +145,7 @@ awk -F, '
         ($idx["review_approved_rows"] + 0) != 4 ||
         ($idx["real_source_declared_rows"] + 0) != 0 ||
         ($idx["non_fixture_declared_rows"] + 0) != 0 ||
+        ($idx["source_import_verified"] + 0) != 0 ||
         ($idx["final_review_verified"] + 0) != 0 ||
         ($idx["real_external_benchmark_verified"] + 0) != 0 ||
         $idx["action"] != "external-benchmark-real-source-review-missing") {
@@ -183,10 +184,11 @@ awk -F, '
     if ($idx["gate"] == "local-final-review-artifact" && $idx["status"] != "blocked") die("local final-review artifacts should block for local fixture", 29)
     if ($idx["gate"] == "nonlocal-final-review-artifact" && $idx["status"] != "blocked") die("nonlocal final-review artifacts should block for local fixture", 30)
     if ($idx["gate"] == "local-upstream-artifact" && $idx["status"] != "blocked") die("local upstream artifacts should block for local fixture", 31)
+    if ($idx["gate"] == "source-import" && $idx["status"] != "blocked") die("source import should block for local fixture", 32)
     if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should block", 32)
   }
   END {
-    if (rows != 13) die("expected v08 final review import decision rows", 33)
+    if (rows != 14) die("expected v08 final review import decision rows", 33)
   }
 ' "$DECISION_CSV"
 

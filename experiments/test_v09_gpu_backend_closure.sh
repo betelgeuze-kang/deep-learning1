@@ -84,6 +84,8 @@ run_check v08-external-benchmark-final-review-real-source-guard \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_real_source_guard.sh"
 run_check v08-external-benchmark-final-review-remote-review-guard \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh"
+run_check v08-external-benchmark-final-review-remote-full-guard \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh"
 run_check v11-pc-routelm-prototype-readiness \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_readiness.sh"
 run_check v11-pc-routelm-prototype-import \

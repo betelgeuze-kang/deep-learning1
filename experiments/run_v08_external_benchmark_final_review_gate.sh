@@ -320,6 +320,12 @@ done < <(
 
 local_upstream_artifact_rows=$((local_upstream_evidence_artifact_rows + local_upstream_execution_artifact_rows + local_upstream_attestation_artifact_rows + local_upstream_identity_artifact_rows))
 
+# The current v08-l layer can validate non-local artifact mechanics, but it must
+# not publish an external benchmark claim until a separate real source import
+# verifier proves the benchmark source/result/execution chain is not a replayed
+# or synthetic remote-style fixture.
+source_import_verified=0
+
 review_rows=0
 matched_attestation_rows=0
 review_ready_rows=0
@@ -533,6 +539,7 @@ if [[ "$attestor_identity_verified" == "1" &&
       "$review_approved_rows" -eq "$benchmark_families" &&
       "$real_source_declared_rows" -eq "$benchmark_families" &&
       "$non_fixture_declared_rows" -eq "$benchmark_families" &&
+      "$source_import_verified" == "1" &&
       "$local_final_review_artifact_rows" -eq 0 &&
       "$local_reviewer_identity_rows" -eq 0 &&
       "$local_reviewer_conflict_rows" -eq 0 &&
@@ -572,6 +579,8 @@ if [[ "$attestor_identity_verified" == "1" ]]; then
     action="external-benchmark-local-final-review-artifact"
   elif [[ "$local_upstream_artifact_rows" -gt 0 ]]; then
     action="external-benchmark-local-upstream-artifact"
+  elif [[ "$source_import_verified" != "1" ]]; then
+    action="external-benchmark-source-import-missing"
   elif [[ "$final_review_verified" == "1" ]]; then
     real_external_benchmark_verified=1
     action="external-benchmark-verified"
@@ -582,8 +591,8 @@ total_routing="$(awk -v a="$summary_routing" -v b="$review_routing" 'BEGIN { pri
 total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f", a + b }')"
 
 {
-  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,final_review_source,evaluator_execution_verified,independent_attestation_verified,attestor_identity_verified,identity_action,review_rows,matched_attestation_rows,review_artifact_rows,review_hash_verified_rows,local_final_review_artifact_rows,nonlocal_final_review_artifact_rows,reviewer_identity_rows,reviewer_identity_hash_verified_rows,local_reviewer_identity_rows,nonlocal_reviewer_identity_rows,reviewer_conflict_rows,reviewer_conflict_hash_verified_rows,local_reviewer_conflict_rows,nonlocal_reviewer_conflict_rows,local_upstream_evidence_artifact_rows,local_upstream_execution_artifact_rows,local_upstream_attestation_artifact_rows,local_upstream_identity_artifact_rows,local_upstream_artifact_rows,critical_hash_match_rows,metric_match_rows,review_ready_rows,review_approved_rows,real_source_declared_rows,non_fixture_declared_rows,final_review_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
-  printf "route-memory-v08l,%d,%s,%s,%s,%s,%s,%s,%d,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
+  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,final_review_source,evaluator_execution_verified,independent_attestation_verified,attestor_identity_verified,identity_action,review_rows,matched_attestation_rows,review_artifact_rows,review_hash_verified_rows,local_final_review_artifact_rows,nonlocal_final_review_artifact_rows,reviewer_identity_rows,reviewer_identity_hash_verified_rows,local_reviewer_identity_rows,nonlocal_reviewer_identity_rows,reviewer_conflict_rows,reviewer_conflict_hash_verified_rows,local_reviewer_conflict_rows,nonlocal_reviewer_conflict_rows,local_upstream_evidence_artifact_rows,local_upstream_execution_artifact_rows,local_upstream_attestation_artifact_rows,local_upstream_identity_artifact_rows,local_upstream_artifact_rows,critical_hash_match_rows,metric_match_rows,review_ready_rows,review_approved_rows,real_source_declared_rows,non_fixture_declared_rows,source_import_verified,final_review_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
+  printf "route-memory-v08l,%d,%s,%s,%s,%s,%s,%s,%d,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
     "$benchmark_families" \
     "$evidence_source" \
     "$authenticity_source" \
@@ -620,6 +629,7 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$review_approved_rows" \
     "$real_source_declared_rows" \
     "$non_fixture_declared_rows" \
+    "$source_import_verified" \
     "$final_review_verified" \
     "$real_external_benchmark_verified" \
     "$action" \
@@ -678,6 +688,9 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$local_upstream_execution_artifact_rows" \
     "$local_upstream_attestation_artifact_rows" \
     "$local_upstream_identity_artifact_rows"
+  printf "source-import,%s,verified=%d\n" \
+    "$([[ "$source_import_verified" == "1" ]] && echo pass || echo blocked)" \
+    "$source_import_verified"
   printf "real-external-benchmark,%s,action=%s\n" \
     "$([[ "$real_external_benchmark_verified" == "1" ]] && echo ready || echo blocked)" \
     "$action"

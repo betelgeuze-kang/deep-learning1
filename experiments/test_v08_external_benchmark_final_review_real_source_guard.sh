@@ -52,7 +52,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("final_review_source review_rows review_hash_verified_rows local_final_review_artifact_rows nonlocal_final_review_artifact_rows local_reviewer_identity_rows nonlocal_reviewer_identity_rows local_reviewer_conflict_rows nonlocal_reviewer_conflict_rows local_upstream_artifact_rows real_source_declared_rows non_fixture_declared_rows final_review_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("final_review_source review_rows review_hash_verified_rows local_final_review_artifact_rows nonlocal_final_review_artifact_rows local_reviewer_identity_rows nonlocal_reviewer_identity_rows local_reviewer_conflict_rows nonlocal_reviewer_conflict_rows local_upstream_artifact_rows real_source_declared_rows non_fixture_declared_rows source_import_verified final_review_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing v08 final review real-source guard summary column: " required[i], 3)
     }
@@ -72,6 +72,7 @@ awk -F, '
         ($idx["local_upstream_artifact_rows"] + 0) != 32 ||
         ($idx["real_source_declared_rows"] + 0) != 4 ||
         ($idx["non_fixture_declared_rows"] + 0) != 4 ||
+        ($idx["source_import_verified"] + 0) != 0 ||
         ($idx["final_review_verified"] + 0) != 0 ||
         ($idx["real_external_benchmark_verified"] + 0) != 0 ||
         $idx["action"] != "external-benchmark-local-final-review-artifact") {
@@ -102,10 +103,11 @@ awk -F, '
     if ($idx["gate"] == "local-final-review-artifact" && $idx["status"] != "blocked") die("local final-review artifact guard should block", 21)
     if ($idx["gate"] == "nonlocal-final-review-artifact" && $idx["status"] != "blocked") die("nonlocal final-review artifact row should block for local fixture", 22)
     if ($idx["gate"] == "local-upstream-artifact" && $idx["status"] != "blocked") die("local upstream artifact guard should block for local fixture", 23)
+    if ($idx["gate"] == "source-import" && $idx["status"] != "blocked") die("source import should block for local fixture", 24)
     if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should remain blocked", 24)
   }
   END {
-    if (rows != 13) die("expected v08 final review real-source guard decision rows", 25)
+    if (rows != 14) die("expected v08 final review real-source guard decision rows", 25)
   }
 ' "$DECISION_CSV"
 

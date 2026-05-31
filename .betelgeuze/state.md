@@ -152,6 +152,12 @@
   registry, and conflict-disclosure artifacts can pass v08-g/i/j/k mechanics
   with local artifact counters at `0`, while real benchmark verification still
   stops before publication with action `external-benchmark-final-review-missing`.
+- v08-l remote-full source-import guard passed: fully remote-style lower-chain
+  plus final-review fixtures can clear local-artifact counters, but still keep
+  `source_import_verified=0`, `final_review_verified=0`, and
+  `real_external_benchmark_verified=0` with action
+  `external-benchmark-source-import-missing` until a real source import verifier
+  exists.
 - h9-f backend boundary passed as CPU-canonical executable parity
   instrumentation: CPU parity tool reports `max_abs_delta=0`,
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
@@ -761,6 +767,7 @@ v08-l supplied final-review fixture:
   review_approved_rows = 4
   real_source_declared_rows = 0
   non_fixture_declared_rows = 0
+  source_import_verified = 0
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-real-source-review-missing
@@ -778,6 +785,7 @@ v08-l local final-review real-source guard:
   local_upstream_artifact_rows = 32
   real_source_declared_rows = 4
   non_fixture_declared_rows = 4
+  source_import_verified = 0
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-local-final-review-artifact
@@ -799,9 +807,29 @@ v08-l non-local final-review remote-review guard:
   local_upstream_artifact_rows = 32
   real_source_declared_rows = 4
   non_fixture_declared_rows = 4
+  source_import_verified = 0
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-local-upstream-artifact
+
+v08-l fully remote-style source-import guard:
+  final_review_source = provided-csv
+  review_rows = 4
+  review_artifact_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 0
+  nonlocal_final_review_artifact_rows = 4
+  local_reviewer_identity_rows = 0
+  nonlocal_reviewer_identity_rows = 4
+  local_reviewer_conflict_rows = 0
+  nonlocal_reviewer_conflict_rows = 4
+  local_upstream_artifact_rows = 0
+  real_source_declared_rows = 4
+  non_fixture_declared_rows = 4
+  source_import_verified = 0
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-missing
 
 v08 lower-chain remote-artifact fixture:
   evidence_source = provided-csv
@@ -1047,13 +1075,15 @@ h9-g supplied measured-speed fixture:
   experiments/test_v08_external_benchmark_final_review_real_source_guard.sh`.
 - Focused v08-l remote-review guard verification passed: `bash
   experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh`.
+- Focused v08-l remote-full source-import guard verification passed: `bash
+  experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh`.
 - Focused v08 lower-chain remote-artifact verification passed: `bash
   experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh`.
 - v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
   adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness
-  and the v08 lower-chain remote-artifact plus v08-l real-source/remote-review
-  guards in h9 quick closure.
+  and the v08 lower-chain remote-artifact plus v08-l real-source/remote-review/remote-full
+  source-import guards in h9 quick closure.
 
 ## Open Boundary
 
@@ -1070,7 +1100,7 @@ h9-g supplied measured-speed fixture:
   evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
   path, replace fixture/local lower-chain and final-review rows with non-local
-  non-fixture evidence, replace h9-g fixture timing
+  non-fixture evidence plus a real source-import verifier, replace h9-g fixture timing
   with real HIP-backed measured GPU speed evidence,
   then replace the h11-a/h11-b fixtures with a real local PC RouteLM prototype
   smoke and non-fixture artifact/provenance evidence.
