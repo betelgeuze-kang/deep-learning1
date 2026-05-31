@@ -166,6 +166,20 @@
   keeping `source_import_verified=0` and
   `real_external_benchmark_verified=0` with action
   `external-benchmark-source-import-real-verifier-missing`.
+- v08-n external benchmark source-import verifier gate passed: runner-owned
+  replay verifier rows can bind back to v08-m source-import IDs, import
+  manifest/fetch-log/reviewer hashes, benchmark artifact URIs, and verifier
+  binary/stdout/stderr hashes, reaching `source_import_verifier_ready=1` while
+  keeping `live_network_source_import_verified=0`,
+  `source_import_verified=0`, and `real_external_benchmark_verified=0` with
+  action `external-benchmark-source-import-live-verifier-missing`.
+- v08-o external benchmark live source-import verifier gate passed: supplied
+  live-style verifier rows can clear the replay blocker with
+  `live_network_verifier_rows=4`, `offline_replay_rows=0`, real declarations,
+  and non-fixture declarations, reaching `source_import_live_verifier_ready=1`
+  while keeping `source_import_verified=0` and
+  `real_external_benchmark_verified=0` with action
+  `external-benchmark-source-import-independent-live-review-missing`.
 - h9-f backend boundary passed as CPU-canonical executable parity
   instrumentation: CPU parity tool reports `max_abs_delta=0`,
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
@@ -860,6 +874,42 @@ v08-m remote-style source-import contract fixture:
   real_external_benchmark_verified = 0
   action = external-benchmark-source-import-real-verifier-missing
 
+v08-n runner-owned source-import verifier replay fixture:
+  source_import_verifier_source = runner-owned-replay
+  expected_verifier_rows = 4
+  expected_verifier_artifacts = 12
+  source_import_verifier_rows = 4
+  matched_source_import_rows = 4
+  source_import_id_match_rows = 4
+  import_manifest_hash_match_rows = 4
+  import_fetch_log_hash_match_rows = 4
+  reviewer_identity_hash_match_rows = 4
+  benchmark_artifact_uri_match_rows = 4
+  verifier_artifact_rows = 12
+  verifier_hash_verified_rows = 12
+  local_verifier_artifact_rows = 12
+  nonlocal_verifier_artifact_rows = 0
+  runner_owned_verifier_rows = 4
+  source_import_verifier_ready = 1
+  live_network_source_import_verified = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-verifier-missing
+
+v08-o supplied live-style source-import verifier fixture:
+  source_import_verifier_source = provided-csv
+  expected_verifier_rows = 4
+  source_import_verifier_rows = 4
+  live_network_verifier_rows = 4
+  offline_replay_rows = 0
+  declared_real_verifier_rows = 4
+  non_fixture_declared_rows = 4
+  source_import_verifier_ready = 1
+  source_import_live_verifier_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-independent-live-review-missing
+
 v08 lower-chain remote-artifact fixture:
   evidence_source = provided-csv
   dataset_artifact_rows = 4
@@ -1109,12 +1159,16 @@ h9-g supplied measured-speed fixture:
 - Focused v08-m source-import contract verification passed: `bash
   experiments/test_v08_external_benchmark_source_import_gate.sh` and `bash
   experiments/test_v08_external_benchmark_source_import_remote_contract.sh`.
+- Focused v08-n source-import verifier verification passed: `bash
+  experiments/test_v08_external_benchmark_source_import_verifier_gate.sh`.
+- Focused v08-o live source-import verifier verification passed: `bash
+  experiments/test_v08_external_benchmark_source_import_live_verifier_gate.sh`.
 - Focused v08 lower-chain remote-artifact verification passed: `bash
   experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh`.
-- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m backend wrapper verification passed: `bash
+- v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
-  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/readiness
-  and the v08 lower-chain remote-artifact plus v08-l/v08-m real-source/remote-review/remote-full
+  adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/readiness
+  and the v08 lower-chain remote-artifact plus v08-l/v08-m/v08-n/v08-o real-source/remote-review/remote-full
   source-import guards in h9 quick closure.
 
 ## Open Boundary
@@ -1129,10 +1183,10 @@ h9-g supplied measured-speed fixture:
   fixture/import with a real non-fixture source import/review chain and connect
   a real external teacher-label source through the h10-j/h10-l source-verification
   contracts, connect real RULER/LongBench/codebase/doc-QA source and result
-  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m
-  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import
+  evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o
+  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier
   path, replace fixture/local lower-chain and final-review rows with non-local
-  non-fixture evidence plus real source-import verifier/fetch evidence, replace h9-g fixture timing
+  non-fixture evidence plus independent live source-import review, replace h9-g fixture timing
   with real HIP-backed measured GPU speed evidence,
   then replace the h11-a/h11-b fixtures with a real local PC RouteLM prototype
   smoke and non-fixture artifact/provenance evidence.

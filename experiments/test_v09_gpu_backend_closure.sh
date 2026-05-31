@@ -80,6 +80,10 @@ run_check v08-external-benchmark-source-import-gate \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_gate.sh"
 run_check v08-external-benchmark-source-import-remote-contract \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_remote_contract.sh"
+run_check v08-external-benchmark-source-import-verifier \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_verifier_gate.sh"
+run_check v08-external-benchmark-source-import-live-verifier \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_live_verifier_gate.sh"
 run_check v08-external-benchmark-final-review \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_gate.sh"
 run_check v08-external-benchmark-final-review-import \
