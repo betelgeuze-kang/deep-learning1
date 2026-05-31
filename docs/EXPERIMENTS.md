@@ -40,7 +40,9 @@ baselines, while placeholder evidence is blocked from counting as real
 benchmark evidence, local artifact hashes and authenticity/evaluator contracts
 plus execution/evaluator-output artifacts can be verified, local/fixture
 attestations and final-review artifacts remain diagnostic, and publishable
-comparison is deferred until real independent verification exists.
+comparison is deferred until real independent verification exists; local
+final-review artifacts cannot become real benchmark evidence by declaration
+flag rewrite alone.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
@@ -64,6 +66,9 @@ bash experiments/test_v10_remote_teacher_source_live_fetch_attestation.sh
 bash experiments/test_v10_remote_teacher_source_runtime_fetcher.sh
 bash experiments/test_v10_remote_teacher_source_live_network_import_gate.sh
 bash experiments/test_v10_chunk_credit_distillation_gate.sh
+bash experiments/test_v08_external_benchmark_final_review_gate.sh
+bash experiments/test_v08_external_benchmark_final_review_import.sh
+bash experiments/test_v08_external_benchmark_final_review_real_source_guard.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
 bash experiments/test_v11_pc_routelm_prototype_readiness.sh
@@ -91,7 +96,9 @@ Latest completed status:
 - h7 route-memory closure includes h10-q and still blocks default promotion.
 - v08-l is the latest external benchmark evidence boundary; final-review
   mechanics pass, but fixture/local review remains non-publishable with
-  `real_external_benchmark_verified=0`.
+  `real_external_benchmark_verified=0`. The real-source guard now also blocks
+  local `file://` final-review artifacts even when real/non-fixture declaration
+  flags are rewritten to pass.
 - h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
   pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
 - h11-b is the latest PC RouteLM / NLG boundary; component evidence and local
@@ -1319,8 +1326,11 @@ v08-l supplied final-review fixture:
   review_rows = 4
   matched_attestation_rows = 4
   review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 4
   reviewer_identity_hash_verified_rows = 4
+  local_reviewer_identity_rows = 4
   reviewer_conflict_hash_verified_rows = 4
+  local_reviewer_conflict_rows = 4
   critical_hash_match_rows = 4
   metric_match_rows = 4
   review_ready_rows = 4
@@ -1330,6 +1340,19 @@ v08-l supplied final-review fixture:
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-real-source-review-missing
+
+v08-l local final-review real-source guard:
+  final_review_source = provided-csv
+  review_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 4
+  local_reviewer_identity_rows = 4
+  local_reviewer_conflict_rows = 4
+  real_source_declared_rows = 4
+  non_fixture_declared_rows = 4
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-local-final-review-artifact
 ```
 
 Expected:
@@ -1354,6 +1377,8 @@ Expected:
   external benchmark claim as publishable
 - final-review artifacts can pass mechanical hash/metric/provenance checks
   without treating fixture/local review as a real publishable external benchmark
+- local final-review artifacts must not become publishable external benchmark
+  evidence by rewriting real/non-fixture declaration flags
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 

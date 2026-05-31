@@ -137,6 +137,11 @@
   attestation, identity, and conflict-disclosure linkage, while real benchmark
   verification remains blocked until real non-fixture source review evidence
   exists.
+- v08-l external benchmark final-review real-source guard passed: local
+  final-review/reviewer artifacts remain blocked even when a supplied
+  final-review CSV declares every row real and non-fixture; real benchmark
+  verification remains `0` with action
+  `external-benchmark-local-final-review-artifact`.
 - h9-f backend boundary passed as CPU-canonical executable parity
   instrumentation: CPU parity tool reports `max_abs_delta=0`,
   `proposal_max_abs_delta=0`, `cpu_best=70`, `backend_best=70`, and speed
@@ -731,8 +736,11 @@ v08-l supplied final-review fixture:
   review_rows = 4
   matched_attestation_rows = 4
   review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 4
   reviewer_identity_hash_verified_rows = 4
+  local_reviewer_identity_rows = 4
   reviewer_conflict_hash_verified_rows = 4
+  local_reviewer_conflict_rows = 4
   critical_hash_match_rows = 4
   metric_match_rows = 4
   review_ready_rows = 4
@@ -742,6 +750,19 @@ v08-l supplied final-review fixture:
   final_review_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-real-source-review-missing
+
+v08-l local final-review real-source guard:
+  final_review_source = provided-csv
+  review_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 4
+  local_reviewer_identity_rows = 4
+  local_reviewer_conflict_rows = 4
+  real_source_declared_rows = 4
+  non_fixture_declared_rows = 4
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-local-final-review-artifact
 
 h11-a supplied prototype fixture:
   prototype_contract_schema_ready = 1
@@ -953,10 +974,12 @@ h9-g supplied measured-speed fixture:
 - Focused v08-l verification passed: `bash
   experiments/test_v08_external_benchmark_final_review_gate.sh` and `bash
   experiments/test_v08_external_benchmark_final_review_import.sh`.
+- Focused v08-l real-source guard verification passed: `bash
+  experiments/test_v08_external_benchmark_final_review_real_source_guard.sh`.
 - v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l backend wrapper verification passed: `bash
   experiments/test_v09_gpu_backend_closure.sh`, confirming h7 plus v08
   adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness
-  in h9 quick closure.
+  and the v08-l real-source guard in h9 quick closure.
 
 ## Open Boundary
 
@@ -972,7 +995,8 @@ h9-g supplied measured-speed fixture:
   contracts, connect real RULER/LongBench/codebase/doc-QA source and result
   evidence through the v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
-  path, replace fixture final-review rows with real non-fixture review evidence, replace h9-g fixture timing
+  path, replace fixture/local final-review rows with non-local non-fixture
+  review evidence, replace h9-g fixture timing
   with real HIP-backed measured GPU speed evidence,
   then replace the h11-a/h11-b fixtures with a real local PC RouteLM prototype
   smoke and non-fixture artifact/provenance evidence.

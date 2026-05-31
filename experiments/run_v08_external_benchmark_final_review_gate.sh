@@ -282,10 +282,13 @@ matched_attestation_rows=0
 review_ready_rows=0
 review_artifact_rows=0
 review_hash_verified_rows=0
+local_final_review_artifact_rows=0
 reviewer_identity_rows=0
 reviewer_identity_hash_verified_rows=0
+local_reviewer_identity_rows=0
 reviewer_conflict_rows=0
 reviewer_conflict_hash_verified_rows=0
+local_reviewer_conflict_rows=0
 critical_hash_match_rows=0
 metric_match_rows=0
 review_approved_rows=0
@@ -329,6 +332,7 @@ while IFS=$'\t' read -r benchmark_family attestation_id review_id review_report_
   fi
 
   if review_path="$(uri_to_local_path "$review_report_uri")"; then
+    ((local_final_review_artifact_rows += 1))
     ((review_artifact_rows += 1))
     if hash_matches "$review_path" "$review_report_hash"; then
       ((review_hash_verified_rows += 1))
@@ -336,6 +340,7 @@ while IFS=$'\t' read -r benchmark_family attestation_id review_id review_report_
   fi
 
   if reviewer_identity_path="$(uri_to_local_path "$reviewer_identity_uri")"; then
+    ((local_reviewer_identity_rows += 1))
     ((reviewer_identity_rows += 1))
     if hash_matches "$reviewer_identity_path" "$reviewer_identity_hash"; then
       ((reviewer_identity_hash_verified_rows += 1))
@@ -343,6 +348,7 @@ while IFS=$'\t' read -r benchmark_family attestation_id review_id review_report_
   fi
 
   if reviewer_conflict_path="$(uri_to_local_path "$reviewer_conflict_disclosure_uri")"; then
+    ((local_reviewer_conflict_rows += 1))
     ((reviewer_conflict_rows += 1))
     if hash_matches "$reviewer_conflict_path" "$reviewer_conflict_disclosure_hash"; then
       ((reviewer_conflict_hash_verified_rows += 1))
@@ -457,6 +463,9 @@ if [[ "$attestor_identity_verified" == "1" &&
       "$review_approved_rows" -eq "$benchmark_families" &&
       "$real_source_declared_rows" -eq "$benchmark_families" &&
       "$non_fixture_declared_rows" -eq "$benchmark_families" &&
+      "$local_final_review_artifact_rows" -eq 0 &&
+      "$local_reviewer_identity_rows" -eq 0 &&
+      "$local_reviewer_conflict_rows" -eq 0 &&
       "$review_routing" == "0.000000" &&
       "$review_jump" == "0.000000" ]]; then
   final_review_verified=1
@@ -486,6 +495,10 @@ if [[ "$attestor_identity_verified" == "1" ]]; then
   elif [[ "$real_source_declared_rows" -ne "$benchmark_families" ||
           "$non_fixture_declared_rows" -ne "$benchmark_families" ]]; then
     action="external-benchmark-real-source-review-missing"
+  elif [[ "$local_final_review_artifact_rows" -gt 0 ||
+          "$local_reviewer_identity_rows" -gt 0 ||
+          "$local_reviewer_conflict_rows" -gt 0 ]]; then
+    action="external-benchmark-local-final-review-artifact"
   elif [[ "$final_review_verified" == "1" ]]; then
     real_external_benchmark_verified=1
     action="external-benchmark-verified"
@@ -496,8 +509,8 @@ total_routing="$(awk -v a="$summary_routing" -v b="$review_routing" 'BEGIN { pri
 total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f", a + b }')"
 
 {
-  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,final_review_source,evaluator_execution_verified,independent_attestation_verified,attestor_identity_verified,identity_action,review_rows,matched_attestation_rows,review_artifact_rows,review_hash_verified_rows,reviewer_identity_rows,reviewer_identity_hash_verified_rows,reviewer_conflict_rows,reviewer_conflict_hash_verified_rows,critical_hash_match_rows,metric_match_rows,review_ready_rows,review_approved_rows,real_source_declared_rows,non_fixture_declared_rows,final_review_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
-  printf "route-memory-v08l,%d,%s,%s,%s,%s,%s,%s,%d,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
+  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,final_review_source,evaluator_execution_verified,independent_attestation_verified,attestor_identity_verified,identity_action,review_rows,matched_attestation_rows,review_artifact_rows,review_hash_verified_rows,local_final_review_artifact_rows,reviewer_identity_rows,reviewer_identity_hash_verified_rows,local_reviewer_identity_rows,reviewer_conflict_rows,reviewer_conflict_hash_verified_rows,local_reviewer_conflict_rows,critical_hash_match_rows,metric_match_rows,review_ready_rows,review_approved_rows,real_source_declared_rows,non_fixture_declared_rows,final_review_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
+  printf "route-memory-v08l,%d,%s,%s,%s,%s,%s,%s,%d,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
     "$benchmark_families" \
     "$evidence_source" \
     "$authenticity_source" \
@@ -513,10 +526,13 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$matched_attestation_rows" \
     "$review_artifact_rows" \
     "$review_hash_verified_rows" \
+    "$local_final_review_artifact_rows" \
     "$reviewer_identity_rows" \
     "$reviewer_identity_hash_verified_rows" \
+    "$local_reviewer_identity_rows" \
     "$reviewer_conflict_rows" \
     "$reviewer_conflict_hash_verified_rows" \
+    "$local_reviewer_conflict_rows" \
     "$critical_hash_match_rows" \
     "$metric_match_rows" \
     "$review_ready_rows" \
@@ -565,6 +581,11 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$([[ "$review_ready_rows" -eq "$benchmark_families" && "$review_approved_rows" -eq "$benchmark_families" ]] && echo pass || echo blocked)" \
     "$review_ready_rows" \
     "$review_approved_rows"
+  printf "local-final-review-artifact,%s,review_local=%d identity_local=%d conflict_local=%d\n" \
+    "$([[ "$local_final_review_artifact_rows" -eq 0 && "$local_reviewer_identity_rows" -eq 0 && "$local_reviewer_conflict_rows" -eq 0 ]] && echo pass || echo blocked)" \
+    "$local_final_review_artifact_rows" \
+    "$local_reviewer_identity_rows" \
+    "$local_reviewer_conflict_rows"
   printf "real-external-benchmark,%s,action=%s\n" \
     "$([[ "$real_external_benchmark_verified" == "1" ]] && echo ready || echo blocked)" \
     "$action"

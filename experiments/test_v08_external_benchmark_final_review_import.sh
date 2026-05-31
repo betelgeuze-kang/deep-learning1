@@ -108,7 +108,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("final_review_source evaluator_execution_verified independent_attestation_verified attestor_identity_verified review_rows matched_attestation_rows review_artifact_rows review_hash_verified_rows reviewer_identity_rows reviewer_identity_hash_verified_rows reviewer_conflict_rows reviewer_conflict_hash_verified_rows critical_hash_match_rows metric_match_rows review_ready_rows review_approved_rows real_source_declared_rows non_fixture_declared_rows final_review_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("final_review_source evaluator_execution_verified independent_attestation_verified attestor_identity_verified review_rows matched_attestation_rows review_artifact_rows review_hash_verified_rows local_final_review_artifact_rows reviewer_identity_rows reviewer_identity_hash_verified_rows local_reviewer_identity_rows reviewer_conflict_rows reviewer_conflict_hash_verified_rows local_reviewer_conflict_rows critical_hash_match_rows metric_match_rows review_ready_rows review_approved_rows real_source_declared_rows non_fixture_declared_rows final_review_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing v08 final review import summary column: " required[i], 2)
     }
@@ -124,10 +124,13 @@ awk -F, '
         ($idx["matched_attestation_rows"] + 0) != 4 ||
         ($idx["review_artifact_rows"] + 0) != 4 ||
         ($idx["review_hash_verified_rows"] + 0) != 4 ||
+        ($idx["local_final_review_artifact_rows"] + 0) != 4 ||
         ($idx["reviewer_identity_rows"] + 0) != 4 ||
         ($idx["reviewer_identity_hash_verified_rows"] + 0) != 4 ||
+        ($idx["local_reviewer_identity_rows"] + 0) != 4 ||
         ($idx["reviewer_conflict_rows"] + 0) != 4 ||
         ($idx["reviewer_conflict_hash_verified_rows"] + 0) != 4 ||
+        ($idx["local_reviewer_conflict_rows"] + 0) != 4 ||
         ($idx["critical_hash_match_rows"] + 0) != 4 ||
         ($idx["metric_match_rows"] + 0) != 4 ||
         ($idx["review_ready_rows"] + 0) != 4 ||
@@ -169,10 +172,11 @@ awk -F, '
     if ($idx["gate"] == "metric-match" && $idx["status"] != "pass") die("metric match should pass", 26)
     if ($idx["gate"] == "real-source-declaration" && $idx["status"] != "blocked") die("real-source declaration should block for local fixture", 27)
     if ($idx["gate"] == "review-approval" && $idx["status"] != "pass") die("review approval should pass", 28)
-    if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should block", 29)
+    if ($idx["gate"] == "local-final-review-artifact" && $idx["status"] != "blocked") die("local final-review artifacts should block for local fixture", 29)
+    if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should block", 30)
   }
   END {
-    if (rows != 10) die("expected v08 final review import decision rows", 30)
+    if (rows != 11) die("expected v08 final review import decision rows", 31)
   }
 ' "$DECISION_CSV"
 

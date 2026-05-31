@@ -16,6 +16,7 @@ discrete local-energy learner
 + remote teacher-source live-fetch attestation contract
 + remote teacher-source runner-owned runtime fetcher contract
 + remote teacher-source live-network import evidence gate
++ external benchmark final-review local-artifact bypass guard
 + PC RouteLM / NLG prototype readiness and artifact verification contracts
 + optional HIP backend scaffold / parity instrumentation
 ```
@@ -60,7 +61,9 @@ Last completed checkpoint:
 - h7 quick closure is current through h10-q and keeps default promotion blocked.
 - v08-l closes the final-review mechanics layer for external benchmarks while
   keeping real benchmark verification blocked until non-fixture source/review
-  evidence exists.
+  evidence exists. The real-source guard also prevents local final-review
+  artifacts from becoming publishable benchmark evidence by declaration-flag
+  rewrite alone.
 - h9-g closes the measured-speed evidence contract while keeping GPU speedup
   claims deferred until real HIP-backed measurements exist.
 - h11-a closes the PC RouteLM / NLG readiness contract and h11-b closes the
@@ -247,7 +250,9 @@ Current closure:
 - `v08-l` adds final external review evidence. Supplied local review artifacts
   can match source/provenance hashes, execution hashes, metrics, attestation
   IDs, reviewer identity, and conflict disclosure, but fixture/local review
-  remains non-publishable without real source review evidence.
+  remains non-publishable without real source review evidence. Its real-source
+  guard now blocks local `file://` final-review/reviewer artifacts even when
+  the supplied review CSV declares them real and non-fixture.
 - `h11-a` opens the PC RouteLM / NLG prototype readiness gate. It can consume
   supplied component evidence for a quantized 3B-14B generator, CPU RAM/NVMe
   O(n) route memory, GPU candidate scoring, GPU decoder binding, and an NLG
@@ -264,8 +269,8 @@ Current closure:
   `experiments/test_v09_gpu_backend_closure.sh`.
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q, h7-b,
   v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/readiness,
-  h11-a prototype readiness/import, h11-b artifact verifier/import, and h9-g
-  included in quick closure paths.
+  the v08-l real-source guard, h11-a prototype readiness/import, h11-b artifact
+  verifier/import, and h9-g included in quick closure paths.
   HIP parity remains optional and environment-dependent.
 
 Current next boundary:
@@ -285,8 +290,8 @@ Current next boundary:
 - Provide or connect real external benchmark sources/results through the
   v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l
   import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review
-  path, then replace fixture final-review rows with real non-fixture review
-  evidence before any v0.8 comparison claim.
+  path, then replace fixture/local final-review rows with non-local,
+  non-fixture review evidence before any v0.8 comparison claim.
 - Provide a real PC RouteLM prototype above the h11-a/h11-b contracts before
   any NLG or personal-PC LLM claim.
 - Any stronger claim must survive those matrices without using symbolic
