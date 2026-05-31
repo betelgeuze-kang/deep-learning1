@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-q plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
+As of h10-q plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -27,6 +27,8 @@ discrete local-energy learner
 + external benchmark source-import authoritative-review gate
 + external benchmark source-import public-registry gate
 + external benchmark source-import live-registry-query gate
++ external benchmark source-import live-registry fetch/cache gate
++ external benchmark source-import live-registry network-proof gate
 + PC RouteLM / NLG prototype readiness and artifact verification contracts
 + optional HIP backend scaffold / parity instrumentation
 ```
@@ -79,12 +81,14 @@ Last completed checkpoint:
   attestation, and attestor identity artifacts pass mechanics through v08-k
   while still blocking publish until final review exists. The remote-full
   source-import guard now combines non-local lower-chain and final-review
-  mechanics and carries the source-import chain through v08-s. A supplied
-  contract/verifier/live-review/authority-review/public-registry/live-query fixture can reach
-  `source_import_live_registry_query_ready=1`, but still blocks at
+  mechanics and carries the source-import chain through v08-u. A supplied
+  contract/verifier/live-review/authority-review/public-registry/live-query/
+  fetch/network-proof fixture can reach
+  `source_import_live_registry_network_proof_ready=1`, but still blocks at
   `source_import_verified=0` with
-  `external-benchmark-source-import-live-registry-query-fixture-only` until
-  non-fixture live registry query proof exists.
+  `external-benchmark-source-import-live-registry-network-proof-fixture-only`
+  until non-fixture live registry query plus fetch/cache and network proof
+  exists.
 - v08-m closes the first source-import contract verifier layer. A remote-style
   fixture can bind source/result/execution URIs and hashes to non-local import
   manifest/fetch-log/reviewer artifacts, live-network import flags,
@@ -132,6 +136,19 @@ Last completed checkpoint:
   `source_import_live_registry_query_ready=1`; they still keep
   `source_import_verified=0` and `real_external_benchmark_verified=0` because
   supplied query rows are fixture-only.
+- v08-t closes the source-import live-registry fetch/cache mechanics layer.
+  Runner-owned replay rows can verify fetcher metadata and local response-cache
+  hashes while still blocking network proof, and supplied live-style fetch rows
+  can reach `source_import_live_registry_fetch_ready=1`; they still keep
+  `source_import_verified=0` and `real_external_benchmark_verified=0` because
+  supplied fetch rows are fixture-only.
+- v08-u closes the source-import live-registry network-proof mechanics layer.
+  Runner-owned replay proof rows can verify proof metadata, request/header/TLS/
+  DNS/nonce hashes, runner/tool hashes, and cache/body hash binding while still
+  blocking live network proof. Supplied live-style proof rows can reach
+  `source_import_live_registry_network_proof_ready=1`; they still keep
+  `source_import_verified=0` and `real_external_benchmark_verified=0` because
+  supplied proof rows are fixture-only.
 - h9-g closes the measured-speed evidence contract while keeping GPU speedup
   claims deferred until real HIP-backed measurements exist.
 - h11-a closes the PC RouteLM / NLG readiness contract and h11-b closes the
@@ -328,10 +345,10 @@ Current closure:
   attestation, and identity artifacts through v08-k, but still stops before
   publication until a final review is supplied and real source evidence exists.
   A fully remote-style package now reaches local-upstream counters of `0`, and
-  with v08-s live-query rows it can reach
-  `source_import_live_registry_query_ready=1`; it still remains blocked at
-  `source_import_verified=0` until non-fixture live registry query proof
-  replaces the remote-style mechanics.
+  with v08-s/v08-t/v08-u live-query/fetch/network-proof rows it can reach
+  `source_import_live_registry_network_proof_ready=1`; it still remains
+  blocked at `source_import_verified=0` until non-fixture live registry query,
+  fetch/cache proof, and network proof replace the remote-style mechanics.
 - `v08-m` adds the explicit source-import contract verifier. It validates
   provided source-import rows against lower-chain artifact URI/hash evidence,
   import manifest/fetch-log/reviewer hash attestations, live-network import
@@ -375,6 +392,21 @@ Current closure:
   live-style query rows can reach `source_import_live_registry_query_ready=1`
   while still blocking final verification with
   `external-benchmark-source-import-live-registry-query-fixture-only`.
+- `v08-t` adds the live-registry fetch/cache source-import gate. It accepts
+  fetch rows above v08-s that match source-import IDs, live query IDs, registry
+  response URIs, and response-cache hashes. Runner-owned replay proves fetcher
+  and cache-hash mechanics but not network proof; supplied live-style fetch rows
+  can reach `source_import_live_registry_fetch_ready=1` while still blocking
+  final verification with
+  `external-benchmark-source-import-live-registry-fetch-fixture-only`.
+- `v08-u` adds the live-registry network-proof source-import gate. It accepts
+  proof rows above v08-t that match source-import IDs, live query IDs, fetcher
+  run IDs, registry/cache URIs, cache hashes, proof metadata, and network
+  request/header/TLS/DNS/nonce hashes. Runner-owned replay proves proof
+  mechanics but not live network fetch; supplied live-style proof rows can
+  reach `source_import_live_registry_network_proof_ready=1` while still
+  blocking final verification with
+  `external-benchmark-source-import-live-registry-network-proof-fixture-only`.
 - `h11-a` opens the PC RouteLM / NLG prototype readiness gate. It can consume
   supplied component evidence for a quantized 3B-14B generator, CPU RAM/NVMe
   O(n) route memory, GPU candidate scoring, GPU decoder binding, and an NLG
@@ -390,8 +422,8 @@ Current closure:
   plus measured-speed evidence contracts:
   `experiments/test_v09_gpu_backend_closure.sh`.
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q, h7-b,
-  v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/readiness,
-  the v08 lower-chain remote-artifact path and v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s real-source/remote-review/remote-full source-import guards, h11-a prototype
+  v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/readiness,
+  the v08 lower-chain remote-artifact path and v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u real-source/remote-review/remote-full source-import guards, h11-a prototype
   readiness/import, h11-b artifact verifier/import, and h9-g included in quick
   closure paths.
   HIP parity remains optional and environment-dependent.
@@ -411,12 +443,12 @@ Current next boundary:
   import/review evidence for the HTTPS acquisition package before any default
   promotion or external benchmark comparison.
 - Provide or connect real external benchmark sources/results through the
-  v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s
-  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query
+  v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u
+  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof
   path, then replace fixture/local lower-chain rows and final-review rows with
-  non-local, non-fixture evidence and replace the remote-style v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s
-  contract/replay/live-style/review/authority-review/registry/query fixtures with
-  non-fixture live registry query proof before any v0.8
+  non-local, non-fixture evidence and replace the remote-style v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u
+  contract/replay/live-style/review/authority-review/registry/query/fetch/network-proof fixtures with
+  non-fixture live registry query plus fetch/cache and network proof before any v0.8
   comparison claim.
 - Provide a real PC RouteLM prototype above the h11-a/h11-b contracts before
   any NLG or personal-PC LLM claim.

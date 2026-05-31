@@ -28,6 +28,8 @@ SOURCE_IMPORT_LIVE_REVIEW_PREFIX="v08_external_benchmark_source_import_live_revi
 SOURCE_IMPORT_AUTHORITY_REVIEW_PREFIX="v08_external_benchmark_source_import_authoritative_review_gate"
 SOURCE_IMPORT_PUBLIC_REGISTRY_PREFIX="v08_external_benchmark_source_import_public_registry_gate"
 SOURCE_IMPORT_LIVE_REGISTRY_QUERY_PREFIX="v08_external_benchmark_source_import_live_registry_query_gate"
+SOURCE_IMPORT_LIVE_REGISTRY_FETCHER_PREFIX="v08_external_benchmark_source_import_live_registry_fetcher"
+SOURCE_IMPORT_LIVE_REGISTRY_NETWORK_PROOF_PREFIX="v08_external_benchmark_source_import_live_registry_network_proof"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v08_external_benchmark_final_review_gate_smoke"
@@ -42,6 +44,8 @@ if [[ "$MODE" == "smoke" ]]; then
   SOURCE_IMPORT_AUTHORITY_REVIEW_PREFIX="v08_external_benchmark_source_import_authoritative_review_gate_smoke"
   SOURCE_IMPORT_PUBLIC_REGISTRY_PREFIX="v08_external_benchmark_source_import_public_registry_gate_smoke"
   SOURCE_IMPORT_LIVE_REGISTRY_QUERY_PREFIX="v08_external_benchmark_source_import_live_registry_query_gate_smoke"
+  SOURCE_IMPORT_LIVE_REGISTRY_FETCHER_PREFIX="v08_external_benchmark_source_import_live_registry_fetcher_smoke"
+  SOURCE_IMPORT_LIVE_REGISTRY_NETWORK_PROOF_PREFIX="v08_external_benchmark_source_import_live_registry_network_proof_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -55,6 +59,8 @@ fi
 "$ROOT_DIR/experiments/run_v08_external_benchmark_source_import_authoritative_review_gate.sh" "${RUN_ARGS[@]}" >/dev/null
 "$ROOT_DIR/experiments/run_v08_external_benchmark_source_import_public_registry_gate.sh" "${RUN_ARGS[@]}" >/dev/null
 "$ROOT_DIR/experiments/run_v08_external_benchmark_source_import_live_registry_query_gate.sh" "${RUN_ARGS[@]}" >/dev/null
+"$ROOT_DIR/experiments/run_v08_external_benchmark_source_import_live_registry_fetcher.sh" "${RUN_ARGS[@]}" >/dev/null
+"$ROOT_DIR/experiments/run_v08_external_benchmark_source_import_live_registry_network_proof.sh" "${RUN_ARGS[@]}" >/dev/null
 
 EVIDENCE_CSV="$RESULTS_DIR/${EVIDENCE_PREFIX}_evidence.csv"
 EXECUTION_CSV="$RESULTS_DIR/${EXECUTION_PREFIX}_execution.csv"
@@ -106,7 +112,7 @@ else
 fi
 
 IDENTITY_SUMMARY_CSV="$RESULTS_DIR/${IDENTITY_PREFIX}_summary.csv"
-SOURCE_IMPORT_SUMMARY_CSV="$RESULTS_DIR/${SOURCE_IMPORT_LIVE_REGISTRY_QUERY_PREFIX}_summary.csv"
+SOURCE_IMPORT_SUMMARY_CSV="$RESULTS_DIR/${SOURCE_IMPORT_LIVE_REGISTRY_NETWORK_PROOF_PREFIX}_summary.csv"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
@@ -350,7 +356,7 @@ SOURCE_IMPORT_VALUES="$(
     }
     NR == 1 {
       for (i = 1; i <= NF; i++) idx[$i] = i
-      required_count = split("source_import_contract_ready source_import_verifier_ready source_import_live_verifier_ready source_import_independent_live_review_ready source_import_authoritative_review_ready source_import_public_registry_ready source_import_live_registry_query_ready source_import_verified action", required, " ")
+      required_count = split("source_import_contract_ready source_import_verifier_ready source_import_live_verifier_ready source_import_independent_live_review_ready source_import_authoritative_review_ready source_import_public_registry_ready source_import_live_registry_query_ready source_import_live_registry_fetcher_ready source_import_live_registry_fetch_ready source_import_live_registry_network_proof_runner_ready source_import_live_registry_network_proof_ready source_import_verified action", required, " ")
       for (i = 1; i <= required_count; i++) {
         if (!(required[i] in idx)) die("missing v08 final review source import summary column: " required[i], 8)
       }
@@ -358,7 +364,7 @@ SOURCE_IMPORT_VALUES="$(
     }
     {
       rows++
-      printf "%d,%d,%d,%d,%d,%d,%d,%d,%s\n",
+      printf "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n",
         $idx["source_import_contract_ready"] + 0,
         $idx["source_import_verifier_ready"] + 0,
         $idx["source_import_live_verifier_ready"] + 0,
@@ -366,6 +372,10 @@ SOURCE_IMPORT_VALUES="$(
         $idx["source_import_authoritative_review_ready"] + 0,
         $idx["source_import_public_registry_ready"] + 0,
         $idx["source_import_live_registry_query_ready"] + 0,
+        $idx["source_import_live_registry_fetcher_ready"] + 0,
+        $idx["source_import_live_registry_fetch_ready"] + 0,
+        $idx["source_import_live_registry_network_proof_runner_ready"] + 0,
+        $idx["source_import_live_registry_network_proof_ready"] + 0,
         $idx["source_import_verified"] + 0,
         $idx["action"]
     }
@@ -375,7 +385,7 @@ SOURCE_IMPORT_VALUES="$(
   ' "$SOURCE_IMPORT_SUMMARY_CSV"
 )"
 
-IFS=, read -r source_import_contract_ready source_import_verifier_ready source_import_live_verifier_ready source_import_independent_live_review_ready source_import_authoritative_review_ready source_import_public_registry_ready source_import_live_registry_query_ready source_import_verified source_import_action <<<"$SOURCE_IMPORT_VALUES"
+IFS=, read -r source_import_contract_ready source_import_verifier_ready source_import_live_verifier_ready source_import_independent_live_review_ready source_import_authoritative_review_ready source_import_public_registry_ready source_import_live_registry_query_ready source_import_live_registry_fetcher_ready source_import_live_registry_fetch_ready source_import_live_registry_network_proof_runner_ready source_import_live_registry_network_proof_ready source_import_verified source_import_action <<<"$SOURCE_IMPORT_VALUES"
 
 review_rows=0
 matched_attestation_rows=0
@@ -642,8 +652,8 @@ total_routing="$(awk -v a="$summary_routing" -v b="$review_routing" 'BEGIN { pri
 total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f", a + b }')"
 
 {
-  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,final_review_source,evaluator_execution_verified,independent_attestation_verified,attestor_identity_verified,identity_action,review_rows,matched_attestation_rows,review_artifact_rows,review_hash_verified_rows,local_final_review_artifact_rows,nonlocal_final_review_artifact_rows,reviewer_identity_rows,reviewer_identity_hash_verified_rows,local_reviewer_identity_rows,nonlocal_reviewer_identity_rows,reviewer_conflict_rows,reviewer_conflict_hash_verified_rows,local_reviewer_conflict_rows,nonlocal_reviewer_conflict_rows,local_upstream_evidence_artifact_rows,local_upstream_execution_artifact_rows,local_upstream_attestation_artifact_rows,local_upstream_identity_artifact_rows,local_upstream_artifact_rows,critical_hash_match_rows,metric_match_rows,review_ready_rows,review_approved_rows,real_source_declared_rows,non_fixture_declared_rows,source_import_contract_ready,source_import_verifier_ready,source_import_live_verifier_ready,source_import_independent_live_review_ready,source_import_authoritative_review_ready,source_import_public_registry_ready,source_import_live_registry_query_ready,source_import_verified,final_review_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
-  printf "route-memory-v08l,%d,%s,%s,%s,%s,%s,%s,%d,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
+  echo "benchmark_scope,benchmark_families,evidence_source,authenticity_source,execution_source,attestation_source,attestor_identity_source,final_review_source,evaluator_execution_verified,independent_attestation_verified,attestor_identity_verified,identity_action,review_rows,matched_attestation_rows,review_artifact_rows,review_hash_verified_rows,local_final_review_artifact_rows,nonlocal_final_review_artifact_rows,reviewer_identity_rows,reviewer_identity_hash_verified_rows,local_reviewer_identity_rows,nonlocal_reviewer_identity_rows,reviewer_conflict_rows,reviewer_conflict_hash_verified_rows,local_reviewer_conflict_rows,nonlocal_reviewer_conflict_rows,local_upstream_evidence_artifact_rows,local_upstream_execution_artifact_rows,local_upstream_attestation_artifact_rows,local_upstream_identity_artifact_rows,local_upstream_artifact_rows,critical_hash_match_rows,metric_match_rows,review_ready_rows,review_approved_rows,real_source_declared_rows,non_fixture_declared_rows,source_import_contract_ready,source_import_verifier_ready,source_import_live_verifier_ready,source_import_independent_live_review_ready,source_import_authoritative_review_ready,source_import_public_registry_ready,source_import_live_registry_query_ready,source_import_live_registry_fetcher_ready,source_import_live_registry_fetch_ready,source_import_live_registry_network_proof_runner_ready,source_import_live_registry_network_proof_ready,source_import_verified,final_review_verified,real_external_benchmark_verified,action,routing_trigger_rate,active_jump_rate"
+  printf "route-memory-v08l,%d,%s,%s,%s,%s,%s,%s,%d,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.6f,%.6f\n" \
     "$benchmark_families" \
     "$evidence_source" \
     "$authenticity_source" \
@@ -687,6 +697,10 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$source_import_authoritative_review_ready" \
     "$source_import_public_registry_ready" \
     "$source_import_live_registry_query_ready" \
+    "$source_import_live_registry_fetcher_ready" \
+    "$source_import_live_registry_fetch_ready" \
+    "$source_import_live_registry_network_proof_runner_ready" \
+    "$source_import_live_registry_network_proof_ready" \
     "$source_import_verified" \
     "$final_review_verified" \
     "$real_external_benchmark_verified" \
@@ -746,7 +760,7 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$local_upstream_execution_artifact_rows" \
     "$local_upstream_attestation_artifact_rows" \
     "$local_upstream_identity_artifact_rows"
-  printf "source-import,%s,verified=%d contract_ready=%d verifier_ready=%d live_verifier_ready=%d live_review_ready=%d auth_review_ready=%d public_registry_ready=%d live_registry_query_ready=%d source_import_action=%s\n" \
+  printf "source-import,%s,verified=%d contract_ready=%d verifier_ready=%d live_verifier_ready=%d live_review_ready=%d auth_review_ready=%d public_registry_ready=%d live_registry_query_ready=%d live_registry_fetcher_ready=%d live_registry_fetch_ready=%d live_registry_network_proof_runner_ready=%d live_registry_network_proof_ready=%d source_import_action=%s\n" \
     "$([[ "$source_import_verified" == "1" ]] && echo pass || echo blocked)" \
     "$source_import_verified" \
     "$source_import_contract_ready" \
@@ -756,6 +770,10 @@ total_jump="$(awk -v a="$summary_jump" -v b="$review_jump" 'BEGIN { printf "%.6f
     "$source_import_authoritative_review_ready" \
     "$source_import_public_registry_ready" \
     "$source_import_live_registry_query_ready" \
+    "$source_import_live_registry_fetcher_ready" \
+    "$source_import_live_registry_fetch_ready" \
+    "$source_import_live_registry_network_proof_runner_ready" \
+    "$source_import_live_registry_network_proof_ready" \
     "$source_import_action"
   printf "real-external-benchmark,%s,action=%s\n" \
     "$([[ "$real_external_benchmark_verified" == "1" ]] && echo ready || echo blocked)" \

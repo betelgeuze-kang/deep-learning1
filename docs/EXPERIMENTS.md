@@ -3,8 +3,8 @@
 ## Current Stage
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q plus h7-b,
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/readiness,
-v08 lower-chain remote-artifact path plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s real-source/remote-review/remote-full source-import guards, h11-a prototype readiness/import, h11-b
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/readiness,
+v08 lower-chain remote-artifact path plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u real-source/remote-review/remote-full source-import guards, h11-a prototype readiness/import, h11-b
 artifact verification/import, and h9-g quick closure:
 
 ```text
@@ -35,7 +35,7 @@ h10-o: remote teacher-source live-fetch attestation contract passes for supplied
 h10-p: runner-owned runtime fetcher replay contract passes for h10-o attestations, while live network fetch and real source verification remain blocked.
 h10-q: live-network runtime evidence import gate passes for provided live-network rows, while real source import remains blocked.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s: external benchmark adapter/evidence
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
 baselines, while placeholder evidence is blocked from counting as real
 benchmark evidence, local artifact hashes and authenticity/evaluator contracts
@@ -48,10 +48,10 @@ if lower-chain benchmark artifacts are local fixtures, and the lower-chain
 evidence/execution/attestation/identity gates can now exercise HTTPS
 hash-attested non-local artifact mechanics without making a final-review or
 publish claim; a fully remote-style lower-chain plus final-review package now
-reaches `source_import_live_registry_query_ready=1` when supplied with the
-v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s fixture chain, but it still blocks at
-`source_import_verified=0` because supplied live query rows remain
-fixture-only. v08-m now validates the source-import contract around that
+reaches `source_import_live_registry_network_proof_ready=1` when supplied with
+the v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u fixture chain, but it
+still blocks at `source_import_verified=0` because supplied live network-proof
+rows remain fixture-only. v08-m now validates the source-import contract around that
 blocker: remote-style source import rows can match source/result/execution
 URIs and hashes, carry non-local import manifest/fetch-log/reviewer artifacts,
 and reach `source_import_contract_ready=1`, while still keeping
@@ -93,6 +93,19 @@ supplied live-style query rows can bind registry response hashes back to the
 public-registry rows and reach `source_import_live_registry_query_ready=1`, but
 `source_import_verified=0` remains blocked with
 `external-benchmark-source-import-live-registry-query-fixture-only`.
+v08-t adds the live-registry fetch/cache layer above v08-s. Runner-owned replay
+rows can bind live-query rows to local response-cache artifacts and verify
+fetcher/cache hashes while still blocking network proof, and supplied
+live-style fetch rows can reach `source_import_live_registry_fetch_ready=1`,
+but `source_import_verified=0` remains blocked with
+`external-benchmark-source-import-live-registry-fetch-fixture-only`.
+v08-u adds the live-registry network-proof layer above v08-t. Runner-owned
+replay proof rows bind fetch/cache rows to proof metadata, request/header/TLS/
+DNS/nonce hashes, tool hashes, and cache/body hashes while remaining non-live;
+supplied live-style proof rows can reach
+`source_import_live_registry_network_proof_ready=1`, but
+`source_import_verified=0` remains blocked with
+`external-benchmark-source-import-live-registry-network-proof-fixture-only`.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
@@ -130,6 +143,8 @@ bash experiments/test_v08_external_benchmark_source_import_live_review_gate.sh
 bash experiments/test_v08_external_benchmark_source_import_authoritative_review_gate.sh
 bash experiments/test_v08_external_benchmark_source_import_public_registry_gate.sh
 bash experiments/test_v08_external_benchmark_source_import_live_registry_query_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_live_registry_fetcher.sh
+bash experiments/test_v08_external_benchmark_source_import_live_registry_network_proof.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
 bash experiments/test_v11_pc_routelm_prototype_readiness.sh
@@ -167,11 +182,11 @@ Latest completed status:
   through v08-k while still stopping at `external-benchmark-final-review-missing`.
   The remote-full source-import guard combines non-local lower-chain artifacts
   with non-local final-review artifacts and now carries the source-import
-  blocker forward through v08-s: a fully supplied contract/verifier/live-review/
-  authority-review/public-registry/live-query fixture reaches
-  `source_import_live_registry_query_ready=1` but still blocks publication at
-  `source_import_verified=0` with
-  `external-benchmark-source-import-live-registry-query-fixture-only`.
+  blocker forward through v08-u: a fully supplied contract/verifier/live-review/
+  authority-review/public-registry/live-query/fetch/network-proof fixture
+  reaches `source_import_live_registry_network_proof_ready=1` but still blocks
+  publication at `source_import_verified=0` with
+  `external-benchmark-source-import-live-registry-network-proof-fixture-only`.
 - v08-m is the external benchmark source-import contract boundary. It
   verifies provided source-import rows against lower-chain source/result and
   execution URIs/hashes, import manifest/fetch-log/reviewer hash attestations,
@@ -218,13 +233,16 @@ Latest completed status:
   `source_import_public_registry_ready=1`, but still keeps
   `source_import_verified=0` and `real_external_benchmark_verified=0` until a
   runner-owned live registry query/fetch path replaces supplied registry rows.
-- v08-s is the latest external benchmark source-import live-registry-query
-  boundary. Runner-owned replay rows can verify query-tool/hash mechanics but
-  still block live network evidence; supplied live-style query rows can bind
-  fetched registry response hashes back to v08-r registry rows and reach
-  `source_import_live_registry_query_ready=1`, but still keep
+- v08-u is the latest external benchmark source-import live-registry
+  network-proof boundary. v08-s query rows can reach
+  `source_import_live_registry_query_ready=1`; v08-t verifies runner-owned
+  fetcher metadata plus local registry response-cache hashes; and v08-u binds
+  those fetch rows to network-proof metadata, request/header/TLS/DNS/nonce
+  hashes, runner/tool hashes, and cache/body hash checks. Replay remains
+  non-network evidence, while supplied live-style proof rows can reach
+  `source_import_live_registry_network_proof_ready=1` but still keep
   `source_import_verified=0` and `real_external_benchmark_verified=0` as
-  `external-benchmark-source-import-live-registry-query-fixture-only`.
+  `external-benchmark-source-import-live-registry-network-proof-fixture-only`.
 - h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
   pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
 - h11-b is the latest PC RouteLM / NLG boundary; component evidence and local
@@ -243,9 +261,9 @@ The next h10/v08-style experiment should connect h10-q live-network runtime
 evidence to a real non-fixture source import/review chain, replace the local h10-k/h10-l labels with real external teacher-label
 feature labels through the h10-j source-verification contract, real benchmark
 source/result evidence through the
-v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s
-import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query path,
-with non-local lower-chain and final-review artifacts plus non-fixture live registry query
+v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u
+import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof path,
+with non-local lower-chain and final-review artifacts plus non-fixture live registry query/fetch/network-proof
 evidence, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
 promotion claim or external benchmark comparison.
 
@@ -1338,6 +1356,8 @@ experiments/run_v08_external_benchmark_source_import_public_registry_gate.sh
 experiments/test_v08_external_benchmark_source_import_public_registry_gate.sh
 experiments/run_v08_external_benchmark_source_import_live_registry_query_gate.sh
 experiments/test_v08_external_benchmark_source_import_live_registry_query_gate.sh
+experiments/run_v08_external_benchmark_source_import_live_registry_fetcher.sh
+experiments/test_v08_external_benchmark_source_import_live_registry_fetcher.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -1713,6 +1733,66 @@ v08-s supplied live-style source-import live-registry-query fixture:
   source_import_verified = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-source-import-live-registry-query-fixture-only
+
+v08-t runner-owned source-import live-registry fetch replay fixture:
+  live_registry_fetch_source = runner-owned-replay
+  fetch_rows = 4
+  matched_query_rows = 4
+  cache_hash_match_rows = 4
+  registry_cache_hash_verified_rows = 4
+  registry_entry_cache_hash_verified_rows = 4
+  source_import_live_registry_fetcher_ready = 1
+  network_fetch_rows = 0
+  offline_replay_rows = 4
+  source_import_live_registry_fetch_ready = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-network-fetch-proof-missing
+
+v08-t supplied live-style source-import live-registry fetch fixture:
+  live_registry_fetch_source = provided-csv
+  fetch_rows = 4
+  matched_query_rows = 4
+  cache_hash_match_rows = 4
+  registry_cache_hash_verified_rows = 4
+  registry_entry_cache_hash_verified_rows = 4
+  source_import_live_registry_fetcher_ready = 1
+  network_fetch_rows = 4
+  offline_replay_rows = 0
+  source_import_live_registry_fetch_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-fetch-fixture-only
+
+v08-u runner-owned source-import live-registry network-proof replay fixture:
+  live_registry_network_proof_source = runner-owned-replay
+  network_proof_rows = 4
+  matched_fetch_rows = 4
+  body_hash_match_rows = 4
+  registry_cache_hash_verified_rows = 4
+  registry_entry_cache_hash_verified_rows = 4
+  source_import_live_registry_network_proof_runner_ready = 1
+  network_fetch_rows = 0
+  offline_replay_rows = 4
+  source_import_live_registry_network_proof_ready = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-network-proof-nonlive
+
+v08-u supplied live-style source-import live-registry network-proof fixture:
+  live_registry_network_proof_source = provided-csv
+  network_proof_rows = 4
+  matched_fetch_rows = 4
+  body_hash_match_rows = 4
+  registry_cache_hash_verified_rows = 4
+  registry_entry_cache_hash_verified_rows = 4
+  source_import_live_registry_network_proof_runner_ready = 1
+  network_fetch_rows = 4
+  offline_replay_rows = 0
+  source_import_live_registry_network_proof_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-network-proof-fixture-only
 ```
 
 Expected:
@@ -1752,6 +1832,10 @@ Expected:
   independently reviewed source-import verification
 - independent source-import live-review mechanics can pass without treating a
   supplied review package as authoritative source-import verification
+- live-registry fetch/cache mechanics can pass without treating supplied fetch
+  rows as real network proof
+- live-registry network-proof mechanics can pass without treating supplied
+  proof rows as real source-import verification
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 

@@ -17,11 +17,17 @@ LIVE_REVIEW_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_live_review_f
 AUTHORITY_REVIEW_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_authoritative_review_fixture.csv"
 PUBLIC_REGISTRY_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_public_registry_fixture.csv"
 LIVE_REGISTRY_QUERY_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_live_registry_query_fixture.csv"
+LIVE_REGISTRY_FETCH_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_live_registry_fetcher_fetch_fixture.csv"
+LIVE_REGISTRY_NETWORK_PROOF_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_live_registry_network_proof_fixture.csv"
 
 "$ROOT_DIR/experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh" >/dev/null
 "$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_remote_contract.sh" >/dev/null
-"$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_live_registry_query_gate.sh" >/dev/null
+"$ROOT_DIR/experiments/test_v08_external_benchmark_source_import_live_registry_network_proof.sh" >/dev/null
 "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_import.sh" >/dev/null
+
+PUBLIC_REGISTRY_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_live_registry_fetcher_public_registry_fixture.csv"
+LIVE_REGISTRY_QUERY_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_live_registry_fetcher_query_fixture.csv"
+LIVE_REGISTRY_NETWORK_PROOF_CSV="$RESULTS_DIR/v08_external_benchmark_source_import_live_registry_network_proof_fixture.csv"
 
 awk -F, -v OFS=, '
   function slugify(value, out) {
@@ -65,6 +71,8 @@ V08_EXTERNAL_BENCHMARK_SOURCE_IMPORT_LIVE_REVIEW_CSV="$LIVE_REVIEW_CSV" \
 V08_EXTERNAL_BENCHMARK_SOURCE_IMPORT_AUTHORITY_REVIEW_CSV="$AUTHORITY_REVIEW_CSV" \
 V08_EXTERNAL_BENCHMARK_SOURCE_IMPORT_PUBLIC_REGISTRY_CSV="$PUBLIC_REGISTRY_CSV" \
 V08_EXTERNAL_BENCHMARK_SOURCE_IMPORT_LIVE_REGISTRY_QUERY_CSV="$LIVE_REGISTRY_QUERY_CSV" \
+V08_EXTERNAL_BENCHMARK_SOURCE_IMPORT_LIVE_REGISTRY_FETCH_CSV="$LIVE_REGISTRY_FETCH_CSV" \
+V08_EXTERNAL_BENCHMARK_SOURCE_IMPORT_LIVE_REGISTRY_NETWORK_PROOF_CSV="$LIVE_REGISTRY_NETWORK_PROOF_CSV" \
   "$ROOT_DIR/experiments/run_v08_external_benchmark_final_review_gate.sh" --smoke
 
 SUMMARY_CSV="$RESULTS_DIR/v08_external_benchmark_final_review_gate_smoke_summary.csv"
@@ -77,7 +85,7 @@ awk -F, '
   }
   NR == 1 {
     for (i = 1; i <= NF; i++) idx[$i] = i
-    required_count = split("final_review_source review_rows review_artifact_rows review_hash_verified_rows local_final_review_artifact_rows nonlocal_final_review_artifact_rows local_reviewer_identity_rows nonlocal_reviewer_identity_rows local_reviewer_conflict_rows nonlocal_reviewer_conflict_rows local_upstream_evidence_artifact_rows local_upstream_execution_artifact_rows local_upstream_attestation_artifact_rows local_upstream_identity_artifact_rows local_upstream_artifact_rows real_source_declared_rows non_fixture_declared_rows source_import_independent_live_review_ready source_import_authoritative_review_ready source_import_public_registry_ready source_import_live_registry_query_ready source_import_verified final_review_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
+    required_count = split("final_review_source review_rows review_artifact_rows review_hash_verified_rows local_final_review_artifact_rows nonlocal_final_review_artifact_rows local_reviewer_identity_rows nonlocal_reviewer_identity_rows local_reviewer_conflict_rows nonlocal_reviewer_conflict_rows local_upstream_evidence_artifact_rows local_upstream_execution_artifact_rows local_upstream_attestation_artifact_rows local_upstream_identity_artifact_rows local_upstream_artifact_rows real_source_declared_rows non_fixture_declared_rows source_import_independent_live_review_ready source_import_authoritative_review_ready source_import_public_registry_ready source_import_live_registry_query_ready source_import_live_registry_fetcher_ready source_import_live_registry_fetch_ready source_import_live_registry_network_proof_runner_ready source_import_live_registry_network_proof_ready source_import_verified final_review_verified real_external_benchmark_verified action routing_trigger_rate active_jump_rate", required, " ")
     for (i = 1; i <= required_count; i++) {
       if (!(required[i] in idx)) die("missing v08 final review remote-full summary column: " required[i], 3)
     }
@@ -106,11 +114,15 @@ awk -F, '
         ($idx["source_import_authoritative_review_ready"] + 0) != 1 ||
         ($idx["source_import_public_registry_ready"] + 0) != 1 ||
         ($idx["source_import_live_registry_query_ready"] + 0) != 1 ||
+        ($idx["source_import_live_registry_fetcher_ready"] + 0) != 1 ||
+        ($idx["source_import_live_registry_fetch_ready"] + 0) != 1 ||
+        ($idx["source_import_live_registry_network_proof_runner_ready"] + 0) != 1 ||
+        ($idx["source_import_live_registry_network_proof_ready"] + 0) != 1 ||
         ($idx["source_import_verified"] + 0) != 0 ||
         ($idx["final_review_verified"] + 0) != 0 ||
         ($idx["real_external_benchmark_verified"] + 0) != 0 ||
-        $idx["action"] != "external-benchmark-source-import-live-registry-query-fixture-only") {
-      die("fully remote-style benchmark artifacts must still block while live registry query is fixture-only", 4)
+        $idx["action"] != "external-benchmark-source-import-live-registry-network-proof-fixture-only") {
+      die("fully remote-style benchmark artifacts must still block while live registry network proof is fixture-only", 4)
     }
     if (($idx["routing_trigger_rate"] + 0) != 0.0 ||
         ($idx["active_jump_rate"] + 0) != 0.0) {
@@ -138,7 +150,7 @@ awk -F, '
     if ($idx["gate"] == "local-final-review-artifact" && $idx["status"] != "pass") die("local final-review artifact guard should pass", 22)
     if ($idx["gate"] == "nonlocal-final-review-artifact" && $idx["status"] != "pass") die("nonlocal final-review artifact guard should pass", 23)
     if ($idx["gate"] == "local-upstream-artifact" && $idx["status"] != "pass") die("local upstream artifact guard should pass", 24)
-    if ($idx["gate"] == "source-import" && ($idx["status"] != "blocked" || $idx["reason"] !~ /contract_ready=1/ || $idx["reason"] !~ /auth_review_ready=1/ || $idx["reason"] !~ /public_registry_ready=1/ || $idx["reason"] !~ /live_registry_query_ready=1/)) die("source import should block after live registry query readiness while evidence is fixture-only", 25)
+    if ($idx["gate"] == "source-import" && ($idx["status"] != "blocked" || $idx["reason"] !~ /contract_ready=1/ || $idx["reason"] !~ /auth_review_ready=1/ || $idx["reason"] !~ /public_registry_ready=1/ || $idx["reason"] !~ /live_registry_query_ready=1/ || $idx["reason"] !~ /live_registry_fetch_ready=1/ || $idx["reason"] !~ /live_registry_network_proof_ready=1/)) die("source import should block after live registry network proof readiness while evidence is fixture-only", 25)
     if ($idx["gate"] == "real-external-benchmark" && $idx["status"] != "blocked") die("real external benchmark should remain blocked", 26)
   }
   END {
