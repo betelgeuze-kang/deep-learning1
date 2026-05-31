@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-q plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
+As of h10-q plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -23,6 +23,8 @@ discrete local-energy learner
 + external benchmark source-import contract verifier
 + external benchmark source-import runner-owned verifier replay contract
 + external benchmark source-import live-verifier evidence gate
++ external benchmark source-import independent live-review gate
++ external benchmark source-import authoritative-review gate
 + PC RouteLM / NLG prototype readiness and artifact verification contracts
 + optional HIP backend scaffold / parity instrumentation
 ```
@@ -75,9 +77,12 @@ Last completed checkpoint:
   attestation, and attestor identity artifacts pass mechanics through v08-k
   while still blocking publish until final review exists. The remote-full
   source-import guard now combines non-local lower-chain and final-review
-  mechanics and still blocks at `source_import_verified=0` with
-  `external-benchmark-source-import-missing` until real live source-import
-  verifier evidence exists.
+  mechanics and carries the source-import chain through v08-q. A supplied
+  contract/verifier/live-review/authority-review fixture can reach
+  `source_import_authoritative_review_ready=1`, but still blocks at
+  `source_import_verified=0` with
+  `external-benchmark-source-import-real-public-registry-missing` until real
+  public registry/source-import authority evidence exists.
 - v08-m closes the first source-import contract verifier layer. A remote-style
   fixture can bind source/result/execution URIs and hashes to non-local import
   manifest/fetch-log/reviewer artifacts, live-network import flags,
@@ -96,6 +101,21 @@ Last completed checkpoint:
   `source_import_live_verifier_ready=1`, but they still keep
   `source_import_verified=0` and `real_external_benchmark_verified=0` until
   independent live review is present.
+- v08-p closes the source-import independent live-review mechanics layer.
+  Supplied non-local, hash-attested review rows can bind to verifier run IDs,
+  verifier artifact hashes, and source-import manifest/fetch-log hashes,
+  reaching `source_import_independent_live_review_ready=1`, but they still keep
+  `source_import_verified=0` and `real_external_benchmark_verified=0` until
+  the v08-q authoritative-review and real public registry/source-import
+  authority evidence layers exist.
+- v08-q closes the source-import authoritative-review mechanics layer.
+  Supplied non-local, hash-attested authority-review rows can bind
+  source-import IDs, verifier run IDs, live-review IDs, live-review report
+  hashes, verifier hashes, reviewer identity, reviewer registry, and conflict
+  disclosure evidence, reaching `source_import_authoritative_review_ready=1`,
+  but they still keep `source_import_verified=0` and
+  `real_external_benchmark_verified=0` until real public registry/source-import
+  authority evidence exists.
 - h9-g closes the measured-speed evidence contract while keeping GPU speedup
   claims deferred until real HIP-backed measurements exist.
 - h11-a closes the PC RouteLM / NLG readiness contract and h11-b closes the
@@ -291,9 +311,11 @@ Current closure:
   artifact path now verifies HTTPS hash-attested source/result, execution,
   attestation, and identity artifacts through v08-k, but still stops before
   publication until a final review is supplied and real source evidence exists.
-  A fully remote-style package now reaches local-upstream counters of `0`, but
-  remains blocked at `source_import_verified=0` until real live source-import
-  verifier evidence replaces replay.
+  A fully remote-style package now reaches local-upstream counters of `0`, and
+  with v08-q authority rows it can reach
+  `source_import_authoritative_review_ready=1`; it still remains blocked at
+  `source_import_verified=0` until real public registry/source-import authority
+  evidence replaces the remote-style mechanics.
 - `v08-m` adds the explicit source-import contract verifier. It validates
   provided source-import rows against lower-chain artifact URI/hash evidence,
   import manifest/fetch-log/reviewer hash attestations, live-network import
@@ -310,6 +332,19 @@ Current closure:
   declarations, reaching `source_import_live_verifier_ready=1` while blocking
   final verification with
   `external-benchmark-source-import-independent-live-review-missing`.
+- `v08-p` adds the independent live-review evidence gate. It accepts only
+  non-local, hash-attested review rows above v08-o that match source-import IDs,
+  verifier run IDs, verifier artifact hashes, and import manifest/fetch-log
+  hashes, reaching `source_import_independent_live_review_ready=1` while still
+  blocking final verification with
+  `external-benchmark-source-import-authoritative-live-review-missing`.
+- `v08-q` adds the authoritative source-import review gate. It accepts only
+  non-local, hash-attested authority-review rows above v08-p that match
+  source-import IDs, verifier run IDs, live-review IDs, live-review hashes,
+  verifier hashes, reviewer identity, reviewer registry, and conflict
+  disclosure evidence, reaching `source_import_authoritative_review_ready=1`
+  while still blocking final verification with
+  `external-benchmark-source-import-real-public-registry-missing`.
 - `h11-a` opens the PC RouteLM / NLG prototype readiness gate. It can consume
   supplied component evidence for a quantized 3B-14B generator, CPU RAM/NVMe
   O(n) route memory, GPU candidate scoring, GPU decoder binding, and an NLG
@@ -325,8 +360,8 @@ Current closure:
   plus measured-speed evidence contracts:
   `experiments/test_v09_gpu_backend_closure.sh`.
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q, h7-b,
-  v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/readiness,
-  the v08 lower-chain remote-artifact path and v08-l/v08-m/v08-n/v08-o real-source/remote-review/remote-full source-import guards, h11-a prototype
+  v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/readiness,
+  the v08 lower-chain remote-artifact path and v08-l/v08-m/v08-n/v08-o/v08-p/v08-q real-source/remote-review/remote-full source-import guards, h11-a prototype
   readiness/import, h11-b artifact verifier/import, and h9-g included in quick
   closure paths.
   HIP parity remains optional and environment-dependent.
@@ -346,11 +381,12 @@ Current next boundary:
   import/review evidence for the HTTPS acquisition package before any default
   promotion or external benchmark comparison.
 - Provide or connect real external benchmark sources/results through the
-  v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o
-  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier
+  v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q
+  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review
   path, then replace fixture/local lower-chain rows and final-review rows with
-  non-local, non-fixture evidence and replace the remote-style v08-m/v08-n/v08-o
-  contract/replay/live-style fixtures with independent live source-import review before any v0.8
+  non-local, non-fixture evidence and replace the remote-style v08-m/v08-n/v08-o/v08-p/v08-q
+  contract/replay/live-style/review/authority-review fixtures with real public
+  registry-backed source-import authority evidence before any v0.8
   comparison claim.
 - Provide a real PC RouteLM prototype above the h11-a/h11-b contracts before
   any NLG or personal-PC LLM claim.

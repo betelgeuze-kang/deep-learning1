@@ -24,8 +24,8 @@ route-memory goal closure:
 h6-t/u/v/w route-memory diagnostics and h7-b promotion gates are wired into h7.
 h9 quick closure passes CPU default behavior, CPU-only HIP error handling,
 h9-f CPU numeric parity, h9-g measured-speed no-claim checks, h7, and
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o benchmark
-adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/readiness
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q benchmark
+adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/readiness
 plus h11-a PC RouteLM prototype readiness/import and h11-b artifact verifier/import.
 HIP parity remains optional and environment-dependent.
 ```
@@ -144,6 +144,7 @@ experiments/test_v08_external_benchmark_source_import_gate.sh
 experiments/test_v08_external_benchmark_source_import_remote_contract.sh
 experiments/test_v08_external_benchmark_source_import_verifier_gate.sh
 experiments/test_v08_external_benchmark_source_import_live_verifier_gate.sh
+experiments/test_v08_external_benchmark_source_import_live_review_gate.sh
 experiments/test_v08_external_benchmark_final_review_gate.sh
 experiments/test_v08_external_benchmark_final_review_import.sh
 experiments/test_v08_external_benchmark_final_review_real_source_guard.sh
