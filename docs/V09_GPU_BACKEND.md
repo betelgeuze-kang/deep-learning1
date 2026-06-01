@@ -24,8 +24,8 @@ route-memory goal closure:
 h6-t/u/v/w route-memory diagnostics and h7-b promotion gates are wired into h7.
 h9 quick closure passes CPU default behavior, CPU-only HIP error handling,
 h9-f CPU numeric parity, h9-g measured-speed no-claim checks, h7, and
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x benchmark
-adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/readiness
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z benchmark
+adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/readiness
 plus h11-a PC RouteLM prototype readiness/import and h11-b artifact verifier/import.
 HIP parity remains optional and environment-dependent.
 ```
@@ -122,6 +122,7 @@ experiments/test_v09_gpu_backend_measured_speed_import.sh
 experiments/test_v05_route_quality_closure.sh
 experiments/test_v07_goal_route_memory_closure.sh
 experiments/test_v08_external_benchmark_adapter.sh
+experiments/test_v08_external_benchmark_source_acquisition_gate.sh
 experiments/test_v08_external_benchmark_evidence_ingestion.sh
 experiments/test_v08_external_benchmark_evidence_import.sh
 experiments/test_v08_external_benchmark_comparison_gate.sh

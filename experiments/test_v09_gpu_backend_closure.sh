@@ -38,6 +38,8 @@ run_check h5-route-quality-closure "$ROOT_DIR/experiments/test_v05_route_quality
 run_check h7-goal-closure "$ROOT_DIR/experiments/test_v07_goal_route_memory_closure.sh"
 run_check v08-external-benchmark-adapter \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_adapter.sh"
+run_check v08-external-benchmark-source-acquisition \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_source_acquisition_gate.sh"
 run_check v08-external-benchmark-evidence-ingestion \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_evidence_ingestion.sh"
 run_check v08-external-benchmark-evidence-import \
@@ -112,6 +114,8 @@ run_check v08-external-benchmark-final-review-remote-full-guard \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh"
 run_check v08-external-benchmark-result-authority \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_result_authority_gate.sh"
+run_check v08-external-benchmark-publication \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_publication_gate.sh"
 run_check v11-pc-routelm-prototype-readiness \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_readiness.sh"
 run_check v11-pc-routelm-prototype-import \

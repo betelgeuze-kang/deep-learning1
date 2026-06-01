@@ -3,8 +3,8 @@
 ## Current Stage
 
 The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q plus h7-b,
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/readiness,
-v08 lower-chain remote-artifact path plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x real-source/remote-review/remote-full source-import/result-authority guards, h11-a prototype readiness/import, h11-b
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/readiness,
+v08 lower-chain remote-artifact path plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z real-source/remote-review/remote-full source-import/result-authority/publication/source-acquisition guards, h11-a prototype readiness/import, h11-b
 artifact verification/import, and h9-g quick closure:
 
 ```text
@@ -35,7 +35,7 @@ h10-o: remote teacher-source live-fetch attestation contract passes for supplied
 h10-p: runner-owned runtime fetcher replay contract passes for h10-o attestations, while live network fetch and real source verification remain blocked.
 h10-q: live-network runtime evidence import gate passes for provided live-network rows, while real source import remains blocked.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x: external benchmark adapter/evidence
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
 baselines, while placeholder evidence is blocked from counting as real
 benchmark evidence, local artifact hashes and authenticity/evaluator contracts
@@ -49,9 +49,9 @@ evidence/execution/attestation/identity gates can now exercise HTTPS
 hash-attested non-local artifact mechanics without making a final-review or
 publish claim; a fully remote-style lower-chain plus final-review package now
 reaches `source_import_live_registry_network_proof_ready=1` when supplied with
-the v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x fixture chain, but it
-still blocks at `real_external_benchmark_verified=0` because supplied result-authority
-rows remain fixture-only. v08-m now validates the source-import contract around that
+the v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z fixture chain, but it
+still blocks at `real_external_benchmark_verified=0` because supplied publication
+packages remain fixture-only or comparison remains unpublished. v08-m now validates the source-import contract around that
 blocker: remote-style source import rows can match source/result/execution
 URIs and hashes, carry non-local import manifest/fetch-log/reviewer artifacts,
 and reach `source_import_contract_ready=1`, while still keeping
@@ -127,6 +127,25 @@ hashes, run-log hashes, and metric values, reaching
 `external_benchmark_result_authority_review_ready=1`; fixture result-authority
 rows still keep `real_external_benchmark_verified=0` with
 `external-benchmark-result-authority-fixture-only`.
+v08-y adds the publication-package/reproducibility layer above result
+authority. Supplied publication rows can bind official leaderboard/result rows
+and comparison deltas/verdicts to publication package, report, comparison table,
+reproducibility bundle, release license, conflict disclosure, and publication
+review artifacts, reaching `external_benchmark_publication_review_ready=1`;
+fixture publication rows still keep `real_external_benchmark_verified=0` with
+`external-benchmark-publication-fixture-only`, and non-fixture publication rows
+still block with `external-benchmark-publication-comparison-not-publishable`
+until comparison publication is allowed.
+v08-z adds the source-acquisition/intake layer for official benchmark sources.
+Supplied acquisition rows can bind the four adapter families to official
+source landing, dataset, benchmark-card, split-manifest, license, and
+metric-spec URI/hash packages, reaching
+`external_benchmark_source_acquisition_review_ready=1`; fixture acquisition
+rows still keep `external_benchmark_source_acquisition_ready=0` with
+`external-benchmark-source-acquisition-fixture-only`, and non-fixture
+acquisition packages can reach `external_benchmark_source_acquisition_ready=1`
+while still keeping `real_external_benchmark_verified=0` until source
+import/content/result/review/publication evidence is connected.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
@@ -169,6 +188,8 @@ bash experiments/test_v08_external_benchmark_source_import_live_registry_network
 bash experiments/test_v08_external_benchmark_source_import_real_verification_gate.sh
 bash experiments/test_v08_external_benchmark_source_import_official_authority_gate.sh
 bash experiments/test_v08_external_benchmark_result_authority_gate.sh
+bash experiments/test_v08_external_benchmark_publication_gate.sh
+bash experiments/test_v08_external_benchmark_source_acquisition_gate.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
 bash experiments/test_v11_pc_routelm_prototype_readiness.sh
@@ -194,7 +215,8 @@ Latest completed status:
   source evidence, relabeled local feature rows, or mismatched external-label
   rows.
 - h7 route-memory closure includes h10-q and still blocks default promotion.
-- v08-l remains the final-review evidence boundary; final-review
+- v08-z is the current external benchmark source-acquisition/intake boundary; v08-l remains
+  the final-review evidence layer. Final-review
   mechanics pass, but fixture/local review remains non-publishable with
   `real_external_benchmark_verified=0`. The real-source guard now also blocks
   local `file://` final-review artifacts even when real/non-fixture declaration
@@ -205,12 +227,12 @@ Latest completed status:
   attestation, attestor identity, registry, and conflict-disclosure artifacts
   through v08-k while still stopping at `external-benchmark-final-review-missing`.
   The remote-full source-import guard combines non-local lower-chain artifacts
-  with non-local final-review artifacts and now carries the source-import
-  blocker forward through v08-u: a fully supplied contract/verifier/live-review/
-  authority-review/public-registry/live-query/fetch/network-proof fixture
-  reaches `source_import_live_registry_network_proof_ready=1` but still blocks
-  publication at `source_import_verified=0` with
-  `external-benchmark-source-import-live-registry-network-proof-fixture-only`.
+  with non-local final-review artifacts and now carries the source-import,
+  publication, and acquisition blockers forward through v08-z: a fully supplied
+  contract/verifier/live-review/authority-review/public-registry/live-query/
+  fetch/network-proof/official-authority/result-authority/publication/acquisition
+  fixture can reach publication and acquisition review readiness, but still
+  blocks publication at `real_external_benchmark_verified=0`.
 - v08-m is the external benchmark source-import contract boundary. It
   verifies provided source-import rows against lower-chain source/result and
   execution URIs/hashes, import manifest/fetch-log/reviewer hash attestations,
@@ -267,7 +289,7 @@ Latest completed status:
   `source_import_live_registry_network_proof_ready=1` but still keep
   `source_import_verified=0` and `real_external_benchmark_verified=0` as
   `external-benchmark-source-import-live-registry-network-proof-fixture-only`.
-- v08-x is the latest external benchmark result-authority boundary. v08-v binds
+- v08-z is the latest external benchmark source-acquisition/intake boundary. v08-v binds
   v08-u network-proof rows to verification records,
   verification reports, verifier identity artifacts, proof transcripts, and
   verified cache hashes. Supplied placeholder-domain rows can exercise the
@@ -284,7 +306,18 @@ Latest completed status:
   review; supplied fixture result-authority rows can reach
   `external_benchmark_result_authority_review_ready=1`, but keep
   `real_external_benchmark_verified=0` as
-  `external-benchmark-result-authority-fixture-only`.
+  `external-benchmark-result-authority-fixture-only`. v08-y then requires a
+  publication/reproducibility/license package above result authority; supplied
+  fixture publication rows can reach
+  `external_benchmark_publication_review_ready=1`, but keep
+  `real_external_benchmark_verified=0`.
+  v08-z then requires an official source-acquisition package above the adapter
+  manifest: source landing, dataset, benchmark card, split manifest, license,
+  and metric spec URIs must be HTTPS, host-matched to non-placeholder official
+  domains, sha256-attested, independently reviewed, and tied to non-local
+  acquisition tooling. Fixture acquisition packages stay review-only, and even
+  non-fixture acquisition packages keep `real_external_benchmark_verified=0`
+  until imported content and result/review/publication evidence exist.
 - h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
   pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
 - h11-b is the latest PC RouteLM / NLG boundary; component evidence and local
@@ -303,9 +336,9 @@ The next h10/v08-style experiment should connect h10-q live-network runtime
 evidence to a real non-fixture source import/review chain, replace the local h10-k/h10-l labels with real external teacher-label
 feature labels through the h10-j source-verification contract, real benchmark
 source/result evidence through the
-v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x
-import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority path,
-with non-local lower-chain and final-review artifacts plus non-fixture live registry query/fetch/network-proof/official-authority/result-authority
+v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z
+import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition path,
+with non-local lower-chain and final-review artifacts plus non-fixture live registry query/fetch/network-proof/official-authority/result-authority/publication/source-acquisition
 evidence, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
 promotion claim or external benchmark comparison.
 
@@ -1894,6 +1927,56 @@ v08-x supplied fixture result authority fixture:
   external_benchmark_result_authority_ready = 0
   real_external_benchmark_verified = 0
   action = external-benchmark-result-authority-fixture-only
+
+v08-y supplied fixture publication package fixture:
+  external_benchmark_publication_source = provided-csv
+  benchmark_comparison_ready = 1
+  publishable_comparison_ready = 0
+  publication_rows = 4
+  matched_result_authority_rows = 4
+  matched_comparison_rows = 4
+  leaderboard_match_rows = 4
+  result_record_match_rows = 4
+  metric_definition_match_rows = 4
+  evaluation_protocol_match_rows = 4
+  comparison_delta_match_rows = 4
+  comparison_verdict_match_rows = 4
+  publication_artifact_rows = 4
+  nonplaceholder_publication_artifact_rows = 4
+  publication_hash_attestation_rows = 4
+  publication_domain_match_rows = 4
+  reproducibility_bundle_rows = 4
+  independent_publication_review_rows = 4
+  live_publication_observed_rows = 4
+  declared_real_publication_rows = 4
+  non_fixture_declared_rows = 0
+  external_benchmark_publication_review_ready = 1
+  external_benchmark_publication_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-publication-fixture-only
+
+v08-z supplied fixture source acquisition fixture:
+  external_benchmark_source_acquisition_source = provided-csv
+  acquisition_rows = 4
+  matched_adapter_rows = 4
+  nonplaceholder_domain_rows = 4
+  remote_uri_rows = 4
+  hash_attestation_rows = 4
+  acquisition_method_rows = 4
+  live_acquisition_observed_rows = 4
+  independent_source_review_rows = 4
+  declared_real_source_rows = 4
+  non_fixture_declared_rows = 0
+  external_benchmark_source_acquisition_review_ready = 1
+  external_benchmark_source_acquisition_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-acquisition-fixture-only
+
+v08-z supplied non-fixture source acquisition package:
+  external_benchmark_source_acquisition_review_ready = 1
+  external_benchmark_source_acquisition_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-acquisition-ready-await-import
 ```
 
 Expected:
@@ -1944,6 +2027,12 @@ Expected:
 - result-authority mechanics can pass review/hash/domain checks without
   treating fixture leaderboard/result-authority rows as real external benchmark
   verification
+- publication-package mechanics can pass binding/hash/domain checks without
+  treating fixture publication/reproducibility packages or unpublished
+  comparisons as real external benchmark publication
+- source-acquisition mechanics can pass official URI/hash/domain/review checks
+  without treating acquisition metadata alone as imported or verified external
+  benchmark results
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 
