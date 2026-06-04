@@ -2,10 +2,19 @@
 
 ## Current Stage
 
-The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q plus h7-b,
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/readiness,
-v08 lower-chain remote-artifact path plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z real-source/remote-review/remote-full source-import/result-authority/publication/source-acquisition guards, h11-a prototype readiness/import, h11-b
-artifact verification/import, and h9-g quick closure:
+The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s plus h7-b/h7-c,
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation/readiness,
+v08 lower-chain remote-artifact path plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at real-source/remote-review/remote-full source-import/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation guards, h11-a prototype readiness/import, h11-b
+artifact verification/import, h11-c NVMe RouteMemory store/artifact smokes, h11-d PC RouteLM NLG smoke,
+h9-h workload-speed gate, v12 paper/release claim audit, v13-a real-run
+binder manifest, v13-b RouteLM mmap reader, v13-c evidence packet ABI,
+v13-d real NLG transcript binding, v13-e public codebase RouteQA binding,
+v13-f resource envelope binding, v13-g real evidence promotion gate,
+v13-h real evidence intake gate, v13-i real evidence live-network gate,
+v13-j real evidence rebind gate, v13-k runtime fetch provenance gate,
+v13-l source seed gate, v13-m source seed live-fetch gate, v13-n external
+benchmark official source acquisition gate in quick closure, plus v14-a
+runner-owned query/result/evaluator execution:
 
 ```text
 h6-p: span-local-energy policy-scale diagnostics pass.
@@ -34,8 +43,26 @@ h10-n: remote teacher-source content verifier passes for supplied cache files bo
 h10-o: remote teacher-source live-fetch attestation contract passes for supplied artifact-level attestations, while live network fetch remains blocked.
 h10-p: runner-owned runtime fetcher replay contract passes for h10-o attestations, while live network fetch and real source verification remain blocked.
 h10-q: live-network runtime evidence import gate passes for provided live-network rows, while real source import remains blocked.
+h10-r: real teacher-source import/review chain gate passes contract/guard tests, while official authority and real source verification remain blocked.
+h10-s: source-verified learned scorer student-only eval gate passes metric/guard tests, while final scorer eval readiness remains blocked until official real teacher-source authority exists.
 h7-b: promotion gate blocks default route-memory promotion.
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z: external benchmark adapter/evidence
+h7-c: promotion review gate binds h7-b, h10-r, h10-s, v08-ab, h11-d, and h9-h, passes review/threshold guardrails, and still blocks default promotion until real evidence exists across every input.
+v13-a: real-run binder manifest packages h11-c store artifacts, h11-d NLG transcript/result, h9-h workload rows, v08-al run/evaluator trace, h10-s scorer/teacher evidence, and v12 claim-audit input into one hash-manifested run directory; the smoke passes for generated diagnostic inputs and corrupted hashes block, while actual nonfixture run, real PC RouteLM NLG, real external benchmark, real workload-speed evidence, real release package, and GPU speedup claims remain blocked.
+v13-b: RouteLM mmap reader opens the v13 run store with mmap, checks route-index/page-table byte windows, validates chunk offsets and route-key matches, and blocks both hash mismatches and hash-clean span semantic corruption while keeping real artifact/external/release claims blocked.
+v13-c: evidence packet ABI normalizes the bound run manifest, store/mmap reader evidence, NLG transcript/result, workload row, benchmark trace/evaluator outputs, h10-s scorer evidence, and v12 input into packet rows plus a claim-matrix input; packet hashes and claim-source references pass, while learned ranking and all real/nonfixture claims remain blocked.
+v13-d: real NLG transcript binding parses the bound transcript/result, replays every transcript row against route-index rows and mmap-read chunk span bytes, emits `transcript_binding.csv`, and blocks hash-clean wrong grounding while real PC RouteLM NLG remains blocked until a nonfixture generator run exists.
+v13-e: public codebase RouteQA binding follows the v13 run benchmark manifest into the local codebase-mini package, verifies trace/package/source hashes, joins seven dataset/result/query/evaluator rows, recomputes metrics, emits `routeqa_rows.csv`, and blocks hash-clean evaluator corruption while keeping independent external benchmark evidence blocked.
+v13-f: resource envelope binding verifies the run-bound workload CSV, NLG/timing/environment artifact hashes, run NLG hash match, CPU/HIP/NVMe/query/token/RAM/VRAM metric envelope, and hash-clean speedup removal while keeping real workload-speed and GPU speedup claims blocked.
+v13-g: real evidence promotion gate consumes v13-c/v13-d/v13-e/v13-f plus h10-s/h11-d/h9-h/v08 run evidence and keeps promotion blocked until real external benchmark, source-verified learned scorer, real NLG, real GPU speed, and nonfixture run evidence are all true in the same bound run.
+v13-h: real evidence intake gate validates the same-run four-row package that must replace the v13-g blockers, including run-id binding, cache hashes, HTTPS source/review/authority URIs, contract flags, and route/jump zero, while keeping real release blocked until live-network verification and regenerated bound-run evidence exist.
+v13-i: real evidence live-network gate validates source/review/authority receipt hashes, HTTPS final URIs, HTTP status rows, live-network declarations, and route/jump zero above v13-h, while keeping real release blocked until the receipts come from runner-owned runtime live fetches and the bound run is regenerated.
+v13-j: real evidence rebind gate validates receipt-hash replay into same-run replacement artifacts and claim-matrix rows above v13-i, while keeping real release blocked until runtime live fetch evidence and regenerated promotion rows exist.
+v13-k: runtime fetch provenance gate reopens v13-i receipt JSON above v13-j, verifies runtime receipt scope/weakness/kind binding, HTTPS original/final URIs, HTTP status, method, headers, empty error, ordered UTC timestamps, receipt hashes, and route/jump zero, while keeping real release blocked unless the receipt source is `runtime-live-fetch`.
+v13-l: source seed gate separates public source seeds from claim evidence, allowing the external-benchmark row to bind current RULER/LongBench public sources while keeping learned chunk ranking, GPU speedup, and real NLG blocked as `project-source-only`.
+v13-m: source seed live-fetch gate consumes the v13-l seed packet and optional runtime receipts, validates receipt scope/weakness/kind binding, HTTPS/status/method/header/timestamp provenance, and route/jump zero, while keeping release blocked unless all source/review/authority receipts and underlying claim evidence are complete.
+v13-n: external benchmark official source acquisition gate consumes v13-m/v13-l source seeds and optionally performs runner-owned acquisition of RULER, LongBench, and RULER arXiv authority metadata, while keeping benchmark results and release blocked until query/result/evaluator evidence exists.
+v14-a: runner-owned query/result/evaluator runner materializes public-codebase RouteQA queries, includes the canonical query file at `benchmarks/public-codebase-routeqa-v1/queries.jsonl`, copies or autodiscovers v13 source-chain rows, binds or live-fetches official repo HEAD source snapshots, can use a runner-owned snapshot as the query repo, builds an mmap store with `route_memory_store.bin`, `route_index.bin`, `chunk_offsets`, and `store_manifest.csv`, hash-binds query materialization in `dataset/dataset_manifest.json`, emits raw predictions plus `predictions/prediction_status.json`, runs the evaluator plus `evaluator/evaluator_status.json`, writes metrics/routeqa/benchmark/evidence/promotion rows and `evidence/run_invocation.json` plus `evidence/requested_outputs_manifest.json`, `evidence/run_layout_manifest.json`, `evidence/objective_requirements_manifest.json`, source-chain CSV mirrors under `evidence/`, and `evidence/execution_chain_manifest.json`, optionally emits RULER-compatible NIAH dataset/prediction/evaluator artifacts plus official evaluator invocation status, invokes official RULER `scripts/data/prepare.py` for three official NIAH tasks and nine generated rows, mmap-verifies those generated inputs through `benchmark/ruler_synthetic/official_generator_store/`, can also run a LongBench v2 multiple-choice official-source smoke through `result.py`, can fetch 12 canonical LongBench v2 dataset-server rows for a non-oracle baseline sample, normalizes those rows into run-level `benchmark/external_benchmark_rows.csv`, aggregates `benchmark/external_benchmark_metrics.json`, hash-binds `benchmark/external_benchmark_manifest.json`, row-binds `benchmark/external_benchmark_execution_chain_manifest.json`, and keeps real external benchmark/release blocked because the current live RULER/LongBench evidence is runner-owned smoke/sample execution rather than independent RULER/LongBench benchmark execution.
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at: external benchmark adapter/evidence
 schemas pass, a supplied evidence CSV can be imported and compared against
 baselines, while placeholder evidence is blocked from counting as real
 benchmark evidence, local artifact hashes and authenticity/evaluator contracts
@@ -49,9 +76,23 @@ evidence/execution/attestation/identity gates can now exercise HTTPS
 hash-attested non-local artifact mechanics without making a final-review or
 publish claim; a fully remote-style lower-chain plus final-review package now
 reaches `source_import_live_registry_network_proof_ready=1` when supplied with
-the v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z fixture chain, but it
+the v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa fixture chain plus the v08-ab local codebase-mini package,
+v08-ac single-family content/result bridge, v08-ad all-family bridge mechanics,
+v08-ae independent reproduction/review mechanics, v08-af official release
+evidence mechanics, v08-ag live release verification mechanics, v08-ah
+canonical online confirmation mechanics, v08-ai publication/result review
+mechanics, v08-aj live publication/result ingestion mechanics, and v08-ak
+authority/promotion evidence mechanics, v08-al local codebase run/evaluator
+trace mechanics, v08-am supplied independent all-family run/evaluator evidence
+mechanics, v08-an supplied live replay/final-review mechanics, v08-ao
+supplied public non-fixture/direct-run verification mechanics, v08-ap
+supplied runner-owned live execution/audit mechanics, v08-aq supplied
+independent live rerun confirmation mechanics, v08-ar supplied real
+nonfixture run package intake mechanics, v08-as supplied live package
+artifact fetch/authority mechanics, and v08-at supplied official result
+reconciliation mechanics, but it
 still blocks at `real_external_benchmark_verified=0` because supplied publication
-packages remain fixture-only or comparison remains unpublished. v08-m now validates the source-import contract around that
+and release packages remain mechanics-only or comparison remains unpublished. v08-m now validates the source-import contract around that
 blocker: remote-style source import rows can match source/result/execution
 URIs and hashes, carry non-local import manifest/fetch-log/reviewer artifacts,
 and reach `source_import_contract_ready=1`, while still keeping
@@ -146,11 +187,162 @@ rows still keep `external_benchmark_source_acquisition_ready=0` with
 acquisition packages can reach `external_benchmark_source_acquisition_ready=1`
 while still keeping `real_external_benchmark_verified=0` until source
 import/content/result/review/publication evidence is connected.
+v08-aa adds the source-acquisition content-cache verifier above v08-z. Supplied
+content rows must bind back to acquisition IDs, match all official source
+landing/dataset/card/split/license/metric URIs and sha256 hashes, and verify
+24 local cache files across the four benchmark families. Matching cache content
+can reach `external_benchmark_source_acquisition_content_ready=1`, but still
+keeps `real_external_benchmark_verified=0` until imported benchmark content,
+result authority, review, and publication evidence are connected.
+v08-ab adds codebase-mini benchmark instrumentation above h11-c. It generates a
+local `codebase-retrieval` package from real repository source files, writes
+source/dataset/split/license/metric manifests plus BM25, symbolic upper-bound,
+RouteMemory student, result, summary, and sha256 artifacts, and requires the
+h11-c RouteMemory store hash chain. The smoke can reach
+`codebase_mini_source_ready=1`, `benchmark_result_artifact_verified=1`, and
+`baseline_comparison_ready=1` with `span_exact=1.000000`,
+`chunk_exact=1.000000`, `missing_abstain=1.000000`, and
+`wrong_answer_rate=0.000000`, but keeps `real_external_benchmark_verified=0`
+because the package is local instrumentation, not an independent external
+benchmark review/publication chain. v08-ac then binds that codebase-mini result
+package to v08-aa source content as a single-family bridge with
+`codebase_content_result_bridge_ready=1`, while
+`external_benchmark_result_bridge_ready=0` remains blocked until the other
+benchmark families have non-local result bridges.
+v08-ad then requires all four benchmark families to have supplied non-local
+result bridge rows bound to the v08-aa source-content acquisition IDs. It
+attests 28 HTTPS result/baseline/dataset/run/evaluator/result-authority/
+publication URI/hash fields, passes independent bridge-review mechanics, and
+can reach `family_result_bridge_review_ready=1` plus
+`external_benchmark_result_bridge_ready=1`, but still keeps
+`real_external_benchmark_verified=0` until independent reproduction, real
+review, and publication evidence replace supplied mechanics.
+v08-ae then requires supplied non-local independent reproduction/review rows
+for all four benchmark families above v08-ad. It verifies result artifact
+binding, bridge-summary hashes, independent runner/reviewer/conflict flags,
+and 28 HTTPS reproduction/report/run-log/reviewer/conflict/environment/metric
+URI/hash fields, reaching `independent_reproduction_review_ready=1` while
+still keeping `real_external_benchmark_verified=0`. v08-af then binds supplied
+official release rows back to those reproduction IDs and can reach
+`official_release_evidence_ready=1`, while real benchmark verification remains
+blocked until live release verification and externally verifiable benchmark
+publication evidence exist. v08-ag then binds supplied live-verification rows
+back to v08-af release IDs, reproduction IDs, and official release/archive/
+dataset/authority URI+hash pairs, reaching
+`official_release_live_verification_ready=1` while still keeping
+`real_external_benchmark_verified=0` until canonical online confirmation
+replaces supplied mechanics. v08-ah then binds supplied canonical confirmation
+rows back to v08-ag live reports, network observations, verifier identities,
+release IDs, and reproduction IDs, reaching
+`canonical_online_confirmation_ready=1` while still keeping
+`real_external_benchmark_verified=0` until non-fixture publication/result
+review replaces supplied mechanics. v08-ai then binds supplied publication/
+result review rows back to v08-ah canonical confirmation reports and
+content-digest manifests, reaching `publication_result_review_ready=1` while
+still keeping `real_external_benchmark_verified=0` until live ingestion
+evidence replaces supplied review mechanics. v08-aj then binds supplied live
+publication/result ingestion rows back to the v08-ai review and record
+URI/hash pairs, reaching `live_publication_result_ingestion_ready=1` while
+still keeping `real_external_benchmark_verified=0` until authority/promotion
+evidence replaces supplied ingestion mechanics. v08-ak then binds supplied
+authority/promotion rows back to v08-aj live records and content digests,
+reaching `authority_promotion_evidence_ready=1` while still keeping
+`real_external_benchmark_verified=0` until actual independently observed
+benchmark run/evaluator evidence replaces supplied authority mechanics.
+v08-al then recomputes the local codebase-mini dataset/result join into a
+runner-owned evaluator trace, reaching `codebase_run_evaluator_trace_ready=1`
+while keeping `external_benchmark_run_evaluator_trace_ready=0` and
+`real_external_benchmark_verified=0` until independent all-family run/evaluator
+evidence replaces the local codebase trace.
+v08-am then consumes supplied independent all-family run/evaluator evidence rows
+for RULER, LongBench, codebase-retrieval, and real-document-qa. The rows must
+provide non-placeholder HTTPS trace/run/evaluator/metric/query/observer/authority
+artifacts, sha256 hashes, query volume, quality thresholds, proof bindings,
+independent evaluator declarations, and route/jump zero. The supplied mechanics
+can raise `external_benchmark_independent_run_evaluator_evidence_ready=1`, but
+keeps `real_external_benchmark_verified=0` until live replay/final review
+replaces supplied evidence.
+v08-an then consumes supplied live replay/final-review rows for the same four
+families. The rows must bind v08-am evidence to replay/final-review artifact
+URI/hash pairs, replay query volume, metric thresholds, live replay
+declarations, final-review declarations, fixture declarations, and route/jump
+zero. The supplied mechanics can raise
+`external_benchmark_live_replay_final_review_ready=1`, but still keeps
+`real_external_benchmark_verified=0` until public non-fixture verification or
+direct runner-owned external benchmark runs replace the supplied package.
+v08-ao then consumes supplied public non-fixture/direct-run verification rows
+for the same four families. The rows must bind v08-an final-review evidence to
+40 non-placeholder HTTPS public/direct-run artifact URIs, 40 sha256 hashes,
+query volume, metric thresholds, public registry/non-fixture declarations,
+direct runner-owned run/dataset/evaluator/network declarations, third-party
+reviewer declarations, fixture declarations, and route/jump zero. The supplied
+mechanics can raise
+`external_benchmark_public_nonfixture_verification_ready=1`, but still keeps
+`real_external_benchmark_verified=0` until runner-owned live execution/audit
+proves the public direct-run receipts instead of merely supplying them.
+v08-ap then consumes supplied runner-owned live execution/audit rows for the
+same four families. The rows must bind v08-ao public verification evidence to
+52 non-placeholder HTTPS live execution/audit artifact URIs, 52 sha256 hashes,
+query volume, metric thresholds, runner-owned execution declarations, live
+network/dataset fetch declarations, runner-invoked evaluator declarations,
+replay-disabled declarations, audit log and third-party audit declarations,
+fixture declarations, and route/jump zero. The supplied mechanics can raise
+`external_benchmark_runner_owned_live_execution_audit_ready=1`, but still keeps
+`real_external_benchmark_verified=0` until independent live rerun confirmation
+proves the runner-owned audit receipts.
+v08-aq then consumes supplied independent live rerun confirmation rows for the
+same four families. The rows must bind v08-ap runner-owned audit evidence to
+60 non-placeholder HTTPS rerun-confirmation artifact URIs, 60 sha256 hashes,
+rerun query volume, metric thresholds, metric-delta bounds, independent runner
+and environment declarations, live network/dataset refetch/evaluator rerun
+declarations, audit receipt reconciliation, metric recomputation, third-party
+confirmation declarations, fixture declarations, and route/jump zero. The
+supplied mechanics can raise
+`external_benchmark_independent_live_rerun_confirmation_ready=1`, but still
+keeps `real_external_benchmark_verified=0` until a real non-fixture benchmark
+run package replaces the supplied confirmation mechanics.
+v08-ar then consumes supplied real nonfixture run package rows for the same
+four families. The rows must bind v08-aq confirmation evidence to
+non-placeholder HTTPS run-package manifests, raw query sets, raw prediction
+outputs, evaluator container digests/configs, metric reports, submission
+receipts, public archives, official leaderboard entries, license/PII/
+third-party reproducibility reviews, package signatures, timestamp-authority
+records, and package-registry entries, each with sha256 attestation. The
+supplied mechanics can raise
+`external_benchmark_real_nonfixture_run_package_intake_ready=1`, but still
+keeps `real_external_benchmark_verified=0` until live package artifact fetch
+and authority verification replace supplied package mechanics.
+v08-as then consumes supplied live package artifact fetch/authority rows for
+the same four families and all 15 package artifact types. The rows must bind
+v08-ar package intake to fetched artifact, fetch receipt, and authority record
+URI/hash pairs; require HTTP-200 checks, content-digest matches, runner-owned
+live fetch declarations, network/TLS/DNS/HTTP proof declarations, authority
+registry and official source authority declarations, fixture declarations, and
+route/jump zero. The supplied mechanics can raise
+`external_benchmark_live_package_artifact_fetch_authority_ready=1`, but still
+keeps `real_external_benchmark_verified=0` until official result
+reconciliation replaces supplied fetch/authority mechanics.
+v08-at then consumes supplied official result reconciliation rows for the same
+four families. The rows must bind v08-as fetched official leaderboard, metric
+report, submission receipt, evaluator config, raw prediction output, and
+package-registry artifacts by exact URI/hash identity; require package identity
+matches, metric-delta tolerance checks, query-count matches, evaluator/digest/
+official-source/leaderboard/runner declarations, fixture declarations, and
+route/jump zero. The supplied mechanics can raise
+`external_benchmark_official_result_reconciliation_ready=1`, but still keeps
+`real_external_benchmark_verified=0`. The active transition is now v13
+real-run binding: a nonfixture runner must populate raw traces, evaluator
+outputs, source/result artifacts, NLG transcript/result, workload/resource
+rows, scorer/teacher evidence, and v12 claim-matrix input from one execution
+before any stronger comparison or release claim.
 h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
 can reach diagnostic prototype readiness, while real prototype/publish stays
 blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
 h11-b: PC RouteLM artifact verifier passes; local generator/route-memory/scorer/decoder/NLG/benchmark/license/provenance artifact chains can be hash-verified, while local fixtures still cannot become real prototype evidence.
-h9-f/h9-g: quick GPU-backend boundary runs CPU numeric parity, verifies timing/environment artifact contracts, and keeps speedup claims deferred unless real HIP-backed measurements exist; HIP parity remains optional.
+h11-c: NVMe RouteMemory store artifact smoke passes; a deterministic store bundle can be generated, hash-verified, route-looked-up, and span-read while real PC RouteLM and external benchmark claims remain blocked.
+h11-d: PC RouteLM diagnostic NLG smoke passes; generated transcript/result artifacts verify teacher-off inference, retrieved evidence use, grounding, span citation, span/chunk exactness, missing abstain, wrong-answer rate, latency/storage/memory metrics, and zero routing/jump activity while `real_pc_routelm_nlg_verified=0` remains blocked.
+h9-f/h9-g/h9-h: quick GPU-backend boundary runs CPU numeric parity, verifies timing/environment artifact contracts, binds h9-g plus h11-d into a CPU/HIP/NVMe workload-speed evidence gate, and keeps speedup claims deferred unless real HIP/NVMe workload measurements exist; HIP parity remains optional.
+v12: paper/release claim audit passes as diagnostic artifact packaging only; publishable release, Transformer replacement, frontier PC LLM, long-context solved, learned sparse routing, and GPU acceleration claims remain blocked.
 ```
 
 Latest completed verification:
@@ -168,6 +360,7 @@ bash experiments/test_v10_remote_teacher_source_content_verifier.sh
 bash experiments/test_v10_remote_teacher_source_live_fetch_attestation.sh
 bash experiments/test_v10_remote_teacher_source_runtime_fetcher.sh
 bash experiments/test_v10_remote_teacher_source_live_network_import_gate.sh
+bash experiments/test_v10_real_teacher_source_import_review.sh
 bash experiments/test_v10_chunk_credit_distillation_gate.sh
 bash experiments/test_v08_external_benchmark_final_review_gate.sh
 bash experiments/test_v08_external_benchmark_final_review_import.sh
@@ -190,16 +383,43 @@ bash experiments/test_v08_external_benchmark_source_import_official_authority_ga
 bash experiments/test_v08_external_benchmark_result_authority_gate.sh
 bash experiments/test_v08_external_benchmark_publication_gate.sh
 bash experiments/test_v08_external_benchmark_source_acquisition_gate.sh
+bash experiments/test_v08_external_benchmark_source_acquisition_content_verifier.sh
+bash experiments/test_v08_external_benchmark_codebase_mini.sh
+bash experiments/test_v08_external_benchmark_content_result_bridge.sh
+bash experiments/test_v08_external_benchmark_family_result_bridge.sh
+bash experiments/test_v08_external_benchmark_independent_reproduction_review.sh
+bash experiments/test_v08_external_benchmark_official_release_evidence.sh
+bash experiments/test_v08_external_benchmark_live_release_verification.sh
+bash experiments/test_v08_external_benchmark_canonical_online_confirmation.sh
+bash experiments/test_v08_external_benchmark_publication_result_review.sh
+bash experiments/test_v08_external_benchmark_live_publication_result_ingestion.sh
+bash experiments/test_v08_external_benchmark_authority_promotion_evidence.sh
+bash experiments/test_v08_external_benchmark_run_evaluator_trace.sh
+bash experiments/test_v08_external_benchmark_independent_run_evaluator_evidence.sh
+bash experiments/test_v08_external_benchmark_live_replay_final_review.sh
+bash experiments/test_v08_external_benchmark_public_nonfixture_verification.sh
+bash experiments/test_v08_external_benchmark_runner_owned_live_execution_audit.sh
+bash experiments/test_v08_external_benchmark_independent_live_rerun_confirmation.sh
+bash experiments/test_v08_external_benchmark_real_nonfixture_run_package.sh
+bash experiments/test_v08_external_benchmark_live_package_artifact_fetch_authority.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
 bash experiments/test_v11_pc_routelm_prototype_readiness.sh
 bash experiments/test_v11_pc_routelm_prototype_import.sh
+bash experiments/test_v11_nvme_route_memory_store.sh
+bash experiments/test_v11_nvme_route_memory_artifact.sh
+bash experiments/test_v11_pc_routelm_nlg_smoke.sh
+bash experiments/test_v09_gpu_backend_real_workload_speed_gate.sh
+bash experiments/test_v07_route_memory_promotion_review_gate.sh
+bash experiments/test_v12_paper_release_claim_audit.sh
+bash experiments/test_v07_goal_route_memory_closure.sh
 bash experiments/test_v09_gpu_backend_closure.sh
 ```
 
 Latest completed status:
 
-- h10-q is the latest route-memory teacher-source boundary. It lets an HTTPS
+- h10-s is the latest route-memory learned-scorer evaluation boundary. The
+  lower teacher-source chain lets an HTTPS
   remote acquisition package pass URI/hash/acquisition/review contract checks,
   verifies supplied local download/cache content against that hash manifest,
   then verifies artifact-level fetch-attestation rows with HTTPS attestation
@@ -207,17 +427,39 @@ Latest completed status:
   replay manifest bind runtime fetch rows back to those attestations. h10-q
   rejects that replay as non-network evidence and accepts only provided
   live-network runtime rows up to `remote_teacher_source_live_network_import_ready=1`.
-  Real teacher-source claims remain blocked until a non-fixture source
-  import/review chain is connected.
+  h10-r then binds that live import to import/review/registry evidence and can
+  reach `real_teacher_source_import_review_ready=1`, but real teacher-source
+  claims remain blocked until official authority sets
+  `real_teacher_source_verified=1`. h10-s sits above that boundary: supplied
+  source-linked eval rows can pass student-only chunk/span metric checks, but
+  `source_verified_learned_chunk_scorer_eval_ready=0` remains until h10-l and
+  h10-r have official real teacher-source authority.
 - h10-l remains the route-memory learned-scorer/source binding gate. It keeps
   local learned scorer readiness separate from source-verified learned scorer
   readiness, so distillation cannot pass on a local scorer plus unrelated real
   source evidence, relabeled local feature rows, or mismatched external-label
   rows.
-- h7 route-memory closure includes h10-q and still blocks default promotion.
-- v08-z is the current external benchmark source-acquisition/intake boundary; v08-l remains
-  the final-review evidence layer. Final-review
-  mechanics pass, but fixture/local review remains non-publishable with
+- h7 route-memory closure includes h10-s and still blocks default promotion.
+- v12 is the current paper/release claim audit boundary. The diagnostic
+  package can be assembled from h7-c, h10-r/h10-s, v08-ab, h11-c/h11-d, and
+  h9-h, but publishable release readiness remains blocked until every real
+  evidence input passes.
+- v08-at is the current external benchmark official result reconciliation
+  boundary above the v08-as live package artifact fetch/authority boundary, the
+  v08-ar real nonfixture run package intake boundary, the
+  v08-aq independent live rerun confirmation boundary, the
+  v08-ap runner-owned live execution/audit boundary, the
+  v08-ao public non-fixture/direct-run verification boundary,
+  v08-an live replay/final-review boundary, v08-am independent all-family
+  run/evaluator evidence, v08-ad all-family bridge, v08-ac single-family
+  bridge, and v08-ab codebase-mini instrumentation layer; v08-l remains the
+  lower final-review evidence layer. Final-review, supplied public/direct-run
+  verification, supplied live execution/audit, and supplied independent rerun
+  confirmation plus supplied real nonfixture run package intake, live
+  package artifact fetch/authority, and official result reconciliation
+  mechanics pass,
+  but fixture/local review and supplied direct-run/audit/rerun/package receipts remain
+  non-publishable with
   `real_external_benchmark_verified=0`. The real-source guard now also blocks
   local `file://` final-review artifacts even when real/non-fixture declaration
   flags are rewritten to pass, and the remote-review guard blocks HTTPS
@@ -228,11 +470,182 @@ Latest completed status:
   through v08-k while still stopping at `external-benchmark-final-review-missing`.
   The remote-full source-import guard combines non-local lower-chain artifacts
   with non-local final-review artifacts and now carries the source-import,
-  publication, and acquisition blockers forward through v08-z: a fully supplied
+  publication, acquisition, content-cache, codebase-mini, content/result bridge,
+  family result bridge, independent reproduction, release, confirmation,
+  ingestion, authority, run/evaluator, replay/review, public verification,
+  audit, independent rerun, package-intake, live-fetch/authority, and
+  official-result-reconciliation blockers forward through v08-at: a fully supplied
   contract/verifier/live-review/authority-review/public-registry/live-query/
-  fetch/network-proof/official-authority/result-authority/publication/acquisition
-  fixture can reach publication and acquisition review readiness, but still
-  blocks publication at `real_external_benchmark_verified=0`.
+  fetch/network-proof/official-authority/result-authority/publication/acquisition/content/codebase-mini/bridge/family-bridge/reproduction
+  fixture can reach publication, acquisition, content-cache, codebase-mini, and
+  supplied all-family replay/final-review plus public non-fixture/direct-run
+  verification, runner-owned live execution/audit, independent live rerun
+  confirmation, real nonfixture run package intake, live package artifact
+  fetch/authority readiness, and official result reconciliation readiness, but still
+  blocks publication at
+  `real_external_benchmark_verified=0`.
+- v13-a is the current real-run binder boundary. It writes or verifies a single
+  run directory with store, NLG, benchmark trace, speed, evidence, run manifest,
+  and `sha256sums.txt`, then feeds the evidence packet shape toward the later
+  nonfixture runner and v12 real-input adapter. This is the pivot from supplied
+  rows toward `real run -> raw trace -> evaluator -> evidence rows -> claim
+  matrix input`, not another v08 layer.
+- v13-b is the current RouteLM mmap reader boundary. It consumes that run
+  directory, independently mmap-reads `store/chunk_pages.bin`, and verifies the
+  reader ABI across route index, page table, chunk offsets, and missing-abstain
+  rows before any nonfixture runner is allowed to treat the store as readable
+  RouteMemory evidence.
+- v13-c is the current evidence packet ABI boundary. It converts the bound run
+  manifest, store/mmap reader evidence, NLG transcript/result, workload row,
+  benchmark trace/evaluator outputs, h10-s scorer evidence, and v12 input into
+  `evidence_packet.csv` plus `claim_matrix_input.csv`, verifies packet hashes
+  and claim-source references, and keeps learned-ranking plus all real evidence
+  claims blocked.
+- v13-d is the NLG transcript binding boundary. It parses
+  `nlg/transcript.jsonl` and `nlg/result_summary.json`, replays each transcript
+  row against the route index and mmap-read chunk span bytes, writes
+  `transcript_binding.csv`, and blocks hash-clean wrong grounding while keeping
+  real PC RouteLM NLG blocked until a nonfixture generator run exists.
+- v13-e is the public codebase RouteQA binding boundary. It binds the
+  v13 benchmark trace to the local codebase-mini package, recomputes the
+  RouteQA evaluator metrics, writes `routeqa_rows.csv`, and keeps real external
+  benchmark claims blocked until independent non-local benchmark evidence
+  replaces the local package.
+- v13-f is the resource envelope binding boundary. It binds
+  `speed/workload.csv` to the same v13 run, verifies workload artifact hashes
+  and metric rows, writes `resource_rows.csv`, and keeps GPU speedup blocked
+  until real HIP/NVMe/nonfixture product or benchmark traces replace the
+  fixture envelope.
+- v13-g is the real evidence promotion boundary. It audits the same
+  bound run across v13-c/v13-d/v13-e/v13-f plus h10-s, h11-d, h9-h, and v08
+  evidence, emits `promotion_rows.csv`, and keeps release promotion blocked
+  until external benchmark, learned chunk ranking, real NLG, GPU speedup, and
+  nonfixture-run evidence are all real and source-bound together.
+- v13-h is the real evidence intake boundary. It consumes v13-g and an
+  optional same-run intake CSV for external benchmark, learned chunk ranking,
+  GPU speedup, and real NLG evidence, emits `intake_rows.csv`, verifies cache
+  hashes and HTTPS authority-chain shape, and keeps real release blocked until
+  the intake is live-network verified and rebound through the v13 run.
+- v13-i is the real evidence live-network boundary. It consumes v13-h
+  intake evidence plus same-run source/review/authority network receipts, emits
+  `live_network_rows.csv`, verifies receipt hashes, HTTPS final URIs, HTTP
+  status rows, live-network declarations, and route/jump zero, and keeps real
+  release blocked until receipts are produced by runner-owned runtime live
+  fetches and rebound through the v13 run.
+- v13-j is the current real evidence rebind boundary. It consumes v13-i
+  receipt evidence plus same-run replacement artifacts, emits `rebind_rows.csv`,
+  verifies receipt-hash replay, rebuilt artifact hashes, claim-matrix hashes,
+  regeneration flags, and route/jump zero, and keeps real release blocked until
+  runtime live fetch evidence and regenerated promotion rows exist.
+- v13-k is the current runtime fetch provenance boundary. It consumes v13-j and
+  the v13-i live receipt packet, emits `runtime_fetch_provenance_rows.csv`,
+  verifies receipt JSON scope, weakness/kind binding, HTTPS original/final
+  URIs, HTTP status, method, headers, empty error, ordered UTC timestamps,
+  receipt hashes, and route/jump zero, and keeps real release blocked until the
+  same receipts are produced by runner-owned `runtime-live-fetch`.
+- v13-l is the current source seed boundary. It emits `source_seed_rows.csv`,
+  binds current RULER/LongBench public source seeds for the external benchmark
+  blocker, classifies learned chunk ranking, GPU speedup, and real NLG as
+  `project-source-only`, and keeps real release blocked until all four rows
+  have official/independent claim evidence plus runtime live fetch receipts.
+- v13-m is the current source seed live-fetch boundary. It consumes v13-l
+  `source_seed_rows.csv` plus optional `runtime_receipts/`, emits
+  `source_seed_live_fetch_rows.csv`, verifies receipt provenance shape and
+  packet hashes, and still blocks real release unless all four weaknesses have
+  complete source/review/authority receipts and real claim evidence.
+- v13-n is the current external benchmark official source acquisition boundary.
+  It consumes v13-m/v13-l seed packets, emits
+  `official_source_acquisition_rows.csv`, optionally writes runner-owned
+  `git ls-remote HEAD` and HTTP HEAD receipts for RULER, LongBench, and the
+  RULER arXiv authority, and still blocks benchmark-result readiness and release
+  until real query/result/evaluator evidence exists.
+- v14-a is the current runner execution boundary, not another receipt gate.
+  `tools/routelm_benchmark_run` produces a bound run directory with
+  `source/`, `dataset/`, `store/`, `predictions/`, `evaluator/`, `metrics/`,
+  `routeqa/`, `benchmark/`, `resource/`, `evidence/`, and `promotion/`
+  artifacts, including copied v13 source-chain rows, `route_memory_store.bin`,
+  `chunk_offsets`, `source_snapshot_rows.csv`, and `benchmark_rows.csv`. The
+  smoke reaches `runner_owned_query_result_evaluator_ready=1` for both built-in
+  and supplied query files, and the live snapshot test runs RouteQA rows against
+  the checked-out v13-n RULER HEAD with `repo_source=runner-owned-source-snapshot`.
+  The RULER-compatible synthetic smoke writes `niah_dataset.jsonl`,
+  `niah_single_1.jsonl`, `ruler_evaluator_rows.csv`, and
+  `official_evaluator_status.json`; current official evaluator execution runs
+  with recorded run-local shims for missing `nltk` and NeMo manifest utilities,
+  producing `summary-niah_single_1.csv` and `submission.csv`. The same smoke
+  now invokes official RULER `scripts/data/prepare.py` with run-local
+  `nltk`/`wonderwords`/`tiktoken`/NeMo shims and a space-free `/tmp` symlink
+  workspace for its internal shell command, writes
+  validation JSONL files for `niah_single_1`, `niah_multikey_2`, and
+  `niah_multikey_3`, predicts those rows through task-specific
+  `official_generator_eval/*.jsonl` files with `oracle_prediction_used=0`,
+  evaluates them through `official_generator_eval/summary.csv` at average score
+  77.78, and
+  records `official_generator_benchmark_rows.csv`,
+  `official_generator_metrics.json`, and
+  `official_generator_prediction_provenance.csv` with dataset/prediction/
+  evaluator/metrics/provenance binding fields, then normalizes those task rows
+  into run-level `benchmark/external_benchmark_rows.csv`. The live LongBench
+  path also fetches 12 canonical `zai-org/LongBench-v2` dataset-server rows,
+  predicts them with a non-oracle lexical-overlap baseline, and runs the same
+  official `result.py` aggregator over both the runner-owned schema smoke and
+  the official sample file. The summary can now report
+  `external_benchmark_rows=5`,
+  `external_benchmark_ready_rows=5`,
+  `external_benchmark_dataset_rows=27`,
+  `external_benchmark_average_score=66.67`,
+  `external_benchmark_metrics_ready=1`,
+  `external_benchmark_manifest_ready=1`, and
+  `runner_owned_external_benchmark_result_ready=1`, `prediction_status_ready=1`,
+  `evaluator_status_ready=1`, `execution_chain_manifest_ready=1`, and
+  `run_invocation_ready=1`, `official_ruler_generator_mmap_verification_ready=1`,
+  `official_ruler_generator_mmap_read_rows=9`,
+  `longbench_v2_official_sample_mmap_verification_ready=1`,
+  `longbench_v2_official_sample_mmap_read_rows=12`,
+  `external_benchmark_mmap_read_rows=21`,
+  `external_benchmark_mmap_prediction_match_rows=21`,
+  `external_benchmark_mmap_verification_ready_rows=4`,
+  `external_benchmark_execution_chain_ready_rows=5`,
+  `external_benchmark_execution_chain_ready=1`, and
+  `requested_outputs_manifest_ready=1`, `requested_outputs_ready=1`,
+  `source_chain_autodiscovery_ready=1`,
+  `source_seed_live_fetch_autodiscovered=1`,
+  `runtime_fetch_provenance_autodiscovered=1`, and
+  `reproducibility_manifest_ready=1`, `direct_cli_shape_ready=1`, and
+  `run_layout_manifest_ready=1`, `run_layout_ready=1`,
+  `objective_requirements_manifest_ready=1`, `objective_requirements_ready=1`,
+  `source_chain_evidence_mirror_ready=1`, and
+  `evidence_packet_rows=50` while keeping
+  `candidate_external_benchmark_result_ready=0`; tests also cross-check
+  execution-chain artifact hashes against `sha256sums.txt`.
+  The fourth row is a LongBench v2 official-source multiple-choice smoke over
+  the live `longbench_repo` snapshot, and the fifth row is the 12-row official
+  dataset-server sample baseline. It writes
+  `benchmark/longbench_v2/longbench_v2_benchmark_rows.csv`,
+  `benchmark/longbench_v2/longbench_v2_metrics.json`, and
+  `benchmark/longbench_v2/longbench_v2_manifest.json`, then invokes official
+  `result.py` and records `longbench_v2_score=100.00`,
+  `longbench_v2_official_sample_rows=12`, and
+  `longbench_v2_official_sample_score=0.00`; the official sample rows are also
+  mmap-verified through `benchmark/longbench_v2/official_sample_store/` with
+  `longbench_v2_official_sample_mmap_prediction_match_rows=12`. The external
+  benchmark rows are also re-bound per row in
+  `benchmark/external_benchmark_execution_chain_manifest.json` from source
+  acquisition through dataset, prediction, evaluator, metrics, provenance, and
+  mmap artifacts. Requested `--emit-*` output flags are recorded in
+  `evidence/requested_outputs_manifest.json` and verified against the emitted
+  artifacts. The concrete run output tree is separately bound in
+  `evidence/run_layout_manifest.json`, covering `source/`, dataset, mmap store,
+  predictions, evaluator, metrics, benchmark, evidence, resource, and promotion
+  artifacts. `evidence/objective_requirements_manifest.json` audits the explicit
+  objective stages from official source acquisition through promotion rows; `evidence/official_source_acquisition_rows.csv` mirrors the canonical source acquisition CSV for the documented direct command shape. The repo-level `routelm_benchmark_run` wrapper is exercised
+  through `PATH`, and `evidence/reproducibility_manifest.json` records a
+  shell-quoted direct runner command plus hashes for the runner,
+  source-acquisition CSV, query file, and autodiscovered source-chain CSVs.
+  It still keeps
+  `candidate_external_benchmark_result_ready=0` until this runner-owned source
+  execution is replaced or reviewed as independent external benchmark
+  query/result/evaluator evidence.
 - v08-m is the external benchmark source-import contract boundary. It
   verifies provided source-import rows against lower-chain source/result and
   execution URIs/hashes, import manifest/fetch-log/reviewer hash attestations,
@@ -289,7 +702,7 @@ Latest completed status:
   `source_import_live_registry_network_proof_ready=1` but still keep
   `source_import_verified=0` and `real_external_benchmark_verified=0` as
   `external-benchmark-source-import-live-registry-network-proof-fixture-only`.
-- v08-z is the latest external benchmark source-acquisition/intake boundary. v08-v binds
+- The later external benchmark chain continues through v08-as. v08-v binds
   v08-u network-proof rows to verification records,
   verification reports, verifier identity artifacts, proof transcripts, and
   verified cache hashes. Supplied placeholder-domain rows can exercise the
@@ -318,11 +731,88 @@ Latest completed status:
   acquisition tooling. Fixture acquisition packages stay review-only, and even
   non-fixture acquisition packages keep `real_external_benchmark_verified=0`
   until imported content and result/review/publication evidence exist.
-- h9-g is the latest backend/speed evidence boundary; measured-speed mechanics
-  pass, but fixture timing remains no-claim with `gpu_speedup_claim=deferred`.
-- h11-b is the latest PC RouteLM / NLG boundary; component evidence and local
-  artifact-chain mechanics can be exercised, but real prototype/publish remains
-  blocked with `real_pc_routelm_artifact_verified=0` for local fixtures.
+  v08-aa then verifies supplied local cache files against that official
+  acquisition manifest: all six source artifacts per benchmark family must
+  match the acquisition URIs and sha256 hashes, with independent content-review
+  flags and zero route/jump activity. Matching cache content reaches
+  `external_benchmark_source_acquisition_content_ready=1`, but still keeps
+  `real_external_benchmark_verified=0`.
+  v08-ab then generates a local codebase-mini package from real repository
+  files, verifies source provenance, baseline/result artifacts, artifact hashes,
+  and h11-c RouteMemory store linkage, and can reach
+  `benchmark_result_artifact_verified=1` plus `baseline_comparison_ready=1`.
+  This is still local instrumentation, so
+  `real_external_benchmark_verified=0` remains.
+  v08-ac then binds the v08-aa source acquisition/content row for
+  codebase-retrieval to the v08-ab result package and verifies result,
+  baseline, dataset, run-manifest, and evaluator hashes. It can reach
+  `codebase_content_result_bridge_ready=1`, but it still leaves
+  `external_benchmark_result_bridge_ready=0` and
+  `real_external_benchmark_verified=0` because family coverage is only 1/4 and
+  the result artifacts are local.
+  v08-ad then requires supplied non-local result bridge rows for RULER,
+  LongBench, codebase-retrieval, and real-document-qa. It can reach
+  `family_result_bridge_review_ready=1` and
+  `external_benchmark_result_bridge_ready=1`, but still keeps
+  `real_external_benchmark_verified=0` because supplied bridge rows are not
+  independent reproduction or official publishable benchmark evidence.
+  v08-ae then binds supplied non-local independent reproduction/review rows to
+  the v08-ad bridge. It can reach
+  `independent_reproduction_review_ready=1`, but still keeps
+  `real_external_benchmark_verified=0`. v08-af then binds supplied official
+  release evidence to those reproduction rows and can reach
+  `official_release_evidence_ready=1`. v08-ag then binds supplied live-release
+  verification rows back to v08-af release IDs, reproduction IDs, and official
+  release/archive/dataset/authority URI+hash pairs, reaching
+  `official_release_live_verification_ready=1`. v08-ah then binds supplied
+  canonical confirmation rows back to v08-ag live reports, network
+  observations, verifier identities, release IDs, and reproduction IDs,
+  reaching `canonical_online_confirmation_ready=1`. v08-ai then binds supplied
+  publication/result review rows back to v08-ah canonical confirmation reports
+  and content-digest manifests, reaching `publication_result_review_ready=1`,
+  then v08-aj binds supplied live publication/result ingestion rows back to the
+  v08-ai review and record URI/hash pairs, reaching
+  `live_publication_result_ingestion_ready=1`, then v08-ak binds supplied
+  authority/promotion rows back to v08-aj live records and content digests,
+  reaching `authority_promotion_evidence_ready=1`, but still keeps real
+  benchmark verification blocked until actual independently observed benchmark
+  run/evaluator evidence replaces supplied authority mechanics. v08-al then
+  recomputes the local codebase-mini dataset/result join into a runner-owned
+  evaluator trace, reaching `codebase_run_evaluator_trace_ready=1` while
+  coverage remains 1/4. v08-am can bind supplied independent all-family
+  run/evaluator evidence rows and raise
+  `external_benchmark_independent_run_evaluator_evidence_ready=1`. v08-an can
+  bind supplied all-family live replay/final-review rows to that evidence and
+  raise `external_benchmark_live_replay_final_review_ready=1`, but still keeps
+  `real_external_benchmark_verified=0`; v08-ao can bind supplied public
+  non-fixture/direct-run verification rows to v08-an and raise
+  `external_benchmark_public_nonfixture_verification_ready=1`, but still keeps
+  `real_external_benchmark_verified=0`; v08-ap can bind supplied runner-owned
+  live execution/audit rows to v08-ao and raise
+  `external_benchmark_runner_owned_live_execution_audit_ready=1`, but still
+  keeps `real_external_benchmark_verified=0`; v08-aq can bind supplied
+  independent live rerun confirmation rows to v08-ap and raise
+  `external_benchmark_independent_live_rerun_confirmation_ready=1`, but still
+  keeps `real_external_benchmark_verified=0`; v08-ar can bind supplied real
+  nonfixture run package rows to v08-aq and raise
+  `external_benchmark_real_nonfixture_run_package_intake_ready=1`, but still
+  keeps `real_external_benchmark_verified=0`; v08-as can bind supplied live
+  package artifact fetch/authority rows to v08-ar and raise
+  `external_benchmark_live_package_artifact_fetch_authority_ready=1`, but still
+  keeps `real_external_benchmark_verified=0`; v08-at can bind supplied
+  official result reconciliation rows to v08-as and raise
+  `external_benchmark_official_result_reconciliation_ready=1`, but still
+  keeps `real_external_benchmark_verified=0` until v13 binds a real nonfixture
+  run directory with raw traces, evaluator output, source/result artifacts, and
+  claim-matrix input.
+- h9-h is the latest backend/speed evidence boundary; measured-speed mechanics
+  and CPU/HIP/NVMe workload-speed artifact mechanics pass, but fixture timing
+  and generated workload rows remain no-claim with `gpu_speedup_claim=deferred`.
+- h11-d is the latest PC RouteLM / NLG boundary; component evidence, local
+  artifact-chain mechanics, a small NVMe-resident RouteMemory store smoke, and
+  a diagnostic generated NLG transcript/result can be exercised, but real
+  prototype/publish remains blocked with `real_pc_routelm_artifact_verified=0`
+  and `real_pc_routelm_nlg_verified=0` for local/generated fixtures.
 
 Read the current route-memory result as an objective split, not a solved
 retrieval policy:
@@ -332,15 +822,23 @@ byte-qacc objective -> local-energy
 span-exact objective -> local-energy-hybrid in most tested groups
 ```
 
-The next h10/v08-style experiment should connect h10-q live-network runtime
-evidence to a real non-fixture source import/review chain, replace the local h10-k/h10-l labels with real external teacher-label
-feature labels through the h10-j source-verification contract, real benchmark
+The next h10/v08-style experiment should replace h10-r supplied import/review
+fixtures with official authority/registry evidence, replace the local h10-k/h10-l labels with real external teacher-label
+feature labels and h10-s source-bound student-only eval rows through the h10-j/h10-l/h10-r/h10-s source-verification contracts, real benchmark
 source/result evidence through the
-v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z
-import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition path,
-with non-local lower-chain and final-review artifacts plus non-fixture live registry query/fetch/network-proof/official-authority/result-authority/publication/source-acquisition
-evidence, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b before any
+v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at
+import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review path,
+with non-local lower-chain and final-review artifacts plus non-fixture live registry query/fetch/network-proof/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority
+official-result-reconciliation evidence, non-fixture h9-h measured CPU/HIP/NVMe workload speed, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b/h11-c/h11-d before any
 promotion claim or external benchmark comparison.
+
+`NEXT_IMPLEMENTATION_ROADMAP_v2.md` is treated as a real-evidence transition
+map rather than a request for more fixture gates. Its immediate h11-c/v08-ab/
+h10-r/h10-s/h11-d/h9-h/h7-c/paper phases are already represented in this
+repository as diagnostic or supplied-evidence contracts through v12, v08-at,
+v13-a, v13-b, v13-c, v13-d, v13-e, v13-f, v13-g, v13-h, v13-i, v13-j, v13-k, v13-l, v13-m, v13-n, and v14-a; the next experiment family must replace those rows with actual
+non-fixture teacher, benchmark, speed, and PC RouteLM/NLG evidence from one
+bound run.
 
 ## h6 Span-first Guardrail
 
@@ -691,7 +1189,7 @@ Expected:
   blocked until they are actually exercised on the chunk-credit path
 - uncertain cases route to weak-hint/abstain
 
-## h10-c/d/e/f/g/h/i/j/k/l/m/n/o/p/q Joint Source, Fallback, and Teacher Gates
+## h10-c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r Joint Source, Fallback, and Teacher Gates
 
 h10-c adds the first joint source/noisy matrix above the teacher-free chunk
 ranker and a separate distillation gate. h10-d adds the missing forced
@@ -712,8 +1210,8 @@ real h10-j teacher-source verification. h10-m adds the remote acquisition
 contract above that source gap: local `file://` packages are rejected as
 local/placeholder, and HTTPS packages can become acquisition-ready but still
 need h10-n content-cache verification, h10-o fetch-attestation, h10-p
-runtime-fetcher replay, h10-q live-network import evidence, and then real
-non-fixture source import/review evidence before a real source claim. The
+runtime-fetcher replay, h10-q live-network import evidence, and h10-r
+import/review evidence before a real source claim. The
 default result is deliberately
 diagnostic-only: noisy wrong candidates are not selected, fallback/retry is now
 exercised, local collection is ready, local distillation training/eval is ready,
@@ -874,8 +1372,8 @@ Expected:
 - local `file://` acquisition packages must block as local/placeholder, while
   HTTPS packages must still stop before real source verification until h10-n
   content-cache verification, h10-o fetch-attestation, h10-p runtime-fetcher
-  replay, h10-q live-network import evidence, and real non-fixture source
-  import/review evidence exist
+  replay, h10-q live-network import evidence, h10-r import/review evidence,
+  and official authority evidence exist
 - default external teacher-label ingestion schema must pass without claiming a
   source
 - supplied external labels must make the labels ready without enabling
@@ -1068,9 +1566,9 @@ Expected:
   contract
 - malformed acquisition CSV rows are rejected
 - HTTPS package readiness is not a real teacher-source claim
-- h10-n/h10-o/h10-p/h10-q provide content-cache verification,
-  fetch-attestation, runtime-fetcher replay, and live-network import evidence
-  contracts; real non-fixture source import/review evidence is still required
+- h10-n/h10-o/h10-p/h10-q/h10-r provide content-cache verification,
+  fetch-attestation, runtime-fetcher replay, live-network import evidence, and
+  import/review contracts; official authority evidence is still required
   before a real teacher-source claim
 
 ## h10-n Remote Teacher-source Content Verification
@@ -1326,12 +1824,208 @@ Expected:
 - live-network import readiness is not a real teacher-source claim until real
   non-fixture source import/review evidence is connected
 
+## h10-r Real Teacher-source Import/review Chain
+
+h10-r adds the import/review chain above h10-q. It consumes h10-q live-network
+import readiness and a supplied `V10_REAL_TEACHER_SOURCE_IMPORT_REVIEW_CSV`.
+The review row must bind back to the acquisition teacher/source, carry HTTPS
+URI and sha256 hash evidence for source/export/identity/policy/license plus
+import manifest, review report, reviewer identity, conflict disclosure, and
+source registry artifacts, and mark live-import observation, independent
+review, authoritative review, registry entry readiness, real source
+declaration, non-fixture declaration, and zero routing/jump activity.
+
+```bash
+experiments/run_v10_real_teacher_source_import_review.sh
+experiments/test_v10_real_teacher_source_import_review.sh
+```
+
+Default smoke summary:
+
+```text
+remote_teacher_source_live_network_import_ready = 0
+review_rows = 0
+teacher_source_import_review_contract_ready = 0
+real_teacher_source_import_review_ready = 0
+real_teacher_source_verified = 0
+action = real-teacher-source-live-network-import-missing
+```
+
+Supplied guarded cases:
+
+```text
+local review artifact:
+  local_review_uri_fields = 5
+  teacher_source_import_review_contract_ready = 0
+  action = real-teacher-source-local-import-artifact
+
+placeholder HTTPS authority:
+  remote_review_uri_fields = 10
+  placeholder_review_uri_fields = 5
+  teacher_source_import_review_contract_ready = 1
+  real_teacher_source_import_review_ready = 0
+  action = real-teacher-source-placeholder-import-artifact
+
+non-placeholder review chain:
+  teacher_source_import_review_contract_ready = 1
+  real_teacher_source_import_review_ready = 1
+  real_teacher_source_verified = 0
+  action = real-teacher-source-official-authority-missing
+```
+
+Expected:
+
+- local review/import artifacts never become real by declaration-flag rewrite
+- placeholder or reserved authorities can exercise mechanics but cannot become
+  real teacher-source evidence
+- non-placeholder import/review readiness is still not a final real
+  teacher-source claim until official authority/registry evidence verifies it
+
+## h10-s Source-verified Learned Scorer Evaluation
+
+h10-s adds the student-only evaluation layer above h10-l and h10-r. It consumes
+the h10-l source-verified learned scorer binding summary, the h10-r import/review
+summary, and an optional
+`V10_SOURCE_VERIFIED_LEARNED_CHUNK_SCORER_EVAL_CSV` with source-bound
+student-only evaluation metrics. The eval table reports baseline versus
+student-only chunk exact, span exact, wrong-answer rate, missing/abstain rate,
+coherent-wrong negative rate, near-miss negative rate, and source/fixture
+declaration flags.
+
+```bash
+experiments/run_v10_source_verified_learned_chunk_scorer_eval_gate.sh
+experiments/test_v10_source_verified_learned_chunk_scorer_eval_gate.sh
+```
+
+Default smoke summary:
+
+```text
+source_verified_feature_labels_ready = 0
+student_only_eval_rows = 0
+student_only_eval_ready = 0
+source_verified_learned_chunk_scorer_eval_ready = 0
+reason = source-verified-feature-labels-missing
+```
+
+Supplied guarded fixture:
+
+```text
+source_verified_feature_labels_ready = 1
+source_verified_learned_chunk_scorer_ready = 0
+student_only_eval_ready = 1
+chunk_exact_delta > 0
+near_miss_negative_rate = 1.000000
+metric_improvement_ready = 1
+source_verified_learned_chunk_scorer_eval_ready = 0
+reason = source-verified-learned-scorer-missing
+```
+
+Expected:
+
+- student-only metric improvement is reported separately from source authority
+- a good supplied eval fixture can pass metric checks without unlocking
+  source-verified scorer eval readiness
+- malformed eval CSV rows are rejected
+- final scorer eval readiness still requires official real teacher-source
+  authority plus zero routing/jump activity
+
+## h7-c Promotion Review Gate
+
+h7-c binds the internal h7-b promotion decision to the real-evidence chain:
+h10-r teacher-source import/review, h10-s source-verified scorer eval, v08-ab
+codebase-mini benchmark instrumentation, h11-d PC RouteLM NLG smoke, and h9-h
+workload-speed evidence.
+
+```bash
+experiments/run_v07_route_memory_promotion_review_gate.sh
+experiments/test_v07_route_memory_promotion_review_gate.sh
+```
+
+Smoke summary:
+
+```text
+promotion_review_contract_ready = 1
+h7_default_promotion = 0
+real_teacher_source_verified = 0
+source_verified_learned_chunk_scorer_eval_ready = 0
+real_external_benchmark_verified = 0
+codebase_mini_source_ready = 1
+benchmark_result_artifact_verified = 1
+pc_routelm_nlg_smoke_ready = 1
+diagnostic_workload_speed_ready = 1
+external_thresholds_met = 1
+nlg_thresholds_met = 1
+wrong_answer_threshold_met = 1
+real_evidence_complete = 0
+promotion_review_ready = 0
+default_promotion = 0
+action = promotion-review-real-evidence-missing
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Expected:
+
+- diagnostic thresholds can pass without becoming a real promotion claim
+- real teacher, scorer, benchmark, NLG, and workload-speed evidence must all be
+  present before `promotion_review_ready=1`
+- the jump-neighbor path remains inactive
+
+## v12 Paper/Release Claim Audit
+
+v12 audits the currently closed diagnostic stack before any paper, release, or
+strong product claim is made. It consumes h7-c, h10-r/h10-s, v08-ab,
+h11-c/h11-d, and h9-h.
+
+```bash
+experiments/run_v12_paper_release_claim_audit.sh
+experiments/test_v12_paper_release_claim_audit.sh
+```
+
+Smoke summary:
+
+```text
+diagnostic_release_package_ready = 1
+real_release_package_ready = 0
+diagnostic_claim_level = 4
+publishable_claim_level = 0
+release_claim = diagnostic-artifact-package-only
+h7c_promotion_review_contract_ready = 1
+h7c_real_evidence_complete = 0
+h10r_real_teacher_source_verified = 0
+h10s_source_verified_eval_ready = 0
+v08ab_real_external_benchmark_verified = 0
+h11c_route_memory_artifact_chain_verified = 1
+h11d_pc_routelm_nlg_smoke_ready = 1
+h11d_real_pc_routelm_nlg_verified = 0
+h9h_diagnostic_workload_speed_ready = 1
+h9h_real_workload_speed_evidence_ready = 0
+h9h_gpu_speedup_claim = deferred
+forbidden_transformer_replacement_claim = blocked
+forbidden_frontier_pc_llm_claim = blocked
+forbidden_long_context_solved_claim = blocked
+forbidden_learned_sparse_routing_claim = blocked
+forbidden_gpu_acceleration_claim = blocked
+action = release-package-real-evidence-missing
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Expected:
+
+- diagnostic artifact packaging can pass without publishable release readiness
+- every forbidden strong claim remains blocked
+- paper/release promotion requires real teacher-source, source-verified scorer
+  eval, external benchmark, PC RouteLM NLG, workload-speed, and h7-c evidence
+
 ## h7-b Promotion Gate and v08 Readiness
 
-h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q are
-wired into the route-memory closure as later chunk-ranking/source/fallback/scorer/content/fetch-attestation/runtime-fetcher/live-network-import
-smokes, but they are not yet default-promotion inputs. v08 uses the h7-b gate
-to decide whether an external benchmark comparison is ready. v08-b adds the
+h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h7-c then reviews
+h7-b together with the h10-r/h10-s/v08-ab/h11-d/h9-h real-evidence boundary
+before any default promotion can be considered. h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s are
+wired into the route-memory closure as later chunk-ranking/source/fallback/scorer/content/fetch-attestation/runtime-fetcher/live-network-import/import-review/eval
+smokes, but they still do not unlock default promotion without real evidence.
+v08 uses the h7-b/h7-c gates to decide whether an external benchmark comparison is ready. v08-b adds the
 external benchmark adapter manifest for RULER, LongBench, codebase retrieval,
 and real document QA. v08-c adds the evidence-ingestion schema for dataset,
 license, baseline, result, evaluator, and provenance evidence. v08-d adds a
@@ -1382,6 +2076,8 @@ treat supplied live-style query rows as real source-import verification.
 ```bash
 experiments/run_v07_route_memory_promotion_gate.sh
 experiments/test_v07_route_memory_promotion_gate.sh
+experiments/run_v07_route_memory_promotion_review_gate.sh
+experiments/test_v07_route_memory_promotion_review_gate.sh
 experiments/run_v08_external_benchmark_adapter.sh
 experiments/test_v08_external_benchmark_adapter.sh
 experiments/run_v08_external_benchmark_evidence_ingestion.sh
@@ -1433,6 +2129,10 @@ experiments/run_v08_external_benchmark_source_import_live_registry_query_gate.sh
 experiments/test_v08_external_benchmark_source_import_live_registry_query_gate.sh
 experiments/run_v08_external_benchmark_source_import_live_registry_fetcher.sh
 experiments/test_v08_external_benchmark_source_import_live_registry_fetcher.sh
+experiments/run_v08_external_benchmark_run_evaluator_trace.sh
+experiments/test_v08_external_benchmark_run_evaluator_trace.sh
+experiments/run_v08_external_benchmark_independent_run_evaluator_evidence.sh
+experiments/test_v08_external_benchmark_independent_run_evaluator_evidence.sh
 experiments/run_v08_external_benchmark_readiness.sh
 experiments/test_v08_external_benchmark_readiness.sh
 ```
@@ -1977,6 +2677,835 @@ v08-z supplied non-fixture source acquisition package:
   external_benchmark_source_acquisition_ready = 1
   real_external_benchmark_verified = 0
   action = external-benchmark-source-acquisition-ready-await-import
+
+v08-aa supplied source acquisition content cache fixture:
+  source_acquisition_ready = 1
+  source_acquisition_content_source = provided-csv
+  content_rows = 4
+  matched_acquisition_rows = 4
+  acquisition_id_match_rows = 4
+  remote_uri_match_rows = 4
+  hash_manifest_match_rows = 4
+  required_content_fields = 24
+  cache_uri_fields = 24
+  content_hash_verified_fields = 24
+  fetch_manifest_ready_rows = 4
+  content_cache_ready_rows = 4
+  independent_content_review_rows = 4
+  declared_real_content_rows = 4
+  non_fixture_declared_rows = 4
+  external_benchmark_source_acquisition_content_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-acquisition-content-ready-await-import
+
+v08-aa supplied bad-hash source acquisition content fixture:
+  hash_manifest_match_rows = 3
+  content_hash_verified_fields = 23
+  external_benchmark_source_acquisition_content_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-acquisition-content-hash-manifest-mismatch
+
+v08-ab generated codebase-mini package:
+  benchmark_scope = route-memory-v08ab
+  benchmark_family = codebase-retrieval
+  artifact_source = generated-local-codebase
+  source_manifest_ready = 1
+  dataset_ready = 1
+  split_manifest_ready = 1
+  license_ready = 1
+  metric_spec_ready = 1
+  baseline_artifact_rows = 3
+  result_artifact_rows = 2
+  artifact_hash_manifest_entries = 10
+  artifact_hash_verified_files = 10
+  source_file_rows = 4
+  source_hash_verified_rows = 4
+  dataset_rows = 7
+  present_queries = 5
+  missing_queries = 1
+  near_miss_queries = 1
+  multi_hop_queries = 1
+  route_memory_artifact_chain_verified = 1
+  codebase_mini_source_ready = 1
+  benchmark_result_artifact_verified = 1
+  baseline_comparison_ready = 1
+  real_codebase_declared = 1
+  external_source_rows = 0
+  local_source_rows = 4
+  span_exact = 1.000000
+  chunk_exact = 1.000000
+  missing_abstain = 1.000000
+  near_miss_false_positive = 0.000000
+  wrong_answer_rate = 0.000000
+  duplicate_latest_rate = 0.000000
+  ssd_bytes_per_query > 0
+  real_external_benchmark_verified = 0
+  action = codebase-mini-result-ready-await-review
+
+v08-ab bad-hash codebase-mini guard:
+  artifact_source = provided-dir
+  artifact_hash_manifest_entries = 10
+  artifact_hash_verified_files = 9
+  codebase_mini_source_ready = 1
+  benchmark_result_artifact_verified = 0
+  baseline_comparison_ready = 0
+  real_external_benchmark_verified = 0
+  action = codebase-mini-artifact-hash-mismatch
+
+v08-ac supplied content/result bridge:
+  source_content_ready = 1
+  source_content_rows = 4
+  codebase_mini_source_ready = 1
+  codebase_result_artifact_verified = 1
+  codebase_baseline_comparison_ready = 1
+  bridge_rows = 1
+  matched_codebase_family_rows = 1
+  acquisition_id_match_rows = 1
+  content_summary_hash_verified_rows = 1
+  artifact_dir_match_rows = 1
+  required_bridge_hash_fields = 5
+  bridge_hash_verified_fields = 5
+  source_content_bound_rows = 1
+  result_artifact_bound_rows = 1
+  baseline_bound_rows = 1
+  dataset_bound_rows = 1
+  independent_bridge_review_rows = 1
+  declared_real_bridge_rows = 1
+  non_fixture_declared_rows = 1
+  local_artifact_uri_fields = 5
+  bridge_family_coverage = 1
+  expected_external_families = 4
+  codebase_content_result_bridge_ready = 1
+  external_benchmark_result_bridge_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-content-result-bridge-ready-await-external-family-results
+
+v08-ac bad-hash content/result bridge guard:
+  bridge_hash_verified_fields = 4
+  codebase_content_result_bridge_ready = 0
+  external_benchmark_result_bridge_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-content-result-bridge-hash-mismatch
+
+v08-ad supplied all-family result bridge:
+  source_content_ready = 1
+  source_content_rows = 4
+  source_content_family_rows = 4
+  bridge_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  acquisition_id_match_rows = 4
+  content_summary_hash_verified_rows = 4
+  required_result_hash_fields = 28
+  result_hash_attested_fields = 28
+  nonlocal_result_uri_fields = 28
+  local_result_uri_fields = 0
+  bridge_family_coverage = 4
+  expected_external_families = 4
+  family_result_bridge_review_ready = 1
+  external_benchmark_result_bridge_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-family-result-bridge-ready-await-independent-reproduction
+
+v08-ad bad-hash/local-result guards:
+  bad_hash_action = external-benchmark-family-result-bridge-hash-attestation-missing
+  local_result_action = external-benchmark-family-result-bridge-local-result-artifact-uri
+  family_result_bridge_review_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ae supplied independent reproduction/review:
+  family_result_bridge_review_ready = 1
+  external_benchmark_result_bridge_ready = 1
+  result_bridge_rows = 4
+  bridge_family_rows = 4
+  reproduction_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  acquisition_id_match_rows = 4
+  result_artifact_match_rows = 4
+  result_bridge_summary_hash_verified_rows = 4
+  required_reproduction_hash_fields = 28
+  reproduction_hash_attested_fields = 28
+  nonlocal_reproduction_uri_fields = 28
+  local_reproduction_uri_fields = 0
+  independent_reproduction_review_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-independent-reproduction-ready-await-official-release-evidence
+
+v08-ae bad-hash/local-reproduction guards:
+  bad_hash_action = external-benchmark-independent-reproduction-hash-attestation-missing
+  local_reproduction_action = external-benchmark-independent-reproduction-local-artifact-uri
+  independent_reproduction_review_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-af supplied official release evidence:
+  independent_reproduction_review_ready = 1
+  reproduction_family_rows = 4
+  release_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_reproduction_family_rows = 4
+  reproduction_id_match_rows = 4
+  independent_reproduction_summary_hash_verified_rows = 4
+  required_release_hash_fields = 44
+  release_hash_attested_fields = 44
+  required_release_uri_fields = 40
+  nonlocal_release_uri_fields = 40
+  local_release_uri_fields = 0
+  official_release_evidence_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-official-release-evidence-ready-await-live-release-verification
+
+v08-af bad-hash/local-release/reproduction-mismatch guards:
+  bad_hash_action = external-benchmark-official-release-hash-attestation-missing
+  local_release_action = external-benchmark-official-release-local-artifact-uri
+  reproduction_mismatch_action = external-benchmark-official-release-reproduction-mismatch
+  official_release_evidence_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ag supplied live release verification:
+  official_release_evidence_ready = 1
+  release_family_rows = 4
+  live_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_release_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  official_release_match_rows = 4
+  public_archive_match_rows = 4
+  dataset_version_match_rows = 4
+  release_authority_match_rows = 4
+  required_live_hash_fields = 28
+  live_hash_attested_fields = 28
+  required_live_uri_fields = 28
+  nonlocal_live_uri_fields = 28
+  local_live_uri_fields = 0
+  live_network_observed_rows = 4
+  independent_verifier_declared_rows = 4
+  stable_release_observed_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  official_release_live_verification_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-live-release-verification-ready-await-canonical-online-confirmation
+
+v08-ag bad-hash/local-live/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-live-release-hash-attestation-missing
+  local_live_action = external-benchmark-live-release-local-artifact-uri
+  release_mismatch_action = external-benchmark-live-release-binding-mismatch
+  fixture_only_action = external-benchmark-live-release-declaration-missing
+  official_release_live_verification_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ah supplied canonical online confirmation:
+  official_release_live_verification_ready = 1
+  live_family_rows = 4
+  confirmation_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_live_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  live_report_match_rows = 4
+  network_observation_match_rows = 4
+  verifier_identity_match_rows = 4
+  required_confirmation_hash_fields = 36
+  confirmation_hash_attested_fields = 36
+  required_confirmation_uri_fields = 36
+  nonlocal_confirmation_uri_fields = 36
+  local_confirmation_uri_fields = 0
+  runner_owned_confirmation_declared_rows = 4
+  canonical_authority_observed_rows = 4
+  online_fetch_declared_rows = 4
+  content_digest_match_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  canonical_online_confirmation_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-canonical-online-confirmation-ready-await-nonfixture-publication-result-review
+
+v08-ah bad-hash/local-confirmation/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-canonical-online-confirmation-hash-attestation-missing
+  local_confirmation_action = external-benchmark-canonical-online-confirmation-local-artifact-uri
+  release_mismatch_action = external-benchmark-canonical-online-confirmation-binding-mismatch
+  fixture_only_action = external-benchmark-canonical-online-confirmation-declaration-missing
+  canonical_online_confirmation_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ai supplied publication/result review:
+  canonical_online_confirmation_ready = 1
+  canonical_family_rows = 4
+  review_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_canonical_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  canonical_confirmation_match_rows = 4
+  content_digest_match_rows = 4
+  required_review_hash_fields = 36
+  review_hash_attested_fields = 36
+  required_review_uri_fields = 36
+  nonlocal_review_uri_fields = 36
+  local_review_uri_fields = 0
+  required_new_review_uri_fields = 28
+  nonplaceholder_new_review_uri_fields = 28
+  placeholder_new_review_uri_fields = 0
+  canonical_confirmation_bound_rows = 4
+  content_digest_manifest_bound_rows = 4
+  publication_review_bound_rows = 4
+  result_review_bound_rows = 4
+  publication_record_bound_rows = 4
+  result_record_bound_rows = 4
+  reviewer_identity_bound_rows = 4
+  publication_authority_bound_rows = 4
+  result_authority_bound_rows = 4
+  independent_review_declared_rows = 4
+  publication_observed_declared_rows = 4
+  result_observed_declared_rows = 4
+  canonical_result_match_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  publication_result_review_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-publication-result-review-ready-await-live-ingestion-promotion-evidence
+
+v08-ai bad-hash/local-review/placeholder-review/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-publication-result-review-hash-attestation-missing
+  local_review_action = external-benchmark-publication-result-review-local-artifact-uri
+  placeholder_review_action = external-benchmark-publication-result-review-placeholder-artifact-uri
+  release_mismatch_action = external-benchmark-publication-result-review-binding-mismatch
+  fixture_only_action = external-benchmark-publication-result-review-declaration-missing
+  publication_result_review_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-aj supplied live publication/result ingestion:
+  publication_result_review_ready = 1
+  review_family_rows = 4
+  ingestion_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_review_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  publication_review_match_rows = 4
+  result_review_match_rows = 4
+  publication_record_match_rows = 4
+  result_record_match_rows = 4
+  required_ingestion_hash_fields = 56
+  ingestion_hash_attested_fields = 56
+  required_ingestion_uri_fields = 56
+  nonlocal_ingestion_uri_fields = 56
+  local_ingestion_uri_fields = 0
+  required_new_ingestion_uri_fields = 40
+  nonplaceholder_new_ingestion_uri_fields = 40
+  placeholder_new_ingestion_uri_fields = 0
+  publication_review_bound_rows = 4
+  result_review_bound_rows = 4
+  publication_record_bound_rows = 4
+  result_record_bound_rows = 4
+  live_publication_record_bound_rows = 4
+  live_result_record_bound_rows = 4
+  publication_ingest_transcript_bound_rows = 4
+  result_ingest_transcript_bound_rows = 4
+  publication_response_header_bound_rows = 4
+  result_response_header_bound_rows = 4
+  publication_content_digest_bound_rows = 4
+  result_content_digest_bound_rows = 4
+  publication_tls_certificate_chain_bound_rows = 4
+  result_tls_certificate_chain_bound_rows = 4
+  runner_owned_ingestion_declared_rows = 4
+  live_network_ingestion_declared_rows = 4
+  publication_record_digest_match_declared_rows = 4
+  result_record_digest_match_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  live_publication_result_ingestion_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-live-publication-result-ingestion-ready-await-promotion-authority-evidence
+
+v08-aj bad-hash/local-ingestion/placeholder-ingestion/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-live-publication-result-ingestion-hash-attestation-missing
+  local_ingestion_action = external-benchmark-live-publication-result-ingestion-local-artifact-uri
+  placeholder_ingestion_action = external-benchmark-live-publication-result-ingestion-placeholder-artifact-uri
+  release_mismatch_action = external-benchmark-live-publication-result-ingestion-binding-mismatch
+  fixture_only_action = external-benchmark-live-publication-result-ingestion-declaration-missing
+  live_publication_result_ingestion_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ak supplied authority/promotion evidence:
+  live_publication_result_ingestion_ready = 1
+  ingestion_family_rows = 4
+  authority_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_ingestion_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  live_publication_record_match_rows = 4
+  live_result_record_match_rows = 4
+  publication_content_digest_match_rows = 4
+  result_content_digest_match_rows = 4
+  required_authority_hash_fields = 56
+  authority_hash_attested_fields = 56
+  required_authority_uri_fields = 56
+  nonlocal_authority_uri_fields = 56
+  local_authority_uri_fields = 0
+  required_new_authority_uri_fields = 40
+  nonplaceholder_new_authority_uri_fields = 40
+  placeholder_new_authority_uri_fields = 0
+  live_publication_record_bound_rows = 4
+  live_result_record_bound_rows = 4
+  publication_content_digest_bound_rows = 4
+  result_content_digest_bound_rows = 4
+  authority_decision_bound_rows = 4
+  promotion_review_bound_rows = 4
+  benchmark_registry_entry_bound_rows = 4
+  leaderboard_entry_bound_rows = 4
+  reproducibility_package_bound_rows = 4
+  artifact_archive_bound_rows = 4
+  authority_identity_bound_rows = 4
+  authority_conflict_disclosure_bound_rows = 4
+  promotion_trace_bound_rows = 4
+  final_claim_packet_bound_rows = 4
+  independent_authority_declared_rows = 4
+  official_result_authority_declared_rows = 4
+  benchmark_owner_registry_declared_rows = 4
+  publication_result_consistent_declared_rows = 4
+  claim_scope_limited_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  authority_promotion_evidence_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-authority-promotion-evidence-ready-await-real-external-benchmark-run-evidence
+
+v08-ak bad-hash/local-authority/placeholder-authority/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-authority-promotion-evidence-hash-attestation-missing
+  local_authority_action = external-benchmark-authority-promotion-evidence-local-artifact-uri
+  placeholder_authority_action = external-benchmark-authority-promotion-evidence-placeholder-artifact-uri
+  release_mismatch_action = external-benchmark-authority-promotion-evidence-binding-mismatch
+  fixture_only_action = external-benchmark-authority-promotion-evidence-declaration-missing
+  authority_promotion_evidence_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-al local codebase run/evaluator trace:
+  authority_promotion_evidence_ready = 1
+  codebase_mini_source_ready = 1
+  benchmark_result_artifact_verified = 1
+  baseline_comparison_ready = 1
+  trace_artifact_files = 6
+  trace_hash_manifest_entries = 6
+  trace_hash_verified_files = 6
+  dataset_rows = 7
+  result_rows = 7
+  query_trace_rows = 7
+  evaluator_output_rows = 7
+  matched_query_rows = 7
+  dataset_bound_rows = 7
+  result_bound_rows = 7
+  runner_owned_evaluator_rows = 7
+  independent_evaluator_rows = 0
+  metric_rows = 5
+  span_exact = 1.000000
+  chunk_exact = 1.000000
+  missing_abstain = 1.000000
+  near_miss_false_positive = 0.000000
+  wrong_answer_rate = 0.000000
+  metrics_match_rows = 5
+  codebase_run_evaluator_trace_ready = 1
+  external_family_coverage = 1
+  expected_external_families = 4
+  external_benchmark_run_evaluator_trace_ready = 0
+  real_external_benchmark_verified = 0
+  action = codebase-run-evaluator-trace-ready-await-independent-all-family-run-evidence
+
+v08-al bad-hash/query-binding/metric guards:
+  bad_hash_action = external-benchmark-run-evaluator-trace-hash-mismatch
+  bad_query_action = external-benchmark-run-evaluator-trace-query-binding-mismatch
+  bad_metric_action = external-benchmark-run-evaluator-trace-metric-mismatch
+  codebase_run_evaluator_trace_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-am supplied independent all-family run/evaluator evidence:
+  upstream_codebase_run_evaluator_trace_ready = 1
+  upstream_authority_promotion_evidence_ready = 1
+  evidence_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_evidence_uri_fields = 28
+  nonlocal_evidence_uri_fields = 28
+  local_evidence_uri_fields = 0
+  nonplaceholder_evidence_uri_fields = 28
+  required_evidence_hash_fields = 28
+  evidence_hash_attested_fields = 28
+  total_query_rows = 256
+  min_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  trace_bound_rows = 4
+  evaluator_bound_rows = 4
+  metrics_bound_rows = 4
+  authority_bound_rows = 4
+  independent_evaluator_declared_rows = 4
+  official_metric_declared_rows = 4
+  all_queries_bound_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_independent_run_evaluator_evidence_ready = 1
+  real_external_benchmark_verified = 0
+  action = independent-run-evaluator-evidence-ready-await-live-replay-or-final-review
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-am bad coverage/placeholder/metric/declaration/jump guards:
+  bad_coverage_action = external-benchmark-independent-run-evaluator-evidence-coverage-incomplete
+  bad_placeholder_action = external-benchmark-independent-run-evaluator-evidence-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-independent-run-evaluator-evidence-quality-threshold-missing
+  bad_declaration_action = external-benchmark-independent-run-evaluator-evidence-declaration-missing
+  bad_jump_action = external-benchmark-independent-run-evaluator-evidence-jump-guardrail-violated
+  external_benchmark_independent_run_evaluator_evidence_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-an supplied live replay/final review mechanics:
+  upstream_independent_run_evaluator_evidence_ready = 1
+  upstream_real_external = 0
+  review_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_replay_review_uri_fields = 32
+  nonlocal_replay_review_uri_fields = 32
+  local_replay_review_uri_fields = 0
+  nonplaceholder_replay_review_uri_fields = 32
+  required_replay_review_hash_fields = 32
+  replay_review_hash_attested_fields = 32
+  total_replayed_query_rows = 256
+  min_replayed_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  v08am_evidence_bound_rows = 4
+  all_queries_replayed_rows = 4
+  metrics_recomputed_rows = 4
+  live_replay_declared_rows = 4
+  runner_owned_replay_declared_rows = 4
+  network_observed_declared_rows = 4
+  final_review_approved_rows = 4
+  independent_final_reviewer_declared_rows = 4
+  public_registry_bound_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_live_replay_final_review_ready = 1
+  real_external_benchmark_verified = 0
+  action = live-replay-final-review-ready-await-public-nonfixture-verification
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-an bad coverage/placeholder/metric/binding/replay-declaration/review-declaration/jump guards:
+  bad_coverage_action = external-benchmark-live-replay-final-review-coverage-incomplete
+  bad_placeholder_action = external-benchmark-live-replay-final-review-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-live-replay-final-review-quality-threshold-missing
+  bad_binding_action = external-benchmark-live-replay-final-review-binding-missing
+  bad_replay_declaration_action = external-benchmark-live-replay-final-review-replay-declaration-missing
+  bad_review_declaration_action = external-benchmark-live-replay-final-review-review-declaration-missing
+  bad_jump_action = external-benchmark-live-replay-final-review-jump-guardrail-violated
+  external_benchmark_live_replay_final_review_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ao supplied public non-fixture/direct-run verification mechanics:
+  upstream_live_replay_final_review_ready = 1
+  upstream_real_external = 0
+  verification_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_public_verification_uri_fields = 40
+  nonlocal_public_verification_uri_fields = 40
+  local_public_verification_uri_fields = 0
+  nonplaceholder_public_verification_uri_fields = 40
+  required_public_verification_hash_fields = 40
+  public_verification_hash_attested_fields = 40
+  total_verified_query_rows = 256
+  min_verified_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  v08an_review_bound_rows = 4
+  public_nonfixture_verification_declared_rows = 4
+  public_artifact_registry_declared_rows = 4
+  direct_runner_owned_run_declared_rows = 4
+  direct_external_dataset_declared_rows = 4
+  direct_evaluator_execution_declared_rows = 4
+  live_network_fetch_declared_rows = 4
+  third_party_reviewer_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_public_nonfixture_verification_ready = 1
+  real_external_benchmark_verified = 0
+  action = public-nonfixture-verification-ready-await-runner-owned-live-execution-audit
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-ao bad coverage/placeholder/metric/binding/public-declaration/direct-declaration/jump guards:
+  bad_coverage_action = external-benchmark-public-nonfixture-verification-coverage-incomplete
+  bad_placeholder_action = external-benchmark-public-nonfixture-verification-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-public-nonfixture-verification-quality-threshold-missing
+  bad_binding_action = external-benchmark-public-nonfixture-verification-binding-missing
+  bad_public_declaration_action = external-benchmark-public-nonfixture-verification-public-declaration-missing
+  bad_direct_declaration_action = external-benchmark-public-nonfixture-verification-direct-run-declaration-missing
+  bad_jump_action = external-benchmark-public-nonfixture-verification-jump-guardrail-violated
+  external_benchmark_public_nonfixture_verification_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ap supplied runner-owned live execution/audit mechanics:
+  upstream_public_nonfixture_verification_ready = 1
+  upstream_real_external = 0
+  audit_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_live_execution_audit_uri_fields = 52
+  nonlocal_live_execution_audit_uri_fields = 52
+  local_live_execution_audit_uri_fields = 0
+  nonplaceholder_live_execution_audit_uri_fields = 52
+  required_live_execution_audit_hash_fields = 52
+  live_execution_audit_hash_attested_fields = 52
+  total_executed_query_rows = 256
+  min_executed_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  v08ao_verification_bound_rows = 4
+  runner_owned_execution_declared_rows = 4
+  live_network_execution_declared_rows = 4
+  external_dataset_live_fetch_declared_rows = 4
+  evaluator_invoked_by_runner_declared_rows = 4
+  replay_disabled_declared_rows = 4
+  audit_log_complete_declared_rows = 4
+  third_party_audit_review_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_runner_owned_live_execution_audit_ready = 1
+  real_external_benchmark_verified = 0
+  action = runner-owned-live-execution-audit-ready-await-independent-live-rerun-confirmation
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-ap bad coverage/placeholder/metric/binding/runner-declaration/live-declaration/audit-declaration/jump guards:
+  bad_coverage_action = external-benchmark-runner-owned-live-execution-audit-coverage-incomplete
+  bad_placeholder_action = external-benchmark-runner-owned-live-execution-audit-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-runner-owned-live-execution-audit-quality-threshold-missing
+  bad_binding_action = external-benchmark-runner-owned-live-execution-audit-binding-missing
+  bad_runner_declaration_action = external-benchmark-runner-owned-live-execution-audit-runner-declaration-missing
+  bad_live_declaration_action = external-benchmark-runner-owned-live-execution-audit-live-execution-declaration-missing
+  bad_audit_declaration_action = external-benchmark-runner-owned-live-execution-audit-audit-declaration-missing
+  bad_jump_action = external-benchmark-runner-owned-live-execution-audit-jump-guardrail-violated
+  external_benchmark_runner_owned_live_execution_audit_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-aq supplied independent live rerun confirmation mechanics:
+  upstream_runner_owned_live_execution_audit_ready = 1
+  upstream_real_external = 0
+  confirmation_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_live_rerun_confirmation_uri_fields = 60
+  nonlocal_live_rerun_confirmation_uri_fields = 60
+  local_live_rerun_confirmation_uri_fields = 0
+  nonplaceholder_live_rerun_confirmation_uri_fields = 60
+  required_live_rerun_confirmation_hash_fields = 60
+  live_rerun_confirmation_hash_attested_fields = 60
+  total_rerun_query_rows = 256
+  min_rerun_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  metric_delta_pass_rows = 4
+  v08ap_audit_bound_rows = 4
+  independent_runner_declared_rows = 4
+  independent_environment_declared_rows = 4
+  live_network_rerun_declared_rows = 4
+  external_dataset_refetch_declared_rows = 4
+  evaluator_reinvoked_declared_rows = 4
+  audit_receipt_reconciled_declared_rows = 4
+  metric_recomputed_declared_rows = 4
+  third_party_confirmation_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_independent_live_rerun_confirmation_ready = 1
+  real_external_benchmark_verified = 0
+  action = independent-live-rerun-confirmation-ready-await-real-nonfixture-benchmark-run-package
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-aq bad coverage/placeholder/metric/delta/binding/independent-declaration/live-declaration/reconciliation-declaration/jump guards:
+  bad_coverage_action = external-benchmark-independent-live-rerun-confirmation-coverage-incomplete
+  bad_placeholder_action = external-benchmark-independent-live-rerun-confirmation-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-independent-live-rerun-confirmation-quality-threshold-missing
+  bad_delta_action = external-benchmark-independent-live-rerun-confirmation-metric-delta-too-large
+  bad_binding_action = external-benchmark-independent-live-rerun-confirmation-binding-missing
+  bad_independent_declaration_action = external-benchmark-independent-live-rerun-confirmation-independent-declaration-missing
+  bad_live_declaration_action = external-benchmark-independent-live-rerun-confirmation-live-rerun-declaration-missing
+  bad_reconciliation_declaration_action = external-benchmark-independent-live-rerun-confirmation-reconciliation-declaration-missing
+  bad_jump_action = external-benchmark-independent-live-rerun-confirmation-jump-guardrail-violated
+  external_benchmark_independent_live_rerun_confirmation_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ar supplied real nonfixture run package intake mechanics:
+  upstream_independent_live_rerun_confirmation_ready = 1
+  upstream_real_external = 0
+  package_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_run_package_uri_fields = 60
+  nonlocal_run_package_uri_fields = 60
+  local_run_package_uri_fields = 0
+  nonplaceholder_run_package_uri_fields = 60
+  required_run_package_hash_fields = 60
+  run_package_hash_attested_fields = 60
+  total_packaged_query_rows = 256
+  min_packaged_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  metric_delta_pass_rows = 4
+  v08aq_confirmation_bound_rows = 4
+  run_package_nonfixture_declared_rows = 4
+  official_benchmark_declared_rows = 4
+  public_archive_declared_rows = 4
+  raw_query_set_declared_rows = 4
+  raw_prediction_output_declared_rows = 4
+  evaluator_container_declared_rows = 4
+  immutable_archive_declared_rows = 4
+  license_review_declared_rows = 4
+  pii_review_declared_rows = 4
+  third_party_reproducibility_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_real_nonfixture_run_package_intake_ready = 1
+  real_external_benchmark_verified = 0
+  action = real-nonfixture-run-package-intake-ready-await-live-package-artifact-fetch
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-ar bad coverage/placeholder/metric/delta/binding/package-declaration/review-declaration/jump guards:
+  bad_coverage_action = external-benchmark-real-nonfixture-run-package-coverage-incomplete
+  bad_placeholder_action = external-benchmark-real-nonfixture-run-package-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-real-nonfixture-run-package-quality-threshold-missing
+  bad_delta_action = external-benchmark-real-nonfixture-run-package-metric-delta-too-large
+  bad_binding_action = external-benchmark-real-nonfixture-run-package-binding-missing
+  bad_package_declaration_action = external-benchmark-real-nonfixture-run-package-package-declaration-missing
+  bad_review_declaration_action = external-benchmark-real-nonfixture-run-package-review-declaration-missing
+  bad_jump_action = external-benchmark-real-nonfixture-run-package-jump-guardrail-violated
+  external_benchmark_real_nonfixture_run_package_intake_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-as supplied live package artifact fetch/authority mechanics:
+  upstream_real_nonfixture_run_package_intake_ready = 1
+  upstream_real_external = 0
+  fetch_rows = 60
+  expected_artifact_rows = 60
+  expected_family_rows = 60
+  unexpected_artifact_type_rows = 0
+  duplicate_artifact_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  artifact_type_coverage = 60
+  expected_artifact_types_per_family = 15
+  required_live_fetch_uri_fields = 180
+  nonlocal_live_fetch_uri_fields = 180
+  local_live_fetch_uri_fields = 0
+  nonplaceholder_live_fetch_uri_fields = 180
+  required_live_fetch_hash_fields = 180
+  live_fetch_hash_attested_fields = 180
+  http_status_pass_rows = 60
+  content_digest_match_declared_rows = 60
+  v08ar_package_intake_bound_rows = 60
+  runner_owned_live_fetch_declared_rows = 60
+  network_fetch_transcript_declared_rows = 60
+  tls_certificate_verified_declared_rows = 60
+  dns_resolution_verified_declared_rows = 60
+  http_status_verified_declared_rows = 60
+  authority_registry_verified_declared_rows = 60
+  official_source_authority_verified_declared_rows = 60
+  fixture_free_rows = 60
+  timestamp_rows = 60
+  external_benchmark_live_package_artifact_fetch_authority_ready = 1
+  real_external_benchmark_verified = 0
+  action = live-package-artifact-fetch-authority-ready-await-official-result-reconciliation
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-as bad coverage/placeholder/status/digest/binding/runner/network/authority/jump guards:
+  bad_coverage_action = external-benchmark-live-package-artifact-fetch-coverage-incomplete
+  bad_placeholder_action = external-benchmark-live-package-artifact-fetch-placeholder-artifact-uri
+  bad_status_action = external-benchmark-live-package-artifact-fetch-http-status-missing
+  bad_digest_action = external-benchmark-live-package-artifact-fetch-content-digest-mismatch
+  bad_binding_action = external-benchmark-live-package-artifact-fetch-binding-missing
+  bad_runner_declaration_action = external-benchmark-live-package-artifact-fetch-runner-declaration-missing
+  bad_network_declaration_action = external-benchmark-live-package-artifact-fetch-network-proof-missing
+  bad_authority_declaration_action = external-benchmark-live-package-artifact-fetch-authority-verification-missing
+  bad_jump_action = external-benchmark-live-package-artifact-fetch-jump-guardrail-violated
+  external_benchmark_live_package_artifact_fetch_authority_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-at supplied official result reconciliation mechanics:
+  upstream_live_package_artifact_fetch_authority_ready = 1
+  upstream_real_external = 0
+  fetch_artifact_rows_seen = 24
+  reconciliation_rows = 4
+  expected_reconciliation_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_reconciliation_uri_fields = 28
+  nonlocal_reconciliation_uri_fields = 28
+  local_reconciliation_uri_fields = 0
+  nonplaceholder_reconciliation_uri_fields = 28
+  required_reconciliation_hash_fields = 28
+  reconciliation_hash_attested_fields = 28
+  v08as_live_fetch_authority_bound_rows = 4
+  package_identity_match_rows = 4
+  artifact_binding_declared_rows = 4
+  fetch_artifact_identity_match_rows = 4
+  metric_delta_within_tolerance_rows = 4
+  query_count_exact_match_rows = 4
+  query_count_match_declared_rows = 4
+  evaluator_identity_match_declared_rows = 4
+  result_digest_match_declared_rows = 4
+  official_source_observed_declared_rows = 4
+  public_leaderboard_observed_declared_rows = 4
+  runner_owned_reconciliation_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_official_result_reconciliation_ready = 1
+  real_external_benchmark_verified = 0
+  action = official-result-reconciliation-ready-await-public-real-external-claim
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-at bad coverage/hash/placeholder/package/artifact/metric/query/declaration/official-source/runner/jump guards:
+  bad_coverage_action = external-benchmark-official-result-reconciliation-coverage-incomplete
+  bad_hash_action = external-benchmark-official-result-reconciliation-hash-attestation-missing
+  bad_placeholder_action = external-benchmark-official-result-reconciliation-placeholder-artifact-uri
+  bad_package_action = external-benchmark-official-result-reconciliation-package-identity-mismatch
+  bad_artifact_binding_action = external-benchmark-official-result-reconciliation-artifact-binding-missing
+  bad_artifact_identity_action = external-benchmark-official-result-reconciliation-artifact-identity-mismatch
+  bad_metric_action = external-benchmark-official-result-reconciliation-metric-mismatch
+  bad_query_action = external-benchmark-official-result-reconciliation-query-count-mismatch
+  bad_declaration_action = external-benchmark-official-result-reconciliation-evaluator-or-digest-declaration-missing
+  bad_official_source_action = external-benchmark-official-result-reconciliation-official-source-missing
+  bad_runner_action = external-benchmark-official-result-reconciliation-runner-declaration-missing
+  bad_jump_action = external-benchmark-official-result-reconciliation-jump-guardrail-violated
+  external_benchmark_official_result_reconciliation_ready = 0
+  real_external_benchmark_verified = 0
 ```
 
 Expected:
@@ -2033,6 +3562,55 @@ Expected:
 - source-acquisition mechanics can pass official URI/hash/domain/review checks
   without treating acquisition metadata alone as imported or verified external
   benchmark results
+- source-acquisition content-cache mechanics can pass URI/hash/cache checks
+  without treating local cache verification alone as a real external benchmark
+  result or publication claim
+- codebase-mini mechanics can pass on real local repository files, baseline
+  artifacts, result artifacts, and h11-c RouteMemory store linkage without
+  treating local instrumentation as an independent external benchmark claim
+- source-content/result bridge mechanics can bind v08-aa content to v08-ab
+  codebase-mini results, while all-family result-bridge mechanics can require
+  four non-local bridge rows and 28 sha256-attested HTTPS result fields without
+  treating supplied bridge rows as real external benchmark verification
+- independent reproduction/review mechanics can bind all four benchmark-family
+  result bridges to supplied non-local reproduction rows and 28 sha256-attested
+  HTTPS reproduction fields without treating those rows as official release
+  evidence or real external benchmark verification
+- local run/evaluator trace mechanics can verify a runner-owned codebase-mini
+  trace, and supplied independent all-family run/evaluator evidence mechanics can
+  pass URI/hash/metric/declaration guards, without treating supplied rows as live
+  replayed or final-reviewed external benchmark proof
+- supplied live replay/final-review mechanics can bind replay/review artifacts,
+  replay query volume, metric thresholds, declarations, and route/jump zero
+  while still leaving real external benchmark verification blocked until public
+  non-fixture verification or direct runner-owned external runs exist
+- supplied public non-fixture/direct-run verification mechanics can bind public
+  artifact registries, direct-run receipts, reviewer attestations, metric
+  thresholds, declarations, and route/jump zero without treating supplied
+  receipts as runner-owned live execution/audit proof
+- supplied runner-owned live execution/audit mechanics can bind live execution
+  manifests, command receipts, network traces, dataset fetch receipts, evaluator
+  outputs, metric recomputation, environment attestations, audit reports, and
+  route/jump zero without treating supplied audit receipts as independent live
+  rerun confirmation
+- supplied independent live rerun confirmation mechanics can bind rerun
+  manifests, command receipts, network traces, dataset refetch receipts,
+  evaluator re-invocation, metric diffs, receipt reconciliation, environment,
+  observer, third-party, timestamp, and registry evidence with route/jump zero
+  without treating supplied confirmation as a real non-fixture benchmark run
+  package
+- supplied real nonfixture run package intake mechanics can bind run package
+  manifests, raw query sets, raw prediction outputs, evaluator container
+  digests/configs, metric reports, submission receipts, public archives,
+  official leaderboard entries, license/PII/repro review, package signatures,
+  timestamp authority, registry evidence, and route/jump zero without treating
+  supplied package intake as live verified external benchmark proof
+- supplied live package artifact fetch/authority mechanics can bind fetched
+  artifacts, fetch receipts, authority records, HTTP status, content-digest
+  match declarations, runner-owned live fetch declarations, network/TLS/DNS
+  proof, authority declarations, timestamp evidence, and route/jump zero
+  without treating supplied fetch/authority rows as official reconciled
+  external benchmark results
 - external benchmark comparison is deferred rather than overclaimed
 - `routing_trigger_rate = active_jump_rate = 0`
 
@@ -2149,6 +3727,116 @@ Expected:
   measured GPU speed evidence all exist
 - `routing_trigger_rate = active_jump_rate = 0`
 
+## h11-c NVMe RouteMemory Store Artifact Smoke
+
+h11-c creates a small concrete RouteMemory store artifact without claiming a
+working PC RouteLM product. It treats NVMe as cold route-memory/chunk storage
+and keeps RAM/VRAM roles as metadata and hot-candidate layers.
+
+```bash
+experiments/run_v11_nvme_route_memory_store.sh
+experiments/test_v11_nvme_route_memory_store.sh
+experiments/test_v11_nvme_route_memory_artifact.sh
+```
+
+Generated store files:
+
+```text
+route_memory_store.bin
+route_index.bin
+chunk_pages.bin
+chunk_offsets.bin
+chunk_credit.bin
+page_table.bin
+manifest.json
+sha256sums.txt
+```
+
+Generated store smoke:
+
+```text
+artifact_source = generated-fixture
+artifact_files_found = 7
+hash_manifest_entries = 7
+hash_verified_files = 7
+route_memory_store_size_bytes > 0
+route_memory_chunk_count = 3
+route_memory_index_rows = 3
+route_lookup_works = 1
+candidate_span_read_works = 1
+span_exact = 1.000000
+chunk_exact = 1.000000
+missing_abstain = 1.000000
+wrong_answer_rate = 0.000000
+route_memory_artifact_chain_verified = 1
+real_pc_routelm_artifact_verified = 0
+real_external_benchmark_verified = 0
+action = nvme-route-memory-artifact-ready
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Corrupted artifact guard:
+
+```text
+artifact_source = provided-dir
+hash_verified_files = 6
+route_memory_artifact_chain_verified = 0
+action = nvme-route-memory-artifact-hash-mismatch
+```
+
+Expected:
+
+- the RouteMemory store bundle can be hash-verified and byte-read by offset
+- missing queries abstain rather than selecting a wrong chunk
+- a corrupted store file blocks artifact-chain verification
+- h11-c remains store instrumentation, not a real PC RouteLM/NLG or external
+  benchmark claim
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h11-d PC RouteLM Diagnostic NLG Smoke
+
+h11-d adds the first generator-facing diagnostic smoke above the h11-c
+RouteMemory store. It writes a generated transcript/result artifact and checks
+that an answer uses retrieved evidence without enabling a real product claim.
+
+```bash
+experiments/run_v11_pc_routelm_nlg_smoke.sh
+experiments/test_v11_pc_routelm_nlg_smoke.sh
+```
+
+Generated NLG smoke:
+
+```text
+nlg_source = generated-fixture
+nlg_rows = 3
+diagnostic_artifact_ready = 1
+teacher_off_inference = 1
+retrieved_evidence_used = 1
+evidence_binding_ready = 1
+nlg_quality_ready = 1
+answer_grounded_rate = 1.000000
+span_citation_accuracy = 1.000000
+span_exact = 1.000000
+chunk_exact = 1.000000
+missing_abstain = 1.000000
+wrong_answer_rate = 0.000000
+pc_routelm_nlg_smoke_ready = 1
+real_pc_routelm_nlg_verified = 0
+action = diagnostic-nlg-smoke-ready
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Guard coverage:
+
+- bad grounding or wrong-answer rows block the NLG smoke readiness path
+- malformed NLG CSV row widths are rejected
+- generated fixtures cannot become real PC RouteLM/NLG evidence
+- real NLG remains blocked until non-fixture generator artifacts, transcript/
+  result evidence, teacher-source, benchmark, speed, and promotion gates all
+  pass
+
 ## v0.2-pre Locked Baseline
 
 The current baseline is `dmv02` with `v0.2-pre` behavior locked. `v0.2-b` now adds coupling plus a block-local coupled proposal path, so the default weak-coupling run is no longer expected to fail the `counter` gate.
@@ -2170,6 +3858,30 @@ experiments/test_v09_gpu_backend_extended_boundary.sh
 experiments/test_v09_gpu_backend_speed_evidence.sh
 experiments/test_v09_gpu_backend_measured_speed_gate.sh
 experiments/test_v09_gpu_backend_measured_speed_import.sh
+experiments/test_v09_gpu_backend_real_workload_speed_gate.sh
+```
+
+h9-h workload-speed smoke:
+
+```text
+workload_source = generated-fixture
+pc_routelm_nlg_smoke_ready = 1
+real_pc_routelm_nlg_verified = 0
+h9_measured_speed_evidence_ready = 0
+h9_speed_evidence_ready = 0
+workload_artifact_rows = 1
+nlg_result_hash_verified_rows = 1
+timing_artifact_hash_verified_rows = 1
+environment_hash_verified_rows = 1
+metrics_positive_rows = 1
+speedup_positive_rows = 1
+median_speedup = 1.500000
+diagnostic_workload_speed_ready = 1
+real_workload_speed_evidence_ready = 0
+gpu_speedup_claim = deferred
+action = real-workload-speed-evidence-missing
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
 ```
 
 Optional HIP check:
@@ -2191,9 +3903,9 @@ Expected:
 - CPU-only `--backend hip` fails clearly with a `DLE_ENABLE_HIP=ON` message.
 - CPU quick closure executes candidate-weight and proposal-score numeric parity
   through the parity tool, not only static grep checks.
-- GPU speedup claims remain deferred until measured CPU/HIP timings are backed
-  by real HIP measurement source evidence; local fixture timing artifacts remain
-  diagnostic-only.
+- GPU speedup claims remain deferred until measured CPU/HIP/NVMe workload rows
+  are backed by real HIP/NVMe measurement source evidence; local fixture timing
+  and generated workload artifacts remain diagnostic-only.
 - HIP parity skips cleanly when ROCm/HIP is unavailable or incomplete.
 - When HIP is available, candidate-weight factors and diagnostic proposal
   scores match CPU within `1e-5`.

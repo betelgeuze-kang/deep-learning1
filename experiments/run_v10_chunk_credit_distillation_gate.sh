@@ -25,8 +25,10 @@ COLLECTION_PREFIX="v10_teacher_label_collection_harness"
 TRAINING_PREFIX="v10_teacher_distillation_learner"
 SCORER_PREFIX="v10_learned_chunk_quality_scorer"
 SOURCE_VERIFIED_SCORER_PREFIX="v10_source_verified_learned_chunk_scorer_gate"
+SOURCE_VERIFIED_SCORER_EVAL_PREFIX="v10_source_verified_learned_chunk_scorer_eval_gate"
 EXTERNAL_PREFIX="v10_teacher_external_label_ingestion"
 SOURCE_PREFIX="v10_teacher_external_label_source_verifier"
+REAL_SOURCE_IMPORT_PREFIX="v10_real_teacher_source_import_review"
 RUN_ARGS=()
 if [[ "$MODE" == "smoke" ]]; then
   PREFIX="v10_chunk_credit_distillation_gate_smoke"
@@ -38,8 +40,10 @@ if [[ "$MODE" == "smoke" ]]; then
   TRAINING_PREFIX="v10_teacher_distillation_learner_smoke"
   SCORER_PREFIX="v10_learned_chunk_quality_scorer_smoke"
   SOURCE_VERIFIED_SCORER_PREFIX="v10_source_verified_learned_chunk_scorer_gate_smoke"
+  SOURCE_VERIFIED_SCORER_EVAL_PREFIX="v10_source_verified_learned_chunk_scorer_eval_gate_smoke"
   EXTERNAL_PREFIX="v10_teacher_external_label_ingestion_smoke"
   SOURCE_PREFIX="v10_teacher_external_label_source_verifier_smoke"
+  REAL_SOURCE_IMPORT_PREFIX="v10_real_teacher_source_import_review_smoke"
   RUN_ARGS=(--smoke)
 elif [[ "$MODE" == "full" ]]; then
   RUN_ARGS=(--full)
@@ -53,8 +57,10 @@ COLLECTION_SUMMARY_CSV="$RESULTS_DIR/${COLLECTION_PREFIX}_summary.csv"
 TRAINING_SUMMARY_CSV="$RESULTS_DIR/${TRAINING_PREFIX}_summary.csv"
 SCORER_SUMMARY_CSV="$RESULTS_DIR/${SCORER_PREFIX}_summary.csv"
 SOURCE_VERIFIED_SCORER_SUMMARY_CSV="$RESULTS_DIR/${SOURCE_VERIFIED_SCORER_PREFIX}_summary.csv"
+SOURCE_VERIFIED_SCORER_EVAL_SUMMARY_CSV="$RESULTS_DIR/${SOURCE_VERIFIED_SCORER_EVAL_PREFIX}_summary.csv"
 EXTERNAL_SUMMARY_CSV="$RESULTS_DIR/${EXTERNAL_PREFIX}_summary.csv"
 SOURCE_SUMMARY_CSV="$RESULTS_DIR/${SOURCE_PREFIX}_summary.csv"
+REAL_SOURCE_IMPORT_SUMMARY_CSV="$RESULTS_DIR/${REAL_SOURCE_IMPORT_PREFIX}_summary.csv"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
@@ -81,9 +87,11 @@ if [[ ! -s "$SCORER_SUMMARY_CSV" ]]; then
 fi
 "$ROOT_DIR/experiments/run_v10_teacher_external_label_ingestion.sh" "${RUN_ARGS[@]}" >/dev/null
 "$ROOT_DIR/experiments/run_v10_teacher_external_label_source_verifier.sh" "${RUN_ARGS[@]}" >/dev/null
+"$ROOT_DIR/experiments/run_v10_real_teacher_source_import_review.sh" "${RUN_ARGS[@]}" >/dev/null
 "$ROOT_DIR/experiments/run_v10_source_verified_learned_chunk_scorer_gate.sh" "${RUN_ARGS[@]}" >/dev/null
+"$ROOT_DIR/experiments/run_v10_source_verified_learned_chunk_scorer_eval_gate.sh" "${RUN_ARGS[@]}" >/dev/null
 
-awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_csv="$FALLBACK_AGG_CSV" -v contract_csv="$CONTRACT_SUMMARY_CSV" -v collection_csv="$COLLECTION_SUMMARY_CSV" -v training_csv="$TRAINING_SUMMARY_CSV" -v scorer_csv="$SCORER_SUMMARY_CSV" -v source_verified_scorer_csv="$SOURCE_VERIFIED_SCORER_SUMMARY_CSV" -v external_csv="$EXTERNAL_SUMMARY_CSV" -v source_csv="$SOURCE_SUMMARY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
+awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_csv="$FALLBACK_AGG_CSV" -v contract_csv="$CONTRACT_SUMMARY_CSV" -v collection_csv="$COLLECTION_SUMMARY_CSV" -v training_csv="$TRAINING_SUMMARY_CSV" -v scorer_csv="$SCORER_SUMMARY_CSV" -v source_verified_scorer_csv="$SOURCE_VERIFIED_SCORER_SUMMARY_CSV" -v source_verified_scorer_eval_csv="$SOURCE_VERIFIED_SCORER_EVAL_SUMMARY_CSV" -v external_csv="$EXTERNAL_SUMMARY_CSV" -v source_csv="$SOURCE_SUMMARY_CSV" -v real_source_import_csv="$REAL_SOURCE_IMPORT_SUMMARY_CSV" -v summary_csv="$SUMMARY_CSV" -v decision_csv="$DECISION_CSV" '
   function die(message, code) {
     print message > "/dev/stderr"
     exit code
@@ -263,6 +271,39 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
     source_verified_scorer_jump = $vidx["active_jump_rate"] + 0
     next
   }
+  FILENAME == source_verified_scorer_eval_csv && FNR == 1 {
+    for (i = 1; i <= NF; i++) vxidx[$i] = i
+    required_count = split("source_verified_learned_chunk_scorer_eval_ready student_only_eval_rows student_only_eval_ready baseline_chunk_exact student_only_chunk_exact chunk_exact_delta baseline_span_exact student_only_span_exact span_exact_delta baseline_wrong_answer_rate student_only_wrong_answer_rate wrong_answer_delta baseline_missing_abstain student_only_missing_abstain missing_abstain_delta near_miss_negative_rate missing_abstain_rate metric_improvement_ready reason routing_trigger_rate active_jump_rate", required, " ")
+    for (i = 1; i <= required_count; i++) {
+      if (!(required[i] in vxidx)) die("missing h10 distillation source-verified scorer eval column: " required[i], 20)
+    }
+    next
+  }
+  FILENAME == source_verified_scorer_eval_csv {
+    source_verified_scorer_eval_rows++
+    source_verified_learned_chunk_scorer_eval_ready = $vxidx["source_verified_learned_chunk_scorer_eval_ready"] + 0
+    source_verified_student_only_eval_rows = $vxidx["student_only_eval_rows"] + 0
+    source_verified_student_only_eval_ready = $vxidx["student_only_eval_ready"] + 0
+    source_verified_baseline_chunk_exact = $vxidx["baseline_chunk_exact"] + 0
+    source_verified_student_only_chunk_exact = $vxidx["student_only_chunk_exact"] + 0
+    source_verified_chunk_exact_delta = $vxidx["chunk_exact_delta"] + 0
+    source_verified_baseline_span_exact = $vxidx["baseline_span_exact"] + 0
+    source_verified_student_only_span_exact = $vxidx["student_only_span_exact"] + 0
+    source_verified_span_exact_delta = $vxidx["span_exact_delta"] + 0
+    source_verified_baseline_wrong_answer_rate = $vxidx["baseline_wrong_answer_rate"] + 0
+    source_verified_student_only_wrong_answer_rate = $vxidx["student_only_wrong_answer_rate"] + 0
+    source_verified_wrong_answer_delta = $vxidx["wrong_answer_delta"] + 0
+    source_verified_baseline_missing_abstain = $vxidx["baseline_missing_abstain"] + 0
+    source_verified_student_only_missing_abstain = $vxidx["student_only_missing_abstain"] + 0
+    source_verified_missing_abstain_delta = $vxidx["missing_abstain_delta"] + 0
+    source_verified_near_miss_negative_rate = $vxidx["near_miss_negative_rate"] + 0
+    source_verified_missing_abstain_rate = $vxidx["missing_abstain_rate"] + 0
+    source_verified_metric_improvement_ready = $vxidx["metric_improvement_ready"] + 0
+    source_verified_scorer_eval_reason = $vxidx["reason"]
+    source_verified_scorer_eval_routing = $vxidx["routing_trigger_rate"] + 0
+    source_verified_scorer_eval_jump = $vxidx["active_jump_rate"] + 0
+    next
+  }
   FILENAME == external_csv && FNR == 1 {
     for (i = 1; i <= NF; i++) eidx[$i] = i
     required_count = split("external_schema_ready external_label_source_ready teacher_external_labels_ready label_source routing_trigger_rate active_jump_rate", required, " ")
@@ -299,6 +340,25 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
     source_jump = $sidx["active_jump_rate"] + 0
     next
   }
+  FILENAME == real_source_import_csv && FNR == 1 {
+    for (i = 1; i <= NF; i++) ridx[$i] = i
+    required_count = split("remote_teacher_source_live_network_import_ready teacher_source_import_review_contract_ready real_teacher_source_import_review_ready real_teacher_source_verified action routing_trigger_rate active_jump_rate", required, " ")
+    for (i = 1; i <= required_count; i++) {
+      if (!(required[i] in ridx)) die("missing h10 distillation real source import column: " required[i], 19)
+    }
+    next
+  }
+  FILENAME == real_source_import_csv {
+    real_source_import_rows++
+    remote_teacher_source_live_network_import_ready = $ridx["remote_teacher_source_live_network_import_ready"] + 0
+    teacher_source_import_review_contract_ready = $ridx["teacher_source_import_review_contract_ready"] + 0
+    real_teacher_source_import_review_ready = $ridx["real_teacher_source_import_review_ready"] + 0
+    real_source_import_real_teacher_source_verified = $ridx["real_teacher_source_verified"] + 0
+    teacher_source_import_review_action = $ridx["action"]
+    real_source_import_routing = $ridx["routing_trigger_rate"] + 0
+    real_source_import_jump = $ridx["active_jump_rate"] + 0
+    next
+  }
   END {
     if (policy_rows != 1) die("expected one h10 distillation policy row", 4)
     if (joint_rows != 1) die("expected one h10 distillation joint row", 5)
@@ -308,8 +368,10 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
     if (training_rows != 1) die("expected one h10 distillation teacher training row", 13)
     if (scorer_rows != 1) die("expected one h10 distillation learned scorer row", 14)
     if (source_verified_scorer_rows != 1) die("expected one h10 distillation source-verified scorer row", 18)
+    if (source_verified_scorer_eval_rows != 1) die("expected one h10 distillation source-verified scorer eval row", 20)
     if (external_rows != 1) die("expected one h10 distillation external ingestion row", 15)
     if (source_rows != 1) die("expected one h10 distillation source verifier row", 17)
+    if (real_source_import_rows != 1) die("expected one h10 distillation real source import row", 19)
 
     teacher_label_contract_ready = 0
     if (contract_teacher_label_contract_ready && teacher_collection_contract_ready) {
@@ -361,10 +423,13 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
         teacher_label_collection_ready &&
         learned_chunk_scorer_ready &&
         source_verified_learned_chunk_scorer_ready &&
+        source_verified_learned_chunk_scorer_eval_ready &&
         teacher_external_schema_ready &&
         teacher_external_label_source_ready &&
         teacher_external_labels_ready &&
+        real_teacher_source_import_review_ready &&
         real_teacher_source_verified &&
+        real_source_import_real_teacher_source_verified &&
         teacher_distillation_training_ready &&
         teacher_distillation_eval_ready &&
         teacher_grounded_span_coverage == 1.0 &&
@@ -384,10 +449,14 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
         scorer_jump == 0.0 &&
         source_verified_scorer_routing == 0.0 &&
         source_verified_scorer_jump == 0.0 &&
+        source_verified_scorer_eval_routing == 0.0 &&
+        source_verified_scorer_eval_jump == 0.0 &&
         external_routing == 0.0 &&
         external_jump == 0.0 &&
         source_routing == 0.0 &&
-        source_jump == 0.0) {
+        source_jump == 0.0 &&
+        real_source_import_routing == 0.0 &&
+        real_source_import_jump == 0.0) {
       distillation_ready = 1
     }
     status = distillation_ready ? "distillation-candidate" : "diagnostic-only"
@@ -408,12 +477,18 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       reason = "teacher-external-label-source-missing"
     } else if (!real_teacher_source_verified) {
       reason = "teacher-real-external-label-source-missing"
+    } else if (!real_teacher_source_import_review_ready) {
+      reason = "teacher-real-source-import-review-missing"
+    } else if (!real_source_import_real_teacher_source_verified) {
+      reason = "teacher-real-external-label-source-missing"
     } else if (!source_verified_learned_chunk_scorer_ready) {
       reason = "source-verified-learned-chunk-scorer-missing"
+    } else if (!source_verified_learned_chunk_scorer_eval_ready) {
+      reason = "source-verified-learned-chunk-scorer-eval-missing"
     }
 
-    print "best_joint_arm,fallback_exercise_arm,guardrail_action,chunk_credit_ready,joint_chunk_ready,source_safe,joint_source_safe,noisy_clean,fallback_not_keyshape_only,fallback_retry_exercised,fallback_exercise_ready,fallback_baseline_qacc,fallback_best_qacc,fallback_qacc_delta_vs_corrupt,fallback_retry_used,fallback_retry_success,fallback_retry_raw_selected,fallback_retry_noisy_selected,fallback_noisy_selected,joint_chunk_source_ready,teacher_label_contract_ready,teacher_label_collection_ready,learned_chunk_scorer_ready,learned_chunk_score_gap,learned_chunk_coherent_wrong_negative_rate,learned_chunk_correct_reward_rate,learned_chunk_negative_action_rate,learned_chunk_scorer_id,learned_chunk_scorer_source,source_verified_feature_labels_ready,source_verified_learned_chunk_scorer_ready,source_verified_feature_source_link_ready,source_verified_feature_label_source,source_verified_feature_csv_provided,source_verified_scorer_reason,teacher_external_schema_ready,teacher_external_label_source_ready,teacher_external_labels_ready,teacher_external_label_source,teacher_external_source_evidence,teacher_source_chain_verified,real_teacher_source_verified,teacher_source_action,teacher_distillation_training_ready,teacher_distillation_eval_ready,teacher_distillation_action_accuracy,teacher_learner_id,teacher_grounded_span_coverage,teacher_label_source,teacher_correct_labels,teacher_wrong_labels,teacher_near_miss_labels,teacher_missing_query_labels,teacher_abstain_labels,policy_distillation_ready,combined_ready,distillation_ready,default_promotion,diagnostic_only,weak_hint_or_abstain,status,reason,routing_trigger_rate,active_jump_rate" > summary_csv
-    printf "%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%s,%s,%d,%d,%d,%s,%d,%s,%d,%d,%d,%s,%s,%d,%d,%s,%d,%d,%.6f,%s,%.6f,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%.6f,%.6f\n",
+    print "best_joint_arm,fallback_exercise_arm,guardrail_action,chunk_credit_ready,joint_chunk_ready,source_safe,joint_source_safe,noisy_clean,fallback_not_keyshape_only,fallback_retry_exercised,fallback_exercise_ready,fallback_baseline_qacc,fallback_best_qacc,fallback_qacc_delta_vs_corrupt,fallback_retry_used,fallback_retry_success,fallback_retry_raw_selected,fallback_retry_noisy_selected,fallback_noisy_selected,joint_chunk_source_ready,teacher_label_contract_ready,teacher_label_collection_ready,learned_chunk_scorer_ready,learned_chunk_score_gap,learned_chunk_coherent_wrong_negative_rate,learned_chunk_correct_reward_rate,learned_chunk_negative_action_rate,learned_chunk_scorer_id,learned_chunk_scorer_source,source_verified_feature_labels_ready,source_verified_learned_chunk_scorer_ready,source_verified_feature_source_link_ready,source_verified_feature_label_source,source_verified_feature_csv_provided,source_verified_scorer_reason,source_verified_learned_chunk_scorer_eval_ready,source_verified_student_only_eval_rows,source_verified_student_only_eval_ready,source_verified_baseline_chunk_exact,source_verified_student_only_chunk_exact,source_verified_chunk_exact_delta,source_verified_baseline_span_exact,source_verified_student_only_span_exact,source_verified_span_exact_delta,source_verified_baseline_wrong_answer_rate,source_verified_student_only_wrong_answer_rate,source_verified_wrong_answer_delta,source_verified_baseline_missing_abstain,source_verified_student_only_missing_abstain,source_verified_missing_abstain_delta,source_verified_near_miss_negative_rate,source_verified_missing_abstain_rate,source_verified_metric_improvement_ready,source_verified_scorer_eval_reason,teacher_external_schema_ready,teacher_external_label_source_ready,teacher_external_labels_ready,teacher_external_label_source,teacher_external_source_evidence,teacher_source_chain_verified,real_teacher_source_verified,teacher_source_action,remote_teacher_source_live_network_import_ready,teacher_source_import_review_contract_ready,real_teacher_source_import_review_ready,teacher_source_import_review_action,teacher_distillation_training_ready,teacher_distillation_eval_ready,teacher_distillation_action_accuracy,teacher_learner_id,teacher_grounded_span_coverage,teacher_label_source,teacher_correct_labels,teacher_wrong_labels,teacher_near_miss_labels,teacher_missing_query_labels,teacher_abstain_labels,policy_distillation_ready,combined_ready,distillation_ready,default_promotion,diagnostic_only,weak_hint_or_abstain,status,reason,routing_trigger_rate,active_jump_rate" > summary_csv
+    printf "%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%s,%s,%d,%d,%d,%s,%d,%s,%d,%d,%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%s,%d,%d,%d,%s,%s,%d,%d,%s,%d,%d,%d,%s,%d,%d,%.6f,%s,%.6f,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%.6f,%.6f\n",
       best_joint_arm,
       fallback_exercise_arm,
       guardrail_action,
@@ -449,6 +524,25 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       source_verified_feature_label_source,
       source_verified_feature_csv_provided,
       source_verified_scorer_reason,
+      source_verified_learned_chunk_scorer_eval_ready,
+      source_verified_student_only_eval_rows,
+      source_verified_student_only_eval_ready,
+      source_verified_baseline_chunk_exact,
+      source_verified_student_only_chunk_exact,
+      source_verified_chunk_exact_delta,
+      source_verified_baseline_span_exact,
+      source_verified_student_only_span_exact,
+      source_verified_span_exact_delta,
+      source_verified_baseline_wrong_answer_rate,
+      source_verified_student_only_wrong_answer_rate,
+      source_verified_wrong_answer_delta,
+      source_verified_baseline_missing_abstain,
+      source_verified_student_only_missing_abstain,
+      source_verified_missing_abstain_delta,
+      source_verified_near_miss_negative_rate,
+      source_verified_missing_abstain_rate,
+      source_verified_metric_improvement_ready,
+      source_verified_scorer_eval_reason,
       teacher_external_schema_ready,
       teacher_external_label_source_ready,
       teacher_external_labels_ready,
@@ -457,6 +551,10 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       teacher_source_chain_verified,
       real_teacher_source_verified,
       teacher_source_action,
+      remote_teacher_source_live_network_import_ready,
+      teacher_source_import_review_contract_ready,
+      real_teacher_source_import_review_ready,
+      teacher_source_import_review_action,
       teacher_distillation_training_ready,
       teacher_distillation_eval_ready,
       teacher_distillation_action_accuracy,
@@ -476,8 +574,8 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       weak_hint_or_abstain,
       status,
       reason,
-      policy_routing + joint_routing + fallback_routing + contract_routing + teacher_routing + training_routing + scorer_routing + source_verified_scorer_routing + external_routing + source_routing,
-      policy_jump + joint_jump + fallback_jump + contract_jump + teacher_jump + training_jump + scorer_jump + source_verified_scorer_jump + external_jump + source_jump >> summary_csv
+      policy_routing + joint_routing + fallback_routing + contract_routing + teacher_routing + training_routing + scorer_routing + source_verified_scorer_routing + source_verified_scorer_eval_routing + external_routing + source_routing + real_source_import_routing,
+      policy_jump + joint_jump + fallback_jump + contract_jump + teacher_jump + training_jump + scorer_jump + source_verified_scorer_jump + source_verified_scorer_eval_jump + external_jump + source_jump + real_source_import_jump >> summary_csv
 
     print "gate,status,reason" > decision_csv
     printf "chunk-credit,%s,chunk_credit_ready=%d joint_chunk_ready=%d\n",
@@ -511,6 +609,12 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       source_verified_learned_chunk_scorer_ready ? "pass" : "blocked",
       source_verified_learned_chunk_scorer_ready,
       source_verified_scorer_reason >> decision_csv
+    printf "source-verified-learned-chunk-scorer-eval,%s,eval_ready=%d student_eval_ready=%d chunk_delta=%.6f reason=%s\n",
+      source_verified_learned_chunk_scorer_eval_ready ? "pass" : "blocked",
+      source_verified_learned_chunk_scorer_eval_ready,
+      source_verified_student_only_eval_ready,
+      source_verified_chunk_exact_delta,
+      source_verified_scorer_eval_reason >> decision_csv
     printf "external-label-schema,%s,schema_ready=%d\n",
       teacher_external_schema_ready ? "pass" : "blocked",
       teacher_external_schema_ready >> decision_csv
@@ -520,6 +624,11 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
     printf "external-label-ingestion,%s,external_ready=%d\n",
       teacher_external_labels_ready ? "pass" : "blocked",
       teacher_external_labels_ready >> decision_csv
+    printf "real-teacher-source-import-review,%s,live_import=%d review_ready=%d action=%s\n",
+      real_teacher_source_import_review_ready ? "pass" : "blocked",
+      remote_teacher_source_live_network_import_ready,
+      real_teacher_source_import_review_ready,
+      teacher_source_import_review_action >> decision_csv
     printf "real-external-teacher-source,%s,chain_verified=%d real_verified=%d action=%s\n",
       real_teacher_source_verified ? "pass" : "blocked",
       teacher_source_chain_verified,
@@ -530,7 +639,7 @@ awk -F, -v policy_csv="$POLICY_CSV" -v joint_csv="$JOINT_AGG_CSV" -v fallback_cs
       status,
       reason >> decision_csv
   }
-' "$POLICY_CSV" "$JOINT_AGG_CSV" "$FALLBACK_AGG_CSV" "$CONTRACT_SUMMARY_CSV" "$COLLECTION_SUMMARY_CSV" "$TRAINING_SUMMARY_CSV" "$SCORER_SUMMARY_CSV" "$SOURCE_VERIFIED_SCORER_SUMMARY_CSV" "$EXTERNAL_SUMMARY_CSV" "$SOURCE_SUMMARY_CSV"
+' "$POLICY_CSV" "$JOINT_AGG_CSV" "$FALLBACK_AGG_CSV" "$CONTRACT_SUMMARY_CSV" "$COLLECTION_SUMMARY_CSV" "$TRAINING_SUMMARY_CSV" "$SCORER_SUMMARY_CSV" "$SOURCE_VERIFIED_SCORER_SUMMARY_CSV" "$SOURCE_VERIFIED_SCORER_EVAL_SUMMARY_CSV" "$EXTERNAL_SUMMARY_CSV" "$SOURCE_SUMMARY_CSV" "$REAL_SOURCE_IMPORT_SUMMARY_CSV"
 
 echo "summary: $SUMMARY_CSV"
 echo "decision: $DECISION_CSV"

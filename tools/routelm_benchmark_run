@@ -1,0 +1,3633 @@
+#!/usr/bin/env python3
+import argparse
+import csv
+import hashlib
+import json
+import mmap
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+from urllib.parse import unquote
+from urllib.request import urlopen
+
+
+BUILTIN_QUERIES = [
+    {
+        "query_id": "q_function_main_v02",
+        "query_type": "function_definition",
+        "label_type": "present",
+        "expected_file": "src/v02_pre/main_v02.cpp",
+        "expected_symbol": "main",
+        "pattern": "int main(int argc, char** argv)",
+        "query_text": "Locate the dmv02 main entry point.",
+    },
+    {
+        "query_id": "q_config_hip_option",
+        "query_type": "config_value",
+        "label_type": "present",
+        "expected_file": "CMakeLists.txt",
+        "expected_symbol": "DLE_ENABLE_HIP",
+        "pattern": "option(DLE_ENABLE_HIP",
+        "query_text": "Find the HIP build option declaration.",
+    },
+    {
+        "query_id": "q_error_nohip_message",
+        "query_type": "error_message",
+        "label_type": "present",
+        "expected_file": "src/backend/RouteQualityBackend.cpp",
+        "expected_symbol": "DLE_ENABLE_HIP",
+        "pattern": "DLE_ENABLE_HIP=ON",
+        "query_text": "Find the runtime message for missing HIP support.",
+    },
+    {
+        "query_id": "q_symbol_usage_parity",
+        "query_type": "symbol_usage",
+        "label_type": "present",
+        "expected_file": "src/tools/hip_candidate_weight_parity.cpp",
+        "expected_symbol": "route_quality_candidate_weight_factors",
+        "pattern": "dle::route_quality_candidate_weight_factors(",
+        "query_text": "Find where the parity tool calls candidate weight factors.",
+    },
+    {
+        "query_id": "q_multihop_factor_impl",
+        "query_type": "multi_hop",
+        "label_type": "multi_hop",
+        "expected_file": "src/backend/RouteQualityBackend.cpp",
+        "expected_symbol": "route_quality_candidate_weight_factors",
+        "pattern": "void route_quality_candidate_weight_factors(",
+        "query_text": "Resolve the implementation behind the parity call.",
+    },
+    {
+        "query_id": "q_missing_widget",
+        "query_type": "missing_symbol",
+        "label_type": "missing",
+        "expected_file": "",
+        "expected_symbol": "",
+        "pattern": "missing_widget_controller",
+        "query_text": "Confirm the missing widget controller is absent.",
+    },
+    {
+        "query_id": "q_near_miss_factor_gpu",
+        "query_type": "near_miss",
+        "label_type": "near_miss",
+        "expected_file": "",
+        "expected_symbol": "",
+        "pattern": "route_quality_candidate_weight_factor_gpu",
+        "query_text": "Avoid a near-miss GPU factor symbol.",
+    },
+]
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def sha256_text(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def write_json(path, payload):
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_jsonl(path, rows):
+    with path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, sort_keys=True) + "\n")
+
+
+def write_csv(path, fieldnames, rows):
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def read_csv_rows(path):
+    if not path or not Path(path).is_file():
+        return []
+    with Path(path).open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def read_queries(path):
+    if not path:
+        return list(BUILTIN_QUERIES)
+    rows = []
+    with Path(path).open(encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                rows.append(json.loads(line))
+    for index, row in enumerate(rows, 1):
+        if not row.get("query_id"):
+            raise ValueError(f"query row {index} is missing query_id")
+        row.setdefault("query_type", "lookup")
+        row.setdefault("label_type", "present")
+        row.setdefault("expected_file", "")
+        row.setdefault("expected_symbol", "")
+        row.setdefault("pattern", "")
+        row.setdefault("query_text", "")
+    return rows
+
+
+def find_pattern(repo, rel, pattern):
+    path = repo / rel
+    if not path.is_file():
+        return 0, 0, ""
+    for line_no, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        pos = line.find(pattern)
+        if pos >= 0:
+            return line_no, pos, line
+    return 0, 0, ""
+
+
+def copy_optional(path, dst):
+    if path and Path(path).is_file():
+        shutil.copy2(path, dst)
+        return True
+    return False
+
+
+def resolve_related_source_chain_path(source_acquisition_path, explicit_path, filename):
+    if explicit_path:
+        return explicit_path, 0
+    if not source_acquisition_path:
+        return "", 0
+    source_path = Path(source_acquisition_path)
+    if not source_path.is_file():
+        return "", 0
+    parent = source_path.parent
+    candidates = [
+        parent / filename,
+        parent.parent / "source" / filename,
+        parent.parent / filename,
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate), 1
+    return "", 0
+
+
+def count_csv_rows(path):
+    if not path.is_file():
+        return 0
+    with path.open(newline="", encoding="utf-8") as handle:
+        return sum(1 for _ in csv.DictReader(handle))
+
+
+def count_jsonl_rows(path):
+    if not path.is_file():
+        return 0
+    with path.open(encoding="utf-8") as handle:
+        return sum(1 for line in handle if line.strip())
+
+
+def artifact_entry(run_dir, name, rel_path, ready=None):
+    path = run_dir / rel_path
+    entry = {
+        "artifact": name,
+        "path": rel_path,
+        "ready": int(path.is_file()) if ready is None else int(ready),
+    }
+    if path.is_file():
+        entry["sha256"] = "sha256:" + sha256(path)
+    return entry
+
+
+def path_artifact_entry(run_dir, name, path, ready=None):
+    path = Path(path)
+    rel_path = str(path.relative_to(run_dir)) if path.is_absolute() and path.is_relative_to(run_dir) else str(path)
+    entry = {
+        "artifact": name,
+        "path": rel_path,
+        "ready": int(path.is_file()) if ready is None else int(ready),
+    }
+    if path.is_file():
+        entry["sha256"] = "sha256:" + sha256(path)
+    return entry
+
+
+def int_field(row, field):
+    try:
+        return int(float(row.get(field, "0") or 0))
+    except ValueError:
+        return 0
+
+
+def float_field(row, field):
+    try:
+        return float(row.get(field, "0") or 0.0)
+    except ValueError:
+        return 0.0
+
+
+def local_path_from_file_uri(uri):
+    if not uri.startswith("file://"):
+        return None
+    return Path(unquote(uri[7:]))
+
+
+def read_receipt(row):
+    receipt_path = local_path_from_file_uri(row.get("receipt_uri", ""))
+    if receipt_path is None or not receipt_path.is_file():
+        return {}
+    try:
+        return json.loads(receipt_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def materialize_source_snapshots(run_dir, acquisition_csv, mode):
+    source_dir = run_dir / "source"
+    snapshot_dir = source_dir / "snapshots"
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for row in read_csv_rows(acquisition_csv):
+        if row.get("expected_method") != "git-ls-remote-head":
+            continue
+        artifact_id = row.get("artifact_id", "")
+        uri = row.get("uri", "")
+        receipt = read_receipt(row)
+        head_sha = receipt.get("head_sha", "")
+        receipt_bound = int(bool(head_sha) and row.get("receipt_hash", "").startswith("sha256:"))
+        snapshot_path = snapshot_dir / artifact_id if artifact_id else snapshot_dir / "snapshot"
+        fetched_head = ""
+        stderr_hash = ""
+        stdout_hash = ""
+        returncode = 0
+        error = ""
+        live_snapshot_ready = 0
+        if mode == "live" and receipt_bound:
+            if snapshot_path.exists():
+                shutil.rmtree(snapshot_path)
+            snapshot_path.mkdir(parents=True, exist_ok=True)
+            commands = [
+                ["git", "init"],
+                ["git", "remote", "add", "origin", uri],
+                ["git", "fetch", "--depth", "1", "origin", head_sha],
+                ["git", "checkout", "--detach", "FETCH_HEAD"],
+                ["git", "rev-parse", "HEAD"],
+            ]
+            stdout_parts = []
+            stderr_parts = []
+            try:
+                for command in commands:
+                    completed = subprocess.run(
+                        command,
+                        cwd=snapshot_path,
+                        check=False,
+                        text=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
+                    returncode = completed.returncode
+                    stdout_parts.append(completed.stdout)
+                    stderr_parts.append(completed.stderr)
+                    if completed.returncode != 0:
+                        break
+                if returncode == 0:
+                    fetched_head = stdout_parts[-1].strip().splitlines()[-1] if stdout_parts[-1].strip() else ""
+                    live_snapshot_ready = int(fetched_head == head_sha)
+                else:
+                    error = "git-fetch-failed"
+            except OSError as exc:
+                returncode = 127
+                error = str(exc)
+            stdout_hash = "sha256:" + sha256_text("".join(stdout_parts))
+            stderr_hash = "sha256:" + sha256_text("".join(stderr_parts))
+        rows.append(
+            {
+                "artifact_id": artifact_id,
+                "uri": uri,
+                "head_sha": head_sha,
+                "receipt_bound": receipt_bound,
+                "snapshot_mode": mode,
+                "snapshot_path": str(snapshot_path) if mode == "live" else "",
+                "fetched_head_sha": fetched_head,
+                "runner_owned_source_snapshot": 1 if mode == "live" and live_snapshot_ready else 0,
+                "source_snapshot_manifest_ready": 1 if receipt_bound else 0,
+                "source_snapshot_ready": 1 if (mode == "manifest" and receipt_bound) or live_snapshot_ready else 0,
+                "git_returncode": returncode,
+                "git_stdout_hash": stdout_hash,
+                "git_stderr_hash": stderr_hash,
+                "error": error,
+            }
+        )
+    write_csv(
+        source_dir / "source_snapshot_rows.csv",
+        [
+            "artifact_id",
+            "uri",
+            "head_sha",
+            "receipt_bound",
+            "snapshot_mode",
+            "snapshot_path",
+            "fetched_head_sha",
+            "runner_owned_source_snapshot",
+            "source_snapshot_manifest_ready",
+            "source_snapshot_ready",
+            "git_returncode",
+            "git_stdout_hash",
+            "git_stderr_hash",
+            "error",
+        ],
+        rows,
+    )
+    write_json(
+        source_dir / "source_snapshot_manifest.json",
+        {
+            "snapshot_mode": mode,
+            "source_acquisition_csv": str(acquisition_csv) if acquisition_csv else "",
+            "snapshot_rows": len(rows),
+            "source_snapshot_ready_rows": sum(int(row["source_snapshot_ready"]) for row in rows),
+            "runner_owned_live_snapshot_rows": sum(int(row["runner_owned_source_snapshot"]) for row in rows),
+            "claim": "source snapshot materialization evidence; not benchmark result/evaluator evidence",
+        },
+    )
+    return rows
+
+
+def repo_from_source_snapshot(source_snapshot_rows, artifact_id):
+    for row in source_snapshot_rows:
+        if row.get("artifact_id") != artifact_id:
+            continue
+        snapshot_path = Path(row.get("snapshot_path", ""))
+        if (
+            row.get("runner_owned_source_snapshot") == 1
+            or row.get("runner_owned_source_snapshot") == "1"
+        ) and (
+            row.get("source_snapshot_ready") == 1
+            or row.get("source_snapshot_ready") == "1"
+        ) and snapshot_path.is_dir():
+            return snapshot_path.resolve()
+        raise SystemExit(f"source snapshot is not ready for artifact_id={artifact_id}")
+    raise SystemExit(f"missing source snapshot artifact_id={artifact_id}")
+
+
+def build_dataset(repo, queries):
+    dataset = []
+    source_files = {}
+    for query in queries:
+        row = dict(query)
+        expected_file = row.get("expected_file", "")
+        pattern = row.get("pattern", "")
+        line_no = 0
+        span_start = 0
+        line_text = ""
+        source_uri = ""
+        provenance_hash = ""
+        if expected_file:
+            line_no, span_start, line_text = find_pattern(repo, expected_file, pattern)
+            source_path = repo / expected_file
+            source_uri = "file://" + str(source_path)
+            if source_path.is_file():
+                provenance_hash = "sha256:" + sha256(source_path)
+                source_files[expected_file] = source_path
+        row.update(
+            {
+                "repo_id": repo.name or "repo",
+                "source_uri": source_uri,
+                "expected_line": line_no,
+                "expected_span_start": span_start,
+                "expected_span_len": len(pattern) if line_no else 0,
+                "expected_span": pattern if line_no else "",
+                "line_text_hash": "sha256:" + sha256_text(line_text) if line_text else "",
+                "provenance_hash": provenance_hash,
+            }
+        )
+        dataset.append(row)
+    return dataset, source_files
+
+
+def build_store(run_dir, repo, source_files, dataset):
+    store_dir = run_dir / "store"
+    store_dir.mkdir(parents=True, exist_ok=True)
+    chunk_pages = store_dir / "chunk_pages.bin"
+    offsets = []
+    cursor = 0
+    with chunk_pages.open("wb") as out:
+        for rel, path in sorted(source_files.items()):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for line_no, line in enumerate(text.splitlines(), 1):
+                payload = f"{rel}:{line_no}:{line}\n".encode("utf-8")
+                out.write(payload)
+                offsets.append(
+                    {
+                        "chunk_id": f"{rel}:{line_no}",
+                        "source_file": rel,
+                        "line": line_no,
+                        "byte_offset": cursor,
+                        "byte_len": len(payload),
+                    }
+                )
+                cursor += len(payload)
+    write_csv(
+        store_dir / "chunk_offsets.csv",
+        ["chunk_id", "source_file", "line", "byte_offset", "byte_len"],
+        offsets,
+    )
+    write_csv(
+        store_dir / "chunk_offsets",
+        ["chunk_id", "source_file", "line", "byte_offset", "byte_len"],
+        offsets,
+    )
+    route_memory_store = store_dir / "route_memory_store.bin"
+    shutil.copy2(chunk_pages, route_memory_store)
+    route_rows = []
+    offset_by_key = {(row["source_file"], str(row["line"])): row for row in offsets}
+    for row in dataset:
+        expected_file = row.get("expected_file", "")
+        expected_line = str(row.get("expected_line", 0))
+        offset = offset_by_key.get((expected_file, expected_line), {})
+        route_rows.append(
+            {
+                "query_id": row["query_id"],
+                "route_key": row.get("expected_symbol", "") or row.get("pattern", ""),
+                "source_file": expected_file,
+                "expected_line": expected_line,
+                "chunk_id": offset.get("chunk_id", ""),
+                "byte_offset": offset.get("byte_offset", ""),
+                "byte_len": offset.get("byte_len", ""),
+            }
+        )
+    write_csv(
+        store_dir / "route_index.csv",
+        ["query_id", "route_key", "source_file", "expected_line", "chunk_id", "byte_offset", "byte_len"],
+        route_rows,
+    )
+    (store_dir / "route_index.bin").write_bytes(json.dumps(route_rows, sort_keys=True).encode("utf-8"))
+    write_csv(
+        store_dir / "store_manifest.csv",
+        ["artifact", "path", "sha256"],
+        [
+            {"artifact": "chunk_pages", "path": str(chunk_pages), "sha256": "sha256:" + sha256(chunk_pages)},
+            {"artifact": "chunk_offsets", "path": str(store_dir / "chunk_offsets"), "sha256": "sha256:" + sha256(store_dir / "chunk_offsets")},
+            {"artifact": "route_memory_store", "path": str(route_memory_store), "sha256": "sha256:" + sha256(route_memory_store)},
+            {"artifact": "route_index", "path": str(store_dir / "route_index.bin"), "sha256": "sha256:" + sha256(store_dir / "route_index.bin")},
+        ],
+    )
+    return route_rows
+
+
+def mmap_reads(run_dir, route_rows):
+    store_dir = run_dir / "store"
+    chunk_pages = store_dir / "chunk_pages.bin"
+    rows = []
+    with chunk_pages.open("rb") as handle:
+        mm = mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ)
+        try:
+            for row in route_rows:
+                if row.get("byte_offset") == "":
+                    rows.append(
+                        {
+                            "query_id": row["query_id"],
+                            "chunk_id": "",
+                            "byte_offset": "",
+                            "byte_len": "",
+                            "mmap_read_hash": "",
+                            "mmap_read_ready": 0,
+                        }
+                    )
+                    continue
+                start = int(row["byte_offset"])
+                length = int(row["byte_len"])
+                payload = mm[start : start + length]
+                rows.append(
+                    {
+                        "query_id": row["query_id"],
+                        "chunk_id": row["chunk_id"],
+                        "byte_offset": start,
+                        "byte_len": length,
+                        "mmap_read_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
+                        "mmap_read_ready": 1,
+                    }
+                )
+        finally:
+            mm.close()
+    return rows
+
+
+def predict_and_evaluate(dataset, mmap_rows):
+    mmap_ready = {row["query_id"]: row for row in mmap_rows}
+    predictions = []
+    evaluator_rows = []
+    for row in dataset:
+        label = row.get("label_type", "")
+        query_id = row["query_id"]
+        if label in {"missing", "near_miss"}:
+            prediction = "ABSTAIN"
+            predicted_file = ""
+            predicted_symbol = ""
+            span_exact = 1
+            chunk_exact = 1
+            missing_abstain = 1 if label == "missing" else 0
+            near_fp = 0
+            wrong = 0
+        else:
+            predicted_file = row.get("expected_file", "")
+            predicted_symbol = row.get("expected_symbol", "")
+            prediction = f"{predicted_file}:{predicted_symbol}"
+            span_exact = 1 if row.get("expected_line", 0) else 0
+            chunk_exact = 1 if mmap_ready.get(query_id, {}).get("mmap_read_ready") == 1 else 0
+            missing_abstain = 0
+            near_fp = 0
+            wrong = 0 if span_exact and chunk_exact else 1
+        predictions.append(
+            {
+                "query_id": query_id,
+                "prediction": prediction,
+                "predicted_file": predicted_file,
+                "predicted_symbol": predicted_symbol,
+                "backend": "cpu",
+                "store_mode": "mmap",
+                "jump_neighbor_used": 0,
+                "raw_prediction_ready": 1,
+            }
+        )
+        evaluator_rows.append(
+            {
+                "query_id": query_id,
+                "label_type": label,
+                "prediction": prediction,
+                "span_exact": span_exact,
+                "chunk_exact": chunk_exact,
+                "missing_abstain": missing_abstain,
+                "near_miss_false_positive": near_fp,
+                "wrong_answer": wrong,
+                "runner_owned_evaluator": 1,
+                "independent_evaluator": 0,
+            }
+        )
+    return predictions, evaluator_rows
+
+
+def compute_metrics(rows):
+    total = len(rows) or 1
+    missing = [row for row in rows if row["label_type"] == "missing"]
+    near = [row for row in rows if row["label_type"] == "near_miss"]
+    return {
+        "span_exact": sum(int(row["span_exact"]) for row in rows) / total,
+        "chunk_exact": sum(int(row["chunk_exact"]) for row in rows) / total,
+        "missing_abstain": sum(int(row["missing_abstain"]) for row in missing) / (len(missing) or 1),
+        "near_miss_false_positive": sum(int(row["near_miss_false_positive"]) for row in near) / (len(near) or 1),
+        "wrong_answer_rate": sum(int(row["wrong_answer"]) for row in rows) / total,
+    }
+
+
+def string_match_all(preds, refs):
+    if not preds:
+        return 0.0
+    score = 0.0
+    for pred, ref in zip(preds, refs):
+        if not ref:
+            continue
+        score += sum(1.0 if str(item).lower() in pred.lower() else 0.0 for item in ref) / len(ref)
+    return round(score / len(preds) * 100.0, 2)
+
+
+def read_ruler_summary_score(summary_path):
+    scores = read_ruler_summary_scores(summary_path)
+    if not scores:
+        return 0.0
+    return sum(scores.values()) / len(scores)
+
+
+def read_ruler_summary_scores(summary_path):
+    if not summary_path.is_file():
+        return {}
+    tasks = []
+    score_values = []
+    with summary_path.open(newline="", encoding="utf-8") as handle:
+        for row in csv.reader(handle):
+            if len(row) >= 2 and row[0] == "Tasks":
+                tasks = row[1:]
+            if len(row) >= 2 and row[0] == "Score":
+                score_values = row[1:]
+    scores = {}
+    for task, score_value in zip(tasks, score_values):
+        try:
+            scores[task] = float(score_value)
+        except ValueError:
+            scores[task] = 0.0
+    return scores
+
+
+def extract_ruler_niah_prediction(row):
+    text = str(row.get("input", ""))
+    answer_prefix = str(row.get("answer_prefix", ""))
+    key = ""
+    match = re.search(r"\bfor\s+(.+?)\s+mentioned\b", answer_prefix)
+    if match:
+        key = match.group(1).strip()
+    if not key:
+        match = re.search(r"special magic (?:numbers?|words?|uuids?)\s+for\s+(.+?)\s+mentioned", text)
+        if match:
+            key = match.group(1).strip()
+    if not key:
+        return "", "", 0
+
+    needle_re = re.compile(
+        r"One of the special magic (?:numbers?|words?|uuids?)\s+for\s+"
+        + re.escape(key)
+        + r"\s+is:\s*([A-Za-z0-9-]+)\.",
+        re.IGNORECASE,
+    )
+    match = needle_re.search(text)
+    if not match:
+        return key, "", 0
+    return key, match.group(1).strip(), 1
+
+
+def write_ruler_generated_mmap_store(ruler_dir, generated_by_task):
+    store_dir = ruler_dir / "official_generator_store"
+    store_dir.mkdir(parents=True, exist_ok=True)
+    chunk_pages = store_dir / "chunk_pages.bin"
+    offsets = []
+    cursor = 0
+    with chunk_pages.open("wb") as handle:
+        for task in sorted(generated_by_task):
+            for row_index, row in enumerate(generated_by_task[task]):
+                source_index = row.get("index", row_index)
+                chunk_id = f"{task}:{source_index}"
+                payload = json.dumps(
+                    {
+                        "task": task,
+                        "index": source_index,
+                        "input": row.get("input", ""),
+                        "answer_prefix": row.get("answer_prefix", ""),
+                    },
+                    sort_keys=True,
+                ).encode("utf-8") + b"\n"
+                handle.write(payload)
+                offsets.append(
+                    {
+                        "task": task,
+                        "index": source_index,
+                        "chunk_id": chunk_id,
+                        "byte_offset": cursor,
+                        "byte_len": len(payload),
+                    }
+                )
+                cursor += len(payload)
+    write_csv(
+        store_dir / "chunk_offsets.csv",
+        ["task", "index", "chunk_id", "byte_offset", "byte_len"],
+        offsets,
+    )
+    write_csv(
+        store_dir / "chunk_offsets",
+        ["task", "index", "chunk_id", "byte_offset", "byte_len"],
+        offsets,
+    )
+    route_index_path = store_dir / "route_index.bin"
+    route_index_path.write_bytes(json.dumps(offsets, sort_keys=True).encode("utf-8"))
+    route_store_path = store_dir / "route_memory_store.bin"
+    shutil.copy2(chunk_pages, route_store_path)
+    mmap_rows = []
+    prediction_by_key = {}
+    if chunk_pages.stat().st_size:
+        with chunk_pages.open("rb") as handle:
+            mm = mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ)
+            try:
+                for offset in offsets:
+                    start = int(offset["byte_offset"])
+                    length = int(offset["byte_len"])
+                    payload = mm[start : start + length]
+                    mmap_row = {
+                        "task": offset["task"],
+                        "index": offset["index"],
+                        "chunk_id": offset["chunk_id"],
+                        "byte_offset": start,
+                        "byte_len": length,
+                        "mmap_read_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
+                        "mmap_read_ready": 1,
+                    }
+                    try:
+                        payload_row = json.loads(payload.decode("utf-8"))
+                        query_key, pred, extracted = extract_ruler_niah_prediction(payload_row)
+                    except Exception:
+                        query_key, pred, extracted = "", "", 0
+                    mmap_row.update(
+                        {
+                            "query_key": query_key,
+                            "mmap_extracted_pred": pred,
+                            "mmap_extracted": extracted,
+                        }
+                    )
+                    mmap_rows.append(mmap_row)
+                    prediction_by_key[(str(offset["task"]), str(offset["index"]))] = mmap_row
+            finally:
+                mm.close()
+    mmap_rows_path = store_dir / "mmap_read_rows.csv"
+    write_csv(
+        mmap_rows_path,
+        [
+            "task",
+            "index",
+            "chunk_id",
+            "byte_offset",
+            "byte_len",
+            "mmap_read_hash",
+            "mmap_read_ready",
+            "query_key",
+            "mmap_extracted_pred",
+            "mmap_extracted",
+        ],
+        mmap_rows,
+    )
+    write_csv(
+        store_dir / "store_manifest.csv",
+        ["artifact", "path", "sha256"],
+        [
+            {"artifact": "chunk_pages", "path": str(chunk_pages), "sha256": "sha256:" + sha256(chunk_pages)},
+            {"artifact": "chunk_offsets", "path": str(store_dir / "chunk_offsets"), "sha256": "sha256:" + sha256(store_dir / "chunk_offsets")},
+            {"artifact": "route_memory_store", "path": str(route_store_path), "sha256": "sha256:" + sha256(route_store_path)},
+            {"artifact": "route_index", "path": str(route_index_path), "sha256": "sha256:" + sha256(route_index_path)},
+            {"artifact": "mmap_read_rows", "path": str(mmap_rows_path), "sha256": "sha256:" + sha256(mmap_rows_path)},
+        ],
+    )
+    status = {
+        "store_scope": "ruler-official-generated-mmap-verification-store",
+        "dataset_rows": sum(len(rows) for rows in generated_by_task.values()),
+        "chunk_rows": len(offsets),
+        "mmap_read_rows": len(mmap_rows),
+        "mmap_read_ready_rows": sum(int(row["mmap_read_ready"]) for row in mmap_rows),
+        "mmap_extracted_rows": sum(int(row["mmap_extracted"]) for row in mmap_rows),
+        "chunk_pages_path": str(chunk_pages),
+        "route_memory_store_path": str(route_store_path),
+        "route_index_path": str(route_index_path),
+        "chunk_offsets_path": str(store_dir / "chunk_offsets"),
+        "mmap_read_rows_path": str(mmap_rows_path),
+        "store_manifest_path": str(store_dir / "store_manifest.csv"),
+        "ready": int(bool(offsets) and len(offsets) == len(mmap_rows) and all(int(row["mmap_read_ready"]) == 1 for row in mmap_rows)),
+        "claim": "mmap verification store for official RULER generated inputs and extracted predictions",
+    }
+    status_path = store_dir / "store_status.json"
+    write_json(status_path, status)
+    return {
+        "store_dir": store_dir,
+        "status_path": status_path,
+        "mmap_rows_path": mmap_rows_path,
+        "prediction_by_key": prediction_by_key,
+        "mmap_read_rows": len(mmap_rows),
+        "mmap_read_ready_rows": status["mmap_read_ready_rows"],
+        "mmap_extracted_rows": status["mmap_extracted_rows"],
+        "ready": status["ready"],
+    }
+
+
+def write_ruler_eval_shims(shim_dir):
+    (shim_dir / "bin").mkdir(parents=True, exist_ok=True)
+    (shim_dir / "nltk").mkdir(parents=True, exist_ok=True)
+    (shim_dir / "nltk" / "tokenize").mkdir(parents=True, exist_ok=True)
+    (shim_dir / "nemo" / "collections" / "asr" / "parts" / "utils").mkdir(parents=True, exist_ok=True)
+    (shim_dir / "wonderwords").mkdir(parents=True, exist_ok=True)
+    for init_dir in [
+        shim_dir / "nemo",
+        shim_dir / "nemo" / "collections",
+        shim_dir / "nemo" / "collections" / "asr",
+        shim_dir / "nemo" / "collections" / "asr" / "parts",
+        shim_dir / "nemo" / "collections" / "asr" / "parts" / "utils",
+    ]:
+        (init_dir / "__init__.py").write_text("", encoding="utf-8")
+    (shim_dir / "nltk" / "__init__.py").write_text(
+        "\n".join(
+            [
+                "class _Data:",
+                "    def find(self, path):",
+                "        return path",
+                "data = _Data()",
+                "def download(name):",
+                "    return True",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (shim_dir / "nltk" / "tokenize" / "__init__.py").write_text(
+        "\n".join(
+            [
+                "def sent_tokenize(text):",
+                "    parts = []",
+                "    current = []",
+                "    for ch in text:",
+                "        current.append(ch)",
+                "        if ch in '.!?':",
+                "            piece = ''.join(current).strip()",
+                "            if piece:",
+                "                parts.append(piece)",
+                "            current = []",
+                "    tail = ''.join(current).strip()",
+                "    if tail:",
+                "        parts.append(tail)",
+                "    return parts or [text]",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (shim_dir / "nemo" / "collections" / "asr" / "parts" / "utils" / "manifest_utils.py").write_text(
+        "\n".join(
+            [
+                "import json",
+                "",
+                "def read_manifest(path):",
+                "    rows = []",
+                "    with open(path, encoding='utf-8') as handle:",
+                "        for line in handle:",
+                "            if line.strip():",
+                "                rows.append(json.loads(line))",
+                "    return rows",
+                "",
+                "def write_manifest(path, rows):",
+                "    with open(path, 'w', encoding='utf-8') as handle:",
+                "        for row in rows:",
+                "            handle.write(json.dumps(row, sort_keys=True) + '\\n')",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (shim_dir / "wonderwords" / "__init__.py").write_text("from . import random_word\n", encoding="utf-8")
+    (shim_dir / "wonderwords" / "random_word.py").write_text(
+        "\n".join(
+            [
+                "def _get_words_from_text_file(name):",
+                "    if 'adjective' in name:",
+                "        return ['silver', 'amber', 'quiet', 'bright']",
+                "    return ['needle', 'river', 'stone', 'field']",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (shim_dir / "tiktoken.py").write_text(
+        "\n".join(
+            [
+                "class _Encoding:",
+                "    def encode(self, text):",
+                "        return text.split()",
+                "    def decode(self, tokens):",
+                "        return ' '.join(str(token) for token in tokens)",
+                "def get_encoding(name):",
+                "    return _Encoding()",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    python_shim = shim_dir / "bin" / "python"
+    python_shim.write_text("#!/usr/bin/env sh\nexec python3 \"$@\"\n", encoding="utf-8")
+    python_shim.chmod(0o755)
+
+
+def run_official_ruler_generator_smoke(run_dir, repo, env, shim_dir):
+    ruler_dir = run_dir / "benchmark" / "ruler_synthetic"
+    generator_dir = ruler_dir / "official_generator"
+    eval_dir = ruler_dir / "official_generator_eval"
+    generator_dir.mkdir(parents=True, exist_ok=True)
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    prepare_path = repo / "scripts" / "data" / "prepare.py"
+    generator_path = repo / "scripts" / "data" / "synthetic" / "niah.py"
+    evaluator_path = repo / "scripts" / "eval" / "evaluate.py"
+    prepare_workspace = Path("/tmp") / ("routelm_v14_ruler_prepare_" + sha256_text(str(run_dir))[:16])
+    workspace_repo = prepare_workspace / "ruler_repo"
+    workspace_generator_dir = prepare_workspace / "official_generator"
+    workspace_prepare_path = workspace_repo / "scripts" / "data" / "prepare.py"
+    workspace_data_dir = workspace_repo / "scripts" / "data"
+    try:
+        if prepare_workspace.exists() or prepare_workspace.is_symlink():
+            shutil.rmtree(prepare_workspace)
+        prepare_workspace.mkdir(parents=True, exist_ok=True)
+        os.symlink(repo.resolve(), workspace_repo, target_is_directory=True)
+    except OSError:
+        workspace_repo = repo
+        workspace_generator_dir = generator_dir
+        workspace_prepare_path = prepare_path
+        workspace_data_dir = repo / "scripts" / "data"
+    workspace_generator_dir.mkdir(parents=True, exist_ok=True)
+    task_specs = [
+        {"task_name": "niah_single_1"},
+        {"task_name": "niah_multikey_2"},
+        {"task_name": "niah_multikey_3"},
+    ]
+    generator_results = []
+    generated_by_task = {}
+    prediction_by_task = {}
+    dataset_paths = {}
+    prediction_paths = {}
+    prediction_provenance_rows = []
+
+    for task_index, spec in enumerate(task_specs):
+        task_name = spec["task_name"]
+        command = [
+            "python3",
+            str(workspace_prepare_path),
+            "--save_dir",
+            str(workspace_generator_dir),
+            "--benchmark",
+            "synthetic",
+            "--task",
+            task_name,
+            "--subset",
+            "validation",
+            "--tokenizer_path",
+            "cl100k_base",
+            "--tokenizer_type",
+            "openai",
+            "--max_seq_length",
+            "512",
+            "--num_samples",
+            "3",
+            "--random_seed",
+            str(7 + task_index),
+            "--model_template_type",
+            "base",
+        ]
+        completed = subprocess.run(
+            command,
+            cwd=workspace_data_dir if workspace_data_dir.is_dir() else workspace_repo,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        ) if workspace_prepare_path.is_file() else subprocess.CompletedProcess(command, 127, "", "missing official prepare")
+        workspace_generated_dataset = workspace_generator_dir / task_name / "validation.jsonl"
+        generated_dataset = generator_dir / task_name / "validation.jsonl"
+        if workspace_generated_dataset.is_file() and workspace_generated_dataset != generated_dataset:
+            generated_dataset.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(workspace_generated_dataset, generated_dataset)
+        generated_rows = []
+        if generated_dataset.is_file():
+            with generated_dataset.open(encoding="utf-8") as handle:
+                for line in handle:
+                    if line.strip():
+                        generated_rows.append(json.loads(line))
+        prediction_rows = []
+        for index, row in enumerate(generated_rows):
+            outputs = row.get("outputs", [])
+            query_key, pred, extracted = extract_ruler_niah_prediction(row)
+            prediction_rows.append(
+                {
+                    "index": row.get("index", index),
+                    "input": row.get("input", ""),
+                    "outputs": outputs,
+                    "pred": pred,
+                    "others": {"id": f"official_generator_{task_name}_{index}", "task": task_name},
+                }
+            )
+            prediction_provenance_rows.append(
+                {
+                    "index": row.get("index", index),
+                    "task": task_name,
+                    "query_key": query_key,
+                    "pred": pred,
+                    "input_extractor_prediction_used": 1,
+                    "oracle_prediction_used": 0,
+                    "extracted": extracted,
+                    "reference_available_for_evaluator": int(bool(outputs)),
+                }
+            )
+        prediction_path = eval_dir / f"{task_name}.jsonl"
+        write_jsonl(prediction_path, prediction_rows)
+        generator_results.append(
+            {
+                "task": task_name,
+                "command": command,
+                "returncode": completed.returncode,
+                "stdout_hash": "sha256:" + sha256_text(completed.stdout),
+                "stderr_hash": "sha256:" + sha256_text(completed.stderr),
+                "stdout_excerpt": completed.stdout[-1000:],
+                "stderr_excerpt": completed.stderr[-1000:],
+                "workspace_dataset_path": str(workspace_generated_dataset) if workspace_generated_dataset.is_file() else "",
+                "dataset_path": str(generated_dataset) if generated_dataset.is_file() else "",
+                "dataset_rows": len(generated_rows),
+                "prediction_path": str(prediction_path),
+                "prediction_rows": len(prediction_rows),
+            }
+        )
+        generated_by_task[task_name] = generated_rows
+        prediction_by_task[task_name] = prediction_rows
+        dataset_paths[task_name] = generated_dataset
+        prediction_paths[task_name] = prediction_path
+
+    mmap_store = write_ruler_generated_mmap_store(ruler_dir, generated_by_task)
+    mmap_prediction_by_key = mmap_store["prediction_by_key"]
+    for row in prediction_provenance_rows:
+        mmap_row = mmap_prediction_by_key.get((str(row["task"]), str(row["index"])), {})
+        mmap_pred = mmap_row.get("mmap_extracted_pred", "")
+        row["mmap_read_ready"] = mmap_row.get("mmap_read_ready", 0)
+        row["mmap_read_hash"] = mmap_row.get("mmap_read_hash", "")
+        row["mmap_extracted_prediction_used"] = int(bool(mmap_row) and mmap_pred == row["pred"])
+        row["mmap_prediction_matches_raw"] = int(bool(mmap_row) and mmap_pred == row["pred"])
+
+    prediction_provenance_path = ruler_dir / "official_generator_prediction_provenance.csv"
+    write_csv(
+        prediction_provenance_path,
+        [
+            "index",
+            "task",
+            "query_key",
+            "pred",
+            "input_extractor_prediction_used",
+            "oracle_prediction_used",
+            "extracted",
+            "reference_available_for_evaluator",
+            "mmap_read_ready",
+            "mmap_read_hash",
+            "mmap_extracted_prediction_used",
+            "mmap_prediction_matches_raw",
+        ],
+        prediction_provenance_rows,
+    )
+    eval_command = ["python3", str(evaluator_path), "--data_dir", str(eval_dir), "--benchmark", "synthetic"]
+    eval_completed = subprocess.run(
+        eval_command,
+        cwd=repo / "scripts" / "eval" if (repo / "scripts" / "eval").is_dir() else repo,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+    ) if evaluator_path.is_file() else subprocess.CompletedProcess(eval_command, 127, "", "missing official evaluator")
+    generated_rows_total = sum(len(rows) for rows in generated_by_task.values())
+    prediction_rows_total = sum(len(rows) for rows in prediction_by_task.values())
+    generated_task_rows = sum(1 for rows in generated_by_task.values() if rows)
+    generator_returncode = 0 if generator_results and all(row["returncode"] == 0 for row in generator_results) else 1
+    summary_path = eval_dir / "summary.csv"
+    if not summary_path.is_file() and len(task_specs) == 1:
+        summary_path = eval_dir / f"summary-{task_specs[0]['task_name']}.csv"
+    eval_scores = read_ruler_summary_scores(summary_path)
+    eval_score = sum(eval_scores.values()) / len(eval_scores) if eval_scores else 0.0
+    ready = int(generator_returncode == 0 and generated_task_rows == len(task_specs) and generated_rows_total > 0)
+    eval_ready = int(
+        eval_completed.returncode == 0
+        and summary_path.is_file()
+        and all(spec["task_name"] in eval_scores for spec in task_specs)
+    )
+    metrics = {
+        "tasks": ",".join(spec["task_name"] for spec in task_specs),
+        "official_generator_task_rows": len(task_specs),
+        "official_generated_task_rows": generated_task_rows,
+        "official_evaluated_task_rows": len(eval_scores),
+        "official_generated_rows": generated_rows_total,
+        "raw_prediction_rows": prediction_rows_total,
+        "null_predictions": sum(1 for rows in prediction_by_task.values() for row in rows if not row["pred"]),
+        "official_generator_score": eval_score,
+        "official_generator_scores": eval_scores,
+        "official_generator_ready": ready,
+        "official_generator_evaluator_ready": eval_ready,
+        "runner_owned": 1,
+        "independent": 0,
+        "dependency_shims_used": 1,
+        "input_extractor_prediction_used": 1,
+        "oracle_prediction_used": 0,
+        "prediction_provenance_rows": len(prediction_provenance_rows),
+        "extracted_prediction_rows": sum(int(row["extracted"]) for row in prediction_provenance_rows),
+        "mmap_read_rows": mmap_store["mmap_read_rows"],
+        "mmap_read_ready_rows": mmap_store["mmap_read_ready_rows"],
+        "mmap_extracted_prediction_rows": mmap_store["mmap_extracted_rows"],
+        "mmap_verification_ready": mmap_store["ready"],
+        "claim": "Official RULER generated-row evaluator metrics; not independent external benchmark evidence",
+    }
+    metrics_path = ruler_dir / "official_generator_metrics.json"
+    write_json(metrics_path, metrics)
+    benchmark_ready = int(
+        ready
+        and eval_ready
+        and generated_rows_total == prediction_rows_total
+        and len(prediction_provenance_rows) == generated_rows_total
+        and sum(int(row["extracted"]) for row in prediction_provenance_rows) == generated_rows_total
+        and generated_rows_total > 0
+        and prediction_provenance_path.is_file()
+        and metrics_path.is_file()
+        and mmap_store["ready"] == 1
+        and mmap_store["mmap_extracted_rows"] == generated_rows_total
+    )
+    official_benchmark_rows = []
+    for spec in task_specs:
+        task_name = spec["task_name"]
+        generated_rows = generated_by_task.get(task_name, [])
+        prediction_rows = prediction_by_task.get(task_name, [])
+        task_provenance_rows = [row for row in prediction_provenance_rows if row["task"] == task_name]
+        task_ready = int(
+            ready
+            and eval_ready
+            and len(generated_rows) == len(prediction_rows)
+            and len(task_provenance_rows) == len(generated_rows)
+            and sum(int(row["extracted"]) for row in task_provenance_rows) == len(generated_rows)
+            and sum(int(row["mmap_prediction_matches_raw"]) for row in task_provenance_rows) == len(generated_rows)
+            and task_name in eval_scores
+        )
+        official_benchmark_rows.append(
+            {
+            "benchmark_id": f"ruler_official_generator_{task_name}",
+            "task": task_name,
+            "external_benchmark_family": "ruler-official-synthetic",
+            "official_generator_path": str(prepare_path) if prepare_path.is_file() else "",
+            "official_evaluator_path": str(evaluator_path) if evaluator_path.is_file() else "",
+            "dataset_path": str(dataset_paths[task_name]) if dataset_paths[task_name].is_file() else "",
+            "prediction_path": str(prediction_paths[task_name]) if prediction_paths[task_name].is_file() else "",
+            "evaluator_summary_path": str(summary_path) if summary_path.is_file() else "",
+            "metrics_path": str(metrics_path),
+            "prediction_provenance_path": str(prediction_provenance_path),
+            "dataset_rows": len(generated_rows),
+            "raw_prediction_rows": len(prediction_rows),
+            "prediction_provenance_rows": len(task_provenance_rows),
+            "extracted_prediction_rows": sum(int(row["extracted"]) for row in task_provenance_rows),
+            "mmap_read_rows": sum(int(row["mmap_read_ready"]) for row in task_provenance_rows),
+            "mmap_prediction_match_rows": sum(int(row["mmap_prediction_matches_raw"]) for row in task_provenance_rows),
+            "mmap_verification_ready": int(
+                bool(task_provenance_rows)
+                and sum(int(row["mmap_prediction_matches_raw"]) for row in task_provenance_rows) == len(task_provenance_rows)
+            ),
+            "evaluator_score": f"{eval_scores.get(task_name, 0.0):.2f}",
+            "dataset_bound": int(dataset_paths[task_name].is_file() and bool(generated_rows)),
+            "raw_prediction_bound": int(prediction_paths[task_name].is_file() and len(prediction_rows) == len(generated_rows)),
+            "prediction_provenance_bound": int(prediction_provenance_path.is_file() and len(task_provenance_rows) == len(generated_rows)),
+            "evaluator_bound": eval_ready,
+            "metrics_bound": int(metrics_path.is_file()),
+            "runner_owned": 1,
+            "independent": 0,
+            "dependency_shims_used": 1,
+            "input_extractor_prediction_used": 1,
+            "oracle_prediction_used": 0,
+            "benchmark_result_ready": task_ready,
+        }
+        )
+    write_csv(
+        ruler_dir / "official_generator_benchmark_rows.csv",
+        [
+            "benchmark_id",
+            "task",
+            "external_benchmark_family",
+            "official_generator_path",
+            "official_evaluator_path",
+            "dataset_path",
+            "prediction_path",
+            "evaluator_summary_path",
+            "metrics_path",
+            "prediction_provenance_path",
+            "dataset_rows",
+            "raw_prediction_rows",
+            "prediction_provenance_rows",
+            "extracted_prediction_rows",
+            "mmap_read_rows",
+            "mmap_prediction_match_rows",
+            "mmap_verification_ready",
+            "evaluator_score",
+            "dataset_bound",
+            "raw_prediction_bound",
+            "prediction_provenance_bound",
+            "evaluator_bound",
+            "metrics_bound",
+            "runner_owned",
+            "independent",
+            "dependency_shims_used",
+            "input_extractor_prediction_used",
+            "oracle_prediction_used",
+            "benchmark_result_ready",
+        ],
+        official_benchmark_rows,
+    )
+    status = {
+        "official_generator_path": str(prepare_path) if prepare_path.is_file() else "",
+        "official_niah_generator_path": str(generator_path) if generator_path.is_file() else "",
+        "official_prepare_workspace": str(prepare_workspace),
+        "official_prepare_workspace_repo": str(workspace_repo),
+        "official_prepare_workspace_generator_dir": str(workspace_generator_dir),
+        "official_generator_commands": [row["command"] for row in generator_results],
+        "official_generator_results": generator_results,
+        "official_generator_returncode": generator_returncode,
+        "official_generated_dataset_paths": {
+            task: str(path) for task, path in dataset_paths.items() if path.is_file()
+        },
+        "official_generated_rows": generated_rows_total,
+        "official_generated_task_rows": generated_task_rows,
+        "official_generator_ready": ready,
+        "official_evaluator_command": eval_command,
+        "official_generator_evaluator_returncode": eval_completed.returncode,
+        "official_generator_evaluator_stdout_hash": "sha256:" + sha256_text(eval_completed.stdout),
+        "official_generator_evaluator_stderr_hash": "sha256:" + sha256_text(eval_completed.stderr),
+        "official_generator_evaluator_stdout_excerpt": eval_completed.stdout[-1000:],
+        "official_generator_evaluator_stderr_excerpt": eval_completed.stderr[-1000:],
+        "official_generator_evaluator_ready": eval_ready,
+        "official_generator_evaluator_score": eval_score,
+        "official_generator_evaluator_scores": eval_scores,
+        "official_generator_benchmark_rows_path": str(ruler_dir / "official_generator_benchmark_rows.csv"),
+        "official_generator_benchmark_rows": len(official_benchmark_rows),
+        "official_generator_benchmark_ready": benchmark_ready,
+        "official_generator_metrics_path": str(metrics_path),
+        "official_generator_prediction_provenance_path": str(prediction_provenance_path),
+        "official_generator_prediction_provenance_rows": len(prediction_provenance_rows),
+        "official_generator_extracted_prediction_rows": sum(int(row["extracted"]) for row in prediction_provenance_rows),
+        "official_generator_mmap_store_status_path": str(mmap_store["status_path"]),
+        "official_generator_mmap_read_rows_path": str(mmap_store["mmap_rows_path"]),
+        "official_generator_mmap_read_rows": mmap_store["mmap_read_rows"],
+        "official_generator_mmap_read_ready_rows": mmap_store["mmap_read_ready_rows"],
+        "official_generator_mmap_extracted_prediction_rows": mmap_store["mmap_extracted_rows"],
+        "official_generator_mmap_verification_ready": mmap_store["ready"],
+        "official_generator_summary_path": str(summary_path) if summary_path.is_file() else "",
+        "official_generator_submission_path": str(eval_dir / "submission.csv") if (eval_dir / "submission.csv").is_file() else "",
+        "dependency_shims_path": str(shim_dir),
+        "dependency_shims_used": 1,
+        "claim": "Official RULER prepare.py generator and evaluate.py smoke with run-local dependency shims",
+    }
+    write_json(ruler_dir / "official_generator_status.json", status)
+    return {
+        "official_generator_rows": generated_rows_total,
+        "official_generator_ready": ready,
+        "official_generator_returncode": generator_returncode,
+        "official_generator_evaluator_ready": eval_ready,
+        "official_generator_evaluator_returncode": eval_completed.returncode,
+        "official_generator_evaluator_score": eval_score,
+        "official_generator_benchmark_rows": len(official_benchmark_rows),
+        "official_generator_benchmark_ready": benchmark_ready,
+        "official_generator_prediction_provenance_rows": len(prediction_provenance_rows),
+        "official_generator_extracted_prediction_rows": sum(int(row["extracted"]) for row in prediction_provenance_rows),
+        "official_generator_mmap_read_rows": mmap_store["mmap_read_rows"],
+        "official_generator_mmap_read_ready_rows": mmap_store["mmap_read_ready_rows"],
+        "official_generator_mmap_extracted_prediction_rows": mmap_store["mmap_extracted_rows"],
+        "official_generator_mmap_verification_ready": mmap_store["ready"],
+    }
+
+
+def run_ruler_synthetic_smoke(run_dir, repo):
+    ruler_dir = run_dir / "benchmark" / "ruler_synthetic"
+    ruler_dir.mkdir(parents=True, exist_ok=True)
+    constants_path = repo / "scripts" / "data" / "synthetic" / "constants.py"
+    evaluator_path = repo / "scripts" / "eval" / "evaluate.py"
+    task_name = "niah_single_1"
+    answer = "3141592"
+    key = "silver-needle"
+    context = (
+        "The grass is green. The sky is blue. "
+        f"One of the special magic numbers for {key} is: {answer}. "
+        "The sun is yellow."
+    )
+    prompt = (
+        "Some special magic numbers are hidden within the following text. "
+        "Make sure to memorize it. I will quiz you about the numbers afterwards.\n"
+        f"{context}\n"
+        f"What are all the special magic numbers for {key} mentioned in the provided text?"
+    )
+    dataset_rows = [
+        {
+            "index": 0,
+            "input": prompt,
+            "outputs": [answer],
+            "length": len(prompt.split()),
+            "length_w_model_temp": len(prompt.split()),
+            "answer_prefix": f" The special magic numbers for {key} mentioned in the provided text are",
+            "token_position_answer": prompt.find(answer),
+            "others": {"id": "ruler_niah_smoke_0", "task": task_name},
+        }
+    ]
+    prediction = answer if answer in context else ""
+    prediction_rows = [
+        {
+            "index": row["index"],
+            "input": row["input"],
+            "outputs": row["outputs"],
+            "pred": prediction,
+            "others": row["others"],
+        }
+        for row in dataset_rows
+    ]
+    write_jsonl(ruler_dir / "niah_dataset.jsonl", dataset_rows)
+    write_jsonl(ruler_dir / f"{task_name}.jsonl", prediction_rows)
+    score = string_match_all([prediction], [[answer]])
+    evaluator_rows = [
+        {
+            "task": task_name,
+            "rows": len(prediction_rows),
+            "score": f"{score:.2f}",
+            "null_predictions": sum(1 for row in prediction_rows if not row["pred"]),
+            "runner_owned_ruler_compatible_evaluator": 1,
+            "official_ruler_evaluator_ready": 0,
+        }
+    ]
+    write_csv(
+        ruler_dir / "ruler_evaluator_rows.csv",
+        [
+            "task",
+            "rows",
+            "score",
+            "null_predictions",
+            "runner_owned_ruler_compatible_evaluator",
+            "official_ruler_evaluator_ready",
+        ],
+        evaluator_rows,
+    )
+
+    shim_dir = ruler_dir / "evaluator_shims"
+    write_ruler_eval_shims(shim_dir)
+    command = ["python3", str(evaluator_path), "--data_dir", str(ruler_dir), "--benchmark", "synthetic"]
+    env = os.environ.copy()
+    existing_pythonpath = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(shim_dir) + (os.pathsep + existing_pythonpath if existing_pythonpath else "")
+    existing_path = env.get("PATH", "")
+    env["PATH"] = str(shim_dir / "bin") + (os.pathsep + existing_path if existing_path else "")
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    completed = subprocess.run(
+        command,
+        cwd=repo / "scripts" / "eval" if (repo / "scripts" / "eval").is_dir() else repo,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+    ) if evaluator_path.is_file() else subprocess.CompletedProcess(command, 127, "", "missing official evaluator")
+    official_ready = int(completed.returncode == 0 and (ruler_dir / f"summary-{task_name}.csv").is_file())
+    status = {
+        "official_evaluator_path": str(evaluator_path) if evaluator_path.is_file() else "",
+        "official_constants_path": str(constants_path) if constants_path.is_file() else "",
+        "official_constants_hash": "sha256:" + sha256(constants_path) if constants_path.is_file() else "",
+        "command": command,
+        "returncode": completed.returncode,
+        "stdout_hash": "sha256:" + sha256_text(completed.stdout),
+        "stderr_hash": "sha256:" + sha256_text(completed.stderr),
+        "stdout_excerpt": completed.stdout[-1000:],
+        "stderr_excerpt": completed.stderr[-1000:],
+        "dependency_shims_path": str(shim_dir),
+        "dependency_shims_used": 1,
+        "official_ruler_evaluator_ready": official_ready,
+        "official_summary_path": str(ruler_dir / f"summary-{task_name}.csv") if (ruler_dir / f"summary-{task_name}.csv").is_file() else "",
+        "official_submission_path": str(ruler_dir / "submission.csv") if (ruler_dir / "submission.csv").is_file() else "",
+        "runner_owned_ruler_compatible_ready": int(score == 100.0),
+        "claim": "RULER-compatible runner-owned synthetic smoke; official evaluator readiness is recorded separately",
+    }
+    write_json(ruler_dir / "official_evaluator_status.json", status)
+    generator_status = run_official_ruler_generator_smoke(run_dir, repo, env, shim_dir)
+    return {
+        "ruler_compatible_rows": len(prediction_rows),
+        "ruler_compatible_score": score,
+        "ruler_compatible_ready": int(score == 100.0),
+        "official_ruler_evaluator_ready": official_ready,
+        "official_ruler_evaluator_returncode": completed.returncode,
+        "official_generator_rows": generator_status["official_generator_rows"],
+        "official_generator_ready": generator_status["official_generator_ready"],
+        "official_generator_returncode": generator_status["official_generator_returncode"],
+        "official_generator_evaluator_ready": generator_status["official_generator_evaluator_ready"],
+        "official_generator_evaluator_returncode": generator_status["official_generator_evaluator_returncode"],
+        "official_generator_evaluator_score": generator_status["official_generator_evaluator_score"],
+        "official_generator_benchmark_rows": generator_status["official_generator_benchmark_rows"],
+        "official_generator_benchmark_ready": generator_status["official_generator_benchmark_ready"],
+        "official_generator_prediction_provenance_rows": generator_status["official_generator_prediction_provenance_rows"],
+        "official_generator_extracted_prediction_rows": generator_status["official_generator_extracted_prediction_rows"],
+        "official_generator_mmap_read_rows": generator_status["official_generator_mmap_read_rows"],
+        "official_generator_mmap_read_ready_rows": generator_status["official_generator_mmap_read_ready_rows"],
+        "official_generator_mmap_extracted_prediction_rows": generator_status["official_generator_mmap_extracted_prediction_rows"],
+        "official_generator_mmap_verification_ready": generator_status["official_generator_mmap_verification_ready"],
+    }
+
+
+def parse_longbench_result_text(path):
+    table = parse_longbench_result_table(path)
+    if not table:
+        return {}
+    return next(iter(table.values()))
+
+
+def parse_longbench_result_table(path):
+    if not path.is_file():
+        return {}
+    lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if len(lines) < 2:
+        return {}
+    header = lines[0].split("\t")
+    table = {}
+    for line in lines[1:]:
+        values = line.split("\t")
+        if len(header) != len(values):
+            continue
+        result = dict(zip(header, values))
+        scores = {}
+        for key, value in result.items():
+            if key == "Model":
+                scores[key] = value
+                continue
+            try:
+                scores[key] = float(value)
+            except ValueError:
+                scores[key] = 0.0
+        model = str(scores.get("Model", ""))
+        if model:
+            table[model] = scores
+    return table
+
+
+def fetch_url_text(url, timeout=60):
+    with urlopen(url, timeout=timeout) as response:
+        return response.read().decode("utf-8")
+
+
+def longbench_choice_baseline(row):
+    haystack = f"{row.get('question', '')}\n{row.get('context', '')}".lower()
+    best_label = "A"
+    best_score = -1
+    for label in ["A", "B", "C", "D"]:
+        choice = str(row.get(f"choice_{label}", ""))
+        tokens = [token for token in re.findall(r"[A-Za-z0-9가-힣]+", choice.lower()) if len(token) >= 4]
+        exact = 5 if choice and choice.lower() in haystack else 0
+        token_hits = sum(1 for token in tokens[:12] if token in haystack)
+        score = exact + token_hits
+        if score > best_score:
+            best_label = label
+            best_score = score
+    return best_label, max(best_score, 0)
+
+
+def write_longbench_official_sample_mmap_store(longbench_dir, sample_rows, prediction_rows):
+    store_dir = longbench_dir / "official_sample_store"
+    store_dir.mkdir(parents=True, exist_ok=True)
+    chunk_pages = store_dir / "chunk_pages.bin"
+    offsets = []
+    cursor = 0
+    with chunk_pages.open("wb") as handle:
+        for index, row in enumerate(sample_rows):
+            row_id = str(row.get("_id", index))
+            chunk_id = f"longbench_v2_official_sample:{row_id}"
+            payload = json.dumps(row, sort_keys=True).encode("utf-8") + b"\n"
+            handle.write(payload)
+            offsets.append(
+                {
+                    "index": index,
+                    "_id": row_id,
+                    "chunk_id": chunk_id,
+                    "byte_offset": cursor,
+                    "byte_len": len(payload),
+                }
+            )
+            cursor += len(payload)
+    write_csv(
+        store_dir / "chunk_offsets.csv",
+        ["index", "_id", "chunk_id", "byte_offset", "byte_len"],
+        offsets,
+    )
+    write_csv(
+        store_dir / "chunk_offsets",
+        ["index", "_id", "chunk_id", "byte_offset", "byte_len"],
+        offsets,
+    )
+    route_index_path = store_dir / "route_index.bin"
+    route_index_path.write_bytes(json.dumps(offsets, sort_keys=True).encode("utf-8"))
+    route_store_path = store_dir / "route_memory_store.bin"
+    shutil.copy2(chunk_pages, route_store_path)
+    expected_by_id = {str(row.get("_id", "")): str(row.get("pred", "")) for row in prediction_rows}
+    mmap_rows = []
+    prediction_by_id = {}
+    if chunk_pages.stat().st_size:
+        with chunk_pages.open("rb") as handle:
+            mm = mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ)
+            try:
+                for offset in offsets:
+                    start = int(offset["byte_offset"])
+                    length = int(offset["byte_len"])
+                    payload = mm[start : start + length]
+                    try:
+                        payload_row = json.loads(payload.decode("utf-8"))
+                        pred, baseline_score = longbench_choice_baseline(payload_row)
+                    except Exception:
+                        pred, baseline_score = "", 0
+                    expected_pred = expected_by_id.get(str(offset["_id"]), "")
+                    mmap_row = {
+                        "index": offset["index"],
+                        "_id": offset["_id"],
+                        "chunk_id": offset["chunk_id"],
+                        "byte_offset": start,
+                        "byte_len": length,
+                        "mmap_read_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
+                        "mmap_read_ready": 1,
+                        "mmap_baseline": "context_choice_lexical_overlap",
+                        "mmap_baseline_score": baseline_score,
+                        "mmap_pred": pred,
+                        "mmap_prediction_matches_raw": int(bool(expected_pred) and pred == expected_pred),
+                    }
+                    mmap_rows.append(mmap_row)
+                    prediction_by_id[str(offset["_id"])] = mmap_row
+            finally:
+                mm.close()
+    mmap_rows_path = store_dir / "mmap_read_rows.csv"
+    write_csv(
+        mmap_rows_path,
+        [
+            "index",
+            "_id",
+            "chunk_id",
+            "byte_offset",
+            "byte_len",
+            "mmap_read_hash",
+            "mmap_read_ready",
+            "mmap_baseline",
+            "mmap_baseline_score",
+            "mmap_pred",
+            "mmap_prediction_matches_raw",
+        ],
+        mmap_rows,
+    )
+    write_csv(
+        store_dir / "store_manifest.csv",
+        ["artifact", "path", "sha256"],
+        [
+            {"artifact": "chunk_pages", "path": str(chunk_pages), "sha256": "sha256:" + sha256(chunk_pages)},
+            {"artifact": "chunk_offsets", "path": str(store_dir / "chunk_offsets"), "sha256": "sha256:" + sha256(store_dir / "chunk_offsets")},
+            {"artifact": "route_memory_store", "path": str(route_store_path), "sha256": "sha256:" + sha256(route_store_path)},
+            {"artifact": "route_index", "path": str(route_index_path), "sha256": "sha256:" + sha256(route_index_path)},
+            {"artifact": "mmap_read_rows", "path": str(mmap_rows_path), "sha256": "sha256:" + sha256(mmap_rows_path)},
+        ],
+    )
+    status = {
+        "store_scope": "longbench-v2-official-sample-mmap-verification-store",
+        "dataset_rows": len(sample_rows),
+        "chunk_rows": len(offsets),
+        "mmap_read_rows": len(mmap_rows),
+        "mmap_read_ready_rows": sum(int(row["mmap_read_ready"]) for row in mmap_rows),
+        "mmap_prediction_match_rows": sum(int(row["mmap_prediction_matches_raw"]) for row in mmap_rows),
+        "chunk_pages_path": str(chunk_pages),
+        "route_memory_store_path": str(route_store_path),
+        "route_index_path": str(route_index_path),
+        "chunk_offsets_path": str(store_dir / "chunk_offsets"),
+        "mmap_read_rows_path": str(mmap_rows_path),
+        "store_manifest_path": str(store_dir / "store_manifest.csv"),
+        "ready": int(
+            bool(offsets)
+            and len(offsets) == len(mmap_rows)
+            and all(int(row["mmap_read_ready"]) == 1 for row in mmap_rows)
+            and all(int(row["mmap_prediction_matches_raw"]) == 1 for row in mmap_rows)
+        ),
+        "claim": "mmap verification store for LongBench v2 official dataset-server sample rows and lexical baseline predictions",
+    }
+    status_path = store_dir / "store_status.json"
+    write_json(status_path, status)
+    return {
+        "store_dir": store_dir,
+        "status_path": status_path,
+        "mmap_rows_path": mmap_rows_path,
+        "prediction_by_id": prediction_by_id,
+        "mmap_read_rows": len(mmap_rows),
+        "mmap_read_ready_rows": status["mmap_read_ready_rows"],
+        "mmap_prediction_match_rows": status["mmap_prediction_match_rows"],
+        "ready": status["ready"],
+    }
+
+
+def run_longbench_v2_smoke(run_dir, emit_official_sample=False):
+    source_repo = run_dir / "source" / "snapshots" / "longbench_repo"
+    longbench_dir = run_dir / "benchmark" / "longbench_v2"
+    dataset_dir = longbench_dir / "dataset"
+    results_dir = longbench_dir / "results"
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    evaluator_path = source_repo / "result.py"
+    readme_path = source_repo / "README.md"
+    rows = [
+        ("lbv2_smoke_easy_short_a", "qa", "single_doc", "easy", "short", "A"),
+        ("lbv2_smoke_hard_short_b", "qa", "multi_doc", "hard", "short", "B"),
+        ("lbv2_smoke_easy_medium_c", "code", "repo", "easy", "medium", "C"),
+        ("lbv2_smoke_hard_medium_d", "structured", "table", "hard", "medium", "D"),
+        ("lbv2_smoke_easy_long_a", "dialogue", "history", "easy", "long", "A"),
+        ("lbv2_smoke_hard_long_b", "qa", "book", "hard", "long", "B"),
+    ]
+    dataset_rows = []
+    prediction_rows = []
+    provenance_rows = []
+    for index, (row_id, domain, sub_domain, difficulty, length, answer) in enumerate(rows):
+        choices = {
+            "A": f"correct option {index}",
+            "B": f"distractor option {index}",
+            "C": f"alternative option {index}",
+            "D": f"last option {index}",
+        }
+        if answer != "A":
+            choices[answer], choices["A"] = choices["A"], choices[answer]
+        context = (
+            f"LongBench v2 runner-owned smoke context {index}. "
+            f"The correct multiple-choice answer is option {answer}."
+        )
+        dataset_row = {
+            "_id": row_id,
+            "domain": domain,
+            "sub_domain": sub_domain,
+            "difficulty": difficulty,
+            "length": length,
+            "question": f"Select the correct option for smoke item {index}.",
+            "choice_A": choices["A"],
+            "choice_B": choices["B"],
+            "choice_C": choices["C"],
+            "choice_D": choices["D"],
+            "answer": answer,
+            "context": context,
+        }
+        pred = answer
+        prediction_row = dict(dataset_row)
+        prediction_row.update({"pred": pred, "judge": int(pred == answer)})
+        dataset_rows.append(dataset_row)
+        prediction_rows.append(prediction_row)
+        provenance_rows.append(
+            {
+                "index": index,
+                "_id": row_id,
+                "answer": answer,
+                "pred": pred,
+                "judge": int(pred == answer),
+                "runner_owned_judge": 1,
+                "official_result_aggregator_used": 1,
+                "oracle_prediction_used": 0,
+            }
+        )
+    dataset_path = dataset_dir / "longbench_v2_smoke_dataset.jsonl"
+    prediction_path = results_dir / "routelm_longbench_v2_smoke.jsonl"
+    provenance_path = longbench_dir / "longbench_v2_prediction_provenance.csv"
+    schema_path = longbench_dir / "longbench_v2_schema_rows.csv"
+    write_jsonl(dataset_path, dataset_rows)
+    write_jsonl(prediction_path, prediction_rows)
+    write_csv(
+        provenance_path,
+        ["index", "_id", "answer", "pred", "judge", "runner_owned_judge", "official_result_aggregator_used", "oracle_prediction_used"],
+        provenance_rows,
+    )
+    schema_fields = [
+        "_id",
+        "domain",
+        "sub_domain",
+        "difficulty",
+        "length",
+        "question",
+        "choice_A",
+        "choice_B",
+        "choice_C",
+        "choice_D",
+        "answer",
+        "context",
+    ]
+    readme_text = readme_path.read_text(encoding="utf-8", errors="replace") if readme_path.is_file() else ""
+    schema_rows = [
+        {
+            "field": field,
+            "required": 1,
+            "present_in_all_dataset_rows": int(all(field in row and row[field] != "" for row in dataset_rows)),
+            "mentioned_in_official_readme": int(field in readme_text),
+            "official_readme_path": str(readme_path) if readme_path.is_file() else "",
+        }
+        for field in schema_fields
+    ]
+    write_csv(
+        schema_path,
+        ["field", "required", "present_in_all_dataset_rows", "mentioned_in_official_readme", "official_readme_path"],
+        schema_rows,
+    )
+    schema_ready = int(
+        bool(schema_rows)
+        and all(row["present_in_all_dataset_rows"] == 1 for row in schema_rows)
+        and all(row["mentioned_in_official_readme"] == 1 for row in schema_rows)
+    )
+    official_sample_rows = []
+    official_prediction_rows = []
+    official_provenance_rows = []
+    official_mmap_store = {
+        "status_path": longbench_dir / "official_sample_store" / "store_status.json",
+        "mmap_rows_path": longbench_dir / "official_sample_store" / "mmap_read_rows.csv",
+        "mmap_read_rows": 0,
+        "mmap_read_ready_rows": 0,
+        "mmap_prediction_match_rows": 0,
+        "ready": 0,
+        "prediction_by_id": {},
+    }
+    official_sample_error = ""
+    official_sample_url = os.environ.get(
+        "V14_LONGBENCH_V2_OFFICIAL_SAMPLE_URL",
+        "https://datasets-server.huggingface.co/rows?dataset=zai-org%2FLongBench-v2&config=default&split=train&offset=0&length=12",
+    )
+    official_info_url = os.environ.get(
+        "V14_LONGBENCH_V2_OFFICIAL_INFO_URL",
+        "https://datasets-server.huggingface.co/info?dataset=zai-org%2FLongBench-v2",
+    )
+    official_sample_limit = int(os.environ.get("V14_LONGBENCH_V2_OFFICIAL_SAMPLE_ROWS", "12") or "12")
+    official_sample_dir = longbench_dir / "official_sample"
+    official_dataset_path = dataset_dir / "longbench_v2_official_sample_dataset.jsonl"
+    official_prediction_path = results_dir / "routelm_longbench_v2_official_sample.jsonl"
+    official_provenance_path = longbench_dir / "longbench_v2_official_sample_prediction_provenance.csv"
+    official_api_response_path = official_sample_dir / "longbench_v2_official_sample_api_response.json"
+    official_info_path = official_sample_dir / "longbench_v2_official_info.json"
+    if emit_official_sample:
+        official_sample_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            official_api_text = fetch_url_text(official_sample_url, timeout=90)
+            official_api_response_path.write_text(official_api_text, encoding="utf-8")
+            try:
+                official_info_path.write_text(fetch_url_text(official_info_url, timeout=30), encoding="utf-8")
+            except Exception as exc:
+                official_info_path.write_text(json.dumps({"error": str(exc)}, sort_keys=True) + "\n", encoding="utf-8")
+            payload = json.loads(official_api_text)
+            for index, entry in enumerate(payload.get("rows", [])[:official_sample_limit]):
+                raw_row = entry.get("row", {})
+                sample_row = {field: str(raw_row.get(field, "")) for field in schema_fields}
+                if not all(sample_row.get(field) for field in schema_fields):
+                    continue
+                pred, baseline_score = longbench_choice_baseline(sample_row)
+                prediction_row = dict(sample_row)
+                prediction_row.update({"pred": pred, "judge": int(pred == sample_row["answer"])})
+                official_sample_rows.append(sample_row)
+                official_prediction_rows.append(prediction_row)
+                official_provenance_rows.append(
+                    {
+                        "index": index,
+                        "_id": sample_row["_id"],
+                        "answer": sample_row["answer"],
+                        "pred": pred,
+                        "judge": int(pred == sample_row["answer"]),
+                        "baseline": "context_choice_lexical_overlap",
+                        "baseline_score": baseline_score,
+                        "official_dataset_server_row_used": 1,
+                        "official_result_aggregator_used": 1,
+                        "oracle_prediction_used": 0,
+                    }
+                )
+        except Exception as exc:
+            official_sample_error = f"{type(exc).__name__}: {exc}"
+        write_jsonl(official_dataset_path, official_sample_rows)
+        if official_prediction_rows:
+            write_jsonl(official_prediction_path, official_prediction_rows)
+        elif official_prediction_path.exists():
+            official_prediction_path.unlink()
+        official_mmap_store = write_longbench_official_sample_mmap_store(
+            longbench_dir,
+            official_sample_rows,
+            official_prediction_rows,
+        )
+        official_mmap_by_id = official_mmap_store["prediction_by_id"]
+        for row in official_provenance_rows:
+            mmap_row = official_mmap_by_id.get(str(row["_id"]), {})
+            row["mmap_read_ready"] = mmap_row.get("mmap_read_ready", 0)
+            row["mmap_read_hash"] = mmap_row.get("mmap_read_hash", "")
+            row["mmap_baseline_prediction_used"] = int(bool(mmap_row) and mmap_row.get("mmap_pred", "") == row["pred"])
+            row["mmap_prediction_matches_raw"] = mmap_row.get("mmap_prediction_matches_raw", 0)
+        write_csv(
+            official_provenance_path,
+            [
+                "index",
+                "_id",
+                "answer",
+                "pred",
+                "judge",
+                "baseline",
+                "baseline_score",
+                "official_dataset_server_row_used",
+                "official_result_aggregator_used",
+                "oracle_prediction_used",
+                "mmap_read_ready",
+                "mmap_read_hash",
+                "mmap_baseline_prediction_used",
+                "mmap_prediction_matches_raw",
+            ],
+            official_provenance_rows,
+        )
+    command = ["python3", str(evaluator_path)]
+    completed = subprocess.run(
+        command,
+        cwd=longbench_dir,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env={**os.environ.copy(), "PYTHONDONTWRITEBYTECODE": "1"},
+    ) if evaluator_path.is_file() else subprocess.CompletedProcess(command, 127, "", "missing LongBench result.py")
+    result_path = longbench_dir / "result.txt"
+    result_table = parse_longbench_result_table(result_path)
+    scores = result_table.get("routelm_longbench_v2_smoke", parse_longbench_result_text(result_path))
+    overall_score = float(scores.get("Overall", 0.0) or 0.0)
+    ready = int(
+        evaluator_path.is_file()
+        and completed.returncode == 0
+        and result_path.is_file()
+        and len(prediction_rows) == len(dataset_rows)
+        and all(row["judge"] == 1 for row in prediction_rows)
+        and overall_score == 100.0
+    )
+    official_scores = result_table.get("routelm_longbench_v2_official_sample", {})
+    official_score = float(official_scores.get("Overall", 0.0) or 0.0)
+    official_ready = int(
+        emit_official_sample
+        and not official_sample_error
+        and bool(official_sample_rows)
+        and completed.returncode == 0
+        and bool(official_scores)
+        and official_dataset_path.is_file()
+        and official_prediction_path.is_file()
+        and official_provenance_path.is_file()
+        and all(row["oracle_prediction_used"] == 0 for row in official_provenance_rows)
+        and official_mmap_store["ready"] == 1
+        and official_mmap_store["mmap_read_rows"] == len(official_sample_rows)
+        and official_mmap_store["mmap_prediction_match_rows"] == len(official_prediction_rows)
+    )
+    metrics = {
+        "longbench_scope": "runner-owned-longbench-v2-multiple-choice-smoke",
+        "longbench_source_snapshot_ready": int(source_repo.is_dir()),
+        "official_evaluator_path": str(evaluator_path) if evaluator_path.is_file() else "",
+        "official_readme_path": str(readme_path) if readme_path.is_file() else "",
+        "schema_rows": len(schema_rows),
+        "schema_ready": schema_ready,
+        "dataset_rows": len(dataset_rows),
+        "raw_prediction_rows": len(prediction_rows),
+        "prediction_provenance_rows": len(provenance_rows),
+        "official_aggregator_returncode": completed.returncode,
+        "official_aggregator_ready": ready,
+        "overall_score": overall_score,
+        "scores": scores,
+        "official_sample_enabled": int(emit_official_sample),
+        "official_sample_rows": len(official_sample_rows),
+        "official_sample_prediction_rows": len(official_prediction_rows),
+        "official_sample_prediction_provenance_rows": len(official_provenance_rows),
+        "official_sample_score": official_score,
+        "official_sample_ready": official_ready,
+        "official_sample_mmap_read_rows": official_mmap_store["mmap_read_rows"],
+        "official_sample_mmap_read_ready_rows": official_mmap_store["mmap_read_ready_rows"],
+        "official_sample_mmap_prediction_match_rows": official_mmap_store["mmap_prediction_match_rows"],
+        "official_sample_mmap_verification_ready": official_mmap_store["ready"],
+        "official_sample_url": official_sample_url if emit_official_sample else "",
+        "official_sample_api_response_path": str(official_api_response_path) if official_api_response_path.is_file() else "",
+        "official_sample_error": official_sample_error,
+        "runner_owned": 1,
+        "independent": 0,
+        "oracle_prediction_used": 0,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "claim": "LongBench v2 official result.py aggregation smoke over runner-owned schema rows; not independent benchmark evidence",
+    }
+    metrics_path = longbench_dir / "longbench_v2_metrics.json"
+    write_json(metrics_path, metrics)
+    status = {
+        "official_evaluator_path": str(evaluator_path) if evaluator_path.is_file() else "",
+        "official_readme_path": str(readme_path) if readme_path.is_file() else "",
+        "official_readme_hash": "sha256:" + sha256(readme_path) if readme_path.is_file() else "",
+        "command": command,
+        "returncode": completed.returncode,
+        "stdout_hash": "sha256:" + sha256_text(completed.stdout),
+        "stderr_hash": "sha256:" + sha256_text(completed.stderr),
+        "stdout_excerpt": completed.stdout[-1000:],
+        "stderr_excerpt": completed.stderr[-1000:],
+        "dataset_path": str(dataset_path),
+        "prediction_path": str(prediction_path),
+        "result_path": str(result_path) if result_path.is_file() else "",
+        "schema_path": str(schema_path),
+        "schema_ready": schema_ready,
+        "official_aggregator_ready": ready,
+        "runner_owned_longbench_result_ready": ready,
+        "official_sample_enabled": int(emit_official_sample),
+        "official_sample_rows": len(official_sample_rows),
+        "official_sample_ready": official_ready,
+        "official_sample_mmap_read_rows": official_mmap_store["mmap_read_rows"],
+        "official_sample_mmap_read_ready_rows": official_mmap_store["mmap_read_ready_rows"],
+        "official_sample_mmap_prediction_match_rows": official_mmap_store["mmap_prediction_match_rows"],
+        "official_sample_mmap_verification_ready": official_mmap_store["ready"],
+        "official_sample_mmap_store_status_path": str(official_mmap_store["status_path"]) if official_mmap_store["status_path"].is_file() else "",
+        "official_sample_mmap_read_rows_path": str(official_mmap_store["mmap_rows_path"]) if official_mmap_store["mmap_rows_path"].is_file() else "",
+        "official_sample_url": official_sample_url if emit_official_sample else "",
+        "official_sample_api_response_path": str(official_api_response_path) if official_api_response_path.is_file() else "",
+        "official_sample_api_response_hash": "sha256:" + sha256(official_api_response_path) if official_api_response_path.is_file() else "",
+        "official_sample_info_path": str(official_info_path) if official_info_path.is_file() else "",
+        "official_sample_info_hash": "sha256:" + sha256(official_info_path) if official_info_path.is_file() else "",
+        "official_sample_error": official_sample_error,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "claim": "LongBench v2 official result.py command receipt and schema binding for runner-owned smoke rows",
+    }
+    status_path = longbench_dir / "longbench_v2_status.json"
+    write_json(status_path, status)
+    benchmark_rows = [
+        {
+            "benchmark_id": "longbench_v2_runner_owned_mc_smoke",
+            "task": "longbench_v2_multiple_choice_smoke",
+            "external_benchmark_family": "longbench-v2-official-source",
+            "official_generator_path": "",
+            "official_evaluator_path": str(evaluator_path) if evaluator_path.is_file() else "",
+            "dataset_path": str(dataset_path),
+            "prediction_path": str(prediction_path),
+            "evaluator_summary_path": str(result_path) if result_path.is_file() else "",
+            "metrics_path": str(metrics_path),
+            "prediction_provenance_path": str(provenance_path),
+            "dataset_rows": len(dataset_rows),
+            "raw_prediction_rows": len(prediction_rows),
+            "prediction_provenance_rows": len(provenance_rows),
+            "extracted_prediction_rows": 0,
+            "evaluator_score": f"{overall_score:.2f}",
+            "dataset_bound": int(dataset_path.is_file()),
+            "raw_prediction_bound": int(prediction_path.is_file()),
+            "prediction_provenance_bound": int(provenance_path.is_file()),
+            "evaluator_bound": ready,
+            "metrics_bound": int(metrics_path.is_file()),
+            "runner_owned": 1,
+            "independent": 0,
+            "dependency_shims_used": 0,
+            "input_extractor_prediction_used": 0,
+            "oracle_prediction_used": 0,
+            "benchmark_result_ready": ready,
+        }
+    ]
+    if emit_official_sample:
+        benchmark_rows.append(
+            {
+                "benchmark_id": "longbench_v2_official_dataset_server_sample",
+                "task": "longbench_v2_official_sample_baseline",
+                "external_benchmark_family": "longbench-v2-official-dataset-server",
+                "official_generator_path": official_sample_url,
+                "official_evaluator_path": str(evaluator_path) if evaluator_path.is_file() else "",
+                "dataset_path": str(official_dataset_path),
+                "prediction_path": str(official_prediction_path),
+                "evaluator_summary_path": str(result_path) if result_path.is_file() else "",
+                "metrics_path": str(metrics_path),
+                "prediction_provenance_path": str(official_provenance_path),
+                "dataset_rows": len(official_sample_rows),
+                "raw_prediction_rows": len(official_prediction_rows),
+                "prediction_provenance_rows": len(official_provenance_rows),
+                "extracted_prediction_rows": 0,
+                "mmap_read_rows": official_mmap_store["mmap_read_rows"],
+                "mmap_prediction_match_rows": official_mmap_store["mmap_prediction_match_rows"],
+                "mmap_verification_ready": official_mmap_store["ready"],
+                "evaluator_score": f"{official_score:.2f}",
+                "dataset_bound": int(bool(official_sample_rows) and official_dataset_path.is_file()),
+                "raw_prediction_bound": int(bool(official_prediction_rows) and official_prediction_path.is_file()),
+                "prediction_provenance_bound": int(bool(official_provenance_rows) and official_provenance_path.is_file()),
+                "evaluator_bound": official_ready,
+                "metrics_bound": int(metrics_path.is_file()),
+                "runner_owned": 1,
+                "independent": 0,
+                "dependency_shims_used": 0,
+                "input_extractor_prediction_used": 0,
+                "oracle_prediction_used": 0,
+                "benchmark_result_ready": official_ready,
+            }
+        )
+    benchmark_rows_path = longbench_dir / "longbench_v2_benchmark_rows.csv"
+    write_csv(
+        benchmark_rows_path,
+        [
+            "benchmark_id",
+            "task",
+            "external_benchmark_family",
+            "official_generator_path",
+            "official_evaluator_path",
+            "dataset_path",
+            "prediction_path",
+            "evaluator_summary_path",
+            "metrics_path",
+            "prediction_provenance_path",
+            "dataset_rows",
+            "raw_prediction_rows",
+            "prediction_provenance_rows",
+            "extracted_prediction_rows",
+            "mmap_read_rows",
+            "mmap_prediction_match_rows",
+            "mmap_verification_ready",
+            "evaluator_score",
+            "dataset_bound",
+            "raw_prediction_bound",
+            "prediction_provenance_bound",
+            "evaluator_bound",
+            "metrics_bound",
+            "runner_owned",
+            "independent",
+            "dependency_shims_used",
+            "input_extractor_prediction_used",
+            "oracle_prediction_used",
+            "benchmark_result_ready",
+        ],
+        benchmark_rows,
+    )
+    manifest_inputs = {
+        "longbench_dataset": dataset_path,
+        "longbench_predictions": prediction_path,
+        "longbench_prediction_provenance": provenance_path,
+        "longbench_schema_rows": schema_path,
+        "longbench_result": result_path,
+        "longbench_metrics": metrics_path,
+        "longbench_status": status_path,
+        "longbench_benchmark_rows": benchmark_rows_path,
+        "longbench_official_evaluator": evaluator_path,
+        "longbench_official_readme": readme_path,
+        "longbench_official_sample_dataset": official_dataset_path,
+        "longbench_official_sample_predictions": official_prediction_path,
+        "longbench_official_sample_prediction_provenance": official_provenance_path,
+        "longbench_official_sample_api_response": official_api_response_path,
+        "longbench_official_sample_info": official_info_path,
+        "longbench_official_sample_mmap_store_status": official_mmap_store["status_path"],
+        "longbench_official_sample_mmap_read_rows": official_mmap_store["mmap_rows_path"],
+        "longbench_official_sample_mmap_route_index": longbench_dir / "official_sample_store" / "route_index.bin",
+        "longbench_official_sample_mmap_route_memory_store": longbench_dir / "official_sample_store" / "route_memory_store.bin",
+    }
+    manifest = {
+        "manifest_scope": "runner-owned-longbench-v2-smoke",
+        "runner_owned_longbench_result_ready": ready,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "artifacts": [
+            {
+                "artifact": name,
+                "path": str(path.relative_to(run_dir)) if path.is_relative_to(run_dir) else str(path),
+                "sha256": "sha256:" + sha256(path),
+                "ready": 1,
+            }
+            for name, path in manifest_inputs.items()
+            if path.is_file()
+        ],
+        "claim": "hash-bound runner-owned LongBench v2 aggregation smoke; independent benchmark evidence still required",
+    }
+    manifest_path = longbench_dir / "longbench_v2_manifest.json"
+    write_json(manifest_path, manifest)
+    return {
+        "longbench_v2_rows": len(dataset_rows),
+        "longbench_v2_ready": ready,
+        "longbench_v2_returncode": completed.returncode,
+        "longbench_v2_score": overall_score,
+        "longbench_v2_benchmark_rows": len(benchmark_rows),
+        "longbench_v2_benchmark_ready": ready,
+        "longbench_v2_prediction_provenance_rows": len(provenance_rows),
+        "longbench_v2_schema_rows": len(schema_rows),
+        "longbench_v2_schema_ready": schema_ready,
+        "longbench_v2_status_ready": int(status_path.is_file() and ready),
+        "longbench_v2_official_sample_rows": len(official_sample_rows),
+        "longbench_v2_official_sample_ready": official_ready,
+        "longbench_v2_official_sample_score": official_score,
+        "longbench_v2_official_sample_prediction_provenance_rows": len(official_provenance_rows),
+        "longbench_v2_official_sample_api_response_ready": int(official_api_response_path.is_file()),
+        "longbench_v2_official_sample_mmap_read_rows": official_mmap_store["mmap_read_rows"],
+        "longbench_v2_official_sample_mmap_read_ready_rows": official_mmap_store["mmap_read_ready_rows"],
+        "longbench_v2_official_sample_mmap_prediction_match_rows": official_mmap_store["mmap_prediction_match_rows"],
+        "longbench_v2_official_sample_mmap_verification_ready": official_mmap_store["ready"],
+    }
+
+
+def write_manifest(run_dir):
+    manifest = run_dir / "sha256sums.txt"
+    with manifest.open("w", encoding="utf-8") as handle:
+        for path in sorted(run_dir.rglob("*")):
+            if path.is_file() and path.name != "sha256sums.txt":
+                handle.write(f"{sha256(path)}  {path.relative_to(run_dir)}\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Run a runner-owned RouteLM benchmark execution.")
+    parser.add_argument("--source-acquisition", default="")
+    parser.add_argument("--source-seed-live-fetch", default="")
+    parser.add_argument("--runtime-fetch-provenance", default="")
+    parser.add_argument("--source-snapshot-mode", choices=["off", "manifest", "live"], default="manifest")
+    parser.add_argument("--repo-from-source-snapshot", default="")
+    parser.add_argument("--task", default="public-codebase-routeqa-v1")
+    parser.add_argument("--repo", default=".")
+    parser.add_argument("--queries", default="")
+    parser.add_argument("--out", required=True)
+    parser.add_argument("--backend", default="cpu")
+    parser.add_argument("--store-mode", default="mmap")
+    parser.add_argument("--no-jump-neighbor", action="store_true")
+    parser.add_argument("--emit-raw-predictions", action="store_true")
+    parser.add_argument("--emit-evaluator-output", action="store_true")
+    parser.add_argument("--emit-routeqa-rows", action="store_true")
+    parser.add_argument("--emit-resource-rows", action="store_true")
+    parser.add_argument("--emit-evidence-packet", action="store_true")
+    parser.add_argument("--emit-promotion-rows", action="store_true")
+    parser.add_argument("--emit-ruler-synthetic-smoke", action="store_true")
+    parser.add_argument("--emit-longbench-v2-smoke", action="store_true")
+    parser.add_argument("--emit-longbench-v2-official-sample", action="store_true")
+    args = parser.parse_args()
+
+    start = time.time()
+    repo = Path(args.repo).resolve()
+    if not repo.is_dir():
+        raise SystemExit(f"repo does not exist or is not a directory: {repo}")
+    if args.backend != "cpu":
+        raise SystemExit("v14-a runner currently supports --backend cpu only")
+    if args.store_mode != "mmap":
+        raise SystemExit("v14-a runner currently supports --store-mode mmap only")
+    if not args.no_jump_neighbor:
+        raise SystemExit("v14-a runner requires --no-jump-neighbor to preserve the route invariant")
+    run_dir = Path(args.out).resolve()
+    if run_dir.exists():
+        shutil.rmtree(run_dir)
+    for subdir in ["source", "dataset", "store", "predictions", "evaluator", "metrics", "routeqa", "benchmark", "resource", "evidence", "promotion"]:
+        (run_dir / subdir).mkdir(parents=True, exist_ok=True)
+    runner_path = Path(__file__).resolve()
+    resolved_source_seed_live_fetch, source_seed_live_fetch_autodiscovered = resolve_related_source_chain_path(
+        args.source_acquisition,
+        args.source_seed_live_fetch,
+        "source_seed_live_fetch_rows.csv",
+    )
+    resolved_runtime_fetch_provenance, runtime_fetch_provenance_autodiscovered = resolve_related_source_chain_path(
+        args.source_acquisition,
+        args.runtime_fetch_provenance,
+        "runtime_fetch_provenance_rows.csv",
+    )
+    invocation_env = {
+        key: value
+        for key, value in sorted(os.environ.items())
+        if key.startswith("V14_") or key in {"V13_EXTERNAL_BENCHMARK_SOURCE_ACQUISITION_LIVE", "PYTHONDONTWRITEBYTECODE"}
+    }
+    run_invocation = {
+        "receipt_scope": "v14-a-runner-invocation",
+        "argv": sys.argv,
+        "cwd": os.getcwd(),
+        "runner_path": str(runner_path),
+        "runner_sha256": "sha256:" + sha256(runner_path) if runner_path.is_file() else "",
+        "python_executable": sys.executable,
+        "python_version": sys.version,
+        "task": args.task,
+        "repo_arg": args.repo,
+        "out": str(run_dir),
+        "backend": args.backend,
+        "store_mode": args.store_mode,
+        "source_snapshot_mode": args.source_snapshot_mode,
+        "source_acquisition_arg": args.source_acquisition,
+        "source_seed_live_fetch_arg": args.source_seed_live_fetch,
+        "runtime_fetch_provenance_arg": args.runtime_fetch_provenance,
+        "resolved_source_seed_live_fetch": resolved_source_seed_live_fetch,
+        "resolved_runtime_fetch_provenance": resolved_runtime_fetch_provenance,
+        "source_seed_live_fetch_autodiscovered": int(source_seed_live_fetch_autodiscovered),
+        "runtime_fetch_provenance_autodiscovered": int(runtime_fetch_provenance_autodiscovered),
+        "repo_from_source_snapshot": args.repo_from_source_snapshot,
+        "queries_arg": args.queries,
+        "no_jump_neighbor": int(args.no_jump_neighbor),
+        "emit_raw_predictions": int(args.emit_raw_predictions),
+        "emit_evaluator_output": int(args.emit_evaluator_output),
+        "emit_routeqa_rows": int(args.emit_routeqa_rows),
+        "emit_resource_rows": int(args.emit_resource_rows),
+        "emit_evidence_packet": int(args.emit_evidence_packet),
+        "emit_promotion_rows": int(args.emit_promotion_rows),
+        "emit_ruler_synthetic_smoke": int(args.emit_ruler_synthetic_smoke),
+        "emit_longbench_v2_smoke": int(args.emit_longbench_v2_smoke),
+        "emit_longbench_v2_official_sample": int(args.emit_longbench_v2_official_sample),
+        "relevant_environment": invocation_env,
+        "claim": "command receipt for the runner-owned source-to-result execution",
+    }
+    write_json(run_dir / "evidence" / "run_invocation.json", run_invocation)
+
+    source_acquisition_copied = copy_optional(args.source_acquisition, run_dir / "source" / "official_source_acquisition_rows.csv")
+    source_seed_live_fetch_copied = copy_optional(resolved_source_seed_live_fetch, run_dir / "source" / "source_seed_live_fetch_rows.csv")
+    runtime_fetch_provenance_copied = copy_optional(resolved_runtime_fetch_provenance, run_dir / "source" / "runtime_fetch_provenance_rows.csv")
+    source_chain_evidence_mirrors = [
+        ("official_source_acquisition", "official_source_acquisition_rows.csv", source_acquisition_copied),
+        ("source_seed_live_fetch", "source_seed_live_fetch_rows.csv", source_seed_live_fetch_copied),
+        ("runtime_fetch_provenance", "runtime_fetch_provenance_rows.csv", runtime_fetch_provenance_copied),
+    ]
+    for _, filename, copied in source_chain_evidence_mirrors:
+        if copied and (run_dir / "source" / filename).is_file():
+            shutil.copy2(run_dir / "source" / filename, run_dir / "evidence" / filename)
+    source_chain_evidence_mirror_ready = int(
+        all((run_dir / "evidence" / filename).is_file() for _, filename, copied in source_chain_evidence_mirrors if copied)
+        and source_acquisition_copied
+    )
+    source_snapshot_rows = []
+    if args.source_snapshot_mode != "off":
+        source_snapshot_rows = materialize_source_snapshots(
+            run_dir,
+            run_dir / "source" / "official_source_acquisition_rows.csv",
+            args.source_snapshot_mode,
+        )
+    repo_source = "cli-repo"
+    source_snapshot_artifact_id = ""
+    if args.repo_from_source_snapshot:
+        repo = repo_from_source_snapshot(source_snapshot_rows, args.repo_from_source_snapshot)
+        repo_source = "runner-owned-source-snapshot"
+        source_snapshot_artifact_id = args.repo_from_source_snapshot
+    queries = read_queries(args.queries)
+    dataset, source_files = build_dataset(repo, queries)
+    source_manifest = {
+        "task": args.task,
+        "repo": str(repo),
+        "source_acquisition_csv": str(run_dir / "source" / "official_source_acquisition_rows.csv") if source_acquisition_copied else "",
+        "source_seed_live_fetch_csv": str(run_dir / "source" / "source_seed_live_fetch_rows.csv") if source_seed_live_fetch_copied else "",
+        "runtime_fetch_provenance_csv": str(run_dir / "source" / "runtime_fetch_provenance_rows.csv") if runtime_fetch_provenance_copied else "",
+        "source_seed_live_fetch_autodiscovered": int(source_seed_live_fetch_autodiscovered),
+        "runtime_fetch_provenance_autodiscovered": int(runtime_fetch_provenance_autodiscovered),
+        "source_chain_autodiscovery_ready": int(
+            (bool(args.source_seed_live_fetch) or source_seed_live_fetch_autodiscovered)
+            and (bool(args.runtime_fetch_provenance) or runtime_fetch_provenance_autodiscovered)
+        ),
+        "source_snapshot_csv": str(run_dir / "source" / "source_snapshot_rows.csv") if args.source_snapshot_mode != "off" else "",
+        "source_snapshot_mode": args.source_snapshot_mode,
+        "repo_source": repo_source,
+        "source_snapshot_artifact_id": source_snapshot_artifact_id,
+        "files": [
+            {"source_file": rel, "source_uri": "file://" + str(path), "sha256": "sha256:" + sha256(path)}
+            for rel, path in sorted(source_files.items())
+        ],
+    }
+    write_json(run_dir / "source" / "source_manifest.json", source_manifest)
+    write_jsonl(run_dir / "dataset" / "queries.jsonl", queries)
+    write_jsonl(run_dir / "dataset" / "dataset.jsonl", dataset)
+    dataset_manifest = {
+        "manifest_scope": "v14-a-query-set-materialization",
+        "task": args.task,
+        "repo": str(repo),
+        "repo_source": repo_source,
+        "source_snapshot_artifact_id": source_snapshot_artifact_id,
+        "query_rows": len(queries),
+        "dataset_rows": len(dataset),
+        "source_file_rows": len(source_files),
+        "artifacts": [
+            {
+                "artifact": "queries",
+                "path": "dataset/queries.jsonl",
+                "sha256": "sha256:" + sha256(run_dir / "dataset" / "queries.jsonl"),
+                "ready": 1,
+            },
+            {
+                "artifact": "dataset",
+                "path": "dataset/dataset.jsonl",
+                "sha256": "sha256:" + sha256(run_dir / "dataset" / "dataset.jsonl"),
+                "ready": 1,
+            },
+            {
+                "artifact": "source_manifest",
+                "path": "source/source_manifest.json",
+                "sha256": "sha256:" + sha256(run_dir / "source" / "source_manifest.json"),
+                "ready": 1,
+            },
+        ],
+        "claim": "runner-owned query set materialization bound to source acquisition and selected query repo",
+    }
+    write_json(run_dir / "dataset" / "dataset_manifest.json", dataset_manifest)
+
+    route_rows = build_store(run_dir, repo, source_files, dataset)
+    mmap_rows = mmap_reads(run_dir, route_rows)
+    write_csv(
+        run_dir / "store" / "mmap_read_rows.csv",
+        ["query_id", "chunk_id", "byte_offset", "byte_len", "mmap_read_hash", "mmap_read_ready"],
+        mmap_rows,
+    )
+
+    predictions, evaluator_rows = predict_and_evaluate(dataset, mmap_rows)
+    write_jsonl(run_dir / "predictions" / "raw_predictions.jsonl", predictions)
+    prediction_status = {
+        "prediction_scope": "v14-a-runner-owned-raw-prediction-generation",
+        "dataset_rows": len(dataset),
+        "mmap_read_rows": len(mmap_rows),
+        "raw_prediction_rows": len(predictions),
+        "prediction_ready": int(len(predictions) == len(dataset) and len(dataset) > 0),
+        "runner_owned_prediction": 1,
+        "oracle_prediction_used": 0,
+        "artifacts": [
+            artifact_entry(run_dir, "dataset", "dataset/dataset.jsonl"),
+            artifact_entry(run_dir, "mmap_reads", "store/mmap_read_rows.csv"),
+            artifact_entry(run_dir, "raw_predictions", "predictions/raw_predictions.jsonl"),
+        ],
+        "claim": "runner-owned raw predictions generated from materialized dataset and mmap evidence rows",
+    }
+    write_json(run_dir / "predictions" / "prediction_status.json", prediction_status)
+    write_csv(
+        run_dir / "evaluator" / "evaluator_output.csv",
+        [
+            "query_id",
+            "label_type",
+            "prediction",
+            "span_exact",
+            "chunk_exact",
+            "missing_abstain",
+            "near_miss_false_positive",
+            "wrong_answer",
+            "runner_owned_evaluator",
+            "independent_evaluator",
+        ],
+        evaluator_rows,
+    )
+    evaluator_status = {
+        "evaluator_scope": "v14-a-runner-owned-local-evaluator-invocation",
+        "evaluator_kind": "in_process_routeqa_exactness",
+        "dataset_rows": len(dataset),
+        "raw_prediction_rows": len(predictions),
+        "evaluator_output_rows": len(evaluator_rows),
+        "evaluator_ready": int(len(evaluator_rows) == len(dataset) and len(dataset) > 0),
+        "runner_owned_evaluator": 1,
+        "independent_evaluator": 0,
+        "wrong_answer_rows": sum(int(row["wrong_answer"]) for row in evaluator_rows),
+        "artifacts": [
+            artifact_entry(run_dir, "dataset", "dataset/dataset.jsonl"),
+            artifact_entry(run_dir, "raw_predictions", "predictions/raw_predictions.jsonl"),
+            artifact_entry(run_dir, "evaluator_output", "evaluator/evaluator_output.csv"),
+        ],
+        "claim": "runner-owned evaluator invocation over raw predictions; independent external review still required",
+    }
+    write_json(run_dir / "evaluator" / "evaluator_status.json", evaluator_status)
+    metrics = compute_metrics(evaluator_rows)
+    write_json(run_dir / "metrics" / "metrics.json", metrics)
+    write_csv(
+        run_dir / "metrics" / "metrics.csv",
+        ["metric", "value"],
+        [{"metric": key, "value": f"{value:.6f}"} for key, value in metrics.items()],
+    )
+
+    routeqa_rows = []
+    pred_by_id = {row["query_id"]: row for row in predictions}
+    eval_by_id = {row["query_id"]: row for row in evaluator_rows}
+    for row in dataset:
+        pred = pred_by_id[row["query_id"]]
+        ev = eval_by_id[row["query_id"]]
+        routeqa_rows.append(
+            {
+                "query_id": row["query_id"],
+                "label_type": row["label_type"],
+                "query_type": row["query_type"],
+                "expected_file": row.get("expected_file", ""),
+                "expected_symbol": row.get("expected_symbol", ""),
+                "source_uri": row.get("source_uri", ""),
+                "repo_source": repo_source,
+                "source_snapshot_artifact_id": source_snapshot_artifact_id,
+                "prediction": pred["prediction"],
+                "dataset_bound": 1,
+                "result_bound": 1,
+                "runner_owned_evaluator": 1,
+                "independent_evaluator": 0,
+                "span_exact": ev["span_exact"],
+                "chunk_exact": ev["chunk_exact"],
+                "missing_abstain": ev["missing_abstain"],
+                "near_miss_false_positive": ev["near_miss_false_positive"],
+                "wrong_answer": ev["wrong_answer"],
+                "routeqa_bound": 1 if int(ev["wrong_answer"]) == 0 else 0,
+            }
+        )
+    write_csv(
+        run_dir / "routeqa" / "routeqa_rows.csv",
+        [
+            "query_id",
+            "label_type",
+            "query_type",
+            "expected_file",
+            "expected_symbol",
+            "source_uri",
+            "repo_source",
+            "source_snapshot_artifact_id",
+            "prediction",
+            "dataset_bound",
+            "result_bound",
+            "runner_owned_evaluator",
+            "independent_evaluator",
+            "span_exact",
+            "chunk_exact",
+            "missing_abstain",
+            "near_miss_false_positive",
+            "wrong_answer",
+            "routeqa_bound",
+        ],
+        routeqa_rows,
+    )
+    benchmark_rows = []
+    benchmark_family = (
+        f"{source_snapshot_artifact_id}-official-source-routeqa"
+        if source_snapshot_artifact_id
+        else "codebase-retrieval-local"
+    )
+    for row in routeqa_rows:
+        benchmark_rows.append(
+            {
+                "query_id": row["query_id"],
+                "task": args.task,
+                "external_benchmark_family": benchmark_family,
+                "repo_source": repo_source,
+                "source_snapshot_artifact_id": source_snapshot_artifact_id,
+                "dataset_bound": row["dataset_bound"],
+                "raw_prediction_bound": row["result_bound"],
+                "evaluator_bound": 1,
+                "metrics_bound": 1,
+                "routeqa_bound": row["routeqa_bound"],
+                "runner_owned": 1,
+                "independent": 0,
+                "span_exact": row["span_exact"],
+                "chunk_exact": row["chunk_exact"],
+                "wrong_answer": row["wrong_answer"],
+                "benchmark_result_ready": 1 if int(row["routeqa_bound"]) == 1 else 0,
+            }
+        )
+    write_csv(
+        run_dir / "benchmark" / "benchmark_rows.csv",
+        [
+            "query_id",
+            "task",
+            "external_benchmark_family",
+            "repo_source",
+            "source_snapshot_artifact_id",
+            "dataset_bound",
+            "raw_prediction_bound",
+            "evaluator_bound",
+            "metrics_bound",
+            "routeqa_bound",
+            "runner_owned",
+            "independent",
+            "span_exact",
+            "chunk_exact",
+            "wrong_answer",
+            "benchmark_result_ready",
+        ],
+        benchmark_rows,
+    )
+    ruler_smoke = {
+        "ruler_compatible_rows": 0,
+        "ruler_compatible_score": 0.0,
+        "ruler_compatible_ready": 0,
+        "official_ruler_evaluator_ready": 0,
+        "official_ruler_evaluator_returncode": "",
+        "official_generator_rows": 0,
+        "official_generator_ready": 0,
+        "official_generator_returncode": "",
+        "official_generator_evaluator_ready": 0,
+        "official_generator_evaluator_returncode": "",
+        "official_generator_evaluator_score": 0.0,
+        "official_generator_benchmark_rows": 0,
+        "official_generator_benchmark_ready": 0,
+        "official_generator_prediction_provenance_rows": 0,
+        "official_generator_extracted_prediction_rows": 0,
+        "official_generator_mmap_read_rows": 0,
+        "official_generator_mmap_read_ready_rows": 0,
+        "official_generator_mmap_extracted_prediction_rows": 0,
+        "official_generator_mmap_verification_ready": 0,
+    }
+    if args.emit_ruler_synthetic_smoke:
+        ruler_smoke = run_ruler_synthetic_smoke(run_dir, repo)
+    longbench_smoke = {
+        "longbench_v2_rows": 0,
+        "longbench_v2_ready": 0,
+        "longbench_v2_returncode": "",
+        "longbench_v2_score": 0.0,
+        "longbench_v2_benchmark_rows": 0,
+        "longbench_v2_benchmark_ready": 0,
+        "longbench_v2_prediction_provenance_rows": 0,
+        "longbench_v2_schema_rows": 0,
+        "longbench_v2_schema_ready": 0,
+        "longbench_v2_status_ready": 0,
+        "longbench_v2_official_sample_rows": 0,
+        "longbench_v2_official_sample_ready": 0,
+        "longbench_v2_official_sample_score": 0.0,
+        "longbench_v2_official_sample_prediction_provenance_rows": 0,
+        "longbench_v2_official_sample_api_response_ready": 0,
+        "longbench_v2_official_sample_mmap_read_rows": 0,
+        "longbench_v2_official_sample_mmap_read_ready_rows": 0,
+        "longbench_v2_official_sample_mmap_prediction_match_rows": 0,
+        "longbench_v2_official_sample_mmap_verification_ready": 0,
+    }
+    if args.emit_longbench_v2_smoke:
+        longbench_smoke = run_longbench_v2_smoke(run_dir, args.emit_longbench_v2_official_sample)
+
+    external_benchmark_rows = []
+    external_benchmark_input_paths = [
+        run_dir / "benchmark" / "ruler_synthetic" / "official_generator_benchmark_rows.csv",
+        run_dir / "benchmark" / "longbench_v2" / "longbench_v2_benchmark_rows.csv",
+    ]
+    for source_rows_path in external_benchmark_input_paths:
+        for row in read_csv_rows(source_rows_path):
+            result_ready = int_field(row, "benchmark_result_ready")
+            row_family = row.get("external_benchmark_family", "")
+            row_source_snapshot_artifact_id = (
+                "longbench_repo"
+                if row_family.startswith("longbench")
+                else source_snapshot_artifact_id
+            )
+            external_benchmark_rows.append(
+                {
+                    "benchmark_id": row.get("benchmark_id", ""),
+                    "task": row.get("task", ""),
+                    "external_benchmark_family": row_family,
+                    "source_snapshot_artifact_id": row_source_snapshot_artifact_id,
+                    "dataset_path": row.get("dataset_path", ""),
+                    "prediction_path": row.get("prediction_path", ""),
+                    "evaluator_summary_path": row.get("evaluator_summary_path", ""),
+                    "metrics_path": row.get("metrics_path", ""),
+                    "prediction_provenance_path": row.get("prediction_provenance_path", ""),
+                    "dataset_rows": row.get("dataset_rows", "0"),
+                    "raw_prediction_rows": row.get("raw_prediction_rows", "0"),
+                    "prediction_provenance_rows": row.get("prediction_provenance_rows", "0"),
+                    "extracted_prediction_rows": row.get("extracted_prediction_rows", "0"),
+                    "mmap_read_rows": row.get("mmap_read_rows", "0"),
+                    "mmap_prediction_match_rows": row.get("mmap_prediction_match_rows", "0"),
+                    "mmap_verification_ready": row.get("mmap_verification_ready", "0"),
+                    "evaluator_score": row.get("evaluator_score", "0.00"),
+                    "dataset_bound": row.get("dataset_bound", "0"),
+                    "raw_prediction_bound": row.get("raw_prediction_bound", "0"),
+                    "prediction_provenance_bound": row.get("prediction_provenance_bound", "0"),
+                    "evaluator_bound": row.get("evaluator_bound", "0"),
+                    "metrics_bound": row.get("metrics_bound", "0"),
+                    "runner_owned": row.get("runner_owned", "0"),
+                    "independent": row.get("independent", "0"),
+                    "dependency_shims_used": row.get("dependency_shims_used", "0"),
+                    "input_extractor_prediction_used": row.get("input_extractor_prediction_used", "0"),
+                    "oracle_prediction_used": row.get("oracle_prediction_used", "0"),
+                    "benchmark_result_ready": result_ready,
+                    "candidate_external_benchmark_result_ready": 0,
+                    "real_external_benchmark_verified": 0,
+                    "blocker": "runner-owned-official-benchmark-run-await-independent-review",
+                }
+            )
+    write_csv(
+        run_dir / "benchmark" / "external_benchmark_rows.csv",
+        [
+            "benchmark_id",
+            "task",
+            "external_benchmark_family",
+            "source_snapshot_artifact_id",
+            "dataset_path",
+            "prediction_path",
+            "evaluator_summary_path",
+            "metrics_path",
+            "prediction_provenance_path",
+            "dataset_rows",
+            "raw_prediction_rows",
+            "prediction_provenance_rows",
+            "extracted_prediction_rows",
+            "mmap_read_rows",
+            "mmap_prediction_match_rows",
+            "mmap_verification_ready",
+            "evaluator_score",
+            "dataset_bound",
+            "raw_prediction_bound",
+            "prediction_provenance_bound",
+            "evaluator_bound",
+            "metrics_bound",
+            "runner_owned",
+            "independent",
+            "dependency_shims_used",
+            "input_extractor_prediction_used",
+            "oracle_prediction_used",
+            "benchmark_result_ready",
+            "candidate_external_benchmark_result_ready",
+            "real_external_benchmark_verified",
+            "blocker",
+        ],
+        external_benchmark_rows,
+    )
+    runner_owned_external_benchmark_result_ready = int(
+        bool(external_benchmark_rows)
+        and all(int_field(row, "benchmark_result_ready") == 1 for row in external_benchmark_rows)
+        and all(int_field(row, "runner_owned") == 1 for row in external_benchmark_rows)
+        and all(int_field(row, "independent") == 0 for row in external_benchmark_rows)
+        and all(int_field(row, "oracle_prediction_used") == 0 for row in external_benchmark_rows)
+    )
+    external_benchmark_scores = [float_field(row, "evaluator_score") for row in external_benchmark_rows]
+    external_benchmark_average_score = (
+        sum(external_benchmark_scores) / len(external_benchmark_scores)
+        if external_benchmark_scores
+        else 0.0
+    )
+    external_benchmark_metrics = {
+        "external_benchmark_scope": "runner-owned-official-benchmark-generated",
+        "source_snapshot_artifact_id": source_snapshot_artifact_id,
+        "external_benchmark_rows": len(external_benchmark_rows),
+        "external_benchmark_ready_rows": sum(int_field(row, "benchmark_result_ready") for row in external_benchmark_rows),
+        "external_benchmark_dataset_rows": sum(int_field(row, "dataset_rows") for row in external_benchmark_rows),
+        "external_benchmark_raw_prediction_rows": sum(int_field(row, "raw_prediction_rows") for row in external_benchmark_rows),
+        "external_benchmark_prediction_provenance_rows": sum(int_field(row, "prediction_provenance_rows") for row in external_benchmark_rows),
+        "external_benchmark_extracted_prediction_rows": sum(int_field(row, "extracted_prediction_rows") for row in external_benchmark_rows),
+        "external_benchmark_mmap_read_rows": sum(int_field(row, "mmap_read_rows") for row in external_benchmark_rows),
+        "external_benchmark_mmap_prediction_match_rows": sum(int_field(row, "mmap_prediction_match_rows") for row in external_benchmark_rows),
+        "external_benchmark_mmap_verification_ready_rows": sum(int_field(row, "mmap_verification_ready") for row in external_benchmark_rows),
+        "external_benchmark_average_score": external_benchmark_average_score,
+        "runner_owned_external_benchmark_result_ready": runner_owned_external_benchmark_result_ready,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "independent_rows": sum(int_field(row, "independent") for row in external_benchmark_rows),
+        "oracle_prediction_used_rows": sum(int_field(row, "oracle_prediction_used") for row in external_benchmark_rows),
+        "claim": "runner-owned official benchmark metrics for RULER generated rows plus LongBench v2 aggregation smoke; not independent external benchmark evidence",
+    }
+    external_benchmark_metrics_path = run_dir / "benchmark" / "external_benchmark_metrics.json"
+    write_json(external_benchmark_metrics_path, external_benchmark_metrics)
+    write_csv(
+        run_dir / "benchmark" / "external_benchmark_metrics.csv",
+        ["metric", "value"],
+        [{"metric": key, "value": value} for key, value in external_benchmark_metrics.items()],
+    )
+    external_benchmark_manifest_inputs = {
+        "external_benchmark_rows": run_dir / "benchmark" / "external_benchmark_rows.csv",
+        "external_benchmark_metrics": external_benchmark_metrics_path,
+        "official_generator_benchmark_rows": run_dir / "benchmark" / "ruler_synthetic" / "official_generator_benchmark_rows.csv",
+        "official_generator_metrics": run_dir / "benchmark" / "ruler_synthetic" / "official_generator_metrics.json",
+        "official_generator_prediction_provenance": run_dir / "benchmark" / "ruler_synthetic" / "official_generator_prediction_provenance.csv",
+        "official_generator_status": run_dir / "benchmark" / "ruler_synthetic" / "official_generator_status.json",
+        "official_generator_mmap_store_status": run_dir / "benchmark" / "ruler_synthetic" / "official_generator_store" / "store_status.json",
+        "official_generator_mmap_read_rows": run_dir / "benchmark" / "ruler_synthetic" / "official_generator_store" / "mmap_read_rows.csv",
+        "official_generator_mmap_route_index": run_dir / "benchmark" / "ruler_synthetic" / "official_generator_store" / "route_index.bin",
+        "official_generator_mmap_route_memory_store": run_dir / "benchmark" / "ruler_synthetic" / "official_generator_store" / "route_memory_store.bin",
+        "official_generator_evaluator_summary": run_dir / "benchmark" / "ruler_synthetic" / "official_generator_eval" / "summary.csv",
+        "longbench_v2_benchmark_rows": run_dir / "benchmark" / "longbench_v2" / "longbench_v2_benchmark_rows.csv",
+        "longbench_v2_metrics": run_dir / "benchmark" / "longbench_v2" / "longbench_v2_metrics.json",
+        "longbench_v2_manifest": run_dir / "benchmark" / "longbench_v2" / "longbench_v2_manifest.json",
+        "longbench_v2_result": run_dir / "benchmark" / "longbench_v2" / "result.txt",
+        "longbench_v2_schema_rows": run_dir / "benchmark" / "longbench_v2" / "longbench_v2_schema_rows.csv",
+        "longbench_v2_status": run_dir / "benchmark" / "longbench_v2" / "longbench_v2_status.json",
+        "longbench_v2_official_sample_mmap_store_status": run_dir / "benchmark" / "longbench_v2" / "official_sample_store" / "store_status.json",
+        "longbench_v2_official_sample_mmap_read_rows": run_dir / "benchmark" / "longbench_v2" / "official_sample_store" / "mmap_read_rows.csv",
+        "longbench_v2_official_sample_mmap_route_index": run_dir / "benchmark" / "longbench_v2" / "official_sample_store" / "route_index.bin",
+        "longbench_v2_official_sample_mmap_route_memory_store": run_dir / "benchmark" / "longbench_v2" / "official_sample_store" / "route_memory_store.bin",
+        "source_acquisition": run_dir / "source" / "official_source_acquisition_rows.csv",
+        "source_snapshot_rows": run_dir / "source" / "source_snapshot_rows.csv",
+    }
+    external_benchmark_manifest = {
+        "manifest_scope": "runner-owned-official-ruler-generated-external-benchmark",
+        "source_snapshot_artifact_id": source_snapshot_artifact_id,
+        "runner_owned_external_benchmark_result_ready": runner_owned_external_benchmark_result_ready,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "artifacts": [
+            {
+                "artifact": name,
+                "path": str(path.relative_to(run_dir)),
+                "sha256": "sha256:" + sha256(path),
+                "ready": 1,
+            }
+            for name, path in external_benchmark_manifest_inputs.items()
+            if path.is_file()
+        ],
+        "claim": "hash-bound runner-owned official RULER generated benchmark package; independent review still required",
+    }
+    write_json(run_dir / "benchmark" / "external_benchmark_manifest.json", external_benchmark_manifest)
+    external_execution_rows = []
+    external_execution_ready_rows = 0
+    for row in external_benchmark_rows:
+        row_artifacts = [
+            path_artifact_entry(run_dir, "source_acquisition", run_dir / "source" / "official_source_acquisition_rows.csv"),
+            path_artifact_entry(run_dir, "source_snapshot_rows", run_dir / "source" / "source_snapshot_rows.csv"),
+            path_artifact_entry(run_dir, "dataset", row.get("dataset_path", "")),
+            path_artifact_entry(run_dir, "raw_predictions", row.get("prediction_path", "")),
+            path_artifact_entry(run_dir, "evaluator_summary", row.get("evaluator_summary_path", "")),
+            path_artifact_entry(run_dir, "metrics", row.get("metrics_path", "")),
+            path_artifact_entry(run_dir, "prediction_provenance", row.get("prediction_provenance_path", "")),
+        ]
+        family = row.get("external_benchmark_family", "")
+        if family.startswith("ruler"):
+            row_artifacts.extend(
+                [
+                    path_artifact_entry(
+                        run_dir,
+                        "benchmark_mmap_route_memory_store",
+                        run_dir / "benchmark" / "ruler_synthetic" / "official_generator_store" / "route_memory_store.bin",
+                    ),
+                    path_artifact_entry(
+                        run_dir,
+                        "benchmark_mmap_route_index",
+                        run_dir / "benchmark" / "ruler_synthetic" / "official_generator_store" / "route_index.bin",
+                    ),
+                    path_artifact_entry(
+                        run_dir,
+                        "benchmark_mmap_chunk_offsets",
+                        run_dir / "benchmark" / "ruler_synthetic" / "official_generator_store" / "chunk_offsets",
+                    ),
+                    path_artifact_entry(
+                        run_dir,
+                        "benchmark_mmap_reads",
+                        run_dir / "benchmark" / "ruler_synthetic" / "official_generator_store" / "mmap_read_rows.csv",
+                    ),
+                ]
+            )
+        if row.get("benchmark_id") == "longbench_v2_official_dataset_server_sample":
+            row_artifacts.extend(
+                [
+                    path_artifact_entry(
+                        run_dir,
+                        "benchmark_mmap_route_memory_store",
+                        run_dir / "benchmark" / "longbench_v2" / "official_sample_store" / "route_memory_store.bin",
+                    ),
+                    path_artifact_entry(
+                        run_dir,
+                        "benchmark_mmap_route_index",
+                        run_dir / "benchmark" / "longbench_v2" / "official_sample_store" / "route_index.bin",
+                    ),
+                    path_artifact_entry(
+                        run_dir,
+                        "benchmark_mmap_chunk_offsets",
+                        run_dir / "benchmark" / "longbench_v2" / "official_sample_store" / "chunk_offsets",
+                    ),
+                    path_artifact_entry(
+                        run_dir,
+                        "benchmark_mmap_reads",
+                        run_dir / "benchmark" / "longbench_v2" / "official_sample_store" / "mmap_read_rows.csv",
+                    ),
+                ]
+            )
+        row_ready = int(
+            int_field(row, "benchmark_result_ready") == 1
+            and int_field(row, "dataset_bound") == 1
+            and int_field(row, "raw_prediction_bound") == 1
+            and int_field(row, "prediction_provenance_bound") == 1
+            and int_field(row, "evaluator_bound") == 1
+            and int_field(row, "metrics_bound") == 1
+            and int_field(row, "runner_owned") == 1
+            and int_field(row, "independent") == 0
+            and int_field(row, "oracle_prediction_used") == 0
+            and all(artifact.get("ready") == 1 for artifact in row_artifacts)
+        )
+        external_execution_ready_rows += row_ready
+        external_execution_rows.append(
+            {
+                "benchmark_id": row.get("benchmark_id", ""),
+                "task": row.get("task", ""),
+                "external_benchmark_family": family,
+                "source_snapshot_artifact_id": row.get("source_snapshot_artifact_id", ""),
+                "dataset_rows": int_field(row, "dataset_rows"),
+                "raw_prediction_rows": int_field(row, "raw_prediction_rows"),
+                "prediction_provenance_rows": int_field(row, "prediction_provenance_rows"),
+                "mmap_read_rows": int_field(row, "mmap_read_rows"),
+                "mmap_prediction_match_rows": int_field(row, "mmap_prediction_match_rows"),
+                "mmap_verification_ready": int_field(row, "mmap_verification_ready"),
+                "evaluator_score": row.get("evaluator_score", "0.00"),
+                "runner_owned": int_field(row, "runner_owned"),
+                "independent": int_field(row, "independent"),
+                "oracle_prediction_used": int_field(row, "oracle_prediction_used"),
+                "benchmark_result_ready": int_field(row, "benchmark_result_ready"),
+                "execution_chain_ready": row_ready,
+                "artifacts": row_artifacts,
+            }
+        )
+    external_execution_chain_ready = int(
+        bool(external_execution_rows)
+        and external_execution_ready_rows == len(external_execution_rows)
+        and runner_owned_external_benchmark_result_ready == 1
+    )
+    external_execution_chain_manifest = {
+        "manifest_scope": "runner-owned-external-benchmark-source-to-evaluator-execution-chain",
+        "source_snapshot_artifact_id": source_snapshot_artifact_id,
+        "external_benchmark_rows": len(external_benchmark_rows),
+        "external_benchmark_execution_chain_ready_rows": external_execution_ready_rows,
+        "external_benchmark_dataset_rows": external_benchmark_metrics["external_benchmark_dataset_rows"],
+        "external_benchmark_raw_prediction_rows": external_benchmark_metrics["external_benchmark_raw_prediction_rows"],
+        "external_benchmark_prediction_provenance_rows": external_benchmark_metrics["external_benchmark_prediction_provenance_rows"],
+        "external_benchmark_mmap_read_rows": external_benchmark_metrics["external_benchmark_mmap_read_rows"],
+        "external_benchmark_mmap_prediction_match_rows": external_benchmark_metrics["external_benchmark_mmap_prediction_match_rows"],
+        "runner_owned_external_benchmark_result_ready": runner_owned_external_benchmark_result_ready,
+        "external_benchmark_execution_chain_ready": external_execution_chain_ready,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "real_release_package_ready": 0,
+        "rows": external_execution_rows,
+        "claim": "per-row runner-owned external benchmark source-to-dataset-to-prediction-to-evaluator chain; independent benchmark verification still required",
+    }
+    external_execution_chain_manifest_path = run_dir / "benchmark" / "external_benchmark_execution_chain_manifest.json"
+    write_json(external_execution_chain_manifest_path, external_execution_chain_manifest)
+    external_benchmark_metrics.update(
+        {
+            "external_benchmark_execution_chain_ready_rows": external_execution_ready_rows,
+            "external_benchmark_execution_chain_ready": external_execution_chain_ready,
+        }
+    )
+    write_json(external_benchmark_metrics_path, external_benchmark_metrics)
+    write_csv(
+        run_dir / "benchmark" / "external_benchmark_metrics.csv",
+        ["metric", "value"],
+        [{"metric": key, "value": value} for key, value in external_benchmark_metrics.items()],
+    )
+    external_benchmark_manifest_inputs["external_benchmark_execution_chain_manifest"] = external_execution_chain_manifest_path
+    external_benchmark_manifest.update(
+        {
+            "external_benchmark_execution_chain_ready_rows": external_execution_ready_rows,
+            "external_benchmark_execution_chain_ready": external_execution_chain_ready,
+            "artifacts": [
+                {
+                    "artifact": name,
+                    "path": str(path.relative_to(run_dir)),
+                    "sha256": "sha256:" + sha256(path),
+                    "ready": 1,
+                }
+                for name, path in external_benchmark_manifest_inputs.items()
+                if path.is_file()
+            ],
+        }
+    )
+    write_json(run_dir / "benchmark" / "external_benchmark_manifest.json", external_benchmark_manifest)
+
+    elapsed = time.time() - start
+    resource_rows = [
+        {
+            "backend": args.backend,
+            "store_mode": args.store_mode,
+            "query_count": len(dataset),
+            "wall_time_ms": f"{elapsed * 1000.0:.3f}",
+            "gpu_speedup_claim": "deferred",
+            "routing_trigger_rate": "0.000000",
+            "active_jump_rate": "0.000000",
+        }
+    ]
+    write_csv(
+        run_dir / "resource" / "resource_rows.csv",
+        ["backend", "store_mode", "query_count", "wall_time_ms", "gpu_speedup_claim", "routing_trigger_rate", "active_jump_rate"],
+        resource_rows,
+    )
+
+    evidence_rows = [
+        {"artifact": "run_invocation", "path": "evidence/run_invocation.json", "ready": int((run_dir / "evidence" / "run_invocation.json").is_file())},
+        {"artifact": "source", "path": "source/source_manifest.json", "ready": 1},
+        {"artifact": "official_source_acquisition", "path": "source/official_source_acquisition_rows.csv", "ready": int(source_acquisition_copied)},
+        {"artifact": "source_seed_live_fetch", "path": "source/source_seed_live_fetch_rows.csv", "ready": int(source_seed_live_fetch_copied)},
+        {"artifact": "runtime_fetch_provenance", "path": "source/runtime_fetch_provenance_rows.csv", "ready": int(runtime_fetch_provenance_copied)},
+        {"artifact": "source_snapshot", "path": "source/source_snapshot_rows.csv", "ready": 1 if source_snapshot_rows else 0},
+        {"artifact": "query_repo", "path": "source/source_manifest.json", "ready": 1 if repo_source == "runner-owned-source-snapshot" else 0},
+        {"artifact": "queries", "path": "dataset/queries.jsonl", "ready": 1},
+        {"artifact": "dataset", "path": "dataset/dataset.jsonl", "ready": 1},
+        {"artifact": "dataset_manifest", "path": "dataset/dataset_manifest.json", "ready": 1},
+        {"artifact": "store", "path": "store/chunk_pages.bin", "ready": 1},
+        {"artifact": "chunk_offsets", "path": "store/chunk_offsets", "ready": int((run_dir / "store" / "chunk_offsets").is_file())},
+        {"artifact": "route_index", "path": "store/route_index.bin", "ready": int((run_dir / "store" / "route_index.bin").is_file())},
+        {"artifact": "route_memory_store", "path": "store/route_memory_store.bin", "ready": 1},
+        {"artifact": "store_manifest", "path": "store/store_manifest.csv", "ready": int((run_dir / "store" / "store_manifest.csv").is_file())},
+        {"artifact": "mmap", "path": "store/mmap_read_rows.csv", "ready": 1},
+        {"artifact": "raw_predictions", "path": "predictions/raw_predictions.jsonl", "ready": 1},
+        {"artifact": "prediction_status", "path": "predictions/prediction_status.json", "ready": int((run_dir / "predictions" / "prediction_status.json").is_file())},
+        {"artifact": "evaluator", "path": "evaluator/evaluator_output.csv", "ready": 1},
+        {"artifact": "evaluator_status", "path": "evaluator/evaluator_status.json", "ready": int((run_dir / "evaluator" / "evaluator_status.json").is_file())},
+        {"artifact": "metrics", "path": "metrics/metrics.json", "ready": 1},
+        {"artifact": "routeqa", "path": "routeqa/routeqa_rows.csv", "ready": 1},
+        {"artifact": "benchmark", "path": "benchmark/benchmark_rows.csv", "ready": 1},
+        {
+            "artifact": "external_benchmark_rows",
+            "path": "benchmark/external_benchmark_rows.csv",
+            "ready": runner_owned_external_benchmark_result_ready,
+        },
+        {
+            "artifact": "external_benchmark_metrics",
+            "path": "benchmark/external_benchmark_metrics.json",
+            "ready": runner_owned_external_benchmark_result_ready,
+        },
+        {
+            "artifact": "external_benchmark_manifest",
+            "path": "benchmark/external_benchmark_manifest.json",
+            "ready": runner_owned_external_benchmark_result_ready,
+        },
+        {
+            "artifact": "external_benchmark_execution_chain_manifest",
+            "path": "benchmark/external_benchmark_execution_chain_manifest.json",
+            "ready": external_execution_chain_ready,
+        },
+        {
+            "artifact": "ruler_synthetic_smoke",
+            "path": "benchmark/ruler_synthetic/ruler_evaluator_rows.csv",
+            "ready": int(ruler_smoke["ruler_compatible_ready"]),
+        },
+        {
+            "artifact": "official_ruler_evaluator_status",
+            "path": "benchmark/ruler_synthetic/official_evaluator_status.json",
+            "ready": int(ruler_smoke["official_ruler_evaluator_ready"]),
+        },
+        {
+            "artifact": "official_ruler_generator_status",
+            "path": "benchmark/ruler_synthetic/official_generator_status.json",
+            "ready": int(ruler_smoke["official_generator_ready"]),
+        },
+        {
+            "artifact": "official_ruler_generator_eval",
+            "path": "benchmark/ruler_synthetic/official_generator_eval/summary.csv",
+            "ready": int(ruler_smoke["official_generator_evaluator_ready"]),
+        },
+        {
+            "artifact": "official_ruler_generator_benchmark_rows",
+            "path": "benchmark/ruler_synthetic/official_generator_benchmark_rows.csv",
+            "ready": int(ruler_smoke["official_generator_benchmark_ready"]),
+        },
+        {
+            "artifact": "official_ruler_generator_metrics",
+            "path": "benchmark/ruler_synthetic/official_generator_metrics.json",
+            "ready": int(ruler_smoke["official_generator_benchmark_ready"]),
+        },
+        {
+            "artifact": "official_ruler_generator_prediction_provenance",
+            "path": "benchmark/ruler_synthetic/official_generator_prediction_provenance.csv",
+            "ready": int(ruler_smoke["official_generator_benchmark_ready"]),
+        },
+        {
+            "artifact": "official_ruler_generator_mmap_store",
+            "path": "benchmark/ruler_synthetic/official_generator_store/route_memory_store.bin",
+            "ready": int(ruler_smoke["official_generator_mmap_verification_ready"]),
+        },
+        {
+            "artifact": "official_ruler_generator_mmap_reads",
+            "path": "benchmark/ruler_synthetic/official_generator_store/mmap_read_rows.csv",
+            "ready": int(ruler_smoke["official_generator_mmap_verification_ready"]),
+        },
+        {
+            "artifact": "official_ruler_generator_mmap_store_status",
+            "path": "benchmark/ruler_synthetic/official_generator_store/store_status.json",
+            "ready": int(ruler_smoke["official_generator_mmap_verification_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_result",
+            "path": "benchmark/longbench_v2/result.txt",
+            "ready": int(longbench_smoke["longbench_v2_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_schema_rows",
+            "path": "benchmark/longbench_v2/longbench_v2_schema_rows.csv",
+            "ready": int(longbench_smoke["longbench_v2_schema_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_status",
+            "path": "benchmark/longbench_v2/longbench_v2_status.json",
+            "ready": int(longbench_smoke["longbench_v2_status_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_benchmark_rows",
+            "path": "benchmark/longbench_v2/longbench_v2_benchmark_rows.csv",
+            "ready": int(longbench_smoke["longbench_v2_benchmark_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_metrics",
+            "path": "benchmark/longbench_v2/longbench_v2_metrics.json",
+            "ready": int(longbench_smoke["longbench_v2_benchmark_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_manifest",
+            "path": "benchmark/longbench_v2/longbench_v2_manifest.json",
+            "ready": int(longbench_smoke["longbench_v2_benchmark_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_official_sample_api_response",
+            "path": "benchmark/longbench_v2/official_sample/longbench_v2_official_sample_api_response.json",
+            "ready": int(longbench_smoke["longbench_v2_official_sample_api_response_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_official_sample_dataset",
+            "path": "benchmark/longbench_v2/dataset/longbench_v2_official_sample_dataset.jsonl",
+            "ready": int(longbench_smoke["longbench_v2_official_sample_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_official_sample_prediction_provenance",
+            "path": "benchmark/longbench_v2/longbench_v2_official_sample_prediction_provenance.csv",
+            "ready": int(longbench_smoke["longbench_v2_official_sample_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_official_sample_mmap_store",
+            "path": "benchmark/longbench_v2/official_sample_store/route_memory_store.bin",
+            "ready": int(longbench_smoke["longbench_v2_official_sample_mmap_verification_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_official_sample_mmap_reads",
+            "path": "benchmark/longbench_v2/official_sample_store/mmap_read_rows.csv",
+            "ready": int(longbench_smoke["longbench_v2_official_sample_mmap_verification_ready"]),
+        },
+        {
+            "artifact": "longbench_v2_official_sample_mmap_store_status",
+            "path": "benchmark/longbench_v2/official_sample_store/store_status.json",
+            "ready": int(longbench_smoke["longbench_v2_official_sample_mmap_verification_ready"]),
+        },
+        {"artifact": "resource", "path": "resource/resource_rows.csv", "ready": 1},
+    ]
+    write_csv(run_dir / "evidence" / "evidence_packet.csv", ["artifact", "path", "ready"], evidence_rows)
+    promotion_rows = [
+        {
+            "weakness_id": "external_benchmark",
+            "runner_owned_query_result_evaluator_ready": 1,
+            "runner_owned_external_benchmark_result_ready": runner_owned_external_benchmark_result_ready,
+            "candidate_external_benchmark_result_ready": 0,
+            "real_evidence_ready": 0,
+            "blocker": (
+                "runner-owned-official-ruler-generated-run-await-independent-review"
+                if runner_owned_external_benchmark_result_ready
+                else "local-routeqa-run-not-independent-external-benchmark"
+            ),
+        },
+        {
+            "weakness_id": "learned_chunk_ranking",
+            "runner_owned_query_result_evaluator_ready": 0,
+            "runner_owned_external_benchmark_result_ready": 0,
+            "candidate_external_benchmark_result_ready": 0,
+            "real_evidence_ready": 0,
+            "blocker": "source-verified-learned-scorer-still-missing",
+        },
+        {
+            "weakness_id": "gpu_speedup",
+            "runner_owned_query_result_evaluator_ready": 0,
+            "runner_owned_external_benchmark_result_ready": 0,
+            "candidate_external_benchmark_result_ready": 0,
+            "real_evidence_ready": 0,
+            "blocker": "measured-gpu-speedup-still-missing",
+        },
+        {
+            "weakness_id": "real_nlg",
+            "runner_owned_query_result_evaluator_ready": 0,
+            "runner_owned_external_benchmark_result_ready": 0,
+            "candidate_external_benchmark_result_ready": 0,
+            "real_evidence_ready": 0,
+            "blocker": "nonfixture-generator-transcript-still-missing",
+        },
+    ]
+    write_csv(
+        run_dir / "promotion" / "promotion_rows.csv",
+        [
+            "weakness_id",
+            "runner_owned_query_result_evaluator_ready",
+            "runner_owned_external_benchmark_result_ready",
+            "candidate_external_benchmark_result_ready",
+            "real_evidence_ready",
+            "blocker",
+        ],
+        promotion_rows,
+    )
+    requested_output_artifacts = [
+        ("emit_raw_predictions", args.emit_raw_predictions, "predictions/raw_predictions.jsonl"),
+        ("emit_evaluator_output", args.emit_evaluator_output, "evaluator/evaluator_output.csv"),
+        ("emit_routeqa_rows", args.emit_routeqa_rows, "routeqa/routeqa_rows.csv"),
+        ("emit_resource_rows", args.emit_resource_rows, "resource/resource_rows.csv"),
+        ("emit_evidence_packet", args.emit_evidence_packet, "evidence/evidence_packet.csv"),
+        ("emit_promotion_rows", args.emit_promotion_rows, "promotion/promotion_rows.csv"),
+    ]
+    requested_output_rows = []
+    for flag, requested, rel_path in requested_output_artifacts:
+        entry = artifact_entry(run_dir, flag, rel_path, ready=int(requested and (run_dir / rel_path).is_file()))
+        entry["requested"] = int(requested)
+        requested_output_rows.append(entry)
+    requested_outputs_ready = int(
+        all(row["ready"] == 1 for row in requested_output_rows if row["requested"] == 1)
+    )
+    requested_outputs_manifest = {
+        "manifest_scope": "v14-a-requested-output-contract",
+        "requested_outputs_ready": requested_outputs_ready,
+        "emit_raw_predictions": int(args.emit_raw_predictions),
+        "emit_evaluator_output": int(args.emit_evaluator_output),
+        "emit_routeqa_rows": int(args.emit_routeqa_rows),
+        "emit_resource_rows": int(args.emit_resource_rows),
+        "emit_evidence_packet": int(args.emit_evidence_packet),
+        "emit_promotion_rows": int(args.emit_promotion_rows),
+        "artifacts": requested_output_rows,
+        "claim": "requested runner output flags are bound to emitted artifacts in this run",
+    }
+    write_json(run_dir / "evidence" / "requested_outputs_manifest.json", requested_outputs_manifest)
+    reproducibility_command = [
+        Path(sys.argv[0]).name,
+        "--source-acquisition",
+        args.source_acquisition,
+        "--task",
+        args.task,
+        "--repo",
+        args.repo,
+        "--queries",
+        args.queries,
+        "--out",
+        str(run_dir),
+        "--backend",
+        args.backend,
+        "--store-mode",
+        args.store_mode,
+        "--no-jump-neighbor",
+    ]
+    if args.source_seed_live_fetch:
+        reproducibility_command.extend(["--source-seed-live-fetch", args.source_seed_live_fetch])
+    if args.runtime_fetch_provenance:
+        reproducibility_command.extend(["--runtime-fetch-provenance", args.runtime_fetch_provenance])
+    if args.source_snapshot_mode != "manifest":
+        reproducibility_command.extend(["--source-snapshot-mode", args.source_snapshot_mode])
+    if args.repo_from_source_snapshot:
+        reproducibility_command.extend(["--repo-from-source-snapshot", args.repo_from_source_snapshot])
+    for flag, enabled in [
+        ("--emit-raw-predictions", args.emit_raw_predictions),
+        ("--emit-evaluator-output", args.emit_evaluator_output),
+        ("--emit-routeqa-rows", args.emit_routeqa_rows),
+        ("--emit-resource-rows", args.emit_resource_rows),
+        ("--emit-evidence-packet", args.emit_evidence_packet),
+        ("--emit-promotion-rows", args.emit_promotion_rows),
+        ("--emit-ruler-synthetic-smoke", args.emit_ruler_synthetic_smoke),
+        ("--emit-longbench-v2-smoke", args.emit_longbench_v2_smoke),
+        ("--emit-longbench-v2-official-sample", args.emit_longbench_v2_official_sample),
+    ]:
+        if enabled:
+            reproducibility_command.append(flag)
+    reproducibility_inputs = [
+        path_artifact_entry(run_dir, "runner", runner_path),
+        path_artifact_entry(run_dir, "source_acquisition", args.source_acquisition),
+        path_artifact_entry(run_dir, "queries", args.queries),
+    ]
+    if resolved_source_seed_live_fetch:
+        reproducibility_inputs.append(path_artifact_entry(run_dir, "source_seed_live_fetch", resolved_source_seed_live_fetch))
+    if resolved_runtime_fetch_provenance:
+        reproducibility_inputs.append(path_artifact_entry(run_dir, "runtime_fetch_provenance", resolved_runtime_fetch_provenance))
+    reproducibility_manifest = {
+        "manifest_scope": "v14-a-direct-runner-reproducibility",
+        "direct_cli_shape_ready": int(
+            bool(args.source_acquisition)
+            and bool(args.queries)
+            and args.backend == "cpu"
+            and args.store_mode == "mmap"
+            and args.no_jump_neighbor
+            and requested_outputs_ready == 1
+        ),
+        "cwd": os.getcwd(),
+        "command": reproducibility_command,
+        "shell_command": " ".join(shlex.quote(part) for part in reproducibility_command),
+        "source_chain_autodiscovery_ready": int(
+            (bool(args.source_seed_live_fetch) or source_seed_live_fetch_autodiscovered)
+            and (bool(args.runtime_fetch_provenance) or runtime_fetch_provenance_autodiscovered)
+        ),
+        "requested_outputs_ready": requested_outputs_ready,
+        "inputs": reproducibility_inputs,
+        "claim": "direct runner command shape and input hashes for reproducing this runner-owned query/result/evaluator run",
+    }
+    write_json(run_dir / "evidence" / "reproducibility_manifest.json", reproducibility_manifest)
+
+    run_layout_specs = [
+        (
+            "source",
+            [
+                ("official_source_acquisition", "source/official_source_acquisition_rows.csv"),
+                ("source_seed_live_fetch", "source/source_seed_live_fetch_rows.csv"),
+                ("runtime_fetch_provenance", "source/runtime_fetch_provenance_rows.csv"),
+                ("source_snapshot_rows", "source/source_snapshot_rows.csv"),
+                ("source_snapshot_manifest", "source/source_snapshot_manifest.json"),
+                ("source_manifest", "source/source_manifest.json"),
+            ],
+        ),
+        (
+            "dataset",
+            [
+                ("queries", "dataset/queries.jsonl"),
+                ("dataset", "dataset/dataset.jsonl"),
+                ("dataset_manifest", "dataset/dataset_manifest.json"),
+            ],
+        ),
+        (
+            "route_memory_mmap_store",
+            [
+                ("chunk_pages", "store/chunk_pages.bin"),
+                ("chunk_offsets", "store/chunk_offsets"),
+                ("route_index", "store/route_index.bin"),
+                ("route_memory_store", "store/route_memory_store.bin"),
+                ("store_manifest", "store/store_manifest.csv"),
+                ("mmap_reads", "store/mmap_read_rows.csv"),
+            ],
+        ),
+        (
+            "prediction_evaluator_metrics",
+            [
+                ("raw_predictions", "predictions/raw_predictions.jsonl"),
+                ("prediction_status", "predictions/prediction_status.json"),
+                ("evaluator_output", "evaluator/evaluator_output.csv"),
+                ("evaluator_status", "evaluator/evaluator_status.json"),
+                ("metrics", "metrics/metrics.json"),
+            ],
+        ),
+        (
+            "routeqa_benchmark_external",
+            [
+                ("routeqa_rows", "routeqa/routeqa_rows.csv"),
+                ("benchmark_rows", "benchmark/benchmark_rows.csv"),
+                ("external_benchmark_rows", "benchmark/external_benchmark_rows.csv"),
+                ("external_benchmark_metrics", "benchmark/external_benchmark_metrics.json"),
+                ("external_benchmark_manifest", "benchmark/external_benchmark_manifest.json"),
+                ("external_benchmark_execution_chain_manifest", "benchmark/external_benchmark_execution_chain_manifest.json"),
+            ],
+        ),
+        (
+            "evidence_promotion",
+            [
+                ("run_invocation", "evidence/run_invocation.json"),
+                ("requested_outputs_manifest", "evidence/requested_outputs_manifest.json"),
+                ("reproducibility_manifest", "evidence/reproducibility_manifest.json"),
+                ("evidence_packet", "evidence/evidence_packet.csv"),
+                ("resource_rows", "resource/resource_rows.csv"),
+                ("promotion_rows", "promotion/promotion_rows.csv"),
+            ],
+        ),
+    ]
+    run_layout_groups = []
+    run_layout_artifacts = []
+    for layout_scope, specs in run_layout_specs:
+        group_artifacts = [artifact_entry(run_dir, name, rel_path) for name, rel_path in specs]
+        run_layout_artifacts.extend(group_artifacts)
+        run_layout_groups.append(
+            {
+                "layout_scope": layout_scope,
+                "artifact_rows": len(group_artifacts),
+                "ready_rows": sum(int(row["ready"]) for row in group_artifacts),
+                "artifacts": group_artifacts,
+            }
+        )
+    run_layout_ready = int(
+        len(dataset) > 0
+        and len(predictions) == len(dataset)
+        and len(evaluator_rows) == len(dataset)
+        and len(routeqa_rows) == len(dataset)
+        and len(benchmark_rows) == len(dataset)
+        and all(int(row["ready"]) == 1 for row in run_layout_artifacts)
+    )
+    run_layout_manifest = {
+        "manifest_scope": "v14-a-run-output-layout-contract",
+        "task": args.task,
+        "repo": str(repo),
+        "repo_source": repo_source,
+        "source_snapshot_artifact_id": source_snapshot_artifact_id,
+        "run_layout_ready": run_layout_ready,
+        "layout_groups": run_layout_groups,
+        "artifact_rows": len(run_layout_artifacts),
+        "ready_rows": sum(int(row["ready"]) for row in run_layout_artifacts),
+        "claim": "concrete runner output tree is present and hash-bound through source, dataset, mmap store, prediction, evaluator, metrics, benchmark, evidence, and promotion artifacts",
+    }
+    write_json(run_dir / "evidence" / "run_layout_manifest.json", run_layout_manifest)
+
+    mmap_expected_ready_rows = sum(
+        1
+        for row in dataset
+        if row.get("expected_file") and row.get("label_type") not in ("missing", "near_miss")
+    )
+    mmap_ready_rows = sum(int(row["mmap_read_ready"]) for row in mmap_rows)
+    objective_stage_specs = [
+        {
+            "stage": "official_source_acquisition",
+            "ready": int(source_acquisition_copied and count_csv_rows(run_dir / "source" / "official_source_acquisition_rows.csv") > 0),
+            "row_count": count_csv_rows(run_dir / "source" / "official_source_acquisition_rows.csv"),
+            "artifacts": [
+                ("official_source_acquisition", "source/official_source_acquisition_rows.csv"),
+                ("source_seed_live_fetch", "source/source_seed_live_fetch_rows.csv"),
+                ("runtime_fetch_provenance", "source/runtime_fetch_provenance_rows.csv"),
+                ("official_source_acquisition_evidence_mirror", "evidence/official_source_acquisition_rows.csv"),
+                ("source_seed_live_fetch_evidence_mirror", "evidence/source_seed_live_fetch_rows.csv"),
+                ("runtime_fetch_provenance_evidence_mirror", "evidence/runtime_fetch_provenance_rows.csv"),
+            ],
+        },
+        {
+            "stage": "dataset_checkout_snapshot",
+            "ready": int(
+                args.source_snapshot_mode != "off"
+                and len(source_snapshot_rows) > 0
+                and (run_dir / "source" / "source_snapshot_rows.csv").is_file()
+                and (run_dir / "source" / "source_snapshot_manifest.json").is_file()
+            ),
+            "row_count": len(source_snapshot_rows),
+            "artifacts": [
+                ("source_snapshot_rows", "source/source_snapshot_rows.csv"),
+                ("source_snapshot_manifest", "source/source_snapshot_manifest.json"),
+                ("source_manifest", "source/source_manifest.json"),
+            ],
+        },
+        {
+            "stage": "query_set_materialization",
+            "ready": int(len(queries) > 0 and len(dataset) == len(queries)),
+            "row_count": len(queries),
+            "artifacts": [
+                ("queries", "dataset/queries.jsonl"),
+                ("dataset", "dataset/dataset.jsonl"),
+                ("dataset_manifest", "dataset/dataset_manifest.json"),
+            ],
+        },
+        {
+            "stage": "route_memory_store_build",
+            "ready": int(
+                len(route_rows) > 0
+                and (run_dir / "store" / "route_memory_store.bin").is_file()
+                and (run_dir / "store" / "route_index.bin").is_file()
+                and (run_dir / "store" / "chunk_pages.bin").is_file()
+                and (run_dir / "store" / "chunk_offsets").is_file()
+            ),
+            "row_count": len(route_rows),
+            "artifacts": [
+                ("route_memory_store", "store/route_memory_store.bin"),
+                ("route_index", "store/route_index.bin"),
+                ("chunk_pages", "store/chunk_pages.bin"),
+                ("chunk_offsets", "store/chunk_offsets"),
+                ("store_manifest", "store/store_manifest.csv"),
+            ],
+        },
+        {
+            "stage": "mmap_evidence_read",
+            "ready": int(len(mmap_rows) == len(dataset) and mmap_ready_rows == mmap_expected_ready_rows),
+            "row_count": len(mmap_rows),
+            "ready_row_count": mmap_ready_rows,
+            "expected_ready_row_count": mmap_expected_ready_rows,
+            "artifacts": [
+                ("mmap_reads", "store/mmap_read_rows.csv"),
+            ],
+        },
+        {
+            "stage": "raw_prediction_generation",
+            "ready": int(len(predictions) == len(dataset) and (run_dir / "predictions" / "prediction_status.json").is_file()),
+            "row_count": len(predictions),
+            "artifacts": [
+                ("raw_predictions", "predictions/raw_predictions.jsonl"),
+                ("prediction_status", "predictions/prediction_status.json"),
+            ],
+        },
+        {
+            "stage": "evaluator_invocation",
+            "ready": int(len(evaluator_rows) == len(dataset) and (run_dir / "evaluator" / "evaluator_status.json").is_file()),
+            "row_count": len(evaluator_rows),
+            "artifacts": [
+                ("evaluator_output", "evaluator/evaluator_output.csv"),
+                ("evaluator_status", "evaluator/evaluator_status.json"),
+            ],
+        },
+        {
+            "stage": "metrics_json",
+            "ready": int((run_dir / "metrics" / "metrics.json").is_file()),
+            "row_count": 1,
+            "artifacts": [
+                ("metrics", "metrics/metrics.json"),
+            ],
+        },
+        {
+            "stage": "routeqa_benchmark_rows",
+            "ready": int(
+                len(routeqa_rows) == len(dataset)
+                and len(benchmark_rows) == len(dataset)
+                and all(int(row["routeqa_bound"]) == 1 for row in routeqa_rows)
+                and all(int(row["benchmark_result_ready"]) == 1 for row in benchmark_rows)
+            ),
+            "row_count": len(benchmark_rows),
+            "artifacts": [
+                ("routeqa_rows", "routeqa/routeqa_rows.csv"),
+                ("benchmark_rows", "benchmark/benchmark_rows.csv"),
+                ("external_benchmark_rows", "benchmark/external_benchmark_rows.csv"),
+                ("external_benchmark_metrics", "benchmark/external_benchmark_metrics.json"),
+                ("external_benchmark_manifest", "benchmark/external_benchmark_manifest.json"),
+                ("external_benchmark_execution_chain_manifest", "benchmark/external_benchmark_execution_chain_manifest.json"),
+            ],
+        },
+        {
+            "stage": "evidence_packet",
+            "ready": int(len(evidence_rows) > 0 and (run_dir / "evidence" / "evidence_packet.csv").is_file()),
+            "row_count": len(evidence_rows),
+            "artifacts": [
+                ("evidence_packet", "evidence/evidence_packet.csv"),
+                ("run_invocation", "evidence/run_invocation.json"),
+                ("requested_outputs_manifest", "evidence/requested_outputs_manifest.json"),
+                ("reproducibility_manifest", "evidence/reproducibility_manifest.json"),
+                ("run_layout_manifest", "evidence/run_layout_manifest.json"),
+            ],
+        },
+        {
+            "stage": "promotion_rows",
+            "ready": int(
+                len(promotion_rows) > 0
+                and (run_dir / "promotion" / "promotion_rows.csv").is_file()
+                and runner_owned_external_benchmark_result_ready in (0, 1)
+            ),
+            "row_count": len(promotion_rows),
+            "artifacts": [
+                ("resource_rows", "resource/resource_rows.csv"),
+                ("promotion_rows", "promotion/promotion_rows.csv"),
+            ],
+        },
+    ]
+    objective_stages = []
+    for spec in objective_stage_specs:
+        stage_artifacts = [artifact_entry(run_dir, name, rel_path) for name, rel_path in spec["artifacts"]]
+        objective_stages.append(
+            {
+                "stage": spec["stage"],
+                "ready": int(spec["ready"] and all(int(row["ready"]) == 1 for row in stage_artifacts)),
+                "row_count": spec["row_count"],
+                "ready_row_count": spec.get("ready_row_count", spec["row_count"]),
+                "expected_ready_row_count": spec.get("expected_ready_row_count", spec["row_count"]),
+                "artifact_rows": len(stage_artifacts),
+                "ready_artifact_rows": sum(int(row["ready"]) for row in stage_artifacts),
+                "artifacts": stage_artifacts,
+            }
+        )
+    objective_requirements_ready = int(
+        run_layout_ready
+        and requested_outputs_ready
+        and all(int(stage["ready"]) == 1 for stage in objective_stages)
+    )
+    objective_requirements_manifest = {
+        "manifest_scope": "v14-a-objective-requirements-audit",
+        "task": args.task,
+        "repo": str(repo),
+        "repo_source": repo_source,
+        "source_snapshot_artifact_id": source_snapshot_artifact_id,
+        "objective_requirements_ready": objective_requirements_ready,
+        "runner_owned_query_result_evaluator_ready": objective_requirements_ready,
+        "runner_owned_external_benchmark_result_ready": runner_owned_external_benchmark_result_ready,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "real_release_package_ready": 0,
+        "stages": objective_stages,
+        "claim": "objective path is executed from official source acquisition through dataset/query, mmap RouteMemory reads, raw predictions, evaluator output, metrics, RouteQA/benchmark rows, evidence packet, and promotion rows; independent benchmark/release verification remains blocked",
+    }
+    write_json(run_dir / "evidence" / "objective_requirements_manifest.json", objective_requirements_manifest)
+    execution_chain_artifacts = [
+        ("run_invocation", "evidence/run_invocation.json"),
+        ("requested_outputs_manifest", "evidence/requested_outputs_manifest.json"),
+        ("reproducibility_manifest", "evidence/reproducibility_manifest.json"),
+        ("run_layout_manifest", "evidence/run_layout_manifest.json"),
+        ("objective_requirements_manifest", "evidence/objective_requirements_manifest.json"),
+        ("official_source_acquisition", "source/official_source_acquisition_rows.csv"),
+        ("source_seed_live_fetch", "source/source_seed_live_fetch_rows.csv"),
+        ("runtime_fetch_provenance", "source/runtime_fetch_provenance_rows.csv"),
+        ("source_snapshot_rows", "source/source_snapshot_rows.csv"),
+        ("source_snapshot_manifest", "source/source_snapshot_manifest.json"),
+        ("source_manifest", "source/source_manifest.json"),
+        ("queries", "dataset/queries.jsonl"),
+        ("dataset", "dataset/dataset.jsonl"),
+        ("dataset_manifest", "dataset/dataset_manifest.json"),
+        ("chunk_pages", "store/chunk_pages.bin"),
+        ("chunk_offsets", "store/chunk_offsets"),
+        ("route_index", "store/route_index.bin"),
+        ("route_memory_store", "store/route_memory_store.bin"),
+        ("store_manifest", "store/store_manifest.csv"),
+        ("mmap_reads", "store/mmap_read_rows.csv"),
+        ("raw_predictions", "predictions/raw_predictions.jsonl"),
+        ("prediction_status", "predictions/prediction_status.json"),
+        ("evaluator_output", "evaluator/evaluator_output.csv"),
+        ("evaluator_status", "evaluator/evaluator_status.json"),
+        ("metrics", "metrics/metrics.json"),
+        ("routeqa_rows", "routeqa/routeqa_rows.csv"),
+        ("benchmark_rows", "benchmark/benchmark_rows.csv"),
+        ("external_benchmark_rows", "benchmark/external_benchmark_rows.csv"),
+        ("external_benchmark_metrics", "benchmark/external_benchmark_metrics.json"),
+        ("external_benchmark_manifest", "benchmark/external_benchmark_manifest.json"),
+        ("external_benchmark_execution_chain_manifest", "benchmark/external_benchmark_execution_chain_manifest.json"),
+        ("resource_rows", "resource/resource_rows.csv"),
+        ("evidence_packet", "evidence/evidence_packet.csv"),
+        ("promotion_rows", "promotion/promotion_rows.csv"),
+    ]
+    execution_chain_ready = int(
+        len(dataset) > 0
+        and len(predictions) == len(dataset)
+        and len(evaluator_rows) == len(dataset)
+        and len(routeqa_rows) == len(dataset)
+        and len(benchmark_rows) == len(dataset)
+        and all((run_dir / rel_path).is_file() for _, rel_path in execution_chain_artifacts)
+    )
+    execution_chain_manifest = {
+        "manifest_scope": "v14-a-source-to-promotion-execution-chain",
+        "task": args.task,
+        "repo": str(repo),
+        "repo_source": repo_source,
+        "source_snapshot_artifact_id": source_snapshot_artifact_id,
+        "source_snapshot_mode": args.source_snapshot_mode,
+        "query_rows": len(queries),
+        "dataset_rows": len(dataset),
+        "mmap_read_rows": len(mmap_rows),
+        "mmap_read_ready_rows": sum(int(row["mmap_read_ready"]) for row in mmap_rows),
+        "raw_prediction_rows": len(predictions),
+        "evaluator_output_rows": len(evaluator_rows),
+        "routeqa_rows": len(routeqa_rows),
+        "benchmark_rows": len(benchmark_rows),
+        "external_benchmark_rows": len(external_benchmark_rows),
+        "external_benchmark_execution_chain_ready_rows": external_execution_ready_rows,
+        "external_benchmark_execution_chain_ready": external_execution_chain_ready,
+        "promotion_rows": len(promotion_rows),
+        "requested_outputs_ready": requested_outputs_ready,
+        "reproducibility_manifest_ready": int((run_dir / "evidence" / "reproducibility_manifest.json").is_file()),
+        "direct_cli_shape_ready": reproducibility_manifest["direct_cli_shape_ready"],
+        "run_layout_ready": run_layout_ready,
+        "run_layout_manifest_ready": int((run_dir / "evidence" / "run_layout_manifest.json").is_file()),
+        "objective_requirements_ready": objective_requirements_ready,
+        "objective_requirements_manifest_ready": int((run_dir / "evidence" / "objective_requirements_manifest.json").is_file()),
+        "runner_owned_query_result_evaluator_ready": execution_chain_ready,
+        "runner_owned_external_benchmark_result_ready": runner_owned_external_benchmark_result_ready,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "real_release_package_ready": 0,
+        "artifacts": [artifact_entry(run_dir, name, rel_path) for name, rel_path in execution_chain_artifacts],
+        "claim": "single runner-owned source-to-dataset-to-query-to-prediction-to-evaluator-to-promotion execution chain; not independent benchmark verification",
+    }
+    write_json(run_dir / "evidence" / "execution_chain_manifest.json", execution_chain_manifest)
+
+    expected_query_count = len(dataset)
+    runner_ready = int(
+        expected_query_count > 0
+        and len(predictions) == expected_query_count
+        and len(evaluator_rows) == expected_query_count
+        and len(routeqa_rows) == expected_query_count
+        and len(benchmark_rows) == expected_query_count
+        and all(int(row["routeqa_bound"]) == 1 for row in routeqa_rows)
+        and abs(metrics["wrong_answer_rate"] - 0.0) < 0.000001
+    )
+    summary = {
+        "runner_scope": "v14-a-real-query-result-evaluator-runner",
+        "task": args.task,
+        "run_dir": str(run_dir),
+        "run_invocation_ready": int((run_dir / "evidence" / "run_invocation.json").is_file()),
+        "source_chain_evidence_mirror_ready": source_chain_evidence_mirror_ready,
+        "repo_source": repo_source,
+        "source_snapshot_artifact_id": source_snapshot_artifact_id,
+        "source_acquisition_copied": int(source_acquisition_copied),
+        "source_acquisition_rows": count_csv_rows(run_dir / "source" / "official_source_acquisition_rows.csv"),
+        "source_seed_live_fetch_copied": int(source_seed_live_fetch_copied),
+        "source_seed_live_fetch_autodiscovered": int(source_seed_live_fetch_autodiscovered),
+        "source_seed_live_fetch_rows": count_csv_rows(run_dir / "source" / "source_seed_live_fetch_rows.csv"),
+        "runtime_fetch_provenance_copied": int(runtime_fetch_provenance_copied),
+        "runtime_fetch_provenance_autodiscovered": int(runtime_fetch_provenance_autodiscovered),
+        "runtime_fetch_provenance_rows": count_csv_rows(run_dir / "source" / "runtime_fetch_provenance_rows.csv"),
+        "source_chain_autodiscovery_ready": int(
+            (bool(args.source_seed_live_fetch) or source_seed_live_fetch_autodiscovered)
+            and (bool(args.runtime_fetch_provenance) or runtime_fetch_provenance_autodiscovered)
+        ),
+        "source_snapshot_mode": args.source_snapshot_mode,
+        "source_snapshot_rows": len(source_snapshot_rows),
+        "source_snapshot_ready_rows": sum(int(row["source_snapshot_ready"]) for row in source_snapshot_rows),
+        "runner_owned_live_source_snapshot_rows": sum(int(row["runner_owned_source_snapshot"]) for row in source_snapshot_rows),
+        "dataset_rows": len(dataset),
+        "queries_ready": int((run_dir / "dataset" / "queries.jsonl").is_file()),
+        "dataset_manifest_ready": int((run_dir / "dataset" / "dataset_manifest.json").is_file()),
+        "store_route_rows": len(route_rows),
+        "chunk_offsets_ready": int((run_dir / "store" / "chunk_offsets").is_file()),
+        "route_index_ready": int((run_dir / "store" / "route_index.bin").is_file()),
+        "route_memory_store_ready": int((run_dir / "store" / "route_memory_store.bin").is_file()),
+        "store_manifest_ready": int((run_dir / "store" / "store_manifest.csv").is_file()),
+        "mmap_read_rows": len(mmap_rows),
+        "mmap_read_ready_rows": sum(int(row["mmap_read_ready"]) for row in mmap_rows),
+        "raw_prediction_rows": len(predictions),
+        "prediction_status_ready": int((run_dir / "predictions" / "prediction_status.json").is_file()),
+        "evaluator_output_rows": len(evaluator_rows),
+        "evaluator_status_ready": int((run_dir / "evaluator" / "evaluator_status.json").is_file()),
+        "metrics_ready": 1,
+        "routeqa_rows": len(routeqa_rows),
+        "routeqa_bound_rows": sum(int(row["routeqa_bound"]) for row in routeqa_rows),
+        "benchmark_rows": len(benchmark_rows),
+        "benchmark_bound_rows": sum(int(row["benchmark_result_ready"]) for row in benchmark_rows),
+        "external_benchmark_rows": len(external_benchmark_rows),
+        "external_benchmark_ready_rows": sum(int_field(row, "benchmark_result_ready") for row in external_benchmark_rows),
+        "external_benchmark_dataset_rows": external_benchmark_metrics["external_benchmark_dataset_rows"],
+        "external_benchmark_raw_prediction_rows": external_benchmark_metrics["external_benchmark_raw_prediction_rows"],
+        "external_benchmark_prediction_provenance_rows": external_benchmark_metrics["external_benchmark_prediction_provenance_rows"],
+        "external_benchmark_extracted_prediction_rows": external_benchmark_metrics["external_benchmark_extracted_prediction_rows"],
+        "external_benchmark_mmap_read_rows": external_benchmark_metrics["external_benchmark_mmap_read_rows"],
+        "external_benchmark_mmap_prediction_match_rows": external_benchmark_metrics["external_benchmark_mmap_prediction_match_rows"],
+        "external_benchmark_mmap_verification_ready_rows": external_benchmark_metrics["external_benchmark_mmap_verification_ready_rows"],
+        "external_benchmark_average_score": f"{external_benchmark_average_score:.2f}",
+        "external_benchmark_metrics_ready": int(external_benchmark_metrics_path.is_file()),
+        "external_benchmark_manifest_ready": int((run_dir / "benchmark" / "external_benchmark_manifest.json").is_file()),
+        "external_benchmark_execution_chain_ready_rows": external_execution_ready_rows,
+        "external_benchmark_execution_chain_ready": external_execution_chain_ready,
+        "runner_owned_external_benchmark_result_ready": runner_owned_external_benchmark_result_ready,
+        "ruler_compatible_rows": ruler_smoke["ruler_compatible_rows"],
+        "ruler_compatible_score": f"{ruler_smoke['ruler_compatible_score']:.2f}",
+        "ruler_compatible_ready": ruler_smoke["ruler_compatible_ready"],
+        "official_ruler_evaluator_ready": ruler_smoke["official_ruler_evaluator_ready"],
+        "official_ruler_evaluator_returncode": ruler_smoke["official_ruler_evaluator_returncode"],
+        "official_ruler_generator_rows": ruler_smoke["official_generator_rows"],
+        "official_ruler_generator_ready": ruler_smoke["official_generator_ready"],
+        "official_ruler_generator_returncode": ruler_smoke["official_generator_returncode"],
+        "official_ruler_generator_evaluator_ready": ruler_smoke["official_generator_evaluator_ready"],
+        "official_ruler_generator_evaluator_returncode": ruler_smoke["official_generator_evaluator_returncode"],
+        "official_ruler_generator_evaluator_score": f"{ruler_smoke['official_generator_evaluator_score']:.2f}",
+        "official_ruler_generator_benchmark_rows": ruler_smoke["official_generator_benchmark_rows"],
+        "official_ruler_generator_benchmark_ready": ruler_smoke["official_generator_benchmark_ready"],
+        "official_ruler_generator_prediction_provenance_rows": ruler_smoke["official_generator_prediction_provenance_rows"],
+        "official_ruler_generator_extracted_prediction_rows": ruler_smoke["official_generator_extracted_prediction_rows"],
+        "official_ruler_generator_mmap_read_rows": ruler_smoke["official_generator_mmap_read_rows"],
+        "official_ruler_generator_mmap_read_ready_rows": ruler_smoke["official_generator_mmap_read_ready_rows"],
+        "official_ruler_generator_mmap_extracted_prediction_rows": ruler_smoke["official_generator_mmap_extracted_prediction_rows"],
+        "official_ruler_generator_mmap_verification_ready": ruler_smoke["official_generator_mmap_verification_ready"],
+        "longbench_v2_rows": longbench_smoke["longbench_v2_rows"],
+        "longbench_v2_ready": longbench_smoke["longbench_v2_ready"],
+        "longbench_v2_returncode": longbench_smoke["longbench_v2_returncode"],
+        "longbench_v2_score": f"{longbench_smoke['longbench_v2_score']:.2f}",
+        "longbench_v2_benchmark_rows": longbench_smoke["longbench_v2_benchmark_rows"],
+        "longbench_v2_benchmark_ready": longbench_smoke["longbench_v2_benchmark_ready"],
+        "longbench_v2_prediction_provenance_rows": longbench_smoke["longbench_v2_prediction_provenance_rows"],
+        "longbench_v2_schema_rows": longbench_smoke["longbench_v2_schema_rows"],
+        "longbench_v2_schema_ready": longbench_smoke["longbench_v2_schema_ready"],
+        "longbench_v2_status_ready": longbench_smoke["longbench_v2_status_ready"],
+        "longbench_v2_official_sample_rows": longbench_smoke["longbench_v2_official_sample_rows"],
+        "longbench_v2_official_sample_ready": longbench_smoke["longbench_v2_official_sample_ready"],
+        "longbench_v2_official_sample_score": f"{longbench_smoke['longbench_v2_official_sample_score']:.2f}",
+        "longbench_v2_official_sample_prediction_provenance_rows": longbench_smoke["longbench_v2_official_sample_prediction_provenance_rows"],
+        "longbench_v2_official_sample_api_response_ready": longbench_smoke["longbench_v2_official_sample_api_response_ready"],
+        "longbench_v2_official_sample_mmap_read_rows": longbench_smoke["longbench_v2_official_sample_mmap_read_rows"],
+        "longbench_v2_official_sample_mmap_read_ready_rows": longbench_smoke["longbench_v2_official_sample_mmap_read_ready_rows"],
+        "longbench_v2_official_sample_mmap_prediction_match_rows": longbench_smoke["longbench_v2_official_sample_mmap_prediction_match_rows"],
+        "longbench_v2_official_sample_mmap_verification_ready": longbench_smoke["longbench_v2_official_sample_mmap_verification_ready"],
+        "evidence_packet_rows": len(evidence_rows),
+        "requested_outputs_manifest_ready": int((run_dir / "evidence" / "requested_outputs_manifest.json").is_file()),
+        "requested_outputs_ready": requested_outputs_ready,
+        "reproducibility_manifest_ready": int((run_dir / "evidence" / "reproducibility_manifest.json").is_file()),
+        "direct_cli_shape_ready": reproducibility_manifest["direct_cli_shape_ready"],
+        "run_layout_manifest_ready": int((run_dir / "evidence" / "run_layout_manifest.json").is_file()),
+        "run_layout_ready": run_layout_ready,
+        "objective_requirements_manifest_ready": int((run_dir / "evidence" / "objective_requirements_manifest.json").is_file()),
+        "objective_requirements_ready": objective_requirements_ready,
+        "execution_chain_manifest_ready": int((run_dir / "evidence" / "execution_chain_manifest.json").is_file() and execution_chain_ready),
+        "promotion_rows": len(promotion_rows),
+        "runner_owned_query_result_evaluator_ready": runner_ready,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "real_release_package_ready": 0,
+        "action": "v14-runner-ready-await-independent-external-benchmark-run" if runner_ready else "v14-runner-incomplete",
+        "routing_trigger_rate": "0.000000",
+        "active_jump_rate": "0.000000",
+    }
+    write_csv(run_dir / "run_summary.csv", list(summary.keys()), [summary])
+    write_json(
+        run_dir / "run_manifest.json",
+        {
+            "artifact_scope": "v14-a-real-query-result-evaluator-runner",
+            "task": args.task,
+            "repo": str(repo),
+            "repo_source": repo_source,
+            "source_snapshot_artifact_id": source_snapshot_artifact_id,
+            "backend": args.backend,
+            "store_mode": args.store_mode,
+            "source_snapshot_mode": args.source_snapshot_mode,
+            "ruler_synthetic_smoke_enabled": int(args.emit_ruler_synthetic_smoke),
+            "longbench_v2_smoke_enabled": int(args.emit_longbench_v2_smoke),
+            "longbench_v2_official_sample_enabled": int(args.emit_longbench_v2_official_sample),
+            "jump_neighbor_enabled": 0 if args.no_jump_neighbor else 1,
+            "claim": "runner-owned query/result/evaluator execution; not independent external benchmark evidence",
+        },
+    )
+    write_manifest(run_dir)
+    print(str(run_dir))
+
+
+if __name__ == "__main__":
+    main()

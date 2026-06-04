@@ -21,12 +21,23 @@ h9 is currently a quick-closure backend scaffold layered after the h7
 route-memory goal closure:
 
 ```text
-h6-t/u/v/w route-memory diagnostics and h7-b promotion gates are wired into h7.
+h6-t/u/v/w route-memory diagnostics plus h7-b promotion and h7-c promotion
+review gates are wired into h7.
 h9 quick closure passes CPU default behavior, CPU-only HIP error handling,
-h9-f CPU numeric parity, h9-g measured-speed no-claim checks, h7, and
-v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z benchmark
-adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/readiness
-plus h11-a PC RouteLM prototype readiness/import and h11-b artifact verifier/import.
+h9-f CPU numeric parity, h9-g measured-speed no-claim checks, h9-h diagnostic
+CPU/HIP/NVMe workload-speed checks, h7, and
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at benchmark
+adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation/readiness
+plus h11-a PC RouteLM prototype readiness/import, h11-b artifact verifier/import,
+h11-c NVMe RouteMemory store/artifact smokes, h11-d diagnostic NLG smoke, and
+h7-c promotion review plus v12 paper/release claim audit plus v13-a real-run
+binder manifest plus v13-b RouteLM mmap reader plus v13-c evidence packet ABI
+plus v13-d real NLG transcript binding plus v13-e public codebase RouteQA
+binding plus v13-f resource envelope binding plus v13-g real evidence
+promotion gate plus v13-h real evidence intake gate plus v13-i real evidence
+live-network gate plus v13-j real evidence rebind gate plus v13-k runtime fetch
+provenance gate plus v13-l source seed gate plus v13-m source seed live-fetch
+gate plus v13-n external benchmark official source acquisition gate.
 HIP parity remains optional and environment-dependent.
 ```
 
@@ -119,10 +130,31 @@ experiments/test_v09_gpu_backend_extended_boundary.sh
 experiments/test_v09_gpu_backend_speed_evidence.sh
 experiments/test_v09_gpu_backend_measured_speed_gate.sh
 experiments/test_v09_gpu_backend_measured_speed_import.sh
+experiments/test_v09_gpu_backend_real_workload_speed_gate.sh
 experiments/test_v05_route_quality_closure.sh
 experiments/test_v07_goal_route_memory_closure.sh
 experiments/test_v08_external_benchmark_adapter.sh
 experiments/test_v08_external_benchmark_source_acquisition_gate.sh
+experiments/test_v08_external_benchmark_source_acquisition_content_verifier.sh
+experiments/test_v08_external_benchmark_codebase_mini.sh
+experiments/test_v08_external_benchmark_content_result_bridge.sh
+experiments/test_v08_external_benchmark_family_result_bridge.sh
+experiments/test_v08_external_benchmark_independent_reproduction_review.sh
+experiments/test_v08_external_benchmark_official_release_evidence.sh
+experiments/test_v08_external_benchmark_live_release_verification.sh
+experiments/test_v08_external_benchmark_canonical_online_confirmation.sh
+experiments/test_v08_external_benchmark_publication_result_review.sh
+experiments/test_v08_external_benchmark_live_publication_result_ingestion.sh
+experiments/test_v08_external_benchmark_authority_promotion_evidence.sh
+experiments/test_v08_external_benchmark_run_evaluator_trace.sh
+experiments/test_v08_external_benchmark_independent_run_evaluator_evidence.sh
+experiments/test_v08_external_benchmark_live_replay_final_review.sh
+experiments/test_v08_external_benchmark_public_nonfixture_verification.sh
+experiments/test_v08_external_benchmark_runner_owned_live_execution_audit.sh
+experiments/test_v08_external_benchmark_independent_live_rerun_confirmation.sh
+experiments/test_v08_external_benchmark_real_nonfixture_run_package.sh
+experiments/test_v08_external_benchmark_live_package_artifact_fetch_authority.sh
+experiments/test_v08_external_benchmark_official_result_reconciliation.sh
 experiments/test_v08_external_benchmark_evidence_ingestion.sh
 experiments/test_v08_external_benchmark_evidence_import.sh
 experiments/test_v08_external_benchmark_comparison_gate.sh
@@ -156,6 +188,13 @@ experiments/test_v11_pc_routelm_prototype_readiness.sh
 experiments/test_v11_pc_routelm_prototype_import.sh
 experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
 experiments/test_v11_pc_routelm_prototype_artifact_import.sh
+experiments/test_v12_paper_release_claim_audit.sh
+experiments/test_v13_real_run_binder_manifest.sh
+experiments/test_v13_routelm_mmap_reader.sh
+experiments/test_v13_evidence_packet_abi.sh
+experiments/test_v13_real_nlg_transcript.sh
+experiments/test_v13_public_codebase_routeqa.sh
+experiments/test_v13_resource_envelope.sh
 ```
 
 Optional HIP check:
@@ -187,6 +226,41 @@ h9-g then verifies timing and environment artifacts, warmup/measured-run
 counts, and positive CPU/HIP timing ratios. Local fixtures remain no-claim:
 `gpu_speedup_claim=deferred` until the measurement source is real HIP-backed.
 
+h9-h binds that timing contract to the h11-d PC RouteLM NLG smoke and a
+CPU/HIP/NVMe workload row:
+
+```bash
+experiments/run_v09_gpu_backend_real_workload_speed_gate.sh
+experiments/test_v09_gpu_backend_real_workload_speed_gate.sh
+```
+
+The diagnostic generated fixture verifies NLG-result/timing/environment
+artifact hashes, positive CPU/HIP ratio, NVMe read latency,
+query-to-evidence, query-to-first-token, tokens/sec, SSD bytes/query, RAM/VRAM
+metrics, and zero route/jump activity:
+
+```text
+diagnostic_workload_speed_ready = 1
+real_workload_speed_evidence_ready = 0
+gpu_speedup_claim = deferred
+```
+
+Real speed evidence remains blocked until h9-g has real HIP-backed measured
+speed evidence, h11-d has non-fixture PC RouteLM NLG evidence, and the workload
+row is non-fixture with real HIP/NVMe measurements plus a verified benchmark or
+product trace.
+
+v12 consumes h9-h in the release-claim audit and keeps the GPU acceleration
+claim blocked:
+
+```text
+h9h_diagnostic_workload_speed_ready = 1
+h9h_real_workload_speed_evidence_ready = 0
+h9h_gpu_speedup_claim = deferred
+forbidden_gpu_acceleration_claim = blocked
+release_claim = diagnostic-artifact-package-only
+```
+
 Closure entrypoint:
 
 ```bash
@@ -202,7 +276,8 @@ h9 is:
 
 ```text
 PASS as optional HIP backend scaffold / candidate-weight and proposal-score parity instrumentation,
-with h9-f executable CPU numeric parity plus h9-g measured-speed no-claim checks in quick closure
+with h9-f executable CPU numeric parity plus h9-g/h9-h measured-speed and workload-speed no-claim checks in quick closure
+and v12 blocking any release-level GPU acceleration claim
 ```
 
 Do not read this as:

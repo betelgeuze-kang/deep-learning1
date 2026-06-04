@@ -34,12 +34,53 @@ run_check h9-extended-boundary "$ROOT_DIR/experiments/test_v09_gpu_backend_exten
 run_check h9-speed-evidence "$ROOT_DIR/experiments/test_v09_gpu_backend_speed_evidence.sh"
 run_check h9-measured-speed-gate "$ROOT_DIR/experiments/test_v09_gpu_backend_measured_speed_gate.sh"
 run_check h9-measured-speed-import "$ROOT_DIR/experiments/test_v09_gpu_backend_measured_speed_import.sh"
+run_check h9-real-workload-speed "$ROOT_DIR/experiments/test_v09_gpu_backend_real_workload_speed_gate.sh"
 run_check h5-route-quality-closure "$ROOT_DIR/experiments/test_v05_route_quality_closure.sh"
 run_check h7-goal-closure "$ROOT_DIR/experiments/test_v07_goal_route_memory_closure.sh"
 run_check v08-external-benchmark-adapter \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_adapter.sh"
 run_check v08-external-benchmark-source-acquisition \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_source_acquisition_gate.sh"
+run_check v08-external-benchmark-source-acquisition-content-verifier \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_source_acquisition_content_verifier.sh"
+run_check v08-external-benchmark-codebase-mini \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_codebase_mini.sh"
+run_check v08-external-benchmark-content-result-bridge \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_content_result_bridge.sh"
+run_check v08-external-benchmark-family-result-bridge \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_family_result_bridge.sh"
+run_check v08-external-benchmark-independent-reproduction-review \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_independent_reproduction_review.sh"
+run_check v08-external-benchmark-official-release-evidence \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_official_release_evidence.sh"
+run_check v08-external-benchmark-live-release-verification \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_live_release_verification.sh"
+run_check v08-external-benchmark-canonical-online-confirmation \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_canonical_online_confirmation.sh"
+run_check v08-external-benchmark-publication-result-review \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_publication_result_review.sh"
+run_check v08-external-benchmark-live-publication-result-ingestion \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_live_publication_result_ingestion.sh"
+run_check v08-external-benchmark-authority-promotion-evidence \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_authority_promotion_evidence.sh"
+run_check v08-external-benchmark-run-evaluator-trace \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_run_evaluator_trace.sh"
+run_check v08-external-benchmark-independent-run-evaluator-evidence \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_independent_run_evaluator_evidence.sh"
+run_check v08-external-benchmark-live-replay-final-review \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_live_replay_final_review.sh"
+run_check v08-external-benchmark-public-nonfixture-verification \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_public_nonfixture_verification.sh"
+run_check v08-external-benchmark-runner-owned-live-execution-audit \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_runner_owned_live_execution_audit.sh"
+run_check v08-external-benchmark-independent-live-rerun-confirmation \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_independent_live_rerun_confirmation.sh"
+run_check v08-external-benchmark-real-nonfixture-run-package \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_real_nonfixture_run_package.sh"
+run_check v08-external-benchmark-live-package-artifact-fetch-authority \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_live_package_artifact_fetch_authority.sh"
+run_check v08-external-benchmark-official-result-reconciliation \
+  "$ROOT_DIR/experiments/test_v08_external_benchmark_official_result_reconciliation.sh"
 run_check v08-external-benchmark-evidence-ingestion \
   "$ROOT_DIR/experiments/test_v08_external_benchmark_evidence_ingestion.sh"
 run_check v08-external-benchmark-evidence-import \
@@ -124,6 +165,42 @@ run_check v11-pc-routelm-prototype-artifact-verifier \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh"
 run_check v11-pc-routelm-prototype-artifact-import \
   "$ROOT_DIR/experiments/test_v11_pc_routelm_prototype_artifact_import.sh"
+run_check v11-nvme-route-memory-store \
+  "$ROOT_DIR/experiments/test_v11_nvme_route_memory_store.sh"
+run_check v11-nvme-route-memory-artifact \
+  "$ROOT_DIR/experiments/test_v11_nvme_route_memory_artifact.sh"
+run_check v11-pc-routelm-nlg-smoke \
+  "$ROOT_DIR/experiments/test_v11_pc_routelm_nlg_smoke.sh"
+run_check v12-paper-release-claim-audit \
+  "$ROOT_DIR/experiments/test_v12_paper_release_claim_audit.sh"
+run_check v13-real-run-binder-manifest \
+  "$ROOT_DIR/experiments/test_v13_real_run_binder_manifest.sh"
+run_check v13-routelm-mmap-reader \
+  "$ROOT_DIR/experiments/test_v13_routelm_mmap_reader.sh"
+run_check v13-evidence-packet-abi \
+  "$ROOT_DIR/experiments/test_v13_evidence_packet_abi.sh"
+run_check v13-real-nlg-transcript \
+  "$ROOT_DIR/experiments/test_v13_real_nlg_transcript.sh"
+run_check v13-public-codebase-routeqa \
+  "$ROOT_DIR/experiments/test_v13_public_codebase_routeqa.sh"
+run_check v13-resource-envelope \
+  "$ROOT_DIR/experiments/test_v13_resource_envelope.sh"
+run_check v13-real-evidence-promotion-gate \
+  "$ROOT_DIR/experiments/test_v13_real_evidence_promotion_gate.sh"
+run_check v13-real-evidence-intake-gate \
+  "$ROOT_DIR/experiments/test_v13_real_evidence_intake_gate.sh"
+run_check v13-real-evidence-live-network-gate \
+  "$ROOT_DIR/experiments/test_v13_real_evidence_live_network_gate.sh"
+run_check v13-real-evidence-rebind-gate \
+  "$ROOT_DIR/experiments/test_v13_real_evidence_rebind_gate.sh"
+run_check v13-real-evidence-runtime-fetch-provenance-gate \
+  "$ROOT_DIR/experiments/test_v13_real_evidence_runtime_fetch_provenance_gate.sh"
+run_check v13-real-evidence-source-seed-gate \
+  "$ROOT_DIR/experiments/test_v13_real_evidence_source_seed_gate.sh"
+run_check v13-real-evidence-source-seed-live-fetch-gate \
+  "$ROOT_DIR/experiments/test_v13_real_evidence_source_seed_live_fetch_gate.sh"
+run_check v13-external-benchmark-official-source-acquisition-gate \
+  "$ROOT_DIR/experiments/test_v13_external_benchmark_official_source_acquisition_gate.sh"
 
 if [[ "$MODE" == "extended" ]]; then
   run_check h9-hip-candidate-weight-parity \

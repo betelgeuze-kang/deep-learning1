@@ -122,6 +122,9 @@ bash "$ROOT_DIR/experiments/test_v10_learned_chunk_quality_scorer.sh"
 echo "goal: h10-source-verified-learned-chunk-scorer"
 bash "$ROOT_DIR/experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh"
 
+echo "goal: h10-source-verified-learned-chunk-scorer-eval"
+bash "$ROOT_DIR/experiments/test_v10_source_verified_learned_chunk_scorer_eval_gate.sh"
+
 echo "goal: h10-remote-teacher-source-acquisition"
 bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_acquisition_gate.sh"
 
@@ -136,6 +139,9 @@ bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_runtime_fetcher.sh"
 
 echo "goal: h10-remote-teacher-source-live-network-import"
 bash "$ROOT_DIR/experiments/test_v10_remote_teacher_source_live_network_import_gate.sh"
+
+echo "goal: h10-real-teacher-source-import-review"
+bash "$ROOT_DIR/experiments/test_v10_real_teacher_source_import_review.sh"
 
 echo "goal: h10-teacher-external-label-ingestion"
 bash "$ROOT_DIR/experiments/test_v10_teacher_external_label_ingestion.sh"
@@ -160,6 +166,9 @@ bash "$ROOT_DIR/experiments/test_v06_route_memory_abstain_retry_guardrail.sh"
 
 echo "goal: h7-promotion-gate"
 bash "$ROOT_DIR/experiments/test_v07_route_memory_promotion_gate.sh"
+
+echo "goal: h7-promotion-review-gate"
+bash "$ROOT_DIR/experiments/test_v07_route_memory_promotion_review_gate.sh"
 
 if [[ "$MODE" == "extended" ]]; then
   echo "goal: h6-exact-span-scale-standard"
@@ -245,6 +254,12 @@ if [[ "$MODE" == "extended" ]]; then
 
   echo "goal: h10-teacher-external-label-ingestion-standard"
   bash "$ROOT_DIR/experiments/run_v10_teacher_external_label_ingestion.sh" >/dev/null
+
+  echo "goal: h10-real-teacher-source-import-review-standard"
+  bash "$ROOT_DIR/experiments/run_v10_real_teacher_source_import_review.sh" >/dev/null
+
+  echo "goal: h10-source-verified-learned-chunk-scorer-eval-standard"
+  bash "$ROOT_DIR/experiments/run_v10_source_verified_learned_chunk_scorer_eval_gate.sh" >/dev/null
 
   echo "goal: h10-chunk-credit-distillation-gate-standard"
   bash "$ROOT_DIR/experiments/run_v10_chunk_credit_distillation_gate.sh" >/dev/null

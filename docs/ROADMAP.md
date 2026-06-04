@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 
-As of h10-q plus v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z, h11-a/h11-b, and the h7/h9 quick closures, the project should be read as:
+As of v14-a plus v13-n/v13-m/v13-l/v13-k/v13-j/v13-i/v13-h/v13-g/v13-f/v13-e/v13-d/v13-c/v13-b/v13-a, h10-s, v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at, h11-a/h11-b/h11-c/h11-d, h9-h, h7-c, v12, and the h7/h9 quick closures, the project should be read as:
 
 ```text
 discrete local-energy learner
@@ -16,6 +16,8 @@ discrete local-energy learner
 + remote teacher-source live-fetch attestation contract
 + remote teacher-source runner-owned runtime fetcher contract
 + remote teacher-source live-network import evidence gate
++ real teacher-source import/review chain gate
++ source-verified learned scorer student-only eval gate
 + external benchmark final-review local-artifact bypass guard
 + external benchmark non-local review / local-upstream guard
 + external benchmark lower-chain HTTPS hash-attested artifact path
@@ -34,7 +36,46 @@ discrete local-energy learner
 + external benchmark result-authority / leaderboard gate
 + external benchmark publication package / reproducibility gate
 + external benchmark source-acquisition / intake gate
++ external benchmark source-acquisition content-cache verifier
++ external benchmark codebase-mini local result instrumentation
++ external benchmark source-content/result bridge for codebase-retrieval
++ external benchmark all-family result bridge mechanics
++ external benchmark independent reproduction/review mechanics
++ external benchmark official release evidence mechanics
++ external benchmark live release verification mechanics
++ external benchmark canonical online confirmation mechanics
++ external benchmark publication/result review mechanics
++ external benchmark live publication/result ingestion mechanics
++ external benchmark authority/promotion evidence mechanics
++ external benchmark local run/evaluator trace mechanics
++ external benchmark independent all-family run/evaluator evidence mechanics
++ external benchmark live replay/final-review mechanics
++ external benchmark public non-fixture/direct-run verification mechanics
++ external benchmark runner-owned live execution/audit mechanics
++ external benchmark independent live rerun confirmation mechanics
++ external benchmark real nonfixture run package intake mechanics
++ external benchmark live package artifact fetch/authority mechanics
 + PC RouteLM / NLG prototype readiness and artifact verification contracts
++ NVMe-resident RouteMemory store artifact smoke
++ PC RouteLM diagnostic small-generator NLG smoke
++ CPU/HIP/NVMe workload-speed evidence gate
++ promotion review gate across teacher/scorer/benchmark/NLG/speed evidence
++ paper/release claim audit and forbidden-claim blocker
++ real-run binder manifest for one evidence-bound run directory
++ RouteLM mmap reader ABI over that run directory's store
++ evidence packet ABI feeding v12-style claim-matrix input
++ NLG transcript binding against route-memory span bytes
++ public codebase RouteQA binding against local codebase-mini trace rows
++ resource envelope binding for workload/timing/storage/memory rows
++ real evidence promotion audit across benchmark/scorer/NLG/speed blockers
++ real evidence intake contract for same-run replacement packages
++ real evidence live-network receipt gate for same-run replacement packages
++ real evidence rebind gate for same-run replacement artifacts
++ runtime fetch provenance gate for runner-owned receipt JSONs
++ source seed gate separating public source seeds from claim evidence
++ source seed live-fetch gate separating source availability from claim evidence
++ external benchmark official source acquisition gate
++ runner-owned query/result/evaluator execution path
 + optional HIP backend scaffold / parity instrumentation
 ```
 
@@ -75,7 +116,145 @@ Last completed checkpoint:
   runtime rows can reach `remote_teacher_source_live_network_import_ready=1`,
   while `real_teacher_source_verified=0` remains blocked until real
   non-fixture source import/review exists.
-- h7 quick closure is current through h10-q and keeps default promotion blocked.
+- h10-r closes the real teacher-source import/review chain gate. It requires
+  h10-q live-network import readiness plus non-local source/export/identity/
+  policy/license/import-manifest/review/reviewer/conflict/registry URI and
+  hash evidence, live-import observation, independent/authoritative review
+  flags, registry readiness, real/non-fixture declarations, and zero
+  routing/jump activity. Local review artifacts and placeholder authorities
+  are blocked; a non-placeholder import/review chain can reach
+  `real_teacher_source_import_review_ready=1`, but
+  `real_teacher_source_verified=0` remains blocked until official authority
+  evidence exists.
+- h10-s closes the source-verified learned scorer student-only evaluation gate.
+  It consumes h10-l source-verified scorer binding, h10-r import/review
+  readiness, and optional source-bound student-only chunk/span eval rows. A
+  supplied eval fixture can pass metric deltas with `student_only_eval_ready=1`,
+  but `source_verified_learned_chunk_scorer_eval_ready=0` remains until h10-l
+  and h10-r have official real teacher-source authority.
+- h7 quick closure is current through h7-c and keeps default promotion blocked.
+- v12 closes the paper/release claim audit above h7-c, h10-r/h10-s, v08-ab,
+  h11-c/h11-d, and h9-h. It can raise
+  `diagnostic_release_package_ready=1` and `diagnostic_claim_level=4`, but
+  keeps `real_release_package_ready=0`, `publishable_claim_level=0`, and
+  `release_claim=diagnostic-artifact-package-only` while blocking Transformer
+  replacement, frontier PC LLM, long-context solved, learned sparse routing,
+  and GPU acceleration claims.
+- v13-a closes the first real-run binder manifest. It packages h11-c store
+  artifacts, h11-d NLG transcript/result, h9-h workload rows, v08-al
+  run/evaluator trace, h10-s scorer/teacher evidence, and v12 claim-audit input
+  into a single hash-manifested run directory. Generated diagnostic input can
+  reach `real_run_binder_manifest_ready=1`, but actual nonfixture run, real PC
+  RouteLM NLG, real external benchmark, real workload-speed evidence, real
+  release package, and GPU speedup claims remain blocked.
+- v13-b closes the RouteLM mmap reader ABI above v13-a. It opens
+  `store/chunk_pages.bin` through mmap, verifies route-index/page-table byte
+  windows, chunk offsets, route-key matches, and missing-abstain rows, and
+  blocks hash-clean semantic span corruption. It is readable RouteMemory store
+  instrumentation, not real PC RouteLM artifact evidence.
+- v13-c closes the evidence packet ABI above v13-a/v13-b. It emits
+  `evidence_packet.csv`, `claim_matrix_input.csv`, `packet_manifest.json`, and
+  packet hashes for the bound run manifest, store/mmap reader, NLG,
+  workload/resource, benchmark trace/evaluator, h10-s scorer, and v12 inputs.
+  The packet and claim-source references pass, while learned chunk ranking and
+  all real/nonfixture release claims remain blocked.
+- v13-d closes the NLG transcript binding boundary above v13-a/v13-b/v13-c. It
+  parses the bound transcript/result, checks transcript rows against route-index
+  entries and mmap-read span bytes, emits `transcript_binding.csv`, and blocks
+  hash-clean wrong grounding. It is grounded transcript instrumentation, not
+  real PC RouteLM NLG proof until a nonfixture generator run exists.
+- v13-e closes the public codebase RouteQA binding boundary above v13-a through
+  v13-d. It binds the local codebase-mini package referenced by the run's
+  benchmark manifest to the runner/evaluator trace, recomputes the seven-row
+  metric table, emits `routeqa_rows.csv`, and blocks hash-clean evaluator
+  corruption. It is local RouteQA instrumentation, not independent external
+  benchmark proof.
+- v13-f closes the resource envelope boundary above v13-a through v13-e. It
+  binds the run workload CSV to NLG/timing/environment hashes, confirms the run
+  NLG result hash, emits `resource_rows.csv`, and blocks hash-clean removal of
+  the diagnostic speedup. It is workload/resource instrumentation, not GPU
+  acceleration proof until real HIP/NVMe/nonfixture measurements exist.
+- v13-g closes the real evidence promotion gate above v13-a through v13-f. It
+  audits the four named weaknesses together, emits `promotion_rows.csv`, and
+  keeps release promotion blocked until real external benchmark, learned chunk
+  ranking, real NLG, real GPU speed, and nonfixture run evidence all bind to
+  the same v13 run.
+- v13-h closes the same-run real evidence intake gate above v13-g. It validates
+  the four-row replacement package for external benchmark, learned chunk
+  ranking, GPU speedup, and real NLG evidence, including run binding, cache
+  hashes, HTTPS authority-chain shape, contract flags, and route/jump zero,
+  while still blocking release until live-network verification and regenerated
+  bound-run evidence exist.
+- v13-i closes the real evidence live-network gate above v13-h. It validates
+  same-run source/review/authority network receipts, receipt hashes, HTTPS final
+  URIs, HTTP status rows, live-network declarations, and route/jump zero, while
+  still blocking release until receipts are produced by runner-owned runtime
+  live fetches and regenerated bound-run evidence exists.
+- v13-j closes the real evidence rebind gate above v13-i. It validates
+  receipt-hash replay into same-run replacement artifacts and claim-matrix
+  rows, rebuilt artifact hashes, regeneration flags, and route/jump zero, while
+  still blocking release until runtime live fetch evidence and regenerated
+  promotion rows exist.
+- v13-k closes the runtime fetch provenance gate above v13-j. It validates
+  v13-i receipt JSON scope, weakness/kind binding, HTTPS original/final URIs,
+  HTTP status, method, headers, empty error, ordered UTC timestamps, receipt
+  hashes, and route/jump zero, while still blocking release unless the receipt
+  source is runner-owned `runtime-live-fetch`.
+- v13-l closes the source seed gate above v13-k. It records current public
+  source seeds for the external benchmark blocker, explicitly classifies
+  learned chunk ranking, GPU speedup, and real NLG as `project-source-only`,
+  and blocks release until all four weaknesses have official/independent claim
+  evidence and runtime live fetch receipts.
+- v13-m closes the source seed live-fetch gate above v13-l. It validates optional
+  runner-owned source seed receipts without turning reachable source URLs into
+  claim evidence; release remains blocked until all four weaknesses have complete
+  source/review/authority receipts and real official/independent claim rows.
+- v13-n closes the external benchmark official source acquisition gate above
+  v13-m/v13-l. It can produce runner-owned RULER/LongBench repo HEAD receipts
+  and a RULER arXiv authority receipt, but it remains source acquisition only;
+  external benchmark result/evaluator readiness and release stay blocked.
+- v14-a opens the runner-owned query/result/evaluator execution path. It
+  materializes public-codebase RouteQA queries, copies v13 source-chain rows,
+  binds or live-fetches official repo HEAD source snapshots, can select a
+  runner-owned source snapshot as the query repo, builds an mmap store with
+  `route_memory_store.bin`, `route_index.bin`, `chunk_offsets`, and
+  `store_manifest.csv`, hash-binds query materialization in
+  `dataset/dataset_manifest.json`, emits raw predictions plus `predictions/prediction_status.json`, runs
+  the evaluator plus `evaluator/evaluator_status.json`, and writes
+  metrics/routeqa/benchmark/evidence/promotion rows plus
+  `evidence/run_invocation.json`, `evidence/run_layout_manifest.json`, and
+  `evidence/execution_chain_manifest.json` in one run directory, with run-layout
+  and execution-chain hashes cross-checked against
+  `sha256sums.txt`. A live RULER snapshot RouteQA run now proves the source snapshot
+  can feed dataset/query/evaluator artifacts. A RULER-compatible NIAH smoke can
+  also emit benchmark-shaped dataset/prediction/evaluator files, invoke the
+  official RULER evaluator, invoke official RULER `scripts/data/prepare.py` for
+  three official NIAH task rows and nine generated rows, feed those rows back
+  through the official evaluator using input-extracted predictions rather than
+  copied oracle outputs, mmap-verify the generated inputs through
+  `benchmark/ruler_synthetic/official_generator_store/`, record generated benchmark/metrics/provenance binding
+  rows, normalize them into run-level `benchmark/external_benchmark_rows.csv`,
+  aggregate `benchmark/external_benchmark_metrics.json`, and hash-bind
+  `benchmark/external_benchmark_manifest.json`. It can also run a LongBench v2
+  multiple-choice official-source smoke through the live `longbench_repo`
+  snapshot and official `result.py`, and can fetch 12 canonical LongBench v2
+  dataset-server rows for a non-oracle baseline sample, mmap-verify those
+  official sample rows through `benchmark/longbench_v2/official_sample_store/`,
+  and add two LongBench rows to the same run-level external benchmark surface.
+  The current live smoke has `external_benchmark_mmap_read_rows=21`,
+  `external_benchmark_mmap_prediction_match_rows=21`,
+  `external_benchmark_mmap_verification_ready_rows=4`,
+  `external_benchmark_execution_chain_ready_rows=5`,
+  `external_benchmark_execution_chain_ready=1`,
+  `requested_outputs_manifest_ready=1`, `requested_outputs_ready=1`,
+  `source_chain_autodiscovery_ready=1`,
+  `reproducibility_manifest_ready=1`, `direct_cli_shape_ready=1`, and
+  `run_layout_manifest_ready=1`, `run_layout_ready=1`,
+  `objective_requirements_manifest_ready=1`, `objective_requirements_ready=1`,
+  `source_chain_evidence_mirror_ready=1`, and
+  `evidence_packet_rows=50`.
+  This still remains runner-owned source execution, not independent
+  RULER/LongBench benchmark proof.
 - v08-l closes the final-review mechanics layer for external benchmarks while
   keeping real benchmark verification blocked until non-fixture source/review
   evidence exists. The real-source guard also prevents local final-review
@@ -111,6 +290,96 @@ Last completed checkpoint:
   packages can reach `external_benchmark_source_acquisition_ready=1`, but
   acquisition alone still keeps `real_external_benchmark_verified=0` until the
   imported content, result, review, and publication chain is verified.
+- v08-aa closes the source-acquisition content-cache verifier layer. Supplied
+  cache rows must bind back to each v08-z acquisition ID, match all official
+  source landing/dataset/card/split/license/metric URIs and sha256 hashes, and
+  verify 24 local cache files across the four benchmark families. Matching
+  cache content can reach
+  `external_benchmark_source_acquisition_content_ready=1`, but cache
+  verification alone still keeps `real_external_benchmark_verified=0` until
+  source import, result authority, review, and publication evidence are
+  connected.
+- v08-ab closes the first codebase-mini benchmark instrumentation layer.
+  Generated local packages bind real repository source files to source,
+  dataset, split, license, metric, baseline, result, and sha256 artifacts, then
+  require h11-c RouteMemory store linkage. The smoke can reach
+  `codebase_mini_source_ready=1`, `benchmark_result_artifact_verified=1`, and
+  `baseline_comparison_ready=1`, but local instrumentation keeps
+  `real_external_benchmark_verified=0` until independent external review and
+  publication evidence exist.
+- v08-ac closes the first source-content/result bridge layer for the
+  codebase-retrieval slice. Supplied bridge rows can bind v08-aa acquisition
+  content to the v08-ab codebase-mini result artifacts and verify five
+  result/baseline/dataset/run/evaluator hashes, reaching
+  `codebase_content_result_bridge_ready=1`; the full external result bridge
+  stays blocked with `external_benchmark_result_bridge_ready=0` because only
+  one of four benchmark families is covered and the artifacts remain local.
+- v08-ad closes the all-family result bridge mechanics layer. Supplied
+  non-local rows for RULER, LongBench, codebase-retrieval, and real-document-qa
+  can bind back to v08-aa source-content acquisition IDs, attest 28 HTTPS
+  result/baseline/dataset/run/evaluator/result-authority/publication URI/hash
+  fields, and reach `family_result_bridge_review_ready=1` plus
+  `external_benchmark_result_bridge_ready=1`; `real_external_benchmark_verified=0`
+  still remains because supplied bridge mechanics are not independent
+  reproduction or official publishable benchmark evidence.
+- v08-ae closes the independent reproduction/review mechanics layer. Supplied
+  non-local rows for all four benchmark families bind back to the v08-ad result
+  bridge, verify result artifact plus bridge-summary hashes, attest 28 HTTPS
+  reproduction/report/run-log/reviewer/conflict/environment/metric URI/hash
+  fields, and reach `independent_reproduction_review_ready=1`; real benchmark
+  verification still stays blocked until official release and externally
+  verifiable publication evidence replace supplied review mechanics.
+- v08-af closes the official release evidence mechanics layer. Supplied
+  release rows for all four benchmark families bind back to the v08-ae
+  reproduction IDs and summary hash, attest 44 release/reproduction hash fields
+  plus 40 HTTPS release package/manifest/archive/version/license/
+  reproducibility/review/index/authority URI fields, and reach
+  `official_release_evidence_ready=1`; real benchmark verification still stays
+  blocked until those supplied release mechanics are replaced by live,
+  externally verifiable release/publication records.
+- v08-ag closes the live release verification mechanics layer. Supplied
+  live-verification rows for all four benchmark families bind back to v08-af
+  release IDs, reproduction IDs, and official release/archive/dataset/authority
+  URI+hash pairs, attest 28 HTTPS live verification/report/network-observation/
+  verifier URI/hash fields, and reach
+  `official_release_live_verification_ready=1`; real benchmark verification
+  still stays blocked until canonical online confirmation and externally
+  verifiable publication evidence replace supplied mechanics.
+- v08-ah closes the canonical online confirmation mechanics layer. Supplied
+  confirmation rows for all four benchmark families bind back to v08-ag live
+  verification reports, network observations, verifier identities, release
+  IDs, and reproduction IDs, attest 36 HTTPS live/canonical confirmation,
+  runner-network transcript, TLS, DNS, HTTP-header, and content-digest URI/hash
+  fields, and reach `canonical_online_confirmation_ready=1`; real benchmark
+  verification still stays blocked until non-fixture publication/result review
+  evidence replaces supplied mechanics.
+- v08-ai closes the publication/result review mechanics layer. Supplied review
+  rows for all four benchmark families bind back to v08-ah canonical
+  confirmation reports, content-digest manifests, release IDs, and reproduction
+  IDs, attest 36 HTTPS review/result/publication/authority URI/hash fields,
+  require 28 newly introduced review artifact URIs to be non-placeholder HTTPS,
+  and reach `publication_result_review_ready=1`; real benchmark verification
+  still stays blocked until live-ingested non-fixture result/publication records
+  and promotion evidence replace supplied mechanics.
+- v08-aj closes the live publication/result ingestion mechanics layer. Supplied
+  ingestion rows for all four benchmark families bind back to v08-ai
+  publication/result review and record URI/hash pairs, attest 56 HTTPS
+  ingestion/review URI/hash fields, require 40 newly introduced live-ingestion
+  artifact URIs to be non-placeholder HTTPS, include response-header,
+  content-digest, and TLS certificate-chain evidence, and reach
+  `live_publication_result_ingestion_ready=1`; real benchmark verification
+  still stays blocked until actual non-fixture authority/promotion evidence
+  replaces supplied ingestion mechanics.
+- v08-ak closes the authority/promotion evidence mechanics layer. Supplied
+  authority rows for all four benchmark families bind back to v08-aj live
+  publication/result records and content digests, attest 56 HTTPS
+  authority/ingestion URI/hash fields, require 40 newly introduced authority
+  artifact URIs to be non-placeholder HTTPS, include registry, leaderboard,
+  reproducibility package, archive, identity, conflict, promotion trace, and
+  final claim packet evidence, and reach
+  `authority_promotion_evidence_ready=1`; real benchmark verification still
+  stays blocked until real independently observed external benchmark run and
+  evaluator evidence replaces supplied authority mechanics.
 - v08-m closes the first source-import contract verifier layer. A remote-style
   fixture can bind source/result/execution URIs and hashes to non-local import
   manifest/fetch-log/reviewer artifacts, live-network import flags,
@@ -177,11 +446,19 @@ Last completed checkpoint:
   reaching `source_import_real_verification_review_ready=1`; placeholder
   domains still keep `source_import_verified=0` and
   `real_external_benchmark_verified=0`.
-- h9-g closes the measured-speed evidence contract while keeping GPU speedup
-  claims deferred until real HIP-backed measurements exist.
-- h11-a closes the PC RouteLM / NLG readiness contract and h11-b closes the
-  artifact/provenance verification mechanics while keeping real prototype and
-  publish claims blocked.
+- h9-g closes the measured-speed evidence contract and h9-h closes the
+  CPU/HIP/NVMe workload-speed evidence contract while keeping GPU speedup
+  claims deferred until real HIP/NVMe workload measurements exist.
+- h7-c closes the promotion review contract above h7-b, h10-r, h10-s,
+  v08-ab, h11-d, and h9-h. It passes the review contract, quality thresholds,
+  and zero route/jump guardrail, but keeps `real_evidence_complete=0`,
+  `promotion_review_ready=0`, and `default_promotion=0` until real teacher,
+  scorer, benchmark, NLG, and workload-speed evidence all pass.
+- h11-a closes the PC RouteLM / NLG readiness contract, h11-b closes the
+  artifact/provenance verification mechanics, h11-c closes the
+  NVMe-resident RouteMemory store smoke, and h11-d closes the diagnostic
+  small-generator NLG smoke while keeping real prototype and publish claims
+  blocked.
 
 The live nonlocal path is still:
 
@@ -321,10 +598,26 @@ Current closure:
   and can raise `remote_teacher_source_live_network_import_ready=1` while still
   keeping `real_teacher_source_verified=0` until real source import/review
   evidence exists.
+- `h10-r` adds the real teacher-source import/review chain gate. It binds h10-q
+  live-network import readiness to source/export/identity/policy/license/
+  import-manifest/review/reviewer/conflict/registry URI/hash evidence, blocks
+  local review artifacts and placeholder authorities, and can raise
+  `real_teacher_source_import_review_ready=1` for a non-placeholder review
+  chain while still keeping `real_teacher_source_verified=0` until official
+  authority evidence exists.
+- `h10-s` adds the source-verified learned scorer student-only evaluation gate.
+  It requires h10-l source-verified scorer readiness, h10-r import/review
+  readiness, source-bound real student-only eval rows, positive chunk/span
+  metric deltas, wrong-answer non-regression, near-miss/missing abstain
+  readiness, and zero routing/jump activity before the learned scorer can be
+  treated as an eval candidate.
 - `h7-a` adds the `/goal` closure smoke:
   `experiments/test_v07_goal_route_memory_closure.sh`.
 - `h7-b` adds the route-memory promotion gate and keeps default promotion
   blocked.
+- `h7-c` adds the promotion review matrix across h7-b, h10-r, h10-s, v08-ab,
+  h11-d, and h9-h, keeping promotion blocked until every input is backed by
+  real non-fixture evidence.
 - `v08` adds an external benchmark readiness gate that defers comparison until
   promotion passes.
 - `v08-b` adds an external benchmark adapter manifest for RULER, LongBench,
@@ -472,6 +765,163 @@ Current closure:
   and real document QA. It can mark non-fixture acquisition packages ready, but
   still refuses to turn acquisition metadata alone into verified benchmark
   results.
+- `v08-aa` adds the source-acquisition content-cache verifier. It verifies that
+  supplied local cache files match the v08-z official acquisition manifest
+  hashes for all six source artifacts per benchmark family, while still
+  blocking real external benchmark verification until imported results and
+  review/publication evidence exist.
+- `v08-ab` adds the codebase-mini benchmark package. It creates a local
+  `codebase-retrieval` dataset from real repo files, verifies source
+  provenance, baseline/result artifacts, and h11-c RouteMemory-store linkage,
+  and keeps the result instrumentation-only until independent non-fixture
+  benchmark review/publication evidence is present.
+- `v08-ac` adds the source-content/result bridge for codebase-retrieval. It
+  binds source-acquisition content-cache evidence to codebase-mini result
+  artifacts and exposes the remaining gap: RULER, LongBench, and real document
+  QA still need non-local result bridge rows before an external comparison can
+  advance.
+- `v08-ad` adds the all-family result bridge contract. It requires non-local
+  result bridge rows for RULER, LongBench, codebase retrieval, and real document
+  QA, source-content summary hash binding, 28 sha256-attested HTTPS result
+  fields, independent bridge review flags, and zero route/jump activity. It can
+  advance result-bridge mechanics, but not a real external benchmark claim.
+- `v08-ae` adds the independent reproduction/review contract. It requires
+  all-family reproduction rows above v08-ad, result artifact binding, bridge
+  summary hash verification, independent runner/reviewer/conflict checks,
+  28 sha256-attested HTTPS reproduction fields, and zero route/jump activity.
+  It can advance review mechanics, but not a real benchmark claim.
+- `v08-af` adds the official release evidence contract. It binds all-family
+  release rows back to v08-ae reproduction IDs and the v08-ae summary hash,
+  requires 44 sha256-attested release/reproduction hashes plus 40 HTTPS release
+  artifact URIs, and can raise `official_release_evidence_ready=1`; it still
+  keeps `real_external_benchmark_verified=0` until live release verification
+  and externally verifiable publication evidence replace supplied mechanics.
+- `v08-ag` adds the live release verification contract. It binds all-family
+  live-verification rows back to v08-af release IDs, reproduction IDs, and the
+  official release/archive/dataset/authority URI+hash pairs, requires 28
+  sha256-attested HTTPS live-verification artifact fields plus independent
+  verifier/live-network/stable-release declarations, and can raise
+  `official_release_live_verification_ready=1`; it still keeps
+  `real_external_benchmark_verified=0` until canonical online confirmation and
+  publishable external evidence replace supplied mechanics.
+- `v08-ah` adds the canonical online confirmation contract. It binds all-family
+  confirmation rows back to v08-ag live reports, network observations, verifier
+  identities, release IDs, and reproduction IDs, requires 36 sha256-attested
+  HTTPS confirmation/proof fields plus runner-owned/authority/online-fetch/
+  digest-match declarations, and can raise `canonical_online_confirmation_ready=1`;
+  it still keeps `real_external_benchmark_verified=0` until non-fixture
+  publication/result review evidence replaces supplied mechanics.
+- `v08-ai` adds the publication/result review contract. It binds all-family
+  review rows back to v08-ah canonical confirmation reports and content-digest
+  manifests, requires 36 sha256-attested HTTPS review/result/publication/
+  authority fields plus independent publication/result observation
+  declarations, requires the newly introduced review URIs to be non-placeholder,
+  and can raise `publication_result_review_ready=1`; it still keeps
+  `real_external_benchmark_verified=0` until live-ingested non-fixture
+  publication/result records and promotion evidence replace supplied mechanics.
+- `v08-aj` adds the live publication/result ingestion contract. It binds
+  all-family ingestion rows back to v08-ai publication/result review and record
+  URI/hash pairs, requires 56 sha256-attested HTTPS ingestion/review fields,
+  40 newly introduced non-placeholder live-ingestion artifact URIs, and
+  runner-owned live-network ingestion plus digest-match declarations. It can
+  raise `live_publication_result_ingestion_ready=1`, but keeps
+  `real_external_benchmark_verified=0` until actual non-fixture authority and
+  promotion evidence replace supplied ingestion mechanics.
+- `v08-ak` adds the authority/promotion evidence contract. It binds all-family
+  authority rows back to v08-aj live publication/result records and content
+  digests, requires 56 sha256-attested HTTPS authority/ingestion fields, 40
+  newly introduced non-placeholder authority artifact URIs, and independent/
+  official/registry/consistency/limited-claim declarations. It can raise
+  `authority_promotion_evidence_ready=1`, but keeps
+  `real_external_benchmark_verified=0` until actual independently observed
+  benchmark run/evaluator evidence replaces supplied authority mechanics.
+- `v08-al` adds the first run/evaluator trace contract above v08-ak and
+  v08-ab. It recomputes the local codebase-mini dataset/result join into
+  runner/evaluator manifests, query trace, evaluator output, metrics, command
+  receipt, and hash manifest artifacts. It can raise
+  `codebase_run_evaluator_trace_ready=1`, but keeps
+  `external_benchmark_run_evaluator_trace_ready=0` and
+  `real_external_benchmark_verified=0` until independent all-family
+  run/evaluator evidence exists.
+- `v08-am` adds the independent all-family run/evaluator evidence contract above
+  v08-al. Supplied rows for RULER, LongBench, codebase-retrieval, and
+  real-document-qa must carry non-placeholder HTTPS trace/run/evaluator/metric/
+  query/observer/authority artifacts, sha256 hashes, query volume, quality
+  thresholds, proof bindings, independent evaluator declarations, and
+  route/jump zero. It can raise
+  `external_benchmark_independent_run_evaluator_evidence_ready=1`, but keeps
+  `real_external_benchmark_verified=0` until live replay/final review replaces
+  supplied evidence.
+- `v08-an` adds the live replay/final-review contract above v08-am. Supplied
+  rows for all four benchmark families bind v08-am evidence to replay and
+  final-review artifact URI/hash pairs, replay query volume, metric thresholds,
+  live replay declarations, independent final-review declarations, fixture
+  declarations, and route/jump zero. It can raise
+  `external_benchmark_live_replay_final_review_ready=1`, but keeps
+  `real_external_benchmark_verified=0` until public non-fixture verification or
+  direct runner-owned external benchmark runs replace supplied mechanics.
+- `v08-ao` adds the public non-fixture/direct-run verification contract above
+  v08-an. Supplied rows for all four benchmark families bind v08-an review
+  evidence to 40 non-placeholder HTTPS public/direct-run artifact URIs, 40
+  sha256 hashes, query volume, metric thresholds, public registry/non-fixture
+  declarations, direct runner-owned run/dataset/evaluator/network declarations,
+  third-party reviewer declarations, fixture declarations, and route/jump zero.
+  It can raise `external_benchmark_public_nonfixture_verification_ready=1`, but
+  keeps `real_external_benchmark_verified=0` until runner-owned live
+  execution/audit proves the public direct-run receipts.
+- `v08-ap` adds the runner-owned live execution/audit contract above v08-ao.
+  Supplied rows for all four benchmark families bind v08-ao verification
+  evidence to 52 non-placeholder HTTPS live execution/audit artifact URIs, 52
+  sha256 hashes, query volume, metric thresholds, runner-owned execution
+  declarations, live network/dataset fetch declarations, runner-invoked
+  evaluator declarations, replay-disabled declarations, audit log and
+  third-party audit declarations, fixture declarations, and route/jump zero. It
+  can raise `external_benchmark_runner_owned_live_execution_audit_ready=1`, but
+  keeps `real_external_benchmark_verified=0` until independent live rerun
+  confirmation proves the runner-owned audit receipts.
+- `v08-aq` adds the independent live rerun confirmation contract above v08-ap.
+  Supplied rows for all four benchmark families bind v08-ap audit evidence to
+  60 non-placeholder HTTPS rerun-confirmation artifact URIs, 60 sha256 hashes,
+  rerun query volume, metric thresholds, metric-delta bounds, independent
+  runner/environment declarations, live network/dataset refetch/evaluator rerun
+  declarations, audit receipt reconciliation, metric recomputation,
+  third-party confirmation declarations, fixture declarations, and route/jump
+  zero. It can raise
+  `external_benchmark_independent_live_rerun_confirmation_ready=1`, but keeps
+  `real_external_benchmark_verified=0` until a real non-fixture benchmark run
+  package replaces supplied confirmation mechanics.
+- `v08-ar` adds the real nonfixture run package intake contract above v08-aq.
+  Supplied rows for all four benchmark families bind v08-aq confirmation
+  evidence to 60 non-placeholder HTTPS run-package artifact URIs, 60 sha256
+  hashes, packaged query volume, metric thresholds, metric-delta bounds,
+  nonfixture/official benchmark/public archive/raw query/raw output/evaluator
+  container/immutable archive declarations, license/PII/third-party
+  reproducibility reviews, fixture declarations, and route/jump zero. It can
+  raise `external_benchmark_real_nonfixture_run_package_intake_ready=1`, but
+  keeps `real_external_benchmark_verified=0` until live package artifact fetch
+  and authority verification replace supplied package mechanics.
+- `v08-as` adds the live package artifact fetch/authority contract above
+  v08-ar. Supplied rows cover all 60 family/artifact entries, binding each to
+  fetched artifact, fetch receipt, and authority record URI/hash pairs. They
+  require 180 non-placeholder HTTPS URI fields, 180 sha256 hashes, HTTP-200
+  checks, content-digest matches, v08-ar package-intake binding, runner-owned
+  live fetch declarations, network/TLS/DNS/HTTP declarations, authority
+  registry/official source authority declarations, fixture declarations, and
+  route/jump zero. It can raise
+  `external_benchmark_live_package_artifact_fetch_authority_ready=1`, but keeps
+  `real_external_benchmark_verified=0` until official result reconciliation
+  replaces supplied fetch/authority mechanics.
+- `v08-at` adds the official result reconciliation contract above v08-as.
+  Supplied rows for all four benchmark families bind v08-as fetched official
+  leaderboard, metric report, submission receipt, evaluator config, raw
+  prediction output, and package-registry artifacts by exact URI/hash identity.
+  They require 28 non-placeholder HTTPS URI fields, 28 sha256 hashes, package
+  identity matches, metric-delta tolerance checks, query-count matches,
+  evaluator/digest/official-source/leaderboard/runner declarations, fixture
+  declarations, and route/jump zero. It can raise
+  `external_benchmark_official_result_reconciliation_ready=1`, but keeps
+  `real_external_benchmark_verified=0`; the next step is v13 real-run binding,
+  not another v08 layer.
 - `h11-a` opens the PC RouteLM / NLG prototype readiness gate. It can consume
   supplied component evidence for a quantized 3B-14B generator, CPU RAM/NVMe
   O(n) route memory, GPU candidate scoring, GPU decoder binding, and an NLG
@@ -483,14 +933,91 @@ Current closure:
   benchmark, license, and provenance hashes with
   `prototype_artifact_chain_verified=1`, but local `results/` artifacts and
   declaration flags still keep `real_pc_routelm_artifact_verified=0`.
-- `h9-a/h9-b/h9-d/h9-e/h9-f/h9-g` add optional ROCm/HIP backend scaffolding
-  plus measured-speed evidence contracts:
+- `h11-c` adds the NVMe-resident RouteMemory store artifact smoke. It creates
+  and verifies a small store bundle (`route_memory_store.bin`,
+  `route_index.bin`, `chunk_pages.bin`, `chunk_offsets.bin`,
+  `chunk_credit.bin`, `page_table.bin`, `manifest.json`, `sha256sums.txt`),
+  then checks route lookup, candidate span reads, hash-chain integrity, and
+  `routing_trigger_rate = active_jump_rate = 0`. The smoke can raise
+  `route_memory_artifact_chain_verified=1`, but it keeps
+  `real_pc_routelm_artifact_verified=0` and
+  `real_external_benchmark_verified=0`.
+- `h11-d` adds the diagnostic PC RouteLM small-generator NLG smoke above the
+  h11-c store. It writes a generated transcript/result artifact, verifies
+  teacher-off inference, retrieved evidence use, grounding, span citation,
+  span/chunk exactness, missing abstain, wrong-answer rate, latency/SSD/RAM/
+  VRAM metrics, and zero route/jump activity. The smoke can raise
+  `pc_routelm_nlg_smoke_ready=1`, but keeps
+  `real_pc_routelm_nlg_verified=0`.
+- `h9-a/h9-b/h9-d/h9-e/h9-f/h9-g/h9-h` add optional ROCm/HIP backend
+  scaffolding plus measured-speed and workload-speed evidence contracts:
   `experiments/test_v09_gpu_backend_closure.sh`.
-- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q, h7-b,
-  v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/readiness,
-  the v08 lower-chain remote-artifact path and v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z real-source/remote-review/remote-full source-import/result-authority/publication/source-acquisition guards, h11-a prototype
-  readiness/import, h11-b artifact verifier/import, and h9-g included in and
-  passing quick closure paths through v08-z.
+- `v12-a` adds the paper/release claim audit over the currently verified stack.
+  It is a release-packaging diagnostic, not a publishable paper/product claim.
+- `v13-a` adds the real-run binder manifest above h11-c/h11-d/h9-h/v08-al/h10-s/v12.
+  It verifies one run directory shape and hash manifest for generated
+  diagnostic inputs while keeping all real/nonfixture and GPU speedup claims
+  blocked.
+- `v13-b` adds the RouteLM mmap reader above v13-a. It proves the bound store
+  can be opened and queried through the reader ABI, while still blocking real
+  artifact/external/release claims.
+- `v13-c` adds the evidence packet ABI above v13-a/v13-b. It produces a
+  hash-manifested packet and v12-style claim-matrix input from the bound run
+  evidence, while keeping learned-ranking and real/nonfixture claims blocked.
+- `v13-d` adds the NLG transcript binding ABI above v13-a/v13-b/v13-c. It
+  validates transcript/result rows against route-memory span bytes and keeps
+  real PC RouteLM NLG blocked until nonfixture generator evidence exists.
+- `v13-e` adds the public codebase RouteQA binding ABI above v13-a/v13-b/v13-c/v13-d.
+  It validates the local codebase-mini trace/result/evaluator rows while
+  keeping independent external benchmark evidence blocked.
+- `v13-f` adds the resource envelope ABI above v13-a/v13-b/v13-c/v13-d/v13-e.
+  It validates workload/timing/storage/memory rows while keeping real workload
+  speed evidence and GPU speedup claims blocked.
+- `v13-g` adds the real evidence promotion gate above v13-a/v13-b/v13-c/v13-d/v13-e/v13-f.
+  It validates that the diagnostic bindings are intact, then blocks release
+  promotion until the four real-evidence weaknesses are solved together.
+- `v13-h` adds the real evidence intake gate above v13-a/v13-b/v13-c/v13-d/v13-e/v13-f/v13-g.
+  It validates the same-run package shape required to replace the four blockers
+  while keeping release blocked until live verification and regenerated run
+  bindings exist.
+- `v13-i` adds the real evidence live-network gate above v13-a/v13-b/v13-c/v13-d/v13-e/v13-f/v13-g/v13-h.
+  It validates same-run source/review/authority receipt hashes and live-network
+  receipt status while keeping release blocked until runtime fetch and
+  regenerated run bindings exist.
+- `v13-j` adds the real evidence rebind gate above v13-a/v13-b/v13-c/v13-d/v13-e/v13-f/v13-g/v13-h/v13-i.
+  It validates receipt-hash replay into same-run replacement artifacts and
+  claim-matrix rows while keeping release blocked until runtime fetch and
+  regenerated promotion rows exist.
+- `v13-k` adds the runtime fetch provenance gate above v13-a/v13-b/v13-c/v13-d/v13-e/v13-f/v13-g/v13-h/v13-i/v13-j.
+  It validates runner-owned receipt JSON provenance while keeping release
+  blocked until the v13-i source is `runtime-live-fetch`.
+- `v13-l` adds the source seed gate above v13-a/v13-b/v13-c/v13-d/v13-e/v13-f/v13-g/v13-h/v13-i/v13-j/v13-k.
+  It binds current RULER/LongBench public source seeds without allowing
+  project-source-only rows to become claim evidence.
+- `v13-m` adds the source seed live-fetch gate above v13-a/v13-b/v13-c/v13-d/v13-e/v13-f/v13-g/v13-h/v13-i/v13-j/v13-k/v13-l.
+  It verifies optional runtime receipts for those seeds while keeping source
+  availability separate from real claim evidence.
+- `v13-n` adds the external benchmark official source acquisition gate above v13-a/v13-b/v13-c/v13-d/v13-e/v13-f/v13-g/v13-h/v13-i/v13-j/v13-k/v13-l/v13-m.
+  It verifies runner-owned acquisition of public benchmark source metadata while
+  keeping benchmark result/evaluator evidence blocked.
+- `v14-a` adds `tools/routelm_benchmark_run`, a runner-owned execution CLI that
+  produces source, dataset, store, raw prediction, evaluator, metrics, RouteQA,
+  benchmark, resource, evidence, and promotion artifacts in one run directory.
+  It now includes `source_snapshot_rows.csv` and optional live git fetch of the
+  official RULER/LongBench HEAD SHAs from v13-n source acquisition receipts,
+  plus `--repo-from-source-snapshot` so a fetched official snapshot can become
+  the repo used for query materialization and evaluator output. It also has an
+  optional RULER-compatible synthetic smoke that writes NIAH-format prediction
+  artifacts, an official evaluator status record, official generator output
+  rows for three official NIAH tasks, a multi-task official evaluator summary,
+  and generated benchmark/metrics/provenance binding rows.
+- Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s, h7-b, h7-c,
+  v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation/readiness,
+  the v08 lower-chain remote-artifact path and v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at real-source/remote-review/remote-full source-import/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation guards, h11-a prototype
+  readiness/import, h11-b artifact verifier/import, h11-c NVMe RouteMemory
+  store/artifact smokes, h11-d PC RouteLM NLG smoke, h9-h, v12, v13-a, v13-b,
+  v13-c, v13-d, v13-e, v13-f, v13-g, v13-h, v13-i, v13-j, v13-k, v13-l, v13-m, and v13-n included in and passing quick closure paths through
+  h7-c/v08-at/h11-d/h9-h/v12/v13-a/v13-b/v13-c/v13-d/v13-e/v13-f/v13-g/v13-h/v13-i/v13-j/v13-k/v13-l/v13-m/v13-n.
   HIP parity remains optional and environment-dependent.
 
 Current next boundary:
@@ -502,23 +1029,39 @@ Current next boundary:
   local learned chunk scorer, source-verified scorer binding, external ingestion
   schema, supplied CSV path, source-chain verifier, remote acquisition
   contract, content-cache verifier, fetch-attestation contract, and
-  runner-owned runtime-fetcher replay contract, and live-network import
-  evidence gate are now present; the next blocker is replacing the supplied
-  live-network evidence fixture/import with real non-fixture source
-  import/review evidence for the HTTPS acquisition package before any default
-  promotion or external benchmark comparison.
+  runner-owned runtime-fetcher replay contract, live-network import evidence
+  gate, and import/review chain gate are now present; the next blocker is
+  replacing the supplied import/review fixtures with official authority/
+  registry evidence that can set `real_teacher_source_verified=1` before any
+  default promotion or external benchmark comparison.
 - Provide or connect real external benchmark sources/results through the
-  v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z
-  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition
-  path, then replace fixture/local lower-chain rows and final-review rows with
-  non-local, non-fixture evidence and replace the remote-style v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z
-  contract/replay/live-style/review/authority-review/registry/query/fetch/network-proof/real-verification/official-authority/result-authority/publication/acquisition fixtures with
+  v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at
+  import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review
+	  path, including public non-fixture verification, runner-owned live
+	  execution/audit, independent live rerun confirmation, real nonfixture run package intake, live package artifact fetch/authority, and official result reconciliation, then replace fixture/local lower-chain rows and
+	  final-review rows with
+  non-local, non-fixture evidence and replace the remote-style v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at
+  contract/replay/live-style/review/authority-review/registry/query/fetch/network-proof/real-verification/official-authority/result-authority/publication/acquisition/content/codebase-mini/bridge/family-bridge/reproduction/release/live-verification/canonical-confirmation/publication-result-review/live-ingestion/authority-promotion/run-evaluator/independent-run-evaluator/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-rerun/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation fixtures with
   non-fixture live registry query plus fetch/cache, network proof, real
   verification records, official authority/trust-root records, and official
-  result-authority/leaderboard records plus non-fixture publication and
-  source-acquisition packages before any v0.8 comparison claim.
-- Provide a real PC RouteLM prototype above the h11-a/h11-b contracts before
-  any NLG or personal-PC LLM claim.
+  result-authority/leaderboard records plus non-fixture publication,
+  source-acquisition/content packages, source-content/result bridge rows,
+  independent reproduction/review, official release evidence, live release
+  verification, canonical online confirmation, publication/result review,
+  live-ingested publication/result records, authority/promotion evidence, real
+  run/evaluator evidence for RULER, LongBench, codebase retrieval, and real
+  document QA, plus live replay/final-review evidence, runner-owned live
+  execution/audit, independent live rerun confirmation, live package artifact
+  fetch plus authority verification, and official result reconciliation inside
+  one v13-style bound nonfixture run package before any v0.8 comparison claim.
+- Replace h9-h generated workload fixtures with real measured CPU/HIP/NVMe
+  workload speed evidence above h9-g/h11-d, then provide a real PC RouteLM
+  prototype above the h11-a/h11-b/h11-c/h11-d contracts before any NLG or
+  personal-PC LLM claim.
+- Re-run h7-c and v12 after those real evidence rows exist; only then can
+  `promotion_review_ready` become a promotion candidate instead of a blocked
+  diagnostic review, and only then can a release claim move beyond diagnostic
+  artifact packaging.
 - Any stronger claim must survive those matrices without using symbolic
   `key-shape` as the policy itself.
 
@@ -531,6 +1074,7 @@ Still not solved:
 - external benchmark comparison
 - GPU acceleration proven
 - real natural language generation / PC RouteLM prototype
+- publishable paper/release claim
 - Transformer replacement
 
 ## Historical Execution Order
@@ -552,9 +1096,24 @@ Status update:
 - steps 1-8 are complete and documented.
 - step 9 split into two findings: active jump-neighbor replacement remains
   no-go, while value-bearing route hints work under controlled fixtures.
-- the current next research boundary is a real external teacher-label source
-  through the h10-j/h10-l source-verification contracts above h10-q
-  live-network import evidence, not topology replacement.
+- `NEXT_IMPLEMENTATION_ROADMAP_v2.md` has now been reconciled against the
+  repository state: its h11-c, v08-ab, h10-r, h10-s, h11-d, h9-h, h7-c, and
+  paper/package phases are implemented here as diagnostic or supplied-evidence
+  contracts through v12 plus v08-at, the v13-a binder manifest, the v13-b mmap
+  reader, the v13-c evidence packet ABI, the v13-d NLG transcript binding, and
+  the v13-e public codebase RouteQA binding, the v13-f resource envelope,
+  the v13-g through v13-n real-evidence/source-acquisition gates, and the
+  v14-a runner-owned query/result/evaluator execution path,
+  not as real-world proof.
+- the current next research boundary is official authority/registry evidence
+  for h10-r plus real external teacher-label rows and source-bound student-only
+  eval rows through the h10-j/h10-l/h10-r/h10-s source-verification contracts,
+  not topology replacement.
+- The decisive next loop is real evidence production through a bound
+  nonfixture run: non-fixture teacher authority, external benchmark
+  source/result/evaluator artifacts, real PC RouteLM/NLG artifact evidence, and
+  measured CPU/HIP/NVMe workload traces must replace the current
+  diagnostic/supplied rows before promotion.
 - GPU work is backend/parity instrumentation only. CPU remains canonical until
   a complete ROCm/HIP install proves fixture parity.
 
