@@ -1250,10 +1250,21 @@ Current next boundary:
   `candidate_external_benchmark_expansion_ready=1`, and
   `real_external_benchmark_verified=1` while keeping
   `human_review_completed=0` and `real_release_package_ready=0`.
+- `v35` is closed as the commercial pilot packet above v34/v33/v18. It reuses
+  the v30 commercial-return schema for one buyer-visible workflow,
+  `internal_docs`, and writes five source-cited internal-document QA rows,
+  including one release-claim abstain row, plus privacy/resource/acceptance
+  reviews, `COMMERCIAL_PILOT_BOUNDARY.md`, `commercial_pilot_manifest.json`,
+  and `sha256_manifest.csv`. It reruns v18 with v33 third-party evidence, the
+  v34 official expansion return, and the v35 commercial pilot return. It
+  verifies `v35_commercial_pilot_packet_ready=1`,
+  `closed_corpus_poc_actual_ready=1`, and
+  `real_external_benchmark_verified=1` while keeping
+  `human_review_completed=0` and `real_release_package_ready=0`.
 - The next real boundary is now evidence scaling and review rather than another
   internal mechanics layer: ask for one human review of the v33/v34 evidence
-  packet set, expand v30 into one additional closed-corpus domain, and only
-  then build a release-claim audit packet. The
+  packet set and then build a release-claim audit packet that consumes
+  v33/v34/v35. The
   detailed post-mode plan is tracked in `docs/POST_V18_RESEARCH_ROADMAP.md`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
