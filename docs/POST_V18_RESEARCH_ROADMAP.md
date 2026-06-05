@@ -197,7 +197,9 @@ Do not keep adding internal packaging layers after v40 unless a real return expo
 - Month 3: done. `v38` builds the human-review dispatch bundle for the v33/v34/v35/v36 evidence set.
 - Month 3: done. `v39` builds the transfer archive for the v38 human-review dispatch bundle.
 - Month 3: done. `v40` builds a machine-verified research artifact above v36-v39. It permits bounded public/private preview wording but keeps human-reviewed release and real release package readiness blocked.
-- Next: either share v40 as a machine-verified research artifact, or send the v39 archive to an external reviewer, complete one independent human-review pass, and return `human_review_rows.csv` through v37. The reviewer should either accept GitHub-hosted runner evidence for this stage or request a non-GitHub independent rerun before any release package can be marked ready.
+- Next: do not add another internal packaging layer. Choose one evidence path:
+  research-first evidence scale-up, commercial pilot expansion, or deferred
+  human review only when release-ready wording becomes necessary.
 
 Expansion discipline:
 
@@ -205,6 +207,23 @@ Expansion discipline:
 - Keep architecture changes out of benchmark-expansion runs. If the architecture changes, re-run the smallest v31/v30/v32-equivalent closure first.
 - Keep all raw predictions and evidence rows before evaluation. No oracle, no raw-input extractor, and no post-hoc answer repair.
 - Treat negative and abstain rows as first-class evidence. A pass is not only high answer accuracy; it is also correct refusal when the source does not support an answer.
+
+Post-v40 recommended sequence:
+
+- `v41` evidence scale-up: expand RULER NIAH from 6 rows to 30 or 50 rows while keeping context length fixed at 4096. This is the best research move because it grows the verified official benchmark slice without changing more than one axis at once.
+- `v42` evidence scale-up: increase context length by one step after v41 passes with the same source/evaluator contract.
+- `v43` evidence scale-up: add a small LongBench v2 slice only after the RULER NIAH row-count and context-length axes are stable.
+- `v41-commercial` optional industry track: expand the `internal_docs` pilot into either product-manual QA or incident-log QA. Keep source-cited QA rows, abstain rows, wrong-answer guard, privacy review, resource envelope, and acceptance review.
+- Human review remains optional for now. Reuse v37-v39 only if the project needs to revisit `real_release_package_ready=1`; until then, v40 is sufficient as a machine-verified artifact.
+
+Invariant for all next experiments:
+
+- No oracle.
+- No raw-input extractor.
+- Keep RouteMemory lineage.
+- Keep official evaluator/source hashes.
+- Keep abstain and negative rows as first-class evidence.
+- Do not claim LLM replacement, Transformer replacement, production readiness, or full commercial deployment readiness.
 
 Research priority:
 

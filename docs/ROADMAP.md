@@ -1325,13 +1325,15 @@ Current next boundary:
   while keeping
   `human_review_completed=0`, `human_review_required_for_public_release=1`, and
   `real_release_package_ready=0`.
-- The next real boundary is now evidence scaling and review rather than another
-  internal mechanics layer. Share v40 only as a machine-verified research
-  artifact; for human-reviewed release language, send the v39 archive to an
-  external reviewer, return `human_review_rows.csv` through v37, and either
-  accept the current GitHub-hosted clean-runner evidence or require a non-GitHub
-  independent rerun. The detailed post-mode plan is tracked in
-  `docs/POST_V18_RESEARCH_ROADMAP.md`.
+- The next real boundary is now evidence scaling rather than another internal
+  mechanics layer. Research-first path: `v41` expands RULER NIAH from 6 rows to
+  30 or 50 rows at the same 4096 context length, `v42` raises context length by
+  one step, and `v43` adds a small LongBench v2 slice. Commercial path:
+  `v41-commercial` expands the `internal_docs` pilot into product-manual QA or
+  incident-log QA with source-cited rows, abstentions, wrong-answer guard,
+  privacy review, resource envelope, and acceptance review. Human review stays
+  deferred until release-ready wording is needed; v37-v39 remain the reuse path
+  for returned `human_review_rows.csv`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
