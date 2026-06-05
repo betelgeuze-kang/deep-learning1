@@ -100,6 +100,7 @@ checks = {
         "experiments/test_v15a_independent_reproduction_package.sh",
         "stdout.txt",
         "rerun_manifest.json",
+        "v15a_package_manifest.json",
         "METRIC_DELTA_SRC",
         "review_rows_auto_copied",
     ],

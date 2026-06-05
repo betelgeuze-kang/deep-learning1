@@ -107,6 +107,9 @@ def verify_third_party(path_text):
     missing = [rel for rel in required if not (path / rel).is_file()]
     for rel in required:
         copy_if_exists(path / rel, f"evidence_copies/third_party_rerun/{rel}")
+    returned_package_manifest = path / "v15a_package_manifest.json"
+    if returned_package_manifest.is_file():
+        copy_if_exists(returned_package_manifest, "evidence_copies/third_party_rerun/v15a_package_manifest.json")
     if missing:
         result["reason"] = "missing: " + "|".join(missing)
         return result
@@ -121,7 +124,11 @@ def verify_third_party(path_text):
     exit_zero = all(str(row.get("exit_code", "")) == "0" for row in commands) and bool(commands)
     metric_pass = metric_rows and all(boolish(row.get("delta_within_tolerance", 0)) == 1 for row in metric_rows)
     review_pass = review_rows and all(row.get("status") == "pass" for row in review_rows)
-    package_hash_ok = manifest.get("v15a_package_manifest_sha256", "") == sha256(root / "results" / "v15a_independent_reproduction_package" / "package_001" / "package_manifest.json")
+    expected_package_sha = manifest.get("v15a_package_manifest_sha256", "")
+    local_package_manifest = root / "results" / "v15a_independent_reproduction_package" / "package_001" / "package_manifest.json"
+    local_package_hash_ok = local_package_manifest.is_file() and expected_package_sha == sha256(local_package_manifest)
+    returned_package_hash_ok = returned_package_manifest.is_file() and expected_package_sha == sha256(returned_package_manifest)
+    package_hash_ok = local_package_hash_ok or returned_package_hash_ok
     frozen_ok = boolish(manifest.get("frozen_queries_verified", 0)) == 1
     source_ok = boolish(manifest.get("source_snapshot_verified", 0)) == 1
     external_reviewer = boolish(identity.get("external_independent_reviewer", 0))

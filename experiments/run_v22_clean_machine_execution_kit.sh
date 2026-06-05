@@ -157,6 +157,7 @@ capture_script.write_text(
             'REVIEW_DIR="$ROOT_DIR/results/v15b_nonfixture_review_independent_rerun/review_001"',
             'PACKAGE_SHA=""',
             'if [ -f "$PACKAGE_MANIFEST" ]; then PACKAGE_SHA="$(sha256sum "$PACKAGE_MANIFEST" | awk \'{print "sha256:" $1}\')"; fi',
+            'if [ -f "$PACKAGE_MANIFEST" ]; then cp "$PACKAGE_MANIFEST" "$RETURN_DIR/v15a_package_manifest.json"; fi',
             'METRIC_DELTA_SRC="$REVIEW_DIR/metric_deltas/metric_delta_rows.csv"',
             'REVIEW_ROWS_SRC="$REVIEW_DIR/review/review_rows.csv"',
             'METRIC_READY=0',
