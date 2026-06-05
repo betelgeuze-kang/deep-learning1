@@ -1298,11 +1298,21 @@ Current next boundary:
   `v38_human_review_dispatch_bundle_ready=1`, `return_template_ready=1`, and
   `verify_script_ready=1`, while keeping `human_review_completed=0` and
   `real_release_package_ready=0`.
+- `v39` is closed as the human review dispatch archive above v38. It archives
+  the v38 bundle as
+  `archive/v38_human_review_dispatch_bundle_bundle_001.tar.gz`, writes
+  `archive/ARCHIVE_SHA256SUMS.txt`, `archive/ARCHIVE_FILE_LIST.txt`,
+  `SEND_ARCHIVE_README.md`, `artifact_manifest.csv`,
+  `human_review_dispatch_archive_manifest.json`, and `sha256_manifest.csv`. It
+  verifies `v39_human_review_dispatch_archive_ready=1`,
+  `archive_sha256_ready=1`, `archive_file_list_ready=1`, and required
+  review/return/verify archive members present while keeping
+  `human_review_completed=0` and `real_release_package_ready=0`.
 - The next real boundary is now evidence scaling and review rather than another
-  internal mechanics layer: send the v38 `review_packet/` to an external
-  reviewer, return `human_review_rows.csv` through v37, and either accept the
-  current GitHub-hosted clean-runner evidence or require a non-GitHub
-  independent rerun. The
+  internal mechanics layer: send the v39 archive to an external reviewer,
+  return `human_review_rows.csv` through v37, and either accept the current
+  GitHub-hosted clean-runner evidence or require a non-GitHub independent rerun.
+  The
   detailed post-mode plan is tracked in `docs/POST_V18_RESEARCH_ROADMAP.md`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
