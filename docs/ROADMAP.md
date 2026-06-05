@@ -1358,14 +1358,16 @@ Current next boundary:
   v45 official benchmark evidence, uses no local teacher-harness labels, and
   verifies ranking improvement plus wrong-candidate guard through v18, while
   keeping `real_release_package_ready=0`.
-- The next real boundary is now buyer-visible audit evidence rather than
-  another internal mechanics layer. The remaining recommended sequence starts
-  at `v47` offline domain policy update over candidate selection, span read,
-  hint strength, abstain/retry, and verifier decision. The claim remains local
-  evidence-bound QA/audit assistance, not Transformer replacement, frontier
-  local LLM, GPU acceleration, long-context solved, or expert replacement.
-  Human review stays deferred until release-ready wording is needed; v37-v39
-  remain the reuse path for returned `human_review_rows.csv`.
+- `v47` is closed as the Offline Domain Policy Update above v46/v18. It writes
+  15 offline policy rows across 3 domains and 5 learning targets: candidate
+  selection, span read, hint strength, abstain/retry, and verifier decision.
+  It keeps `expert_replacement_claim=0`, `release_ready_claim=0`, and
+  `real_release_package_ready=0`.
+- The v41-v47 impact roadmap is closed. The claim remains local evidence-bound
+  QA/audit assistance, not Transformer replacement, frontier local LLM, GPU
+  acceleration, long-context solved, or expert replacement. Human review stays
+  deferred until release-ready wording is needed; v37-v39 remain the reuse path
+  for returned `human_review_rows.csv`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
