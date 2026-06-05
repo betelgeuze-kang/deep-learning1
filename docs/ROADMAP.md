@@ -1277,10 +1277,21 @@ Current next boundary:
   packets. It keeps `human_review_completed=0` and
   `real_release_package_ready=0`, with release-ready product and stronger model
   replacement claims blocked.
+- `v37` is closed as the human review intake verifier above v36. It copies the
+  v36 human-review request/template, consumes an optional returned
+  `human_review_rows.csv`, normalizes the four required review items, checks
+  reviewer identity, timestamps, and all-pass status, and writes
+  `human_review_intake_manifest.json`, `normalized_human_review_rows.csv`,
+  `missing_review_rows.csv`, and `sha256_manifest.csv`. The default current run
+  verifies `v37_human_review_intake_ready=1` while keeping
+  `human_review_return_supplied=0`, `human_review_completed=0`, and
+  `real_release_package_ready=0`; an isolated fixture pass path verifies that a
+  complete review return can set `evidence_set_human_review_accepted=1` without
+  making release readiness automatic.
 - The next real boundary is now evidence scaling and review rather than another
-  internal mechanics layer: ask for one human review of the v33/v34/v35/v36
-  evidence set and either accept the current GitHub-hosted clean-runner evidence
-  or require a non-GitHub independent rerun. The
+  internal mechanics layer: return `human_review_rows.csv` through v37 for the
+  v33/v34/v35/v36 evidence set and either accept the current GitHub-hosted
+  clean-runner evidence or require a non-GitHub independent rerun. The
   detailed post-mode plan is tracked in `docs/POST_V18_RESEARCH_ROADMAP.md`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
