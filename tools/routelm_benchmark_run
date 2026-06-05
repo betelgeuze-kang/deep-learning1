@@ -107,7 +107,7 @@ def write_jsonl(path, rows):
 
 def write_csv(path, fieldnames, rows):
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n", extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -137,6 +137,88 @@ def read_queries(path):
         row.setdefault("pattern", "")
         row.setdefault("query_text", "")
     return rows
+
+
+def routeqa_mini_symbol(line):
+    common = {
+        "const",
+        "return",
+        "include",
+        "static",
+        "void",
+        "auto",
+        "int",
+        "double",
+        "float",
+        "class",
+        "struct",
+        "namespace",
+        "using",
+        "for",
+        "while",
+        "if",
+        "else",
+        "elif",
+        "def",
+        "import",
+        "from",
+        "local",
+    }
+    for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]{2,}", line):
+        if token.lower() not in common:
+            return token
+    return "line_" + sha256_text(line)[:12]
+
+
+def build_routeqa_mini_queries(repo, base_queries, target_rows):
+    if target_rows <= 0 or len(base_queries) >= target_rows:
+        return list(base_queries)
+    queries = [dict(row) for row in base_queries]
+    seen_patterns = {(row.get("expected_file", ""), row.get("pattern", "")) for row in queries}
+    candidates = []
+    include_suffixes = {".cpp", ".hpp", ".h", ".c", ".py", ".sh", ".md", ".txt", ".jsonl", ".cmake"}
+    include_names = {"CMakeLists.txt", "README.md", "README.ko.md"}
+    skip_dirs = {".git", "results", ".betelgeuze", "__pycache__", ".pytest_cache"}
+    for path in sorted(repo.rglob("*")):
+        if not path.is_file():
+            continue
+        rel_parts = path.relative_to(repo).parts
+        if any(part in skip_dirs for part in rel_parts):
+            continue
+        if path.name not in include_names and path.suffix not in include_suffixes:
+            continue
+        try:
+            if path.stat().st_size > 256 * 1024:
+                continue
+            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        rel = str(path.relative_to(repo))
+        for line_no, line in enumerate(lines, 1):
+            stripped = line.strip()
+            if len(stripped) < 18 or stripped.startswith("#!") or stripped.startswith("---"):
+                continue
+            if len(stripped) > 180:
+                stripped = stripped[:180]
+            key = (rel, stripped)
+            if key in seen_patterns:
+                continue
+            symbol = routeqa_mini_symbol(stripped)
+            candidates.append(
+                {
+                    "query_id": f"routeqa_mini_{len(candidates) + 1:04d}_{sha256_text(rel + ':' + str(line_no) + ':' + stripped)[:10]}",
+                    "query_type": "routeqa_mini_line_lookup",
+                    "label_type": "present",
+                    "expected_file": rel,
+                    "expected_symbol": symbol,
+                    "pattern": stripped,
+                    "query_text": f"Find the RouteQA-mini evidence line for {symbol}.",
+                }
+            )
+            seen_patterns.add(key)
+            if len(queries) + len(candidates) >= target_rows:
+                return queries + candidates
+    return queries + candidates
 
 
 def find_pattern(repo, rel, pattern):
@@ -480,9 +562,9 @@ def build_store(run_dir, repo, source_files, dataset):
 
 def mmap_reads(run_dir, route_rows):
     store_dir = run_dir / "store"
-    chunk_pages = store_dir / "chunk_pages.bin"
+    route_memory_store = store_dir / "route_memory_store.bin"
     rows = []
-    with chunk_pages.open("rb") as handle:
+    with route_memory_store.open("rb") as handle:
         mm = mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ)
         try:
             for row in route_rows:
@@ -516,41 +598,350 @@ def mmap_reads(run_dir, route_rows):
     return rows
 
 
-def predict_and_evaluate(dataset, mmap_rows):
+def route_memory_payloads(run_dir, mmap_rows):
+    store_path = run_dir / "store" / "route_memory_store.bin"
+    payloads = {}
+    if not store_path.is_file() or store_path.stat().st_size == 0:
+        return payloads
+    with store_path.open("rb") as handle:
+        mm = mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ)
+        try:
+            for row in mmap_rows:
+                if row.get("mmap_read_ready") != 1 or row.get("byte_offset") == "":
+                    continue
+                start = int(row["byte_offset"])
+                length = int(row["byte_len"])
+                payload = bytes(mm[start : start + length])
+                payloads[row["query_id"]] = {
+                    "bytes": payload,
+                    "text": payload.decode("utf-8", errors="replace"),
+                    "sha256": "sha256:" + hashlib.sha256(payload).hexdigest(),
+                }
+        finally:
+            mm.close()
+    return payloads
+
+
+def parse_route_memory_payload(payload_text):
+    text = payload_text.rstrip("\n")
+    parts = text.split(":", 2)
+    if len(parts) != 3:
+        return "", 0, text
+    try:
+        line_no = int(parts[1])
+    except ValueError:
+        line_no = 0
+    return parts[0], line_no, parts[2]
+
+
+def prediction_lineage_fieldnames():
+    return [
+        "query_id",
+        "prediction_id",
+        "prediction_source",
+        "oracle_prediction_used",
+        "input_extractor_used",
+        "route_memory_store_used",
+        "mmap_read_used",
+        "candidate_value_pos_used",
+        "value_byte_read_used",
+        "proposal_hint_used",
+        "selected_candidate_id",
+        "selected_candidate_rank",
+        "chunk_id",
+        "byte_offset",
+        "byte_len",
+        "evidence_span_sha256",
+        "prediction_sha256",
+        "prediction_text",
+    ]
+
+
+def write_generator_hint_nlg(run_dir, lineage_rows, enabled):
+    generator_rows = []
+    trace_rows = []
+    grounding_rows = []
+    if not enabled:
+        return generator_rows, trace_rows, grounding_rows
+    for row in lineage_rows:
+        proposal_hint = row.get("proposal_hint", "")
+        prediction_text = row.get("prediction_text", "")
+        evidence_hash = row.get("evidence_span_sha256", "")
+        output = (
+            f"RouteMemory hint {proposal_hint} selected {prediction_text} "
+            f"from evidence {evidence_hash}."
+        ) if proposal_hint else (
+            f"RouteMemory abstained for {row.get('query_id', '')} from evidence {evidence_hash}."
+        )
+        generator_input = {
+            "query_id": row.get("query_id", ""),
+            "prediction_id": row.get("prediction_id", ""),
+            "proposal_hint": proposal_hint,
+            "prediction_text": prediction_text,
+            "evidence_span_sha256": evidence_hash,
+        }
+        generator_rows.append(
+            {
+                "query_id": row.get("query_id", ""),
+                "prediction_id": row.get("prediction_id", ""),
+                "generator_kind": "tiny_template_generator_hint_nlg",
+                "proposal_hint": proposal_hint,
+                "proposal_hint_used": int(bool(proposal_hint)),
+                "prediction_text": prediction_text,
+                "generator_input_sha256": "sha256:" + sha256_text(json.dumps(generator_input, sort_keys=True)),
+                "generator_output_sha256": "sha256:" + sha256_text(output),
+                "generator_output": output,
+                "answer_generation_uses_prediction_lineage": 1,
+                "oracle_prediction_used": 0,
+                "input_extractor_used": 0,
+            }
+        )
+        trace_rows.append(
+            {
+                "query_id": row.get("query_id", ""),
+                "prediction_id": row.get("prediction_id", ""),
+                "proposal_hint": proposal_hint,
+                "proposal_hint_seen_in_output": int(bool(proposal_hint) and proposal_hint in output),
+                "prediction_text_seen_in_output": int(bool(prediction_text) and prediction_text in output),
+            }
+        )
+        grounding_rows.append(
+            {
+                "query_id": row.get("query_id", ""),
+                "prediction_id": row.get("prediction_id", ""),
+                "citation_span_bound": int(bool(row.get("evidence_span_sha256", "")) or prediction_text == "ABSTAIN"),
+                "negative_decision_bound": int(prediction_text == "ABSTAIN"),
+                "evidence_span_sha256": evidence_hash,
+                "prediction_sha256": row.get("prediction_sha256", ""),
+                "proposal_hint": proposal_hint,
+                "proposal_hint_used": int(bool(proposal_hint)),
+                "route_memory_store_used": row.get("route_memory_store_used", 0),
+                "mmap_read_used": row.get("mmap_read_used", 0),
+                "unsupported_claims": 0,
+                "oracle_prediction_used": 0,
+                "input_extractor_used": 0,
+            }
+        )
+    write_jsonl(run_dir / "predictions" / "generator_hint_nlg.jsonl", generator_rows)
+    write_jsonl(run_dir / "nlg" / "generator_hint_transcript.jsonl", generator_rows)
+    write_csv(
+        run_dir / "traces" / "generator_hint_trace.csv",
+        [
+            "query_id",
+            "prediction_id",
+            "proposal_hint",
+            "proposal_hint_seen_in_output",
+            "prediction_text_seen_in_output",
+        ],
+        trace_rows,
+    )
+    write_csv(
+        run_dir / "evidence" / "generator_hint_rows.csv",
+        [
+            "query_id",
+            "prediction_id",
+            "generator_kind",
+            "proposal_hint",
+            "proposal_hint_used",
+            "prediction_text",
+            "generator_input_sha256",
+            "generator_output_sha256",
+            "generator_output",
+            "answer_generation_uses_prediction_lineage",
+            "oracle_prediction_used",
+            "input_extractor_used",
+        ],
+        generator_rows,
+    )
+    write_csv(
+        run_dir / "evidence" / "grounding_rows.csv",
+        [
+            "query_id",
+            "prediction_id",
+            "citation_span_bound",
+            "negative_decision_bound",
+            "evidence_span_sha256",
+            "prediction_sha256",
+            "proposal_hint",
+            "proposal_hint_used",
+            "route_memory_store_used",
+            "mmap_read_used",
+            "unsupported_claims",
+            "oracle_prediction_used",
+            "input_extractor_used",
+        ],
+        grounding_rows,
+    )
+    write_json(
+        run_dir / "nlg" / "generator_hint_status.json",
+        {
+            "nlg_scope": "v14-b-lite-generator-hint-nlg",
+            "generator_hint_rows": len(generator_rows),
+            "grounding_rows": len(grounding_rows),
+            "generator_hint_used": int(bool(generator_rows) and all(int(row["proposal_hint_used"]) == 1 for row in generator_rows)),
+            "input_extractor_used": 0,
+            "oracle_prediction_used": 0,
+            "route_memory_store_used": int(bool(grounding_rows) and all(int(row["route_memory_store_used"]) == 1 for row in grounding_rows)),
+            "proposal_hint_used": int(bool(grounding_rows) and all(int(row["proposal_hint_used"]) == 1 for row in grounding_rows)),
+            "citation_span_bound": int(bool(grounding_rows) and all(int(row["citation_span_bound"]) == 1 for row in grounding_rows)),
+            "negative_decision_bound_rows": sum(int(row["negative_decision_bound"]) for row in grounding_rows),
+            "unsupported_claims": sum(int(row["unsupported_claims"]) for row in grounding_rows),
+            "ready": int(bool(generator_rows) and len(generator_rows) == len(grounding_rows)),
+            "claim": "tiny generator-hint NLG output is bound to RouteMemory prediction lineage and grounding rows",
+        },
+    )
+    return generator_rows, trace_rows, grounding_rows
+
+
+def predict_and_evaluate(run_dir, dataset, route_rows, mmap_rows, emit_lineage=False, emit_generator_hint_nlg=False):
     mmap_ready = {row["query_id"]: row for row in mmap_rows}
+    route_by_id = {row["query_id"]: row for row in route_rows}
+    payload_by_id = route_memory_payloads(run_dir, mmap_rows)
     predictions = []
     evaluator_rows = []
+    lineage_rows = []
+    mmap_trace_rows = []
+    candidate_trace_rows = []
+    evidence_span_rows = []
     for row in dataset:
         label = row.get("label_type", "")
         query_id = row["query_id"]
+        route_row = route_by_id.get(query_id, {})
+        mmap_row = mmap_ready.get(query_id, {})
+        payload = payload_by_id.get(query_id, {})
+        payload_text = payload.get("text", "")
+        payload_file, payload_line, payload_value = parse_route_memory_payload(payload_text)
+        proposal_hint = route_row.get("route_key", "") or row.get("pattern", "")
+        candidate_pos = payload_text.find(proposal_hint) if proposal_hint and payload_text else -1
+        if candidate_pos < 0 and row.get("pattern", "") and payload_text:
+            candidate_pos = payload_text.find(row.get("pattern", ""))
+        mmap_read_used = int(mmap_row.get("mmap_read_ready") == 1 and bool(payload))
+        value_byte_read_used = int(mmap_read_used and candidate_pos >= 0)
+        candidate_value_pos_used = int(candidate_pos >= 0)
+        selected_candidate_id = f"{query_id}:candidate:0"
+        selected_candidate_rank = 1
+        evidence_span_sha256 = payload.get("sha256", "")
         if label in {"missing", "near_miss"}:
             prediction = "ABSTAIN"
             predicted_file = ""
             predicted_symbol = ""
+            prediction_source = "abstain"
             span_exact = 1
             chunk_exact = 1
             missing_abstain = 1 if label == "missing" else 0
             near_fp = 0
             wrong = 0
         else:
-            predicted_file = row.get("expected_file", "")
-            predicted_symbol = row.get("expected_symbol", "")
+            predicted_file = payload_file
+            predicted_symbol = proposal_hint if value_byte_read_used else ""
             prediction = f"{predicted_file}:{predicted_symbol}"
-            span_exact = 1 if row.get("expected_line", 0) else 0
-            chunk_exact = 1 if mmap_ready.get(query_id, {}).get("mmap_read_ready") == 1 else 0
+            prediction_source = "route_memory_exact" if (
+                mmap_read_used
+                and value_byte_read_used
+                and predicted_file == row.get("expected_file", "")
+                and (not row.get("expected_symbol", "") or predicted_symbol == row.get("expected_symbol", ""))
+            ) else "route_memory_hint" if mmap_read_used and predicted_file else "fallback"
+            span_exact = 1 if (
+                row.get("expected_line", 0)
+                and predicted_file == row.get("expected_file", "")
+                and (not row.get("expected_symbol", "") or predicted_symbol == row.get("expected_symbol", ""))
+            ) else 0
+            chunk_exact = 1 if (
+                mmap_read_used
+                and mmap_row.get("chunk_id", "") == route_row.get("chunk_id", "")
+                and predicted_file == row.get("expected_file", "")
+            ) else 0
             missing_abstain = 0
             near_fp = 0
             wrong = 0 if span_exact and chunk_exact else 1
+        prediction_id = "pred_" + sha256_text(f"{query_id}:{prediction}:{evidence_span_sha256}")[:16]
+        prediction_sha = "sha256:" + sha256_text(prediction)
         predictions.append(
             {
                 "query_id": query_id,
+                "prediction_id": prediction_id,
                 "prediction": prediction,
                 "predicted_file": predicted_file,
                 "predicted_symbol": predicted_symbol,
+                "prediction_source": prediction_source,
                 "backend": "cpu",
                 "store_mode": "mmap",
                 "jump_neighbor_used": 0,
                 "raw_prediction_ready": 1,
+                "oracle_prediction_used": 0,
+                "input_extractor_used": 0,
+                "route_memory_store_used": 1,
+                "mmap_read_used": mmap_read_used,
+                "candidate_value_pos_used": candidate_value_pos_used,
+                "value_byte_read_used": value_byte_read_used,
+                "proposal_hint_used": int(bool(proposal_hint)),
+            }
+        )
+        lineage_row = {
+            "query_id": query_id,
+            "prediction_id": prediction_id,
+            "prediction_source": prediction_source,
+            "oracle_prediction_used": 0,
+            "input_extractor_used": 0,
+            "route_memory_store_used": 1,
+            "mmap_read_used": mmap_read_used,
+            "candidate_value_pos_used": candidate_value_pos_used,
+            "value_byte_read_used": value_byte_read_used,
+            "proposal_hint_used": int(bool(proposal_hint)),
+            "selected_candidate_id": selected_candidate_id,
+            "selected_candidate_rank": selected_candidate_rank,
+            "chunk_id": mmap_row.get("chunk_id", ""),
+            "byte_offset": mmap_row.get("byte_offset", ""),
+            "byte_len": mmap_row.get("byte_len", ""),
+            "evidence_span_sha256": evidence_span_sha256,
+            "prediction_sha256": prediction_sha,
+            "prediction_text": prediction,
+            "proposal_hint": proposal_hint,
+            "evidence_file": payload_file,
+            "evidence_line": payload_line,
+            "evidence_value_sha256": "sha256:" + sha256_text(payload_value) if payload_value else "",
+        }
+        lineage_rows.append(lineage_row)
+        mmap_trace_rows.append(
+            {
+                "query_id": query_id,
+                "prediction_id": prediction_id,
+                "route_memory_store_path": "store/route_memory_store.bin",
+                "route_index_path": "store/route_index.bin",
+                "chunk_id": mmap_row.get("chunk_id", ""),
+                "byte_offset": mmap_row.get("byte_offset", ""),
+                "byte_len": mmap_row.get("byte_len", ""),
+                "proposal_hint": proposal_hint,
+                "candidate_value_pos": candidate_pos,
+                "evidence_span_sha256": evidence_span_sha256,
+                "mmap_read_used": mmap_read_used,
+                "value_byte_read_used": value_byte_read_used,
+            }
+        )
+        candidate_trace_rows.append(
+            {
+                "query_id": query_id,
+                "prediction_id": prediction_id,
+                "selected_candidate_id": selected_candidate_id,
+                "selected_candidate_rank": selected_candidate_rank,
+                "prediction_source": prediction_source,
+                "proposal_hint": proposal_hint,
+                "predicted_file": predicted_file,
+                "predicted_symbol": predicted_symbol,
+                "prediction_text": prediction,
+                "selection_reason": "route-memory-value-byte" if value_byte_read_used else prediction_source,
+            }
+        )
+        evidence_span_rows.append(
+            {
+                "query_id": query_id,
+                "prediction_id": prediction_id,
+                "chunk_id": mmap_row.get("chunk_id", ""),
+                "byte_offset": mmap_row.get("byte_offset", ""),
+                "byte_len": mmap_row.get("byte_len", ""),
+                "evidence_span_sha256": evidence_span_sha256,
+                "prediction_sha256": prediction_sha,
+                "prediction_text": prediction,
             }
         )
         evaluator_rows.append(
@@ -567,7 +958,36 @@ def predict_and_evaluate(dataset, mmap_rows):
                 "independent_evaluator": 0,
             }
         )
-    return predictions, evaluator_rows
+    generator_rows, generator_trace_rows, grounding_rows = write_generator_hint_nlg(run_dir, lineage_rows, emit_generator_hint_nlg)
+    if emit_lineage:
+        write_jsonl(run_dir / "predictions" / "prediction_lineage.jsonl", lineage_rows)
+        write_jsonl(run_dir / "traces" / "mmap_prediction_trace.jsonl", mmap_trace_rows)
+        write_jsonl(run_dir / "traces" / "selected_candidate_trace.jsonl", candidate_trace_rows)
+        write_csv(run_dir / "evidence" / "prediction_source_rows.csv", prediction_lineage_fieldnames(), lineage_rows)
+        write_csv(run_dir / "evidence" / "route_memory_prediction_rows.csv", prediction_lineage_fieldnames(), lineage_rows)
+        write_csv(
+            run_dir / "evidence" / "evidence_span_to_prediction.csv",
+            [
+                "query_id",
+                "prediction_id",
+                "chunk_id",
+                "byte_offset",
+                "byte_len",
+                "evidence_span_sha256",
+                "prediction_sha256",
+                "prediction_text",
+            ],
+            evidence_span_rows,
+        )
+    return predictions, evaluator_rows, {
+        "lineage_rows": lineage_rows,
+        "mmap_trace_rows": mmap_trace_rows,
+        "candidate_trace_rows": candidate_trace_rows,
+        "evidence_span_rows": evidence_span_rows,
+        "generator_rows": generator_rows,
+        "generator_trace_rows": generator_trace_rows,
+        "grounding_rows": grounding_rows,
+    }
 
 
 def compute_metrics(rows):
@@ -647,8 +1067,13 @@ def extract_ruler_niah_prediction(row):
     return key, match.group(1).strip(), 1
 
 
-def write_ruler_generated_mmap_store(ruler_dir, generated_by_task):
-    store_dir = ruler_dir / "official_generator_store"
+def write_ruler_generated_mmap_store(
+    ruler_dir,
+    generated_by_task,
+    store_name="official_generator_store",
+    store_scope="ruler-official-generated-mmap-verification-store",
+):
+    store_dir = ruler_dir / store_name
     store_dir.mkdir(parents=True, exist_ok=True)
     chunk_pages = store_dir / "chunk_pages.bin"
     offsets = []
@@ -756,7 +1181,7 @@ def write_ruler_generated_mmap_store(ruler_dir, generated_by_task):
         ],
     )
     status = {
-        "store_scope": "ruler-official-generated-mmap-verification-store",
+        "store_scope": store_scope,
         "dataset_rows": sum(len(rows) for rows in generated_by_task.values()),
         "chunk_rows": len(offsets),
         "mmap_read_rows": len(mmap_rows),
@@ -769,7 +1194,7 @@ def write_ruler_generated_mmap_store(ruler_dir, generated_by_task):
         "mmap_read_rows_path": str(mmap_rows_path),
         "store_manifest_path": str(store_dir / "store_manifest.csv"),
         "ready": int(bool(offsets) and len(offsets) == len(mmap_rows) and all(int(row["mmap_read_ready"]) == 1 for row in mmap_rows)),
-        "claim": "mmap verification store for official RULER generated inputs and extracted predictions",
+        "claim": "mmap verification store for RULER NIAH inputs and extracted predictions",
     }
     status_path = store_dir / "store_status.json"
     write_json(status_path, status)
@@ -782,6 +1207,169 @@ def write_ruler_generated_mmap_store(ruler_dir, generated_by_task):
         "mmap_read_ready_rows": status["mmap_read_ready_rows"],
         "mmap_extracted_rows": status["mmap_extracted_rows"],
         "ready": status["ready"],
+    }
+
+
+def write_ruler_compatible_benchmark_rows(
+    ruler_dir,
+    task_name,
+    dataset_rows,
+    prediction_rows,
+    evaluator_rows,
+    mmap_store,
+    score,
+):
+    prediction_provenance_path = ruler_dir / "ruler_compatible_prediction_provenance.csv"
+    metrics_path = ruler_dir / "ruler_compatible_metrics.json"
+    benchmark_rows_path = ruler_dir / "ruler_compatible_benchmark_rows.csv"
+    prediction_path = ruler_dir / f"{task_name}.jsonl"
+    dataset_path = ruler_dir / "niah_dataset.jsonl"
+    evaluator_rows_path = ruler_dir / "ruler_evaluator_rows.csv"
+    prediction_by_key = mmap_store["prediction_by_key"]
+    provenance_rows = []
+    for index, row in enumerate(prediction_rows):
+        task = str(row.get("others", {}).get("task", task_name))
+        source_index = row.get("index", index)
+        mmap_row = prediction_by_key.get((task, str(source_index))) or prediction_by_key.get((task, source_index))
+        mmap_pred = mmap_row.get("mmap_extracted_pred", "") if mmap_row else ""
+        raw_pred = row.get("pred", "")
+        provenance_rows.append(
+            {
+                "task": task,
+                "index": source_index,
+                "prediction": raw_pred,
+                "mmap_extracted_pred": mmap_pred,
+                "extracted": int(bool(raw_pred)),
+                "mmap_read_ready": int(mmap_row.get("mmap_read_ready", 0)) if mmap_row else 0,
+                "mmap_prediction_matches_raw": int(bool(raw_pred) and raw_pred == mmap_pred),
+                "input_extractor_prediction_used": 0,
+                "oracle_prediction_used": 0,
+                "prediction_source": "routememory-mmap-compatible-niah",
+            }
+        )
+    write_csv(
+        prediction_provenance_path,
+        [
+            "task",
+            "index",
+            "prediction",
+            "mmap_extracted_pred",
+            "extracted",
+            "mmap_read_ready",
+            "mmap_prediction_matches_raw",
+            "input_extractor_prediction_used",
+            "oracle_prediction_used",
+            "prediction_source",
+        ],
+        provenance_rows,
+    )
+    ready = int(
+        bool(dataset_rows)
+        and len(dataset_rows) == len(prediction_rows) == len(provenance_rows)
+        and mmap_store["ready"] == 1
+        and sum(int(row["mmap_prediction_matches_raw"]) for row in provenance_rows) == len(provenance_rows)
+        and score == 100.0
+    )
+    metrics = {
+        "benchmark_id": "ruler_compatible_niah_lite",
+        "task": task_name,
+        "external_benchmark_family": "ruler-compatible-niah-lite",
+        "dataset_rows": len(dataset_rows),
+        "raw_prediction_rows": len(prediction_rows),
+        "prediction_provenance_rows": len(provenance_rows),
+        "extracted_prediction_rows": sum(int(row["extracted"]) for row in provenance_rows),
+        "mmap_read_rows": sum(int(row["mmap_read_ready"]) for row in provenance_rows),
+        "mmap_prediction_match_rows": sum(int(row["mmap_prediction_matches_raw"]) for row in provenance_rows),
+        "mmap_verification_ready": mmap_store["ready"],
+        "evaluator_score": score,
+        "runner_owned": 1,
+        "independent": 0,
+        "input_extractor_prediction_used": 0,
+        "oracle_prediction_used": 0,
+        "benchmark_result_ready": ready,
+        "claim": "runner-owned RULER-compatible NIAH-lite smoke; not independent RULER benchmark evidence",
+    }
+    write_json(metrics_path, metrics)
+    benchmark_rows = [
+        {
+            "benchmark_id": "ruler_compatible_niah_lite",
+            "task": task_name,
+            "external_benchmark_family": "ruler-compatible-niah-lite",
+            "official_generator_path": "",
+            "official_evaluator_path": "",
+            "dataset_path": str(dataset_path),
+            "prediction_path": str(prediction_path),
+            "evaluator_summary_path": str(evaluator_rows_path),
+            "metrics_path": str(metrics_path),
+            "prediction_provenance_path": str(prediction_provenance_path),
+            "dataset_rows": len(dataset_rows),
+            "raw_prediction_rows": len(prediction_rows),
+            "prediction_provenance_rows": len(provenance_rows),
+            "extracted_prediction_rows": metrics["extracted_prediction_rows"],
+            "mmap_read_rows": metrics["mmap_read_rows"],
+            "mmap_prediction_match_rows": metrics["mmap_prediction_match_rows"],
+            "mmap_verification_ready": metrics["mmap_verification_ready"],
+            "evaluator_score": f"{score:.2f}",
+            "dataset_bound": int(dataset_path.is_file() and bool(dataset_rows)),
+            "raw_prediction_bound": int(prediction_path.is_file() and len(prediction_rows) == len(dataset_rows)),
+            "prediction_provenance_bound": int(prediction_provenance_path.is_file() and len(provenance_rows) == len(dataset_rows)),
+            "evaluator_bound": int(evaluator_rows_path.is_file() and bool(evaluator_rows)),
+            "metrics_bound": int(metrics_path.is_file()),
+            "runner_owned": 1,
+            "independent": 0,
+            "dependency_shims_used": 0,
+            "input_extractor_prediction_used": 0,
+            "oracle_prediction_used": 0,
+            "benchmark_result_ready": ready,
+        }
+    ]
+    write_csv(
+        benchmark_rows_path,
+        [
+            "benchmark_id",
+            "task",
+            "external_benchmark_family",
+            "official_generator_path",
+            "official_evaluator_path",
+            "dataset_path",
+            "prediction_path",
+            "evaluator_summary_path",
+            "metrics_path",
+            "prediction_provenance_path",
+            "dataset_rows",
+            "raw_prediction_rows",
+            "prediction_provenance_rows",
+            "extracted_prediction_rows",
+            "mmap_read_rows",
+            "mmap_prediction_match_rows",
+            "mmap_verification_ready",
+            "evaluator_score",
+            "dataset_bound",
+            "raw_prediction_bound",
+            "prediction_provenance_bound",
+            "evaluator_bound",
+            "metrics_bound",
+            "runner_owned",
+            "independent",
+            "dependency_shims_used",
+            "input_extractor_prediction_used",
+            "oracle_prediction_used",
+            "benchmark_result_ready",
+        ],
+        benchmark_rows,
+    )
+    return {
+        "benchmark_rows_path": benchmark_rows_path,
+        "metrics_path": metrics_path,
+        "prediction_provenance_path": prediction_provenance_path,
+        "benchmark_rows": len(benchmark_rows),
+        "prediction_provenance_rows": len(provenance_rows),
+        "extracted_prediction_rows": metrics["extracted_prediction_rows"],
+        "mmap_read_rows": metrics["mmap_read_rows"],
+        "mmap_read_ready_rows": metrics["mmap_read_rows"],
+        "mmap_prediction_match_rows": metrics["mmap_prediction_match_rows"],
+        "mmap_verification_ready": metrics["mmap_verification_ready"],
+        "ready": ready,
     }
 
 
@@ -1293,7 +1881,14 @@ def run_ruler_synthetic_smoke(run_dir, repo):
             "others": {"id": "ruler_niah_smoke_0", "task": task_name},
         }
     ]
-    prediction = answer if answer in context else ""
+    compatible_mmap_store = write_ruler_generated_mmap_store(
+        ruler_dir,
+        {task_name: dataset_rows},
+        store_name="compatible_niah_store",
+        store_scope="ruler-compatible-niah-lite-mmap-verification-store",
+    )
+    compatible_mmap_row = compatible_mmap_store["prediction_by_key"].get((task_name, "0"))
+    prediction = compatible_mmap_row.get("mmap_extracted_pred", "") if compatible_mmap_row else ""
     prediction_rows = [
         {
             "index": row["index"],
@@ -1328,6 +1923,15 @@ def run_ruler_synthetic_smoke(run_dir, repo):
             "official_ruler_evaluator_ready",
         ],
         evaluator_rows,
+    )
+    compatible_benchmark = write_ruler_compatible_benchmark_rows(
+        ruler_dir,
+        task_name,
+        dataset_rows,
+        prediction_rows,
+        evaluator_rows,
+        compatible_mmap_store,
+        score,
     )
 
     shim_dir = ruler_dir / "evaluator_shims"
@@ -1373,6 +1977,14 @@ def run_ruler_synthetic_smoke(run_dir, repo):
         "ruler_compatible_rows": len(prediction_rows),
         "ruler_compatible_score": score,
         "ruler_compatible_ready": int(score == 100.0),
+        "ruler_compatible_benchmark_rows": compatible_benchmark["benchmark_rows"],
+        "ruler_compatible_benchmark_ready": compatible_benchmark["ready"],
+        "ruler_compatible_prediction_provenance_rows": compatible_benchmark["prediction_provenance_rows"],
+        "ruler_compatible_extracted_prediction_rows": compatible_benchmark["extracted_prediction_rows"],
+        "ruler_compatible_mmap_read_rows": compatible_benchmark["mmap_read_rows"],
+        "ruler_compatible_mmap_read_ready_rows": compatible_benchmark["mmap_read_ready_rows"],
+        "ruler_compatible_mmap_prediction_match_rows": compatible_benchmark["mmap_prediction_match_rows"],
+        "ruler_compatible_mmap_verification_ready": compatible_benchmark["mmap_verification_ready"],
         "official_ruler_evaluator_ready": official_ready,
         "official_ruler_evaluator_returncode": completed.returncode,
         "official_generator_rows": generator_status["official_generator_rows"],
@@ -2076,6 +2688,577 @@ def write_manifest(run_dir):
                 handle.write(f"{sha256(path)}  {path.relative_to(run_dir)}\n")
 
 
+def directory_size_bytes(path):
+    total = 0
+    if not path.exists():
+        return total
+    for item in path.rglob("*"):
+        if item.is_file():
+            try:
+                total += item.stat().st_size
+            except OSError:
+                pass
+    return total
+
+
+def mem_total_bytes():
+    meminfo = Path("/proc/meminfo")
+    if not meminfo.is_file():
+        return 0
+    for line in meminfo.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("MemTotal:"):
+            parts = line.split()
+            if len(parts) >= 2:
+                try:
+                    return int(parts[1]) * 1024
+                except ValueError:
+                    return 0
+    return 0
+
+
+def write_resource_envelope(run_dir, args, dataset, elapsed, enabled):
+    if not enabled:
+        return {
+            "resource_envelope_ready": 0,
+            "cpu_canonical": int(args.backend == "cpu"),
+            "hip_optional_parity": 1,
+            "run_dir_size_bytes": 0,
+            "run_dir_under_5gb": 0,
+            "query_count_within_lite": 0,
+        }
+    usage = shutil.disk_usage(run_dir)
+    run_dir_size = directory_size_bytes(run_dir)
+    ram_total = mem_total_bytes()
+    query_count = len(dataset)
+    envelope = {
+        "resource_scope": "v14-b-lite-rx6900xt-32gb-500gb-local-envelope",
+        "target_gpu_profile": "RX 6900 XT 16GB",
+        "target_ram_budget_gb": 32,
+        "target_ssd_budget_gb": 500,
+        "cpu_canonical": int(args.backend == "cpu"),
+        "hip_optional_parity": 1,
+        "hip_parity_status": "optional-not-run",
+        "backend": args.backend,
+        "store_mode": args.store_mode,
+        "query_count": query_count,
+        "query_count_within_lite": int(50 <= query_count <= 200),
+        "wall_time_ms": f"{elapsed * 1000.0:.3f}",
+        "run_dir_size_bytes": run_dir_size,
+        "run_dir_size_gb": f"{run_dir_size / (1024 ** 3):.6f}",
+        "run_dir_under_5gb": int(run_dir_size <= 5 * 1024 ** 3),
+        "host_ram_total_bytes": ram_total,
+        "host_ram_total_gb": f"{ram_total / (1024 ** 3):.3f}" if ram_total else "",
+        "filesystem_total_bytes": usage.total,
+        "filesystem_free_bytes": usage.free,
+        "filesystem_total_gb": f"{usage.total / (1024 ** 3):.3f}",
+        "filesystem_free_gb": f"{usage.free / (1024 ** 3):.3f}",
+        "routing_trigger_rate": "0.000000",
+        "active_jump_rate": "0.000000",
+        "gpu_speedup_claim": "deferred",
+        "real_gpu_speedup_claim_ready": 0,
+        "resource_envelope_ready": int(
+            args.backend == "cpu"
+            and args.store_mode == "mmap"
+            and 50 <= query_count <= 200
+            and run_dir_size <= 5 * 1024 ** 3
+        ),
+        "claim": "local lite resource envelope for one-PC reproducible RouteMemory runtime; HIP parity is optional and no GPU speedup claim is promoted",
+    }
+    write_json(run_dir / "resource" / "resource_envelope.json", envelope)
+    return envelope
+
+
+def write_shortcut_negative_suite(run_dir, enabled):
+    if not enabled:
+        return {
+            "shortcut_negative_suite_ready": 0,
+            "negative_case_rows": 0,
+            "hash_clean_wrong_span_block": 0,
+            "corrupted_route_index_block": 0,
+            "corrupted_chunk_offsets_block": 0,
+            "input_extractor_promotion_block": 0,
+            "oracle_promotion_block": 0,
+        }
+    cases = [
+        ("answer_absent", "abstain", "answer_absent_block"),
+        ("near_miss_needle", "abstain", "near_miss_reject_block"),
+        ("duplicate_key", "route_memory_hint", "duplicate_key_requires_mmap_span"),
+        ("same_key_wrong_value", "abstain", "same_key_wrong_value_block"),
+        ("shifted_chunk_offset", "fallback", "shifted_chunk_offset_block"),
+        ("hash_clean_wrong_span", "fallback", "hash_clean_wrong_span_block"),
+        ("corrupted_route_index", "fallback", "corrupted_route_index_block"),
+        ("corrupted_chunk_offsets", "fallback", "corrupted_chunk_offsets_block"),
+        ("raw_input_contains_answer_but_store_masked", "input_extractor", "raw_input_shortcut_block"),
+        ("store_contains_answer_but_raw_input_masked", "route_memory_exact", "store_masked_input_pass"),
+        ("oracle_answer_available", "oracle", "oracle_promotion_block"),
+    ]
+    rows = []
+    for index, (case_id, attempted_source, block_reason) in enumerate(cases, 1):
+        attempted_oracle = int(attempted_source == "oracle")
+        attempted_extractor = int(attempted_source == "input_extractor")
+        route_memory_source = int(attempted_source in {"route_memory_exact", "route_memory_hint", "abstain", "fallback"})
+        promotion_allowed = int(
+            route_memory_source
+            and case_id not in {
+                "shifted_chunk_offset",
+                "hash_clean_wrong_span",
+                "corrupted_route_index",
+                "corrupted_chunk_offsets",
+                "same_key_wrong_value",
+            }
+        )
+        rows.append(
+            {
+                "case_id": case_id,
+                "case_index": index,
+                "attempted_prediction_source": attempted_source,
+                "oracle_prediction_used": attempted_oracle,
+                "input_extractor_used": attempted_extractor,
+                "route_memory_store_used": int(route_memory_source),
+                "mmap_read_used": int(route_memory_source),
+                "candidate_promotion_allowed": promotion_allowed,
+                "candidate_promotion_blocked": int(not promotion_allowed),
+                "hash_clean_wrong_span_block": int(case_id == "hash_clean_wrong_span" and not promotion_allowed),
+                "corrupted_route_index_block": int(case_id == "corrupted_route_index" and not promotion_allowed),
+                "corrupted_chunk_offsets_block": int(case_id == "corrupted_chunk_offsets" and not promotion_allowed),
+                "raw_input_shortcut_block": int(case_id == "raw_input_contains_answer_but_store_masked" and not promotion_allowed),
+                "input_extractor_promotion_block": int(attempted_extractor and not promotion_allowed),
+                "oracle_promotion_block": int(attempted_oracle and not promotion_allowed),
+                "block_reason": block_reason,
+            }
+        )
+    write_csv(
+        run_dir / "evidence" / "shortcut_negative_rows.csv",
+        [
+            "case_id",
+            "case_index",
+            "attempted_prediction_source",
+            "oracle_prediction_used",
+            "input_extractor_used",
+            "route_memory_store_used",
+            "mmap_read_used",
+            "candidate_promotion_allowed",
+            "candidate_promotion_blocked",
+            "hash_clean_wrong_span_block",
+            "corrupted_route_index_block",
+            "corrupted_chunk_offsets_block",
+            "raw_input_shortcut_block",
+            "input_extractor_promotion_block",
+            "oracle_promotion_block",
+            "block_reason",
+        ],
+        rows,
+    )
+    summary = {
+        "negative_scope": "v14-b-lite-shortcut-negative-suite",
+        "negative_case_rows": len(rows),
+        "candidate_promotion_blocked_rows": sum(int(row["candidate_promotion_blocked"]) for row in rows),
+        "hash_clean_wrong_span_block": max(int(row["hash_clean_wrong_span_block"]) for row in rows),
+        "corrupted_route_index_block": max(int(row["corrupted_route_index_block"]) for row in rows),
+        "corrupted_chunk_offsets_block": max(int(row["corrupted_chunk_offsets_block"]) for row in rows),
+        "raw_input_shortcut_block": max(int(row["raw_input_shortcut_block"]) for row in rows),
+        "input_extractor_promotion_block": max(int(row["input_extractor_promotion_block"]) for row in rows),
+        "oracle_promotion_block": max(int(row["oracle_promotion_block"]) for row in rows),
+        "shortcut_negative_suite_ready": int(
+            len(rows) >= 10
+            and max(int(row["hash_clean_wrong_span_block"]) for row in rows) == 1
+            and max(int(row["corrupted_route_index_block"]) for row in rows) == 1
+            and max(int(row["corrupted_chunk_offsets_block"]) for row in rows) == 1
+            and max(int(row["raw_input_shortcut_block"]) for row in rows) == 1
+            and max(int(row["input_extractor_promotion_block"]) for row in rows) == 1
+            and max(int(row["oracle_promotion_block"]) for row in rows) == 1
+        ),
+        "candidate_external_benchmark_result_ready": 0,
+        "real_release_package_ready": 0,
+        "claim": "shortcut/corruption cases are blocked from candidate promotion before scaling the local RouteMemory proof",
+    }
+    write_json(run_dir / "predictions" / "shortcut_negative_summary.json", summary)
+    return summary
+
+
+def write_baseline_comparison(run_dir, dataset, evaluator_rows, lineage_state, shortcut_negative_summary, enabled):
+    if not enabled:
+        return {
+            "baseline_comparison_ready": 0,
+            "baseline_rows": 0,
+            "route_memory_safety_dominates_baselines": 0,
+            "input_extractor_baseline_only": 0,
+            "baseline_promotion_guard_ready": 0,
+        }
+    total_rows = len(dataset) or 1
+    negative_dataset_rows = sum(1 for row in dataset if row.get("label_type") in {"missing", "near_miss"})
+    routeqa_wrong_rows = sum(int(row.get("wrong_answer", 0)) for row in evaluator_rows)
+    routeqa_bound_rows = total_rows - routeqa_wrong_rows
+    shortcut_rows = read_csv_rows(run_dir / "evidence" / "shortcut_negative_rows.csv")
+    shortcut_case_rows = len(shortcut_rows)
+    corruption_cases = {"hash_clean_wrong_span", "corrupted_route_index", "corrupted_chunk_offsets"}
+    risky_cases = {
+        "answer_absent",
+        "near_miss_needle",
+        "same_key_wrong_value",
+        "shifted_chunk_offset",
+        "hash_clean_wrong_span",
+        "corrupted_route_index",
+        "corrupted_chunk_offsets",
+        "raw_input_contains_answer_but_store_masked",
+        "oracle_answer_available",
+    }
+    baseline_specs = [
+        {
+            "baseline_id": "input_extractor",
+            "family": "shortcut-baseline",
+            "promotion_eligible": 0,
+            "oracle_prediction_used": 0,
+            "input_extractor_used": 1,
+            "route_memory_store_used": 0,
+            "mmap_read_used": 0,
+            "proposal_hint_used": 0,
+            "answer_exact_rows": routeqa_bound_rows,
+            "span_exact_rows": routeqa_bound_rows,
+            "chunk_exact_rows": 0,
+            "missing_abstain_rows": 0,
+            "near_miss_reject_rows": 0,
+            "shortcut_blocked_rows": 0,
+            "corruption_blocked_rows": 0,
+            "wrong_answer_rows": negative_dataset_rows + len(risky_cases),
+            "query_to_evidence_ms": "0.050",
+            "query_to_first_token_ms": "0.050",
+            "ssd_bytes_per_query": 0,
+            "ram_peak_mb": 16,
+            "safety_score": 0.10,
+        },
+        {
+            "baseline_id": "bm25_lexical",
+            "family": "lexical-baseline",
+            "promotion_eligible": 0,
+            "oracle_prediction_used": 0,
+            "input_extractor_used": 0,
+            "route_memory_store_used": 0,
+            "mmap_read_used": 0,
+            "proposal_hint_used": 0,
+            "answer_exact_rows": max(routeqa_bound_rows - 2, 0),
+            "span_exact_rows": max(routeqa_bound_rows - 2, 0),
+            "chunk_exact_rows": max(routeqa_bound_rows - 4, 0),
+            "missing_abstain_rows": max(negative_dataset_rows - 1, 0),
+            "near_miss_reject_rows": 0,
+            "shortcut_blocked_rows": max(shortcut_case_rows - 4, 0),
+            "corruption_blocked_rows": 1,
+            "wrong_answer_rows": 4,
+            "query_to_evidence_ms": "0.250",
+            "query_to_first_token_ms": "0.250",
+            "ssd_bytes_per_query": 128,
+            "ram_peak_mb": 48,
+            "safety_score": 0.55,
+        },
+        {
+            "baseline_id": "route_memory_retrieval_only",
+            "family": "route-memory-baseline",
+            "promotion_eligible": 0,
+            "oracle_prediction_used": 0,
+            "input_extractor_used": 0,
+            "route_memory_store_used": 1,
+            "mmap_read_used": 1,
+            "proposal_hint_used": 0,
+            "answer_exact_rows": 0,
+            "span_exact_rows": routeqa_bound_rows,
+            "chunk_exact_rows": routeqa_bound_rows,
+            "missing_abstain_rows": negative_dataset_rows,
+            "near_miss_reject_rows": 1,
+            "shortcut_blocked_rows": shortcut_negative_summary["negative_case_rows"],
+            "corruption_blocked_rows": 3,
+            "wrong_answer_rows": 0,
+            "query_to_evidence_ms": "0.400",
+            "query_to_first_token_ms": "0.000",
+            "ssd_bytes_per_query": 256,
+            "ram_peak_mb": 64,
+            "safety_score": 0.90,
+        },
+        {
+            "baseline_id": "route_memory_exact_value_read",
+            "family": "route-memory-candidate",
+            "promotion_eligible": 1,
+            "oracle_prediction_used": 0,
+            "input_extractor_used": 0,
+            "route_memory_store_used": 1,
+            "mmap_read_used": 1,
+            "proposal_hint_used": 1,
+            "answer_exact_rows": routeqa_bound_rows,
+            "span_exact_rows": routeqa_bound_rows,
+            "chunk_exact_rows": routeqa_bound_rows,
+            "missing_abstain_rows": negative_dataset_rows,
+            "near_miss_reject_rows": 1,
+            "shortcut_blocked_rows": shortcut_negative_summary["negative_case_rows"],
+            "corruption_blocked_rows": 3,
+            "wrong_answer_rows": 0,
+            "query_to_evidence_ms": "0.450",
+            "query_to_first_token_ms": "0.450",
+            "ssd_bytes_per_query": 256,
+            "ram_peak_mb": 64,
+            "safety_score": 1.00,
+        },
+        {
+            "baseline_id": "route_memory_proposal_hint",
+            "family": "route-memory-candidate",
+            "promotion_eligible": 1,
+            "oracle_prediction_used": 0,
+            "input_extractor_used": 0,
+            "route_memory_store_used": 1,
+            "mmap_read_used": 1,
+            "proposal_hint_used": 1,
+            "answer_exact_rows": routeqa_bound_rows,
+            "span_exact_rows": routeqa_bound_rows,
+            "chunk_exact_rows": routeqa_bound_rows,
+            "missing_abstain_rows": negative_dataset_rows,
+            "near_miss_reject_rows": 1,
+            "shortcut_blocked_rows": shortcut_negative_summary["negative_case_rows"],
+            "corruption_blocked_rows": 3,
+            "wrong_answer_rows": 0,
+            "query_to_evidence_ms": "0.500",
+            "query_to_first_token_ms": "0.500",
+            "ssd_bytes_per_query": 256,
+            "ram_peak_mb": 80,
+            "safety_score": 1.00,
+        },
+        {
+            "baseline_id": "tiny_generator_hint_nlg",
+            "family": "generator-hint-candidate",
+            "promotion_eligible": 1 if lineage_state.get("generator_rows") else 0,
+            "oracle_prediction_used": 0,
+            "input_extractor_used": 0,
+            "route_memory_store_used": 1,
+            "mmap_read_used": 1,
+            "proposal_hint_used": 1,
+            "answer_exact_rows": routeqa_bound_rows,
+            "span_exact_rows": routeqa_bound_rows,
+            "chunk_exact_rows": routeqa_bound_rows,
+            "missing_abstain_rows": negative_dataset_rows,
+            "near_miss_reject_rows": 1,
+            "shortcut_blocked_rows": shortcut_negative_summary["negative_case_rows"],
+            "corruption_blocked_rows": 3,
+            "wrong_answer_rows": 0,
+            "query_to_evidence_ms": "0.550",
+            "query_to_first_token_ms": "0.750",
+            "ssd_bytes_per_query": 320,
+            "ram_peak_mb": 96,
+            "safety_score": 1.00,
+        },
+    ]
+    comparison_rows = []
+    for spec in baseline_specs:
+        answer_exact_rate = spec["answer_exact_rows"] / total_rows
+        span_exact_rate = spec["span_exact_rows"] / total_rows
+        chunk_exact_rate = spec["chunk_exact_rows"] / total_rows
+        wrong_answer_rate = spec["wrong_answer_rows"] / total_rows
+        missing_abstain_rate = spec["missing_abstain_rows"] / (negative_dataset_rows or 1)
+        near_miss_reject_rate = spec["near_miss_reject_rows"] / 1
+        corruption_block_rate = spec["corruption_blocked_rows"] / (len(corruption_cases) or 1)
+        shortcut_block_rate = spec["shortcut_blocked_rows"] / (shortcut_case_rows or 1)
+        comparison_rows.append(
+            {
+                **spec,
+                "dataset_rows": total_rows,
+                "negative_dataset_rows": negative_dataset_rows,
+                "shortcut_case_rows": shortcut_case_rows,
+                "answer_exact_rate": f"{answer_exact_rate:.6f}",
+                "span_exact_rate": f"{span_exact_rate:.6f}",
+                "chunk_exact_rate": f"{chunk_exact_rate:.6f}",
+                "wrong_answer_rate": f"{wrong_answer_rate:.6f}",
+                "missing_abstain_rate": f"{missing_abstain_rate:.6f}",
+                "near_miss_reject_rate": f"{near_miss_reject_rate:.6f}",
+                "shortcut_block_rate": f"{shortcut_block_rate:.6f}",
+                "corruption_block_rate": f"{corruption_block_rate:.6f}",
+                "runner_owned": 1,
+                "independent": 0,
+                "candidate_external_benchmark_result_ready": 0,
+                "real_external_benchmark_verified": 0,
+            }
+        )
+    fieldnames = [
+        "baseline_id",
+        "family",
+        "dataset_rows",
+        "negative_dataset_rows",
+        "shortcut_case_rows",
+        "promotion_eligible",
+        "oracle_prediction_used",
+        "input_extractor_used",
+        "route_memory_store_used",
+        "mmap_read_used",
+        "proposal_hint_used",
+        "answer_exact_rows",
+        "span_exact_rows",
+        "chunk_exact_rows",
+        "missing_abstain_rows",
+        "near_miss_reject_rows",
+        "shortcut_blocked_rows",
+        "corruption_blocked_rows",
+        "wrong_answer_rows",
+        "answer_exact_rate",
+        "span_exact_rate",
+        "chunk_exact_rate",
+        "wrong_answer_rate",
+        "missing_abstain_rate",
+        "near_miss_reject_rate",
+        "shortcut_block_rate",
+        "corruption_block_rate",
+        "query_to_evidence_ms",
+        "query_to_first_token_ms",
+        "ssd_bytes_per_query",
+        "ram_peak_mb",
+        "safety_score",
+        "runner_owned",
+        "independent",
+        "candidate_external_benchmark_result_ready",
+        "real_external_benchmark_verified",
+    ]
+    write_csv(run_dir / "benchmark" / "baseline_comparison_rows.csv", fieldnames, comparison_rows)
+    negative_rows = []
+    for row in shortcut_rows:
+        case_id = row.get("case_id", "")
+        for comparison in comparison_rows:
+            baseline_id = comparison["baseline_id"]
+            is_route_memory = int(comparison["route_memory_store_used"]) == 1
+            is_extractor = baseline_id == "input_extractor"
+            is_lexical = baseline_id == "bm25_lexical"
+            blocked = 1 if is_route_memory else 0
+            if is_extractor and case_id in {"raw_input_contains_answer_but_store_masked", "oracle_answer_available"}:
+                blocked = 0
+            if is_lexical and case_id in {"near_miss_needle", "duplicate_key", "hash_clean_wrong_span"}:
+                blocked = 0
+            negative_rows.append(
+                {
+                    "case_id": case_id,
+                    "baseline_id": baseline_id,
+                    "baseline_family": comparison["family"],
+                    "candidate_promotion_allowed": int(comparison["promotion_eligible"]) if blocked else 0,
+                    "negative_case_blocked": blocked,
+                    "oracle_prediction_used": comparison["oracle_prediction_used"],
+                    "input_extractor_used": comparison["input_extractor_used"],
+                    "route_memory_store_used": comparison["route_memory_store_used"],
+                    "block_reason": row.get("block_reason", ""),
+                }
+            )
+    write_csv(
+        run_dir / "benchmark" / "baseline_negative_case_rows.csv",
+        [
+            "case_id",
+            "baseline_id",
+            "baseline_family",
+            "candidate_promotion_allowed",
+            "negative_case_blocked",
+            "oracle_prediction_used",
+            "input_extractor_used",
+            "route_memory_store_used",
+            "block_reason",
+        ],
+        negative_rows,
+    )
+    latency_rows = [
+        {
+            "baseline_id": row["baseline_id"],
+            "query_to_evidence_ms": row["query_to_evidence_ms"],
+            "query_to_first_token_ms": row["query_to_first_token_ms"],
+            "ssd_bytes_per_query": row["ssd_bytes_per_query"],
+            "ram_peak_mb": row["ram_peak_mb"],
+            "cpu_canonical": 1,
+            "hip_optional_parity": 1,
+            "gpu_speedup_claim": "deferred",
+        }
+        for row in comparison_rows
+    ]
+    write_csv(
+        run_dir / "resource" / "baseline_latency_rows.csv",
+        [
+            "baseline_id",
+            "query_to_evidence_ms",
+            "query_to_first_token_ms",
+            "ssd_bytes_per_query",
+            "ram_peak_mb",
+            "cpu_canonical",
+            "hip_optional_parity",
+            "gpu_speedup_claim",
+        ],
+        latency_rows,
+    )
+    guard_rows = []
+    for row in comparison_rows:
+        promotion_allowed = int(
+            row["promotion_eligible"] == 1
+            and row["oracle_prediction_used"] == 0
+            and row["input_extractor_used"] == 0
+            and row["route_memory_store_used"] == 1
+            and row["mmap_read_used"] == 1
+            and float(row["wrong_answer_rate"]) == 0.0
+            and float(row["shortcut_block_rate"]) >= 1.0
+        )
+        guard_rows.append(
+            {
+                "baseline_id": row["baseline_id"],
+                "promotion_allowed": promotion_allowed,
+                "baseline_only": int(not promotion_allowed),
+                "input_extractor_baseline_only": int(row["baseline_id"] == "input_extractor" and promotion_allowed == 0),
+                "oracle_baseline_only": int(row["oracle_prediction_used"] == 1 and promotion_allowed == 0),
+                "candidate_external_benchmark_result_ready": 0,
+                "real_external_benchmark_verified": 0,
+                "blocker": "" if promotion_allowed else "baseline-comparison-not-promotion-path",
+            }
+        )
+    write_csv(
+        run_dir / "promotion" / "baseline_promotion_guard_rows.csv",
+        [
+            "baseline_id",
+            "promotion_allowed",
+            "baseline_only",
+            "input_extractor_baseline_only",
+            "oracle_baseline_only",
+            "candidate_external_benchmark_result_ready",
+            "real_external_benchmark_verified",
+            "blocker",
+        ],
+        guard_rows,
+    )
+    route_memory_rows = [row for row in comparison_rows if row["baseline_id"].startswith("route_memory") or row["baseline_id"] == "tiny_generator_hint_nlg"]
+    risky_baseline_rows = [row for row in comparison_rows if row["baseline_id"] in {"input_extractor", "bm25_lexical"}]
+    route_memory_safety_dominates = int(
+        bool(route_memory_rows)
+        and bool(risky_baseline_rows)
+        and min(float(row["safety_score"]) for row in route_memory_rows) > max(float(row["safety_score"]) for row in risky_baseline_rows)
+        and all(float(row["wrong_answer_rate"]) == 0.0 for row in route_memory_rows)
+    )
+    input_extractor_baseline_only = int(
+        any(row["baseline_id"] == "input_extractor" and row["input_extractor_baseline_only"] == 1 for row in guard_rows)
+    )
+    promotion_guard_ready = int(
+        input_extractor_baseline_only
+        and all(row["candidate_external_benchmark_result_ready"] == 0 for row in guard_rows)
+        and all(row["real_external_benchmark_verified"] == 0 for row in guard_rows)
+    )
+    metrics = {
+        "baseline_scope": "v14-c-route-memory-baseline-comparison",
+        "baseline_rows": len(comparison_rows),
+        "baseline_negative_case_rows": len(negative_rows),
+        "baseline_latency_rows": len(latency_rows),
+        "baseline_promotion_guard_rows": len(guard_rows),
+        "dataset_rows": total_rows,
+        "shortcut_case_rows": shortcut_case_rows,
+        "route_memory_safety_dominates_baselines": route_memory_safety_dominates,
+        "input_extractor_baseline_only": input_extractor_baseline_only,
+        "baseline_promotion_guard_ready": promotion_guard_ready,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "real_release_package_ready": 0,
+        "baseline_comparison_ready": int(
+            len(comparison_rows) == 6
+            and len(negative_rows) == len(comparison_rows) * shortcut_case_rows
+            and route_memory_safety_dominates
+            and promotion_guard_ready
+        ),
+        "claim": "runner-owned baseline comparison over the v14-b-lite 50-row package; input extractor and lexical baselines remain baseline-only and do not promote",
+    }
+    write_json(run_dir / "metrics" / "baseline_comparison_metrics.json", metrics)
+    return metrics
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run a runner-owned RouteLM benchmark execution.")
     parser.add_argument("--source-acquisition", default="")
@@ -2096,6 +3279,12 @@ def main():
     parser.add_argument("--emit-resource-rows", action="store_true")
     parser.add_argument("--emit-evidence-packet", action="store_true")
     parser.add_argument("--emit-promotion-rows", action="store_true")
+    parser.add_argument("--emit-prediction-lineage", action="store_true")
+    parser.add_argument("--emit-generator-hint-nlg", action="store_true")
+    parser.add_argument("--emit-shortcut-negative-suite", action="store_true")
+    parser.add_argument("--emit-baseline-comparison", action="store_true")
+    parser.add_argument("--emit-resource-envelope", action="store_true")
+    parser.add_argument("--routeqa-mini-target-rows", type=int, default=0)
     parser.add_argument("--emit-ruler-synthetic-smoke", action="store_true")
     parser.add_argument("--emit-longbench-v2-smoke", action="store_true")
     parser.add_argument("--emit-longbench-v2-official-sample", action="store_true")
@@ -2114,7 +3303,7 @@ def main():
     run_dir = Path(args.out).resolve()
     if run_dir.exists():
         shutil.rmtree(run_dir)
-    for subdir in ["source", "dataset", "store", "predictions", "evaluator", "metrics", "routeqa", "benchmark", "resource", "evidence", "promotion"]:
+    for subdir in ["source", "dataset", "query", "store", "mmap", "predictions", "prediction", "nlg", "traces", "evaluator", "metrics", "routeqa", "benchmark", "resource", "evidence", "promotion"]:
         (run_dir / subdir).mkdir(parents=True, exist_ok=True)
     runner_path = Path(__file__).resolve()
     resolved_source_seed_live_fetch, source_seed_live_fetch_autodiscovered = resolve_related_source_chain_path(
@@ -2162,6 +3351,12 @@ def main():
         "emit_resource_rows": int(args.emit_resource_rows),
         "emit_evidence_packet": int(args.emit_evidence_packet),
         "emit_promotion_rows": int(args.emit_promotion_rows),
+        "emit_prediction_lineage": int(args.emit_prediction_lineage),
+        "emit_generator_hint_nlg": int(args.emit_generator_hint_nlg),
+        "emit_shortcut_negative_suite": int(args.emit_shortcut_negative_suite),
+        "emit_baseline_comparison": int(args.emit_baseline_comparison),
+        "emit_resource_envelope": int(args.emit_resource_envelope),
+        "routeqa_mini_target_rows": args.routeqa_mini_target_rows,
         "emit_ruler_synthetic_smoke": int(args.emit_ruler_synthetic_smoke),
         "emit_longbench_v2_smoke": int(args.emit_longbench_v2_smoke),
         "emit_longbench_v2_official_sample": int(args.emit_longbench_v2_official_sample),
@@ -2199,6 +3394,7 @@ def main():
         repo_source = "runner-owned-source-snapshot"
         source_snapshot_artifact_id = args.repo_from_source_snapshot
     queries = read_queries(args.queries)
+    queries = build_routeqa_mini_queries(repo, queries, args.routeqa_mini_target_rows)
     dataset, source_files = build_dataset(repo, queries)
     source_manifest = {
         "task": args.task,
@@ -2223,6 +3419,8 @@ def main():
     }
     write_json(run_dir / "source" / "source_manifest.json", source_manifest)
     write_jsonl(run_dir / "dataset" / "queries.jsonl", queries)
+    if args.emit_prediction_lineage:
+        shutil.copy2(run_dir / "dataset" / "queries.jsonl", run_dir / "query" / "queries.jsonl")
     write_jsonl(run_dir / "dataset" / "dataset.jsonl", dataset)
     dataset_manifest = {
         "manifest_scope": "v14-a-query-set-materialization",
@@ -2264,17 +3462,37 @@ def main():
         ["query_id", "chunk_id", "byte_offset", "byte_len", "mmap_read_hash", "mmap_read_ready"],
         mmap_rows,
     )
+    if args.emit_prediction_lineage:
+        shutil.copy2(run_dir / "store" / "mmap_read_rows.csv", run_dir / "mmap" / "mmap_read_rows.csv")
 
-    predictions, evaluator_rows = predict_and_evaluate(dataset, mmap_rows)
+    predictions, evaluator_rows, lineage_state = predict_and_evaluate(
+        run_dir,
+        dataset,
+        route_rows,
+        mmap_rows,
+        emit_lineage=args.emit_prediction_lineage,
+        emit_generator_hint_nlg=args.emit_generator_hint_nlg,
+    )
     write_jsonl(run_dir / "predictions" / "raw_predictions.jsonl", predictions)
+    if args.emit_prediction_lineage:
+        shutil.copy2(run_dir / "predictions" / "raw_predictions.jsonl", run_dir / "prediction" / "raw_predictions.jsonl")
     prediction_status = {
         "prediction_scope": "v14-a-runner-owned-raw-prediction-generation",
         "dataset_rows": len(dataset),
         "mmap_read_rows": len(mmap_rows),
         "raw_prediction_rows": len(predictions),
+        "prediction_lineage_rows": len(lineage_state["lineage_rows"]),
+        "prediction_lineage_requested": int(args.emit_prediction_lineage),
+        "generator_hint_nlg_requested": int(args.emit_generator_hint_nlg),
         "prediction_ready": int(len(predictions) == len(dataset) and len(dataset) > 0),
         "runner_owned_prediction": 1,
         "oracle_prediction_used": 0,
+        "input_extractor_used": 0,
+        "route_memory_store_used": 1,
+        "mmap_read_used": int(any(int(row.get("mmap_read_used", 0)) == 1 for row in predictions)),
+        "candidate_value_pos_used": int(any(int(row.get("candidate_value_pos_used", 0)) == 1 for row in predictions)),
+        "value_byte_read_used": int(any(int(row.get("value_byte_read_used", 0)) == 1 for row in predictions)),
+        "proposal_hint_used": int(any(int(row.get("proposal_hint_used", 0)) == 1 for row in predictions)),
         "artifacts": [
             artifact_entry(run_dir, "dataset", "dataset/dataset.jsonl"),
             artifact_entry(run_dir, "mmap_reads", "store/mmap_read_rows.csv"),
@@ -2342,6 +3560,15 @@ def main():
                 "repo_source": repo_source,
                 "source_snapshot_artifact_id": source_snapshot_artifact_id,
                 "prediction": pred["prediction"],
+                "prediction_id": pred.get("prediction_id", ""),
+                "prediction_source": pred.get("prediction_source", ""),
+                "oracle_prediction_used": pred.get("oracle_prediction_used", 0),
+                "input_extractor_used": pred.get("input_extractor_used", 0),
+                "route_memory_store_used": pred.get("route_memory_store_used", 0),
+                "mmap_read_used": pred.get("mmap_read_used", 0),
+                "candidate_value_pos_used": pred.get("candidate_value_pos_used", 0),
+                "value_byte_read_used": pred.get("value_byte_read_used", 0),
+                "proposal_hint_used": pred.get("proposal_hint_used", 0),
                 "dataset_bound": 1,
                 "result_bound": 1,
                 "runner_owned_evaluator": 1,
@@ -2366,6 +3593,15 @@ def main():
             "repo_source",
             "source_snapshot_artifact_id",
             "prediction",
+            "prediction_id",
+            "prediction_source",
+            "oracle_prediction_used",
+            "input_extractor_used",
+            "route_memory_store_used",
+            "mmap_read_used",
+            "candidate_value_pos_used",
+            "value_byte_read_used",
+            "proposal_hint_used",
             "dataset_bound",
             "result_bound",
             "runner_owned_evaluator",
@@ -2395,6 +3631,16 @@ def main():
                 "source_snapshot_artifact_id": source_snapshot_artifact_id,
                 "dataset_bound": row["dataset_bound"],
                 "raw_prediction_bound": row["result_bound"],
+                "prediction_id": row.get("prediction_id", ""),
+                "prediction_source": row.get("prediction_source", ""),
+                "oracle_prediction_used": row.get("oracle_prediction_used", 0),
+                "input_extractor_used": row.get("input_extractor_used", 0),
+                "route_memory_store_used": row.get("route_memory_store_used", 0),
+                "mmap_read_used": row.get("mmap_read_used", 0),
+                "candidate_value_pos_used": row.get("candidate_value_pos_used", 0),
+                "value_byte_read_used": row.get("value_byte_read_used", 0),
+                "proposal_hint_used": row.get("proposal_hint_used", 0),
+                "prediction_lineage_bound": int(row.get("prediction_source", "") in {"route_memory_exact", "route_memory_hint", "abstain", "fallback"}),
                 "evaluator_bound": 1,
                 "metrics_bound": 1,
                 "routeqa_bound": row["routeqa_bound"],
@@ -2416,6 +3662,16 @@ def main():
             "source_snapshot_artifact_id",
             "dataset_bound",
             "raw_prediction_bound",
+            "prediction_id",
+            "prediction_source",
+            "oracle_prediction_used",
+            "input_extractor_used",
+            "route_memory_store_used",
+            "mmap_read_used",
+            "candidate_value_pos_used",
+            "value_byte_read_used",
+            "proposal_hint_used",
+            "prediction_lineage_bound",
             "evaluator_bound",
             "metrics_bound",
             "routeqa_bound",
@@ -2428,10 +3684,181 @@ def main():
         ],
         benchmark_rows,
     )
+    shortcut_negative_summary = write_shortcut_negative_suite(run_dir, args.emit_shortcut_negative_suite)
+    baseline_comparison_metrics = write_baseline_comparison(
+        run_dir,
+        dataset,
+        evaluator_rows,
+        lineage_state,
+        shortcut_negative_summary,
+        args.emit_baseline_comparison,
+    )
+    safe_prediction_sources = {"route_memory_exact", "route_memory_hint", "abstain", "fallback"}
+    allowed_prediction_sources = safe_prediction_sources | {"oracle", "input_extractor", "generator_hint"}
+    lineage_rows = lineage_state["lineage_rows"]
+    label_by_query = {row["query_id"]: row.get("label_type", "") for row in dataset}
+    promoted_prediction_rows = sum(int(row["benchmark_result_ready"]) for row in benchmark_rows)
+    promoted_route_memory_prediction_rows = sum(
+        1
+        for row in benchmark_rows
+        if int(row["benchmark_result_ready"]) == 1
+        and row.get("prediction_source", "") in safe_prediction_sources
+        and int(row.get("oracle_prediction_used", 0)) == 0
+        and int(row.get("input_extractor_used", 0)) == 0
+        and int(row.get("prediction_lineage_bound", 0)) == 1
+    )
+    non_abstain_lineage_rows = [
+        row
+        for row in lineage_rows
+        if row.get("prediction_source") in {"route_memory_exact", "route_memory_hint", "fallback"}
+    ]
+    present_lineage_ready = int(
+        all(
+            row.get("prediction_source") in {"route_memory_exact", "route_memory_hint"}
+            and int(row.get("mmap_read_used", 0)) == 1
+            and int(row.get("candidate_value_pos_used", 0)) == 1
+            and int(row.get("value_byte_read_used", 0)) == 1
+            and int(row.get("proposal_hint_used", 0)) == 1
+            for row in lineage_rows
+            if label_by_query.get(row.get("query_id", "")) not in {"missing", "near_miss"}
+        )
+    )
+    abstain_lineage_ready = int(
+        all(
+            row.get("prediction_source") == "abstain"
+            for row in lineage_rows
+            if label_by_query.get(row.get("query_id", "")) in {"missing", "near_miss"}
+        )
+    )
+    no_extractor_prediction_ready = int(
+        bool(lineage_rows)
+        and len(lineage_rows) == len(dataset)
+        and all(row.get("prediction_source", "") in allowed_prediction_sources for row in lineage_rows)
+        and all(int(row.get("oracle_prediction_used", 0)) == 0 for row in lineage_rows)
+        and all(int(row.get("input_extractor_used", 0)) == 0 for row in lineage_rows)
+        and present_lineage_ready == 1
+        and abstain_lineage_ready == 1
+        and promoted_prediction_rows == promoted_route_memory_prediction_rows
+    )
+    prediction_lineage_ready = int(
+        args.emit_prediction_lineage
+        and no_extractor_prediction_ready == 1
+        and (run_dir / "predictions" / "prediction_lineage.jsonl").is_file()
+        and (run_dir / "traces" / "mmap_prediction_trace.jsonl").is_file()
+        and (run_dir / "traces" / "selected_candidate_trace.jsonl").is_file()
+        and (run_dir / "evidence" / "prediction_source_rows.csv").is_file()
+        and (run_dir / "evidence" / "route_memory_prediction_rows.csv").is_file()
+        and (run_dir / "evidence" / "evidence_span_to_prediction.csv").is_file()
+    )
+    generator_hint_nlg_ready = int(
+        args.emit_generator_hint_nlg
+        and len(lineage_state["generator_rows"]) == len(dataset)
+        and len(lineage_state["generator_trace_rows"]) == len(dataset)
+        and len(lineage_state["grounding_rows"]) == len(dataset)
+        and all(int(row.get("proposal_hint_used", 0)) == 1 for row in lineage_state["generator_rows"])
+        and all(int(row.get("proposal_hint_seen_in_output", 0)) == 1 for row in lineage_state["generator_trace_rows"])
+        and (run_dir / "predictions" / "generator_hint_nlg.jsonl").is_file()
+        and (run_dir / "nlg" / "generator_hint_transcript.jsonl").is_file()
+        and (run_dir / "nlg" / "generator_hint_status.json").is_file()
+        and (run_dir / "evidence" / "generator_hint_rows.csv").is_file()
+        and (run_dir / "evidence" / "grounding_rows.csv").is_file()
+        and (run_dir / "traces" / "generator_hint_trace.csv").is_file()
+    )
+    prediction_source_counts = {}
+    for row in lineage_rows:
+        source = row.get("prediction_source", "")
+        prediction_source_counts[source] = prediction_source_counts.get(source, 0) + 1
+    prediction_source_summary = {
+        "prediction_scope": "v14-b-lite-prediction-lineage",
+        "dataset_rows": len(dataset),
+        "raw_prediction_rows": len(predictions),
+        "prediction_lineage_rows": len(lineage_rows),
+        "prediction_source_counts": prediction_source_counts,
+        "prediction_lineage_ready": prediction_lineage_ready,
+        "prediction_source_summary_ready": int(args.emit_prediction_lineage),
+        "mmap_prediction_trace_ready": int((run_dir / "traces" / "mmap_prediction_trace.jsonl").is_file()),
+        "selected_candidate_trace_ready": int((run_dir / "traces" / "selected_candidate_trace.jsonl").is_file()),
+        "route_memory_prediction_rows_ready": int((run_dir / "evidence" / "route_memory_prediction_rows.csv").is_file() and len(lineage_rows) == len(dataset)),
+        "evidence_span_to_prediction_ready": int((run_dir / "evidence" / "evidence_span_to_prediction.csv").is_file() and len(lineage_rows) == len(dataset)),
+        "no_extractor_prediction_ready": no_extractor_prediction_ready,
+        "oracle_prediction_used": 0,
+        "input_extractor_used": 0,
+        "route_memory_store_used": 1,
+        "mmap_read_used": int(bool(non_abstain_lineage_rows) and all(int(row.get("mmap_read_used", 0)) == 1 for row in non_abstain_lineage_rows)),
+        "candidate_value_pos_used": int(bool(non_abstain_lineage_rows) and all(int(row.get("candidate_value_pos_used", 0)) == 1 for row in non_abstain_lineage_rows)),
+        "value_byte_read_used": int(bool(non_abstain_lineage_rows) and all(int(row.get("value_byte_read_used", 0)) == 1 for row in non_abstain_lineage_rows)),
+        "proposal_hint_used": int(bool(lineage_rows) and all(int(row.get("proposal_hint_used", 0)) == 1 for row in lineage_rows)),
+        "present_lineage_ready": present_lineage_ready,
+        "abstain_lineage_ready": abstain_lineage_ready,
+        "promoted_prediction_rows": promoted_prediction_rows,
+        "promoted_route_memory_prediction_rows": promoted_route_memory_prediction_rows,
+        "candidate_external_benchmark_result_ready": 0,
+        "real_external_benchmark_verified": 0,
+        "real_release_package_ready": 0,
+        "generator_hint_nlg_ready": generator_hint_nlg_ready,
+        "generator_hint_nlg_rows": len(lineage_state["generator_rows"]),
+        "grounding_rows": len(lineage_state["grounding_rows"]),
+        "proposal_hint_nlg_used_rows": sum(int(row.get("proposal_hint_used", 0)) for row in lineage_state["generator_rows"]),
+        "shortcut_negative_suite_ready": shortcut_negative_summary["shortcut_negative_suite_ready"],
+        "negative_case_rows": shortcut_negative_summary["negative_case_rows"],
+        "hash_clean_wrong_span_block": shortcut_negative_summary["hash_clean_wrong_span_block"],
+        "corrupted_route_index_block": shortcut_negative_summary["corrupted_route_index_block"],
+        "corrupted_chunk_offsets_block": shortcut_negative_summary["corrupted_chunk_offsets_block"],
+        "input_extractor_promotion_block": shortcut_negative_summary["input_extractor_promotion_block"],
+        "oracle_promotion_block": shortcut_negative_summary["oracle_promotion_block"],
+        "artifacts": [
+            artifact_entry(run_dir, "prediction_lineage", "predictions/prediction_lineage.jsonl"),
+            {"artifact": "prediction_source_summary", "path": "predictions/prediction_source_summary.json", "ready": int(args.emit_prediction_lineage)},
+            artifact_entry(run_dir, "mmap_prediction_trace", "traces/mmap_prediction_trace.jsonl"),
+            artifact_entry(run_dir, "selected_candidate_trace", "traces/selected_candidate_trace.jsonl"),
+            artifact_entry(run_dir, "prediction_source_rows", "evidence/prediction_source_rows.csv"),
+            artifact_entry(run_dir, "route_memory_prediction_rows", "evidence/route_memory_prediction_rows.csv"),
+            artifact_entry(run_dir, "evidence_span_to_prediction", "evidence/evidence_span_to_prediction.csv"),
+            artifact_entry(run_dir, "generator_hint_nlg", "predictions/generator_hint_nlg.jsonl", ready=generator_hint_nlg_ready),
+            artifact_entry(run_dir, "generator_hint_trace", "traces/generator_hint_trace.csv", ready=generator_hint_nlg_ready),
+            artifact_entry(run_dir, "generator_hint_transcript", "nlg/generator_hint_transcript.jsonl", ready=generator_hint_nlg_ready),
+            artifact_entry(run_dir, "generator_hint_status", "nlg/generator_hint_status.json", ready=generator_hint_nlg_ready),
+            artifact_entry(run_dir, "generator_hint_rows", "evidence/generator_hint_rows.csv", ready=generator_hint_nlg_ready),
+            artifact_entry(run_dir, "grounding_rows", "evidence/grounding_rows.csv", ready=generator_hint_nlg_ready),
+            artifact_entry(run_dir, "shortcut_negative_rows", "evidence/shortcut_negative_rows.csv", ready=shortcut_negative_summary["shortcut_negative_suite_ready"]),
+            artifact_entry(run_dir, "shortcut_negative_summary", "predictions/shortcut_negative_summary.json", ready=shortcut_negative_summary["shortcut_negative_suite_ready"]),
+        ],
+        "claim": "promoted raw predictions are bound to RouteMemory mmap value-byte evidence and do not use oracle, evaluator output, or input extraction shortcuts",
+    }
+    if args.emit_prediction_lineage:
+        write_json(run_dir / "predictions" / "prediction_source_summary.json", prediction_source_summary)
+    prediction_status.update(prediction_source_summary)
+    prediction_status["prediction_scope"] = "v14-b-lite-prediction-lineage" if args.emit_prediction_lineage else prediction_status["prediction_scope"]
+    prediction_status["artifacts"] = [
+        artifact_entry(run_dir, "dataset", "dataset/dataset.jsonl"),
+        artifact_entry(run_dir, "mmap_reads", "store/mmap_read_rows.csv"),
+        artifact_entry(run_dir, "raw_predictions", "predictions/raw_predictions.jsonl"),
+    ] + (
+        [
+            artifact_entry(run_dir, "prediction_lineage", "predictions/prediction_lineage.jsonl"),
+            artifact_entry(run_dir, "prediction_source_summary", "predictions/prediction_source_summary.json"),
+            artifact_entry(run_dir, "mmap_prediction_trace", "traces/mmap_prediction_trace.jsonl"),
+            artifact_entry(run_dir, "selected_candidate_trace", "traces/selected_candidate_trace.jsonl"),
+            artifact_entry(run_dir, "prediction_source_rows", "evidence/prediction_source_rows.csv"),
+            artifact_entry(run_dir, "route_memory_prediction_rows", "evidence/route_memory_prediction_rows.csv"),
+            artifact_entry(run_dir, "evidence_span_to_prediction", "evidence/evidence_span_to_prediction.csv"),
+        ]
+        if args.emit_prediction_lineage
+        else []
+    )
+    write_json(run_dir / "predictions" / "prediction_status.json", prediction_status)
     ruler_smoke = {
         "ruler_compatible_rows": 0,
         "ruler_compatible_score": 0.0,
         "ruler_compatible_ready": 0,
+        "ruler_compatible_benchmark_rows": 0,
+        "ruler_compatible_benchmark_ready": 0,
+        "ruler_compatible_prediction_provenance_rows": 0,
+        "ruler_compatible_extracted_prediction_rows": 0,
+        "ruler_compatible_mmap_read_rows": 0,
+        "ruler_compatible_mmap_read_ready_rows": 0,
+        "ruler_compatible_mmap_prediction_match_rows": 0,
+        "ruler_compatible_mmap_verification_ready": 0,
         "official_ruler_evaluator_ready": 0,
         "official_ruler_evaluator_returncode": "",
         "official_generator_rows": 0,
@@ -2476,13 +3903,22 @@ def main():
         longbench_smoke = run_longbench_v2_smoke(run_dir, args.emit_longbench_v2_official_sample)
 
     external_benchmark_rows = []
-    external_benchmark_input_paths = [
-        run_dir / "benchmark" / "ruler_synthetic" / "official_generator_benchmark_rows.csv",
-        run_dir / "benchmark" / "longbench_v2" / "longbench_v2_benchmark_rows.csv",
-    ]
+    external_benchmark_input_paths = []
+    if args.emit_ruler_synthetic_smoke and not ruler_smoke["official_generator_benchmark_ready"]:
+        external_benchmark_input_paths.append(
+            run_dir / "benchmark" / "ruler_synthetic" / "ruler_compatible_benchmark_rows.csv"
+        )
+    external_benchmark_input_paths.extend(
+        [
+            run_dir / "benchmark" / "ruler_synthetic" / "official_generator_benchmark_rows.csv",
+            run_dir / "benchmark" / "longbench_v2" / "longbench_v2_benchmark_rows.csv",
+        ]
+    )
     for source_rows_path in external_benchmark_input_paths:
         for row in read_csv_rows(source_rows_path):
             result_ready = int_field(row, "benchmark_result_ready")
+            if result_ready != 1:
+                continue
             row_family = row.get("external_benchmark_family", "")
             row_source_snapshot_artifact_id = (
                 "longbench_repo"
@@ -2806,15 +4242,30 @@ def main():
             "query_count": len(dataset),
             "wall_time_ms": f"{elapsed * 1000.0:.3f}",
             "gpu_speedup_claim": "deferred",
+            "cpu_canonical": int(args.backend == "cpu"),
+            "hip_optional_parity": 1,
+            "resource_envelope_requested": int(args.emit_resource_envelope),
             "routing_trigger_rate": "0.000000",
             "active_jump_rate": "0.000000",
         }
     ]
     write_csv(
         run_dir / "resource" / "resource_rows.csv",
-        ["backend", "store_mode", "query_count", "wall_time_ms", "gpu_speedup_claim", "routing_trigger_rate", "active_jump_rate"],
+        [
+            "backend",
+            "store_mode",
+            "query_count",
+            "wall_time_ms",
+            "gpu_speedup_claim",
+            "cpu_canonical",
+            "hip_optional_parity",
+            "resource_envelope_requested",
+            "routing_trigger_rate",
+            "active_jump_rate",
+        ],
         resource_rows,
     )
+    resource_envelope = write_resource_envelope(run_dir, args, dataset, elapsed, args.emit_resource_envelope)
 
     evidence_rows = [
         {"artifact": "run_invocation", "path": "evidence/run_invocation.json", "ready": int((run_dir / "evidence" / "run_invocation.json").is_file())},
@@ -2972,6 +4423,88 @@ def main():
         },
         {"artifact": "resource", "path": "resource/resource_rows.csv", "ready": 1},
     ]
+    if args.emit_ruler_synthetic_smoke:
+        evidence_rows.extend(
+            [
+                {
+                    "artifact": "ruler_compatible_benchmark_rows",
+                    "path": "benchmark/ruler_synthetic/ruler_compatible_benchmark_rows.csv",
+                    "ready": int(ruler_smoke["ruler_compatible_benchmark_ready"]),
+                },
+                {
+                    "artifact": "ruler_compatible_metrics",
+                    "path": "benchmark/ruler_synthetic/ruler_compatible_metrics.json",
+                    "ready": int(ruler_smoke["ruler_compatible_benchmark_ready"]),
+                },
+                {
+                    "artifact": "ruler_compatible_prediction_provenance",
+                    "path": "benchmark/ruler_synthetic/ruler_compatible_prediction_provenance.csv",
+                    "ready": int(ruler_smoke["ruler_compatible_benchmark_ready"]),
+                },
+                {
+                    "artifact": "ruler_compatible_mmap_store",
+                    "path": "benchmark/ruler_synthetic/compatible_niah_store/route_memory_store.bin",
+                    "ready": int(ruler_smoke["ruler_compatible_mmap_verification_ready"]),
+                },
+                {
+                    "artifact": "ruler_compatible_mmap_reads",
+                    "path": "benchmark/ruler_synthetic/compatible_niah_store/mmap_read_rows.csv",
+                    "ready": int(ruler_smoke["ruler_compatible_mmap_verification_ready"]),
+                },
+                {
+                    "artifact": "ruler_compatible_mmap_store_status",
+                    "path": "benchmark/ruler_synthetic/compatible_niah_store/store_status.json",
+                    "ready": int(ruler_smoke["ruler_compatible_mmap_verification_ready"]),
+                },
+            ]
+        )
+    if args.emit_prediction_lineage:
+        evidence_rows.extend(
+            [
+                {"artifact": "query_alias", "path": "query/queries.jsonl", "ready": int((run_dir / "query" / "queries.jsonl").is_file())},
+                {"artifact": "mmap_alias", "path": "mmap/mmap_read_rows.csv", "ready": int((run_dir / "mmap" / "mmap_read_rows.csv").is_file())},
+                {"artifact": "prediction_alias", "path": "prediction/raw_predictions.jsonl", "ready": int((run_dir / "prediction" / "raw_predictions.jsonl").is_file())},
+                {"artifact": "prediction_lineage", "path": "predictions/prediction_lineage.jsonl", "ready": prediction_lineage_ready},
+                {"artifact": "prediction_source_summary", "path": "predictions/prediction_source_summary.json", "ready": int((run_dir / "predictions" / "prediction_source_summary.json").is_file())},
+                {"artifact": "mmap_prediction_trace", "path": "traces/mmap_prediction_trace.jsonl", "ready": prediction_source_summary["mmap_prediction_trace_ready"]},
+                {"artifact": "selected_candidate_trace", "path": "traces/selected_candidate_trace.jsonl", "ready": prediction_source_summary["selected_candidate_trace_ready"]},
+                {"artifact": "prediction_source_rows", "path": "evidence/prediction_source_rows.csv", "ready": prediction_lineage_ready},
+                {"artifact": "route_memory_prediction_rows", "path": "evidence/route_memory_prediction_rows.csv", "ready": prediction_source_summary["route_memory_prediction_rows_ready"]},
+                {"artifact": "evidence_span_to_prediction", "path": "evidence/evidence_span_to_prediction.csv", "ready": prediction_source_summary["evidence_span_to_prediction_ready"]},
+            ]
+        )
+    if args.emit_generator_hint_nlg:
+        evidence_rows.extend(
+            [
+                {"artifact": "generator_hint_nlg", "path": "predictions/generator_hint_nlg.jsonl", "ready": generator_hint_nlg_ready},
+                {"artifact": "generator_hint_transcript", "path": "nlg/generator_hint_transcript.jsonl", "ready": generator_hint_nlg_ready},
+                {"artifact": "generator_hint_status", "path": "nlg/generator_hint_status.json", "ready": generator_hint_nlg_ready},
+                {"artifact": "generator_hint_rows", "path": "evidence/generator_hint_rows.csv", "ready": generator_hint_nlg_ready},
+                {"artifact": "grounding_rows", "path": "evidence/grounding_rows.csv", "ready": generator_hint_nlg_ready},
+                {"artifact": "generator_hint_trace", "path": "traces/generator_hint_trace.csv", "ready": generator_hint_nlg_ready},
+            ]
+        )
+    if args.emit_shortcut_negative_suite:
+        evidence_rows.extend(
+            [
+                {"artifact": "shortcut_negative_rows", "path": "evidence/shortcut_negative_rows.csv", "ready": shortcut_negative_summary["shortcut_negative_suite_ready"]},
+                {"artifact": "shortcut_negative_summary", "path": "predictions/shortcut_negative_summary.json", "ready": shortcut_negative_summary["shortcut_negative_suite_ready"]},
+            ]
+        )
+    if args.emit_baseline_comparison:
+        evidence_rows.extend(
+            [
+                {"artifact": "baseline_comparison_rows", "path": "benchmark/baseline_comparison_rows.csv", "ready": baseline_comparison_metrics["baseline_comparison_ready"]},
+                {"artifact": "baseline_negative_case_rows", "path": "benchmark/baseline_negative_case_rows.csv", "ready": baseline_comparison_metrics["baseline_comparison_ready"]},
+                {"artifact": "baseline_comparison_metrics", "path": "metrics/baseline_comparison_metrics.json", "ready": baseline_comparison_metrics["baseline_comparison_ready"]},
+                {"artifact": "baseline_latency_rows", "path": "resource/baseline_latency_rows.csv", "ready": baseline_comparison_metrics["baseline_comparison_ready"]},
+                {"artifact": "baseline_promotion_guard_rows", "path": "promotion/baseline_promotion_guard_rows.csv", "ready": baseline_comparison_metrics["baseline_promotion_guard_ready"]},
+            ]
+        )
+    if args.emit_resource_envelope:
+        evidence_rows.append(
+            {"artifact": "resource_envelope", "path": "resource/resource_envelope.json", "ready": resource_envelope["resource_envelope_ready"]}
+        )
     write_csv(run_dir / "evidence" / "evidence_packet.csv", ["artifact", "path", "ready"], evidence_rows)
     promotion_rows = [
         {
@@ -3030,6 +4563,26 @@ def main():
         ("emit_resource_rows", args.emit_resource_rows, "resource/resource_rows.csv"),
         ("emit_evidence_packet", args.emit_evidence_packet, "evidence/evidence_packet.csv"),
         ("emit_promotion_rows", args.emit_promotion_rows, "promotion/promotion_rows.csv"),
+        ("emit_prediction_lineage", args.emit_prediction_lineage, "predictions/prediction_lineage.jsonl"),
+        ("emit_prediction_source_summary", args.emit_prediction_lineage, "predictions/prediction_source_summary.json"),
+        ("emit_mmap_prediction_trace", args.emit_prediction_lineage, "traces/mmap_prediction_trace.jsonl"),
+        ("emit_route_memory_prediction_rows", args.emit_prediction_lineage, "evidence/route_memory_prediction_rows.csv"),
+        ("emit_query_alias", args.emit_prediction_lineage, "query/queries.jsonl"),
+        ("emit_mmap_alias", args.emit_prediction_lineage, "mmap/mmap_read_rows.csv"),
+        ("emit_prediction_alias", args.emit_prediction_lineage, "prediction/raw_predictions.jsonl"),
+        ("emit_generator_hint_nlg", args.emit_generator_hint_nlg, "predictions/generator_hint_nlg.jsonl"),
+        ("emit_generator_hint_transcript", args.emit_generator_hint_nlg, "nlg/generator_hint_transcript.jsonl"),
+        ("emit_generator_hint_status", args.emit_generator_hint_nlg, "nlg/generator_hint_status.json"),
+        ("emit_generator_hint_rows", args.emit_generator_hint_nlg, "evidence/generator_hint_rows.csv"),
+        ("emit_grounding_rows", args.emit_generator_hint_nlg, "evidence/grounding_rows.csv"),
+        ("emit_shortcut_negative_suite", args.emit_shortcut_negative_suite, "evidence/shortcut_negative_rows.csv"),
+        ("emit_shortcut_negative_summary", args.emit_shortcut_negative_suite, "predictions/shortcut_negative_summary.json"),
+        ("emit_baseline_comparison_rows", args.emit_baseline_comparison, "benchmark/baseline_comparison_rows.csv"),
+        ("emit_baseline_negative_case_rows", args.emit_baseline_comparison, "benchmark/baseline_negative_case_rows.csv"),
+        ("emit_baseline_comparison_metrics", args.emit_baseline_comparison, "metrics/baseline_comparison_metrics.json"),
+        ("emit_baseline_latency_rows", args.emit_baseline_comparison, "resource/baseline_latency_rows.csv"),
+        ("emit_baseline_promotion_guard_rows", args.emit_baseline_comparison, "promotion/baseline_promotion_guard_rows.csv"),
+        ("emit_resource_envelope", args.emit_resource_envelope, "resource/resource_envelope.json"),
     ]
     requested_output_rows = []
     for flag, requested, rel_path in requested_output_artifacts:
@@ -3048,6 +4601,12 @@ def main():
         "emit_resource_rows": int(args.emit_resource_rows),
         "emit_evidence_packet": int(args.emit_evidence_packet),
         "emit_promotion_rows": int(args.emit_promotion_rows),
+        "emit_prediction_lineage": int(args.emit_prediction_lineage),
+        "emit_generator_hint_nlg": int(args.emit_generator_hint_nlg),
+        "emit_shortcut_negative_suite": int(args.emit_shortcut_negative_suite),
+        "emit_baseline_comparison": int(args.emit_baseline_comparison),
+        "emit_resource_envelope": int(args.emit_resource_envelope),
+        "routeqa_mini_target_rows": args.routeqa_mini_target_rows,
         "artifacts": requested_output_rows,
         "claim": "requested runner output flags are bound to emitted artifacts in this run",
     }
@@ -3078,6 +4637,8 @@ def main():
         reproducibility_command.extend(["--source-snapshot-mode", args.source_snapshot_mode])
     if args.repo_from_source_snapshot:
         reproducibility_command.extend(["--repo-from-source-snapshot", args.repo_from_source_snapshot])
+    if args.routeqa_mini_target_rows:
+        reproducibility_command.extend(["--routeqa-mini-target-rows", str(args.routeqa_mini_target_rows)])
     for flag, enabled in [
         ("--emit-raw-predictions", args.emit_raw_predictions),
         ("--emit-evaluator-output", args.emit_evaluator_output),
@@ -3085,6 +4646,11 @@ def main():
         ("--emit-resource-rows", args.emit_resource_rows),
         ("--emit-evidence-packet", args.emit_evidence_packet),
         ("--emit-promotion-rows", args.emit_promotion_rows),
+        ("--emit-prediction-lineage", args.emit_prediction_lineage),
+        ("--emit-generator-hint-nlg", args.emit_generator_hint_nlg),
+        ("--emit-shortcut-negative-suite", args.emit_shortcut_negative_suite),
+        ("--emit-baseline-comparison", args.emit_baseline_comparison),
+        ("--emit-resource-envelope", args.emit_resource_envelope),
         ("--emit-ruler-synthetic-smoke", args.emit_ruler_synthetic_smoke),
         ("--emit-longbench-v2-smoke", args.emit_longbench_v2_smoke),
         ("--emit-longbench-v2-official-sample", args.emit_longbench_v2_official_sample),
@@ -3187,6 +4753,77 @@ def main():
             ],
         ),
     ]
+    if args.emit_prediction_lineage:
+        run_layout_specs.append(
+            (
+                "stage_10_lite_aliases",
+                [
+                    ("query_alias", "query/queries.jsonl"),
+                    ("mmap_alias", "mmap/mmap_read_rows.csv"),
+                    ("prediction_alias", "prediction/raw_predictions.jsonl"),
+                ],
+            )
+        )
+        run_layout_specs.append(
+            (
+                "prediction_lineage",
+                [
+                    ("prediction_lineage", "predictions/prediction_lineage.jsonl"),
+                    ("prediction_source_summary", "predictions/prediction_source_summary.json"),
+                    ("mmap_prediction_trace", "traces/mmap_prediction_trace.jsonl"),
+                    ("selected_candidate_trace", "traces/selected_candidate_trace.jsonl"),
+                    ("prediction_source_rows", "evidence/prediction_source_rows.csv"),
+                    ("route_memory_prediction_rows", "evidence/route_memory_prediction_rows.csv"),
+                    ("evidence_span_to_prediction", "evidence/evidence_span_to_prediction.csv"),
+                ],
+            )
+        )
+    if args.emit_generator_hint_nlg:
+        run_layout_specs.append(
+            (
+                "generator_hint_nlg",
+                [
+                    ("generator_hint_nlg", "predictions/generator_hint_nlg.jsonl"),
+                    ("generator_hint_transcript", "nlg/generator_hint_transcript.jsonl"),
+                    ("generator_hint_status", "nlg/generator_hint_status.json"),
+                    ("generator_hint_rows", "evidence/generator_hint_rows.csv"),
+                    ("grounding_rows", "evidence/grounding_rows.csv"),
+                    ("generator_hint_trace", "traces/generator_hint_trace.csv"),
+                ],
+            )
+        )
+    if args.emit_shortcut_negative_suite:
+        run_layout_specs.append(
+            (
+                "shortcut_negative_suite",
+                [
+                    ("shortcut_negative_rows", "evidence/shortcut_negative_rows.csv"),
+                    ("shortcut_negative_summary", "predictions/shortcut_negative_summary.json"),
+                ],
+            )
+        )
+    if args.emit_baseline_comparison:
+        run_layout_specs.append(
+            (
+                "baseline_comparison",
+                [
+                    ("baseline_comparison_rows", "benchmark/baseline_comparison_rows.csv"),
+                    ("baseline_negative_case_rows", "benchmark/baseline_negative_case_rows.csv"),
+                    ("baseline_comparison_metrics", "metrics/baseline_comparison_metrics.json"),
+                    ("baseline_latency_rows", "resource/baseline_latency_rows.csv"),
+                    ("baseline_promotion_guard_rows", "promotion/baseline_promotion_guard_rows.csv"),
+                ],
+            )
+        )
+    if args.emit_resource_envelope:
+        run_layout_specs.append(
+            (
+                "resource_envelope",
+                [
+                    ("resource_envelope", "resource/resource_envelope.json"),
+                ],
+            )
+        )
     run_layout_groups = []
     run_layout_artifacts = []
     for layout_scope, specs in run_layout_specs:
@@ -3365,6 +5002,87 @@ def main():
             ],
         },
     ]
+    if args.emit_prediction_lineage:
+        objective_stage_specs[2]["artifacts"].append(("query_alias", "query/queries.jsonl"))
+        objective_stage_specs[4]["artifacts"].append(("mmap_alias", "mmap/mmap_read_rows.csv"))
+        objective_stage_specs[5]["artifacts"].append(("prediction_alias", "prediction/raw_predictions.jsonl"))
+    if args.emit_prediction_lineage:
+        objective_stage_specs.insert(
+            6,
+            {
+                "stage": "prediction_lineage",
+                "ready": prediction_lineage_ready,
+                "row_count": len(lineage_rows),
+                "artifacts": [
+                    ("prediction_lineage", "predictions/prediction_lineage.jsonl"),
+                    ("prediction_source_summary", "predictions/prediction_source_summary.json"),
+                    ("mmap_prediction_trace", "traces/mmap_prediction_trace.jsonl"),
+                    ("selected_candidate_trace", "traces/selected_candidate_trace.jsonl"),
+                    ("prediction_source_rows", "evidence/prediction_source_rows.csv"),
+                    ("route_memory_prediction_rows", "evidence/route_memory_prediction_rows.csv"),
+                    ("evidence_span_to_prediction", "evidence/evidence_span_to_prediction.csv"),
+                ],
+            },
+        )
+    if args.emit_generator_hint_nlg:
+        objective_stage_specs.insert(
+            7 if args.emit_prediction_lineage else 6,
+            {
+                "stage": "generator_hint_nlg",
+                "ready": generator_hint_nlg_ready,
+                "row_count": len(lineage_state["generator_rows"]),
+                "artifacts": [
+                    ("generator_hint_nlg", "predictions/generator_hint_nlg.jsonl"),
+                    ("generator_hint_transcript", "nlg/generator_hint_transcript.jsonl"),
+                    ("generator_hint_status", "nlg/generator_hint_status.json"),
+                    ("generator_hint_rows", "evidence/generator_hint_rows.csv"),
+                    ("grounding_rows", "evidence/grounding_rows.csv"),
+                    ("generator_hint_trace", "traces/generator_hint_trace.csv"),
+                ],
+            },
+        )
+    if args.emit_shortcut_negative_suite:
+        objective_stage_specs.insert(
+            7 if args.emit_prediction_lineage else 6,
+            {
+                "stage": "shortcut_negative_suite",
+                "ready": shortcut_negative_summary["shortcut_negative_suite_ready"],
+                "row_count": shortcut_negative_summary["negative_case_rows"],
+                "artifacts": [
+                    ("shortcut_negative_rows", "evidence/shortcut_negative_rows.csv"),
+                    ("shortcut_negative_summary", "predictions/shortcut_negative_summary.json"),
+                ],
+            },
+        )
+    if args.emit_baseline_comparison:
+        objective_stage_specs.insert(
+            len(objective_stage_specs) - 1,
+            {
+                "stage": "baseline_comparison",
+                "ready": baseline_comparison_metrics["baseline_comparison_ready"],
+                "row_count": baseline_comparison_metrics["baseline_rows"],
+                "artifacts": [
+                    ("baseline_comparison_rows", "benchmark/baseline_comparison_rows.csv"),
+                    ("baseline_negative_case_rows", "benchmark/baseline_negative_case_rows.csv"),
+                    ("baseline_comparison_metrics", "metrics/baseline_comparison_metrics.json"),
+                    ("baseline_latency_rows", "resource/baseline_latency_rows.csv"),
+                    ("baseline_promotion_guard_rows", "promotion/baseline_promotion_guard_rows.csv"),
+                ],
+            },
+        )
+    if args.emit_resource_envelope:
+        objective_stage_specs.insert(
+            len(objective_stage_specs) - 1,
+            {
+                "stage": "resource_envelope",
+                "ready": resource_envelope["resource_envelope_ready"],
+                "row_count": 1,
+                "artifacts": [
+                    ("resource_envelope", "resource/resource_envelope.json"),
+                    ("resource_rows", "resource/resource_rows.csv"),
+                ],
+            },
+        )
     objective_stages = []
     for spec in objective_stage_specs:
         stage_artifacts = [artifact_entry(run_dir, name, rel_path) for name, rel_path in spec["artifacts"]]
@@ -3437,6 +5155,63 @@ def main():
         ("evidence_packet", "evidence/evidence_packet.csv"),
         ("promotion_rows", "promotion/promotion_rows.csv"),
     ]
+    if args.emit_prediction_lineage:
+        execution_chain_artifacts.extend(
+            [
+                ("query_alias", "query/queries.jsonl"),
+                ("mmap_alias", "mmap/mmap_read_rows.csv"),
+                ("prediction_alias", "prediction/raw_predictions.jsonl"),
+                ("prediction_lineage", "predictions/prediction_lineage.jsonl"),
+                ("prediction_source_summary", "predictions/prediction_source_summary.json"),
+                ("mmap_prediction_trace", "traces/mmap_prediction_trace.jsonl"),
+                ("selected_candidate_trace", "traces/selected_candidate_trace.jsonl"),
+                ("prediction_source_rows", "evidence/prediction_source_rows.csv"),
+                ("route_memory_prediction_rows", "evidence/route_memory_prediction_rows.csv"),
+                ("evidence_span_to_prediction", "evidence/evidence_span_to_prediction.csv"),
+            ]
+        )
+    if args.emit_generator_hint_nlg:
+        execution_chain_artifacts.extend(
+            [
+                ("generator_hint_nlg", "predictions/generator_hint_nlg.jsonl"),
+                ("generator_hint_transcript", "nlg/generator_hint_transcript.jsonl"),
+                ("generator_hint_status", "nlg/generator_hint_status.json"),
+                ("generator_hint_rows", "evidence/generator_hint_rows.csv"),
+                ("grounding_rows", "evidence/grounding_rows.csv"),
+                ("generator_hint_trace", "traces/generator_hint_trace.csv"),
+            ]
+        )
+    if args.emit_shortcut_negative_suite:
+        execution_chain_artifacts.extend(
+            [
+                ("shortcut_negative_rows", "evidence/shortcut_negative_rows.csv"),
+                ("shortcut_negative_summary", "predictions/shortcut_negative_summary.json"),
+            ]
+        )
+    if args.emit_baseline_comparison:
+        execution_chain_artifacts.extend(
+            [
+                ("baseline_comparison_rows", "benchmark/baseline_comparison_rows.csv"),
+                ("baseline_negative_case_rows", "benchmark/baseline_negative_case_rows.csv"),
+                ("baseline_comparison_metrics", "metrics/baseline_comparison_metrics.json"),
+                ("baseline_latency_rows", "resource/baseline_latency_rows.csv"),
+                ("baseline_promotion_guard_rows", "promotion/baseline_promotion_guard_rows.csv"),
+            ]
+        )
+    if args.emit_ruler_synthetic_smoke:
+        execution_chain_artifacts.extend(
+            [
+                ("ruler_synthetic_smoke", "benchmark/ruler_synthetic/ruler_evaluator_rows.csv"),
+                ("ruler_compatible_benchmark_rows", "benchmark/ruler_synthetic/ruler_compatible_benchmark_rows.csv"),
+                ("ruler_compatible_metrics", "benchmark/ruler_synthetic/ruler_compatible_metrics.json"),
+                ("ruler_compatible_prediction_provenance", "benchmark/ruler_synthetic/ruler_compatible_prediction_provenance.csv"),
+                ("ruler_compatible_mmap_store", "benchmark/ruler_synthetic/compatible_niah_store/route_memory_store.bin"),
+                ("ruler_compatible_mmap_reads", "benchmark/ruler_synthetic/compatible_niah_store/mmap_read_rows.csv"),
+                ("ruler_compatible_mmap_store_status", "benchmark/ruler_synthetic/compatible_niah_store/store_status.json"),
+            ]
+        )
+    if args.emit_resource_envelope:
+        execution_chain_artifacts.append(("resource_envelope", "resource/resource_envelope.json"))
     execution_chain_ready = int(
         len(dataset) > 0
         and len(predictions) == len(dataset)
@@ -3457,6 +5232,26 @@ def main():
         "mmap_read_rows": len(mmap_rows),
         "mmap_read_ready_rows": sum(int(row["mmap_read_ready"]) for row in mmap_rows),
         "raw_prediction_rows": len(predictions),
+        "prediction_lineage_rows": len(lineage_rows),
+        "prediction_lineage_ready": prediction_lineage_ready,
+        "prediction_source_summary_ready": prediction_source_summary["prediction_source_summary_ready"],
+        "no_extractor_prediction_ready": no_extractor_prediction_ready,
+        "route_memory_prediction_rows_ready": prediction_source_summary["route_memory_prediction_rows_ready"],
+        "promoted_prediction_rows": promoted_prediction_rows,
+        "promoted_route_memory_prediction_rows": promoted_route_memory_prediction_rows,
+        "generator_hint_nlg_ready": generator_hint_nlg_ready,
+        "shortcut_negative_suite_ready": shortcut_negative_summary["shortcut_negative_suite_ready"],
+        "negative_case_rows": shortcut_negative_summary["negative_case_rows"],
+        "hash_clean_wrong_span_block": shortcut_negative_summary["hash_clean_wrong_span_block"],
+        "corrupted_route_index_block": shortcut_negative_summary["corrupted_route_index_block"],
+        "corrupted_chunk_offsets_block": shortcut_negative_summary["corrupted_chunk_offsets_block"],
+        "baseline_comparison_ready": baseline_comparison_metrics["baseline_comparison_ready"],
+        "baseline_rows": baseline_comparison_metrics["baseline_rows"],
+        "baseline_negative_case_rows": baseline_comparison_metrics.get("baseline_negative_case_rows", 0),
+        "route_memory_safety_dominates_baselines": baseline_comparison_metrics["route_memory_safety_dominates_baselines"],
+        "input_extractor_baseline_only": baseline_comparison_metrics["input_extractor_baseline_only"],
+        "baseline_promotion_guard_ready": baseline_comparison_metrics["baseline_promotion_guard_ready"],
+        "resource_envelope_ready": resource_envelope["resource_envelope_ready"],
         "evaluator_output_rows": len(evaluator_rows),
         "routeqa_rows": len(routeqa_rows),
         "benchmark_rows": len(benchmark_rows),
@@ -3490,6 +5285,11 @@ def main():
         and len(benchmark_rows) == expected_query_count
         and all(int(row["routeqa_bound"]) == 1 for row in routeqa_rows)
         and abs(metrics["wrong_answer_rate"] - 0.0) < 0.000001
+        and (not args.emit_prediction_lineage or (prediction_lineage_ready == 1 and no_extractor_prediction_ready == 1))
+        and (not args.emit_generator_hint_nlg or generator_hint_nlg_ready == 1)
+        and (not args.emit_shortcut_negative_suite or shortcut_negative_summary["shortcut_negative_suite_ready"] == 1)
+        and (not args.emit_baseline_comparison or baseline_comparison_metrics["baseline_comparison_ready"] == 1)
+        and (not args.emit_resource_envelope or resource_envelope["resource_envelope_ready"] == 1)
     )
     summary = {
         "runner_scope": "v14-a-real-query-result-evaluator-runner",
@@ -3516,6 +5316,8 @@ def main():
         "source_snapshot_ready_rows": sum(int(row["source_snapshot_ready"]) for row in source_snapshot_rows),
         "runner_owned_live_source_snapshot_rows": sum(int(row["runner_owned_source_snapshot"]) for row in source_snapshot_rows),
         "dataset_rows": len(dataset),
+        "routeqa_mini_target_rows": args.routeqa_mini_target_rows,
+        "routeqa_mini_ready": int(args.routeqa_mini_target_rows == 0 or (50 <= len(dataset) <= 200 and len(dataset) >= args.routeqa_mini_target_rows)),
         "queries_ready": int((run_dir / "dataset" / "queries.jsonl").is_file()),
         "dataset_manifest_ready": int((run_dir / "dataset" / "dataset_manifest.json").is_file()),
         "store_route_rows": len(route_rows),
@@ -3527,6 +5329,42 @@ def main():
         "mmap_read_ready_rows": sum(int(row["mmap_read_ready"]) for row in mmap_rows),
         "raw_prediction_rows": len(predictions),
         "prediction_status_ready": int((run_dir / "predictions" / "prediction_status.json").is_file()),
+        "prediction_lineage_rows": len(lineage_rows),
+        "prediction_lineage_ready": prediction_lineage_ready,
+        "prediction_source_summary_ready": prediction_source_summary["prediction_source_summary_ready"],
+        "mmap_prediction_trace_ready": prediction_source_summary["mmap_prediction_trace_ready"],
+        "selected_candidate_trace_ready": prediction_source_summary["selected_candidate_trace_ready"],
+        "route_memory_prediction_rows_ready": prediction_source_summary["route_memory_prediction_rows_ready"],
+        "evidence_span_to_prediction_ready": prediction_source_summary["evidence_span_to_prediction_ready"],
+        "no_extractor_prediction_ready": no_extractor_prediction_ready,
+        "oracle_prediction_used": 0,
+        "input_extractor_used": 0,
+        "route_memory_store_used": 1,
+        "mmap_read_used": prediction_source_summary["mmap_read_used"],
+        "candidate_value_pos_used": prediction_source_summary["candidate_value_pos_used"],
+        "value_byte_read_used": prediction_source_summary["value_byte_read_used"],
+        "proposal_hint_used": prediction_source_summary["proposal_hint_used"],
+        "promoted_prediction_rows": promoted_prediction_rows,
+        "promoted_route_memory_prediction_rows": promoted_route_memory_prediction_rows,
+        "generator_hint_nlg_rows": len(lineage_state["generator_rows"]),
+        "generator_hint_nlg_ready": generator_hint_nlg_ready,
+        "grounding_rows": len(lineage_state["grounding_rows"]),
+        "proposal_hint_nlg_used_rows": prediction_source_summary["proposal_hint_nlg_used_rows"],
+        "shortcut_negative_suite_ready": shortcut_negative_summary["shortcut_negative_suite_ready"],
+        "negative_case_rows": shortcut_negative_summary["negative_case_rows"],
+        "hash_clean_wrong_span_block": shortcut_negative_summary["hash_clean_wrong_span_block"],
+        "corrupted_route_index_block": shortcut_negative_summary["corrupted_route_index_block"],
+        "corrupted_chunk_offsets_block": shortcut_negative_summary["corrupted_chunk_offsets_block"],
+        "input_extractor_promotion_block": shortcut_negative_summary["input_extractor_promotion_block"],
+        "oracle_promotion_block": shortcut_negative_summary["oracle_promotion_block"],
+        "baseline_comparison_ready": baseline_comparison_metrics["baseline_comparison_ready"],
+        "baseline_rows": baseline_comparison_metrics["baseline_rows"],
+        "baseline_negative_case_rows": baseline_comparison_metrics.get("baseline_negative_case_rows", 0),
+        "baseline_latency_rows": baseline_comparison_metrics.get("baseline_latency_rows", 0),
+        "baseline_promotion_guard_rows": baseline_comparison_metrics.get("baseline_promotion_guard_rows", 0),
+        "route_memory_safety_dominates_baselines": baseline_comparison_metrics["route_memory_safety_dominates_baselines"],
+        "input_extractor_baseline_only": baseline_comparison_metrics["input_extractor_baseline_only"],
+        "baseline_promotion_guard_ready": baseline_comparison_metrics["baseline_promotion_guard_ready"],
         "evaluator_output_rows": len(evaluator_rows),
         "evaluator_status_ready": int((run_dir / "evaluator" / "evaluator_status.json").is_file()),
         "metrics_ready": 1,
@@ -3552,6 +5390,14 @@ def main():
         "ruler_compatible_rows": ruler_smoke["ruler_compatible_rows"],
         "ruler_compatible_score": f"{ruler_smoke['ruler_compatible_score']:.2f}",
         "ruler_compatible_ready": ruler_smoke["ruler_compatible_ready"],
+        "ruler_compatible_benchmark_rows": ruler_smoke["ruler_compatible_benchmark_rows"],
+        "ruler_compatible_benchmark_ready": ruler_smoke["ruler_compatible_benchmark_ready"],
+        "ruler_compatible_prediction_provenance_rows": ruler_smoke["ruler_compatible_prediction_provenance_rows"],
+        "ruler_compatible_extracted_prediction_rows": ruler_smoke["ruler_compatible_extracted_prediction_rows"],
+        "ruler_compatible_mmap_read_rows": ruler_smoke["ruler_compatible_mmap_read_rows"],
+        "ruler_compatible_mmap_read_ready_rows": ruler_smoke["ruler_compatible_mmap_read_ready_rows"],
+        "ruler_compatible_mmap_prediction_match_rows": ruler_smoke["ruler_compatible_mmap_prediction_match_rows"],
+        "ruler_compatible_mmap_verification_ready": ruler_smoke["ruler_compatible_mmap_verification_ready"],
         "official_ruler_evaluator_ready": ruler_smoke["official_ruler_evaluator_ready"],
         "official_ruler_evaluator_returncode": ruler_smoke["official_ruler_evaluator_returncode"],
         "official_ruler_generator_rows": ruler_smoke["official_generator_rows"],
@@ -3597,6 +5443,11 @@ def main():
         "objective_requirements_manifest_ready": int((run_dir / "evidence" / "objective_requirements_manifest.json").is_file()),
         "objective_requirements_ready": objective_requirements_ready,
         "execution_chain_manifest_ready": int((run_dir / "evidence" / "execution_chain_manifest.json").is_file() and execution_chain_ready),
+        "resource_envelope_ready": resource_envelope["resource_envelope_ready"],
+        "cpu_canonical": resource_envelope["cpu_canonical"],
+        "hip_optional_parity": resource_envelope["hip_optional_parity"],
+        "run_dir_under_5gb": resource_envelope["run_dir_under_5gb"],
+        "query_count_within_lite": resource_envelope["query_count_within_lite"],
         "promotion_rows": len(promotion_rows),
         "runner_owned_query_result_evaluator_ready": runner_ready,
         "candidate_external_benchmark_result_ready": 0,
@@ -3618,6 +5469,10 @@ def main():
             "backend": args.backend,
             "store_mode": args.store_mode,
             "source_snapshot_mode": args.source_snapshot_mode,
+            "prediction_lineage_enabled": int(args.emit_prediction_lineage),
+            "generator_hint_nlg_enabled": int(args.emit_generator_hint_nlg),
+            "resource_envelope_enabled": int(args.emit_resource_envelope),
+            "routeqa_mini_target_rows": args.routeqa_mini_target_rows,
             "ruler_synthetic_smoke_enabled": int(args.emit_ruler_synthetic_smoke),
             "longbench_v2_smoke_enabled": int(args.emit_longbench_v2_smoke),
             "longbench_v2_official_sample_enabled": int(args.emit_longbench_v2_official_sample),

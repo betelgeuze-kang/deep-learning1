@@ -1011,6 +1011,23 @@ Current closure:
   artifacts, an official evaluator status record, official generator output
   rows for three official NIAH tasks, a multi-task official evaluator summary,
   and generated benchmark/metrics/provenance binding rows.
+- `v14-b-lite` is closed as a local prediction-lineage proof, not a new
+  external benchmark/release claim. The runner can emit prediction lineage and
+  source summary artifacts, mmap/candidate traces, RouteMemory prediction
+  evidence rows, a 50-row RouteQA-mini lightweight benchmark, Stage 8.2-L
+  shortcut/corruption negative rows, tiny generator-hint NLG rows under `nlg/`
+  plus grounding evidence, explicit `query/`, `mmap/`, and `prediction/` alias
+  artifacts for the Stage 10-Lite output tree, and a CPU-canonical
+  RX 6900XT/32GB/500GB-lite resource envelope. The smoke verifies
+  `prediction_lineage_ready=1`, `no_extractor_prediction_ready=1`,
+  `promoted_prediction_rows == promoted_route_memory_prediction_rows`,
+  `shortcut_negative_suite_ready=1`, `hash_clean_wrong_span_block=1`,
+  `corrupted_route_index_block=1`, `corrupted_chunk_offsets_block=1`,
+  `generator_hint_nlg_ready=1`, `resource_envelope_ready=1`,
+  `run_layout_ready=1`, `objective_requirements_ready=1`, and
+  `execution_chain_manifest_ready=1`, while keeping real external
+  benchmark/release flags blocked. The detailed goal and artifact contract live
+  in [V14B_LITE_PREDICTION_LINEAGE_GOAL.md](V14B_LITE_PREDICTION_LINEAGE_GOAL.md).
 - Current verification has h6-t/u/v/w/x/y, h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s, h7-b, h7-c,
   v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation/readiness,
   the v08 lower-chain remote-artifact path and v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at real-source/remote-review/remote-full source-import/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation guards, h11-a prototype
@@ -1020,8 +1037,212 @@ Current closure:
   h7-c/v08-at/h11-d/h9-h/v12/v13-a/v13-b/v13-c/v13-d/v13-e/v13-f/v13-g/v13-h/v13-i/v13-j/v13-k/v13-l/v13-m/v13-n.
   HIP parity remains optional and environment-dependent.
 
+Post Stage 10-Lite roadmap:
+
+- Keep `v14-b-lite` frozen as the local proof baseline. It is the smallest
+  reproducible claim that a RouteMemory mmap value-byte path can produce
+  promoted predictions with no oracle, no raw-input extractor, shortcut
+  negatives blocked, generator-hint grounding recorded, and source/dataset/
+  query/store/mmap/prediction/evaluator/metrics/evidence/promotion/resource
+  artifacts hash-bound in one run directory. This remains a local proof and
+  must not set `candidate_external_benchmark_result_ready`,
+  `real_external_benchmark_verified`, or `real_release_package_ready`.
+- `v14-c` is closed as the baseline-comparison boundary. It compares input
+  extractor, BM25/lexical retrieval, RouteMemory retrieval-only, RouteMemory
+  exact value read, RouteMemory plus proposal hint, and tiny generator-hint NLG
+  on the same 50-row RouteQA-mini package plus shortcut negatives. The runner
+  emits
+  `benchmark/baseline_comparison_rows.csv`,
+  `benchmark/baseline_negative_case_rows.csv`,
+  `metrics/baseline_comparison_metrics.json`,
+  `resource/baseline_latency_rows.csv`, and
+  `promotion/baseline_promotion_guard_rows.csv`. The focused smoke verifies
+  six baselines, 66 baseline/negative-case rows,
+  `route_memory_safety_dominates_baselines=1`,
+  `input_extractor_baseline_only=1`,
+  `baseline_promotion_guard_ready=1`, and keeps real external
+  benchmark/release flags blocked.
+- `v14-d` is closed as the local scale boundary above v14-c. The scale runner
+  executes 100-row and 150-row public-codebase RouteQA-mini runs while keeping
+  CPU canonical, HIP optional, run directories below the local budget, route
+  and jump rates at zero, and all v14-b-lite/v14-c lineage, negative-suite,
+  NLG-grounding, baseline-comparison, resource-envelope, run-layout,
+  objective, and execution-chain contracts intact. This is still runner-owned
+  lightweight benchmark evidence, not independent external benchmark
+  verification.
+- `v14-e` is closed as a RULER NIAH-lite runner-owned external-source smoke.
+  It keeps the scale small with a RULER-compatible NIAH row plus a 100-row
+  RouteQA-mini local context, derives the NIAH prediction through a dedicated
+  RouteMemory mmap store, writes compatible benchmark/metrics/provenance rows,
+  normalizes one ready runner-owned external benchmark row, and reaches
+  `runner_owned_external_benchmark_result_ready=1` while real/candidate
+  benchmark and release flags remain blocked.
+- `v15-a` is closed as the independent reproduction mechanics package around
+  the v14-b/v14-c/v14-d/v14-e outputs. It provides one-command reproduction,
+  expected summary/decision CSVs, frozen query sets, source snapshot
+  rows/manifests, resource envelopes, run sha256 manifests, package artifact
+  and environment manifests, failure-mode documentation, and explicit "what
+  this does not claim" notes. This is a replay package for runner-owned
+  evidence, not independent benchmark verification by itself.
+- `v15-b` is closed as local nonfixture review / independent rerun mechanics
+  above v15-a. It binds the v15-a package hash, reviewer identity, rerun
+  environment, reproduced command stdout/stderr hashes, expected-vs-rerun
+  summary copies, metric deltas, and pass/fail review rows. This is still a
+  runner-owned local review package; external independent reviewer, candidate
+  benchmark, real benchmark, and release flags remain blocked until a real
+  third-party/non-local rerun is supplied.
+- `v16` is closed as two explicit tracks. The research track is a
+  publication-style packet that binds hypothesis, method, RouteMemory lineage,
+  shortcut-resistance, baseline/scale/NIAH-lite results, reproducibility,
+  review/rerun evidence, limitations, and claim boundaries. The commercial
+  track is a local codebase QA/audit prototype contract with evidence-bound
+  answers, citation requirements, abstention behavior, local-first privacy
+  assumptions, user-facing failure modes, and blocked unsupported product
+  claims. It is not a release or external benchmark verification package.
+- Defer large generators and GPU speed claims. The generator track should first
+  harden `nlg/` grounding, unsupported-claim detection, and abstain behavior;
+  only then test a tiny non-attention or quantized generator. HIP on RX 6900XT
+  remains a parity/diagnostic path until CPU/HIP result hashes or tolerance
+  bounds, kernel/fallback rows, and real timing evidence are bound to the same
+  run package.
+- Recommended attachment after `v14-d` is evidence-bound local codebase QA and
+  audit. Research-wise, this gives the cleanest test surface for RouteMemory
+  lineage, no-extractor prediction, shortcut resistance, abstention, and
+  benchmark comparability because every answer can be tied to a source span,
+  mmap trace, evaluator row, and negative case. Commercially, the same surface
+  maps to a local-first code review / documentation QA / compliance-audit
+  prototype, but it should remain a prototype until v15 independent
+  reproduction and nonfixture review evidence exist.
+
 Current next boundary:
 
+- `v17` is closed as a post-v16 externalization handoff, not actual external
+  validation. It separates three tracks: third-party rerun, official benchmark
+  reconciliation, and commercial closed-corpus local QA/audit PoC. The package
+  prepares commands, schemas, required artifact rows, manifest templates, and
+  acceptance criteria while keeping `independent_rerun_actual_ready=0`,
+  `candidate_external_benchmark_result_ready=0`,
+  `closed_corpus_poc_actual_ready=0`, real benchmark, and release flags blocked.
+- `v18` is closed as the supplied external evidence intake verifier above v17.
+  With no supplied directories it keeps all actual/candidate flags blocked.
+  With supplied non-fixture directories it can verify third-party rerun,
+  official benchmark reconciliation, and commercial closed-corpus PoC evidence
+  through `V18_THIRD_PARTY_RERUN_DIR`, `V18_OFFICIAL_BENCHMARK_DIR`, and
+  `V18_COMMERCIAL_POC_DIR`. The included fixture smoke proves verifier logic
+  only; it is not real external evidence.
+- `v19` is closed as the external submission bundle above v18, not as external
+  validation. It packages third-party rerun submission/runbook files, official
+  benchmark slice requirements, commercial local evidence-bound QA/audit PoC
+  intake files, v18 return commands, track rows, artifact hashes, and
+  `docs/POST_V18_RESEARCH_ROADMAP.md`. It marks only submission readiness and
+  keeps `independent_rerun_actual_ready=0`,
+  `candidate_external_benchmark_result_ready=0`,
+  `closed_corpus_poc_actual_ready=0`, real benchmark, and release flags blocked.
+- `v20` is closed as the external return tracker above v19/v18. It turns the
+  three externalization tracks into explicit required-return rows, blocker rows,
+  and next-action rows, and forwards optional `V20_THIRD_PARTY_RERUN_DIR`,
+  `V20_OFFICIAL_BENCHMARK_DIR`, and `V20_COMMERCIAL_POC_DIR` directories into
+  the v18 verifier. The default no-return path is intentionally blocked for all
+  actual/candidate/release flags, but the remaining evidence gaps are now
+  machine-readable.
+- `v21` is closed as the external review dispatch kit above v20. It packages
+  reviewer-facing requests for the third-party rerun, official benchmark
+  reconciliation, and commercial local QA/audit PoC tracks, a packet index,
+  return directory layout, verification command script, copied return templates,
+  tracker summary, source manifests, and artifact hashes. It is the handoff
+  packet to send outward, not evidence that the external review has already
+  happened.
+- `v22` is closed as the clean-machine execution kit above v21. It adds host
+  and container clean-machine runbooks, a minimal container recipe, a
+  third-party rerun capture script, reviewer/environment templates, official
+  benchmark and commercial PoC return templates, execution notes, verification
+  notes, manifests, and artifact hashes. The capture script now auto-populates
+  v15-b metric delta rows and review rows after a successful rerun, leaving
+  reviewer identity and true clean-machine independence as the remaining
+  external fields. This reduces ambiguity for the real third-party rerun path
+  but does not substitute for an actual returned independent review directory.
+- `v23` is closed as the official benchmark reconciliation kit above v22. It
+  adds an official-slice runbook, return directory layout, evaluator/container
+  contract, no-oracle/no-raw-input-extractor contract, raw prediction template,
+  RouteMemory-derived prediction-lineage template, metrics/provenance/
+  reproducibility templates, a return-file preflight script, v20 verification
+  notes, manifests, and artifact hashes. This reduces ambiguity for the real
+  RULER/LongBench reconciliation path but does not substitute for returned
+  official benchmark evidence.
+- `v24` is closed as the current external send/receive/verify handoff above
+  v21/v22/v18. It explicitly says what to send (`v21` dispatch kit plus `v22`
+  clean-machine execution kit), what to receive (third-party rerun, official
+  benchmark, or commercial closed-corpus PoC return directory), and how to
+  verify with direct `V18_THIRD_PARTY_RERUN_DIR`,
+  `V18_OFFICIAL_BENCHMARK_DIR`, and `V18_COMMERCIAL_POC_DIR` commands. This is
+  the operational packet for the updated objective; it still cannot move actual
+  flags without returned external directories.
+- `v25` is closed as the outbound send manifest above v24. It hash-manifests
+  all outbound `v21` dispatch-kit and `v22` clean-machine execution-kit files,
+  provides receiver acknowledgement, return-option, and direct v18 verification
+  instructions, and records artifact hashes. This makes the send step auditable
+  but still does not replace a returned external directory.
+- `v26` is closed as the single external send bundle above v25. It copies all
+  outbound `v21` and `v22` files into one `send_bundle/`, writes bundle file and
+  sha256 manifests, receiver integrity-check instructions, direct v18 return
+  verification notes, source manifests, and artifact hashes. This is the current
+  directory to send outward; it still does not replace a returned external
+  directory.
+- `v27` is closed as the external send archive above v26. It packages the v26
+  send bundle into a transfer-friendly `tar.gz`, writes archive sha256 sums,
+  archive listing, receiver archive/return verification notes, source manifests,
+  and artifact hashes. This makes outbound transfer easier; it still does not
+  replace returned external evidence.
+- `v28` is closed as the inbound return inbox above v27/v18. It creates standard
+  return locations for third-party rerun, official benchmark, and commercial
+  closed-corpus PoC directories, mirrors the latest v18 intake result, and
+  invokes v18 only for non-empty return directories. Empty placeholder inboxes
+  are not promoted into supplied evidence.
+- `v29` is closed as the receiver-side return preflight kit above v28. It checks
+  default v28 inbox paths or supplied `V29_*_RETURN_DIR` paths for required
+  third-party rerun, official benchmark, and commercial PoC return files, writes
+  missing-file rows and v18 verification instructions, and remains a preflight
+  gate only. It does not promote actual/candidate/release readiness.
+- `v30` is closed as the commercial codebase QA closed-corpus PoC return above
+  v29/v18. It generates a repository-only commercial return directory with
+  source-bound query rows, exact source hashes, PoC result rows, audit trail,
+  resource envelope, privacy review, acceptance review, and artifact hashes.
+  v29 sees the commercial return as complete and v18 verifies
+  `closed_corpus_poc_actual_ready=1`. This closes the first commercial PoC
+  evidence loop while leaving third-party rerun, official benchmark, real
+  external benchmark, and release readiness blocked.
+- `v31` is closed as the official RULER NIAH candidate return above v30/v18. It
+  live-binds the current `NVIDIA/RULER` HEAD, hashes upstream `prepare.py`,
+  `evaluate.py`, and README source files, and returns official source,
+  evaluator, raw prediction, RouteMemory lineage, metrics, provenance,
+  reproducibility, and candidate rows. v18 verifies
+  `candidate_external_benchmark_result_ready=1`, and v20 can track official
+  candidate plus commercial PoC returns together. Real external benchmark and
+  release remain blocked until third-party rerun evidence arrives.
+- `v32` is closed as the GitHub Actions third-party rerun kit above v31/v22/v18.
+  It adds a workflow that runs the v22 capture script on a GitHub-hosted
+  `ubuntu-24.04` runner, fills reviewer/environment provenance, invokes v18, and
+  uploads the return artifact. The local v32 kit is ready and authenticated, but
+  `independent_rerun_actual_ready` stays 0 until the workflow artifact is
+  downloaded and verified by v18.
+- The next real boundary now requires returned external artifacts: a
+  downloaded GitHub Actions or reviewer clean-machine rerun package, broader
+  official benchmark slices beyond the v31 one-row candidate, and broader
+  domain/customer closed-corpus PoCs beyond the repository-only v30 codebase QA
+  return.
+- After the current mode closes, the immediate roadmap is evidence scaling
+  rather than another internal mechanics layer. First, run and download the v32
+  GitHub Actions return artifact and verify it through v18 together with the
+  v31 official RULER candidate and v30 commercial codebase QA return. Then
+  freeze a v33 evidence-closure packet, ask for one human review of that packet,
+  expand v31 along one official benchmark axis, expand v30 into one additional
+  closed-corpus domain, and only then build a release-claim audit packet. The
+  detailed post-mode plan is tracked in `docs/POST_V18_RESEARCH_ROADMAP.md`.
+- The recommended first attachment is codebase QA. It is the cleanest research
+  test surface for RouteMemory lineage, no-extractor prediction, citation
+  accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
+  commercially it maps to a local-first QA/audit PoC without claiming LLM
+  replacement.
 - Provide or connect a real external teacher-label source through the h10-j
   source-verification contract and replace h10-k/h10-l local labels with real
   source-backed feature labels that row-match external teacher-label evidence.
