@@ -21,7 +21,8 @@ Current boundary:
 - `v31` provides the first official RULER NIAH candidate return and v18 verification path.
 - `v32` provides the GitHub Actions clean-runner path for the remaining third-party rerun return.
 - `v33` provides the frozen evidence-closure packet for the verified v32/v31/v30/v18 intake.
-- Current verified state after PR run `27029089994` and v33: `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `closed_corpus_poc_actual_ready=1`, `real_external_benchmark_verified=1`, and `v33_evidence_closure_packet_ready=1`; `human_review_completed=0` and `real_release_package_ready=0` remain blocked until separate review/audit packets.
+- `v34` provides the first official benchmark expansion packet: RULER NIAH grows from 1 to 6 raw prediction rows at the same 4096-token context length while keeping the official source/evaluator snapshot, no-oracle/no-extractor contract, and RouteMemory lineage.
+- Current verified state after PR run `27029089994` plus v33/v34: `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `candidate_external_benchmark_expansion_ready=1`, `closed_corpus_poc_actual_ready=1`, `real_external_benchmark_verified=1`, `v33_evidence_closure_packet_ready=1`, and `v34_official_benchmark_expansion_packet_ready=1`; `human_review_completed=0` and `real_release_package_ready=0` remain blocked until separate review/audit packets.
 
 ## Current Handoff
 
@@ -167,16 +168,17 @@ Mode-closure result:
 - v18 has been run with all three current evidence directories: v32 third-party rerun, v31 official RULER candidate, and v30 commercial codebase QA PoC.
 - The verified closure flags are `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `closed_corpus_poc_actual_ready=1`, and therefore `real_external_benchmark_verified=1`.
 - v33 has frozen those evidence directories into `results/v33_evidence_closure_packet/packet_001/` with v18 summary/decision rows, copied evidence returns, `sha256_manifest.csv`, `CLAIM_BOUNDARY.md`, and a human-review request.
-- `real_release_package_ready` remains 0 until a separate release audit packet is built on top of the verified evidence. Do not promote release language inside the v32 closure step.
+- v34 has expanded the official benchmark slice into `results/v34_official_benchmark_expansion_packet/packet_001/`, with 6 RULER NIAH raw prediction rows, official evaluator/source hashes, RouteMemory lineage, v18 re-verification, `EXPANSION_BOUNDARY.md`, and `sha256_manifest.csv`.
+- `real_release_package_ready` remains 0 until a separate release audit packet is built on top of the verified evidence. Do not promote release language inside the v34 expansion step.
 
 Do not keep adding internal packaging layers after this mode closes unless a real return exposes a concrete verifier gap. The next roadmap should move from mechanics to evidence scale:
 
 - Week 0: done. The current v14-v32 scripts, docs, and `.github/workflows/third-party-rerun.yml` are on the PR branch; GitHub Actions PR run `27029089994` returned the artifact; local v18 verified it together with v31 and v30.
 - Week 1: done. `v33` freezes the v18 summary, decision rows, copied third-party return, official candidate return, commercial PoC return, sha256 manifest, and a plain-language claim boundary.
 - Week 1-2: run one independent human-review pass over the `v33` packet. The reviewer should check that the GitHub-hosted runner identity is acceptable as third-party/clean-machine evidence or require a non-GitHub human reviewer rerun.
-- Week 2-3: expand the v31 official benchmark slice only one axis at a time. Start with more RULER NIAH rows at the same context length before adding LongBench v2 or another task family.
+- Week 2-3: done. `v34` expands the v31 official benchmark slice only one axis at a time: more RULER NIAH rows at the same context length before adding LongBench v2 or another task family.
 - Week 3-4: run a second closed-corpus PoC in either internal documentation or product manuals. Keep the same v30 schema: source spans, citations, abstentions, wrong-answer guard, privacy review, and acceptance review.
-- Month 2: build a `v34` official benchmark expansion packet with raw predictions, official evaluator hash, source snapshot, RouteMemory lineage, and metrics for a larger RULER NIAH slice or a small LongBench v2 slice.
+- Month 2: done. `v34` builds the official benchmark expansion packet with raw predictions, official evaluator hash, source snapshot, RouteMemory lineage, and metrics for a larger RULER NIAH slice.
 - Month 2: build a `v35` commercial pilot packet for one buyer-visible workflow: codebase QA, product-manual QA, or incident-log QA. Do not mix all three in one pilot.
 - Month 3: build a `v36` release-claim audit packet that consumes v33/v34/v35 and explicitly decides the maximum allowed public claim. Expected claim shape: local evidence-bound QA/audit architecture with deterministic provenance and conservative abstention.
 

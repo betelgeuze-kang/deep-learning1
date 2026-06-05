@@ -1238,10 +1238,22 @@ Current next boundary:
   packet files, and writes an explicit claim boundary plus human-review request.
   It verifies `v33_evidence_closure_packet_ready=1` while keeping
   `human_review_completed=0` and `real_release_package_ready=0`.
+- `v34` is closed as the official benchmark expansion packet above
+  v33/v31/v18. It expands the v31 RULER NIAH candidate along one axis only:
+  raw prediction rows increase from 1 to 6 while benchmark family, task family,
+  context length, official source snapshot, and evaluator digest stay fixed. It
+  writes raw predictions, RouteMemory lineage, expansion metrics, candidate
+  result rows, `EXPANSION_BOUNDARY.md`, `benchmark_expansion_manifest.json`,
+  and `sha256_manifest.csv`, then reruns v18 with the v34 official return plus
+  v33 third-party/commercial evidence. It verifies
+  `v34_official_benchmark_expansion_packet_ready=1`,
+  `candidate_external_benchmark_expansion_ready=1`, and
+  `real_external_benchmark_verified=1` while keeping
+  `human_review_completed=0` and `real_release_package_ready=0`.
 - The next real boundary is now evidence scaling and review rather than another
-  internal mechanics layer: ask for one human review of the v33 packet, expand
-  v31 along one official benchmark axis, expand v30 into one additional
-  closed-corpus domain, and only then build a release-claim audit packet. The
+  internal mechanics layer: ask for one human review of the v33/v34 evidence
+  packet set, expand v30 into one additional closed-corpus domain, and only
+  then build a release-claim audit packet. The
   detailed post-mode plan is tracked in `docs/POST_V18_RESEARCH_ROADMAP.md`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
