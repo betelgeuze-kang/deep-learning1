@@ -1342,10 +1342,15 @@ Current next boundary:
   binds every decision to documentation and implementation source spans, and
   verifies the return through v18, while keeping `human_review_completed=0` and
   `real_release_package_ready=0`.
+- `v44` is closed as the Tiny Non-Attention Generator Hint smoke above v43/v18.
+  It uses compact RouteHint payloads with a finite-state/template generator,
+  records zero attention layers, zero transformer blocks, and zero raw prompt
+  context bytes, verifies grounded answers plus missing-query abstention through
+  v18, and keeps `human_review_completed=0` and
+  `real_release_package_ready=0`.
 - The next real boundary is now buyer-visible audit evidence rather than
   another internal mechanics layer. The remaining recommended sequence starts
-  at `v44` tiny non-attention generator using RouteHint without raw prompt
-  stuffing, then `v45` LongBench v2 small slice, `v46` source-verified scorer
+  at `v45` LongBench v2 small slice, then `v46` source-verified scorer
   mainline, and `v47` offline domain policy update over candidate selection,
   span read, hint strength, abstain/retry, and verifier decision. The claim
   remains local evidence-bound QA/audit assistance, not Transformer
