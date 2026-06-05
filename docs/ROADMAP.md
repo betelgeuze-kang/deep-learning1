@@ -1261,10 +1261,23 @@ Current next boundary:
   `closed_corpus_poc_actual_ready=1`, and
   `real_external_benchmark_verified=1` while keeping
   `human_review_completed=0` and `real_release_package_ready=0`.
+- `v36` is closed as the release-claim audit packet above v33/v34/v35. It
+  copies evidence manifests, summaries, decisions, and claim boundaries from
+  v33/v34/v35, writes `claim_matrix.csv`, `evidence_input_rows.csv`,
+  `release_decision_rows.csv`, `RELEASE_CLAIM_AUDIT.md`,
+  `v36_release_claim_audit_manifest.json`, and `sha256_manifest.csv`, and
+  decides the maximum allowed public wording. It verifies
+  `v36_release_claim_audit_packet_ready=1`, `evidence_inputs_ready=1`, and
+  `maximum_allowed_claim_decided=1`; the maximum allowed wording is bounded to
+  local evidence-bound QA/audit with deterministic provenance, source-cited
+  answers, conservative abstention, and externally reproducible evidence
+  packets. It keeps `human_review_completed=0` and
+  `real_release_package_ready=0`, with release-ready product and stronger model
+  replacement claims blocked.
 - The next real boundary is now evidence scaling and review rather than another
-  internal mechanics layer: ask for one human review of the v33/v34 evidence
-  packet set and then build a release-claim audit packet that consumes
-  v33/v34/v35. The
+  internal mechanics layer: ask for one human review of the v33/v34/v35/v36
+  evidence set and either accept the current GitHub-hosted clean-runner evidence
+  or require a non-GitHub independent rerun. The
   detailed post-mode plan is tracked in `docs/POST_V18_RESEARCH_ROADMAP.md`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation

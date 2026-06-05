@@ -158,9 +158,9 @@ queries = [
     {
         "query_id": "idocs_004",
         "question": "Can the project claim release-ready product status now?",
-        "expected_answer": "ABSTAIN: real_release_package_ready remains 0 until a separate release audit packet.",
+        "expected_answer": "ABSTAIN: real_release_package_ready remains 0 until external human review accepts the evidence set.",
         "expected_behavior": "abstain",
-        **locate("docs/POST_V18_RESEARCH_ROADMAP.md", "`real_release_package_ready` remains 0 until a separate release audit packet"),
+        **locate("docs/POST_V18_RESEARCH_ROADMAP.md", "`real_release_package_ready` remains 0 until external human review accepts the evidence set"),
     },
     {
         "query_id": "idocs_005",

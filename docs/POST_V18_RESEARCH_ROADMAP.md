@@ -23,7 +23,8 @@ Current boundary:
 - `v33` provides the frozen evidence-closure packet for the verified v32/v31/v30/v18 intake.
 - `v34` provides the first official benchmark expansion packet: RULER NIAH grows from 1 to 6 raw prediction rows at the same 4096-token context length while keeping the official source/evaluator snapshot, no-oracle/no-extractor contract, and RouteMemory lineage.
 - `v35` provides the first post-v30 commercial pilot packet: an `internal_docs` buyer-visible workflow using the v30 commercial-return schema, five source-cited QA rows, one release-claim abstain row, and privacy/resource/acceptance review.
-- Current verified state after PR run `27029089994` plus v33/v34/v35: `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `candidate_external_benchmark_expansion_ready=1`, `closed_corpus_poc_actual_ready=1`, `real_external_benchmark_verified=1`, `v33_evidence_closure_packet_ready=1`, `v34_official_benchmark_expansion_packet_ready=1`, and `v35_commercial_pilot_packet_ready=1`; `human_review_completed=0` and `real_release_package_ready=0` remain blocked until separate review/audit packets.
+- `v36` provides the release-claim audit packet over v33/v34/v35 and decides the maximum allowed public wording while blocking release-ready product and stronger model-replacement claims.
+- Current verified state after PR run `27029089994` plus v33/v34/v35/v36: `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `candidate_external_benchmark_expansion_ready=1`, `closed_corpus_poc_actual_ready=1`, `real_external_benchmark_verified=1`, `v33_evidence_closure_packet_ready=1`, `v34_official_benchmark_expansion_packet_ready=1`, `v35_commercial_pilot_packet_ready=1`, and `v36_release_claim_audit_packet_ready=1`; `maximum_allowed_claim_decided=1`, but `human_review_completed=0` and `real_release_package_ready=0` remain blocked until external review accepts the evidence set.
 
 ## Current Handoff
 
@@ -171,7 +172,8 @@ Mode-closure result:
 - v33 has frozen those evidence directories into `results/v33_evidence_closure_packet/packet_001/` with v18 summary/decision rows, copied evidence returns, `sha256_manifest.csv`, `CLAIM_BOUNDARY.md`, and a human-review request.
 - v34 has expanded the official benchmark slice into `results/v34_official_benchmark_expansion_packet/packet_001/`, with 6 RULER NIAH raw prediction rows, official evaluator/source hashes, RouteMemory lineage, v18 re-verification, `EXPANSION_BOUNDARY.md`, and `sha256_manifest.csv`.
 - v35 has expanded the commercial PoC track into `results/v35_commercial_pilot_packet/packet_001/`, with an `internal_docs` commercial pilot packet for one buyer-visible workflow, five source-cited rows, one abstain row, privacy/resource/acceptance review, v18 re-verification, `COMMERCIAL_PILOT_BOUNDARY.md`, and `sha256_manifest.csv`.
-- `real_release_package_ready` remains 0 until a separate release audit packet is built on top of the verified evidence. Do not promote release language inside the v35 pilot step.
+- v36 has audited the release claim boundary in `results/v36_release_claim_audit_packet/packet_001/`, with `claim_matrix.csv`, `release_decision_rows.csv`, `RELEASE_CLAIM_AUDIT.md`, and `sha256_manifest.csv`. It allows only the bounded local evidence-bound QA/audit wording and blocks release-ready product, general LLM replacement, Transformer replacement, frontier long-context solved, GPU acceleration, and full commercial deployment readiness.
+- `real_release_package_ready` remains 0 until external human review accepts the evidence set and any required non-GitHub rerun is completed. Do not promote release language inside the v36 audit step.
 
 Do not keep adding internal packaging layers after this mode closes unless a real return exposes a concrete verifier gap. The next roadmap should move from mechanics to evidence scale:
 
@@ -182,7 +184,8 @@ Do not keep adding internal packaging layers after this mode closes unless a rea
 - Week 3-4: done. `v35` runs a second closed-corpus PoC in internal documentation. It keeps the same v30 schema: source spans, citations, abstentions, wrong-answer guard, privacy review, and acceptance review.
 - Month 2: done. `v34` builds the official benchmark expansion packet with raw predictions, official evaluator hash, source snapshot, RouteMemory lineage, and metrics for a larger RULER NIAH slice.
 - Month 2: done. `v35` builds a commercial pilot packet for one buyer-visible workflow: internal documentation QA. Do not mix all three in one pilot.
-- Month 3: build a `v36` release-claim audit packet that consumes v33/v34/v35 and explicitly decides the maximum allowed public claim. Expected claim shape: local evidence-bound QA/audit architecture with deterministic provenance and conservative abstention.
+- Month 3: done. `v36` builds a release-claim audit packet that consumes v33/v34/v35 and explicitly decides the maximum allowed public claim. Expected claim shape: local evidence-bound QA/audit architecture with deterministic provenance and conservative abstention.
+- Next: complete one independent human-review pass over the v33/v34/v35/v36 evidence set. The reviewer should either accept GitHub-hosted runner evidence for this stage or request a non-GitHub independent rerun before any release package can be marked ready.
 
 Expansion discipline:
 
