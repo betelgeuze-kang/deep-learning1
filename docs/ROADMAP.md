@@ -1336,17 +1336,22 @@ Current next boundary:
   abstain rows for unsupported readiness/replacement claims, privacy/resource
   review, acceptance review, and v18 verification, while keeping
   `human_review_completed=0` and `real_release_package_ready=0`.
+- `v43` is closed as the Doc-Code Conflict Detection audit above v42/v18. It
+  derives implementation facts from v42 evidence, checks a bounded doc-code
+  conflict corpus, finds 8 mismatch rows while preserving 4 consistent rows,
+  binds every decision to documentation and implementation source spans, and
+  verifies the return through v18, while keeping `human_review_completed=0` and
+  `real_release_package_ready=0`.
 - The next real boundary is now buyer-visible audit evidence rather than
   another internal mechanics layer. The remaining recommended sequence starts
-  at `v43` doc-code conflict detection, then `v44` tiny non-attention generator
-  using RouteHint without raw prompt stuffing, `v45` LongBench v2 small slice,
-  `v46` source-verified scorer mainline, and `v47` offline domain policy update
-  over candidate selection, span read, hint strength, abstain/retry, and
-  verifier decision. The claim remains local evidence-bound QA/audit assistance,
-  not Transformer replacement, frontier local LLM, GPU acceleration,
-  long-context solved, or expert replacement. Human review stays deferred until
-  release-ready wording is needed; v37-v39 remain the reuse path for returned
-  `human_review_rows.csv`.
+  at `v44` tiny non-attention generator using RouteHint without raw prompt
+  stuffing, then `v45` LongBench v2 small slice, `v46` source-verified scorer
+  mainline, and `v47` offline domain policy update over candidate selection,
+  span read, hint strength, abstain/retry, and verifier decision. The claim
+  remains local evidence-bound QA/audit assistance, not Transformer
+  replacement, frontier local LLM, GPU acceleration, long-context solved, or
+  expert replacement. Human review stays deferred until release-ready wording is
+  needed; v37-v39 remain the reuse path for returned `human_review_rows.csv`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
