@@ -20,7 +20,7 @@ Current boundary:
 - `v30` provides the first commercial codebase QA closed-corpus PoC return and v18 verification path.
 - `v31` provides the first official RULER NIAH candidate return and v18 verification path.
 - `v32` provides the GitHub Actions clean-runner path for the remaining third-party rerun return.
-- Current verified state after v31: `candidate_external_benchmark_result_ready=1` and `closed_corpus_poc_actual_ready=1`, while `independent_rerun_actual_ready=0`, `real_external_benchmark_verified=0`, and `real_release_package_ready=0` remain blocked.
+- Current verified state after PR run `27027920036`: `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `closed_corpus_poc_actual_ready=1`, and `real_external_benchmark_verified=1`; `real_release_package_ready=0` remains blocked until a separate release audit packet.
 
 ## Current Handoff
 
@@ -145,24 +145,31 @@ gh run download --name third-party-rerun-return --dir results/v32_github_actions
 GitHub Actions return verification:
 
 ```bash
-V18_THIRD_PARTY_RERUN_DIR=results/v32_github_actions_third_party_rerun_kit/kit_001/downloaded/results/github_actions_third_party_rerun/github_actions_return_001/third_party_return \
+V18_THIRD_PARTY_RERUN_DIR=results/v32_github_actions_third_party_rerun_kit/kit_001/downloaded_run_27027920036/github_actions_third_party_rerun/github_actions_return_27027920036/third_party_return \
 V18_OFFICIAL_BENCHMARK_DIR=results/v31_official_ruler_niah_candidate_return/return_001/official_return \
 V18_COMMERCIAL_POC_DIR=results/v30_commercial_codebase_poc_return/return_001/commercial_return \
 experiments/run_v18_external_evidence_intake.sh
 ```
 
+Verified v18 summary:
+
+```csv
+intake_id,third_party_rerun_supplied,independent_rerun_actual_ready,official_benchmark_supplied,candidate_external_benchmark_result_ready,commercial_poc_supplied,closed_corpus_poc_actual_ready,real_external_benchmark_verified,real_release_package_ready,artifact_rows
+intake_001,1,1,1,1,1,1,1,0,27
+```
+
 ## After Current Mode Closes
 
-Mode-closure definition:
+Mode-closure result:
 
-- The v32 workflow has been committed, pushed, run on GitHub Actions, and its uploaded third-party rerun return artifact has been downloaded.
+- The v32 workflow has been committed, pushed, run on GitHub Actions PR run `27027920036`, and its uploaded third-party rerun return artifact has been downloaded.
 - v18 has been run with all three current evidence directories: v32 third-party rerun, v31 official RULER candidate, and v30 commercial codebase QA PoC.
-- The expected closure flags are `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `closed_corpus_poc_actual_ready=1`, and therefore `real_external_benchmark_verified=1`.
-- `real_release_package_ready` should remain 0 until a separate release audit packet is built on top of the verified evidence. Do not promote release language inside the v32 closure step.
+- The verified closure flags are `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `closed_corpus_poc_actual_ready=1`, and therefore `real_external_benchmark_verified=1`.
+- `real_release_package_ready` remains 0 until a separate release audit packet is built on top of the verified evidence. Do not promote release language inside the v32 closure step.
 
 Do not keep adding internal packaging layers after this mode closes unless a real return exposes a concrete verifier gap. The next roadmap should move from mechanics to evidence scale:
 
-- Week 0: commit and push the current v14-v32 scripts, docs, and `.github/workflows/third-party-rerun.yml`; run the GitHub Actions third-party rerun; download the artifact; verify it with v18 together with v31 and v30.
+- Week 0: done. The current v14-v32 scripts, docs, and `.github/workflows/third-party-rerun.yml` are on the PR branch; GitHub Actions PR run `27027920036` returned the artifact; local v18 verified it together with v31 and v30.
 - Week 1: freeze a `v33` evidence-closure packet that contains the v18 summary, decision rows, copied third-party return, official candidate return, commercial PoC return, sha256 manifest, and a plain-language claim boundary.
 - Week 1-2: run one independent human-review pass over the `v33` packet. The reviewer should check that the GitHub-hosted runner identity is acceptable as third-party/clean-machine evidence or require a non-GitHub human reviewer rerun.
 - Week 2-3: expand the v31 official benchmark slice only one axis at a time. Start with more RULER NIAH rows at the same context length before adding LongBench v2 or another task family.

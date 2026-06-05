@@ -1222,22 +1222,27 @@ Current next boundary:
 - `v32` is closed as the GitHub Actions third-party rerun kit above v31/v22/v18.
   It adds a workflow that runs the v22 capture script on a GitHub-hosted
   `ubuntu-24.04` runner, fills reviewer/environment provenance, invokes v18, and
-  uploads the return artifact. The local v32 kit is ready and authenticated, but
-  `independent_rerun_actual_ready` stays 0 until the workflow artifact is
-  downloaded and verified by v18.
+  uploads the return artifact. PR run `27027920036` completed successfully,
+  downloaded `third-party-rerun-return`, and local v18 intake verified that
+  artifact together with the v31 official RULER candidate and v30 commercial
+  codebase QA PoC. The verified closure flags are
+  `independent_rerun_actual_ready=1`,
+  `candidate_external_benchmark_result_ready=1`,
+  `closed_corpus_poc_actual_ready=1`, and
+  `real_external_benchmark_verified=1`; `real_release_package_ready=0` remains
+  blocked until a separate release audit packet.
 - The next real boundary now requires returned external artifacts: a
   downloaded GitHub Actions or reviewer clean-machine rerun package, broader
   official benchmark slices beyond the v31 one-row candidate, and broader
   domain/customer closed-corpus PoCs beyond the repository-only v30 codebase QA
   return.
 - After the current mode closes, the immediate roadmap is evidence scaling
-  rather than another internal mechanics layer. First, run and download the v32
-  GitHub Actions return artifact and verify it through v18 together with the
-  v31 official RULER candidate and v30 commercial codebase QA return. Then
-  freeze a v33 evidence-closure packet, ask for one human review of that packet,
-  expand v31 along one official benchmark axis, expand v30 into one additional
-  closed-corpus domain, and only then build a release-claim audit packet. The
-  detailed post-mode plan is tracked in `docs/POST_V18_RESEARCH_ROADMAP.md`.
+  rather than another internal mechanics layer. Freeze a v33 evidence-closure
+  packet from the verified v32/v31/v30 intake, ask for one human review of that
+  packet, expand v31 along one official benchmark axis, expand v30 into one
+  additional closed-corpus domain, and only then build a release-claim audit
+  packet. The detailed post-mode plan is tracked in
+  `docs/POST_V18_RESEARCH_ROADMAP.md`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
