@@ -1308,12 +1308,26 @@ Current next boundary:
   `archive_sha256_ready=1`, `archive_file_list_ready=1`, and required
   review/return/verify archive members present while keeping
   `human_review_completed=0` and `real_release_package_ready=0`.
+- `v40` is closed as the machine-verified research artifact above v36-v39. It
+  copies the v36 release-claim audit, the v37 no-return human-review intake
+  state, the v38 dispatch bundle evidence, and the v39 transfer archive
+  evidence, then writes `MACHINE_VERIFIED_RESEARCH_ARTIFACT.md`,
+  `release_mode_rows.csv`, `allowed_claim_rows.csv`,
+  `blocked_claim_rows.csv`, `evidence_index.csv`,
+  `v40_machine_verified_research_artifact_manifest.json`, and
+  `sha256_manifest.csv`. It verifies
+  `v40_machine_verified_research_artifact_ready=1`,
+  `automated_research_artifact_ready=1`, and
+  `machine_verified_prototype_ready=1`, while keeping
+  `human_review_completed=0`, `human_review_required_for_public_release=1`, and
+  `real_release_package_ready=0`.
 - The next real boundary is now evidence scaling and review rather than another
-  internal mechanics layer: send the v39 archive to an external reviewer,
-  return `human_review_rows.csv` through v37, and either accept the current
-  GitHub-hosted clean-runner evidence or require a non-GitHub independent rerun.
-  The
-  detailed post-mode plan is tracked in `docs/POST_V18_RESEARCH_ROADMAP.md`.
+  internal mechanics layer. Share v40 only as a machine-verified research
+  artifact; for human-reviewed release language, send the v39 archive to an
+  external reviewer, return `human_review_rows.csv` through v37, and either
+  accept the current GitHub-hosted clean-runner evidence or require a non-GitHub
+  independent rerun. The detailed post-mode plan is tracked in
+  `docs/POST_V18_RESEARCH_ROADMAP.md`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
