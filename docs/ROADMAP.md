@@ -1325,18 +1325,23 @@ Current next boundary:
   while keeping
   `human_review_completed=0`, `human_review_required_for_public_release=1`, and
   `real_release_package_ready=0`.
-- The next real boundary is now impact evidence rather than another internal
-  mechanics layer. The recommended sequence is `v41` RULER NIAH 50-row scale at
-  fixed 4096 context length, `v42` Codebase Auditor 200-query for a
-  buyer-visible local repo QA/audit demo, `v43` doc-code conflict detection,
-  `v44` tiny non-attention generator using RouteHint without raw prompt
-  stuffing, `v45` LongBench v2 small slice, `v46` source-verified scorer
-  mainline, and `v47` offline domain policy update over candidate selection,
-  span read, hint strength, abstain/retry, and verifier decision. The claim
-  remains local evidence-bound QA/audit assistance, not Transformer
-  replacement, frontier local LLM, GPU acceleration, long-context solved, or
-  expert replacement. Human review stays deferred until release-ready wording is
-  needed; v37-v39 remain the reuse path for returned `human_review_rows.csv`.
+- `v41` is closed as the RULER NIAH 50-row academic scale-up above v34/v33/v18.
+  It runs the v34 expansion engine at 50 rows and fixed 4096 context length,
+  verifies 50 raw prediction rows, 50 RouteMemory lineage rows, official
+  evaluator/source reuse, no-oracle/no-extractor status, and v18 intake, while
+  keeping `human_review_completed=0` and `real_release_package_ready=0`.
+- The next real boundary is now buyer-visible audit evidence rather than
+  another internal mechanics layer. The remaining recommended sequence is
+  `v42` Codebase Auditor 200-query for a local repo QA/audit demo, `v43`
+  doc-code conflict detection, `v44` tiny non-attention generator using
+  RouteHint without raw prompt stuffing, `v45` LongBench v2 small slice, `v46`
+  source-verified scorer mainline, and `v47` offline domain policy update over
+  candidate selection, span read, hint strength, abstain/retry, and verifier
+  decision. The claim remains local evidence-bound QA/audit assistance, not
+  Transformer replacement, frontier local LLM, GPU acceleration, long-context
+  solved, or expert replacement. Human review stays deferred until release-ready
+  wording is needed; v37-v39 remain the reuse path for returned
+  `human_review_rows.csv`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;

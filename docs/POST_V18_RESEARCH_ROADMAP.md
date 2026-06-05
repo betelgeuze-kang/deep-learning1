@@ -28,7 +28,8 @@ Current boundary:
 - `v38` provides the human-review dispatch bundle over v37/v36: `review_packet/`, return template, verification script, dispatch manifest, and sha256 manifest for handing the evidence set to an external reviewer.
 - `v39` provides the human-review dispatch archive over v38: a tar.gz archive, archive sha256 sums, file list, send README, artifact manifest, and sha256 manifest for transfer.
 - `v40` provides the machine-verified research artifact over v33-v39: a bounded public/private preview track with release-mode rows, allowed/blocked claim rows, machine-verification support rows, v33-v39 evidence index, artifact manifest, and sha256 manifest. It opens `automated_research_artifact_ready=1` and `machine_verified_prototype_ready=1` only.
-- Current verified state after PR run `27029089994` plus v33/v34/v35/v36/v37/v38/v39/v40: `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `candidate_external_benchmark_expansion_ready=1`, `closed_corpus_poc_actual_ready=1`, `real_external_benchmark_verified=1`, `v33_evidence_closure_packet_ready=1`, `v34_official_benchmark_expansion_packet_ready=1`, `v35_commercial_pilot_packet_ready=1`, `v36_release_claim_audit_packet_ready=1`, `v37_human_review_intake_ready=1`, `v38_human_review_dispatch_bundle_ready=1`, `v39_human_review_dispatch_archive_ready=1`, and `v40_machine_verified_research_artifact_ready=1`; `maximum_allowed_claim_decided=1`, `human_review_request_ready=1`, `return_template_ready=1`, `verify_script_ready=1`, `archive_sha256_ready=1`, `archive_file_list_ready=1`, `machine_verification_ready=1`, `automated_research_artifact_ready=1`, and `machine_verified_prototype_ready=1`, but `human_review_return_supplied=0`, `human_review_completed=0`, `human_review_required_for_public_release=1`, and `real_release_package_ready=0` remain blocked until external review accepts the evidence set.
+- `v41` provides the RULER NIAH 50-row academic scale-up over v34/v33/v18: 50 raw prediction rows, 50 RouteMemory lineage rows, fixed 4096 context length, official evaluator/source reuse, no-oracle/no-extractor status, v18 intake, and release blocking.
+- Current verified state after PR run `27029089994` plus v33/v34/v35/v36/v37/v38/v39/v40/v41: `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `candidate_external_benchmark_expansion_ready=1`, `closed_corpus_poc_actual_ready=1`, `real_external_benchmark_verified=1`, `v33_evidence_closure_packet_ready=1`, `v34_official_benchmark_expansion_packet_ready=1`, `v35_commercial_pilot_packet_ready=1`, `v36_release_claim_audit_packet_ready=1`, `v37_human_review_intake_ready=1`, `v38_human_review_dispatch_bundle_ready=1`, `v39_human_review_dispatch_archive_ready=1`, `v40_machine_verified_research_artifact_ready=1`, and `v41_ruler_niah_50row_scale_ready=1`; `maximum_allowed_claim_decided=1`, `human_review_request_ready=1`, `return_template_ready=1`, `verify_script_ready=1`, `archive_sha256_ready=1`, `archive_file_list_ready=1`, `machine_verification_ready=1`, `automated_research_artifact_ready=1`, `machine_verified_prototype_ready=1`, `row_count_ready=1`, `same_context_length=1`, `no_oracle_no_extractor_ready=1`, and `v18_verified=1`, but `human_review_return_supplied=0`, `human_review_completed=0`, `human_review_required_for_public_release=1`, and `real_release_package_ready=0` remain blocked until external review accepts the evidence set.
 
 ## Current Handoff
 
@@ -181,6 +182,7 @@ Mode-closure result:
 - v38 has added `results/v38_human_review_dispatch_bundle/bundle_001/` as the review dispatch bundle. Send `review_packet/` to the reviewer, have the reviewer fill `return/human_review_rows.csv`, and verify with `verify/VERIFY_RETURN.sh`.
 - v39 has added `results/v39_human_review_dispatch_archive/archive_001/` as the transfer archive. Send `archive/v38_human_review_dispatch_bundle_bundle_001.tar.gz` with `ARCHIVE_SHA256SUMS.txt` and `ARCHIVE_FILE_LIST.txt`.
 - v40 has added `results/v40_machine_verified_research_artifact/artifact_001/` as the machine-verified research artifact. It can be shared as an automated evidence artifact with the notice: "This artifact is machine-verified and externally reproducible through the v18 evidence-intake path, but it is not a human-reviewed release package." Its `machine_verification_rows.csv` binds the allowed support set to clean-runner rerun evidence, v18 intake verification, RouteMemory prediction lineage, no-oracle/no-extractor status, and closed-corpus PoC preview evidence.
+- v41 has added `results/v41_ruler_niah_50row_scale/scale_001/` as the first academic scale-up. It preserves official-evaluator, no-oracle RouteMemory lineage through 50 rows at the same 4096 context length.
 - `real_release_package_ready` remains 0 until external human review accepts the evidence set and any required non-GitHub rerun is completed. Do not promote release language inside the v36 audit step.
 
 Do not keep adding internal packaging layers after v40 unless a real return exposes a concrete verifier gap. The next roadmap should move from mechanics to evidence scale:
@@ -197,9 +199,10 @@ Do not keep adding internal packaging layers after v40 unless a real return expo
 - Month 3: done. `v38` builds the human-review dispatch bundle for the v33/v34/v35/v36 evidence set.
 - Month 3: done. `v39` builds the transfer archive for the v38 human-review dispatch bundle.
 - Month 3: done. `v40` builds a machine-verified research artifact above v36-v39. It permits bounded public/private preview wording but keeps human-reviewed release and real release package readiness blocked.
+- Month 3: done. `v41` builds the RULER NIAH 50-row scale at fixed 4096 context length with official evaluator/source reuse, no-oracle/no-extractor rows, RouteMemory lineage, and v18 verification.
 - Next: do not add another internal packaging layer. Follow the v41-v47 impact
-  roadmap below, with human review deferred until release-ready wording becomes
-  necessary.
+  roadmap below from `v42`, with human review deferred until release-ready
+  wording becomes necessary.
 
 Expansion discipline:
 
@@ -210,7 +213,7 @@ Expansion discipline:
 
 Post-v40 impact roadmap:
 
-- `v41` RULER NIAH 50-row scale. Goal: first academic scale-up. Success message: official-evaluator, no-oracle RouteMemory lineage is preserved through 50 rows at the same 4096 context length.
+- `v41` RULER NIAH 50-row scale. Done. Goal: first academic scale-up. Success message: official-evaluator, no-oracle RouteMemory lineage is preserved through 50 rows at the same 4096 context length.
 - `v42` Codebase Auditor 200-query. Goal: first buyer-visible industrial demo. Success message: local-repository codebase QA works with citations, abstentions, and audit trail.
 - `v43` Doc-Code Conflict Detection. Goal: prove audit behavior beyond ordinary QA. Success message: documentation/code mismatches are found with supporting source spans.
 - `v44` Tiny Non-Attention Generator Hint. Goal: a small non-attention generator actually uses RouteHint. Success message: grounded answers are generated from proposal hints without appending retrieved text as raw prompt context.
