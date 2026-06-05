@@ -1222,7 +1222,7 @@ Current next boundary:
 - `v32` is closed as the GitHub Actions third-party rerun kit above v31/v22/v18.
   It adds a workflow that runs the v22 capture script on a GitHub-hosted
   `ubuntu-24.04` runner, fills reviewer/environment provenance, invokes v18, and
-  uploads the return artifact. PR run `27027920036` completed successfully,
+  uploads the return artifact. PR run `27029089994` completed successfully,
   downloaded `third-party-rerun-return`, and local v18 intake verified that
   artifact together with the v31 official RULER candidate and v30 commercial
   codebase QA PoC. The verified closure flags are
@@ -1231,18 +1231,18 @@ Current next boundary:
   `closed_corpus_poc_actual_ready=1`, and
   `real_external_benchmark_verified=1`; `real_release_package_ready=0` remains
   blocked until a separate release audit packet.
-- The next real boundary now requires returned external artifacts: a
-  downloaded GitHub Actions or reviewer clean-machine rerun package, broader
-  official benchmark slices beyond the v31 one-row candidate, and broader
-  domain/customer closed-corpus PoCs beyond the repository-only v30 codebase QA
-  return.
-- After the current mode closes, the immediate roadmap is evidence scaling
-  rather than another internal mechanics layer. Freeze a v33 evidence-closure
-  packet from the verified v32/v31/v30 intake, ask for one human review of that
-  packet, expand v31 along one official benchmark axis, expand v30 into one
-  additional closed-corpus domain, and only then build a release-claim audit
-  packet. The detailed post-mode plan is tracked in
-  `docs/POST_V18_RESEARCH_ROADMAP.md`.
+- `v33` is closed as the evidence-closure packet above v32/v31/v30/v18. It
+  reruns v18 against the latest downloaded GitHub Actions third-party return,
+  v31 official candidate return, and v30 commercial PoC return, copies those
+  evidence directories plus v18 summary/decision rows into one packet, hashes 59
+  packet files, and writes an explicit claim boundary plus human-review request.
+  It verifies `v33_evidence_closure_packet_ready=1` while keeping
+  `human_review_completed=0` and `real_release_package_ready=0`.
+- The next real boundary is now evidence scaling and review rather than another
+  internal mechanics layer: ask for one human review of the v33 packet, expand
+  v31 along one official benchmark axis, expand v30 into one additional
+  closed-corpus domain, and only then build a release-claim audit packet. The
+  detailed post-mode plan is tracked in `docs/POST_V18_RESEARCH_ROADMAP.md`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
