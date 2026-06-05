@@ -1325,15 +1325,18 @@ Current next boundary:
   while keeping
   `human_review_completed=0`, `human_review_required_for_public_release=1`, and
   `real_release_package_ready=0`.
-- The next real boundary is now evidence scaling rather than another internal
-  mechanics layer. Research-first path: `v41` expands RULER NIAH from 6 rows to
-  30 or 50 rows at the same 4096 context length, `v42` raises context length by
-  one step, and `v43` adds a small LongBench v2 slice. Commercial path:
-  `v41-commercial` expands the `internal_docs` pilot into product-manual QA or
-  incident-log QA with source-cited rows, abstentions, wrong-answer guard,
-  privacy review, resource envelope, and acceptance review. Human review stays
-  deferred until release-ready wording is needed; v37-v39 remain the reuse path
-  for returned `human_review_rows.csv`.
+- The next real boundary is now impact evidence rather than another internal
+  mechanics layer. The recommended sequence is `v41` RULER NIAH 50-row scale at
+  fixed 4096 context length, `v42` Codebase Auditor 200-query for a
+  buyer-visible local repo QA/audit demo, `v43` doc-code conflict detection,
+  `v44` tiny non-attention generator using RouteHint without raw prompt
+  stuffing, `v45` LongBench v2 small slice, `v46` source-verified scorer
+  mainline, and `v47` offline domain policy update over candidate selection,
+  span read, hint strength, abstain/retry, and verifier decision. The claim
+  remains local evidence-bound QA/audit assistance, not Transformer
+  replacement, frontier local LLM, GPU acceleration, long-context solved, or
+  expert replacement. Human review stays deferred until release-ready wording is
+  needed; v37-v39 remain the reuse path for returned `human_review_rows.csv`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;

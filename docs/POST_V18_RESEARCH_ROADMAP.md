@@ -197,9 +197,9 @@ Do not keep adding internal packaging layers after v40 unless a real return expo
 - Month 3: done. `v38` builds the human-review dispatch bundle for the v33/v34/v35/v36 evidence set.
 - Month 3: done. `v39` builds the transfer archive for the v38 human-review dispatch bundle.
 - Month 3: done. `v40` builds a machine-verified research artifact above v36-v39. It permits bounded public/private preview wording but keeps human-reviewed release and real release package readiness blocked.
-- Next: do not add another internal packaging layer. Choose one evidence path:
-  research-first evidence scale-up, commercial pilot expansion, or deferred
-  human review only when release-ready wording becomes necessary.
+- Next: do not add another internal packaging layer. Follow the v41-v47 impact
+  roadmap below, with human review deferred until release-ready wording becomes
+  necessary.
 
 Expansion discipline:
 
@@ -208,13 +208,32 @@ Expansion discipline:
 - Keep all raw predictions and evidence rows before evaluation. No oracle, no raw-input extractor, and no post-hoc answer repair.
 - Treat negative and abstain rows as first-class evidence. A pass is not only high answer accuracy; it is also correct refusal when the source does not support an answer.
 
-Post-v40 recommended sequence:
+Post-v40 impact roadmap:
 
-- `v41` evidence scale-up: expand RULER NIAH from 6 rows to 30 or 50 rows while keeping context length fixed at 4096. This is the best research move because it grows the verified official benchmark slice without changing more than one axis at once.
-- `v42` evidence scale-up: increase context length by one step after v41 passes with the same source/evaluator contract.
-- `v43` evidence scale-up: add a small LongBench v2 slice only after the RULER NIAH row-count and context-length axes are stable.
-- `v41-commercial` optional industry track: expand the `internal_docs` pilot into either product-manual QA or incident-log QA. Keep source-cited QA rows, abstain rows, wrong-answer guard, privacy review, resource envelope, and acceptance review.
-- Human review remains optional for now. Reuse v37-v39 only if the project needs to revisit `real_release_package_ready=1`; until then, v40 is sufficient as a machine-verified artifact.
+- `v41` RULER NIAH 50-row scale. Goal: first academic scale-up. Success message: official-evaluator, no-oracle RouteMemory lineage is preserved through 50 rows at the same 4096 context length.
+- `v42` Codebase Auditor 200-query. Goal: first buyer-visible industrial demo. Success message: local-repository codebase QA works with citations, abstentions, and audit trail.
+- `v43` Doc-Code Conflict Detection. Goal: prove audit behavior beyond ordinary QA. Success message: documentation/code mismatches are found with supporting source spans.
+- `v44` Tiny Non-Attention Generator Hint. Goal: a small non-attention generator actually uses RouteHint. Success message: grounded answers are generated from proposal hints without appending retrieved text as raw prompt context.
+- `v45` LongBench v2 small slice. Goal: expand beyond the RULER benchmark family. Success message: the lineage-bound path applies to another long-document QA family, not only RULER synthetic evidence.
+- `v46` Source-Verified Scorer mainline. Goal: promote candidate ranking beyond the local teacher harness. Success message: candidate ranking is trained and verified from source-verified labels rather than fixture labels.
+- `v47` Offline domain policy update. Goal: start domain-specialized assistant behavior. Learning targets: candidate selection, span read, hint strength, abstain/retry, and verifier decision. Keep the claim as expert assistance and audit assistance, not expert replacement.
+
+Impact thesis:
+
+- The highest-impact path is not to claim non-Transformer LLM replacement. The stronger claim is a small local machine that extends no-oracle/no-extractor RouteMemory prediction lineage across official benchmarks and real codebase/internal-document QA while binding every answer to citation, abstention, mmap evidence, and audit trail.
+- The decisive follow-up is a small non-attention generator that produces grounded answers from RouteMemory proposal hints without raw context stuffing. If v41-v43 grow evidence scale and industrial PoC strength, then v44 can move the project from a well-verified QA prototype toward an alternative local intelligence system path.
+
+Paths to avoid:
+
+- Do not call this a Transformer replacement.
+- Do not call this a frontier local LLM.
+- Do not claim GPU acceleration proven.
+- Do not claim long-context solved.
+- Do not grow benchmark score while weakening lineage, abstention, or citation evidence.
+- Do not regress into RAG-style prompt stuffing.
+- Do not add another internal packaging layer unless a real return exposes a concrete verifier gap.
+
+Human review remains optional for now. Reuse v37-v39 only if the project needs to revisit `real_release_package_ready=1`; until then, v40 is sufficient as a machine-verified artifact.
 
 Invariant for all next experiments:
 
