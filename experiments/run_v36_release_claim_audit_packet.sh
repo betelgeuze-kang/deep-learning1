@@ -230,7 +230,7 @@ release_decision_rows = [
     {"gate": "evidence-inputs", "status": "pass" if evidence_inputs_ready else "blocked", "reason": "v33/v34/v35 packets are ready" if evidence_inputs_ready else "one or more evidence packets are missing"},
     {"gate": "maximum-allowed-public-claim", "status": "pass", "reason": "bounded local evidence-bound QA/audit wording is selected"},
     {"gate": "overclaim-guard", "status": "pass", "reason": f"{len(blocked_rows)} stronger claims remain blocked"},
-    {"gate": "human-review", "status": "blocked", "reason": "external human review has not been completed"},
+    {"gate": "human-review", "status": "blocked", "reason": "external human review has not been completed; use human_review/HUMAN_REVIEW_REQUEST.md"},
     {"gate": "real-release-package", "status": "blocked", "reason": "real_release_package_ready remains 0"},
     {"gate": "release-ready-product", "status": "blocked", "reason": "product release requires human review and release readiness evidence"},
 ]
@@ -270,6 +270,48 @@ audit_md.write_text(
     encoding="utf-8",
 )
 
+human_review_dir = packet_dir / "human_review"
+human_review_dir.mkdir(parents=True, exist_ok=True)
+(human_review_dir / "HUMAN_REVIEW_REQUEST.md").write_text(
+    "\n".join(
+        [
+            "# v36 Evidence-Set Human Review Request",
+            "",
+            "Review scope:",
+            "",
+            "- v33 evidence closure packet.",
+            "- v34 official benchmark expansion packet.",
+            "- v35 commercial pilot packet.",
+            "- v36 release-claim audit packet.",
+            "",
+            "Review questions:",
+            "",
+            "1. Is the GitHub-hosted clean-runner evidence acceptable for this stage, or is a non-GitHub independent rerun required?",
+            "2. Do v34 and v35 support the bounded local evidence-bound QA/audit claim stated in `RELEASE_CLAIM_AUDIT.md`?",
+            "3. Are the blocked claims in `claim_matrix.csv` correctly blocked?",
+            "4. Can the evidence set be referenced publicly with the limited wording, while keeping `real_release_package_ready=0`?",
+            "",
+            "Return `human_review_rows.csv` using the template in this directory.",
+            "",
+        ]
+    ),
+    encoding="utf-8",
+)
+write_csv(
+    human_review_dir / "human_review_template.csv",
+    ["review_item", "status", "reason", "reviewer", "review_timestamp_utc"],
+    [
+        {"review_item": "clean-runner-acceptability", "status": "", "reason": "", "reviewer": "", "review_timestamp_utc": ""},
+        {"review_item": "bounded-claim-support", "status": "", "reason": "", "reviewer": "", "review_timestamp_utc": ""},
+        {"review_item": "blocked-claims-correctness", "status": "", "reason": "", "reviewer": "", "review_timestamp_utc": ""},
+        {"review_item": "limited-public-reference", "status": "", "reason": "", "reviewer": "", "review_timestamp_utc": ""},
+    ],
+)
+human_review_request_ready = int(
+    (human_review_dir / "HUMAN_REVIEW_REQUEST.md").is_file()
+    and (human_review_dir / "human_review_template.csv").is_file()
+)
+
 manifest = {
     "manifest_scope": "v36-release-claim-audit-packet",
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -282,6 +324,7 @@ manifest = {
     "maximum_allowed_claim": maximum_allowed_claim,
     "allowed_claim_rows": len(allowed_rows),
     "blocked_claim_rows": len(blocked_rows),
+    "human_review_request_ready": human_review_request_ready,
     "human_review_completed": human_review_completed,
     "real_release_package_ready": real_release_package_ready,
     "release_recommendation": "do-not-release-product",
@@ -295,7 +338,7 @@ for path in sorted(packet_dir.rglob("*")):
     sha_rows.append({"path": str(path.relative_to(packet_dir)), "sha256": sha256(path), "bytes": path.stat().st_size})
 write_csv(packet_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], sha_rows)
 
-v36_ready = int(evidence_inputs_ready and len(allowed_rows) > 0 and len(blocked_rows) >= 5 and audit_md.is_file())
+v36_ready = int(evidence_inputs_ready and len(allowed_rows) > 0 and len(blocked_rows) >= 5 and audit_md.is_file() and human_review_request_ready)
 summary_rows = [
     {
         "packet_id": packet_dir.name,
@@ -307,6 +350,7 @@ summary_rows = [
         "v35_commercial_pilot_packet_ready": v35_ready,
         "allowed_claim_rows": len(allowed_rows),
         "blocked_claim_rows": len(blocked_rows),
+        "human_review_request_ready": human_review_request_ready,
         "human_review_completed": human_review_completed,
         "real_release_package_ready": real_release_package_ready,
         "artifact_rows": len(sha_rows),

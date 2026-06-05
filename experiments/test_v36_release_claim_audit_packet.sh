@@ -43,6 +43,7 @@ expected_ones = [
     "v33_evidence_closure_packet_ready",
     "v34_official_benchmark_expansion_packet_ready",
     "v35_commercial_pilot_packet_ready",
+    "human_review_request_ready",
 ]
 for field in expected_ones:
     if summary.get(field) != "1":
@@ -77,6 +78,8 @@ required_files = [
     "release_decision_rows.csv",
     "v36_release_claim_audit_manifest.json",
     "sha256_manifest.csv",
+    "human_review/HUMAN_REVIEW_REQUEST.md",
+    "human_review/human_review_template.csv",
     "evidence/v33/evidence_closure_manifest.json",
     "evidence/v33/summary.csv",
     "evidence/v33/decision.csv",
@@ -101,6 +104,8 @@ if "local evidence-bound QA/audit architecture" not in manifest.get("maximum_all
     raise SystemExit("v36 maximum allowed claim should remain bounded")
 if manifest.get("human_review_completed") != 0 or manifest.get("real_release_package_ready") != 0:
     raise SystemExit("v36 manifest must not open review/release")
+if manifest.get("human_review_request_ready") != 1:
+    raise SystemExit("v36 manifest should prepare the human review request")
 if manifest.get("release_recommendation") != "do-not-release-product":
     raise SystemExit("v36 release recommendation should block product release")
 
@@ -135,6 +140,16 @@ for snippet in [
 ]:
     if snippet not in audit:
         raise SystemExit(f"v36 audit missing: {snippet}")
+
+review_request = (packet_dir / "human_review" / "HUMAN_REVIEW_REQUEST.md").read_text(encoding="utf-8")
+for snippet in [
+    "Review scope:",
+    "v33 evidence closure packet",
+    "v36 release-claim audit packet",
+    "non-GitHub independent rerun",
+]:
+    if snippet not in review_request:
+        raise SystemExit(f"v36 human review request missing: {snippet}")
 
 with (packet_dir / "sha256_manifest.csv").open(newline="", encoding="utf-8") as handle:
     sha_rows = list(csv.DictReader(handle))

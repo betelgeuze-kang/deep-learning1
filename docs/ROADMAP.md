@@ -1265,10 +1265,13 @@ Current next boundary:
   copies evidence manifests, summaries, decisions, and claim boundaries from
   v33/v34/v35, writes `claim_matrix.csv`, `evidence_input_rows.csv`,
   `release_decision_rows.csv`, `RELEASE_CLAIM_AUDIT.md`,
+  `human_review/HUMAN_REVIEW_REQUEST.md`,
+  `human_review/human_review_template.csv`,
   `v36_release_claim_audit_manifest.json`, and `sha256_manifest.csv`, and
   decides the maximum allowed public wording. It verifies
-  `v36_release_claim_audit_packet_ready=1`, `evidence_inputs_ready=1`, and
-  `maximum_allowed_claim_decided=1`; the maximum allowed wording is bounded to
+  `v36_release_claim_audit_packet_ready=1`, `evidence_inputs_ready=1`,
+  `maximum_allowed_claim_decided=1`, and `human_review_request_ready=1`; the
+  maximum allowed wording is bounded to
   local evidence-bound QA/audit with deterministic provenance, source-cited
   answers, conservative abstention, and externally reproducible evidence
   packets. It keeps `human_review_completed=0` and
