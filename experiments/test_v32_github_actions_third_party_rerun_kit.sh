@@ -62,8 +62,12 @@ for rel in required_files:
 
 workflow_text = workflow.read_text(encoding="utf-8")
 for snippet in [
+    "pull_request:",
+    "branches:",
+    "main",
     "workflow_dispatch:",
     "runs-on: ubuntu-24.04",
+    "RETURN_ID_INPUT",
     "CAPTURE_THIRD_PARTY_RERUN.sh",
     "external_independent_reviewer\": 1",
     "clean_machine\": 1",
@@ -75,6 +79,8 @@ for snippet in [
 
 runbook = (kit_dir / "GITHUB_ACTIONS_THIRD_PARTY_RERUN.md").read_text(encoding="utf-8")
 for snippet in [
+    "PR path:",
+    "gh pr create --base main",
     "gh workflow run third-party-rerun.yml",
     "gh run download --name third-party-rerun-return",
     "V18_THIRD_PARTY_RERUN_DIR=",

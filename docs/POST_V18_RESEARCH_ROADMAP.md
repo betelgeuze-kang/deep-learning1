@@ -133,6 +133,15 @@ mkdir -p results/v32_github_actions_third_party_rerun_kit/kit_001/downloaded
 gh run download --name third-party-rerun-return --dir results/v32_github_actions_third_party_rerun_kit/kit_001/downloaded
 ```
 
+PR-based GitHub Actions rerun:
+
+```bash
+gh pr create --base main --head codex/route-memory-local-energy-policy --draft
+gh run list --branch codex/route-memory-local-energy-policy --limit 5
+gh run watch
+gh run download --name third-party-rerun-return --dir results/v32_github_actions_third_party_rerun_kit/kit_001/downloaded
+```
+
 GitHub Actions return verification:
 
 ```bash

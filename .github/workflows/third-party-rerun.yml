@@ -1,6 +1,9 @@
 name: Third-party rerun return
 
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       return_id:
@@ -29,7 +32,12 @@ jobs:
       - name: Capture third-party rerun
         run: |
           set -euo pipefail
-          RETURN_ID="${{ github.event.inputs.return_id || 'github_actions_return_001' }}"
+          RETURN_ID_INPUT="${{ inputs.return_id || '' }}"
+          if [ -n "$RETURN_ID_INPUT" ]; then
+            RETURN_ID="$RETURN_ID_INPUT"
+          else
+            RETURN_ID="github_actions_return_${GITHUB_RUN_ID}"
+          fi
           RETURN_DIR="results/github_actions_third_party_rerun/${RETURN_ID}/third_party_return"
           mkdir -p "$RETURN_DIR"
           experiments/run_v22_clean_machine_execution_kit.sh >/dev/null
