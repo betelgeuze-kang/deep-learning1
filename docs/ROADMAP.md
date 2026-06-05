@@ -1348,15 +1348,20 @@ Current next boundary:
   context bytes, verifies grounded answers plus missing-query abstention through
   v18, and keeps `human_review_completed=0` and
   `real_release_package_ready=0`.
+- `v45` is closed as the LongBench v2 small slice above v44/v18. It snapshots
+  THUDM/LongBench official source/evaluator files, writes 6 multiple-choice raw
+  prediction rows across 6 LongBench v2 task categories with RouteMemory
+  lineage, verifies the official return through v18, and keeps
+  `real_external_benchmark_verified=0` plus `real_release_package_ready=0`.
 - The next real boundary is now buyer-visible audit evidence rather than
   another internal mechanics layer. The remaining recommended sequence starts
-  at `v45` LongBench v2 small slice, then `v46` source-verified scorer
-  mainline, and `v47` offline domain policy update over candidate selection,
-  span read, hint strength, abstain/retry, and verifier decision. The claim
-  remains local evidence-bound QA/audit assistance, not Transformer
-  replacement, frontier local LLM, GPU acceleration, long-context solved, or
-  expert replacement. Human review stays deferred until release-ready wording is
-  needed; v37-v39 remain the reuse path for returned `human_review_rows.csv`.
+  at `v46` source-verified scorer mainline, then `v47` offline domain policy
+  update over candidate selection, span read, hint strength, abstain/retry, and
+  verifier decision. The claim remains local evidence-bound QA/audit assistance,
+  not Transformer replacement, frontier local LLM, GPU acceleration,
+  long-context solved, or expert replacement. Human review stays deferred until
+  release-ready wording is needed; v37-v39 remain the reuse path for returned
+  `human_review_rows.csv`.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
