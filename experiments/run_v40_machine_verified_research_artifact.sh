@@ -98,6 +98,9 @@ required_inputs = {
     "v36/v36_release_claim_audit_manifest.json": v36_packet_dir / "v36_release_claim_audit_manifest.json",
     "v36/summary.csv": results_dir / "v36_release_claim_audit_packet_summary.csv",
     "v36/decision.csv": results_dir / "v36_release_claim_audit_packet_decision.csv",
+    "support/v33_summary.csv": results_dir / "v33_evidence_closure_packet_summary.csv",
+    "support/v34_summary.csv": results_dir / "v34_official_benchmark_expansion_packet_summary.csv",
+    "support/v35_summary.csv": results_dir / "v35_commercial_pilot_packet_summary.csv",
     "v37/human_review_intake_manifest.json": v37_intake_dir / "human_review_intake_manifest.json",
     "v37/missing_review_rows.csv": v37_intake_dir / "missing_review_rows.csv",
     "v37/summary.csv": results_dir / "v37_human_review_intake_summary.csv",
@@ -123,6 +126,9 @@ v36_summary = read_csv_one(results_dir / "v36_release_claim_audit_packet_summary
 v37_summary = read_csv_one(results_dir / "v37_human_review_intake_summary.csv")
 v38_summary = read_csv_one(results_dir / "v38_human_review_dispatch_bundle_summary.csv")
 v39_summary = read_csv_one(results_dir / "v39_human_review_dispatch_archive_summary.csv")
+v33_summary = read_csv_one(results_dir / "v33_evidence_closure_packet_summary.csv")
+v34_summary = read_csv_one(results_dir / "v34_official_benchmark_expansion_packet_summary.csv")
+v35_summary = read_csv_one(results_dir / "v35_commercial_pilot_packet_summary.csv")
 
 v36_ready = int(v36_summary.get("v36_release_claim_audit_packet_ready") == "1" and v36_manifest.get("maximum_allowed_claim_decided") == 1)
 v37_ready = int(v37_summary.get("v37_human_review_intake_ready") == "1" and v37_manifest.get("v36_release_claim_audit_packet_ready") == 1)
@@ -136,32 +142,6 @@ machine_verified_prototype_ready = automated_research_artifact_ready
 
 allowed_claim = "local evidence-bound QA/audit architecture with deterministic provenance, source-cited answers, conservative abstention, and externally reproducible evidence packets"
 notice = "This artifact is machine-verified and externally reproducible through the v18 evidence-intake path, but it is not a human-reviewed release package."
-release_mode_rows = [
-    {
-        "release_mode": "machine_verified_research_artifact",
-        "automated_research_artifact_ready": automated_research_artifact_ready,
-        "machine_verified_prototype_ready": machine_verified_prototype_ready,
-        "human_review_completed": human_review_completed,
-        "human_review_required_for_public_release": human_review_required_for_public_release,
-        "real_release_package_ready": real_release_package_ready,
-        "allowed_claim": allowed_claim,
-        "notice": notice,
-    }
-]
-write_csv(
-    artifact_dir / "release_mode_rows.csv",
-    [
-        "release_mode",
-        "automated_research_artifact_ready",
-        "machine_verified_prototype_ready",
-        "human_review_completed",
-        "human_review_required_for_public_release",
-        "real_release_package_ready",
-        "allowed_claim",
-        "notice",
-    ],
-    release_mode_rows,
-)
 
 source_claim_rows = read_csv(v36_packet_dir / "claim_matrix.csv")
 blocked_claim_ids = [
@@ -195,7 +175,7 @@ allowed_rows = [
         "allowed": 1,
         "status": "allowed_limited",
         "public_wording": "machine-verified research artifact for local evidence-bound QA/audit",
-        "reason": "v36-v39 evidence chain is present and hash-manifested while human review remains incomplete",
+        "reason": "v33-v39 evidence chain is present and hash-manifested while human review remains incomplete",
     },
     {
         "claim_id": "bounded-local-qa-audit-architecture",
@@ -207,7 +187,94 @@ allowed_rows = [
 ]
 write_csv(artifact_dir / "allowed_claim_rows.csv", ["claim_id", "allowed", "status", "public_wording", "reason"], allowed_rows)
 
+machine_verification_rows = [
+    {
+        "support_id": "github-actions-clean-runner-rerun",
+        "ready": int(v33_summary.get("independent_rerun_actual_ready") == "1"),
+        "source": "v33_evidence_closure_packet_summary.csv",
+        "evidence_field": "independent_rerun_actual_ready",
+        "claim_scope": "CI-clean-runner reproducible evidence packet",
+    },
+    {
+        "support_id": "v18-external-evidence-intake",
+        "ready": int(v33_summary.get("real_external_benchmark_verified") == "1"),
+        "source": "v33_evidence_closure_packet_summary.csv",
+        "evidence_field": "real_external_benchmark_verified",
+        "claim_scope": "v18 external evidence intake verified",
+    },
+    {
+        "support_id": "routememory-prediction-lineage",
+        "ready": int(v34_summary.get("route_memory_prediction_lineage_ready") == "1"),
+        "source": "v34_official_benchmark_expansion_packet_summary.csv",
+        "evidence_field": "route_memory_prediction_lineage_ready",
+        "claim_scope": "RouteMemory-derived prediction lineage included",
+    },
+    {
+        "support_id": "no-oracle-no-extractor-contract",
+        "ready": int(v34_summary.get("oracle_prediction_used") == "0" and v34_summary.get("raw_input_extractor_used") == "0"),
+        "source": "v34_official_benchmark_expansion_packet_summary.csv",
+        "evidence_field": "oracle_prediction_used=0;raw_input_extractor_used=0",
+        "claim_scope": "no-oracle / no-raw-input-extractor contract included",
+    },
+    {
+        "support_id": "commercial-poc-preview",
+        "ready": int(v35_summary.get("closed_corpus_poc_actual_ready") == "1" and v35_summary.get("acceptance_rows", "0").isdigit() and int(v35_summary.get("acceptance_rows", "0")) > 0),
+        "source": "v35_commercial_pilot_packet_summary.csv",
+        "evidence_field": "closed_corpus_poc_actual_ready;acceptance_rows",
+        "claim_scope": "private/commercial closed-corpus QA/audit PoC preview",
+    },
+]
+write_csv(artifact_dir / "machine_verification_rows.csv", ["support_id", "ready", "source", "evidence_field", "claim_scope"], machine_verification_rows)
+machine_verification_ready = int(all(row["ready"] == 1 for row in machine_verification_rows))
+automated_research_artifact_ready = int(automated_research_artifact_ready and machine_verification_ready)
+machine_verified_prototype_ready = automated_research_artifact_ready
+
+release_mode_rows = [
+    {
+        "release_mode": "machine_verified_research_artifact",
+        "automated_research_artifact_ready": automated_research_artifact_ready,
+        "machine_verified_prototype_ready": machine_verified_prototype_ready,
+        "human_review_completed": human_review_completed,
+        "human_review_required_for_public_release": human_review_required_for_public_release,
+        "real_release_package_ready": real_release_package_ready,
+        "allowed_claim": allowed_claim,
+        "notice": notice,
+    }
+]
+write_csv(
+    artifact_dir / "release_mode_rows.csv",
+    [
+        "release_mode",
+        "automated_research_artifact_ready",
+        "machine_verified_prototype_ready",
+        "human_review_completed",
+        "human_review_required_for_public_release",
+        "real_release_package_ready",
+        "allowed_claim",
+        "notice",
+    ],
+    release_mode_rows,
+)
+
 evidence_rows = [
+    {
+        "evidence_id": "v33-evidence-closure",
+        "path": "results/v33_evidence_closure_packet/packet_001",
+        "ready": int(v33_summary.get("v33_evidence_closure_packet_ready") == "1"),
+        "role": "GitHub Actions clean-runner return plus v18 evidence intake closure",
+    },
+    {
+        "evidence_id": "v34-official-benchmark-expansion",
+        "path": "results/v34_official_benchmark_expansion_packet/packet_001",
+        "ready": int(v34_summary.get("v34_official_benchmark_expansion_packet_ready") == "1"),
+        "role": "RouteMemory lineage and no-oracle/no-extractor official benchmark expansion",
+    },
+    {
+        "evidence_id": "v35-commercial-pilot",
+        "path": "results/v35_commercial_pilot_packet/packet_001",
+        "ready": int(v35_summary.get("v35_commercial_pilot_packet_ready") == "1"),
+        "role": "closed-corpus commercial QA/audit preview evidence",
+    },
     {
         "evidence_id": "v36-release-claim-audit",
         "path": rel(v36_packet_dir),
@@ -247,6 +314,7 @@ readme.write_text(
             "",
             f"- {allowed_claim}.",
             "- Machine-verified research artifact for local evidence-bound QA/audit.",
+            "- CI-clean-runner reproducible, v18 evidence-intake verified, RouteMemory-lineage bound, and no-oracle/no-extractor bounded evidence packet.",
             "",
             "Required boundary:",
             "",
@@ -289,6 +357,7 @@ manifest = {
     "v37_human_review_intake_ready": v37_ready,
     "v38_human_review_dispatch_bundle_ready": v38_ready,
     "v39_human_review_dispatch_archive_ready": v39_ready,
+    "machine_verification_ready": machine_verification_ready,
     "automated_research_artifact_ready": automated_research_artifact_ready,
     "machine_verified_prototype_ready": machine_verified_prototype_ready,
     "human_review_completed": human_review_completed,
@@ -305,6 +374,7 @@ for artifact in [
     artifact_dir / "release_mode_rows.csv",
     artifact_dir / "allowed_claim_rows.csv",
     artifact_dir / "blocked_claim_rows.csv",
+    artifact_dir / "machine_verification_rows.csv",
     artifact_dir / "evidence_index.csv",
     artifact_dir / "v40_machine_verified_research_artifact_manifest.json",
 ]:
@@ -328,11 +398,13 @@ summary_rows = [
         "v37_human_review_intake_ready": v37_ready,
         "v38_human_review_dispatch_bundle_ready": v38_ready,
         "v39_human_review_dispatch_archive_ready": v39_ready,
+        "machine_verification_ready": machine_verification_ready,
         "human_review_completed": human_review_completed,
         "human_review_required_for_public_release": human_review_required_for_public_release,
         "real_release_package_ready": real_release_package_ready,
         "allowed_claim_rows": len(allowed_rows),
         "blocked_claim_rows": len(blocked_rows),
+        "machine_verification_rows": len(machine_verification_rows),
         "artifact_rows": len(sha_rows),
     }
 ]
@@ -347,6 +419,7 @@ decision_rows = [
     {"gate": "v37-human-review-intake", "status": status(v37_ready), "reason": "human review intake verifier is ready"},
     {"gate": "v38-dispatch-bundle", "status": status(v38_ready), "reason": "optional human review dispatch bundle is ready"},
     {"gate": "v39-dispatch-archive", "status": status(v39_ready), "reason": "optional human review transfer archive is ready"},
+    {"gate": "machine-verification-support", "status": status(machine_verification_ready), "reason": "clean-runner, v18, lineage, no-oracle, and PoC preview support rows are ready"},
     {"gate": "automated-research-artifact", "status": status(automated_research_artifact_ready), "reason": "machine-verifiable research artifact may be shared with bounded wording"},
     {"gate": "human-reviewed-release", "status": "blocked", "reason": "human_review_completed remains 0"},
     {"gate": "real-release-package", "status": "blocked", "reason": "real_release_package_ready remains 0"},

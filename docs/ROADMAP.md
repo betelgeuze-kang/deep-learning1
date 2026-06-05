@@ -1308,17 +1308,21 @@ Current next boundary:
   `archive_sha256_ready=1`, `archive_file_list_ready=1`, and required
   review/return/verify archive members present while keeping
   `human_review_completed=0` and `real_release_package_ready=0`.
-- `v40` is closed as the machine-verified research artifact above v36-v39. It
+- `v40` is closed as the machine-verified research artifact above v33-v39. It
   copies the v36 release-claim audit, the v37 no-return human-review intake
-  state, the v38 dispatch bundle evidence, and the v39 transfer archive
-  evidence, then writes `MACHINE_VERIFIED_RESEARCH_ARTIFACT.md`,
-  `release_mode_rows.csv`, `allowed_claim_rows.csv`,
-  `blocked_claim_rows.csv`, `evidence_index.csv`,
+  state, the v38 dispatch bundle evidence, the v39 transfer archive evidence,
+  and the v33/v34/v35 support summaries, then writes
+  `MACHINE_VERIFIED_RESEARCH_ARTIFACT.md`, `release_mode_rows.csv`,
+  `allowed_claim_rows.csv`, `blocked_claim_rows.csv`,
+  `machine_verification_rows.csv`, `evidence_index.csv`,
   `v40_machine_verified_research_artifact_manifest.json`, and
   `sha256_manifest.csv`. It verifies
   `v40_machine_verified_research_artifact_ready=1`,
   `automated_research_artifact_ready=1`, and
-  `machine_verified_prototype_ready=1`, while keeping
+  `machine_verified_prototype_ready=1`, plus
+  `machine_verification_ready=1` for clean-runner, v18 intake,
+  RouteMemory-lineage, no-oracle/no-extractor, and closed-corpus PoC support,
+  while keeping
   `human_review_completed=0`, `human_review_required_for_public_release=1`, and
   `real_release_package_ready=0`.
 - The next real boundary is now evidence scaling and review rather than another

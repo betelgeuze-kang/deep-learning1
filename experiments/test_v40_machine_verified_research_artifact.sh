@@ -43,6 +43,7 @@ for field in [
     "v37_human_review_intake_ready",
     "v38_human_review_dispatch_bundle_ready",
     "v39_human_review_dispatch_archive_ready",
+    "machine_verification_ready",
     "human_review_required_for_public_release",
 ]:
     if summary.get(field) != "1":
@@ -53,6 +54,8 @@ if int(summary.get("allowed_claim_rows", "0")) < 2:
     raise SystemExit("v40 should include bounded allowed claims")
 if int(summary.get("blocked_claim_rows", "0")) < 8:
     raise SystemExit("v40 should block stronger claims")
+if int(summary.get("machine_verification_rows", "0")) < 5:
+    raise SystemExit("v40 should include direct machine-verification support rows")
 if int(summary.get("artifact_rows", "0")) < 25:
     raise SystemExit("v40 should hash its copied evidence and boundary files")
 
@@ -63,6 +66,7 @@ for gate in [
     "v37-human-review-intake",
     "v38-dispatch-bundle",
     "v39-dispatch-archive",
+    "machine-verification-support",
     "automated-research-artifact",
 ]:
     if decisions.get(gate, {}).get("status") != "pass":
@@ -76,6 +80,7 @@ required_files = [
     "release_mode_rows.csv",
     "allowed_claim_rows.csv",
     "blocked_claim_rows.csv",
+    "machine_verification_rows.csv",
     "evidence_index.csv",
     "artifact_manifest.csv",
     "v40_machine_verified_research_artifact_manifest.json",
@@ -83,6 +88,9 @@ required_files = [
     "evidence/v36/RELEASE_CLAIM_AUDIT.md",
     "evidence/v36/claim_matrix.csv",
     "evidence/v36/summary.csv",
+    "evidence/support/v33_summary.csv",
+    "evidence/support/v34_summary.csv",
+    "evidence/support/v35_summary.csv",
     "evidence/v37/human_review_intake_manifest.json",
     "evidence/v37/missing_review_rows.csv",
     "evidence/v37/summary.csv",
@@ -104,6 +112,8 @@ if manifest.get("automated_research_artifact_ready") != 1:
     raise SystemExit("v40 manifest should mark automated research artifact ready")
 if manifest.get("machine_verified_prototype_ready") != 1:
     raise SystemExit("v40 manifest should mark machine verified prototype ready")
+if manifest.get("machine_verification_ready") != 1:
+    raise SystemExit("v40 manifest should mark machine verification support ready")
 if manifest.get("human_review_completed") != 0 or manifest.get("real_release_package_ready") != 0:
     raise SystemExit("v40 manifest must keep human review/release blocked")
 if manifest.get("human_review_required_for_public_release") != 1:
@@ -148,14 +158,29 @@ if allowed.get("machine-verified-research-artifact", {}).get("allowed") != "1":
 if "local evidence-bound QA/audit architecture" not in allowed.get("bounded-local-qa-audit-architecture", {}).get("public_wording", ""):
     raise SystemExit("v40 should inherit bounded v36 public wording")
 
+support = {row["support_id"]: row for row in read_csv(artifact_dir / "machine_verification_rows.csv")}
+if set(support) != {
+    "github-actions-clean-runner-rerun",
+    "v18-external-evidence-intake",
+    "routememory-prediction-lineage",
+    "no-oracle-no-extractor-contract",
+    "commercial-poc-preview",
+}:
+    raise SystemExit("v40 machine verification rows should bind the documented support set")
+if any(row["ready"] != "1" for row in support.values()):
+    raise SystemExit("v40 machine verification support rows should be ready")
+
 evidence = {row["evidence_id"]: row for row in read_csv(artifact_dir / "evidence_index.csv")}
 if set(evidence) != {
+    "v33-evidence-closure",
+    "v34-official-benchmark-expansion",
+    "v35-commercial-pilot",
     "v36-release-claim-audit",
     "v37-human-review-intake",
     "v38-human-review-dispatch-bundle",
     "v39-human-review-dispatch-archive",
 }:
-    raise SystemExit("v40 evidence index should bind v36-v39")
+    raise SystemExit("v40 evidence index should bind v33-v39")
 if any(row["ready"] != "1" for row in evidence.values()):
     raise SystemExit("v40 evidence index rows should be ready")
 
@@ -165,6 +190,7 @@ for snippet in [
     "`automated_research_artifact_ready=1` is allowed",
     "`human_review_completed=0` remains explicit",
     "`real_release_package_ready=0` remains explicit",
+    "CI-clean-runner reproducible",
     "Human-reviewed release",
     "experiments/test_v40_machine_verified_research_artifact.sh",
 ]:
