@@ -1418,6 +1418,12 @@ Current next boundary:
   answer rows plus citation/retrieval/resource rows over the v50 public-repo
   seed, marks the row `v52_absorb_ready=1`, and still keeps full v52 blocked
   until C/D/E real baseline rows exist.
+- `v52f` expands system B from the 9-row seed to a 100-row measured run.
+  `experiments/test_v52f_small_local_rag_measured_100.sh` emits 100 answer
+  rows plus citation, abstain, wrong-answer guard, resource, source-manifest,
+  and 300 retrieval rows over the frozen v53d query IDs. It marks the B-100
+  layer `v52_absorb_ready=1`, but keeps full v52 blocked until A/G/H are run
+  over the same frozen query set and real C/D/E evidence directories validate.
 - `v52c` adds the 7B-14B local model + RAG evidence-intake gate for system C.
   `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh` emits the
   required evidence schema, answer/model templates, validation rows, and hash

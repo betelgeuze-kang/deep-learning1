@@ -294,6 +294,8 @@ Implemented now:
 - `experiments/test_v52_llm_rag_baseline_war.sh`
 - `experiments/run_v52b_small_local_rag_measured_row.sh`
 - `experiments/test_v52b_small_local_rag_measured_row.sh`
+- `experiments/run_v52f_small_local_rag_measured_100.sh`
+- `experiments/test_v52f_small_local_rag_measured_100.sh`
 - `experiments/run_v52c_7b14b_local_model_rag_evidence_intake.sh`
 - `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh`
 - `experiments/run_v52d_30b70b_llm_rag_evidence_intake.sh`
@@ -346,6 +348,7 @@ Implemented now:
 - `experiments/test_v60b_release_preflight_candidate_audit.sh`
 - `results/v52_llm_rag_baseline_war/baseline_001/` contract artifacts
 - `results/v52b_small_local_rag_measured_row/row_001/` measured system-B seed artifacts
+- `results/v52f_small_local_rag_measured_100/measured_001/` measured system-B 100-row frozen-query artifacts
 - `results/v52c_7b14b_local_model_rag_evidence_intake/intake_001/` system-C evidence-intake artifacts
 - `results/v52d_30b70b_llm_rag_evidence_intake/intake_001/` system-D/E evidence-intake artifacts
 - `results/v52e_100b_plus_hosted_llm_rag_optional_intake/intake_001/` system-F optional evidence-intake artifacts
@@ -374,6 +377,8 @@ Implemented now:
 This scaffold emits the A-H baseline registry, adapter contract rows, symmetric evaluation contract rows, score axes, source-preview copies, and claim boundary. It intentionally keeps `v52_ready=0`, `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, and `optional_100b_plus_baseline_status=deferred-with-reason`.
 
 The v52b measured-row layer emits the first system-B small-local-RAG answer/citation/retrieval/resource rows over the v50 public-repo seed. It intentionally marks only `v52_absorb_ready=1`; it keeps `v52_ready=0`, `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, and all 30B-150B comparison claims blocked.
+
+The v52f measured-row layer expands system B to 100 rows over the frozen v53d query set. It emits source manifest rows, answer rows, citation rows, abstain rows, wrong-answer guard rows, resource rows, retrieval rows, copied v53d query/source evidence, and a sha256 manifest. It intentionally marks only the B-100 layer absorb-ready; it keeps `v52_ready=0` and all 30B-150B comparison claims blocked until A/G/H run on the same query IDs and source manifest and C/D/E evidence directories validate.
 
 The v52c evidence-intake layer emits the system-C 7B-14B local-model-RAG schema, answer template, model identity template, validation rows, source evidence copies, hash manifest, and claim boundary. Default/no-env execution intentionally keeps `supplied_evidence_ready=0`, `v52_absorb_ready=0`, `v52_ready=0`, and all 30B-150B comparison claims blocked until a real local model evidence directory validates.
 
@@ -427,19 +432,20 @@ The v60b preflight layer consumes the v59b candidate replay and emits release-pr
 
 The next implementation PR should extend v52-v60 from contract scaffold to measured and reviewed rows:
 
-1. Absorb and scale the measured B small-local-RAG row beyond the current 9-row v50 seed.
-2. Supply and validate a real 7B-14B local model + RAG evidence directory for C.
-3. Supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E.
-4. Supply and validate a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
-5. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
-6. Promote v53e/v53f canary-scope query and intake layers into complete-source 1000+ query audit evidence, then supply valid A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
-7. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
-8. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
-9. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
-10. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
-11. Promote the v58c response intake into a real 500+ row blind evaluation by supplying valid D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
-12. Promote the v59b candidate replay into a full challenge demo by replacing candidate/intake rows with real v52-v58 measured/reviewed rows and writing a reviewer-ready artifact bundle.
-13. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
-14. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
+1. Promote the v52f B small-local-RAG 100-row measured run to 300 rows, then 1000 rows, preserving the same row contract: `query_id`, `source_manifest`, `answer_rows`, `citation_rows`, `abstain_rows`, `wrong_answer_guard_rows`, `resource_rows`, and `sha256_manifest`.
+2. Run A, B, G, and H on the same frozen query set and source manifest before adding wider model comparisons; the output must be comparable row-for-row across BM25/lexical, small local RAG, RouteMemory + RouteHint, and RouteMemory + RouteHint + scorer/policy.
+3. Supply and validate a real 7B-14B local model + RAG evidence directory for C.
+4. Supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E.
+5. Supply and validate a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
+6. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
+7. Promote v53e/v53f canary-scope query and intake layers into complete-source 1000+ query audit evidence, then supply valid A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
+8. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
+9. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
+10. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
+11. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
+12. Promote the v58c response intake into a real 500+ row blind evaluation by supplying valid D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
+13. Promote the v59b candidate replay into a full challenge demo by replacing candidate/intake rows with real v52-v58 measured/reviewed rows and writing a reviewer-ready artifact bundle.
+14. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
+15. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
 
 This completes the v52-v60 contract scaffold chain without weakening the claim boundary. It does not complete the v1.0 Architecture Challenge itself.

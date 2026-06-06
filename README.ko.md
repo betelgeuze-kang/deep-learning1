@@ -26,11 +26,12 @@
 
 v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡니다.
 
-현재 v52-v60 scaffold:
+현재 v52-v60 scaffold와 measured seed layer:
 
 ```bash
 ./experiments/test_v52_llm_rag_baseline_war.sh
 ./experiments/test_v52b_small_local_rag_measured_row.sh
+./experiments/test_v52f_small_local_rag_measured_100.sh
 ./experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh
 ./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh
 ./experiments/test_v52e_100b_plus_hosted_llm_rag_optional_intake.sh
@@ -59,9 +60,11 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 ./experiments/test_v60b_release_preflight_candidate_audit.sh
 ```
 
-이 명령들은 A-H baseline registry, system B small-local-RAG measured seed row, system C 7B-14B local-model-RAG evidence-intake gate, system D/E 30B/70B open-weight LLM+RAG evidence-intake gate, optional system F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, live 10-repo public target lock, pinned canary source snapshot, 100-row source-span-bound canary query seed, negative/abstain row를 포함한 1000-row canary-scope query scale, frozen query set 위의 A-H answer/citation/resource intake matrix, v54 1000-row generation contract, v54b deterministic local 1000-row RouteHint generation scale run, v55 scaling-law main-run contract, v55b 6축 / 360-row local scaling-law main run, v56 RULER/LongBench expanded benchmark contract, v56b 1500-row RULER/LongBench candidate-scale run, v57 domain expert pack contract, v57b 1000-row source-span-bound domain expert pack candidate set, v58 blind-eval contract, v58b 500-row blind query-freeze and reviewer-packet candidate set, v58c D/E/F/G/H blind response evidence-intake gate, v59 one-command challenge demo contract, v59b one-command candidate/intake-chain replay bundle, v60 release-audit contract, v60b release preflight candidate audit를 만들지만, 실제 30B/70B LLM+RAG row, complete-source 10+ repo / 1000+ query audit row와 A-H answer/citation/resource, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
+이 명령들은 A-H baseline registry, frozen v53d query set 위에서 100-row까지 확장된 system B small-local-RAG measured seed row, system C 7B-14B local-model-RAG evidence-intake gate, system D/E 30B/70B open-weight LLM+RAG evidence-intake gate, optional system F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, live 10-repo public target lock, pinned canary source snapshot, 100-row source-span-bound canary query seed, negative/abstain row를 포함한 1000-row canary-scope query scale, frozen query set 위의 A-H answer/citation/resource intake matrix, v54 1000-row generation contract, v54b deterministic local 1000-row RouteHint generation scale run, v55 scaling-law main-run contract, v55b 6축 / 360-row local scaling-law main run, v56 RULER/LongBench expanded benchmark contract, v56b 1500-row RULER/LongBench candidate-scale run, v57 domain expert pack contract, v57b 1000-row source-span-bound domain expert pack candidate set, v58 blind-eval contract, v58b 500-row blind query-freeze and reviewer-packet candidate set, v58c D/E/F/G/H blind response evidence-intake gate, v59 one-command challenge demo contract, v59b one-command candidate/intake-chain replay bundle, v60 release-audit contract, v60b release preflight candidate audit를 만들지만, 실제 30B/70B LLM+RAG row, complete-source 10+ repo / 1000+ query audit row와 A-H answer/citation/resource, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
 
 현재 measured baseline 진척: `experiments/test_v52b_small_local_rag_measured_row.sh`는 v50 public-repo seed 위에서 `results/v52b_small_local_rag_measured_row/row_001/`에 system B answer row 9개, citation/retrieval/resource row, hash manifest를 생성합니다. 이 row는 v52에 흡수 가능한 첫 실측 seed지만, 30B-150B 비교 결과는 아니며 v52 release claim은 계속 blocked입니다.
+
+현재 B-baseline 100-row 진척: `experiments/test_v52f_small_local_rag_measured_100.sh`는 frozen v53d query set 위에서 `results/v52f_small_local_rag_measured_100/measured_001/`에 system B answer row 100개, citation row, abstain row, wrong-answer guard row, resource row, source manifest row, retrieval row, sha256 manifest를 생성합니다. 이는 B를 9행 seed에서 100행으로 올린 첫 controlled expansion이지만, 같은 frozen query set 위의 A/G/H row와 실제 C/D/E evidence directory가 검증되기 전까지 full v52는 blocked입니다.
 
 현재 C-baseline intake 진척: `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh`는 미래의 7B-14B local model + RAG 실행 결과를 받을 수 있도록 `results/v52c_7b14b_local_model_rag_evidence_intake/intake_001/`에 required schema, answer template, model identity template, validation row, hash manifest를 생성합니다. 기본 no-env 실행은 실제 supplied evidence directory가 검증되기 전까지 blocked입니다.
 
