@@ -1437,6 +1437,13 @@ Current next boundary:
   frozen query/source rows, and 3000 retrieval rows, including 160
   negative/abstain query rows. It closes the B 9->100->300->1000 ladder while
   keeping A/G/H same-query-set rows, C/D/E evidence, and full v52 blocked.
+- `v52i` adds the local A/B/G/H same-query measured packet.
+  `experiments/test_v52i_abgh_same_query_measured_1000.sh` emits A, B, G,
+  and H over the same full frozen v53e query set and source manifest, with
+  4000 answer/citation/abstain/wrong-answer/resource rows, 12000 retrieval
+  rows, 2000 G/H RouteHint rows, and per-system metrics. It closes the local
+  same-query packet while keeping C/D/E evidence, 30B/70B baselines, and full
+  v52 blocked.
 - `v52c` adds the 7B-14B local model + RAG evidence-intake gate for system C.
   `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh` emits the
   required evidence schema, answer/model templates, validation rows, and hash
