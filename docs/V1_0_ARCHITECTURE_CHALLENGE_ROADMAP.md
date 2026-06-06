@@ -318,6 +318,8 @@ Implemented now:
 - `experiments/test_v54b_routehint_generation_scale_1000.sh`
 - `experiments/run_v55_local_scaling_law_main_contract.sh`
 - `experiments/test_v55_local_scaling_law_main_contract.sh`
+- `experiments/run_v55b_local_scaling_law_main_120.sh`
+- `experiments/test_v55b_local_scaling_law_main_120.sh`
 - `experiments/run_v56_ruler_longbench_expanded_contract.sh`
 - `experiments/test_v56_ruler_longbench_expanded_contract.sh`
 - `experiments/run_v57_domain_expert_packs_contract.sh`
@@ -343,6 +345,7 @@ Implemented now:
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
+- `results/v55b_local_scaling_law_main_120/main_001/` six-axis / 360-row local scaling-law main artifacts
 - `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
 - `results/v57_domain_expert_packs_contract/contract_001/` contract artifacts
 - `results/v58_blind_eval_contract/contract_001/` contract artifacts
@@ -377,6 +380,8 @@ The v54b scale layer emits 1000 deterministic local RouteHint generation rows ac
 
 The v55 scaffold emits a six-axis / 100-row scaling-law target, fit contract rows, no-oracle/no-extractor/RouteMemory-lineage invariants, v51 seed curve copies, and claim boundary. It intentionally keeps `v55_local_scaling_law_ready=0`, `repo_count_axis_ready=0`, and `missing_scaling_curve_rows=73`.
 
+The v55b main-run layer emits six scaling axes, 360 curve rows, 60 repo-count rows, 120 confidence-interval rows, failure-case rows, resource rows, fit rows, local source/probe hash binding, and claim boundary. It marks `v55_local_scaling_law_ready=1` while keeping GPU speedup, production latency, release, and 30B-150B equivalence claims blocked.
+
 The v56 scaffold emits RULER and LongBench expanded benchmark targets, official source/evaluator artifact contracts, no-oracle/no-extractor/RouteMemory-lineage invariants, v49/v45 seed evidence copies, and claim boundary. It intentionally keeps `v56_ruler_longbench_expanded_ready=0`, `ruler_missing_rows=500`, `longbench_missing_rows=494`, and `llm_rag_baseline_rows_ready=0`.
 
 The v57 scaffold emits six domain-pack targets, expert-review artifact contracts, domain policy gates, v47/v48/v52/v56 seed evidence copies, and claim boundary. It intentionally keeps `v57_domain_expert_packs_ready=0`, `missing_eval_rows=950`, `human_expert_review_ready=0`, `blind_eval_ready=0`, and `expert_replacement_claim=0`.
@@ -398,7 +403,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 5. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
 6. Promote v53e/v53f canary-scope query and intake layers into complete-source 1000+ query audit evidence, then supply valid A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
 7. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
-8. Expand scaling from 5 preview axes / 27 rows to 6 main axes / at least 100 rows, including repo_count, confidence intervals, and failure cases.
+8. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
 9. Expand RULER to at least 1000 official-source/evaluator-bound rows and LongBench to at least 500 rows, with v52 baseline rows where benchmark format allows.
 10. Fill the six domain expert packs with human-reviewed gold query sets, rubrics, failure taxonomy, blind review forms, policy diffs, privacy review, and reproducibility manifests.
 11. Run the 500+ row blind evaluation with sealed system identity, frozen pre-output query selection, symmetric evidence budgets, human blind review, and inter-rater/adjudication rows.

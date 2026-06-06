@@ -1483,6 +1483,13 @@ Current next boundary:
   `experiments/test_v55_local_scaling_law_main_contract.sh` emits the six-axis
   / 100-row scaling contract from v51 seed curves, and keeps full v55 blocked
   with `repo_count_axis_ready=0` and `missing_scaling_curve_rows=73`.
+- `v55b` adds the local scaling-law main run.
+  `experiments/test_v55b_local_scaling_law_main_120.sh` emits six scaling
+  axes, 360 curve rows, 60 repo-count rows, 120 confidence-interval rows,
+  failure-case rows, resource rows, fit rows, and local source/probe hash
+  binding. It marks the v55 machine-verified scaling-law target ready while
+  keeping GPU speedup, production latency, release, and 30B-150B equivalence
+  claims blocked.
 - `v56` is started as a RULER/LongBench expanded benchmark contract scaffold.
   `experiments/test_v56_ruler_longbench_expanded_contract.sh` emits the
   official source/evaluator-bound benchmark contract from v49/v45 seed
