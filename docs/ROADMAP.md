@@ -1580,6 +1580,13 @@ Current next boundary:
   rows, gate rows, README_RESULT, boundary, and sha256 manifest. It marks the
   current candidate replay bundle ready while keeping real LLM rows,
   complete-source audit, human review, full v59, and release claims blocked.
+- `v59c` adds the one-command measured-registry replay.
+  `examples/v1_0_architecture_challenge_measured_registry_demo.sh` runs the
+  v59c bundle builder, which assembles the v52j A/B/G/H measured registry plus
+  the current v53e-v58c candidate chain, stage rows, gate rows, README_RESULT,
+  boundary, and sha256 manifest. It promotes the local 1000-query measured
+  registry into replay while keeping C/D/E real rows, complete-source audit,
+  human review, full v59, and release claims blocked.
 - `v60` is started as a release-audit contract scaffold.
   `experiments/test_v60_architecture_challenge_release_contract.sh` consumes
   the v59 bundle, emits release requirement rows, allowed/forbidden claim rows,

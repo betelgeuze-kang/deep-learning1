@@ -350,6 +350,9 @@ Implemented now:
 - `examples/v1_0_architecture_challenge_candidate_demo.sh`
 - `experiments/run_v59b_one_command_candidate_demo.sh`
 - `experiments/test_v59b_one_command_candidate_demo.sh`
+- `examples/v1_0_architecture_challenge_measured_registry_demo.sh`
+- `experiments/run_v59c_one_command_measured_registry_demo.sh`
+- `experiments/test_v59c_one_command_measured_registry_demo.sh`
 - `experiments/run_v60_architecture_challenge_release_contract.sh`
 - `experiments/test_v60_architecture_challenge_release_contract.sh`
 - `experiments/run_v60b_release_preflight_candidate_audit.sh`
@@ -383,6 +386,7 @@ Implemented now:
 - `results/v58c_blind_response_evidence_intake/intake_001/` D/E/F/G/H blind response evidence-intake artifacts
 - `results/v59_one_command_challenge_demo_contract/contract_001/` contract artifacts
 - `results/v59b_one_command_candidate_demo/candidate_001/` one-command candidate/intake-chain replay artifacts
+- `results/v59c_one_command_measured_registry_demo/measured_registry_001/` one-command measured-registry replay artifacts
 - `results/v60_architecture_challenge_release_contract/contract_001/` contract artifacts
 - `results/v60b_release_preflight_candidate_audit/preflight_001/` release preflight candidate-audit artifacts
 
@@ -444,6 +448,8 @@ The v59 scaffold emits a repository one-command entrypoint, v52-v58 contract bun
 
 The v59b candidate layer emits a repository one-command candidate entrypoint, v52b-v58c candidate/intake bundle, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It marks only `v59b_one_command_candidate_demo_ready=1`; it keeps `v59_ready=0`, real 30B/70B rows, optional 100B+ row/final deferral, complete-source audit, human domain review, human blind review, full challenge demo, and release claims blocked.
 
+The v59c measured-registry layer emits a repository one-command measured-registry entrypoint, v52j measured-registry bundle, v53e-v58c candidate-chain copies, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It marks only `v59c_one_command_measured_registry_demo_ready=1`; it hash-binds A/B/G/H over the shared 1000-query v53e source manifest into the v59 replay path while keeping `v59_ready=0`, C/D/E real evidence rows, optional F handling, complete-source audit, human domain review, human blind review, full challenge demo, and release claims blocked.
+
 The v60 scaffold emits release requirement rows, allowed claim rows, forbidden claim rows, release decision rows, v59 source bundle copies, hash manifest, and claim boundary. It intentionally keeps `v60_ready=0`, all ten release requirements blocked, `real_release_package_ready=0`, and all v1.0 comparison/release claims blocked until real measured rows and human/release review evidence exist.
 
 The v60b preflight layer consumes the v59b candidate replay and emits release-preflight requirement rows, claim rows, stage release-audit rows, decision rows, copied v59b source evidence, hash manifest, and claim boundary. It marks only `v60b_release_preflight_candidate_audit_ready=1`; it keeps `v60_ready=0`, real 30B/70B rows, complete-source audit, human domain review, human blind review, human release review, release package, and all v1.0 release/comparison/superiority claims blocked.
@@ -452,7 +458,7 @@ The v60b preflight layer consumes the v59b candidate replay and emits release-pr
 
 The next implementation PR should extend v52-v60 from contract scaffold to measured and reviewed rows:
 
-1. Promote the v52j measured registry into the v59 replay bundle without weakening its local-only claim boundary.
+1. Closed in v59c: promote the v52j measured registry into the v59 replay bundle without weakening its local-only claim boundary.
 2. Supply and validate a real 7B-14B local model + RAG evidence directory for C.
 3. Supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E.
 4. Re-run the same shared `query_id`, `source_manifest`, `answer_rows`, `citation_rows`, `abstain_rows`, `wrong_answer_guard_rows`, `resource_rows`, and `sha256_manifest` contract after C/D/E evidence validates.
@@ -464,7 +470,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 10. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
 11. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
 12. Promote the v58c response intake into a real 500+ row blind evaluation by supplying valid D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
-13. Promote the v59b candidate replay into a full challenge demo by replacing candidate/intake rows with real v52-v58 measured/reviewed rows and writing a reviewer-ready artifact bundle.
+13. Promote the v59c measured-registry replay into a full challenge demo by replacing remaining candidate/intake rows with real v52-v58 measured/reviewed rows and writing a reviewer-ready artifact bundle.
 14. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
 15. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
 
