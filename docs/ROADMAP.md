@@ -1423,6 +1423,11 @@ Current next boundary:
   required evidence schema, answer/model templates, validation rows, and hash
   manifest, and still keeps C blocked until a real local-model-RAG evidence
   directory validates.
+- `v52d` adds the 30B/70B open-weight LLM+RAG evidence-intake gate for systems
+  D and E. `experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh` emits the
+  required D/E evidence schemas, answer/model templates, validation rows, and
+  hash manifest, and still keeps v52 blocked until both real D and E evidence
+  directories validate.
 - `v53` is started as a public repo code/doc audit contract scaffold.
   `experiments/test_v53_public_repo_code_doc_audit.sh` emits the 10-repo /
   1000-query scale contract from the v50 3-repo seed, and keeps full v53
