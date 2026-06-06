@@ -1368,13 +1368,17 @@ Current next boundary:
   non-attention generator -> grounded answer -> citation/abstain/audit trail`
   holds across RULER NIAH, LongBench v2, codebase QA, and internal docs QA with
   zero raw context in hints and zero raw prompt stuffing.
-- The v41-v47 impact roadmap is closed, and v48 begins the next
-  evidence-scale/use-surface phase. The remaining high-leverage tracks are
-  RULER NIAH 200/500 rows at fixed context/architecture and Codebase Auditor
-  over 3-5 public repositories with doc-code conflict, deprecated usage, and
-  config mismatch checks. The claim remains local evidence-bound QA/audit
-  assistance, not Transformer replacement, frontier local LLM, GPU
-  acceleration, long-context solved, or expert replacement.
+- `v49` is closed as the fixed-context RULER NIAH 200/500-row scale above
+  v34/v33/v18. It verifies 200 and 500 raw prediction rows, matching
+  RouteMemory lineage rows, official evaluator/source reuse, no-oracle/
+  no-extractor status, fixed 4096 context length, fixed architecture, and v18
+  intake while keeping release readiness blocked.
+- The v41-v47 impact roadmap is closed, and v48/v49 continue the next
+  evidence-scale/use-surface phase. The remaining high-leverage track is
+  Codebase Auditor over 3-5 public repositories with doc-code conflict,
+  deprecated usage, and config mismatch checks. The claim remains local
+  evidence-bound QA/audit assistance, not Transformer replacement, frontier
+  local LLM, GPU acceleration, long-context solved, or expert replacement.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
