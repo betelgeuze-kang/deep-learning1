@@ -657,9 +657,32 @@ triggers, or active jumps.
 h6-e scales that span-hash candidate diagnostic over key-count/value-length and
 hash-bit arms. It remains a value-bearing proposal-hint scale guard and still
 does not create remote neighbors, route triggers, or active jumps.
+h6-f/h6-g/h6-h/h6-i/h6-j/h6-k/h6-l/h6-m/h6-n/h6-o/h6-p expose span-candidate quality failures under symbolic
+ambiguity and weak learned-like route-code sources. h6-g/h6-h track span
+exact-match and all-span recall/top1 so byte-level qacc cannot hide full-span
+failure; h6-i adds record/key quality metrics showing coherent wrong-key span
+selection under weak route-code identity. h6-j adds a span-prefix ranking probe
+and shows that visible prefix consistency alone is not a promotion path. h6-k
+adds a span-key-support ranking probe and shows that same-key support across
+offsets can also be neutral under coherent wrong-key failure. h6-l adds a
+span-local-energy ranking probe and shows local dynamics compatibility is a
+limited but useful non-key-shape span-quality signal. h6-m scales that signal
+over a small key/seed matrix while keeping the same non-topological route path.
+h6-n composes local-energy ranking with h5 candidate-quality presets and shows
+that span exact-match and byte qacc can prefer different policy choices.
+h6-o records that split as an explicit policy calibration artifact.
+h6-p scales the artifact and keeps the same conclusion on average.
+They preserve span-offset
+`value_pos -> value byte -> proposal hint` routing and still do not create
+remote neighbors, route triggers, or active jumps.
 h7-a closes the current goal with a route-quality/route-memory smoke suite. It
 is a regression guard for the non-topological path, not a promotion of
 jump-neighbor routing.
+h9-a/h9-b/h9-d add an optional ROCm/HIP backend scaffold, but only around
+numeric candidate-weight factor parity and diagnostic proposal-score parity.
+The backend selector does not change route
+semantics, does not move KV/string parsing or source-credit ledgers onto GPU,
+and does not create remote neighbors, route triggers, or active jumps.
 
 Do not say:
 
@@ -673,5 +696,8 @@ Do not say:
 - `source-quality separation solves learned routing`
 - `weakened route-code source solves learned routing`
 - `weak learned-source scale proves learned routing`
+- `span learned-source stress solves chunk retrieval`
+- `span recall recovery solves chunk retrieval`
 - `fallback-source ablation solves learned routing`
 - `key-shape fallback is learned routing`
+- `HIP backend proves GPU acceleration`

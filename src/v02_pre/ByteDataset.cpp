@@ -159,6 +159,7 @@ ByteDataset::Window ByteDataset::window_for_epoch(int epoch, int N) const {
                     kv_record_keys_[input_index],
                     i,
                     local_value_pos,
+                    kv_record_value_lengths_[input_index],
                     kv_record_values_[input_index],
                 });
             }
@@ -266,6 +267,7 @@ void ByteDataset::build_route_hints() {
     kv_duplicate_record_present_.assign(data_.size(), false);
     kv_record_keys_.assign(data_.size(), std::string{});
     kv_record_value_positions_.assign(data_.size(), -1);
+    kv_record_value_lengths_.assign(data_.size(), 1);
     kv_record_values_.assign(data_.size(), 0);
     kv_query_present_.assign(data_.size(), false);
     kv_query_hit_.assign(data_.size(), false);
@@ -411,6 +413,7 @@ void ByteDataset::build_route_hints() {
             }
             kv_record_keys_[i] = key;
             kv_record_value_positions_[i] = static_cast<int>(record_value_start);
+            kv_record_value_lengths_[i] = static_cast<int>(span_values.size());
             kv_record_values_[i] = data_[record_value_start];
             record_values[key] = RecordValue{
                 data_[record_value_start],

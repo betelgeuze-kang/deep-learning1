@@ -537,6 +537,10 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
             params.route_mode = value;
         } else if (key == "route-refresh" || key == "route_refresh") {
             params.route_refresh = value;
+        } else if (key == "backend") {
+            params.backend = value;
+        } else if (key == "hip-device" || key == "hip_device") {
+            params.hip_device = cli_to_int(value, key);
         } else if (key == "dataset") {
             params.dataset = value;
         } else if (key == "input") {
@@ -720,11 +724,13 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-delta-mode <target-only|projected>\n"
        << "  --route-pull-scale <float>\n"
        << "  --route-push-scale <float>\n"
-       << "  --route-candidate-score <insertion|recency|value-vote|key-shape>\n"
+       << "  --route-candidate-score <insertion|recency|value-vote|key-shape|span-prefix|span-key-support|span-local-energy|span-local-energy-prefix|span-local-energy-worst|span-local-margin|span-local-margin-worst|span-route-code|span-local-energy-route-code|span-chunk-credit|span-local-energy-chunk-credit>\n"
        << "  --route-source <none|input-byte|joint-code|state-code>\n"
        << "  --route-mode <off|probe|jump-neighbors|hint-oracle|hint-parsed|hint-kv-exact|hint-kv-hash>\n"
        << "     jump-neighbors may use input-byte, joint-code, or state-code route keys\n"
        << "  --route-refresh <epoch|cycle>\n"
+       << "  --backend <cpu|hip>\n"
+       << "  --hip-device <int>\n"
        << "  --csv <path>\n";
 }
 

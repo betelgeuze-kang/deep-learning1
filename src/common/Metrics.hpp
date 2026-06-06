@@ -104,6 +104,21 @@ struct EpochMetricsV02 {
     double fixture_query_lo_acc = 0.0;
     double fixture_query_field_acc = 0.0;
     double fixture_query_joint_acc = 0.0;
+    double route_span_group_count = 0.0;
+    double route_span_mean_query_count = 0.0;
+    double route_span_exact_match_rate = 0.0;
+    double route_span_selected_key_consistency_rate = 0.0;
+    double route_span_selected_correct_key_rate = 0.0;
+    double route_span_candidate_all_recall_rate = 0.0;
+    double route_span_candidate_all_top1_rate = 0.0;
+    double route_span_candidate_offset_recall_rate = 0.0;
+    double route_span_candidate_offset_top1_rate = 0.0;
+    double route_span_candidate_correct_key_share_mean = 0.0;
+    double route_span_candidate_unique_key_count_mean = 0.0;
+    double route_span_candidate_key_entropy_mean = 0.0;
+    double route_span_candidate_top_key_consistency_rate = 0.0;
+    double route_span_candidate_top_key_correct_rate = 0.0;
+    double route_span_candidate_coherent_wrong_top_key_rate = 0.0;
     double query_route_hint_margin_mean = 0.0;
     double query_local_margin_against_route_mean = 0.0;
     double query_effective_route_margin_mean = 0.0;
@@ -187,6 +202,10 @@ struct EpochMetricsV02 {
     double route_credit_qacc = 0.0;
     double route_credit_learn_active = 0.0;
     double route_credit_apply_active = 0.0;
+    double route_chunk_credit_correct_mean = 0.0;
+    double route_chunk_credit_wrong_mean = 0.0;
+    double route_chunk_credit_gap = 0.0;
+    double route_chunk_credit_top1_rate = 0.0;
     double route_plasticity_ledger_size = 0.0;
     double route_plasticity_ledger_mean_abs_credit = 0.0;
     double route_source_credit_size = 0.0;
@@ -298,6 +317,11 @@ struct EpochMetricsV02 {
     double route_key_unique_count = 0.0;
     double route_signature_collision_rate = 0.0;
     double route_vs_raw_candidate_overlap_rate = 0.0;
+    double backend_active = 0.0;
+    double hip_enabled = 0.0;
+    double hip_device = 0.0;
+    double hip_kernel_calls = 0.0;
+    double hip_fallback_count = 0.0;
 };
 
 inline std::string v01_csv_header() {
@@ -344,6 +368,19 @@ inline std::string v02_csv_header() {
            "route_hint_value_match_rate,fixture_query_acc,"
            "fixture_query_byte_acc,fixture_query_hi_acc,fixture_query_lo_acc,"
            "fixture_query_field_acc,fixture_query_joint_acc,"
+           "route_span_group_count,route_span_mean_query_count,"
+           "route_span_exact_match_rate,route_span_selected_key_consistency_rate,"
+           "route_span_selected_correct_key_rate,"
+           "route_span_candidate_all_recall_rate,"
+           "route_span_candidate_all_top1_rate,"
+           "route_span_candidate_offset_recall_rate,"
+           "route_span_candidate_offset_top1_rate,"
+           "route_span_candidate_correct_key_share_mean,"
+           "route_span_candidate_unique_key_count_mean,"
+           "route_span_candidate_key_entropy_mean,"
+           "route_span_candidate_top_key_consistency_rate,"
+           "route_span_candidate_top_key_correct_rate,"
+           "route_span_candidate_coherent_wrong_top_key_rate,"
            "query_route_hint_margin_mean,query_local_margin_against_route_mean,"
            "query_effective_route_margin_mean,route_strength_mean,route_strength_p50,"
            "route_strength_p90,route_strength_max,route_candidate_corrupt_rate,"
@@ -389,6 +426,8 @@ inline std::string v02_csv_header() {
            "route_credit_rewarded_rate,route_credit_slashed_rate,"
            "route_credit_top1_rate,route_credit_qacc,"
            "route_credit_learn_active,route_credit_apply_active,"
+           "route_chunk_credit_correct_mean,route_chunk_credit_wrong_mean,"
+           "route_chunk_credit_gap,route_chunk_credit_top1_rate,"
            "route_plasticity_ledger_size,route_plasticity_ledger_mean_abs_credit,"
            "route_source_credit_size,route_source_credit_apply_active,"
            "route_source_credit_override_rate,"
@@ -466,7 +505,8 @@ inline std::string v02_csv_header() {
            "raw_key_unique_count,joint_key_unique_count,joint_signature_collision_rate,"
            "joint_vs_raw_candidate_overlap_rate,key_region_route_decode_acc,"
            "route_key_unique_count,route_signature_collision_rate,"
-           "route_vs_raw_candidate_overlap_rate";
+           "route_vs_raw_candidate_overlap_rate,"
+           "backend_active,hip_enabled,hip_device,hip_kernel_calls,hip_fallback_count";
 }
 
 inline std::string to_csv_row(const CycleMetrics& metrics) {
@@ -547,6 +587,21 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.fixture_query_lo_acc << ','
         << metrics.fixture_query_field_acc << ','
         << metrics.fixture_query_joint_acc << ','
+        << metrics.route_span_group_count << ','
+        << metrics.route_span_mean_query_count << ','
+        << metrics.route_span_exact_match_rate << ','
+        << metrics.route_span_selected_key_consistency_rate << ','
+        << metrics.route_span_selected_correct_key_rate << ','
+        << metrics.route_span_candidate_all_recall_rate << ','
+        << metrics.route_span_candidate_all_top1_rate << ','
+        << metrics.route_span_candidate_offset_recall_rate << ','
+        << metrics.route_span_candidate_offset_top1_rate << ','
+        << metrics.route_span_candidate_correct_key_share_mean << ','
+        << metrics.route_span_candidate_unique_key_count_mean << ','
+        << metrics.route_span_candidate_key_entropy_mean << ','
+        << metrics.route_span_candidate_top_key_consistency_rate << ','
+        << metrics.route_span_candidate_top_key_correct_rate << ','
+        << metrics.route_span_candidate_coherent_wrong_top_key_rate << ','
         << metrics.query_route_hint_margin_mean << ','
         << metrics.query_local_margin_against_route_mean << ','
         << metrics.query_effective_route_margin_mean << ','
@@ -630,6 +685,10 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.route_credit_qacc << ','
         << metrics.route_credit_learn_active << ','
         << metrics.route_credit_apply_active << ','
+        << metrics.route_chunk_credit_correct_mean << ','
+        << metrics.route_chunk_credit_wrong_mean << ','
+        << metrics.route_chunk_credit_gap << ','
+        << metrics.route_chunk_credit_top1_rate << ','
         << metrics.route_plasticity_ledger_size << ','
         << metrics.route_plasticity_ledger_mean_abs_credit << ','
         << metrics.route_source_credit_size << ','
@@ -740,7 +799,12 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.key_region_route_decode_acc << ','
         << metrics.route_key_unique_count << ','
         << metrics.route_signature_collision_rate << ','
-        << metrics.route_vs_raw_candidate_overlap_rate;
+        << metrics.route_vs_raw_candidate_overlap_rate << ','
+        << metrics.backend_active << ','
+        << metrics.hip_enabled << ','
+        << metrics.hip_device << ','
+        << metrics.hip_kernel_calls << ','
+        << metrics.hip_fallback_count;
     return oss.str();
 }
 

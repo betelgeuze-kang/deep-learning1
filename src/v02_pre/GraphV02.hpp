@@ -109,6 +109,7 @@ class GraphV02 {
     void apply_route_noisy_source(const ByteDataset::Window& window);
     void refresh_route_hint_candidate_keys();
     void refresh_route_hint_candidate_sources();
+    void apply_span_key_support_candidate_score();
     bool candidate_positions_contain_correct(int index) const;
     bool should_corrupt_route_candidate(int index) const;
     bool should_inject_noisy_route_source(int index) const;
@@ -127,6 +128,7 @@ class GraphV02 {
     std::string route_source_credit_key(int query_index, const std::string& source_id) const;
     std::string route_source_id_for_candidate(int query_index, int value_pos) const;
     float route_credit_for_candidate(int query_index, int value_pos) const;
+    float route_chunk_credit_for_candidate(int query_index, int value_pos) const;
     float route_credit_weight_for_candidate(int query_index, int value_pos) const;
     float route_source_credit_for_candidate(int query_index, int value_pos) const;
     float route_source_credit_for_source(int query_index, const std::string& source_id) const;
@@ -286,6 +288,8 @@ class GraphV02 {
     std::unordered_map<std::string, float> route_source_credit_by_bucket_;
     int current_epoch_ = 0;
     std::vector<int> route_value_positions_;
+    std::vector<int> route_value_position_starts_;
+    std::vector<int> route_value_position_lengths_;
     std::vector<std::string> route_value_position_keys_;
     std::vector<std::string> route_hint_query_keys_;
     std::vector<std::vector<std::string>> route_hint_candidate_keys_;

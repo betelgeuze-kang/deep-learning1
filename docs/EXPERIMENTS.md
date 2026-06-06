@@ -1,8 +1,4168 @@
 # Experiments
 
+## Current Stage
+
+The current checkpoint is h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s plus h7-b/h7-c,
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at adapter/evidence/import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation/readiness,
+v08 lower-chain remote-artifact path plus v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at real-source/remote-review/remote-full source-import/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority/official-result-reconciliation guards, h11-a prototype readiness/import, h11-b
+artifact verification/import, h11-c NVMe RouteMemory store/artifact smokes, h11-d PC RouteLM NLG smoke,
+h9-h workload-speed gate, v12 paper/release claim audit, v13-a real-run
+binder manifest, v13-b RouteLM mmap reader, v13-c evidence packet ABI,
+v13-d real NLG transcript binding, v13-e public codebase RouteQA binding,
+v13-f resource envelope binding, v13-g real evidence promotion gate,
+v13-h real evidence intake gate, v13-i real evidence live-network gate,
+v13-j real evidence rebind gate, v13-k runtime fetch provenance gate,
+v13-l source seed gate, v13-m source seed live-fetch gate, v13-n external
+benchmark official source acquisition gate in quick closure, plus v14-a
+runner-owned query/result/evaluator execution:
+
+```text
+h6-p: span-local-energy policy-scale diagnostics pass.
+h6-q: span-first policy guardrail diagnostics pass.
+h6-r: span-first guardrail degradation diagnostics pass.
+h6-s: adaptive guardrail calibration diagnostics pass.
+h6-t: adaptive guardrail scale diagnostics pass as safe diagnostic-only.
+h6-u: chunk-quality diagnostics pass and expose coherent wrong-key/top1 gaps.
+h6-v/h6-w: wrong-candidate/fallback robustness gates pass diagnostic-only.
+h6-x: chunk-local scorer diagnostics keep plain span-local-energy as best current non-key-shape scorer.
+h6-y: chunk-code similarity diagnostics show learned route-code signature collision is too high to improve chunk ranking.
+h10-a: teacher-free chunk-credit ranker smoke breaks the coherent wrong-key mode in the controlled fixture.
+h10-b: chunk-credit abstain policy routes positive chunk credit to weak-hint/abstain, not default promotion.
+h10-c: joint noisy/distillation gate keeps promotion blocked while proving injected noisy candidates are not selected.
+h10-d: fallback/retry exercise forces primary-candidate corruption and shows raw retry can recover without noisy selection.
+h10-e: teacher-label contract covers correct/wrong/near-miss/missing/abstain grounded-span labels, while external collection/training remains blocked.
+h10-f: local teacher-label collection harness passes, while external labels/training remains blocked.
+h10-g: local distilled-rule learner fits the h10-f labels, while external label ingestion remains blocked.
+h10-h: external teacher-label ingestion schema passes, while default external source remains blocked.
+h10-i: supplied external teacher-label CSV import passes, but distillation remains blocked until h10-j verifies a real teacher source.
+h10-j: teacher external-label source verification passes for local hash/provenance mechanics while keeping real teacher-source verification blocked.
+h10-k: local learned chunk-quality scorer passes on h10-f labels, while external source and default promotion remain blocked.
+h10-l: row/provenance-bound source-verified learned scorer binding passes, while local/default labels remain blocked from satisfying source-verified distillation.
+h10-m: remote teacher-source acquisition contract passes for HTTPS evidence packages.
+h10-n: remote teacher-source content verifier passes for supplied cache files bound to the HTTPS acquisition manifest, while live remote fetch verification remains blocked.
+h10-o: remote teacher-source live-fetch attestation contract passes for supplied artifact-level attestations, while live network fetch remains blocked.
+h10-p: runner-owned runtime fetcher replay contract passes for h10-o attestations, while live network fetch and real source verification remain blocked.
+h10-q: live-network runtime evidence import gate passes for provided live-network rows, while real source import remains blocked.
+h10-r: real teacher-source import/review chain gate passes contract/guard tests, while official authority and real source verification remain blocked.
+h10-s: source-verified learned scorer student-only eval gate passes metric/guard tests, while final scorer eval readiness remains blocked until official real teacher-source authority exists.
+h7-b: promotion gate blocks default route-memory promotion.
+h7-c: promotion review gate binds h7-b, h10-r, h10-s, v08-ab, h11-d, and h9-h, passes review/threshold guardrails, and still blocks default promotion until real evidence exists across every input.
+v13-a: real-run binder manifest packages h11-c store artifacts, h11-d NLG transcript/result, h9-h workload rows, v08-al run/evaluator trace, h10-s scorer/teacher evidence, and v12 claim-audit input into one hash-manifested run directory; the smoke passes for generated diagnostic inputs and corrupted hashes block, while actual nonfixture run, real PC RouteLM NLG, real external benchmark, real workload-speed evidence, real release package, and GPU speedup claims remain blocked.
+v13-b: RouteLM mmap reader opens the v13 run store with mmap, checks route-index/page-table byte windows, validates chunk offsets and route-key matches, and blocks both hash mismatches and hash-clean span semantic corruption while keeping real artifact/external/release claims blocked.
+v13-c: evidence packet ABI normalizes the bound run manifest, store/mmap reader evidence, NLG transcript/result, workload row, benchmark trace/evaluator outputs, h10-s scorer evidence, and v12 input into packet rows plus a claim-matrix input; packet hashes and claim-source references pass, while learned ranking and all real/nonfixture claims remain blocked.
+v13-d: real NLG transcript binding parses the bound transcript/result, replays every transcript row against route-index rows and mmap-read chunk span bytes, emits `transcript_binding.csv`, and blocks hash-clean wrong grounding while real PC RouteLM NLG remains blocked until a nonfixture generator run exists.
+v13-e: public codebase RouteQA binding follows the v13 run benchmark manifest into the local codebase-mini package, verifies trace/package/source hashes, joins seven dataset/result/query/evaluator rows, recomputes metrics, emits `routeqa_rows.csv`, and blocks hash-clean evaluator corruption while keeping independent external benchmark evidence blocked.
+v13-f: resource envelope binding verifies the run-bound workload CSV, NLG/timing/environment artifact hashes, run NLG hash match, CPU/HIP/NVMe/query/token/RAM/VRAM metric envelope, and hash-clean speedup removal while keeping real workload-speed and GPU speedup claims blocked.
+v13-g: real evidence promotion gate consumes v13-c/v13-d/v13-e/v13-f plus h10-s/h11-d/h9-h/v08 run evidence and keeps promotion blocked until real external benchmark, source-verified learned scorer, real NLG, real GPU speed, and nonfixture run evidence are all true in the same bound run.
+v13-h: real evidence intake gate validates the same-run four-row package that must replace the v13-g blockers, including run-id binding, cache hashes, HTTPS source/review/authority URIs, contract flags, and route/jump zero, while keeping real release blocked until live-network verification and regenerated bound-run evidence exist.
+v13-i: real evidence live-network gate validates source/review/authority receipt hashes, HTTPS final URIs, HTTP status rows, live-network declarations, and route/jump zero above v13-h, while keeping real release blocked until the receipts come from runner-owned runtime live fetches and the bound run is regenerated.
+v13-j: real evidence rebind gate validates receipt-hash replay into same-run replacement artifacts and claim-matrix rows above v13-i, while keeping real release blocked until runtime live fetch evidence and regenerated promotion rows exist.
+v13-k: runtime fetch provenance gate reopens v13-i receipt JSON above v13-j, verifies runtime receipt scope/weakness/kind binding, HTTPS original/final URIs, HTTP status, method, headers, empty error, ordered UTC timestamps, receipt hashes, and route/jump zero, while keeping real release blocked unless the receipt source is `runtime-live-fetch`.
+v13-l: source seed gate separates public source seeds from claim evidence, allowing the external-benchmark row to bind current RULER/LongBench public sources while keeping learned chunk ranking, GPU speedup, and real NLG blocked as `project-source-only`.
+v13-m: source seed live-fetch gate consumes the v13-l seed packet and optional runtime receipts, validates receipt scope/weakness/kind binding, HTTPS/status/method/header/timestamp provenance, and route/jump zero, while keeping release blocked unless all source/review/authority receipts and underlying claim evidence are complete.
+v13-n: external benchmark official source acquisition gate consumes v13-m/v13-l source seeds and optionally performs runner-owned acquisition of RULER, LongBench, and RULER arXiv authority metadata, while keeping benchmark results and release blocked until query/result/evaluator evidence exists.
+v14-a: runner-owned query/result/evaluator runner materializes public-codebase RouteQA queries, includes the canonical query file at `benchmarks/public-codebase-routeqa-v1/queries.jsonl`, copies or autodiscovers v13 source-chain rows, binds or live-fetches official repo HEAD source snapshots, can use a runner-owned snapshot as the query repo, builds an mmap store with `route_memory_store.bin`, `route_index.bin`, `chunk_offsets`, and `store_manifest.csv`, hash-binds query materialization in `dataset/dataset_manifest.json`, emits raw predictions plus `predictions/prediction_status.json`, runs the evaluator plus `evaluator/evaluator_status.json`, writes metrics/routeqa/benchmark/evidence/promotion rows and `evidence/run_invocation.json` plus `evidence/requested_outputs_manifest.json`, `evidence/run_layout_manifest.json`, `evidence/objective_requirements_manifest.json`, source-chain CSV mirrors under `evidence/`, and `evidence/execution_chain_manifest.json`, optionally emits RULER-compatible NIAH dataset/prediction/evaluator artifacts plus official evaluator invocation status, invokes official RULER `scripts/data/prepare.py` for three official NIAH tasks and nine generated rows, mmap-verifies those generated inputs through `benchmark/ruler_synthetic/official_generator_store/`, can also run a LongBench v2 multiple-choice official-source smoke through `result.py`, can fetch 12 canonical LongBench v2 dataset-server rows for a non-oracle baseline sample, normalizes those rows into run-level `benchmark/external_benchmark_rows.csv`, aggregates `benchmark/external_benchmark_metrics.json`, hash-binds `benchmark/external_benchmark_manifest.json`, row-binds `benchmark/external_benchmark_execution_chain_manifest.json`, and keeps real external benchmark/release blocked because the current live RULER/LongBench evidence is runner-owned smoke/sample execution rather than independent RULER/LongBench benchmark execution.
+v14-b-lite: prediction-lineage proof over v14-a is implemented and covered by `experiments/test_v14b_lite_prediction_lineage.sh`. The runner emits prediction lineage/source summary artifacts, mmap/candidate traces, RouteMemory prediction evidence rows, a 50-row RouteQA-mini lightweight benchmark, Stage 8.2-L shortcut/corruption negative rows, tiny generator-hint NLG rows under `nlg/` plus grounding evidence, explicit `query/`, `mmap/`, and `prediction/` alias artifacts for the Stage 10-Lite output tree, and a CPU-canonical RX 6900XT/32GB/500GB-lite resource envelope. The smoke proves `prediction_lineage_ready=1`, `no_extractor_prediction_ready=1`, `promoted_prediction_rows == promoted_route_memory_prediction_rows`, `shortcut_negative_suite_ready=1`, `hash_clean_wrong_span_block=1`, `corrupted_route_index_block=1`, `corrupted_chunk_offsets_block=1`, `generator_hint_nlg_ready=1`, `resource_envelope_ready=1`, `run_layout_ready=1`, `objective_requirements_ready=1`, and `execution_chain_manifest_ready=1`, while keeping real external benchmark and release flags blocked.
+v14-c: baseline-comparison boundary over v14-b-lite is implemented and covered by `experiments/test_v14c_baseline_comparison.sh`. The runner compares input extractor, BM25/lexical retrieval, RouteMemory retrieval-only, RouteMemory exact value read, RouteMemory plus proposal hint, and tiny generator-hint NLG on the same 50-row RouteQA-mini package plus shortcut negatives, emits `benchmark/baseline_comparison_rows.csv`, `benchmark/baseline_negative_case_rows.csv`, `metrics/baseline_comparison_metrics.json`, `resource/baseline_latency_rows.csv`, and `promotion/baseline_promotion_guard_rows.csv`, proves `baseline_comparison_ready=1`, `route_memory_safety_dominates_baselines=1`, `input_extractor_baseline_only=1`, and `baseline_promotion_guard_ready=1`, while keeping real external benchmark and release flags blocked.
+v14-d: RouteQA-mini 100/150 row scale boundary over v14-c is implemented and covered by `experiments/test_v14d_routeqa_mini_scale.sh`. The scale runner executes 100-row and 150-row CPU/mmap runs with prediction lineage, generator-hint NLG, shortcut negatives, baseline comparison, and resource envelope enabled; aggregates `results/v14d_routeqa_mini_scale_summary.csv` and `results/v14d_routeqa_mini_scale_decision.csv`; verifies exact query/lineage/NLG/grounding row counts for both target sizes, six baseline comparison rows, 66 baseline negative-case rows, manifest-bound artifacts, zero route/jump rates, run-layout/objective/execution-chain readiness, and blocked candidate external benchmark/release flags.
+v14-e: RULER NIAH-lite runner-owned smoke over v14-d is implemented and covered by `experiments/test_v14e_ruler_niah_lite.sh`. The runner emits RULER-compatible NIAH-lite dataset/prediction/evaluator rows, derives the answer through `benchmark/ruler_synthetic/compatible_niah_store/` mmap reads, writes `ruler_compatible_benchmark_rows.csv`, `ruler_compatible_metrics.json`, and `ruler_compatible_prediction_provenance.csv`, normalizes one ready runner-owned external benchmark row with external execution-chain binding, proves `runner_owned_external_benchmark_result_ready=1`, and keeps candidate external benchmark, real external benchmark, and release flags blocked.
+v15-a: independent reproduction mechanics package over v14-b/v14-c/v14-d/v14-e is implemented and covered by `experiments/test_v15a_independent_reproduction_package.sh`. The package runner regenerates the v14 boundary outputs, assembles `results/v15a_independent_reproduction_package/package_001/`, writes `REPRODUCE.sh`, expected summary/decision CSVs, frozen query sets, source snapshot rows/manifests, resource envelopes, run sha256 manifests, `artifact_manifest.csv`, `environment_manifest.json`, `docs/FAILURE_MODES.md`, and `docs/WHAT_THIS_DOES_NOT_CLAIM.md`, verifies package/stage readiness and artifact hashes, and keeps candidate external benchmark, real external benchmark, and release flags blocked.
+v15-b: nonfixture review / independent rerun evidence mechanics over v15-a is implemented and covered by `experiments/test_v15b_nonfixture_review_independent_rerun.sh`. The review runner regenerates v15-a, executes the package `REPRODUCE.sh`, captures command stdout/stderr hashes, binds reviewer identity and rerun environment, records v15-a package hashes, copies expected and rerun summaries, emits `metric_deltas/metric_delta_rows.csv`, `review/review_rows.csv`, `artifact_manifest.csv`, and `review_manifest.json`, proves `nonfixture_review_package_ready=1` and `independent_rerun_mechanics_ready=1`, and keeps external independent reviewer, candidate external benchmark, real external benchmark, and release flags blocked.
+v16: research publication track plus commercial local QA/audit prototype contract over v15-b is implemented and covered by `experiments/test_v16_research_commercial_tracks.sh`. The packet runner assembles `results/v16_research_commercial_tracks/packet_001/`, copies v14-b/v14-c/v14-d/v14-e/v15-a/v15-b summary inputs, emits `research_publication_packet.md`, `research_evidence_matrix.csv`, `claim_boundary_matrix.csv`, `commercial_local_qa_audit_contract.md`, `commercial_acceptance_rows.csv`, `artifact_manifest.csv`, and `v16_manifest.json`, proves `research_publication_track_ready=1`, `commercial_local_qa_audit_prototype_ready=1`, and `claim_boundaries_ready=1`, while keeping candidate external benchmark, real external benchmark, and release flags blocked.
+v17: post-v16 externalization handoff over v16 is implemented and covered by `experiments/test_v17_post_v16_externalization_handoff.sh`. The handoff runner assembles `results/v17_post_v16_externalization_handoff/package_001/`, copies v15-a/v15-b/v16 baseline inputs, prepares `third_party_rerun/EXTERNAL_REPRODUCE.sh`, external rerun required-artifact and manifest templates, official benchmark reconciliation requirements and candidate-result template, commercial local PoC domain intake and acceptance criteria, plus a handoff artifact manifest. It proves `third_party_rerun_handoff_ready=1`, `official_benchmark_reconciliation_intake_ready=1`, and `commercial_local_poc_intake_ready=1`, while keeping `independent_rerun_actual_ready=0`, `candidate_external_benchmark_result_ready=0`, `closed_corpus_poc_actual_ready=0`, real benchmark, and release flags blocked.
+v18: supplied external evidence intake verifier over v17 is implemented and covered by `experiments/test_v18_external_evidence_intake.sh` and `experiments/test_v18_external_evidence_intake_with_fixtures.sh`. The default verifier run emits `results/v18_external_evidence_intake/intake_001/track_intake_rows.csv`, `intake_manifest.json`, and `artifact_manifest.csv` while keeping third-party rerun, official benchmark, commercial PoC, real external benchmark, and release flags blocked when no external directories are supplied. The fixture smoke proves the same verifier can accept synthetic directories for `V18_THIRD_PARTY_RERUN_DIR`, `V18_OFFICIAL_BENCHMARK_DIR`, and `V18_COMMERCIAL_POC_DIR`; those fixture flags are test-only and do not constitute real external readiness.
+v19: external submission bundle over v18 is implemented and covered by `experiments/test_v19_external_submission_bundle.sh`. The runner assembles `results/v19_external_submission_bundle/bundle_001/`, copies v17/v18 source manifests, prepares third-party clean-machine rerun submission files, official benchmark slice requirements, commercial local evidence-bound QA/audit PoC intake files, v18 intake commands, `track_rows.csv`, `submission_manifest.json`, `artifact_manifest.csv`, and `docs/POST_V18_RESEARCH_ROADMAP.md`. It proves `submission_bundle_ready=1`, `third_party_submission_ready=1`, `official_benchmark_submission_ready=1`, and `commercial_poc_submission_ready=1`, while keeping `independent_rerun_actual_ready=0`, `candidate_external_benchmark_result_ready=0`, `closed_corpus_poc_actual_ready=0`, real benchmark, and release flags blocked.
+v20: external return tracker over v19/v18 is implemented and covered by `experiments/test_v20_external_return_tracker.sh`. The runner assembles `results/v20_external_return_tracker/tracker_001/`, reruns the v19 submission bundle, forwards optional returned directories through `V20_THIRD_PARTY_RERUN_DIR`, `V20_OFFICIAL_BENCHMARK_DIR`, and `V20_COMMERCIAL_POC_DIR` into the v18 verifier, and writes `return_requirement_rows.csv`, `blocker_rows.csv`, `next_action_rows.csv`, `RETURN_TRACKER.md`, `return_tracker_manifest.json`, and `artifact_manifest.csv`. The default no-return path proves the tracker is ready while keeping all actual/candidate/release flags blocked and making the missing external return directories explicit.
+v21: external review dispatch kit over v20 is implemented and covered by `experiments/test_v21_external_review_dispatch_kit.sh`. The runner assembles `results/v21_external_review_dispatch_kit/dispatch_001/`, reruns the v20 tracker, copies v19/v20 source manifests and return templates, writes reviewer-facing third-party rerun, official benchmark, and commercial local QA/audit request files, a reviewer packet index, return directory layout, tracker summary, `verification/VERIFY_RETURN_COMMANDS.sh`, `dispatch_manifest.json`, and `artifact_manifest.csv`. It proves the dispatch packet is ready for external reviewers while keeping actual rerun, candidate benchmark, commercial PoC, real benchmark, and release flags blocked.
+v22: clean-machine execution kit over v21 is implemented and covered by `experiments/test_v22_clean_machine_execution_kit.sh`. The runner assembles `results/v22_clean_machine_execution_kit/kit_001/`, reruns the v21 dispatch kit, writes host/container clean-machine runbooks, a minimal `Containerfile.clean-machine`, `CAPTURE_THIRD_PARTY_RERUN.sh`, reviewer and environment templates, official benchmark and commercial PoC return manifest templates, execution notes, verification notes, `clean_machine_execution_manifest.json`, and `artifact_manifest.csv`. The capture script now copies v15-b metric delta rows and review rows into the returned directory when the rerun succeeds, so the remaining third-party actual blockers are reviewer identity and clean-machine independence rather than missing metric/review files. It improves the real third-party rerun path while keeping independent rerun, candidate benchmark, closed-corpus PoC, real benchmark, and release flags blocked until non-fixture returns are supplied.
+v23: official benchmark reconciliation kit over v22 is implemented and covered by `experiments/test_v23_official_benchmark_reconciliation_kit.sh`. The runner assembles `results/v23_official_benchmark_reconciliation_kit/kit_001/`, reruns the v22 kit, writes an official-slice reconciliation runbook, return directory layout, evaluator/container contract, no-oracle/no-raw-input-extractor contract, raw prediction and RouteMemory-derived prediction-lineage templates, metrics/provenance/reproducibility templates, `verification/CHECK_OFFICIAL_RETURN_FILES.sh`, `verification/VERIFY_WITH_V20.md`, `official_benchmark_reconciliation_manifest.json`, and `artifact_manifest.csv`. It improves the candidate external benchmark path while keeping candidate benchmark, real benchmark, and release flags blocked until returned official evidence is supplied.
+v24: external handoff send/receive/verify packet over v21/v22/v18 is implemented and covered by `experiments/test_v24_external_handoff_send_receive_verify.sh`. The runner assembles `results/v24_external_handoff_send_receive_verify/handoff_001/`, reruns the v22 kit and v18 intake, writes the exact send packet path for v21 dispatch plus v22 clean-machine execution kit, return inbox expectations for third-party, official benchmark, and commercial PoC returns, direct v18 verification commands using `V18_THIRD_PARTY_RERUN_DIR`, `V18_OFFICIAL_BENCHMARK_DIR`, and `V18_COMMERCIAL_POC_DIR`, `handoff_rows.csv`, `CURRENT_BLOCKERS.md`, `handoff_manifest.json`, and `artifact_manifest.csv`. It is the current operational handoff packet while keeping all actual/candidate/release flags blocked until a real return directory is supplied.
+v25: outbound send manifest over v24 is implemented and covered by `experiments/test_v25_outbound_send_manifest.sh`. The runner assembles `results/v25_outbound_send_manifest/packet_001/`, reruns v24, writes `outbound/OUTBOUND_FILE_MANIFEST.csv`, `outbound/OUTBOUND_SHA256SUMS.txt`, outbound send instructions for the v21 dispatch kit plus v22 clean-machine kit, receiver acknowledgement template, return options, direct v18 verification instructions, source manifests, `outbound_send_manifest.json`, and `artifact_manifest.csv`. It verifies outbound send packet integrity while keeping all actual/candidate/release flags blocked until a real return directory is supplied.
+v26: external send bundle over v25 is implemented and covered by `experiments/test_v26_external_send_bundle.sh`. The runner assembles `results/v26_external_send_bundle/bundle_001/`, reruns v25, copies every outbound v21 dispatch-kit and v22 clean-machine-kit file into `send_bundle/`, writes `send_bundle/BUNDLE_FILE_MANIFEST.csv`, `send_bundle/BUNDLE_SHA256SUMS.txt`, `SEND_BUNDLE_README.md`, direct v18 return verification notes, source manifests, `send_bundle_manifest.json`, and `artifact_manifest.csv`. It creates one auditable directory to send outward while keeping all actual/candidate/release flags blocked until a real return directory is supplied.
+v27: external send archive over v26 is implemented and covered by `experiments/test_v27_external_send_archive.sh`. The runner assembles `results/v27_external_send_archive/archive_001/`, reruns v26, creates `archive/v26_external_send_bundle_bundle_001.tar.gz`, writes `archive/ARCHIVE_SHA256SUMS.txt`, `archive/ARCHIVE_FILE_LIST.txt`, `SEND_ARCHIVE_README.md`, direct v18 return verification notes, source manifests, `send_archive_manifest.json`, and `artifact_manifest.csv`. It creates a transfer-friendly archive for the outbound packet while keeping all actual/candidate/release flags blocked until a real return directory is supplied.
+v28: inbound return inbox over v27/v18 is implemented and covered by `experiments/test_v28_inbound_return_inbox.sh`. The runner assembles `results/v28_inbound_return_inbox/inbox_001/`, creates standard inbox paths for `third_party_return`, `official_return`, and `commercial_return`, writes `inbox_rows.csv`, `INBOUND_RETURN_INBOX.md`, `verify/VERIFY_INBOX_WITH_V18.sh`, mirrors the latest v18 intake manifest and summary, and writes `inbound_return_inbox_manifest.json` plus `artifact_manifest.csv`. Empty placeholder directories are not passed to v18 as supplied evidence; all actual/candidate/release flags stay blocked until real returned files are present and v18 verifies them.
+v29: receiver-side return preflight over v28 is implemented and covered by `experiments/test_v29_receiver_return_preflight.sh`. The runner assembles `results/v29_receiver_return_preflight/preflight_001/`, reruns v28, checks default or supplied receiver return directories through `V29_THIRD_PARTY_RETURN_DIR`, `V29_OFFICIAL_RETURN_DIR`, and `V29_COMMERCIAL_RETURN_DIR`, writes `receiver/preflight_rows.csv`, `receiver/missing_file_rows.csv`, `receiver/RECEIVER_RETURN_PREFLIGHT.md`, `verify/VERIFY_AFTER_PREFLIGHT.md`, source manifests, `receiver_return_preflight_manifest.json`, and `artifact_manifest.csv`. It makes missing returned files explicit before v18 verification while keeping all actual/candidate/release flags blocked until non-fixture returned directories pass v18.
+v30: commercial codebase QA closed-corpus PoC return over v29/v18 is implemented and covered by `experiments/test_v30_commercial_codebase_poc_return.sh`. The runner assembles `results/v30_commercial_codebase_poc_return/return_001/commercial_return/`, binds four source-cited repository QA rows to current worktree hashes, writes domain and corpus manifests, `query_set.csv`, `poc_result_rows.csv`, `audit_trail.csv`, `resource_envelope.json`, `privacy_review.json`, `acceptance_review.csv`, source manifests, `commercial_codebase_poc_manifest.json`, and artifact hashes. The smoke verifies that v29 sees the commercial return as complete and v18 raises `closed_corpus_poc_actual_ready=1`, while keeping third-party rerun, official benchmark, real external benchmark, and release flags blocked.
+v31: official RULER NIAH candidate return over v30/v18 is implemented and covered by `experiments/test_v31_official_ruler_niah_candidate_return.sh`. The runner assembles `results/v31_official_ruler_niah_candidate_return/return_001/official_return/`, live-binds the current `NVIDIA/RULER` HEAD, downloads and hashes upstream `scripts/data/prepare.py`, `scripts/eval/evaluate.py`, and `README.md`, writes `official_source_snapshot.json`, `official_evaluator_status.json`, `raw_predictions.jsonl`, `prediction_lineage.jsonl`, `metrics.json`, `provenance_manifest.json`, `reproducibility_package_manifest.json`, `candidate_result_rows.csv`, and artifact manifests. The smoke verifies v29 official-return completeness and v18/v20 readiness with `candidate_external_benchmark_result_ready=1` plus v30 `closed_corpus_poc_actual_ready=1`, while keeping third-party rerun, real external benchmark, and release flags blocked.
+v32: GitHub Actions third-party rerun kit over v31/v22/v18 is implemented and covered by `experiments/test_v32_github_actions_third_party_rerun_kit.sh`. The kit adds `.github/workflows/third-party-rerun.yml`, which runs the v22 capture script on a GitHub-hosted `ubuntu-24.04` runner, fills reviewer/environment provenance, invokes v18 against the generated return directory, and uploads the return artifact with `actions/upload-artifact@v4`. The runner assembles `results/v32_github_actions_third_party_rerun_kit/kit_001/` with workflow copy, run/download/verify instructions, manifest, and artifact hashes. PR run `27029089994` returned the GitHub Actions artifact; local v18 intake with that v32 return plus v31 and v30 verifies `independent_rerun_actual_ready=1`, `candidate_external_benchmark_result_ready=1`, `closed_corpus_poc_actual_ready=1`, and `real_external_benchmark_verified=1` while release readiness remains blocked.
+v33: evidence-closure packet over v32/v31/v30/v18 is implemented and covered by `experiments/test_v33_evidence_closure_packet.sh`. The runner assembles `results/v33_evidence_closure_packet/packet_001/`, reruns v18 against the latest downloaded GitHub Actions third-party return plus the v31 official candidate return and v30 commercial PoC return, copies the v18 summary/decision/intake files plus the three evidence return directories, writes `CLAIM_BOUNDARY.md`, `human_review/HUMAN_REVIEW_REQUEST.md`, `human_review/human_review_template.csv`, `evidence_closure_manifest.json`, and `sha256_manifest.csv`. The smoke verifies `v33_evidence_closure_packet_ready=1`, `real_external_benchmark_verified=1`, `human_review_completed=0`, and `real_release_package_ready=0`.
+v34: official benchmark expansion packet over v33/v31/v18 is implemented and covered by `experiments/test_v34_official_benchmark_expansion_packet.sh`. The runner assembles `results/v34_official_benchmark_expansion_packet/packet_001/`, expands the v31 official RULER NIAH candidate from 1 to 6 raw prediction rows at the same 4096-token context length, reuses the official source snapshot and evaluator digest, writes RouteMemory lineage, expansion metrics, candidate result rows, `EXPANSION_BOUNDARY.md`, `benchmark_expansion_manifest.json`, and `sha256_manifest.csv`, then reruns v18 with the v34 official return plus the v33 third-party/commercial evidence. The smoke verifies `v34_official_benchmark_expansion_packet_ready=1`, `candidate_external_benchmark_expansion_ready=1`, `real_external_benchmark_verified=1`, `oracle_prediction_used=0`, and `raw_input_extractor_used=0`, while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v35: commercial pilot packet over v34/v33/v18 is implemented and covered by `experiments/test_v35_commercial_pilot_packet.sh`. The runner assembles `results/v35_commercial_pilot_packet/packet_001/`, reuses the v30 commercial-return schema for an `internal_docs` buyer-visible workflow, writes five source-cited internal-docs QA rows including one release-claim abstain row, privacy/resource/acceptance reviews, `COMMERCIAL_PILOT_BOUNDARY.md`, `commercial_pilot_manifest.json`, and `sha256_manifest.csv`, then reruns v18 with v33 third-party evidence, the v34 official expansion return, and the v35 commercial pilot return. The smoke verifies `v35_commercial_pilot_packet_ready=1`, `closed_corpus_poc_actual_ready=1`, `real_external_benchmark_verified=1`, and a supported `internal_docs` domain while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v36: release-claim audit packet over v33/v34/v35 is implemented and covered by `experiments/test_v36_release_claim_audit_packet.sh`. The runner assembles `results/v36_release_claim_audit_packet/packet_001/`, copies v33/v34/v35 evidence manifests, summaries, decisions, and claim boundaries, writes `claim_matrix.csv`, `evidence_input_rows.csv`, `release_decision_rows.csv`, `RELEASE_CLAIM_AUDIT.md`, `human_review/HUMAN_REVIEW_REQUEST.md`, `human_review/human_review_template.csv`, `v36_release_claim_audit_manifest.json`, and `sha256_manifest.csv`, and decides the maximum allowed public claim. The smoke verifies `v36_release_claim_audit_packet_ready=1`, `evidence_inputs_ready=1`, `maximum_allowed_claim_decided=1`, and `human_review_request_ready=1`; the allowed claim is bounded to local evidence-bound QA/audit with deterministic provenance, source-cited answers, conservative abstention, and externally reproducible evidence packets, while `human_review_completed=0`, `real_release_package_ready=0`, release-ready product, general LLM replacement, Transformer replacement, frontier long-context solved, and GPU acceleration claims remain blocked.
+v37: human review intake verifier over v36 is implemented and covered by `experiments/test_v37_human_review_intake.sh`. The runner assembles `results/v37_human_review_intake/intake_001/`, copies the v36 human-review request/template, consumes an optional returned `human_review_rows.csv`, normalizes the four required review items, checks reviewer identity, timestamps, and all-pass status, writes `human_review_intake_manifest.json`, `normalized_human_review_rows.csv`, `missing_review_rows.csv`, and `sha256_manifest.csv`, and keeps release readiness separate. The default current run verifies `v37_human_review_intake_ready=1` while keeping `human_review_return_supplied=0`, `human_review_completed=0`, and `real_release_package_ready=0`; the smoke also exercises an isolated fixture pass path that can set `evidence_set_human_review_accepted=1` without changing the default no-return summary.
+v38: human review dispatch bundle over v37/v36 is implemented and covered by `experiments/test_v38_human_review_dispatch_bundle.sh`. The runner assembles `results/v38_human_review_dispatch_bundle/bundle_001/`, copies the v36 review request, release audit, claim matrix, decision rows, evidence-input rows, v36/v37 manifests, and missing-review rows into `review_packet/`, prepares `return/human_review_rows.csv`, writes `verify/VERIFY_RETURN.sh`, `HUMAN_REVIEW_DISPATCH_README.md`, `dispatch_rows.csv`, `human_review_dispatch_manifest.json`, and `sha256_manifest.csv`. The smoke verifies `v38_human_review_dispatch_bundle_ready=1`, `return_template_ready=1`, and `verify_script_ready=1`, while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v39: human review dispatch archive over v38 is implemented and covered by `experiments/test_v39_human_review_dispatch_archive.sh`. The runner assembles `results/v39_human_review_dispatch_archive/archive_001/`, archives the v38 bundle as `archive/v38_human_review_dispatch_bundle_bundle_001.tar.gz`, writes `archive/ARCHIVE_SHA256SUMS.txt`, `archive/ARCHIVE_FILE_LIST.txt`, `SEND_ARCHIVE_README.md`, `artifact_manifest.csv`, `human_review_dispatch_archive_manifest.json`, and `sha256_manifest.csv`. The smoke verifies `v39_human_review_dispatch_archive_ready=1`, `archive_sha256_ready=1`, `archive_file_list_ready=1`, and required review/return/verify archive members present while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v40: machine-verified research artifact over v33-v39 is implemented and covered by `experiments/test_v40_machine_verified_research_artifact.sh`. The runner assembles `results/v40_machine_verified_research_artifact/artifact_001/`, copies the v36 release-claim audit, v37 no-return human-review intake state, v38 dispatch bundle evidence, v39 transfer archive evidence, and v33/v34/v35 support summaries, then writes `MACHINE_VERIFIED_RESEARCH_ARTIFACT.md`, `release_mode_rows.csv`, `allowed_claim_rows.csv`, `blocked_claim_rows.csv`, `machine_verification_rows.csv`, `evidence_index.csv`, `v40_machine_verified_research_artifact_manifest.json`, `artifact_manifest.csv`, and `sha256_manifest.csv`. The smoke verifies `v40_machine_verified_research_artifact_ready=1`, `automated_research_artifact_ready=1`, `machine_verified_prototype_ready=1`, and `machine_verification_ready=1` for the clean-runner, v18 intake, RouteMemory-lineage, no-oracle/no-extractor, and closed-corpus PoC support set, while explicitly keeping `human_review_completed=0`, `human_review_required_for_public_release=1`, and `real_release_package_ready=0`; human-reviewed release, production readiness, Transformer/general LLM replacement, frontier long-context, GPU acceleration, and full commercial deployment claims remain blocked.
+v41: RULER NIAH 50-row scale over v34/v33/v18 is implemented and covered by `experiments/test_v41_ruler_niah_50row_scale.sh`. The runner assembles `results/v41_ruler_niah_50row_scale/scale_001/`, runs the v34 expansion engine with 50 rows at the fixed 4096 context length, preserves official evaluator/source reuse, writes `V41_RULER_NIAH_50ROW_BOUNDARY.md`, `scale_rows.csv`, `v41_ruler_niah_50row_scale_manifest.json`, and `sha256_manifest.csv`, and verifies 50 raw predictions, 50 RouteMemory lineage rows, no-oracle/no-raw-input-extractor status, v18 intake, and release blocking. The smoke verifies `v41_ruler_niah_50row_scale_ready=1`, `row_count_ready=1`, `same_context_length=1`, `route_memory_prediction_lineage_ready=1`, `no_oracle_no_extractor_ready=1`, and `v18_verified=1`, while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v42: Codebase Auditor 200-query over v18 is implemented and covered by `experiments/test_v42_codebase_auditor_200query.sh`. The runner assembles `results/v42_codebase_auditor_200query/audit_001/`, selects tracked repository source files, writes 200 source-cited local codebase QA/audit query rows, 200 PoC result rows, 200 audit-trail rows, at least 20 abstain rows for unsupported readiness/replacement claims, and the v18 commercial-return files under `commercial_return/`. It writes `V42_CODEBASE_AUDITOR_BOUNDARY.md`, `auditor_rows.csv`, `source_manifests/codebase_auditor_source_rows.csv`, `v42_codebase_auditor_manifest.json`, and `sha256_manifest.csv`, then verifies the return through v18. The smoke verifies `v42_codebase_auditor_200query_ready=1`, `query_rows=200`, `poc_result_rows=200`, `wrong_answer_guard_pass_rows=200`, `citation_accuracy_pass_rows=200`, `abstain_behavior_pass_rows=200`, `audit_trail_bound_rows=200`, `privacy_review_ready=1`, `resource_envelope_ready=1`, and `v18_closed_corpus_poc_actual_ready=1`, while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v43: Doc-Code Conflict Detection over v42/v18 is implemented and covered by `experiments/test_v43_doc_code_conflict_detection.sh`. The runner assembles `results/v43_doc_code_conflict_detection/detection_001/`, derives implementation facts from v42 readiness evidence, creates a bounded doc-code conflict corpus, writes `detection_case_rows.csv`, `conflict_rows.csv`, `source_span_rows.csv`, `V43_DOC_CODE_CONFLICT_BOUNDARY.md`, `v43_doc_code_conflict_manifest.json`, and `sha256_manifest.csv`, then verifies the detector return through v18. The smoke verifies `v43_doc_code_conflict_detection_ready=1`, `conflict_rows=8`, `consistent_rows=4`, `total_cases=12`, `correct_rows=12`, `supporting_source_spans_ready=1`, `conflict_detection_precision_ready=1`, `conflict_detection_recall_ready=1`, `wrong_answer_guard_pass_rows=12`, `citation_accuracy_pass_rows=12`, `audit_trail_rows=12`, and `v18_closed_corpus_poc_actual_ready=1`, while keeping `human_review_completed=0` and `real_release_package_ready=0`. The boundary limits the result to the bounded v43 audit corpus and does not claim unresolved production defects across the full repository.
+v44: Tiny Non-Attention Generator Hint over v43/v18 is implemented and covered by `experiments/test_v44_tiny_non_attention_generator_hint.sh`. The runner assembles `results/v44_tiny_non_attention_generator_hint/generator_001/`, writes RouteHint payload rows, generator input rows with `attention_layers=0`, `transformer_blocks=0`, `raw_prompt_context_appended=0`, and `raw_prompt_context_bytes=0`, grounded transcript rows, missing-query abstain rows, `V44_TINY_GENERATOR_HINT_BOUNDARY.md`, `v44_tiny_generator_manifest.json`, and `sha256_manifest.csv`, then verifies the return through v18. The smoke verifies `v44_tiny_non_attention_generator_hint_ready=1`, `generator_rows=10`, `grounded_answer_rows=10`, `abstain_rows=2`, `route_hint_used_rows=10`, `raw_prompt_context_appended_rows=0`, `no_raw_prompt_stuffing_ready=1`, `non_attention_generator_ready=1`, `answer_grounded_rate=1.000000`, `span_citation_accuracy=1.000000`, `wrong_answer_rate=0.000000`, and `v18_closed_corpus_poc_actual_ready=1`, while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v45: LongBench v2 small slice over v44/v18 is implemented and covered by `experiments/test_v45_longbench_v2_small_slice.sh`. The runner assembles `results/v45_longbench_v2_small_slice/slice_001/`, snapshots THUDM/LongBench official source/evaluator files, writes `official_return/` with 6 LongBench-v2 multiple-choice raw prediction rows across 6 task categories, 6 RouteMemory prediction-lineage rows, `official_source_snapshot.json`, `official_evaluator_status.json`, `metrics.json`, `provenance_manifest.json`, `reproducibility_package_manifest.json`, and `candidate_result_rows.csv`, then verifies the official return through v18. The smoke verifies `v45_longbench_v2_small_slice_ready=1`, `official_source_snapshot_ready=1`, `official_evaluator_ready=1`, `raw_prediction_rows=6`, `prediction_lineage_rows=6`, `task_categories=6`, `route_memory_prediction_lineage_ready=1`, `oracle_prediction_used=0`, `raw_input_extractor_used=0`, and `v18_candidate_external_benchmark_result_ready=1`, while keeping `real_external_benchmark_verified=0`, `human_review_completed=0`, and `real_release_package_ready=0`.
+v46: Source-Verified Scorer mainline over v45/v18 is implemented and covered by `experiments/test_v46_source_verified_scorer_mainline.sh`. The runner assembles `results/v46_source_verified_scorer_mainline/scorer_001/`, writes 12 source-bound label rows from v45 official benchmark evidence, `source_verified_scorer_model.json`, `scorer_eval_rows.csv`, `V46_SOURCE_VERIFIED_SCORER_BOUNDARY.md`, `v46_source_verified_scorer_manifest.json`, and `sha256_manifest.csv`, then verifies a commercial return through v18. The smoke verifies `v46_source_verified_scorer_mainline_ready=1`, `source_verified_label_rows=12`, `source_bound_label_rows=12`, `local_teacher_harness_labels_used=0`, `scorer_model_ready=1`, `eval_query_rows=6`, `baseline_top1_accuracy=0.000000`, `scorer_top1_accuracy=1.000000`, `ranking_improvement_ready=1`, `wrong_candidate_guard_rate=1.000000`, `wrong_candidate_guard_ready=1`, and `v18_closed_corpus_poc_actual_ready=1`, while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v47: Offline Domain Policy Update over v46/v18 is implemented and covered by `experiments/test_v47_offline_domain_policy_update.sh`. The runner assembles `results/v47_offline_domain_policy_update/policy_001/`, writes `policy_source_rows.csv`, `offline_domain_policy_rows.csv`, `offline_domain_policy.json`, `V47_OFFLINE_DOMAIN_POLICY_BOUNDARY.md`, `v47_offline_domain_policy_manifest.json`, and `sha256_manifest.csv`, then verifies a commercial return through v18. The smoke verifies `v47_offline_domain_policy_update_ready=1`, `policy_rows=15`, `domain_count=3`, `learning_target_count=5`, `candidate_selection_rows=3`, `span_read_rows=3`, `hint_strength_rows=3`, `abstain_retry_rows=3`, `verifier_decision_rows=3`, `offline_only=1`, `external_network_used=0`, `expert_replacement_claim=0`, `release_ready_claim=0`, and `v18_closed_corpus_poc_actual_ready=1`, while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v48: Multi-Domain RouteHint Generator evidence is implemented and covered by `experiments/test_v48_multi_domain_generator_evidence.sh`. The runner assembles `results/v48_multi_domain_generator_evidence/run_001/`, writes `route_memory_evidence_rows.csv`, `compact_route_hint_rows.csv`, `tiny_generator_input_rows.csv`, `grounded_generation_rows.csv`, `V48_MULTI_DOMAIN_GENERATOR_BOUNDARY.md`, `v48_multi_domain_generator_manifest.json`, and `sha256_manifest.csv`, then verifies a commercial return through v18. The smoke verifies `v48_multi_domain_generator_evidence_ready=1`, `domain_count=4`, `generation_rows=24`, `abstain_rows=4`, `route_memory_evidence_rows=24`, `route_hint_used_rows=24`, `grounded_answer_rows=24`, `citation_rows=24`, `audit_trail_rows=24`, `raw_context_in_hint_rows=0`, `raw_prompt_context_appended_rows=0`, `answer_grounded_rate=1.000000`, `span_citation_accuracy=1.000000`, `wrong_answer_rate=0.000000`, and `v18_closed_corpus_poc_actual_ready=1`, while keeping `real_release_package_ready=0`. It is an evidence-scale generation expansion, not an internal packaging layer.
+v49: RULER NIAH 200/500-row scale is implemented and covered by `experiments/test_v49_ruler_niah_200_500_scale.sh`. The runner assembles `results/v49_ruler_niah_200_500_scale/scale_001/`, runs the v34 official benchmark expansion engine twice at fixed 4096 context length for 200 and 500 rows, writes copied v34 summaries/decisions/manifests, `scale_rows.csv`, `V49_RULER_NIAH_200_500_BOUNDARY.md`, `v49_ruler_niah_200_500_scale_manifest.json`, and `sha256_manifest.csv`, and verifies both expanded official returns through v18. The smoke verifies `v49_ruler_niah_200_500_scale_ready=1`, `target_200_ready=1`, `target_500_ready=1`, `rows_200=200`, `rows_500=500`, `lineage_rows_200=200`, `lineage_rows_500=500`, `context_length_fixed=1`, `architecture_fixed=1`, `official_evaluator_ready=1`, `route_memory_prediction_lineage_ready=1`, `no_oracle_no_extractor_ready=1`, and `v18_verified=1`, while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+v50: Public Repo Auditor 3-repo evidence is implemented and covered by `experiments/test_v50_public_repo_auditor_3repo.sh`. The runner assembles `results/v50_public_repo_auditor_3repo/audit_001/`, shallow-clones `pypa/sampleproject`, `psf/requests`, and `pallets/click`, binds public repo URLs, HEAD SHAs, source hashes, and source spans, writes `public_repo_source_snapshot_rows.csv`, `public_repo_audit_case_rows.csv`, `public_repo_source_span_rows.csv`, `V50_PUBLIC_REPO_AUDITOR_BOUNDARY.md`, `v50_public_repo_auditor_manifest.json`, and `sha256_manifest.csv`, then verifies the public-repo auditor commercial return through v18. The smoke verifies `v50_public_repo_auditor_3repo_ready=1`, `repo_count=3`, `audit_case_rows=9`, `audit_type_count=3`, `doc_code_conflict_rows=3`, `deprecated_usage_rows=3`, `config_mismatch_rows=3`, `detected_doc_code_conflict_rows=3`, `detected_config_mismatch_rows=1`, `source_span_rows=18`, `public_repo_snapshot_ready=1`, and `v18_closed_corpus_poc_actual_ready=1`, while keeping `human_review_completed=0` and `real_release_package_ready=0`.
+
+v08-b/v08-c/v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at: external benchmark adapter/evidence
+schemas pass, a supplied evidence CSV can be imported and compared against
+baselines, while placeholder evidence is blocked from counting as real
+benchmark evidence, local artifact hashes and authenticity/evaluator contracts
+plus execution/evaluator-output artifacts can be verified, local/fixture
+attestations and final-review artifacts remain diagnostic, and publishable
+comparison is deferred until real independent verification exists; local
+final-review artifacts cannot become real benchmark evidence by declaration
+flag rewrite alone, HTTPS hash-attested review artifacts still cannot publish
+if lower-chain benchmark artifacts are local fixtures, and the lower-chain
+evidence/execution/attestation/identity gates can now exercise HTTPS
+hash-attested non-local artifact mechanics without making a final-review or
+publish claim; a fully remote-style lower-chain plus final-review package now
+reaches `source_import_live_registry_network_proof_ready=1` when supplied with
+the v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa fixture chain plus the v08-ab local codebase-mini package,
+v08-ac single-family content/result bridge, v08-ad all-family bridge mechanics,
+v08-ae independent reproduction/review mechanics, v08-af official release
+evidence mechanics, v08-ag live release verification mechanics, v08-ah
+canonical online confirmation mechanics, v08-ai publication/result review
+mechanics, v08-aj live publication/result ingestion mechanics, and v08-ak
+authority/promotion evidence mechanics, v08-al local codebase run/evaluator
+trace mechanics, v08-am supplied independent all-family run/evaluator evidence
+mechanics, v08-an supplied live replay/final-review mechanics, v08-ao
+supplied public non-fixture/direct-run verification mechanics, v08-ap
+supplied runner-owned live execution/audit mechanics, v08-aq supplied
+independent live rerun confirmation mechanics, v08-ar supplied real
+nonfixture run package intake mechanics, v08-as supplied live package
+artifact fetch/authority mechanics, and v08-at supplied official result
+reconciliation mechanics, but it
+still blocks at `real_external_benchmark_verified=0` because supplied publication
+and release packages remain mechanics-only or comparison remains unpublished. v08-m now validates the source-import contract around that
+blocker: remote-style source import rows can match source/result/execution
+URIs and hashes, carry non-local import manifest/fetch-log/reviewer artifacts,
+and reach `source_import_contract_ready=1`, while still keeping
+`source_import_verified=0`. v08-n now adds the runner-owned source-import
+verifier/fetch-evidence contract: replay verifier rows can bind back to every
+v08-m source-import row, import manifest, fetch log, reviewer identity, and
+benchmark artifact URI with verifier binary/stdout/stderr hash evidence, but
+offline replay still blocks at
+`external-benchmark-source-import-live-verifier-missing`.
+v08-o then separates replay from live verifier evidence: supplied live-style
+verifier rows can raise `source_import_live_verifier_ready=1`, but
+`source_import_verified=0` remains blocked with
+`external-benchmark-source-import-independent-live-review-missing`.
+v08-p adds the independent live-review layer above v08-o. Supplied non-local,
+hash-attested live-review rows can bind to verifier run IDs, verifier artifact
+hashes, and import manifest/fetch-log hashes, reaching
+`source_import_independent_live_review_ready=1`, but
+`source_import_verified=0` remains blocked with
+`external-benchmark-source-import-authoritative-live-review-missing`.
+v08-q adds the authoritative source-import review layer above v08-p. Supplied
+non-local, hash-attested authority rows can bind source-import IDs, verifier
+run IDs, live-review IDs, live-review report hashes, reviewer identity,
+reviewer registry, conflict disclosure, and verifier artifact hashes, reaching
+`source_import_authoritative_review_ready=1`, but `source_import_verified=0`
+and `real_external_benchmark_verified=0` remain blocked with
+`external-benchmark-source-import-real-public-registry-missing` until real
+public registry/source-import authority evidence exists.
+v08-r adds the public-registry/source-import authority layer above v08-q.
+Supplied non-local, hash-attested registry rows can bind source-import IDs,
+verifier run IDs, live-review IDs, authority-review IDs, authority hashes,
+verifier hashes, registry entry artifacts, operator identity, and provenance,
+reaching `source_import_public_registry_ready=1`, but
+`source_import_verified=0` remains blocked with
+`external-benchmark-source-import-live-registry-query-missing` until a
+runner-owned live registry query/fetch path exists.
+v08-s adds the live-registry-query layer above v08-r. Runner-owned replay rows
+can satisfy query-runner mechanics while still blocking network evidence, and
+supplied live-style query rows can bind registry response hashes back to the
+public-registry rows and reach `source_import_live_registry_query_ready=1`, but
+`source_import_verified=0` remains blocked with
+`external-benchmark-source-import-live-registry-query-fixture-only`.
+v08-t adds the live-registry fetch/cache layer above v08-s. Runner-owned replay
+rows can bind live-query rows to local response-cache artifacts and verify
+fetcher/cache hashes while still blocking network proof, and supplied
+live-style fetch rows can reach `source_import_live_registry_fetch_ready=1`,
+but `source_import_verified=0` remains blocked with
+`external-benchmark-source-import-live-registry-fetch-fixture-only`.
+v08-u adds the live-registry network-proof layer above v08-t. Runner-owned
+replay proof rows bind fetch/cache rows to proof metadata, request/header/TLS/
+DNS/nonce hashes, tool hashes, and cache/body hashes while remaining non-live;
+supplied live-style proof rows can reach
+`source_import_live_registry_network_proof_ready=1`, but
+`source_import_verified=0` remains blocked with
+`external-benchmark-source-import-live-registry-network-proof-fixture-only`.
+v08-v adds the real source-import verification layer above v08-u. Supplied
+verification rows can bind network-proof rows to verification reports,
+verifier identities, proof transcripts, and verified cache hashes, reaching
+`source_import_real_verification_review_ready=1`; placeholder domains such as
+`example.invalid` still keep `source_import_verified=0` with
+`external-benchmark-source-import-real-verification-placeholder-domain`.
+v08-w adds the official authority/trust-root layer above v08-v. Supplied
+authority rows can bind verification rows to authority artifacts, benchmark
+source/license artifacts, verification-report hashes, authority domains, and
+trust-root review flags, reaching
+`source_import_official_authority_review_ready=1`; fixture authority rows still
+keep `source_import_verified=0` with
+`external-benchmark-source-import-official-authority-fixture-only`.
+v08-x adds the official result-authority/leaderboard layer above final review.
+Supplied result-authority rows can bind benchmark result rows to official
+leaderboard artifacts, result records, metric/protocol artifacts, submitter
+identity, final reviewed result URIs, provenance hashes, evaluator-output
+hashes, run-log hashes, and metric values, reaching
+`external_benchmark_result_authority_review_ready=1`; fixture result-authority
+rows still keep `real_external_benchmark_verified=0` with
+`external-benchmark-result-authority-fixture-only`.
+v08-y adds the publication-package/reproducibility layer above result
+authority. Supplied publication rows can bind official leaderboard/result rows
+and comparison deltas/verdicts to publication package, report, comparison table,
+reproducibility bundle, release license, conflict disclosure, and publication
+review artifacts, reaching `external_benchmark_publication_review_ready=1`;
+fixture publication rows still keep `real_external_benchmark_verified=0` with
+`external-benchmark-publication-fixture-only`, and non-fixture publication rows
+still block with `external-benchmark-publication-comparison-not-publishable`
+until comparison publication is allowed.
+v08-z adds the source-acquisition/intake layer for official benchmark sources.
+Supplied acquisition rows can bind the four adapter families to official
+source landing, dataset, benchmark-card, split-manifest, license, and
+metric-spec URI/hash packages, reaching
+`external_benchmark_source_acquisition_review_ready=1`; fixture acquisition
+rows still keep `external_benchmark_source_acquisition_ready=0` with
+`external-benchmark-source-acquisition-fixture-only`, and non-fixture
+acquisition packages can reach `external_benchmark_source_acquisition_ready=1`
+while still keeping `real_external_benchmark_verified=0` until source
+import/content/result/review/publication evidence is connected.
+v08-aa adds the source-acquisition content-cache verifier above v08-z. Supplied
+content rows must bind back to acquisition IDs, match all official source
+landing/dataset/card/split/license/metric URIs and sha256 hashes, and verify
+24 local cache files across the four benchmark families. Matching cache content
+can reach `external_benchmark_source_acquisition_content_ready=1`, but still
+keeps `real_external_benchmark_verified=0` until imported benchmark content,
+result authority, review, and publication evidence are connected.
+v08-ab adds codebase-mini benchmark instrumentation above h11-c. It generates a
+local `codebase-retrieval` package from real repository source files, writes
+source/dataset/split/license/metric manifests plus BM25, symbolic upper-bound,
+RouteMemory student, result, summary, and sha256 artifacts, and requires the
+h11-c RouteMemory store hash chain. The smoke can reach
+`codebase_mini_source_ready=1`, `benchmark_result_artifact_verified=1`, and
+`baseline_comparison_ready=1` with `span_exact=1.000000`,
+`chunk_exact=1.000000`, `missing_abstain=1.000000`, and
+`wrong_answer_rate=0.000000`, but keeps `real_external_benchmark_verified=0`
+because the package is local instrumentation, not an independent external
+benchmark review/publication chain. v08-ac then binds that codebase-mini result
+package to v08-aa source content as a single-family bridge with
+`codebase_content_result_bridge_ready=1`, while
+`external_benchmark_result_bridge_ready=0` remains blocked until the other
+benchmark families have non-local result bridges.
+v08-ad then requires all four benchmark families to have supplied non-local
+result bridge rows bound to the v08-aa source-content acquisition IDs. It
+attests 28 HTTPS result/baseline/dataset/run/evaluator/result-authority/
+publication URI/hash fields, passes independent bridge-review mechanics, and
+can reach `family_result_bridge_review_ready=1` plus
+`external_benchmark_result_bridge_ready=1`, but still keeps
+`real_external_benchmark_verified=0` until independent reproduction, real
+review, and publication evidence replace supplied mechanics.
+v08-ae then requires supplied non-local independent reproduction/review rows
+for all four benchmark families above v08-ad. It verifies result artifact
+binding, bridge-summary hashes, independent runner/reviewer/conflict flags,
+and 28 HTTPS reproduction/report/run-log/reviewer/conflict/environment/metric
+URI/hash fields, reaching `independent_reproduction_review_ready=1` while
+still keeping `real_external_benchmark_verified=0`. v08-af then binds supplied
+official release rows back to those reproduction IDs and can reach
+`official_release_evidence_ready=1`, while real benchmark verification remains
+blocked until live release verification and externally verifiable benchmark
+publication evidence exist. v08-ag then binds supplied live-verification rows
+back to v08-af release IDs, reproduction IDs, and official release/archive/
+dataset/authority URI+hash pairs, reaching
+`official_release_live_verification_ready=1` while still keeping
+`real_external_benchmark_verified=0` until canonical online confirmation
+replaces supplied mechanics. v08-ah then binds supplied canonical confirmation
+rows back to v08-ag live reports, network observations, verifier identities,
+release IDs, and reproduction IDs, reaching
+`canonical_online_confirmation_ready=1` while still keeping
+`real_external_benchmark_verified=0` until non-fixture publication/result
+review replaces supplied mechanics. v08-ai then binds supplied publication/
+result review rows back to v08-ah canonical confirmation reports and
+content-digest manifests, reaching `publication_result_review_ready=1` while
+still keeping `real_external_benchmark_verified=0` until live ingestion
+evidence replaces supplied review mechanics. v08-aj then binds supplied live
+publication/result ingestion rows back to the v08-ai review and record
+URI/hash pairs, reaching `live_publication_result_ingestion_ready=1` while
+still keeping `real_external_benchmark_verified=0` until authority/promotion
+evidence replaces supplied ingestion mechanics. v08-ak then binds supplied
+authority/promotion rows back to v08-aj live records and content digests,
+reaching `authority_promotion_evidence_ready=1` while still keeping
+`real_external_benchmark_verified=0` until actual independently observed
+benchmark run/evaluator evidence replaces supplied authority mechanics.
+v08-al then recomputes the local codebase-mini dataset/result join into a
+runner-owned evaluator trace, reaching `codebase_run_evaluator_trace_ready=1`
+while keeping `external_benchmark_run_evaluator_trace_ready=0` and
+`real_external_benchmark_verified=0` until independent all-family run/evaluator
+evidence replaces the local codebase trace.
+v08-am then consumes supplied independent all-family run/evaluator evidence rows
+for RULER, LongBench, codebase-retrieval, and real-document-qa. The rows must
+provide non-placeholder HTTPS trace/run/evaluator/metric/query/observer/authority
+artifacts, sha256 hashes, query volume, quality thresholds, proof bindings,
+independent evaluator declarations, and route/jump zero. The supplied mechanics
+can raise `external_benchmark_independent_run_evaluator_evidence_ready=1`, but
+keeps `real_external_benchmark_verified=0` until live replay/final review
+replaces supplied evidence.
+v08-an then consumes supplied live replay/final-review rows for the same four
+families. The rows must bind v08-am evidence to replay/final-review artifact
+URI/hash pairs, replay query volume, metric thresholds, live replay
+declarations, final-review declarations, fixture declarations, and route/jump
+zero. The supplied mechanics can raise
+`external_benchmark_live_replay_final_review_ready=1`, but still keeps
+`real_external_benchmark_verified=0` until public non-fixture verification or
+direct runner-owned external benchmark runs replace the supplied package.
+v08-ao then consumes supplied public non-fixture/direct-run verification rows
+for the same four families. The rows must bind v08-an final-review evidence to
+40 non-placeholder HTTPS public/direct-run artifact URIs, 40 sha256 hashes,
+query volume, metric thresholds, public registry/non-fixture declarations,
+direct runner-owned run/dataset/evaluator/network declarations, third-party
+reviewer declarations, fixture declarations, and route/jump zero. The supplied
+mechanics can raise
+`external_benchmark_public_nonfixture_verification_ready=1`, but still keeps
+`real_external_benchmark_verified=0` until runner-owned live execution/audit
+proves the public direct-run receipts instead of merely supplying them.
+v08-ap then consumes supplied runner-owned live execution/audit rows for the
+same four families. The rows must bind v08-ao public verification evidence to
+52 non-placeholder HTTPS live execution/audit artifact URIs, 52 sha256 hashes,
+query volume, metric thresholds, runner-owned execution declarations, live
+network/dataset fetch declarations, runner-invoked evaluator declarations,
+replay-disabled declarations, audit log and third-party audit declarations,
+fixture declarations, and route/jump zero. The supplied mechanics can raise
+`external_benchmark_runner_owned_live_execution_audit_ready=1`, but still keeps
+`real_external_benchmark_verified=0` until independent live rerun confirmation
+proves the runner-owned audit receipts.
+v08-aq then consumes supplied independent live rerun confirmation rows for the
+same four families. The rows must bind v08-ap runner-owned audit evidence to
+60 non-placeholder HTTPS rerun-confirmation artifact URIs, 60 sha256 hashes,
+rerun query volume, metric thresholds, metric-delta bounds, independent runner
+and environment declarations, live network/dataset refetch/evaluator rerun
+declarations, audit receipt reconciliation, metric recomputation, third-party
+confirmation declarations, fixture declarations, and route/jump zero. The
+supplied mechanics can raise
+`external_benchmark_independent_live_rerun_confirmation_ready=1`, but still
+keeps `real_external_benchmark_verified=0` until a real non-fixture benchmark
+run package replaces the supplied confirmation mechanics.
+v08-ar then consumes supplied real nonfixture run package rows for the same
+four families. The rows must bind v08-aq confirmation evidence to
+non-placeholder HTTPS run-package manifests, raw query sets, raw prediction
+outputs, evaluator container digests/configs, metric reports, submission
+receipts, public archives, official leaderboard entries, license/PII/
+third-party reproducibility reviews, package signatures, timestamp-authority
+records, and package-registry entries, each with sha256 attestation. The
+supplied mechanics can raise
+`external_benchmark_real_nonfixture_run_package_intake_ready=1`, but still
+keeps `real_external_benchmark_verified=0` until live package artifact fetch
+and authority verification replace supplied package mechanics.
+v08-as then consumes supplied live package artifact fetch/authority rows for
+the same four families and all 15 package artifact types. The rows must bind
+v08-ar package intake to fetched artifact, fetch receipt, and authority record
+URI/hash pairs; require HTTP-200 checks, content-digest matches, runner-owned
+live fetch declarations, network/TLS/DNS/HTTP proof declarations, authority
+registry and official source authority declarations, fixture declarations, and
+route/jump zero. The supplied mechanics can raise
+`external_benchmark_live_package_artifact_fetch_authority_ready=1`, but still
+keeps `real_external_benchmark_verified=0` until official result
+reconciliation replaces supplied fetch/authority mechanics.
+v08-at then consumes supplied official result reconciliation rows for the same
+four families. The rows must bind v08-as fetched official leaderboard, metric
+report, submission receipt, evaluator config, raw prediction output, and
+package-registry artifacts by exact URI/hash identity; require package identity
+matches, metric-delta tolerance checks, query-count matches, evaluator/digest/
+official-source/leaderboard/runner declarations, fixture declarations, and
+route/jump zero. The supplied mechanics can raise
+`external_benchmark_official_result_reconciliation_ready=1`, but still keeps
+`real_external_benchmark_verified=0`. The active transition is now v13
+real-run binding: a nonfixture runner must populate raw traces, evaluator
+outputs, source/result artifacts, NLG transcript/result, workload/resource
+rows, scorer/teacher evidence, and v12 claim-matrix input from one execution
+before any stronger comparison or release claim.
+h11-a: PC RouteLM / NLG prototype contract passes; supplied component evidence
+can reach diagnostic prototype readiness, while real prototype/publish stays
+blocked by promotion, teacher-source, benchmark, GPU speed, and artifact gates.
+h11-b: PC RouteLM artifact verifier passes; local generator/route-memory/scorer/decoder/NLG/benchmark/license/provenance artifact chains can be hash-verified, while local fixtures still cannot become real prototype evidence.
+h11-c: NVMe RouteMemory store artifact smoke passes; a deterministic store bundle can be generated, hash-verified, route-looked-up, and span-read while real PC RouteLM and external benchmark claims remain blocked.
+h11-d: PC RouteLM diagnostic NLG smoke passes; generated transcript/result artifacts verify teacher-off inference, retrieved evidence use, grounding, span citation, span/chunk exactness, missing abstain, wrong-answer rate, latency/storage/memory metrics, and zero routing/jump activity while `real_pc_routelm_nlg_verified=0` remains blocked.
+h9-f/h9-g/h9-h: quick GPU-backend boundary runs CPU numeric parity, verifies timing/environment artifact contracts, binds h9-g plus h11-d into a CPU/HIP/NVMe workload-speed evidence gate, and keeps speedup claims deferred unless real HIP/NVMe workload measurements exist; HIP parity remains optional.
+v12: paper/release claim audit passes as diagnostic artifact packaging only; publishable release, Transformer replacement, frontier PC LLM, long-context solved, learned sparse routing, and GPU acceleration claims remain blocked.
+```
+
+Latest completed verification:
+
+```bash
+bash -n experiments/*.sh
+git diff --check
+bash experiments/test_v10_teacher_external_label_source_verifier.sh
+bash experiments/test_v10_teacher_external_label_source_import.sh
+bash experiments/test_v10_teacher_external_label_import.sh
+bash experiments/test_v10_learned_chunk_quality_scorer.sh
+bash experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh
+bash experiments/test_v10_remote_teacher_source_acquisition_gate.sh
+bash experiments/test_v10_remote_teacher_source_content_verifier.sh
+bash experiments/test_v10_remote_teacher_source_live_fetch_attestation.sh
+bash experiments/test_v10_remote_teacher_source_runtime_fetcher.sh
+bash experiments/test_v10_remote_teacher_source_live_network_import_gate.sh
+bash experiments/test_v10_real_teacher_source_import_review.sh
+bash experiments/test_v10_chunk_credit_distillation_gate.sh
+bash experiments/test_v08_external_benchmark_final_review_gate.sh
+bash experiments/test_v08_external_benchmark_final_review_import.sh
+bash experiments/test_v08_external_benchmark_final_review_real_source_guard.sh
+bash experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh
+bash experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh
+bash experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh
+bash experiments/test_v08_external_benchmark_source_import_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_remote_contract.sh
+bash experiments/test_v08_external_benchmark_source_import_verifier_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_live_verifier_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_live_review_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_authoritative_review_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_public_registry_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_live_registry_query_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_live_registry_fetcher.sh
+bash experiments/test_v08_external_benchmark_source_import_live_registry_network_proof.sh
+bash experiments/test_v08_external_benchmark_source_import_real_verification_gate.sh
+bash experiments/test_v08_external_benchmark_source_import_official_authority_gate.sh
+bash experiments/test_v08_external_benchmark_result_authority_gate.sh
+bash experiments/test_v08_external_benchmark_publication_gate.sh
+bash experiments/test_v08_external_benchmark_source_acquisition_gate.sh
+bash experiments/test_v08_external_benchmark_source_acquisition_content_verifier.sh
+bash experiments/test_v08_external_benchmark_codebase_mini.sh
+bash experiments/test_v08_external_benchmark_content_result_bridge.sh
+bash experiments/test_v08_external_benchmark_family_result_bridge.sh
+bash experiments/test_v08_external_benchmark_independent_reproduction_review.sh
+bash experiments/test_v08_external_benchmark_official_release_evidence.sh
+bash experiments/test_v08_external_benchmark_live_release_verification.sh
+bash experiments/test_v08_external_benchmark_canonical_online_confirmation.sh
+bash experiments/test_v08_external_benchmark_publication_result_review.sh
+bash experiments/test_v08_external_benchmark_live_publication_result_ingestion.sh
+bash experiments/test_v08_external_benchmark_authority_promotion_evidence.sh
+bash experiments/test_v08_external_benchmark_run_evaluator_trace.sh
+bash experiments/test_v08_external_benchmark_independent_run_evaluator_evidence.sh
+bash experiments/test_v08_external_benchmark_live_replay_final_review.sh
+bash experiments/test_v08_external_benchmark_public_nonfixture_verification.sh
+bash experiments/test_v08_external_benchmark_runner_owned_live_execution_audit.sh
+bash experiments/test_v08_external_benchmark_independent_live_rerun_confirmation.sh
+bash experiments/test_v08_external_benchmark_real_nonfixture_run_package.sh
+bash experiments/test_v08_external_benchmark_live_package_artifact_fetch_authority.sh
+bash experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
+bash experiments/test_v11_pc_routelm_prototype_artifact_import.sh
+bash experiments/test_v11_pc_routelm_prototype_readiness.sh
+bash experiments/test_v11_pc_routelm_prototype_import.sh
+bash experiments/test_v11_nvme_route_memory_store.sh
+bash experiments/test_v11_nvme_route_memory_artifact.sh
+bash experiments/test_v11_pc_routelm_nlg_smoke.sh
+bash experiments/test_v09_gpu_backend_real_workload_speed_gate.sh
+bash experiments/test_v07_route_memory_promotion_review_gate.sh
+bash experiments/test_v12_paper_release_claim_audit.sh
+bash experiments/test_v07_goal_route_memory_closure.sh
+bash experiments/test_v09_gpu_backend_closure.sh
+```
+
+Latest completed status:
+
+- h10-s is the latest route-memory learned-scorer evaluation boundary. The
+  lower teacher-source chain lets an HTTPS
+  remote acquisition package pass URI/hash/acquisition/review contract checks,
+  verifies supplied local download/cache content against that hash manifest,
+  then verifies artifact-level fetch-attestation rows with HTTPS attestation
+  URIs and independent attestor flags, and finally lets a runner-owned offline
+  replay manifest bind runtime fetch rows back to those attestations. h10-q
+  rejects that replay as non-network evidence and accepts only provided
+  live-network runtime rows up to `remote_teacher_source_live_network_import_ready=1`.
+  h10-r then binds that live import to import/review/registry evidence and can
+  reach `real_teacher_source_import_review_ready=1`, but real teacher-source
+  claims remain blocked until official authority sets
+  `real_teacher_source_verified=1`. h10-s sits above that boundary: supplied
+  source-linked eval rows can pass student-only chunk/span metric checks, but
+  `source_verified_learned_chunk_scorer_eval_ready=0` remains until h10-l and
+  h10-r have official real teacher-source authority.
+- h10-l remains the route-memory learned-scorer/source binding gate. It keeps
+  local learned scorer readiness separate from source-verified learned scorer
+  readiness, so distillation cannot pass on a local scorer plus unrelated real
+  source evidence, relabeled local feature rows, or mismatched external-label
+  rows.
+- h7 route-memory closure includes h10-s and still blocks default promotion.
+- v12 is the current paper/release claim audit boundary. The diagnostic
+  package can be assembled from h7-c, h10-r/h10-s, v08-ab, h11-c/h11-d, and
+  h9-h, but publishable release readiness remains blocked until every real
+  evidence input passes.
+- v08-at is the current external benchmark official result reconciliation
+  boundary above the v08-as live package artifact fetch/authority boundary, the
+  v08-ar real nonfixture run package intake boundary, the
+  v08-aq independent live rerun confirmation boundary, the
+  v08-ap runner-owned live execution/audit boundary, the
+  v08-ao public non-fixture/direct-run verification boundary,
+  v08-an live replay/final-review boundary, v08-am independent all-family
+  run/evaluator evidence, v08-ad all-family bridge, v08-ac single-family
+  bridge, and v08-ab codebase-mini instrumentation layer; v08-l remains the
+  lower final-review evidence layer. Final-review, supplied public/direct-run
+  verification, supplied live execution/audit, and supplied independent rerun
+  confirmation plus supplied real nonfixture run package intake, live
+  package artifact fetch/authority, and official result reconciliation
+  mechanics pass,
+  but fixture/local review and supplied direct-run/audit/rerun/package receipts remain
+  non-publishable with
+  `real_external_benchmark_verified=0`. The real-source guard now also blocks
+  local `file://` final-review artifacts even when real/non-fixture declaration
+  flags are rewritten to pass, and the remote-review guard blocks HTTPS
+  hash-attested final-review rows if evidence/execution/attestation/identity
+  artifacts underneath are still local fixtures. The lower-chain remote-artifact
+  path now verifies HTTPS hash-attested source/result, evaluator output/run-log,
+  attestation, attestor identity, registry, and conflict-disclosure artifacts
+  through v08-k while still stopping at `external-benchmark-final-review-missing`.
+  The remote-full source-import guard combines non-local lower-chain artifacts
+  with non-local final-review artifacts and now carries the source-import,
+  publication, acquisition, content-cache, codebase-mini, content/result bridge,
+  family result bridge, independent reproduction, release, confirmation,
+  ingestion, authority, run/evaluator, replay/review, public verification,
+  audit, independent rerun, package-intake, live-fetch/authority, and
+  official-result-reconciliation blockers forward through v08-at: a fully supplied
+  contract/verifier/live-review/authority-review/public-registry/live-query/
+  fetch/network-proof/official-authority/result-authority/publication/acquisition/content/codebase-mini/bridge/family-bridge/reproduction
+  fixture can reach publication, acquisition, content-cache, codebase-mini, and
+  supplied all-family replay/final-review plus public non-fixture/direct-run
+  verification, runner-owned live execution/audit, independent live rerun
+  confirmation, real nonfixture run package intake, live package artifact
+  fetch/authority readiness, and official result reconciliation readiness, but still
+  blocks publication at
+  `real_external_benchmark_verified=0`.
+- v13-a is the current real-run binder boundary. It writes or verifies a single
+  run directory with store, NLG, benchmark trace, speed, evidence, run manifest,
+  and `sha256sums.txt`, then feeds the evidence packet shape toward the later
+  nonfixture runner and v12 real-input adapter. This is the pivot from supplied
+  rows toward `real run -> raw trace -> evaluator -> evidence rows -> claim
+  matrix input`, not another v08 layer.
+- v13-b is the current RouteLM mmap reader boundary. It consumes that run
+  directory, independently mmap-reads `store/chunk_pages.bin`, and verifies the
+  reader ABI across route index, page table, chunk offsets, and missing-abstain
+  rows before any nonfixture runner is allowed to treat the store as readable
+  RouteMemory evidence.
+- v13-c is the current evidence packet ABI boundary. It converts the bound run
+  manifest, store/mmap reader evidence, NLG transcript/result, workload row,
+  benchmark trace/evaluator outputs, h10-s scorer evidence, and v12 input into
+  `evidence_packet.csv` plus `claim_matrix_input.csv`, verifies packet hashes
+  and claim-source references, and keeps learned-ranking plus all real evidence
+  claims blocked.
+- v13-d is the NLG transcript binding boundary. It parses
+  `nlg/transcript.jsonl` and `nlg/result_summary.json`, replays each transcript
+  row against the route index and mmap-read chunk span bytes, writes
+  `transcript_binding.csv`, and blocks hash-clean wrong grounding while keeping
+  real PC RouteLM NLG blocked until a nonfixture generator run exists.
+- v13-e is the public codebase RouteQA binding boundary. It binds the
+  v13 benchmark trace to the local codebase-mini package, recomputes the
+  RouteQA evaluator metrics, writes `routeqa_rows.csv`, and keeps real external
+  benchmark claims blocked until independent non-local benchmark evidence
+  replaces the local package.
+- v13-f is the resource envelope binding boundary. It binds
+  `speed/workload.csv` to the same v13 run, verifies workload artifact hashes
+  and metric rows, writes `resource_rows.csv`, and keeps GPU speedup blocked
+  until real HIP/NVMe/nonfixture product or benchmark traces replace the
+  fixture envelope.
+- v13-g is the real evidence promotion boundary. It audits the same
+  bound run across v13-c/v13-d/v13-e/v13-f plus h10-s, h11-d, h9-h, and v08
+  evidence, emits `promotion_rows.csv`, and keeps release promotion blocked
+  until external benchmark, learned chunk ranking, real NLG, GPU speedup, and
+  nonfixture-run evidence are all real and source-bound together.
+- v13-h is the real evidence intake boundary. It consumes v13-g and an
+  optional same-run intake CSV for external benchmark, learned chunk ranking,
+  GPU speedup, and real NLG evidence, emits `intake_rows.csv`, verifies cache
+  hashes and HTTPS authority-chain shape, and keeps real release blocked until
+  the intake is live-network verified and rebound through the v13 run.
+- v13-i is the real evidence live-network boundary. It consumes v13-h
+  intake evidence plus same-run source/review/authority network receipts, emits
+  `live_network_rows.csv`, verifies receipt hashes, HTTPS final URIs, HTTP
+  status rows, live-network declarations, and route/jump zero, and keeps real
+  release blocked until receipts are produced by runner-owned runtime live
+  fetches and rebound through the v13 run.
+- v13-j is the current real evidence rebind boundary. It consumes v13-i
+  receipt evidence plus same-run replacement artifacts, emits `rebind_rows.csv`,
+  verifies receipt-hash replay, rebuilt artifact hashes, claim-matrix hashes,
+  regeneration flags, and route/jump zero, and keeps real release blocked until
+  runtime live fetch evidence and regenerated promotion rows exist.
+- v13-k is the current runtime fetch provenance boundary. It consumes v13-j and
+  the v13-i live receipt packet, emits `runtime_fetch_provenance_rows.csv`,
+  verifies receipt JSON scope, weakness/kind binding, HTTPS original/final
+  URIs, HTTP status, method, headers, empty error, ordered UTC timestamps,
+  receipt hashes, and route/jump zero, and keeps real release blocked until the
+  same receipts are produced by runner-owned `runtime-live-fetch`.
+- v13-l is the current source seed boundary. It emits `source_seed_rows.csv`,
+  binds current RULER/LongBench public source seeds for the external benchmark
+  blocker, classifies learned chunk ranking, GPU speedup, and real NLG as
+  `project-source-only`, and keeps real release blocked until all four rows
+  have official/independent claim evidence plus runtime live fetch receipts.
+- v13-m is the current source seed live-fetch boundary. It consumes v13-l
+  `source_seed_rows.csv` plus optional `runtime_receipts/`, emits
+  `source_seed_live_fetch_rows.csv`, verifies receipt provenance shape and
+  packet hashes, and still blocks real release unless all four weaknesses have
+  complete source/review/authority receipts and real claim evidence.
+- v13-n is the current external benchmark official source acquisition boundary.
+  It consumes v13-m/v13-l seed packets, emits
+  `official_source_acquisition_rows.csv`, optionally writes runner-owned
+  `git ls-remote HEAD` and HTTP HEAD receipts for RULER, LongBench, and the
+  RULER arXiv authority, and still blocks benchmark-result readiness and release
+  until real query/result/evaluator evidence exists.
+- v14-a is the current runner execution boundary, not another receipt gate.
+  `tools/routelm_benchmark_run` produces a bound run directory with
+  `source/`, `dataset/`, `store/`, `predictions/`, `evaluator/`, `metrics/`,
+  `routeqa/`, `benchmark/`, `resource/`, `evidence/`, and `promotion/`
+  artifacts, including copied v13 source-chain rows, `route_memory_store.bin`,
+  `chunk_offsets`, `source_snapshot_rows.csv`, and `benchmark_rows.csv`. The
+  smoke reaches `runner_owned_query_result_evaluator_ready=1` for both built-in
+  and supplied query files, and the live snapshot test runs RouteQA rows against
+  the checked-out v13-n RULER HEAD with `repo_source=runner-owned-source-snapshot`.
+  The RULER-compatible synthetic smoke writes `niah_dataset.jsonl`,
+  `niah_single_1.jsonl`, `ruler_evaluator_rows.csv`, and
+  `official_evaluator_status.json`; current official evaluator execution runs
+  with recorded run-local shims for missing `nltk` and NeMo manifest utilities,
+  producing `summary-niah_single_1.csv` and `submission.csv`. The same smoke
+  now invokes official RULER `scripts/data/prepare.py` with run-local
+  `nltk`/`wonderwords`/`tiktoken`/NeMo shims and a space-free `/tmp` symlink
+  workspace for its internal shell command, writes
+  validation JSONL files for `niah_single_1`, `niah_multikey_2`, and
+  `niah_multikey_3`, predicts those rows through task-specific
+  `official_generator_eval/*.jsonl` files with `oracle_prediction_used=0`,
+  evaluates them through `official_generator_eval/summary.csv` at average score
+  77.78, and
+  records `official_generator_benchmark_rows.csv`,
+  `official_generator_metrics.json`, and
+  `official_generator_prediction_provenance.csv` with dataset/prediction/
+  evaluator/metrics/provenance binding fields, then normalizes those task rows
+  into run-level `benchmark/external_benchmark_rows.csv`. The live LongBench
+  path also fetches 12 canonical `zai-org/LongBench-v2` dataset-server rows,
+  predicts them with a non-oracle lexical-overlap baseline, and runs the same
+  official `result.py` aggregator over both the runner-owned schema smoke and
+  the official sample file. The summary can now report
+  `external_benchmark_rows=5`,
+  `external_benchmark_ready_rows=5`,
+  `external_benchmark_dataset_rows=27`,
+  `external_benchmark_average_score=66.67`,
+  `external_benchmark_metrics_ready=1`,
+  `external_benchmark_manifest_ready=1`, and
+  `runner_owned_external_benchmark_result_ready=1`, `prediction_status_ready=1`,
+  `evaluator_status_ready=1`, `execution_chain_manifest_ready=1`, and
+  `run_invocation_ready=1`, `official_ruler_generator_mmap_verification_ready=1`,
+  `official_ruler_generator_mmap_read_rows=9`,
+  `longbench_v2_official_sample_mmap_verification_ready=1`,
+  `longbench_v2_official_sample_mmap_read_rows=12`,
+  `external_benchmark_mmap_read_rows=21`,
+  `external_benchmark_mmap_prediction_match_rows=21`,
+  `external_benchmark_mmap_verification_ready_rows=4`,
+  `external_benchmark_execution_chain_ready_rows=5`,
+  `external_benchmark_execution_chain_ready=1`, and
+  `requested_outputs_manifest_ready=1`, `requested_outputs_ready=1`,
+  `source_chain_autodiscovery_ready=1`,
+  `source_seed_live_fetch_autodiscovered=1`,
+  `runtime_fetch_provenance_autodiscovered=1`, and
+  `reproducibility_manifest_ready=1`, `direct_cli_shape_ready=1`, and
+  `run_layout_manifest_ready=1`, `run_layout_ready=1`,
+  `objective_requirements_manifest_ready=1`, `objective_requirements_ready=1`,
+  `source_chain_evidence_mirror_ready=1`, and
+  `evidence_packet_rows=50` while keeping
+  `candidate_external_benchmark_result_ready=0`; tests also cross-check
+  execution-chain artifact hashes against `sha256sums.txt`.
+  The fourth row is a LongBench v2 official-source multiple-choice smoke over
+  the live `longbench_repo` snapshot, and the fifth row is the 12-row official
+  dataset-server sample baseline. It writes
+  `benchmark/longbench_v2/longbench_v2_benchmark_rows.csv`,
+  `benchmark/longbench_v2/longbench_v2_metrics.json`, and
+  `benchmark/longbench_v2/longbench_v2_manifest.json`, then invokes official
+  `result.py` and records `longbench_v2_score=100.00`,
+  `longbench_v2_official_sample_rows=12`, and
+  `longbench_v2_official_sample_score=0.00`; the official sample rows are also
+  mmap-verified through `benchmark/longbench_v2/official_sample_store/` with
+  `longbench_v2_official_sample_mmap_prediction_match_rows=12`. The external
+  benchmark rows are also re-bound per row in
+  `benchmark/external_benchmark_execution_chain_manifest.json` from source
+  acquisition through dataset, prediction, evaluator, metrics, provenance, and
+  mmap artifacts. Requested `--emit-*` output flags are recorded in
+  `evidence/requested_outputs_manifest.json` and verified against the emitted
+  artifacts. The concrete run output tree is separately bound in
+  `evidence/run_layout_manifest.json`, covering `source/`, dataset, mmap store,
+  predictions, evaluator, metrics, benchmark, evidence, resource, and promotion
+  artifacts. `evidence/objective_requirements_manifest.json` audits the explicit
+  objective stages from official source acquisition through promotion rows; `evidence/official_source_acquisition_rows.csv` mirrors the canonical source acquisition CSV for the documented direct command shape. The repo-level `routelm_benchmark_run` wrapper is exercised
+  through `PATH`, and `evidence/reproducibility_manifest.json` records a
+  shell-quoted direct runner command plus hashes for the runner,
+  source-acquisition CSV, query file, and autodiscovered source-chain CSVs.
+  It still keeps
+  `candidate_external_benchmark_result_ready=0` until this runner-owned source
+  execution is replaced or reviewed as independent external benchmark
+  query/result/evaluator evidence.
+- v08-m is the external benchmark source-import contract boundary. It
+  verifies provided source-import rows against lower-chain source/result and
+  execution URIs/hashes, import manifest/fetch-log/reviewer hash attestations,
+  live-network import flags, non-fixture declarations, and independent
+  source-import review. The remote-style fixture reaches
+  `source_import_contract_ready=1`, but `source_import_verified=0` remains with
+  `external-benchmark-source-import-real-verifier-missing`.
+- v08-n is the external benchmark source-import verifier boundary. It
+  can generate runner-owned replay verifier rows from the v08-m source-import
+  contract, bind them back to source-import IDs, manifest/fetch-log/reviewer
+  hashes, benchmark artifact URIs, and verifier binary/stdout/stderr hashes,
+  and reach `source_import_verifier_ready=1`. It still keeps
+  `live_network_source_import_verified=0`, `source_import_verified=0`, and
+  `real_external_benchmark_verified=0` because replay is not live
+  source-import verification.
+- v08-o is the external benchmark source-import live-verifier boundary.
+  It accepts only live-style verifier evidence above v08-n by requiring live
+  verifier rows, no offline replay rows, real declarations, and non-fixture
+  declarations. Such a package can reach
+  `source_import_live_verifier_ready=1`, but still keeps
+  `source_import_verified=0` and `real_external_benchmark_verified=0` until
+  independent live review is present.
+- v08-p is the external benchmark source-import live-review boundary.
+  It binds non-local, hash-attested independent review rows to verifier run
+  IDs, verifier artifact hashes, and source-import manifest/fetch-log hashes.
+  The supplied fixture can reach
+  `source_import_independent_live_review_ready=1`, but still keeps
+  `source_import_verified=0` and `real_external_benchmark_verified=0` until
+  v08-q authoritative review and real public registry/source-import authority
+  evidence replace the supplied review package.
+- v08-q is the external benchmark source-import authoritative-review
+  boundary. It binds non-local, hash-attested authority review rows to
+  source-import IDs, verifier run IDs, live-review IDs, live-review hashes,
+  verifier hashes, reviewer identity, reviewer registry, and conflict
+  disclosure evidence. The supplied fixture can reach
+  `source_import_authoritative_review_ready=1`, but still keeps
+  `source_import_verified=0` and `real_external_benchmark_verified=0` until
+  real public registry/source-import authority evidence replaces the fixture.
+- v08-r is the external benchmark source-import public-registry
+  boundary. It binds non-local, hash-attested registry rows to source-import
+  IDs, verifier run IDs, live-review IDs, authority-review IDs, authority
+  hashes, verifier hashes, registry entry artifacts, operator identity, and
+  provenance. The supplied fixture can reach
+  `source_import_public_registry_ready=1`, but still keeps
+  `source_import_verified=0` and `real_external_benchmark_verified=0` until a
+  runner-owned live registry query/fetch path replaces supplied registry rows.
+- v08-u is the latest external benchmark source-import live-registry
+  network-proof boundary. v08-s query rows can reach
+  `source_import_live_registry_query_ready=1`; v08-t verifies runner-owned
+  fetcher metadata plus local registry response-cache hashes; and v08-u binds
+  those fetch rows to network-proof metadata, request/header/TLS/DNS/nonce
+  hashes, runner/tool hashes, and cache/body hash checks. Replay remains
+  non-network evidence, while supplied live-style proof rows can reach
+  `source_import_live_registry_network_proof_ready=1` but still keep
+  `source_import_verified=0` and `real_external_benchmark_verified=0` as
+  `external-benchmark-source-import-live-registry-network-proof-fixture-only`.
+- The later external benchmark chain continues through v08-as. v08-v binds
+  v08-u network-proof rows to verification records,
+  verification reports, verifier identity artifacts, proof transcripts, and
+  verified cache hashes. Supplied placeholder-domain rows can exercise the
+  review mechanics up to `source_import_real_verification_review_ready=1`, but
+  they still keep `source_import_verified=0` and
+  `real_external_benchmark_verified=0` as
+  `external-benchmark-source-import-real-verification-placeholder-domain`.
+  v08-w then requires official authority/trust-root rows above non-placeholder
+  verification evidence; supplied fixture authority rows can reach
+  `source_import_official_authority_review_ready=1`, but keep
+  `source_import_verified=0` as
+  `external-benchmark-source-import-official-authority-fixture-only`.
+  v08-x then requires official result-authority/leaderboard rows above final
+  review; supplied fixture result-authority rows can reach
+  `external_benchmark_result_authority_review_ready=1`, but keep
+  `real_external_benchmark_verified=0` as
+  `external-benchmark-result-authority-fixture-only`. v08-y then requires a
+  publication/reproducibility/license package above result authority; supplied
+  fixture publication rows can reach
+  `external_benchmark_publication_review_ready=1`, but keep
+  `real_external_benchmark_verified=0`.
+  v08-z then requires an official source-acquisition package above the adapter
+  manifest: source landing, dataset, benchmark card, split manifest, license,
+  and metric spec URIs must be HTTPS, host-matched to non-placeholder official
+  domains, sha256-attested, independently reviewed, and tied to non-local
+  acquisition tooling. Fixture acquisition packages stay review-only, and even
+  non-fixture acquisition packages keep `real_external_benchmark_verified=0`
+  until imported content and result/review/publication evidence exist.
+  v08-aa then verifies supplied local cache files against that official
+  acquisition manifest: all six source artifacts per benchmark family must
+  match the acquisition URIs and sha256 hashes, with independent content-review
+  flags and zero route/jump activity. Matching cache content reaches
+  `external_benchmark_source_acquisition_content_ready=1`, but still keeps
+  `real_external_benchmark_verified=0`.
+  v08-ab then generates a local codebase-mini package from real repository
+  files, verifies source provenance, baseline/result artifacts, artifact hashes,
+  and h11-c RouteMemory store linkage, and can reach
+  `benchmark_result_artifact_verified=1` plus `baseline_comparison_ready=1`.
+  This is still local instrumentation, so
+  `real_external_benchmark_verified=0` remains.
+  v08-ac then binds the v08-aa source acquisition/content row for
+  codebase-retrieval to the v08-ab result package and verifies result,
+  baseline, dataset, run-manifest, and evaluator hashes. It can reach
+  `codebase_content_result_bridge_ready=1`, but it still leaves
+  `external_benchmark_result_bridge_ready=0` and
+  `real_external_benchmark_verified=0` because family coverage is only 1/4 and
+  the result artifacts are local.
+  v08-ad then requires supplied non-local result bridge rows for RULER,
+  LongBench, codebase-retrieval, and real-document-qa. It can reach
+  `family_result_bridge_review_ready=1` and
+  `external_benchmark_result_bridge_ready=1`, but still keeps
+  `real_external_benchmark_verified=0` because supplied bridge rows are not
+  independent reproduction or official publishable benchmark evidence.
+  v08-ae then binds supplied non-local independent reproduction/review rows to
+  the v08-ad bridge. It can reach
+  `independent_reproduction_review_ready=1`, but still keeps
+  `real_external_benchmark_verified=0`. v08-af then binds supplied official
+  release evidence to those reproduction rows and can reach
+  `official_release_evidence_ready=1`. v08-ag then binds supplied live-release
+  verification rows back to v08-af release IDs, reproduction IDs, and official
+  release/archive/dataset/authority URI+hash pairs, reaching
+  `official_release_live_verification_ready=1`. v08-ah then binds supplied
+  canonical confirmation rows back to v08-ag live reports, network
+  observations, verifier identities, release IDs, and reproduction IDs,
+  reaching `canonical_online_confirmation_ready=1`. v08-ai then binds supplied
+  publication/result review rows back to v08-ah canonical confirmation reports
+  and content-digest manifests, reaching `publication_result_review_ready=1`,
+  then v08-aj binds supplied live publication/result ingestion rows back to the
+  v08-ai review and record URI/hash pairs, reaching
+  `live_publication_result_ingestion_ready=1`, then v08-ak binds supplied
+  authority/promotion rows back to v08-aj live records and content digests,
+  reaching `authority_promotion_evidence_ready=1`, but still keeps real
+  benchmark verification blocked until actual independently observed benchmark
+  run/evaluator evidence replaces supplied authority mechanics. v08-al then
+  recomputes the local codebase-mini dataset/result join into a runner-owned
+  evaluator trace, reaching `codebase_run_evaluator_trace_ready=1` while
+  coverage remains 1/4. v08-am can bind supplied independent all-family
+  run/evaluator evidence rows and raise
+  `external_benchmark_independent_run_evaluator_evidence_ready=1`. v08-an can
+  bind supplied all-family live replay/final-review rows to that evidence and
+  raise `external_benchmark_live_replay_final_review_ready=1`, but still keeps
+  `real_external_benchmark_verified=0`; v08-ao can bind supplied public
+  non-fixture/direct-run verification rows to v08-an and raise
+  `external_benchmark_public_nonfixture_verification_ready=1`, but still keeps
+  `real_external_benchmark_verified=0`; v08-ap can bind supplied runner-owned
+  live execution/audit rows to v08-ao and raise
+  `external_benchmark_runner_owned_live_execution_audit_ready=1`, but still
+  keeps `real_external_benchmark_verified=0`; v08-aq can bind supplied
+  independent live rerun confirmation rows to v08-ap and raise
+  `external_benchmark_independent_live_rerun_confirmation_ready=1`, but still
+  keeps `real_external_benchmark_verified=0`; v08-ar can bind supplied real
+  nonfixture run package rows to v08-aq and raise
+  `external_benchmark_real_nonfixture_run_package_intake_ready=1`, but still
+  keeps `real_external_benchmark_verified=0`; v08-as can bind supplied live
+  package artifact fetch/authority rows to v08-ar and raise
+  `external_benchmark_live_package_artifact_fetch_authority_ready=1`, but still
+  keeps `real_external_benchmark_verified=0`; v08-at can bind supplied
+  official result reconciliation rows to v08-as and raise
+  `external_benchmark_official_result_reconciliation_ready=1`, but still
+  keeps `real_external_benchmark_verified=0` until v13 binds a real nonfixture
+  run directory with raw traces, evaluator output, source/result artifacts, and
+  claim-matrix input.
+- h9-h is the latest backend/speed evidence boundary; measured-speed mechanics
+  and CPU/HIP/NVMe workload-speed artifact mechanics pass, but fixture timing
+  and generated workload rows remain no-claim with `gpu_speedup_claim=deferred`.
+- h11-d is the latest PC RouteLM / NLG boundary; component evidence, local
+  artifact-chain mechanics, a small NVMe-resident RouteMemory store smoke, and
+  a diagnostic generated NLG transcript/result can be exercised, but real
+  prototype/publish remains blocked with `real_pc_routelm_artifact_verified=0`
+  and `real_pc_routelm_nlg_verified=0` for local/generated fixtures.
+
+Read the current route-memory result as an objective split, not a solved
+retrieval policy:
+
+```text
+byte-qacc objective -> local-energy
+span-exact objective -> local-energy-hybrid in most tested groups
+```
+
+The next h10/v08-style experiment should replace h10-r supplied import/review
+fixtures with official authority/registry evidence, replace the local h10-k/h10-l labels with real external teacher-label
+feature labels and h10-s source-bound student-only eval rows through the h10-j/h10-l/h10-r/h10-s source-verification contracts, real benchmark
+source/result evidence through the
+v08-d/v08-e/v08-f/v08-g/v08-h/v08-i/v08-j/v08-k/v08-l/v08-m/v08-n/v08-o/v08-p/v08-q/v08-r/v08-s/v08-t/v08-u/v08-v/v08-w/v08-x/v08-y/v08-z/v08-aa/v08-ab/v08-ac/v08-ad/v08-ae/v08-af/v08-ag/v08-ah/v08-ai/v08-aj/v08-ak/v08-al/v08-am/v08-an/v08-ao/v08-ap/v08-aq/v08-ar/v08-as/v08-at
+import/comparison/real-evidence/artifact-verifier/authenticity/execution/attestation/attestor-identity/final-review/source-import/source-import-verifier/live-verifier/live-review/authoritative-review/public-registry/live-registry-query/live-registry-fetcher/live-registry-network-proof/real-verification/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review path,
+with non-local lower-chain and final-review artifacts plus non-fixture live registry query/fetch/network-proof/official-authority/result-authority/publication/source-acquisition/source-acquisition-content/codebase-mini/content-result-bridge/family-result-bridge/independent-reproduction/official-release/live-release/canonical-confirmation/publication-result-review/live-publication-result-ingestion/authority-promotion-evidence/run-evaluator-trace/independent-run-evaluator-evidence/live-replay-final-review/public-nonfixture-verification/runner-owned-live-execution-audit/independent-live-rerun-confirmation/real-nonfixture-run-package/live-package-artifact-fetch-authority
+official-result-reconciliation evidence, non-fixture h9-h measured CPU/HIP/NVMe workload speed, and measured PC RouteLM/NLG prototype evidence through h11-a/h11-b/h11-c/h11-d before any
+promotion claim or external benchmark comparison.
+
+`NEXT_IMPLEMENTATION_ROADMAP_v2.md` is treated as a real-evidence transition
+map rather than a request for more fixture gates. Its immediate h11-c/v08-ab/
+h10-r/h10-s/h11-d/h9-h/h7-c/paper phases are already represented in this
+repository as diagnostic or supplied-evidence contracts through v12, v08-at,
+v13-a, v13-b, v13-c, v13-d, v13-e, v13-f, v13-g, v13-h, v13-i, v13-j, v13-k, v13-l, v13-m, v13-n, and v14-a; the next experiment family must replace those rows with actual
+non-fixture teacher, benchmark, speed, and PC RouteLM/NLG evidence from one
+bound run.
+
+## h6 Span-first Guardrail
+
+h6-q consumes the h6-p policy artifact and tests span-first selection as a
+guarded policy rather than a universal preset.
+
+```bash
+experiments/run_v06_route_memory_span_first_guardrail.sh
+experiments/test_v06_route_memory_span_first_guardrail.sh
+```
+
+Reference standard aggregate:
+
+```text
+qacc-default:
+  qacc_mean = 0.571875
+  span_exact_mean = 0.378906
+
+strict-g0p050-cap0p050:
+  span_accept_rate = 0.250000
+  qacc_mean = 0.560937
+  span_exact_mean = 0.425781
+  qacc_delta_vs_qacc_policy_mean = -0.010938
+  span_exact_delta_vs_qacc_policy_mean = 0.046875
+
+span-first-g0p025-cap0p075:
+  span_accept_rate = 0.750000
+  qacc_mean = 0.538281
+  span_exact_mean = 0.441406
+```
+
+Expected:
+
+- strict guardrail accepts the span policy only for high span gain with bounded qacc loss
+- looser guardrails approach the raw span-exact policy
+- `routing_trigger_rate = active_jump_rate = 0`
+- this is policy guardrail instrumentation, not chunk retrieval solved
+
+## h6 Span-first Guardrail Degradation
+
+h6-r scales the h6-q guardrail over weak and harsher learned-like source
+degradation.
+
+```bash
+experiments/run_v06_route_memory_span_first_guardrail_degradation.sh
+experiments/test_v06_route_memory_span_first_guardrail_degradation.sh
+```
+
+Reference standard aggregate:
+
+```text
+weak:
+  objective_split_rate = 1.000000
+  strict span_accept_rate = 0.000000
+  strict qacc_mean = 0.517187
+  strict span_exact_mean = 0.289062
+
+harsher:
+  objective_split_rate = 0.500000
+  strict span_accept_rate = 0.000000
+  span-first-g0p025-cap0p075 span_accept_rate = 0.500000
+  span-first-g0p025-cap0p075 qacc_delta = -0.029688
+  span-first-g0p025-cap0p075 span_delta = +0.023438
+```
+
+Expected:
+
+- weak degradation can keep the objective split while rejecting span-first under the qacc-loss caps
+- harsher degradation can collapse the split in some groups and admit only looser guardrails in others
+- `routing_trigger_rate = active_jump_rate = 0`
+- this is degradation guardrail instrumentation, not learned source robustness solved
+
+## h6 Adaptive Guardrail Calibration
+
+h6-s calibrates a utility-style span-first guardrail over the h6-r degradation
+matrix:
+
+```bash
+experiments/run_v06_route_memory_span_adaptive_guardrail.sh
+experiments/test_v06_route_memory_span_adaptive_guardrail.sh
+```
+
+Decision rule:
+
+```text
+accept span policy when span_gain - loss_weight * qacc_loss > 0
+```
+
+Reference standard aggregate:
+
+```text
+weak utility-w0p50:
+  span_accept_rate = 1.000000
+  qacc_delta = -0.109375
+  span_delta = +0.062500
+
+weak utility-w0p75:
+  span_accept_rate = 0.000000
+
+harsher utility-w0p75:
+  span_accept_rate = 0.500000
+  qacc_delta = -0.029688
+  span_delta = +0.023438
+
+harsher utility-w1p00:
+  span_accept_rate = 0.000000
+```
+
+Expected:
+
+- `utility-w0p50` is too permissive under weak high-loss splits
+- `utility-w0p75` rejects weak high-loss splits and accepts the lower-loss harsher split
+- `utility-w1p00` is conservative and rejects the tested split
+- `routing_trigger_rate = active_jump_rate = 0`
+- this is adaptive guardrail calibration, not learned source robustness solved
+
+## h6-t Adaptive Guardrail Scale
+
+h6-t scales the `utility-w0p75` guardrail as a diagnostic before any default
+promotion.
+
+```bash
+experiments/run_v06_route_memory_span_adaptive_guardrail_scale.sh
+experiments/test_v06_route_memory_span_adaptive_guardrail_scale.sh
+```
+
+Smoke aggregate:
+
+```text
+all utility-w0p75:
+  groups = 2
+  span_accept_rate = 0.000000
+  bad_accept_rate = 0.000000
+  top1_recall_gap_mean = 0.796875
+  coherent_wrong_top_key_mean = 0.828125
+```
+
+Expected:
+
+- `utility-w0p75` must not accept excessive qacc-loss splits
+- byte qacc and span/chunk exactness stay separate objectives
+- `routing_trigger_rate = active_jump_rate = 0`
+- this is scale guardrail instrumentation, not promotion
+
+## h6-u Chunk-quality Diagnostics
+
+h6-u treats the value span as the current chunk unit and derives chunk-quality
+readouts from h6-t:
+
+```bash
+experiments/run_v06_route_memory_chunk_quality_diagnostics.sh
+experiments/test_v06_route_memory_chunk_quality_diagnostics.sh
+```
+
+Smoke aggregate:
+
+```text
+all utility-w0p75:
+  chunk_exact_mean = 0.156250
+  coherent_wrong_key_mean = 0.828125
+  top1_recall_gap_mean = 0.796875
+  keyshape_gap_mean = 0.734375
+```
+
+Expected:
+
+- chunk exact-match, per-offset consistency, coherent wrong-key, and top1/recall
+  gap are reported separately
+- symbolic `key-shape` remains an upper-bound diagnostic, not the policy
+- the current chunk-quality result is not ready for promotion
+
+## h6-v/h6-w Wrong-candidate Robustness Gates
+
+h6-v combines h6-u chunk-quality with h5 source-credit retry; h6-w separates
+default promotion from weak-hint/abstain behavior.
+
+```bash
+experiments/run_v06_route_memory_wrong_candidate_robustness.sh
+experiments/test_v06_route_memory_wrong_candidate_robustness.sh
+experiments/run_v06_route_memory_abstain_retry_guardrail.sh
+experiments/test_v06_route_memory_abstain_retry_guardrail.sh
+```
+
+Smoke result:
+
+```text
+chunk_ready = 0
+source_arm = policy-source-order
+source_qacc = 0.957813
+source_retry_noisy_selected = 0.000000
+combined_ready = 0
+guardrail_action = abstain-or-weak-hint
+```
+
+Expected:
+
+- noisy source/retry selection stays zero
+- source-credit retry can be safe while chunk-quality still blocks promotion
+- default route-memory promotion stays off
+
+## h6-x Chunk-local Scorer Diagnostics
+
+h6-x compares simple non-key-shape transforms over the chunk-local record score:
+visible-prefix composition, worst-offset local energy, mean local margin, and
+worst-offset local margin.
+
+```bash
+experiments/run_v06_route_memory_chunk_local_energy_prefix.sh
+experiments/test_v06_route_memory_chunk_local_scorers.sh
+```
+
+Smoke aggregate:
+
+```text
+best_non_keyshape_scorer = span-local-energy
+local_energy_qacc = 0.700000
+local_energy_chunk_exact = 0.531250
+local_energy_coherent_wrong = 0.468750
+local_energy_prefix_chunk_delta = -0.031250
+local_margin_chunk_exact = 0.531250
+keyshape_chunk_gap = 0.468750
+```
+
+Expected:
+
+- `span-local-energy` remains the best current non-key-shape record scorer
+- prefix/worst/margin variants are diagnostic-only unless they beat chunk exact
+  without qacc leakage or coherent-wrong regression
+- symbolic `key-shape` remains an upper-bound diagnostic
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6-y Chunk-code Similarity Diagnostics
+
+h6-y compares learned route-code signature similarity against plain local-energy
+chunk ranking.
+
+```bash
+experiments/run_v06_route_memory_chunk_code_similarity.sh
+experiments/test_v06_route_memory_chunk_code_similarity.sh
+```
+
+Smoke aggregate:
+
+```text
+best_non_keyshape_scorer = span-local-energy
+local_energy_qacc = 0.706250
+local_energy_chunk_exact = 0.531250
+route_code_qacc = 0.587500
+route_code_chunk_exact = 0.281250
+local_energy_route_code_chunk_exact = 0.531250
+route_signature_collision_mean = 0.750000
+keyshape_chunk_gap = 0.406250
+```
+
+Expected:
+
+- learned route-code signature scoring remains diagnostic-only unless it beats
+  plain `span-local-energy` without qacc leakage
+- high route signature collision explains why direct code similarity is not yet
+  a replacement for symbolic `key-shape`
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h10-a Teacher-free Chunk Ranker
+
+h10-a turns the existing route-credit reward/slash loop into a chunk-ranking
+signal by averaging candidate credit over the full candidate record span.
+The scorer does not use symbolic `key-shape`; it reorders candidates with
+`span-chunk-credit` or combines that signal with local energy via
+`span-local-energy-chunk-credit`.
+
+```bash
+experiments/run_v10_teacher_free_chunk_ranker.sh
+experiments/test_v10_teacher_free_chunk_ranker.sh
+experiments/test_v10_teacher_free_chunk_ranker_scale.sh
+```
+
+Smoke aggregate:
+
+```text
+best_non_keyshape_scorer = span-chunk-credit
+local_energy_qacc = 0.700000
+local_energy_chunk_exact = 0.562500
+chunk_credit_qacc = 1.000000
+chunk_credit_chunk_exact = 1.000000
+chunk_credit_coherent_wrong = 0.000000
+route_credit_gap_mean = 0.800000
+chunk_credit_gap_mean = 0.800000
+routing_trigger_rate_mean = 0.000000
+active_jump_rate_mean = 0.000000
+```
+
+Expected:
+
+- chunk credit must improve qacc/chunk exact over plain `span-local-energy`
+- coherent wrong-key must fall rather than merely preserving recall
+- credit gap and credit top1 metrics must show correct/wrong separation
+- this is a first positive chunk-ranker smoke, not default promotion until it
+  scales across degradation/noisy/fallback regimes
+
+Standard scale aggregate over 32/64-key arms:
+
+```text
+groups = 2
+chunk_credit_qacc = 0.992188
+chunk_credit_chunk_exact = 0.960938
+chunk_credit_coherent_wrong = 0.000000
+local_energy_qacc = 0.512500
+local_energy_chunk_exact = 0.351562
+route_credit_gap_mean = 0.799219
+chunk_credit_top1_mean = 1.000000
+keyshape_chunk_gap = 0.000000
+```
+
+## h10-b Chunk-credit Abstain Policy
+
+h10-b keeps the positive chunk-credit result from becoming a default promotion
+too early. The gate treats chunk credit as ready in the controlled fixture, but
+requires joint fallback/retry and distillation evidence before promotion.
+
+```bash
+experiments/run_v10_chunk_credit_abstain_policy.sh
+experiments/test_v10_chunk_credit_abstain_policy.sh
+```
+
+Smoke policy:
+
+```text
+guardrail_action = weak-hint-with-abstain
+default_promotion = 0
+diagnostic_only = 1
+weak_hint_or_abstain = 1
+chunk_credit_ready = 1
+source_safe = 1
+joint_chunk_source_ready = 0
+joint_noisy_used = 1.000000
+joint_fallback_retry_exercised = 0
+distillation_ready = 0
+combined_ready = 0
+noisy_selection_clean = 1
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Expected:
+
+- chunk-credit readiness alone is not enough for default promotion
+- noisy-clean evidence stays visible, but fallback/retry and distillation stay
+  blocked until they are actually exercised on the chunk-credit path
+- uncertain cases route to weak-hint/abstain
+
+## h10-c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r Joint Source, Fallback, and Teacher Gates
+
+h10-c adds the first joint source/noisy matrix above the teacher-free chunk
+ranker and a separate distillation gate. h10-d adds the missing forced
+fallback/retry exercise by clearing the correct primary candidates and requiring
+the retry path to recover from raw-key evidence without selecting noisy sources.
+h10-e adds the teacher-label contract for distillation labels. h10-f adds the
+local teacher-label collection harness. h10-g fits a local distilled-rule
+learner over those labels. h10-h defines the external teacher-label ingestion
+schema. h10-i adds a supplied external teacher-label CSV import path. h10-j adds
+a source-verifier layer over source artifact, label export, teacher identity,
+teacher policy, license, provenance, and hash evidence. h10-k adds a local
+learned chunk-quality scorer over the h10-f label features and feeds it into
+the distillation gate. h10-l adds the missing binding check: learned scorer
+readiness only counts for source-verified distillation when supplied feature
+labels are non-local, teacher-ID linked to the source evidence, row-bound to
+external teacher-label rows by `source_uri` and `provenance_hash`, and backed by
+real h10-j teacher-source verification. h10-m adds the remote acquisition
+contract above that source gap: local `file://` packages are rejected as
+local/placeholder, and HTTPS packages can become acquisition-ready but still
+need h10-n content-cache verification, h10-o fetch-attestation, h10-p
+runtime-fetcher replay, h10-q live-network import evidence, and h10-r
+import/review evidence before a real source claim. The
+default result is deliberately
+diagnostic-only: noisy wrong candidates are not selected, fallback/retry is now
+exercised, local collection is ready, local distillation training/eval is ready,
+local learned chunk scoring is ready, and external ingestion schema is ready,
+but no default external teacher-label source exists. A supplied label fixture
+can mark labels ready, and a supplied local source fixture can verify the chain
+mechanics, but both remain blocked before real teacher-source verification.
+
+```bash
+experiments/run_v10_chunk_credit_source_robustness.sh
+experiments/test_v10_chunk_credit_source_robustness.sh
+experiments/run_v10_chunk_credit_fallback_retry_exercise.sh
+experiments/test_v10_chunk_credit_fallback_retry_exercise.sh
+experiments/run_v10_teacher_label_contract.sh
+experiments/test_v10_teacher_label_contract.sh
+experiments/run_v10_teacher_label_collection_harness.sh
+experiments/test_v10_teacher_label_collection_harness.sh
+experiments/run_v10_teacher_distillation_learner.sh
+experiments/test_v10_teacher_distillation_learner.sh
+experiments/run_v10_teacher_external_label_ingestion.sh
+experiments/test_v10_teacher_external_label_ingestion.sh
+experiments/test_v10_teacher_external_label_import.sh
+experiments/run_v10_teacher_external_label_source_verifier.sh
+experiments/test_v10_teacher_external_label_source_verifier.sh
+experiments/test_v10_teacher_external_label_source_import.sh
+experiments/run_v10_learned_chunk_quality_scorer.sh
+experiments/test_v10_learned_chunk_quality_scorer.sh
+experiments/run_v10_source_verified_learned_chunk_scorer_gate.sh
+experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh
+experiments/run_v10_remote_teacher_source_acquisition_gate.sh
+experiments/test_v10_remote_teacher_source_acquisition_gate.sh
+experiments/run_v10_remote_teacher_source_content_verifier.sh
+experiments/test_v10_remote_teacher_source_content_verifier.sh
+experiments/run_v10_remote_teacher_source_live_fetch_attestation.sh
+experiments/test_v10_remote_teacher_source_live_fetch_attestation.sh
+experiments/run_v10_remote_teacher_source_runtime_fetcher.sh
+experiments/test_v10_remote_teacher_source_runtime_fetcher.sh
+experiments/run_v10_remote_teacher_source_live_network_import_gate.sh
+experiments/test_v10_remote_teacher_source_live_network_import_gate.sh
+experiments/run_v10_chunk_credit_distillation_gate.sh
+experiments/test_v10_chunk_credit_distillation_gate.sh
+```
+
+Smoke summary:
+
+```text
+best_joint_arm = chunk-credit-source-order
+fallback_exercise_arm = raw-retry
+chunk_credit_ready = 1
+joint_chunk_ready = 1
+joint_source_safe = 1
+noisy_clean = 1
+joint_noisy_used = 1.000000
+noisy_selected = 0.000000
+fallback_retry_exercised = 1
+fallback_exercise_ready = 1
+fallback_qacc_delta_vs_corrupt = 0.620000
+fallback_retry_raw_selected = 1.000000
+fallback_retry_noisy_selected = 0.000000
+joint_chunk_source_ready = 0
+teacher_label_contract_ready = 1
+teacher_label_collection_ready = 1
+learned_chunk_scorer_ready = 1
+learned_chunk_score_gap = 3.064325
+learned_chunk_coherent_wrong_negative_rate = 1.000000
+learned_chunk_correct_reward_rate = 1.000000
+learned_chunk_negative_action_rate = 1.000000
+learned_chunk_scorer_id = linear-contrastive-chunk-v1
+learned_chunk_scorer_source = local-teacher-harness
+source_verified_feature_labels_ready = 0
+source_verified_learned_chunk_scorer_ready = 0
+source_verified_scorer_reason = source-verified-feature-labels-missing
+teacher_external_schema_ready = 1
+teacher_external_label_source_ready = 0
+teacher_external_labels_ready = 0
+teacher_external_label_source = external-teacher-pending
+teacher_external_source_evidence = pending-fixture
+teacher_source_chain_verified = 0
+real_teacher_source_verified = 0
+teacher_source_action = teacher-external-label-source-missing
+teacher_distillation_training_ready = 1
+teacher_distillation_eval_ready = 1
+teacher_distillation_action_accuracy = 1.000000
+teacher_learner_id = distilled-rule-v1
+teacher_grounded_span_coverage = 1.000000
+teacher_label_source = local-teacher-harness
+distillation_ready = 0
+reason = teacher-external-label-source-missing
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Supplied external-label fixture:
+
+```text
+external_label_source_ready = 1
+teacher_external_labels_ready = 1
+label_source = provided-external-csv
+ingestion_mode = provided-csv
+external_label_rows = 5
+correct_labels = 1
+wrong_labels = 1
+near_miss_labels = 1
+missing_query_labels = 1
+abstain_labels = 1
+teacher_source_chain_verified = 0
+real_teacher_source_verified = 0
+teacher_source_action = teacher-external-source-evidence-missing
+distillation_ready = 0
+status = diagnostic-only
+reason = teacher-real-external-label-source-missing
+default_promotion = 0
+```
+
+Supplied local source-verifier fixture:
+
+```text
+external_label_source_ready = 1
+teacher_external_labels_ready = 1
+teacher_source_source = provided-csv
+external_label_rows = 5
+source_rows = 1
+matched_teacher_rows = 1
+source_hash_verified_rows = 1
+label_export_hash_verified_rows = 1
+teacher_identity_hash_verified_rows = 1
+teacher_policy_hash_verified_rows = 1
+license_hash_verified_rows = 1
+local_fixture_uri_rows = 1
+teacher_source_chain_verified = 1
+real_teacher_source_verified = 0
+action = teacher-real-source-review-missing
+distillation_ready = 0
+reason = teacher-real-external-label-source-missing
+```
+
+Expected:
+
+- injected noisy candidates must be present and not selected
+- chunk-credit must remain stronger than the local-energy baseline
+- fallback/retry must be forced by corrupting the primary candidates and must
+  recover through non-noisy raw retry evidence
+- teacher-label contract must cover correct, wrong, near-miss, missing, and
+  abstain labels over grounded spans
+- local teacher-label collection must pass without claiming external labels
+- local teacher-distillation training/eval must pass without claiming external
+  labels
+- local learned chunk scoring must separate reward from negative actions
+  without claiming external source evidence
+- source-verified learned scoring must require supplied non-local feature
+  labels linked to h10-j teacher-source evidence and row-bound to external
+  teacher-label rows by `source_uri` plus `provenance_hash`
+- relabeled local rows, external-label row mismatches, malformed feature CSV
+  rows, and local `file://` evidence outside `results/` must not unlock the
+  source-verified scorer
+- remote teacher-source acquisition must require HTTPS non-local URI fields,
+  sha256 hash manifests, acquisition metadata, and review evidence
+- local `file://` acquisition packages must block as local/placeholder, while
+  HTTPS packages must still stop before real source verification until h10-n
+  content-cache verification, h10-o fetch-attestation, h10-p runtime-fetcher
+  replay, h10-q live-network import evidence, h10-r import/review evidence,
+  and official authority evidence exist
+- default external teacher-label ingestion schema must pass without claiming a
+  source
+- supplied external labels must make the labels ready without enabling
+  distillation or default promotion
+- supplied local source fixtures may verify chain/hash mechanics, but remain
+  non-real until `real_teacher_source_verified=1`
+- default distillation remains blocked until real external-label source evidence
+  exists
+
+## h10-k Learned Chunk-quality Scorer
+
+h10-k is the first local learned chunk-quality scorer gate above the teacher
+label harness. It trains a deterministic linear contrastive scorer from h10-f
+labels using chunk score, chunk gap, normalized span overlap, chunk top1,
+coherent-wrong, noisy-source, missing-query, missing-candidate, and near-miss
+features. The learned scorer is deliberately local-only: it can be ready as a
+diagnostic component, but it does not turn local teacher labels into real
+external source evidence or default promotion.
+
+```bash
+experiments/run_v10_learned_chunk_quality_scorer.sh
+experiments/test_v10_learned_chunk_quality_scorer.sh
+```
+
+Smoke summary:
+
+```text
+label_source = local-teacher-harness
+learner_id = linear-contrastive-chunk-v1
+feature_count = 9
+reward_rows = 2
+negative_rows = 4
+wrong_rows = 1
+near_miss_rows = 1
+missing_query_rows = 1
+abstain_rows = 1
+coherent_wrong_rows = 2
+reward_score_min = 1.951978
+negative_score_max = -1.112347
+learned_score_gap = 3.064325
+correct_reward_rate = 1.000000
+negative_action_rate = 1.000000
+coherent_wrong_negative_rate = 1.000000
+slash_negative_rate = 1.000000
+abstain_negative_rate = 1.000000
+weak_negative_rate = 1.000000
+direction_ready = 1
+separation_ready = 1
+learned_chunk_scorer_ready = 1
+external_label_source_ready = 0
+default_promotion = 0
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Expected:
+
+- correct chunk evidence must receive positive feature direction
+- coherent wrong, noisy, missing, and near-miss risk must score negative
+- reward rows must stay above zero score and negative rows below zero score
+- mixed label-source CSVs are rejected so scorer provenance is not silently
+  overwritten
+- local scorer readiness is consumed by the distillation gate, but real
+  distillation still requires h10-j real source verification
+
+## h10-l Source-verified Learned Chunk Scorer
+
+h10-l closes the binding gap between h10-k and h10-j. A local h10-k scorer can
+separate correct and wrong chunks, and h10-j can verify teacher-source chain
+mechanics, but those two facts are not enough unless the learned scorer was
+trained/evaluated on feature labels tied to the same verified teacher source.
+h10-l requires supplied feature labels, a non-local `label_source`, matching
+teacher IDs between feature labels and source evidence, exact row binding
+between feature labels and external teacher-label rows by
+`teacher_id/query_key/candidate_key/teacher_label/source_uri/provenance_hash`,
+source-chain verification, and real teacher-source verification before
+`source_verified_learned_chunk_scorer_ready=1`.
+
+```bash
+experiments/run_v10_source_verified_learned_chunk_scorer_gate.sh
+experiments/test_v10_source_verified_learned_chunk_scorer_gate.sh
+```
+
+Default smoke summary:
+
+```text
+feature_csv_provided = 0
+feature_has_binding_fields = 0
+feature_bound_rows = 0
+matched_feature_label_rows = 0
+external_label_rows = 0
+feature_external_label_link_ready = 0
+feature_label_source = local-teacher-harness
+feature_source_link_ready = 0
+learned_chunk_scorer_ready = 1
+source_verified_feature_labels_ready = 0
+source_verified_learned_chunk_scorer_ready = 0
+status = diagnostic-only
+reason = source-verified-feature-labels-missing
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Supplied local fixture behavior:
+
+```text
+feature_csv_provided = 1
+feature_rows = 6
+feature_has_binding_fields = 1
+feature_bound_rows = 6
+matched_feature_label_rows = 6
+external_label_rows = 6
+feature_external_label_link_ready = 1
+feature_label_source = provided-external-feature-csv
+feature_source_link_ready = 1
+source_verified_feature_labels_ready = 1
+teacher_source_chain_verified = 1
+real_teacher_source_verified = 0
+source_verified_learned_chunk_scorer_ready = 0
+reason = teacher-real-external-label-source-missing
+```
+
+Expected:
+
+- local h10-k labels must not satisfy source-verified learned scoring
+- supplied feature labels must be teacher-ID linked to source evidence and
+  row-bound to external teacher-label rows by `source_uri` plus
+  `provenance_hash`
+- simply relabeling h10-f local rows as external is rejected
+- external-label row mismatches and malformed feature CSV rows are rejected
+- local `file://` evidence outside `results/` is still local fixture evidence
+  and cannot become real by declaration flags alone
+- local fixture source chains may verify mechanics but remain non-real
+- distillation now requires `source_verified_learned_chunk_scorer_ready=1`,
+  not just local `learned_chunk_scorer_ready=1`
+
+## h10-m Remote Teacher-source Acquisition
+
+h10-m opens the remote teacher-source acquisition contract without pretending
+that remote source content has already been fetched and verified. It is a
+preflight gate for the next real external teacher-label source step: all
+teacher source, label export, identity, policy, license, and review URIs must
+be HTTPS non-local URIs, all hashes must be `sha256:<64 hex>`, acquisition
+metadata must be non-fixture, and review evidence must be ready. Even when that
+contract is satisfied, the gate keeps `real_teacher_source_verified=0` with
+`remote-teacher-source-fetcher-missing`.
+
+```bash
+experiments/run_v10_remote_teacher_source_acquisition_gate.sh
+experiments/test_v10_remote_teacher_source_acquisition_gate.sh
+```
+
+Default smoke summary:
+
+```text
+acquisition_rows = 0
+remote_teacher_source_acquisition_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-acquisition-missing
+```
+
+Supplied local fixture behavior:
+
+```text
+acquisition_rows = 1
+required_uri_fields = 6
+local_uri_fields = 6
+remote_uri_scheme_ready = 0
+hash_manifest_ready = 1
+remote_teacher_source_acquisition_ready = 0
+action = remote-teacher-source-local-or-placeholder
+```
+
+Supplied HTTPS acquisition package behavior:
+
+```text
+acquisition_rows = 1
+required_uri_fields = 6
+https_remote_uri_fields = 6
+remote_uri_scheme_ready = 1
+hash_manifest_ready = 1
+remote_teacher_source_acquisition_ready = 1
+real_teacher_source_verified = 0
+action = remote-teacher-source-fetcher-missing
+```
+
+Expected:
+
+- local/placeholder/insecure/missing URIs must not pass the remote acquisition
+  contract
+- malformed acquisition CSV rows are rejected
+- HTTPS package readiness is not a real teacher-source claim
+- h10-n/h10-o/h10-p/h10-q/h10-r provide content-cache verification,
+  fetch-attestation, runtime-fetcher replay, live-network import evidence, and
+  import/review contracts; official authority evidence is still required
+  before a real teacher-source claim
+
+## h10-n Remote Teacher-source Content Verification
+
+h10-n adds the content-cache verifier above h10-m. It consumes the HTTPS
+remote acquisition manifest and an optional
+`V10_REMOTE_TEACHER_SOURCE_CONTENT_CSV`. The content CSV must bind every
+teacher source, label export, identity, policy, license, and review URI back to
+the h10-m remote URI/hash manifest, then provide local `file://` download/cache
+files whose sha256 hashes match the remote hashes. This closes the hash/content
+mechanics without claiming that a live remote fetch has happened in this
+sandbox.
+
+```bash
+experiments/run_v10_remote_teacher_source_content_verifier.sh
+experiments/test_v10_remote_teacher_source_content_verifier.sh
+```
+
+Default smoke summary:
+
+```text
+remote_teacher_source_acquisition_ready = 0
+remote_teacher_source_content_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-acquisition-not-ready
+```
+
+Supplied HTTPS acquisition without content:
+
+```text
+remote_teacher_source_acquisition_ready = 1
+content_rows = 0
+remote_teacher_source_content_ready = 0
+action = remote-teacher-source-content-missing
+```
+
+Supplied matching cache content:
+
+```text
+content_rows = 1
+remote_uri_match_rows = 1
+hash_manifest_match_rows = 1
+required_content_fields = 6
+content_hash_verified_fields = 6
+remote_teacher_source_content_ready = 1
+real_teacher_source_verified = 0
+action = remote-teacher-source-live-fetch-missing
+```
+
+Expected:
+
+- content rows must match h10-m teacher IDs, remote URIs, and sha256 hashes
+- cache URIs must be local files whose content hashes match the remote hash
+  manifest
+- malformed content CSV rows and hash/URI mismatches are rejected or blocked
+- cache verification is not a real teacher-source claim until h10-o
+  fetch-attestation and runtime fetcher evidence exist above it
+
+## h10-o Remote Teacher-source Live-fetch Attestation
+
+h10-o adds an artifact-level fetch-attestation contract above h10-n. It
+consumes the same h10-m acquisition and h10-n content CSVs plus an optional
+`V10_REMOTE_TEACHER_SOURCE_FETCH_ATTESTATION_CSV`. The fetch-attestation CSV
+must contain one row for each source, label export, identity, policy, license,
+and review artifact. Each row is matched back to the h10-n remote URI, cache
+URI, and content hash, then checked for fetch metadata, HTTPS attestation URI,
+cached attestation hash, independent attestor identity, and explicit non-fixture
+declaration. This closes the fetch-attestation evidence mechanics without yet
+claiming that the repository itself performed the live fetch.
+
+```bash
+experiments/run_v10_remote_teacher_source_live_fetch_attestation.sh
+experiments/test_v10_remote_teacher_source_live_fetch_attestation.sh
+```
+
+Default smoke summary:
+
+```text
+remote_teacher_source_content_ready = 0
+remote_teacher_source_live_fetch_attestation_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-content-not-ready
+```
+
+Supplied h10-n content without fetch attestation:
+
+```text
+remote_teacher_source_content_ready = 1
+expected_fetch_artifact_rows = 6
+fetch_attestation_rows = 0
+action = remote-teacher-source-fetch-attestation-missing
+```
+
+Supplied local attestation fixture:
+
+```text
+fetch_attestation_rows = 6
+matched_artifact_rows = 6
+content_hash_match_rows = 6
+attestation_uri_remote_rows = 0
+independent_attestor_rows = 0
+remote_teacher_source_live_fetch_attestation_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-independent-attestation-missing
+```
+
+Supplied remote-style attestation package:
+
+```text
+fetch_attestation_rows = 6
+attestation_uri_remote_rows = 6
+attestation_cache_hash_verified_rows = 6
+independent_attestor_rows = 6
+independent_attestation_ready_rows = 6
+remote_teacher_source_live_fetch_attestation_ready = 1
+real_teacher_source_verified = 0
+action = remote-teacher-source-runtime-fetcher-missing
+```
+
+Expected:
+
+- fetch-attestation rows must match h10-n teacher IDs, artifact kinds, remote
+  URIs, cache URIs, and sha256 content hashes
+- local-only attestation artifacts do not count as independent remote
+  attestation
+- malformed fetch-attestation CSV rows and attested hash mismatches are
+  rejected or blocked
+- the attestation contract is not a real teacher-source claim until a
+  runner-owned live remote fetch path exists
+
+## h10-p Remote Teacher-source Runtime Fetcher
+
+h10-p adds a runner-owned runtime fetcher contract above h10-o. It consumes the
+same h10-m acquisition, h10-n content, and h10-o fetch-attestation CSVs plus an
+optional `V10_REMOTE_TEACHER_SOURCE_RUNTIME_FETCH_CSV`. In replay mode
+(`V10_REMOTE_TEACHER_SOURCE_RUNTIME_FETCH_REPLAY=1`), the runner writes its own
+runtime fetch manifest from h10-o attestation rows, records fetcher binary and
+command hashes, binds each runtime fetch row back to the attested remote URI,
+cache URI, and content hash, and verifies downloaded cache hashes. This closes
+the runner-owned fetcher mechanics while still refusing to treat offline replay
+as a live network fetch or real teacher source.
+
+```bash
+experiments/run_v10_remote_teacher_source_runtime_fetcher.sh
+experiments/test_v10_remote_teacher_source_runtime_fetcher.sh
+```
+
+Default smoke summary:
+
+```text
+remote_teacher_source_live_fetch_attestation_ready = 0
+runner_owned_runtime_fetcher_ready = 0
+live_network_fetch_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-fetch-attestation-not-ready
+```
+
+Supplied h10-o-ready evidence without runtime fetch rows:
+
+```text
+remote_teacher_source_live_fetch_attestation_ready = 1
+expected_runtime_artifact_rows = 6
+runtime_fetch_rows = 0
+runner_owned_runtime_fetcher_ready = 0
+action = remote-teacher-source-runtime-fetch-missing
+```
+
+Runner-owned offline replay:
+
+```text
+runtime_fetch_source = runner-owned-replay
+runtime_fetch_rows = 6
+download_cache_hash_verified_rows = 6
+fetcher_metadata_rows = 6
+runner_owned_fetch_rows = 6
+offline_replay_rows = 6
+network_fetch_rows = 0
+runner_owned_runtime_fetcher_ready = 1
+live_network_fetch_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-live-network-fetch-missing
+```
+
+Expected:
+
+- runtime fetch rows must match h10-o teacher IDs, artifact kinds, remote URIs,
+  cache URIs, and content hashes
+- download cache hashes must verify against the h10-o attested content hashes
+- malformed runtime CSV rows, artifact mismatches, and bad download hashes are
+  rejected or blocked
+- runner-owned offline replay is a fetcher contract check, not a real network
+  fetch or real teacher-source claim
+
+## h10-q Remote Teacher-source Live-network Import
+
+h10-q adds the live-network import gate above h10-p. It consumes the h10-p
+runtime fetcher summary plus either h10-p replay evidence or a supplied
+`V10_REMOTE_TEACHER_SOURCE_RUNTIME_FETCH_CSV`. Replay proves the runner-owned
+runtime fetcher path, but h10-q refuses to count replay as live-network
+evidence. A supplied runtime CSV must be all network fetch rows, all real
+runtime declarations, all non-fixture declarations, and still row-complete
+against the six expected remote teacher-source artifacts.
+
+```bash
+experiments/run_v10_remote_teacher_source_live_network_import_gate.sh
+experiments/test_v10_remote_teacher_source_live_network_import_gate.sh
+```
+
+Default smoke summary:
+
+```text
+runner_owned_runtime_fetcher_ready = 0
+live_network_fetch_ready = 0
+remote_teacher_source_live_network_import_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-fetch-attestation-not-ready
+```
+
+Runner-owned offline replay:
+
+```text
+runtime_fetch_source = runner-owned-replay
+runtime_fetch_rows = 6
+network_fetch_rows = 0
+offline_replay_rows = 6
+runner_owned_runtime_fetcher_ready = 1
+live_network_fetch_ready = 0
+remote_teacher_source_live_network_import_ready = 0
+real_teacher_source_verified = 0
+action = remote-teacher-source-live-network-fetch-missing
+```
+
+Supplied live-network runtime evidence:
+
+```text
+runtime_fetch_source = provided-csv
+runtime_fetch_rows = 6
+network_fetch_rows = 6
+offline_replay_rows = 0
+declared_real_rows = 6
+non_fixture_declared_rows = 6
+runner_owned_runtime_fetcher_ready = 1
+live_network_fetch_ready = 1
+remote_teacher_source_live_network_import_ready = 1
+real_teacher_source_verified = 0
+action = remote-teacher-source-real-source-import-missing
+```
+
+Expected:
+
+- replay never counts as live-network evidence
+- all six runtime rows must be live-network, real-declared, non-fixture rows
+- live-network import readiness is not a real teacher-source claim until real
+  non-fixture source import/review evidence is connected
+
+## h10-r Real Teacher-source Import/review Chain
+
+h10-r adds the import/review chain above h10-q. It consumes h10-q live-network
+import readiness and a supplied `V10_REAL_TEACHER_SOURCE_IMPORT_REVIEW_CSV`.
+The review row must bind back to the acquisition teacher/source, carry HTTPS
+URI and sha256 hash evidence for source/export/identity/policy/license plus
+import manifest, review report, reviewer identity, conflict disclosure, and
+source registry artifacts, and mark live-import observation, independent
+review, authoritative review, registry entry readiness, real source
+declaration, non-fixture declaration, and zero routing/jump activity.
+
+```bash
+experiments/run_v10_real_teacher_source_import_review.sh
+experiments/test_v10_real_teacher_source_import_review.sh
+```
+
+Default smoke summary:
+
+```text
+remote_teacher_source_live_network_import_ready = 0
+review_rows = 0
+teacher_source_import_review_contract_ready = 0
+real_teacher_source_import_review_ready = 0
+real_teacher_source_verified = 0
+action = real-teacher-source-live-network-import-missing
+```
+
+Supplied guarded cases:
+
+```text
+local review artifact:
+  local_review_uri_fields = 5
+  teacher_source_import_review_contract_ready = 0
+  action = real-teacher-source-local-import-artifact
+
+placeholder HTTPS authority:
+  remote_review_uri_fields = 10
+  placeholder_review_uri_fields = 5
+  teacher_source_import_review_contract_ready = 1
+  real_teacher_source_import_review_ready = 0
+  action = real-teacher-source-placeholder-import-artifact
+
+non-placeholder review chain:
+  teacher_source_import_review_contract_ready = 1
+  real_teacher_source_import_review_ready = 1
+  real_teacher_source_verified = 0
+  action = real-teacher-source-official-authority-missing
+```
+
+Expected:
+
+- local review/import artifacts never become real by declaration-flag rewrite
+- placeholder or reserved authorities can exercise mechanics but cannot become
+  real teacher-source evidence
+- non-placeholder import/review readiness is still not a final real
+  teacher-source claim until official authority/registry evidence verifies it
+
+## h10-s Source-verified Learned Scorer Evaluation
+
+h10-s adds the student-only evaluation layer above h10-l and h10-r. It consumes
+the h10-l source-verified learned scorer binding summary, the h10-r import/review
+summary, and an optional
+`V10_SOURCE_VERIFIED_LEARNED_CHUNK_SCORER_EVAL_CSV` with source-bound
+student-only evaluation metrics. The eval table reports baseline versus
+student-only chunk exact, span exact, wrong-answer rate, missing/abstain rate,
+coherent-wrong negative rate, near-miss negative rate, and source/fixture
+declaration flags.
+
+```bash
+experiments/run_v10_source_verified_learned_chunk_scorer_eval_gate.sh
+experiments/test_v10_source_verified_learned_chunk_scorer_eval_gate.sh
+```
+
+Default smoke summary:
+
+```text
+source_verified_feature_labels_ready = 0
+student_only_eval_rows = 0
+student_only_eval_ready = 0
+source_verified_learned_chunk_scorer_eval_ready = 0
+reason = source-verified-feature-labels-missing
+```
+
+Supplied guarded fixture:
+
+```text
+source_verified_feature_labels_ready = 1
+source_verified_learned_chunk_scorer_ready = 0
+student_only_eval_ready = 1
+chunk_exact_delta > 0
+near_miss_negative_rate = 1.000000
+metric_improvement_ready = 1
+source_verified_learned_chunk_scorer_eval_ready = 0
+reason = source-verified-learned-scorer-missing
+```
+
+Expected:
+
+- student-only metric improvement is reported separately from source authority
+- a good supplied eval fixture can pass metric checks without unlocking
+  source-verified scorer eval readiness
+- malformed eval CSV rows are rejected
+- final scorer eval readiness still requires official real teacher-source
+  authority plus zero routing/jump activity
+
+## h7-c Promotion Review Gate
+
+h7-c binds the internal h7-b promotion decision to the real-evidence chain:
+h10-r teacher-source import/review, h10-s source-verified scorer eval, v08-ab
+codebase-mini benchmark instrumentation, h11-d PC RouteLM NLG smoke, and h9-h
+workload-speed evidence.
+
+```bash
+experiments/run_v07_route_memory_promotion_review_gate.sh
+experiments/test_v07_route_memory_promotion_review_gate.sh
+```
+
+Smoke summary:
+
+```text
+promotion_review_contract_ready = 1
+h7_default_promotion = 0
+real_teacher_source_verified = 0
+source_verified_learned_chunk_scorer_eval_ready = 0
+real_external_benchmark_verified = 0
+codebase_mini_source_ready = 1
+benchmark_result_artifact_verified = 1
+pc_routelm_nlg_smoke_ready = 1
+diagnostic_workload_speed_ready = 1
+external_thresholds_met = 1
+nlg_thresholds_met = 1
+wrong_answer_threshold_met = 1
+real_evidence_complete = 0
+promotion_review_ready = 0
+default_promotion = 0
+action = promotion-review-real-evidence-missing
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Expected:
+
+- diagnostic thresholds can pass without becoming a real promotion claim
+- real teacher, scorer, benchmark, NLG, and workload-speed evidence must all be
+  present before `promotion_review_ready=1`
+- the jump-neighbor path remains inactive
+
+## v12 Paper/Release Claim Audit
+
+v12 audits the currently closed diagnostic stack before any paper, release, or
+strong product claim is made. It consumes h7-c, h10-r/h10-s, v08-ab,
+h11-c/h11-d, and h9-h.
+
+```bash
+experiments/run_v12_paper_release_claim_audit.sh
+experiments/test_v12_paper_release_claim_audit.sh
+```
+
+Smoke summary:
+
+```text
+diagnostic_release_package_ready = 1
+real_release_package_ready = 0
+diagnostic_claim_level = 4
+publishable_claim_level = 0
+release_claim = diagnostic-artifact-package-only
+h7c_promotion_review_contract_ready = 1
+h7c_real_evidence_complete = 0
+h10r_real_teacher_source_verified = 0
+h10s_source_verified_eval_ready = 0
+v08ab_real_external_benchmark_verified = 0
+h11c_route_memory_artifact_chain_verified = 1
+h11d_pc_routelm_nlg_smoke_ready = 1
+h11d_real_pc_routelm_nlg_verified = 0
+h9h_diagnostic_workload_speed_ready = 1
+h9h_real_workload_speed_evidence_ready = 0
+h9h_gpu_speedup_claim = deferred
+forbidden_transformer_replacement_claim = blocked
+forbidden_frontier_pc_llm_claim = blocked
+forbidden_long_context_solved_claim = blocked
+forbidden_learned_sparse_routing_claim = blocked
+forbidden_gpu_acceleration_claim = blocked
+action = release-package-real-evidence-missing
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Expected:
+
+- diagnostic artifact packaging can pass without publishable release readiness
+- every forbidden strong claim remains blocked
+- paper/release promotion requires real teacher-source, source-verified scorer
+  eval, external benchmark, PC RouteLM NLG, workload-speed, and h7-c evidence
+
+## h7-b Promotion Gate and v08 Readiness
+
+h7-b aggregates h6-t/u/v/w/x/y into a single promotion gate. h7-c then reviews
+h7-b together with the h10-r/h10-s/v08-ab/h11-d/h9-h real-evidence boundary
+before any default promotion can be considered. h10-a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s are
+wired into the route-memory closure as later chunk-ranking/source/fallback/scorer/content/fetch-attestation/runtime-fetcher/live-network-import/import-review/eval
+smokes, but they still do not unlock default promotion without real evidence.
+v08 uses the h7-b/h7-c gates to decide whether an external benchmark comparison is ready. v08-b adds the
+external benchmark adapter manifest for RULER, LongBench, codebase retrieval,
+and real document QA. v08-c adds the evidence-ingestion schema for dataset,
+license, baseline, result, evaluator, and provenance evidence. v08-d adds a
+`V08_EXTERNAL_BENCHMARK_EVIDENCE_CSV` import path and a positive supplied-CSV
+fixture gate. v08-e adds baseline-vs-route-memory comparison deltas. v08-f
+separates supplied placeholder evidence from real benchmark evidence by
+requiring non-placeholder artifact URIs and `sha256:<64 hex>` provenance
+hashes before any real benchmark claim. v08-g adds a local `file://` artifact
+hash verifier, but still blocks publishable claims until benchmark authenticity
+and evaluator verification exist. v08-h verifies benchmark identity, canonical
+URIs, evaluator hash, and metric contract while still blocking actual external
+benchmark claims until execution evidence exists. The default path still
+validates schema/comparison coverage without claiming source or result evidence.
+v08-i verifies evaluator output and run-log artifacts plus metric output, but
+still blocks real external benchmark claims until independent external
+attestation exists.
+v08-j adds that attestation gate: supplied/local attestations can verify their
+own artifact hashes and match execution hashes/metrics, but they still keep
+`real_external_benchmark_verified=0` until the attestor is independently
+verified.
+v08-k verifies attestor identity, registry, conflict disclosure, and
+independence provenance artifacts. Passing v08-k still keeps
+`real_external_benchmark_verified=0`; it means the attestor identity chain is
+ready for final review, not that the benchmark claim is publishable.
+v08-l verifies final-review reports against source/provenance hashes, execution
+hashes, metric values, attestation IDs, reviewer identity, and reviewer conflict
+disclosure artifacts. Supplied local review fixtures can pass the mechanical
+checks, but they still keep `real_external_benchmark_verified=0` unless real
+non-fixture source review evidence and a source-import verification path exist.
+v08-m adds that source-import contract path without treating a synthetic
+remote-style fixture as real verification.
+v08-n adds the runner-owned verifier/fetch-evidence replay layer above v08-m,
+and still refuses to treat replay as live source-import verification.
+v08-o adds the live-verifier evidence separation layer above v08-n, and still
+refuses to treat live-style evidence as independently reviewed source-import
+verification.
+v08-p adds the independent live-review layer above v08-o, and still refuses to
+treat supplied live-review mechanics as authoritative source-import
+verification.
+v08-q adds the authoritative-review layer above v08-p, and still refuses to
+treat supplied authority-review mechanics as real public registry-backed
+source-import verification.
+v08-r adds the public-registry layer above v08-q, and still refuses to treat
+supplied registry rows as runner-owned live registry query verification.
+v08-s adds the live-registry-query layer above v08-r, and still refuses to
+treat supplied live-style query rows as real source-import verification.
+
+```bash
+experiments/run_v07_route_memory_promotion_gate.sh
+experiments/test_v07_route_memory_promotion_gate.sh
+experiments/run_v07_route_memory_promotion_review_gate.sh
+experiments/test_v07_route_memory_promotion_review_gate.sh
+experiments/run_v08_external_benchmark_adapter.sh
+experiments/test_v08_external_benchmark_adapter.sh
+experiments/run_v08_external_benchmark_evidence_ingestion.sh
+experiments/test_v08_external_benchmark_evidence_ingestion.sh
+experiments/test_v08_external_benchmark_evidence_import.sh
+experiments/run_v08_external_benchmark_comparison_gate.sh
+experiments/test_v08_external_benchmark_comparison_gate.sh
+experiments/test_v08_external_benchmark_comparison_import.sh
+experiments/run_v08_external_benchmark_real_evidence_gate.sh
+experiments/test_v08_external_benchmark_real_evidence_gate.sh
+experiments/test_v08_external_benchmark_real_evidence_placeholder.sh
+experiments/test_v08_external_benchmark_real_evidence_format.sh
+experiments/run_v08_external_benchmark_artifact_verifier.sh
+experiments/test_v08_external_benchmark_artifact_verifier.sh
+experiments/test_v08_external_benchmark_artifact_verifier_local.sh
+experiments/run_v08_external_benchmark_authenticity_gate.sh
+experiments/test_v08_external_benchmark_authenticity_gate.sh
+experiments/test_v08_external_benchmark_authenticity_import.sh
+experiments/run_v08_external_benchmark_execution_gate.sh
+experiments/test_v08_external_benchmark_execution_gate.sh
+experiments/test_v08_external_benchmark_execution_import.sh
+experiments/run_v08_external_benchmark_attestation_gate.sh
+experiments/test_v08_external_benchmark_attestation_gate.sh
+experiments/test_v08_external_benchmark_attestation_import.sh
+experiments/run_v08_external_benchmark_attestor_identity_gate.sh
+experiments/test_v08_external_benchmark_attestor_identity_gate.sh
+experiments/test_v08_external_benchmark_attestor_identity_import.sh
+experiments/run_v08_external_benchmark_final_review_gate.sh
+experiments/test_v08_external_benchmark_final_review_gate.sh
+experiments/test_v08_external_benchmark_final_review_import.sh
+experiments/test_v08_external_benchmark_final_review_real_source_guard.sh
+experiments/test_v08_external_benchmark_final_review_remote_review_guard.sh
+experiments/test_v08_external_benchmark_final_review_remote_full_guard.sh
+experiments/test_v08_external_benchmark_lower_chain_remote_artifacts.sh
+experiments/run_v08_external_benchmark_source_import_gate.sh
+experiments/test_v08_external_benchmark_source_import_gate.sh
+experiments/test_v08_external_benchmark_source_import_remote_contract.sh
+experiments/run_v08_external_benchmark_source_import_verifier_gate.sh
+experiments/test_v08_external_benchmark_source_import_verifier_gate.sh
+experiments/run_v08_external_benchmark_source_import_live_verifier_gate.sh
+experiments/test_v08_external_benchmark_source_import_live_verifier_gate.sh
+experiments/run_v08_external_benchmark_source_import_live_review_gate.sh
+experiments/test_v08_external_benchmark_source_import_live_review_gate.sh
+experiments/run_v08_external_benchmark_source_import_authoritative_review_gate.sh
+experiments/test_v08_external_benchmark_source_import_authoritative_review_gate.sh
+experiments/run_v08_external_benchmark_source_import_public_registry_gate.sh
+experiments/test_v08_external_benchmark_source_import_public_registry_gate.sh
+experiments/run_v08_external_benchmark_source_import_live_registry_query_gate.sh
+experiments/test_v08_external_benchmark_source_import_live_registry_query_gate.sh
+experiments/run_v08_external_benchmark_source_import_live_registry_fetcher.sh
+experiments/test_v08_external_benchmark_source_import_live_registry_fetcher.sh
+experiments/run_v08_external_benchmark_run_evaluator_trace.sh
+experiments/test_v08_external_benchmark_run_evaluator_trace.sh
+experiments/run_v08_external_benchmark_independent_run_evaluator_evidence.sh
+experiments/test_v08_external_benchmark_independent_run_evaluator_evidence.sh
+experiments/run_v08_external_benchmark_readiness.sh
+experiments/test_v08_external_benchmark_readiness.sh
+```
+
+Smoke result:
+
+```text
+h7-b:
+  chunk_local_safe = 1
+  chunk_local_best_scorer = span-local-energy
+  chunk_code_safe = 1
+  chunk_code_best_scorer = span-local-energy
+  default_promotion = 0
+  status = diagnostic-only
+
+v08:
+  benchmark_families = 4
+  benchmark_adapter_ready = 1
+  benchmark_evidence_schema_ready = 1
+  external_benchmark_source_ready = 0
+  external_benchmark_result_ready = 0
+  external_benchmark_ready = 0
+  action = defer-external-comparison
+
+v08-d supplied CSV fixture:
+  evidence_source = provided-csv
+  external_benchmark_source_ready = 1
+  external_benchmark_result_ready = 1
+  external_benchmark_ready = 1
+
+v08-e supplied CSV comparison fixture:
+  comparison_input_ready = 1
+  benchmark_comparison_ready = 1
+  publishable_comparison_ready = 0
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  route_memory_losses = 4
+  action = diagnostic-comparison-only
+
+v08-f default real-evidence gate:
+  real_evidence_format_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-real-evidence-missing
+
+v08-f supplied placeholder fixture:
+  evidence_source = provided-csv
+  external_benchmark_ready = 1
+  ready_rows = 4
+  real_dataset_uri_rows = 0
+  real_result_uri_rows = 0
+  source_hash_rows = 0
+  provenance_hash_rows = 0
+  real_evidence_format_ready = 0
+  real_external_benchmark_verified = 0
+  action = fixture-evidence-not-real-benchmark
+
+v08-f supplied real-format fixture:
+  evidence_source = provided-csv
+  external_benchmark_ready = 1
+  ready_rows = 4
+  real_dataset_uri_rows = 4
+  real_result_uri_rows = 4
+  source_hash_rows = 4
+  provenance_hash_rows = 4
+  real_evidence_format_ready = 1
+  real_external_benchmark_verified = 0
+  action = real-benchmark-verifier-missing
+
+v08-g default artifact verifier:
+  real_evidence_format_ready = 0
+  artifact_verifier_ready = 0
+  real_external_benchmark_verified = 0
+  action = real-evidence-format-missing
+
+v08-g local file artifact fixture:
+  evidence_source = provided-csv
+  real_evidence_format_ready = 1
+  local_dataset_uri_rows = 4
+  local_result_uri_rows = 4
+  source_hash_verified_rows = 4
+  provenance_hash_verified_rows = 4
+  artifact_verifier_ready = 1
+  real_external_benchmark_verified = 0
+  action = benchmark-authenticity-verifier-missing
+
+v08-h supplied authenticity/evaluator fixture:
+  evidence_source = provided-csv
+  authenticity_source = provided-csv
+  artifact_verifier_ready = 1
+  canonical_uri_match_rows = 4
+  authenticity_ready_rows = 4
+  evaluator_ready_rows = 4
+  evaluator_hash_rows = 4
+  metric_ready_rows = 4
+  benchmark_authenticity_ready = 1
+  evaluator_contract_ready = 1
+  benchmark_authenticity_verified = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-execution-missing
+
+v08-i supplied execution fixture:
+  evidence_source = provided-csv
+  authenticity_source = provided-csv
+  execution_source = provided-csv
+  benchmark_authenticity_verified = 1
+  output_hash_verified_rows = 4
+  run_log_hash_verified_rows = 4
+  execution_ready_rows = 4
+  metric_output_rows = 4
+  evaluator_execution_verified = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-attestation-missing
+
+v08-j supplied attestation fixture:
+  evidence_source = provided-csv
+  authenticity_source = provided-csv
+  execution_source = provided-csv
+  attestation_source = provided-csv
+  evaluator_execution_verified = 1
+  attestation_artifact_rows = 4
+  attestation_hash_verified_rows = 4
+  execution_hash_attested_rows = 4
+  metric_attested_rows = 4
+  independent_attestor_rows = 0
+  independent_attestation_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-independent-attestor-missing
+
+v08-k supplied attestor identity fixture:
+  attestor_identity_source = provided-csv
+  evaluator_execution_verified = 1
+  independent_attestation_verified = 1
+  identity_rows = 4
+  matched_attestation_rows = 4
+  identity_hash_verified_rows = 4
+  registry_hash_verified_rows = 4
+  conflict_disclosure_hash_verified_rows = 4
+  independence_basis_rows = 4
+  no_declared_conflict_rows = 4
+  attestor_identity_verified = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-final-review-missing
+
+v08-l supplied final-review fixture:
+  final_review_source = provided-csv
+  evaluator_execution_verified = 1
+  independent_attestation_verified = 1
+  attestor_identity_verified = 1
+  review_rows = 4
+  matched_attestation_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 4
+  nonlocal_final_review_artifact_rows = 0
+  reviewer_identity_hash_verified_rows = 4
+  local_reviewer_identity_rows = 4
+  nonlocal_reviewer_identity_rows = 0
+  reviewer_conflict_hash_verified_rows = 4
+  local_reviewer_conflict_rows = 4
+  nonlocal_reviewer_conflict_rows = 0
+  local_upstream_artifact_rows = 32
+  critical_hash_match_rows = 4
+  metric_match_rows = 4
+  review_ready_rows = 4
+  review_approved_rows = 4
+  real_source_declared_rows = 0
+  non_fixture_declared_rows = 0
+  source_import_verified = 0
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-real-source-review-missing
+
+v08-l local final-review real-source guard:
+  final_review_source = provided-csv
+  review_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 4
+  nonlocal_final_review_artifact_rows = 0
+  local_reviewer_identity_rows = 4
+  nonlocal_reviewer_identity_rows = 0
+  local_reviewer_conflict_rows = 4
+  nonlocal_reviewer_conflict_rows = 0
+  local_upstream_artifact_rows = 32
+  real_source_declared_rows = 4
+  non_fixture_declared_rows = 4
+  source_import_verified = 0
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-local-final-review-artifact
+
+v08-l non-local final-review remote-review guard:
+  final_review_source = provided-csv
+  review_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 0
+  nonlocal_final_review_artifact_rows = 4
+  local_reviewer_identity_rows = 0
+  nonlocal_reviewer_identity_rows = 4
+  local_reviewer_conflict_rows = 0
+  nonlocal_reviewer_conflict_rows = 4
+  local_upstream_evidence_artifact_rows = 8
+  local_upstream_execution_artifact_rows = 8
+  local_upstream_attestation_artifact_rows = 4
+  local_upstream_identity_artifact_rows = 12
+  local_upstream_artifact_rows = 32
+  real_source_declared_rows = 4
+  non_fixture_declared_rows = 4
+  source_import_verified = 0
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-local-upstream-artifact
+
+v08-l/v08-s fully remote-style source-import guard:
+  final_review_source = provided-csv
+  review_rows = 4
+  review_artifact_rows = 4
+  review_hash_verified_rows = 4
+  local_final_review_artifact_rows = 0
+  nonlocal_final_review_artifact_rows = 4
+  local_reviewer_identity_rows = 0
+  nonlocal_reviewer_identity_rows = 4
+  local_reviewer_conflict_rows = 0
+  nonlocal_reviewer_conflict_rows = 4
+  local_upstream_artifact_rows = 0
+  real_source_declared_rows = 4
+  non_fixture_declared_rows = 4
+  source_import_independent_live_review_ready = 1
+  source_import_authoritative_review_ready = 1
+  source_import_public_registry_ready = 1
+  source_import_live_registry_query_ready = 1
+  source_import_verified = 0
+  final_review_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-query-fixture-only
+
+v08-m remote-style source-import contract fixture:
+  source_import_source = provided-csv
+  attestor_identity_verified = 1
+  source_import_rows = 4
+  artifact_uri_match_rows = 4
+  critical_hash_match_rows = 4
+  import_ready_rows = 4
+  import_artifact_rows = 12
+  import_hash_verified_rows = 12
+  local_import_artifact_rows = 0
+  nonlocal_import_artifact_rows = 12
+  live_network_import_rows = 4
+  offline_replay_rows = 0
+  real_source_import_declared_rows = 4
+  non_fixture_declared_rows = 4
+  independent_import_reviewed_rows = 4
+  source_import_contract_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-real-verifier-missing
+
+v08-n runner-owned source-import verifier replay fixture:
+  source_import_verifier_source = runner-owned-replay
+  expected_verifier_rows = 4
+  expected_verifier_artifacts = 12
+  source_import_verifier_rows = 4
+  matched_source_import_rows = 4
+  source_import_id_match_rows = 4
+  import_manifest_uri_match_rows = 4
+  import_manifest_hash_match_rows = 4
+  import_fetch_log_uri_match_rows = 4
+  import_fetch_log_hash_match_rows = 4
+  reviewer_identity_uri_match_rows = 4
+  reviewer_identity_hash_match_rows = 4
+  benchmark_artifact_uri_match_rows = 4
+  verifier_artifact_rows = 12
+  verifier_hash_verified_rows = 12
+  local_verifier_artifact_rows = 12
+  nonlocal_verifier_artifact_rows = 0
+  runner_owned_verifier_rows = 4
+  source_import_verifier_ready = 1
+  live_network_source_import_verified = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-verifier-missing
+
+v08-o supplied live-style source-import verifier fixture:
+  source_import_verifier_source = provided-csv
+  expected_verifier_rows = 4
+  source_import_verifier_rows = 4
+  live_network_verifier_rows = 4
+  offline_replay_rows = 0
+  declared_real_verifier_rows = 4
+  non_fixture_declared_rows = 4
+  source_import_verifier_ready = 1
+  source_import_live_verifier_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-independent-live-review-missing
+
+v08-p supplied source-import live-review fixture:
+  live_review_source = provided-csv
+  review_rows = 4
+  matched_verifier_rows = 4
+  source_import_id_match_rows = 4
+  verifier_run_id_match_rows = 4
+  verifier_hash_match_rows = 4
+  import_hash_match_rows = 4
+  local_live_review_artifact_rows = 0
+  nonlocal_live_review_artifact_rows = 12
+  source_import_independent_live_review_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-authoritative-live-review-missing
+
+v08-q supplied source-import authoritative-review fixture:
+  authority_review_source = provided-csv
+  authority_review_rows = 4
+  matched_live_review_rows = 4
+  source_import_id_match_rows = 4
+  verifier_run_id_match_rows = 4
+  live_review_id_match_rows = 4
+  live_review_hash_match_rows = 4
+  verifier_hash_match_rows = 4
+  authority_metadata_rows = 4
+  local_authority_artifact_rows = 0
+  nonlocal_authority_artifact_rows = 16
+  independent_authority_rows = 4
+  authority_review_approved_rows = 4
+  source_import_authoritative_review_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-real-public-registry-missing
+
+v08-r supplied source-import public-registry fixture:
+  public_registry_source = provided-csv
+  public_registry_rows = 4
+  matched_authority_review_rows = 4
+  source_import_id_match_rows = 4
+  verifier_run_id_match_rows = 4
+  live_review_id_match_rows = 4
+  authority_review_id_match_rows = 4
+  authority_review_hash_match_rows = 4
+  verifier_hash_match_rows = 4
+  registry_metadata_rows = 4
+  local_registry_artifact_rows = 0
+  nonlocal_registry_artifact_rows = 16
+  official_public_registry_rows = 4
+  registry_entry_approved_rows = 4
+  source_import_public_registry_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-query-missing
+
+v08-s runner-owned source-import live-registry-query replay fixture:
+  live_registry_query_source = runner-owned-replay
+  registry_query_rows = 4
+  matched_public_registry_rows = 4
+  query_tool_hash_verified_rows = 4
+  query_output_hash_match_rows = 4
+  runner_owned_registry_query_ready = 1
+  network_query_rows = 0
+  offline_replay_rows = 4
+  source_import_live_registry_query_ready = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-network-fetch-missing
+
+v08-s supplied live-style source-import live-registry-query fixture:
+  live_registry_query_source = provided-csv
+  registry_query_rows = 4
+  matched_public_registry_rows = 4
+  query_tool_hash_verified_rows = 4
+  query_output_hash_match_rows = 4
+  runner_owned_registry_query_ready = 1
+  network_query_rows = 4
+  offline_replay_rows = 0
+  source_import_live_registry_query_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-query-fixture-only
+
+v08-t runner-owned source-import live-registry fetch replay fixture:
+  live_registry_fetch_source = runner-owned-replay
+  fetch_rows = 4
+  matched_query_rows = 4
+  cache_hash_match_rows = 4
+  registry_cache_hash_verified_rows = 4
+  registry_entry_cache_hash_verified_rows = 4
+  source_import_live_registry_fetcher_ready = 1
+  network_fetch_rows = 0
+  offline_replay_rows = 4
+  source_import_live_registry_fetch_ready = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-network-fetch-proof-missing
+
+v08-t supplied live-style source-import live-registry fetch fixture:
+  live_registry_fetch_source = provided-csv
+  fetch_rows = 4
+  matched_query_rows = 4
+  cache_hash_match_rows = 4
+  registry_cache_hash_verified_rows = 4
+  registry_entry_cache_hash_verified_rows = 4
+  source_import_live_registry_fetcher_ready = 1
+  network_fetch_rows = 4
+  offline_replay_rows = 0
+  source_import_live_registry_fetch_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-fetch-fixture-only
+
+v08-u runner-owned source-import live-registry network-proof replay fixture:
+  live_registry_network_proof_source = runner-owned-replay
+  network_proof_rows = 4
+  matched_fetch_rows = 4
+  body_hash_match_rows = 4
+  registry_cache_hash_verified_rows = 4
+  registry_entry_cache_hash_verified_rows = 4
+  source_import_live_registry_network_proof_runner_ready = 1
+  network_fetch_rows = 0
+  offline_replay_rows = 4
+  source_import_live_registry_network_proof_ready = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-network-proof-nonlive
+
+v08-u supplied live-style source-import live-registry network-proof fixture:
+  live_registry_network_proof_source = provided-csv
+  network_proof_rows = 4
+  matched_fetch_rows = 4
+  body_hash_match_rows = 4
+  registry_cache_hash_verified_rows = 4
+  registry_entry_cache_hash_verified_rows = 4
+  source_import_live_registry_network_proof_runner_ready = 1
+  network_fetch_rows = 4
+  offline_replay_rows = 0
+  source_import_live_registry_network_proof_ready = 1
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-live-registry-network-proof-fixture-only
+
+v08-v supplied placeholder-domain source-import real verification fixture:
+  source_import_real_verification_source = provided-csv
+  real_verification_rows = 4
+  matched_proof_rows = 4
+  hash_match_rows = 4
+  artifact_metadata_rows = 4
+  nonplaceholder_artifact_rows = 0
+  hash_attestation_rows = 4
+  official_external_registry_rows = 4
+  independent_verifier_rows = 4
+  live_network_observed_rows = 4
+  source_import_real_verification_review_ready = 1
+  source_import_real_verification_ready = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-real-verification-placeholder-domain
+
+v08-w supplied fixture source-import official authority fixture:
+  source_import_official_authority_source = provided-csv
+  official_authority_rows = 4
+  matched_verification_rows = 4
+  verification_report_hash_match_rows = 4
+  authority_artifact_rows = 4
+  nonplaceholder_authority_artifact_rows = 4
+  authority_hash_attestation_rows = 4
+  authority_domain_match_rows = 4
+  canonical_benchmark_rows = 4
+  official_trust_root_rows = 4
+  independent_authority_review_rows = 4
+  live_authority_observed_rows = 4
+  source_import_official_authority_review_ready = 1
+  source_import_official_authority_ready = 0
+  source_import_verified = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-import-official-authority-fixture-only
+
+v08-x supplied fixture result authority fixture:
+  external_benchmark_result_authority_source = provided-csv
+  result_authority_rows = 4
+  matched_evidence_rows = 4
+  matched_execution_rows = 4
+  result_uri_match_rows = 4
+  provenance_hash_match_rows = 4
+  evaluator_output_hash_match_rows = 4
+  run_log_hash_match_rows = 4
+  metric_value_match_rows = 4
+  result_authority_artifact_rows = 4
+  nonplaceholder_result_authority_artifact_rows = 4
+  result_authority_hash_attestation_rows = 4
+  result_authority_domain_match_rows = 4
+  official_leaderboard_rows = 4
+  official_metric_rows = 4
+  independent_result_review_rows = 4
+  live_result_observed_rows = 4
+  external_benchmark_result_authority_review_ready = 1
+  external_benchmark_result_authority_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-result-authority-fixture-only
+
+v08-y supplied fixture publication package fixture:
+  external_benchmark_publication_source = provided-csv
+  benchmark_comparison_ready = 1
+  publishable_comparison_ready = 0
+  publication_rows = 4
+  matched_result_authority_rows = 4
+  matched_comparison_rows = 4
+  leaderboard_match_rows = 4
+  result_record_match_rows = 4
+  metric_definition_match_rows = 4
+  evaluation_protocol_match_rows = 4
+  comparison_delta_match_rows = 4
+  comparison_verdict_match_rows = 4
+  publication_artifact_rows = 4
+  nonplaceholder_publication_artifact_rows = 4
+  publication_hash_attestation_rows = 4
+  publication_domain_match_rows = 4
+  reproducibility_bundle_rows = 4
+  independent_publication_review_rows = 4
+  live_publication_observed_rows = 4
+  declared_real_publication_rows = 4
+  non_fixture_declared_rows = 0
+  external_benchmark_publication_review_ready = 1
+  external_benchmark_publication_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-publication-fixture-only
+
+v08-z supplied fixture source acquisition fixture:
+  external_benchmark_source_acquisition_source = provided-csv
+  acquisition_rows = 4
+  matched_adapter_rows = 4
+  nonplaceholder_domain_rows = 4
+  remote_uri_rows = 4
+  hash_attestation_rows = 4
+  acquisition_method_rows = 4
+  live_acquisition_observed_rows = 4
+  independent_source_review_rows = 4
+  declared_real_source_rows = 4
+  non_fixture_declared_rows = 0
+  external_benchmark_source_acquisition_review_ready = 1
+  external_benchmark_source_acquisition_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-acquisition-fixture-only
+
+v08-z supplied non-fixture source acquisition package:
+  external_benchmark_source_acquisition_review_ready = 1
+  external_benchmark_source_acquisition_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-acquisition-ready-await-import
+
+v08-aa supplied source acquisition content cache fixture:
+  source_acquisition_ready = 1
+  source_acquisition_content_source = provided-csv
+  content_rows = 4
+  matched_acquisition_rows = 4
+  acquisition_id_match_rows = 4
+  remote_uri_match_rows = 4
+  hash_manifest_match_rows = 4
+  required_content_fields = 24
+  cache_uri_fields = 24
+  content_hash_verified_fields = 24
+  fetch_manifest_ready_rows = 4
+  content_cache_ready_rows = 4
+  independent_content_review_rows = 4
+  declared_real_content_rows = 4
+  non_fixture_declared_rows = 4
+  external_benchmark_source_acquisition_content_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-acquisition-content-ready-await-import
+
+v08-aa supplied bad-hash source acquisition content fixture:
+  hash_manifest_match_rows = 3
+  content_hash_verified_fields = 23
+  external_benchmark_source_acquisition_content_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-source-acquisition-content-hash-manifest-mismatch
+
+v08-ab generated codebase-mini package:
+  benchmark_scope = route-memory-v08ab
+  benchmark_family = codebase-retrieval
+  artifact_source = generated-local-codebase
+  source_manifest_ready = 1
+  dataset_ready = 1
+  split_manifest_ready = 1
+  license_ready = 1
+  metric_spec_ready = 1
+  baseline_artifact_rows = 3
+  result_artifact_rows = 2
+  artifact_hash_manifest_entries = 10
+  artifact_hash_verified_files = 10
+  source_file_rows = 4
+  source_hash_verified_rows = 4
+  dataset_rows = 7
+  present_queries = 5
+  missing_queries = 1
+  near_miss_queries = 1
+  multi_hop_queries = 1
+  route_memory_artifact_chain_verified = 1
+  codebase_mini_source_ready = 1
+  benchmark_result_artifact_verified = 1
+  baseline_comparison_ready = 1
+  real_codebase_declared = 1
+  external_source_rows = 0
+  local_source_rows = 4
+  span_exact = 1.000000
+  chunk_exact = 1.000000
+  missing_abstain = 1.000000
+  near_miss_false_positive = 0.000000
+  wrong_answer_rate = 0.000000
+  duplicate_latest_rate = 0.000000
+  ssd_bytes_per_query > 0
+  real_external_benchmark_verified = 0
+  action = codebase-mini-result-ready-await-review
+
+v08-ab bad-hash codebase-mini guard:
+  artifact_source = provided-dir
+  artifact_hash_manifest_entries = 10
+  artifact_hash_verified_files = 9
+  codebase_mini_source_ready = 1
+  benchmark_result_artifact_verified = 0
+  baseline_comparison_ready = 0
+  real_external_benchmark_verified = 0
+  action = codebase-mini-artifact-hash-mismatch
+
+v08-ac supplied content/result bridge:
+  source_content_ready = 1
+  source_content_rows = 4
+  codebase_mini_source_ready = 1
+  codebase_result_artifact_verified = 1
+  codebase_baseline_comparison_ready = 1
+  bridge_rows = 1
+  matched_codebase_family_rows = 1
+  acquisition_id_match_rows = 1
+  content_summary_hash_verified_rows = 1
+  artifact_dir_match_rows = 1
+  required_bridge_hash_fields = 5
+  bridge_hash_verified_fields = 5
+  source_content_bound_rows = 1
+  result_artifact_bound_rows = 1
+  baseline_bound_rows = 1
+  dataset_bound_rows = 1
+  independent_bridge_review_rows = 1
+  declared_real_bridge_rows = 1
+  non_fixture_declared_rows = 1
+  local_artifact_uri_fields = 5
+  bridge_family_coverage = 1
+  expected_external_families = 4
+  codebase_content_result_bridge_ready = 1
+  external_benchmark_result_bridge_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-content-result-bridge-ready-await-external-family-results
+
+v08-ac bad-hash content/result bridge guard:
+  bridge_hash_verified_fields = 4
+  codebase_content_result_bridge_ready = 0
+  external_benchmark_result_bridge_ready = 0
+  real_external_benchmark_verified = 0
+  action = external-benchmark-content-result-bridge-hash-mismatch
+
+v08-ad supplied all-family result bridge:
+  source_content_ready = 1
+  source_content_rows = 4
+  source_content_family_rows = 4
+  bridge_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  acquisition_id_match_rows = 4
+  content_summary_hash_verified_rows = 4
+  required_result_hash_fields = 28
+  result_hash_attested_fields = 28
+  nonlocal_result_uri_fields = 28
+  local_result_uri_fields = 0
+  bridge_family_coverage = 4
+  expected_external_families = 4
+  family_result_bridge_review_ready = 1
+  external_benchmark_result_bridge_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-family-result-bridge-ready-await-independent-reproduction
+
+v08-ad bad-hash/local-result guards:
+  bad_hash_action = external-benchmark-family-result-bridge-hash-attestation-missing
+  local_result_action = external-benchmark-family-result-bridge-local-result-artifact-uri
+  family_result_bridge_review_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ae supplied independent reproduction/review:
+  family_result_bridge_review_ready = 1
+  external_benchmark_result_bridge_ready = 1
+  result_bridge_rows = 4
+  bridge_family_rows = 4
+  reproduction_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  acquisition_id_match_rows = 4
+  result_artifact_match_rows = 4
+  result_bridge_summary_hash_verified_rows = 4
+  required_reproduction_hash_fields = 28
+  reproduction_hash_attested_fields = 28
+  nonlocal_reproduction_uri_fields = 28
+  local_reproduction_uri_fields = 0
+  independent_reproduction_review_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-independent-reproduction-ready-await-official-release-evidence
+
+v08-ae bad-hash/local-reproduction guards:
+  bad_hash_action = external-benchmark-independent-reproduction-hash-attestation-missing
+  local_reproduction_action = external-benchmark-independent-reproduction-local-artifact-uri
+  independent_reproduction_review_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-af supplied official release evidence:
+  independent_reproduction_review_ready = 1
+  reproduction_family_rows = 4
+  release_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_reproduction_family_rows = 4
+  reproduction_id_match_rows = 4
+  independent_reproduction_summary_hash_verified_rows = 4
+  required_release_hash_fields = 44
+  release_hash_attested_fields = 44
+  required_release_uri_fields = 40
+  nonlocal_release_uri_fields = 40
+  local_release_uri_fields = 0
+  official_release_evidence_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-official-release-evidence-ready-await-live-release-verification
+
+v08-af bad-hash/local-release/reproduction-mismatch guards:
+  bad_hash_action = external-benchmark-official-release-hash-attestation-missing
+  local_release_action = external-benchmark-official-release-local-artifact-uri
+  reproduction_mismatch_action = external-benchmark-official-release-reproduction-mismatch
+  official_release_evidence_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ag supplied live release verification:
+  official_release_evidence_ready = 1
+  release_family_rows = 4
+  live_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_release_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  official_release_match_rows = 4
+  public_archive_match_rows = 4
+  dataset_version_match_rows = 4
+  release_authority_match_rows = 4
+  required_live_hash_fields = 28
+  live_hash_attested_fields = 28
+  required_live_uri_fields = 28
+  nonlocal_live_uri_fields = 28
+  local_live_uri_fields = 0
+  live_network_observed_rows = 4
+  independent_verifier_declared_rows = 4
+  stable_release_observed_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  official_release_live_verification_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-live-release-verification-ready-await-canonical-online-confirmation
+
+v08-ag bad-hash/local-live/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-live-release-hash-attestation-missing
+  local_live_action = external-benchmark-live-release-local-artifact-uri
+  release_mismatch_action = external-benchmark-live-release-binding-mismatch
+  fixture_only_action = external-benchmark-live-release-declaration-missing
+  official_release_live_verification_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ah supplied canonical online confirmation:
+  official_release_live_verification_ready = 1
+  live_family_rows = 4
+  confirmation_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_live_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  live_report_match_rows = 4
+  network_observation_match_rows = 4
+  verifier_identity_match_rows = 4
+  required_confirmation_hash_fields = 36
+  confirmation_hash_attested_fields = 36
+  required_confirmation_uri_fields = 36
+  nonlocal_confirmation_uri_fields = 36
+  local_confirmation_uri_fields = 0
+  runner_owned_confirmation_declared_rows = 4
+  canonical_authority_observed_rows = 4
+  online_fetch_declared_rows = 4
+  content_digest_match_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  canonical_online_confirmation_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-canonical-online-confirmation-ready-await-nonfixture-publication-result-review
+
+v08-ah bad-hash/local-confirmation/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-canonical-online-confirmation-hash-attestation-missing
+  local_confirmation_action = external-benchmark-canonical-online-confirmation-local-artifact-uri
+  release_mismatch_action = external-benchmark-canonical-online-confirmation-binding-mismatch
+  fixture_only_action = external-benchmark-canonical-online-confirmation-declaration-missing
+  canonical_online_confirmation_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ai supplied publication/result review:
+  canonical_online_confirmation_ready = 1
+  canonical_family_rows = 4
+  review_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_canonical_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  canonical_confirmation_match_rows = 4
+  content_digest_match_rows = 4
+  required_review_hash_fields = 36
+  review_hash_attested_fields = 36
+  required_review_uri_fields = 36
+  nonlocal_review_uri_fields = 36
+  local_review_uri_fields = 0
+  required_new_review_uri_fields = 28
+  nonplaceholder_new_review_uri_fields = 28
+  placeholder_new_review_uri_fields = 0
+  canonical_confirmation_bound_rows = 4
+  content_digest_manifest_bound_rows = 4
+  publication_review_bound_rows = 4
+  result_review_bound_rows = 4
+  publication_record_bound_rows = 4
+  result_record_bound_rows = 4
+  reviewer_identity_bound_rows = 4
+  publication_authority_bound_rows = 4
+  result_authority_bound_rows = 4
+  independent_review_declared_rows = 4
+  publication_observed_declared_rows = 4
+  result_observed_declared_rows = 4
+  canonical_result_match_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  publication_result_review_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-publication-result-review-ready-await-live-ingestion-promotion-evidence
+
+v08-ai bad-hash/local-review/placeholder-review/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-publication-result-review-hash-attestation-missing
+  local_review_action = external-benchmark-publication-result-review-local-artifact-uri
+  placeholder_review_action = external-benchmark-publication-result-review-placeholder-artifact-uri
+  release_mismatch_action = external-benchmark-publication-result-review-binding-mismatch
+  fixture_only_action = external-benchmark-publication-result-review-declaration-missing
+  publication_result_review_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-aj supplied live publication/result ingestion:
+  publication_result_review_ready = 1
+  review_family_rows = 4
+  ingestion_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_review_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  publication_review_match_rows = 4
+  result_review_match_rows = 4
+  publication_record_match_rows = 4
+  result_record_match_rows = 4
+  required_ingestion_hash_fields = 56
+  ingestion_hash_attested_fields = 56
+  required_ingestion_uri_fields = 56
+  nonlocal_ingestion_uri_fields = 56
+  local_ingestion_uri_fields = 0
+  required_new_ingestion_uri_fields = 40
+  nonplaceholder_new_ingestion_uri_fields = 40
+  placeholder_new_ingestion_uri_fields = 0
+  publication_review_bound_rows = 4
+  result_review_bound_rows = 4
+  publication_record_bound_rows = 4
+  result_record_bound_rows = 4
+  live_publication_record_bound_rows = 4
+  live_result_record_bound_rows = 4
+  publication_ingest_transcript_bound_rows = 4
+  result_ingest_transcript_bound_rows = 4
+  publication_response_header_bound_rows = 4
+  result_response_header_bound_rows = 4
+  publication_content_digest_bound_rows = 4
+  result_content_digest_bound_rows = 4
+  publication_tls_certificate_chain_bound_rows = 4
+  result_tls_certificate_chain_bound_rows = 4
+  runner_owned_ingestion_declared_rows = 4
+  live_network_ingestion_declared_rows = 4
+  publication_record_digest_match_declared_rows = 4
+  result_record_digest_match_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  live_publication_result_ingestion_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-live-publication-result-ingestion-ready-await-promotion-authority-evidence
+
+v08-aj bad-hash/local-ingestion/placeholder-ingestion/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-live-publication-result-ingestion-hash-attestation-missing
+  local_ingestion_action = external-benchmark-live-publication-result-ingestion-local-artifact-uri
+  placeholder_ingestion_action = external-benchmark-live-publication-result-ingestion-placeholder-artifact-uri
+  release_mismatch_action = external-benchmark-live-publication-result-ingestion-binding-mismatch
+  fixture_only_action = external-benchmark-live-publication-result-ingestion-declaration-missing
+  live_publication_result_ingestion_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ak supplied authority/promotion evidence:
+  live_publication_result_ingestion_ready = 1
+  ingestion_family_rows = 4
+  authority_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  matched_ingestion_family_rows = 4
+  reproduction_id_match_rows = 4
+  release_id_match_rows = 4
+  live_publication_record_match_rows = 4
+  live_result_record_match_rows = 4
+  publication_content_digest_match_rows = 4
+  result_content_digest_match_rows = 4
+  required_authority_hash_fields = 56
+  authority_hash_attested_fields = 56
+  required_authority_uri_fields = 56
+  nonlocal_authority_uri_fields = 56
+  local_authority_uri_fields = 0
+  required_new_authority_uri_fields = 40
+  nonplaceholder_new_authority_uri_fields = 40
+  placeholder_new_authority_uri_fields = 0
+  live_publication_record_bound_rows = 4
+  live_result_record_bound_rows = 4
+  publication_content_digest_bound_rows = 4
+  result_content_digest_bound_rows = 4
+  authority_decision_bound_rows = 4
+  promotion_review_bound_rows = 4
+  benchmark_registry_entry_bound_rows = 4
+  leaderboard_entry_bound_rows = 4
+  reproducibility_package_bound_rows = 4
+  artifact_archive_bound_rows = 4
+  authority_identity_bound_rows = 4
+  authority_conflict_disclosure_bound_rows = 4
+  promotion_trace_bound_rows = 4
+  final_claim_packet_bound_rows = 4
+  independent_authority_declared_rows = 4
+  official_result_authority_declared_rows = 4
+  benchmark_owner_registry_declared_rows = 4
+  publication_result_consistent_declared_rows = 4
+  claim_scope_limited_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  authority_promotion_evidence_ready = 1
+  real_external_benchmark_verified = 0
+  action = external-benchmark-authority-promotion-evidence-ready-await-real-external-benchmark-run-evidence
+
+v08-ak bad-hash/local-authority/placeholder-authority/release-mismatch/fixture guards:
+  bad_hash_action = external-benchmark-authority-promotion-evidence-hash-attestation-missing
+  local_authority_action = external-benchmark-authority-promotion-evidence-local-artifact-uri
+  placeholder_authority_action = external-benchmark-authority-promotion-evidence-placeholder-artifact-uri
+  release_mismatch_action = external-benchmark-authority-promotion-evidence-binding-mismatch
+  fixture_only_action = external-benchmark-authority-promotion-evidence-declaration-missing
+  authority_promotion_evidence_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-al local codebase run/evaluator trace:
+  authority_promotion_evidence_ready = 1
+  codebase_mini_source_ready = 1
+  benchmark_result_artifact_verified = 1
+  baseline_comparison_ready = 1
+  trace_artifact_files = 6
+  trace_hash_manifest_entries = 6
+  trace_hash_verified_files = 6
+  dataset_rows = 7
+  result_rows = 7
+  query_trace_rows = 7
+  evaluator_output_rows = 7
+  matched_query_rows = 7
+  dataset_bound_rows = 7
+  result_bound_rows = 7
+  runner_owned_evaluator_rows = 7
+  independent_evaluator_rows = 0
+  metric_rows = 5
+  span_exact = 1.000000
+  chunk_exact = 1.000000
+  missing_abstain = 1.000000
+  near_miss_false_positive = 0.000000
+  wrong_answer_rate = 0.000000
+  metrics_match_rows = 5
+  codebase_run_evaluator_trace_ready = 1
+  external_family_coverage = 1
+  expected_external_families = 4
+  external_benchmark_run_evaluator_trace_ready = 0
+  real_external_benchmark_verified = 0
+  action = codebase-run-evaluator-trace-ready-await-independent-all-family-run-evidence
+
+v08-al bad-hash/query-binding/metric guards:
+  bad_hash_action = external-benchmark-run-evaluator-trace-hash-mismatch
+  bad_query_action = external-benchmark-run-evaluator-trace-query-binding-mismatch
+  bad_metric_action = external-benchmark-run-evaluator-trace-metric-mismatch
+  codebase_run_evaluator_trace_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-am supplied independent all-family run/evaluator evidence:
+  upstream_codebase_run_evaluator_trace_ready = 1
+  upstream_authority_promotion_evidence_ready = 1
+  evidence_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_evidence_uri_fields = 28
+  nonlocal_evidence_uri_fields = 28
+  local_evidence_uri_fields = 0
+  nonplaceholder_evidence_uri_fields = 28
+  required_evidence_hash_fields = 28
+  evidence_hash_attested_fields = 28
+  total_query_rows = 256
+  min_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  trace_bound_rows = 4
+  evaluator_bound_rows = 4
+  metrics_bound_rows = 4
+  authority_bound_rows = 4
+  independent_evaluator_declared_rows = 4
+  official_metric_declared_rows = 4
+  all_queries_bound_declared_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_independent_run_evaluator_evidence_ready = 1
+  real_external_benchmark_verified = 0
+  action = independent-run-evaluator-evidence-ready-await-live-replay-or-final-review
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-am bad coverage/placeholder/metric/declaration/jump guards:
+  bad_coverage_action = external-benchmark-independent-run-evaluator-evidence-coverage-incomplete
+  bad_placeholder_action = external-benchmark-independent-run-evaluator-evidence-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-independent-run-evaluator-evidence-quality-threshold-missing
+  bad_declaration_action = external-benchmark-independent-run-evaluator-evidence-declaration-missing
+  bad_jump_action = external-benchmark-independent-run-evaluator-evidence-jump-guardrail-violated
+  external_benchmark_independent_run_evaluator_evidence_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-an supplied live replay/final review mechanics:
+  upstream_independent_run_evaluator_evidence_ready = 1
+  upstream_real_external = 0
+  review_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_replay_review_uri_fields = 32
+  nonlocal_replay_review_uri_fields = 32
+  local_replay_review_uri_fields = 0
+  nonplaceholder_replay_review_uri_fields = 32
+  required_replay_review_hash_fields = 32
+  replay_review_hash_attested_fields = 32
+  total_replayed_query_rows = 256
+  min_replayed_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  v08am_evidence_bound_rows = 4
+  all_queries_replayed_rows = 4
+  metrics_recomputed_rows = 4
+  live_replay_declared_rows = 4
+  runner_owned_replay_declared_rows = 4
+  network_observed_declared_rows = 4
+  final_review_approved_rows = 4
+  independent_final_reviewer_declared_rows = 4
+  public_registry_bound_rows = 4
+  non_fixture_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_live_replay_final_review_ready = 1
+  real_external_benchmark_verified = 0
+  action = live-replay-final-review-ready-await-public-nonfixture-verification
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-an bad coverage/placeholder/metric/binding/replay-declaration/review-declaration/jump guards:
+  bad_coverage_action = external-benchmark-live-replay-final-review-coverage-incomplete
+  bad_placeholder_action = external-benchmark-live-replay-final-review-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-live-replay-final-review-quality-threshold-missing
+  bad_binding_action = external-benchmark-live-replay-final-review-binding-missing
+  bad_replay_declaration_action = external-benchmark-live-replay-final-review-replay-declaration-missing
+  bad_review_declaration_action = external-benchmark-live-replay-final-review-review-declaration-missing
+  bad_jump_action = external-benchmark-live-replay-final-review-jump-guardrail-violated
+  external_benchmark_live_replay_final_review_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ao supplied public non-fixture/direct-run verification mechanics:
+  upstream_live_replay_final_review_ready = 1
+  upstream_real_external = 0
+  verification_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_public_verification_uri_fields = 40
+  nonlocal_public_verification_uri_fields = 40
+  local_public_verification_uri_fields = 0
+  nonplaceholder_public_verification_uri_fields = 40
+  required_public_verification_hash_fields = 40
+  public_verification_hash_attested_fields = 40
+  total_verified_query_rows = 256
+  min_verified_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  v08an_review_bound_rows = 4
+  public_nonfixture_verification_declared_rows = 4
+  public_artifact_registry_declared_rows = 4
+  direct_runner_owned_run_declared_rows = 4
+  direct_external_dataset_declared_rows = 4
+  direct_evaluator_execution_declared_rows = 4
+  live_network_fetch_declared_rows = 4
+  third_party_reviewer_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_public_nonfixture_verification_ready = 1
+  real_external_benchmark_verified = 0
+  action = public-nonfixture-verification-ready-await-runner-owned-live-execution-audit
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-ao bad coverage/placeholder/metric/binding/public-declaration/direct-declaration/jump guards:
+  bad_coverage_action = external-benchmark-public-nonfixture-verification-coverage-incomplete
+  bad_placeholder_action = external-benchmark-public-nonfixture-verification-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-public-nonfixture-verification-quality-threshold-missing
+  bad_binding_action = external-benchmark-public-nonfixture-verification-binding-missing
+  bad_public_declaration_action = external-benchmark-public-nonfixture-verification-public-declaration-missing
+  bad_direct_declaration_action = external-benchmark-public-nonfixture-verification-direct-run-declaration-missing
+  bad_jump_action = external-benchmark-public-nonfixture-verification-jump-guardrail-violated
+  external_benchmark_public_nonfixture_verification_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ap supplied runner-owned live execution/audit mechanics:
+  upstream_public_nonfixture_verification_ready = 1
+  upstream_real_external = 0
+  audit_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_live_execution_audit_uri_fields = 52
+  nonlocal_live_execution_audit_uri_fields = 52
+  local_live_execution_audit_uri_fields = 0
+  nonplaceholder_live_execution_audit_uri_fields = 52
+  required_live_execution_audit_hash_fields = 52
+  live_execution_audit_hash_attested_fields = 52
+  total_executed_query_rows = 256
+  min_executed_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  v08ao_verification_bound_rows = 4
+  runner_owned_execution_declared_rows = 4
+  live_network_execution_declared_rows = 4
+  external_dataset_live_fetch_declared_rows = 4
+  evaluator_invoked_by_runner_declared_rows = 4
+  replay_disabled_declared_rows = 4
+  audit_log_complete_declared_rows = 4
+  third_party_audit_review_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_runner_owned_live_execution_audit_ready = 1
+  real_external_benchmark_verified = 0
+  action = runner-owned-live-execution-audit-ready-await-independent-live-rerun-confirmation
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-ap bad coverage/placeholder/metric/binding/runner-declaration/live-declaration/audit-declaration/jump guards:
+  bad_coverage_action = external-benchmark-runner-owned-live-execution-audit-coverage-incomplete
+  bad_placeholder_action = external-benchmark-runner-owned-live-execution-audit-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-runner-owned-live-execution-audit-quality-threshold-missing
+  bad_binding_action = external-benchmark-runner-owned-live-execution-audit-binding-missing
+  bad_runner_declaration_action = external-benchmark-runner-owned-live-execution-audit-runner-declaration-missing
+  bad_live_declaration_action = external-benchmark-runner-owned-live-execution-audit-live-execution-declaration-missing
+  bad_audit_declaration_action = external-benchmark-runner-owned-live-execution-audit-audit-declaration-missing
+  bad_jump_action = external-benchmark-runner-owned-live-execution-audit-jump-guardrail-violated
+  external_benchmark_runner_owned_live_execution_audit_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-aq supplied independent live rerun confirmation mechanics:
+  upstream_runner_owned_live_execution_audit_ready = 1
+  upstream_real_external = 0
+  confirmation_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_live_rerun_confirmation_uri_fields = 60
+  nonlocal_live_rerun_confirmation_uri_fields = 60
+  local_live_rerun_confirmation_uri_fields = 0
+  nonplaceholder_live_rerun_confirmation_uri_fields = 60
+  required_live_rerun_confirmation_hash_fields = 60
+  live_rerun_confirmation_hash_attested_fields = 60
+  total_rerun_query_rows = 256
+  min_rerun_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  metric_delta_pass_rows = 4
+  v08ap_audit_bound_rows = 4
+  independent_runner_declared_rows = 4
+  independent_environment_declared_rows = 4
+  live_network_rerun_declared_rows = 4
+  external_dataset_refetch_declared_rows = 4
+  evaluator_reinvoked_declared_rows = 4
+  audit_receipt_reconciled_declared_rows = 4
+  metric_recomputed_declared_rows = 4
+  third_party_confirmation_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_independent_live_rerun_confirmation_ready = 1
+  real_external_benchmark_verified = 0
+  action = independent-live-rerun-confirmation-ready-await-real-nonfixture-benchmark-run-package
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-aq bad coverage/placeholder/metric/delta/binding/independent-declaration/live-declaration/reconciliation-declaration/jump guards:
+  bad_coverage_action = external-benchmark-independent-live-rerun-confirmation-coverage-incomplete
+  bad_placeholder_action = external-benchmark-independent-live-rerun-confirmation-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-independent-live-rerun-confirmation-quality-threshold-missing
+  bad_delta_action = external-benchmark-independent-live-rerun-confirmation-metric-delta-too-large
+  bad_binding_action = external-benchmark-independent-live-rerun-confirmation-binding-missing
+  bad_independent_declaration_action = external-benchmark-independent-live-rerun-confirmation-independent-declaration-missing
+  bad_live_declaration_action = external-benchmark-independent-live-rerun-confirmation-live-rerun-declaration-missing
+  bad_reconciliation_declaration_action = external-benchmark-independent-live-rerun-confirmation-reconciliation-declaration-missing
+  bad_jump_action = external-benchmark-independent-live-rerun-confirmation-jump-guardrail-violated
+  external_benchmark_independent_live_rerun_confirmation_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-ar supplied real nonfixture run package intake mechanics:
+  upstream_independent_live_rerun_confirmation_ready = 1
+  upstream_real_external = 0
+  package_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_run_package_uri_fields = 60
+  nonlocal_run_package_uri_fields = 60
+  local_run_package_uri_fields = 0
+  nonplaceholder_run_package_uri_fields = 60
+  required_run_package_hash_fields = 60
+  run_package_hash_attested_fields = 60
+  total_packaged_query_rows = 256
+  min_packaged_query_rows_pass_rows = 4
+  metric_threshold_pass_rows = 4
+  metric_delta_pass_rows = 4
+  v08aq_confirmation_bound_rows = 4
+  run_package_nonfixture_declared_rows = 4
+  official_benchmark_declared_rows = 4
+  public_archive_declared_rows = 4
+  raw_query_set_declared_rows = 4
+  raw_prediction_output_declared_rows = 4
+  evaluator_container_declared_rows = 4
+  immutable_archive_declared_rows = 4
+  license_review_declared_rows = 4
+  pii_review_declared_rows = 4
+  third_party_reproducibility_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_real_nonfixture_run_package_intake_ready = 1
+  real_external_benchmark_verified = 0
+  action = real-nonfixture-run-package-intake-ready-await-live-package-artifact-fetch
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-ar bad coverage/placeholder/metric/delta/binding/package-declaration/review-declaration/jump guards:
+  bad_coverage_action = external-benchmark-real-nonfixture-run-package-coverage-incomplete
+  bad_placeholder_action = external-benchmark-real-nonfixture-run-package-placeholder-artifact-uri
+  bad_metric_action = external-benchmark-real-nonfixture-run-package-quality-threshold-missing
+  bad_delta_action = external-benchmark-real-nonfixture-run-package-metric-delta-too-large
+  bad_binding_action = external-benchmark-real-nonfixture-run-package-binding-missing
+  bad_package_declaration_action = external-benchmark-real-nonfixture-run-package-package-declaration-missing
+  bad_review_declaration_action = external-benchmark-real-nonfixture-run-package-review-declaration-missing
+  bad_jump_action = external-benchmark-real-nonfixture-run-package-jump-guardrail-violated
+  external_benchmark_real_nonfixture_run_package_intake_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-as supplied live package artifact fetch/authority mechanics:
+  upstream_real_nonfixture_run_package_intake_ready = 1
+  upstream_real_external = 0
+  fetch_rows = 60
+  expected_artifact_rows = 60
+  expected_family_rows = 60
+  unexpected_artifact_type_rows = 0
+  duplicate_artifact_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  artifact_type_coverage = 60
+  expected_artifact_types_per_family = 15
+  required_live_fetch_uri_fields = 180
+  nonlocal_live_fetch_uri_fields = 180
+  local_live_fetch_uri_fields = 0
+  nonplaceholder_live_fetch_uri_fields = 180
+  required_live_fetch_hash_fields = 180
+  live_fetch_hash_attested_fields = 180
+  http_status_pass_rows = 60
+  content_digest_match_declared_rows = 60
+  v08ar_package_intake_bound_rows = 60
+  runner_owned_live_fetch_declared_rows = 60
+  network_fetch_transcript_declared_rows = 60
+  tls_certificate_verified_declared_rows = 60
+  dns_resolution_verified_declared_rows = 60
+  http_status_verified_declared_rows = 60
+  authority_registry_verified_declared_rows = 60
+  official_source_authority_verified_declared_rows = 60
+  fixture_free_rows = 60
+  timestamp_rows = 60
+  external_benchmark_live_package_artifact_fetch_authority_ready = 1
+  real_external_benchmark_verified = 0
+  action = live-package-artifact-fetch-authority-ready-await-official-result-reconciliation
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-as bad coverage/placeholder/status/digest/binding/runner/network/authority/jump guards:
+  bad_coverage_action = external-benchmark-live-package-artifact-fetch-coverage-incomplete
+  bad_placeholder_action = external-benchmark-live-package-artifact-fetch-placeholder-artifact-uri
+  bad_status_action = external-benchmark-live-package-artifact-fetch-http-status-missing
+  bad_digest_action = external-benchmark-live-package-artifact-fetch-content-digest-mismatch
+  bad_binding_action = external-benchmark-live-package-artifact-fetch-binding-missing
+  bad_runner_declaration_action = external-benchmark-live-package-artifact-fetch-runner-declaration-missing
+  bad_network_declaration_action = external-benchmark-live-package-artifact-fetch-network-proof-missing
+  bad_authority_declaration_action = external-benchmark-live-package-artifact-fetch-authority-verification-missing
+  bad_jump_action = external-benchmark-live-package-artifact-fetch-jump-guardrail-violated
+  external_benchmark_live_package_artifact_fetch_authority_ready = 0
+  real_external_benchmark_verified = 0
+
+v08-at supplied official result reconciliation mechanics:
+  upstream_live_package_artifact_fetch_authority_ready = 1
+  upstream_real_external = 0
+  fetch_artifact_rows_seen = 24
+  reconciliation_rows = 4
+  expected_reconciliation_rows = 4
+  expected_family_rows = 4
+  duplicate_family_rows = 0
+  family_coverage = 4
+  expected_external_families = 4
+  required_reconciliation_uri_fields = 28
+  nonlocal_reconciliation_uri_fields = 28
+  local_reconciliation_uri_fields = 0
+  nonplaceholder_reconciliation_uri_fields = 28
+  required_reconciliation_hash_fields = 28
+  reconciliation_hash_attested_fields = 28
+  v08as_live_fetch_authority_bound_rows = 4
+  package_identity_match_rows = 4
+  artifact_binding_declared_rows = 4
+  fetch_artifact_identity_match_rows = 4
+  metric_delta_within_tolerance_rows = 4
+  query_count_exact_match_rows = 4
+  query_count_match_declared_rows = 4
+  evaluator_identity_match_declared_rows = 4
+  result_digest_match_declared_rows = 4
+  official_source_observed_declared_rows = 4
+  public_leaderboard_observed_declared_rows = 4
+  runner_owned_reconciliation_declared_rows = 4
+  fixture_free_rows = 4
+  timestamp_rows = 4
+  external_benchmark_official_result_reconciliation_ready = 1
+  real_external_benchmark_verified = 0
+  action = official-result-reconciliation-ready-await-public-real-external-claim
+  routing_trigger_rate = 0.000000
+  active_jump_rate = 0.000000
+
+v08-at bad coverage/hash/placeholder/package/artifact/metric/query/declaration/official-source/runner/jump guards:
+  bad_coverage_action = external-benchmark-official-result-reconciliation-coverage-incomplete
+  bad_hash_action = external-benchmark-official-result-reconciliation-hash-attestation-missing
+  bad_placeholder_action = external-benchmark-official-result-reconciliation-placeholder-artifact-uri
+  bad_package_action = external-benchmark-official-result-reconciliation-package-identity-mismatch
+  bad_artifact_binding_action = external-benchmark-official-result-reconciliation-artifact-binding-missing
+  bad_artifact_identity_action = external-benchmark-official-result-reconciliation-artifact-identity-mismatch
+  bad_metric_action = external-benchmark-official-result-reconciliation-metric-mismatch
+  bad_query_action = external-benchmark-official-result-reconciliation-query-count-mismatch
+  bad_declaration_action = external-benchmark-official-result-reconciliation-evaluator-or-digest-declaration-missing
+  bad_official_source_action = external-benchmark-official-result-reconciliation-official-source-missing
+  bad_runner_action = external-benchmark-official-result-reconciliation-runner-declaration-missing
+  bad_jump_action = external-benchmark-official-result-reconciliation-jump-guardrail-violated
+  external_benchmark_official_result_reconciliation_ready = 0
+  real_external_benchmark_verified = 0
+```
+
+Expected:
+
+- no route-memory policy is promoted by default before chunk-quality is ready
+- external benchmark adapter/evidence schemas pass before source/result evidence exists
+- supplied evidence CSV import can raise source/result readiness when all
+  evidence fields are populated
+- supplied evidence CSV comparison can compute baseline deltas while staying
+  unpublished before promotion
+- supplied placeholder evidence is rejected as real benchmark evidence until
+  artifact URIs, provenance hashes, and a verifier exist; real-format evidence
+  still blocks publishable claims until the verifier exists
+- local file artifact hashes can be verified without treating synthetic local
+  fixtures as authentic external benchmarks
+- authenticity/evaluator contracts can pass without treating synthetic local
+  fixtures as executed external benchmarks
+- execution/evaluator-output artifacts can pass, and local/fixture
+  attestations can match those artifacts, without treating synthetic local
+  fixtures as independently verified external benchmarks
+- attestor identity/provenance artifacts can pass without treating the whole
+  external benchmark claim as publishable
+- final-review artifacts can pass mechanical hash/metric/provenance checks
+  without treating fixture/local review as a real publishable external benchmark
+- local final-review artifacts must not become publishable external benchmark
+  evidence by rewriting real/non-fixture declaration flags
+- HTTPS hash-attested final-review artifacts can count as non-local review
+  evidence, but not while lower-chain evidence/execution/attestation/identity
+  artifacts are still local fixtures
+- fully remote-style lower-chain and final-review artifacts still cannot become
+  publishable without explicit real source-import verification
+- source-import contract mechanics can pass without turning a remote-style
+  fixture into a verified external benchmark
+- runner-owned source-import verifier replay mechanics can pass without
+  treating offline replay as live source-import verification
+- live-style source-import verifier evidence can pass without treating it as
+  independently reviewed source-import verification
+- independent source-import live-review mechanics can pass without treating a
+  supplied review package as authoritative source-import verification
+- live-registry fetch/cache mechanics can pass without treating supplied fetch
+  rows as real network proof
+- live-registry network-proof mechanics can pass without treating supplied
+  proof rows as real source-import verification
+- real-verification mechanics can pass review/hash checks without treating
+  placeholder verification registries as real source-import verification
+- official-authority mechanics can pass review/hash/domain checks without
+  treating fixture authority/trust-root rows as real source-import verification
+- result-authority mechanics can pass review/hash/domain checks without
+  treating fixture leaderboard/result-authority rows as real external benchmark
+  verification
+- publication-package mechanics can pass binding/hash/domain checks without
+  treating fixture publication/reproducibility packages or unpublished
+  comparisons as real external benchmark publication
+- source-acquisition mechanics can pass official URI/hash/domain/review checks
+  without treating acquisition metadata alone as imported or verified external
+  benchmark results
+- source-acquisition content-cache mechanics can pass URI/hash/cache checks
+  without treating local cache verification alone as a real external benchmark
+  result or publication claim
+- codebase-mini mechanics can pass on real local repository files, baseline
+  artifacts, result artifacts, and h11-c RouteMemory store linkage without
+  treating local instrumentation as an independent external benchmark claim
+- source-content/result bridge mechanics can bind v08-aa content to v08-ab
+  codebase-mini results, while all-family result-bridge mechanics can require
+  four non-local bridge rows and 28 sha256-attested HTTPS result fields without
+  treating supplied bridge rows as real external benchmark verification
+- independent reproduction/review mechanics can bind all four benchmark-family
+  result bridges to supplied non-local reproduction rows and 28 sha256-attested
+  HTTPS reproduction fields without treating those rows as official release
+  evidence or real external benchmark verification
+- local run/evaluator trace mechanics can verify a runner-owned codebase-mini
+  trace, and supplied independent all-family run/evaluator evidence mechanics can
+  pass URI/hash/metric/declaration guards, without treating supplied rows as live
+  replayed or final-reviewed external benchmark proof
+- supplied live replay/final-review mechanics can bind replay/review artifacts,
+  replay query volume, metric thresholds, declarations, and route/jump zero
+  while still leaving real external benchmark verification blocked until public
+  non-fixture verification or direct runner-owned external runs exist
+- supplied public non-fixture/direct-run verification mechanics can bind public
+  artifact registries, direct-run receipts, reviewer attestations, metric
+  thresholds, declarations, and route/jump zero without treating supplied
+  receipts as runner-owned live execution/audit proof
+- supplied runner-owned live execution/audit mechanics can bind live execution
+  manifests, command receipts, network traces, dataset fetch receipts, evaluator
+  outputs, metric recomputation, environment attestations, audit reports, and
+  route/jump zero without treating supplied audit receipts as independent live
+  rerun confirmation
+- supplied independent live rerun confirmation mechanics can bind rerun
+  manifests, command receipts, network traces, dataset refetch receipts,
+  evaluator re-invocation, metric diffs, receipt reconciliation, environment,
+  observer, third-party, timestamp, and registry evidence with route/jump zero
+  without treating supplied confirmation as a real non-fixture benchmark run
+  package
+- supplied real nonfixture run package intake mechanics can bind run package
+  manifests, raw query sets, raw prediction outputs, evaluator container
+  digests/configs, metric reports, submission receipts, public archives,
+  official leaderboard entries, license/PII/repro review, package signatures,
+  timestamp authority, registry evidence, and route/jump zero without treating
+  supplied package intake as live verified external benchmark proof
+- supplied live package artifact fetch/authority mechanics can bind fetched
+  artifacts, fetch receipts, authority records, HTTP status, content-digest
+  match declarations, runner-owned live fetch declarations, network/TLS/DNS
+  proof, authority declarations, timestamp evidence, and route/jump zero
+  without treating supplied fetch/authority rows as official reconciled
+  external benchmark results
+- external benchmark comparison is deferred rather than overclaimed
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h11-a PC RouteLM Prototype Readiness
+
+h11-a opens the PC RouteLM / NLG prototype boundary without claiming that a
+real prototype exists. The contract requires supplied evidence for:
+
+- a quantized 3B-14B small generator adapter
+- CPU RAM or NVMe resident O(n) route memory
+- GPU candidate scoring
+- GPU decoder binding
+- an NLG smoke result URI
+- license and provenance evidence
+
+```bash
+experiments/run_v11_pc_routelm_prototype_readiness.sh
+experiments/test_v11_pc_routelm_prototype_readiness.sh
+experiments/test_v11_pc_routelm_prototype_import.sh
+```
+
+Default result:
+
+```text
+prototype_contract_schema_ready = 1
+component_evidence_ready = 0
+nlg_smoke_ready = 0
+pc_routelm_prototype_ready = 0
+publishable_pc_routelm_ready = 0
+action = pc-routelm-components-missing
+```
+
+Supplied component fixture:
+
+```text
+small_generator_adapter_ready = 1
+route_memory_residency_ready = 1
+candidate_scoring_ready = 1
+decoder_binding_ready = 1
+nlg_smoke_ready = 1
+component_evidence_ready = 1
+diagnostic_prototype_ready = 1
+pc_routelm_prototype_ready = 0
+publishable_pc_routelm_ready = 0
+action = diagnostic-prototype-only
+```
+
+Expected:
+
+- supplied component evidence can exercise the prototype contract
+- real PC RouteLM remains blocked until default promotion, real teacher-source
+  distillation, external benchmark comparison, measured GPU speed evidence, and
+  non-fixture artifact evidence exist
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h11-b PC RouteLM Prototype Artifact Verification
+
+h11-b adds an artifact/provenance verifier above the h11-a component contract.
+It checks artifact URIs and sha256 hashes for:
+
+- generator model artifact
+- route-memory store artifact
+- candidate scorer artifact
+- decoder binding artifact
+- NLG smoke transcript/result
+- benchmark result artifact
+- license and provenance artifacts
+
+```bash
+experiments/run_v11_pc_routelm_prototype_artifact_verifier.sh
+experiments/test_v11_pc_routelm_prototype_artifact_verifier.sh
+experiments/test_v11_pc_routelm_prototype_artifact_import.sh
+```
+
+Default result:
+
+```text
+prototype_rows = 0
+artifact_rows = 0
+prototype_artifact_chain_verified = 0
+real_pc_routelm_artifact_verified = 0
+action = pc-routelm-components-missing
+```
+
+Supplied local artifact fixture:
+
+```text
+prototype_rows = 1
+artifact_rows = 1
+matched_prototype_rows = 1
+generator_hash_verified_rows = 1
+route_memory_hash_verified_rows = 1
+candidate_scorer_hash_verified_rows = 1
+decoder_binding_hash_verified_rows = 1
+nlg_smoke_hash_verified_rows = 1
+benchmark_result_hash_verified_rows = 1
+license_hash_verified_rows = 1
+provenance_hash_verified_rows = 1
+prototype_artifact_chain_verified = 1
+real_pc_routelm_artifact_verified = 0
+action = pc-routelm-real-artifact-review-missing
+```
+
+Expected:
+
+- supplied local artifacts can verify the h11-b hash-chain mechanics
+- a local `results/` fixture cannot become real PC RouteLM evidence by setting
+  `real_prototype_declared=1` or `fixture_or_synthetic_declared=0`
+- the h11-a readiness summary now includes
+  `prototype_artifact_chain_verified`, `real_pc_routelm_artifact_verified`, and
+  `prototype_artifact_action`
+- real PC RouteLM remains blocked until non-fixture artifact evidence, default
+  promotion, teacher-source distillation, external benchmark verification, and
+  measured GPU speed evidence all exist
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h11-c NVMe RouteMemory Store Artifact Smoke
+
+h11-c creates a small concrete RouteMemory store artifact without claiming a
+working PC RouteLM product. It treats NVMe as cold route-memory/chunk storage
+and keeps RAM/VRAM roles as metadata and hot-candidate layers.
+
+```bash
+experiments/run_v11_nvme_route_memory_store.sh
+experiments/test_v11_nvme_route_memory_store.sh
+experiments/test_v11_nvme_route_memory_artifact.sh
+```
+
+Generated store files:
+
+```text
+route_memory_store.bin
+route_index.bin
+chunk_pages.bin
+chunk_offsets.bin
+chunk_credit.bin
+page_table.bin
+manifest.json
+sha256sums.txt
+```
+
+Generated store smoke:
+
+```text
+artifact_source = generated-fixture
+artifact_files_found = 7
+hash_manifest_entries = 7
+hash_verified_files = 7
+route_memory_store_size_bytes > 0
+route_memory_chunk_count = 3
+route_memory_index_rows = 3
+route_lookup_works = 1
+candidate_span_read_works = 1
+span_exact = 1.000000
+chunk_exact = 1.000000
+missing_abstain = 1.000000
+wrong_answer_rate = 0.000000
+route_memory_artifact_chain_verified = 1
+real_pc_routelm_artifact_verified = 0
+real_external_benchmark_verified = 0
+action = nvme-route-memory-artifact-ready
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Corrupted artifact guard:
+
+```text
+artifact_source = provided-dir
+hash_verified_files = 6
+route_memory_artifact_chain_verified = 0
+action = nvme-route-memory-artifact-hash-mismatch
+```
+
+Expected:
+
+- the RouteMemory store bundle can be hash-verified and byte-read by offset
+- missing queries abstain rather than selecting a wrong chunk
+- a corrupted store file blocks artifact-chain verification
+- h11-c remains store instrumentation, not a real PC RouteLM/NLG or external
+  benchmark claim
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h11-d PC RouteLM Diagnostic NLG Smoke
+
+h11-d adds the first generator-facing diagnostic smoke above the h11-c
+RouteMemory store. It writes a generated transcript/result artifact and checks
+that an answer uses retrieved evidence without enabling a real product claim.
+
+```bash
+experiments/run_v11_pc_routelm_nlg_smoke.sh
+experiments/test_v11_pc_routelm_nlg_smoke.sh
+```
+
+Generated NLG smoke:
+
+```text
+nlg_source = generated-fixture
+nlg_rows = 3
+diagnostic_artifact_ready = 1
+teacher_off_inference = 1
+retrieved_evidence_used = 1
+evidence_binding_ready = 1
+nlg_quality_ready = 1
+answer_grounded_rate = 1.000000
+span_citation_accuracy = 1.000000
+span_exact = 1.000000
+chunk_exact = 1.000000
+missing_abstain = 1.000000
+wrong_answer_rate = 0.000000
+pc_routelm_nlg_smoke_ready = 1
+real_pc_routelm_nlg_verified = 0
+action = diagnostic-nlg-smoke-ready
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Guard coverage:
+
+- bad grounding or wrong-answer rows block the NLG smoke readiness path
+- malformed NLG CSV row widths are rejected
+- generated fixtures cannot become real PC RouteLM/NLG evidence
+- real NLG remains blocked until non-fixture generator artifacts, transcript/
+  result evidence, teacher-source, benchmark, speed, and promotion gates all
+  pass
+
 ## v0.2-pre Locked Baseline
 
 The current baseline is `dmv02` with `v0.2-pre` behavior locked. `v0.2-b` now adds coupling plus a block-local coupled proposal path, so the default weak-coupling run is no longer expected to fail the `counter` gate.
+
+## h9 ROCm/HIP Backend Scaffold
+
+h9 adds an optional backend boundary for ROCm/HIP without changing the CPU
+reference path. `DLE_ENABLE_HIP` is off by default, `--backend cpu` is the
+default runtime backend, and the first HIP targets are the route-quality
+candidate-weight factor parity kernel plus a diagnostic-only 16x16
+proposal-score parity kernel.
+
+CPU-only checks:
+
+```bash
+experiments/test_v09_gpu_backend_cpu_smoke.sh
+experiments/test_v09_gpu_backend_nohip_error.sh
+experiments/test_v09_gpu_backend_extended_boundary.sh
+experiments/test_v09_gpu_backend_speed_evidence.sh
+experiments/test_v09_gpu_backend_measured_speed_gate.sh
+experiments/test_v09_gpu_backend_measured_speed_import.sh
+experiments/test_v09_gpu_backend_real_workload_speed_gate.sh
+```
+
+h9-h workload-speed smoke:
+
+```text
+workload_source = generated-fixture
+pc_routelm_nlg_smoke_ready = 1
+real_pc_routelm_nlg_verified = 0
+h9_measured_speed_evidence_ready = 0
+h9_speed_evidence_ready = 0
+workload_artifact_rows = 1
+nlg_result_hash_verified_rows = 1
+timing_artifact_hash_verified_rows = 1
+environment_hash_verified_rows = 1
+metrics_positive_rows = 1
+speedup_positive_rows = 1
+median_speedup = 1.500000
+diagnostic_workload_speed_ready = 1
+real_workload_speed_evidence_ready = 0
+gpu_speedup_claim = deferred
+action = real-workload-speed-evidence-missing
+routing_trigger_rate = 0.000000
+active_jump_rate = 0.000000
+```
+
+Optional HIP check:
+
+```bash
+experiments/test_v09_gpu_backend_candidate_weight_parity.sh
+```
+
+Closure:
+
+```bash
+experiments/test_v09_gpu_backend_closure.sh
+experiments/test_v09_gpu_backend_closure.sh --extended
+```
+
+Expected:
+
+- CPU builds remain unchanged.
+- CPU-only `--backend hip` fails clearly with a `DLE_ENABLE_HIP=ON` message.
+- CPU quick closure executes candidate-weight and proposal-score numeric parity
+  through the parity tool, not only static grep checks.
+- GPU speedup claims remain deferred until measured CPU/HIP/NVMe workload rows
+  are backed by real HIP/NVMe measurement source evidence; local fixture timing
+  and generated workload artifacts remain diagnostic-only.
+- HIP parity skips cleanly when ROCm/HIP is unavailable or incomplete.
+- When HIP is available, candidate-weight factors and diagnostic proposal
+  scores match CPU within `1e-5`.
+- `routing_trigger_rate = 0` and `active_jump_rate = 0` remain closed.
+- This is backend/parity instrumentation, not GPU acceleration proven and not learned routing solved.
+
+## h6 Span Ambiguity
+
+h6-f intentionally lowers hash bits to create offset-aware span-candidate
+collisions.
+
+```bash
+experiments/run_v06_route_memory_span_ambiguity.sh
+experiments/test_v06_route_memory_span_ambiguity.sh
+```
+
+Expected:
+
+- high-bit hash control remains collision-free and exact
+- low-bit hash buckets produce collision and top1/qacc degradation
+- larger `K_route` can recover recall without fixing top1
+- symbolic `key-shape` resolves the controlled ambiguity
+- current byte-level candidate-quality preset does not solve span ambiguity
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Learned-like Span Source
+
+h6-g weakens the route-code span source after making learned/source fallback
+paths span-offset aware.
+
+```bash
+experiments/run_v06_route_memory_span_learned_source.sh
+experiments/test_v06_route_memory_span_learned_source.sh
+```
+
+Expected:
+
+- clean `route-code-key` span lookup keeps decode/recall/top1 high
+- weak route-code identity lowers decode and creates learned-source collisions
+- larger `K_route` can recover recall without fixing top1
+- span exact-match diagnostics expose that byte qacc can hide full-span failure
+- byte-level candidate-quality preset remains neutral in this stress
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-level Candidate Quality
+
+h6-h compares span-level recall, top1, exact-match, and selected-key consistency
+under clean and weak route-code span sources.
+
+```bash
+experiments/run_v06_route_memory_span_quality_diagnostics.sh
+experiments/test_v06_route_memory_span_quality_diagnostics.sh
+```
+
+Expected:
+
+- clean route-code span source keeps all-span recall/top1/exact-match high
+- weak route-code source separates recall from all-span top1 and exact-match
+- larger `K_route` can recover all-span recall without fixing all-span top1
+- byte-level candidate-quality preset is neutral in this span stress
+- symbolic `key-shape` exposes the upper bound for span-level ranking
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span Candidate-quality Gap
+
+h6-i adds span record/key quality metrics to explain why recall-restored weak
+span candidates still fail.
+
+```bash
+experiments/run_v06_route_memory_span_candidate_quality_gap.sh
+experiments/test_v06_route_memory_span_candidate_quality_gap.sh
+```
+
+Expected:
+
+- weak route-code `K_route=16` restores all-span recall but leaves top1 and
+  span exact-match low
+- top-key consistency can be high while top-key correctness is low, exposing
+  coherent wrong-key span selection
+- byte-level `base-default` remains neutral and `hybrid-safe` is not promoted
+  for this stress
+- symbolic `key-shape` stays an upper-bound span record-ranking diagnostic
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-prefix Ranking
+
+h6-j adds a first non-key-shape span-record ranking probe.
+
+```bash
+experiments/run_v06_route_memory_span_prefix_ranking.sh
+experiments/test_v06_route_memory_span_prefix_ranking.sh
+```
+
+Expected:
+
+- `--route-candidate-score span-prefix` is accepted and keeps all-span recall
+  populated
+- span-prefix may reduce coherent wrong-key selection, but it is not promoted
+  unless qacc/span exact-match also improve
+- symbolic `key-shape` remains an upper-bound diagnostic
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-key-support Ranking
+
+h6-k adds a second non-key-shape span-record ranking probe.
+
+```bash
+experiments/run_v06_route_memory_span_key_support_ranking.sh
+experiments/test_v06_route_memory_span_key_support_ranking.sh
+```
+
+Expected:
+
+- `--route-candidate-score span-key-support` is accepted and keeps all-span
+  recall populated
+- cross-offset candidate-key support is measured through the existing span
+  candidate-quality metrics
+- span-key-support may be neutral when a coherent wrong key has broad support
+  across offsets
+- symbolic `key-shape` remains an upper-bound diagnostic
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Ranking
+
+h6-l adds the first non-`key-shape` span-record ranking probe that uses the
+existing local energy as a record-quality signal.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_ranking.sh
+experiments/test_v06_route_memory_span_local_energy_ranking.sh
+```
+
+Expected:
+
+- `--route-candidate-score span-local-energy` is accepted and keeps all-span
+  recall populated
+- span-local-energy improves qacc/span exact-match over the weak route-code
+  baseline in the smoke, while remaining below symbolic `key-shape`
+- candidate-key entropy and coherent wrong-key metrics explain how much of the
+  span-ranking gap remains
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Scale
+
+h6-m checks whether the h6-l local-energy record-ranking signal survives a
+small key/seed matrix.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_scale.sh
+experiments/test_v06_route_memory_span_local_energy_scale.sh
+```
+
+Expected:
+
+- weak, `span-local-energy`, and symbolic `key-shape` arms are present
+- `span-local-energy` keeps all-span recall populated
+- `span-local-energy` qacc/span exact-match are not below the weak baseline in
+  the smoke
+- standard mode reports mean qacc/span-exact/top1/key-quality deltas
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Composition
+
+h6-n compares span-local-energy record ranking with the existing h5
+candidate-quality presets.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_composition.sh
+experiments/test_v06_route_memory_span_local_energy_composition.sh
+```
+
+Expected:
+
+- weak, local-energy, local-energy+base, local-energy+hybrid, and key-shape
+  arms are present
+- all arms keep all-span recall populated
+- local-energy remains no worse than weak in the smoke
+- h5 presets are treated as composition diagnostics, not promotion defaults
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Policy
+
+h6-o turns the h6-n qacc/span-exact tradeoff into an explicit policy
+calibration artifact.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_policy.sh
+experiments/test_v06_route_memory_span_local_energy_policy.sh
+```
+
+Expected:
+
+- byte-qacc, span-exact, and balanced objective rows are present
+- byte-qacc selects `local-energy`
+- span-exact selects `local-energy-hybrid`
+- span-exact improves span exact-match while trading off byte qacc
+- `routing_trigger_rate = active_jump_rate = 0`
+
+## h6 Span-local-energy Policy Scale
+
+h6-p scales the h6-o policy split over a small key/seed matrix.
+
+```bash
+experiments/run_v06_route_memory_span_local_energy_policy_scale.sh
+experiments/test_v06_route_memory_span_local_energy_policy_scale.sh
+```
+
+Expected:
+
+- byte-qacc, span-exact, and balanced objective rows are emitted for each group
+- byte-qacc consistently selects `local-energy` in the smoke
+- span-exact selects `local-energy-hybrid` in the smoke
+- standard mode reports objective-difference rates and mean qacc/span-exact
+  tradeoffs
+- `routing_trigger_rate = active_jump_rate = 0`
 
 ## Staged Flow 1-5
 
@@ -3941,6 +8101,588 @@ offset-aware hash candidates now scale over a small symbolic span matrix while
 preserving the same value-bearing proposal path. This is a span-candidate scale
 guard, not learned chunk retrieval.
 
+## h6-g Learned-like Span-source Stress Decision
+
+`h6-g` passes as learned-like span-source stress instrumentation. It does not
+solve learned chunk retrieval, source-credit robustness, wrong-candidate
+robustness, fallback robustness, or long-context retrieval.
+
+The slice makes learned/source fallback route paths span-offset aware and adds:
+
+```text
+experiments/run_v06_route_memory_span_learned_source.sh
+experiments/test_v06_route_memory_span_learned_source.sh
+```
+
+Reference smoke:
+
+```text
+clean-route-code-span:
+  qacc = 0.987500
+  span_exact = 0.937500
+  route_decode = 1.000000
+  recall = 1.000000
+  top1 = 1.000000
+
+weak-route-code-k4:
+  qacc = 0.606250
+  span_exact = 0.281250
+  route_decode = 0.000000
+  recall = 0.843750
+  top1 = 0.250000
+  route_collision = 0.750000
+
+weak-route-code-k16:
+  qacc = 0.637500
+  span_exact = 0.375000
+  recall = 1.000000
+  top1 = 0.250000
+
+weak-route-code-quality:
+  qacc = 0.637500
+  span_exact = 0.375000
+  recall = 1.000000
+  top1 = 0.250000
+```
+
+Interpretation:
+clean route-code identity supports span-offset route hints. Weakened
+route-code identity creates a learned-like span-source failure: decode
+collapses, collisions appear, and top1/qacc/span exact-match degrade.
+Increasing `K_route` recovers recall but not top1 or span exact-match, and the
+current byte-level candidate-quality preset is neutral. This is an actionable
+learned-like source split, not learned chunk retrieval solved.
+
+## h6-h Span-level Candidate-quality Diagnostics Decision
+
+`h6-h` passes as span-level candidate-quality diagnostics and actionable split.
+It does not solve learned chunk retrieval, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_quality_diagnostics.sh
+experiments/test_v06_route_memory_span_quality_diagnostics.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.556250
+  span_exact = 0.250000
+  all_recall = 1.000000
+  all_top1 = 0.250000
+
+weak-quality:
+  qacc = 0.556250
+  span_exact = 0.250000
+  all_recall = 1.000000
+  all_top1 = 0.250000
+
+weak-keyshape:
+  qacc = 1.000000
+  span_exact = 1.000000
+  all_recall = 1.000000
+  all_top1 = 1.000000
+```
+
+Interpretation:
+span recall is not span quality. The weak route-code source can recover
+all-span recall at larger `K_route`, but all-span top1 and span exact-match
+remain low. The current byte-level candidate-quality preset is neutral, while
+symbolic `key-shape` recovers the upper bound. The next step should test
+learned span-level ranking/consistency features.
+
+## h6-i Span Candidate-quality Gap Decision
+
+`h6-i` passes as span candidate-quality gap diagnostics and actionable split.
+It does not solve learned chunk retrieval, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_candidate_quality_gap.sh
+experiments/test_v06_route_memory_span_candidate_quality_gap.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  correct_key_share = 0.503125
+  unique_key_count = 2.750000
+  key_entropy = 1.238921
+  top_key_consistency = 1.000000
+  top_key_correct = 0.250000
+  coherent_wrong_top_key = 0.750000
+
+weak-base-default:
+  qacc = 0.625000
+  span_exact = 0.281250
+
+weak-hybrid-safe:
+  qacc = 0.368750
+  span_exact = 0.250000
+
+weak-keyshape:
+  qacc = 0.993750
+  span_exact = 0.968750
+  all_top1 = 1.000000
+  correct_key_share = 1.000000
+  key_entropy = 0.000000
+```
+
+Interpretation:
+span recall is not span record quality. Under weak route-code identity, all
+offsets often select a coherent but wrong key: top-key consistency stays high,
+but top-key correctness is low. Existing byte-level candidate-quality presets
+do not fix this, so the next route-memory work should add learned
+span-record-ranking or consistency features. Symbolic key-shape remains an
+upper-bound diagnostic, not learned chunk retrieval.
+
+## h6-j Span-prefix Ranking Decision
+
+`h6-j` passes as span-prefix ranking diagnostics and negative/limited
+instrumentation. It does not solve learned chunk retrieval, source-credit
+robustness, wrong-candidate robustness, fallback robustness, or long-context
+retrieval.
+
+The slice adds:
+
+```text
+--route-candidate-score span-prefix
+experiments/run_v06_route_memory_span_prefix_ranking.sh
+experiments/test_v06_route_memory_span_prefix_ranking.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  coherent_wrong_top_key = 0.750000
+
+weak-span-prefix:
+  qacc = 0.587500
+  span_exact = 0.218750
+  all_recall = 1.000000
+  all_top1 = 0.218750
+  coherent_wrong_top_key = 0.593750
+
+weak-keyshape:
+  qacc = 0.993750
+  span_exact = 0.968750
+  all_top1 = 1.000000
+```
+
+Interpretation:
+the visible-prefix scorer is wired and keeps route topology closed, but it is
+not strong enough to replace symbolic key-shape. It reduces coherent wrong-key
+selection somewhat while hurting qacc/span exact-match in this smoke. The next
+span step needs a stronger learned record-ranking signal.
+
+## h6-k Span-key-support Ranking Decision
+
+`h6-k` passes as span-key-support ranking diagnostics and neutral
+instrumentation. It does not solve learned chunk retrieval, source-credit
+robustness, wrong-candidate robustness, fallback robustness, or long-context
+retrieval.
+
+The slice adds:
+
+```text
+--route-candidate-score span-key-support
+experiments/run_v06_route_memory_span_key_support_ranking.sh
+experiments/test_v06_route_memory_span_key_support_ranking.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  coherent_wrong_top_key = 0.750000
+
+weak-span-key-support:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  coherent_wrong_top_key = 0.750000
+
+weak-keyshape:
+  qacc = 0.993750
+  span_exact = 0.968750
+  all_top1 = 1.000000
+```
+
+Interpretation:
+span-key-support is wired and preserves all-span recall, but it is neutral in
+this smoke. A coherent wrong key can be supported across offsets just as
+strongly as the correct key, so same-key support alone is not enough to replace
+symbolic key-shape. The next span step needs learned record-quality evidence
+that separates correct-key support from coherent wrong-key support.
+
+## h6-l Span-local-energy Ranking Decision
+
+`h6-l` passes as span-local-energy ranking diagnostics and limited mitigation.
+It does not solve learned chunk retrieval, source-credit robustness,
+wrong-candidate robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+--route-candidate-score span-local-energy
+experiments/run_v06_route_memory_span_local_energy_ranking.sh
+experiments/test_v06_route_memory_span_local_energy_ranking.sh
+```
+
+Reference smoke:
+
+```text
+weak-k16:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_recall = 1.000000
+  all_top1 = 0.250000
+  correct_key_share = 0.503125
+  key_entropy = 1.238921
+  coherent_wrong_top_key = 0.750000
+
+weak-span-local-energy:
+  qacc = 0.675000
+  span_exact = 0.406250
+  all_recall = 1.000000
+  all_top1 = 0.406250
+  correct_key_share = 0.631250
+  key_entropy = 0.862081
+  coherent_wrong_top_key = 0.593750
+
+weak-keyshape:
+  qacc = 0.993750
+  span_exact = 0.968750
+  all_top1 = 1.000000
+```
+
+Interpretation:
+unlike visible-prefix and same-key-support probes, local-energy span ranking
+produces a limited but real lift in the weak route-code span stress. It is
+still not enough to replace symbolic key-shape, but it identifies local
+dynamics compatibility as the first useful non-symbolic record-quality signal
+for h6 span memory.
+
+## h6-m Span-local-energy Scale Decision
+
+`h6-m` passes as span-local-energy scale/stability diagnostics and limited
+mitigation. It does not solve learned chunk retrieval, source-credit
+robustness, wrong-candidate robustness, fallback robustness, or long-context
+retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_local_energy_scale.sh
+experiments/test_v06_route_memory_span_local_energy_scale.sh
+```
+
+Reference standard aggregate:
+
+```text
+rows = 12
+groups = 4
+weak_qacc_mean = 0.546094
+local_energy_qacc_mean = 0.571875
+keyshape_qacc_mean = 0.984375
+local_energy_qacc_delta_mean = 0.025781
+
+weak_span_exact_mean = 0.273438
+local_energy_span_exact_mean = 0.378906
+keyshape_span_exact_mean = 0.921875
+local_energy_span_exact_delta_mean = 0.105469
+
+weak_all_recall_mean = 0.992188
+local_energy_all_recall_mean = 0.992188
+weak_all_top1_mean = 0.277344
+local_energy_all_top1_mean = 0.382812
+
+weak_correct_key_share_mean = 0.492722
+local_energy_correct_key_share_mean = 0.565547
+weak_key_entropy_mean = 1.406354
+local_energy_key_entropy_mean = 1.200587
+weak_coherent_wrong_mean = 0.722656
+local_energy_coherent_wrong_mean = 0.617188
+```
+
+Interpretation:
+local-energy span ranking keeps the h6-l lift across a small key/seed matrix.
+It improves span exact-match more than byte qacc, which is the right direction
+for route-memory work. It remains a limited mitigation because symbolic
+`key-shape` is still much stronger and the effect weakens as key count rises.
+
+## h6-n Span-local-energy Composition Decision
+
+`h6-n` passes as span-local-energy / candidate-quality composition diagnostics
+and mixed limited mitigation. It does not solve learned chunk retrieval,
+source-credit robustness, wrong-candidate robustness, fallback robustness, or
+long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_local_energy_composition.sh
+experiments/test_v06_route_memory_span_local_energy_composition.sh
+```
+
+Reference smoke:
+
+```text
+weak:
+  qacc = 0.625000
+  span_exact = 0.281250
+  all_top1 = 0.250000
+  correct_key_share = 0.503125
+  key_entropy = 1.238921
+
+local-energy:
+  qacc = 0.675000
+  span_exact = 0.406250
+  all_top1 = 0.406250
+  correct_key_share = 0.631250
+  key_entropy = 0.862081
+
+local-energy-base:
+  qacc = 0.675000
+  span_exact = 0.406250
+  all_top1 = 0.406250
+  correct_key_share = 0.631250
+  key_entropy = 0.862081
+
+local-energy-hybrid:
+  qacc = 0.631250
+  span_exact = 0.593750
+  all_top1 = 0.593750
+  correct_key_share = 0.768229
+  key_entropy = 0.510620
+```
+
+Interpretation:
+`hybrid-safe` combined with local-energy ranking improves span-level record
+quality but lowers byte qacc relative to local-energy alone. h6-n therefore
+marks a span-objective calibration split: span exact-match and byte qacc should
+be reported separately rather than compressed into a single pass/fail.
+
+## h6-o Span-local-energy Policy Calibration Decision
+
+`h6-o` passes as span-local-energy policy calibration diagnostics. It does not
+solve learned chunk retrieval, source-credit robustness, wrong-candidate
+robustness, fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_local_energy_policy.sh
+experiments/test_v06_route_memory_span_local_energy_policy.sh
+```
+
+Reference smoke policy:
+
+```text
+byte-qacc:
+  selected = local-energy
+  qacc = 0.675000
+  span_exact = 0.406250
+
+span-exact:
+  selected = local-energy-hybrid
+  qacc = 0.631250
+  span_exact = 0.593750
+
+balanced:
+  selected = local-energy-hybrid
+  qacc = 0.631250
+  span_exact = 0.593750
+```
+
+Interpretation:
+policy calibration makes the h6-n tradeoff explicit. A byte-qacc objective and
+a span-exact objective select different local-energy policies. The span-exact
+policy gains `+0.187500` span exact-match over the byte-qacc policy while
+giving back `-0.043750` qacc. Future span-memory diagnostics should therefore
+name which objective is being optimized.
+
+## h6-p Span-local-energy Policy Scale Decision
+
+`h6-p` passes as span-local-energy policy-scale diagnostics. It does not solve
+learned chunk retrieval, source-credit robustness, wrong-candidate robustness,
+fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_local_energy_policy_scale.sh
+experiments/test_v06_route_memory_span_local_energy_policy_scale.sh
+```
+
+Reference standard aggregate:
+
+```text
+rows = 20
+groups = 4
+objectives_differ_rate = 0.750000
+qacc_policy_local_energy_rate = 1.000000
+span_policy_hybrid_rate = 0.750000
+balanced_policy_hybrid_rate = 0.500000
+
+qacc_policy_qacc_mean = 0.571875
+qacc_policy_span_exact_mean = 0.378906
+span_policy_qacc_mean = 0.538281
+span_policy_span_exact_mean = 0.441406
+span_policy_qacc_delta_vs_qacc_policy_mean = -0.033594
+span_policy_span_exact_delta_vs_qacc_policy_mean = 0.062500
+```
+
+Interpretation:
+the h6-o policy split survives across the small key/seed matrix. It is not
+absolute: one group has the same qacc/span policy, and the balanced objective
+only selects hybrid in half the groups. The stable takeaway is narrower and
+useful: qacc-optimized and span-optimized policy selection must be reported as
+separate axes for future route-memory work.
+
+## h6-q Span-first Guardrail Decision
+
+`h6-q` passes as span-first policy guardrail diagnostics. It does not solve
+learned chunk retrieval, learned source robustness, wrong-candidate robustness,
+fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_first_guardrail.sh
+experiments/test_v06_route_memory_span_first_guardrail.sh
+```
+
+Reference standard aggregate:
+
+```text
+qacc-default:
+  span_accept_rate = 0.000000
+  qacc_mean = 0.571875
+  span_exact_mean = 0.378906
+
+strict-g0p050-cap0p050:
+  span_accept_rate = 0.250000
+  selected_hybrid_rate = 0.250000
+  qacc_mean = 0.560937
+  span_exact_mean = 0.425781
+  qacc_delta_vs_qacc_policy_mean = -0.010938
+  span_exact_delta_vs_qacc_policy_mean = 0.046875
+
+balanced-g0p025-cap0p050:
+  span_accept_rate = 0.500000
+  qacc_mean = 0.553125
+  span_exact_mean = 0.433594
+
+span-first-g0p025-cap0p075:
+  span_accept_rate = 0.750000
+  qacc_mean = 0.538281
+  span_exact_mean = 0.441406
+```
+
+Interpretation:
+strict span-first selection catches the high-gain span-policy cell while
+rejecting the small-gain cells and the larger qacc-loss cell. This recovers
+most of the span-exact improvement from h6-p with much smaller qacc loss, but
+the result is still a controlled guardrail over symbolic span fixtures.
+
+## h6-r Span-first Guardrail Degradation Decision
+
+`h6-r` passes as span-first policy guardrail degradation diagnostics. It does
+not solve learned chunk retrieval, learned source robustness,
+wrong-candidate/fallback robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_first_guardrail_degradation.sh
+experiments/test_v06_route_memory_span_first_guardrail_degradation.sh
+```
+
+Reference standard aggregate:
+
+```text
+weak:
+  objective_split_rate = 1.000000
+  strict span_accept_rate = 0.000000
+  strict qacc_mean = 0.517187
+  strict span_exact_mean = 0.289062
+
+harsher:
+  objective_split_rate = 0.500000
+  strict span_accept_rate = 0.000000
+  span-first-g0p025-cap0p075 span_accept_rate = 0.500000
+  span-first-g0p025-cap0p075 qacc_delta = -0.029688
+  span-first-g0p025-cap0p075 span_delta = 0.023438
+```
+
+Interpretation:
+h6-r shows fixed guardrail thresholds are regime-sensitive. Weak degradation
+keeps the objective split but the qacc loss is too large for all configured
+caps. Harsher degradation collapses the split in one group and allows only the
+looser span-first guardrail in the other. The next policy slice should calibrate
+or adapt thresholds rather than promoting a single fixed guardrail.
+
+## h6-s Adaptive Guardrail Calibration Decision
+
+`h6-s` passes as adaptive guardrail calibration diagnostics. It does not solve
+learned chunk retrieval, learned source robustness, wrong-candidate/fallback
+robustness, or long-context retrieval.
+
+The slice adds:
+
+```text
+experiments/run_v06_route_memory_span_adaptive_guardrail.sh
+experiments/test_v06_route_memory_span_adaptive_guardrail.sh
+```
+
+Reference standard aggregate:
+
+```text
+weak utility-w0p50:
+  span_accept_rate = 1.000000
+  qacc_delta = -0.109375
+  span_delta = 0.062500
+
+weak utility-w0p75:
+  span_accept_rate = 0.000000
+
+harsher utility-w0p75:
+  span_accept_rate = 0.500000
+  qacc_delta = -0.029688
+  span_delta = 0.023438
+
+harsher utility-w1p00:
+  span_accept_rate = 0.000000
+```
+
+Interpretation:
+utility calibration separates high-loss span gains from lower-loss span gains
+better than a single fixed cap in this controlled matrix. `utility-w0p50` is
+too permissive; `utility-w1p00` is too conservative; `utility-w0p75` is the
+current diagnostic candidate for the next scale check.
+
 ## h7-a Route-memory Goal Closure Decision
 
 `h7-a` passes as route-memory goal closure instrumentation. It does not solve
@@ -3955,9 +8697,10 @@ experiments/test_v07_goal_route_memory_closure.sh
 ```
 
 The quick closure runs shell syntax checks, the `dmv02` build, h5 route-quality
-closure, and every h6 span boundary/exact/hash smoke. The optional `--extended`
-mode additionally runs the extended h5 closure plus standard h6 exact/hash span
-scale runners.
+closure, and every h6 span boundary/exact/hash/ambiguity/learned-source/quality
+candidate-quality-gap/prefix-ranking/key-support/local-energy/local-energy-scale/local-energy-composition/local-energy-policy/local-energy-policy-scale/span-first-guardrail/span-first-guardrail-degradation/adaptive-guardrail
+smoke. The optional `--extended` mode additionally runs the extended h5 closure
+plus the matching standard h6 span runners.
 
 Interpretation:
 h7 closes the current route-quality plus route-memory scaffold as a tested

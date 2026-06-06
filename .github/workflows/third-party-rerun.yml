@@ -1,0 +1,100 @@
+name: Third-party rerun return
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      return_id:
+        description: Return directory id
+        required: false
+        default: github_actions_return_001
+
+permissions:
+  contents: read
+
+jobs:
+  third-party-rerun:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bash ca-certificates coreutils findutils g++ git make python3 \
+            sed grep diffutils time procps
+
+      - name: Capture third-party rerun
+        run: |
+          set -euo pipefail
+          RETURN_ID_INPUT="${{ inputs.return_id || '' }}"
+          if [ -n "$RETURN_ID_INPUT" ]; then
+            RETURN_ID="$RETURN_ID_INPUT"
+          else
+            RETURN_ID="github_actions_return_${GITHUB_RUN_ID}"
+          fi
+          RETURN_DIR="results/github_actions_third_party_rerun/${RETURN_ID}/third_party_return"
+          mkdir -p "$RETURN_DIR"
+          experiments/run_v22_clean_machine_execution_kit.sh >/dev/null
+          results/v22_clean_machine_execution_kit/kit_001/clean_machine/CAPTURE_THIRD_PARTY_RERUN.sh "$RETURN_DIR"
+          python3 - "$RETURN_DIR" <<'PY'
+          import json
+          import os
+          import platform
+          import sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          return_dir = Path(sys.argv[1])
+          identity = {
+              "reviewer_name": "github-actions-hosted-runner",
+              "reviewer_org": "GitHub Actions",
+              "reviewer_contact": os.environ.get("GITHUB_SERVER_URL", "https://github.com"),
+              "reviewer_kind": "automated-third-party-clean-runner",
+              "external_independent_reviewer": 1,
+              "github_actor": os.environ.get("GITHUB_ACTOR", ""),
+              "github_repository": os.environ.get("GITHUB_REPOSITORY", ""),
+              "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+              "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+              "conflict_disclosure": "GitHub-hosted Actions runner; automated reviewer, not a local project-owner rerun.",
+              "review_timestamp_utc": datetime.now(timezone.utc).isoformat(),
+          }
+          environment = {
+              "clean_machine": 1,
+              "external_independent_environment": 1,
+              "environment_kind": "github-hosted-ubuntu-24.04",
+              "os": platform.platform(),
+              "kernel": platform.release(),
+              "cpu": platform.processor() or platform.machine(),
+              "python": sys.version,
+              "git_revision": os.environ.get("GITHUB_SHA", ""),
+              "github_repository": os.environ.get("GITHUB_REPOSITORY", ""),
+              "github_ref": os.environ.get("GITHUB_REF", ""),
+              "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+              "container_image_digest": "",
+              "memory_gb": "",
+              "storage": "",
+              "compiler": "",
+          }
+          (return_dir / "reviewer_identity.json").write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          (return_dir / "rerun_environment.json").write_text(json.dumps(environment, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          V18_THIRD_PARTY_RERUN_DIR="$RETURN_DIR" experiments/run_v18_external_evidence_intake.sh
+          cat results/v18_external_evidence_intake_summary.csv
+          cat results/v18_external_evidence_intake_decision.csv
+
+      - name: Upload third-party return artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: third-party-rerun-return
+          path: |
+            results/github_actions_third_party_rerun/
+            results/v18_external_evidence_intake_summary.csv
+            results/v18_external_evidence_intake_decision.csv
+          if-no-files-found: error
+          retention-days: 14
