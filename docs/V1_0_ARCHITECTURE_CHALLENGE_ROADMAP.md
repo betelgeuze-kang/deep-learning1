@@ -302,6 +302,8 @@ Implemented now:
 - `experiments/test_v52e_100b_plus_hosted_llm_rag_optional_intake.sh`
 - `experiments/run_v53_public_repo_code_doc_audit.sh`
 - `experiments/test_v53_public_repo_code_doc_audit.sh`
+- `experiments/run_v53b_public_repo_10_lock.sh`
+- `experiments/test_v53b_public_repo_10_lock.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v55_local_scaling_law_main_contract.sh`
@@ -323,6 +325,7 @@ Implemented now:
 - `results/v52d_30b70b_llm_rag_evidence_intake/intake_001/` system-D/E evidence-intake artifacts
 - `results/v52e_100b_plus_hosted_llm_rag_optional_intake/intake_001/` system-F optional evidence-intake artifacts
 - `results/v53_public_repo_code_doc_audit/audit_001/` contract artifacts
+- `results/v53b_public_repo_10_lock/lock_001/` live 10-repo target-lock artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
 - `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
@@ -342,6 +345,8 @@ The v52d evidence-intake layer emits the system-D/E 30B/70B open-weight LLM+RAG 
 The v52e optional-intake layer emits the system-F 100B+ hosted/API LLM+RAG schema, answer template, model identity template, validation rows, source evidence copies, hash manifest, and claim boundary. Default/no-env execution intentionally keeps `optional_100b_plus_baseline_status=deferred-with-reason`, `optional_100b_plus_baseline_ready=0`, `v52_optional_absorb_ready=0`, `v52_ready=0`, and all 30B-150B comparison claims blocked. F is optional and cannot replace required D/E evidence.
 
 The v53 scaffold emits a 10-repo target registry, 1000-query scale contract, artifact contract rows, v50 seed evidence copies, and claim boundary. It intentionally keeps `v53_ready=0`, `missing_repo_count=7`, and `missing_query_rows=991`.
+
+The v53b repo-lock layer resolves live HEAD SHAs for 10 public GitHub repositories, writes the 10-repo lock table and 1000-row query plan, and copies the v50 seed evidence. It intentionally keeps `v53_ready=0` because the seven newly locked repositories still need source snapshots and the audit still needs source-span-bound query rows, A-H answer/citation/resource rows, negative/abstain rows, and review artifacts.
 
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
@@ -365,7 +370,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 2. Supply and validate a real 7B-14B local model + RAG evidence directory for C.
 3. Supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E.
 4. Supply and validate a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
-5. Expand public repo coverage from 3 to at least 10 pinned repositories.
+5. Add source snapshots for the seven newly locked v53b repositories.
 6. Expand code/doc query coverage from 9 to at least 1000 source-span-bound rows.
 7. Expand RouteHint generation from 24 seed rows to at least 1000 grounded rows.
 8. Expand scaling from 5 preview axes / 27 rows to 6 main axes / at least 100 rows, including repo_count, confidence intervals, and failure cases.

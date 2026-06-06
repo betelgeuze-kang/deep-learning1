@@ -1437,6 +1437,12 @@ Current next boundary:
   `experiments/test_v53_public_repo_code_doc_audit.sh` emits the 10-repo /
   1000-query scale contract from the v50 3-repo seed, and keeps full v53
   blocked with `missing_repo_count=7` and `missing_query_rows=991`.
+- `v53b` adds a live public repo 10-lock layer.
+  `experiments/test_v53b_public_repo_10_lock.sh` resolves HEAD SHAs for 10
+  public GitHub repositories and writes the 1000-row query plan, but keeps full
+  v53 blocked until source snapshots, source-span-bound query rows,
+  answer/citation/resource rows, negative/abstain rows, and review artifacts
+  exist.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,

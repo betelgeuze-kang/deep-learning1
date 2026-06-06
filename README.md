@@ -35,6 +35,7 @@ Current v52-v60 scaffold:
 ./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh
 ./experiments/test_v52e_100b_plus_hosted_llm_rag_optional_intake.sh
 ./experiments/test_v53_public_repo_code_doc_audit.sh
+./experiments/test_v53b_public_repo_10_lock.sh
 ./experiments/test_v54_routehint_generation_1000_contract.sh
 ./experiments/test_v55_local_scaling_law_main_contract.sh
 ./experiments/test_v56_ruler_longbench_expanded_contract.sh
@@ -45,7 +46,7 @@ Current v52-v60 scaffold:
 ./experiments/test_v60_architecture_challenge_release_contract.sh
 ```
 
-These emit the A-H baseline registry, a measured B small-local-RAG seed row, the C 7B-14B local-model-RAG evidence-intake gate, the D/E 30B/70B open-weight LLM+RAG evidence-intake gate, the optional F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, and v60 release-audit contract while keeping full v52-v60 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, expanded RULER/LongBench rows, human-reviewed domain expert pack rows, 500+ blind-eval rows, the complete challenge demo rows, and human/release review evidence are supplied.
+These emit the A-H baseline registry, a measured B small-local-RAG seed row, the C 7B-14B local-model-RAG evidence-intake gate, the D/E 30B/70B open-weight LLM+RAG evidence-intake gate, the optional F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, a live 10-repo public target lock, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, and v60 release-audit contract while keeping full v52-v60 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, expanded RULER/LongBench rows, human-reviewed domain expert pack rows, 500+ blind-eval rows, the complete challenge demo rows, and human/release review evidence are supplied.
 
 Current measured baseline progress: `experiments/test_v52b_small_local_rag_measured_row.sh` creates `results/v52b_small_local_rag_measured_row/row_001/` with nine measured system-B answer rows, citation rows, retrieval/resource rows, and hash manifests over the v50 public-repo seed. It is absorb-ready for v52, but it is not a 30B-150B comparison and leaves v52 release claims blocked.
 
@@ -54,6 +55,8 @@ Current C-baseline intake progress: `experiments/test_v52c_7b14b_local_model_rag
 Current D/E-baseline intake progress: `experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh` creates `results/v52d_30b70b_llm_rag_evidence_intake/intake_001/` with required schemas, answer templates, model identity templates, validation rows, and hash manifest for future 30B and 70B open-weight LLM+RAG runs. Default/no-env execution remains blocked until both real D and E evidence directories validate.
 
 Current F-baseline optional progress: `experiments/test_v52e_100b_plus_hosted_llm_rag_optional_intake.sh` creates `results/v52e_100b_plus_hosted_llm_rag_optional_intake/intake_001/` with required schema, answer template, hosted/API model identity template, validation rows, and hash manifest for a future 100B+ hosted/API LLM+RAG run. Default/no-env execution remains `deferred-with-reason`, and F cannot replace the required 30B/70B D/E rows.
+
+Current v53 repo-scale progress: `experiments/test_v53b_public_repo_10_lock.sh` creates `results/v53b_public_repo_10_lock/lock_001/` by resolving live HEAD SHAs for 10 public GitHub repositories. This satisfies the repo target-lock layer, but v53 remains blocked until source snapshots for the seven newly locked repos and at least 1000 source-span-bound query rows exist.
 
 ## v0.3 Architecture Preview
 
