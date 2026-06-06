@@ -1381,10 +1381,16 @@ Current next boundary:
   doc-code conflict, deprecated/legacy usage, and config mismatch, verifies
   guard negative controls, and passes the commercial return through v18 while
   keeping release readiness blocked.
-- The v41-v50 impact roadmap is closed, and the next high-leverage stage is
-  real-return evidence rather than another internal packaging layer: external
-  or buyer PoC acceptance, actual teacher-source import, and measured
-  CPU/HIP/NVMe workload traces. The claim remains local evidence-bound QA/audit
+- `v51` is closed as the Real-return Evidence Intake measured trace above
+  v18/v40. It measures CPU SHA-256 batch work and filesystem/NVMe-style reads
+  over tracked repository source files, hash-binds the trace artifacts, exposes
+  three cited QA/audit rows through v18, binds the result to the v40
+  machine-verified artifact ladder, and keeps external/buyer return,
+  teacher-source import, GPU speedup, human review, and release readiness
+  blocked.
+- The v41-v51 impact roadmap is closed, and the next high-leverage stage is
+  external acceptance or teacher-source authority evidence rather than another
+  internal packaging layer. The claim remains local evidence-bound QA/audit
   assistance, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
 - The recommended first attachment is codebase QA. It is the cleanest research
