@@ -1363,11 +1363,18 @@ Current next boundary:
   selection, span read, hint strength, abstain/retry, and verifier decision.
   It keeps `expert_replacement_claim=0`, `release_ready_claim=0`, and
   `real_release_package_ready=0`.
-- The v41-v47 impact roadmap is closed. The claim remains local evidence-bound
-  QA/audit assistance, not Transformer replacement, frontier local LLM, GPU
-  acceleration, long-context solved, or expert replacement. Human review stays
-  deferred until release-ready wording is needed; v37-v39 remain the reuse path
-  for returned `human_review_rows.csv`.
+- `v48` is closed as the first post-v47 evidence-scale generator expansion. It
+  verifies that `RouteMemory evidence -> compact RouteHint -> tiny
+  non-attention generator -> grounded answer -> citation/abstain/audit trail`
+  holds across RULER NIAH, LongBench v2, codebase QA, and internal docs QA with
+  zero raw context in hints and zero raw prompt stuffing.
+- The v41-v47 impact roadmap is closed, and v48 begins the next
+  evidence-scale/use-surface phase. The remaining high-leverage tracks are
+  RULER NIAH 200/500 rows at fixed context/architecture and Codebase Auditor
+  over 3-5 public repositories with doc-code conflict, deprecated usage, and
+  config mismatch checks. The claim remains local evidence-bound QA/audit
+  assistance, not Transformer replacement, frontier local LLM, GPU
+  acceleration, long-context solved, or expert replacement.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
