@@ -1373,12 +1373,17 @@ Current next boundary:
   RouteMemory lineage rows, official evaluator/source reuse, no-oracle/
   no-extractor status, fixed 4096 context length, fixed architecture, and v18
   intake while keeping release readiness blocked.
-- The v41-v47 impact roadmap is closed, and v48/v49 continue the next
-  evidence-scale/use-surface phase. The remaining high-leverage track is
-  Codebase Auditor over 3-5 public repositories with doc-code conflict,
-  deprecated usage, and config mismatch checks. The claim remains local
-  evidence-bound QA/audit assistance, not Transformer replacement, frontier
-  local LLM, GPU acceleration, long-context solved, or expert replacement.
+- `v50` is closed as the Public Repo Auditor 3-repo evidence run above
+  v42/v43/v18. It shallow-clones `pypa/sampleproject`, `psf/requests`, and
+  `pallets/click`, binds HEAD SHAs/source hashes, verifies 9 audit cases across
+  doc-code conflict, deprecated/legacy usage, and config mismatch, and passes
+  the commercial return through v18 while keeping release readiness blocked.
+- The v41-v50 impact roadmap is closed, and the next high-leverage stage is
+  real-return evidence rather than another internal packaging layer: external
+  or buyer PoC acceptance, actual teacher-source import, and measured
+  CPU/HIP/NVMe workload traces. The claim remains local evidence-bound QA/audit
+  assistance, not Transformer replacement, frontier local LLM, GPU
+  acceleration, long-context solved, or expert replacement.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation
   accuracy, abstention, shortcut resistance, and mmap/evaluator auditability;
