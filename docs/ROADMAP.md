@@ -1418,6 +1418,11 @@ Current next boundary:
   answer rows plus citation/retrieval/resource rows over the v50 public-repo
   seed, marks the row `v52_absorb_ready=1`, and still keeps full v52 blocked
   until C/D/E real baseline rows exist.
+- `v52c` adds the 7B-14B local model + RAG evidence-intake gate for system C.
+  `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh` emits the
+  required evidence schema, answer/model templates, validation rows, and hash
+  manifest, and still keeps C blocked until a real local-model-RAG evidence
+  directory validates.
 - `v53` is started as a public repo code/doc audit contract scaffold.
   `experiments/test_v53_public_repo_code_doc_audit.sh` emits the 10-repo /
   1000-query scale contract from the v50 3-repo seed, and keeps full v53

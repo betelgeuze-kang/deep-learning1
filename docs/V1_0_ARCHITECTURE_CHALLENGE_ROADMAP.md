@@ -294,6 +294,8 @@ Implemented now:
 - `experiments/test_v52_llm_rag_baseline_war.sh`
 - `experiments/run_v52b_small_local_rag_measured_row.sh`
 - `experiments/test_v52b_small_local_rag_measured_row.sh`
+- `experiments/run_v52c_7b14b_local_model_rag_evidence_intake.sh`
+- `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh`
 - `experiments/run_v53_public_repo_code_doc_audit.sh`
 - `experiments/test_v53_public_repo_code_doc_audit.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
@@ -313,6 +315,7 @@ Implemented now:
 - `experiments/test_v60_architecture_challenge_release_contract.sh`
 - `results/v52_llm_rag_baseline_war/baseline_001/` contract artifacts
 - `results/v52b_small_local_rag_measured_row/row_001/` measured system-B seed artifacts
+- `results/v52c_7b14b_local_model_rag_evidence_intake/intake_001/` system-C evidence-intake artifacts
 - `results/v53_public_repo_code_doc_audit/audit_001/` contract artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -325,6 +328,8 @@ Implemented now:
 This scaffold emits the A-H baseline registry, adapter contract rows, symmetric evaluation contract rows, score axes, source-preview copies, and claim boundary. It intentionally keeps `v52_ready=0`, `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, and `optional_100b_plus_baseline_status=deferred-with-reason`.
 
 The v52b measured-row layer emits the first system-B small-local-RAG answer/citation/retrieval/resource rows over the v50 public-repo seed. It intentionally marks only `v52_absorb_ready=1`; it keeps `v52_ready=0`, `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, and all 30B-150B comparison claims blocked.
+
+The v52c evidence-intake layer emits the system-C 7B-14B local-model-RAG schema, answer template, model identity template, validation rows, source evidence copies, hash manifest, and claim boundary. Default/no-env execution intentionally keeps `supplied_evidence_ready=0`, `v52_absorb_ready=0`, `v52_ready=0`, and all 30B-150B comparison claims blocked until a real local model evidence directory validates.
 
 The v53 scaffold emits a 10-repo target registry, 1000-query scale contract, artifact contract rows, v50 seed evidence copies, and claim boundary. It intentionally keeps `v53_ready=0`, `missing_repo_count=7`, and `missing_query_rows=991`.
 
@@ -347,7 +352,7 @@ The v60 scaffold emits release requirement rows, allowed claim rows, forbidden c
 The next implementation PR should extend v52-v60 from contract scaffold to measured and reviewed rows:
 
 1. Absorb and scale the measured B small-local-RAG row beyond the current 9-row v50 seed.
-2. Add a measured 7B-14B local model + RAG row for C.
+2. Supply and validate a real 7B-14B local model + RAG evidence directory for C.
 3. Add real 30B and 70B open-weight LLM+RAG adapters/runs for D and E.
 4. Add a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
 5. Expand public repo coverage from 3 to at least 10 pinned repositories.
