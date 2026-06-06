@@ -32,6 +32,7 @@ run_or_reuse "$RESULTS_DIR/v55b_local_scaling_law_main_120_summary.csv" "$ROOT_D
 run_or_reuse "$RESULTS_DIR/v56b_ruler_longbench_expanded_scale_summary.csv" "$ROOT_DIR/experiments/run_v56b_ruler_longbench_expanded_scale.sh"
 run_or_reuse "$RESULTS_DIR/v57b_domain_expert_pack_candidate_1000_summary.csv" "$ROOT_DIR/experiments/run_v57b_domain_expert_pack_candidate_1000.sh"
 run_or_reuse "$RESULTS_DIR/v58b_blind_eval_candidate_500_summary.csv" "$ROOT_DIR/experiments/run_v58b_blind_eval_candidate_500.sh"
+run_or_reuse "$RESULTS_DIR/v58c_blind_response_evidence_intake_summary.csv" "$ROOT_DIR/experiments/run_v58c_blind_response_evidence_intake.sh"
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
@@ -148,6 +149,15 @@ STAGES = [
         "artifacts": ["blind_query_freeze_rows.csv", "blind_response_template_rows.csv", "blind_reviewer_packet_template_rows.csv", "V58B_BLIND_EVAL_CANDIDATE_BOUNDARY.md", "v58b_blind_eval_candidate_manifest.json", "sha256_manifest.csv"],
         "claim": "500-row blind eval candidate freeze",
     },
+    {
+        "stage": "v58c",
+        "summary": results / "v58c_blind_response_evidence_intake_summary.csv",
+        "source_dir": results / "v58c_blind_response_evidence_intake" / "intake_001",
+        "ready_field": "v58c_blind_response_evidence_intake_ready",
+        "full_ready_field": "v58_ready",
+        "artifacts": ["blind_response_required_field_rows.csv", "blind_response_row_template.csv", "run_identity_template_rows.csv", "V58C_BLIND_RESPONSE_EVIDENCE_INTAKE_BOUNDARY.md", "v58c_blind_response_evidence_intake_manifest.json", "sha256_manifest.csv"],
+        "claim": "blind response evidence intake",
+    },
 ]
 
 
@@ -251,7 +261,7 @@ demo.chmod(0o755)
     "```bash\n"
     "./examples/v1_0_architecture_challenge_candidate_demo.sh\n"
     "```\n\n"
-    "This bundle proves that the current v52b-v58b candidate/intake chain can be replayed and audited from one command. It does not prove v1.0 performance, blind-eval wins, or release readiness.\n\n"
+    "This bundle proves that the current v52b-v58c candidate/intake chain can be replayed and audited from one command. It does not prove v1.0 performance, blind-eval wins, or release readiness.\n\n"
     "Candidate-ready surfaces included:\n\n"
     "- measured small-local-RAG seed rows\n"
     "- C/D/E/F evidence intake templates\n"
@@ -261,6 +271,7 @@ demo.chmod(0o755)
     "- 1500-row RULER/LongBench candidate scale\n"
     "- 1000-row domain expert candidate pack\n"
     "- 500-row blind query freeze and reviewer packet templates\n\n"
+    "- blind response evidence intake templates\n\n"
     "Still blocked: real 30B/70B LLM+RAG rows, optional 100B+ row or final deferral, complete-source audit rows, human expert review, human blind review, and release review.\n",
     encoding="utf-8",
 )

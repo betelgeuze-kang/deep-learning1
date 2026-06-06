@@ -332,6 +332,8 @@ Implemented now:
 - `experiments/test_v58_blind_eval_contract.sh`
 - `experiments/run_v58b_blind_eval_candidate_500.sh`
 - `experiments/test_v58b_blind_eval_candidate_500.sh`
+- `experiments/run_v58c_blind_response_evidence_intake.sh`
+- `experiments/test_v58c_blind_response_evidence_intake.sh`
 - `examples/v1_0_architecture_challenge_demo.sh`
 - `experiments/run_v59_one_command_challenge_demo_contract.sh`
 - `experiments/test_v59_one_command_challenge_demo_contract.sh`
@@ -363,6 +365,7 @@ Implemented now:
 - `results/v57b_domain_expert_pack_candidate_1000/candidate_001/` 1000-row domain expert pack candidate artifacts
 - `results/v58_blind_eval_contract/contract_001/` contract artifacts
 - `results/v58b_blind_eval_candidate_500/candidate_001/` 500-row blind query-freeze and reviewer-packet candidate artifacts
+- `results/v58c_blind_response_evidence_intake/intake_001/` D/E/F/G/H blind response evidence-intake artifacts
 - `results/v59_one_command_challenge_demo_contract/contract_001/` contract artifacts
 - `results/v59b_one_command_candidate_demo/candidate_001/` one-command candidate/intake-chain replay artifacts
 - `results/v60_architecture_challenge_release_contract/contract_001/` contract artifacts
@@ -410,9 +413,11 @@ The v58 scaffold emits D-H blind-system mapping, 500-row blind query-freeze targ
 
 The v58b candidate layer emits 500 frozen source-span-bound blind queries, 2500 D/E/F/G/H response templates, 2500 anonymous reviewer-packet templates, sealed answer and identity keys, same-evidence-budget rows, adjudication templates, copied v58/v57b source evidence, hash manifest, and claim boundary. It marks only `v58b_blind_eval_candidate_ready=1`; it keeps `v58_ready=0`, `actual_blind_response_rows=0`, `required_30b_blind_response_ready=0`, `required_70b_blind_response_ready=0`, `human_blind_review_ready=0`, `inter_rater_rows_ready=0`, and `real_release_package_ready=0`.
 
+The v58c intake layer emits the D/E/F/G/H blind response schema, 2500-row response template, run-identity template, validation rows, gate rows, copied v58b source evidence, hash manifest, and claim boundary. It marks only `v58c_blind_response_evidence_intake_ready=1`; it keeps `v58_ready=0`, required blind response readiness, optional F readiness, human blind review, inter-rater rows, full blind-eval, and release claims blocked until real supplied response rows validate.
+
 The v59 scaffold emits a repository one-command entrypoint, v52-v58 contract bundle, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It intentionally keeps `v59_ready=0`, all v52-v58 full-ready stage rows at zero, and the real 30B/70B, public repo scale, generation, scaling, expanded benchmark, domain pack, blind-eval, and release blockers explicit.
 
-The v59b candidate layer emits a repository one-command candidate entrypoint, v52b-v58b candidate/intake bundle, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It marks only `v59b_one_command_candidate_demo_ready=1`; it keeps `v59_ready=0`, real 30B/70B rows, optional 100B+ row/final deferral, complete-source audit, human domain review, human blind review, full challenge demo, and release claims blocked.
+The v59b candidate layer emits a repository one-command candidate entrypoint, v52b-v58c candidate/intake bundle, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It marks only `v59b_one_command_candidate_demo_ready=1`; it keeps `v59_ready=0`, real 30B/70B rows, optional 100B+ row/final deferral, complete-source audit, human domain review, human blind review, full challenge demo, and release claims blocked.
 
 The v60 scaffold emits release requirement rows, allowed claim rows, forbidden claim rows, release decision rows, v59 source bundle copies, hash manifest, and claim boundary. It intentionally keeps `v60_ready=0`, all ten release requirements blocked, `real_release_package_ready=0`, and all v1.0 comparison/release claims blocked until real measured rows and human/release review evidence exist.
 
@@ -432,7 +437,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 8. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
 9. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
 10. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
-11. Promote the v58b frozen query/reviewer packet into a real 500+ row blind evaluation by supplying D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
+11. Promote the v58c response intake into a real 500+ row blind evaluation by supplying valid D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
 12. Promote the v59b candidate replay into a full challenge demo by replacing candidate/intake rows with real v52-v58 measured/reviewed rows and writing a reviewer-ready artifact bundle.
 13. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
 14. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.

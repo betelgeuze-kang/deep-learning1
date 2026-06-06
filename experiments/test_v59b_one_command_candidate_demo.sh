@@ -21,7 +21,7 @@ run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
 
-STAGE_ORDER = ["v52b", "v52c", "v52d", "v52e", "v53e", "v53f", "v54b", "v55b", "v56b", "v57b", "v58b"]
+STAGE_ORDER = ["v52b", "v52c", "v52d", "v52e", "v53e", "v53f", "v54b", "v55b", "v56b", "v57b", "v58b", "v58c"]
 FULL_READY_ALLOWED = {"v54b", "v55b", "v56b"}
 
 
@@ -45,8 +45,8 @@ summary = summary_rows[0]
 expected = {
     "v59b_one_command_candidate_demo_ready": "1",
     "v59_ready": "0",
-    "candidate_stage_rows": "11",
-    "candidate_ready_stage_rows": "11",
+    "candidate_stage_rows": "12",
+    "candidate_ready_stage_rows": "12",
     "full_ready_stage_rows": "3",
     "one_command_candidate_entrypoint_ready": "1",
     "candidate_bundle_ready": "1",
@@ -124,7 +124,7 @@ if manifest.get("v59b_one_command_candidate_demo_ready") != 1 or manifest.get("v
     raise SystemExit("v59b manifest readiness mismatch")
 if manifest.get("stage_order") != STAGE_ORDER:
     raise SystemExit("v59b manifest stage order mismatch")
-if manifest.get("candidate_ready_stage_rows") != 11 or manifest.get("full_ready_stage_rows") != 3:
+if manifest.get("candidate_ready_stage_rows") != 12 or manifest.get("full_ready_stage_rows") != 3:
     raise SystemExit("v59b manifest stage count mismatch")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}

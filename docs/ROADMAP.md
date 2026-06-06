@@ -1530,6 +1530,13 @@ Current next boundary:
   marks the pre-output freeze and review-intake surface ready while keeping real
   blind responses, human blind review, inter-rater rows, and release claims
   blocked.
+- `v58c` adds the blind response evidence-intake gate.
+  `experiments/test_v58c_blind_response_evidence_intake.sh` emits the D/E/F/G/H
+  blind response schema, 2500-row response template, run-identity template,
+  validation rows, gate rows, and hash manifest over the v58b frozen query set.
+  It keeps required response readiness, human blind review, inter-rater rows,
+  full v58, and release claims blocked until real supplied response rows
+  validate.
 - `v59` is started as a one-command challenge demo contract scaffold.
   `examples/v1_0_architecture_challenge_demo.sh` runs the v59 bundle builder,
   which assembles v52-v58 contract artifacts, stage/gate rows, a replay
@@ -1537,7 +1544,7 @@ Current next boundary:
   with `v59_ready=0` and all v52-v58 full-ready stage rows at zero.
 - `v59b` adds the one-command candidate/intake-chain replay.
   `examples/v1_0_architecture_challenge_candidate_demo.sh` runs the v59b
-  bundle builder, which assembles v52b-v58b candidate/intake artifacts, stage
+  bundle builder, which assembles v52b-v58c candidate/intake artifacts, stage
   rows, gate rows, README_RESULT, boundary, and sha256 manifest. It marks the
   current candidate replay bundle ready while keeping real LLM rows,
   complete-source audit, human review, full v59, and release claims blocked.

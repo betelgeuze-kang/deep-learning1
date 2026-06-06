@@ -43,8 +43,8 @@ expected = {
     "v60_ready": "0",
     "v59b_one_command_candidate_demo_ready": "1",
     "v59_ready": "0",
-    "candidate_stage_rows": "11",
-    "candidate_ready_stage_rows": "11",
+    "candidate_stage_rows": "12",
+    "candidate_ready_stage_rows": "12",
     "full_ready_stage_rows": "3",
     "release_requirement_rows": "11",
     "release_requirement_ready_rows": "3",
@@ -116,8 +116,8 @@ for claim in ["v1_0_release_ready", "beats_30b_150b_llm_rag", "safe_grounded_cod
         raise SystemExit(f"v60b forbidden claim missing: {claim}")
 
 stage_audit = read_csv(run_dir / "stage_release_audit_rows.csv")
-if len(stage_audit) != 11:
-    raise SystemExit("v60b should audit 11 candidate stages")
+if len(stage_audit) != 12:
+    raise SystemExit("v60b should audit 12 candidate stages")
 if any(row["release_acceptable"] != "0" for row in stage_audit):
     raise SystemExit("v60b should not mark candidate stages release-acceptable")
 
