@@ -1413,6 +1413,11 @@ Current next boundary:
   emits the A-H registry, adapter contracts, symmetric evaluation axes, copied
   v0.3 source-preview artifacts, and claim boundary, but keeps full v52 blocked
   until real 30B and 70B LLM+RAG rows exist.
+- `v52b` adds the first measured small local RAG row for system B.
+  `experiments/test_v52b_small_local_rag_measured_row.sh` emits nine measured
+  answer rows plus citation/retrieval/resource rows over the v50 public-repo
+  seed, marks the row `v52_absorb_ready=1`, and still keeps full v52 blocked
+  until C/D/E real baseline rows exist.
 - `v53` is started as a public repo code/doc audit contract scaffold.
   `experiments/test_v53_public_repo_code_doc_audit.sh` emits the 10-repo /
   1000-query scale contract from the v50 3-repo seed, and keeps full v53

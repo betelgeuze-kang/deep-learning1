@@ -30,6 +30,7 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 
 ```bash
 ./experiments/test_v52_llm_rag_baseline_war.sh
+./experiments/test_v52b_small_local_rag_measured_row.sh
 ./experiments/test_v53_public_repo_code_doc_audit.sh
 ./experiments/test_v54_routehint_generation_1000_contract.sh
 ./experiments/test_v55_local_scaling_law_main_contract.sh
@@ -41,7 +42,9 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 ./experiments/test_v60_architecture_challenge_release_contract.sh
 ```
 
-이 명령들은 A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, v60 release-audit contract를 만들지만, 실제 30B/70B LLM+RAG row, 10+ repo / 1000+ query audit row, 1000+ RouteHint generation row, 6축 / 100+ row scaling evidence, expanded RULER/LongBench row, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
+이 명령들은 A-H baseline registry, system B small-local-RAG measured seed row, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, v60 release-audit contract를 만들지만, 실제 30B/70B LLM+RAG row, 10+ repo / 1000+ query audit row, 1000+ RouteHint generation row, 6축 / 100+ row scaling evidence, expanded RULER/LongBench row, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
+
+현재 measured baseline 진척: `experiments/test_v52b_small_local_rag_measured_row.sh`는 v50 public-repo seed 위에서 `results/v52b_small_local_rag_measured_row/row_001/`에 system B answer row 9개, citation/retrieval/resource row, hash manifest를 생성합니다. 이 row는 v52에 흡수 가능한 첫 실측 seed지만, 30B-150B 비교 결과는 아니며 v52 release claim은 계속 blocked입니다.
 
 ## v0.3 Architecture Preview
 

@@ -30,6 +30,7 @@ Current v52-v60 scaffold:
 
 ```bash
 ./experiments/test_v52_llm_rag_baseline_war.sh
+./experiments/test_v52b_small_local_rag_measured_row.sh
 ./experiments/test_v53_public_repo_code_doc_audit.sh
 ./experiments/test_v54_routehint_generation_1000_contract.sh
 ./experiments/test_v55_local_scaling_law_main_contract.sh
@@ -41,7 +42,9 @@ Current v52-v60 scaffold:
 ./experiments/test_v60_architecture_challenge_release_contract.sh
 ```
 
-These emit the A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, and v60 release-audit contract while keeping full v52-v60 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, expanded RULER/LongBench rows, human-reviewed domain expert pack rows, 500+ blind-eval rows, the complete challenge demo rows, and human/release review evidence are supplied.
+These emit the A-H baseline registry, a measured B small-local-RAG seed row, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, and v60 release-audit contract while keeping full v52-v60 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, expanded RULER/LongBench rows, human-reviewed domain expert pack rows, 500+ blind-eval rows, the complete challenge demo rows, and human/release review evidence are supplied.
+
+Current measured baseline progress: `experiments/test_v52b_small_local_rag_measured_row.sh` creates `results/v52b_small_local_rag_measured_row/row_001/` with nine measured system-B answer rows, citation rows, retrieval/resource rows, and hash manifests over the v50 public-repo seed. It is absorb-ready for v52, but it is not a 30B-150B comparison and leaves v52 release claims blocked.
 
 ## v0.3 Architecture Preview
 
