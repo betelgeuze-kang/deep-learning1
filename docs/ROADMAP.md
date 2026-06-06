@@ -1522,6 +1522,14 @@ Current next boundary:
   full v58 blocked with `missing_blind_eval_rows=500`,
   `required_30b_blind_response_ready=0`, and
   `human_blind_review_ready=0`.
+- `v58b` adds the blind-eval candidate freeze.
+  `experiments/test_v58b_blind_eval_candidate_500.sh` emits 500 frozen
+  source-span-bound blind queries, 2500 D/E/F/G/H response templates, 2500
+  anonymous reviewer-packet templates, sealed answer/identity keys,
+  same-evidence-budget rows, adjudication templates, and hash manifests. It
+  marks the pre-output freeze and review-intake surface ready while keeping real
+  blind responses, human blind review, inter-rater rows, and release claims
+  blocked.
 - `v59` is started as a one-command challenge demo contract scaffold.
   `examples/v1_0_architecture_challenge_demo.sh` runs the v59 bundle builder,
   which assembles v52-v58 contract artifacts, stage/gate rows, a replay
