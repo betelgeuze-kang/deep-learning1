@@ -43,12 +43,15 @@ expect_decision_status() {
 
 expect_summary_value "v0_3_architecture_preview_ready" "1"
 expect_summary_value "one_command_repo_audit_ready" "1"
+expect_summary_value "local_scaling_matrix_ready" "1"
 expect_summary_value "baseline_war_ready" "1"
 expect_summary_value "routehint_generator_mainline_ready" "1"
 expect_summary_value "local_codebase_intelligence_box_ready" "1"
 expect_summary_value "audit_report_ready" "1"
 expect_summary_value "reproduce_ready" "1"
+expect_summary_value "scaling_axis_count" "5"
 expect_summary_value "baseline_rows" "8"
+expect_summary_value "scaling_curve_rows" "27"
 expect_summary_value "raw_prompt_context_bytes" "0"
 expect_summary_value "attention_blocks" "0"
 expect_summary_value "transformer_blocks" "0"
@@ -58,6 +61,7 @@ expect_summary_value "real_release_package_ready" "0"
 expect_summary_value "gpu_speedup_claim" "deferred"
 
 expect_decision_status "v0.3-architecture-preview" "pass"
+expect_decision_status "local-scaling-matrix" "pass"
 expect_decision_status "baseline-war" "pass"
 expect_decision_status "audit-my-repo-ux" "pass"
 expect_decision_status "routehint-generator-mainline" "pass"
@@ -71,6 +75,14 @@ for file in \
   AUDIT_REPORT.md \
   BASELINE_COMPARISON.md \
   LOCAL_SCALING_SUMMARY.md \
+  store_size_curve.csv \
+  topk_curve.csv \
+  cache_budget_curve.csv \
+  routehint_budget_curve.csv \
+  query_count_curve.csv \
+  active_bytes_per_query.csv \
+  latency_breakdown.csv \
+  local_scaling_claim_boundary.md \
   ARCHITECTURE_TRACE.md \
   baseline_summary.md \
   baseline_metrics.csv \
@@ -124,6 +136,9 @@ for rel in [
     "compact_route_hint_rows.csv",
     "grounded_generation_rows.csv",
     "resource_envelope.json",
+    "store_size_curve.csv",
+    "active_bytes_per_query.csv",
+    "local_scaling_claim_boundary.md",
 ]:
     if manifest.get(rel) != sha256(preview_dir / rel):
         raise SystemExit(f"sha256 manifest mismatch: {rel}")
@@ -134,9 +149,18 @@ with (preview_dir / "grounded_generation_rows.csv").open(newline="", encoding="u
     generation_rows = list(csv.DictReader(handle))
 with (preview_dir / "baseline_metrics.csv").open(newline="", encoding="utf-8") as handle:
     baseline_rows = list(csv.DictReader(handle))
+with (preview_dir / "store_size_curve.csv").open(newline="", encoding="utf-8") as handle:
+    store_size_rows = list(csv.DictReader(handle))
+with (preview_dir / "active_bytes_per_query.csv").open(newline="", encoding="utf-8") as handle:
+    active_bytes_rows = list(csv.DictReader(handle))
 
-if not routehint_rows or not generation_rows or not baseline_rows:
+if not routehint_rows or not generation_rows or not baseline_rows or not store_size_rows or not active_bytes_rows:
     raise SystemExit("preview rows should not be empty")
+if len(store_size_rows) != 7 or len(active_bytes_rows) != 27:
+    raise SystemExit("preview scaling rows mismatch")
+store_active = [int(row["active_bytes_per_query"]) for row in store_size_rows]
+if store_active[-1] <= store_active[0] or store_active[-1] >= int(store_size_rows[-1]["store_size_bytes"]):
+    raise SystemExit("preview scaling active-byte curve is not bounded/sublinear")
 if len(routehint_rows) != len(generation_rows):
     raise SystemExit("RouteHint rows should match generation rows")
 if any(row["raw_context_appended"] != "0" or row["proposal_hint_used"] != "1" for row in routehint_rows):
@@ -182,6 +206,10 @@ boundary = (preview_dir / "baseline_claim_boundary.md").read_text(encoding="utf-
 for snippet in ["Transformer replacement", "production release", "GPU acceleration proven"]:
     if snippet not in boundary:
         raise SystemExit(f"claim boundary missing {snippet}")
+scaling_boundary = (preview_dir / "local_scaling_claim_boundary.md").read_text(encoding="utf-8")
+for snippet in ["GPU acceleration proven", "Transformer replacement", "release-ready product"]:
+    if snippet not in scaling_boundary:
+        raise SystemExit(f"local scaling claim boundary missing {snippet}")
 
 resource = json.loads((preview_dir / "resource_envelope.json").read_text(encoding="utf-8"))
 if resource.get("external_network_used") != 0 or resource.get("raw_prompt_context_bytes") != 0:

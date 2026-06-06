@@ -18,6 +18,7 @@ The preview is meant to let a reader clone the repository and run an evidence-bo
 
 ```bash
 ./scripts/audit_my_repo.sh /path/to/repo --emit-report --emit-lineage --emit-reproduce
+./scripts/run_local_scaling_matrix.sh /path/to/repo
 ./scripts/run_routehint_generator_mainline.sh /path/to/repo
 ./examples/local_codebase_intelligence_box.sh /path/to/repo
 ./experiments/test_v0_3_architecture_preview.sh
@@ -51,10 +52,27 @@ The preview is meant to let a reader clone the repository and run an evidence-bo
 
 `experiments/run_v0_3_architecture_preview.sh` additionally binds the showcase to the existing `v14c` baseline comparison artifacts and emits the preview summary/decision CSVs.
 
+`scripts/run_local_scaling_matrix.sh` writes the one-axis local scaling matrix:
+
+- `scaling_summary.md`
+- `store_size_curve.csv`
+- `topk_curve.csv`
+- `cache_budget_curve.csv`
+- `routehint_budget_curve.csv`
+- `query_count_curve.csv`
+- `active_bytes_per_query.csv`
+- `latency_breakdown.csv`
+- `resource_envelope.json`
+- `claim_boundary.md`
+- `sha256_manifest.csv`
+
 ## Passing Criteria
 
 - `v0_3_architecture_preview_ready=1`
 - `one_command_repo_audit_ready=1`
+- `local_scaling_matrix_ready=1`
+- `scaling_axis_count=5`
+- `scaling_curve_rows=27`
 - `baseline_war_ready=1`
 - `baseline_rows=8`, covering ripgrep literal search, BM25, small RAG boundary, tiny generator-only, RouteMemory retrieval-only, RouteMemory exact value-read, RouteMemory + compact RouteHint, and RouteMemory + scorer/offline policy
 - `routehint_generator_mainline_ready=1`

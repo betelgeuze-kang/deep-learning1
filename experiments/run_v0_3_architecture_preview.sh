@@ -12,6 +12,7 @@ rm -rf "$PREVIEW_DIR"
 mkdir -p "$PREVIEW_DIR"
 
 "$ROOT_DIR/experiments/run_v14c_baseline_comparison.sh" >/dev/null
+"$ROOT_DIR/scripts/run_local_scaling_matrix.sh" "$ROOT_DIR" >/dev/null
 "$ROOT_DIR/scripts/run_routehint_generator_mainline.sh" "$ROOT_DIR" >/dev/null
 V55_LOCAL_CODEBASE_BOX_DIR="$PREVIEW_DIR/local_codebase_intelligence_box" "$ROOT_DIR/examples/local_codebase_intelligence_box.sh" "$ROOT_DIR" >/dev/null
 
@@ -31,6 +32,8 @@ results_dir = root / "results"
 v14c_summary_path = results_dir / "v14c_baseline_comparison_summary.csv"
 v14c_decision_path = results_dir / "v14c_baseline_comparison_decision.csv"
 v14c_run_dir = results_dir / "v14c_baseline_comparison_runs" / "comparison_001"
+scaling_dir = results_dir / "v51_local_scaling_matrix"
+scaling_summary_path = results_dir / "v51_local_scaling_matrix_summary.csv"
 v54_dir = results_dir / "v54_routehint_generator_mainline"
 v55_dir = preview_dir / "local_codebase_intelligence_box"
 
@@ -46,6 +49,7 @@ def sha256(path):
     return "sha256:" + h.hexdigest()
 
 v14c = read_csv(v14c_summary_path)[0]
+scaling = read_csv(scaling_summary_path)[0]
 v54 = read_csv(v54_dir / "v54_routehint_generator_mainline_summary.csv")[0]
 v55 = read_csv(v55_dir / "v55_local_codebase_intelligence_box_summary.csv")[0]
 
@@ -62,7 +66,15 @@ artifact_map = {
     "README_RESULT.md": v55_dir / "README_RESULT.md",
     "AUDIT_REPORT.md": v55_dir / "AUDIT_REPORT.md",
     "BASELINE_COMPARISON.md": v55_dir / "BASELINE_COMPARISON.md",
-    "LOCAL_SCALING_SUMMARY.md": v55_dir / "LOCAL_SCALING_SUMMARY.md",
+    "LOCAL_SCALING_SUMMARY.md": scaling_dir / "scaling_summary.md",
+    "store_size_curve.csv": scaling_dir / "store_size_curve.csv",
+    "topk_curve.csv": scaling_dir / "topk_curve.csv",
+    "cache_budget_curve.csv": scaling_dir / "cache_budget_curve.csv",
+    "routehint_budget_curve.csv": scaling_dir / "routehint_budget_curve.csv",
+    "query_count_curve.csv": scaling_dir / "query_count_curve.csv",
+    "active_bytes_per_query.csv": scaling_dir / "active_bytes_per_query.csv",
+    "latency_breakdown.csv": scaling_dir / "latency_breakdown.csv",
+    "local_scaling_claim_boundary.md": scaling_dir / "claim_boundary.md",
     "ARCHITECTURE_TRACE.md": v55_dir / "ARCHITECTURE_TRACE.md",
     "compact_route_hint_rows.csv": v55_dir / "compact_route_hint_rows.csv",
     "grounded_generation_rows.csv": v55_dir / "grounded_generation_rows.csv",
@@ -219,12 +231,15 @@ with (preview_dir / "routehint_vs_rag.csv").open("w", newline="", encoding="utf-
 summary = {
     "v0_3_architecture_preview_ready": 1,
     "one_command_repo_audit_ready": int(v55.get("local_codebase_intelligence_box_ready") == "1"),
+    "local_scaling_matrix_ready": int(scaling.get("v51_local_scaling_matrix_ready") == "1"),
     "baseline_war_ready": int(v14c.get("baseline_comparison_ready") == "1" and v14c.get("route_memory_safety_dominates_baselines") == "1"),
     "routehint_generator_mainline_ready": int(v54.get("routehint_generator_mainline_ready") == "1"),
     "local_codebase_intelligence_box_ready": int(v55.get("local_codebase_intelligence_box_ready") == "1"),
     "audit_report_ready": int((preview_dir / "AUDIT_REPORT.md").is_file()),
     "reproduce_ready": int((preview_dir / "reproduce.sh").is_file()),
+    "scaling_axis_count": 5,
     "baseline_rows": len(baseline_overlay_rows),
+    "scaling_curve_rows": int(scaling.get("active_bytes_rows", "0")),
     "v14c_baseline_rows": v14c.get("baseline_rows", "0"),
     "compact_route_hint_rows": v55.get("compact_route_hint_rows", "0"),
     "grounded_generation_rows": v55.get("grounded_generation_rows", "0"),
@@ -245,6 +260,7 @@ with summary_csv.open("w", newline="", encoding="utf-8") as handle:
 
 decisions = [
     ("v0.3-architecture-preview", "pass" if summary["v0_3_architecture_preview_ready"] == 1 else "blocked", "preview artifacts emitted"),
+    ("local-scaling-matrix", "pass" if summary["local_scaling_matrix_ready"] == 1 and summary["scaling_curve_rows"] == 27 else "blocked", f"curve_rows={summary['scaling_curve_rows']}"),
     ("baseline-war", "pass" if summary["baseline_war_ready"] == 1 else "blocked", f"baseline_rows={summary['baseline_rows']}"),
     ("audit-my-repo-ux", "pass" if summary["one_command_repo_audit_ready"] == 1 and summary["audit_report_ready"] == 1 else "blocked", "one-command report/reproduce path"),
     ("routehint-generator-mainline", "pass" if summary["routehint_generator_mainline_ready"] == 1 else "blocked", "compact RouteHint generator path"),

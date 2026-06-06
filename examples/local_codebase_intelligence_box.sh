@@ -75,7 +75,8 @@ def sha256(path):
 (out_dir / "LOCAL_SCALING_SUMMARY.md").write_text(
     "# Local Scaling Summary\n\n"
     "The preview records a bounded local resource envelope for this one-command audit. "
-    "Full measured CPU/NVMe traces remain in the v51 measured evidence intake artifact; this showcase does not open GPU speedup wording.\n\n"
+    "Run `./scripts/run_local_scaling_matrix.sh /path/to/repo` for the full one-axis store/top-k/cache/RouteHint/query-count curve artifact. "
+    "This showcase does not open GPU speedup wording.\n\n"
     f"- source_files_scanned={summary['source_files']}\n"
     f"- finding_rows={summary['finding_rows']}\n"
     "- gpu_speedup_claim=deferred\n",
