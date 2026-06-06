@@ -26,7 +26,7 @@ Required v1.0 stages:
 
 v0.3 remains a local architecture preview and claim-bound evidence surface.
 
-Current v52-v59 scaffold:
+Current v52-v60 scaffold:
 
 ```bash
 ./experiments/test_v52_llm_rag_baseline_war.sh
@@ -38,9 +38,10 @@ Current v52-v59 scaffold:
 ./experiments/test_v58_blind_eval_contract.sh
 ./experiments/test_v59_one_command_challenge_demo_contract.sh
 ./examples/v1_0_architecture_challenge_demo.sh
+./experiments/test_v60_architecture_challenge_release_contract.sh
 ```
 
-These emit the A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, and v59 one-command challenge demo contract while keeping full v52-v59 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, expanded RULER/LongBench rows, human-reviewed domain expert pack rows, 500+ blind-eval rows, and the complete challenge demo rows are supplied.
+These emit the A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, and v60 release-audit contract while keeping full v52-v60 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, expanded RULER/LongBench rows, human-reviewed domain expert pack rows, 500+ blind-eval rows, the complete challenge demo rows, and human/release review evidence are supplied.
 
 ## v0.3 Architecture Preview
 

@@ -1448,6 +1448,11 @@ Current next boundary:
   which assembles v52-v58 contract artifacts, stage/gate rows, a replay
   command, README_RESULT, and sha256 manifest while keeping full v59 blocked
   with `v59_ready=0` and all v52-v58 full-ready stage rows at zero.
+- `v60` is started as a release-audit contract scaffold.
+  `experiments/test_v60_architecture_challenge_release_contract.sh` consumes
+  the v59 bundle, emits release requirement rows, allowed/forbidden claim rows,
+  and release decision rows, and keeps full v60 blocked with `v60_ready=0`,
+  all ten release requirements blocked, and `real_release_package_ready=0`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
