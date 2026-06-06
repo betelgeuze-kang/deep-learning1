@@ -1421,6 +1421,10 @@ Current next boundary:
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
   and keeps full v54 blocked with `missing_generation_rows=976`.
+- `v55` is started as a local scaling law main-run contract scaffold.
+  `experiments/test_v55_local_scaling_law_main_contract.sh` emits the six-axis
+  / 100-row scaling contract from v51 seed curves, and keeps full v55 blocked
+  with `repo_count_axis_ready=0` and `missing_scaling_curve_rows=73`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
