@@ -36,8 +36,10 @@ The preview is meant to let a reader clone the repository and run an evidence-bo
 - `compact_route_hint_rows.csv`
 - `grounded_generation_rows.csv`
 - `abstain_rows.csv`
+- `wrong_answer_guard_rows.csv`
 - `unsupported_claim_rows.csv`
 - `resource_envelope.json`
+- `claim_boundary.md`
 - `reproduce.sh`
 - `sha256sums.txt`
 

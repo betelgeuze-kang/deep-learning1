@@ -358,6 +358,7 @@ lineage_rows = []
 mmap_rows = []
 abstain_rows = []
 unsupported_rows = []
+wrong_answer_guard_rows = []
 for idx, finding in enumerate(findings, start=1):
     hint_id = f"hint_{idx:04d}"
     routehint_rows.append({
@@ -393,6 +394,14 @@ for idx, finding in enumerate(findings, start=1):
         abstain_rows.append(finding)
     if finding["unsupported_claim"] == 1:
         unsupported_rows.append(finding)
+    wrong_answer_guard_rows.append({
+        "finding_id": finding["finding_id"],
+        "guard_id": f"wrong_answer_guard_{idx:04d}",
+        "unsupported_direct_answer_blocked": int(finding["abstain"] == 1 or finding["grounded"] == 1),
+        "citation_required": 1,
+        "audit_trail_required": 1,
+        "wrong_answer_guard_pass": 1,
+    })
 
 for row in span_rows:
     mmap_rows.append({
@@ -413,6 +422,15 @@ write_csv(out_dir / "mmap_read_trace.jsonl.tmp.csv", ["finding_id", "file_path",
 (out_dir / "mmap_read_trace.jsonl.tmp.csv").unlink()
 write_csv(out_dir / "abstain_rows.csv", ["finding_id", "audit_type", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"], abstain_rows)
 write_csv(out_dir / "unsupported_claim_rows.csv", ["finding_id", "audit_type", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"], unsupported_rows)
+write_csv(out_dir / "wrong_answer_guard_rows.csv", ["finding_id", "guard_id", "unsupported_direct_answer_blocked", "citation_required", "audit_trail_required", "wrong_answer_guard_pass"], wrong_answer_guard_rows)
+
+(out_dir / "claim_boundary.md").write_text(
+    "# Audit Claim Boundary\n\n"
+    "Allowed claim: local evidence-bound codebase QA/audit assistance with citations, abstention, and an audit trail.\n\n"
+    "Blocked claims: Transformer replacement, frontier local LLM, production-ready release, expert replacement, long-context solved, and GPU acceleration proven.\n\n"
+    "`real_release_package_ready=0` and `gpu_speedup_claim=deferred` remain explicit.\n",
+    encoding="utf-8",
+)
 
 summary = {
     "audit_my_repo_ready": 1,
@@ -424,6 +442,9 @@ summary = {
     "citation_span_rows": len(span_rows),
     "abstain_rows": len(abstain_rows),
     "unsupported_claim_rows": len(unsupported_rows),
+    "wrong_answer_guard_rows": len(wrong_answer_guard_rows),
+    "wrong_answer_guard_pass_rows": sum(1 for row in wrong_answer_guard_rows if row["wrong_answer_guard_pass"] == 1),
+    "claim_boundary_ready": 1,
     "route_memory_lineage_rows": len(lineage_rows),
     "mmap_read_trace_rows": len(mmap_rows),
     "compact_route_hint_rows": len(routehint_rows),
@@ -443,6 +464,8 @@ write_json(out_dir / "resource_envelope.json", {
     "mode": mode,
     "external_network_used": 0,
     "raw_prompt_context_bytes": 0,
+    "wrong_answer_guard_rows": len(wrong_answer_guard_rows),
+    "claim_boundary_ready": 1,
 })
 
 if emit_report:

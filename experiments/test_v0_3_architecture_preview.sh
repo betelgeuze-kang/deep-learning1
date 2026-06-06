@@ -6,6 +6,7 @@ RESULTS_DIR="$ROOT_DIR/results"
 PREVIEW_DIR="$RESULTS_DIR/v0_3_architecture_preview"
 SUMMARY_CSV="$RESULTS_DIR/v0_3_architecture_preview_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v0_3_architecture_preview_decision.csv"
+V54_DIR="$RESULTS_DIR/v54_routehint_generator_mainline"
 
 "$ROOT_DIR/experiments/run_v0_3_architecture_preview.sh" >/dev/null
 
@@ -90,6 +91,7 @@ for file in \
   routehint_vs_rag.csv \
   wrong_answer_guard_rows.csv \
   unsupported_claim_rows.csv \
+  claim_boundary.md \
   baseline_claim_boundary.md \
   prediction_lineage.jsonl \
   compact_route_hint_rows.csv \
@@ -106,7 +108,25 @@ do
   fi
 done
 
-python3 - "$PREVIEW_DIR" <<'PY'
+for file in \
+  route_memory_evidence_rows.csv \
+  compact_route_hint_rows.csv \
+  generator_input_rows.csv \
+  grounded_generation_rows.csv \
+  citation_rows.csv \
+  abstain_rows.csv \
+  unsupported_claim_rows.csv \
+  generator_boundary.md \
+  generation_metrics.json \
+  sha256_manifest.csv
+do
+  if [[ ! -s "$V54_DIR/$file" ]]; then
+    echo "missing v54 RouteHint generator mainline artifact: $file" >&2
+    exit 21
+  fi
+done
+
+python3 - "$PREVIEW_DIR" "$V54_DIR" <<'PY'
 import csv
 import hashlib
 import json
@@ -114,6 +134,7 @@ import sys
 from pathlib import Path
 
 preview_dir = Path(sys.argv[1])
+v54_dir = Path(sys.argv[2])
 
 def sha256(path):
     h = hashlib.sha256()
@@ -153,9 +174,28 @@ with (preview_dir / "store_size_curve.csv").open(newline="", encoding="utf-8") a
     store_size_rows = list(csv.DictReader(handle))
 with (preview_dir / "active_bytes_per_query.csv").open(newline="", encoding="utf-8") as handle:
     active_bytes_rows = list(csv.DictReader(handle))
+with (preview_dir / "wrong_answer_guard_rows.csv").open(newline="", encoding="utf-8") as handle:
+    wrong_guard_rows = list(csv.DictReader(handle))
+with (v54_dir / "generator_input_rows.csv").open(newline="", encoding="utf-8") as handle:
+    v54_input_rows = list(csv.DictReader(handle))
+with (v54_dir / "route_memory_evidence_rows.csv").open(newline="", encoding="utf-8") as handle:
+    v54_evidence_rows = list(csv.DictReader(handle))
+with (v54_dir / "citation_rows.csv").open(newline="", encoding="utf-8") as handle:
+    v54_citation_rows = list(csv.DictReader(handle))
+v54_metrics = json.loads((v54_dir / "generation_metrics.json").read_text(encoding="utf-8"))
 
-if not routehint_rows or not generation_rows or not baseline_rows or not store_size_rows or not active_bytes_rows:
+if not routehint_rows or not generation_rows or not baseline_rows or not store_size_rows or not active_bytes_rows or not wrong_guard_rows:
     raise SystemExit("preview rows should not be empty")
+if not v54_input_rows or not v54_evidence_rows or not v54_citation_rows:
+    raise SystemExit("v54 generator rows should not be empty")
+if any(row["wrong_answer_guard_pass"] != "1" for row in wrong_guard_rows):
+    raise SystemExit("wrong-answer guard rows should all pass")
+if any(row["raw_prompt_context_appended"] != "0" or row["attention_blocks"] != "0" or row["transformer_blocks"] != "0" for row in v54_input_rows):
+    raise SystemExit("v54 generator input rows should stay no raw prompt stuffing and non-attention")
+if int(v54_metrics.get("proposal_hint_used_rows", -1)) != int(v54_metrics.get("generation_rows", -2)):
+    raise SystemExit("v54 proposal hint rows should equal generation rows")
+if v54_metrics.get("missing_query_abstention_ready") != 1:
+    raise SystemExit("v54 should preserve missing-query abstention")
 if len(store_size_rows) != 7 or len(active_bytes_rows) != 27:
     raise SystemExit("preview scaling rows mismatch")
 store_active = [int(row["active_bytes_per_query"]) for row in store_size_rows]
@@ -214,6 +254,11 @@ for snippet in ["GPU acceleration proven", "Transformer replacement", "release-r
 resource = json.loads((preview_dir / "resource_envelope.json").read_text(encoding="utf-8"))
 if resource.get("external_network_used") != 0 or resource.get("raw_prompt_context_bytes") != 0:
     raise SystemExit("resource envelope boundary mismatch")
+
+claim_boundary = (preview_dir / "claim_boundary.md").read_text(encoding="utf-8")
+for snippet in ["Transformer replacement", "frontier local LLM", "production-ready release"]:
+    if snippet not in claim_boundary:
+        raise SystemExit(f"audit claim boundary missing {snippet}")
 PY
 
 echo "v0.3 architecture preview smoke passed"

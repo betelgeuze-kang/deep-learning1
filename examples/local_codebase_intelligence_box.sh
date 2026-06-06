@@ -25,6 +25,8 @@ cp "$AUDIT_DIR/compact_route_hint_rows.csv" "$OUT_DIR/compact_route_hint_rows.cs
 cp "$AUDIT_DIR/grounded_generation_rows.csv" "$OUT_DIR/grounded_generation_rows.csv"
 cp "$AUDIT_DIR/citation_spans.jsonl" "$OUT_DIR/citation_spans.jsonl"
 cp "$AUDIT_DIR/abstain_rows.csv" "$OUT_DIR/abstain_rows.csv"
+cp "$AUDIT_DIR/wrong_answer_guard_rows.csv" "$OUT_DIR/wrong_answer_guard_rows.csv"
+cp "$AUDIT_DIR/claim_boundary.md" "$OUT_DIR/claim_boundary.md"
 cp "$AUDIT_DIR/resource_envelope.json" "$OUT_DIR/resource_envelope.json"
 
 python3 - "$ROOT_DIR" "$OUT_DIR" "$AUDIT_DIR" "$DEMO_REPO" <<'PY'
