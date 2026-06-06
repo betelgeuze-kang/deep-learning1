@@ -302,6 +302,8 @@ Implemented now:
 - `experiments/test_v52h_small_local_rag_measured_1000.sh`
 - `experiments/run_v52i_abgh_same_query_measured_1000.sh`
 - `experiments/test_v52i_abgh_same_query_measured_1000.sh`
+- `experiments/run_v52j_measured_registry_absorb.sh`
+- `experiments/test_v52j_measured_registry_absorb.sh`
 - `experiments/run_v52c_7b14b_local_model_rag_evidence_intake.sh`
 - `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh`
 - `experiments/run_v52d_30b70b_llm_rag_evidence_intake.sh`
@@ -358,6 +360,7 @@ Implemented now:
 - `results/v52g_small_local_rag_measured_300/measured_001/` measured system-B 300-row stratified frozen-query artifacts
 - `results/v52h_small_local_rag_measured_1000/measured_001/` measured system-B 1000-row full frozen-query artifacts
 - `results/v52i_abgh_same_query_measured_1000/measured_001/` local A/B/G/H same-query measured artifacts
+- `results/v52j_measured_registry_absorb/registry_001/` v52 measured registry absorb artifacts
 - `results/v52c_7b14b_local_model_rag_evidence_intake/intake_001/` system-C evidence-intake artifacts
 - `results/v52d_30b70b_llm_rag_evidence_intake/intake_001/` system-D/E evidence-intake artifacts
 - `results/v52e_100b_plus_hosted_llm_rag_optional_intake/intake_001/` system-F optional evidence-intake artifacts
@@ -394,6 +397,8 @@ The v52g measured-row layer expands system B to 300 rows over a stratified froze
 The v52h measured-row layer expands system B to 1000 rows over the full frozen v53e canary query scale. It emits frozen query/source rows, source manifest rows, answer rows, citation rows, abstain rows, wrong-answer guard rows, resource rows, retrieval rows, copied v53e query/source evidence, and a sha256 manifest. It closes the B 9->100->300->1000 measured ladder while intentionally keeping A/G/H same-query-set rows, C/D/E evidence directories, `v52_ready=0`, and all 30B-150B comparison claims blocked.
 
 The v52i measured-row layer runs A/B/G/H over the same full frozen v53e canary query set and source manifest. It emits shared frozen query/source rows, source manifest rows, local system rows, answer rows, citation rows, abstain rows, wrong-answer guard rows, resource rows, retrieval rows, G/H RouteHint rows, per-system metrics, copied v53e evidence, and a sha256 manifest. It closes the local A/B/G/H same-query packet while intentionally keeping C/D/E evidence directories, required 30B/70B baselines, `v52_ready=0`, and all 30B-150B comparison claims blocked.
+
+The v52j measured-registry layer absorbs the v52i A/B/G/H measured packet into a v52 baseline registry. It marks A/B/G/H as measured over the shared v53e query/source manifest, copies the measured artifacts, records C/D/E/F blockers, and intentionally keeps C/D/E evidence directories, required 30B/70B baselines, `v52_ready=0`, and all 30B-150B comparison claims blocked.
 
 The v52c evidence-intake layer emits the system-C 7B-14B local-model-RAG schema, answer template, model identity template, validation rows, source evidence copies, hash manifest, and claim boundary. Default/no-env execution intentionally keeps `supplied_evidence_ready=0`, `v52_absorb_ready=0`, `v52_ready=0`, and all 30B-150B comparison claims blocked until a real local model evidence directory validates.
 
@@ -447,7 +452,7 @@ The v60b preflight layer consumes the v59b candidate replay and emits release-pr
 
 The next implementation PR should extend v52-v60 from contract scaffold to measured and reviewed rows:
 
-1. Promote the v52i A/B/G/H same-query packet into the v52 comparison registry and v59 replay bundle without weakening its local-only claim boundary.
+1. Promote the v52j measured registry into the v59 replay bundle without weakening its local-only claim boundary.
 2. Supply and validate a real 7B-14B local model + RAG evidence directory for C.
 3. Supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E.
 4. Re-run the same shared `query_id`, `source_manifest`, `answer_rows`, `citation_rows`, `abstain_rows`, `wrong_answer_guard_rows`, `resource_rows`, and `sha256_manifest` contract after C/D/E evidence validates.

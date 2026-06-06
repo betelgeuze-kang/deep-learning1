@@ -1444,6 +1444,12 @@ Current next boundary:
   rows, 2000 G/H RouteHint rows, and per-system metrics. It closes the local
   same-query packet while keeping C/D/E evidence, 30B/70B baselines, and full
   v52 blocked.
+- `v52j` absorbs the local measured packet into the v52 registry.
+  `experiments/test_v52j_measured_registry_absorb.sh` writes a measured
+  baseline registry where A/B/G/H are row-backed over v53e, copies the v52i
+  artifacts, and keeps C/D/E/F blockers explicit. It moves v52 beyond local
+  measured rows sitting beside the contract, but full v52 still requires real
+  C/D/E evidence directories.
 - `v52c` adds the 7B-14B local model + RAG evidence-intake gate for system C.
   `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh` emits the
   required evidence schema, answer/model templates, validation rows, and hash
