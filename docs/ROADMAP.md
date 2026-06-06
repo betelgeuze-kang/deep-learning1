@@ -1461,6 +1461,14 @@ Current next boundary:
   citation, resource, transcript, and model-identity rows, and validates them
   through v52c. It keeps C-over-v53e scale, D/E, full v52, and release claims
   blocked.
+- `v52l` expands system C to the shared v53e 1000-query set.
+  `experiments/test_v52l_7b14b_local_model_rag_v53e_1000.sh` runs local
+  Ollama `qwen2.5:7b-instruct` over the same frozen query/source manifest used
+  by v52i A/B/G/H, emits 1000 answer, citation, retrieval, abstain,
+  wrong-answer guard, resource, and transcript rows, and marks
+  `c_v53e_absorb_ready=1`. It records 0/1000 strict exact-label accuracy, so it
+  is a real C response/schema pressure packet rather than a C quality claim;
+  D/E, full v52, and release claims stay blocked.
 - `v52d` adds the 30B/70B open-weight LLM+RAG evidence-intake gate for systems
   D and E. `experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh` emits the
   required D/E evidence schemas, answer/model templates, validation rows, and
