@@ -1495,6 +1495,13 @@ Current next boundary:
   official source/evaluator-bound benchmark contract from v49/v45 seed
   evidence, and keeps full v56 blocked with `ruler_missing_rows=500`,
   `longbench_missing_rows=494`, and `llm_rag_baseline_rows_ready=0`.
+- `v56b` adds the expanded RULER/LongBench candidate-scale run.
+  `experiments/test_v56b_ruler_longbench_expanded_scale.sh` emits 1500
+  benchmark-format prediction rows, 1000 RULER rows, 500 LongBench rows, and
+  1500 lineage/candidate/resource rows with no oracle or raw-input extractor.
+  It marks the row-count target ready while keeping LLM+RAG baseline rows,
+  independent external benchmark verification, leaderboard, and release claims
+  blocked.
 - `v57` is started as a domain expert packs contract scaffold.
   `experiments/test_v57_domain_expert_packs_contract.sh` emits six domain-pack
   targets, expert-review artifact contracts, and policy gates from
