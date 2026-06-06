@@ -304,6 +304,8 @@ Implemented now:
 - `experiments/test_v53_public_repo_code_doc_audit.sh`
 - `experiments/run_v53b_public_repo_10_lock.sh`
 - `experiments/test_v53b_public_repo_10_lock.sh`
+- `experiments/run_v53c_public_repo_canary_source_snapshot.sh`
+- `experiments/test_v53c_public_repo_canary_source_snapshot.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v55_local_scaling_law_main_contract.sh`
@@ -326,6 +328,7 @@ Implemented now:
 - `results/v52e_100b_plus_hosted_llm_rag_optional_intake/intake_001/` system-F optional evidence-intake artifacts
 - `results/v53_public_repo_code_doc_audit/audit_001/` contract artifacts
 - `results/v53b_public_repo_10_lock/lock_001/` live 10-repo target-lock artifacts
+- `results/v53c_public_repo_canary_source_snapshot/snapshot_001/` pinned canary source snapshot artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
 - `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
@@ -347,6 +350,8 @@ The v52e optional-intake layer emits the system-F 100B+ hosted/API LLM+RAG schem
 The v53 scaffold emits a 10-repo target registry, 1000-query scale contract, artifact contract rows, v50 seed evidence copies, and claim boundary. It intentionally keeps `v53_ready=0`, `missing_repo_count=7`, and `missing_query_rows=991`.
 
 The v53b repo-lock layer resolves live HEAD SHAs for 10 public GitHub repositories, writes the 10-repo lock table and 1000-row query plan, and copies the v50 seed evidence. It intentionally keeps `v53_ready=0` because the seven newly locked repositories still need source snapshots and the audit still needs source-span-bound query rows, A-H answer/citation/resource rows, negative/abstain rows, and review artifacts.
+
+The v53c canary source snapshot layer fetches pinned source/doc/config canary files from all 10 locked repositories and records sha256 content rows. It intentionally keeps `v53_ready=0`, `full_source_snapshot_missing_repo_count=7`, and `missing_query_rows=991` because canary files are not complete source snapshots and do not provide the 1000-row audit, A-H answer/citation/resource rows, negative/abstain rows, or review artifacts.
 
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
@@ -370,7 +375,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 2. Supply and validate a real 7B-14B local model + RAG evidence directory for C.
 3. Supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E.
 4. Supply and validate a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
-5. Add source snapshots for the seven newly locked v53b repositories.
+5. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
 6. Expand code/doc query coverage from 9 to at least 1000 source-span-bound rows.
 7. Expand RouteHint generation from 24 seed rows to at least 1000 grounded rows.
 8. Expand scaling from 5 preview axes / 27 rows to 6 main axes / at least 100 rows, including repo_count, confidence intervals, and failure cases.

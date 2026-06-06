@@ -1443,6 +1443,11 @@ Current next boundary:
   v53 blocked until source snapshots, source-span-bound query rows,
   answer/citation/resource rows, negative/abstain rows, and review artifacts
   exist.
+- `v53c` adds pinned canary source snapshots for the 10 locked public repos.
+  `experiments/test_v53c_public_repo_canary_source_snapshot.sh` fetches
+  source/doc/config canary files from the locked HEAD SHAs and records sha256
+  content rows, but keeps full v53 blocked until complete source snapshots and
+  the 1000-row audit evidence exist.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
