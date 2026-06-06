@@ -25,6 +25,7 @@
 
 ```bash
 ./experiments/test_v0_3_architecture_preview.sh
+./experiments/test_v0_3_completion_audit.sh
 ```
 
 이 preview는 `RouteMemory evidence -> compact RouteHint -> tiny non-attention generator -> grounded answer -> citation / abstain / audit trail` 경로를 보여줍니다. Transformer 대체, frontier local LLM, GPU speedup proof, production release 주장은 아닙니다.

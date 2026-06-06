@@ -25,6 +25,7 @@ Verification:
 
 ```bash
 ./experiments/test_v0_3_architecture_preview.sh
+./experiments/test_v0_3_completion_audit.sh
 ```
 
 This preview demonstrates `RouteMemory evidence -> compact RouteHint -> tiny non-attention generator -> grounded answer -> citation / abstain / audit trail`. It is not a Transformer replacement, not a frontier local LLM, not a GPU-speedup proof, and not a production release.

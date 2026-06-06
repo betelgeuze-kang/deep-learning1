@@ -22,6 +22,7 @@ The preview is meant to let a reader clone the repository and run an evidence-bo
 ./scripts/run_routehint_generator_mainline.sh /path/to/repo
 ./examples/local_codebase_intelligence_box.sh /path/to/repo
 ./experiments/test_v0_3_architecture_preview.sh
+./experiments/test_v0_3_completion_audit.sh
 ```
 
 ## Emitted Artifacts
@@ -53,6 +54,8 @@ The preview is meant to let a reader clone the repository and run an evidence-bo
 - lineage, citation, RouteHint, generation, abstain, resource, reproduce, and hash artifacts
 
 `experiments/run_v0_3_architecture_preview.sh` additionally binds the showcase to the existing `v14c` baseline comparison artifacts and emits the preview summary/decision CSVs.
+
+`experiments/run_v0_3_completion_audit.sh` writes `results/v0_3_completion_audit/` with requirement-by-requirement evidence, a completion audit report, a PR body draft, and a sha256 manifest.
 
 `scripts/run_local_scaling_matrix.sh` writes the one-axis local scaling matrix:
 
