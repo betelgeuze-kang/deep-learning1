@@ -1508,6 +1508,13 @@ Current next boundary:
   v47/v48/v52/v56 seed evidence, and keeps full v57 blocked with
   `missing_eval_rows=950`, `human_expert_review_ready=0`, and
   `blind_eval_ready=0`.
+- `v57b` adds the domain expert pack candidate-scale set.
+  `experiments/test_v57b_domain_expert_pack_candidate_1000.sh` emits 1000
+  source-span-bound candidate eval rows across six packs, 900 answer rows,
+  100 abstain rows, 1000 expert-review template rows, policy/rubric/failure
+  taxonomy rows, and hash manifests. It marks the candidate surface ready while
+  keeping human expert review, blind evaluation, expert-replacement, and release
+  claims blocked.
 - `v58` is started as a blind evaluation contract scaffold.
   `experiments/test_v58_blind_eval_contract.sh` emits D-H blind-system
   mapping, 500-row query-freeze targets, evaluator contracts, and sealed

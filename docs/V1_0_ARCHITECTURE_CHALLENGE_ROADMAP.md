@@ -326,6 +326,8 @@ Implemented now:
 - `experiments/test_v56b_ruler_longbench_expanded_scale.sh`
 - `experiments/run_v57_domain_expert_packs_contract.sh`
 - `experiments/test_v57_domain_expert_packs_contract.sh`
+- `experiments/run_v57b_domain_expert_pack_candidate_1000.sh`
+- `experiments/test_v57b_domain_expert_pack_candidate_1000.sh`
 - `experiments/run_v58_blind_eval_contract.sh`
 - `experiments/test_v58_blind_eval_contract.sh`
 - `examples/v1_0_architecture_challenge_demo.sh`
@@ -351,6 +353,7 @@ Implemented now:
 - `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
 - `results/v56b_ruler_longbench_expanded_scale/scale_001/` 1500-row RULER/LongBench candidate-scale artifacts
 - `results/v57_domain_expert_packs_contract/contract_001/` contract artifacts
+- `results/v57b_domain_expert_pack_candidate_1000/candidate_001/` 1000-row domain expert pack candidate artifacts
 - `results/v58_blind_eval_contract/contract_001/` contract artifacts
 - `results/v59_one_command_challenge_demo_contract/contract_001/` contract artifacts
 - `results/v60_architecture_challenge_release_contract/contract_001/` contract artifacts
@@ -391,6 +394,8 @@ The v56b scale layer emits 1500 benchmark-format prediction rows, 1000 RULER row
 
 The v57 scaffold emits six domain-pack targets, expert-review artifact contracts, domain policy gates, v47/v48/v52/v56 seed evidence copies, and claim boundary. It intentionally keeps `v57_domain_expert_packs_ready=0`, `missing_eval_rows=950`, `human_expert_review_ready=0`, `blind_eval_ready=0`, and `expert_replacement_claim=0`.
 
+The v57b candidate layer emits 1000 source-span-bound candidate eval rows across six domain packs, with 900 answer rows, 100 abstain rows, 1000 source-span rows, 1000 expert-review template rows, policy/rubric/failure-taxonomy rows, copied v57 contract evidence, hash manifest, and claim boundary. It marks only `v57b_domain_expert_pack_candidate_ready=1`; it keeps `v57_domain_expert_packs_ready=0`, `human_expert_review_ready=0`, `blind_eval_ready=0`, `expert_replacement_claim=0`, and `real_release_package_ready=0`.
+
 The v58 scaffold emits D-H blind-system mapping, 500-row blind query-freeze targets, blind evaluator artifact contracts, sealed identity and symmetric-evidence gates, v52/v57 seed evidence copies, and claim boundary. It intentionally keeps `v58_ready=0`, `missing_blind_eval_rows=500`, `required_30b_blind_response_ready=0`, `required_70b_blind_response_ready=0`, `human_blind_review_ready=0`, and `inter_rater_rows_ready=0`.
 
 The v59 scaffold emits a repository one-command entrypoint, v52-v58 contract bundle, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It intentionally keeps `v59_ready=0`, all v52-v58 full-ready stage rows at zero, and the real 30B/70B, public repo scale, generation, scaling, expanded benchmark, domain pack, blind-eval, and release blockers explicit.
@@ -410,7 +415,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 7. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
 8. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
 9. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
-10. Fill the six domain expert packs with human-reviewed gold query sets, rubrics, failure taxonomy, blind review forms, policy diffs, privacy review, and reproducibility manifests.
+10. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
 11. Run the 500+ row blind evaluation with sealed system identity, frozen pre-output query selection, symmetric evidence budgets, human blind review, and inter-rater/adjudication rows.
 12. Turn the v59 command from contract bundle into a challenge demo by replaying the real v52-v58 measured rows and writing a reviewer-ready artifact bundle.
 13. Supply human/release review evidence and a real release artifact package only after v52-v59 real rows exist.

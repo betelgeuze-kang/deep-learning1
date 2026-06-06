@@ -47,13 +47,14 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 ./experiments/test_v56_ruler_longbench_expanded_contract.sh
 ./experiments/test_v56b_ruler_longbench_expanded_scale.sh
 ./experiments/test_v57_domain_expert_packs_contract.sh
+./experiments/test_v57b_domain_expert_pack_candidate_1000.sh
 ./experiments/test_v58_blind_eval_contract.sh
 ./experiments/test_v59_one_command_challenge_demo_contract.sh
 ./examples/v1_0_architecture_challenge_demo.sh
 ./experiments/test_v60_architecture_challenge_release_contract.sh
 ```
 
-이 명령들은 A-H baseline registry, system B small-local-RAG measured seed row, system C 7B-14B local-model-RAG evidence-intake gate, system D/E 30B/70B open-weight LLM+RAG evidence-intake gate, optional system F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, live 10-repo public target lock, pinned canary source snapshot, 100-row source-span-bound canary query seed, negative/abstain row를 포함한 1000-row canary-scope query scale, frozen query set 위의 A-H answer/citation/resource intake matrix, v54 1000-row generation contract, v54b deterministic local 1000-row RouteHint generation scale run, v55 scaling-law main-run contract, v55b 6축 / 360-row local scaling-law main run, v56 RULER/LongBench expanded benchmark contract, v56b 1500-row RULER/LongBench candidate-scale run, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, v60 release-audit contract를 만들지만, 실제 30B/70B LLM+RAG row, complete-source 10+ repo / 1000+ query audit row와 A-H answer/citation/resource, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
+이 명령들은 A-H baseline registry, system B small-local-RAG measured seed row, system C 7B-14B local-model-RAG evidence-intake gate, system D/E 30B/70B open-weight LLM+RAG evidence-intake gate, optional system F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, live 10-repo public target lock, pinned canary source snapshot, 100-row source-span-bound canary query seed, negative/abstain row를 포함한 1000-row canary-scope query scale, frozen query set 위의 A-H answer/citation/resource intake matrix, v54 1000-row generation contract, v54b deterministic local 1000-row RouteHint generation scale run, v55 scaling-law main-run contract, v55b 6축 / 360-row local scaling-law main run, v56 RULER/LongBench expanded benchmark contract, v56b 1500-row RULER/LongBench candidate-scale run, v57 domain expert pack contract, v57b 1000-row source-span-bound domain expert pack candidate set, v58 blind-eval contract, v59 one-command challenge demo contract, v60 release-audit contract를 만들지만, 실제 30B/70B LLM+RAG row, complete-source 10+ repo / 1000+ query audit row와 A-H answer/citation/resource, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
 
 현재 measured baseline 진척: `experiments/test_v52b_small_local_rag_measured_row.sh`는 v50 public-repo seed 위에서 `results/v52b_small_local_rag_measured_row/row_001/`에 system B answer row 9개, citation/retrieval/resource row, hash manifest를 생성합니다. 이 row는 v52에 흡수 가능한 첫 실측 seed지만, 30B-150B 비교 결과는 아니며 v52 release claim은 계속 blocked입니다.
 
@@ -78,6 +79,8 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 현재 v55 scaling-law 진척: `experiments/test_v55b_local_scaling_law_main_120.sh`는 6개 scaling axis, 360개 curve row, repo-count row 60개, confidence-interval row 120개, failure-case row, resource row, local source/probe hash binding을 `results/v55b_local_scaling_law_main_120/main_001/`에 생성합니다. v55 machine-verified local scaling-law main-run target은 닫혔지만, GPU speedup, production latency guarantee, 30B-150B equivalence, release claim은 계속 blocked입니다.
 
 현재 v56 benchmark-scale 진척: `experiments/test_v56b_ruler_longbench_expanded_scale.sh`는 RULER/LongBench-format prediction row 1500개, RULER row 1000개, LongBench row 500개, lineage/candidate/resource row 1500개를 `results/v56b_ruler_longbench_expanded_scale/scale_001/`에 생성하며 oracle/raw-input extractor 사용은 0입니다. v56 row-count target은 local candidate-scale evidence로 닫혔지만, external benchmark, leaderboard, v52 LLM+RAG baseline-row, release claim은 계속 blocked입니다.
+
+현재 v57 domain-pack 진척: `experiments/test_v57b_domain_expert_pack_candidate_1000.sh`는 6개 pack 위에서 source-span-bound candidate eval row 1000개를 `results/v57b_domain_expert_pack_candidate_1000/candidate_001/`에 생성합니다. 여기에는 answer row 900개, abstain row 100개, review-template row 1000개, policy/rubric/failure-taxonomy row, hash manifest가 포함됩니다. candidate row-count surface는 닫혔지만, 이 row들이 human-reviewed expert evidence로 돌아오고 v58 blind evaluation에 쓰이기 전까지 v57은 blocked입니다.
 
 ## v0.3 Architecture Preview
 
