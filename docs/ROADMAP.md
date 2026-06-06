@@ -1546,6 +1546,13 @@ Current next boundary:
   the v59 bundle, emits release requirement rows, allowed/forbidden claim rows,
   and release decision rows, and keeps full v60 blocked with `v60_ready=0`,
   all ten release requirements blocked, and `real_release_package_ready=0`.
+- `v60b` adds the release preflight candidate audit.
+  `experiments/test_v60b_release_preflight_candidate_audit.sh` consumes the
+  v59b one-command candidate replay, emits release-preflight requirements,
+  claim rows, stage release-audit rows, decision rows, boundary, and sha256
+  manifest. It allows only limited candidate-chain replay wording and keeps v1.0
+  release, 30B-150B comparison, QA superiority, expert replacement, production,
+  and release-package claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

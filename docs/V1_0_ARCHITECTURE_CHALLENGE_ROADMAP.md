@@ -340,6 +340,8 @@ Implemented now:
 - `experiments/test_v59b_one_command_candidate_demo.sh`
 - `experiments/run_v60_architecture_challenge_release_contract.sh`
 - `experiments/test_v60_architecture_challenge_release_contract.sh`
+- `experiments/run_v60b_release_preflight_candidate_audit.sh`
+- `experiments/test_v60b_release_preflight_candidate_audit.sh`
 - `results/v52_llm_rag_baseline_war/baseline_001/` contract artifacts
 - `results/v52b_small_local_rag_measured_row/row_001/` measured system-B seed artifacts
 - `results/v52c_7b14b_local_model_rag_evidence_intake/intake_001/` system-C evidence-intake artifacts
@@ -364,6 +366,7 @@ Implemented now:
 - `results/v59_one_command_challenge_demo_contract/contract_001/` contract artifacts
 - `results/v59b_one_command_candidate_demo/candidate_001/` one-command candidate/intake-chain replay artifacts
 - `results/v60_architecture_challenge_release_contract/contract_001/` contract artifacts
+- `results/v60b_release_preflight_candidate_audit/preflight_001/` release preflight candidate-audit artifacts
 
 This scaffold emits the A-H baseline registry, adapter contract rows, symmetric evaluation contract rows, score axes, source-preview copies, and claim boundary. It intentionally keeps `v52_ready=0`, `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, and `optional_100b_plus_baseline_status=deferred-with-reason`.
 
@@ -413,6 +416,8 @@ The v59b candidate layer emits a repository one-command candidate entrypoint, v5
 
 The v60 scaffold emits release requirement rows, allowed claim rows, forbidden claim rows, release decision rows, v59 source bundle copies, hash manifest, and claim boundary. It intentionally keeps `v60_ready=0`, all ten release requirements blocked, `real_release_package_ready=0`, and all v1.0 comparison/release claims blocked until real measured rows and human/release review evidence exist.
 
+The v60b preflight layer consumes the v59b candidate replay and emits release-preflight requirement rows, claim rows, stage release-audit rows, decision rows, copied v59b source evidence, hash manifest, and claim boundary. It marks only `v60b_release_preflight_candidate_audit_ready=1`; it keeps `v60_ready=0`, real 30B/70B rows, complete-source audit, human domain review, human blind review, human release review, release package, and all v1.0 release/comparison/superiority claims blocked.
+
 ## Immediate Next PR Target
 
 The next implementation PR should extend v52-v60 from contract scaffold to measured and reviewed rows:
@@ -429,7 +434,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 10. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
 11. Promote the v58b frozen query/reviewer packet into a real 500+ row blind evaluation by supplying D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
 12. Promote the v59b candidate replay into a full challenge demo by replacing candidate/intake rows with real v52-v58 measured/reviewed rows and writing a reviewer-ready artifact bundle.
-13. Supply human/release review evidence and a real release artifact package only after v52-v59 real rows exist.
+13. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
 14. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
 
 This completes the v52-v60 contract scaffold chain without weakening the claim boundary. It does not complete the v1.0 Architecture Challenge itself.
