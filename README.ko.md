@@ -26,6 +26,14 @@
 
 v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡니다.
 
+현재 v52 scaffold:
+
+```bash
+./experiments/test_v52_llm_rag_baseline_war.sh
+```
+
+이 명령은 A-H baseline registry와 symmetric evaluation contract를 만들지만, 실제 30B/70B LLM+RAG row가 들어오기 전까지 full v52 comparison은 blocked로 유지합니다.
+
 ## v0.3 Architecture Preview
 
 로컬 evidence-bound codebase audit preview를 실행합니다.

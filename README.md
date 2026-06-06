@@ -26,6 +26,14 @@ Required v1.0 stages:
 
 v0.3 remains a local architecture preview and claim-bound evidence surface.
 
+Current v52 scaffold:
+
+```bash
+./experiments/test_v52_llm_rag_baseline_war.sh
+```
+
+This emits the A-H baseline registry and symmetric evaluation contract while keeping the full v52 comparison blocked until real 30B and 70B LLM+RAG rows are supplied.
+
 ## v0.3 Architecture Preview
 
 Run a local evidence-bound codebase audit preview:

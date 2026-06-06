@@ -286,14 +286,24 @@ Stop rule:
 
 - If the 30B/70B baselines, 1000+ generation rows, 10+ public repos, blind eval, or one-command demo are missing, the result remains a pre-v1.0 research artifact.
 
+## Current v52 Scaffold
+
+Implemented now:
+
+- `experiments/run_v52_llm_rag_baseline_war.sh`
+- `experiments/test_v52_llm_rag_baseline_war.sh`
+- `results/v52_llm_rag_baseline_war/baseline_001/` contract artifacts
+
+This scaffold emits the A-H baseline registry, adapter contract rows, symmetric evaluation contract rows, score axes, source-preview copies, and claim boundary. It intentionally keeps `v52_ready=0`, `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, and `optional_100b_plus_baseline_status=deferred-with-reason`.
+
 ## Immediate Next PR Target
 
-The next implementation PR should be v52, not another packaging layer:
+The next implementation PR should extend v52 from contract scaffold to measured baseline rows:
 
-1. Add a baseline registry schema for A-H.
-2. Implement deterministic local rows for A/B/G/H first.
-3. Add adapter contracts and deferred evidence rows for C/D/E/F.
-4. Add symmetric citation, abstain, and wrong-answer guard evaluation.
-5. Keep comparison claims blocked until D/E are real.
+1. Add a measured small local RAG row for B.
+2. Add a measured 7B-14B local model + RAG row for C.
+3. Add real 30B and 70B open-weight LLM+RAG adapters/runs for D and E.
+4. Add a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
+5. Keep comparison claims blocked until D/E are real and the citation verifier is symmetric.
 
 This creates the scaffold that v53-v60 can reuse without weakening the claim boundary.

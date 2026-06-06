@@ -1409,6 +1409,10 @@ Current next boundary:
   benchmark, v57 domain expert packs, v58 blind eval versus 30B-150B-class
   systems, v59 one-command challenge demo, and v60 v1.0 Architecture Challenge
   Release. See `docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md`.
+- `v52` is started as a baseline-war contract scaffold. `experiments/test_v52_llm_rag_baseline_war.sh`
+  emits the A-H registry, adapter contracts, symmetric evaluation axes, copied
+  v0.3 source-preview artifacts, and claim boundary, but keeps full v52 blocked
+  until real 30B and 70B LLM+RAG rows exist.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
