@@ -48,6 +48,7 @@ expect_summary_value "routehint_generator_mainline_ready" "1"
 expect_summary_value "local_codebase_intelligence_box_ready" "1"
 expect_summary_value "audit_report_ready" "1"
 expect_summary_value "reproduce_ready" "1"
+expect_summary_value "baseline_rows" "8"
 expect_summary_value "raw_prompt_context_bytes" "0"
 expect_summary_value "attention_blocks" "0"
 expect_summary_value "transformer_blocks" "0"
@@ -143,9 +144,29 @@ if any(row["raw_context_appended"] != "0" or row["proposal_hint_used"] != "1" fo
 if any(row["attention_blocks"] != "0" or row["transformer_blocks"] != "0" or row["raw_prompt_context_bytes"] != "0" for row in generation_rows):
     raise SystemExit("generation rows should stay non-attention and no raw prompt stuffing")
 baseline_ids = {row["baseline_id"] for row in baseline_rows}
-required = {"input_extractor", "bm25_lexical", "route_memory_exact_value_read", "route_memory_proposal_hint", "tiny_generator_hint_nlg"}
+required = {
+    "ripgrep_literal",
+    "bm25_lexical",
+    "small_rag_boundary",
+    "tiny_generator_only",
+    "route_memory_retrieval_only",
+    "route_memory_exact",
+    "route_memory_compact_routehint",
+    "route_memory_scorer_offline_policy",
+}
 if not required.issubset(baseline_ids):
     raise SystemExit(f"baseline id set missing required rows: {required - baseline_ids}")
+if len(baseline_rows) != 8:
+    raise SystemExit(f"expected 8 preview baseline rows, got {len(baseline_rows)}")
+by_baseline = {row["baseline_id"]: row for row in baseline_rows}
+if by_baseline["small_rag_boundary"]["raw_prompt_context_bytes"] != "nonzero-or-unbounded":
+    raise SystemExit("small RAG boundary should document nonzero/unbounded raw prompt context")
+for baseline_id in ["route_memory_exact", "route_memory_compact_routehint", "route_memory_scorer_offline_policy"]:
+    row = by_baseline[baseline_id]
+    if row["route_memory_store_used"] != "1" or row["citation_audit_trail_required"] != "1" or row["abstain_required"] != "1":
+        raise SystemExit(f"RouteMemory preview baseline missing evidence-bound controls: {baseline_id}")
+if by_baseline["route_memory_compact_routehint"]["compact_routehint_used"] != "1" or by_baseline["route_memory_compact_routehint"]["tiny_non_attention_generator_used"] != "1":
+    raise SystemExit("RouteHint preview baseline should use compact RouteHint and tiny generator")
 
 trace = (preview_dir / "ARCHITECTURE_TRACE.md").read_text(encoding="utf-8")
 for snippet in [

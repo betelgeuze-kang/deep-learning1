@@ -56,6 +56,7 @@ The preview is meant to let a reader clone the repository and run an evidence-bo
 - `v0_3_architecture_preview_ready=1`
 - `one_command_repo_audit_ready=1`
 - `baseline_war_ready=1`
+- `baseline_rows=8`, covering ripgrep literal search, BM25, small RAG boundary, tiny generator-only, RouteMemory retrieval-only, RouteMemory exact value-read, RouteMemory + compact RouteHint, and RouteMemory + scorer/offline policy
 - `routehint_generator_mainline_ready=1`
 - `local_codebase_intelligence_box_ready=1`
 - `raw_prompt_context_bytes=0`

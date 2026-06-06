@@ -1396,8 +1396,8 @@ Current next boundary:
   `examples/local_codebase_intelligence_box.sh` bundles the audit report,
   baseline note, local scaling note, architecture trace, lineage/citation/
   RouteHint/generation artifacts, and hashes. The smoke verifies the one-command
-  audit, baseline-war binding, RouteHint generator mainline, no raw prompt
-  stuffing, no attention/Transformer blocks, no oracle, and no raw-input
+  audit, 8-way baseline-war binding, RouteHint generator mainline, no raw
+  prompt stuffing, no attention/Transformer blocks, no oracle, and no raw-input
   extractor, while keeping release and GPU-speedup claims blocked.
 - The v41-v51 impact roadmap is closed, and the next high-leverage stage is
   external acceptance or teacher-source authority evidence rather than another

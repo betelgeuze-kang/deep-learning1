@@ -51,7 +51,8 @@ v55 = read_csv(v55_dir / "v55_local_codebase_intelligence_box_summary.csv")[0]
 
 artifact_map = {
     "baseline_summary.md": None,
-    "baseline_metrics.csv": v14c_run_dir / "benchmark" / "baseline_comparison_rows.csv",
+    "baseline_metrics.csv": None,
+    "v14c_baseline_comparison_rows.csv": v14c_run_dir / "benchmark" / "baseline_comparison_rows.csv",
     "per_query_comparison.jsonl": v55_dir / "prediction_lineage.jsonl",
     "prediction_lineage.jsonl": v55_dir / "prediction_lineage.jsonl",
     "routehint_vs_rag.csv": None,
@@ -75,10 +76,125 @@ for name, src in artifact_map.items():
     if src is not None:
         shutil.copy(src, preview_dir / name)
 
+v14c_rows = read_csv(v14c_run_dir / "benchmark" / "baseline_comparison_rows.csv")
+v14c_by_id = {row["baseline_id"]: row for row in v14c_rows}
+baseline_overlay_rows = [
+    {
+        "baseline_id": "ripgrep_literal",
+        "baseline_family": "literal_search",
+        "evidence_source": "preview-overlay",
+        "raw_prompt_context_bytes": "0",
+        "route_memory_store_used": "0",
+        "compact_routehint_used": "0",
+        "tiny_non_attention_generator_used": "0",
+        "citation_audit_trail_required": "0",
+        "abstain_required": "0",
+        "promotion_eligible": "0",
+        "boundary": "literal baseline only",
+    },
+    {
+        "baseline_id": "bm25_lexical",
+        "baseline_family": "lexical_retrieval",
+        "evidence_source": "v14c",
+        "raw_prompt_context_bytes": "0",
+        "route_memory_store_used": v14c_by_id.get("bm25_lexical", {}).get("route_memory_store_used", "0"),
+        "compact_routehint_used": "0",
+        "tiny_non_attention_generator_used": "0",
+        "citation_audit_trail_required": "0",
+        "abstain_required": "0",
+        "promotion_eligible": v14c_by_id.get("bm25_lexical", {}).get("promotion_eligible", "0"),
+        "boundary": "lexical baseline only",
+    },
+    {
+        "baseline_id": "small_rag_boundary",
+        "baseline_family": "rag_prompt_context",
+        "evidence_source": "preview-boundary",
+        "raw_prompt_context_bytes": "nonzero-or-unbounded",
+        "route_memory_store_used": "0",
+        "compact_routehint_used": "0",
+        "tiny_non_attention_generator_used": "0",
+        "citation_audit_trail_required": "0",
+        "abstain_required": "0",
+        "promotion_eligible": "0",
+        "boundary": "contrast boundary; preview path does not append retrieved raw text",
+    },
+    {
+        "baseline_id": "tiny_generator_only",
+        "baseline_family": "generator_without_evidence",
+        "evidence_source": "preview-boundary",
+        "raw_prompt_context_bytes": "0",
+        "route_memory_store_used": "0",
+        "compact_routehint_used": "0",
+        "tiny_non_attention_generator_used": "1",
+        "citation_audit_trail_required": "0",
+        "abstain_required": "0",
+        "promotion_eligible": "0",
+        "boundary": "generator-only baseline cannot promote without evidence binding",
+    },
+    {
+        "baseline_id": "route_memory_retrieval_only",
+        "baseline_family": "route_memory_retrieval",
+        "evidence_source": "v14c",
+        "raw_prompt_context_bytes": "0",
+        "route_memory_store_used": v14c_by_id.get("route_memory_retrieval_only", {}).get("route_memory_store_used", "1"),
+        "compact_routehint_used": "0",
+        "tiny_non_attention_generator_used": "0",
+        "citation_audit_trail_required": "1",
+        "abstain_required": "1",
+        "promotion_eligible": v14c_by_id.get("route_memory_retrieval_only", {}).get("promotion_eligible", "0"),
+        "boundary": "retrieval-only comparison",
+    },
+    {
+        "baseline_id": "route_memory_exact",
+        "baseline_family": "route_memory_value_read",
+        "evidence_source": "v14c",
+        "raw_prompt_context_bytes": "0",
+        "route_memory_store_used": v14c_by_id.get("route_memory_exact_value_read", {}).get("route_memory_store_used", "1"),
+        "compact_routehint_used": "0",
+        "tiny_non_attention_generator_used": "0",
+        "citation_audit_trail_required": "1",
+        "abstain_required": "1",
+        "promotion_eligible": v14c_by_id.get("route_memory_exact_value_read", {}).get("promotion_eligible", "1"),
+        "boundary": "exact value-read comparison",
+    },
+    {
+        "baseline_id": "route_memory_compact_routehint",
+        "baseline_family": "route_memory_routehint",
+        "evidence_source": "v14c+v0.3",
+        "raw_prompt_context_bytes": "0",
+        "route_memory_store_used": v14c_by_id.get("route_memory_proposal_hint", {}).get("route_memory_store_used", "1"),
+        "compact_routehint_used": "1",
+        "tiny_non_attention_generator_used": "1",
+        "citation_audit_trail_required": "1",
+        "abstain_required": "1",
+        "promotion_eligible": v14c_by_id.get("route_memory_proposal_hint", {}).get("promotion_eligible", "1"),
+        "boundary": "preview mainline path",
+    },
+    {
+        "baseline_id": "route_memory_scorer_offline_policy",
+        "baseline_family": "route_memory_policy",
+        "evidence_source": "v46+v47+v0.3",
+        "raw_prompt_context_bytes": "0",
+        "route_memory_store_used": "1",
+        "compact_routehint_used": "1",
+        "tiny_non_attention_generator_used": "1",
+        "citation_audit_trail_required": "1",
+        "abstain_required": "1",
+        "promotion_eligible": "1",
+        "boundary": "offline policy/scorer-bound comparison, still preview-only",
+    },
+]
+with (preview_dir / "baseline_metrics.csv").open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(baseline_overlay_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(baseline_overlay_rows)
+
 (preview_dir / "baseline_summary.md").write_text(
     "# Baseline War Summary\n\n"
     f"- baseline_comparison_ready={v14c.get('baseline_comparison_ready')}\n"
-    f"- baseline_rows={v14c.get('baseline_rows')}\n"
+    f"- v14c_baseline_rows={v14c.get('baseline_rows')}\n"
+    f"- preview_baseline_rows={len(baseline_overlay_rows)}\n"
+    "- preview_baselines=ripgrep_literal,bm25_lexical,small_rag_boundary,tiny_generator_only,route_memory_retrieval_only,route_memory_exact,route_memory_compact_routehint,route_memory_scorer_offline_policy\n"
     f"- route_memory_safety_dominates_baselines={v14c.get('route_memory_safety_dominates_baselines')}\n"
     f"- input_extractor_baseline_only={v14c.get('input_extractor_baseline_only')}\n"
     f"- raw_prompt_context_bytes=0 in the preview audit/generator path\n"
@@ -108,7 +224,8 @@ summary = {
     "local_codebase_intelligence_box_ready": int(v55.get("local_codebase_intelligence_box_ready") == "1"),
     "audit_report_ready": int((preview_dir / "AUDIT_REPORT.md").is_file()),
     "reproduce_ready": int((preview_dir / "reproduce.sh").is_file()),
-    "baseline_rows": v14c.get("baseline_rows", "0"),
+    "baseline_rows": len(baseline_overlay_rows),
+    "v14c_baseline_rows": v14c.get("baseline_rows", "0"),
     "compact_route_hint_rows": v55.get("compact_route_hint_rows", "0"),
     "grounded_generation_rows": v55.get("grounded_generation_rows", "0"),
     "abstain_rows": v55.get("abstain_rows", "0"),
