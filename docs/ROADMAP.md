@@ -1424,6 +1424,13 @@ Current next boundary:
   and 300 retrieval rows over the frozen v53d query IDs. It marks the B-100
   layer `v52_absorb_ready=1`, but keeps full v52 blocked until A/G/H are run
   over the same frozen query set and real C/D/E evidence directories validate.
+- `v52g` expands system B from 100 rows to a stratified 300-row measured run.
+  `experiments/test_v52g_small_local_rag_measured_300.sh` emits 300 answer
+  rows plus citation, abstain, wrong-answer guard, resource, source-manifest,
+  frozen query/source subset, and 900 retrieval rows over v53e, including 48
+  negative/abstain query rows. It marks the B-300 layer `v52_absorb_ready=1`,
+  but keeps B-1000, A/G/H same-query-set rows, C/D/E evidence, and full v52
+  blocked.
 - `v52c` adds the 7B-14B local model + RAG evidence-intake gate for system C.
   `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh` emits the
   required evidence schema, answer/model templates, validation rows, and hash
