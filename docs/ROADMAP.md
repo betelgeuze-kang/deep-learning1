@@ -1388,6 +1388,17 @@ Current next boundary:
   machine-verified artifact ladder, and keeps external/buyer return,
   teacher-source import, GPU speedup, human review, and release readiness
   blocked.
+- `v0.3 Architecture Preview` is closed as the first clone-and-run public
+  preview surface. `scripts/audit_my_repo.sh` emits a Markdown audit report,
+  JSONL/CSV machine artifacts, citation spans, RouteMemory lineage, mmap read
+  trace, compact RouteHint rows, grounded generation rows, abstentions,
+  resource envelope, reproduce script, and hash manifest. The showcase command
+  `examples/local_codebase_intelligence_box.sh` bundles the audit report,
+  baseline note, local scaling note, architecture trace, lineage/citation/
+  RouteHint/generation artifacts, and hashes. The smoke verifies the one-command
+  audit, baseline-war binding, RouteHint generator mainline, no raw prompt
+  stuffing, no attention/Transformer blocks, no oracle, and no raw-input
+  extractor, while keeping release and GPU-speedup claims blocked.
 - The v41-v51 impact roadmap is closed, and the next high-leverage stage is
   external acceptance or teacher-source authority evidence rather than another
   internal packaging layer. The claim remains local evidence-bound QA/audit
