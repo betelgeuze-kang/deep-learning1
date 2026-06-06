@@ -1425,6 +1425,11 @@ Current next boundary:
   `experiments/test_v55_local_scaling_law_main_contract.sh` emits the six-axis
   / 100-row scaling contract from v51 seed curves, and keeps full v55 blocked
   with `repo_count_axis_ready=0` and `missing_scaling_curve_rows=73`.
+- `v56` is started as a RULER/LongBench expanded benchmark contract scaffold.
+  `experiments/test_v56_ruler_longbench_expanded_contract.sh` emits the
+  official source/evaluator-bound benchmark contract from v49/v45 seed
+  evidence, and keeps full v56 blocked with `ruler_missing_rows=500`,
+  `longbench_missing_rows=494`, and `llm_rag_baseline_rows_ready=0`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

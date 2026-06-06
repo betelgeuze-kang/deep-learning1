@@ -286,7 +286,7 @@ Stop rule:
 
 - If the 30B/70B baselines, 1000+ generation rows, 10+ public repos, blind eval, or one-command demo are missing, the result remains a pre-v1.0 research artifact.
 
-## Current v52-v55 Scaffold
+## Current v52-v56 Scaffold
 
 Implemented now:
 
@@ -298,10 +298,13 @@ Implemented now:
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v55_local_scaling_law_main_contract.sh`
 - `experiments/test_v55_local_scaling_law_main_contract.sh`
+- `experiments/run_v56_ruler_longbench_expanded_contract.sh`
+- `experiments/test_v56_ruler_longbench_expanded_contract.sh`
 - `results/v52_llm_rag_baseline_war/baseline_001/` contract artifacts
 - `results/v53_public_repo_code_doc_audit/audit_001/` contract artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
+- `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
 
 This scaffold emits the A-H baseline registry, adapter contract rows, symmetric evaluation contract rows, score axes, source-preview copies, and claim boundary. It intentionally keeps `v52_ready=0`, `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, and `optional_100b_plus_baseline_status=deferred-with-reason`.
 
@@ -311,9 +314,11 @@ The v54 scaffold emits a 1000-row RouteHint generation target, six domain target
 
 The v55 scaffold emits a six-axis / 100-row scaling-law target, fit contract rows, no-oracle/no-extractor/RouteMemory-lineage invariants, v51 seed curve copies, and claim boundary. It intentionally keeps `v55_local_scaling_law_ready=0`, `repo_count_axis_ready=0`, and `missing_scaling_curve_rows=73`.
 
+The v56 scaffold emits RULER and LongBench expanded benchmark targets, official source/evaluator artifact contracts, no-oracle/no-extractor/RouteMemory-lineage invariants, v49/v45 seed evidence copies, and claim boundary. It intentionally keeps `v56_ruler_longbench_expanded_ready=0`, `ruler_missing_rows=500`, `longbench_missing_rows=494`, and `llm_rag_baseline_rows_ready=0`.
+
 ## Immediate Next PR Target
 
-The next implementation PR should extend v52-v55 from contract scaffold to measured rows:
+The next implementation PR should extend v52-v56 from contract scaffold to measured rows:
 
 1. Add a measured small local RAG row for B.
 2. Add a measured 7B-14B local model + RAG row for C.
@@ -323,6 +328,7 @@ The next implementation PR should extend v52-v55 from contract scaffold to measu
 6. Expand code/doc query coverage from 9 to at least 1000 source-span-bound rows.
 7. Expand RouteHint generation from 24 seed rows to at least 1000 grounded rows.
 8. Expand scaling from 5 preview axes / 27 rows to 6 main axes / at least 100 rows, including repo_count, confidence intervals, and failure cases.
-9. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, and v55 reaches the scaling-law main target.
+9. Expand RULER to at least 1000 official-source/evaluator-bound rows and LongBench to at least 500 rows, with v52 baseline rows where benchmark format allows.
+10. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, and v56 reaches expanded benchmark scale.
 
-This creates the scaffold that v56-v60 can reuse without weakening the claim boundary.
+This creates the scaffold that v57-v60 can reuse without weakening the claim boundary.

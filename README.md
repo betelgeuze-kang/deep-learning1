@@ -33,9 +33,10 @@ Current v52 scaffold:
 ./experiments/test_v53_public_repo_code_doc_audit.sh
 ./experiments/test_v54_routehint_generation_1000_contract.sh
 ./experiments/test_v55_local_scaling_law_main_contract.sh
+./experiments/test_v56_ruler_longbench_expanded_contract.sh
 ```
 
-These emit the A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, and v55 scaling-law main-run contract while keeping full v52-v55 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, and 6-axis / 100+ row scaling evidence are supplied.
+These emit the A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, and v56 RULER/LongBench expanded benchmark contract while keeping full v52-v56 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, and expanded RULER/LongBench rows are supplied.
 
 ## v0.3 Architecture Preview
 
