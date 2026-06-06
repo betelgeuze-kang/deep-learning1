@@ -308,6 +308,8 @@ Implemented now:
 - `experiments/test_v53c_public_repo_canary_source_snapshot.sh`
 - `experiments/run_v53d_canary_source_query_seed_100.sh`
 - `experiments/test_v53d_canary_source_query_seed_100.sh`
+- `experiments/run_v53e_canary_query_scale_1000.sh`
+- `experiments/test_v53e_canary_query_scale_1000.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v55_local_scaling_law_main_contract.sh`
@@ -332,6 +334,7 @@ Implemented now:
 - `results/v53b_public_repo_10_lock/lock_001/` live 10-repo target-lock artifacts
 - `results/v53c_public_repo_canary_source_snapshot/snapshot_001/` pinned canary source snapshot artifacts
 - `results/v53d_canary_source_query_seed_100/query_001/` 100-row source-span-bound canary query seed artifacts
+- `results/v53e_canary_query_scale_1000/scale_001/` 1000-row canary-scope source-span-bound query scale artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
 - `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
@@ -358,6 +361,8 @@ The v53c canary source snapshot layer fetches pinned source/doc/config canary fi
 
 The v53d query-seed layer derives 100 source-span-bound canary query rows from the v53c source files, with 10 rows per locked repository and matching source-span rows. It intentionally keeps `v53_ready=0`, `missing_query_rows=900`, negative/abstain family coverage blocked, and A-H answer/citation/resource rows blocked.
 
+The v53e query-scale layer expands the v53d seeds to 1000 canary-scope source-span-bound query rows across the 10 locked repositories, with 840 supported rows, 160 negative/abstain rows, and eight query families. It intentionally keeps `v53_ready=0` because canary-scale query mechanics are not complete-source audit evidence and do not provide A-H answer/citation/resource rows, symmetric scorer/policy rows, or review artifacts.
+
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
 The v55 scaffold emits a six-axis / 100-row scaling-law target, fit contract rows, no-oracle/no-extractor/RouteMemory-lineage invariants, v51 seed curve copies, and claim boundary. It intentionally keeps `v55_local_scaling_law_ready=0`, `repo_count_axis_ready=0`, and `missing_scaling_curve_rows=73`.
@@ -381,7 +386,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 3. Supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E.
 4. Supply and validate a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
 5. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
-6. Expand code/doc query coverage from 100 to at least 1000 source-span-bound rows, including negative/abstain families.
+6. Promote v53e canary-scope query scale into complete-source 1000+ query audit evidence, then generate A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
 7. Expand RouteHint generation from 24 seed rows to at least 1000 grounded rows.
 8. Expand scaling from 5 preview axes / 27 rows to 6 main axes / at least 100 rows, including repo_count, confidence intervals, and failure cases.
 9. Expand RULER to at least 1000 official-source/evaluator-bound rows and LongBench to at least 500 rows, with v52 baseline rows where benchmark format allows.

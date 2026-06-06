@@ -1454,6 +1454,13 @@ Current next boundary:
   span rows, but keeps full v53 blocked with `missing_query_rows=900`,
   negative/abstain families missing, and A-H answer/citation/resource rows
   missing.
+- `v53e` adds a 1000-row canary-scope query scale layer.
+  `experiments/test_v53e_canary_query_scale_1000.sh` scales the v53d seeds to
+  1000 source-span-bound query rows across the 10 locked repos, including 840
+  supported rows, 160 negative/abstain rows, and eight query families, but
+  keeps full v53 blocked until complete source snapshots, A-H
+  answer/citation/resource rows, symmetric scorer/policy rows, and review
+  artifacts exist.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
