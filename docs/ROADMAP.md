@@ -1436,6 +1436,13 @@ Current next boundary:
   v47/v48/v52/v56 seed evidence, and keeps full v57 blocked with
   `missing_eval_rows=950`, `human_expert_review_ready=0`, and
   `blind_eval_ready=0`.
+- `v58` is started as a blind evaluation contract scaffold.
+  `experiments/test_v58_blind_eval_contract.sh` emits D-H blind-system
+  mapping, 500-row query-freeze targets, evaluator contracts, and sealed
+  identity/symmetric-evidence gates from v52/v57 seed evidence, while keeping
+  full v58 blocked with `missing_blind_eval_rows=500`,
+  `required_30b_blind_response_ready=0`, and
+  `human_blind_review_ready=0`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
