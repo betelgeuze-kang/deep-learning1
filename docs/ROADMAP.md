@@ -1472,6 +1472,13 @@ Current next boundary:
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
   and keeps full v54 blocked with `missing_generation_rows=976`.
+- `v54b` adds the RouteHint generation 1000-row scale run.
+  `experiments/test_v54b_routehint_generation_scale_1000.sh` emits 1000
+  deterministic local RouteHint generation rows across six domains, including
+  900 answer rows, 100 abstain rows, 1000 citation rows, 1000 resource rows,
+  zero attention/Transformer/raw-prompt-context rows, and zero wrong-answer
+  rows. It marks the v54 machine-verified generation target ready while
+  keeping release and 30B-150B equivalence claims blocked.
 - `v55` is started as a local scaling law main-run contract scaffold.
   `experiments/test_v55_local_scaling_law_main_contract.sh` emits the six-axis
   / 100-row scaling contract from v51 seed curves, and keeps full v55 blocked

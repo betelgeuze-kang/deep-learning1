@@ -41,6 +41,7 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 ./experiments/test_v53e_canary_query_scale_1000.sh
 ./experiments/test_v53f_ah_answer_citation_resource_intake.sh
 ./experiments/test_v54_routehint_generation_1000_contract.sh
+./experiments/test_v54b_routehint_generation_scale_1000.sh
 ./experiments/test_v55_local_scaling_law_main_contract.sh
 ./experiments/test_v56_ruler_longbench_expanded_contract.sh
 ./experiments/test_v57_domain_expert_packs_contract.sh
@@ -50,7 +51,7 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 ./experiments/test_v60_architecture_challenge_release_contract.sh
 ```
 
-이 명령들은 A-H baseline registry, system B small-local-RAG measured seed row, system C 7B-14B local-model-RAG evidence-intake gate, system D/E 30B/70B open-weight LLM+RAG evidence-intake gate, optional system F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, live 10-repo public target lock, pinned canary source snapshot, 100-row source-span-bound canary query seed, negative/abstain row를 포함한 1000-row canary-scope query scale, frozen query set 위의 A-H answer/citation/resource intake matrix, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, v60 release-audit contract를 만들지만, 실제 30B/70B LLM+RAG row, complete-source 10+ repo / 1000+ query audit row와 A-H answer/citation/resource, 1000+ RouteHint generation row, 6축 / 100+ row scaling evidence, expanded RULER/LongBench row, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
+이 명령들은 A-H baseline registry, system B small-local-RAG measured seed row, system C 7B-14B local-model-RAG evidence-intake gate, system D/E 30B/70B open-weight LLM+RAG evidence-intake gate, optional system F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, live 10-repo public target lock, pinned canary source snapshot, 100-row source-span-bound canary query seed, negative/abstain row를 포함한 1000-row canary-scope query scale, frozen query set 위의 A-H answer/citation/resource intake matrix, v54 1000-row generation contract, v54b deterministic local 1000-row RouteHint generation scale run, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, v60 release-audit contract를 만들지만, 실제 30B/70B LLM+RAG row, complete-source 10+ repo / 1000+ query audit row와 A-H answer/citation/resource, 6축 / 100+ row scaling evidence, expanded RULER/LongBench row, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
 
 현재 measured baseline 진척: `experiments/test_v52b_small_local_rag_measured_row.sh`는 v50 public-repo seed 위에서 `results/v52b_small_local_rag_measured_row/row_001/`에 system B answer row 9개, citation/retrieval/resource row, hash manifest를 생성합니다. 이 row는 v52에 흡수 가능한 첫 실측 seed지만, 30B-150B 비교 결과는 아니며 v52 release claim은 계속 blocked입니다.
 
@@ -69,6 +70,8 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 현재 v53 query-scale 진척: `experiments/test_v53e_canary_query_scale_1000.sh`는 10개 locked repository 위에서 1000개의 canary-scope source-span-bound query row를 `results/v53e_canary_query_scale_1000/scale_001/`에 생성합니다. 이 안에는 supported row 840개, negative/abstain row 160개, 8개 query family가 포함됩니다. canary query-count mechanics는 닫혔지만, complete source snapshot, A-H answer/citation/resource row, symmetric scorer/policy row, review artifact가 생기기 전까지 full v53은 blocked입니다.
 
 현재 v53 A-H intake 진척: `experiments/test_v53f_ah_answer_citation_resource_intake.sh`는 frozen v53e query set 위에서 A-H system target, required answer/citation/resource schema, 8000개 answer/resource template row를 `results/v53f_ah_answer_citation_resource_intake/intake_001/`에 생성합니다. 비교 증거를 받아 검증할 입력면은 닫혔지만, supplied valid answer/citation/resource row, complete source snapshot, scorer/policy row, review artifact가 생기기 전까지 full v53은 blocked입니다.
+
+현재 v54 generation-scale 진척: `experiments/test_v54b_routehint_generation_scale_1000.sh`는 6개 domain 위에서 deterministic local RouteHint generation row 1000개를 `results/v54b_routehint_generation_scale_1000/scale_001/`에 생성합니다. 여기에는 answer row 900개, abstain row 100개, citation row 1000개, resource row 1000개가 포함되며 attention/Transformer/raw-prompt-context row는 0입니다. v54 1000-row machine-verified generation target은 닫혔지만, v52/v53/v55-v60의 측정/리뷰 row가 생기기 전까지 v1.0은 blocked입니다.
 
 ## v0.3 Architecture Preview
 

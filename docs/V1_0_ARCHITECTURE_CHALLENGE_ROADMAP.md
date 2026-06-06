@@ -314,6 +314,8 @@ Implemented now:
 - `experiments/test_v53f_ah_answer_citation_resource_intake.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
+- `experiments/run_v54b_routehint_generation_scale_1000.sh`
+- `experiments/test_v54b_routehint_generation_scale_1000.sh`
 - `experiments/run_v55_local_scaling_law_main_contract.sh`
 - `experiments/test_v55_local_scaling_law_main_contract.sh`
 - `experiments/run_v56_ruler_longbench_expanded_contract.sh`
@@ -339,6 +341,7 @@ Implemented now:
 - `results/v53e_canary_query_scale_1000/scale_001/` 1000-row canary-scope source-span-bound query scale artifacts
 - `results/v53f_ah_answer_citation_resource_intake/intake_001/` A-H answer/citation/resource intake artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
+- `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
 - `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
 - `results/v57_domain_expert_packs_contract/contract_001/` contract artifacts
@@ -370,6 +373,8 @@ The v53f intake layer defines the A-H answer/citation/resource evidence surface 
 
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
+The v54b scale layer emits 1000 deterministic local RouteHint generation rows across six domains, with RouteMemory evidence rows, compact RouteHint rows, generator input rows, grounded generation rows, citation rows, abstain rows, unsupported-claim rows, resource rows, and hash manifests. It marks `v54_generation_1000_ready=1` with `attention_blocks=0`, `transformer_blocks=0`, `raw_prompt_context_appended_rows=0`, and `wrong_answer_rows=0`, while keeping release and 30B-150B equivalence claims blocked.
+
 The v55 scaffold emits a six-axis / 100-row scaling-law target, fit contract rows, no-oracle/no-extractor/RouteMemory-lineage invariants, v51 seed curve copies, and claim boundary. It intentionally keeps `v55_local_scaling_law_ready=0`, `repo_count_axis_ready=0`, and `missing_scaling_curve_rows=73`.
 
 The v56 scaffold emits RULER and LongBench expanded benchmark targets, official source/evaluator artifact contracts, no-oracle/no-extractor/RouteMemory-lineage invariants, v49/v45 seed evidence copies, and claim boundary. It intentionally keeps `v56_ruler_longbench_expanded_ready=0`, `ruler_missing_rows=500`, `longbench_missing_rows=494`, and `llm_rag_baseline_rows_ready=0`.
@@ -392,7 +397,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 4. Supply and validate a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
 5. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
 6. Promote v53e/v53f canary-scope query and intake layers into complete-source 1000+ query audit evidence, then supply valid A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
-7. Expand RouteHint generation from 24 seed rows to at least 1000 grounded rows.
+7. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
 8. Expand scaling from 5 preview axes / 27 rows to 6 main axes / at least 100 rows, including repo_count, confidence intervals, and failure cases.
 9. Expand RULER to at least 1000 official-source/evaluator-bound rows and LongBench to at least 500 rows, with v52 baseline rows where benchmark format allows.
 10. Fill the six domain expert packs with human-reviewed gold query sets, rubrics, failure taxonomy, blind review forms, policy diffs, privacy review, and reproducibility manifests.
