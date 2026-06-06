@@ -1401,10 +1401,16 @@ Current next boundary:
   binding, RouteHint generator mainline, no raw prompt stuffing, no
   attention/Transformer blocks, no oracle, and no raw-input extractor, while
   keeping release and GPU-speedup claims blocked.
-- The v41-v51 impact roadmap is closed, and the next high-leverage stage is
-  external acceptance or teacher-source authority evidence rather than another
-  internal packaging layer. The claim remains local evidence-bound QA/audit
-  assistance, not Transformer replacement, frontier local LLM, GPU
+- The v41-v51 impact roadmap is closed. The next public timing target is
+  `v1.0 Architecture Challenge`, not a broad v0.3 claim. The new chain is
+  v52 30B/70B/100B+ LLM+RAG baseline war, v53 public repo 10-30 repo /
+  1000-3000 query code/doc audit, v54 RouteHint non-attention generator
+  1000+ rows, v55 local scaling law main run, v56 RULER/LongBench expanded
+  benchmark, v57 domain expert packs, v58 blind eval versus 30B-150B-class
+  systems, v59 one-command challenge demo, and v60 v1.0 Architecture Challenge
+  Release. See `docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md`.
+- The claim remains local evidence-bound QA/audit assistance until those
+  challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
 - The recommended first attachment is codebase QA. It is the cleanest research
   test surface for RouteMemory lineage, no-extractor prediction, citation

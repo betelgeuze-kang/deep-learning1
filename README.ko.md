@@ -6,6 +6,26 @@
 
 **아티팩트 경계:** 이 패키지는 휴먼 리뷰를 거친 릴리스가 아니라, 자동 검증 가능한 연구 아티팩트입니다.
 
+## v1.0 Architecture Challenge 로드맵
+
+다음 공개 타이밍은 v0.3의 넓은 공개 주장이 아니라 v1.0 Architecture Challenge입니다. 목표는 RouteMemory + RouteHint를 30B-150B급 LLM+RAG baseline과 code/doc QA, grounded generation, scaling, one-command reproducibility에서 정면 비교하는 것입니다.
+
+로드맵: [docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md](docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md)
+
+필수 v1.0 단계:
+
+- v52: 30B/70B/100B+ LLM+RAG baseline war
+- v53: public repo 10-30개, query 1000-3000개 code/doc audit
+- v54: RouteHint non-attention generator 1000+ generation rows
+- v55: local scaling law 본선
+- v56: RULER/LongBench expanded benchmark
+- v57: domain expert packs
+- v58: blind eval vs 30B-150B-class systems
+- v59: one-command LLM challenge demo
+- v60: v1.0 Architecture Challenge Release
+
+v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡니다.
+
 ## v0.3 Architecture Preview
 
 로컬 evidence-bound codebase audit preview를 실행합니다.
@@ -92,7 +112,7 @@
 - v19는 v18 위의 external submission bundle로 구현됐습니다. `experiments/test_v19_external_submission_bundle.sh`는 `results/v19_external_submission_bundle/bundle_001/` 아래 third-party rerun, official benchmark reconciliation, commercial local evidence-bound QA/audit 제출 packet, v18 intake command, track row, artifact hash, `docs/POST_V18_RESEARCH_ROADMAP.md` 로드맵을 묶습니다. 제출 준비 flag만 올리고 `independent_rerun_actual_ready=0`, `candidate_external_benchmark_result_ready=0`, `closed_corpus_poc_actual_ready=0`, `real_external_benchmark_verified=0`, `real_release_package_ready=0`은 계속 blocked로 둡니다.
 - v20은 v19/v18 위의 external return tracker로 구현됐습니다. `experiments/test_v20_external_return_tracker.sh`는 `results/v20_external_return_tracker/tracker_001/` 아래 track별 required return file, blocker row, next action, tracker manifest, artifact hash를 묶습니다. `V20_THIRD_PARTY_RERUN_DIR`, `V20_OFFICIAL_BENCHMARK_DIR`, `V20_COMMERCIAL_POC_DIR`로 반환 디렉터리를 v18 verifier에 넘길 수 있지만, 기본 no-return 경로에서는 actual rerun, candidate benchmark, commercial PoC, real benchmark, release flag를 의도적으로 blocked로 유지합니다.
 - v21은 v20 위의 external review dispatch kit로 구현됐습니다. `experiments/test_v21_external_review_dispatch_kit.sh`는 `results/v21_external_review_dispatch_kit/dispatch_001/` 아래 reviewer-facing request, packet index, return directory layout, return template copy, verification command, tracker summary, source manifest, artifact hash를 묶습니다. 세 갈래 handoff를 외부 리뷰어에게 보낼 수 있는 형태로 만들지만, non-fixture return directory가 들어오기 전까지 actual rerun, candidate benchmark, commercial PoC, real benchmark, release flag는 계속 blocked입니다.
-- v22는 v21 위의 clean-machine execution kit로 구현됐습니다. `experiments/test_v22_clean_machine_execution_kit.sh`는 `results/v22_clean_machine_execution_kit/kit_001/` 아래 host/container clean-machine runbook, 최소 Containerfile, third-party rerun capture script, reviewer/environment template, official benchmark와 commercial PoC execution note, verification note, source manifest, artifact hash를 묶습니다. Capture script는 성공한 rerun 뒤 v15-b metric delta row와 review row를 자동으로 채우며, reviewer identity와 clean-machine independence만 외부 reviewer가 채워야 하는 필드로 남깁니다. 실제 제3자 재실행 경로를 더 실행 가능하게 만들지만, v20/v18이 반환된 non-fixture evidence를 검증하기 전까지 actual/candidate/release flag는 계속 blocked입니다.
+- v22는 v21 위의 clean-machine execution kit로 구현됐습니다. `experiments/test_v22_clean_machine_execution_kit.sh`는 `results/v22_clean_machine_execution_kit/kit_001/` 아래 host/container clean-machine runbook, 최소 Containerfile, third-party rerun capture script, reviewer/environment template, official benchmark와 commercial PoC execution note, verification note, source manifest, artifact hash를 묶습니다. Capture script는 성공한 rerun 뒤 v15-b metric delta row와 review row를 자동으로 채우고, hosted clean-machine run을 위해 bounded `CAPTURE_TIMEOUT_SECONDS`와 start/finish diagnostic도 기록합니다. reviewer identity와 clean-machine independence는 외부 reviewer가 채워야 하는 필드로 남습니다. 실제 제3자 재실행 경로를 더 실행 가능하게 만들지만, v20/v18이 반환된 non-fixture evidence를 검증하기 전까지 actual/candidate/release flag는 계속 blocked입니다.
 - v23은 v22 위의 official benchmark reconciliation kit로 구현됐습니다. `experiments/test_v23_official_benchmark_reconciliation_kit.sh`는 `results/v23_official_benchmark_reconciliation_kit/kit_001/` 아래 official-slice runbook, return directory layout, evaluator/container contract, no-oracle/no-raw-input-extractor contract, raw prediction과 RouteMemory lineage template, metrics/provenance/reproducibility template, return-file preflight script, v20 verification note, source manifest, artifact hash를 묶습니다. Candidate external benchmark 경로를 더 명확하게 만들지만, returned official evidence가 검증되기 전까지 candidate/real/release flag는 계속 blocked입니다.
 - v24는 v21/v22/v18 위의 external handoff send/receive/verify packet으로 구현됐습니다. `experiments/test_v24_external_handoff_send_receive_verify.sh`는 `results/v24_external_handoff_send_receive_verify/handoff_001/` 아래 보낼 packet(`v21` dispatch kit + `v22` clean-machine kit), return inbox expectation, 직접 `V18_THIRD_PARTY_RERUN_DIR`, `V18_OFFICIAL_BENCHMARK_DIR`, `V18_COMMERCIAL_POC_DIR` 검증 command, handoff row, blocker, source manifest, artifact hash를 묶습니다. 실제 return directory가 들어오기 전까지 actual flag는 계속 blocked입니다.
 - v25는 v24 위의 outbound send manifest로 구현됐습니다. `experiments/test_v25_outbound_send_manifest.sh`는 `results/v25_outbound_send_manifest/packet_001/` 아래 outbound `v21` dispatch kit와 `v22` clean-machine execution kit 전체 sha256 manifest, receiver acknowledgement template, return option, 직접 v18 verification instruction, source manifest, artifact hash를 묶습니다. 보낼 packet의 무결성을 검증하지만 실제 return directory가 들어오기 전까지 actual/candidate/release flag는 계속 blocked입니다.

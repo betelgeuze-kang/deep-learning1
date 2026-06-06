@@ -101,6 +101,8 @@ checks = {
         "stdout.txt",
         "rerun_manifest.json",
         "v15a_package_manifest.json",
+        "CAPTURE_TIMEOUT_SECONDS",
+        "capture_timeout_seconds",
         "METRIC_DELTA_SRC",
         "review_rows_auto_copied",
     ],

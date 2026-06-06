@@ -1,0 +1,299 @@
+# v1.0 Architecture Challenge Roadmap
+
+This roadmap supersedes publishing v0.3 as a broad public claim. v0.3 remains a clone-and-run architecture preview. The public challenge moment should be v1.0, after the repository can compare RouteMemory + RouteHint against 30B-150B-class LLM+RAG systems on code/doc QA with machine-verifiable lineage, citations, abstention, and scaling evidence.
+
+## Public Timing
+
+Do not position v0.3 as a disruptive public result. Position it as an internal preview and evidence surface.
+
+The public target is:
+
+```text
+v1.0 Architecture Challenge:
+RouteMemory + RouteHint versus 30B-150B-class LLM+RAG baselines
+on source-cited code/doc QA, grounded generation, scaling, and one-command reproducibility.
+```
+
+The v1.0 claim must stay bounded:
+
+- allowed: local evidence-bound QA/audit architecture, source-cited answers, abstention, deterministic lineage, RouteHint generation, scaling evidence
+- blocked until proven: general LLM replacement, Transformer replacement, frontier local LLM, expert replacement, GPU speedup, production release readiness
+
+## Baseline Matrix
+
+Every v1.0 comparison run should emit the same query IDs, source manifests, answer rows, citation rows, abstain rows, wrong-answer guard rows, resource rows, and sha256 manifest for all baselines.
+
+| ID | System | Required Status |
+| --- | --- | --- |
+| A | BM25 / lexical | required |
+| B | small local RAG | required |
+| C | 7B-14B local model + RAG | required |
+| D | 30B open-weight LLM + RAG | required |
+| E | 70B open-weight LLM + RAG | required |
+| F | 100B+ API or hosted model + RAG | optional but preferred |
+| G | RouteMemory + RouteHint | required |
+| H | RouteMemory + RouteHint + source-verified scorer + domain policy | required |
+
+The challenge is not won by raw answer rate alone. It must score answer accuracy, citation correctness, unsupported-claim abstention, wrong-answer guard behavior, source lineage, replayability, resource envelope, and privacy/locality boundary.
+
+## Exit Criteria
+
+v1.0 can be called an Architecture Challenge release only when all of these are true:
+
+- 30B, 70B, and preferably 100B+ LLM+RAG baselines are present as real rows, not placeholders.
+- Public repo code/doc QA covers 10-30 repositories and 1000-3000 query rows.
+- RouteHint non-attention generation covers at least 1000 generation rows.
+- Local scaling law runs cover store size, top-k, cache budget, RouteHint budget, query count, and repository count.
+- RULER/LongBench expanded benchmark evidence is source/evaluator bound.
+- Domain expert packs have domain policies, query sets, acceptance rows, and source-cited failure modes.
+- Blind evaluation compares G/H against the 30B-150B-class systems without cherry-picking.
+- A one-command challenge demo reproduces the public subset and writes a reviewer-ready artifact bundle.
+- The claim audit still blocks Transformer replacement, frontier local LLM, GPU speedup, and production release wording unless separate evidence proves them.
+
+## v52: 30B/70B/100B+ LLM+RAG Baseline War
+
+Goal:
+
+- Build the real baseline-war layer against A-H, with D/E required and F preferred.
+- Keep all systems on the same source corpus, query set, answer schema, evaluator, citation verifier, and resource manifest.
+
+Implementation objectives:
+
+- Add a baseline registry with model/provider identity, model size class, quantization or API mode, prompt template, retrieval backend, context budget, and cost/resource fields.
+- Implement adapters for lexical/BM25, small local RAG, 7B-14B local RAG, 30B RAG, 70B RAG, optional 100B+ hosted/API RAG, RouteMemory + RouteHint, and RouteMemory + RouteHint + scorer/policy.
+- Emit per-baseline `answer_rows.csv`, `citation_rows.csv`, `abstain_rows.csv`, `wrong_answer_guard_rows.csv`, `resource_rows.csv`, and `baseline_manifest.json`.
+- Add a comparison report that separates answer correctness from citation correctness and unsupported-claim behavior.
+
+Acceptance gates:
+
+- `baseline_system_rows >= 8`
+- `required_30b_baseline_ready=1`
+- `required_70b_baseline_ready=1`
+- `optional_100b_plus_baseline_status in {ready, deferred-with-reason}`
+- `same_query_set_all_required_systems=1`
+- `same_source_manifest_all_required_systems=1`
+- `routehint_no_raw_prompt_stuffing=1`
+- `release_ready_claim=0`
+
+Stop rule:
+
+- Do not publish comparison language if D or E is missing, if the LLM baselines use a weaker source corpus than RouteMemory, or if citation verification is not symmetric.
+
+## v53: Public Repo 10-30 Repo, 1000-3000 Query Code/Doc Audit
+
+Goal:
+
+- Move from 3 public repos and preview-scale audit to a credible public code/doc QA benchmark.
+
+Implementation objectives:
+
+- Select 10-30 pinned public repositories with licenses, commit SHAs, language/domain tags, and source manifests.
+- Generate 1000-3000 query rows across API behavior, docs, config, deprecations, examples, tests, doc-code conflicts, and unsupported claims.
+- Include negative and abstain rows for misleading docs, missing APIs, version mismatch, and ambiguous source evidence.
+- Emit repository-level and aggregate audit reports.
+
+Acceptance gates:
+
+- `public_repo_count >= 10`
+- `query_rows >= 1000`
+- `source_span_bound_rows == query_rows`
+- `negative_control_rows >= 10% of query_rows`
+- `abstain_policy_verified=1`
+- `wrong_answer_guard_verified=1`
+- `pinned_commit_manifest_ready=1`
+
+Stop rule:
+
+- Do not count generated queries unless they are traceable to pinned files and independently reproducible from the source manifest.
+
+## v54: RouteHint Non-Attention Generator 1000+ Rows
+
+Goal:
+
+- Promote RouteHint generation from mainline preview to a 1000+ row evidence run.
+
+Implementation objectives:
+
+- Run RouteMemory evidence -> compact RouteHint -> non-attention generator -> grounded answer across codebase QA, internal docs QA, product/manual QA, incident-log QA, RULER, and LongBench-style rows.
+- Keep raw context out of the prompt payload. The generator may receive compact hints, source IDs, scores, and citation handles, not stuffed spans.
+- Emit grounded generation rows, citation rows, unsupported-claim rows, abstain rows, and generator resource rows.
+
+Acceptance gates:
+
+- `generation_rows >= 1000`
+- `attention_blocks=0`
+- `transformer_blocks=0`
+- `raw_prompt_context_appended_rows=0`
+- `proposal_hint_used_rows == generation_rows`
+- `citation_accuracy_ready=1`
+- `missing_query_abstention_ready=1`
+
+Stop rule:
+
+- Do not call the generator mainline if it answers by copying raw retrieved context into the prompt or if unsupported claims are not explicitly guarded.
+
+## v55: Local Scaling Law Main Run
+
+Goal:
+
+- Replace the preview scaling matrix with a main scaling law over real code/doc workloads.
+
+Implementation objectives:
+
+- Sweep repository count, source bytes, store size, top-k, cache budget, RouteHint budget, query count, and generator rows.
+- Record active bytes/query, query-to-evidence latency, query-to-first-token latency, tokens/sec where applicable, CPU time, memory, storage reads, and cache hit rate.
+- Fit bounded scaling curves with confidence intervals and failure cases.
+
+Acceptance gates:
+
+- `scaling_axis_count >= 6`
+- `scaling_curve_rows >= 100`
+- `repo_count_axis_ready=1`
+- `store_size_axis_ready=1`
+- `query_count_axis_ready=1`
+- `resource_envelope_bound=1`
+- `claim_boundary_written=1`
+
+Stop rule:
+
+- Do not claim scaling law if the run is only a one-repository local preview or if resource rows are not hash-bound to the same run.
+
+## v56: RULER/LongBench Expanded Benchmark
+
+Goal:
+
+- Expand the official benchmark-facing layer beyond small slices while preserving no-oracle/no-raw-input-extractor lineage.
+
+Implementation objectives:
+
+- Run expanded RULER NIAH and LongBench subsets with official source snapshots, evaluator hashes, split manifests, raw prediction rows, RouteMemory lineage, metrics, and provenance.
+- Include LLM+RAG baseline rows from v52 where allowed by the benchmark format.
+- Keep source/result bridges ready for independent review.
+
+Acceptance gates:
+
+- `ruler_expanded_rows_ready=1`
+- `longbench_expanded_rows_ready=1`
+- `official_source_hash_bound=1`
+- `official_evaluator_hash_bound=1`
+- `oracle_prediction_used=0`
+- `raw_input_extractor_used=0`
+- `real_external_benchmark_verified` remains `0` unless independently returned evidence is supplied.
+
+Stop rule:
+
+- Do not use benchmark score claims without official source/evaluator binding and reproducible raw prediction rows.
+
+## v57: Domain Expert Packs
+
+Goal:
+
+- Turn code/doc QA into domain-specific evidence packs without claiming expert replacement.
+
+Implementation objectives:
+
+- Prepare domain packs for codebase QA, internal docs QA, product/manual QA, incident-log QA, and at least one regulated/compliance-style audit domain.
+- Each pack must define domain policy, source admissibility, abstention rules, wrong-answer guards, query templates, acceptance rows, privacy/resource notes, and failure modes.
+- Bind each pack to RouteMemory + RouteHint + scorer/policy evidence.
+
+Acceptance gates:
+
+- `domain_pack_rows >= 5`
+- `domain_policy_rows_ready=1`
+- `acceptance_rows_ready=1`
+- `privacy_boundary_ready=1`
+- `expert_replacement_claim=0`
+
+Stop rule:
+
+- Do not market domain packs as expert systems. They are evidence-bound assistant/audit packs until human or buyer acceptance returns prove more.
+
+## v58: Blind Eval vs 30B-150B-Class Systems
+
+Goal:
+
+- Run blind evaluation between G/H and the 30B-150B-class LLM+RAG systems.
+
+Implementation objectives:
+
+- Freeze source corpus, query set, system registry, evaluation rubric, random seeds, and answer schema before generation.
+- Hide system identity from the evaluator where possible.
+- Evaluate correctness, citation support, abstention, unsupported claim behavior, failure explanation quality, replayability, and resource/cost envelope.
+
+Acceptance gates:
+
+- `blind_eval_query_rows >= 500`
+- `system_identity_hidden_from_evaluator=1` where evaluator workflow allows it
+- `all_required_systems_present=1`
+- `citation_verifier_symmetric=1`
+- `routehint_advantage_rows_ready=1`
+- `failure_case_report_ready=1`
+
+Stop rule:
+
+- Do not use blind-eval claims if query selection happened after seeing model outputs or if the evaluator receives asymmetric evidence.
+
+## v59: One-Command LLM Challenge Demo
+
+Goal:
+
+- Package a public reviewer command that reproduces a bounded subset of v52-v58.
+
+Implementation objectives:
+
+- Add one command that downloads or verifies pinned public sources, builds RouteMemory artifacts, runs required local baselines, runs available model adapters or marks deferred adapters explicitly, executes evaluator checks, and writes a challenge bundle.
+- The bundle should include README, source manifest, query set, baseline registry, answer/citation/abstain rows, metrics, resource rows, claim boundary, failure cases, and sha256 manifest.
+
+Acceptance gates:
+
+- `one_command_challenge_demo_ready=1`
+- `clean_machine_runbook_ready=1`
+- `deferred_external_model_rows_explicit=1`
+- `sha256_manifest_ready=1`
+- `claim_audit_ready=1`
+
+Stop rule:
+
+- Do not make v1.0 public if the challenge requires undocumented local state, private fixtures, or manual post-processing.
+
+## v60: v1.0 Architecture Challenge Release
+
+Goal:
+
+- Release the Architecture Challenge package with bounded, verifiable claims.
+
+Implementation objectives:
+
+- Freeze the v1.0 artifact directory.
+- Run completion audit across v52-v59.
+- Produce a public README, Korean README update, claim matrix, reviewer guide, reproduction guide, and release notes.
+- Include explicit blocked-claim rows and remaining evidence gaps.
+
+Acceptance gates:
+
+- `v52_ready=1`
+- `v53_ready=1`
+- `v54_ready=1`
+- `v55_ready=1`
+- `v56_ready=1`
+- `v57_ready=1`
+- `v58_ready=1`
+- `v59_ready=1`
+- `v1_0_architecture_challenge_ready=1`
+- `real_release_package_ready` only becomes `1` if the human/release-review ladder is also satisfied.
+
+Stop rule:
+
+- If the 30B/70B baselines, 1000+ generation rows, 10+ public repos, blind eval, or one-command demo are missing, the result remains a pre-v1.0 research artifact.
+
+## Immediate Next PR Target
+
+The next implementation PR should be v52, not another packaging layer:
+
+1. Add a baseline registry schema for A-H.
+2. Implement deterministic local rows for A/B/G/H first.
+3. Add adapter contracts and deferred evidence rows for C/D/E/F.
+4. Add symmetric citation, abstain, and wrong-answer guard evaluation.
+5. Keep comparison claims blocked until D/E are real.
+
+This creates the scaffold that v53-v60 can reuse without weakening the claim boundary.

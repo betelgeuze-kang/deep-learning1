@@ -109,8 +109,13 @@ The preview keeps `real_release_package_ready=0` and `gpu_speedup_claim=deferred
 
 ## Next Research Step
 
-The preview closes the local user-experience surface. The next high-value work is not another internal wrapper; it is real external acceptance or teacher-source authority evidence:
+The preview closes the local user-experience surface. The next public timing target is not a broad v0.3 claim; it is the v1.0 Architecture Challenge described in [V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md](V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md).
 
-- external/human or buyer PoC acceptance return
-- real teacher-source import/review authority package
-- human review only when release-ready wording becomes necessary
+Immediate next work:
+
+- v52: 30B/70B/100B+ LLM+RAG baseline war
+- v53: public repo 10-30 repo, 1000-3000 query code/doc audit
+- v54: RouteHint non-attention generator 1000+ rows
+- v55-v60: scaling law, expanded RULER/LongBench, domain packs, blind eval, one-command challenge demo, and v1.0 release audit
+
+The preview remains a local architecture preview until those challenge gates are satisfied.

@@ -6,6 +6,26 @@ Korean README: [README.ko.md](README.ko.md)
 
 **Artifact boundary:** This is a machine-verifiable research artifact, not a human-reviewed release package.
 
+## v1.0 Architecture Challenge Roadmap
+
+The next public timing target is not a broad v0.3 claim. It is the v1.0 Architecture Challenge: RouteMemory + RouteHint versus 30B-150B-class LLM+RAG baselines on code/doc QA, grounded generation, scaling, and one-command reproducibility.
+
+Roadmap: [docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md](docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md)
+
+Required v1.0 stages:
+
+- v52: 30B/70B/100B+ LLM+RAG baseline war
+- v53: public repo 10-30 repo, 1000-3000 query code/doc audit
+- v54: RouteHint non-attention generator 1000+ rows
+- v55: local scaling law main run
+- v56: RULER/LongBench expanded benchmark
+- v57: domain expert packs
+- v58: blind eval vs 30B-150B-class systems
+- v59: one-command LLM challenge demo
+- v60: v1.0 Architecture Challenge Release
+
+v0.3 remains a local architecture preview and claim-bound evidence surface.
+
 ## v0.3 Architecture Preview
 
 Run a local evidence-bound codebase audit preview:
@@ -92,7 +112,7 @@ Latest completed checkpoint:
 - v19 is implemented as the external submission bundle above v18. `experiments/test_v19_external_submission_bundle.sh` builds `results/v19_external_submission_bundle/bundle_001/` with third-party rerun, official benchmark reconciliation, and commercial local evidence-bound QA/audit submission packets, v18 intake commands, track rows, artifact hashes, and the post-v18 roadmap in `docs/POST_V18_RESEARCH_ROADMAP.md`. It marks only submission readiness while keeping `independent_rerun_actual_ready=0`, `candidate_external_benchmark_result_ready=0`, `closed_corpus_poc_actual_ready=0`, `real_external_benchmark_verified=0`, and `real_release_package_ready=0`.
 - v20 is implemented as the external return tracker above v19/v18. `experiments/test_v20_external_return_tracker.sh` builds `results/v20_external_return_tracker/tracker_001/` with per-track required return files, blocker rows, next actions, a tracker manifest, and artifact hashes. It can pass returned directories through `V20_THIRD_PARTY_RERUN_DIR`, `V20_OFFICIAL_BENCHMARK_DIR`, and `V20_COMMERCIAL_POC_DIR` into the v18 verifier, but the default no-return path intentionally keeps the actual rerun, candidate benchmark, commercial PoC, real benchmark, and release flags blocked.
 - v21 is implemented as the external review dispatch kit above v20. `experiments/test_v21_external_review_dispatch_kit.sh` builds `results/v21_external_review_dispatch_kit/dispatch_001/` with reviewer-facing requests, a packet index, return directory layout, copied return templates, verification commands, tracker summary, source manifests, and artifact hashes. It makes the three-track handoff portable for external reviewers while still keeping actual rerun, candidate benchmark, commercial PoC, real benchmark, and release flags blocked until non-fixture return directories are supplied.
-- v22 is implemented as the clean-machine execution kit above v21. `experiments/test_v22_clean_machine_execution_kit.sh` builds `results/v22_clean_machine_execution_kit/kit_001/` with host/container clean-machine runbooks, a minimal Containerfile, a third-party rerun capture script, reviewer/environment templates, official benchmark and commercial PoC execution notes, verification notes, source manifests, and artifact hashes. The capture script now auto-populates v15-b metric delta rows and review rows after a successful rerun, leaving reviewer identity and clean-machine independence as the remaining external fields. It improves the real third-party rerun path but still keeps actual/candidate/release flags blocked until returned non-fixture evidence is verified by v20/v18.
+- v22 is implemented as the clean-machine execution kit above v21. `experiments/test_v22_clean_machine_execution_kit.sh` builds `results/v22_clean_machine_execution_kit/kit_001/` with host/container clean-machine runbooks, a minimal Containerfile, a third-party rerun capture script, reviewer/environment templates, official benchmark and commercial PoC execution notes, verification notes, source manifests, and artifact hashes. The capture script auto-populates v15-b metric delta rows and review rows after a successful rerun and now records a bounded `CAPTURE_TIMEOUT_SECONDS` window plus start/finish diagnostics for hosted clean-machine runs. Reviewer identity and clean-machine independence remain the external fields. It improves the real third-party rerun path but still keeps actual/candidate/release flags blocked until returned non-fixture evidence is verified by v20/v18.
 - v23 is implemented as the official benchmark reconciliation kit above v22. `experiments/test_v23_official_benchmark_reconciliation_kit.sh` builds `results/v23_official_benchmark_reconciliation_kit/kit_001/` with an official-slice runbook, return directory layout, evaluator/container contract, no-oracle/no-raw-input-extractor contract, raw prediction and RouteMemory lineage templates, metrics/provenance/reproducibility templates, a return-file preflight script, v20 verification notes, source manifests, and artifact hashes. It improves the candidate external benchmark path while keeping candidate/real/release flags blocked until returned official evidence is verified.
 - v24 is implemented as the external handoff send/receive/verify packet above v21/v22/v18. `experiments/test_v24_external_handoff_send_receive_verify.sh` builds `results/v24_external_handoff_send_receive_verify/handoff_001/` with the exact send packet (`v21` dispatch kit plus `v22` clean-machine kit), return inbox expectations, direct `V18_THIRD_PARTY_RERUN_DIR`, `V18_OFFICIAL_BENCHMARK_DIR`, and `V18_COMMERCIAL_POC_DIR` verification commands, handoff rows, blockers, source manifests, and artifact hashes. It is the current operational packet for sending out and receiving back evidence while keeping actual flags blocked until a real return directory is supplied.
 - v25 is implemented as the outbound send manifest above v24. `experiments/test_v25_outbound_send_manifest.sh` builds `results/v25_outbound_send_manifest/packet_001/` with a complete sha256 manifest for the outbound `v21` dispatch kit and `v22` clean-machine execution kit, receiver acknowledgement template, return options, direct v18 verification instructions, source manifests, and artifact hashes. It verifies the send packet's integrity while keeping actual/candidate/release flags blocked until a real return directory is supplied.
