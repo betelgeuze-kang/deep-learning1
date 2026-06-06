@@ -1430,6 +1430,12 @@ Current next boundary:
   official source/evaluator-bound benchmark contract from v49/v45 seed
   evidence, and keeps full v56 blocked with `ruler_missing_rows=500`,
   `longbench_missing_rows=494`, and `llm_rag_baseline_rows_ready=0`.
+- `v57` is started as a domain expert packs contract scaffold.
+  `experiments/test_v57_domain_expert_packs_contract.sh` emits six domain-pack
+  targets, expert-review artifact contracts, and policy gates from
+  v47/v48/v52/v56 seed evidence, and keeps full v57 blocked with
+  `missing_eval_rows=950`, `human_expert_review_ready=0`, and
+  `blind_eval_ready=0`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

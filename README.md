@@ -26,7 +26,7 @@ Required v1.0 stages:
 
 v0.3 remains a local architecture preview and claim-bound evidence surface.
 
-Current v52 scaffold:
+Current v52-v57 scaffold:
 
 ```bash
 ./experiments/test_v52_llm_rag_baseline_war.sh
@@ -34,9 +34,10 @@ Current v52 scaffold:
 ./experiments/test_v54_routehint_generation_1000_contract.sh
 ./experiments/test_v55_local_scaling_law_main_contract.sh
 ./experiments/test_v56_ruler_longbench_expanded_contract.sh
+./experiments/test_v57_domain_expert_packs_contract.sh
 ```
 
-These emit the A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, and v56 RULER/LongBench expanded benchmark contract while keeping full v52-v56 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, and expanded RULER/LongBench rows are supplied.
+These emit the A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, and v57 domain expert pack contract while keeping full v52-v57 blocked until real 30B/70B LLM+RAG rows, 10+ repo / 1000+ query audit rows, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, expanded RULER/LongBench rows, and human-reviewed domain expert pack rows are supplied.
 
 ## v0.3 Architecture Preview
 
