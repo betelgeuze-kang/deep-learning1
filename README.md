@@ -30,9 +30,10 @@ Current v52 scaffold:
 
 ```bash
 ./experiments/test_v52_llm_rag_baseline_war.sh
+./experiments/test_v53_public_repo_code_doc_audit.sh
 ```
 
-This emits the A-H baseline registry and symmetric evaluation contract while keeping the full v52 comparison blocked until real 30B and 70B LLM+RAG rows are supplied.
+These emit the A-H baseline registry, symmetric evaluation contract, and v53 repo/query scale contract while keeping full v52/v53 blocked until real 30B/70B LLM+RAG rows and 10+ repo / 1000+ query audit rows are supplied.
 
 ## v0.3 Architecture Preview
 
