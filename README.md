@@ -39,6 +39,7 @@ Current v52-v60 scaffold:
 ./experiments/test_v53c_public_repo_canary_source_snapshot.sh
 ./experiments/test_v53d_canary_source_query_seed_100.sh
 ./experiments/test_v53e_canary_query_scale_1000.sh
+./experiments/test_v53f_ah_answer_citation_resource_intake.sh
 ./experiments/test_v54_routehint_generation_1000_contract.sh
 ./experiments/test_v55_local_scaling_law_main_contract.sh
 ./experiments/test_v56_ruler_longbench_expanded_contract.sh
@@ -49,7 +50,7 @@ Current v52-v60 scaffold:
 ./experiments/test_v60_architecture_challenge_release_contract.sh
 ```
 
-These emit the A-H baseline registry, a measured B small-local-RAG seed row, the C 7B-14B local-model-RAG evidence-intake gate, the D/E 30B/70B open-weight LLM+RAG evidence-intake gate, the optional F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, a live 10-repo public target lock, pinned canary source snapshots, a 100-row source-span-bound canary query seed, a 1000-row canary-scope query scale with negative/abstain rows, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, and v60 release-audit contract while keeping full v52-v60 blocked until real 30B/70B LLM+RAG rows, complete-source 10+ repo / 1000+ query audit rows with A-H answers/citations/resources, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, expanded RULER/LongBench rows, human-reviewed domain expert pack rows, 500+ blind-eval rows, the complete challenge demo rows, and human/release review evidence are supplied.
+These emit the A-H baseline registry, a measured B small-local-RAG seed row, the C 7B-14B local-model-RAG evidence-intake gate, the D/E 30B/70B open-weight LLM+RAG evidence-intake gate, the optional F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, a live 10-repo public target lock, pinned canary source snapshots, a 100-row source-span-bound canary query seed, a 1000-row canary-scope query scale with negative/abstain rows, an A-H answer/citation/resource intake matrix over that frozen query set, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, and v60 release-audit contract while keeping full v52-v60 blocked until real 30B/70B LLM+RAG rows, complete-source 10+ repo / 1000+ query audit rows with A-H answers/citations/resources, 1000+ RouteHint generation rows, 6-axis / 100+ row scaling evidence, expanded RULER/LongBench rows, human-reviewed domain expert pack rows, 500+ blind-eval rows, the complete challenge demo rows, and human/release review evidence are supplied.
 
 Current measured baseline progress: `experiments/test_v52b_small_local_rag_measured_row.sh` creates `results/v52b_small_local_rag_measured_row/row_001/` with nine measured system-B answer rows, citation rows, retrieval/resource rows, and hash manifests over the v50 public-repo seed. It is absorb-ready for v52, but it is not a 30B-150B comparison and leaves v52 release claims blocked.
 
@@ -66,6 +67,8 @@ Current v53 source-snapshot progress: `experiments/test_v53c_public_repo_canary_
 Current v53 query-seed progress: `experiments/test_v53d_canary_source_query_seed_100.sh` creates `results/v53d_canary_source_query_seed_100/query_001/` with 100 source-span-bound canary query rows over the 10 locked repositories. It raises the seed from 9 to 100 rows, but full v53 remains blocked until at least 1000 query rows, negative/abstain families, A-H answer/citation/resource rows, and review artifacts exist.
 
 Current v53 query-scale progress: `experiments/test_v53e_canary_query_scale_1000.sh` creates `results/v53e_canary_query_scale_1000/scale_001/` with 1000 canary-scope source-span-bound query rows, 840 supported rows, 160 negative/abstain rows, eight query families, and coverage across the 10 locked repositories. This closes the canary query-count mechanics, but full v53 remains blocked until complete source snapshots, A-H answer/citation/resource rows, symmetric scorer/policy rows, and review artifacts exist.
+
+Current v53 A-H intake progress: `experiments/test_v53f_ah_answer_citation_resource_intake.sh` creates `results/v53f_ah_answer_citation_resource_intake/intake_001/` with A-H system targets, required answer/citation/resource schemas, and 8000 answer/resource template rows over the frozen v53e query set. This closes the comparison evidence intake surface, but full v53 remains blocked because supplied valid answer/citation/resource rows, complete source snapshots, scorer/policy rows, and review artifacts are still missing.
 
 ## v0.3 Architecture Preview
 

@@ -1461,6 +1461,13 @@ Current next boundary:
   keeps full v53 blocked until complete source snapshots, A-H
   answer/citation/resource rows, symmetric scorer/policy rows, and review
   artifacts exist.
+- `v53f` adds the A-H answer/citation/resource intake layer.
+  `experiments/test_v53f_ah_answer_citation_resource_intake.sh` emits the A-H
+  system target matrix, required answer/citation/resource schemas, and 8000
+  answer/resource template rows over the frozen v53e query set, but keeps full
+  v53 blocked with `valid_answer_rows=0` until real supplied comparison rows,
+  source citation coverage, resource measurements, complete source snapshots,
+  and review artifacts exist.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
