@@ -1417,6 +1417,10 @@ Current next boundary:
   `experiments/test_v53_public_repo_code_doc_audit.sh` emits the 10-repo /
   1000-query scale contract from the v50 3-repo seed, and keeps full v53
   blocked with `missing_repo_count=7` and `missing_query_rows=991`.
+- `v54` is started as a RouteHint generation 1000-row contract scaffold.
+  `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
+  domain target, invariant, and artifact contracts from v48/v54 seed evidence,
+  and keeps full v54 blocked with `missing_generation_rows=976`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

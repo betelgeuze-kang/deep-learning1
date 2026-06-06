@@ -286,7 +286,7 @@ Stop rule:
 
 - If the 30B/70B baselines, 1000+ generation rows, 10+ public repos, blind eval, or one-command demo are missing, the result remains a pre-v1.0 research artifact.
 
-## Current v52-v53 Scaffold
+## Current v52-v54 Scaffold
 
 Implemented now:
 
@@ -294,16 +294,21 @@ Implemented now:
 - `experiments/test_v52_llm_rag_baseline_war.sh`
 - `experiments/run_v53_public_repo_code_doc_audit.sh`
 - `experiments/test_v53_public_repo_code_doc_audit.sh`
+- `experiments/run_v54_routehint_generation_1000_contract.sh`
+- `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `results/v52_llm_rag_baseline_war/baseline_001/` contract artifacts
 - `results/v53_public_repo_code_doc_audit/audit_001/` contract artifacts
+- `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 
 This scaffold emits the A-H baseline registry, adapter contract rows, symmetric evaluation contract rows, score axes, source-preview copies, and claim boundary. It intentionally keeps `v52_ready=0`, `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, and `optional_100b_plus_baseline_status=deferred-with-reason`.
 
 The v53 scaffold emits a 10-repo target registry, 1000-query scale contract, artifact contract rows, v50 seed evidence copies, and claim boundary. It intentionally keeps `v53_ready=0`, `missing_repo_count=7`, and `missing_query_rows=991`.
 
+The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
+
 ## Immediate Next PR Target
 
-The next implementation PR should extend v52/v53 from contract scaffold to measured rows:
+The next implementation PR should extend v52/v53/v54 from contract scaffold to measured rows:
 
 1. Add a measured small local RAG row for B.
 2. Add a measured 7B-14B local model + RAG row for C.
@@ -311,6 +316,7 @@ The next implementation PR should extend v52/v53 from contract scaffold to measu
 4. Add a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
 5. Expand public repo coverage from 3 to at least 10 pinned repositories.
 6. Expand code/doc query coverage from 9 to at least 1000 source-span-bound rows.
-7. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, and v53 reaches the repo/query scale target.
+7. Expand RouteHint generation from 24 seed rows to at least 1000 grounded rows.
+8. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, and v54 reaches the 1000-row generation target.
 
-This creates the scaffold that v53-v60 can reuse without weakening the claim boundary.
+This creates the scaffold that v55-v60 can reuse without weakening the claim boundary.
