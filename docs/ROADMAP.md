@@ -1428,6 +1428,11 @@ Current next boundary:
   required D/E evidence schemas, answer/model templates, validation rows, and
   hash manifest, and still keeps v52 blocked until both real D and E evidence
   directories validate.
+- `v52e` adds the optional 100B+ hosted/API LLM+RAG evidence-intake/defer gate
+  for system F. `experiments/test_v52e_100b_plus_hosted_llm_rag_optional_intake.sh`
+  emits the required F schema, answer/model templates, validation rows, and
+  hash manifest, while keeping the optional row `deferred-with-reason` until a
+  real hosted/API evidence directory validates.
 - `v53` is started as a public repo code/doc audit contract scaffold.
   `experiments/test_v53_public_repo_code_doc_audit.sh` emits the 10-repo /
   1000-query scale contract from the v50 3-repo seed, and keeps full v53
