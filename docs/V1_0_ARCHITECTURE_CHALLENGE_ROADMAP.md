@@ -286,7 +286,7 @@ Stop rule:
 
 - If the 30B/70B baselines, 1000+ generation rows, 10+ public repos, blind eval, or one-command demo are missing, the result remains a pre-v1.0 research artifact.
 
-## Current v52-v58 Scaffold
+## Current v52-v59 Scaffold
 
 Implemented now:
 
@@ -304,6 +304,9 @@ Implemented now:
 - `experiments/test_v57_domain_expert_packs_contract.sh`
 - `experiments/run_v58_blind_eval_contract.sh`
 - `experiments/test_v58_blind_eval_contract.sh`
+- `examples/v1_0_architecture_challenge_demo.sh`
+- `experiments/run_v59_one_command_challenge_demo_contract.sh`
+- `experiments/test_v59_one_command_challenge_demo_contract.sh`
 - `results/v52_llm_rag_baseline_war/baseline_001/` contract artifacts
 - `results/v53_public_repo_code_doc_audit/audit_001/` contract artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
@@ -311,6 +314,7 @@ Implemented now:
 - `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
 - `results/v57_domain_expert_packs_contract/contract_001/` contract artifacts
 - `results/v58_blind_eval_contract/contract_001/` contract artifacts
+- `results/v59_one_command_challenge_demo_contract/contract_001/` contract artifacts
 
 This scaffold emits the A-H baseline registry, adapter contract rows, symmetric evaluation contract rows, score axes, source-preview copies, and claim boundary. It intentionally keeps `v52_ready=0`, `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, and `optional_100b_plus_baseline_status=deferred-with-reason`.
 
@@ -326,9 +330,11 @@ The v57 scaffold emits six domain-pack targets, expert-review artifact contracts
 
 The v58 scaffold emits D-H blind-system mapping, 500-row blind query-freeze targets, blind evaluator artifact contracts, sealed identity and symmetric-evidence gates, v52/v57 seed evidence copies, and claim boundary. It intentionally keeps `v58_ready=0`, `missing_blind_eval_rows=500`, `required_30b_blind_response_ready=0`, `required_70b_blind_response_ready=0`, `human_blind_review_ready=0`, and `inter_rater_rows_ready=0`.
 
+The v59 scaffold emits a repository one-command entrypoint, v52-v58 contract bundle, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It intentionally keeps `v59_ready=0`, all v52-v58 full-ready stage rows at zero, and the real 30B/70B, public repo scale, generation, scaling, expanded benchmark, domain pack, blind-eval, and release blockers explicit.
+
 ## Immediate Next PR Target
 
-The next implementation PR should extend v52-v58 from contract scaffold to measured rows:
+The next implementation PR should extend v52-v59 from contract scaffold to measured rows:
 
 1. Add a measured small local RAG row for B.
 2. Add a measured 7B-14B local model + RAG row for C.
@@ -341,6 +347,7 @@ The next implementation PR should extend v52-v58 from contract scaffold to measu
 9. Expand RULER to at least 1000 official-source/evaluator-bound rows and LongBench to at least 500 rows, with v52 baseline rows where benchmark format allows.
 10. Fill the six domain expert packs with human-reviewed gold query sets, rubrics, failure taxonomy, blind review forms, policy diffs, privacy review, and reproducibility manifests.
 11. Run the 500+ row blind evaluation with sealed system identity, frozen pre-output query selection, symmetric evidence budgets, human blind review, and inter-rater/adjudication rows.
-12. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, and v58 has real blind-eval rows.
+12. Turn the v59 command from contract bundle into a challenge demo by replaying the real v52-v58 measured rows and writing a reviewer-ready artifact bundle.
+13. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, and v59 replays those rows through one command.
 
-This creates the scaffold that v59-v60 can reuse without weakening the claim boundary.
+This creates the scaffold that v60 can reuse without weakening the claim boundary.

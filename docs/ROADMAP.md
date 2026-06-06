@@ -1443,6 +1443,11 @@ Current next boundary:
   full v58 blocked with `missing_blind_eval_rows=500`,
   `required_30b_blind_response_ready=0`, and
   `human_blind_review_ready=0`.
+- `v59` is started as a one-command challenge demo contract scaffold.
+  `examples/v1_0_architecture_challenge_demo.sh` runs the v59 bundle builder,
+  which assembles v52-v58 contract artifacts, stage/gate rows, a replay
+  command, README_RESULT, and sha256 manifest while keeping full v59 blocked
+  with `v59_ready=0` and all v52-v58 full-ready stage rows at zero.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

@@ -26,7 +26,7 @@
 
 v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡니다.
 
-현재 v52-v58 scaffold:
+현재 v52-v59 scaffold:
 
 ```bash
 ./experiments/test_v52_llm_rag_baseline_war.sh
@@ -36,9 +36,11 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 ./experiments/test_v56_ruler_longbench_expanded_contract.sh
 ./experiments/test_v57_domain_expert_packs_contract.sh
 ./experiments/test_v58_blind_eval_contract.sh
+./experiments/test_v59_one_command_challenge_demo_contract.sh
+./examples/v1_0_architecture_challenge_demo.sh
 ```
 
-이 명령들은 A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract를 만들지만, 실제 30B/70B LLM+RAG row, 10+ repo / 1000+ query audit row, 1000+ RouteHint generation row, 6축 / 100+ row scaling evidence, expanded RULER/LongBench row, human-reviewed domain expert pack row, 500+ blind-eval row가 들어오기 전까지 full v52-v58은 blocked로 유지합니다.
+이 명령들은 A-H baseline registry, symmetric evaluation contract, v53 repo/query scale contract, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract를 만들지만, 실제 30B/70B LLM+RAG row, 10+ repo / 1000+ query audit row, 1000+ RouteHint generation row, 6축 / 100+ row scaling evidence, expanded RULER/LongBench row, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row가 들어오기 전까지 full v52-v59는 blocked로 유지합니다.
 
 ## v0.3 Architecture Preview
 
