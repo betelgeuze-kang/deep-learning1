@@ -1535,6 +1535,12 @@ Current next boundary:
   which assembles v52-v58 contract artifacts, stage/gate rows, a replay
   command, README_RESULT, and sha256 manifest while keeping full v59 blocked
   with `v59_ready=0` and all v52-v58 full-ready stage rows at zero.
+- `v59b` adds the one-command candidate/intake-chain replay.
+  `examples/v1_0_architecture_challenge_candidate_demo.sh` runs the v59b
+  bundle builder, which assembles v52b-v58b candidate/intake artifacts, stage
+  rows, gate rows, README_RESULT, boundary, and sha256 manifest. It marks the
+  current candidate replay bundle ready while keeping real LLM rows,
+  complete-source audit, human review, full v59, and release claims blocked.
 - `v60` is started as a release-audit contract scaffold.
   `experiments/test_v60_architecture_challenge_release_contract.sh` consumes
   the v59 bundle, emits release requirement rows, allowed/forbidden claim rows,
