@@ -1367,17 +1367,20 @@ Current next boundary:
   verifies that `RouteMemory evidence -> compact RouteHint -> tiny
   non-attention generator -> grounded answer -> citation/abstain/audit trail`
   holds across RULER NIAH, LongBench v2, codebase QA, and internal docs QA with
-  zero raw context in hints and zero raw prompt stuffing.
+  zero raw context in hints, zero raw prompt stuffing, zero raw span copying,
+  zero direct hint-value echo, and 20 answer-row RouteHint transformations.
 - `v49` is closed as the fixed-context RULER NIAH 200/500-row scale above
   v34/v33/v18. It verifies 200 and 500 raw prediction rows, matching
   RouteMemory lineage rows, official evaluator/source reuse, no-oracle/
   no-extractor status, fixed 4096 context length, fixed architecture, and v18
   intake while keeping release readiness blocked.
 - `v50` is closed as the Public Repo Auditor 3-repo evidence run above
-  v42/v43/v18. It shallow-clones `pypa/sampleproject`, `psf/requests`, and
-  `pallets/click`, binds HEAD SHAs/source hashes, verifies 9 audit cases across
-  doc-code conflict, deprecated/legacy usage, and config mismatch, and passes
-  the commercial return through v18 while keeping release readiness blocked.
+  v42/v43/v18. It checks out pinned commit SHAs for `pypa/sampleproject`,
+  `psf/requests`, and `pallets/click`, binds requested refs, HEAD SHAs/source
+  hashes, verifies 9 audit cases with independent detector outputs across
+  doc-code conflict, deprecated/legacy usage, and config mismatch, verifies
+  guard negative controls, and passes the commercial return through v18 while
+  keeping release readiness blocked.
 - The v41-v50 impact roadmap is closed, and the next high-leverage stage is
   real-return evidence rather than another internal packaging layer: external
   or buyer PoC acceptance, actual teacher-source import, and measured

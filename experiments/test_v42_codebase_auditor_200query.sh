@@ -49,6 +49,8 @@ for field in expected_ones:
 for field in ["query_rows", "poc_result_rows", "audit_trail_rows", "wrong_answer_guard_pass_rows", "citation_accuracy_pass_rows", "abstain_behavior_pass_rows", "audit_trail_bound_rows"]:
     if summary.get(field) != "200":
         raise SystemExit(f"v42 {field}: expected 200, got {summary.get(field)}")
+if summary.get("guard_negative_rows") != "3" or summary.get("guard_negative_block_rows") != "3":
+    raise SystemExit("v42 guard negative controls should all block")
 if int(summary.get("abstain_rows", "0")) < 20:
     raise SystemExit("v42 should include at least 20 abstain rows")
 if int(summary.get("source_files", "0")) < 40:
@@ -64,6 +66,7 @@ for gate in [
     "query-count",
     "citations",
     "abstain",
+    "guard-negative-controls",
     "audit-trail",
     "privacy-resource-acceptance",
     "v18-commercial-intake",
@@ -76,6 +79,7 @@ if decisions.get("real-release-package", {}).get("status") != "blocked":
 required_files = [
     "V42_CODEBASE_AUDITOR_BOUNDARY.md",
     "auditor_rows.csv",
+    "guard_negative_rows.csv",
     "v42_codebase_auditor_manifest.json",
     "sha256_manifest.csv",
     "source_manifests/codebase_auditor_source_rows.csv",
@@ -102,6 +106,8 @@ if manifest.get("query_rows") != 200 or manifest.get("poc_result_rows") != 200:
     raise SystemExit("v42 manifest should record 200 query/result rows")
 if manifest.get("audit_trail_rows") < 200:
     raise SystemExit("v42 manifest should record an audit trail for every query")
+if manifest.get("guard_negative_rows") != 3 or manifest.get("guard_negative_block_rows") != 3:
+    raise SystemExit("v42 manifest should record blocked guard negatives")
 if manifest.get("v18_closed_corpus_poc_actual_ready") != 1:
     raise SystemExit("v42 manifest should record v18 commercial readiness")
 if manifest.get("human_review_completed") != 0 or manifest.get("real_release_package_ready") != 0:
@@ -122,8 +128,11 @@ query_rows = read_csv(return_dir / "query_set.csv")
 poc_rows = read_csv(return_dir / "poc_result_rows.csv")
 audit_rows = read_csv(return_dir / "audit_trail.csv")
 acceptance_rows = read_csv(return_dir / "acceptance_review.csv")
+guard_negative_rows = read_csv(audit_dir / "guard_negative_rows.csv")
 if len(query_rows) != 200 or len(poc_rows) != 200 or len(audit_rows) != 200:
     raise SystemExit("v42 query/result/audit rows should all be 200")
+if len(guard_negative_rows) != 3 or any(row["blocked"] != "1" or row["expected_block"] != "1" for row in guard_negative_rows):
+    raise SystemExit("v42 guard negative controls should be blocked")
 if len({row["query_id"] for row in query_rows}) != 200:
     raise SystemExit("v42 query IDs should be unique")
 if len([row for row in query_rows if row["expected_behavior"] == "abstain"]) < 20:

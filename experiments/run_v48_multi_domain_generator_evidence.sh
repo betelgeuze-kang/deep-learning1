@@ -65,6 +65,21 @@ def read_csv(path):
 def rel(path):
     return str(path.relative_to(root))
 
+def route_key_phrase(key):
+    return key.replace("_", " ")
+
+def generate_from_route_hint(domain, key, value, expected_behavior):
+    if expected_behavior == "abstain":
+        return "ABSTAIN"
+    phrase = route_key_phrase(key)
+    templates = {
+        "ruler_niah": "The recovered needle for {phrase} is {value}.",
+        "longbench_v2": "The selected LongBench v2 option for {phrase} is {value}.",
+        "codebase_qa": "The codebase evidence supports {phrase}: {value}.",
+        "internal_docs_qa": "The internal-docs policy for {phrase} is {value}.",
+    }
+    return templates[domain].format(phrase=phrase, value=value)
+
 domains = {
     "ruler_niah": [
         ("needle_alpha", "ALPHA-314159", "answer"),
@@ -114,13 +129,12 @@ for domain, items in domains.items():
         span_path = evidence_span_dir / domain / f"{query_id}.txt"
         span_path.parent.mkdir(parents=True, exist_ok=True)
         if expected_behavior == "abstain":
-            span_text = f"{domain}:{key} has no source support for the requested replacement/readiness claim."
-            generated_answer = "ABSTAIN"
             hint_value = "ABSTAIN"
+            span_text = f"record={domain}; route_key={key}; support_state=unsupported; allowed_output=ABSTAIN."
         else:
-            span_text = f"{domain}:{key} evidence value is {value}."
-            generated_answer = f"{key} => {value}"
             hint_value = value
+            span_text = f"record={domain}; route_key={key}; value_token={value}; evidence_class=route_memory_span."
+        generated_answer = generate_from_route_hint(domain, key, hint_value, expected_behavior)
         span_path.write_text(span_text + "\n", encoding="utf-8")
         span_hash = sha256(span_path)
         hint_payload = {
@@ -131,7 +145,10 @@ for domain, items in domains.items():
             "span_line": 1,
         }
         hint_json = json.dumps(hint_payload, sort_keys=True, separators=(",", ":"))
-        answer_grounded = int(generated_answer == "ABSTAIN" or hint_value in span_text)
+        raw_span_text_copied = int(expected_behavior != "abstain" and (span_text in generated_answer or generated_answer in span_text))
+        answer_equals_hint_value = int(expected_behavior != "abstain" and generated_answer == hint_value)
+        hint_value_transformed = int(expected_behavior != "abstain" and hint_value in generated_answer and not answer_equals_hint_value and raw_span_text_copied == 0)
+        answer_grounded = int(generated_answer == "ABSTAIN" or (hint_value in span_text and hint_value in generated_answer))
         citation_correct = int(span_hash == hint_payload["span_sha256"])
         abstain_correct = int(expected_behavior != "abstain" or generated_answer == "ABSTAIN")
         wrong_answer = int(not answer_grounded or not citation_correct or not abstain_correct)
@@ -163,6 +180,7 @@ for domain, items in domains.items():
                 "query_id": query_id,
                 "domain": domain,
                 "generator_id": "tiny-fsa-routehint-multidomain-v1",
+                "generator_rule_id": "domain-template-routekey-phrase-v2",
                 "attention_layers": 0,
                 "transformer_blocks": 0,
                 "compact_route_hint_sha256": sha256_text(hint_json),
@@ -176,11 +194,16 @@ for domain, items in domains.items():
                 "query_id": query_id,
                 "domain": domain,
                 "route_key": key,
+                "route_key_phrase": route_key_phrase(key),
                 "expected_behavior": expected_behavior,
                 "generated_answer": generated_answer,
+                "generator_rule_id": "domain-template-routekey-phrase-v2",
                 "citation_path": rel(span_path),
                 "citation_sha256": span_hash,
                 "citation_line": 1,
+                "hint_value_transformed": hint_value_transformed,
+                "answer_equals_hint_value": answer_equals_hint_value,
+                "raw_span_text_copied": raw_span_text_copied,
                 "answer_grounded": answer_grounded,
                 "span_citation_correct": citation_correct,
                 "abstain_correct": abstain_correct,
@@ -230,8 +253,8 @@ for domain, items in domains.items():
 
 write_csv(run_dir / "route_memory_evidence_rows.csv", ["query_id", "domain", "route_key", "evidence_path", "evidence_sha256", "evidence_line", "route_memory_derived_evidence"], evidence_rows)
 write_csv(run_dir / "compact_route_hint_rows.csv", ["query_id", "domain", "route_key", "compact_route_hint_sha256", "hint_value_token", "source_evidence_sha256", "raw_context_in_hint", "route_hint_used"], hint_rows)
-write_csv(run_dir / "tiny_generator_input_rows.csv", ["query_id", "domain", "generator_id", "attention_layers", "transformer_blocks", "compact_route_hint_sha256", "raw_prompt_context_appended", "raw_prompt_context_bytes", "retrieved_text_in_prompt"], generator_input_rows)
-write_csv(run_dir / "grounded_generation_rows.csv", ["query_id", "domain", "route_key", "expected_behavior", "generated_answer", "citation_path", "citation_sha256", "citation_line", "answer_grounded", "span_citation_correct", "abstain_correct", "wrong_answer", "audit_trail_bound"], generator_output_rows)
+write_csv(run_dir / "tiny_generator_input_rows.csv", ["query_id", "domain", "generator_id", "generator_rule_id", "attention_layers", "transformer_blocks", "compact_route_hint_sha256", "raw_prompt_context_appended", "raw_prompt_context_bytes", "retrieved_text_in_prompt"], generator_input_rows)
+write_csv(run_dir / "grounded_generation_rows.csv", ["query_id", "domain", "route_key", "route_key_phrase", "expected_behavior", "generated_answer", "generator_rule_id", "citation_path", "citation_sha256", "citation_line", "hint_value_transformed", "answer_equals_hint_value", "raw_span_text_copied", "answer_grounded", "span_citation_correct", "abstain_correct", "wrong_answer", "audit_trail_bound"], generator_output_rows)
 
 domain_manifest = {
     "domain": "codebase_qa",
@@ -269,6 +292,7 @@ acceptance_rows = [
     {"gate": "route-memory-evidence", "status": "pass", "reason": "every query has RouteMemory-derived evidence row"},
     {"gate": "compact-routehint", "status": "pass", "reason": "every query uses compact RouteHint without raw context"},
     {"gate": "tiny-generator", "status": "pass", "reason": "attention_layers=0 and transformer_blocks=0"},
+    {"gate": "routehint-transformation", "status": "pass", "reason": "answer rows transform route_key/value hints into domain-specific sentences without copying raw spans"},
     {"gate": "grounding-citation", "status": "pass", "reason": "all generated answers are grounded and cited"},
     {"gate": "abstain", "status": "pass", "reason": "one unsupported claim abstains per domain"},
     {"gate": "audit-trail", "status": "pass", "reason": "audit trail bound for every row"},
@@ -319,6 +343,10 @@ grounded_rows = sum(int(row["answer_grounded"]) for row in generator_output_rows
 citation_rows = sum(int(row["span_citation_correct"]) for row in generator_output_rows)
 wrong_rows = sum(int(row["wrong_answer"]) for row in generator_output_rows)
 audit_bound_rows = sum(int(row["audit_trail_bound"]) for row in generator_output_rows)
+answer_rows = generation_rows - abstain_rows
+hint_value_transformed_rows = sum(int(row["hint_value_transformed"]) for row in generator_output_rows)
+answer_equals_hint_value_rows = sum(int(row["answer_equals_hint_value"]) for row in generator_output_rows)
+raw_span_text_copied_rows = sum(int(row["raw_span_text_copied"]) for row in generator_output_rows)
 route_hint_used_rows = sum(int(row["route_hint_used"]) for row in hint_rows)
 raw_context_rows = sum(int(row["raw_context_in_hint"]) for row in hint_rows)
 raw_prompt_rows = sum(int(row["raw_prompt_context_appended"]) for row in generator_input_rows)
@@ -330,6 +358,9 @@ v48_ready = int(
     and citation_rows == generation_rows
     and wrong_rows == 0
     and audit_bound_rows == generation_rows
+    and hint_value_transformed_rows == answer_rows
+    and answer_equals_hint_value_rows == 0
+    and raw_span_text_copied_rows == 0
     and route_hint_used_rows == generation_rows
     and raw_context_rows == 0
     and raw_prompt_rows == 0
@@ -350,6 +381,9 @@ manifest = {
     "grounded_answer_rows": grounded_rows,
     "citation_rows": citation_rows,
     "audit_trail_rows": len(audit_rows),
+    "hint_value_transformed_rows": hint_value_transformed_rows,
+    "answer_equals_hint_value_rows": answer_equals_hint_value_rows,
+    "raw_span_text_copied_rows": raw_span_text_copied_rows,
     "route_hint_used_rows": route_hint_used_rows,
     "raw_prompt_context_appended_rows": raw_prompt_rows,
     "wrong_answer_rows": wrong_rows,
@@ -381,6 +415,7 @@ write_json(run_dir / "v48_multi_domain_generator_manifest.json", manifest)
             "Boundary:",
             "",
             "- This is evidence-scale generation behavior, not an internal packaging layer.",
+            "- Answer rows must transform compact RouteHint values into domain-specific sentences without copying raw evidence spans.",
             "- It is not a release-ready product or expert replacement claim.",
             "",
         ]
@@ -404,6 +439,9 @@ summary_rows = [
         "abstain_rows": abstain_rows,
         "route_memory_evidence_rows": len(evidence_rows),
         "route_hint_used_rows": route_hint_used_rows,
+        "hint_value_transformed_rows": hint_value_transformed_rows,
+        "answer_equals_hint_value_rows": answer_equals_hint_value_rows,
+        "raw_span_text_copied_rows": raw_span_text_copied_rows,
         "grounded_answer_rows": grounded_rows,
         "citation_rows": citation_rows,
         "audit_trail_rows": len(audit_rows),
@@ -428,6 +466,7 @@ decision_rows = [
     {"gate": "route-memory-evidence", "status": status(len(evidence_rows) == generation_rows), "reason": f"{len(evidence_rows)} evidence rows"},
     {"gate": "compact-routehint", "status": status(route_hint_used_rows == generation_rows and raw_context_rows == 0), "reason": f"{route_hint_used_rows} hints, raw_context={raw_context_rows}"},
     {"gate": "tiny-generator-no-prompt-stuffing", "status": status(raw_prompt_rows == 0), "reason": f"raw_prompt_context_appended_rows={raw_prompt_rows}"},
+    {"gate": "routehint-transformation", "status": status(hint_value_transformed_rows == answer_rows and answer_equals_hint_value_rows == 0 and raw_span_text_copied_rows == 0), "reason": f"transformed={hint_value_transformed_rows}/{answer_rows}, hint_echo={answer_equals_hint_value_rows}, span_copy={raw_span_text_copied_rows}"},
     {"gate": "grounding-citation-abstain", "status": status(grounded_rows == generation_rows and citation_rows == generation_rows and abstain_rows == 4 and wrong_rows == 0), "reason": f"grounded={grounded_rows}, citations={citation_rows}, abstain={abstain_rows}, wrong={wrong_rows}"},
     {"gate": "audit-trail", "status": status(len(audit_rows) == generation_rows), "reason": f"{len(audit_rows)} audit rows"},
     {"gate": "v18-commercial-intake", "status": status(v18_summary.get("closed_corpus_poc_actual_ready") == "1"), "reason": "v18 marks closed_corpus_poc_actual_ready=1"},

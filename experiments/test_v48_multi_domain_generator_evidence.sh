@@ -45,6 +45,9 @@ expected_values = {
     "abstain_rows": "4",
     "route_memory_evidence_rows": "24",
     "route_hint_used_rows": "24",
+    "hint_value_transformed_rows": "20",
+    "answer_equals_hint_value_rows": "0",
+    "raw_span_text_copied_rows": "0",
     "grounded_answer_rows": "24",
     "citation_rows": "24",
     "audit_trail_rows": "24",
@@ -67,6 +70,7 @@ for gate in [
     "route-memory-evidence",
     "compact-routehint",
     "tiny-generator-no-prompt-stuffing",
+    "routehint-transformation",
     "grounding-citation-abstain",
     "audit-trail",
     "v18-commercial-intake",
@@ -107,6 +111,8 @@ if manifest.get("domain_count") != 4 or manifest.get("generation_rows") != 24:
     raise SystemExit("v48 manifest should record four domains and 24 rows")
 if manifest.get("abstain_rows") != 4 or manifest.get("wrong_answer_rows") != 0:
     raise SystemExit("v48 manifest should record four abstains and zero wrong answers")
+if manifest.get("hint_value_transformed_rows") != 20 or manifest.get("answer_equals_hint_value_rows") != 0 or manifest.get("raw_span_text_copied_rows") != 0:
+    raise SystemExit("v48 manifest should record transformed, non-echo answer rows")
 if manifest.get("raw_prompt_context_appended_rows") != 0 or manifest.get("real_release_package_ready") != 0:
     raise SystemExit("v48 manifest should keep no prompt stuffing and no release readiness")
 
@@ -147,6 +153,11 @@ for row in output_rows:
         raise SystemExit("v48 generated answers should be grounded, cited, and abstain-correct")
     if row["wrong_answer"] != "0" or row["audit_trail_bound"] != "1":
         raise SystemExit("v48 generated answers should have zero wrong answers and bound audit trails")
+    if row["expected_behavior"] == "answer":
+        if row["hint_value_transformed"] != "1" or row["answer_equals_hint_value"] != "0" or row["raw_span_text_copied"] != "0":
+            raise SystemExit("v48 answer rows should transform RouteHint values without echoing hint values or raw spans")
+        if row["route_key_phrase"] not in row["generated_answer"]:
+            raise SystemExit("v48 generated answers should include transformed route key phrase")
 
 domain = json.loads((return_dir / "domain_manifest.json").read_text(encoding="utf-8"))
 resource = json.loads((return_dir / "resource_envelope.json").read_text(encoding="utf-8"))

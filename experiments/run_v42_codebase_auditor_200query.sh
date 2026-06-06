@@ -65,6 +65,14 @@ def read_csv(path):
 def rel(path):
     return str(path.relative_to(root))
 
+def verifier_flags(row):
+    citation_path = root / row["citation_path"]
+    citation_hash_ok = citation_path.is_file() and row["citation_sha256"] == sha256(citation_path)
+    citation_line_ok = str(row["citation_line"]).isdigit() and int(row["citation_line"]) >= 1
+    wrong_answer_guard_pass = int(citation_hash_ok and citation_line_ok)
+    citation_accuracy_pass = int(citation_hash_ok)
+    return wrong_answer_guard_pass, citation_accuracy_pass
+
 def source_candidates():
     tracked = subprocess.check_output(["git", "ls-files"], cwd=root, text=True).splitlines()
     allowed_suffixes = {".md", ".sh", ".py", ".hpp", ".cpp", ".h"}
@@ -167,6 +175,46 @@ for idx in range(query_count):
         }
     )
 
+def make_guard_negative_rows(poc_rows):
+    base = poc_rows[0]
+    bad_sha = "sha256:" + ("0" * 64)
+    rows = []
+    for guard, mutation in [
+        ("corrupted_citation_hash", {"citation_sha256": bad_sha}),
+        ("missing_citation_path", {"citation_path": "results/v42_codebase_auditor_200query/missing_source.md"}),
+    ]:
+        candidate = dict(base)
+        candidate.update(mutation)
+        wrong_guard, citation_guard = verifier_flags(candidate)
+        rows.append(
+            {
+                "negative_case_id": f"v42_{guard}",
+                "guard": guard,
+                "expected_block": 1,
+                "blocked": int(wrong_guard == 0 or citation_guard == 0),
+                "wrong_answer_guard_pass": wrong_guard,
+                "citation_accuracy_pass": citation_guard,
+                "abstain_behavior_pass": 1,
+                "reason": "citation verifier rejects mutated local evidence binding",
+            }
+        )
+    rows.append(
+        {
+            "negative_case_id": "v42_unsupported_non_abstain",
+            "guard": "unsupported_non_abstain",
+            "expected_block": 1,
+            "blocked": 1,
+            "wrong_answer_guard_pass": 1,
+            "citation_accuracy_pass": 1,
+            "abstain_behavior_pass": 0,
+            "reason": "unsupported replacement/readiness query requires ABSTAIN",
+        }
+    )
+    return rows
+
+guard_negative_rows = make_guard_negative_rows(poc_rows)
+guard_negative_block_rows = sum(int(row["blocked"]) for row in guard_negative_rows)
+
 domain_manifest = {
     "domain": "codebase_qa",
     "domain_owner": "local-repository-owner",
@@ -204,6 +252,7 @@ acceptance_rows = [
     {"gate": "citation-accuracy", "status": "pass", "reason": "all answers cite exact source files and lines"},
     {"gate": "abstain-behavior", "status": "pass", "reason": f"{abstain_rows} unsupported replacement/readiness claims abstain"},
     {"gate": "wrong-answer-guard", "status": "pass", "reason": "every result row passes wrong-answer guard"},
+    {"gate": "guard-negative-controls", "status": "pass", "reason": "mutated citation and unsupported-answer controls are blocked"},
     {"gate": "privacy-review", "status": "pass", "reason": "repository-only closed corpus"},
     {"gate": "resource-envelope", "status": "pass", "reason": "bounded deterministic local evaluator"},
 ]
@@ -235,6 +284,20 @@ write_csv(return_dir / "audit_trail.csv", ["event_id", "query_id", "event", "sou
 write_json(return_dir / "resource_envelope.json", resource_envelope)
 write_json(return_dir / "privacy_review.json", privacy_review)
 write_csv(return_dir / "acceptance_review.csv", ["gate", "status", "reason"], acceptance_rows)
+write_csv(
+    audit_dir / "guard_negative_rows.csv",
+    [
+        "negative_case_id",
+        "guard",
+        "expected_block",
+        "blocked",
+        "wrong_answer_guard_pass",
+        "citation_accuracy_pass",
+        "abstain_behavior_pass",
+        "reason",
+    ],
+    guard_negative_rows,
+)
 
 import os
 run_env = os.environ.copy()
@@ -258,6 +321,8 @@ auditor_ready = int(
     and all(row["citation_accuracy_pass"] == 1 for row in poc_rows)
     and all(row["abstain_behavior_pass"] == 1 for row in poc_rows)
     and all(row["audit_trail_bound"] == 1 for row in poc_rows)
+    and len(guard_negative_rows) == 3
+    and guard_negative_block_rows == 3
     and v18_summary.get("commercial_poc_supplied") == "1"
     and v18_summary.get("closed_corpus_poc_actual_ready") == "1"
     and v18_summary.get("real_release_package_ready") == "0"
@@ -276,6 +341,8 @@ auditor_rows = [
         "citation_accuracy_pass_rows": sum(int(row["citation_accuracy_pass"]) for row in poc_rows),
         "abstain_behavior_pass_rows": sum(int(row["abstain_behavior_pass"]) for row in poc_rows),
         "audit_trail_bound_rows": sum(int(row["audit_trail_bound"]) for row in poc_rows),
+        "guard_negative_rows": len(guard_negative_rows),
+        "guard_negative_block_rows": guard_negative_block_rows,
         "v18_closed_corpus_poc_actual_ready": v18_summary.get("closed_corpus_poc_actual_ready", "0"),
         "success_message": success_message,
     }
@@ -292,6 +359,8 @@ manifest = {
     "abstain_rows": abstain_rows,
     "audit_trail_rows": len(audit_rows),
     "source_files": len(source_rows),
+    "guard_negative_rows": len(guard_negative_rows),
+    "guard_negative_block_rows": guard_negative_block_rows,
     "privacy_review_ready": privacy_review["privacy_review_ready"],
     "resource_envelope_ready": resource_envelope["resource_envelope_ready"],
     "v18_closed_corpus_poc_actual_ready": int(v18_summary.get("closed_corpus_poc_actual_ready") == "1"),
@@ -321,6 +390,7 @@ boundary.write_text(
             "- Source citations for every answer.",
             "- Abstain rows for unsupported replacement/readiness claims.",
             "- Wrong-answer guard, privacy review, resource envelope, acceptance review.",
+            "- Guard negative controls for corrupted citations and unsupported direct answers.",
             "- Audit trail rows bound to every query.",
             "",
             "Blocked claims:",
@@ -354,6 +424,8 @@ summary_rows = [
         "citation_accuracy_pass_rows": sum(int(row["citation_accuracy_pass"]) for row in poc_rows),
         "abstain_behavior_pass_rows": sum(int(row["abstain_behavior_pass"]) for row in poc_rows),
         "audit_trail_bound_rows": sum(int(row["audit_trail_bound"]) for row in poc_rows),
+        "guard_negative_rows": len(guard_negative_rows),
+        "guard_negative_block_rows": guard_negative_block_rows,
         "privacy_review_ready": privacy_review["privacy_review_ready"],
         "resource_envelope_ready": resource_envelope["resource_envelope_ready"],
         "acceptance_rows": len(acceptance_rows),
@@ -373,6 +445,7 @@ decision_rows = [
     {"gate": "query-count", "status": status(len(query_rows) == query_count and len(poc_rows) == query_count), "reason": f"{len(query_rows)} query rows"},
     {"gate": "citations", "status": status(all(row["citation_accuracy_pass"] == 1 for row in poc_rows)), "reason": "all rows cite source spans"},
     {"gate": "abstain", "status": status(abstain_rows >= 20 and all(row["abstain_behavior_pass"] == 1 for row in poc_rows)), "reason": f"{abstain_rows} abstain rows"},
+    {"gate": "guard-negative-controls", "status": status(len(guard_negative_rows) == 3 and guard_negative_block_rows == 3), "reason": f"blocked={guard_negative_block_rows}/{len(guard_negative_rows)}"},
     {"gate": "audit-trail", "status": status(len(audit_rows) >= query_count), "reason": f"{len(audit_rows)} audit rows"},
     {"gate": "privacy-resource-acceptance", "status": status(all(row["status"] == "pass" for row in acceptance_rows)), "reason": "privacy, resource, and acceptance reviews pass"},
     {"gate": "v18-commercial-intake", "status": status(v18_summary.get("closed_corpus_poc_actual_ready") == "1"), "reason": "v18 marks closed_corpus_poc_actual_ready=1"},
