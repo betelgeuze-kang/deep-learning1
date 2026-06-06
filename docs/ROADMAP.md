@@ -1455,6 +1455,12 @@ Current next boundary:
   required evidence schema, answer/model templates, validation rows, and hash
   manifest, and still keeps C blocked until a real local-model-RAG evidence
   directory validates.
+- `v52k` adds a real 7B local model + RAG measured seed for system C.
+  `experiments/test_v52k_7b14b_local_model_rag_measured_seed.sh` runs local
+  Ollama `qwen2.5:7b-instruct` over the v50 9-query seed, writes answer,
+  citation, resource, transcript, and model-identity rows, and validates them
+  through v52c. It keeps C-over-v53e scale, D/E, full v52, and release claims
+  blocked.
 - `v52d` adds the 30B/70B open-weight LLM+RAG evidence-intake gate for systems
   D and E. `experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh` emits the
   required D/E evidence schemas, answer/model templates, validation rows, and
