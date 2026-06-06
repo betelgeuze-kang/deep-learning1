@@ -37,6 +37,7 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 ./experiments/test_v53_public_repo_code_doc_audit.sh
 ./experiments/test_v53b_public_repo_10_lock.sh
 ./experiments/test_v53c_public_repo_canary_source_snapshot.sh
+./experiments/test_v53d_canary_source_query_seed_100.sh
 ./experiments/test_v54_routehint_generation_1000_contract.sh
 ./experiments/test_v55_local_scaling_law_main_contract.sh
 ./experiments/test_v56_ruler_longbench_expanded_contract.sh
@@ -47,7 +48,7 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 ./experiments/test_v60_architecture_challenge_release_contract.sh
 ```
 
-이 명령들은 A-H baseline registry, system B small-local-RAG measured seed row, system C 7B-14B local-model-RAG evidence-intake gate, system D/E 30B/70B open-weight LLM+RAG evidence-intake gate, optional system F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, live 10-repo public target lock, pinned canary source snapshot, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, v60 release-audit contract를 만들지만, 실제 30B/70B LLM+RAG row, 10+ repo / 1000+ query audit row, 1000+ RouteHint generation row, 6축 / 100+ row scaling evidence, expanded RULER/LongBench row, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
+이 명령들은 A-H baseline registry, system B small-local-RAG measured seed row, system C 7B-14B local-model-RAG evidence-intake gate, system D/E 30B/70B open-weight LLM+RAG evidence-intake gate, optional system F 100B+ hosted/API LLM+RAG intake/defer gate, symmetric evaluation contract, v53 repo/query scale contract, live 10-repo public target lock, pinned canary source snapshot, 100-row source-span-bound canary query seed, v54 1000-row generation contract, v55 scaling-law main-run contract, v56 RULER/LongBench expanded benchmark contract, v57 domain expert pack contract, v58 blind-eval contract, v59 one-command challenge demo contract, v60 release-audit contract를 만들지만, 실제 30B/70B LLM+RAG row, 10+ repo / 1000+ query audit row, 1000+ RouteHint generation row, 6축 / 100+ row scaling evidence, expanded RULER/LongBench row, human-reviewed domain expert pack row, 500+ blind-eval row, complete challenge demo row, human/release review evidence가 들어오기 전까지 full v52-v60은 blocked로 유지합니다.
 
 현재 measured baseline 진척: `experiments/test_v52b_small_local_rag_measured_row.sh`는 v50 public-repo seed 위에서 `results/v52b_small_local_rag_measured_row/row_001/`에 system B answer row 9개, citation/retrieval/resource row, hash manifest를 생성합니다. 이 row는 v52에 흡수 가능한 첫 실측 seed지만, 30B-150B 비교 결과는 아니며 v52 release claim은 계속 blocked입니다.
 
@@ -60,6 +61,8 @@ v0.3은 계속 local architecture preview와 claim-bound evidence surface로 둡
 현재 v53 repo-scale 진척: `experiments/test_v53b_public_repo_10_lock.sh`는 10개 public GitHub repository의 live HEAD SHA를 확인해 `results/v53b_public_repo_10_lock/lock_001/`에 고정합니다. 이 단계는 repo target-lock layer를 충족하지만, 새로 잠근 7개 repo의 source snapshot과 최소 1000개 source-span-bound query row가 생기기 전까지 v53은 blocked입니다.
 
 현재 v53 source-snapshot 진척: `experiments/test_v53c_public_repo_canary_source_snapshot.sh`는 10개 locked repository 모두에서 pinned canary source/doc/config file을 fetch하고 sha256 content row를 `results/v53c_public_repo_canary_source_snapshot/snapshot_001/`에 기록합니다. 이 단계는 새 repo source acquisition을 시작하지만, complete source snapshot, 1000개 source-span-bound query, A-H answer/citation/resource row, review artifact가 생기기 전까지 full v53은 blocked입니다.
+
+현재 v53 query-seed 진척: `experiments/test_v53d_canary_source_query_seed_100.sh`는 10개 locked repository 위에서 100개의 source-span-bound canary query row를 `results/v53d_canary_source_query_seed_100/query_001/`에 생성합니다. seed는 9행에서 100행으로 올라갔지만, 최소 1000 query row, negative/abstain family, A-H answer/citation/resource row, review artifact가 생기기 전까지 full v53은 blocked입니다.
 
 ## v0.3 Architecture Preview
 

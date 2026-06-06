@@ -1448,6 +1448,12 @@ Current next boundary:
   source/doc/config canary files from the locked HEAD SHAs and records sha256
   content rows, but keeps full v53 blocked until complete source snapshots and
   the 1000-row audit evidence exist.
+- `v53d` adds a 100-row source-span-bound canary query seed.
+  `experiments/test_v53d_canary_source_query_seed_100.sh` derives 10 query rows
+  per locked repo from v53c canary source files and records matching source
+  span rows, but keeps full v53 blocked with `missing_query_rows=900`,
+  negative/abstain families missing, and A-H answer/citation/resource rows
+  missing.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,

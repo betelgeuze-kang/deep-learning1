@@ -129,6 +129,24 @@ def select_canary_files(tree):
     return selected
 
 
+fallback_paths = {
+    "pypa/sampleproject": ["pyproject.toml", "README.md", "tests/test_simple.py"],
+    "psf/requests": ["pyproject.toml", "README.md", "docs/user/quickstart.md"],
+    "pallets/click": ["pyproject.toml", "README.md", "docs/index.rst"],
+    "pallets/flask": ["pyproject.toml", "README.md", "docs/index.rst"],
+    "fastapi/fastapi": ["pyproject.toml", "README.md", "docs/en/docs/index.md"],
+    "django/django": ["README.rst", "pyproject.toml", "docs/intro/tutorial01.txt"],
+    "pytest-dev/pytest": ["pyproject.toml", "README.rst", "doc/en/index.rst"],
+    "pypa/pip": ["pyproject.toml", "README.rst", "docs/html/index.rst"],
+    "python/cpython": ["README.rst", "Doc/README.rst", "Lib/test/test_sys.py"],
+    "tiangolo/typer": ["pyproject.toml", "README.md", "docs/index.md"],
+}
+
+
+def fallback_items(owner_repo):
+    return [{"path": path, "sha": "", "size": 0} for path in fallback_paths.get(owner_repo, [])]
+
+
 for rel in [
     "public_repo_10_lock_rows.csv",
     "public_repo_10_query_plan_rows.csv",
@@ -153,8 +171,13 @@ for repo in lock_rows:
         tree = tree_payload.get("tree", [])
         selected = select_canary_files(tree)
     except Exception as exc:
-        selected = []
+        selected = fallback_items(owner_repo)
         fetch_error_rows.append({"owner_repo": owner_repo, "stage": "tree", "reason": str(exc)[:240]})
+    else:
+        if len(selected) < 3:
+            seen_paths = {item["path"] for item in selected}
+            selected.extend(item for item in fallback_items(owner_repo) if item["path"] not in seen_paths)
+            selected = selected[:3]
     fetched = 0
     for item in selected:
         path = item["path"]
