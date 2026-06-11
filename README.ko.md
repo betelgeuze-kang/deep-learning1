@@ -46,6 +46,7 @@ SSD-resident MoE runtime 구현 방향: [docs/V61_SSD_RESIDENT_MOE_RUNTIME.md](d
 ./experiments/test_v61aj_checkpoint_storage_profile_admission_matrix.sh
 ./experiments/test_v61ak_checkpoint_warehouse_target_preflight.sh
 ./experiments/test_v61al_checkpoint_warehouse_activation_gate.sh
+./experiments/test_v61al_checkpoint_warehouse_activation_gate_target_override.sh
 ./experiments/test_v61am_checkpoint_post_activation_verification_gate.sh
 ./experiments/test_v61an_checkpoint_full_page_hash_execution_gate.sh
 ```
@@ -55,7 +56,7 @@ SSD-resident MoE runtime 구현 방향: [docs/V61_SSD_RESIDENT_MOE_RUNTIME.md](d
 v61ai storage plan은 `required_with_reserve_bytes=315601231712`, `available_ssd_bytes=21337460736`, `full_budget_deficit_bytes=294263770976`, `raw_checkpoint_deficit_bytes=259904032608`, `safe_materialization_batch_rows=0`, reserve를 무시한 diagnostic top-priority batch 4개 shard / 19478756392 bytes, v61ai checkpoint payload download/commit 0 bytes를 기록합니다.
 v61aj storage profile matrix는 `profile_rows=6`, `current_reserve_admitted_shard_rows=0`, `current_no_reserve_admitted_shard_rows=4`, `exact_reserve_admitted_shard_rows=59`, `minimum_additional_bytes_for_full_reserve=294263770976`, `recommended_operator_free_bytes=549755813888`, v61aj checkpoint payload download/commit 0 bytes를 기록합니다.
 v61ak warehouse target preflight는 `target_rows=3`, live current-target free/deficit row, repo 내부 checkpoint payload target reject, v61ak checkpoint payload download/commit 0 bytes를 기록합니다.
-v61al warehouse activation gate는 `activation_command_rows=59`, `activation_admitted_rows=0`, `activation_blocked_rows=59`, `selected_target_id=none`, `selected_backend_id=curl-resume`, v61al checkpoint payload download/commit 0 bytes를 기록합니다.
+v61al warehouse activation gate는 `activation_command_rows=59`, `activation_admitted_rows=0`, `activation_blocked_rows=59`, `selected_target_id=none`, `selected_backend_id=curl-resume`, v61al checkpoint payload download/commit 0 bytes를 기록합니다. target-override smoke는 `V61AL_WAREHOUSE_ROOT`가 들어왔을 때 activation plan 전에 v61ak target probe를 새로 수행하는지 검증합니다.
 v61am post-activation verification gate는 `post_activation_verification_rows=59`, `post_activation_verification_ready_rows=0`, `post_activation_verification_blocked_rows=59`, activation admitted row 0개, local identity verified shard row 0개, verified page hash row 0/134161개, generation gate ready 0, v61am checkpoint payload download/commit 0 bytes를 기록합니다.
 v61an full page-hash execution gate는 `required_page_hash_rows=134161`, `planned_page_hash_rows=134161`, `execution_chunk_rows=291`, `hashed_chunk_rows=0`, `blocked_activation_chunk_rows=291`, full page-hash execution ready 0, v61an checkpoint payload download/commit 0 bytes를 기록합니다.
 

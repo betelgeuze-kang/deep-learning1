@@ -2029,13 +2029,17 @@ Current next boundary:
   generation, production latency, and release claims stay blocked unless an
   outside-repository target with enough live free space is supplied.
 - `v61al` adds checkpoint warehouse activation gating.
-  `experiments/test_v61al_checkpoint_warehouse_activation_gate.sh`
+  `experiments/test_v61al_checkpoint_warehouse_activation_gate.sh` plus
+  `experiments/test_v61al_checkpoint_warehouse_activation_gate_target_override.sh`
   consumes v61ak/v61ah/v61w and records 59 activation command rows, 0 admitted
   activation rows, 59 blocked activation rows, `activation_package_ready=0`,
   `selected_target_id=none`, `selected_backend_id=curl-resume`, explicit
   execution required, and zero checkpoint payload bytes downloaded or committed
-  by v61al. Download execution, local materialization, full page-hash coverage,
-  actual model generation, production latency, and release claims stay blocked.
+  by v61al. `V61AL_WAREHOUSE_ROOT` now forces a fresh v61ak target probe before
+  activation planning, so external NVMe target changes are not hidden by stale
+  cached preflight rows. Download execution, local materialization, full
+  page-hash coverage, actual model generation, production latency, and release
+  claims stay blocked.
 - `v61am` adds checkpoint post-activation verification gating.
   `experiments/test_v61am_checkpoint_post_activation_verification_gate.sh`
   consumes v61al/v61t/v61r and records 59 post-activation verification rows,

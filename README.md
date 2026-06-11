@@ -46,6 +46,7 @@ Current v61 prototype smoke:
 ./experiments/test_v61aj_checkpoint_storage_profile_admission_matrix.sh
 ./experiments/test_v61ak_checkpoint_warehouse_target_preflight.sh
 ./experiments/test_v61al_checkpoint_warehouse_activation_gate.sh
+./experiments/test_v61al_checkpoint_warehouse_activation_gate_target_override.sh
 ./experiments/test_v61am_checkpoint_post_activation_verification_gate.sh
 ./experiments/test_v61an_checkpoint_full_page_hash_execution_gate.sh
 ```
@@ -55,7 +56,7 @@ This closes the v61a-v61j SSD-resident active-sparse runtime prototype and adds 
 The v61ai storage-budget summary also pins `required_with_reserve_bytes=315601231712`, `available_ssd_bytes=21337460736`, `full_budget_deficit_bytes=294263770976`, `raw_checkpoint_deficit_bytes=259904032608`, `safe_materialization_batch_rows=0`, diagnostic no-reserve top-priority batch `4` shards / `19478756392` bytes, and checkpoint payload download/commit `0` bytes by v61ai.
 The v61aj storage-profile matrix pins `profile_rows=6`, `current_reserve_admitted_shard_rows=0`, `current_no_reserve_admitted_shard_rows=4`, `exact_reserve_admitted_shard_rows=59`, `minimum_additional_bytes_for_full_reserve=294263770976`, and `recommended_operator_free_bytes=549755813888`.
 The v61ak warehouse-target preflight pins `target_rows=3`, repository-local checkpoint payload rejection, live current-target free/deficit rows, and checkpoint payload download/commit `0` bytes by v61ak.
-The v61al warehouse-activation gate pins `activation_command_rows=59`, `activation_admitted_rows=0`, `activation_blocked_rows=59`, `selected_target_id=none`, `selected_backend_id=curl-resume`, and checkpoint payload download/commit `0` bytes by v61al.
+The v61al warehouse-activation gate pins `activation_command_rows=59`, `activation_admitted_rows=0`, `activation_blocked_rows=59`, `selected_target_id=none`, `selected_backend_id=curl-resume`, and checkpoint payload download/commit `0` bytes by v61al. Its target-override smoke verifies that `V61AL_WAREHOUSE_ROOT` forces a fresh v61ak target probe before activation planning.
 The v61am post-activation verification gate pins `post_activation_verification_rows=59`, `post_activation_verification_ready_rows=0`, `post_activation_verification_blocked_rows=59`, activation admitted rows `0`, local identity verified shard rows `0`, verified page hash rows `0/134161`, generation gate ready `0`, and checkpoint payload download/commit `0` bytes by v61am.
 The v61an full page-hash execution gate pins `required_page_hash_rows=134161`, `planned_page_hash_rows=134161`, `execution_chunk_rows=291`, `hashed_chunk_rows=0`, `blocked_activation_chunk_rows=291`, full page-hash execution ready `0`, and checkpoint payload download/commit `0` bytes by v61an.
 

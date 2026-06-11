@@ -40,6 +40,7 @@ expected = {
     "v61ak_checkpoint_warehouse_target_preflight_ready": "1",
     "v61ah_checkpoint_download_backend_fallback_plan_ready": "1",
     "model_id": "mistralai/Mixtral-8x22B-v0.1",
+    "warehouse_root_override_supplied": "0",
     "activation_command_rows": "59",
     "activation_admitted_rows": "0",
     "activation_blocked_rows": "59",
