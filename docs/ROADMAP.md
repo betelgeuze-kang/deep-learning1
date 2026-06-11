@@ -1651,6 +1651,14 @@ Current next boundary:
   preserved C mismatches, and `symmetric_scorer_policy_rows_ready=1`, while
   keeping quality comparison, `v53_ready`, review artifacts, and release claims
   blocked.
+- `v53r` adds the complete-source review packet.
+  `experiments/test_v53r_complete_source_review_packet.sh` consumes v53q and
+  emits 1000 query review packets, 7000 answer review packets, 7000 pending
+  review queue rows, 10 repo packets, 7 system packets, reviewer assignment
+  templates, and review return templates. It records p0/p1/p2 priority counts
+  of 1000/960/5040 and marks `review_packet_ready=1`, while keeping returned
+  human/source review artifacts, adjudication artifacts, quality comparison,
+  `v53_ready`, and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
@@ -1863,6 +1871,15 @@ Current next boundary:
   `remote_sample_tensor_binding_ready=1`, while keeping local checkpoint
   materialization, full page-hash coverage, real Mixtral generation,
   near-frontier quality, production latency, and release claims blocked.
+- `v61w` adds materialization admission and download-resume planning.
+  `experiments/test_v61w_materialization_admission_resume_plan.sh` consumes
+  v61p/v61q/v61t/v61v and emits 59 checkpoint shard priority rows plus 59
+  download-resume rows. It prioritizes 15 remote-hashed MoE expert shards and
+  one embedding shard ahead of generic backfill with
+  `download_resume_plan_ready=1`, while keeping
+  `materialization_admission_ready=0`, local checkpoint materialization, full
+  page-hash coverage, real Mixtral generation, near-frontier quality,
+  production latency, and release claims blocked on the current SSD budget.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
