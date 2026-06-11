@@ -807,6 +807,34 @@ Pass condition:
   generation, near-frontier, production-latency, and release claims remain
   blocked
 
+### v61ac Hotset Token Budget Replay
+
+Bind source-bound workload rows to sampled hotset direct-I/O latency and
+sampled BF16/q8/q4 numeric tile probes, without executing model generation.
+
+Outputs:
+
+- `hotset_token_budget_rows.csv`
+- `hotset_token_budget_page_schedule_rows.csv`
+- `hotset_token_budget_tile_binding_rows.csv`
+- `hotset_token_budget_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61AC_HOTSET_TOKEN_BUDGET_BOUNDARY.md`
+
+Pass condition:
+
+- v61x source-bound replay binding, v61z direct-I/O latency, and v61ab numeric
+  tile evidence are bound
+- 37 source-bound workload rows map to 37 token-budget rows
+- the replay emits 148 active page schedule rows and 1184 tile-binding rows
+- each token budget uses four active page reads and 32 active tile probes
+- each token budget records 8388608 SSD read bytes and 131072 BF16 tile values
+- sampled token direct-I/O p50/p95 budgets are recorded as
+  2.323072/3.82676 ms
+- full checkpoint materialization, full safetensors page-hash coverage, real
+  generation, near-frontier, production-latency, and release claims remain
+  blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -834,9 +862,10 @@ The benchmark ladder should be ordered by runtime risk:
 21. Sampled hotset direct-I/O read replay with latency metrics.
 22. Sampled hotset BF16 tensor-slice interpretation and stats.
 23. Sampled hotset BF16/q8/q4 numeric tile probes.
-24. Complete-source 1000+ QA workload with real model generation.
-25. Same runtime under long-context workloads with source-bound quality checks.
-26. One-command local assistant demo.
+24. Sampled source-bound hotset token-budget replay.
+25. Complete-source 1000+ QA workload with real model generation.
+26. Same runtime under long-context workloads with source-bound quality checks.
+27. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1169,9 +1198,10 @@ without weakening the boundary:
 13. Closed as v61z sampled hotset direct-I/O replay: read the 16 local sampled hotset pages with O_DIRECT, verify hashes, and record latency/throughput while keeping full checkpoint materialization and real generation blocked.
 14. Closed as v61aa sampled hotset tensor-slice verifier: interpret the 16 local pages as BF16 tensor segments, record finite sampled stats, and keep real generation blocked.
 15. Closed as v61ab sampled hotset tensor-tile quant probe: run bounded BF16/q8/q4 dot-tile probes over the sampled tensor slices, record finite numeric rows, and keep real generation blocked.
-16. Promote identity-verified local shards into full safetensors page-hash coverage.
-17. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-18. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+16. Closed as v61ac sampled hotset token-budget replay: bind v61x source-bound rows to v61z direct-I/O latency and v61ab tile probes, record bounded per-token budgets, and keep real generation blocked.
+17. Promote identity-verified local shards into full safetensors page-hash coverage.
+18. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+19. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1220,9 +1250,14 @@ The current v61 runtime prototype can say:
   524288 BF16 values, with 128/128 finite baseline/q8/q4 dot rows and q8/q4
   mean absolute dot errors of 0.00113809798/0.0244754219, but this is still not
   real Mixtral generation or production latency
+- the sampled hotset path can replay 37 source-bound token-budget rows with
+  148 active page schedule rows, 1184 tile-binding rows, 8388608 SSD read bytes
+  per token, 131072 BF16 tile values per token, and sampled token direct-I/O
+  p50/p95 budgets of 2.323072/3.82676 ms, but this is still not production
+  latency or real Mixtral generation
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, and sampled BF16/q8/q4 tensor-tile numeric probes, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, and sampled source-bound hotset token-budget replay, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.

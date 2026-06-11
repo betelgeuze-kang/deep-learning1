@@ -1929,6 +1929,16 @@ Current next boundary:
   `q4_quant_probe_ready=1`, while keeping full checkpoint materialization,
   full page-hash coverage, real Mixtral generation, near-frontier quality,
   production latency, and release claims blocked.
+- `v61ac` adds sampled hotset token-budget replay.
+  `experiments/test_v61ac_hotset_token_budget_replay.sh` consumes
+  v61x/v61z/v61ab and binds the sampled hotset pages plus numeric tile probes
+  to 37 source-bound workload rows. It records 37 token-budget rows, 148 active
+  page schedule rows, 1184 tile-binding rows, four active page reads per token,
+  32 active tile probes per token, 131072 BF16 tile values per token, 8388608
+  SSD read bytes per token, and sampled token direct-I/O p50/p95 budgets of
+  2.323072/3.82676 ms, while keeping full checkpoint materialization, full
+  page-hash coverage, real Mixtral generation, near-frontier quality,
+  production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
