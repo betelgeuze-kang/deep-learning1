@@ -1966,6 +1966,15 @@ Current next boundary:
   and zero checkpoint payload bytes downloaded or committed by v61af, while
   keeping SSD-budget admission, local materialization, full page-hash coverage,
   actual model generation, production latency, and release claims blocked.
+- `v61ag` adds checkpoint warehouse execution preflight.
+  `experiments/test_v61ag_checkpoint_warehouse_execution_preflight.sh`
+  consumes v61af, syntax-checks the operator scripts, and runs a one-row dry-run
+  download probe. It records 4/4 script syntax/executable passes,
+  `download_dry_run_guard_ready=1`, `huggingface_cli_available=0`,
+  `ssd_disk_budget_pass=0`, `download_execution_ready=0`, and zero checkpoint
+  payload bytes downloaded or committed by v61ag, while keeping local
+  materialization, full page-hash coverage, actual model generation,
+  production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

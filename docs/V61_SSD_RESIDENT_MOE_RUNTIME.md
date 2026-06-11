@@ -925,6 +925,33 @@ Pass condition:
   coverage, actual model generation, near-frontier, production-latency, and
   release claims remain blocked
 
+### v61ag Checkpoint Warehouse Execution Preflight
+
+Verify the guarded v61af operator bundle before any real checkpoint payload
+download or full page-hash execution.
+
+Outputs:
+
+- `checkpoint_warehouse_environment_rows.csv`
+- `checkpoint_warehouse_operator_script_probe_rows.csv`
+- `checkpoint_warehouse_dry_run_probe_rows.csv`
+- `checkpoint_warehouse_execution_gate_rows.csv`
+- `checkpoint_warehouse_execution_preflight_metric_rows.csv`
+- `V61AG_CHECKPOINT_WAREHOUSE_EXECUTION_PREFLIGHT_BOUNDARY.md`
+
+Pass condition:
+
+- v61af operator bundle evidence is bound
+- all four operator scripts pass `bash -n` and have executable bits set
+- a one-row dry-run download probe exits 0 and sees the dry-run guard
+- the checkpoint warehouse target is outside the repository
+- the operator bundle remains ignored by git
+- `download_execution_ready=0` until CLI, SSD budget, outside-repo warehouse,
+  and explicit execution gates pass
+- checkpoint payload bytes downloaded or committed by v61ag remain zero
+- local materialization, full page-hash coverage, actual generation,
+  production-latency, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -956,9 +983,10 @@ The benchmark ladder should be ordered by runtime risk:
 25. Sampled KV + weight token-budget replay.
 26. Real generation admission gate over complete-source candidates.
 27. Guarded checkpoint warehouse operator bundle.
-28. Complete-source 1000+ QA workload with real model generation.
-29. Same runtime under long-context workloads with source-bound quality checks.
-30. One-command local assistant demo.
+28. Checkpoint warehouse execution preflight.
+29. Complete-source 1000+ QA workload with real model generation.
+30. Same runtime under long-context workloads with source-bound quality checks.
+31. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1295,9 +1323,10 @@ without weakening the boundary:
 17. Closed as v61ad KV + weight token-budget replay: bind v61ac token rows to v61m KV context profiles, record combined VRAM-hot/NVMe-cold budget rows, and keep full-KV-in-VRAM and real generation blocked.
 18. Closed as v61ae real generation admission gate: bind v61ad/v53r/v61r/v61t/v61w into 1000 complete-source generation candidates, admit 0 rows, and keep source-review/materialization/full-page-hash blockers explicit.
 19. Closed as v61af checkpoint warehouse operator bundle: emit guarded repo-outside download, verify, full-page-hash, and admission-recheck scripts with dry-run defaults and zero payload bytes downloaded by v61af.
-20. Promote identity-verified local shards into full safetensors page-hash coverage.
-21. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-22. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+20. Closed as v61ag checkpoint warehouse execution preflight: syntax-check v61af operator scripts, run a guarded one-row dry-run probe, record current CLI/SSD blockers, and keep real download execution blocked.
+21. Promote identity-verified local shards into full safetensors page-hash coverage.
+22. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+23. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1364,9 +1393,12 @@ The current v61 runtime prototype can say:
   commands, 62 guarded operator command rows, and dry-run scripts for download,
   materialization verification, full page hashing, and generation-admission
   recheck, but downloads zero checkpoint payload bytes by default
+- the checkpoint warehouse execution preflight can verify 4/4 operator scripts,
+  run a one-row guarded dry-run download probe, and show that current download
+  execution remains blocked by missing CLI/SSD-budget gates
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, and guarded checkpoint warehouse operator scripting, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, and checkpoint warehouse execution preflight, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
