@@ -1994,6 +1994,15 @@ Current next boundary:
   budget remediation remains blocked, so download execution, local materialization,
   full page-hash coverage, actual model generation, production latency, and
   release claims stay blocked.
+- `v61aj` adds checkpoint storage profile admission matrixing.
+  `experiments/test_v61aj_checkpoint_storage_profile_admission_matrix.sh`
+  consumes v61ai/v61w and records six storage profile rows, current reserve
+  admitted shard rows 0, current no-reserve diagnostic admitted shard rows 4 /
+  19478756392 bytes, exact reserve admitted shard rows 59, minimum additional
+  bytes 294263770976, recommended operator free bytes 549755813888, and zero
+  checkpoint payload bytes downloaded or committed by v61aj. Current-host
+  download execution, local materialization, full page-hash coverage, actual
+  model generation, production latency, and release claims stay blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

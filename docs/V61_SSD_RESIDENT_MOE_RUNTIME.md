@@ -1008,6 +1008,34 @@ Pass condition:
 - storage-budget remediation, actual materialization, full page-hash coverage,
   actual generation, production-latency, and release claims remain blocked
 
+### v61aj Checkpoint Storage Profile Admission Matrix
+
+Convert the v61ai SSD budget blocker into deterministic current, minimum, and
+operator-margin storage profiles that can be checked before any checkpoint
+payload download.
+
+Outputs:
+
+- `checkpoint_storage_profile_rows.csv`
+- `checkpoint_storage_profile_requirement_rows.csv`
+- `checkpoint_storage_profile_metric_rows.csv`
+- `V61AJ_CHECKPOINT_STORAGE_PROFILE_ADMISSION_MATRIX_BOUNDARY.md`
+
+Pass condition:
+
+- v61ai storage remediation and v61w shard-priority evidence are bound
+- six storage profile rows are emitted
+- current reserve-policy profile admits zero shard rows
+- current no-reserve diagnostic profile admits 4 shards / 19478756392 bytes,
+  but remains diagnostic-only
+- `full-checkpoint-exact-with-reserve` admits all 59 shards
+- `minimum_additional_bytes_for_full_reserve=294263770976`
+- `recommended_operator_free_bytes=549755813888`
+- checkpoint payload bytes downloaded or committed by v61aj remain zero
+- current-host download execution, actual materialization, full page-hash
+  coverage, actual generation, production-latency, and release claims remain
+  blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1042,9 +1070,10 @@ The benchmark ladder should be ordered by runtime risk:
 28. Checkpoint warehouse execution preflight.
 29. Checkpoint download backend fallback plan.
 30. Checkpoint storage budget remediation plan.
-31. Complete-source 1000+ QA workload with real model generation.
-32. Same runtime under long-context workloads with source-bound quality checks.
-33. One-command local assistant demo.
+31. Checkpoint storage profile admission matrix.
+32. Complete-source 1000+ QA workload with real model generation.
+33. Same runtime under long-context workloads with source-bound quality checks.
+34. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1384,9 +1413,10 @@ without weakening the boundary:
 20. Closed as v61ag checkpoint warehouse execution preflight: syntax-check v61af operator scripts, run a guarded one-row dry-run probe, record current CLI/SSD blockers, and keep real download execution blocked.
 21. Closed as v61ah checkpoint download backend fallback plan: select curl-resume over missing huggingface-cli, emit 59 guarded backend commands, and keep SSD-budget execution blocked.
 22. Closed as v61ai checkpoint storage budget remediation plan: quantify the current SSD deficit, record zero reserve-safe shard rows, and keep materialization/download execution blocked.
-23. Promote identity-verified local shards into full safetensors page-hash coverage.
-24. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-25. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+23. Closed as v61aj checkpoint storage profile admission matrix: map current/minimum/operator storage profiles, identify the exact full-reserve profile, and keep current-host execution blocked.
+24. Promote identity-verified local shards into full safetensors page-hash coverage.
+25. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+26. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1463,9 +1493,14 @@ The current v61 runtime prototype can say:
   deficit as 294263770976 bytes with reserve, admit zero reserve-safe shard rows,
   and record a 4-shard / 19478756392-byte diagnostic no-reserve batch, but it
   still blocks download execution and materialization
+- the storage profile admission matrix can show that the current reserve policy
+  admits zero shards, the current no-reserve diagnostic profile admits 4 shards,
+  the exact full-reserve profile admits all 59 shards, and a 512 GiB free-space
+  profile provides the recommended operator margin, but current-host execution
+  remains blocked
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, and checkpoint storage budget remediation planning, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, and checkpoint storage profile admission matrixing, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
