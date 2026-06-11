@@ -1861,14 +1861,16 @@ Current next boundary:
   real Mixtral generation, full page-hash coverage, near-frontier quality,
   production latency, and release claims blocked.
 - `v61t` adds local checkpoint materialization identity verification.
-  `experiments/test_v61t_local_checkpoint_materialization_verifier.sh` refreshes
-  v61p, binds v61q/v61r, and verifies any local outside-repository shards by
-  exact byte length, safetensors header hash, and sampled page hash. The current
-  host records 0 local existing shards, 0 identity-verified shards,
+  `experiments/test_v61t_local_checkpoint_materialization_verifier.sh` plus
+  `experiments/test_v61t_local_checkpoint_materialization_verifier_target_override.sh`
+  refreshes v61p, binds v61q/v61r, and verifies any local outside-repository
+  shards by exact byte length, safetensors header hash, and sampled page hash.
+  The current host records 0 local existing shards, 0 identity-verified shards,
   `local_checkpoint_materialization_ready=0`, and
-  `full_safetensors_page_hash_binding_ready=0`, while keeping real Mixtral
-  generation, near-frontier quality, production latency, and release claims
-  blocked.
+  `full_safetensors_page_hash_binding_ready=0`; `V61T_WAREHOUSE_ROOT` forces
+  the v61p shard-presence preflight and all verifier target paths to use the
+  supplied outside-repository warehouse. Real Mixtral generation, near-frontier
+  quality, production latency, and release claims stay blocked.
 - `v61u` adds bounded remote checkpoint page-hash samples.
   `experiments/test_v61u_remote_checkpoint_page_hash_sampler.sh` consumes v61q
   and v61t, selects 16 deterministic full-size checkpoint pages, and performs

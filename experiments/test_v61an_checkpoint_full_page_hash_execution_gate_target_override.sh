@@ -36,6 +36,7 @@ def read_csv(path):
 
 summary = read_csv(summary_csv)[0]
 source_v61am_summary = read_csv(run_dir / "source_v61am" / "v61am_checkpoint_post_activation_verification_gate_summary.csv")[0]
+source_v61t_summary = read_csv(run_dir / "source_v61t" / "v61t_local_checkpoint_materialization_verifier_summary.csv")[0]
 fresh_v61al_summary = read_csv(
     results_dir
     / "v61am_checkpoint_post_activation_verification_gate"
@@ -83,6 +84,10 @@ for field, value in expected.items():
 
 if source_v61am_summary["warehouse_root_override_supplied"] != "1":
     raise SystemExit("v61an override did not force fresh v61am planning")
+if source_v61t_summary["warehouse_root_override_supplied"] != "1":
+    raise SystemExit("v61an override did not force fresh v61t materialization planning")
+if Path(source_v61t_summary["ssd_warehouse_path"]) != target_dir:
+    raise SystemExit("v61an override source v61t warehouse path mismatch")
 if fresh_v61al_summary["warehouse_root_override_supplied"] != "1":
     raise SystemExit("v61an override did not force fresh v61al planning")
 if fresh_v61ak_summary["env_warehouse_root_supplied"] != "1":
@@ -109,6 +114,8 @@ if len(chunk_rows) != 291:
     raise SystemExit("v61an override execution chunk row count mismatch")
 if sum(int(row["planned_page_hash_rows"]) for row in chunk_rows) != 134161:
     raise SystemExit("v61an override planned page total mismatch")
+if any(not row["target_path"].startswith(str(target_dir)) for row in chunk_rows):
+    raise SystemExit("v61an override chunk target paths should use override root")
 if any(row["checkpoint_payload_bytes_downloaded_by_v61an"] != "0" for row in chunk_rows):
     raise SystemExit("v61an override must not download checkpoint payload bytes")
 if any(row["checkpoint_payload_bytes_committed_to_repo"] != "0" for row in chunk_rows):

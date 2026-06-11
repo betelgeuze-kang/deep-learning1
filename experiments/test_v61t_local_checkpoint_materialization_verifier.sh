@@ -41,6 +41,7 @@ expected = {
     "v61q_real_checkpoint_page_map_ready": "1",
     "v61r_full_page_hash_sweep_plan_ready": "1",
     "model_id": "mistralai/Mixtral-8x22B-v0.1",
+    "warehouse_root_override_supplied": "0",
     "checkpoint_shard_rows": "59",
     "total_checkpoint_bytes_expected": "281241493344",
     "ssd_warehouse_outside_repo": "1",

@@ -28,6 +28,7 @@ SSD-resident MoE runtime 구현 방향: [docs/V61_SSD_RESIDENT_MOE_RUNTIME.md](d
 ./experiments/test_v61r_full_page_hash_sweep_plan.sh
 ./experiments/test_v61s_one_command_source_bound_qa_replay.sh
 ./experiments/test_v61t_local_checkpoint_materialization_verifier.sh
+./experiments/test_v61t_local_checkpoint_materialization_verifier_target_override.sh
 ./experiments/test_v61u_remote_checkpoint_page_hash_sampler.sh
 ./experiments/test_v61v_remote_page_tensor_binding.sh
 ./experiments/test_v61w_materialization_admission_resume_plan.sh
@@ -59,6 +60,7 @@ v61ai storage plan은 `required_with_reserve_bytes=315601231712`, `available_ssd
 v61aj storage profile matrix는 `profile_rows=6`, `current_reserve_admitted_shard_rows=0`, `current_no_reserve_admitted_shard_rows=4`, `exact_reserve_admitted_shard_rows=59`, `minimum_additional_bytes_for_full_reserve=294263770976`, `recommended_operator_free_bytes=549755813888`, v61aj checkpoint payload download/commit 0 bytes를 기록합니다.
 v61ak warehouse target preflight는 `target_rows=3`, live current-target free/deficit row, repo 내부 checkpoint payload target reject, v61ak checkpoint payload download/commit 0 bytes를 기록합니다.
 v61al warehouse activation gate는 `activation_command_rows=59`, `activation_admitted_rows=0`, `activation_blocked_rows=59`, `selected_target_id=none`, `selected_backend_id=curl-resume`, v61al checkpoint payload download/commit 0 bytes를 기록합니다. target-override smoke는 `V61AL_WAREHOUSE_ROOT`가 들어왔을 때 activation plan 전에 v61ak target probe를 새로 수행하는지 검증합니다.
+v61t verifier는 local existing shard 0개, header-hash match 0개, sampled local page-hash match 0개, `local_checkpoint_materialization_ready=0`을 기록하며, target-override smoke는 `V61T_WAREHOUSE_ROOT`가 v61p shard-presence preflight로 전달되는지 검증합니다.
 v61am post-activation verification gate는 `post_activation_verification_rows=59`, `post_activation_verification_ready_rows=0`, `post_activation_verification_blocked_rows=59`, activation admitted row 0개, local identity verified shard row 0개, verified page hash row 0/134161개, generation gate ready 0, v61am checkpoint payload download/commit 0 bytes를 기록합니다. target-override smoke는 `V61AM_WAREHOUSE_ROOT`가 v61al/v61ak planning을 새로 수행하게 하는지 검증합니다.
 v61an full page-hash execution gate는 `required_page_hash_rows=134161`, `planned_page_hash_rows=134161`, `execution_chunk_rows=291`, `hashed_chunk_rows=0`, `blocked_activation_chunk_rows=291`, full page-hash execution ready 0, v61an checkpoint payload download/commit 0 bytes를 기록합니다. target-override smoke는 `V61AN_WAREHOUSE_ROOT`가 full page-hash scheduling 전에 v61am/v61al/v61ak까지 전파되는지 검증합니다.
 

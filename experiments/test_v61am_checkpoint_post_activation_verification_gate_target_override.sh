@@ -35,6 +35,7 @@ def read_csv(path):
 
 summary = read_csv(summary_csv)[0]
 source_v61al_summary = read_csv(run_dir / "source_v61al" / "v61al_checkpoint_warehouse_activation_gate_summary.csv")[0]
+source_v61t_summary = read_csv(run_dir / "source_v61t" / "v61t_local_checkpoint_materialization_verifier_summary.csv")[0]
 fresh_v61ak_summary = read_csv(
     results_dir
     / "v61al_checkpoint_warehouse_activation_gate"
@@ -72,6 +73,10 @@ for field, value in expected.items():
 
 if source_v61al_summary["warehouse_root_override_supplied"] != "1":
     raise SystemExit("v61am override did not force fresh v61al planning")
+if source_v61t_summary["warehouse_root_override_supplied"] != "1":
+    raise SystemExit("v61am override did not force fresh v61t materialization planning")
+if Path(source_v61t_summary["ssd_warehouse_path"]) != target_dir:
+    raise SystemExit("v61am override source v61t warehouse path mismatch")
 if fresh_v61ak_summary["env_warehouse_root_supplied"] != "1":
     raise SystemExit("v61am override did not force fresh v61ak target probing")
 
@@ -92,8 +97,16 @@ for field, value in {
         raise SystemExit(f"v61am override env target {field}: expected {value}, got {env_target[field]}")
 
 verification_rows = read_csv(run_dir / "checkpoint_post_activation_verification_rows.csv")
+source_v61t_materialization_rows = read_csv(run_dir / "source_v61t" / "local_checkpoint_materialization_rows.csv")
 if len(verification_rows) != 59:
     raise SystemExit("v61am override verification row count mismatch")
+if len(source_v61t_materialization_rows) != 59:
+    raise SystemExit("v61am override source v61t materialization row count mismatch")
+if any(not row["target_path"].startswith(str(target_dir)) for row in source_v61t_materialization_rows):
+    raise SystemExit("v61am override source v61t target paths should use override root")
+if source_v61al_summary["selected_target_id"] != "none":
+    if any(not row["target_path"].startswith(str(target_dir)) for row in verification_rows):
+        raise SystemExit("v61am override selected activation target paths should use override root")
 if any(row["checkpoint_payload_bytes_downloaded_by_v61am"] != "0" for row in verification_rows):
     raise SystemExit("v61am override must not download checkpoint payload bytes")
 if any(row["checkpoint_payload_bytes_committed_to_repo"] != "0" for row in verification_rows):
