@@ -1624,6 +1624,16 @@ Current next boundary:
   A+B+C+G `supplied_v53j/` rows with 4000 answers, 4000 citations, and 4000
   resources, while keeping D/E/H, symmetric scorer/policy rows, `v53_ready`,
   review artifacts, and release claims blocked.
+- `v53o` adds complete-source System H RouteMemory+RouteHint+source-verified
+  scorer+domain-policy measured rows.
+  `experiments/test_v53o_complete_source_system_h_routehint_scorer_policy_measured.sh`
+  consumes v53n and emits System H answer/citation/resource/retrieval rows,
+  1000 route-memory evidence rows, 1000 compact RouteHint rows, 1000
+  source-verified scorer rows, 1000 domain-policy rows, and raw prompt context
+  bytes 0 over the same frozen v53i 1000-query set. It emits combined
+  A+B+C+G+H `supplied_v53j/` rows with 5000 answers, 5000 citations, and 5000
+  resources, while keeping D/E, symmetric scorer/policy rows, `v53_ready`,
+  review artifacts, and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
