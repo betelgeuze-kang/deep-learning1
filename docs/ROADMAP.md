@@ -2003,6 +2003,16 @@ Current next boundary:
   checkpoint payload bytes downloaded or committed by v61aj. Current-host
   download execution, local materialization, full page-hash coverage, actual
   model generation, production latency, and release claims stay blocked.
+- `v61ak` adds checkpoint warehouse target preflight.
+  `experiments/test_v61ak_checkpoint_warehouse_target_preflight.sh`
+  consumes v61aj/v61p and probes current, operator-supplied, and repository-control
+  warehouse targets. It records three target rows, repository-local target
+  rejection, live current target free/deficit bytes, `required_with_reserve_bytes=315601231712`,
+  `recommended_operator_free_bytes=549755813888`, and zero checkpoint payload
+  bytes downloaded or committed by v61ak. Current-host target selection, download
+  execution, local materialization, full page-hash coverage, actual model
+  generation, production latency, and release claims stay blocked unless an
+  outside-repository target with enough live free space is supplied.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
