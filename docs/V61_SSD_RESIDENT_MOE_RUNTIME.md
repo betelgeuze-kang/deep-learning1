@@ -388,6 +388,30 @@ Pass condition:
   source-bound QA, near-frontier, production-latency, and release claims remain
   blocked
 
+### v61m KV Cache Residency Eviction Policy
+
+Bind the Mixtral KV-cache geometry to a deterministic residency/eviction policy.
+
+Outputs:
+
+- `kv_cache_geometry_rows.csv`
+- `kv_residency_policy_rows.csv`
+- `kv_budget_profile_rows.csv`
+- `kv_eviction_trace_rows.csv`
+- `kv_eviction_event_rows.csv`
+- `runtime_gap_rows.csv`
+
+Pass condition:
+
+- v61k Mixtral config and v61l page-kernel evidence are bound
+- KV bytes per token and KV tokens per 2 MiB page are computed from the model
+  config
+- VRAM hot/sink window fits the configured KV budget
+- older KV pages spill to an NVMe cold tier with `host_ram_spill_bytes=0`
+- real checkpoint materialization, safetensors page hash binding,
+  source-bound QA, long-context quality, near-frontier, production-latency, and
+  release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -401,9 +425,10 @@ The benchmark ladder should be ordered by runtime risk:
 7. 100B+ total-parameter MoE active-sparse runtime.
 8. Real open-weight MoE page manifest, no redistributed weights.
 9. GPU/ROCm page-kernel timing over the real-model page geometry.
-10. Same runtime under code/doc QA workloads.
-11. Same runtime under long-context workloads with KV policy.
-12. One-command local assistant demo.
+10. KV-cache residency/eviction policy over the real-model geometry.
+11. Same runtime under code/doc QA workloads.
+12. Same runtime under long-context workloads with source-bound quality checks.
+13. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -546,8 +571,53 @@ Verified current summary:
 
 This is allowed to claim only ROCm page-kernel timing over v61k page geometry.
 It is not real Mixtral inference speed: the payload is synthetic q4 page
-geometry, real safetensors page hashes are not bound, and no KV policy or
-source-bound QA workload consumes the kernel yet.
+geometry, real safetensors page hashes are not bound, and no source-bound QA
+workload consumes the kernel yet.
+
+## Current KV Cache Policy
+
+The first v61 KV-cache residency/eviction policy is implemented and covered by:
+
+```bash
+./experiments/test_v61m_kv_cache_residency_eviction_policy.sh
+```
+
+It emits:
+
+- `results/v61m_kv_cache_residency_eviction_policy/kv_001/`
+
+Verified current summary:
+
+- `v61m_kv_cache_residency_eviction_policy_ready=1`
+- `model_id=mistralai/Mixtral-8x22B-v0.1`
+- `kv_bytes_per_token=229376`
+- `kv_tokens_per_page=9`
+- `kv_page_payload_bytes=2064384`
+- `hot_window_tokens=1024`
+- `sink_tokens=128`
+- `vram_kv_budget_bytes=402653184`
+- `max_context_tokens=8192`
+- `max_total_kv_pages=911`
+- `max_resident_vram_pages=129`
+- `max_resident_vram_bytes=270532608`
+- `max_evicted_nvme_pages=782`
+- `max_evicted_nvme_bytes=1639972864`
+- `sequence_profile_rows=5`
+- `kv_eviction_trace_rows=1766`
+- `kv_eviction_event_rows=1208`
+- `vram_budget_pass_all_profiles=1`
+- `full_kv_vram_budget_pass_all_profiles=0`
+- `host_ram_kv_spill_enabled=0`
+- `kv_cache_policy_ready=1`
+- `source_bound_qa_ready=0`
+- `near_frontier_claim_ready=0`
+- `production_latency_claim_ready=0`
+- `real_release_package_ready=0`
+
+This is allowed to claim only a deterministic KV residency/eviction policy over
+Mixtral page geometry. It is not long-context quality evidence: source-bound QA,
+exact long-context replay, production latency, and release readiness remain
+blocked.
 
 ## Immediate Next Implementation Target
 
@@ -557,9 +627,10 @@ without weakening the boundary:
 1. Add optional local checkpoint shard/header intake for the v61k manifest, still
    without committing weight bytes.
 2. Closed as v61l seed: add GPU/ROCm page-dequant-matmul measurements over the v61k page geometry while keeping real checkpoint weights blocked.
-3. Add a KV-cache residency/eviction policy so long-context claims remain gated by measured rows.
-4. Run source-bound code/doc QA workloads through the v61j command and bind answers to citation/abstain/fallback evidence.
-5. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+3. Closed as v61m seed: add a KV-cache residency/eviction policy so long-context claims remain gated by measured rows.
+4. Add local safetensors shard/header/page-hash intake without committing weight bytes.
+5. Run source-bound code/doc QA workloads through the v61j command and bind answers to citation/abstain/fallback evidence.
+6. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -572,6 +643,7 @@ The current v61 runtime prototype can say:
 - prefetch reduces stalls
 - mixed quantization is bounded by quality gates
 - SSD read bytes per token are within a practical local-PC budget
+- KV cache residency/eviction has a deterministic VRAM hot plus NVMe cold policy
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 

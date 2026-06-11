@@ -1699,9 +1699,16 @@ Current next boundary:
   synthetic 2 MiB q4-equivalent page tile with `tile_m=1024`, `tile_k=4096`,
   positive `gpu_kernel_avg_ms`, positive `gpu_page_dequant_gflops`, and
   positive `gpu_page_bandwidth_gbps`. It keeps checkpoint weight
-  materialization, safetensors page-hash binding, KV residency/eviction,
-  source-bound QA, near-frontier quality, production latency, and release claims
-  blocked.
+  materialization, safetensors page-hash binding, source-bound QA,
+  near-frontier quality, production latency, and release claims blocked.
+- `v61m` adds KV-cache residency/eviction policy evidence over the v61k Mixtral
+  config. `experiments/test_v61m_kv_cache_residency_eviction_policy.sh`
+  verifies `kv_bytes_per_token=229376`, `kv_tokens_per_page=9`, a 1024-token
+  VRAM hot window plus 128 sink tokens, `max_context_tokens=8192`,
+  `max_resident_vram_pages=129`, `max_evicted_nvme_pages=782`,
+  `kv_cache_policy_ready=1`, and `host_ram_kv_spill_enabled=0`. It keeps
+  safetensors page-hash binding, source-bound QA, long-context quality,
+  near-frontier quality, production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

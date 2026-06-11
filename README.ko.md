@@ -20,9 +20,10 @@ SSD-resident MoE runtime 구현 방향: [docs/V61_SSD_RESIDENT_MOE_RUNTIME.md](d
 ./experiments/test_v61j_one_command_ssd_resident_demo.sh
 ./experiments/test_v61k_real_model_page_manifest.sh
 ./experiments/test_v61l_gpu_page_dequant_matmul_measurement.sh
+./experiments/test_v61m_kv_cache_residency_eviction_policy.sh
 ```
 
-이 명령은 v61a-v61j SSD-resident active-sparse runtime prototype을 닫고, v61k/v61l에서 Mixtral 8x22B real-model page evidence를 추가합니다: deterministic 2 MB SSD weight page, aligned direct I/O read, full-model RAM residency 금지 audit row, RouteHint prefetch/VRAM hot cache, CPU page-dequant-matmul numeric check, expert routing, predictive prefetch, mixed quant planning, dense full-stream stress blocker, logical 128B MoE active-sparse contract, one-command demo bundle, legally redistributable real-model page manifest, 2 MiB q4-equivalent page tile 1개에 대한 ROCm page-dequant-matmul timing row를 검증합니다. 실제 checkpoint 물질화, end-to-end GPU speedup, KV-cache, source-bound QA, near-frontier 품질, dense hundreds-B local-speed, production-latency, release claim은 계속 blocked입니다.
+이 명령은 v61a-v61j SSD-resident active-sparse runtime prototype을 닫고, v61k-v61m에서 Mixtral 8x22B real-model page evidence를 추가합니다: deterministic 2 MB SSD weight page, aligned direct I/O read, full-model RAM residency 금지 audit row, RouteHint prefetch/VRAM hot cache, CPU page-dequant-matmul numeric check, expert routing, predictive prefetch, mixed quant planning, dense full-stream stress blocker, logical 128B MoE active-sparse contract, one-command demo bundle, legally redistributable real-model page manifest, 2 MiB q4-equivalent page tile 1개에 대한 ROCm page-dequant-matmul timing row, VRAM hot/sink window를 유지하고 오래된 page를 NVMe cold tier로 내리는 KV-cache residency/eviction policy를 검증합니다. 실제 checkpoint 물질화, end-to-end GPU speedup, source-bound QA, long-context 품질, near-frontier 품질, dense hundreds-B local-speed, production-latency, release claim은 계속 blocked입니다.
 
 필수 v1.0 단계:
 

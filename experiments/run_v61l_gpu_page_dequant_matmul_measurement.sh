@@ -19,7 +19,9 @@ fi
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-if [[ ! -s "$RESULTS_DIR/v61k_real_model_page_manifest_summary.csv" ]]; then
+if [[ ! -s "$RESULTS_DIR/v61k_real_model_page_manifest_summary.csv" \
+  || ! -s "$RESULTS_DIR/v61k_real_model_page_manifest/manifest_001/real_model_identity_rows.csv" \
+  || ! -s "$RESULTS_DIR/v61k_real_model_page_manifest/manifest_001/tensor_page_manifest_rows.csv" ]]; then
   "$ROOT_DIR/experiments/run_v61k_real_model_page_manifest.sh" >/dev/null
 fi
 
