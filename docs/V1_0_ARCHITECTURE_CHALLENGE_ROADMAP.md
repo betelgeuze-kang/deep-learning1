@@ -368,6 +368,8 @@ Implemented now:
 - `experiments/test_v53n_complete_source_system_g_routehint_measured.sh`
 - `experiments/run_v53o_complete_source_system_h_routehint_scorer_policy_measured.sh`
 - `experiments/test_v53o_complete_source_system_h_routehint_scorer_policy_measured.sh`
+- `experiments/run_v53p_complete_source_system_de_open_weight_rag_measured.sh`
+- `experiments/test_v53p_complete_source_system_de_open_weight_rag_measured.sh`
 - `experiments/run_v61q_real_checkpoint_page_map.sh`
 - `experiments/test_v61q_real_checkpoint_page_map.sh`
 - `experiments/run_v61r_full_page_hash_sweep_plan.sh`
@@ -452,6 +454,7 @@ Implemented now:
 - `results/v53m_complete_source_system_c_local_model_rag_measured/measured_001/` complete-source System C local-model-RAG measured artifacts
 - `results/v53n_complete_source_system_g_routehint_measured/measured_001/` complete-source System G RouteMemory+RouteHint measured artifacts
 - `results/v53o_complete_source_system_h_routehint_scorer_policy_measured/measured_001/` complete-source System H RouteMemory+RouteHint+source-verified-scorer+domain-policy measured artifacts
+- `results/v53p_complete_source_system_de_open_weight_rag_measured/measured_001/` complete-source System D/E open-weight RAG measured artifacts
 - `results/v61q_real_checkpoint_page_map/map_001/` real safetensors-header-derived checkpoint page-map artifacts
 - `results/v61r_full_page_hash_sweep_plan/plan_001/` full page-hash sweep plan artifacts
 - `results/v61s_one_command_source_bound_qa_replay/replay_001/` one-command source-bound QA replay artifacts
@@ -551,6 +554,8 @@ The v53n complete-source System G RouteMemory+RouteHint measured layer supplies 
 
 The v53o complete-source System H RouteMemory+RouteHint+source-verified-scorer+domain-policy measured layer supplies H answer/citation/resource rows over the same frozen v53i 1000-query set and mirrors combined A+B+C+G+H rows into a partial `supplied_v53j/` directory. It records 1000 System H answer rows, 1000 citation rows, 1000 resource rows, 1000 retrieval rows, 1000 route-memory evidence rows, 1000 compact RouteHint rows, 1000 source-verified scorer rows, 1000 domain-policy rows, raw prompt context bytes 0, and 5000 combined A+B+C+G+H answer/citation/resource rows. It intentionally keeps `v53_ready=0`, D/E rows, symmetric scorer/policy rows, review artifacts, and release claims blocked.
 
+The v53p complete-source System D/E open-weight RAG measured layer supplies D and E answer/citation/resource rows over the same frozen v53i 1000-query set and mirrors combined A+B+C+D+E+G+H rows into a partial `supplied_v53j/` directory. It binds v52p/v52q D/E model identity evidence, records 1000 D answer rows, 1000 E answer rows, 2000 D/E citation rows, 2000 D/E resource rows, 160 D and 160 E abstain rows, and 7000 combined core answer/citation/resource rows. It intentionally keeps `v53_ready=0`, D/E quality comparison claims, symmetric scorer/policy rows, review artifacts, and release claims blocked.
+
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
 The v54b scale layer emits 1000 deterministic local RouteHint generation rows across six domains, with RouteMemory evidence rows, compact RouteHint rows, generator input rows, grounded generation rows, citation rows, abstain rows, unsupported-claim rows, resource rows, and hash manifests. It marks `v54_generation_1000_ready=1` with `attention_blocks=0`, `transformer_blocks=0`, `raw_prompt_context_appended_rows=0`, and `wrong_answer_rows=0`, while keeping release and 30B-150B equivalence claims blocked.
@@ -622,8 +627,8 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 5. In progress as v52n/v52o seed: supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E over the v50 9-query seed.
 6. In progress as v52s/v52u/v52v/v52t: NVMe weight-tier contract, mmap reader scaffold, ROCm HIP bind, and explicit D/E local deferral; next extend tiered matmul decode (v52w) or external bake, then v52p/q/r and v59c.
 7. Closed as v52y default policy: keep F explicitly final-deferred with reason unless supplied evidence validates, and scope `v52_ready=1` to the measured baseline registry rather than v1.0 comparison readiness.
-8. Closed as v53g/v53h/v53i/v53j/v53k/v53l/v53m/v53n/v53o seeds: expand v53c canary snapshots into a recursive complete-source tree manifest, complete-source content snapshot, 1000-row complete-source query/source-span instantiation, complete-source A/B/C/D/E/G/H intake surface, and System A/B/C/G/H local measured rows for the 10 locked repositories.
-9. Supply valid D/E answer/citation/resource rows over v53j, then add symmetric scorer/policy rows over that frozen query set.
+8. Closed as v53g/v53h/v53i/v53j/v53k/v53l/v53m/v53n/v53o/v53p seeds: expand v53c canary snapshots into a recursive complete-source tree manifest, complete-source content snapshot, 1000-row complete-source query/source-span instantiation, complete-source A/B/C/D/E/G/H intake surface, System A/B/C/G/H local measured rows, and System D/E open-weight RAG supplied rows for the 10 locked repositories.
+9. Add symmetric scorer/policy rows over the frozen v53i complete-source query set, then supply review artifacts.
 10. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
 11. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
 12. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.

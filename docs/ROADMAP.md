@@ -1634,6 +1634,15 @@ Current next boundary:
   A+B+C+G+H `supplied_v53j/` rows with 5000 answers, 5000 citations, and 5000
   resources, while keeping D/E, symmetric scorer/policy rows, `v53_ready`,
   review artifacts, and release claims blocked.
+- `v53p` adds complete-source System D/E open-weight RAG measured rows.
+  `experiments/test_v53p_complete_source_system_de_open_weight_rag_measured.sh`
+  consumes v53o, binds v52p/v52q D/E model identity evidence, and emits 1000
+  System D plus 1000 System E answer/citation/resource rows over the same frozen
+  v53i 1000-query set. It emits combined A+B+C+D+E+G+H `supplied_v53j/` rows
+  with 7000 answers, 7000 citations, and 7000 resources, setting
+  `required_core_systems_ready=1` and `answer_citation_resource_rows_ready=1`
+  while keeping D/E quality comparison, symmetric scorer/policy rows,
+  `v53_ready`, review artifacts, and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
