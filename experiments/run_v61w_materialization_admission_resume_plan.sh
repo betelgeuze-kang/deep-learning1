@@ -8,8 +8,9 @@ RUN_ID="${V61W_RUN_ID:-plan_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+WAREHOUSE_ROOT_OVERRIDE="${V61W_WAREHOUSE_ROOT:-${V61T_WAREHOUSE_ROOT:-${V61P_SSD_WAREHOUSE_DIR:-${V61_WAREHOUSE_ROOT:-}}}}"
 
-if [[ "${V61W_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V61W_REUSE_EXISTING:-0}" == "1" && -z "$WAREHOUSE_ROOT_OVERRIDE" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
   echo "v61w_materialization_admission_resume_plan_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -19,14 +20,19 @@ fi
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-V61T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
+if [[ -n "$WAREHOUSE_ROOT_OVERRIDE" ]]; then
+  V61T_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61T_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
+else
+  V61T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
+fi
 V61V_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61v_remote_page_tensor_binding.sh" >/dev/null
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$WAREHOUSE_ROOT_OVERRIDE" <<'PY'
 import csv
 import hashlib
 import json
 import re
+import shlex
 import shutil
 import sys
 from collections import defaultdict
@@ -37,6 +43,7 @@ root = Path(sys.argv[1]).resolve()
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+warehouse_root_override = sys.argv[5].strip()
 results = root / "results"
 
 v61p_dir = results / "v61p_local_ssd_checkpoint_residency_preflight" / "preflight_001"
@@ -86,6 +93,10 @@ def rel_command(path):
         return str(path.relative_to(root))
     except ValueError:
         return str(path)
+
+
+def env_assignment(name, value):
+    return f"{name}={shlex.quote(value)} " if value else ""
 
 
 v61p_summary = read_csv(results / "v61p_local_ssd_checkpoint_residency_preflight_summary.csv")[0]
@@ -233,12 +244,16 @@ for shard_name in sorted(download_by_shard, key=shard_number):
     admission_status = shard_admission_status(local_identity)
     action = recommended_action(local_identity, actual_bytes)
     blocked_reason = "" if admission_status in ["already-identity-verified", "admitted-for-download"] else admission_status
+    verify_env_prefix = env_assignment("V61T_WAREHOUSE_ROOT", warehouse_root_override)
+    full_hash_env_prefix = env_assignment("V61R_WAREHOUSE_ROOT", warehouse_root_override)
     verify_command = (
-        "V61T_REUSE_EXISTING=0 "
+        verify_env_prefix
+        + "V61T_REUSE_EXISTING=0 "
         + rel_command(root / "experiments" / "run_v61t_local_checkpoint_materialization_verifier.sh")
     )
     full_hash_command = (
-        "V61R_ENABLE_LOCAL_HASH_SWEEP=1 V61R_REUSE_EXISTING=0 "
+        full_hash_env_prefix
+        + "V61R_ENABLE_LOCAL_HASH_SWEEP=1 V61R_REUSE_EXISTING=0 "
         + rel_command(root / "experiments" / "run_v61r_full_page_hash_sweep_plan.sh")
     )
     unranked_rows.append(
@@ -448,6 +463,8 @@ metric_rows = [
         "available_ssd_bytes": v61p_summary["available_ssd_bytes"],
         "ssd_disk_budget_pass": str(ssd_disk_budget_pass),
         "ssd_warehouse_outside_repo": str(ssd_warehouse_outside_repo),
+        "warehouse_root_override_supplied": str(int(bool(warehouse_root_override))),
+        "ssd_warehouse_path": v61p_summary["ssd_warehouse_path"],
         "local_existing_shard_rows": v61t_summary["local_existing_shard_rows"],
         "local_identity_verified_shard_rows": v61t_summary["local_identity_verified_shard_rows"],
         "download_resume_plan_ready": str(download_resume_plan_ready),
@@ -482,6 +499,8 @@ summary = {
     "available_ssd_bytes": v61p_summary["available_ssd_bytes"],
     "ssd_disk_budget_pass": str(ssd_disk_budget_pass),
     "ssd_warehouse_outside_repo": str(ssd_warehouse_outside_repo),
+    "warehouse_root_override_supplied": str(int(bool(warehouse_root_override))),
+    "ssd_warehouse_path": v61p_summary["ssd_warehouse_path"],
     "local_existing_shard_rows": v61t_summary["local_existing_shard_rows"],
     "local_identity_verified_shard_rows": v61t_summary["local_identity_verified_shard_rows"],
     "download_resume_plan_ready": str(download_resume_plan_ready),
@@ -536,6 +555,8 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": g, "status": s, 
     f"- required_with_reserve_bytes={v61p_summary['required_with_reserve_bytes']}\n"
     f"- available_ssd_bytes={v61p_summary['available_ssd_bytes']}\n"
     f"- ssd_disk_budget_pass={ssd_disk_budget_pass}\n"
+    f"- warehouse_root_override_supplied={int(bool(warehouse_root_override))}\n"
+    f"- ssd_warehouse_path={v61p_summary['ssd_warehouse_path']}\n"
     f"- download_resume_plan_ready={download_resume_plan_ready}\n"
     f"- moe_first_priority_plan_ready={moe_first_priority_plan_ready}\n"
     f"- materialization_admission_ready={materialization_admission_ready}\n"
@@ -571,6 +592,8 @@ manifest = {
     "planned_remaining_bytes": planned_remaining_bytes,
     "ssd_disk_budget_pass": ssd_disk_budget_pass,
     "ssd_warehouse_outside_repo": ssd_warehouse_outside_repo,
+    "warehouse_root_override_supplied": int(bool(warehouse_root_override)),
+    "ssd_warehouse_path": v61p_summary["ssd_warehouse_path"],
     "download_resume_plan_ready": download_resume_plan_ready,
     "moe_first_priority_plan_ready": moe_first_priority_plan_ready,
     "materialization_admission_ready": materialization_admission_ready,

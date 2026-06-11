@@ -8,8 +8,9 @@ RUN_ID="${V61R_RUN_ID:-plan_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+WAREHOUSE_ROOT_OVERRIDE="${V61R_WAREHOUSE_ROOT:-${V61T_WAREHOUSE_ROOT:-${V61P_SSD_WAREHOUSE_DIR:-${V61_WAREHOUSE_ROOT:-}}}}"
 
-if [[ "${V61R_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V61R_REUSE_EXISTING:-0}" == "1" && -z "$WAREHOUSE_ROOT_OVERRIDE" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
   echo "v61r_full_page_hash_sweep_plan_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -20,9 +21,13 @@ rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
 V61Q_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61q_real_checkpoint_page_map.sh" >/dev/null
-V61P_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61p_local_ssd_checkpoint_residency_preflight.sh" >/dev/null
+if [[ -n "$WAREHOUSE_ROOT_OVERRIDE" ]]; then
+  V61P_SSD_WAREHOUSE_DIR="$WAREHOUSE_ROOT_OVERRIDE" V61P_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61p_local_ssd_checkpoint_residency_preflight.sh" >/dev/null
+else
+  V61P_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61p_local_ssd_checkpoint_residency_preflight.sh" >/dev/null
+fi
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$WAREHOUSE_ROOT_OVERRIDE" <<'PY'
 import csv
 import hashlib
 import json
@@ -37,6 +42,7 @@ root = Path(sys.argv[1]).resolve()
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+warehouse_root_override = sys.argv[5].strip()
 results = root / "results"
 v61q_dir = results / "v61q_real_checkpoint_page_map" / "map_001"
 v61p_dir = results / "v61p_local_ssd_checkpoint_residency_preflight" / "preflight_001"
@@ -332,6 +338,8 @@ metric_rows = [
         "sampled_remote_page_hash_probe_rows": str(len(sampled_probe_rows)),
         "sampled_remote_page_hash_page_overlap_rows": str(len(sample_binding_rows)),
         "local_hash_sweep_enabled": str(int(enable_local_hash_sweep)),
+        "warehouse_root_override_supplied": str(int(bool(warehouse_root_override))),
+        "ssd_warehouse_path": v61p_summary["ssd_warehouse_path"],
         "full_safetensors_page_hash_binding_ready": str(full_page_hash_ready),
         "checkpoint_payload_bytes_committed_to_repo": "0",
     }
@@ -370,6 +378,8 @@ summary = {
     "sampled_remote_page_hash_probe_rows": str(len(sampled_probe_rows)),
     "sampled_remote_page_hash_page_overlap_rows": str(len(sample_binding_rows)),
     "local_hash_sweep_enabled": str(int(enable_local_hash_sweep)),
+    "warehouse_root_override_supplied": str(int(bool(warehouse_root_override))),
+    "ssd_warehouse_path": v61p_summary["ssd_warehouse_path"],
     "local_checkpoint_residency_ready": v61p_summary["local_checkpoint_residency_ready"],
     "full_safetensors_page_hash_binding_ready": str(full_page_hash_ready),
     "checkpoint_payload_bytes_committed_to_repo": "0",
@@ -412,6 +422,8 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": g, "status": s, 
     f"- sampled_remote_page_hash_probe_rows={len(sampled_probe_rows)}\n"
     f"- sampled_remote_page_hash_page_overlap_rows={len(sample_binding_rows)}\n"
     f"- local_checkpoint_residency_ready={v61p_summary['local_checkpoint_residency_ready']}\n"
+    f"- warehouse_root_override_supplied={int(bool(warehouse_root_override))}\n"
+    f"- ssd_warehouse_path={v61p_summary['ssd_warehouse_path']}\n"
     f"- full_safetensors_page_hash_binding_ready={full_page_hash_ready}\n"
     "- checkpoint_payload_bytes_committed_to_repo=0\n"
     "- real_checkpoint_weight_bytes_materialized=0\n"
@@ -442,6 +454,8 @@ manifest = {
     "sampled_remote_page_hash_probe_rows": len(sampled_probe_rows),
     "sampled_remote_page_hash_page_overlap_rows": len(sample_binding_rows),
     "local_hash_sweep_enabled": int(enable_local_hash_sweep),
+    "warehouse_root_override_supplied": int(bool(warehouse_root_override)),
+    "ssd_warehouse_path": v61p_summary["ssd_warehouse_path"],
     "local_checkpoint_residency_ready": int(v61p_summary["local_checkpoint_residency_ready"]),
     "full_safetensors_page_hash_binding_ready": full_page_hash_ready,
     "checkpoint_payload_bytes_committed_to_repo": 0,

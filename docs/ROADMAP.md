@@ -1847,12 +1847,16 @@ Current next boundary:
   local SSD checkpoint residency, real Mixtral generation, near-frontier
   quality, production latency, and release claims blocked.
 - `v61r` adds a full page-hash sweep plan without downloading weights.
-  `experiments/test_v61r_full_page_hash_sweep_plan.sh` consumes v61q and v61p,
-  emits 134161 page-hash task rows, binds 3 sampled remote page-hash probes to
-  6 overlapping page rows, and records 0 verified local page hashes on the
-  current host. It keeps local SSD checkpoint residency, completed full
-  page-hash coverage, real Mixtral generation, near-frontier quality,
-  production latency, and release claims blocked.
+  `experiments/test_v61r_full_page_hash_sweep_plan.sh` plus
+  `experiments/test_v61r_full_page_hash_sweep_plan_target_override.sh` consume
+  v61q and v61p, emit 134161 page-hash task rows, bind 3 sampled remote
+  page-hash probes to 6 overlapping page rows, and record 0 verified local page
+  hashes on the current host. The target-override smoke verifies that
+  `V61R_WAREHOUSE_ROOT` refreshes v61p shard-presence planning and rewrites
+  local shard paths to the supplied external warehouse root. It keeps local SSD
+  checkpoint residency, completed full page-hash coverage, real Mixtral
+  generation, near-frontier quality, production latency, and release claims
+  blocked.
 - `v61s` adds one-command source-bound QA replay.
   `experiments/test_v61s_one_command_source_bound_qa_replay.sh` exercises
   `./examples/v61_ssd_resident_moe_demo.sh --source-bound-qa`, binds v61j/v61n,
@@ -1889,11 +1893,14 @@ Current next boundary:
   materialization, full page-hash coverage, real Mixtral generation,
   near-frontier quality, production latency, and release claims blocked.
 - `v61w` adds materialization admission and download-resume planning.
-  `experiments/test_v61w_materialization_admission_resume_plan.sh` consumes
-  v61p/v61q/v61t/v61v and emits 59 checkpoint shard priority rows plus 59
-  download-resume rows. It prioritizes 15 remote-hashed MoE expert shards and
-  one embedding shard ahead of generic backfill with
-  `download_resume_plan_ready=1`, while keeping
+  `experiments/test_v61w_materialization_admission_resume_plan.sh` plus
+  `experiments/test_v61w_materialization_admission_resume_plan_target_override.sh`
+  consume v61p/v61q/v61t/v61v and emit 59 checkpoint shard priority rows plus
+  59 download-resume rows. They prioritize 15 remote-hashed MoE expert shards
+  and one embedding shard ahead of generic backfill with
+  `download_resume_plan_ready=1`, and verify that `V61W_WAREHOUSE_ROOT` forces
+  fresh v61t/v61p materialization planning plus target-preserving
+  post-download verify/hash commands, while keeping
   `materialization_admission_ready=0`, local checkpoint materialization, full
   page-hash coverage, real Mixtral generation, near-frontier quality,
   production latency, and release claims blocked on the current SSD budget.
@@ -1967,22 +1974,29 @@ Current next boundary:
   checkpoint materialization, full page-hash coverage, real Mixtral generation,
   near-frontier quality, production latency, and release claims blocked.
 - `v61ae` adds a real generation admission gate.
-  `experiments/test_v61ae_real_generation_admission_gate.sh` consumes v61ad,
-  v53r, v61r, v61t, and v61w, binding complete-source review packets to sampled
-  runtime budgets plus materialization/page-hash state. It records 1000
-  real-generation candidate rows, 0 admitted rows, 1000 runtime-budget-ready
-  rows, 1000 source-review-blocked rows, 1000 materialization-blocked rows, and
-  1000 page-hash-blocked rows, while keeping actual model generation,
-  near-frontier quality, production latency, and release claims blocked.
+  `experiments/test_v61ae_real_generation_admission_gate.sh` plus
+  `experiments/test_v61ae_real_generation_admission_gate_target_override.sh`
+  consume v61ad, v53r, v61r, v61t, and v61w, binding complete-source review
+  packets to sampled runtime budgets plus materialization/page-hash state. They
+  record 1000 real-generation candidate rows, 0 admitted rows, 1000
+  runtime-budget-ready rows, 1000 source-review-blocked rows, 1000
+  materialization-blocked rows, and 1000 page-hash-blocked rows, and verify
+  that `V61AE_WAREHOUSE_ROOT` refreshes v61r/v61t/v61w source evidence over the
+  supplied warehouse root, while keeping actual model generation, near-frontier
+  quality, production latency, and release claims blocked.
 - `v61af` adds a guarded checkpoint warehouse operator bundle.
-  `experiments/test_v61af_checkpoint_warehouse_operator_bundle.sh` consumes
-  v61w, v61t, v61r, and v61ae, emitting repo-outside operator scripts for
-  priority shard download, materialization verification, full page hashing, and
-  generation-admission recheck. It records 59 download commands, 62 operator
-  command rows, six bundle files, dry-run defaults for download/full hashing,
-  and zero checkpoint payload bytes downloaded or committed by v61af, while
-  keeping SSD-budget admission, local materialization, full page-hash coverage,
-  actual model generation, production latency, and release claims blocked.
+  `experiments/test_v61af_checkpoint_warehouse_operator_bundle.sh` plus
+  `experiments/test_v61af_checkpoint_warehouse_operator_bundle_target_override.sh`
+  consume v61w, v61t, v61r, and v61ae, emitting repo-outside operator scripts
+  for priority shard download, materialization verification, full page hashing,
+  and generation-admission recheck. They record 59 download commands, 62
+  operator command rows, six bundle files, dry-run defaults for download/full
+  hashing, and zero checkpoint payload bytes downloaded or committed by v61af,
+  and verify that `V61AF_WAREHOUSE_ROOT` propagates into source evidence,
+  `operator_env.template`, guarded scripts, and verify/hash/admission command
+  rows, while keeping SSD-budget admission, local materialization, full
+  page-hash coverage, actual model generation, production latency, and release
+  claims blocked.
 - `v61ag` adds checkpoint warehouse execution preflight.
   `experiments/test_v61ag_checkpoint_warehouse_execution_preflight.sh`
   consumes v61af, syntax-checks the operator scripts, and runs a one-row dry-run

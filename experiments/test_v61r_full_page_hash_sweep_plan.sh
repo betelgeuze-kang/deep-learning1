@@ -51,6 +51,7 @@ expected = {
     "sampled_remote_page_hash_probe_rows": "3",
     "sampled_remote_page_hash_page_overlap_rows": "6",
     "local_hash_sweep_enabled": "0",
+    "warehouse_root_override_supplied": "0",
     "local_checkpoint_residency_ready": "0",
     "full_safetensors_page_hash_binding_ready": "0",
     "checkpoint_payload_bytes_committed_to_repo": "0",
@@ -140,12 +141,15 @@ if manifest.get("v61r_full_page_hash_sweep_plan_ready") != 1:
     raise SystemExit("v61r manifest readiness mismatch")
 if manifest.get("page_hash_sweep_plan_rows") != 134161 or manifest.get("full_safetensors_page_hash_binding_ready") != 0:
     raise SystemExit("v61r manifest page-hash boundary mismatch")
+if manifest.get("warehouse_root_override_supplied") != 0:
+    raise SystemExit("v61r manifest should record no default warehouse override")
 
 boundary = (run_dir / "V61R_FULL_PAGE_HASH_SWEEP_PLAN_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     "full safetensors page-hash sweep plan",
     "page_hash_sweep_plan_rows=134161",
     "blocked_missing_local_shard_page_rows=134161",
+    "warehouse_root_override_supplied=0",
     "full_safetensors_page_hash_binding_ready=0",
     "Blocked wording",
 ]:

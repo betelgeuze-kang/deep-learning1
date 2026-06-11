@@ -51,10 +51,10 @@ expected = {
     "moe_priority_shard_rows": "15",
     "embedding_priority_shard_rows": "1",
     "planned_remaining_bytes": "281241493344",
-    "available_ssd_bytes": "21337460736",
     "required_with_reserve_bytes": "315601231712",
     "ssd_disk_budget_pass": "0",
     "ssd_warehouse_outside_repo": "1",
+    "warehouse_root_override_supplied": "0",
     "download_dry_run_default": "1",
     "full_hash_dry_run_default": "1",
     "materialization_admission_ready": "0",
@@ -87,6 +87,7 @@ required_files = [
     "V61AF_CHECKPOINT_WAREHOUSE_OPERATOR_BUNDLE_BOUNDARY.md",
     "v61af_checkpoint_warehouse_operator_bundle_manifest.json",
     "sha256_manifest.csv",
+    "source_v61p/v61p_local_ssd_checkpoint_residency_preflight_summary.csv",
     "source_v61w/checkpoint_download_resume_plan_rows.csv",
     "source_v61w/checkpoint_shard_priority_rows.csv",
     "source_v61t/local_checkpoint_materialization_metric_rows.csv",
@@ -134,6 +135,12 @@ for gate in [
 command_rows = read_csv(run_dir / "checkpoint_warehouse_operator_command_rows.csv")
 stage_rows = {row["stage"]: row["status"] for row in read_csv(run_dir / "checkpoint_warehouse_operator_stage_rows.csv")}
 metric = read_csv(run_dir / "checkpoint_warehouse_operator_metric_rows.csv")[0]
+source_v61p_summary = read_csv(run_dir / "source_v61p/v61p_local_ssd_checkpoint_residency_preflight_summary.csv")[0]
+
+if summary["available_ssd_bytes"] != source_v61p_summary["available_ssd_bytes"]:
+    raise SystemExit("v61af available_ssd_bytes should match copied v61p summary")
+if metric["available_ssd_bytes"] != summary["available_ssd_bytes"]:
+    raise SystemExit("v61af metric available_ssd_bytes should match summary")
 
 if len(command_rows) != 62:
     raise SystemExit("v61af operator command row count mismatch")
@@ -174,6 +181,7 @@ for field, value in expected.items():
 
 download_script = (run_dir / "operator_bundle/download_priority_queue.sh").read_text(encoding="utf-8")
 full_hash_script = (run_dir / "operator_bundle/run_full_page_hash_sweep.sh").read_text(encoding="utf-8")
+operator_env = (run_dir / "operator_bundle/operator_env.template").read_text(encoding="utf-8")
 operator_readme = (run_dir / "operator_bundle/README.md").read_text(encoding="utf-8")
 boundary = (run_dir / "V61AF_CHECKPOINT_WAREHOUSE_OPERATOR_BUNDLE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
@@ -191,7 +199,16 @@ for snippet in [
     if snippet not in full_hash_script:
         raise SystemExit(f"v61af full hash script missing snippet: {snippet}")
 for snippet in [
+    "V61AF_WAREHOUSE_ROOT",
+    "V61T_WAREHOUSE_ROOT",
+    "V61R_WAREHOUSE_ROOT",
+    "V61AE_WAREHOUSE_ROOT",
+]:
+    if snippet not in operator_env:
+        raise SystemExit(f"v61af operator env missing snippet: {snippet}")
+for snippet in [
     "download_command_rows=59",
+    "warehouse_root_override_supplied=0",
     "generation_admitted_rows=0",
     "checkpoint_payload_bytes_downloaded_by_v61af=0",
 ]:
@@ -214,6 +231,8 @@ if manifest.get("operator_command_rows") != 62 or manifest.get("download_command
     raise SystemExit("v61af manifest command row mismatch")
 if manifest.get("checkpoint_payload_bytes_downloaded_by_v61af") != 0:
     raise SystemExit("v61af manifest must keep downloaded payload bytes at zero")
+if manifest.get("warehouse_root_override_supplied") != 0:
+    raise SystemExit("v61af manifest should record no default warehouse override")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:

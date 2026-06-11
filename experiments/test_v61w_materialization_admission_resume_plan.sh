@@ -48,6 +48,7 @@ expected = {
     "moe_priority_shard_rows": "15",
     "embedding_priority_shard_rows": "1",
     "remote_sample_tensor_binding_rows": "16",
+    "warehouse_root_override_supplied": "0",
     "download_resume_plan_ready": "1",
     "moe_first_priority_plan_ready": "1",
     "materialization_admission_ready": "0",
@@ -189,12 +190,15 @@ if manifest.get("download_resume_plan_rows") != 59 or manifest.get("moe_priority
     raise SystemExit("v61w manifest row counts mismatch")
 if manifest.get("materialization_admission_ready") != 0 or manifest.get("local_checkpoint_materialization_ready") != 0:
     raise SystemExit("v61w manifest should keep materialization blocked")
+if manifest.get("warehouse_root_override_supplied") != 0:
+    raise SystemExit("v61w manifest should record no default warehouse override")
 
 boundary = (run_dir / "V61W_MATERIALIZATION_ADMISSION_RESUME_PLAN_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     "download_resume_plan_rows=59",
     "sampled_priority_shard_rows=16",
     "moe_priority_shard_rows=15",
+    "warehouse_root_override_supplied=0",
     "download_resume_plan_ready=1",
     "materialization_admission_ready=0",
     "local_checkpoint_materialization_ready=0",

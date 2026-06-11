@@ -8,8 +8,9 @@ RUN_ID="${V61AE_RUN_ID:-gate_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+WAREHOUSE_ROOT_OVERRIDE="${V61AE_WAREHOUSE_ROOT:-${V61W_WAREHOUSE_ROOT:-${V61T_WAREHOUSE_ROOT:-${V61R_WAREHOUSE_ROOT:-${V61P_SSD_WAREHOUSE_DIR:-${V61_WAREHOUSE_ROOT:-}}}}}}"
 
-if [[ "${V61AE_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V61AE_REUSE_EXISTING:-0}" == "1" && -z "$WAREHOUSE_ROOT_OVERRIDE" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
   echo "v61ae_real_generation_admission_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -21,11 +22,17 @@ mkdir -p "$RUN_DIR"
 
 V61AD_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ad_kv_weight_token_budget_replay.sh" >/dev/null
 V53R_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53r_complete_source_review_packet.sh" >/dev/null
-V61R_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61r_full_page_hash_sweep_plan.sh" >/dev/null
-V61T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
-V61W_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61w_materialization_admission_resume_plan.sh" >/dev/null
+if [[ -n "$WAREHOUSE_ROOT_OVERRIDE" ]]; then
+  V61R_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61R_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61r_full_page_hash_sweep_plan.sh" >/dev/null
+  V61T_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61T_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
+  V61W_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61W_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61w_materialization_admission_resume_plan.sh" >/dev/null
+else
+  V61R_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61r_full_page_hash_sweep_plan.sh" >/dev/null
+  V61T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
+  V61W_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61w_materialization_admission_resume_plan.sh" >/dev/null
+fi
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$WAREHOUSE_ROOT_OVERRIDE" <<'PY'
 import csv
 import hashlib
 import json
@@ -38,6 +45,7 @@ root = Path(sys.argv[1]).resolve()
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+warehouse_root_override = sys.argv[5].strip()
 results = root / "results"
 model_id = "mistralai/Mixtral-8x22B-v0.1"
 
@@ -237,6 +245,7 @@ metric_rows = [
         "core_answer_rows": v53r_summary["core_answer_rows"],
         "review_packet_ready": v53r_summary["review_packet_ready"],
         "review_artifacts_ready": v53r_summary["review_artifacts_ready"],
+        "warehouse_root_override_supplied": str(int(bool(warehouse_root_override))),
         "pending_review_queue_rows": v53r_summary["review_queue_rows"],
         "generation_candidate_rows": str(len(candidate_rows)),
         "generation_admitted_rows": str(admitted_rows),
@@ -306,6 +315,7 @@ summary = {
     "core_answer_rows": v53r_summary["core_answer_rows"],
     "review_packet_ready": v53r_summary["review_packet_ready"],
     "review_artifacts_ready": v53r_summary["review_artifacts_ready"],
+    "warehouse_root_override_supplied": str(int(bool(warehouse_root_override))),
     "pending_review_queue_rows": v53r_summary["review_queue_rows"],
     "generation_candidate_rows": str(len(candidate_rows)),
     "generation_admitted_rows": str(admitted_rows),
@@ -343,6 +353,7 @@ manifest = {
     "source_review_blocked_rows": source_review_blocked_rows,
     "materialization_blocked_rows": materialization_blocked_rows,
     "page_hash_blocked_rows": page_hash_blocked_rows,
+    "warehouse_root_override_supplied": int(bool(warehouse_root_override)),
     "actual_model_generation_ready": 0,
     "blocked_claims": [
         "human_source_review_artifacts",
@@ -369,6 +380,7 @@ Evidence emitted:
 - core_answer_rows={v53r_summary['core_answer_rows']}
 - review_packet_ready={v53r_summary['review_packet_ready']}
 - review_artifacts_ready={v53r_summary['review_artifacts_ready']}
+- warehouse_root_override_supplied={int(bool(warehouse_root_override))}
 - pending_review_queue_rows={v53r_summary['review_queue_rows']}
 - generation_candidate_rows={len(candidate_rows)}
 - generation_admitted_rows={admitted_rows}

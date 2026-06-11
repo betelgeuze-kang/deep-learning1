@@ -47,6 +47,7 @@ expected = {
     "core_answer_rows": "7000",
     "review_packet_ready": "1",
     "review_artifacts_ready": "0",
+    "warehouse_root_override_supplied": "0",
     "pending_review_queue_rows": "7000",
     "generation_candidate_rows": "1000",
     "generation_admitted_rows": "0",
@@ -196,6 +197,8 @@ if manifest.get("generation_admitted_rows") != 0:
     raise SystemExit("v61ae manifest should admit zero generation rows")
 if manifest.get("actual_model_generation_ready") != 0:
     raise SystemExit("v61ae manifest should keep generation blocked")
+if manifest.get("warehouse_root_override_supplied") != 0:
+    raise SystemExit("v61ae manifest should record no default warehouse override")
 
 boundary = (run_dir / "V61AE_REAL_GENERATION_ADMISSION_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
@@ -206,6 +209,7 @@ for snippet in [
     "source_review_blocked_rows=1000",
     "materialization_blocked_rows=1000",
     "page_hash_blocked_rows=1000",
+    "warehouse_root_override_supplied=0",
     "actual_model_generation_ready=0",
     "Blocked wording",
 ]:

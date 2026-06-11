@@ -8,8 +8,9 @@ RUN_ID="${V61AF_RUN_ID:-operator_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+WAREHOUSE_ROOT_OVERRIDE="${V61AF_WAREHOUSE_ROOT:-${V61W_WAREHOUSE_ROOT:-${V61T_WAREHOUSE_ROOT:-${V61R_WAREHOUSE_ROOT:-${V61AE_WAREHOUSE_ROOT:-${V61P_SSD_WAREHOUSE_DIR:-${V61_WAREHOUSE_ROOT:-}}}}}}}"
 
-if [[ "${V61AF_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V61AF_REUSE_EXISTING:-0}" == "1" && -z "$WAREHOUSE_ROOT_OVERRIDE" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
   echo "v61af_checkpoint_warehouse_operator_bundle_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -19,12 +20,19 @@ fi
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-V61W_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61w_materialization_admission_resume_plan.sh" >/dev/null
-V61T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
-V61R_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61r_full_page_hash_sweep_plan.sh" >/dev/null
-V61AE_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ae_real_generation_admission_gate.sh" >/dev/null
+if [[ -n "$WAREHOUSE_ROOT_OVERRIDE" ]]; then
+  V61W_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61W_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61w_materialization_admission_resume_plan.sh" >/dev/null
+  V61T_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61T_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
+  V61R_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61R_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61r_full_page_hash_sweep_plan.sh" >/dev/null
+  V61AE_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61AE_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61ae_real_generation_admission_gate.sh" >/dev/null
+else
+  V61W_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61w_materialization_admission_resume_plan.sh" >/dev/null
+  V61T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
+  V61R_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61r_full_page_hash_sweep_plan.sh" >/dev/null
+  V61AE_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ae_real_generation_admission_gate.sh" >/dev/null
+fi
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$WAREHOUSE_ROOT_OVERRIDE" <<'PY'
 import csv
 import hashlib
 import json
@@ -38,6 +46,7 @@ root = Path(sys.argv[1]).resolve()
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+warehouse_root_override = sys.argv[5].strip()
 results = root / "results"
 bundle_dir = run_dir / "operator_bundle"
 bundle_dir.mkdir(parents=True, exist_ok=True)
@@ -77,6 +86,11 @@ def rel_command(path):
         return "./" + str(path.resolve().relative_to(root))
     except ValueError:
         return str(path)
+
+
+def env_prefix(assignments):
+    parts = [f"{name}={shlex.quote(value)}" for name, value in assignments.items() if value]
+    return " ".join(parts) + (" " if parts else "")
 
 
 v61w_dir = results / "v61w_materialization_admission_resume_plan" / "plan_001"
@@ -130,12 +144,21 @@ priority_rows = read_csv(v61w_dir / "checkpoint_shard_priority_rows.csv")
 if len(resume_rows) != 59 or len(priority_rows) != 59:
     raise SystemExit("v61af expects 59 v61w resume/priority rows")
 
-verify_cmd = "V61T_REUSE_EXISTING=0 " + rel_command(root / "experiments" / "run_v61t_local_checkpoint_materialization_verifier.sh")
+verify_cmd = (
+    env_prefix({"V61T_WAREHOUSE_ROOT": warehouse_root_override})
+    + "V61T_REUSE_EXISTING=0 "
+    + rel_command(root / "experiments" / "run_v61t_local_checkpoint_materialization_verifier.sh")
+)
 full_hash_cmd = (
-    "V61R_ENABLE_LOCAL_HASH_SWEEP=1 V61R_REUSE_EXISTING=0 "
+    env_prefix({"V61R_WAREHOUSE_ROOT": warehouse_root_override})
+    + "V61R_ENABLE_LOCAL_HASH_SWEEP=1 V61R_REUSE_EXISTING=0 "
     + rel_command(root / "experiments" / "run_v61r_full_page_hash_sweep_plan.sh")
 )
-admission_cmd = "V61AE_REUSE_EXISTING=0 " + rel_command(root / "experiments" / "run_v61ae_real_generation_admission_gate.sh")
+admission_cmd = (
+    env_prefix({"V61AE_WAREHOUSE_ROOT": warehouse_root_override})
+    + "V61AE_REUSE_EXISTING=0 "
+    + rel_command(root / "experiments" / "run_v61ae_real_generation_admission_gate.sh")
+)
 
 command_rows = []
 for row in resume_rows:
@@ -235,10 +258,31 @@ operator_files = [
     "recheck_real_generation_admission.sh",
 ]
 
+warehouse_env_lines = []
+if warehouse_root_override:
+    warehouse_env_lines.append(f"export V61AF_WAREHOUSE_ROOT={shlex.quote(warehouse_root_override)}")
+warehouse_env_lines.extend(
+    [
+        'if [[ -n "${V61AF_WAREHOUSE_ROOT:-}" ]]; then',
+        '  export V61_WAREHOUSE_ROOT="$V61AF_WAREHOUSE_ROOT"',
+        '  export V61W_WAREHOUSE_ROOT="$V61AF_WAREHOUSE_ROOT"',
+        '  export V61T_WAREHOUSE_ROOT="$V61AF_WAREHOUSE_ROOT"',
+        '  export V61R_WAREHOUSE_ROOT="$V61AF_WAREHOUSE_ROOT"',
+        '  export V61AE_WAREHOUSE_ROOT="$V61AF_WAREHOUSE_ROOT"',
+        'elif [[ -n "${V61_WAREHOUSE_ROOT:-}" ]]; then',
+        '  export V61W_WAREHOUSE_ROOT="${V61W_WAREHOUSE_ROOT:-$V61_WAREHOUSE_ROOT}"',
+        '  export V61T_WAREHOUSE_ROOT="${V61T_WAREHOUSE_ROOT:-$V61_WAREHOUSE_ROOT}"',
+        '  export V61R_WAREHOUSE_ROOT="${V61R_WAREHOUSE_ROOT:-$V61_WAREHOUSE_ROOT}"',
+        '  export V61AE_WAREHOUSE_ROOT="${V61AE_WAREHOUSE_ROOT:-$V61_WAREHOUSE_ROOT}"',
+        "fi",
+    ]
+)
+
 download_lines = [
     "#!/usr/bin/env bash",
     "set -euo pipefail",
     'ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"',
+    *warehouse_env_lines,
     ': "${V61AF_EXECUTE_DOWNLOAD:=0}"',
     ': "${V61AF_MAX_DOWNLOAD_ROWS:=0}"',
     'download_count=0',
@@ -277,6 +321,7 @@ download_lines.append('echo "[v61af] processed ${download_count} planned downloa
             "#!/usr/bin/env bash",
             "set -euo pipefail",
             'ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"',
+            *warehouse_env_lines,
             'cd "$ROOT_DIR"',
             verify_cmd,
             rel_command(root / "experiments" / "test_v61t_local_checkpoint_materialization_verifier.sh"),
@@ -292,6 +337,7 @@ download_lines.append('echo "[v61af] processed ${download_count} planned downloa
             "#!/usr/bin/env bash",
             "set -euo pipefail",
             'ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"',
+            *warehouse_env_lines,
             ': "${V61AF_EXECUTE_FULL_HASH:=0}"',
             'if [[ "$V61AF_EXECUTE_FULL_HASH" != "1" ]]; then',
             '  echo "[v61af] dry-run: set V61AF_EXECUTE_FULL_HASH=1 to hash every local checkpoint page"',
@@ -312,6 +358,7 @@ download_lines.append('echo "[v61af] processed ${download_count} planned downloa
             "#!/usr/bin/env bash",
             "set -euo pipefail",
             'ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"',
+            *warehouse_env_lines,
             'cd "$ROOT_DIR"',
             admission_cmd,
             rel_command(root / "experiments" / "test_v61ae_real_generation_admission_gate.sh"),
@@ -321,13 +368,20 @@ download_lines.append('echo "[v61af] processed ${download_count} planned downloa
     encoding="utf-8",
 )
 
+warehouse_template_path = warehouse_root_override or v61p_summary["ssd_warehouse_path"]
 (bundle_dir / "operator_env.template").write_text(
     "\n".join(
         [
             "export V61AF_EXECUTE_DOWNLOAD=0",
             "export V61AF_MAX_DOWNLOAD_ROWS=16",
             "export V61AF_EXECUTE_FULL_HASH=0",
-            f"export V61AF_WAREHOUSE_PATH={shlex.quote(v61p_summary['ssd_warehouse_path'])}",
+            f"export V61_WAREHOUSE_ROOT={shlex.quote(warehouse_template_path)}",
+            f"export V61AF_WAREHOUSE_ROOT={shlex.quote(warehouse_template_path)}",
+            f"export V61W_WAREHOUSE_ROOT={shlex.quote(warehouse_template_path)}",
+            f"export V61T_WAREHOUSE_ROOT={shlex.quote(warehouse_template_path)}",
+            f"export V61R_WAREHOUSE_ROOT={shlex.quote(warehouse_template_path)}",
+            f"export V61AE_WAREHOUSE_ROOT={shlex.quote(warehouse_template_path)}",
+            f"export V61AF_WAREHOUSE_PATH={shlex.quote(warehouse_template_path)}",
         ]
     )
     + "\n",
@@ -350,6 +404,8 @@ Default state:
 - planned_remaining_bytes={v61w_summary['planned_remaining_bytes']}
 - available_ssd_bytes={v61w_summary['available_ssd_bytes']}
 - required_with_reserve_bytes={v61w_summary['required_with_reserve_bytes']}
+- warehouse_root_override_supplied={int(bool(warehouse_root_override))}
+- ssd_warehouse_path={v61p_summary['ssd_warehouse_path']}
 - materialization_admission_ready={v61w_summary['materialization_admission_ready']}
 - local_checkpoint_materialization_ready={v61t_summary['local_checkpoint_materialization_ready']}
 - full_safetensors_page_hash_binding_ready={v61r_summary['full_safetensors_page_hash_binding_ready']}
@@ -401,6 +457,8 @@ metric = {
     "required_with_reserve_bytes": v61w_summary["required_with_reserve_bytes"],
     "ssd_disk_budget_pass": v61w_summary["ssd_disk_budget_pass"],
     "ssd_warehouse_outside_repo": v61w_summary["ssd_warehouse_outside_repo"],
+    "warehouse_root_override_supplied": str(int(bool(warehouse_root_override))),
+    "ssd_warehouse_path": v61p_summary["ssd_warehouse_path"],
     "download_dry_run_default": "1",
     "full_hash_dry_run_default": "1",
     "materialization_admission_ready": v61w_summary["materialization_admission_ready"],
@@ -465,6 +523,8 @@ Evidence emitted:
 - planned_remaining_bytes={v61w_summary['planned_remaining_bytes']}
 - available_ssd_bytes={v61w_summary['available_ssd_bytes']}
 - required_with_reserve_bytes={v61w_summary['required_with_reserve_bytes']}
+- warehouse_root_override_supplied={int(bool(warehouse_root_override))}
+- ssd_warehouse_path={v61p_summary['ssd_warehouse_path']}
 - download_dry_run_default=1
 - full_hash_dry_run_default=1
 - materialization_admission_ready={v61w_summary['materialization_admission_ready']}
@@ -497,6 +557,8 @@ manifest = {
     "download_command_rows": 59,
     "operator_command_rows": len(command_rows),
     "operator_bundle_file_rows": len(operator_files),
+    "warehouse_root_override_supplied": int(bool(warehouse_root_override)),
+    "ssd_warehouse_path": v61p_summary["ssd_warehouse_path"],
     "download_dry_run_default": 1,
     "full_hash_dry_run_default": 1,
     "checkpoint_payload_bytes_downloaded_by_v61af": 0,

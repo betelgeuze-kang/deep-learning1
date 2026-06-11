@@ -531,6 +531,9 @@ Pass condition:
 
 - v61q real checkpoint page map evidence is bound
 - v61p outside-repository warehouse and local shard presence evidence is bound
+- `V61R_WAREHOUSE_ROOT` target override forces fresh v61p shard-presence
+  planning and rewrites local shard paths to the supplied external warehouse
+  root
 - every v61q checkpoint page has one page-hash task row
 - v61o sampled remote page hashes are bound to overlapping v61q page rows
 - local page hashes are verified only when shards are resident outside the
@@ -666,6 +669,9 @@ Outputs:
 Pass condition:
 
 - v61p, v61q, v61t, and v61v evidence is bound
+- `V61W_WAREHOUSE_ROOT` target override forces fresh v61t/v61p planning and
+  preserves target-aware `V61T_WAREHOUSE_ROOT`/`V61R_WAREHOUSE_ROOT`
+  post-download commands
 - all 59 checkpoint shards have priority and download-resume rows
 - remote-hashed MoE expert and embedding sample shards are promoted before
   generic checkpoint backfill shards
@@ -883,6 +889,8 @@ Pass condition:
 - v61ad runtime-budget evidence, v53r complete-source review packets, v61r full
   page-hash sweep state, v61t local materialization state, and v61w
   materialization admission state are bound
+- `V61AE_WAREHOUSE_ROOT` target override forces fresh v61r/v61t/v61w source
+  evidence over the supplied external warehouse root
 - 1000 complete-source real-generation candidate rows are emitted
 - zero candidate rows are admitted for actual model generation
 - all 1000 candidate rows have runtime-budget evidence ready
@@ -914,6 +922,9 @@ Pass condition:
 
 - v61w materialization planning, v61t local materialization state, v61r full
   page-hash sweep state, and v61ae generation admission state are bound
+- `V61AF_WAREHOUSE_ROOT` target override propagates through source evidence,
+  `operator_env.template`, guarded scripts, and verify/hash/admission command
+  rows
 - 59 guarded shard download commands are emitted in priority order
 - 62 operator command rows and six operator bundle files are emitted
 - download execution defaults to dry-run and requires
@@ -1514,7 +1525,7 @@ without weakening the boundary:
 7. Closed as v61t verifier: promote v61p size/presence rows into local shard identity verification using safetensors header hashes and sampled page hashes, while keeping materialization blocked on the current host.
 8. Closed as v61u sampler: expand sampled page-hash evidence with bounded remote full-page range hashes while keeping full page-hash coverage blocked.
 9. Closed as v61v binder: bind remote-hashed sampled pages to real tensor/page segments and runtime nodes while keeping full coverage and local materialization blocked.
-10. Closed as v61w planner: turn v61p/v61t blockers and v61v sampled tensor bindings into a 59-shard materialization admission/download-resume plan while keeping SSD budget admission and materialization blocked on the current host.
+10. Closed as v61w planner: turn v61p/v61t blockers and v61v sampled tensor bindings into a 59-shard materialization admission/download-resume plan, with `V61W_WAREHOUSE_ROOT` forcing fresh external-target materialization planning, while keeping SSD budget admission and materialization blocked on the current host.
 11. Closed as v61x hotset manifest: bind v61w/v61v/v61s/v61m into 16 planned NVMe hotset page slots and 37 source-bound replay rows while keeping hotset payload materialization and real generation blocked.
 12. Closed as v61y sampled hotset verifier: materialize the 16 sampled hotset pages outside the repository and verify local/readback hashes while keeping full checkpoint materialization and real generation blocked.
 13. Closed as v61z sampled hotset direct-I/O replay: read the 16 local sampled hotset pages with O_DIRECT, verify hashes, and record latency/throughput while keeping full checkpoint materialization and real generation blocked.
@@ -1522,8 +1533,8 @@ without weakening the boundary:
 15. Closed as v61ab sampled hotset tensor-tile quant probe: run bounded BF16/q8/q4 dot-tile probes over the sampled tensor slices, record finite numeric rows, and keep real generation blocked.
 16. Closed as v61ac sampled hotset token-budget replay: bind v61x source-bound rows to v61z direct-I/O latency and v61ab tile probes, record bounded per-token budgets, and keep real generation blocked.
 17. Closed as v61ad KV + weight token-budget replay: bind v61ac token rows to v61m KV context profiles, record combined VRAM-hot/NVMe-cold budget rows, and keep full-KV-in-VRAM and real generation blocked.
-18. Closed as v61ae real generation admission gate: bind v61ad/v53r/v61r/v61t/v61w into 1000 complete-source generation candidates, admit 0 rows, and keep source-review/materialization/full-page-hash blockers explicit.
-19. Closed as v61af checkpoint warehouse operator bundle: emit guarded repo-outside download, verify, full-page-hash, and admission-recheck scripts with dry-run defaults and zero payload bytes downloaded by v61af.
+18. Closed as v61ae real generation admission gate: bind v61ad/v53r/v61r/v61t/v61w into 1000 complete-source generation candidates, admit 0 rows, and keep source-review/materialization/full-page-hash blockers explicit, with `V61AE_WAREHOUSE_ROOT` refreshing target-bound source evidence.
+19. Closed as v61af checkpoint warehouse operator bundle: emit guarded repo-outside download, verify, full-page-hash, and admission-recheck scripts with dry-run defaults, zero payload bytes downloaded by v61af, and `V61AF_WAREHOUSE_ROOT` propagated into source evidence and operator scripts.
 20. Closed as v61ag checkpoint warehouse execution preflight: syntax-check v61af operator scripts, run a guarded one-row dry-run probe, record current CLI/SSD blockers, and keep real download execution blocked.
 21. Closed as v61ah checkpoint download backend fallback plan: select curl-resume over missing huggingface-cli, emit 59 guarded backend commands, and keep SSD-budget execution blocked.
 22. Closed as v61ai checkpoint storage budget remediation plan: quantify the current SSD deficit, record zero reserve-safe shard rows, and keep materialization/download execution blocked.
