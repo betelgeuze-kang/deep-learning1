@@ -1795,6 +1795,13 @@ Current next boundary:
   current host. It keeps local SSD checkpoint residency, completed full
   page-hash coverage, real Mixtral generation, near-frontier quality,
   production latency, and release claims blocked.
+- `v61s` adds one-command source-bound QA replay.
+  `experiments/test_v61s_one_command_source_bound_qa_replay.sh` exercises
+  `./examples/v61_ssd_resident_moe_demo.sh --source-bound-qa`, binds v61j/v61n,
+  records exit code 0, 37/37 source-bound query pass rows, and 10/10
+  abstain-policy pass rows. It keeps complete-source 1000+ audit completion,
+  real Mixtral generation, full page-hash coverage, near-frontier quality,
+  production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

@@ -537,6 +537,30 @@ Pass condition:
   generation, near-frontier, production-latency, and release claims remain
   blocked until every local checkpoint page is hashed
 
+### v61s One-Command Source-Bound QA Replay
+
+Exercise the v61 one-command entrypoint in source-bound QA mode and verify that
+the v61n workload passes through the command-level path.
+
+Outputs:
+
+- `one_command_replay_rows.csv`
+- `source_bound_workload_pass_rows.csv`
+- `runtime_gap_rows.csv`
+- `one_command_stdout.txt`
+- `one_command_stderr.txt`
+- `V61S_ONE_COMMAND_SOURCE_BOUND_QA_REPLAY_BOUNDARY.md`
+
+Pass condition:
+
+- `./examples/v61_ssd_resident_moe_demo.sh --source-bound-qa` exits with code 0
+- v61j runtime evidence and v61n source-bound QA rows are bound
+- every source-bound query has a citation-supported pass row
+- every abstain row has a verified abstain-policy row
+- actual model generation, completed full page-hash coverage, complete-source
+  1000+ audit completion, near-frontier, production-latency, and release claims
+  remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -556,9 +580,10 @@ The benchmark ladder should be ordered by runtime risk:
 13. GPU/ROCm page-kernel timing over the real-model page geometry.
 14. KV-cache residency/eviction policy over the real-model geometry.
 15. Source-bound code/doc QA workload seed over materialized files.
-16. Complete-source 1000+ QA workload with real model generation.
-17. Same runtime under long-context workloads with source-bound quality checks.
-18. One-command local assistant demo.
+16. One-command source-bound QA replay.
+17. Complete-source 1000+ QA workload with real model generation.
+18. Same runtime under long-context workloads with source-bound quality checks.
+19. One-command local assistant demo.
 
 ## Stop Rules
 
