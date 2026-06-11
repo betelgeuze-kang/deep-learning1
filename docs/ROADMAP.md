@@ -2029,6 +2029,14 @@ Current next boundary:
   generation gate ready 0, and zero checkpoint payload bytes downloaded or
   committed by v61am. Actual model generation, production latency,
   near-frontier, and release claims stay blocked.
+- `v61an` adds checkpoint full page-hash execution gating.
+  `experiments/test_v61an_checkpoint_full_page_hash_execution_gate.sh`
+  consumes v61am/v61t/v61r and records 291 resumable execution chunks over
+  134161 planned page hashes, 0 hashed chunks, 291 activation-blocked chunks,
+  0 local page hash verification rows, `full_page_hash_execution_ready=0`, and
+  zero checkpoint payload bytes downloaded or committed by v61an. Full
+  page-hash coverage, actual model generation, production latency,
+  near-frontier, and release claims stay blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
