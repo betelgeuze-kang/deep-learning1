@@ -2013,6 +2013,14 @@ Current next boundary:
   execution, local materialization, full page-hash coverage, actual model
   generation, production latency, and release claims stay blocked unless an
   outside-repository target with enough live free space is supplied.
+- `v61al` adds checkpoint warehouse activation gating.
+  `experiments/test_v61al_checkpoint_warehouse_activation_gate.sh`
+  consumes v61ak/v61ah/v61w and records 59 activation command rows, 0 admitted
+  activation rows, 59 blocked activation rows, `activation_package_ready=0`,
+  `selected_target_id=none`, `selected_backend_id=curl-resume`, explicit
+  execution required, and zero checkpoint payload bytes downloaded or committed
+  by v61al. Download execution, local materialization, full page-hash coverage,
+  actual model generation, production latency, and release claims stay blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
