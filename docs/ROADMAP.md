@@ -1909,6 +1909,16 @@ Current next boundary:
   full checkpoint materialization, full page-hash coverage, real Mixtral
   generation, near-frontier quality, production latency, and release claims
   blocked.
+- `v61aa` adds sampled hotset tensor-slice verification.
+  `experiments/test_v61aa_hotset_tensor_slice_verifier.sh` consumes
+  v61z/v61v/v61y and interprets the 16 local sampled hotset pages as real BF16
+  tensor segments using the safetensors tensor/page bindings. It records 16
+  tensor slices, 15 MoE tensor slices, one embedding tensor slice, 33550832
+  tensor-segment bytes, 65536 sampled BF16 values, 65536 finite values, zero
+  NaN/Inf values, 16 slice/page hash matches, and
+  `bf16_tensor_slice_stats_ready=1`, while keeping full checkpoint
+  materialization, full page-hash coverage, real Mixtral generation,
+  near-frontier quality, production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

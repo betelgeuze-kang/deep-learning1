@@ -754,6 +754,32 @@ Pass condition:
   generation, near-frontier, production-latency, and release claims remain
   blocked
 
+### v61aa Hotset Tensor Slice Verifier
+
+Interpret the sampled local hotset pages as BF16 tensor segments using the real
+safetensors tensor/page bindings, without executing model generation.
+
+Outputs:
+
+- `hotset_tensor_slice_stat_rows.csv`
+- `hotset_tensor_slice_sample_value_rows.csv`
+- `hotset_tensor_slice_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61AA_HOTSET_TENSOR_SLICE_BOUNDARY.md`
+
+Pass condition:
+
+- v61z direct-I/O hotset replay and v61v tensor/page binding evidence are bound
+- 16 local sampled hotset pages map to 16 real BF16 tensor slices
+- the slices cover 15 MoE expert pages and one embedding page
+- 33550832 tensor-segment bytes are hash-bound to the sampled local pages
+- 65536 sampled BF16 values are finite, with zero sampled NaN/Inf values
+- derived tensor-slice stats are recorded without committing checkpoint payload
+  bytes to the repository
+- full checkpoint materialization, full safetensors page-hash coverage, real
+  generation, near-frontier, production-latency, and release claims remain
+  blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -779,9 +805,10 @@ The benchmark ladder should be ordered by runtime risk:
 19. NVMe hotset runtime replay manifest over remote-hashed pages.
 20. Local sampled-hotset page materialization and readback verification.
 21. Sampled hotset direct-I/O read replay with latency metrics.
-22. Complete-source 1000+ QA workload with real model generation.
-23. Same runtime under long-context workloads with source-bound quality checks.
-24. One-command local assistant demo.
+22. Sampled hotset BF16 tensor-slice interpretation and stats.
+23. Complete-source 1000+ QA workload with real model generation.
+24. Same runtime under long-context workloads with source-bound quality checks.
+25. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1112,9 +1139,10 @@ without weakening the boundary:
 11. Closed as v61x hotset manifest: bind v61w/v61v/v61s/v61m into 16 planned NVMe hotset page slots and 37 source-bound replay rows while keeping hotset payload materialization and real generation blocked.
 12. Closed as v61y sampled hotset verifier: materialize the 16 sampled hotset pages outside the repository and verify local/readback hashes while keeping full checkpoint materialization and real generation blocked.
 13. Closed as v61z sampled hotset direct-I/O replay: read the 16 local sampled hotset pages with O_DIRECT, verify hashes, and record latency/throughput while keeping full checkpoint materialization and real generation blocked.
-14. Promote identity-verified local shards into full safetensors page-hash coverage.
-15. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-16. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+14. Closed as v61aa sampled hotset tensor-slice verifier: interpret the 16 local pages as BF16 tensor segments, record finite sampled stats, and keep real generation blocked.
+15. Promote identity-verified local shards into full safetensors page-hash coverage.
+16. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+17. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1155,9 +1183,13 @@ The current v61 runtime prototype can say:
   matches, 33554432 direct-I/O bytes, p50/p95 read latency
   0.580768/0.956690 ms, and 2784.734538 MiB/s sampled throughput, but this is
   still not real model generation or production latency
+- those local pages can be interpreted as 16 real BF16 tensor slices covering
+  33550832 segment bytes, with 65536 sampled finite values, zero sampled
+  NaN/Inf values, and 16 slice/page hash matches, but this is still not real
+  Mixtral generation
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, and sampled direct-I/O hotset read replay, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, and sampled BF16 tensor-slice interpretation, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.
