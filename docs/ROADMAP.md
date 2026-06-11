@@ -1919,6 +1919,16 @@ Current next boundary:
   `bf16_tensor_slice_stats_ready=1`, while keeping full checkpoint
   materialization, full page-hash coverage, real Mixtral generation,
   near-frontier quality, production latency, and release claims blocked.
+- `v61ab` adds sampled hotset tensor-tile quantization probes.
+  `experiments/test_v61ab_hotset_tensor_tile_quant_probe.sh` consumes v61aa
+  and runs bounded numeric dot-tile probes over the sampled real-checkpoint
+  BF16 tensor slices. It records 128 tensor tile probe rows, 120 MoE tile rows,
+  8 embedding tile rows, 524288 BF16 tile values, 128/128 finite
+  baseline/q8/q4 dot rows, q8/q4 mean absolute dot errors of
+  0.00113809798/0.0244754219, `q8_quant_probe_ready=1`, and
+  `q4_quant_probe_ready=1`, while keeping full checkpoint materialization,
+  full page-hash coverage, real Mixtral generation, near-frontier quality,
+  production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

@@ -780,6 +780,33 @@ Pass condition:
   generation, near-frontier, production-latency, and release claims remain
   blocked
 
+### v61ab Hotset Tensor Tile Quant Probe
+
+Run bounded numeric dot-tile probes over the sampled real-checkpoint BF16 tensor
+slices and compare q8/q4 dequantized dot probes, without executing model
+generation.
+
+Outputs:
+
+- `hotset_tensor_tile_probe_rows.csv`
+- `hotset_tensor_tile_sample_trace_rows.csv`
+- `hotset_tensor_tile_quant_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61AB_HOTSET_TENSOR_TILE_QUANT_BOUNDARY.md`
+
+Pass condition:
+
+- v61aa sampled BF16 tensor-slice evidence is bound
+- 128 bounded tensor tile probes run over 524288 BF16 values
+- the probes cover 120 MoE tile rows and 8 embedding tile rows
+- 128/128 baseline dot rows are finite
+- 128/128 q8 and q4 dequantized dot rows are finite
+- q8/q4 quantized dot error metrics are recorded without committing checkpoint
+  payload bytes to the repository
+- full checkpoint materialization, full safetensors page-hash coverage, real
+  generation, near-frontier, production-latency, and release claims remain
+  blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -806,9 +833,10 @@ The benchmark ladder should be ordered by runtime risk:
 20. Local sampled-hotset page materialization and readback verification.
 21. Sampled hotset direct-I/O read replay with latency metrics.
 22. Sampled hotset BF16 tensor-slice interpretation and stats.
-23. Complete-source 1000+ QA workload with real model generation.
-24. Same runtime under long-context workloads with source-bound quality checks.
-25. One-command local assistant demo.
+23. Sampled hotset BF16/q8/q4 numeric tile probes.
+24. Complete-source 1000+ QA workload with real model generation.
+25. Same runtime under long-context workloads with source-bound quality checks.
+26. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1140,9 +1168,10 @@ without weakening the boundary:
 12. Closed as v61y sampled hotset verifier: materialize the 16 sampled hotset pages outside the repository and verify local/readback hashes while keeping full checkpoint materialization and real generation blocked.
 13. Closed as v61z sampled hotset direct-I/O replay: read the 16 local sampled hotset pages with O_DIRECT, verify hashes, and record latency/throughput while keeping full checkpoint materialization and real generation blocked.
 14. Closed as v61aa sampled hotset tensor-slice verifier: interpret the 16 local pages as BF16 tensor segments, record finite sampled stats, and keep real generation blocked.
-15. Promote identity-verified local shards into full safetensors page-hash coverage.
-16. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-17. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+15. Closed as v61ab sampled hotset tensor-tile quant probe: run bounded BF16/q8/q4 dot-tile probes over the sampled tensor slices, record finite numeric rows, and keep real generation blocked.
+16. Promote identity-verified local shards into full safetensors page-hash coverage.
+17. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+18. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1187,9 +1216,13 @@ The current v61 runtime prototype can say:
   33550832 segment bytes, with 65536 sampled finite values, zero sampled
   NaN/Inf values, and 16 slice/page hash matches, but this is still not real
   Mixtral generation
+- those sampled slices can feed 128 bounded BF16/q8/q4 dot-tile probes over
+  524288 BF16 values, with 128/128 finite baseline/q8/q4 dot rows and q8/q4
+  mean absolute dot errors of 0.00113809798/0.0244754219, but this is still not
+  real Mixtral generation or production latency
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, and sampled BF16 tensor-slice interpretation, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, and sampled BF16/q8/q4 tensor-tile numeric probes, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.
