@@ -589,6 +589,33 @@ Pass condition:
   blocked until all 59 shards pass identity verification and every page is
   hashed
 
+### v61u Remote Checkpoint Page Hash Sampler
+
+Expand real checkpoint page-hash evidence without downloading full shards by
+performing bounded HTTP Range reads over deterministic v61q full-size checkpoint
+pages.
+
+Outputs:
+
+- `remote_page_hash_sample_plan_rows.csv`
+- `remote_page_hash_sample_rows.csv`
+- `remote_page_hash_page_map_overlap_rows.csv`
+- `remote_page_hash_sample_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61U_REMOTE_CHECKPOINT_PAGE_HASH_SAMPLER_BOUNDARY.md`
+
+Pass condition:
+
+- v61q real checkpoint page map and v61t materialization verifier evidence are
+  bound
+- deterministic full-size v61q checkpoint page rows are selected
+- every sampled remote page has an HTTP Range read, byte count, page sha256, and
+  page-map overlap row
+- checkpoint payload bytes are not persisted or committed to the repository
+- full safetensors page-hash coverage, local checkpoint materialization, real
+  generation, near-frontier, production-latency, and release claims remain
+  blocked because bounded remote samples are not exhaustive coverage
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -936,9 +963,10 @@ without weakening the boundary:
 5. Closed as v61o seed: add checkpoint index, safetensors header, and sampled page-hash probe intake without persisting checkpoint payload bytes.
 6. Closed as v61p preflight: add an outside-repository local SSD checkpoint residency plan, disk budget audit, and shard presence audit without downloading checkpoint payload bytes.
 7. Closed as v61t verifier: promote v61p size/presence rows into local shard identity verification using safetensors header hashes and sampled page hashes, while keeping materialization blocked on the current host.
-8. Promote identity-verified local shards into full safetensors page-hash coverage.
-9. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-10. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+8. Closed as v61u sampler: expand sampled page-hash evidence with bounded remote full-page range hashes while keeping full page-hash coverage blocked.
+9. Promote identity-verified local shards into full safetensors page-hash coverage.
+10. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+11. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -960,9 +988,11 @@ The current v61 runtime prototype can say:
   blocked by the current 21337460736-byte SSD budget
 - local checkpoint materialization has an identity verifier, but the current
   host has 0 local existing shards and 0 identity-verified shards
+- bounded remote page-hash sampling has read 16 full 2 MiB checkpoint pages and
+  stored hashes only, not payload bytes or full coverage
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, and local checkpoint materialization identity verification mechanics, not completed real-checkpoint residency or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, and bounded remote checkpoint page-hash samples, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.

@@ -1829,6 +1829,15 @@ Current next boundary:
   `full_safetensors_page_hash_binding_ready=0`, while keeping real Mixtral
   generation, near-frontier quality, production latency, and release claims
   blocked.
+- `v61u` adds bounded remote checkpoint page-hash samples.
+  `experiments/test_v61u_remote_checkpoint_page_hash_sampler.sh` consumes v61q
+  and v61t, selects 16 deterministic full-size checkpoint pages, and performs
+  HTTP Range reads against the real Mixtral checkpoint source while storing only
+  hashes and metadata. It records 16 ready remote page-hash sample rows,
+  33554432 remote payload bytes read, and
+  `full_safetensors_page_hash_binding_ready=0`, while keeping local checkpoint
+  materialization, real Mixtral generation, near-frontier quality, production
+  latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
