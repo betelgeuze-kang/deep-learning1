@@ -378,6 +378,8 @@ Implemented now:
 - `experiments/test_v61t_local_checkpoint_materialization_verifier.sh`
 - `experiments/run_v61u_remote_checkpoint_page_hash_sampler.sh`
 - `experiments/test_v61u_remote_checkpoint_page_hash_sampler.sh`
+- `experiments/run_v61v_remote_page_tensor_binding.sh`
+- `experiments/test_v61v_remote_page_tensor_binding.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -455,6 +457,7 @@ Implemented now:
 - `results/v61s_one_command_source_bound_qa_replay/replay_001/` one-command source-bound QA replay artifacts
 - `results/v61t_local_checkpoint_materialization_verifier/verify_001/` local checkpoint materialization identity verifier artifacts
 - `results/v61u_remote_checkpoint_page_hash_sampler/sample_001/` bounded remote checkpoint page-hash sample artifacts
+- `results/v61v_remote_page_tensor_binding/binding_001/` remote-hashed page tensor/runtime-node binding artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -606,6 +609,8 @@ The v61t local checkpoint materialization verifier is implemented and covered by
 
 The v61u remote checkpoint page-hash sampler is implemented and covered by `experiments/test_v61u_remote_checkpoint_page_hash_sampler.sh`. It consumes v61q/v61t, performs bounded HTTP Range reads over 16 deterministic full-size v61q checkpoint pages from the real Mixtral checkpoint source, and records 16 ready page-hash sample rows plus 33554432 remote payload bytes read as hashes only. It keeps local checkpoint materialization, full safetensors page-hash coverage, real Mixtral generation, near-frontier quality, production latency, and release claims blocked.
 
+The v61v remote page tensor binding is implemented and covered by `experiments/test_v61v_remote_page_tensor_binding.sh`. It consumes v61u and v61q, binds each of the 16 remote-hashed sampled checkpoint pages to real safetensors tensor/page segment rows and runtime scheduling nodes, and records 15 MoE expert page bindings across 15 layers and all eight expert indices plus one embedding binding. It keeps local checkpoint materialization, full safetensors page-hash coverage, real Mixtral generation, near-frontier quality, production latency, and release claims blocked.
+
 ## Immediate Next PR Target
 
 The next implementation PR should extend v52-v60 from contract scaffold to measured and reviewed rows:
@@ -629,6 +634,6 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 17. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
 18. Closed as v61a-v61j prototype: replace the broken v52w-style page-to-kernel numeric path with a deterministic SSD page-store -> direct I/O reader -> RouteHint prefetch/VRAM cache -> CPU page-dequant-matmul -> expert router -> predictive prefetch -> mixed quant planner -> dense stress blocker -> logical 128B MoE active-sparse contract -> one-command demo chain, including token-level SSD I/O metrics and no-RAM-resident full-model audit rows.
 19. Closed as v61k manifest seed: replace the logical-only model reference with a legally redistributable Mixtral 8x22B page manifest, while keeping checkpoint weight materialization and runtime claims blocked.
-20. Closed as v61l/v61m/v61n/v61o/v61p/v61q/v61r/v61s/v61t/v61u measurement seeds: add GPU/ROCm page-dequant-matmul timing, KV-cache residency/eviction policy, a source-bound QA workload seed, checkpoint index/header/sampled page-hash probes, local SSD checkpoint residency preflight, real safetensors-header-derived checkpoint page mapping, a full page-hash sweep plan, one-command source-bound QA replay, local checkpoint materialization identity verification, and bounded remote checkpoint page-hash samples over the v61k/v53g evidence path, while keeping the payload partly synthetic, full checkpoint materialization blocked, host-RAM KV spill disabled, full page-hash coverage blocked, and complete-source A-H QA blocked. Next v61 runtime steps are satisfying the v61p SSD budget/presence requirements outside the repository, completing full safetensors page-hash coverage, and real model generation over source-bound workloads without opening near-frontier or release claims until external review passes.
+20. Closed as v61l/v61m/v61n/v61o/v61p/v61q/v61r/v61s/v61t/v61u/v61v measurement seeds: add GPU/ROCm page-dequant-matmul timing, KV-cache residency/eviction policy, a source-bound QA workload seed, checkpoint index/header/sampled page-hash probes, local SSD checkpoint residency preflight, real safetensors-header-derived checkpoint page mapping, a full page-hash sweep plan, one-command source-bound QA replay, local checkpoint materialization identity verification, bounded remote checkpoint page-hash samples, and remote-hashed page tensor/runtime-node binding over the v61k/v53g evidence path, while keeping the payload partly synthetic, full checkpoint materialization blocked, host-RAM KV spill disabled, full page-hash coverage blocked, and complete-source A-H QA blocked. Next v61 runtime steps are satisfying the v61p SSD budget/presence requirements outside the repository, completing full safetensors page-hash coverage, and real model generation over source-bound workloads without opening near-frontier or release claims until external review passes.
 
 This completes the v52-v60 contract scaffold chain without weakening the claim boundary. It does not complete the v1.0 Architecture Challenge itself.

@@ -23,6 +23,8 @@ Allowed current claim:
 - SSD-resident runtime roadmap for active-sparse local LLM execution.
 - NVMe weight-store, page routing, prefetch, and quantization contracts can be measured as research artifacts.
 - RouteMemory and RouteHint are being redirected from answer-only evidence toward runtime scheduling evidence.
+- Bounded remote checkpoint page hashes can be bound to real tensor/page segments
+  and runtime nodes as metadata-only evidence.
 
 Blocked until verified:
 
@@ -616,6 +618,35 @@ Pass condition:
   generation, near-frontier, production-latency, and release claims remain
   blocked because bounded remote samples are not exhaustive coverage
 
+### v61v Remote Page Tensor Binding
+
+Bind bounded remote checkpoint page-hash samples to real safetensors tensor/page
+segments and runtime scheduling nodes without claiming local residency or full
+page-hash coverage.
+
+Outputs:
+
+- `selected_v61q_page_segment_rows.csv`
+- `remote_sample_tensor_binding_rows.csv`
+- `remote_sample_runtime_node_rows.csv`
+- `remote_sample_tensor_role_summary_rows.csv`
+- `remote_sample_tensor_coverage_rows.csv`
+- `remote_sample_tensor_binding_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61V_REMOTE_PAGE_TENSOR_BINDING_BOUNDARY.md`
+
+Pass condition:
+
+- v61u remote page-hash sample evidence and v61q checkpoint page-map evidence
+  are bound
+- every sampled remote page has a tensor/page segment binding and runtime-node
+  row
+- MoE expert sampled pages include layer and expert indices
+- checkpoint payload bytes are not persisted or committed to the repository
+- local checkpoint materialization, full safetensors page-hash coverage, real
+  generation, near-frontier, production-latency, and release claims remain
+  blocked because the binding covers bounded samples only
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -636,9 +667,10 @@ The benchmark ladder should be ordered by runtime risk:
 14. KV-cache residency/eviction policy over the real-model geometry.
 15. Source-bound code/doc QA workload seed over materialized files.
 16. One-command source-bound QA replay.
-17. Complete-source 1000+ QA workload with real model generation.
-18. Same runtime under long-context workloads with source-bound quality checks.
-19. One-command local assistant demo.
+17. Remote-hashed checkpoint page tensor/runtime-node binding.
+18. Complete-source 1000+ QA workload with real model generation.
+19. Same runtime under long-context workloads with source-bound quality checks.
+20. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -964,9 +996,10 @@ without weakening the boundary:
 6. Closed as v61p preflight: add an outside-repository local SSD checkpoint residency plan, disk budget audit, and shard presence audit without downloading checkpoint payload bytes.
 7. Closed as v61t verifier: promote v61p size/presence rows into local shard identity verification using safetensors header hashes and sampled page hashes, while keeping materialization blocked on the current host.
 8. Closed as v61u sampler: expand sampled page-hash evidence with bounded remote full-page range hashes while keeping full page-hash coverage blocked.
-9. Promote identity-verified local shards into full safetensors page-hash coverage.
-10. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-11. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+9. Closed as v61v binder: bind remote-hashed sampled pages to real tensor/page segments and runtime nodes while keeping full coverage and local materialization blocked.
+10. Promote identity-verified local shards into full safetensors page-hash coverage.
+11. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+12. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -990,9 +1023,12 @@ The current v61 runtime prototype can say:
   host has 0 local existing shards and 0 identity-verified shards
 - bounded remote page-hash sampling has read 16 full 2 MiB checkpoint pages and
   stored hashes only, not payload bytes or full coverage
+- those 16 remote-hashed pages are bound to 16 real tensor/runtime-node rows,
+  including 15 MoE expert page bindings across 15 layers and all eight expert
+  indices
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, and bounded remote checkpoint page-hash samples, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, and remote-hashed page tensor/runtime-node bindings, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.

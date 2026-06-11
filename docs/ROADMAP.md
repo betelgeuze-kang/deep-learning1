@@ -1838,6 +1838,14 @@ Current next boundary:
   `full_safetensors_page_hash_binding_ready=0`, while keeping local checkpoint
   materialization, real Mixtral generation, near-frontier quality, production
   latency, and release claims blocked.
+- `v61v` adds remote page tensor/runtime-node binding.
+  `experiments/test_v61v_remote_page_tensor_binding.sh` consumes v61u and binds
+  remote-hashed sampled pages to v61q tensor segments and runtime scheduling
+  nodes. It records 16 tensor bindings, 16 runtime nodes, 15 MoE expert page
+  bindings across 15 layers and all eight expert indices, and
+  `remote_sample_tensor_binding_ready=1`, while keeping local checkpoint
+  materialization, full page-hash coverage, real Mixtral generation,
+  near-frontier quality, production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
