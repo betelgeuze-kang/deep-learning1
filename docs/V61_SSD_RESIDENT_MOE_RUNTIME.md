@@ -434,7 +434,7 @@ Pass condition:
 - v53g complete-source manifest is bound
 - materialized v53c canary-overlap files provide the cited source bytes
 - supported answers have citation rows and unsupported runtime claims abstain
-- complete-source 1000+ QA, real Mixtral generation, safetensors page hash
+- complete-source A-H QA rows, real Mixtral generation, safetensors page hash
   binding, near-frontier, production-latency, and release claims remain blocked
 
 ### v61o Checkpoint Shard Header Probe
@@ -708,8 +708,9 @@ Verified current summary:
 
 This is allowed to claim only a source-bound QA workload seed over materialized
 v53c canary-overlap files that are also bound to the v53g complete-source
-manifest. It is not the complete-source 1000+ query audit and it is not real
-Mixtral checkpoint generation.
+manifest. v53i now supplies a complete-source 1000-query/source-span set, but
+this v61 seed is still not complete-source A-H QA and it is not real Mixtral
+checkpoint generation.
 
 ## Current Checkpoint Shard Header Probe
 
@@ -759,7 +760,7 @@ without weakening the boundary:
 4. Closed as v61n seed: run a source-bound code/doc QA workload through the v61 evidence chain and bind answers to citation/abstain/resource evidence.
 5. Closed as v61o seed: add checkpoint index, safetensors header, and sampled page-hash probe intake without persisting checkpoint payload bytes.
 6. Promote sampled page probes into full page-hash coverage or local SSD shard residency outside the repository.
-7. Promote the source-bound seed into complete-source 1000+ QA with real model generation only after checkpoint/page hash binding exists.
+7. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
 8. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape

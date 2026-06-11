@@ -1579,6 +1579,14 @@ Current next boundary:
   keeping complete-source span extraction, 1000+ complete-source query rows,
   A-H answer/citation/resource rows, `v53_ready`, review artifacts, and release
   claims blocked.
+- `v53i` adds the complete-source query instantiation layer.
+  `experiments/test_v53i_complete_source_query_instantiation.sh` applies the
+  v53g eight-family 1000-query budget to line-level spans from v53h content,
+  records 1000 complete-source query rows, 1000 source-span rows, 840 supported
+  rows, 160 negative/abstain rows, eight families, and 10-repo coverage. It
+  marks `complete_source_query_rows_ready=1` while keeping A-H
+  answer/citation/resource rows, symmetric scorer/policy rows, `v53_ready`,
+  review artifacts, and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
@@ -1722,7 +1730,7 @@ Current next boundary:
   and the currently materialized v53c canary-overlap files into source-bound
   query rows, with citation-supported answers, one unsupported-claim abstain per
   repository, 10 repositories, and manifest-bound source files. It keeps
-  complete-source 1000+ QA, real Mixtral generation, safetensors page-hash
+  complete-source A-H QA, real Mixtral generation, safetensors page-hash
   binding, near-frontier quality, production latency, and release claims
   blocked.
 - `v61o` strengthens checkpoint identity without full weight residency.

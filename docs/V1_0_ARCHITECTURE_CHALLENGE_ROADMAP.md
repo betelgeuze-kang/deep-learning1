@@ -354,6 +354,8 @@ Implemented now:
 - `experiments/test_v53g_complete_source_manifest.sh`
 - `experiments/run_v53h_complete_source_content_snapshot.sh`
 - `experiments/test_v53h_complete_source_content_snapshot.sh`
+- `experiments/run_v53i_complete_source_query_instantiation.sh`
+- `experiments/test_v53i_complete_source_query_instantiation.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -417,6 +419,9 @@ Implemented now:
 - `results/v53d_canary_source_query_seed_100/query_001/` 100-row source-span-bound canary query seed artifacts
 - `results/v53e_canary_query_scale_1000/scale_001/` 1000-row canary-scope source-span-bound query scale artifacts
 - `results/v53f_ah_answer_citation_resource_intake/intake_001/` A-H answer/citation/resource intake artifacts
+- `results/v53g_complete_source_manifest/manifest_001/` complete-source recursive Git tree manifest artifacts
+- `results/v53h_complete_source_content_snapshot/snapshot_001/` complete-source content snapshot artifacts
+- `results/v53i_complete_source_query_instantiation/instantiate_001/` complete-source 1000-query/source-span artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -496,6 +501,8 @@ The v53g complete-source manifest layer binds the 10 locked repositories to recu
 
 The v53h complete-source content snapshot layer materializes the v53g manifest from pinned Git blobs. It records 11318 content files, 11318 content sha256 rows, 124845122 content bytes, 11312 query-eligible content rows, and 10 content-ready repositories. It marks `complete_source_content_snapshot_ready=1` while intentionally keeping `v53_ready=0`, complete-source span extraction, complete-source 1000+ query rows, A-H answer/citation/resource rows, review artifacts, and release claims blocked.
 
+The v53i complete-source query instantiation layer applies the v53g eight-family 1000-query budget to line-level spans from the v53h materialized content snapshot. It records 1000 complete-source query rows, 1000 matching source-span rows, 840 supported rows, 160 negative/abstain rows, eight families, and 10-repo coverage. It marks `complete_source_query_rows_ready=1` while intentionally keeping `v53_ready=0`, A-H answer/citation/resource rows, symmetric scorer/policy rows, review artifacts, and release claims blocked.
+
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
 The v54b scale layer emits 1000 deterministic local RouteHint generation rows across six domains, with RouteMemory evidence rows, compact RouteHint rows, generator input rows, grounded generation rows, citation rows, abstain rows, unsupported-claim rows, resource rows, and hash manifests. It marks `v54_generation_1000_ready=1` with `attention_blocks=0`, `transformer_blocks=0`, `raw_prompt_context_appended_rows=0`, and `wrong_answer_rows=0`, while keeping release and 30B-150B equivalence claims blocked.
@@ -538,7 +545,7 @@ The v61l GPU page-dequant-matmul measurement is implemented and covered by `expe
 
 The v61m KV-cache residency/eviction policy is implemented and covered by `experiments/test_v61m_kv_cache_residency_eviction_policy.sh`. It computes Mixtral KV geometry from the v61k config, consumes the v61l page-kernel evidence, and emits deterministic VRAM hot/sink plus NVMe cold-tier residency rows. It records `kv_bytes_per_token=229376`, `kv_tokens_per_page=9`, `max_context_tokens=8192`, `max_resident_vram_pages=129`, `max_evicted_nvme_pages=782`, `kv_cache_policy_ready=1`, and `host_ram_kv_spill_enabled=0`; it keeps safetensors page-hash binding, source-bound QA, long-context quality, near-frontier quality, production latency, and release claims blocked.
 
-The v61n source-bound QA workload seed is implemented and covered by `experiments/test_v61n_source_bound_qa_workload.sh`. It binds v61j one-command runtime evidence, v61m KV policy evidence, the v53g complete-source manifest, and the currently materialized v53c canary-overlap files into source-bound query rows. It records citation-bound supported answers, one unsupported-claim abstain per repository, 10 repositories, manifest-bound source files, and `source_bound_qa_workload_ready=1`; it keeps complete-source 1000+ QA, real Mixtral generation, safetensors page-hash binding, near-frontier quality, production latency, and release claims blocked.
+The v61n source-bound QA workload seed is implemented and covered by `experiments/test_v61n_source_bound_qa_workload.sh`. It binds v61j one-command runtime evidence, v61m KV policy evidence, the v53g complete-source manifest, and the currently materialized v53c canary-overlap files into source-bound query rows. It records citation-bound supported answers, one unsupported-claim abstain per repository, 10 repositories, manifest-bound source files, and `source_bound_qa_workload_ready=1`; it keeps complete-source A-H QA, real Mixtral generation, safetensors page-hash binding, near-frontier quality, production latency, and release claims blocked.
 
 The v61o checkpoint shard/header probe is implemented and covered by `experiments/test_v61o_checkpoint_shard_header_probe.sh`. It fetches the Hugging Face safetensors index, HEAD-probes all 59 checkpoint shards, range-reads every safetensors header, parses 1739 tensor header rows, and hashes three sampled first 2 MiB payload pages while persisting zero checkpoint payload bytes. It keeps full checkpoint materialization, full page-hash coverage, local SSD checkpoint residency, real Mixtral generation, near-frontier quality, production latency, and release claims blocked.
 
@@ -553,8 +560,8 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 5. In progress as v52n/v52o seed: supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E over the v50 9-query seed.
 6. In progress as v52s/v52u/v52v/v52t: NVMe weight-tier contract, mmap reader scaffold, ROCm HIP bind, and explicit D/E local deferral; next extend tiered matmul decode (v52w) or external bake, then v52p/q/r and v59c.
 7. Closed as v52y default policy: keep F explicitly final-deferred with reason unless supplied evidence validates, and scope `v52_ready=1` to the measured baseline registry rather than v1.0 comparison readiness.
-8. In progress as v53g/v53h seeds: expand v53c canary snapshots into a recursive complete-source tree manifest and complete-source content snapshot for the 10 locked repositories; next add line-level source spans and complete-source query instantiation.
-9. Promote v53e/v53f canary-scope query and intake layers into complete-source 1000+ query audit evidence over v53h content, then supply valid A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
+8. Closed as v53g/v53h/v53i seeds: expand v53c canary snapshots into a recursive complete-source tree manifest, complete-source content snapshot, and 1000-row complete-source query/source-span instantiation for the 10 locked repositories.
+9. Promote v53i into complete-source A-H answer/citation/resource evidence, then add symmetric scorer/policy rows over that frozen query set.
 10. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
 11. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
 12. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
@@ -565,6 +572,6 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 17. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
 18. Closed as v61a-v61j prototype: replace the broken v52w-style page-to-kernel numeric path with a deterministic SSD page-store -> direct I/O reader -> RouteHint prefetch/VRAM cache -> CPU page-dequant-matmul -> expert router -> predictive prefetch -> mixed quant planner -> dense stress blocker -> logical 128B MoE active-sparse contract -> one-command demo chain, including token-level SSD I/O metrics and no-RAM-resident full-model audit rows.
 19. Closed as v61k manifest seed: replace the logical-only model reference with a legally redistributable Mixtral 8x22B page manifest, while keeping checkpoint weight materialization and runtime claims blocked.
-20. Closed as v61l/v61m/v61n/v61o measurement seeds: add GPU/ROCm page-dequant-matmul timing, KV-cache residency/eviction policy, a source-bound QA workload seed, and checkpoint index/header/sampled page-hash probes over the v61k/v53g evidence path, while keeping the payload partly synthetic, full checkpoint materialization blocked, host-RAM KV spill disabled, full page-hash coverage blocked, and complete-source 1000+ QA blocked. Next v61 runtime steps are local SSD shard residency outside the repository, full safetensors page-hash coverage, and real model generation over source-bound workloads without opening near-frontier or release claims until external review passes.
+20. Closed as v61l/v61m/v61n/v61o measurement seeds: add GPU/ROCm page-dequant-matmul timing, KV-cache residency/eviction policy, a source-bound QA workload seed, and checkpoint index/header/sampled page-hash probes over the v61k/v53g evidence path, while keeping the payload partly synthetic, full checkpoint materialization blocked, host-RAM KV spill disabled, full page-hash coverage blocked, and complete-source A-H QA blocked. Next v61 runtime steps are local SSD shard residency outside the repository, full safetensors page-hash coverage, and real model generation over source-bound workloads without opening near-frontier or release claims until external review passes.
 
 This completes the v52-v60 contract scaffold chain without weakening the claim boundary. It does not complete the v1.0 Architecture Challenge itself.
