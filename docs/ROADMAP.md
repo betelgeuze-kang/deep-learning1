@@ -1587,6 +1587,13 @@ Current next boundary:
   marks `complete_source_query_rows_ready=1` while keeping A-H
   answer/citation/resource rows, symmetric scorer/policy rows, `v53_ready`,
   review artifacts, and release claims blocked.
+- `v53j` adds the complete-source A-H intake layer.
+  `experiments/test_v53j_complete_source_ah_answer_citation_resource_intake.sh`
+  promotes the v53f intake surface onto the v53i complete-source query set,
+  records seven required core systems, 7000 A/B/C/D/E/G/H answer/resource/
+  citation targets, and binds optional F to the v52y final-deferred policy. It
+  keeps supplied core rows, symmetric scorer/policy rows, `v53_ready`, review
+  artifacts, and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,

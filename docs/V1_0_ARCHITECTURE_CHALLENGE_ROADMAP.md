@@ -356,6 +356,8 @@ Implemented now:
 - `experiments/test_v53h_complete_source_content_snapshot.sh`
 - `experiments/run_v53i_complete_source_query_instantiation.sh`
 - `experiments/test_v53i_complete_source_query_instantiation.sh`
+- `experiments/run_v53j_complete_source_ah_answer_citation_resource_intake.sh`
+- `experiments/test_v53j_complete_source_ah_answer_citation_resource_intake.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -422,6 +424,7 @@ Implemented now:
 - `results/v53g_complete_source_manifest/manifest_001/` complete-source recursive Git tree manifest artifacts
 - `results/v53h_complete_source_content_snapshot/snapshot_001/` complete-source content snapshot artifacts
 - `results/v53i_complete_source_query_instantiation/instantiate_001/` complete-source 1000-query/source-span artifacts
+- `results/v53j_complete_source_ah_answer_citation_resource_intake/intake_001/` complete-source A-H intake artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -503,6 +506,8 @@ The v53h complete-source content snapshot layer materializes the v53g manifest f
 
 The v53i complete-source query instantiation layer applies the v53g eight-family 1000-query budget to line-level spans from the v53h materialized content snapshot. It records 1000 complete-source query rows, 1000 matching source-span rows, 840 supported rows, 160 negative/abstain rows, eight families, and 10-repo coverage. It marks `complete_source_query_rows_ready=1` while intentionally keeping `v53_ready=0`, A-H answer/citation/resource rows, symmetric scorer/policy rows, review artifacts, and release claims blocked.
 
+The v53j complete-source A-H intake layer promotes the v53f answer/citation/resource evidence surface onto the v53i complete-source query set. It records 7000 A/B/C/D/E/G/H core answer/resource/citation targets, binds optional F to the v52y `deferred-with-reason-final` policy, and emits validation templates over the same 1000 complete-source query IDs. It intentionally keeps `v53_ready=0`, supplied core answer/citation/resource rows, symmetric scorer/policy rows, review artifacts, and release claims blocked.
+
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
 The v54b scale layer emits 1000 deterministic local RouteHint generation rows across six domains, with RouteMemory evidence rows, compact RouteHint rows, generator input rows, grounded generation rows, citation rows, abstain rows, unsupported-claim rows, resource rows, and hash manifests. It marks `v54_generation_1000_ready=1` with `attention_blocks=0`, `transformer_blocks=0`, `raw_prompt_context_appended_rows=0`, and `wrong_answer_rows=0`, while keeping release and 30B-150B equivalence claims blocked.
@@ -560,8 +565,8 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 5. In progress as v52n/v52o seed: supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E over the v50 9-query seed.
 6. In progress as v52s/v52u/v52v/v52t: NVMe weight-tier contract, mmap reader scaffold, ROCm HIP bind, and explicit D/E local deferral; next extend tiered matmul decode (v52w) or external bake, then v52p/q/r and v59c.
 7. Closed as v52y default policy: keep F explicitly final-deferred with reason unless supplied evidence validates, and scope `v52_ready=1` to the measured baseline registry rather than v1.0 comparison readiness.
-8. Closed as v53g/v53h/v53i seeds: expand v53c canary snapshots into a recursive complete-source tree manifest, complete-source content snapshot, and 1000-row complete-source query/source-span instantiation for the 10 locked repositories.
-9. Promote v53i into complete-source A-H answer/citation/resource evidence, then add symmetric scorer/policy rows over that frozen query set.
+8. Closed as v53g/v53h/v53i/v53j seeds: expand v53c canary snapshots into a recursive complete-source tree manifest, complete-source content snapshot, 1000-row complete-source query/source-span instantiation, and complete-source A/B/C/D/E/G/H intake surface for the 10 locked repositories.
+9. Supply valid A/B/C/D/E/G/H answer/citation/resource rows over v53j, then add symmetric scorer/policy rows over that frozen query set.
 10. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
 11. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
 12. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
