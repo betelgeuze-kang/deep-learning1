@@ -2041,21 +2041,26 @@ Current next boundary:
   page-hash coverage, actual model generation, production latency, and release
   claims stay blocked.
 - `v61am` adds checkpoint post-activation verification gating.
-  `experiments/test_v61am_checkpoint_post_activation_verification_gate.sh`
+  `experiments/test_v61am_checkpoint_post_activation_verification_gate.sh` plus
+  `experiments/test_v61am_checkpoint_post_activation_verification_gate_target_override.sh`
   consumes v61al/v61t/v61r and records 59 post-activation verification rows,
   0 ready rows, 59 blocked rows, 0 activation-admitted rows, 0 local identity
   verified shard rows, 0 verified page-hash rows out of 134161 required rows,
   generation gate ready 0, and zero checkpoint payload bytes downloaded or
-  committed by v61am. Actual model generation, production latency,
+  committed by v61am. `V61AM_WAREHOUSE_ROOT` forces fresh v61al/v61ak target
+  planning before verification. Actual model generation, production latency,
   near-frontier, and release claims stay blocked.
 - `v61an` adds checkpoint full page-hash execution gating.
-  `experiments/test_v61an_checkpoint_full_page_hash_execution_gate.sh`
+  `experiments/test_v61an_checkpoint_full_page_hash_execution_gate.sh` plus
+  `experiments/test_v61an_checkpoint_full_page_hash_execution_gate_target_override.sh`
   consumes v61am/v61t/v61r and records 291 resumable execution chunks over
   134161 planned page hashes, 0 hashed chunks, 291 activation-blocked chunks,
   0 local page hash verification rows, `full_page_hash_execution_ready=0`, and
-  zero checkpoint payload bytes downloaded or committed by v61an. Full
-  page-hash coverage, actual model generation, production latency,
-  near-frontier, and release claims stay blocked.
+  zero checkpoint payload bytes downloaded or committed by v61an.
+  `V61AN_WAREHOUSE_ROOT` propagates through fresh v61am/v61al/v61ak planning
+  before full page-hash scheduling. Full page-hash coverage, actual model
+  generation, production latency, near-frontier, and release claims stay
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

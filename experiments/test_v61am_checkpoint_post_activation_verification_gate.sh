@@ -41,6 +41,7 @@ expected = {
     "v61t_local_checkpoint_materialization_verifier_ready": "1",
     "v61r_full_page_hash_sweep_plan_ready": "1",
     "model_id": "mistralai/Mixtral-8x22B-v0.1",
+    "warehouse_root_override_supplied": "0",
     "post_activation_verification_rows": "59",
     "post_activation_verification_ready_rows": "0",
     "post_activation_verification_blocked_rows": "59",

@@ -8,8 +8,9 @@ RUN_ID="${V61AN_RUN_ID:-gate_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+WAREHOUSE_ROOT_OVERRIDE="${V61AN_WAREHOUSE_ROOT:-${V61AM_WAREHOUSE_ROOT:-${V61AL_WAREHOUSE_ROOT:-${V61AK_WAREHOUSE_ROOT:-}}}}"
 
-if [[ "${V61AN_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V61AN_REUSE_EXISTING:-0}" == "1" && -z "$WAREHOUSE_ROOT_OVERRIDE" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
   echo "v61an_checkpoint_full_page_hash_execution_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -19,11 +20,15 @@ fi
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-V61AM_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61am_checkpoint_post_activation_verification_gate.sh" >/dev/null
+if [[ -n "$WAREHOUSE_ROOT_OVERRIDE" ]]; then
+  V61AM_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61AM_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61am_checkpoint_post_activation_verification_gate.sh" >/dev/null
+else
+  V61AM_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61am_checkpoint_post_activation_verification_gate.sh" >/dev/null
+fi
 V61T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61t_local_checkpoint_materialization_verifier.sh" >/dev/null
 V61R_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61r_full_page_hash_sweep_plan.sh" >/dev/null
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$WAREHOUSE_ROOT_OVERRIDE" <<'PY'
 import csv
 import hashlib
 import json
@@ -39,6 +44,7 @@ root = Path(sys.argv[1]).resolve()
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+warehouse_root_override = sys.argv[5].strip()
 results = root / "results"
 
 model_id = "mistralai/Mixtral-8x22B-v0.1"
@@ -299,6 +305,7 @@ write_csv(run_dir / "checkpoint_full_page_hash_execution_requirement_rows.csv", 
 metric = {
     "metric_id": "v61an_checkpoint_full_page_hash_execution_gate_metrics",
     "model_id": model_id,
+    "warehouse_root_override_supplied": str(int(bool(warehouse_root_override))),
     "checkpoint_shard_rows": "59",
     "required_page_hash_rows": str(required_page_hash_rows),
     "planned_page_hash_rows": str(planned_page_hash_rows),
@@ -317,6 +324,7 @@ metric = {
     "full_page_hash_execution_ready": str(full_hash_execution_ready),
     "full_safetensors_page_hash_binding_ready": str(full_safetensors_page_hash_binding_ready),
     "post_activation_verification_gate_ready": v61am_summary["post_activation_verification_gate_ready"],
+    "download_execution_ready": "0",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
     "production_latency_claim_ready": "0",
