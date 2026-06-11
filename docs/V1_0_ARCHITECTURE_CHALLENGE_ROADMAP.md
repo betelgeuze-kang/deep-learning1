@@ -364,6 +364,8 @@ Implemented now:
 - `experiments/test_v53l_complete_source_system_b_local_rag_measured.sh`
 - `experiments/run_v53m_complete_source_system_c_local_model_rag_measured.sh`
 - `experiments/test_v53m_complete_source_system_c_local_model_rag_measured.sh`
+- `experiments/run_v61q_real_checkpoint_page_map.sh`
+- `experiments/test_v61q_real_checkpoint_page_map.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -434,6 +436,7 @@ Implemented now:
 - `results/v53k_complete_source_system_a_lexical_measured/measured_001/` complete-source System A lexical measured artifacts
 - `results/v53l_complete_source_system_b_local_rag_measured/measured_001/` complete-source System B local-RAG measured artifacts
 - `results/v53m_complete_source_system_c_local_model_rag_measured/measured_001/` complete-source System C local-model-RAG measured artifacts
+- `results/v61q_real_checkpoint_page_map/map_001/` real safetensors-header-derived checkpoint page-map artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -571,6 +574,8 @@ The v61o checkpoint shard/header probe is implemented and covered by `experiment
 
 The v61p local SSD checkpoint residency preflight is implemented and covered by `experiments/test_v61p_local_ssd_checkpoint_residency_preflight.sh`. It consumes v61o and emits an outside-repository warehouse probe, disk budget row, checkpoint residency requirement rows, 59 shard download-plan rows, 59 local shard presence rows, runtime gaps, boundary, manifest, and hash rows without downloading checkpoint payload bytes. The current host records 281241493344 checkpoint bytes required, 315601231712 bytes required with reserve, 21616869376 available bytes, zero locally complete shards, `real_100b_open_weight_materialized=0`, and `local_checkpoint_residency_ready=0`; it keeps full page-hash coverage, real Mixtral generation, near-frontier quality, production latency, and release claims blocked.
 
+The v61q real checkpoint page map is implemented and covered by `experiments/test_v61q_real_checkpoint_page_map.sh`. It consumes v61o safetensors header tensor offsets and converts them into a metadata-only 2 MiB SSD checkpoint page map. It records 59 checkpoint shards, 1739 real checkpoint tensor rows, 134161 unique checkpoint page rows, 135841 tensor/page segment rows, 281241268224 mapped tensor payload bytes, 281241493344 total checkpoint bytes, `checkpoint_page_map_weight_bytes_included=0`, and `real_checkpoint_weight_bytes_materialized=0`. It strengthens the real-model page manifest from architecture-derived expert pages to actual safetensors offset/page binding while keeping full page-hash coverage, local SSD checkpoint residency, real Mixtral generation, near-frontier quality, production latency, and release claims blocked.
+
 ## Immediate Next PR Target
 
 The next implementation PR should extend v52-v60 from contract scaffold to measured and reviewed rows:
@@ -594,6 +599,6 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 17. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
 18. Closed as v61a-v61j prototype: replace the broken v52w-style page-to-kernel numeric path with a deterministic SSD page-store -> direct I/O reader -> RouteHint prefetch/VRAM cache -> CPU page-dequant-matmul -> expert router -> predictive prefetch -> mixed quant planner -> dense stress blocker -> logical 128B MoE active-sparse contract -> one-command demo chain, including token-level SSD I/O metrics and no-RAM-resident full-model audit rows.
 19. Closed as v61k manifest seed: replace the logical-only model reference with a legally redistributable Mixtral 8x22B page manifest, while keeping checkpoint weight materialization and runtime claims blocked.
-20. Closed as v61l/v61m/v61n/v61o/v61p measurement seeds: add GPU/ROCm page-dequant-matmul timing, KV-cache residency/eviction policy, a source-bound QA workload seed, checkpoint index/header/sampled page-hash probes, and local SSD checkpoint residency preflight over the v61k/v53g evidence path, while keeping the payload partly synthetic, full checkpoint materialization blocked, host-RAM KV spill disabled, full page-hash coverage blocked, and complete-source A-H QA blocked. Next v61 runtime steps are satisfying the v61p SSD budget/presence requirements outside the repository, full safetensors page-hash coverage, and real model generation over source-bound workloads without opening near-frontier or release claims until external review passes.
+20. Closed as v61l/v61m/v61n/v61o/v61p/v61q measurement seeds: add GPU/ROCm page-dequant-matmul timing, KV-cache residency/eviction policy, a source-bound QA workload seed, checkpoint index/header/sampled page-hash probes, local SSD checkpoint residency preflight, and real safetensors-header-derived checkpoint page mapping over the v61k/v53g evidence path, while keeping the payload partly synthetic, full checkpoint materialization blocked, host-RAM KV spill disabled, full page-hash coverage blocked, and complete-source A-H QA blocked. Next v61 runtime steps are satisfying the v61p SSD budget/presence requirements outside the repository, full safetensors page-hash coverage, and real model generation over source-bound workloads without opening near-frontier or release claims until external review passes.
 
 This completes the v52-v60 contract scaffold chain without weakening the claim boundary. It does not complete the v1.0 Architecture Challenge itself.

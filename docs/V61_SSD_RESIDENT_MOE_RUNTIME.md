@@ -461,6 +461,56 @@ Pass condition:
   residency, real generation, near-frontier, production-latency, and release
   claims remain blocked
 
+### v61p Local SSD Checkpoint Residency Preflight
+
+Turn the v61o shard identity table into an outside-repository SSD warehouse
+plan and local presence audit without downloading checkpoint payload bytes.
+
+Outputs:
+
+- `ssd_warehouse_probe_rows.csv`
+- `ssd_disk_budget_rows.csv`
+- `checkpoint_residency_requirement_rows.csv`
+- `checkpoint_download_plan_rows.csv`
+- `local_shard_presence_rows.csv`
+- `runtime_gap_rows.csv`
+
+Pass condition:
+
+- v61o checkpoint shard/header evidence is bound
+- the warehouse path is outside the git repository
+- all 59 shard download-plan rows are emitted
+- disk budget and local shard presence are explicit blockers or passes
+- no checkpoint payload bytes are downloaded by the runner or committed to the
+  repository
+- full page-hash coverage, real generation, near-frontier, production-latency,
+  and release claims remain blocked
+
+### v61q Real Checkpoint Page Map
+
+Convert the real safetensors header tensor offsets into a metadata-only 2 MiB
+SSD page map for the Mixtral checkpoint.
+
+Outputs:
+
+- `checkpoint_tensor_page_span_rows.csv`
+- `checkpoint_page_segment_rows.csv`
+- `checkpoint_unique_page_rows.csv`
+- `checkpoint_shard_page_summary_rows.csv`
+- `checkpoint_page_map_metric_rows.csv`
+- `runtime_gap_rows.csv`
+
+Pass condition:
+
+- v61o checkpoint index, shard identity, and safetensors header rows are bound
+- all 1739 real checkpoint tensor rows are mapped to 2 MiB page spans
+- the map records 134161 unique checkpoint pages and 135841 tensor/page
+  segments
+- the map is metadata-only: no checkpoint payload bytes are redistributed,
+  persisted, or committed to the repository
+- full page-hash coverage, local SSD checkpoint residency, real generation,
+  near-frontier, production-latency, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -474,12 +524,14 @@ The benchmark ladder should be ordered by runtime risk:
 7. 100B+ total-parameter MoE active-sparse runtime.
 8. Real open-weight MoE page manifest, no redistributed weights.
 9. Checkpoint index/shard/header and sampled page-hash probes.
-10. GPU/ROCm page-kernel timing over the real-model page geometry.
-11. KV-cache residency/eviction policy over the real-model geometry.
-12. Source-bound code/doc QA workload seed over materialized files.
-13. Complete-source 1000+ QA workload with real model generation.
-14. Same runtime under long-context workloads with source-bound quality checks.
-15. One-command local assistant demo.
+10. Real safetensors-header-derived checkpoint page map.
+11. Local SSD checkpoint residency preflight and presence audit.
+12. GPU/ROCm page-kernel timing over the real-model page geometry.
+13. KV-cache residency/eviction policy over the real-model geometry.
+14. Source-bound code/doc QA workload seed over materialized files.
+15. Complete-source 1000+ QA workload with real model generation.
+16. Same runtime under long-context workloads with source-bound quality checks.
+17. One-command local assistant demo.
 
 ## Stop Rules
 

@@ -1780,6 +1780,14 @@ Current next boundary:
   `local_checkpoint_residency_ready=0`. It keeps full page-hash coverage, real
   generation, near-frontier quality, production latency, and release claims
   blocked.
+- `v61q` adds a real safetensors-header-derived checkpoint page map without
+  downloading weights. `experiments/test_v61q_real_checkpoint_page_map.sh`
+  consumes v61o and maps 1739 real checkpoint tensor offset rows into 134161
+  unique 2 MiB checkpoint page rows plus 135841 tensor/page segment rows. It
+  records `checkpoint_page_map_weight_bytes_included=0`,
+  `checkpoint_weight_bytes_persisted=0`, and keeps full page-hash coverage,
+  local SSD checkpoint residency, real Mixtral generation, near-frontier
+  quality, production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
