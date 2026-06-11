@@ -1,0 +1,17 @@
+{
+  "context_length": 2048,
+  "external_bake_host": "external-bake-fixture-host",
+  "external_bake_imported_at_utc": "2026-06-11T13:18:09.400984+00:00",
+  "external_network_used": 0,
+  "model_artifact_sha256": "sha256:538a93de09557a9ebe5a0f1674626b534fbf19dfb4957c2ae7f0392426dbece6",
+  "model_artifact_uri": "external-bake://external-bake-fixture-host/D",
+  "model_id": "qwen2.5:32b-instruct",
+  "open_weight_license_uri": "https://huggingface.co/",
+  "parameter_count_b": 32.0,
+  "quantization": "external-bake-artifact",
+  "rag_context_builder": "v53e frozen canary source span supplied per query",
+  "runner": "external-bake-import",
+  "runner_version": "v52x-fixture-bake-1",
+  "size_class": "30b",
+  "system_id": "D"
+}

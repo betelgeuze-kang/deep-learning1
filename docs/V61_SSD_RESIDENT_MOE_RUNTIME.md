@@ -341,6 +341,31 @@ Pass condition:
 - it proves the SSD-resident active-sparse path
 - it does not silently fall back to RAM-resident full-model inference
 
+### v61k Real-Model Page Manifest
+
+Replace the logical-only 128B fixture with a legally redistributable page
+manifest bound to a real open-weight MoE model identity.
+
+Outputs:
+
+- `real_model_identity_rows.csv`
+- `real_model_source_rows.csv`
+- `real_model_config_rows.csv`
+- `license_redistribution_rows.csv`
+- `checkpoint_shard_manifest_rows.csv`
+- `tensor_page_manifest_rows.csv`
+- `expert_page_budget_rows.csv`
+- `runtime_gap_rows.csv`
+
+Pass condition:
+
+- real public MoE model identity, config, license, and source URLs are recorded
+- page manifest contains metadata only and no checkpoint weights
+- total-parameter direction is 100B+
+- uncached active path budget blocker is explicit
+- real checkpoint materialization, GPU speedup, KV-cache, source-bound QA,
+  near-frontier, production-latency, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -352,9 +377,10 @@ The benchmark ladder should be ordered by runtime risk:
 5. 70B dense stress, blocked if not practical.
 6. Small MoE with real expert routing.
 7. 100B+ total-parameter MoE active-sparse runtime.
-8. Same runtime under code/doc QA workloads.
-9. Same runtime under long-context workloads with KV policy.
-10. One-command local assistant demo.
+8. Real open-weight MoE page manifest, no redistributed weights.
+9. Same runtime under code/doc QA workloads.
+10. Same runtime under long-context workloads with KV policy.
+11. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -424,11 +450,52 @@ Verified current summary:
 
 This closes the local SSD-resident active-sparse runtime prototype and one-command artifact chain. It does not materialize a real 100B open-weight checkpoint, does not prove GPU speedup, does not prove near-frontier local inference, and is not a release package.
 
+## Current Real-Model Manifest
+
+The first v61 real-model page manifest step is implemented and covered by:
+
+```bash
+./experiments/test_v61k_real_model_page_manifest.sh
+```
+
+It emits:
+
+- `results/v61k_real_model_page_manifest/manifest_001/`
+
+Verified current summary:
+
+- `v61k_real_model_page_manifest_ready=1`
+- `model_id=mistralai/Mixtral-8x22B-v0.1`
+- `source_model_license=apache-2.0`
+- `published_total_parameter_label=8x22B`
+- `published_total_parameters_estimate=176000000000`
+- `total_parameters_100b_plus=1`
+- `checkpoint_shard_manifest_rows=59`
+- `tensor_page_manifest_rows=129024`
+- `legally_redistributable_page_manifest_ready=1`
+- `real_checkpoint_weight_bytes_materialized=0`
+- `real_100b_open_weight_materialized=0`
+- `active_uncached_q4_bytes_per_token_estimate=16911433728`
+- `ssd_read_budget_bytes_per_token=16777216`
+- `active_uncached_q4_budget_pass=0`
+- `near_frontier_claim_ready=0`
+- `production_latency_claim_ready=0`
+- `real_release_package_ready=0`
+
+This moves v61 from a logical-only 128B fixture toward real-model evidence by
+binding the page manifest to a public MoE model config and license. It also
+shows that reading uncached active expert weights per token is still far over
+the current SSD budget, so the next runtime work must prove persistent hot
+cache, reuse, GPU page-dequant-matmul, and KV residency rather than claiming
+practical near-frontier inference.
+
 ## Immediate Next Implementation Target
 
-Move from the logical 128B contract fixture to real-model evidence without weakening the boundary:
+Move from the real-model page manifest into measured real-model runtime evidence
+without weakening the boundary:
 
-1. Replace the logical 128B contract fixture with a real open-weight MoE checkpoint shard or a legally redistributable page manifest.
+1. Add optional local checkpoint shard/header intake for the v61k manifest, still
+   without committing weight bytes.
 2. Add GPU/ROCm page-dequant-matmul measurements and keep CPU fallback rows for reproducibility.
 3. Add a KV-cache residency/eviction policy so long-context claims remain gated by measured rows.
 4. Run source-bound code/doc QA workloads through the v61j command and bind answers to citation/abstain/fallback evidence.
@@ -450,4 +517,4 @@ The full local assistant claim additionally requires source-bound tasks with cit
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path and logical 100B+ MoE contract, not real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, and a real-model redistributable page manifest, not real near-frontier open-weight inference.

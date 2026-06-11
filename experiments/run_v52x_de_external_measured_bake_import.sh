@@ -93,9 +93,9 @@ def build_bake_packet(system_id, prefix, model_id, param_b, target_dir, bake_sou
         "V53E_CANARY_QUERY_SCALE_1000_BOUNDARY.md",
         "v53e_canary_query_scale_1000_manifest.json",
         "sha256_manifest.csv",
-        "v53e_canary_query_scale_1000_summary.csv",
     ]:
         copy(v53e_dir / rel, target_dir / "source_v53e" / rel)
+    copy(results / "v53e_canary_query_scale_1000_summary.csv", target_dir / "source_v53e" / "v53e_canary_query_scale_1000_summary.csv")
 
     shutil.copy2(bake_source / "frozen_query_rows.csv", target_dir / "frozen_query_rows.csv")
     shutil.copy2(bake_source / "frozen_source_span_rows.csv", target_dir / "frozen_source_span_rows.csv")
@@ -269,7 +269,7 @@ def generate_fixture_bake(system_id, prefix, model_id, param_b, out_dir):
                 "expected_answer": row["expected_answer"],
                 "expected_answer_sha256": row["expected_answer_sha256"],
                 "negative_or_abstain": row["negative_or_abstain"],
-                "query_family": row["query_family"],
+                "query_family": row.get("query_family", row.get("audit_type", "")),
                 "source_span_id": row["source_span_id"],
             }
         )

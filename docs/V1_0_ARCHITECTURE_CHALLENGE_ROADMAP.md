@@ -336,6 +336,8 @@ Implemented now:
 - `experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh`
 - `experiments/run_v52e_100b_plus_hosted_llm_rag_optional_intake.sh`
 - `experiments/test_v52e_100b_plus_hosted_llm_rag_optional_intake.sh`
+- `experiments/run_v52y_f_optional_final_policy.sh`
+- `experiments/test_v52y_f_optional_final_policy.sh`
 - `experiments/run_v53_public_repo_code_doc_audit.sh`
 - `experiments/test_v53_public_repo_code_doc_audit.sh`
 - `experiments/run_v53b_public_repo_10_lock.sh`
@@ -472,6 +474,8 @@ The v52d evidence-intake layer emits the system-D/E 30B/70B open-weight LLM+RAG 
 
 The v52e optional-intake layer emits the system-F 100B+ hosted/API LLM+RAG schema, answer template, model identity template, validation rows, source evidence copies, hash manifest, and claim boundary. Default/no-env execution intentionally keeps `optional_100b_plus_baseline_status=deferred-with-reason`, `optional_100b_plus_baseline_ready=0`, `v52_optional_absorb_ready=0`, `v52_ready=0`, and all 30B-150B comparison claims blocked. F is optional and cannot replace required D/E evidence.
 
+The v52y F-final policy layer consumes v52r and v52e, records F as either supplied-ready or explicit final-deferred-with-reason, and defines the `v52_ready` condition matrix. In the default path it marks `f_optional_final_disposition=deferred-with-reason-final`, keeps `optional_100b_plus_baseline_ready=0`, sets `v52_ready=1` for the measured baseline registry scope, and marks 30B-150B-class wording as `allowed-with-disclosure`. It still blocks measured 100B+/150B result wording, v53 complete-source audit, v1.0 comparison readiness, and release claims.
+
 The v53 scaffold emits a 10-repo target registry, 1000-query scale contract, artifact contract rows, v50 seed evidence copies, and claim boundary. It intentionally keeps `v53_ready=0`, `missing_repo_count=7`, and `missing_query_rows=991`.
 
 The v53b repo-lock layer resolves live HEAD SHAs for 10 public GitHub repositories, writes the 10-repo lock table and 1000-row query plan, and copies the v50 seed evidence. It intentionally keeps `v53_ready=0` because the seven newly locked repositories still need source snapshots and the audit still needs source-span-bound query rows, A-H answer/citation/resource rows, negative/abstain rows, and review artifacts.
@@ -520,6 +524,8 @@ The v61 SSD-resident MoE runtime direction is documented in `docs/V61_SSD_RESIDE
 
 The v61a-v61j SSD-resident active-sparse prototype is implemented and covered by `experiments/test_v61j_one_command_ssd_resident_demo.sh`. It creates deterministic 2 MB SSD weight pages split by layer/expert/page ID, verifies aligned direct I/O reads, records no full-model RAM residency audit rows, emits RouteHint prefetch/VRAM hot-cache rows, runs CPU deterministic page-dequant-matmul numeric checks, selects active experts, compares predictive-prefetch stalls, assigns mixed quant profiles, measures dense full-stream blockers, emits a logical 128B MoE active-sparse contract, and bundles the path behind one command. It marks `ssd_resident_active_sparse_path_proven=1`, `ram_resident_full_model_fallback_rows=0`, `total_parameters=128000000000`, `ssd_read_bytes_per_token_max=8388608`, and `route_jump_rows=0`, while keeping real 100B checkpoint materialization, GPU speedup, dense hundreds-B local-speed, near-frontier quality, and release claims blocked.
 
+The v61k real-model page manifest is implemented and covered by `experiments/test_v61k_real_model_page_manifest.sh`. It binds the page manifest to `mistralai/Mixtral-8x22B-v0.1`, records Apache-2.0 source/config/license rows, emits 59 checkpoint-shard manifest rows, enumerates 129024 2 MiB expert tensor page metadata rows, and keeps checkpoint weights out of the repository. It marks `legally_redistributable_page_manifest_ready=1`, `total_parameters_100b_plus=1`, `real_checkpoint_weight_bytes_materialized=0`, `active_uncached_q4_budget_pass=0`, and `near_frontier_claim_ready=0`; this opens the next measured work on GPU page-dequant-matmul, KV residency/eviction, and source-bound QA without opening production or release claims.
+
 ## Immediate Next PR Target
 
 The next implementation PR should extend v52-v60 from contract scaffold to measured and reviewed rows:
@@ -530,7 +536,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 4. Closed as v52m absorb: re-absorb the v52l C measured packet into the v52 measured registry alongside A/B/G/H while preserving the no-quality-claim boundary.
 5. In progress as v52n/v52o seed: supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E over the v50 9-query seed.
 6. In progress as v52s/v52u/v52v/v52t: NVMe weight-tier contract, mmap reader scaffold, ROCm HIP bind, and explicit D/E local deferral; next extend tiered matmul decode (v52w) or external bake, then v52p/q/r and v59c.
-7. Supply and validate a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
+7. Closed as v52y default policy: keep F explicitly final-deferred with reason unless supplied evidence validates, and scope `v52_ready=1` to the measured baseline registry rather than v1.0 comparison readiness.
 8. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
 9. Promote v53e/v53f canary-scope query and intake layers into complete-source 1000+ query audit evidence, then supply valid A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
 10. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
@@ -542,6 +548,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 16. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
 17. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
 18. Closed as v61a-v61j prototype: replace the broken v52w-style page-to-kernel numeric path with a deterministic SSD page-store -> direct I/O reader -> RouteHint prefetch/VRAM cache -> CPU page-dequant-matmul -> expert router -> predictive prefetch -> mixed quant planner -> dense stress blocker -> logical 128B MoE active-sparse contract -> one-command demo chain, including token-level SSD I/O metrics and no-RAM-resident full-model audit rows.
-19. Next v61 runtime step: replace the logical 128B contract fixture with a real open-weight MoE checkpoint shard, add GPU/ROCm page-dequant-matmul measurements, and run source-bound workloads without opening near-frontier or release claims until external review passes.
+19. Closed as v61k manifest seed: replace the logical-only model reference with a legally redistributable Mixtral 8x22B page manifest, while keeping checkpoint weight materialization and runtime claims blocked.
+20. Next v61 runtime step: add local checkpoint shard/header intake, GPU/ROCm page-dequant-matmul measurements, KV residency/eviction, and source-bound workloads without opening near-frontier or release claims until external review passes.
 
 This completes the v52-v60 contract scaffold chain without weakening the claim boundary. It does not complete the v1.0 Architecture Challenge itself.

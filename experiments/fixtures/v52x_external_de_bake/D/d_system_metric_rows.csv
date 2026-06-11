@@ -1,0 +1,2 @@
+system_id,system_name,model_id,answer_rows,correct_rows,accuracy,citation_rows,citation_correct_rows,citation_accuracy,abstain_rows,negative_abstain_query_rows,abstained_rows,wrong_answer_rows,resource_rows,avg_latency_ns,context_or_hint_total_bytes,external_model_used
+D,32B open-weight LLM + RAG,qwen2.5:32b-instruct,1000,840,0.840000,1000,1000,1.000000,1000,160,160,0,1000,250000000,512000,1

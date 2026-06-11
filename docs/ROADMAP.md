@@ -1500,6 +1500,12 @@ Current next boundary:
   artifacts, records 7000 answer/citation/abstain/guard/resource rows, sets
   `required_30b_baseline_ready=1` and `required_70b_baseline_ready=1`, and
   keeps optional F, full v52, and release claims blocked.
+- `v52y` resolves F optional handling after v52r.
+  `experiments/test_v52y_f_optional_final_policy.sh` records F as
+  `deferred-with-reason-final` by default, verifies the v52 ready-condition
+  matrix, and sets `v52_ready=1` for the measured-baseline-registry scope while
+  keeping measured 100B+/150B result wording, v53 complete-source audit, v1.0
+  comparison, and release claims blocked.
 - `v52s` emits the NVMe hot/warm/cold weight shard store contract aligned with
   h11-c. `experiments/test_v52s_local_llm_weight_tier_contract.sh` marks
   `nvme_mmap_store_ready=1` while keeping tiered decode runtime blocked.
@@ -1672,6 +1678,15 @@ Current next boundary:
   `route_jump_rows=0`, while real 100B checkpoint materialization,
   near-frontier quality, dense hundreds-B local-speed, GPU speedup,
   production-latency, and release claims remain blocked.
+- `v61k` starts the real-model evidence track.
+  `experiments/test_v61k_real_model_page_manifest.sh` binds the v61 page model
+  to `mistralai/Mixtral-8x22B-v0.1`, records Apache-2.0 source/config/license
+  rows, emits 59 checkpoint-shard manifest rows, enumerates 129024 2 MiB expert
+  tensor page metadata rows, and keeps all checkpoint weight bytes out of the
+  repository. The summary reaches `legally_redistributable_page_manifest_ready=1`,
+  `total_parameters_100b_plus=1`, and `real_checkpoint_weight_bytes_materialized=0`,
+  while showing `active_uncached_q4_budget_pass=0`; the next v61 work is GPU page
+  dequant-matmul, KV residency/eviction, and source-bound QA over this manifest.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
