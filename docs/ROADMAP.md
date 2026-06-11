@@ -1566,11 +1566,19 @@ Current next boundary:
 - `v53g` adds the complete-source manifest layer.
   `experiments/test_v53g_complete_source_manifest.sh` binds the 10 locked repos
   to recursive Git tree source/doc/config/test manifests, records 11318
-  metadata-only manifest rows, 11312 query-eligible rows, 30 canary-overlap
-  rows, and an eight-family 1000-query budget. It marks
+  metadata-only manifest rows, 11312 query-eligible rows, at least 20
+  canary-overlap rows, and an eight-family 1000-query budget. It marks
   `v53g_complete_source_manifest_ready=1` while keeping content materialization,
   complete-source query rows, A-H answer/citation/resource rows, `v53_ready`,
   and release claims blocked.
+- `v53h` adds the complete-source content snapshot layer.
+  `experiments/test_v53h_complete_source_content_snapshot.sh` materializes the
+  v53g manifest into 11318 content files, 11318 content sha256 rows,
+  124845122 content bytes, and 11312 query-eligible content rows across all 10
+  locked repos. It marks `complete_source_content_snapshot_ready=1` while
+  keeping complete-source span extraction, 1000+ complete-source query rows,
+  A-H answer/citation/resource rows, `v53_ready`, review artifacts, and release
+  claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
