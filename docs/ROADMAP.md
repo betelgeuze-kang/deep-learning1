@@ -1984,6 +1984,16 @@ Current next boundary:
   blocked, so download execution, local materialization, full page-hash
   coverage, actual model generation, production latency, and release claims
   stay blocked.
+- `v61ai` adds checkpoint storage budget remediation planning.
+  `experiments/test_v61ai_checkpoint_storage_budget_remediation_plan.sh`
+  consumes v61ah/v61p/v61w and records `required_with_reserve_bytes=315601231712`,
+  `available_ssd_bytes=21337460736`, `full_budget_deficit_bytes=294263770976`,
+  `raw_checkpoint_deficit_bytes=259904032608`, `safe_materialization_batch_rows=0`,
+  and a diagnostic no-reserve top-priority batch of 4 shards / 19478756392 bytes
+  with zero checkpoint payload bytes downloaded or committed by v61ai. Storage
+  budget remediation remains blocked, so download execution, local materialization,
+  full page-hash coverage, actual model generation, production latency, and
+  release claims stay blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

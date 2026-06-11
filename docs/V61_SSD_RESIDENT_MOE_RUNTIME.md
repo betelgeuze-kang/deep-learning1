@@ -980,6 +980,34 @@ Pass condition:
 - SSD-budget admission, local materialization, full page-hash coverage, actual
   generation, production-latency, and release claims remain blocked
 
+### v61ai Checkpoint Storage Budget Remediation Plan
+
+Quantify the remaining SSD storage blocker after the backend fallback is ready,
+and emit a bounded remediation plan without downloading checkpoint payload bytes.
+
+Outputs:
+
+- `checkpoint_storage_budget_remediation_rows.csv`
+- `checkpoint_materialization_batch_rows.csv`
+- `checkpoint_no_reserve_candidate_shard_rows.csv`
+- `checkpoint_storage_budget_metric_rows.csv`
+- `V61AI_CHECKPOINT_STORAGE_BUDGET_REMEDIATION_BOUNDARY.md`
+
+Pass condition:
+
+- v61ah backend fallback, v61p storage budget, and v61w shard-priority evidence
+  are bound
+- `required_with_reserve_bytes=315601231712`
+- `available_ssd_bytes=21337460736`
+- `full_budget_deficit_bytes=294263770976`
+- `raw_checkpoint_deficit_bytes=259904032608`
+- reserve-safe materialization admits zero shard rows
+- the diagnostic no-reserve top-priority batch records 4 shards /
+  19478756392 bytes, but remains non-admitted by reserve policy
+- checkpoint payload bytes downloaded or committed by v61ai remain zero
+- storage-budget remediation, actual materialization, full page-hash coverage,
+  actual generation, production-latency, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1013,9 +1041,10 @@ The benchmark ladder should be ordered by runtime risk:
 27. Guarded checkpoint warehouse operator bundle.
 28. Checkpoint warehouse execution preflight.
 29. Checkpoint download backend fallback plan.
-30. Complete-source 1000+ QA workload with real model generation.
-31. Same runtime under long-context workloads with source-bound quality checks.
-32. One-command local assistant demo.
+30. Checkpoint storage budget remediation plan.
+31. Complete-source 1000+ QA workload with real model generation.
+32. Same runtime under long-context workloads with source-bound quality checks.
+33. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1354,9 +1383,10 @@ without weakening the boundary:
 19. Closed as v61af checkpoint warehouse operator bundle: emit guarded repo-outside download, verify, full-page-hash, and admission-recheck scripts with dry-run defaults and zero payload bytes downloaded by v61af.
 20. Closed as v61ag checkpoint warehouse execution preflight: syntax-check v61af operator scripts, run a guarded one-row dry-run probe, record current CLI/SSD blockers, and keep real download execution blocked.
 21. Closed as v61ah checkpoint download backend fallback plan: select curl-resume over missing huggingface-cli, emit 59 guarded backend commands, and keep SSD-budget execution blocked.
-22. Promote identity-verified local shards into full safetensors page-hash coverage.
-23. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-24. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+22. Closed as v61ai checkpoint storage budget remediation plan: quantify the current SSD deficit, record zero reserve-safe shard rows, and keep materialization/download execution blocked.
+23. Promote identity-verified local shards into full safetensors page-hash coverage.
+24. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+25. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1429,9 +1459,13 @@ The current v61 runtime prototype can say:
 - the download backend fallback plan can select `curl-resume` from three ready
   backends and emit 59 guarded backend download rows, but SSD budget still
   blocks actual checkpoint download execution
+- the storage budget remediation plan can quantify the current full-checkpoint
+  deficit as 294263770976 bytes with reserve, admit zero reserve-safe shard rows,
+  and record a 4-shard / 19478756392-byte diagnostic no-reserve batch, but it
+  still blocks download execution and materialization
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, and checkpoint download backend fallback planning, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, and checkpoint storage budget remediation planning, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
