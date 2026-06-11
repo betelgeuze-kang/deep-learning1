@@ -728,6 +728,32 @@ Pass condition:
   materialization, full safetensors page-hash coverage, real generation,
   near-frontier, production-latency, and release claims remain blocked
 
+### v61z Hotset Direct I/O Replay
+
+Replay direct local reads over the bounded v61y sampled hotset pages and verify
+each O_DIRECT read against the remote checkpoint page hash.
+
+Outputs:
+
+- `hotset_direct_io_read_rows.csv`
+- `hotset_direct_io_prefetch_order_rows.csv`
+- `hotset_direct_io_latency_rows.csv`
+- `hotset_direct_io_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61Z_HOTSET_DIRECT_IO_REPLAY_BOUNDARY.md`
+
+Pass condition:
+
+- v61y sampled hotset materialization evidence is bound
+- all 16 sampled hotset pages are read through O_DIRECT
+- all 16 direct reads match the corresponding remote checkpoint page hashes
+- 15 MoE expert pages are scheduled before the embedding page in replay order
+- 33554432 direct-I/O bytes are read, with `ssd_read_bytes_per_token=8388608`
+- sampled direct-read latency/throughput metrics are recorded
+- full checkpoint materialization, full safetensors page-hash coverage, real
+  generation, near-frontier, production-latency, and release claims remain
+  blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -752,9 +778,10 @@ The benchmark ladder should be ordered by runtime risk:
 18. Materialization admission and download-resume plan.
 19. NVMe hotset runtime replay manifest over remote-hashed pages.
 20. Local sampled-hotset page materialization and readback verification.
-21. Complete-source 1000+ QA workload with real model generation.
-22. Same runtime under long-context workloads with source-bound quality checks.
-23. One-command local assistant demo.
+21. Sampled hotset direct-I/O read replay with latency metrics.
+22. Complete-source 1000+ QA workload with real model generation.
+23. Same runtime under long-context workloads with source-bound quality checks.
+24. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1084,9 +1111,10 @@ without weakening the boundary:
 10. Closed as v61w planner: turn v61p/v61t blockers and v61v sampled tensor bindings into a 59-shard materialization admission/download-resume plan while keeping SSD budget admission and materialization blocked on the current host.
 11. Closed as v61x hotset manifest: bind v61w/v61v/v61s/v61m into 16 planned NVMe hotset page slots and 37 source-bound replay rows while keeping hotset payload materialization and real generation blocked.
 12. Closed as v61y sampled hotset verifier: materialize the 16 sampled hotset pages outside the repository and verify local/readback hashes while keeping full checkpoint materialization and real generation blocked.
-13. Promote identity-verified local shards into full safetensors page-hash coverage.
-14. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-15. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+13. Closed as v61z sampled hotset direct-I/O replay: read the 16 local sampled hotset pages with O_DIRECT, verify hashes, and record latency/throughput while keeping full checkpoint materialization and real generation blocked.
+14. Promote identity-verified local shards into full safetensors page-hash coverage.
+15. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+16. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1123,9 +1151,13 @@ The current v61 runtime prototype can say:
 - those 16 sampled hotset page payloads are now materialized outside the
   repository with 33554432 persisted bytes, 16 local hash matches, and 16
   readback hash matches, but this is still not full checkpoint materialization
+- those 16 local sampled hotset pages can be read through O_DIRECT with 16 hash
+  matches, 33554432 direct-I/O bytes, p50/p95 read latency
+  0.580768/0.956690 ms, and 2784.734538 MiB/s sampled throughput, but this is
+  still not real model generation or production latency
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, and sampled local hotset page materialization, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, and sampled direct-I/O hotset read replay, not completed real-checkpoint residency, full safetensors page-hash coverage, or real near-frontier open-weight inference.

@@ -1900,6 +1900,15 @@ Current next boundary:
   materialization, SSD budget admission, local full-checkpoint materialization,
   full page-hash coverage, real Mixtral generation, near-frontier quality,
   production latency, and release claims blocked.
+- `v61z` adds sampled hotset direct-I/O replay.
+  `experiments/test_v61z_hotset_direct_io_replay.sh` consumes v61y and reads
+  the 16 local sampled hotset pages through O_DIRECT. It records 16 direct-read
+  hash matches, zero direct-I/O errors, 33554432 direct-I/O bytes,
+  `ssd_read_bytes_per_token=8388608`, p50/p95 read latency
+  0.580768/0.956690 ms, and 2784.734538 MiB/s sampled throughput, while keeping
+  full checkpoint materialization, full page-hash coverage, real Mixtral
+  generation, near-frontier quality, production latency, and release claims
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
