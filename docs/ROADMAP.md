@@ -1601,6 +1601,13 @@ Current next boundary:
   `supplied_v53j/`, boundary, manifest, and hash rows. It keeps B/C/D/E/G/H,
   symmetric scorer/policy rows, `v53_ready`, review artifacts, and release
   claims blocked.
+- `v53l` adds complete-source System B local-RAG measured rows.
+  `experiments/test_v53l_complete_source_system_b_local_rag_measured.sh`
+  consumes v53k and supplies System B answer/citation/resource rows over the
+  same frozen v53i 1000-query set. It emits combined A+B `supplied_v53j/` rows
+  with 2000 answers, 2000 citations, and 2000 resources, while keeping C/D/E/G/H,
+  symmetric scorer/policy rows, `v53_ready`, review artifacts, and release
+  claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
