@@ -1755,6 +1755,16 @@ Current next boundary:
   checkpoint materialization, full page-hash coverage, local SSD checkpoint
   residency, real generation, near-frontier quality, production latency, and
   release claims blocked.
+- `v61p` adds local SSD checkpoint residency preflight without downloading
+  weights. `experiments/test_v61p_local_ssd_checkpoint_residency_preflight.sh`
+  consumes v61o, emits an outside-repository warehouse probe, disk budget row,
+  checkpoint residency requirements, 59 shard download-plan rows, and 59 local
+  shard presence rows. The current host records 281241493344 checkpoint bytes,
+  315601231712 bytes required with reserve, 21616869376 available bytes,
+  `checkpoint_payload_bytes_downloaded_by_v61p=0`, and
+  `local_checkpoint_residency_ready=0`. It keeps full page-hash coverage, real
+  generation, near-frontier quality, production latency, and release claims
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

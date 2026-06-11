@@ -748,6 +748,49 @@ This is allowed to claim checkpoint index, shard HTTP identity, safetensors
 header, and sampled page-hash probe evidence. It is not full checkpoint
 residency, full page-hash coverage, or real Mixtral generation.
 
+### v61p Local SSD Checkpoint Residency Preflight
+
+The local SSD checkpoint residency preflight is implemented and covered by:
+
+```bash
+./experiments/test_v61p_local_ssd_checkpoint_residency_preflight.sh
+```
+
+It emits:
+
+- `results/v61p_local_ssd_checkpoint_residency_preflight/preflight_001/`
+
+Verified current summary:
+
+- `v61p_local_ssd_checkpoint_residency_preflight_ready=1`
+- `checkpoint_shard_rows=59`
+- `total_checkpoint_bytes_required=281241493344`
+- `ssd_reserve_bytes=34359738368`
+- `required_with_reserve_bytes=315601231712`
+- `available_ssd_bytes=21616869376`
+- `ssd_disk_budget_pass=0`
+- `ssd_warehouse_path=/home/betelgeuze/.cache/deep_learning_v61p_mixtral_8x22b_warehouse`
+- `ssd_warehouse_outside_repo=1`
+- `checkpoint_download_plan_rows=59`
+- `local_shard_presence_rows=59`
+- `local_complete_shard_rows=0`
+- `local_checkpoint_residency_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61p=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+- `real_checkpoint_weight_bytes_materialized=0`
+- `real_100b_open_weight_materialized=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `actual_model_generation_ready=0`
+- `near_frontier_claim_ready=0`
+- `production_latency_claim_ready=0`
+- `real_release_package_ready=0`
+
+This is allowed to claim an outside-repository checkpoint warehouse plan, disk
+budget audit, and local shard presence audit. It is not completed checkpoint
+residency until the outside-repository SSD warehouse contains all 59 shards and
+enough free-space reserve remains; it is also not full page-hash coverage or
+real Mixtral generation.
+
 ## Immediate Next Implementation Target
 
 Move from the real-model page manifest into measured real-model runtime evidence
@@ -759,15 +802,19 @@ without weakening the boundary:
 3. Closed as v61m seed: add a KV-cache residency/eviction policy so long-context claims remain gated by measured rows.
 4. Closed as v61n seed: run a source-bound code/doc QA workload through the v61 evidence chain and bind answers to citation/abstain/resource evidence.
 5. Closed as v61o seed: add checkpoint index, safetensors header, and sampled page-hash probe intake without persisting checkpoint payload bytes.
-6. Promote sampled page probes into full page-hash coverage or local SSD shard residency outside the repository.
-7. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-8. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+6. Closed as v61p preflight: add an outside-repository local SSD checkpoint residency plan, disk budget audit, and shard presence audit without downloading checkpoint payload bytes.
+7. Promote v61p into real local SSD shard residency only after the host has enough SSD budget and all 59 shards are present outside the repository.
+8. Promote sampled page probes into full safetensors page-hash coverage.
+9. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+10. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
 The current v61 runtime prototype can say:
 
-- the model warehouse is SSD-resident
+- the prepared page-store path is SSD-resident for deterministic fixture pages
+- the real Mixtral checkpoint has an outside-repository SSD residency preflight,
+  but not completed local shard residency on the current host
 - model weights are not fully RAM-resident
 - the active execution set is routed into VRAM
 - MoE/page routing is measured
@@ -777,9 +824,11 @@ The current v61 runtime prototype can say:
 - KV cache residency/eviction has a deterministic VRAM hot plus NVMe cold policy
 - source-bound QA has a citation/abstain workload seed over materialized files
 - checkpoint shard identity, safetensors headers, and sampled page hashes are bound
+- checkpoint residency currently requires 315601231712 bytes with reserve and is
+  blocked by the current 21616869376-byte SSD budget
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, and a real-model redistributable page manifest, not real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, and local SSD residency preflight, not completed real-checkpoint residency or real near-frontier open-weight inference.
