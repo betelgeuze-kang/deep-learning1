@@ -1667,6 +1667,13 @@ Current next boundary:
   path. It records `review_return_ready=0`,
   `quality_comparison_claim_ready=0`, and `v53_ready=0`, keeping the
   human-reviewed audit, comparison, and release claims blocked.
+- `v53t` adds the complete-source audit readiness gate.
+  `experiments/test_v53t_complete_source_audit_readiness_gate.sh` consumes
+  v52y/v53i/v53q/v53r/v53s, records
+  `machine_complete_source_surface_ready=1`, and keeps accepted human review
+  at 0/7000, adjudication at 0/1000, `review_return_ready=0`,
+  `quality_comparison_claim_ready=0`, `v53_ready=0`,
+  `v1_0_comparison_ready=0`, and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,

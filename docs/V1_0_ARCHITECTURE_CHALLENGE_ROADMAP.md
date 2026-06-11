@@ -376,6 +376,8 @@ Implemented now:
 - `experiments/test_v53r_complete_source_review_packet.sh`
 - `experiments/run_v53s_complete_source_review_return_intake.sh`
 - `experiments/test_v53s_complete_source_review_return_intake.sh`
+- `experiments/run_v53t_complete_source_audit_readiness_gate.sh`
+- `experiments/test_v53t_complete_source_audit_readiness_gate.sh`
 - `experiments/run_v61q_real_checkpoint_page_map.sh`
 - `experiments/test_v61q_real_checkpoint_page_map.sh`
 - `experiments/run_v61r_full_page_hash_sweep_plan.sh`
@@ -500,6 +502,7 @@ Implemented now:
 - `results/v53q_complete_source_symmetric_scorer_policy/score_001/` complete-source symmetric scorer/policy artifacts
 - `results/v53r_complete_source_review_packet/review_001/` complete-source review packet artifacts
 - `results/v53s_complete_source_review_return_intake/intake_001/` complete-source review return intake artifacts
+- `results/v53t_complete_source_audit_readiness_gate/gate_001/` complete-source audit readiness gate artifacts
 - `results/v61q_real_checkpoint_page_map/map_001/` real safetensors-header-derived checkpoint page-map artifacts
 - `results/v61r_full_page_hash_sweep_plan/plan_001/` full page-hash sweep plan artifacts
 - `results/v61s_one_command_source_bound_qa_replay/replay_001/` one-command source-bound QA replay artifacts
@@ -625,6 +628,8 @@ The v53r complete-source review packet layer prepares the frozen v53i/v53q evide
 
 The v53s complete-source review return intake layer binds v53r to the expected external returned-review artifacts without fabricating review judgments. It records `expected_human_review_rows=7000`, `expected_adjudication_rows=1000`, `expected_reviewer_assignment_rows=21`, accepted human/adjudication rows 0 in the default path, `review_return_ready=0`, `quality_comparison_claim_ready=0`, and `v53_ready=0`, while keeping human-reviewed audit, comparison, and release claims blocked.
 
+The v53t complete-source audit readiness gate binds v52y/v53i/v53q/v53r/v53s into one readiness matrix. It records `machine_complete_source_surface_ready=1` for the complete-source query/scoring/review-packet surface, accepted human review rows 0/7000, accepted adjudication rows 0/1000, `review_return_ready=0`, `quality_comparison_claim_ready=0`, `v53_ready=0`, `v1_0_comparison_ready=0`, and `real_release_package_ready=0`.
+
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
 The v54b scale layer emits 1000 deterministic local RouteHint generation rows across six domains, with RouteMemory evidence rows, compact RouteHint rows, generator input rows, grounded generation rows, citation rows, abstain rows, unsupported-claim rows, resource rows, and hash manifests. It marks `v54_generation_1000_ready=1` with `attention_blocks=0`, `transformer_blocks=0`, `raw_prompt_context_appended_rows=0`, and `wrong_answer_rows=0`, while keeping release and 30B-150B equivalence claims blocked.
@@ -732,8 +737,8 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 5. In progress as v52n/v52o seed: supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E over the v50 9-query seed.
 6. In progress as v52s/v52u/v52v/v52t: NVMe weight-tier contract, mmap reader scaffold, ROCm HIP bind, and explicit D/E local deferral; next extend tiered matmul decode (v52w) or external bake, then v52p/q/r and v59c.
 7. Closed as v52y default policy: keep F explicitly final-deferred with reason unless supplied evidence validates, and scope `v52_ready=1` to the measured baseline registry rather than v1.0 comparison readiness.
-8. Closed as v53g/v53h/v53i/v53j/v53k/v53l/v53m/v53n/v53o/v53p/v53q/v53r/v53s seeds: expand v53c canary snapshots into a recursive complete-source tree manifest, complete-source content snapshot, 1000-row complete-source query/source-span instantiation, complete-source A/B/C/D/E/G/H intake surface, System A/B/C/G/H local measured rows, System D/E open-weight RAG supplied rows, symmetric scorer/policy rows, a complete-source review packet for the 10 locked repositories, and a returned-review intake gate.
-9. Return actual human/source review artifacts, adjudication rows, reviewer identity/conflict rows, and quality-comparison evidence over the frozen v53i/v53r/v53s complete-source packet.
+8. Closed as v53g/v53h/v53i/v53j/v53k/v53l/v53m/v53n/v53o/v53p/v53q/v53r/v53s/v53t seeds: expand v53c canary snapshots into a recursive complete-source tree manifest, complete-source content snapshot, 1000-row complete-source query/source-span instantiation, complete-source A/B/C/D/E/G/H intake surface, System A/B/C/G/H local measured rows, System D/E open-weight RAG supplied rows, symmetric scorer/policy rows, a complete-source review packet for the 10 locked repositories, a returned-review intake gate, and a complete-source audit readiness gate.
+9. Return actual human/source review artifacts, adjudication rows, reviewer identity/conflict rows, and quality-comparison evidence over the frozen v53i/v53r/v53s/v53t complete-source packet.
 10. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
 11. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
 12. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
