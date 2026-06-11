@@ -561,6 +561,34 @@ Pass condition:
   1000+ audit completion, near-frontier, production-latency, and release claims
   remain blocked
 
+### v61t Local Checkpoint Materialization Verifier
+
+Promote local SSD shard presence from size-only preflight into identity
+verification for any outside-repository checkpoint shards that are already
+present on the host.
+
+Outputs:
+
+- `local_checkpoint_materialization_rows.csv`
+- `sampled_local_page_hash_verification_rows.csv`
+- `local_checkpoint_materialization_metric_rows.csv`
+- `materialization_gap_rows.csv`
+- `V61T_LOCAL_CHECKPOINT_MATERIALIZATION_VERIFIER_BOUNDARY.md`
+
+Pass condition:
+
+- v61p local shard presence, v61q real checkpoint page map, and v61r full
+  page-hash sweep plan evidence are bound
+- every shard has an identity-verification row
+- a local shard is counted as identity verified only when exact byte length,
+  safetensors header hash, and any required sampled page hash match
+- no checkpoint payload bytes are downloaded by the runner or committed to the
+  repository
+- completed checkpoint materialization, full page-hash coverage, real
+  generation, near-frontier, production-latency, and release claims remain
+  blocked until all 59 shards pass identity verification and every page is
+  hashed
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -871,7 +899,7 @@ Verified current summary:
 - `total_checkpoint_bytes_required=281241493344`
 - `ssd_reserve_bytes=34359738368`
 - `required_with_reserve_bytes=315601231712`
-- `available_ssd_bytes=21616869376`
+- `available_ssd_bytes=21337460736`
 - `ssd_disk_budget_pass=0`
 - `ssd_warehouse_path=/home/betelgeuze/.cache/deep_learning_v61p_mixtral_8x22b_warehouse`
 - `ssd_warehouse_outside_repo=1`
@@ -907,8 +935,8 @@ without weakening the boundary:
 4. Closed as v61n seed: run a source-bound code/doc QA workload through the v61 evidence chain and bind answers to citation/abstain/resource evidence.
 5. Closed as v61o seed: add checkpoint index, safetensors header, and sampled page-hash probe intake without persisting checkpoint payload bytes.
 6. Closed as v61p preflight: add an outside-repository local SSD checkpoint residency plan, disk budget audit, and shard presence audit without downloading checkpoint payload bytes.
-7. Promote v61p into real local SSD shard residency only after the host has enough SSD budget and all 59 shards are present outside the repository.
-8. Promote sampled page probes into full safetensors page-hash coverage.
+7. Closed as v61t verifier: promote v61p size/presence rows into local shard identity verification using safetensors header hashes and sampled page hashes, while keeping materialization blocked on the current host.
+8. Promote identity-verified local shards into full safetensors page-hash coverage.
 9. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
 10. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
@@ -929,10 +957,12 @@ The current v61 runtime prototype can say:
 - source-bound QA has a citation/abstain workload seed over materialized files
 - checkpoint shard identity, safetensors headers, and sampled page hashes are bound
 - checkpoint residency currently requires 315601231712 bytes with reserve and is
-  blocked by the current 21616869376-byte SSD budget
+  blocked by the current 21337460736-byte SSD budget
+- local checkpoint materialization has an identity verifier, but the current
+  host has 0 local existing shards and 0 identity-verified shards
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, and local SSD residency preflight, not completed real-checkpoint residency or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, and local checkpoint materialization identity verification mechanics, not completed real-checkpoint residency or real near-frontier open-weight inference.

@@ -1793,7 +1793,7 @@ Current next boundary:
   consumes v61o, emits an outside-repository warehouse probe, disk budget row,
   checkpoint residency requirements, 59 shard download-plan rows, and 59 local
   shard presence rows. The current host records 281241493344 checkpoint bytes,
-  315601231712 bytes required with reserve, 21616869376 available bytes,
+  315601231712 bytes required with reserve, 21337460736 available bytes,
   `checkpoint_payload_bytes_downloaded_by_v61p=0`, and
   `local_checkpoint_residency_ready=0`. It keeps full page-hash coverage, real
   generation, near-frontier quality, production latency, and release claims
@@ -1820,6 +1820,15 @@ Current next boundary:
   abstain-policy pass rows. It keeps complete-source 1000+ audit completion,
   real Mixtral generation, full page-hash coverage, near-frontier quality,
   production latency, and release claims blocked.
+- `v61t` adds local checkpoint materialization identity verification.
+  `experiments/test_v61t_local_checkpoint_materialization_verifier.sh` refreshes
+  v61p, binds v61q/v61r, and verifies any local outside-repository shards by
+  exact byte length, safetensors header hash, and sampled page hash. The current
+  host records 0 local existing shards, 0 identity-verified shards,
+  `local_checkpoint_materialization_ready=0`, and
+  `full_safetensors_page_hash_binding_ready=0`, while keeping real Mixtral
+  generation, near-frontier quality, production latency, and release claims
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
