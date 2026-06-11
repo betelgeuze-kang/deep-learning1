@@ -1659,6 +1659,14 @@ Current next boundary:
   of 1000/960/5040 and marks `review_packet_ready=1`, while keeping returned
   human/source review artifacts, adjudication artifacts, quality comparison,
   `v53_ready`, and release claims blocked.
+- `v53s` adds the complete-source review return intake gate.
+  `experiments/test_v53s_complete_source_review_return_intake.sh` consumes
+  v53r, writes the returned-review schema and validation rows, expects 7000
+  human review rows, 1000 adjudication rows, reviewer identity/conflict rows,
+  and an acceptance summary, but accepts 0 returned rows in the default no-env
+  path. It records `review_return_ready=0`,
+  `quality_comparison_claim_ready=0`, and `v53_ready=0`, keeping the
+  human-reviewed audit, comparison, and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
