@@ -1880,6 +1880,16 @@ Current next boundary:
   `materialization_admission_ready=0`, local checkpoint materialization, full
   page-hash coverage, real Mixtral generation, near-frontier quality,
   production latency, and release claims blocked on the current SSD budget.
+- `v61x` adds the hotset runtime replay manifest.
+  `experiments/test_v61x_hotset_runtime_replay_manifest.sh` consumes
+  v61w/v61v/v61s/v61m and binds the 16 remote-hashed real checkpoint pages to
+  16 planned NVMe hotset slots plus 37 source-bound replay rows. It records 15
+  MoE hotset pages, one embedding hotset page, `hotset_manifest_ready=1`,
+  `source_bound_replay_binding_ready=1`, and zero checkpoint payload bytes
+  downloaded or committed by v61x, while keeping hotset payload
+  materialization, SSD budget admission, local checkpoint materialization, full
+  page-hash coverage, real Mixtral generation, near-frontier quality,
+  production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
