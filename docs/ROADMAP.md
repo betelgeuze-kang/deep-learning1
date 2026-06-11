@@ -1975,6 +1975,15 @@ Current next boundary:
   payload bytes downloaded or committed by v61ag, while keeping local
   materialization, full page-hash coverage, actual model generation,
   production latency, and release claims blocked.
+- `v61ah` adds checkpoint download backend fallback planning.
+  `experiments/test_v61ah_checkpoint_download_backend_fallback_plan.sh`
+  consumes v61ag, probes five download backend candidates, selects available
+  `curl-resume` over the missing `huggingface-cli`, emits 59 backend download
+  plan rows, and verifies backend dry-run guard readiness with zero checkpoint
+  payload bytes downloaded or committed by v61ah. SSD-budget admission remains
+  blocked, so download execution, local materialization, full page-hash
+  coverage, actual model generation, production latency, and release claims
+  stay blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
