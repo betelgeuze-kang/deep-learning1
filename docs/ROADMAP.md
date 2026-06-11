@@ -1957,6 +1957,15 @@ Current next boundary:
   rows, 1000 source-review-blocked rows, 1000 materialization-blocked rows, and
   1000 page-hash-blocked rows, while keeping actual model generation,
   near-frontier quality, production latency, and release claims blocked.
+- `v61af` adds a guarded checkpoint warehouse operator bundle.
+  `experiments/test_v61af_checkpoint_warehouse_operator_bundle.sh` consumes
+  v61w, v61t, v61r, and v61ae, emitting repo-outside operator scripts for
+  priority shard download, materialization verification, full page hashing, and
+  generation-admission recheck. It records 59 download commands, 62 operator
+  command rows, six bundle files, dry-run defaults for download/full hashing,
+  and zero checkpoint payload bytes downloaded or committed by v61af, while
+  keeping SSD-budget admission, local materialization, full page-hash coverage,
+  actual model generation, production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

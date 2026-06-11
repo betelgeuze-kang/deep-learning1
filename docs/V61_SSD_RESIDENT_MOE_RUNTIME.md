@@ -892,6 +892,39 @@ Pass condition:
 - actual model generation, near-frontier quality, production-latency, and
   release claims remain blocked
 
+### v61af Checkpoint Warehouse Operator Bundle
+
+Turn the v61w materialization plan into guarded repo-outside operator scripts
+for the real Mixtral checkpoint warehouse, without downloading checkpoint
+payload bytes by default.
+
+Outputs:
+
+- `checkpoint_warehouse_operator_command_rows.csv`
+- `checkpoint_warehouse_operator_stage_rows.csv`
+- `checkpoint_warehouse_operator_metric_rows.csv`
+- `operator_bundle/README.md`
+- `operator_bundle/download_priority_queue.sh`
+- `operator_bundle/verify_materialization.sh`
+- `operator_bundle/run_full_page_hash_sweep.sh`
+- `operator_bundle/recheck_real_generation_admission.sh`
+- `V61AF_CHECKPOINT_WAREHOUSE_OPERATOR_BUNDLE_BOUNDARY.md`
+
+Pass condition:
+
+- v61w materialization planning, v61t local materialization state, v61r full
+  page-hash sweep state, and v61ae generation admission state are bound
+- 59 guarded shard download commands are emitted in priority order
+- 62 operator command rows and six operator bundle files are emitted
+- download execution defaults to dry-run and requires
+  `V61AF_EXECUTE_DOWNLOAD=1`
+- full page hashing defaults to dry-run and requires
+  `V61AF_EXECUTE_FULL_HASH=1`
+- checkpoint payload bytes downloaded or committed by v61af remain zero
+- SSD-budget admission, local checkpoint materialization, full page-hash
+  coverage, actual model generation, near-frontier, production-latency, and
+  release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -922,9 +955,10 @@ The benchmark ladder should be ordered by runtime risk:
 24. Sampled source-bound hotset token-budget replay.
 25. Sampled KV + weight token-budget replay.
 26. Real generation admission gate over complete-source candidates.
-27. Complete-source 1000+ QA workload with real model generation.
-28. Same runtime under long-context workloads with source-bound quality checks.
-29. One-command local assistant demo.
+27. Guarded checkpoint warehouse operator bundle.
+28. Complete-source 1000+ QA workload with real model generation.
+29. Same runtime under long-context workloads with source-bound quality checks.
+30. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1260,9 +1294,10 @@ without weakening the boundary:
 16. Closed as v61ac sampled hotset token-budget replay: bind v61x source-bound rows to v61z direct-I/O latency and v61ab tile probes, record bounded per-token budgets, and keep real generation blocked.
 17. Closed as v61ad KV + weight token-budget replay: bind v61ac token rows to v61m KV context profiles, record combined VRAM-hot/NVMe-cold budget rows, and keep full-KV-in-VRAM and real generation blocked.
 18. Closed as v61ae real generation admission gate: bind v61ad/v53r/v61r/v61t/v61w into 1000 complete-source generation candidates, admit 0 rows, and keep source-review/materialization/full-page-hash blockers explicit.
-19. Promote identity-verified local shards into full safetensors page-hash coverage.
-20. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-21. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+19. Closed as v61af checkpoint warehouse operator bundle: emit guarded repo-outside download, verify, full-page-hash, and admission-recheck scripts with dry-run defaults and zero payload bytes downloaded by v61af.
+20. Promote identity-verified local shards into full safetensors page-hash coverage.
+21. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+22. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1325,9 +1360,13 @@ The current v61 runtime prototype can say:
 - the real generation admission gate can emit 1000 complete-source generation
   candidate rows with 1000 runtime-budget-ready rows, but admits 0 rows until
   source review, materialization, and full page-hash gates pass
+- the checkpoint warehouse operator bundle can emit 59 priority download
+  commands, 62 guarded operator command rows, and dry-run scripts for download,
+  materialization verification, full page hashing, and generation-admission
+  recheck, but downloads zero checkpoint payload bytes by default
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, and sampled KV+weight token-budget replay, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, and guarded checkpoint warehouse operator scripting, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
