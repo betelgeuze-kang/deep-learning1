@@ -366,6 +366,28 @@ Pass condition:
 - real checkpoint materialization, GPU speedup, KV-cache, source-bound QA,
   near-frontier, production-latency, and release claims remain blocked
 
+### v61l GPU Page Dequant Matmul Measurement
+
+Measure a ROCm/HIP page kernel over the v61k real-model page geometry.
+
+Outputs:
+
+- `gpu_page_dequant_matmul_rows.csv`
+- `real_model_manifest_binding_rows.csv`
+- `rocm_toolchain_rows.csv`
+- `rocm_device_rows.csv`
+- `runtime_gap_rows.csv`
+
+Pass condition:
+
+- v61k Mixtral page manifest is bound
+- one 2 MiB q4-equivalent page tile is measured by a real ROCm/HIP kernel
+- numeric checks pass
+- the payload is disclosed as synthetic q4 page geometry
+- real checkpoint materialization, safetensors page hash binding, KV-cache,
+  source-bound QA, near-frontier, production-latency, and release claims remain
+  blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -378,9 +400,10 @@ The benchmark ladder should be ordered by runtime risk:
 6. Small MoE with real expert routing.
 7. 100B+ total-parameter MoE active-sparse runtime.
 8. Real open-weight MoE page manifest, no redistributed weights.
-9. Same runtime under code/doc QA workloads.
-10. Same runtime under long-context workloads with KV policy.
-11. One-command local assistant demo.
+9. GPU/ROCm page-kernel timing over the real-model page geometry.
+10. Same runtime under code/doc QA workloads.
+11. Same runtime under long-context workloads with KV policy.
+12. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -489,6 +512,43 @@ the current SSD budget, so the next runtime work must prove persistent hot
 cache, reuse, GPU page-dequant-matmul, and KV residency rather than claiming
 practical near-frontier inference.
 
+## Current GPU Page-Kernel Measurement
+
+The first v61 ROCm page-kernel measurement is implemented and covered by:
+
+```bash
+./experiments/test_v61l_gpu_page_dequant_matmul_measurement.sh
+```
+
+It emits:
+
+- `results/v61l_gpu_page_dequant_matmul_measurement/gpu_001/`
+
+Verified current summary:
+
+- `v61l_gpu_page_dequant_matmul_measurement_ready=1`
+- `model_id=mistralai/Mixtral-8x22B-v0.1`
+- `page_size_bytes=2097152`
+- `q4_page_bytes=2097152`
+- `tile_m=1024`
+- `tile_k=4096`
+- `iterations=20`
+- positive `gpu_kernel_avg_ms`
+- positive `gpu_page_dequant_gflops`
+- positive `gpu_page_bandwidth_gbps`
+- `max_abs_delta=0.00000000`
+- `real_checkpoint_weight_bytes_materialized=0`
+- `kv_cache_policy_ready=0`
+- `source_bound_qa_ready=0`
+- `near_frontier_claim_ready=0`
+- `production_latency_claim_ready=0`
+- `real_release_package_ready=0`
+
+This is allowed to claim only ROCm page-kernel timing over v61k page geometry.
+It is not real Mixtral inference speed: the payload is synthetic q4 page
+geometry, real safetensors page hashes are not bound, and no KV policy or
+source-bound QA workload consumes the kernel yet.
+
 ## Immediate Next Implementation Target
 
 Move from the real-model page manifest into measured real-model runtime evidence
@@ -496,7 +556,7 @@ without weakening the boundary:
 
 1. Add optional local checkpoint shard/header intake for the v61k manifest, still
    without committing weight bytes.
-2. Add GPU/ROCm page-dequant-matmul measurements and keep CPU fallback rows for reproducibility.
+2. Closed as v61l seed: add GPU/ROCm page-dequant-matmul measurements over the v61k page geometry while keeping real checkpoint weights blocked.
 3. Add a KV-cache residency/eviction policy so long-context claims remain gated by measured rows.
 4. Run source-bound code/doc QA workloads through the v61j command and bind answers to citation/abstain/fallback evidence.
 5. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.

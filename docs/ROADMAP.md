@@ -1693,8 +1693,15 @@ Current next boundary:
   tensor page metadata rows, and keeps all checkpoint weight bytes out of the
   repository. The summary reaches `legally_redistributable_page_manifest_ready=1`,
   `total_parameters_100b_plus=1`, and `real_checkpoint_weight_bytes_materialized=0`,
-  while showing `active_uncached_q4_budget_pass=0`; the next v61 work is GPU page
-  dequant-matmul, KV residency/eviction, and source-bound QA over this manifest.
+  while showing `active_uncached_q4_budget_pass=0`.
+- `v61l` adds real ROCm page-kernel timing over the v61k page geometry.
+  `experiments/test_v61l_gpu_page_dequant_matmul_measurement.sh` measures one
+  synthetic 2 MiB q4-equivalent page tile with `tile_m=1024`, `tile_k=4096`,
+  positive `gpu_kernel_avg_ms`, positive `gpu_page_dequant_gflops`, and
+  positive `gpu_page_bandwidth_gbps`. It keeps checkpoint weight
+  materialization, safetensors page-hash binding, KV residency/eviction,
+  source-bound QA, near-frontier quality, production latency, and release claims
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

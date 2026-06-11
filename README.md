@@ -19,9 +19,10 @@ Current v61 prototype smoke:
 ```bash
 ./experiments/test_v61j_one_command_ssd_resident_demo.sh
 ./experiments/test_v61k_real_model_page_manifest.sh
+./experiments/test_v61l_gpu_page_dequant_matmul_measurement.sh
 ```
 
-This closes the v61a-v61j SSD-resident active-sparse runtime prototype and adds v61k real-model page-manifest evidence for Mixtral 8x22B: deterministic 2 MB SSD weight pages, aligned direct I/O reads, no full-model RAM residency audit rows, RouteHint prefetch/VRAM hot cache, CPU page-dequant-matmul numeric checks, expert routing, predictive prefetch, mixed quant planning, dense full-stream stress blockers, a logical 128B MoE active-sparse contract, a one-command demo bundle, and a legally redistributable real-model page manifest. It keeps real checkpoint materialization, GPU speedup, KV-cache, source-bound QA, near-frontier quality, dense hundreds-B local-speed, production-latency, and release claims blocked.
+This closes the v61a-v61j SSD-resident active-sparse runtime prototype and adds v61k/v61l real-model page evidence for Mixtral 8x22B: deterministic 2 MB SSD weight pages, aligned direct I/O reads, no full-model RAM residency audit rows, RouteHint prefetch/VRAM hot cache, CPU page-dequant-matmul numeric checks, expert routing, predictive prefetch, mixed quant planning, dense full-stream stress blockers, a logical 128B MoE active-sparse contract, a one-command demo bundle, a legally redistributable real-model page manifest, and a ROCm page-dequant-matmul timing row over one 2 MiB q4-equivalent page tile. It keeps real checkpoint materialization, end-to-end GPU speedup, KV-cache, source-bound QA, near-frontier quality, dense hundreds-B local-speed, production-latency, and release claims blocked.
 
 Required v1.0 stages:
 
