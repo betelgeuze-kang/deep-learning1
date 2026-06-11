@@ -1608,6 +1608,14 @@ Current next boundary:
   with 2000 answers, 2000 citations, and 2000 resources, while keeping C/D/E/G/H,
   symmetric scorer/policy rows, `v53_ready`, review artifacts, and release
   claims blocked.
+- `v53m` adds complete-source System C local-model-RAG measured rows.
+  `experiments/test_v53m_complete_source_system_c_local_model_rag_measured.sh`
+  runs local Ollama `qwen2.5:7b-instruct` over the same frozen v53i 1000-query
+  set and emits System C answer/citation/resource/retrieval/abstain/guard/
+  transcript rows. It emits combined A+B+C `supplied_v53j/` rows with 3000
+  answers, 3000 citations, and 3000 resources, while recording 0/1000 strict
+  exact-answer matches and keeping D/E/G/H, symmetric scorer/policy rows,
+  `v53_ready`, review artifacts, and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
