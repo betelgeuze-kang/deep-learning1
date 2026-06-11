@@ -1594,6 +1594,13 @@ Current next boundary:
   citation targets, and binds optional F to the v52y final-deferred policy. It
   keeps supplied core rows, symmetric scorer/policy rows, `v53_ready`, review
   artifacts, and release claims blocked.
+- `v53k` adds complete-source System A lexical measured rows.
+  `experiments/test_v53k_complete_source_system_a_lexical_measured.sh` consumes
+  v53j and supplies System A/BM25-compatible answer/citation/resource rows over
+  the frozen v53i 1000-query set, with retrieval, guard, metric, partial
+  `supplied_v53j/`, boundary, manifest, and hash rows. It keeps B/C/D/E/G/H,
+  symmetric scorer/policy rows, `v53_ready`, review artifacts, and release
+  claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
