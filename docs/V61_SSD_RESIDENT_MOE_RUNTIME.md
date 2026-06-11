@@ -1090,6 +1090,34 @@ Pass condition:
 - download execution, actual materialization, full page-hash coverage, actual
   generation, production-latency, and release claims remain blocked
 
+### v61am Checkpoint Post-Activation Verification Gate
+
+Bind the activation gate, local checkpoint materialization identity verifier,
+and full page-hash sweep plan into a post-activation verification gate. This is
+the first gate after an activation package exists, and it prevents generation or
+release claims until local identity and full page hashes are complete.
+
+Outputs:
+
+- `checkpoint_post_activation_verification_rows.csv`
+- `checkpoint_post_activation_requirement_rows.csv`
+- `checkpoint_post_activation_metric_rows.csv`
+- `V61AM_CHECKPOINT_POST_ACTIVATION_VERIFICATION_GATE_BOUNDARY.md`
+
+Pass condition:
+
+- v61al activation rows, v61t local materialization rows, and v61r full
+  page-hash sweep rows are bound
+- 59 post-activation verification rows are emitted
+- current host records `activation_admitted_rows=0`,
+  `local_identity_verified_shard_rows=0`, `verified_page_hash_rows=0`, and
+  `required_page_hash_rows=134161`
+- `post_activation_verification_gate_ready=0`
+- `generation_gate_ready_after_post_activation=0`
+- checkpoint payload bytes downloaded or committed by v61am remain zero
+- actual generation, production-latency, near-frontier, and release claims
+  remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1127,9 +1155,10 @@ The benchmark ladder should be ordered by runtime risk:
 31. Checkpoint storage profile admission matrix.
 32. Checkpoint warehouse target preflight.
 33. Checkpoint warehouse activation gate.
-34. Complete-source 1000+ QA workload with real model generation.
-35. Same runtime under long-context workloads with source-bound quality checks.
-36. One-command local assistant demo.
+34. Checkpoint post-activation verification gate.
+35. Complete-source 1000+ QA workload with real model generation.
+36. Same runtime under long-context workloads with source-bound quality checks.
+37. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1472,9 +1501,10 @@ without weakening the boundary:
 23. Closed as v61aj checkpoint storage profile admission matrix: map current/minimum/operator storage profiles, identify the exact full-reserve profile, and keep current-host execution blocked.
 24. Closed as v61ak checkpoint warehouse target preflight: probe live warehouse targets, reject repository-local payload paths, and keep current-host target selection/download execution blocked.
 25. Closed as v61al checkpoint warehouse activation gate: emit 59 dry-run activation rows over curl-resume, admit 0 rows without a selected full-reserve target, and keep payload execution blocked.
-26. Promote identity-verified local shards into full safetensors page-hash coverage.
-27. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-28. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+26. Closed as v61am checkpoint post-activation verification gate: bind activation, local identity, and full page-hash readiness into 59 blocked post-activation rows, with generation/release gates still closed.
+27. Promote identity-verified local shards into full safetensors page-hash coverage.
+28. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+29. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1563,9 +1593,12 @@ The current v61 runtime prototype can say:
 - the warehouse activation gate can bind 59 shard activation rows to the
   selected `curl-resume` backend, but admits zero rows until a full-reserve
   outside-repository target is selected
+- the post-activation verification gate can bind activation rows to local
+  identity and full page-hash readiness, but records zero ready rows until
+  activation, local shard identity, and full page-hash coverage all pass
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, and checkpoint warehouse activation gating, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, and checkpoint post-activation verification gating, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.

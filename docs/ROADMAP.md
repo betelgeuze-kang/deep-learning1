@@ -2021,6 +2021,14 @@ Current next boundary:
   execution required, and zero checkpoint payload bytes downloaded or committed
   by v61al. Download execution, local materialization, full page-hash coverage,
   actual model generation, production latency, and release claims stay blocked.
+- `v61am` adds checkpoint post-activation verification gating.
+  `experiments/test_v61am_checkpoint_post_activation_verification_gate.sh`
+  consumes v61al/v61t/v61r and records 59 post-activation verification rows,
+  0 ready rows, 59 blocked rows, 0 activation-admitted rows, 0 local identity
+  verified shard rows, 0 verified page-hash rows out of 134161 required rows,
+  generation gate ready 0, and zero checkpoint payload bytes downloaded or
+  committed by v61am. Actual model generation, production latency,
+  near-frontier, and release claims stay blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
