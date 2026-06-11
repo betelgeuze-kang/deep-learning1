@@ -350,6 +350,8 @@ Implemented now:
 - `experiments/test_v53e_canary_query_scale_1000.sh`
 - `experiments/run_v53f_ah_answer_citation_resource_intake.sh`
 - `experiments/test_v53f_ah_answer_citation_resource_intake.sh`
+- `experiments/run_v53g_complete_source_manifest.sh`
+- `experiments/test_v53g_complete_source_manifest.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -488,6 +490,8 @@ The v53e query-scale layer expands the v53d seeds to 1000 canary-scope source-sp
 
 The v53f intake layer defines the A-H answer/citation/resource evidence surface over the frozen v53e 1000-query canary set. It writes the A-H system target matrix, required schemas, and 8000 answer/resource template rows, while intentionally keeping `v53_ready=0`, `valid_answer_rows=0`, and citation/resource coverage blocked until real supplied comparison rows, complete source snapshots, scorer/policy rows, and review artifacts exist.
 
+The v53g complete-source manifest layer binds the 10 locked repositories to recursive Git tree source/doc/config/test manifests. It records 11318 metadata-only file manifest rows, 11312 query-eligible rows, 30 canary-overlap rows, and an eight-family 1000-query budget. It intentionally keeps `v53_ready=0`, `complete_source_content_snapshot_ready=0`, `complete_source_query_rows_ready=0`, and A-H answer/citation/resource rows blocked, because this is the complete-source manifest prerequisite rather than materialized complete-source audit evidence.
+
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
 The v54b scale layer emits 1000 deterministic local RouteHint generation rows across six domains, with RouteMemory evidence rows, compact RouteHint rows, generator input rows, grounded generation rows, citation rows, abstain rows, unsupported-claim rows, resource rows, and hash manifests. It marks `v54_generation_1000_ready=1` with `attention_blocks=0`, `transformer_blocks=0`, `raw_prompt_context_appended_rows=0`, and `wrong_answer_rows=0`, while keeping release and 30B-150B equivalence claims blocked.
@@ -537,7 +541,7 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 5. In progress as v52n/v52o seed: supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E over the v50 9-query seed.
 6. In progress as v52s/v52u/v52v/v52t: NVMe weight-tier contract, mmap reader scaffold, ROCm HIP bind, and explicit D/E local deferral; next extend tiered matmul decode (v52w) or external bake, then v52p/q/r and v59c.
 7. Closed as v52y default policy: keep F explicitly final-deferred with reason unless supplied evidence validates, and scope `v52_ready=1` to the measured baseline registry rather than v1.0 comparison readiness.
-8. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
+8. In progress as v53g manifest seed: expand v53c canary snapshots into a recursive complete-source tree manifest for the 10 locked repositories; next materialize content snapshots and line-level source spans.
 9. Promote v53e/v53f canary-scope query and intake layers into complete-source 1000+ query audit evidence, then supply valid A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
 10. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
 11. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.

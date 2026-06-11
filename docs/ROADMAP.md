@@ -1563,6 +1563,14 @@ Current next boundary:
   v53 blocked with `valid_answer_rows=0` until real supplied comparison rows,
   source citation coverage, resource measurements, complete source snapshots,
   and review artifacts exist.
+- `v53g` adds the complete-source manifest layer.
+  `experiments/test_v53g_complete_source_manifest.sh` binds the 10 locked repos
+  to recursive Git tree source/doc/config/test manifests, records 11318
+  metadata-only manifest rows, 11312 query-eligible rows, 30 canary-overlap
+  rows, and an eight-family 1000-query budget. It marks
+  `v53g_complete_source_manifest_ready=1` while keeping content materialization,
+  complete-source query rows, A-H answer/citation/resource rows, `v53_ready`,
+  and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
