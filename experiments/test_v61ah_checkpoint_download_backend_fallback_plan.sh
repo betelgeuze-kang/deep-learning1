@@ -54,6 +54,7 @@ expected = {
     "aria2c_available": "0",
     "ssd_disk_budget_pass": "0",
     "warehouse_outside_repo": "1",
+    "warehouse_root_override_supplied": "0",
     "download_execution_ready": "0",
     "local_checkpoint_materialization_ready": "0",
     "full_safetensors_page_hash_binding_ready": "0",
@@ -79,6 +80,8 @@ required_files = [
     "V61AH_CHECKPOINT_DOWNLOAD_BACKEND_FALLBACK_BOUNDARY.md",
     "v61ah_checkpoint_download_backend_fallback_plan_manifest.json",
     "sha256_manifest.csv",
+    "source_v61ag/v61ag_checkpoint_warehouse_execution_preflight_summary.csv",
+    "source_v61af/v61af_checkpoint_warehouse_operator_bundle_summary.csv",
     "source_v61ag/checkpoint_warehouse_environment_rows.csv",
     "source_v61af/checkpoint_warehouse_operator_command_rows.csv",
     "source_v61w/checkpoint_shard_priority_rows.csv",
@@ -117,6 +120,13 @@ candidate_rows = {row["backend_id"]: row for row in read_csv(run_dir / "checkpoi
 plan_rows = read_csv(run_dir / "checkpoint_download_backend_plan_rows.csv")
 dry_rows = read_csv(run_dir / "checkpoint_download_backend_dry_run_rows.csv")
 metric = read_csv(run_dir / "checkpoint_download_backend_metric_rows.csv")[0]
+source_v61ag_summary = read_csv(run_dir / "source_v61ag/v61ag_checkpoint_warehouse_execution_preflight_summary.csv")[0]
+source_v61af_summary = read_csv(run_dir / "source_v61af/v61af_checkpoint_warehouse_operator_bundle_summary.csv")[0]
+
+if summary["ssd_warehouse_path"] != source_v61af_summary["ssd_warehouse_path"]:
+    raise SystemExit("v61ah warehouse path should match copied v61af summary")
+if source_v61ag_summary["ssd_warehouse_path"] != summary["ssd_warehouse_path"]:
+    raise SystemExit("v61ah source v61ag warehouse path should match summary")
 
 if set(candidate_rows) != {"curl-resume", "python-huggingface-hub", "wget-continue", "huggingface-cli", "aria2c-continue"}:
     raise SystemExit("v61ah backend candidate set mismatch")
@@ -149,6 +159,7 @@ for snippet in [
     "download_backend_dry_run_guard_ready=1",
     "huggingface_cli_available=0",
     "curl_available=1",
+    "warehouse_root_override_supplied=0",
     "download_execution_ready=0",
     "checkpoint_payload_bytes_downloaded_by_v61ah=0",
     "Blocked wording",
@@ -168,6 +179,8 @@ if manifest.get("selected_backend_id") != "curl-resume":
     raise SystemExit("v61ah manifest selected backend mismatch")
 if manifest.get("checkpoint_payload_bytes_downloaded_by_v61ah") != 0:
     raise SystemExit("v61ah manifest must keep downloaded payload bytes at zero")
+if manifest.get("warehouse_root_override_supplied") != 0:
+    raise SystemExit("v61ah manifest should record no default warehouse override")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:

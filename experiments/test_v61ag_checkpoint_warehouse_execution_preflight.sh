@@ -50,8 +50,8 @@ expected = {
     "warehouse_outside_repo": "1",
     "operator_bundle_ignored_by_git": "1",
     "ssd_disk_budget_pass": "0",
-    "available_ssd_bytes": "21337460736",
     "required_with_reserve_bytes": "315601231712",
+    "warehouse_root_override_supplied": "0",
     "download_execution_ready": "0",
     "operator_execution_preflight_ready": "0",
     "local_checkpoint_materialization_ready": "0",
@@ -80,6 +80,7 @@ required_files = [
     "V61AG_CHECKPOINT_WAREHOUSE_EXECUTION_PREFLIGHT_BOUNDARY.md",
     "v61ag_checkpoint_warehouse_execution_preflight_manifest.json",
     "sha256_manifest.csv",
+    "source_v61af/v61af_checkpoint_warehouse_operator_bundle_summary.csv",
     "source_v61af/checkpoint_warehouse_operator_command_rows.csv",
     "source_v61af/checkpoint_warehouse_operator_stage_rows.csv",
     "source_v61af/checkpoint_warehouse_operator_metric_rows.csv",
@@ -125,6 +126,14 @@ script_rows = read_csv(run_dir / "checkpoint_warehouse_operator_script_probe_row
 dry_rows = read_csv(run_dir / "checkpoint_warehouse_dry_run_probe_rows.csv")
 gate_rows = {row["gate"]: row for row in read_csv(run_dir / "checkpoint_warehouse_execution_gate_rows.csv")}
 metric = read_csv(run_dir / "checkpoint_warehouse_execution_preflight_metric_rows.csv")[0]
+source_v61af_summary = read_csv(run_dir / "source_v61af/v61af_checkpoint_warehouse_operator_bundle_summary.csv")[0]
+
+if summary["available_ssd_bytes"] != source_v61af_summary["available_ssd_bytes"]:
+    raise SystemExit("v61ag available_ssd_bytes should match copied v61af summary")
+if metric["available_ssd_bytes"] != summary["available_ssd_bytes"]:
+    raise SystemExit("v61ag metric available_ssd_bytes should match summary")
+if summary["ssd_warehouse_path"] != source_v61af_summary["ssd_warehouse_path"]:
+    raise SystemExit("v61ag warehouse path should match copied v61af summary")
 
 if len(environment_rows) != 5 or len(script_rows) != 4 or len(dry_rows) != 1:
     raise SystemExit("v61ag artifact row count mismatch")
@@ -151,6 +160,7 @@ boundary = (run_dir / "V61AG_CHECKPOINT_WAREHOUSE_EXECUTION_PREFLIGHT_BOUNDARY.m
 for snippet in [
     "operator_command_rows=62",
     "download_dry_run_guard_ready=1",
+    "warehouse_root_override_supplied=0",
     "download_execution_ready=0",
     "operator_execution_preflight_ready=0",
     "checkpoint_payload_bytes_downloaded_by_v61ag=0",
@@ -166,6 +176,8 @@ if manifest.get("download_dry_run_guard_ready") != 1:
     raise SystemExit("v61ag manifest dry-run guard mismatch")
 if manifest.get("checkpoint_payload_bytes_downloaded_by_v61ag") != 0:
     raise SystemExit("v61ag manifest must keep downloaded payload bytes at zero")
+if manifest.get("warehouse_root_override_supplied") != 0:
+    raise SystemExit("v61ag manifest should record no default warehouse override")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:

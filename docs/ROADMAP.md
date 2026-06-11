@@ -1998,42 +1998,52 @@ Current next boundary:
   page-hash coverage, actual model generation, production latency, and release
   claims blocked.
 - `v61ag` adds checkpoint warehouse execution preflight.
-  `experiments/test_v61ag_checkpoint_warehouse_execution_preflight.sh`
-  consumes v61af, syntax-checks the operator scripts, and runs a one-row dry-run
-  download probe. It records 4/4 script syntax/executable passes,
+  `experiments/test_v61ag_checkpoint_warehouse_execution_preflight.sh` plus
+  `experiments/test_v61ag_checkpoint_warehouse_execution_preflight_target_override.sh`
+  consume v61af, syntax-check the operator scripts, and run a one-row dry-run
+  download probe. They record 4/4 script syntax/executable passes,
   `download_dry_run_guard_ready=1`, `huggingface_cli_available=0`,
   `ssd_disk_budget_pass=0`, `download_execution_ready=0`, and zero checkpoint
-  payload bytes downloaded or committed by v61ag, while keeping local
-  materialization, full page-hash coverage, actual model generation,
-  production latency, and release claims blocked.
+  payload bytes downloaded or committed by v61ag, and verify that
+  `V61AG_WAREHOUSE_ROOT` refreshes v61af and preserves the target in copied
+  operator env/scripts and command rows, while keeping local materialization,
+  full page-hash coverage, actual model generation, production latency, and
+  release claims blocked.
 - `v61ah` adds checkpoint download backend fallback planning.
-  `experiments/test_v61ah_checkpoint_download_backend_fallback_plan.sh`
-  consumes v61ag, probes five download backend candidates, selects available
-  `curl-resume` over the missing `huggingface-cli`, emits 59 backend download
-  plan rows, and verifies backend dry-run guard readiness with zero checkpoint
-  payload bytes downloaded or committed by v61ah. SSD-budget admission remains
+  `experiments/test_v61ah_checkpoint_download_backend_fallback_plan.sh` plus
+  `experiments/test_v61ah_checkpoint_download_backend_fallback_plan_target_override.sh`
+  consume v61ag, probe five download backend candidates, select available
+  `curl-resume` over the missing `huggingface-cli`, emit 59 backend download
+  plan rows, verify backend dry-run guard readiness with zero checkpoint
+  payload bytes downloaded or committed by v61ah, and verify that
+  `V61AH_WAREHOUSE_ROOT` propagates into target paths, curl commands, and the
+  guarded backend script. SSD-budget admission remains blocked, so download
+  execution, local materialization, full page-hash coverage, actual model
+  generation, production latency, and release claims stay blocked.
+- `v61ai` adds checkpoint storage budget remediation planning.
+  `experiments/test_v61ai_checkpoint_storage_budget_remediation_plan.sh` plus
+  `experiments/test_v61ai_checkpoint_storage_budget_remediation_plan_target_override.sh`
+  consume v61ah/v61p/v61w and record `required_with_reserve_bytes=315601231712`,
+  live available SSD bytes, computed full/raw deficits,
+  `safe_materialization_batch_rows=0`, and a bounded diagnostic no-reserve
+  top-priority batch with zero checkpoint payload bytes downloaded or committed
+  by v61ai. They verify that `V61AI_WAREHOUSE_ROOT` propagates through
+  v61ah/v61p/v61w evidence and target paths. Storage budget remediation remains
   blocked, so download execution, local materialization, full page-hash
   coverage, actual model generation, production latency, and release claims
   stay blocked.
-- `v61ai` adds checkpoint storage budget remediation planning.
-  `experiments/test_v61ai_checkpoint_storage_budget_remediation_plan.sh`
-  consumes v61ah/v61p/v61w and records `required_with_reserve_bytes=315601231712`,
-  `available_ssd_bytes=21337460736`, `full_budget_deficit_bytes=294263770976`,
-  `raw_checkpoint_deficit_bytes=259904032608`, `safe_materialization_batch_rows=0`,
-  and a diagnostic no-reserve top-priority batch of 4 shards / 19478756392 bytes
-  with zero checkpoint payload bytes downloaded or committed by v61ai. Storage
-  budget remediation remains blocked, so download execution, local materialization,
-  full page-hash coverage, actual model generation, production latency, and
-  release claims stay blocked.
 - `v61aj` adds checkpoint storage profile admission matrixing.
-  `experiments/test_v61aj_checkpoint_storage_profile_admission_matrix.sh`
-  consumes v61ai/v61w and records six storage profile rows, current reserve
-  admitted shard rows 0, current no-reserve diagnostic admitted shard rows 4 /
-  19478756392 bytes, exact reserve admitted shard rows 59, minimum additional
-  bytes 294263770976, recommended operator free bytes 549755813888, and zero
-  checkpoint payload bytes downloaded or committed by v61aj. Current-host
-  download execution, local materialization, full page-hash coverage, actual
-  model generation, production latency, and release claims stay blocked.
+  `experiments/test_v61aj_checkpoint_storage_profile_admission_matrix.sh` plus
+  `experiments/test_v61aj_checkpoint_storage_profile_admission_matrix_target_override.sh`
+  consume v61ai/v61w and record six storage profile rows, current reserve
+  admitted shard rows 0, live current no-reserve diagnostic admitted shard
+  rows/bytes, exact reserve admitted shard rows 59, computed minimum additional
+  bytes, recommended operator free bytes 549755813888, and zero checkpoint
+  payload bytes downloaded or committed by v61aj. They verify that
+  `V61AJ_WAREHOUSE_ROOT` propagates through v61ai and copied v61w target paths.
+  Current-host download execution, local materialization, full page-hash
+  coverage, actual model generation, production latency, and release claims
+  stay blocked.
 - `v61ak` adds checkpoint warehouse target preflight.
   `experiments/test_v61ak_checkpoint_warehouse_target_preflight.sh`
   consumes v61aj/v61p and probes current, operator-supplied, and repository-control

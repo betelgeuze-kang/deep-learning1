@@ -953,6 +953,9 @@ Outputs:
 Pass condition:
 
 - v61af operator bundle evidence is bound
+- `V61AG_WAREHOUSE_ROOT` target override forces fresh v61af bundle evidence and
+  preserves the supplied external warehouse target in copied operator
+  env/scripts and download command rows
 - all four operator scripts pass `bash -n` and have executable bits set
 - a one-row dry-run download probe exits 0 and sees the dry-run guard
 - the checkpoint warehouse target is outside the repository
@@ -981,6 +984,8 @@ Outputs:
 Pass condition:
 
 - v61ag execution preflight evidence is bound
+- `V61AH_WAREHOUSE_ROOT` target override propagates through v61ag/v61af and
+  into backend target paths, curl commands, and the guarded backend script
 - five backend candidates are probed
 - an available backend is selected for all 59 checkpoint shard rows
 - `curl-resume` is selected when `huggingface-cli` is unavailable
@@ -1008,13 +1013,13 @@ Pass condition:
 
 - v61ah backend fallback, v61p storage budget, and v61w shard-priority evidence
   are bound
+- `V61AI_WAREHOUSE_ROOT` target override propagates through v61ah/v61p/v61w
+  evidence and target paths
 - `required_with_reserve_bytes=315601231712`
-- `available_ssd_bytes=21337460736`
-- `full_budget_deficit_bytes=294263770976`
-- `raw_checkpoint_deficit_bytes=259904032608`
+- live `available_ssd_bytes` and computed full/raw budget deficits are recorded
 - reserve-safe materialization admits zero shard rows
-- the diagnostic no-reserve top-priority batch records 4 shards /
-  19478756392 bytes, but remains non-admitted by reserve policy
+- the diagnostic no-reserve top-priority batch is bounded by live available
+  bytes and remains non-admitted by reserve policy
 - checkpoint payload bytes downloaded or committed by v61ai remain zero
 - storage-budget remediation, actual materialization, full page-hash coverage,
   actual generation, production-latency, and release claims remain blocked
@@ -1035,12 +1040,14 @@ Outputs:
 Pass condition:
 
 - v61ai storage remediation and v61w shard-priority evidence are bound
+- `V61AJ_WAREHOUSE_ROOT` target override propagates through v61ai and copied
+  v61w target paths
 - six storage profile rows are emitted
 - current reserve-policy profile admits zero shard rows
-- current no-reserve diagnostic profile admits 4 shards / 19478756392 bytes,
+- current no-reserve diagnostic profile records live admitted shard rows/bytes
   but remains diagnostic-only
 - `full-checkpoint-exact-with-reserve` admits all 59 shards
-- `minimum_additional_bytes_for_full_reserve=294263770976`
+- computed `minimum_additional_bytes_for_full_reserve` is recorded
 - `recommended_operator_free_bytes=549755813888`
 - checkpoint payload bytes downloaded or committed by v61aj remain zero
 - current-host download execution, actual materialization, full page-hash
@@ -1535,10 +1542,10 @@ without weakening the boundary:
 17. Closed as v61ad KV + weight token-budget replay: bind v61ac token rows to v61m KV context profiles, record combined VRAM-hot/NVMe-cold budget rows, and keep full-KV-in-VRAM and real generation blocked.
 18. Closed as v61ae real generation admission gate: bind v61ad/v53r/v61r/v61t/v61w into 1000 complete-source generation candidates, admit 0 rows, and keep source-review/materialization/full-page-hash blockers explicit, with `V61AE_WAREHOUSE_ROOT` refreshing target-bound source evidence.
 19. Closed as v61af checkpoint warehouse operator bundle: emit guarded repo-outside download, verify, full-page-hash, and admission-recheck scripts with dry-run defaults, zero payload bytes downloaded by v61af, and `V61AF_WAREHOUSE_ROOT` propagated into source evidence and operator scripts.
-20. Closed as v61ag checkpoint warehouse execution preflight: syntax-check v61af operator scripts, run a guarded one-row dry-run probe, record current CLI/SSD blockers, and keep real download execution blocked.
-21. Closed as v61ah checkpoint download backend fallback plan: select curl-resume over missing huggingface-cli, emit 59 guarded backend commands, and keep SSD-budget execution blocked.
-22. Closed as v61ai checkpoint storage budget remediation plan: quantify the current SSD deficit, record zero reserve-safe shard rows, and keep materialization/download execution blocked.
-23. Closed as v61aj checkpoint storage profile admission matrix: map current/minimum/operator storage profiles, identify the exact full-reserve profile, and keep current-host execution blocked.
+20. Closed as v61ag checkpoint warehouse execution preflight: syntax-check v61af operator scripts, run a guarded one-row dry-run probe, preserve `V61AG_WAREHOUSE_ROOT` target-bound operator evidence, record current CLI/SSD blockers, and keep real download execution blocked.
+21. Closed as v61ah checkpoint download backend fallback plan: select curl-resume over missing huggingface-cli, emit 59 guarded backend commands, preserve `V61AH_WAREHOUSE_ROOT` in backend target paths/scripts, and keep SSD-budget execution blocked.
+22. Closed as v61ai checkpoint storage budget remediation plan: quantify the current SSD deficit from target-bound v61p/v61w evidence, preserve `V61AI_WAREHOUSE_ROOT`, record zero reserve-safe shard rows, and keep materialization/download execution blocked.
+23. Closed as v61aj checkpoint storage profile admission matrix: map current/minimum/operator storage profiles from target-bound remediation evidence, preserve `V61AJ_WAREHOUSE_ROOT`, identify the exact full-reserve profile, and keep current-host execution blocked.
 24. Closed as v61ak checkpoint warehouse target preflight: probe live warehouse targets, reject repository-local payload paths, and keep current-host target selection/download execution blocked.
 25. Closed as v61al checkpoint warehouse activation gate: emit 59 dry-run activation rows over curl-resume, admit 0 rows without a selected full-reserve target, and keep payload execution blocked.
 26. Closed as v61am checkpoint post-activation verification gate: bind activation, local identity, and full page-hash readiness into 59 blocked post-activation rows, with generation/release gates still closed.

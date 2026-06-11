@@ -43,18 +43,14 @@ expected = {
     "full_reserve_profile_rows": "3",
     "full_without_reserve_profile_rows": "4",
     "first_full_reserve_profile_id": "full-checkpoint-exact-with-reserve",
-    "current_available_bytes": "21337460736",
     "total_checkpoint_bytes_required": "281241493344",
     "ssd_reserve_bytes": "34359738368",
     "required_with_reserve_bytes": "315601231712",
-    "minimum_additional_bytes_for_full_reserve": "294263770976",
-    "raw_checkpoint_deficit_bytes": "259904032608",
     "recommended_operator_free_bytes": "549755813888",
     "current_reserve_admitted_shard_rows": "0",
-    "current_no_reserve_admitted_shard_rows": "4",
-    "current_no_reserve_admitted_shard_bytes": "19478756392",
     "exact_reserve_admitted_shard_rows": "59",
     "selected_backend_id": "curl-resume",
+    "warehouse_root_override_supplied": "0",
     "storage_profile_admission_matrix_ready": "1",
     "download_execution_ready": "0",
     "full_checkpoint_materialization_ready": "0",
@@ -79,6 +75,7 @@ required_files = [
     "V61AJ_CHECKPOINT_STORAGE_PROFILE_ADMISSION_MATRIX_BOUNDARY.md",
     "v61aj_checkpoint_storage_profile_admission_matrix_manifest.json",
     "sha256_manifest.csv",
+    "source_v61ai/v61ai_checkpoint_storage_budget_remediation_plan_summary.csv",
     "source_v61ai/checkpoint_storage_budget_remediation_rows.csv",
     "source_v61ai/checkpoint_materialization_batch_rows.csv",
     "source_v61w/checkpoint_shard_priority_rows.csv",
@@ -118,14 +115,32 @@ raw_exact = profiles["raw-checkpoint-exact-no-reserve"]
 safe_exact = profiles["full-checkpoint-exact-with-reserve"]
 operator_512 = profiles["operator-512gib-free-profile"]
 operator_1tib = profiles["operator-1tib-free-profile"]
+source_v61ai_summary = read_csv(run_dir / "source_v61ai/v61ai_checkpoint_storage_budget_remediation_plan_summary.csv")[0]
+
+current_available_bytes = int(summary["current_available_bytes"])
+total_checkpoint_bytes = int(summary["total_checkpoint_bytes_required"])
+required_with_reserve = int(summary["required_with_reserve_bytes"])
+minimum_additional = max(required_with_reserve - current_available_bytes, 0)
+raw_checkpoint_deficit = max(total_checkpoint_bytes - current_available_bytes, 0)
+current_no_reserve_rows = summary["current_no_reserve_admitted_shard_rows"]
+current_no_reserve_bytes = summary["current_no_reserve_admitted_shard_bytes"]
+
+if summary["current_available_bytes"] != source_v61ai_summary["available_ssd_bytes"]:
+    raise SystemExit("v61aj current_available_bytes should match copied v61ai summary")
+if summary["ssd_warehouse_path"] != source_v61ai_summary["ssd_warehouse_path"]:
+    raise SystemExit("v61aj warehouse path should match copied v61ai summary")
+if int(summary["minimum_additional_bytes_for_full_reserve"]) != minimum_additional:
+    raise SystemExit("v61aj minimum additional bytes formula mismatch")
+if int(summary["raw_checkpoint_deficit_bytes"]) != raw_checkpoint_deficit:
+    raise SystemExit("v61aj raw checkpoint deficit formula mismatch")
 
 if current["admitted_shard_rows_under_profile_policy"] != "0":
     raise SystemExit("v61aj current reserve profile should admit zero shards")
-if current["admitted_shard_rows_without_reserve"] != "4":
+if current["admitted_shard_rows_without_reserve"] != current_no_reserve_rows:
     raise SystemExit("v61aj current no-reserve view should fit four shards")
 if diagnostic["execution_admission_status"] != "diagnostic-only":
     raise SystemExit("v61aj current no-reserve profile should be diagnostic only")
-if diagnostic["admitted_shard_rows_under_profile_policy"] != "4":
+if diagnostic["admitted_shard_rows_under_profile_policy"] != current_no_reserve_rows:
     raise SystemExit("v61aj diagnostic profile should admit four shards under no reserve")
 if raw_exact["full_checkpoint_admitted_without_reserve"] != "1":
     raise SystemExit("v61aj raw exact profile should fit full checkpoint without reserve")
@@ -135,7 +150,7 @@ if safe_exact["full_checkpoint_admitted_by_profile_policy"] != "1":
     raise SystemExit("v61aj exact reserve profile should admit full checkpoint")
 if safe_exact["configured_reserve_satisfied_after_full"] != "1":
     raise SystemExit("v61aj exact reserve profile should satisfy configured reserve")
-if safe_exact["additional_bytes_from_current"] != "294263770976":
+if safe_exact["additional_bytes_from_current"] != str(minimum_additional):
     raise SystemExit("v61aj exact reserve additional bytes mismatch")
 if operator_512["full_checkpoint_admitted_by_profile_policy"] != "1":
     raise SystemExit("v61aj 512GiB profile should admit full checkpoint")
@@ -143,7 +158,7 @@ if operator_1tib["full_checkpoint_admitted_by_profile_policy"] != "1":
     raise SystemExit("v61aj 1TiB profile should admit full checkpoint")
 
 requirements = {row["requirement_id"]: row for row in read_csv(run_dir / "checkpoint_storage_profile_requirement_rows.csv")}
-if requirements["minimum-additional-bytes-for-full-reserve"]["bytes"] != "294263770976":
+if requirements["minimum-additional-bytes-for-full-reserve"]["bytes"] != str(minimum_additional):
     raise SystemExit("v61aj minimum additional bytes requirement mismatch")
 if requirements["operator-margin-free-bytes"]["bytes"] != "549755813888":
     raise SystemExit("v61aj operator margin bytes mismatch")
@@ -156,12 +171,14 @@ for field, value in expected.items():
 boundary = (run_dir / "V61AJ_CHECKPOINT_STORAGE_PROFILE_ADMISSION_MATRIX_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     "profile_rows=6",
-    "minimum_additional_bytes_for_full_reserve=294263770976",
+    f"minimum_additional_bytes_for_full_reserve={minimum_additional}",
     "current_reserve_admitted_shard_rows=0",
-    "current_no_reserve_admitted_shard_rows=4",
+    f"current_no_reserve_admitted_shard_rows={current_no_reserve_rows}",
+    f"current_no_reserve_admitted_shard_bytes={current_no_reserve_bytes}",
     "exact_reserve_admitted_shard_rows=59",
     "first_full_reserve_profile_id=full-checkpoint-exact-with-reserve",
     "recommended_operator_free_bytes=549755813888",
+    "warehouse_root_override_supplied=0",
     "checkpoint_payload_bytes_downloaded_by_v61aj=0",
     "Blocked wording",
 ]:
@@ -173,10 +190,12 @@ if manifest.get("v61aj_checkpoint_storage_profile_admission_matrix_ready") != 1:
     raise SystemExit("v61aj manifest readiness mismatch")
 if manifest.get("profile_rows") != 6:
     raise SystemExit("v61aj manifest profile rows mismatch")
-if manifest.get("minimum_additional_bytes_for_full_reserve") != 294263770976:
+if manifest.get("minimum_additional_bytes_for_full_reserve") != minimum_additional:
     raise SystemExit("v61aj manifest minimum bytes mismatch")
 if manifest.get("checkpoint_payload_bytes_downloaded_by_v61aj") != 0:
     raise SystemExit("v61aj manifest must keep downloaded payload bytes at zero")
+if manifest.get("warehouse_root_override_supplied") != 0:
+    raise SystemExit("v61aj manifest should record no default warehouse override")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:

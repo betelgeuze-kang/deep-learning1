@@ -8,8 +8,9 @@ RUN_ID="${V61AG_RUN_ID:-preflight_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+WAREHOUSE_ROOT_OVERRIDE="${V61AG_WAREHOUSE_ROOT:-${V61AF_WAREHOUSE_ROOT:-${V61W_WAREHOUSE_ROOT:-${V61T_WAREHOUSE_ROOT:-${V61R_WAREHOUSE_ROOT:-${V61AE_WAREHOUSE_ROOT:-${V61P_SSD_WAREHOUSE_DIR:-${V61_WAREHOUSE_ROOT:-}}}}}}}}"
 
-if [[ "${V61AG_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V61AG_REUSE_EXISTING:-0}" == "1" && -z "$WAREHOUSE_ROOT_OVERRIDE" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
   echo "v61ag_checkpoint_warehouse_execution_preflight_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -19,9 +20,13 @@ fi
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-V61AF_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61af_checkpoint_warehouse_operator_bundle.sh" >/dev/null
+if [[ -n "$WAREHOUSE_ROOT_OVERRIDE" ]]; then
+  V61AF_WAREHOUSE_ROOT="$WAREHOUSE_ROOT_OVERRIDE" V61AF_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61af_checkpoint_warehouse_operator_bundle.sh" >/dev/null
+else
+  V61AF_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61af_checkpoint_warehouse_operator_bundle.sh" >/dev/null
+fi
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$WAREHOUSE_ROOT_OVERRIDE" <<'PY'
 import csv
 import hashlib
 import json
@@ -36,6 +41,7 @@ root = Path(sys.argv[1]).resolve()
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+warehouse_root_override = sys.argv[5].strip()
 results = root / "results"
 model_id = "mistralai/Mixtral-8x22B-v0.1"
 
@@ -269,6 +275,8 @@ metric = {
     "warehouse_outside_repo": str(warehouse_outside_repo),
     "operator_bundle_ignored_by_git": str(operator_bundle_ignored_by_git),
     "ssd_disk_budget_pass": v61af_summary["ssd_disk_budget_pass"],
+    "warehouse_root_override_supplied": str(int(bool(warehouse_root_override))),
+    "ssd_warehouse_path": v61af_summary["ssd_warehouse_path"],
     "available_ssd_bytes": v61af_summary["available_ssd_bytes"],
     "required_with_reserve_bytes": v61af_summary["required_with_reserve_bytes"],
     "download_execution_ready": str(download_execution_ready),
@@ -317,6 +325,8 @@ Evidence emitted:
 - warehouse_outside_repo={warehouse_outside_repo}
 - operator_bundle_ignored_by_git={operator_bundle_ignored_by_git}
 - ssd_disk_budget_pass={v61af_summary['ssd_disk_budget_pass']}
+- warehouse_root_override_supplied={int(bool(warehouse_root_override))}
+- ssd_warehouse_path={v61af_summary['ssd_warehouse_path']}
 - download_execution_ready={download_execution_ready}
 - operator_execution_preflight_ready={operator_execution_preflight_ready}
 - checkpoint_payload_bytes_downloaded_by_v61ag=0
@@ -344,6 +354,8 @@ manifest = {
     "download_dry_run_guard_ready": dry_run_payload_blocked,
     "download_execution_ready": download_execution_ready,
     "operator_execution_preflight_ready": operator_execution_preflight_ready,
+    "warehouse_root_override_supplied": int(bool(warehouse_root_override)),
+    "ssd_warehouse_path": v61af_summary["ssd_warehouse_path"],
     "checkpoint_payload_bytes_downloaded_by_v61ag": 0,
     "checkpoint_payload_bytes_committed_to_repo": 0,
 }

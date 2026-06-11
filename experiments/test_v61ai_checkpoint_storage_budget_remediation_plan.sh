@@ -43,16 +43,11 @@ expected = {
     "total_checkpoint_bytes_required": "281241493344",
     "ssd_reserve_bytes": "34359738368",
     "required_with_reserve_bytes": "315601231712",
-    "available_ssd_bytes": "21337460736",
-    "available_after_reserve_bytes": "0",
-    "full_budget_deficit_bytes": "294263770976",
-    "raw_checkpoint_deficit_bytes": "259904032608",
     "safe_materialization_batch_rows": "0",
     "safe_materialization_batch_bytes": "0",
-    "no_reserve_candidate_shard_rows": "4",
-    "no_reserve_candidate_bytes": "19478756392",
     "selected_backend_id": "curl-resume",
     "download_backend_ready": "1",
+    "warehouse_root_override_supplied": "0",
     "download_execution_ready": "0",
     "storage_budget_remediation_ready": "0",
     "full_checkpoint_materialization_ready": "0",
@@ -80,7 +75,9 @@ required_files = [
     "v61ai_checkpoint_storage_budget_remediation_plan_manifest.json",
     "sha256_manifest.csv",
     "source_v61ah/checkpoint_download_backend_plan_rows.csv",
+    "source_v61p/v61p_local_ssd_checkpoint_residency_preflight_summary.csv",
     "source_v61p/checkpoint_residency_requirement_rows.csv",
+    "source_v61w/v61w_materialization_admission_resume_plan_summary.csv",
     "source_v61w/checkpoint_shard_priority_rows.csv",
 ]
 for rel in required_files:
@@ -114,18 +111,43 @@ remediation_rows = {row["remediation_id"]: row for row in read_csv(run_dir / "ch
 batch_rows = {row["batch_id"]: row for row in read_csv(run_dir / "checkpoint_materialization_batch_rows.csv")}
 candidate_rows = read_csv(run_dir / "checkpoint_no_reserve_candidate_shard_rows.csv")
 metric = read_csv(run_dir / "checkpoint_storage_budget_metric_rows.csv")[0]
+source_v61p_summary = read_csv(run_dir / "source_v61p/v61p_local_ssd_checkpoint_residency_preflight_summary.csv")[0]
+source_v61w_summary = read_csv(run_dir / "source_v61w/v61w_materialization_admission_resume_plan_summary.csv")[0]
 
-if len(remediation_rows) != 5 or len(batch_rows) != 3 or len(candidate_rows) != 4:
+total_checkpoint_bytes = int(summary["total_checkpoint_bytes_required"])
+reserve_bytes = int(summary["ssd_reserve_bytes"])
+required_with_reserve = int(summary["required_with_reserve_bytes"])
+available_bytes = int(summary["available_ssd_bytes"])
+available_after_reserve = max(available_bytes - reserve_bytes, 0)
+full_budget_deficit = max(required_with_reserve - available_bytes, 0)
+raw_checkpoint_deficit = max(total_checkpoint_bytes - available_bytes, 0)
+no_reserve_candidate_rows = int(summary["no_reserve_candidate_shard_rows"])
+no_reserve_candidate_bytes = int(summary["no_reserve_candidate_bytes"])
+
+if summary["available_ssd_bytes"] != source_v61p_summary["available_ssd_bytes"]:
+    raise SystemExit("v61ai available_ssd_bytes should match copied v61p summary")
+if summary["ssd_warehouse_path"] != source_v61p_summary["ssd_warehouse_path"]:
+    raise SystemExit("v61ai warehouse path should match copied v61p summary")
+if source_v61w_summary["ssd_warehouse_path"] != summary["ssd_warehouse_path"]:
+    raise SystemExit("v61ai source v61w warehouse path should match summary")
+if int(summary["available_after_reserve_bytes"]) != available_after_reserve:
+    raise SystemExit("v61ai available_after_reserve_bytes formula mismatch")
+if int(summary["full_budget_deficit_bytes"]) != full_budget_deficit:
+    raise SystemExit("v61ai full_budget_deficit_bytes formula mismatch")
+if int(summary["raw_checkpoint_deficit_bytes"]) != raw_checkpoint_deficit:
+    raise SystemExit("v61ai raw_checkpoint_deficit_bytes formula mismatch")
+
+if len(remediation_rows) != 5 or len(batch_rows) != 3 or len(candidate_rows) != no_reserve_candidate_rows:
     raise SystemExit("v61ai row count mismatch")
-if remediation_rows["full-checkpoint-with-reserve"]["deficit_bytes"] != "294263770976":
+if remediation_rows["full-checkpoint-with-reserve"]["deficit_bytes"] != str(full_budget_deficit):
     raise SystemExit("v61ai full reserve deficit mismatch")
 if remediation_rows["diagnostic-no-reserve-top-priority-batch"]["status"] != "diagnostic-only":
     raise SystemExit("v61ai no-reserve batch should be diagnostic only")
 if batch_rows["current-safe-reserve-batch"]["shard_rows"] != "0":
     raise SystemExit("v61ai safe reserve batch should admit zero shards")
-if batch_rows["diagnostic-no-reserve-top-priority-batch"]["batch_checkpoint_bytes"] != "19478756392":
+if batch_rows["diagnostic-no-reserve-top-priority-batch"]["batch_checkpoint_bytes"] != str(no_reserve_candidate_bytes):
     raise SystemExit("v61ai no-reserve batch bytes mismatch")
-if [row["priority_rank"] for row in candidate_rows] != ["1", "2", "3", "4"]:
+if [row["priority_rank"] for row in candidate_rows] != [str(index) for index in range(1, no_reserve_candidate_rows + 1)]:
     raise SystemExit("v61ai no-reserve candidate priorities mismatch")
 if any(row["admitted_under_reserve_policy"] != "0" for row in candidate_rows):
     raise SystemExit("v61ai no-reserve candidates must not be admitted under reserve policy")
@@ -140,11 +162,12 @@ for field, value in expected.items():
 
 boundary = (run_dir / "V61AI_CHECKPOINT_STORAGE_BUDGET_REMEDIATION_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "full_budget_deficit_bytes=294263770976",
-    "raw_checkpoint_deficit_bytes=259904032608",
+    f"full_budget_deficit_bytes={full_budget_deficit}",
+    f"raw_checkpoint_deficit_bytes={raw_checkpoint_deficit}",
     "safe_materialization_batch_rows=0",
-    "no_reserve_candidate_shard_rows=4",
-    "no_reserve_candidate_bytes=19478756392",
+    f"no_reserve_candidate_shard_rows={no_reserve_candidate_rows}",
+    f"no_reserve_candidate_bytes={no_reserve_candidate_bytes}",
+    "warehouse_root_override_supplied=0",
     "storage_budget_remediation_ready=0",
     "checkpoint_payload_bytes_downloaded_by_v61ai=0",
     "Blocked wording",
@@ -155,12 +178,14 @@ for snippet in [
 manifest = json.loads((run_dir / "v61ai_checkpoint_storage_budget_remediation_plan_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v61ai_checkpoint_storage_budget_remediation_plan_ready") != 1:
     raise SystemExit("v61ai manifest readiness mismatch")
-if manifest.get("full_budget_deficit_bytes") != 294263770976:
+if manifest.get("full_budget_deficit_bytes") != full_budget_deficit:
     raise SystemExit("v61ai manifest deficit mismatch")
 if manifest.get("safe_materialization_batch_rows") != 0:
     raise SystemExit("v61ai manifest safe batch should stay zero")
 if manifest.get("checkpoint_payload_bytes_downloaded_by_v61ai") != 0:
     raise SystemExit("v61ai manifest must keep downloaded payload bytes at zero")
+if manifest.get("warehouse_root_override_supplied") != 0:
+    raise SystemExit("v61ai manifest should record no default warehouse override")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
