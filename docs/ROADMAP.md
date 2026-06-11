@@ -1939,6 +1939,16 @@ Current next boundary:
   2.323072/3.82676 ms, while keeping full checkpoint materialization, full
   page-hash coverage, real Mixtral generation, near-frontier quality,
   production latency, and release claims blocked.
+- `v61ad` adds sampled KV + weight token-budget replay.
+  `experiments/test_v61ad_kv_weight_token_budget_replay.sh` consumes v61ac and
+  v61m, combining the 37 source-bound token-budget rows with five KV context
+  profiles. It records 185 combined KV+weight budget rows, 185/185 resident KV
+  policy pass rows, 74/185 full-KV-in-VRAM pass rows, 111 NVMe cold KV
+  eviction-required rows, zero host RAM spill bytes, 229376 KV bytes per token,
+  8617984 sampled weight+new-KV bytes per token, and max 8192-context evicted
+  NVMe KV bytes of 1639972864, while keeping full KV-in-VRAM residency, full
+  checkpoint materialization, full page-hash coverage, real Mixtral generation,
+  near-frontier quality, production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
