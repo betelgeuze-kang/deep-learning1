@@ -1890,6 +1890,16 @@ Current next boundary:
   materialization, SSD budget admission, local checkpoint materialization, full
   page-hash coverage, real Mixtral generation, near-frontier quality,
   production latency, and release claims blocked.
+- `v61y` adds sampled hotset local materialization verification.
+  `experiments/test_v61y_hotset_local_materialization_verifier.sh` consumes
+  v61x/v61u and materializes the 16 sampled real checkpoint hotset pages outside
+  the repository. It records 16 local page hash matches, 16 readback hash
+  matches, 33554432 sampled checkpoint payload bytes persisted outside the
+  repository, `hotset_payload_materialization_ready=1`, and zero checkpoint
+  payload bytes committed to the repository, while keeping full checkpoint
+  materialization, SSD budget admission, local full-checkpoint materialization,
+  full page-hash coverage, real Mixtral generation, near-frontier quality,
+  production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
