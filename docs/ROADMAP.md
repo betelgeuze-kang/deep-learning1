@@ -1788,6 +1788,13 @@ Current next boundary:
   `checkpoint_weight_bytes_persisted=0`, and keeps full page-hash coverage,
   local SSD checkpoint residency, real Mixtral generation, near-frontier
   quality, production latency, and release claims blocked.
+- `v61r` adds a full page-hash sweep plan without downloading weights.
+  `experiments/test_v61r_full_page_hash_sweep_plan.sh` consumes v61q and v61p,
+  emits 134161 page-hash task rows, binds 3 sampled remote page-hash probes to
+  6 overlapping page rows, and records 0 verified local page hashes on the
+  current host. It keeps local SSD checkpoint residency, completed full
+  page-hash coverage, real Mixtral generation, near-frontier quality,
+  production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
