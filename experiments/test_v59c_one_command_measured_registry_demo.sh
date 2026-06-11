@@ -21,7 +21,7 @@ run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
 
-STAGE_ORDER = ["v52j", "v53e", "v53f", "v54b", "v55b", "v56b", "v57b", "v58b", "v58c"]
+STAGE_ORDER = ["v52m", "v53e", "v53f", "v54b", "v55b", "v56b", "v57b", "v58b", "v58c"]
 FULL_READY_ALLOWED = {"v54b", "v55b", "v56b"}
 
 
@@ -49,20 +49,22 @@ expected = {
     "candidate_ready_stage_rows": "9",
     "full_ready_stage_rows": "3",
     "measured_registry_ready": "1",
-    "local_measured_systems": "A/B/G/H",
+    "local_measured_systems": "A/B/C/G/H",
     "query_rows": "1000",
-    "answer_rows": "4000",
-    "citation_rows": "4000",
-    "abstain_rows": "4000",
-    "wrong_answer_guard_rows": "4000",
-    "resource_rows": "4000",
+    "answer_rows": "5000",
+    "citation_rows": "5000",
+    "abstain_rows": "5000",
+    "wrong_answer_guard_rows": "5000",
+    "resource_rows": "5000",
     "routehint_rows": "2000",
     "one_command_measured_registry_entrypoint_ready": "1",
     "measured_registry_bundle_ready": "1",
     "network_required": "0",
     "external_model_required_for_local_registry": "0",
     "real_llm_rows_required_for_full_v1": "1",
-    "missing_7b14b_real_rows": "1",
+    "required_7b14b_baseline_ready": "1",
+    "c_strict_exact_label_accuracy": "0.000000",
+    "missing_7b14b_real_rows": "0",
     "missing_real_30b_70b_rows": "1",
     "missing_100b_plus_real_row_or_final_deferral": "1",
     "missing_complete_source_audit": "1",
@@ -81,11 +83,11 @@ for gate in [
     "one-command-measured-registry-entrypoint",
     "measured-registry-bundle-hash-manifest",
     "local-only-claim-boundary-preserved",
+    "7b14b-real-rows",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v59c gate should pass: {gate}")
 for gate in [
-    "7b14b-real-rows",
     "30b-70b-real-rows",
     "100b-plus-real-row",
     "complete-source-audit",
@@ -105,14 +107,17 @@ required_files = [
     "V59C_ONE_COMMAND_MEASURED_REGISTRY_BOUNDARY.md",
     "v59c_one_command_measured_registry_demo_manifest.json",
     "sha256_manifest.csv",
-    "source_v52j/measured_baseline_registry.csv",
-    "source_v52j/measured_artifact_absorb_rows.csv",
-    "source_v52j/source_v52i/abgh_answer_rows.csv",
-    "source_v52j/source_v52i/abgh_citation_rows.csv",
-    "source_v52j/source_v52i/abgh_abstain_rows.csv",
-    "source_v52j/source_v52i/abgh_wrong_answer_guard_rows.csv",
-    "source_v52j/source_v52i/abgh_resource_rows.csv",
-    "source_v52j/source_v52i/routehint_rows.csv",
+    "source_v52m/measured_baseline_registry.csv",
+    "source_v52m/measured_artifact_absorb_rows.csv",
+    "source_v52m/source_v52i/abgh_answer_rows.csv",
+    "source_v52m/source_v52i/abgh_citation_rows.csv",
+    "source_v52m/source_v52i/abgh_abstain_rows.csv",
+    "source_v52m/source_v52i/abgh_wrong_answer_guard_rows.csv",
+    "source_v52m/source_v52i/abgh_resource_rows.csv",
+    "source_v52m/source_v52i/routehint_rows.csv",
+    "source_v52m/source_v52l/c_answer_rows.csv",
+    "source_v52m/source_v52l/c_citation_rows.csv",
+    "source_v52m/source_v52l/ollama_generation_transcript_rows.csv",
 ]
 for rel in required_files:
     path = run_dir / rel
@@ -123,7 +128,7 @@ if not (root / "examples" / "v1_0_architecture_challenge_measured_registry_demo.
 
 stage_rows = read_csv(run_dir / "measured_registry_stage_replay_rows.csv")
 if [row["stage"] for row in stage_rows] != STAGE_ORDER:
-    raise SystemExit("v59c stage rows should cover v52j and v53e-v58c in order")
+    raise SystemExit("v59c stage rows should cover v52m and v53e-v58c in order")
 if any(row["candidate_ready"] != "1" for row in stage_rows):
     raise SystemExit("v59c all measured-registry/candidate stages should be ready")
 for row in stage_rows:
@@ -133,13 +138,15 @@ for row in stage_rows:
     if int(row["copied_artifacts"]) < 5:
         raise SystemExit(f"v59c should copy enough artifacts for {row['stage']}")
 
-registry = read_csv(run_dir / "source_v52j" / "measured_baseline_registry.csv")
+registry = read_csv(run_dir / "source_v52m" / "measured_baseline_registry.csv")
 by_id = {row["system_id"]: row for row in registry}
-for system_id in ["A", "B", "G", "H"]:
+for system_id in ["A", "B", "C", "G", "H"]:
     row = by_id[system_id]
     if row["measured_baseline_ready"] != "1" or row["query_set_id"] != "v53e_canary_query_scale_1000_full":
-        raise SystemExit(f"v59c should preserve measured v52j registry for {system_id}")
-for system_id in ["C", "D", "E"]:
+        raise SystemExit(f"v59c should preserve measured v52m registry for {system_id}")
+if by_id["C"]["adapter_status"] != "measured-local-v52l":
+    raise SystemExit("v59c should preserve v52l C adapter status")
+for system_id in ["D", "E"]:
     if by_id[system_id]["measured_baseline_ready"] != "0":
         raise SystemExit(f"v59c should not promote missing {system_id} evidence")
 
@@ -161,7 +168,7 @@ if manifest.get("stage_order") != STAGE_ORDER:
     raise SystemExit("v59c manifest stage order mismatch")
 if manifest.get("candidate_ready_stage_rows") != 9 or manifest.get("full_ready_stage_rows") != 3:
     raise SystemExit("v59c manifest stage count mismatch")
-if manifest.get("local_measured_systems") != ["A", "B", "G", "H"]:
+if manifest.get("local_measured_systems") != ["A", "B", "C", "G", "H"]:
     raise SystemExit("v59c manifest local systems mismatch")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
@@ -176,10 +183,11 @@ for stage in STAGE_ORDER:
 
 boundary = (run_dir / "V59C_ONE_COMMAND_MEASURED_REGISTRY_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "one-command replay of the v52j local measured registry",
+    "one-command replay of the v52m local measured registry",
     "not the completed v1.0 Architecture Challenge demo",
-    "local_measured_systems=A/B/G/H",
-    "answer_rows=4000",
+    "local_measured_systems=A/B/C/G/H",
+    "answer_rows=5000",
+    "required_7b14b_baseline_ready=1",
     "real_30b_70b_rows_ready=0",
     "Do not publish 30B-150B comparison wins",
 ]:

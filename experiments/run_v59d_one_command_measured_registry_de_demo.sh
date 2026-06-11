@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RESULTS_DIR="$ROOT_DIR/results"
-PREFIX="v59c_one_command_measured_registry_demo"
-RUN_ID="${V59C_RUN_ID:-measured_registry_001}"
+PREFIX="v59d_one_command_measured_registry_de_demo"
+RUN_ID="${V59D_RUN_ID:-measured_registry_de_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
@@ -15,13 +15,13 @@ mkdir -p "$RUN_DIR"
 run_or_reuse() {
   local summary_path="$1"
   shift
-  if [[ "${V59C_REUSE_EXISTING:-0}" == "1" && -s "$summary_path" ]]; then
+  if [[ "${V59D_REUSE_EXISTING:-0}" == "1" && -s "$summary_path" ]]; then
     return 0
   fi
   "$@" >/dev/null
 }
 
-run_or_reuse "$RESULTS_DIR/v52m_measured_registry_c_absorb_summary.csv" "$ROOT_DIR/experiments/run_v52m_measured_registry_c_absorb.sh"
+run_or_reuse "$RESULTS_DIR/v52r_measured_registry_de_absorb_summary.csv" env V52R_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v52r_measured_registry_de_absorb.sh"
 run_or_reuse "$RESULTS_DIR/v53e_canary_query_scale_1000_summary.csv" "$ROOT_DIR/experiments/run_v53e_canary_query_scale_1000.sh"
 run_or_reuse "$RESULTS_DIR/v53f_ah_answer_citation_resource_intake_summary.csv" "$ROOT_DIR/experiments/run_v53f_ah_answer_citation_resource_intake.sh"
 run_or_reuse "$RESULTS_DIR/v54b_routehint_generation_scale_1000_summary.csv" "$ROOT_DIR/experiments/run_v54b_routehint_generation_scale_1000.sh"
@@ -48,16 +48,16 @@ results = root / "results"
 
 STAGES = [
     {
-        "stage": "v52m",
-        "summary": results / "v52m_measured_registry_c_absorb_summary.csv",
-        "source_dir": results / "v52m_measured_registry_c_absorb" / "registry_001",
-        "ready_field": "v52m_measured_registry_c_absorb_ready",
+        "stage": "v52r",
+        "summary": results / "v52r_measured_registry_de_absorb_summary.csv",
+        "source_dir": results / "v52r_measured_registry_de_absorb" / "registry_001",
+        "ready_field": "v52r_measured_registry_de_absorb_ready",
         "full_ready_field": "v52_ready",
         "artifacts": [
             "measured_baseline_registry.csv",
             "measured_artifact_absorb_rows.csv",
-            "V52M_MEASURED_REGISTRY_C_ABSORB_BOUNDARY.md",
-            "v52m_measured_registry_c_absorb_manifest.json",
+            "V52R_MEASURED_REGISTRY_DE_ABSORB_BOUNDARY.md",
+            "v52r_measured_registry_de_absorb_manifest.json",
             "sha256_manifest.csv",
             "source_v52i/frozen_query_rows.csv",
             "source_v52i/source_manifest_rows.csv",
@@ -71,11 +71,17 @@ STAGES = [
             "source_v52l/c_citation_rows.csv",
             "source_v52l/c_resource_rows.csv",
             "source_v52l/ollama_generation_transcript_rows.csv",
+            "source_v52p/d_answer_rows.csv",
+            "source_v52p/d_citation_rows.csv",
+            "source_v52p/d_resource_rows.csv",
+            "source_v52q/e_answer_rows.csv",
+            "source_v52q/e_citation_rows.csv",
+            "source_v52q/e_resource_rows.csv",
             "source_v52c/v52c_7b14b_local_model_rag_evidence_intake_summary.csv",
             "source_v52d/v52d_30b70b_llm_rag_evidence_intake_summary.csv",
             "source_v52e/v52e_100b_plus_hosted_llm_rag_optional_intake_summary.csv",
         ],
-        "claim": "v52 measured registry with A/B/C/G/H over the same 1000-query set",
+        "claim": "v52 measured registry with A/B/C/D/E/G/H over the same 1000-query set",
     },
     {
         "stage": "v53e",
@@ -208,13 +214,13 @@ for spec in STAGES:
 
 write_csv(run_dir / "measured_registry_stage_replay_rows.csv", list(stage_rows[0].keys()), stage_rows)
 
-v52m = read_summary(results / "v52m_measured_registry_c_absorb_summary.csv")
+v52r = read_summary(results / "v52r_measured_registry_de_absorb_summary.csv")
 command_rows = [
     {
-        "command_id": "v1_0_architecture_challenge_measured_registry_demo",
-        "command": "./examples/v1_0_architecture_challenge_measured_registry_demo.sh",
+        "command_id": "v1_0_architecture_challenge_measured_registry_de_demo",
+        "command": "./examples/v1_0_architecture_challenge_measured_registry_de_demo.sh",
         "runs_stages": ",".join(spec["stage"] for spec in STAGES),
-        "writes_bundle": "results/v59c_one_command_measured_registry_demo/measured_registry_001",
+        "writes_bundle": "results/v59d_one_command_measured_registry_de_demo/measured_registry_de_001",
         "network_required": "0",
         "external_model_required_for_local_registry": "0",
         "real_llm_rows_required_for_full_v1": "1",
@@ -224,18 +230,18 @@ command_rows = [
 write_csv(run_dir / "measured_registry_one_command_rows.csv", list(command_rows[0].keys()), command_rows)
 
 gate_rows = [
-    ("measured-registry-replay", "pass", "v52m A/B/C/G/H measured registry is regenerated and copied"),
-    ("same-query-source-local-systems", "pass", "A/B/C/G/H retain shared v53e query IDs and source manifest"),
-    ("one-command-measured-registry-entrypoint", "pass", "examples/v1_0_architecture_challenge_measured_registry_demo.sh runs v59c"),
-    ("measured-registry-bundle-hash-manifest", "pass", "v59c writes sha256_manifest.csv over copied measured artifacts"),
-    ("local-only-claim-boundary-preserved", "pass", "local measured rows do not mark D/E or full v52/v59 ready"),
+    ("measured-registry-replay", "pass", "v52r A/B/C/D/E/G/H measured registry is regenerated and copied"),
+    ("same-query-source-local-systems", "pass", "A/B/C/D/E/G/H retain shared v53e query IDs and source manifest"),
+    ("one-command-measured-registry-entrypoint", "pass", "examples/v1_0_architecture_challenge_measured_registry_de_demo.sh runs v59d"),
+    ("measured-registry-bundle-hash-manifest", "pass", "v59d writes sha256_manifest.csv over copied measured artifacts"),
+    ("local-only-claim-boundary-preserved", "pass", "local measured rows do not mark full v52/v59 ready"),
     ("7b14b-real-rows", "pass", "v52l C measured packet is absorbed over the shared v53e 1000-row set"),
-    ("30b-70b-real-rows", "blocked", "real D/E LLM+RAG answer and blind-response rows are missing"),
+    ("30b-70b-real-rows", "pass", "externally baked D/E v52p/v52q packets are absorbed into v52r"),
     ("100b-plus-real-row", "blocked", "optional F hosted/API row is missing or deferred"),
     ("complete-source-audit", "blocked", "v53 remains canary-scope, not complete-source 10+ repo audit"),
     ("human-domain-and-blind-review", "blocked", "human expert and blind-review rows are missing"),
-    ("v59-full-one-command-demo", "blocked", "v59c is a measured local-registry replay, not the full challenge demo"),
-    ("real-release-package", "blocked", "v59c measured registry packet is not a release package"),
+    ("v59-full-one-command-demo", "blocked", "v59d is a measured local-registry replay with D/E, not the full challenge demo"),
+    ("real-release-package", "blocked", "v59d measured registry packet is not a release package"),
 ]
 decision_rows = [{"gate": gate, "status": status, "reason": reason} for gate, status, reason in gate_rows]
 write_csv(decision_csv, ["gate", "status", "reason"], decision_rows)
@@ -246,50 +252,54 @@ demo.write_text(
     "#!/usr/bin/env bash\n"
     "set -euo pipefail\n\n"
     "ROOT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/../../..\" && pwd)\"\n"
-    "\"$ROOT_DIR/examples/v1_0_architecture_challenge_measured_registry_demo.sh\"\n",
+    "\"$ROOT_DIR/examples/v1_0_architecture_challenge_measured_registry_de_demo.sh\"\n",
     encoding="utf-8",
 )
 demo.chmod(0o755)
 
 (run_dir / "README_RESULT.md").write_text(
-    "# v59c One-Command Measured Registry Demo\n\n"
+    "# v59d One-Command Measured Registry D/E Demo\n\n"
     "Command:\n\n"
     "```bash\n"
-    "./examples/v1_0_architecture_challenge_measured_registry_demo.sh\n"
+    "./examples/v1_0_architecture_challenge_measured_registry_de_demo.sh\n"
     "```\n\n"
-    "This bundle promotes the v52m measured registry into the one-command replay path. "
-    "It includes A/B/C/G/H over the same frozen v53e 1000-query set and source manifest. "
+    "This bundle promotes the v52r measured registry into the one-command replay path. "
+    "It includes A/B/C/D/E/G/H over the same frozen v53e 1000-query set and source manifest. "
     "It does not prove v1.0 performance, blind-eval wins, or release readiness.\n\n"
     "Measured local registry included:\n\n"
-    "- local_measured_systems=A/B/C/G/H\n"
-    f"- query_rows={v52m['query_rows']}\n"
-    f"- answer_rows={v52m['answer_rows']}\n"
-    f"- citation_rows={v52m['citation_rows']}\n"
-    f"- abstain_rows={v52m['abstain_rows']}\n"
-    f"- wrong_answer_guard_rows={v52m['wrong_answer_guard_rows']}\n"
-    f"- resource_rows={v52m['resource_rows']}\n"
-    f"- routehint_rows={v52m['routehint_rows']}\n"
-    f"- c_strict_exact_label_accuracy={v52m['c_strict_exact_label_accuracy']}\n\n"
-    "Still blocked: real D/E 30B/70B LLM+RAG rows, optional 100B+ row or final deferral, complete-source audit rows, human expert review, human blind review, and release review.\n",
+    "- local_measured_systems=A/B/C/D/E/G/H\n"
+    f"- query_rows={v52r['query_rows']}\n"
+    f"- answer_rows={v52r['answer_rows']}\n"
+    f"- citation_rows={v52r['citation_rows']}\n"
+    f"- abstain_rows={v52r['abstain_rows']}\n"
+    f"- wrong_answer_guard_rows={v52r['wrong_answer_guard_rows']}\n"
+    f"- resource_rows={v52r['resource_rows']}\n"
+    f"- routehint_rows={v52r['routehint_rows']}\n"
+    f"- c_strict_exact_label_accuracy={v52r['c_strict_exact_label_accuracy']}\n"
+    f"- d_strict_exact_label_accuracy={v52r['d_strict_exact_label_accuracy']}\n"
+    f"- e_strict_exact_label_accuracy={v52r['e_strict_exact_label_accuracy']}\n\n"
+    "Still blocked: optional 100B+ row or final deferral, complete-source audit rows, human expert review, human blind review, and release review.\n",
     encoding="utf-8",
 )
 
-(run_dir / "V59C_ONE_COMMAND_MEASURED_REGISTRY_BOUNDARY.md").write_text(
-    "# v59c One-Command Measured Registry Boundary\n\n"
-    "This is a one-command replay of the v52m local measured registry plus the current v53-v58 candidate chain. "
+(run_dir / "V59D_ONE_COMMAND_MEASURED_REGISTRY_DE_BOUNDARY.md").write_text(
+    "# v59d One-Command Measured Registry D/E Boundary\n\n"
+    "This is a one-command replay of the v52r local measured registry plus the current v53-v58 candidate chain. "
     "It is not the completed v1.0 Architecture Challenge demo.\n\n"
     f"- stage_rows={len(stage_rows)}\n"
     f"- candidate_ready_stage_rows={sum(row['candidate_ready'] for row in stage_rows)}\n"
     f"- full_ready_stage_rows={sum(row['full_ready'] for row in stage_rows)}\n"
     "- measured_registry_ready=1\n"
-    "- local_measured_systems=A/B/C/G/H\n"
-    f"- query_rows={v52m['query_rows']}\n"
-    f"- answer_rows={v52m['answer_rows']}\n"
-    f"- citation_rows={v52m['citation_rows']}\n"
-    f"- resource_rows={v52m['resource_rows']}\n"
+    "- local_measured_systems=A/B/C/D/E/G/H\n"
+    f"- query_rows={v52r['query_rows']}\n"
+    f"- answer_rows={v52r['answer_rows']}\n"
+    f"- citation_rows={v52r['citation_rows']}\n"
+    f"- resource_rows={v52r['resource_rows']}\n"
     "- required_7b14b_baseline_ready=1\n"
-    f"- c_strict_exact_label_accuracy={v52m['c_strict_exact_label_accuracy']}\n"
-    "- real_30b_70b_rows_ready=0\n"
+    "- required_30b_baseline_ready=1\n"
+    "- required_70b_baseline_ready=1\n"
+    f"- c_strict_exact_label_accuracy={v52r['c_strict_exact_label_accuracy']}\n"
+    "- real_30b_70b_rows_ready=1\n"
     "- human_domain_review_ready=0\n"
     "- human_blind_review_ready=0\n\n"
     "Do not publish 30B-150B comparison wins, one-command challenge completion, or v1.0 release claims from this local measured-registry replay.\n",
@@ -297,29 +307,33 @@ demo.chmod(0o755)
 )
 
 summary = {
-    "v59c_one_command_measured_registry_demo_ready": 1,
+    "v59d_one_command_measured_registry_de_demo_ready": 1,
     "v59_ready": 0,
     "stage_rows": len(stage_rows),
     "candidate_ready_stage_rows": sum(row["candidate_ready"] for row in stage_rows),
     "full_ready_stage_rows": sum(row["full_ready"] for row in stage_rows),
-    "measured_registry_ready": int(v52m["v52m_measured_registry_c_absorb_ready"]),
-    "local_measured_systems": v52m["local_measured_systems"],
-    "query_rows": int(v52m["query_rows"]),
-    "answer_rows": int(v52m["answer_rows"]),
-    "citation_rows": int(v52m["citation_rows"]),
-    "abstain_rows": int(v52m["abstain_rows"]),
-    "wrong_answer_guard_rows": int(v52m["wrong_answer_guard_rows"]),
-    "resource_rows": int(v52m["resource_rows"]),
-    "routehint_rows": int(v52m["routehint_rows"]),
-    "required_7b14b_baseline_ready": int(v52m["required_7b14b_baseline_ready"]),
-    "c_strict_exact_label_accuracy": v52m["c_strict_exact_label_accuracy"],
+    "measured_registry_ready": int(v52r["v52r_measured_registry_de_absorb_ready"]),
+    "local_measured_systems": v52r["local_measured_systems"],
+    "query_rows": int(v52r["query_rows"]),
+    "answer_rows": int(v52r["answer_rows"]),
+    "citation_rows": int(v52r["citation_rows"]),
+    "abstain_rows": int(v52r["abstain_rows"]),
+    "wrong_answer_guard_rows": int(v52r["wrong_answer_guard_rows"]),
+    "resource_rows": int(v52r["resource_rows"]),
+    "routehint_rows": int(v52r["routehint_rows"]),
+    "required_7b14b_baseline_ready": int(v52r["required_7b14b_baseline_ready"]),
+    "required_30b_baseline_ready": int(v52r["required_30b_baseline_ready"]),
+    "required_70b_baseline_ready": int(v52r["required_70b_baseline_ready"]),
+    "c_strict_exact_label_accuracy": v52r["c_strict_exact_label_accuracy"],
+    "d_strict_exact_label_accuracy": v52r["d_strict_exact_label_accuracy"],
+    "e_strict_exact_label_accuracy": v52r["e_strict_exact_label_accuracy"],
     "one_command_measured_registry_entrypoint_ready": 1,
     "measured_registry_bundle_ready": 1,
     "network_required": 0,
     "external_model_required_for_local_registry": 0,
     "real_llm_rows_required_for_full_v1": 1,
     "missing_7b14b_real_rows": 0,
-    "missing_real_30b_70b_rows": 1,
+    "missing_real_30b_70b_rows": 0,
     "missing_100b_plus_real_row_or_final_deferral": 1,
     "missing_complete_source_audit": 1,
     "missing_human_domain_review": 1,
@@ -329,16 +343,16 @@ summary = {
 write_csv(summary_csv, list(summary.keys()), [summary])
 
 manifest = {
-    "manifest_scope": "v59c-one-command-measured-registry-demo",
+    "manifest_scope": "v59d-one-command-measured-registry-de-demo",
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-    "v59c_one_command_measured_registry_demo_ready": 1,
+    "v59d_one_command_measured_registry_de_demo_ready": 1,
     "v59_ready": 0,
-    "one_command": "./examples/v1_0_architecture_challenge_measured_registry_demo.sh",
+    "one_command": "./examples/v1_0_architecture_challenge_measured_registry_de_demo.sh",
     "stage_order": [spec["stage"] for spec in STAGES],
     "candidate_stage_rows": len(stage_rows),
     "candidate_ready_stage_rows": summary["candidate_ready_stage_rows"],
     "full_ready_stage_rows": summary["full_ready_stage_rows"],
-    "local_measured_systems": ["A", "B", "C", "G", "H"],
+    "local_measured_systems": ["A", "B", "C", "D", "E", "G", "H"],
     "query_rows": summary["query_rows"],
     "answer_rows": summary["answer_rows"],
     "citation_rows": summary["citation_rows"],
@@ -346,7 +360,7 @@ manifest = {
     "real_release_package_ready": 0,
     "source_summary_sha256": {spec["stage"]: sha256(spec["summary"]) for spec in STAGES},
 }
-(run_dir / "v59c_one_command_measured_registry_demo_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+(run_dir / "v59d_one_command_measured_registry_de_demo_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 artifact_rels.extend(
     [
@@ -355,8 +369,8 @@ artifact_rels.extend(
         "measured_registry_demo_gate_rows.csv",
         "measured_registry_demo.sh",
         "README_RESULT.md",
-        "V59C_ONE_COMMAND_MEASURED_REGISTRY_BOUNDARY.md",
-        "v59c_one_command_measured_registry_demo_manifest.json",
+        "V59D_ONE_COMMAND_MEASURED_REGISTRY_DE_BOUNDARY.md",
+        "v59d_one_command_measured_registry_de_demo_manifest.json",
     ]
 )
 artifact_rows = []
@@ -365,7 +379,7 @@ for relpath in artifact_rels:
     artifact_rows.append({"path": relpath, "sha256": sha256(path), "bytes": path.stat().st_size})
 write_csv(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], artifact_rows)
 
-print(f"v59c_one_command_measured_registry_demo_dir: {run_dir}")
+print(f"v59d_one_command_measured_registry_de_demo_dir: {run_dir}")
 print(f"summary: {summary_csv}")
 print(f"decision: {decision_csv}")
 PY

@@ -1469,6 +1469,49 @@ Current next boundary:
   `c_v53e_absorb_ready=1`. It records 0/1000 strict exact-label accuracy, so it
   is a real C response/schema pressure packet rather than a C quality claim;
   D/E, full v52, and release claims stay blocked.
+- `v52m` re-absorbs the v52l C measured packet into the v52 measured registry.
+  `experiments/test_v52m_measured_registry_c_absorb.sh` promotes A/B/C/G/H over
+  the shared v53e 1000-query/source manifest, copies v52i and v52l artifacts,
+  records 5000 answer/citation/abstain/guard/resource rows, sets
+  `required_7b14b_baseline_ready=1`, and records
+  `c_strict_exact_label_accuracy=0.000000` without turning that into a C quality
+  claim. D/E, full v52, and release claims stay blocked.
+- `v52n` supplies the 30B open-weight LLM+RAG measured seed for system D.
+  `experiments/test_v52n_30b_open_weight_llm_rag_measured_seed.sh` runs local
+  Ollama `qwen2.5:32b-instruct` over the v50 9-query seed, validates through
+  v52d with `d_30b_supplied_evidence_ready=1`, and keeps full D scale, E 70B
+  rows, full v52, and release claims blocked.
+- `v52o` supplies the 70B open-weight LLM+RAG measured seed for system E.
+  `experiments/test_v52o_70b_open_weight_llm_rag_measured_seed.sh` runs local
+  Ollama `llama3.1:70b-instruct-q2_K` over the v50 9-query seed, validates
+  through v52d with `e_70b_supplied_evidence_ready=1`, and keeps full E scale,
+  D 30B real row, full v52, and release claims blocked.
+- `v52p` expands D to the full frozen v53e 1000-query/source manifest.
+  `experiments/test_v52p_30b_open_weight_llm_rag_v53e_1000.sh` emits 1000 D
+  answer/citation/retrieval/abstain/wrong-answer/resource/transcript rows and
+  marks `d_v53e_absorb_ready=1` without turning strict exact-label accuracy
+  into a D quality claim; E, full v52, and release claims stay blocked.
+- `v52q` expands E to the same v53e 1000-row set with
+  `experiments/test_v52q_70b_open_weight_llm_rag_v53e_1000.sh`, marks
+  `e_v53e_absorb_ready=1`, and keeps D, full v52, and release claims blocked.
+- `v52r` re-absorbs the v52p/v52q D/E measured packets into the v52 measured
+  registry. `experiments/test_v52r_measured_registry_de_absorb.sh` promotes
+  A/B/C/D/E/G/H over the shared v53e manifest, copies v52i/v52l/v52p/v52q
+  artifacts, records 7000 answer/citation/abstain/guard/resource rows, sets
+  `required_30b_baseline_ready=1` and `required_70b_baseline_ready=1`, and
+  keeps optional F, full v52, and release claims blocked.
+- `v52s` emits the NVMe hot/warm/cold weight shard store contract aligned with
+  h11-c. `experiments/test_v52s_local_llm_weight_tier_contract.sh` marks
+  `nvme_mmap_store_ready=1` while keeping tiered decode runtime blocked.
+- `v52u` mmap-reads the v52s shard store with hash verification and warm-prefetch
+  scaffold rows following the v13-b reader ABI.
+  `experiments/test_v52u_local_llm_weight_tier_mmap_reader.sh` marks
+  `weight_tier_mmap_reader_ready=1` while keeping ROCm decode binding blocked.
+- `v52v` binds a diagnostic ROCm HIP kernel scaffold to v52u hot-tier decode
+  steps. `experiments/test_v52v_local_llm_weight_tier_rocm_decode_bind.sh` marks
+  `rocm_kernel_bind_ready=1` while keeping full tiered LLM decode runtime blocked.
+- `v52t` records explicit `deferred-with-reason` for local monolithic D/E measured
+  rows on 16GB VRAM hosts and links v52s/v52u/v52v.
 - `v52d` adds the 30B/70B open-weight LLM+RAG evidence-intake gate for systems
   D and E. `experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh` emits the
   required D/E evidence schemas, answer/model templates, validation rows, and
@@ -1596,10 +1639,10 @@ Current next boundary:
   complete-source audit, human review, full v59, and release claims blocked.
 - `v59c` adds the one-command measured-registry replay.
   `examples/v1_0_architecture_challenge_measured_registry_demo.sh` runs the
-  v59c bundle builder, which assembles the v52j A/B/G/H measured registry plus
+  v59c bundle builder, which assembles the v52m A/B/C/G/H measured registry plus
   the current v53e-v58c candidate chain, stage rows, gate rows, README_RESULT,
   boundary, and sha256 manifest. It promotes the local 1000-query measured
-  registry into replay while keeping C/D/E real rows, complete-source audit,
+  registry into replay while keeping D/E real rows, complete-source audit,
   human review, full v59, and release claims blocked.
 - `v60` is started as a release-audit contract scaffold.
   `experiments/test_v60_architecture_challenge_release_contract.sh` consumes
@@ -1613,6 +1656,22 @@ Current next boundary:
   manifest. It allows only limited candidate-chain replay wording and keeps v1.0
   release, 30B-150B comparison, QA superiority, expert replacement, production,
   and release-package claims blocked.
+- `v61` is implemented as an SSD-resident MoE active-sparse runtime prototype.
+  `docs/V61_SSD_RESIDENT_MOE_RUNTIME.md` documents the implementation direction:
+  an NVMe SSD model warehouse for hundreds-B to trillions-parameter open-weight
+  models, active-sparse MoE/page routing, RouteHint prefetch plans, VRAM hot
+  cache, page-level mixed quantization, KV-cache policy, and token-level I/O
+  budgets such as `ssd_read_bytes_per_token`. It treats v52s/v52u/v52v/v52w as
+  the seed for a real weight-page runtime. `experiments/test_v61j_one_command_ssd_resident_demo.sh`
+  now closes v61a-v61j: SSD page store, direct I/O reader, RouteHint prefetch,
+  VRAM hot cache, CPU page-dequant-matmul checks, expert routing, predictive
+  prefetch, mixed quant planning, dense stress blockers, a logical 128B MoE
+  active-sparse contract, and a one-command demo. The summary reaches
+  `ssd_resident_active_sparse_path_proven=1`, `ram_resident_full_model_fallback_rows=0`,
+  `total_parameters=128000000000`, `ssd_read_bytes_per_token_max=8388608`, and
+  `route_jump_rows=0`, while real 100B checkpoint materialization,
+  near-frontier quality, dense hundreds-B local-speed, GPU speedup,
+  production-latency, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

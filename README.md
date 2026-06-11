@@ -12,6 +12,16 @@ The next public timing target is not a broad v0.3 claim. It is the v1.0 Architec
 
 Roadmap: [docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md](docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md)
 
+SSD-resident MoE runtime direction: [docs/V61_SSD_RESIDENT_MOE_RUNTIME.md](docs/V61_SSD_RESIDENT_MOE_RUNTIME.md). This track is not RAM offload. It stores a hundreds-B to trillions-parameter open-weight model warehouse on NVMe SSD, then uses discrete-node routing, MoE active sparsity, predictive prefetch, and mixed quantization to fit the active execution set into a local PC's VRAM/compute budget. It redirects v52s/v52u/v52v/v52w into the v61 weight-page runtime seed while keeping v52-v60 release/comparison claims separately gated.
+
+Current v61 prototype smoke:
+
+```bash
+./experiments/test_v61j_one_command_ssd_resident_demo.sh
+```
+
+This closes the v61a-v61j SSD-resident active-sparse runtime prototype: deterministic 2 MB SSD weight pages, aligned direct I/O reads, no full-model RAM residency audit rows, RouteHint prefetch/VRAM hot cache, CPU page-dequant-matmul numeric checks, expert routing, predictive prefetch, mixed quant planning, dense full-stream stress blockers, a logical 128B MoE active-sparse contract, and a one-command demo bundle. It keeps real 100B checkpoint materialization, GPU speedup, near-frontier quality, dense hundreds-B local-speed, and release claims blocked.
+
 Required v1.0 stages:
 
 - v52: 30B/70B/100B+ LLM+RAG baseline war

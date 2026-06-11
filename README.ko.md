@@ -12,6 +12,16 @@
 
 로드맵: [docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md](docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md)
 
+SSD-resident MoE runtime 구현 방향: [docs/V61_SSD_RESIDENT_MOE_RUNTIME.md](docs/V61_SSD_RESIDENT_MOE_RUNTIME.md). 이 트랙은 RAM offload가 아니라 NVMe SSD에 수백B-수T급 open-weight 모델 warehouse를 두고, 이산노드 라우팅 + MoE active sparsity + predictive prefetch + mixed quantization으로 로컬 PC의 활성 계산/VRAM 예산 안에 넣는 연구 방향입니다. v52s/v52u/v52v/v52w 계열을 v61의 weight-page runtime seed로 재정렬하며, v52-v60 release/comparison claim은 계속 별도 gate로 둡니다.
+
+현재 v61 prototype smoke:
+
+```bash
+./experiments/test_v61j_one_command_ssd_resident_demo.sh
+```
+
+이 명령은 v61a-v61j SSD-resident active-sparse runtime prototype을 닫습니다: deterministic 2 MB SSD weight page, aligned direct I/O read, full-model RAM residency 금지 audit row, RouteHint prefetch/VRAM hot cache, CPU page-dequant-matmul numeric check, expert routing, predictive prefetch, mixed quant planning, dense full-stream stress blocker, logical 128B MoE active-sparse contract, one-command demo bundle을 검증합니다. 실제 100B checkpoint 물질화, GPU speedup, near-frontier 품질, dense hundreds-B local-speed, release claim은 계속 blocked입니다.
+
 필수 v1.0 단계:
 
 - v52: 30B/70B/100B+ LLM+RAG baseline war

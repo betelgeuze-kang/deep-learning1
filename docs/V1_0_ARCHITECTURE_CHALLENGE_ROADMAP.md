@@ -308,6 +308,30 @@ Implemented now:
 - `experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh`
 - `experiments/run_v52k_7b14b_local_model_rag_measured_seed.sh`
 - `experiments/test_v52k_7b14b_local_model_rag_measured_seed.sh`
+- `experiments/run_v52l_7b14b_local_model_rag_v53e_1000.sh`
+- `experiments/test_v52l_7b14b_local_model_rag_v53e_1000.sh`
+- `experiments/run_v52m_measured_registry_c_absorb.sh`
+- `experiments/test_v52m_measured_registry_c_absorb.sh`
+- `experiments/run_v52n_30b_open_weight_llm_rag_measured_seed.sh`
+- `experiments/test_v52n_30b_open_weight_llm_rag_measured_seed.sh`
+- `experiments/run_v52o_70b_open_weight_llm_rag_measured_seed.sh`
+- `experiments/test_v52o_70b_open_weight_llm_rag_measured_seed.sh`
+- `experiments/run_v52p_30b_open_weight_llm_rag_v53e_1000.sh`
+- `experiments/test_v52p_30b_open_weight_llm_rag_v53e_1000.sh`
+- `experiments/run_v52q_70b_open_weight_llm_rag_v53e_1000.sh`
+- `experiments/test_v52q_70b_open_weight_llm_rag_v53e_1000.sh`
+- `experiments/run_v52r_measured_registry_de_absorb.sh`
+- `experiments/test_v52r_measured_registry_de_absorb.sh`
+- `experiments/run_v52s_local_llm_weight_tier_contract.sh`
+- `experiments/test_v52s_local_llm_weight_tier_contract.sh`
+- `experiments/run_v52u_local_llm_weight_tier_mmap_reader.sh`
+- `experiments/test_v52u_local_llm_weight_tier_mmap_reader.sh`
+- `experiments/run_v52t_de_local_measured_deferral.sh`
+- `experiments/test_v52t_de_local_measured_deferral.sh`
+- `experiments/run_v52v_local_llm_weight_tier_rocm_decode_bind.sh`
+- `experiments/test_v52v_local_llm_weight_tier_rocm_decode_bind.sh`
+- `scripts/ollama_rocm_env.sh`
+- `scripts/ensure_rocm_device_libs.sh`
 - `experiments/run_v52d_30b70b_llm_rag_evidence_intake.sh`
 - `experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh`
 - `experiments/run_v52e_100b_plus_hosted_llm_rag_optional_intake.sh`
@@ -366,6 +390,17 @@ Implemented now:
 - `results/v52h_small_local_rag_measured_1000/measured_001/` measured system-B 1000-row full frozen-query artifacts
 - `results/v52i_abgh_same_query_measured_1000/measured_001/` local A/B/G/H same-query measured artifacts
 - `results/v52j_measured_registry_absorb/registry_001/` v52 measured registry absorb artifacts
+- `results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/` real system-C Ollama v53e 1000-row measured artifacts
+- `results/v52m_measured_registry_c_absorb/registry_001/` v52 measured registry with A/B/C/G/H absorb artifacts
+- `results/v52n_30b_open_weight_llm_rag_measured_seed/measured_001/` real system-D Ollama v50 9-query measured seed artifacts
+- `results/v52o_70b_open_weight_llm_rag_measured_seed/measured_001/` real system-E Ollama v50 9-query measured seed artifacts
+- `results/v52p_30b_open_weight_llm_rag_v53e_1000/measured_001/` real system-D Ollama v53e 1000-row measured artifacts
+- `results/v52q_70b_open_weight_llm_rag_v53e_1000/measured_001/` real system-E Ollama v53e 1000-row measured artifacts
+- `results/v52r_measured_registry_de_absorb/registry_001/` v52 measured registry with A/B/C/D/E/G/H absorb artifacts
+- `results/v52s_local_llm_weight_tier_contract/contract_001/` NVMe hot/warm/cold weight shard store contract artifacts
+- `results/v52u_local_llm_weight_tier_mmap_reader/reader_001/` tiered weight mmap reader scaffold artifacts
+- `results/v52t_de_local_measured_deferral/deferral_001/` D/E local monolithic measured deferral artifacts
+- `results/v52v_local_llm_weight_tier_rocm_decode_bind/bind_001/` ROCm HIP kernel bind scaffold artifacts
 - `results/v52c_7b14b_local_model_rag_evidence_intake/intake_001/` system-C evidence-intake artifacts
 - `results/v52k_7b14b_local_model_rag_measured_seed/measured_001/` real system-C Ollama measured seed artifacts
 - `results/v52d_30b70b_llm_rag_evidence_intake/intake_001/` system-D/E evidence-intake artifacts
@@ -411,7 +446,27 @@ The v52c evidence-intake layer emits the system-C 7B-14B local-model-RAG schema,
 
 The v52k measured-seed layer runs local Ollama `qwen2.5:7b-instruct` as baseline C over the v50 9-query public-repo seed, writes real answer/citation/resource rows, and validates the supplied evidence directory through v52c with `supplied_evidence_ready=1` and `v52c_absorb_ready=1`. It records 9 answer rows, 18 citation rows, 9 resource rows, and 6/9 measured label accuracy while intentionally keeping C-over-v53e scale, D/E 30B/70B rows, `v52_ready=0`, and all release/comparison claims blocked.
 
-The v52l measured-scale layer runs local Ollama `qwen2.5:7b-instruct` as baseline C over the same frozen v53e 1000-query/source manifest used by v52i A/B/G/H. It records 1000 C answer rows, 1000 citation rows, 1000 retrieval rows, 1000 abstain rows, 1000 wrong-answer guard rows, 1000 resource rows, 1000 raw Ollama transcript rows, model identity, and sha256 manifests with `same_query_set_as_v52i_abgh=1`, `same_source_manifest_as_v52i_abgh=1`, and `c_v53e_absorb_ready=1`. It records 0/1000 strict exact-label accuracy, so it is a real C response packet and schema pressure test rather than a C quality claim; D/E 30B/70B rows, C/D/E registry re-absorb, `v52_ready=0`, and all release/comparison claims remain blocked.
+The v52l measured-scale layer runs local Ollama `qwen2.5:7b-instruct` as baseline C over the same frozen v53e 1000-query/source manifest used by v52i A/B/G/H. It records 1000 C answer rows, 1000 citation rows, 1000 retrieval rows, 1000 abstain rows, 1000 wrong-answer guard rows, 1000 resource rows, 1000 raw Ollama transcript rows, model identity, and sha256 manifests with `same_query_set_as_v52i_abgh=1`, `same_source_manifest_as_v52i_abgh=1`, and `c_v53e_absorb_ready=1`. It records 0/1000 strict exact-label accuracy, so it is a real C response packet and schema pressure test rather than a C quality claim; D/E 30B/70B rows, full registry re-absorb, `v52_ready=0`, and all release/comparison claims remained blocked at the v52l layer.
+
+The v52m measured-registry layer absorbs the v52i A/B/G/H measured packet plus the v52l C measured packet into an updated v52 measured registry. It marks A/B/C/G/H as measured over the shared v53e query/source manifest, copies the v52i and v52l artifacts, records 5000 answer/citation/abstain/guard/resource rows, sets `required_7b14b_baseline_ready=1`, and records `c_strict_exact_label_accuracy=0.000000` without turning that into a C performance claim. It intentionally keeps D/E evidence directories, required 30B/70B baselines, `v52_ready=0`, and all 30B-150B comparison claims blocked.
+
+The v52n measured-seed layer runs local Ollama `qwen2.5:32b-instruct` as baseline D over the v50 9-query public-repo seed, writes real answer/citation/resource rows, and validates the supplied evidence directory through v52d with `d_30b_supplied_evidence_ready=1`. It records 9 answer rows, 18 citation rows, and 9 resource rows while intentionally keeping D-over-v53e scale, E 70B rows, `v52_ready=0`, and all release/comparison claims blocked.
+
+The v52o measured-seed layer runs local Ollama `llama3.1:70b-instruct-q2_K` as baseline E over the v50 9-query public-repo seed, writes real answer/citation/resource rows, and validates through v52d with `e_70b_supplied_evidence_ready=1`. It records 9 answer rows, 18 citation rows, and 9 resource rows while intentionally keeping E-over-v53e scale, D 30B real row, `v52_ready=0`, and all release/comparison claims blocked.
+
+The v52p measured-scale layer runs local Ollama `qwen2.5:32b-instruct` as baseline D over the same frozen v53e 1000-query/source manifest used by v52i A/B/G/H. It records 1000 D answer/citation/retrieval/abstain/wrong-answer/resource/transcript rows with `same_query_set_as_v52i_abgh=1`, `same_source_manifest_as_v52i_abgh=1`, and `d_v53e_absorb_ready=1`. Strict exact-label accuracy is recorded without turning it into a D quality claim; E 70B rows, full registry re-absorb, `v52_ready=0`, and all release/comparison claims remain blocked at the v52p layer.
+
+The v52q measured-scale layer runs local Ollama `llama3.1:70b-instruct-q2_K` as baseline E over the same frozen v53e manifest with `e_v53e_absorb_ready=1`. D 30B rows, full registry re-absorb, `v52_ready=0`, and all release/comparison claims remain blocked at the v52q layer.
+
+The v52s weight-tier contract layer emits an NVMe-mmap hot/warm/cold weight shard store aligned with the h11-c RouteMemory store pattern. It marks `nvme_mmap_store_ready=1` while keeping tiered decode runtime, monolithic Ollama D/E measured rows, and release claims blocked.
+
+The v52u mmap-reader layer mmap-opens the v52s shard store, verifies page headers and hashes, and emits hot/warm/cold read traces plus a warm-prefetch decode scaffold following the v13-b reader ABI shape. It marks `weight_tier_mmap_reader_ready=1` while keeping ROCm kernel binding, D/E measured rows, and release claims blocked.
+
+The v52v ROCm bind layer sources `scripts/ollama_rocm_env.sh`, compiles a diagnostic HIP axpy probe, and binds v52u vram-hot decode scaffold rows while keeping full tiered LLM decode runtime blocked.
+
+The v52t deferral layer records explicit `deferred-with-reason` status for local monolithic Ollama D/E measured rows on 16GB VRAM hosts and links the v52s/v52u/v52v replacement path while keeping required 30B/70B baselines blocked.
+
+The v52r measured-registry layer absorbs the v52i A/B/G/H measured packet plus the v52l C and v52p/v52q D/E measured packets into an updated v52 measured registry. It marks A/B/C/D/E/G/H as measured over the shared v53e query/source manifest, copies v52i/v52l/v52p/v52q artifacts, records 7000 answer/citation/abstain/guard/resource rows, sets `required_30b_baseline_ready=1` and `required_70b_baseline_ready=1`, and records C/D/E strict exact-label accuracy fields without quality claims. It intentionally keeps optional F handling, `v52_ready=0`, and all 30B-150B comparison claims blocked.
 
 The v52d evidence-intake layer emits the system-D/E 30B/70B open-weight LLM+RAG schemas, answer templates, model identity templates, validation rows, source evidence copies, hash manifest, and claim boundary. Default/no-env execution intentionally keeps `required_30b_baseline_ready=0`, `required_70b_baseline_ready=0`, `v52_absorb_ready=0`, `v52_ready=0`, and all 30B-150B comparison claims blocked until both real D and E evidence directories validate.
 
@@ -455,31 +510,38 @@ The v59 scaffold emits a repository one-command entrypoint, v52-v58 contract bun
 
 The v59b candidate layer emits a repository one-command candidate entrypoint, v52b-v58c candidate/intake bundle, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It marks only `v59b_one_command_candidate_demo_ready=1`; it keeps `v59_ready=0`, real 30B/70B rows, optional 100B+ row/final deferral, complete-source audit, human domain review, human blind review, full challenge demo, and release claims blocked.
 
-The v59c measured-registry layer emits a repository one-command measured-registry entrypoint, v52j measured-registry bundle, v53e-v58c candidate-chain copies, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It marks only `v59c_one_command_measured_registry_demo_ready=1`; it hash-binds A/B/G/H over the shared 1000-query v53e source manifest into the v59 replay path while keeping `v59_ready=0`, C/D/E registry re-absorb, D/E real evidence rows, optional F handling, complete-source audit, human domain review, human blind review, full challenge demo, and release claims blocked.
+The v59c measured-registry layer emits a repository one-command measured-registry entrypoint, v52m measured-registry bundle, v53e-v58c candidate-chain copies, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It marks only `v59c_one_command_measured_registry_demo_ready=1`; it hash-binds A/B/C/G/H over the shared 1000-query v53e source manifest into the v59 replay path while keeping `v59_ready=0`, D/E real evidence rows, optional F handling, complete-source audit, human domain review, human blind review, full challenge demo, and release claims blocked.
 
 The v60 scaffold emits release requirement rows, allowed claim rows, forbidden claim rows, release decision rows, v59 source bundle copies, hash manifest, and claim boundary. It intentionally keeps `v60_ready=0`, all ten release requirements blocked, `real_release_package_ready=0`, and all v1.0 comparison/release claims blocked until real measured rows and human/release review evidence exist.
 
 The v60b preflight layer consumes the v59b candidate replay and emits release-preflight requirement rows, claim rows, stage release-audit rows, decision rows, copied v59b source evidence, hash manifest, and claim boundary. It marks only `v60b_release_preflight_candidate_audit_ready=1`; it keeps `v60_ready=0`, real 30B/70B rows, complete-source audit, human domain review, human blind review, human release review, release package, and all v1.0 release/comparison/superiority claims blocked.
 
+The v61 SSD-resident MoE runtime direction is documented in `docs/V61_SSD_RESIDENT_MOE_RUNTIME.md`. It is a post-v52 runtime implementation track, not a shortcut through the v1.0 release gates. Its objective is to store hundreds-B to trillions-parameter open-weight model warehouses on NVMe SSD while keeping only the active MoE/page execution set in VRAM, with discrete-node routing, predictive prefetch, VRAM hot cache, page-level mixed quantization, and token-level I/O budgets. v52s/v52u/v52v/v52w become the seed artifacts for this track; v52x external bake remains fallback evidence intake rather than the main research path.
+
+The v61a-v61j SSD-resident active-sparse prototype is implemented and covered by `experiments/test_v61j_one_command_ssd_resident_demo.sh`. It creates deterministic 2 MB SSD weight pages split by layer/expert/page ID, verifies aligned direct I/O reads, records no full-model RAM residency audit rows, emits RouteHint prefetch/VRAM hot-cache rows, runs CPU deterministic page-dequant-matmul numeric checks, selects active experts, compares predictive-prefetch stalls, assigns mixed quant profiles, measures dense full-stream blockers, emits a logical 128B MoE active-sparse contract, and bundles the path behind one command. It marks `ssd_resident_active_sparse_path_proven=1`, `ram_resident_full_model_fallback_rows=0`, `total_parameters=128000000000`, `ssd_read_bytes_per_token_max=8388608`, and `route_jump_rows=0`, while keeping real 100B checkpoint materialization, GPU speedup, dense hundreds-B local-speed, near-frontier quality, and release claims blocked.
+
 ## Immediate Next PR Target
 
 The next implementation PR should extend v52-v60 from contract scaffold to measured and reviewed rows:
 
-1. Closed in v59c: promote the v52j measured registry into the v59 replay bundle without weakening its local-only claim boundary.
+1. Closed in v59c: promote the v52m measured registry into the v59 replay bundle without weakening its local-only claim boundary.
 2. Closed as v52k seed: supply and validate a real 7B-14B local model + RAG evidence directory for C over the v50 9-query seed.
 3. Closed as v52l scale: expand C from the v50 seed to the shared v53e 1000-query set, producing real local C response/resource/transcript rows while preserving the no-quality-claim boundary.
-4. Next: supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E.
-5. Re-run the same shared `query_id`, `source_manifest`, `answer_rows`, `citation_rows`, `abstain_rows`, `wrong_answer_guard_rows`, `resource_rows`, and `sha256_manifest` contract after C/D/E evidence validates, and re-absorb C/D/E into the measured registry.
-6. Supply and validate a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
-7. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
-8. Promote v53e/v53f canary-scope query and intake layers into complete-source 1000+ query audit evidence, then supply valid A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
-9. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
-10. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
-11. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
-12. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
-13. Promote the v58c response intake into a real 500+ row blind evaluation by supplying valid D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
-14. Promote the v59c measured-registry replay into a full challenge demo by replacing remaining candidate/intake rows with real v52-v58 measured/reviewed rows and writing a reviewer-ready artifact bundle.
-15. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
-16. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
+4. Closed as v52m absorb: re-absorb the v52l C measured packet into the v52 measured registry alongside A/B/G/H while preserving the no-quality-claim boundary.
+5. In progress as v52n/v52o seed: supply and validate real 30B and 70B open-weight LLM+RAG evidence directories for D and E over the v50 9-query seed.
+6. In progress as v52s/v52u/v52v/v52t: NVMe weight-tier contract, mmap reader scaffold, ROCm HIP bind, and explicit D/E local deferral; next extend tiered matmul decode (v52w) or external bake, then v52p/q/r and v59c.
+7. Supply and validate a 100B+ hosted/API row for F when credentials and policy allow it, or keep it explicitly deferred with reason.
+8. Expand v53c canary snapshots into complete source snapshots for the seven newly locked repositories.
+9. Promote v53e/v53f canary-scope query and intake layers into complete-source 1000+ query audit evidence, then supply valid A-H answer/citation/resource rows and symmetric scorer/policy rows over that frozen query set.
+10. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
+11. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
+12. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
+13. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
+14. Promote the v58c response intake into a real 500+ row blind evaluation by supplying valid D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
+15. Promote the v59c measured-registry replay into a full challenge demo by replacing remaining candidate/intake rows with real v52-v58 measured/reviewed rows and writing a reviewer-ready artifact bundle.
+16. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
+17. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
+18. Closed as v61a-v61j prototype: replace the broken v52w-style page-to-kernel numeric path with a deterministic SSD page-store -> direct I/O reader -> RouteHint prefetch/VRAM cache -> CPU page-dequant-matmul -> expert router -> predictive prefetch -> mixed quant planner -> dense stress blocker -> logical 128B MoE active-sparse contract -> one-command demo chain, including token-level SSD I/O metrics and no-RAM-resident full-model audit rows.
+19. Next v61 runtime step: replace the logical 128B contract fixture with a real open-weight MoE checkpoint shard, add GPU/ROCm page-dequant-matmul measurements, and run source-bound workloads without opening near-frontier or release claims until external review passes.
 
 This completes the v52-v60 contract scaffold chain without weakening the claim boundary. It does not complete the v1.0 Architecture Challenge itself.
