@@ -19,6 +19,7 @@ import csv
 import hashlib
 import json
 import shutil
+import subprocess
 import sys
 import urllib.request
 from collections import Counter, defaultdict
@@ -99,6 +100,57 @@ def fetch_json(url):
     )
     with urllib.request.urlopen(request, timeout=90) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def fetch_tree_git(owner_repo, head_sha):
+    cache_dir = results / "_v53g_git_tree_cache" / owner_repo.replace("/", "__")
+    ref = f"refs/v53g/{head_sha}"
+    if not cache_dir.exists():
+        cache_dir.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git", "init", "--bare", "-q", str(cache_dir)], check=True, capture_output=True, text=True)
+        subprocess.run(
+            ["git", "-C", str(cache_dir), "remote", "add", "origin", f"https://github.com/{owner_repo}.git"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    ref_check = subprocess.run(
+        ["git", "-C", str(cache_dir), "rev-parse", "--verify", ref],
+        capture_output=True,
+        text=True,
+    )
+    if ref_check.returncode != 0:
+        subprocess.run(
+            ["git", "-C", str(cache_dir), "fetch", "--depth=1", "origin", f"{head_sha}:{ref}"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+    proc = subprocess.run(
+        ["git", "-C", str(cache_dir), "ls-tree", "-r", "-l", "-z", ref],
+        check=True,
+        capture_output=True,
+    )
+    tree = []
+    for record in proc.stdout.split(b"\0"):
+        if not record:
+            continue
+        meta, path_bytes = record.split(b"\t", 1)
+        parts = meta.decode("utf-8", errors="replace").split()
+        if len(parts) < 4 or parts[1] != "blob":
+            continue
+        size_text = parts[3]
+        size = 0 if size_text == "-" else int(size_text)
+        tree.append(
+            {
+                "type": "blob",
+                "path": path_bytes.decode("utf-8", errors="replace"),
+                "sha": parts[2],
+                "size": size,
+            }
+        )
+    return tree
 
 
 def file_extension(path):
@@ -198,13 +250,17 @@ for repo in lock_rows:
         tree = payload.get("tree", [])
         tree_truncated = int(bool(payload.get("truncated")))
     except Exception as exc:
-        fetch_error_rows.append(
-            {
-                "owner_repo": owner_repo,
-                "stage": "recursive-tree",
-                "reason": str(exc)[:240],
-            }
-        )
+        try:
+            tree = fetch_tree_git(owner_repo, head_sha)
+            tree_truncated = 0
+        except Exception as git_exc:
+            fetch_error_rows.append(
+                {
+                    "owner_repo": owner_repo,
+                    "stage": "recursive-tree",
+                    "reason": f"api={str(exc)[:120]}; git={str(git_exc)[:120]}",
+                }
+            )
 
     included = []
     tree_blob_rows = 0

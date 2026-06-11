@@ -412,6 +412,31 @@ Pass condition:
   source-bound QA, long-context quality, near-frontier, production-latency, and
   release claims remain blocked
 
+### v61n Source-Bound QA Workload Seed
+
+Bind the runtime evidence chain to a source-bound code/doc QA workload seed.
+
+Outputs:
+
+- `source_manifest_binding_rows.csv`
+- `source_bound_query_rows.csv`
+- `source_bound_answer_rows.csv`
+- `source_bound_citation_rows.csv`
+- `source_bound_abstain_rows.csv`
+- `source_bound_resource_rows.csv`
+- `runtime_binding_rows.csv`
+- `runtime_gap_rows.csv`
+
+Pass condition:
+
+- v61j one-command runtime evidence is bound
+- v61m KV-cache policy evidence is bound
+- v53g complete-source manifest is bound
+- materialized v53c canary-overlap files provide the cited source bytes
+- supported answers have citation rows and unsupported runtime claims abstain
+- complete-source 1000+ QA, real Mixtral generation, safetensors page hash
+  binding, near-frontier, production-latency, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -426,9 +451,10 @@ The benchmark ladder should be ordered by runtime risk:
 8. Real open-weight MoE page manifest, no redistributed weights.
 9. GPU/ROCm page-kernel timing over the real-model page geometry.
 10. KV-cache residency/eviction policy over the real-model geometry.
-11. Same runtime under code/doc QA workloads.
-12. Same runtime under long-context workloads with source-bound quality checks.
-13. One-command local assistant demo.
+11. Source-bound code/doc QA workload seed over materialized files.
+12. Complete-source 1000+ QA workload with real model generation.
+13. Same runtime under long-context workloads with source-bound quality checks.
+14. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -619,6 +645,47 @@ Mixtral page geometry. It is not long-context quality evidence: source-bound QA,
 exact long-context replay, production latency, and release readiness remain
 blocked.
 
+## Current Source-Bound QA Workload
+
+The first v61 source-bound QA workload seed is implemented and covered by:
+
+```bash
+./experiments/test_v61n_source_bound_qa_workload.sh
+```
+
+It emits:
+
+- `results/v61n_source_bound_qa_workload/qa_001/`
+
+Verified current summary:
+
+- `v61n_source_bound_qa_workload_ready=1`
+- `source_bound_qa_workload_ready=1`
+- `source_bound_query_rows >= materialized_source_file_rows + bound_repo_count`
+- `source_bound_supported_answer_rows == materialized_source_file_rows`
+- `source_bound_abstain_rows == bound_repo_count`
+- `source_bound_citation_rows == source_bound_query_rows`
+- `source_bound_resource_rows == source_bound_query_rows`
+- `bound_repo_count=10`
+- `materialized_source_file_rows >= 20`
+- `complete_source_manifest_binding_rows == materialized_source_file_rows`
+- `answer_citation_support_pass_rows == source_bound_query_rows`
+- `abstain_policy_verified_rows == source_bound_abstain_rows`
+- `runtime_binding_ready=1`
+- `actual_model_generation_ready=0`
+- `complete_source_1000_query_ready=0`
+- `complete_source_content_snapshot_ready=0`
+- `real_checkpoint_weight_bytes_materialized=0`
+- `safetensors_page_hash_binding_ready=0`
+- `near_frontier_claim_ready=0`
+- `production_latency_claim_ready=0`
+- `real_release_package_ready=0`
+
+This is allowed to claim only a source-bound QA workload seed over materialized
+v53c canary-overlap files that are also bound to the v53g complete-source
+manifest. It is not the complete-source 1000+ query audit and it is not real
+Mixtral checkpoint generation.
+
 ## Immediate Next Implementation Target
 
 Move from the real-model page manifest into measured real-model runtime evidence
@@ -628,9 +695,10 @@ without weakening the boundary:
    without committing weight bytes.
 2. Closed as v61l seed: add GPU/ROCm page-dequant-matmul measurements over the v61k page geometry while keeping real checkpoint weights blocked.
 3. Closed as v61m seed: add a KV-cache residency/eviction policy so long-context claims remain gated by measured rows.
-4. Add local safetensors shard/header/page-hash intake without committing weight bytes.
-5. Run source-bound code/doc QA workloads through the v61j command and bind answers to citation/abstain/fallback evidence.
-6. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+4. Closed as v61n seed: run a source-bound code/doc QA workload through the v61 evidence chain and bind answers to citation/abstain/resource evidence.
+5. Add local safetensors shard/header/page-hash intake without committing weight bytes.
+6. Promote the source-bound seed into complete-source 1000+ QA with real model generation only after checkpoint/page hash binding exists.
+7. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -644,6 +712,7 @@ The current v61 runtime prototype can say:
 - mixed quantization is bounded by quality gates
 - SSD read bytes per token are within a practical local-PC budget
 - KV cache residency/eviction has a deterministic VRAM hot plus NVMe cold policy
+- source-bound QA has a citation/abstain workload seed over materialized files
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 

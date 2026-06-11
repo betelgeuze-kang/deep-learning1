@@ -1709,6 +1709,14 @@ Current next boundary:
   `kv_cache_policy_ready=1`, and `host_ram_kv_spill_enabled=0`. It keeps
   safetensors page-hash binding, source-bound QA, long-context quality,
   near-frontier quality, production latency, and release claims blocked.
+- `v61n` adds a source-bound QA workload seed over materialized source rows.
+  `experiments/test_v61n_source_bound_qa_workload.sh` binds v61j, v61m, v53g,
+  and the currently materialized v53c canary-overlap files into source-bound
+  query rows, with citation-supported answers, one unsupported-claim abstain per
+  repository, 10 repositories, and manifest-bound source files. It keeps
+  complete-source 1000+ QA, real Mixtral generation, safetensors page-hash
+  binding, near-frontier quality, production latency, and release claims
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
