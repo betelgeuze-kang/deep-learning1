@@ -1643,6 +1643,14 @@ Current next boundary:
   `required_core_systems_ready=1` and `answer_citation_resource_rows_ready=1`
   while keeping D/E quality comparison, symmetric scorer/policy rows,
   `v53_ready`, review artifacts, and release claims blocked.
+- `v53q` adds complete-source symmetric scorer/policy rows.
+  `experiments/test_v53q_complete_source_symmetric_scorer_policy.sh` consumes
+  v53p and applies the same source-verification scorer plus domain/abstain
+  policy checks to all 7000 A/B/C/D/E/G/H rows. It records 7000 scorer rows,
+  7000 policy rows, 1000 query metric rows, 6000 answer-hash matches, 1000
+  preserved C mismatches, and `symmetric_scorer_policy_rows_ready=1`, while
+  keeping quality comparison, `v53_ready`, review artifacts, and release claims
+  blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
