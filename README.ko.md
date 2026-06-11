@@ -22,9 +22,10 @@ SSD-resident MoE runtime 구현 방향: [docs/V61_SSD_RESIDENT_MOE_RUNTIME.md](d
 ./experiments/test_v61l_gpu_page_dequant_matmul_measurement.sh
 ./experiments/test_v61m_kv_cache_residency_eviction_policy.sh
 ./experiments/test_v61n_source_bound_qa_workload.sh
+./experiments/test_v61o_checkpoint_shard_header_probe.sh
 ```
 
-이 명령은 v61a-v61j SSD-resident active-sparse runtime prototype을 닫고, v61k-v61n에서 Mixtral 8x22B real-model page evidence를 추가합니다: deterministic 2 MB SSD weight page, aligned direct I/O read, full-model RAM residency 금지 audit row, RouteHint prefetch/VRAM hot cache, CPU page-dequant-matmul numeric check, expert routing, predictive prefetch, mixed quant planning, dense full-stream stress blocker, logical 128B MoE active-sparse contract, one-command demo bundle, legally redistributable real-model page manifest, 2 MiB q4-equivalent page tile 1개에 대한 ROCm page-dequant-matmul timing row, VRAM hot/sink window를 유지하고 오래된 page를 NVMe cold tier로 내리는 KV-cache residency/eviction policy, v53g complete-source manifest에 묶인 v53c canary-overlap materialized file 기반 source-bound QA workload seed를 검증합니다. 실제 checkpoint 물질화, real Mixtral generation, complete-source 1000+ QA, end-to-end GPU speedup, long-context 품질, near-frontier 품질, dense hundreds-B local-speed, production-latency, release claim은 계속 blocked입니다.
+이 명령은 v61a-v61j SSD-resident active-sparse runtime prototype을 닫고, v61k-v61o에서 Mixtral 8x22B real-model page evidence를 추가합니다: deterministic 2 MB SSD weight page, aligned direct I/O read, full-model RAM residency 금지 audit row, RouteHint prefetch/VRAM hot cache, CPU page-dequant-matmul numeric check, expert routing, predictive prefetch, mixed quant planning, dense full-stream stress blocker, logical 128B MoE active-sparse contract, one-command demo bundle, legally redistributable real-model page manifest, 2 MiB q4-equivalent page tile 1개에 대한 ROCm page-dequant-matmul timing row, KV-cache residency/eviction policy, source-bound QA workload seed, checkpoint index/shard HTTP/safetensors header 및 sampled page-hash probe evidence를 검증합니다. full checkpoint 물질화, full page-hash coverage, real Mixtral generation, complete-source 1000+ QA, end-to-end GPU speedup, long-context 품질, near-frontier 품질, dense hundreds-B local-speed, production-latency, release claim은 계속 blocked입니다.
 
 필수 v1.0 단계:
 

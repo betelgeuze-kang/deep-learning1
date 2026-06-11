@@ -1717,6 +1717,14 @@ Current next boundary:
   complete-source 1000+ QA, real Mixtral generation, safetensors page-hash
   binding, near-frontier quality, production latency, and release claims
   blocked.
+- `v61o` strengthens checkpoint identity without full weight residency.
+  `experiments/test_v61o_checkpoint_shard_header_probe.sh` fetches the
+  safetensors index, HEAD-probes all 59 checkpoint shards, range-reads all shard
+  headers, parses 1739 tensor header rows, and hashes three sampled first 2 MiB
+  payload pages while persisting zero checkpoint payload bytes. It keeps full
+  checkpoint materialization, full page-hash coverage, local SSD checkpoint
+  residency, real generation, near-frontier quality, production latency, and
+  release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

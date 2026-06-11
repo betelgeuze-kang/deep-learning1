@@ -437,6 +437,30 @@ Pass condition:
 - complete-source 1000+ QA, real Mixtral generation, safetensors page hash
   binding, near-frontier, production-latency, and release claims remain blocked
 
+### v61o Checkpoint Shard Header Probe
+
+Strengthen the real-model checkpoint binding without downloading full weights.
+
+Outputs:
+
+- `checkpoint_index_rows.csv`
+- `checkpoint_shard_http_identity_rows.csv`
+- `safetensors_header_probe_rows.csv`
+- `safetensors_header_tensor_rows.csv`
+- `sampled_page_hash_probe_rows.csv`
+- `runtime_gap_rows.csv`
+
+Pass condition:
+
+- v61k Mixtral page manifest is bound
+- Hugging Face safetensors index is hash-bound
+- all 59 checkpoint shards have HTTP identity rows
+- all safetensors headers are range-read and parsed
+- sampled first-page payload hashes are recorded without persisting payload bytes
+- full checkpoint materialization, full page-hash coverage, local SSD checkpoint
+  residency, real generation, near-frontier, production-latency, and release
+  claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -449,12 +473,13 @@ The benchmark ladder should be ordered by runtime risk:
 6. Small MoE with real expert routing.
 7. 100B+ total-parameter MoE active-sparse runtime.
 8. Real open-weight MoE page manifest, no redistributed weights.
-9. GPU/ROCm page-kernel timing over the real-model page geometry.
-10. KV-cache residency/eviction policy over the real-model geometry.
-11. Source-bound code/doc QA workload seed over materialized files.
-12. Complete-source 1000+ QA workload with real model generation.
-13. Same runtime under long-context workloads with source-bound quality checks.
-14. One-command local assistant demo.
+9. Checkpoint index/shard/header and sampled page-hash probes.
+10. GPU/ROCm page-kernel timing over the real-model page geometry.
+11. KV-cache residency/eviction policy over the real-model geometry.
+12. Source-bound code/doc QA workload seed over materialized files.
+13. Complete-source 1000+ QA workload with real model generation.
+14. Same runtime under long-context workloads with source-bound quality checks.
+15. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -686,6 +711,42 @@ v53c canary-overlap files that are also bound to the v53g complete-source
 manifest. It is not the complete-source 1000+ query audit and it is not real
 Mixtral checkpoint generation.
 
+## Current Checkpoint Shard Header Probe
+
+The first v61 checkpoint shard/header probe is implemented and covered by:
+
+```bash
+./experiments/test_v61o_checkpoint_shard_header_probe.sh
+```
+
+It emits:
+
+- `results/v61o_checkpoint_shard_header_probe/probe_001/`
+
+Verified current summary:
+
+- `v61o_checkpoint_shard_header_probe_ready=1`
+- `checkpoint_index_ready=1`
+- `checkpoint_index_weight_map_tensor_rows=1739`
+- `checkpoint_shard_http_identity_rows=59`
+- `safetensors_header_probe_rows=59`
+- `safetensors_header_probe_ready_rows=59`
+- `safetensors_header_tensor_rows=1739`
+- `sampled_page_hash_probe_rows=3`
+- `sampled_page_payload_bytes_read=6291456`
+- `sampled_safetensors_page_hash_binding_ready=1`
+- `full_safetensors_page_hash_binding_ready=0`
+- `checkpoint_weight_bytes_persisted=0`
+- `real_checkpoint_weight_bytes_materialized=0`
+- `actual_model_generation_ready=0`
+- `near_frontier_claim_ready=0`
+- `production_latency_claim_ready=0`
+- `real_release_package_ready=0`
+
+This is allowed to claim checkpoint index, shard HTTP identity, safetensors
+header, and sampled page-hash probe evidence. It is not full checkpoint
+residency, full page-hash coverage, or real Mixtral generation.
+
 ## Immediate Next Implementation Target
 
 Move from the real-model page manifest into measured real-model runtime evidence
@@ -696,9 +757,10 @@ without weakening the boundary:
 2. Closed as v61l seed: add GPU/ROCm page-dequant-matmul measurements over the v61k page geometry while keeping real checkpoint weights blocked.
 3. Closed as v61m seed: add a KV-cache residency/eviction policy so long-context claims remain gated by measured rows.
 4. Closed as v61n seed: run a source-bound code/doc QA workload through the v61 evidence chain and bind answers to citation/abstain/resource evidence.
-5. Add local safetensors shard/header/page-hash intake without committing weight bytes.
-6. Promote the source-bound seed into complete-source 1000+ QA with real model generation only after checkpoint/page hash binding exists.
-7. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+5. Closed as v61o seed: add checkpoint index, safetensors header, and sampled page-hash probe intake without persisting checkpoint payload bytes.
+6. Promote sampled page probes into full page-hash coverage or local SSD shard residency outside the repository.
+7. Promote the source-bound seed into complete-source 1000+ QA with real model generation only after checkpoint/page hash binding exists.
+8. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -713,6 +775,7 @@ The current v61 runtime prototype can say:
 - SSD read bytes per token are within a practical local-PC budget
 - KV cache residency/eviction has a deterministic VRAM hot plus NVMe cold policy
 - source-bound QA has a citation/abstain workload seed over materialized files
+- checkpoint shard identity, safetensors headers, and sampled page hashes are bound
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
