@@ -864,6 +864,34 @@ Pass condition:
   generation, near-frontier, production-latency, and release claims remain
   blocked
 
+### v61ae Real Generation Admission Gate
+
+Bind sampled KV+weight runtime budgets, complete-source review packets, and
+materialization/page-hash state into a real generation admission gate, without
+executing Mixtral generation.
+
+Outputs:
+
+- `real_generation_candidate_rows.csv`
+- `real_generation_admission_requirement_rows.csv`
+- `real_generation_admission_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61AE_REAL_GENERATION_ADMISSION_BOUNDARY.md`
+
+Pass condition:
+
+- v61ad runtime-budget evidence, v53r complete-source review packets, v61r full
+  page-hash sweep state, v61t local materialization state, and v61w
+  materialization admission state are bound
+- 1000 complete-source real-generation candidate rows are emitted
+- zero candidate rows are admitted for actual model generation
+- all 1000 candidate rows have runtime-budget evidence ready
+- all 1000 candidate rows remain blocked by source review, materialization, and
+  full safetensors page-hash gates
+- checkpoint payload bytes committed to the repository remain zero
+- actual model generation, near-frontier quality, production-latency, and
+  release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -893,9 +921,10 @@ The benchmark ladder should be ordered by runtime risk:
 23. Sampled hotset BF16/q8/q4 numeric tile probes.
 24. Sampled source-bound hotset token-budget replay.
 25. Sampled KV + weight token-budget replay.
-26. Complete-source 1000+ QA workload with real model generation.
-27. Same runtime under long-context workloads with source-bound quality checks.
-28. One-command local assistant demo.
+26. Real generation admission gate over complete-source candidates.
+27. Complete-source 1000+ QA workload with real model generation.
+28. Same runtime under long-context workloads with source-bound quality checks.
+29. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1230,9 +1259,10 @@ without weakening the boundary:
 15. Closed as v61ab sampled hotset tensor-tile quant probe: run bounded BF16/q8/q4 dot-tile probes over the sampled tensor slices, record finite numeric rows, and keep real generation blocked.
 16. Closed as v61ac sampled hotset token-budget replay: bind v61x source-bound rows to v61z direct-I/O latency and v61ab tile probes, record bounded per-token budgets, and keep real generation blocked.
 17. Closed as v61ad KV + weight token-budget replay: bind v61ac token rows to v61m KV context profiles, record combined VRAM-hot/NVMe-cold budget rows, and keep full-KV-in-VRAM and real generation blocked.
-18. Promote identity-verified local shards into full safetensors page-hash coverage.
-19. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-20. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+18. Closed as v61ae real generation admission gate: bind v61ad/v53r/v61r/v61t/v61w into 1000 complete-source generation candidates, admit 0 rows, and keep source-review/materialization/full-page-hash blockers explicit.
+19. Promote identity-verified local shards into full safetensors page-hash coverage.
+20. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+21. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1292,6 +1322,9 @@ The current v61 runtime prototype can say:
   spill bytes, and 8617984 sampled weight+new-KV bytes per token, but this is
   still not full KV-in-VRAM residency, production latency, or real Mixtral
   generation
+- the real generation admission gate can emit 1000 complete-source generation
+  candidate rows with 1000 runtime-budget-ready rows, but admits 0 rows until
+  source review, materialization, and full page-hash gates pass
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 

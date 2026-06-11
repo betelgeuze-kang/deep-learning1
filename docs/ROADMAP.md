@@ -1949,6 +1949,14 @@ Current next boundary:
   NVMe KV bytes of 1639972864, while keeping full KV-in-VRAM residency, full
   checkpoint materialization, full page-hash coverage, real Mixtral generation,
   near-frontier quality, production latency, and release claims blocked.
+- `v61ae` adds a real generation admission gate.
+  `experiments/test_v61ae_real_generation_admission_gate.sh` consumes v61ad,
+  v53r, v61r, v61t, and v61w, binding complete-source review packets to sampled
+  runtime budgets plus materialization/page-hash state. It records 1000
+  real-generation candidate rows, 0 admitted rows, 1000 runtime-budget-ready
+  rows, 1000 source-review-blocked rows, 1000 materialization-blocked rows, and
+  1000 page-hash-blocked rows, while keeping actual model generation,
+  near-frontier quality, production latency, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
