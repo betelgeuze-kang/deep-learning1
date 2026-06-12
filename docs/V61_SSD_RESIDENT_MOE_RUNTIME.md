@@ -1716,6 +1716,39 @@ Pass condition:
 - full checkpoint materialization, full page-hash coverage, actual generation,
   production-latency, near-frontier, and release claims remain blocked
 
+### v61bg Ubuntu-1 Token-Budget Replay
+
+Bind the v61x source-bound workload rows to the v61bd ubuntu-1 direct-I/O
+latency evidence and the v61bf resident tensor-tile quant evidence. This turns
+the selected NVMe target from a page-local probe into a per-token hotset budget
+object while preserving the no-generation/no-production-claim boundary.
+
+Outputs:
+
+- `ubuntu1_token_budget_rows.csv`
+- `ubuntu1_token_budget_page_schedule_rows.csv`
+- `ubuntu1_token_budget_tile_binding_rows.csv`
+- `ubuntu1_token_budget_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61BG_UBUNTU1_TOKEN_BUDGET_BOUNDARY.md`
+
+Pass condition:
+
+- v61x source-bound replay binding is ready
+- v61bd ubuntu-1 direct-I/O latency evidence is bound
+- v61bf ubuntu-1 tensor-tile quant evidence is bound
+- 37 token-budget rows are emitted
+- 148 active page schedule rows are emitted
+- 1184 tile-binding rows are emitted
+- 8388608 SSD read bytes/token are recorded
+- 131072 BF16 tile values/token are recorded
+- token direct-I/O p50/p95 budgets are computed from ubuntu-1 latency evidence
+- q8/q4 per-token error budgets are computed from resident tile evidence
+- `checkpoint_payload_bytes_downloaded_by_v61bg=0`
+- checkpoint payload bytes committed to the repository remain zero
+- full checkpoint materialization, full page-hash coverage, actual generation,
+  production-latency, near-frontier, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1773,9 +1806,10 @@ The benchmark ladder should be ordered by runtime risk:
 51. Ubuntu-1 bounded sampled-hotset direct-I/O replay.
 52. Ubuntu-1 resident BF16 tensor-slice interpretation and stats.
 53. Ubuntu-1 resident BF16/q8/q4 tensor-tile quant probes.
-54. Complete-source 1000+ QA workload with real model generation.
-55. Same runtime under long-context workloads with source-bound quality checks.
-56. One-command local assistant demo.
+54. Ubuntu-1 source-bound token-budget replay.
+55. Complete-source 1000+ QA workload with real model generation.
+56. Same runtime under long-context workloads with source-bound quality checks.
+57. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1870,6 +1904,7 @@ covered by:
 ./experiments/test_v61bd_ubuntu1_sampled_hotset_direct_io_replay.sh
 ./experiments/test_v61be_ubuntu1_hotset_tensor_slice_verifier.sh
 ./experiments/test_v61bf_ubuntu1_tensor_tile_quant_probe.sh
+./experiments/test_v61bg_ubuntu1_token_budget_replay.sh
 ```
 
 They emit:
@@ -1889,6 +1924,7 @@ They emit:
 - `results/v61bd_ubuntu1_sampled_hotset_direct_io_replay/replay_001/`
 - `results/v61be_ubuntu1_hotset_tensor_slice_verifier/verify_001/`
 - `results/v61bf_ubuntu1_tensor_tile_quant_probe/probe_001/`
+- `results/v61bg_ubuntu1_token_budget_replay/replay_001/`
 
 Verified current summary:
 
@@ -2303,6 +2339,41 @@ The current v61bf ubuntu-1 tensor-tile quant probe records:
 - `real_100b_open_weight_materialized=0`
 - `actual_model_generation_ready=0`
 
+The current v61bg ubuntu-1 token-budget replay records:
+
+- `v61bg_ubuntu1_token_budget_replay_ready=1`
+- `v61x_hotset_runtime_replay_manifest_ready=1`
+- `v61bd_ubuntu1_sampled_hotset_direct_io_replay_ready=1`
+- `v61bf_ubuntu1_tensor_tile_quant_probe_ready=1`
+- `model_id=mistralai/Mixtral-8x22B-v0.1`
+- `selected_target_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
+- `ubuntu1_hotset_root=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse/.v61_sampled_hotset_pages`
+- `source_bound_workload_binding_rows=37`
+- `token_budget_rows=37`
+- `token_page_schedule_rows=148`
+- `token_tile_binding_rows=1184`
+- `finite_token_budget_rows=37`
+- `finite_tile_binding_rows=1184`
+- `active_page_reads_per_token=4`
+- `active_tile_probe_rows_per_token=32`
+- `tile_bf16_values_per_token=131072`
+- `ssd_read_bytes_per_token=8388608`
+- `ubuntu1_token_direct_io_latency_ms_p50=4.289692`
+- `ubuntu1_token_direct_io_latency_ms_p95=5.237824`
+- `q8_abs_error_budget_mean_per_token=0.0364191354`
+- `q4_abs_error_budget_mean_per_token=0.783213501`
+- `ubuntu1_token_budget_replay_ready=1`
+- `checkpoint_payload_bytes_downloaded_by_v61bg=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+- `full_checkpoint_materialization_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `real_100b_open_weight_materialized=0`
+- `actual_model_generation_ready=0`
+- `near_frontier_claim_ready=0`
+- `production_latency_claim_ready=0`
+- `real_release_package_ready=0`
+- `route_jump_rows=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
@@ -2310,7 +2381,8 @@ io_uring preflight plus backend selection plus token/runtime binding plus
 ubuntu-1 capacity admission plus target-bound handoff packaging plus the
 ubuntu-1 write sentinel witness plus ubuntu-1 sampled hotset materialization
 plus ubuntu-1 sampled hotset direct-I/O replay plus ubuntu-1 resident BF16
-tensor-slice verification plus ubuntu-1 resident tensor-tile quant probing is
+tensor-slice verification plus ubuntu-1 resident tensor-tile quant probing plus
+ubuntu-1 source-bound token-budget replay is
 not full payload
 download execution, checkpoint materialization, bootstrap cold-start admission,
 io_uring SQ/CQ execution, registered-buffer prefetch, or full-runtime
@@ -2573,9 +2645,10 @@ without weakening the boundary:
 43. Closed as v61bd ubuntu-1 sampled hotset direct-I/O replay: read the ubuntu-1 sampled hotset pages with O_DIRECT, verify hashes, and record target-specific latency/throughput while keeping full checkpoint payload execution blocked.
 44. Closed as v61be ubuntu-1 hotset tensor-slice verifier: interpret those ubuntu-1 resident pages as real BF16 tensor segments, verify finite sampled stats and page/direct-read hash binding, and keep full checkpoint payload execution blocked.
 45. Closed as v61bf ubuntu-1 tensor-tile quant probe: run bounded BF16/q8/q4 dot-tile probes over the ubuntu-1 resident tensor slices and keep full checkpoint payload execution blocked.
-46. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-47. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-48. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+46. Closed as v61bg ubuntu-1 token-budget replay: bind source-bound workload rows to ubuntu-1 direct-I/O latency and resident tensor-tile quant evidence while keeping full checkpoint payload execution blocked.
+47. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+48. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+49. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -2738,9 +2811,17 @@ The current v61 runtime prototype can say:
 - the ubuntu-1 sampled hotset direct-I/O replay reads those 16 bounded sampled
   pages with O_DIRECT, records 16/16 hash matches and target-specific
   p50/p95/throughput rows, while keeping production-latency claims blocked
+- the ubuntu-1 resident tensor-slice verifier interprets those sampled pages as
+  real BF16 tensor segments with finite sampled values and inherited
+  page/direct-read hash witnesses, while keeping generation blocked
+- the ubuntu-1 resident tensor-tile quant probe measures bounded BF16/q8/q4
+  numeric tile risk over those slices, while keeping release claims blocked
+- the ubuntu-1 token-budget replay binds source-bound workload rows to
+  target-specific direct-I/O latency and resident tile evidence, while keeping
+  production-latency and near-frontier claims blocked
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, and ubuntu-1 sampled-hotset direct-I/O replay, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, and ubuntu-1 source-bound token-budget replay, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, or real near-frontier open-weight inference.

@@ -2239,6 +2239,17 @@ Current next boundary:
   payload bytes committed to the repo. Full checkpoint materialization, full
   page-hash coverage, actual model generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61bg` adds ubuntu-1 source-bound token-budget replay.
+  `experiments/test_v61bg_ubuntu1_token_budget_replay.sh` consumes
+  v61x/v61bd/v61bf and binds 37 source-bound workload rows to ubuntu-1
+  direct-I/O page schedules plus resident BF16/q8/q4 tile probes. It records
+  37 token-budget rows, 148 scheduled page reads, 1184 tile-binding rows,
+  8388608 SSD read bytes/token, 131072 BF16 tile values/token, p50/p95 token
+  direct-I/O budgets 4.289692/5.237824 ms, q8/q4 mean error budgets
+  0.0364191354/0.783213501 per token, `checkpoint_payload_bytes_downloaded_by_v61bg=0`,
+  and zero checkpoint payload bytes committed to the repo. Full checkpoint
+  materialization, full page-hash coverage, actual model generation,
+  production latency, near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

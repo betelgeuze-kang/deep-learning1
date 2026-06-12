@@ -474,6 +474,8 @@ Implemented now:
 - `experiments/test_v61be_ubuntu1_hotset_tensor_slice_verifier.sh`
 - `experiments/run_v61bf_ubuntu1_tensor_tile_quant_probe.sh`
 - `experiments/test_v61bf_ubuntu1_tensor_tile_quant_probe.sh`
+- `experiments/run_v61bg_ubuntu1_token_budget_replay.sh`
+- `experiments/test_v61bg_ubuntu1_token_budget_replay.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -593,6 +595,7 @@ Implemented now:
 - `results/v61bd_ubuntu1_sampled_hotset_direct_io_replay/replay_001/` ubuntu-1 sampled hotset direct-I/O artifacts
 - `results/v61be_ubuntu1_hotset_tensor_slice_verifier/verify_001/` ubuntu-1 sampled hotset tensor-slice artifacts
 - `results/v61bf_ubuntu1_tensor_tile_quant_probe/probe_001/` ubuntu-1 sampled hotset tensor-tile quant artifacts
+- `results/v61bg_ubuntu1_token_budget_replay/replay_001/` ubuntu-1 sampled hotset token-budget replay artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -827,6 +830,8 @@ The v61bd ubuntu-1 sampled hotset direct-I/O replay is implemented and covered b
 The v61be ubuntu-1 hotset tensor-slice verifier is implemented and covered by `experiments/test_v61be_ubuntu1_hotset_tensor_slice_verifier.sh`. It consumes v61bd/v61v, interprets the 16 ubuntu-1 resident sampled hotset pages as real BF16 tensor segments, records 16 tensor slices, 15 MoE slices plus 1 embedding slice, 33550832 tensor-segment bytes, 65536 sampled BF16 values, 65536 finite values, zero NaN/Inf values, 16 ubuntu-1 page hash matches, 16 direct-read hash matches, `checkpoint_payload_bytes_downloaded_by_v61be=0`, and zero checkpoint payload bytes committed to the repo. It keeps full checkpoint materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 The v61bf ubuntu-1 tensor-tile quant probe is implemented and covered by `experiments/test_v61bf_ubuntu1_tensor_tile_quant_probe.sh`. It consumes v61be, runs bounded BF16/q8/q4 dot-tile probes over the ubuntu-1 resident tensor slices, records 128 tile probes, 120 MoE tile probes plus 8 embedding tile probes, 524288 BF16 tile values, 128/128 finite baseline/q8/q4 dot rows, q8/q4 mean absolute dot errors 0.00113809798/0.0244754219, 16 ubuntu-1 page hash matches, 16 direct-read hash matches, `checkpoint_payload_bytes_downloaded_by_v61bf=0`, and zero checkpoint payload bytes committed to the repo. It keeps full checkpoint materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
+
+The v61bg ubuntu-1 token-budget replay is implemented and covered by `experiments/test_v61bg_ubuntu1_token_budget_replay.sh`. It consumes v61x/v61bd/v61bf, binds 37 source-bound workload rows to ubuntu-1 direct-I/O page schedules plus resident BF16/q8/q4 tile probes, records 37 token-budget rows, 148 scheduled page reads, 1184 tile-binding rows, 37/37 finite token budgets, 1184/1184 finite tile bindings, 8388608 SSD read bytes/token, 131072 BF16 tile values/token, p50/p95 token direct-I/O budgets 4.289692/5.237824 ms, q8/q4 mean error budgets 0.0364191354/0.783213501 per token, `checkpoint_payload_bytes_downloaded_by_v61bg=0`, and zero checkpoint payload bytes committed to the repo. It keeps full checkpoint materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 ## Immediate Next PR Target
 
