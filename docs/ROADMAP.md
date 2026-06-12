@@ -2111,6 +2111,14 @@ Current next boundary:
   `remote_hash_execution_ready=0`, full MoE remote-hash coverage, full
   page-hash coverage, local materialization, actual model generation,
   production latency, near-frontier, and release claims blocked.
+- `v61ar` adds a MoE remote-hash result intake gate.
+  `experiments/test_v61ar_moe_remote_hash_result_intake.sh` consumes v61aq,
+  defines the hash-only result return schema for the 1329 guarded command rows,
+  preserves 15 existing MoE remote hashes, emits 1344 combined coverage rows,
+  and keeps `remote_hash_result_intake_ready=0`, full MoE remote-hash
+  coverage, full page-hash coverage, local materialization, actual model
+  generation, production latency, near-frontier, and release claims blocked in
+  the default no-supplied-result path.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
