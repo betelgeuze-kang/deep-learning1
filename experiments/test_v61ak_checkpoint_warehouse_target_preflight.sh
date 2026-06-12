@@ -44,7 +44,6 @@ expected = {
     "required_with_reserve_bytes": "315601231712",
     "total_checkpoint_bytes_required": "281241493344",
     "ssd_reserve_bytes": "34359738368",
-    "minimum_additional_bytes_for_full_reserve_from_v61aj": "294263770976",
     "recommended_operator_free_bytes": "549755813888",
     "selected_backend_id": "curl-resume",
     "warehouse_target_preflight_ready": "1",
@@ -70,6 +69,7 @@ required_files = [
     "V61AK_CHECKPOINT_WAREHOUSE_TARGET_PREFLIGHT_BOUNDARY.md",
     "v61ak_checkpoint_warehouse_target_preflight_manifest.json",
     "sha256_manifest.csv",
+    "source_v61aj/v61aj_checkpoint_storage_profile_admission_matrix_summary.csv",
     "source_v61aj/checkpoint_storage_profile_rows.csv",
     "source_v61p/ssd_disk_budget_rows.csv",
     "source_v61p/local_shard_presence_rows.csv",
@@ -78,6 +78,16 @@ for rel in required_files:
     path = run_dir / rel
     if not path.is_file() or path.stat().st_size == 0:
         raise SystemExit(f"missing v61ak artifact: {rel}")
+
+v61aj_summary = read_csv(run_dir / "source_v61aj/v61aj_checkpoint_storage_profile_admission_matrix_summary.csv")[0]
+minimum_from_source = v61aj_summary["minimum_additional_bytes_for_full_reserve"]
+if summary["minimum_additional_bytes_for_full_reserve_from_v61aj"] != minimum_from_source:
+    raise SystemExit("v61ak minimum additional bytes should match v61aj source summary")
+if int(minimum_from_source) != max(
+    int(v61aj_summary["required_with_reserve_bytes"]) - int(v61aj_summary["current_available_bytes"]),
+    0,
+):
+    raise SystemExit("v61ak v61aj minimum additional bytes formula mismatch")
 
 targets = {row["target_id"]: row for row in read_csv(run_dir / "checkpoint_warehouse_target_rows.csv")}
 if set(targets) != {"current-v61p-warehouse", "env-v61ak-warehouse-root", "repo-local-forbidden-control"}:

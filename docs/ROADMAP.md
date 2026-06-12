@@ -2179,6 +2179,16 @@ Current next boundary:
   downloaded or committed by v61az. Download execution, local materialization,
   full page-hash coverage, actual model generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61ba` adds ubuntu-1 activation handoff packaging.
+  `experiments/test_v61ba_ubuntu1_activation_handoff_package.sh` consumes
+  v61az/v61ah/v61w and rewrites all 59 checkpoint shard handoff rows,
+  post-download verifier rows, full page-hash rows, and generation-admission
+  recheck rows to the ubuntu-1 target. It records 59 target-bound rows for each
+  handoff class, `stale_tmp_target_command_rows=0`,
+  `activation_execution_ready=0`, and zero checkpoint payload bytes downloaded
+  or committed by v61ba. Operator/escalated write, download execution, local
+  materialization, full page-hash coverage, actual model generation, production
+  latency, near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
