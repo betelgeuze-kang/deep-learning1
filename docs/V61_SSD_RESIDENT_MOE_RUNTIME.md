@@ -1688,6 +1688,34 @@ Pass condition:
 - full checkpoint materialization, full page-hash coverage, actual generation,
   production-latency, near-frontier, and release claims remain blocked
 
+### v61bf Ubuntu-1 Tensor-Tile Quant Probe
+
+Run bounded BF16/q8/q4 dot-tile probes over the ubuntu-1 resident tensor slices
+from v61be. This extends the selected NVMe target evidence from page residency
+and BF16 slice interpretation into page-local quantization risk measurement.
+
+Outputs:
+
+- `ubuntu1_tensor_tile_probe_rows.csv`
+- `ubuntu1_tensor_tile_sample_trace_rows.csv`
+- `ubuntu1_tensor_tile_quant_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61BF_UBUNTU1_TENSOR_TILE_QUANT_BOUNDARY.md`
+
+Pass condition:
+
+- v61be ubuntu-1 tensor-slice evidence is bound
+- 128 bounded tile probes are emitted
+- 120 MoE tile probes and 8 embedding tile probes are emitted
+- 524288 BF16 tile values are consumed from ubuntu-1 resident pages
+- all baseline/q8/q4 dot rows are finite
+- all q8/q4 error rows are finite
+- all tile rows inherit ubuntu-1 page hash and direct-read hash witnesses
+- `checkpoint_payload_bytes_downloaded_by_v61bf=0`
+- checkpoint payload bytes committed to the repository remain zero
+- full checkpoint materialization, full page-hash coverage, actual generation,
+  production-latency, near-frontier, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1744,9 +1772,10 @@ The benchmark ladder should be ordered by runtime risk:
 50. Ubuntu-1 bounded sampled-hotset payload materialization.
 51. Ubuntu-1 bounded sampled-hotset direct-I/O replay.
 52. Ubuntu-1 resident BF16 tensor-slice interpretation and stats.
-53. Complete-source 1000+ QA workload with real model generation.
-54. Same runtime under long-context workloads with source-bound quality checks.
-55. One-command local assistant demo.
+53. Ubuntu-1 resident BF16/q8/q4 tensor-tile quant probes.
+54. Complete-source 1000+ QA workload with real model generation.
+55. Same runtime under long-context workloads with source-bound quality checks.
+56. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1840,6 +1869,7 @@ covered by:
 ./experiments/test_v61bc_ubuntu1_sampled_hotset_materialization.sh
 ./experiments/test_v61bd_ubuntu1_sampled_hotset_direct_io_replay.sh
 ./experiments/test_v61be_ubuntu1_hotset_tensor_slice_verifier.sh
+./experiments/test_v61bf_ubuntu1_tensor_tile_quant_probe.sh
 ```
 
 They emit:
@@ -1858,6 +1888,7 @@ They emit:
 - `results/v61bc_ubuntu1_sampled_hotset_materialization/materialization_001/`
 - `results/v61bd_ubuntu1_sampled_hotset_direct_io_replay/replay_001/`
 - `results/v61be_ubuntu1_hotset_tensor_slice_verifier/verify_001/`
+- `results/v61bf_ubuntu1_tensor_tile_quant_probe/probe_001/`
 
 Verified current summary:
 
@@ -2238,6 +2269,40 @@ The current v61be ubuntu-1 hotset tensor-slice verifier records:
 - `real_100b_open_weight_materialized=0`
 - `actual_model_generation_ready=0`
 
+The current v61bf ubuntu-1 tensor-tile quant probe records:
+
+- `v61bf_ubuntu1_tensor_tile_quant_probe_ready=1`
+- `v61be_ubuntu1_hotset_tensor_slice_verifier_ready=1`
+- `model_id=mistralai/Mixtral-8x22B-v0.1`
+- `selected_target_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
+- `ubuntu1_hotset_root=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse/.v61_sampled_hotset_pages`
+- `tensor_slice_rows=16`
+- `tensor_tile_probe_rows=128`
+- `moe_tensor_tile_probe_rows=120`
+- `embedding_tensor_tile_probe_rows=8`
+- `tile_bf16_value_rows=524288`
+- `tile_sample_trace_rows=384`
+- `finite_baseline_dot_rows=128`
+- `finite_q8_dot_rows=128`
+- `finite_q4_dot_rows=128`
+- `finite_q8_error_rows=128`
+- `finite_q4_error_rows=128`
+- `q8_abs_error_mean=0.00113809798`
+- `q4_abs_error_mean=0.0244754219`
+- `q8_abs_error_max=0.0044396754`
+- `q4_abs_error_max=0.114740279`
+- `ubuntu1_page_hash_match_rows=16`
+- `direct_read_hash_match_rows=16`
+- `ubuntu1_numeric_tile_probe_ready=1`
+- `ubuntu1_q8_quant_probe_ready=1`
+- `ubuntu1_q4_quant_probe_ready=1`
+- `checkpoint_payload_bytes_downloaded_by_v61bf=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+- `full_checkpoint_materialization_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `real_100b_open_weight_materialized=0`
+- `actual_model_generation_ready=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
@@ -2245,7 +2310,7 @@ io_uring preflight plus backend selection plus token/runtime binding plus
 ubuntu-1 capacity admission plus target-bound handoff packaging plus the
 ubuntu-1 write sentinel witness plus ubuntu-1 sampled hotset materialization
 plus ubuntu-1 sampled hotset direct-I/O replay plus ubuntu-1 resident BF16
-tensor-slice verification is
+tensor-slice verification plus ubuntu-1 resident tensor-tile quant probing is
 not full payload
 download execution, checkpoint materialization, bootstrap cold-start admission,
 io_uring SQ/CQ execution, registered-buffer prefetch, or full-runtime
@@ -2507,9 +2572,10 @@ without weakening the boundary:
 42. Closed as v61bc ubuntu-1 sampled hotset materialization: persist the 16 bounded sampled hotset pages under the ubuntu-1 target, verify hashes/readback, and keep full checkpoint payload execution blocked.
 43. Closed as v61bd ubuntu-1 sampled hotset direct-I/O replay: read the ubuntu-1 sampled hotset pages with O_DIRECT, verify hashes, and record target-specific latency/throughput while keeping full checkpoint payload execution blocked.
 44. Closed as v61be ubuntu-1 hotset tensor-slice verifier: interpret those ubuntu-1 resident pages as real BF16 tensor segments, verify finite sampled stats and page/direct-read hash binding, and keep full checkpoint payload execution blocked.
-45. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-46. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-47. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+45. Closed as v61bf ubuntu-1 tensor-tile quant probe: run bounded BF16/q8/q4 dot-tile probes over the ubuntu-1 resident tensor slices and keep full checkpoint payload execution blocked.
+46. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+47. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+48. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
