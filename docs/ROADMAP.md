@@ -2478,6 +2478,20 @@ Current next boundary:
   bytes committed to the repo. Completed full page-hash coverage, actual
   generation, production latency, near-frontier, and release claims remain
   blocked.
+- `v61bz` adds ubuntu-1 remaining page-hash operator bundling.
+  `experiments/test_v61bz_ubuntu1_remaining_page_hash_operator_bundle.sh`
+  consumes v61by, mirrors the 286 remaining page-hash chunks into seven
+  dry-run-first operator bundle files with execute, approval, and
+  identity-confirmation guards, verifies script syntax/executable bits and a
+  one-chunk dry-run guard, and records
+  `remaining_page_hash_operator_bundle_ready=1`,
+  `page_hash_execution_ready=0`,
+  `full_safetensors_page_hash_binding_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bz=0`, and zero checkpoint payload
+  bytes committed to the repo. Explicit page-hash execution, completed full
+  page-hash coverage, actual generation, production latency, near-frontier, and
+  release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
