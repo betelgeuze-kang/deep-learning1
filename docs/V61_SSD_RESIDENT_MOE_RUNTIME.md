@@ -1226,6 +1226,36 @@ Pass condition:
   materialization, actual generation, production-latency, near-frontier, and
   release claims remain blocked
 
+### v61aq MoE Remote Hash Execution Gate
+
+Convert the v61ap MoE representative remote hash plan into guarded curl-range
+command rows and resumable execution chunks. This is an execution gate, not a
+network execution step: it preserves existing v61v hashes and keeps new remote
+range hashing disabled by default.
+
+Outputs:
+
+- `moe_remote_hash_execution_command_rows.csv`
+- `moe_remote_hash_existing_hash_rows.csv`
+- `moe_remote_hash_execution_chunk_rows.csv`
+- `moe_remote_hash_execution_role_rows.csv`
+- `moe_remote_hash_execution_requirement_rows.csv`
+- `moe_remote_hash_execution_metric_rows.csv`
+- `V61AQ_MOE_REMOTE_HASH_EXECUTION_GATE_BOUNDARY.md`
+
+Pass condition:
+
+- v61ap 1344-row MoE remote hash plan is bound
+- 1329 guarded curl-range command rows are emitted for not-yet-hashed cells
+- 15 existing v61v MoE remote hashes are preserved
+- 1344 representative rows are scheduled into 21 execution chunks
+- `remote_hash_execution_ready=0`
+- `full_moe_coverage_remote_hash_ready=0`
+- checkpoint payload bytes downloaded or committed by v61aq remain zero
+- executed remote hash expansion, full MoE remote-hash coverage, full
+  safetensors page-hash coverage, local materialization, actual generation,
+  production-latency, near-frontier, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1267,9 +1297,10 @@ The benchmark ladder should be ordered by runtime risk:
 35. Checkpoint full page-hash execution gate.
 36. Real model page-manifest coverage audit.
 37. MoE coverage remote-hash expansion plan.
-38. Complete-source 1000+ QA workload with real model generation.
-39. Same runtime under long-context workloads with source-bound quality checks.
-40. One-command local assistant demo.
+38. MoE remote-hash execution gate.
+39. Complete-source 1000+ QA workload with real model generation.
+40. Same runtime under long-context workloads with source-bound quality checks.
+41. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1348,6 +1379,7 @@ covered by:
 ./experiments/test_v61k_real_model_page_manifest.sh
 ./experiments/test_v61ao_real_model_page_manifest_coverage_audit.sh
 ./experiments/test_v61ap_moe_coverage_remote_hash_plan.sh
+./experiments/test_v61aq_moe_remote_hash_execution_gate.sh
 ```
 
 They emit:
@@ -1403,6 +1435,18 @@ The current v61ap MoE coverage remote hash plan records:
 - `full_moe_coverage_remote_hash_ready=0`
 - `remote_hash_expansion_execution_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61ap=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
+The current v61aq MoE remote hash execution gate records:
+
+- `planned_remote_hash_command_rows=1329`
+- `remote_hash_execution_chunk_rows=21`
+- `blocked_execution_chunk_rows=21`
+- `remote_hash_verified_rows=15`
+- `planned_remote_hash_bytes=2787115008`
+- `full_moe_coverage_remote_hash_ready=0`
+- `remote_hash_execution_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61aq=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
 It also shows that reading uncached active expert weights per token is still
@@ -1648,9 +1692,10 @@ without weakening the boundary:
 27. Closed as v61an checkpoint full page-hash execution gate: chunk 134161 planned page hashes into 291 execution chunks, hash 0 chunks on the current host, and keep full page-hash coverage blocked.
 28. Closed as v61ao real model page manifest coverage audit: bind v61q/v61v/v61an into 59-shard, 134161-page, 1344-cell MoE manifest coverage evidence while keeping full page-hash coverage and real generation blocked.
 29. Closed as v61ap MoE coverage remote hash plan: preserve 15 already remote-hashed MoE cells and plan 1329 remaining representative layer/expert/tensor page hashes without fetching payload bytes.
-30. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-31. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-32. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+30. Closed as v61aq MoE remote hash execution gate: emit 1329 guarded curl-range commands and 21 resumable chunks while preserving 15 existing hashes and keeping execution disabled.
+31. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+32. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+33. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1753,9 +1798,12 @@ The current v61 runtime prototype can say:
   cells and plan 1329 remaining representative layer/expert/tensor page hashes,
   but it performs no new range reads and still does not provide full MoE or full
   safetensors page-hash coverage
+- the MoE remote hash execution gate can emit 1329 guarded curl-range commands
+  and 21 resumable chunks while preserving 15 existing hashes, but remote hash
+  execution remains disabled and no new payload bytes are downloaded
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, and MoE coverage remote-hash expansion planning, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, and MoE remote-hash execution gating, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.

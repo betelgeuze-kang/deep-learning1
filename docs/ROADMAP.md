@@ -2104,6 +2104,13 @@ Current next boundary:
   `full_moe_coverage_remote_hash_ready=0`, remote hash execution, full
   page-hash coverage, local materialization, actual model generation,
   production latency, near-frontier, and release claims blocked.
+- `v61aq` adds a MoE remote-hash execution gate.
+  `experiments/test_v61aq_moe_remote_hash_execution_gate.sh` consumes v61ap
+  and emits 1329 guarded curl-range command rows plus 21 resumable execution
+  chunks, preserves 15 existing MoE remote hashes, and keeps
+  `remote_hash_execution_ready=0`, full MoE remote-hash coverage, full
+  page-hash coverage, local materialization, actual model generation,
+  production latency, near-frontier, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

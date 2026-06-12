@@ -442,6 +442,8 @@ Implemented now:
 - `experiments/test_v61ao_real_model_page_manifest_coverage_audit.sh`
 - `experiments/run_v61ap_moe_coverage_remote_hash_plan.sh`
 - `experiments/test_v61ap_moe_coverage_remote_hash_plan.sh`
+- `experiments/run_v61aq_moe_remote_hash_execution_gate.sh`
+- `experiments/test_v61aq_moe_remote_hash_execution_gate.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -545,6 +547,7 @@ Implemented now:
 - `results/v61an_checkpoint_full_page_hash_execution_gate/gate_001/` checkpoint full page-hash execution gate artifacts
 - `results/v61ao_real_model_page_manifest_coverage_audit/audit_001/` real model page-manifest coverage audit artifacts
 - `results/v61ap_moe_coverage_remote_hash_plan/plan_001/` MoE coverage remote-hash expansion plan artifacts
+- `results/v61aq_moe_remote_hash_execution_gate/gate_001/` MoE remote-hash execution gate artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -747,6 +750,8 @@ The v61an checkpoint full page-hash execution gate is implemented and covered by
 The v61ao real model page-manifest coverage audit is implemented and covered by `experiments/test_v61ao_real_model_page_manifest_coverage_audit.sh`. It consumes v61q/v61v/v61an, audits the real Mixtral checkpoint manifest as metadata-only coverage, and records 59 shards, 1739 tensors, 134161 unique checkpoint pages, 135841 tensor/page segments, 1344/1344 layer-expert-MoE tensor coverage rows, 16 remote-hash-bound sample tensor rows, `real_model_page_manifest_coverage_ready=1`, `full_safetensors_page_hash_binding_ready=0`, and zero checkpoint payload bytes downloaded or committed by v61ao. It keeps local materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 The v61ap MoE coverage remote hash plan is implemented and covered by `experiments/test_v61ap_moe_coverage_remote_hash_plan.sh`. It consumes v61ao/v61q/v61v, emits 1344 representative layer-expert-MoE remote hash plan rows, preserves 15 already remote-hash-bound MoE sample rows, plans 1329 remaining representative range hashes, records `full_moe_coverage_remote_hash_ready=0`, `remote_hash_expansion_execution_ready=0`, and keeps zero checkpoint payload bytes downloaded or committed by v61ap. It keeps executed hash expansion, full page-hash coverage, local materialization, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
+
+The v61aq MoE remote hash execution gate is implemented and covered by `experiments/test_v61aq_moe_remote_hash_execution_gate.sh`. It consumes v61ap, emits 1329 guarded curl-range command rows and 21 resumable execution chunks, preserves 15 existing MoE remote hashes, records `remote_hash_execution_ready=0`, `full_moe_coverage_remote_hash_ready=0`, and keeps zero checkpoint payload bytes downloaded or committed by v61aq. It keeps executed remote hashing, full MoE coverage, full page-hash coverage, local materialization, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 ## Immediate Next PR Target
 
