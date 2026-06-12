@@ -26,6 +26,7 @@ V61CA_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ca_ubuntu1_remaining_page_h
 V61CB_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cb_ubuntu1_full_page_hash_coverage_promotion_gate.sh" >/dev/null
 V61CM_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate.sh" >/dev/null
 V61CN_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cn_ubuntu1_page_hash_execution_materialization_admission_gate.sh" >/dev/null
+V61CO_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61co_real_manifest_runtime_execution_admission_bridge.sh" >/dev/null
 V53U_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53u_complete_source_review_return_operator_bundle.sh" >/dev/null
 V61BT_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh" >/dev/null
 V61CG_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cg_ubuntu1_source_bound_generation_operator_bundle.sh" >/dev/null
@@ -123,6 +124,12 @@ sources = {
         results / "v61cn_ubuntu1_page_hash_execution_materialization_admission_gate" / "gate_001",
         "v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_ready",
     ),
+    "v61co": (
+        results / "v61co_real_manifest_runtime_execution_admission_bridge_summary.csv",
+        results / "v61co_real_manifest_runtime_execution_admission_bridge_decision.csv",
+        results / "v61co_real_manifest_runtime_execution_admission_bridge" / "bridge_001",
+        "v61co_real_manifest_runtime_execution_admission_bridge_ready",
+    ),
     "v53u": (
         results / "v53u_complete_source_review_return_operator_bundle_summary.csv",
         results / "v53u_complete_source_review_return_operator_bundle_decision.csv",
@@ -160,6 +167,7 @@ copy(sources["v61ca"][2] / "remaining_page_hash_result_requirement_rows.csv", "s
 copy(sources["v61cb"][2] / "full_page_hash_coverage_promotion_rows.csv", "source_v61cb/full_page_hash_coverage_promotion_rows.csv")
 copy(sources["v61cm"][2] / "full_checkpoint_materialization_promotion_rows.csv", "source_v61cm/full_checkpoint_materialization_promotion_rows.csv")
 copy(sources["v61cn"][2] / "page_hash_execution_materialization_admission_rows.csv", "source_v61cn/page_hash_execution_materialization_admission_rows.csv")
+copy(sources["v61co"][2] / "real_manifest_runtime_execution_admission_rows.csv", "source_v61co/real_manifest_runtime_execution_admission_rows.csv")
 copy(sources["v53u"][2] / "reviewer_workload_chunk_rows.csv", "source_v53u/reviewer_workload_chunk_rows.csv")
 copy(sources["v53u"][2] / "review_return_expected_artifact_rows.csv", "source_v53u/review_return_expected_artifact_rows.csv")
 copy(sources["v61bt"][2] / "actual_generation_result_requirement_rows.csv", "source_v61bt/actual_generation_result_requirement_rows.csv")
@@ -172,6 +180,7 @@ v61ca = summaries["v61ca"]
 v61cb = summaries["v61cb"]
 v61cm = summaries["v61cm"]
 v61cn = summaries["v61cn"]
+v61co = summaries["v61co"]
 v53u = summaries["v53u"]
 v61bt = summaries["v61bt"]
 v61cg = summaries["v61cg"]
@@ -201,7 +210,18 @@ matrix_rows = [
         "blocking_reason": "page-hash execution is not admitted until full materialization and returned page hashes are absent",
     },
     {
-        "unblocker_id": "03-complete-source-human-review-return",
+        "unblocker_id": "03-real-manifest-runtime-execution-admission",
+        "source_gate": "v61co",
+        "operator_surface_ready": v61co["v61co_real_manifest_runtime_execution_admission_bridge_ready"],
+        "required_rows": v61co["runtime_execution_candidate_rows"],
+        "accepted_rows": v61co["runtime_execution_admitted_rows"],
+        "missing_rows": v61co["runtime_execution_blocked_rows"],
+        "required_bytes": "0",
+        "current_ready": v61co["real_manifest_runtime_execution_admission_ready"],
+        "blocking_reason": "source-bound runtime execution rows are blocked by incomplete materialization and page-hash admission",
+    },
+    {
+        "unblocker_id": "04-complete-source-human-review-return",
         "source_gate": "v53u",
         "operator_surface_ready": v53u["review_return_operator_bundle_handoff_ready"],
         "required_rows": v53u["expected_human_review_rows"],
@@ -212,7 +232,7 @@ matrix_rows = [
         "blocking_reason": "external human/source review return has not been accepted",
     },
     {
-        "unblocker_id": "04-complete-source-adjudication-return",
+        "unblocker_id": "05-complete-source-adjudication-return",
         "source_gate": "v53u",
         "operator_surface_ready": v53u["review_return_operator_bundle_handoff_ready"],
         "required_rows": v53u["expected_adjudication_rows"],
@@ -223,7 +243,7 @@ matrix_rows = [
         "blocking_reason": "external p0 adjudication return has not been accepted",
     },
     {
-        "unblocker_id": "05-actual-generation-result-return",
+        "unblocker_id": "06-actual-generation-result-return",
         "source_gate": "v61cg/v61bt",
         "operator_surface_ready": v61cg["operator_bundle_handoff_ready"],
         "required_rows": v61bt["expected_generation_result_artifacts"],
@@ -280,14 +300,21 @@ execution_rows = [
         "expected_return": "review_return_ready=1",
     },
     {
-        "execution_step": "07-run-source-bound-generation",
+        "execution_step": "07-recheck-runtime-execution-admission",
+        "depends_on": "v61co",
+        "command": "V61CO_REUSE_EXISTING=0 ./experiments/run_v61co_real_manifest_runtime_execution_admission_bridge.sh",
+        "ready_to_run_now": "0",
+        "expected_return": "real_manifest_runtime_execution_admission_ready=1 for source-bound QA seed rows after materialization and page-hash gates pass",
+    },
+    {
+        "execution_step": "08-run-source-bound-generation",
         "depends_on": "v61cg",
         "command": "run v61cg operator bundle only after full page-hash and review return pass",
         "ready_to_run_now": "0",
         "expected_return": "five v61bt generation result artifacts",
     },
     {
-        "execution_step": "08-intake-generation-results",
+        "execution_step": "09-intake-generation-results",
         "depends_on": "v61bt/v61ce",
         "command": "V61BT_REUSE_EXISTING=0 V61BT_GENERATION_RESULT_DIR=/path/to/generation_return ./experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh && V61CE_REUSE_EXISTING=0 ./experiments/run_v61ce_ubuntu1_generation_closure_return_intake.sh",
         "ready_to_run_now": "0",
@@ -355,6 +382,7 @@ required_files=(
   "$MATRIX_DIR/source_v61bv/remaining_checkpoint_materialization_queue_rows.csv"
   "$MATRIX_DIR/source_v61cm/full_checkpoint_materialization_promotion_rows.csv"
   "$MATRIX_DIR/source_v61cn/page_hash_execution_materialization_admission_rows.csv"
+  "$MATRIX_DIR/source_v61co/real_manifest_runtime_execution_admission_rows.csv"
   "$MATRIX_DIR/source_v61ca/remaining_page_hash_result_requirement_rows.csv"
   "$MATRIX_DIR/source_v53u/reviewer_workload_chunk_rows.csv"
   "$MATRIX_DIR/source_v61bt/actual_generation_result_requirement_rows.csv"
@@ -367,8 +395,8 @@ for path in "${required_files[@]}"; do
   fi
 done
 
-[[ "$(wc -l < "$MATRIX_DIR/real_generation_unblocker_matrix_rows.csv" | tr -d ' ')" == "6" ]] || { echo "expected five unblocker rows" >&2; exit 1; }
-[[ "$(wc -l < "$MATRIX_DIR/real_generation_operator_execution_order_rows.csv" | tr -d ' ')" == "9" ]] || { echo "expected eight execution order rows" >&2; exit 1; }
+[[ "$(wc -l < "$MATRIX_DIR/real_generation_unblocker_matrix_rows.csv" | tr -d ' ')" == "7" ]] || { echo "expected six unblocker rows" >&2; exit 1; }
+[[ "$(wc -l < "$MATRIX_DIR/real_generation_operator_execution_order_rows.csv" | tr -d ' ')" == "10" ]] || { echo "expected nine execution order rows" >&2; exit 1; }
 [[ "$(wc -l < "$MATRIX_DIR/source_v53u/reviewer_workload_chunk_rows.csv" | tr -d ' ')" == "22" ]] || { echo "expected 21 v53u reviewer chunks" >&2; exit 1; }
 
 if find "$MATRIX_DIR" -type f \( -name '*.safetensors' -o -name '*.bin' -o -name '*.pt' \) | grep -q .; then
@@ -392,8 +420,8 @@ write_csv(run_dir / "real_generation_operator_matrix_file_rows.csv", list(file_r
 ready_unblocker_surfaces = sum(1 for row in matrix_rows if row["operator_surface_ready"] == "1")
 blocked_unblocker_rows = sum(1 for row in matrix_rows if row["current_ready"] != "1")
 matrix_ready = int(
-    ready_unblocker_surfaces == 5
-    and len(execution_rows) == 8
+    ready_unblocker_surfaces == 6
+    and len(execution_rows) == 9
     and int(v61cg["operator_bundle_handoff_ready"]) == 1
     and int(v53u["review_return_operator_bundle_handoff_ready"]) == 1
 )
@@ -408,6 +436,7 @@ metric = {
     "v61cb_ubuntu1_full_page_hash_coverage_promotion_gate_ready": v61cb["v61cb_ubuntu1_full_page_hash_coverage_promotion_gate_ready"],
     "v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_ready": v61cm["v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_ready"],
     "v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_ready": v61cn["v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_ready"],
+    "v61co_real_manifest_runtime_execution_admission_bridge_ready": v61co["v61co_real_manifest_runtime_execution_admission_bridge_ready"],
     "v53u_complete_source_review_return_operator_bundle_ready": v53u["v53u_complete_source_review_return_operator_bundle_ready"],
     "v61bt_ubuntu1_actual_generation_result_intake_ready": v61bt["v61bt_ubuntu1_actual_generation_result_intake_ready"],
     "v61cg_ubuntu1_source_bound_generation_operator_bundle_ready": v61cg["v61cg_ubuntu1_source_bound_generation_operator_bundle_ready"],
@@ -431,6 +460,12 @@ metric = {
     "materialization_blocked_page_hash_execution_chunk_rows": v61cn["materialization_blocked_page_hash_execution_chunk_rows"],
     "blocked_page_hash_rows": v61cn["blocked_page_hash_rows"],
     "blocked_page_hash_bytes": v61cn["blocked_page_hash_bytes"],
+    "runtime_execution_candidate_rows": v61co["runtime_execution_candidate_rows"],
+    "runtime_execution_admitted_rows": v61co["runtime_execution_admitted_rows"],
+    "runtime_execution_blocked_rows": v61co["runtime_execution_blocked_rows"],
+    "materialization_blocked_runtime_rows": v61co["materialization_blocked_runtime_rows"],
+    "page_hash_admission_blocked_runtime_rows": v61co["page_hash_admission_blocked_runtime_rows"],
+    "real_manifest_runtime_execution_admission_ready": v61co["real_manifest_runtime_execution_admission_ready"],
     "accepted_remaining_page_hash_result_rows": v61ca["accepted_remaining_page_hash_result_rows"],
     "missing_remaining_page_hash_result_rows": v61ca["missing_remaining_page_hash_result_rows"],
     "expected_human_review_rows": v53u["expected_human_review_rows"],
@@ -468,9 +503,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 
 decision_rows = [
     {"gate": "real-manifest-immediate-target-bridge", "status": "pass", "reason": "v61cj immediate target bridge is ready"},
-    {"gate": "operator-unblocker-matrix", "status": "pass" if matrix_ready else "blocked", "reason": f"ready_surfaces={ready_unblocker_surfaces}/5"},
+    {"gate": "operator-unblocker-matrix", "status": "pass" if matrix_ready else "blocked", "reason": f"ready_surfaces={ready_unblocker_surfaces}/6"},
     {"gate": "full-checkpoint-materialization", "status": "blocked", "reason": f"blocked_checkpoint_materialization_shard_rows={v61cm['blocked_checkpoint_materialization_shard_rows']}"},
     {"gate": "completed-full-safetensors-page-hash-coverage", "status": "blocked", "reason": f"accepted_remaining_page_hash_result_rows={v61ca['accepted_remaining_page_hash_result_rows']}/{v61ca['expected_remaining_page_hash_result_rows']}"},
+    {"gate": "real-manifest-runtime-execution-admission", "status": "blocked", "reason": f"runtime_execution_admitted_rows={v61co['runtime_execution_admitted_rows']}/{v61co['runtime_execution_candidate_rows']}"},
     {"gate": "complete-source-review-return", "status": "blocked", "reason": f"accepted_human_review_rows={v53u['accepted_human_review_rows']}/{v53u['expected_human_review_rows']}"},
     {"gate": "actual-generation-result-return", "status": "blocked", "reason": f"accepted_generation_result_artifacts={v61bt['accepted_generation_result_artifacts']}/{v61bt['expected_generation_result_artifacts']}"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "full materialization, full page-hash, review return, and generation artifacts are incomplete"},
@@ -489,7 +525,7 @@ It is a matrix and handoff layer only.
 Evidence emitted:
 
 - unblocker_matrix_rows={len(matrix_rows)}
-- ready_unblocker_operator_surfaces={ready_unblocker_surfaces}/5
+- ready_unblocker_operator_surfaces={ready_unblocker_surfaces}/6
 - remaining_materialization_queue_rows={v61bv['remaining_queue_rows']}
 - remaining_unverified_bytes={v61bv['remaining_unverified_bytes']}
 - checkpoint_materialization_promotion_rows={v61cm['checkpoint_shard_rows']}
@@ -503,6 +539,12 @@ Evidence emitted:
 - materialization_blocked_page_hash_execution_chunk_rows={v61cn['materialization_blocked_page_hash_execution_chunk_rows']}
 - blocked_page_hash_rows={v61cn['blocked_page_hash_rows']}
 - blocked_page_hash_bytes={v61cn['blocked_page_hash_bytes']}
+- runtime_execution_candidate_rows={v61co['runtime_execution_candidate_rows']}
+- runtime_execution_admitted_rows={v61co['runtime_execution_admitted_rows']}
+- runtime_execution_blocked_rows={v61co['runtime_execution_blocked_rows']}
+- materialization_blocked_runtime_rows={v61co['materialization_blocked_runtime_rows']}
+- page_hash_admission_blocked_runtime_rows={v61co['page_hash_admission_blocked_runtime_rows']}
+- real_manifest_runtime_execution_admission_ready={v61co['real_manifest_runtime_execution_admission_ready']}
 - accepted_remaining_page_hash_result_rows={v61ca['accepted_remaining_page_hash_result_rows']}
 - expected_human_review_rows={v53u['expected_human_review_rows']}
 - accepted_human_review_rows={v53u['accepted_human_review_rows']}
@@ -536,6 +578,7 @@ manifest = {
     "source_v61cj_summary_sha256": sha256(sources["v61cj"][0]),
     "source_v61cm_summary_sha256": sha256(sources["v61cm"][0]),
     "source_v61cn_summary_sha256": sha256(sources["v61cn"][0]),
+    "source_v61co_summary_sha256": sha256(sources["v61co"][0]),
     "source_v61cb_summary_sha256": sha256(sources["v61cb"][0]),
     "source_v53u_summary_sha256": sha256(sources["v53u"][0]),
     "source_v61bt_summary_sha256": sha256(sources["v61bt"][0]),

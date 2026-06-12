@@ -47,13 +47,14 @@ expected = {
     "v61cb_ubuntu1_full_page_hash_coverage_promotion_gate_ready": "1",
     "v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_ready": "1",
     "v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_ready": "1",
+    "v61co_real_manifest_runtime_execution_admission_bridge_ready": "1",
     "v53u_complete_source_review_return_operator_bundle_ready": "1",
     "v61bt_ubuntu1_actual_generation_result_intake_ready": "1",
     "v61cg_ubuntu1_source_bound_generation_operator_bundle_ready": "1",
-    "unblocker_matrix_rows": "5",
-    "ready_unblocker_operator_surfaces": "5",
-    "blocked_unblocker_rows": "5",
-    "operator_execution_order_rows": "8",
+    "unblocker_matrix_rows": "6",
+    "ready_unblocker_operator_surfaces": "6",
+    "blocked_unblocker_rows": "6",
+    "operator_execution_order_rows": "9",
     "operator_matrix_file_rows": "3",
     "remaining_materialization_queue_rows": "58",
     "remaining_unverified_bytes": "276308963480",
@@ -69,6 +70,12 @@ expected = {
     "materialization_blocked_page_hash_execution_chunk_rows": "286",
     "blocked_page_hash_rows": "131808",
     "blocked_page_hash_bytes": "276308963480",
+    "runtime_execution_candidate_rows": "37",
+    "runtime_execution_admitted_rows": "0",
+    "runtime_execution_blocked_rows": "37",
+    "materialization_blocked_runtime_rows": "37",
+    "page_hash_admission_blocked_runtime_rows": "37",
+    "real_manifest_runtime_execution_admission_ready": "0",
     "accepted_remaining_page_hash_result_rows": "0",
     "missing_remaining_page_hash_result_rows": "131808",
     "expected_human_review_rows": "7000",
@@ -114,6 +121,7 @@ required_files = [
     "source_v61bv/remaining_checkpoint_materialization_queue_rows.csv",
     "source_v61cm/full_checkpoint_materialization_promotion_rows.csv",
     "source_v61cn/page_hash_execution_materialization_admission_rows.csv",
+    "source_v61co/real_manifest_runtime_execution_admission_rows.csv",
     "source_v61ca/remaining_page_hash_result_requirement_rows.csv",
     "source_v61cb/full_page_hash_coverage_promotion_rows.csv",
     "source_v53u/reviewer_workload_chunk_rows.csv",
@@ -133,7 +141,7 @@ files = read_csv(run_dir / "real_generation_operator_matrix_file_rows.csv")
 metric = read_csv(run_dir / "real_generation_unblocker_metric_rows.csv")[0]
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 
-if len(matrix) != 5 or len(execution) != 8 or len(files) != 3:
+if len(matrix) != 6 or len(execution) != 9 or len(files) != 3:
     raise SystemExit("v61ck matrix row count mismatch")
 if any(row["operator_surface_ready"] != "1" for row in matrix):
     raise SystemExit("v61ck all operator surfaces should be ready")
@@ -157,6 +165,7 @@ for gate in ["real-manifest-immediate-target-bridge", "operator-unblocker-matrix
 for gate in [
     "full-checkpoint-materialization",
     "completed-full-safetensors-page-hash-coverage",
+    "real-manifest-runtime-execution-admission",
     "complete-source-review-return",
     "actual-generation-result-return",
     "actual-model-generation",
@@ -169,8 +178,8 @@ for gate in [
 
 boundary = (run_dir / "V61CK_REAL_GENERATION_UNBLOCKER_OPERATOR_MATRIX_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "unblocker_matrix_rows=5",
-    "ready_unblocker_operator_surfaces=5/5",
+    "unblocker_matrix_rows=6",
+    "ready_unblocker_operator_surfaces=6/6",
     "remaining_materialization_queue_rows=58",
     "remaining_unverified_bytes=276308963480",
     "checkpoint_materialization_promotion_rows=59",
@@ -184,6 +193,12 @@ for snippet in [
     "materialization_blocked_page_hash_execution_chunk_rows=286",
     "blocked_page_hash_rows=131808",
     "blocked_page_hash_bytes=276308963480",
+    "runtime_execution_candidate_rows=37",
+    "runtime_execution_admitted_rows=0",
+    "runtime_execution_blocked_rows=37",
+    "materialization_blocked_runtime_rows=37",
+    "page_hash_admission_blocked_runtime_rows=37",
+    "real_manifest_runtime_execution_admission_ready=0",
     "accepted_remaining_page_hash_result_rows=0",
     "expected_human_review_rows=7000",
     "accepted_human_review_rows=0",

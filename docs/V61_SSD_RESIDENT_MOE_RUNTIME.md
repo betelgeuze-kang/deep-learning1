@@ -2993,6 +2993,8 @@ covered by:
 ./experiments/test_v61cl_ubuntu1_remaining_checkpoint_materialization_return_intake.sh
 ./experiments/test_v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate.sh
 ./experiments/test_v61cn_ubuntu1_page_hash_execution_materialization_admission_gate.sh
+./experiments/test_v61co_real_manifest_runtime_execution_admission_bridge.sh
+./experiments/test_v61cp_complete_source_runtime_admission_coverage_gate.sh
 ```
 
 They emit:
@@ -3046,6 +3048,8 @@ They emit:
 - `results/v61cl_ubuntu1_remaining_checkpoint_materialization_return_intake/intake_001/`
 - `results/v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate/gate_001/`
 - `results/v61cn_ubuntu1_page_hash_execution_materialization_admission_gate/gate_001/`
+- `results/v61co_real_manifest_runtime_execution_admission_bridge/bridge_001/`
+- `results/v61cp_complete_source_runtime_admission_coverage_gate/gate_001/`
 
 Verified current summary:
 
@@ -4571,13 +4575,15 @@ without weakening the boundary:
 73. Closed as v61ch real-model page manifest release index: bind v61ao/v61cb/v61cg into a zero-payload release index with verifier-backed metadata/hash/offset rows while keeping full page-hash coverage, generation, and release claims blocked.
 74. Closed as v61ci real manifest runtime substitution gate: bind v61j/v61k/v61ch so the logical fixture runtime input is replaced by the real zero-payload Mixtral manifest contract while keeping real runtime execution and generation blocked.
 75. Closed as v61cj real manifest immediate-target bridge: bind fixture replacement, ROCm page-kernel timing, KV policy, and v61j source-bound QA command replay into ready immediate-target rows while keeping full page-hash coverage, complete-source 1000-query generation, actual generation, and release claims blocked.
-76. Closed as v61ck real generation unblocker operator matrix: bind checkpoint materialization promotion, page-hash materialization admission, review-return, and generation-result blockers into a five-row operator matrix while keeping required external return rows/artifacts at zero and actual generation blocked.
+76. Closed as v61ck real generation unblocker operator matrix: bind checkpoint materialization promotion, page-hash materialization admission, real-manifest runtime execution admission, review-return, and generation-result blockers into a six-row operator matrix while keeping required external return rows/artifacts at zero and actual generation blocked.
 77. Closed as v61cl ubuntu-1 remaining checkpoint materialization return intake: define metadata-only return intake for the 58 remaining shard materialization receipts while preserving the existing identity-verified shard and keeping full checkpoint materialization, full page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
 78. Closed as v61cm ubuntu-1 full checkpoint materialization promotion gate: aggregate v61cl into 59 shard-level materialization promotion rows, mark one identity-verified shard ready and 58 remaining shards blocked, and keep full checkpoint materialization, full page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
 79. Closed as v61cn ubuntu-1 page-hash execution materialization admission gate: bind 286 remaining page-hash execution chunks to full-checkpoint materialization promotion rows, admit 0 chunks while materialization is incomplete, and keep page-hash execution, completed full page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-80. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
-81. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists and review return is accepted.
-82. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+80. Closed as v61co real manifest runtime execution admission bridge: map 37 source-bound QA seed rows onto v61cj/v61ci/v61cm/v61cn prerequisites, admit 0 rows while materialization/page-hash admission is incomplete, and keep real runtime execution, generation, production latency, near-frontier quality, and release claims blocked.
+81. Closed as v61cp complete-source runtime admission coverage gate: compare the 37-row v61co seed runtime bridge against the 1000-row v61cf/v61cc complete-source generation packet, record direct query overlap 0/1000, and keep complete-source real-model runtime coverage and generation blocked.
+82. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
+83. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists and review return is accepted.
+84. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -4623,6 +4629,11 @@ The current v61 runtime prototype can say:
 - page-hash to generation admission now has a 1000-row complete-source bridge:
   all rows remain blocked by incomplete full page-hash coverage, missing human
   review return, and missing generation result artifacts
+- real-manifest runtime execution admission now has a 37-row source-bound QA
+  bridge over the ready v61cj/v61ci immediate-target and substitution evidence:
+  37/37 seed rows pass the source-bound scaffold, but 0/37 are admitted because
+  full checkpoint materialization and page-hash execution admission remain
+  blocked
 - generation unblocker closure now has a three-phase operator bundle covering
   remaining page-hash return, complete-source review return, and actual
   generation artifact return without moving checkpoint payload into the repo
@@ -4649,10 +4660,11 @@ The current v61 runtime prototype can say:
   ROCm page-kernel timing, KV policy, and v61j source-bound QA command replay,
   while keeping full page-hash coverage, complete-source 1000-query generation,
   actual generation, production latency, and release claims blocked
-- the real generation unblocker operator matrix now records 5/5 ready operator
-  surfaces across remaining materialization, remaining page-hash, review return,
-  adjudication return, and generation result return, while keeping accepted
-  returns at zero and actual generation blocked
+- the real generation unblocker operator matrix now records 6/6 ready operator
+  surfaces across remaining materialization, remaining page-hash, runtime
+  execution admission, review return, adjudication return, and generation
+  result return, while keeping accepted returns at zero and actual generation
+  blocked
 - bounded remote page-hash sampling has read 16 full 2 MiB checkpoint pages and
   stored hashes only, not payload bytes or full coverage
 - those 16 remote-hashed pages are bound to 16 real tensor/runtime-node rows,
@@ -4903,10 +4915,10 @@ The current v61 runtime prototype can say:
   `source_bound_query_pass_rows=37`, while keeping full page-hash coverage,
   actual generation, and release-package claims blocked
 - the real generation unblocker operator matrix binds v61cj/v61bv/v61bz/v61ca/
-  v61cb/v61cm/v61cn/v53u/v61bt/v61cg into five unblocker rows and eight
+  v61cb/v61cm/v61cn/v61co/v53u/v61bt/v61cg into six unblocker rows and nine
   execution-order rows, with `generation_unblocker_operator_matrix_ready=1`,
-  while keeping materialization, full page-hash, review return, generation
-  artifacts, and actual generation blocked
+  while keeping materialization, full page-hash, runtime execution admission,
+  review return, generation artifacts, and actual generation blocked
 - the remaining checkpoint materialization return intake binds the v61bv
   58-shard queue to a metadata-only receipt schema, preserves the existing
   identity-verified shard, and records
@@ -4923,9 +4935,20 @@ The current v61 runtime prototype can say:
   `materialization_blocked_page_hash_execution_chunk_rows=286`, and
   `page_hash_execution_admission_ready=0` until full checkpoint
   materialization is ready
+- the real-manifest runtime execution admission bridge maps 37 source-bound QA
+  seed rows onto v61cj/v61ci/v61cm/v61cn prerequisites, records
+  `runtime_execution_admitted_rows=0`,
+  `materialization_blocked_runtime_rows=37`,
+  `page_hash_admission_blocked_runtime_rows=37`, and
+  `real_manifest_runtime_execution_admission_ready=0`
+- the complete-source runtime admission coverage gate compares those 37 seed
+  rows against the 1000-row complete-source generation packet and records
+  `direct_query_overlap_rows=0`,
+  `runtime_seed_uncovered_complete_source_rows=1000`, and
+  `complete_source_runtime_admission_coverage_ready=0`
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, ubuntu-1 source-bound token-budget replay, ubuntu-1 KV+weight token-budget replay, ubuntu-1 persistent-hotset reuse admission, ubuntu-1 sampled prefetch-overlap admission, ubuntu-1 sampled prefetch queue-depth scheduler admission, ubuntu-1 sampled threaded O_DIRECT async prefetch execution, ubuntu-1 bootstrap cold-start admission, ubuntu-1 activation target admission refresh, ubuntu-1 payload execution readiness gating, ubuntu-1 payload execution launch bundling, ubuntu-1 payload execution receipt intake, ubuntu-1 post-receipt materialization promotion gating, ubuntu-1 post-receipt verification result intake, ubuntu-1 actual generation result intake, ubuntu-1 partial checkpoint materialization witnessing, ubuntu-1 remaining checkpoint materialization queueing, ubuntu-1 remaining checkpoint materialization return intake, ubuntu-1 full checkpoint materialization promotion gating, ubuntu-1 page-hash execution materialization admission gating, ubuntu-1 partial page-hash witnessing, ubuntu-1 page-hash coverage ledgering, ubuntu-1 remaining page-hash execution planning, ubuntu-1 remaining page-hash operator bundling, ubuntu-1 remaining page-hash result intake, ubuntu-1 full page-hash coverage promotion gating, ubuntu-1 page-hash generation admission bridging, ubuntu-1 generation unblocker closure bundling, ubuntu-1 generation closure return intake gating, ubuntu-1 source-bound generation execution packeting, ubuntu-1 source-bound generation operator bundling, zero-payload real-model page-manifest release indexing, real-manifest runtime substitution gating, real-manifest immediate-target bridging, and real-generation unblocker operator matrixing, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual model generation, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, real release-package readiness, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, ubuntu-1 source-bound token-budget replay, ubuntu-1 KV+weight token-budget replay, ubuntu-1 persistent-hotset reuse admission, ubuntu-1 sampled prefetch-overlap admission, ubuntu-1 sampled prefetch queue-depth scheduler admission, ubuntu-1 sampled threaded O_DIRECT async prefetch execution, ubuntu-1 bootstrap cold-start admission, ubuntu-1 activation target admission refresh, ubuntu-1 payload execution readiness gating, ubuntu-1 payload execution launch bundling, ubuntu-1 payload execution receipt intake, ubuntu-1 post-receipt materialization promotion gating, ubuntu-1 post-receipt verification result intake, ubuntu-1 actual generation result intake, ubuntu-1 partial checkpoint materialization witnessing, ubuntu-1 remaining checkpoint materialization queueing, ubuntu-1 remaining checkpoint materialization return intake, ubuntu-1 full checkpoint materialization promotion gating, ubuntu-1 page-hash execution materialization admission gating, ubuntu-1 partial page-hash witnessing, ubuntu-1 page-hash coverage ledgering, ubuntu-1 remaining page-hash execution planning, ubuntu-1 remaining page-hash operator bundling, ubuntu-1 remaining page-hash result intake, ubuntu-1 full page-hash coverage promotion gating, ubuntu-1 page-hash generation admission bridging, ubuntu-1 generation unblocker closure bundling, ubuntu-1 generation closure return intake gating, ubuntu-1 source-bound generation execution packeting, ubuntu-1 source-bound generation operator bundling, zero-payload real-model page-manifest release indexing, real-manifest runtime substitution gating, real-manifest immediate-target bridging, real-manifest runtime execution admission bridging, complete-source runtime admission coverage gating, and real-generation unblocker operator matrixing, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual model generation, complete-source real-model runtime coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, real release-package readiness, or real near-frontier open-weight inference.

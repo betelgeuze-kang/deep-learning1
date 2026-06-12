@@ -2626,14 +2626,17 @@ Current next boundary:
   near-frontier, and release claims blocked.
 - `v61ck` adds a real generation unblocker operator matrix.
   `experiments/test_v61ck_real_generation_unblocker_operator_matrix.sh`
-  consumes v61cj/v61bv/v61bz/v61ca/v61cb/v61cm/v61cn/v53u/v61bt/v61cg and records
-  a five-row unblocker matrix plus eight execution-order rows. It pins 5/5
+  consumes v61cj/v61bv/v61bz/v61ca/v61cb/v61cm/v61cn/v61co/v53u/v61bt/v61cg and records
+  a six-row unblocker matrix plus nine execution-order rows. It pins 6/6
   ready operator surfaces, 58 remaining materialization queue rows,
   59 materialization promotion rows with one ready shard and 58 blocked shards,
   286 page-hash execution admission rows with 0 admitted and 286
-  materialization-blocked chunks, 276308963480 missing materialization/page-hash
-  bytes, 131808 remaining page-hash rows, 7000 human review rows,
-  1000 adjudication rows, 5 generation result artifacts, and
+  materialization-blocked chunks, 37 runtime execution admission candidates
+  with 0 admitted rows, 37 materialization-blocked runtime rows,
+  37 page-hash-admission-blocked runtime rows, 276308963480 missing
+  materialization/page-hash bytes, 131808 remaining page-hash rows,
+  7000 human review rows, 1000 adjudication rows, 5 generation result artifacts,
+  and
   `generation_unblocker_operator_matrix_ready=1`, while keeping accepted
   external returns at 0 and actual generation, production latency,
   near-frontier, and release claims blocked.
@@ -2673,6 +2676,32 @@ Current next boundary:
   payload bytes committed to the repo. Page-hash execution, completed full
   page-hash coverage, actual generation, production latency, near-frontier,
   and release claims remain blocked.
+- `v61co` adds real-manifest runtime execution admission bridging.
+  `experiments/test_v61co_real_manifest_runtime_execution_admission_bridge.sh`
+  consumes v61cj/v61ci/v61cm/v61cn/v61n/v61s, maps the 37 source-bound QA seed
+  rows onto real-manifest runtime prerequisites, and records
+  `runtime_execution_candidate_rows=37`, `runtime_execution_admitted_rows=0`,
+  `materialization_blocked_runtime_rows=37`,
+  `page_hash_admission_blocked_runtime_rows=37`,
+  `source_bound_query_pass_rows=37`,
+  `real_manifest_runtime_execution_admission_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61co=0`, and zero checkpoint
+  payload bytes committed to the repo. This narrows the immediate real-runtime
+  blocker to full checkpoint materialization plus page-hash execution admission
+  while keeping actual generation, production latency, near-frontier, and
+  release claims blocked.
+- `v61cp` adds complete-source runtime admission coverage gating.
+  `experiments/test_v61cp_complete_source_runtime_admission_coverage_gate.sh`
+  consumes v61co/v61cf/v61cc, compares the 37-row real-manifest seed runtime
+  admission bridge with the 1000-row complete-source generation packet, and
+  records `complete_source_query_rows=1000`,
+  `source_bound_seed_runtime_candidate_rows=37`, `direct_query_overlap_rows=0`,
+  `runtime_seed_uncovered_complete_source_rows=1000`,
+  `complete_source_runtime_execution_admitted_rows=0`,
+  `complete_source_runtime_admission_coverage_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cp=0`, and zero checkpoint
+  payload bytes committed to the repo. This blocks any claim that the 37-row
+  seed replay covers complete-source 1000-query real-model runtime generation.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
