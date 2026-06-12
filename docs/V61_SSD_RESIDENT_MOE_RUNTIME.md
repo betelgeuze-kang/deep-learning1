@@ -1574,6 +1574,34 @@ Pass condition:
   actual generation, production-latency, near-frontier, and release claims
   remain blocked
 
+### v61bb Ubuntu-1 Write Sentinel Activation Probe
+
+Write and verify a tiny JSON sentinel under the ubuntu-1 warehouse target to
+prove the operator/escalated write path without executing checkpoint payload
+downloads.
+
+Outputs:
+
+- `ubuntu1_write_sentinel_witness_rows.csv`
+- `ubuntu1_write_sentinel_requirement_rows.csv`
+- `ubuntu1_write_sentinel_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61BB_UBUNTU1_WRITE_SENTINEL_ACTIVATION_PROBE_BOUNDARY.md`
+
+Pass condition:
+
+- v61ba target-bound handoff evidence is bound
+- the sentinel file lives under the ubuntu-1 target directory
+- the sentinel JSON is parseable and target-bound
+- the sentinel records zero checkpoint payload bytes downloaded or committed
+- `ubuntu1_write_witness_ready=1`
+- `operator_write_step_resolved_by_witness=1`
+- `activation_target_write_witness_ready=1`
+- checkpoint payload execution remains blocked with
+  `activation_payload_execution_ready=0`
+- local checkpoint materialization, full page-hash coverage, actual generation,
+  production-latency, near-frontier, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1626,9 +1654,10 @@ The benchmark ladder should be ordered by runtime risk:
 46. Selected-backend token runtime binding gate.
 47. Ubuntu-1 outside-repository warehouse capacity target admission.
 48. Ubuntu-1 target-bound checkpoint activation handoff package.
-49. Complete-source 1000+ QA workload with real model generation.
-50. Same runtime under long-context workloads with source-bound quality checks.
-51. One-command local assistant demo.
+49. Ubuntu-1 write sentinel activation witness.
+50. Complete-source 1000+ QA workload with real model generation.
+51. Same runtime under long-context workloads with source-bound quality checks.
+52. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1718,6 +1747,7 @@ covered by:
 ./experiments/test_v61ay_selected_backend_token_runtime_binding.sh
 ./experiments/test_v61az_ubuntu1_warehouse_target_admission.sh
 ./experiments/test_v61ba_ubuntu1_activation_handoff_package.sh
+./experiments/test_v61bb_ubuntu1_write_sentinel_activation_probe.sh
 ```
 
 They emit:
@@ -1732,6 +1762,7 @@ They emit:
 - `results/v61ay_selected_backend_token_runtime_binding/binding_001/`
 - `results/v61az_ubuntu1_warehouse_target_admission/admission_001/`
 - `results/v61ba_ubuntu1_activation_handoff_package/handoff_001/`
+- `results/v61bb_ubuntu1_write_sentinel_activation_probe/write_probe_001/`
 
 Verified current summary:
 
@@ -2015,15 +2046,37 @@ The current v61ba ubuntu-1 activation handoff package records:
 - `checkpoint_payload_bytes_downloaded_by_v61ba=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
+The current v61bb ubuntu-1 write sentinel activation probe records:
+
+- `v61bb_ubuntu1_write_sentinel_activation_probe_ready=1`
+- `selected_target_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
+- `sentinel_file=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse/.v61_activation_sentinel/v61bb_write_probe.json`
+- `sentinel_exists=1`
+- `sentinel_json_valid=1`
+- `sentinel_target_path_match=1`
+- `sentinel_no_payload_claim=1`
+- `ubuntu1_write_witness_ready=1`
+- `operator_write_step_resolved_by_witness=1`
+- `activation_target_write_witness_ready=1`
+- `activation_handoff_command_rows=59`
+- `activation_payload_execution_ready=0`
+- `download_execution_ready=0`
+- `local_checkpoint_materialization_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `actual_model_generation_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61bb=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
 io_uring preflight plus backend selection plus token/runtime binding plus
-ubuntu-1 capacity admission plus target-bound handoff packaging is not payload
+ubuntu-1 capacity admission plus target-bound handoff packaging plus the
+ubuntu-1 write sentinel witness is not payload
 download execution, checkpoint materialization, bootstrap cold-start admission,
 io_uring SQ/CQ execution, registered-buffer prefetch, or full-runtime
-admission. The next runtime work must continue toward write-ready execution,
-full coverage, local checkpoint materialization, io_uring/registered-buffer
+admission. The next runtime work must continue toward explicit payload
+execution, full coverage, local checkpoint materialization, io_uring/registered-buffer
 execution, and actual generation evidence rather than claiming practical
 near-frontier inference.
 
@@ -2276,9 +2329,10 @@ without weakening the boundary:
 38. Closed as v61ay selected-backend token runtime binding: bind 185/185 KV+weight token budget rows and 5/5 context profiles to the selected `threaded_odirect` backend while keeping full runtime admission blocked.
 39. Closed as v61az ubuntu-1 warehouse target admission: record ubuntu-1 as a full-reserve outside-repository capacity target while keeping write activation and payload execution blocked in the current managed session.
 40. Closed as v61ba ubuntu-1 activation handoff package: rewrite all 59 shard download, materialization verify, full page-hash, and generation-admission recheck commands to the ubuntu-1 target while keeping payload execution blocked.
-41. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-42. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-43. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+41. Closed as v61bb ubuntu-1 write sentinel activation probe: record an operator/escalated write witness under the ubuntu-1 target while keeping checkpoint payload execution blocked.
+42. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+43. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+44. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -2419,15 +2473,18 @@ The current v61 runtime prototype can say:
   async-I/O admission
 - the ubuntu-1 warehouse target admission gate records `/dev/nvme0n1p8`
   label `ubuntu-1` as an outside-repository full-reserve capacity target, but
-  the current managed session still blocks target write/activation readiness
-  and performs no checkpoint payload download
+  the managed-session direct probe still blocks target write/activation
+  readiness and performs no checkpoint payload download
 - the ubuntu-1 activation handoff package rewrites all 59 shard handoff rows,
   post-download verifier rows, full page-hash rows, and generation-admission
   recheck rows to the ubuntu-1 target with zero stale `/tmp` target commands,
   while keeping explicit download execution blocked
+- the ubuntu-1 write sentinel activation probe records an operator/escalated
+  write witness under the target path, resolving the write-step evidence for
+  metadata activation while keeping checkpoint payload execution blocked
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, and ubuntu-1 target-bound activation handoff packaging, not completed real-checkpoint residency, write-ready warehouse activation, payload download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, and ubuntu-1 write sentinel activation witnessing, not completed real-checkpoint residency, checkpoint payload activation/download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, or real near-frontier open-weight inference.

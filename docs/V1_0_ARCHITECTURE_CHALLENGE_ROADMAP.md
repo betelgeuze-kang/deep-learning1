@@ -464,6 +464,8 @@ Implemented now:
 - `experiments/test_v61az_ubuntu1_warehouse_target_admission.sh`
 - `experiments/run_v61ba_ubuntu1_activation_handoff_package.sh`
 - `experiments/test_v61ba_ubuntu1_activation_handoff_package.sh`
+- `experiments/run_v61bb_ubuntu1_write_sentinel_activation_probe.sh`
+- `experiments/test_v61bb_ubuntu1_write_sentinel_activation_probe.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -578,6 +580,7 @@ Implemented now:
 - `results/v61ay_selected_backend_token_runtime_binding/binding_001/` selected-backend token runtime binding artifacts
 - `results/v61az_ubuntu1_warehouse_target_admission/admission_001/` ubuntu-1 warehouse target admission artifacts
 - `results/v61ba_ubuntu1_activation_handoff_package/handoff_001/` ubuntu-1 activation handoff artifacts
+- `results/v61bb_ubuntu1_write_sentinel_activation_probe/write_probe_001/` ubuntu-1 write sentinel activation artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -802,6 +805,8 @@ The v61ay selected-backend token runtime binding is implemented and covered by `
 The v61az ubuntu-1 warehouse target admission is implemented and covered by `experiments/test_v61az_ubuntu1_warehouse_target_admission.sh`. It consumes v61aj/v61ak/v61ay, records `/dev/nvme0n1p8` label `ubuntu-1` mounted at `/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25` as an outside-repository full-reserve capacity target, verifies 410615001088 live free bytes against `required_with_reserve_bytes=315601231712`, keeps operator margin as a recommended gap against `recommended_operator_free_bytes=549755813888`, records target write/activation readiness 0 in the current managed session, and downloads or commits zero checkpoint payload bytes. It keeps download execution, local materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 The v61ba ubuntu-1 activation handoff package is implemented and covered by `experiments/test_v61ba_ubuntu1_activation_handoff_package.sh`. It consumes v61az/v61ah/v61w, rewrites all 59 checkpoint shard handoff rows plus post-download materialization verifier, full page-hash, and generation-admission recheck commands to the ubuntu-1 target, records `stale_tmp_target_command_rows=0`, keeps `activation_execution_ready=0`, and downloads or commits zero checkpoint payload bytes. It keeps operator/escalated write, download execution, local materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
+
+The v61bb ubuntu-1 write sentinel activation probe is implemented and covered by `experiments/test_v61bb_ubuntu1_write_sentinel_activation_probe.sh`. It consumes v61ba, writes or observes a tiny JSON sentinel under the ubuntu-1 target, records `ubuntu1_write_witness_ready=1`, `operator_write_step_resolved_by_witness=1`, `activation_target_write_witness_ready=1`, keeps `activation_payload_execution_ready=0`, and downloads or commits zero checkpoint payload bytes. It keeps checkpoint payload execution, local materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 ## Immediate Next PR Target
 

@@ -2189,6 +2189,16 @@ Current next boundary:
   or committed by v61ba. Operator/escalated write, download execution, local
   materialization, full page-hash coverage, actual model generation, production
   latency, near-frontier, and release claims remain blocked.
+- `v61bb` adds ubuntu-1 write sentinel activation probing.
+  `experiments/test_v61bb_ubuntu1_write_sentinel_activation_probe.sh` consumes
+  v61ba, verifies a tiny JSON sentinel under the ubuntu-1 target, and records
+  `ubuntu1_write_witness_ready=1`,
+  `operator_write_step_resolved_by_witness=1`,
+  `activation_target_write_witness_ready=1`,
+  `activation_payload_execution_ready=0`, and zero checkpoint payload bytes
+  downloaded or committed by v61bb. Download execution, local materialization,
+  full page-hash coverage, actual model generation, production latency,
+  near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
