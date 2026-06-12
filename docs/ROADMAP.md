@@ -2284,6 +2284,18 @@ Current next boundary:
   checkpoint payload bytes committed to the repo. Bootstrap cold-start, full
   checkpoint materialization, full page-hash coverage, actual model generation,
   production latency, near-frontier, and release claims remain blocked.
+- `v61bk` adds ubuntu-1 sampled prefetch queue-depth scheduler admission.
+  `experiments/test_v61bk_ubuntu1_prefetch_queue_depth_scheduler_gate.sh`
+  consumes v61bj/v61bi/v61bd and turns ubuntu-1 overlap rows into
+  queue-depth/deadline scheduler rows. It records 11/11 steady-state prefetch
+  issue rows meeting deadline at queue depth 4, max steady-state required depth
+  1, `ubuntu1_steady_state_scheduler_ready=1`,
+  `ubuntu1_prefetch_scheduler_admission_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bk=0`, and zero checkpoint payload
+  bytes committed to the repo. Bootstrap scheduling, actual async/io_uring
+  execution, registered buffers, full checkpoint materialization, full
+  page-hash coverage, full runtime admission, actual model generation,
+  production latency, near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
