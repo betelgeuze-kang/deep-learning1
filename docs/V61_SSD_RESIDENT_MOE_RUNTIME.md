@@ -2402,6 +2402,44 @@ Pass condition:
 - completed full safetensors page-hash coverage, actual generation,
   production-latency, near-frontier, and release claims remain blocked
 
+### v61by Ubuntu-1 Remaining Page-Hash Execution Plan
+
+Consume the v61bx page-hash coverage ledger and v61bv remaining materialization
+queue, then emit a remaining-only page-hash execution plan. This skips the
+already page-hashed shard and schedules only the unverified checkpoint pages for
+future post-materialization hashing.
+
+Outputs:
+
+- `remaining_page_hash_execution_chunk_rows.csv`
+- `verified_page_hash_skip_rows.csv`
+- `remaining_page_hash_execution_requirement_rows.csv`
+- `remaining_page_hash_execution_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61BY_UBUNTU1_REMAINING_PAGE_HASH_EXECUTION_PLAN_BOUNDARY.md`
+
+Pass condition:
+
+- v61bx page-hash coverage ledger evidence is bound
+- v61bv remaining materialization queue evidence is bound
+- `checkpoint_shard_rows=59`
+- `total_checkpoint_unique_page_rows=134161`
+- `verified_page_hash_rows=2353`
+- `verified_page_hash_bytes=4932529864`
+- `skipped_verified_page_hash_rows=2353`
+- `skipped_verified_page_hash_bytes=4932529864`
+- `remaining_page_hash_rows=131808`
+- `remaining_page_hash_bytes=276308963480`
+- `remaining_page_hash_execution_chunk_size_pages=512`
+- `remaining_page_hash_execution_chunk_rows=286`
+- `remaining_page_hash_execution_plan_ready=1`
+- `full_safetensors_page_hash_binding_ready=0`
+- `actual_model_generation_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61by=0`
+- checkpoint payload bytes committed to the repository remain zero
+- completed full safetensors page-hash coverage, actual generation,
+  production-latency, near-frontier, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -2590,6 +2628,7 @@ covered by:
 ./experiments/test_v61bv_ubuntu1_remaining_checkpoint_materialization_queue.sh
 ./experiments/test_v61bw_ubuntu1_partial_page_hash_witness.sh
 ./experiments/test_v61bx_ubuntu1_page_hash_coverage_ledger.sh
+./experiments/test_v61by_ubuntu1_remaining_page_hash_execution_plan.sh
 ```
 
 They emit:
@@ -2627,6 +2666,7 @@ They emit:
 - `results/v61bv_ubuntu1_remaining_checkpoint_materialization_queue/queue_001/`
 - `results/v61bw_ubuntu1_partial_page_hash_witness/hash_001/`
 - `results/v61bx_ubuntu1_page_hash_coverage_ledger/ledger_001/`
+- `results/v61by_ubuntu1_remaining_page_hash_execution_plan/plan_001/`
 
 Verified current summary:
 
@@ -3586,6 +3626,29 @@ The current v61bx ubuntu-1 page-hash coverage ledger records:
 - `checkpoint_payload_bytes_downloaded_by_v61bx=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
+The current v61by ubuntu-1 remaining page-hash execution plan records:
+
+- `v61by_ubuntu1_remaining_page_hash_execution_plan_ready=1`
+- `v61bx_ubuntu1_page_hash_coverage_ledger_ready=1`
+- `v61bv_ubuntu1_remaining_checkpoint_materialization_queue_ready=1`
+- `target_root_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
+- `checkpoint_shard_rows=59`
+- `total_checkpoint_unique_page_rows=134161`
+- `total_checkpoint_bytes_expected=281241493344`
+- `verified_page_hash_rows=2353`
+- `verified_page_hash_bytes=4932529864`
+- `skipped_verified_page_hash_rows=2353`
+- `skipped_verified_page_hash_bytes=4932529864`
+- `remaining_page_hash_rows=131808`
+- `remaining_page_hash_bytes=276308963480`
+- `remaining_page_hash_execution_chunk_size_pages=512`
+- `remaining_page_hash_execution_chunk_rows=286`
+- `remaining_page_hash_execution_plan_ready=1`
+- `full_safetensors_page_hash_binding_ready=0`
+- `actual_model_generation_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61by=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
@@ -3609,6 +3672,7 @@ plus ubuntu-1 partial checkpoint materialization witnessing
 plus ubuntu-1 remaining checkpoint materialization queueing
 plus ubuntu-1 partial page-hash witnessing
 plus ubuntu-1 page-hash coverage ledgering
+plus ubuntu-1 remaining page-hash execution planning
 is
 not full payload
 download execution, checkpoint materialization, bootstrap prefetch overlap,
@@ -3890,9 +3954,10 @@ without weakening the boundary:
 61. Closed as v61bv ubuntu-1 remaining checkpoint materialization queue: skip the first identity-verified shard and rewrite the remaining 58-shard dry-run-first execution queue while keeping explicit payload execution, receipt-backed full materialization, full page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
 62. Closed as v61bw ubuntu-1 partial page-hash witness: read the first identity-verified shard into 2353 local page-hash witness rows while keeping completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
 63. Closed as v61bx ubuntu-1 page-hash coverage ledger: promote the 2353 verified page hashes into a 59-shard ledger with 131808 remaining page hashes while keeping completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-64. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-65. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-66. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+64. Closed as v61by ubuntu-1 remaining page-hash execution plan: skip the 2353 verified page hashes and schedule the remaining 131808 page hashes into 286 guarded chunks while keeping completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
+65. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+66. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+67. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -3923,6 +3988,8 @@ The current v61 runtime prototype can say:
   coverage remains blocked at 2353/134161 pages
 - checkpoint-wide page-hash accounting now records 2353 verified page hashes
   and 131808 remaining page hashes across 59 shards
+- remaining page-hash execution planning now skips the verified shard and
+  schedules 131808 remaining page hashes into 286 guarded chunks
 - bounded remote page-hash sampling has read 16 full 2 MiB checkpoint pages and
   stored hashes only, not payload bytes or full coverage
 - those 16 remote-hashed pages are bound to 16 real tensor/runtime-node rows,
