@@ -2381,6 +2381,19 @@ Current next boundary:
   download, full checkpoint materialization, full page-hash coverage, actual
   model generation, production latency, near-frontier, and release claims remain
   blocked.
+- `v61bs` adds ubuntu-1 post-receipt verification result intake.
+  `experiments/test_v61bs_ubuntu1_post_receipt_verification_result_intake.sh`
+  consumes v61br and defines the returned-summary schema for the post-receipt
+  v61t/v61an/v61ae commands. The default path records three expected result
+  artifacts, 0 supplied/accepted artifacts, three missing artifacts,
+  `identity_verification_result_ready=0`, `local_checkpoint_materialization_ready=0`,
+  `required_page_hash_rows=134161`, `verified_page_hash_rows_from_result=0`,
+  `full_page_hash_result_ready=0`, `complete_source_review_return_ready=0`,
+  `generation_admission_result_ready=0`, `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bs=0`, and zero checkpoint payload
+  bytes committed to the repo. Full materialization, full page-hash coverage,
+  actual model generation, production latency, near-frontier, and release
+  claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
