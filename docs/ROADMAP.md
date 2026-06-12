@@ -2355,6 +2355,18 @@ Current next boundary:
   execution approval, full checkpoint materialization, full page-hash coverage,
   actual model generation, production latency, near-frontier, and release
   claims remain blocked.
+- `v61bq` adds ubuntu-1 payload execution receipt intake.
+  `experiments/test_v61bq_ubuntu1_payload_execution_receipt_intake.sh`
+  consumes v61bp, defines the receipt schema for an approved payload execution
+  run, and records non-invasive live target-file presence/size rows for all 59
+  shards. The default path records 59 expected receipt rows, 0 supplied/accepted
+  receipts, 59 final-deferred missing rows, 0 live existing shard rows,
+  0 live size-match rows, `payload_execution_receipt_intake_ready=0`,
+  `download_execution_ready=0`, `checkpoint_payload_bytes_downloaded_by_v61bq=0`,
+  and zero checkpoint payload bytes committed to the repo. Actual payload
+  execution, full checkpoint materialization, full page-hash coverage, actual
+  model generation, production latency, near-frontier, and release claims remain
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
