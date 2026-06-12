@@ -2087,6 +2087,15 @@ Current next boundary:
   before full page-hash scheduling. Full page-hash coverage, actual model
   generation, production latency, near-frontier, and release claims stay
   blocked.
+- `v61ao` adds real model page-manifest coverage auditing.
+  `experiments/test_v61ao_real_model_page_manifest_coverage_audit.sh`
+  consumes v61q/v61v/v61an and records 59 shards, 1739 tensors, 134161
+  checkpoint pages, 135841 tensor/page segments, 1344/1344
+  layer-expert-MoE tensor coverage rows, 16 remote-hash-bound sample tensor
+  rows, `real_model_page_manifest_coverage_ready=1`, and zero checkpoint
+  payload bytes downloaded or committed by v61ao. Full page-hash coverage,
+  local materialization, actual model generation, production latency,
+  near-frontier, and release claims stay blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

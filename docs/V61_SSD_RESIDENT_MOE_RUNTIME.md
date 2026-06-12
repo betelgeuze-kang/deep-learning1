@@ -1164,6 +1164,37 @@ Pass condition:
 - full page-hash coverage, actual generation, production-latency,
   near-frontier, and release claims remain blocked
 
+### v61ao Real Model Page Manifest Coverage Audit
+
+Audit the v61q real checkpoint page map as a complete metadata coverage object
+and bind it to v61v remote-hashed tensor samples plus v61an full page-hash
+execution gating. This is the real-model page-manifest coverage checkpoint
+before any full local payload materialization or real generation claim.
+
+Outputs:
+
+- `checkpoint_tensor_role_coverage_rows.csv`
+- `moe_layer_expert_tensor_coverage_rows.csv`
+- `checkpoint_manifest_shard_audit_rows.csv`
+- `real_model_page_manifest_coverage_requirement_rows.csv`
+- `real_model_page_manifest_coverage_metric_rows.csv`
+- `V61AO_REAL_MODEL_PAGE_MANIFEST_COVERAGE_AUDIT_BOUNDARY.md`
+
+Pass condition:
+
+- v61q checkpoint page-map rows, v61v remote tensor bindings, and v61an full
+  page-hash execution gate rows are bound
+- 59 shards, 1739 tensors, 134161 checkpoint pages, and 135841 tensor/page
+  segments are audited as metadata-only manifest coverage
+- all 1344 layer/expert/MoE tensor coverage cells are ready across 56 layers,
+  8 experts, and w1/w2/w3 expert tensor roles
+- 16 remote-hash-bound sample tensor rows remain bound, including 15 MoE rows
+- `real_model_page_manifest_coverage_ready=1`
+- `full_safetensors_page_hash_binding_ready=0`
+- checkpoint payload bytes downloaded or committed by v61ao remain zero
+- local materialization, full page-hash coverage, actual generation,
+  production-latency, near-frontier, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1203,9 +1234,10 @@ The benchmark ladder should be ordered by runtime risk:
 33. Checkpoint warehouse activation gate.
 34. Checkpoint post-activation verification gate.
 35. Checkpoint full page-hash execution gate.
-36. Complete-source 1000+ QA workload with real model generation.
-37. Same runtime under long-context workloads with source-bound quality checks.
-38. One-command local assistant demo.
+36. Real model page-manifest coverage audit.
+37. Complete-source 1000+ QA workload with real model generation.
+38. Same runtime under long-context workloads with source-bound quality checks.
+39. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1277,15 +1309,18 @@ This closes the local SSD-resident active-sparse runtime prototype and one-comma
 
 ## Current Real-Model Manifest
 
-The first v61 real-model page manifest step is implemented and covered by:
+The v61 real-model page manifest and coverage-audit steps are implemented and
+covered by:
 
 ```bash
 ./experiments/test_v61k_real_model_page_manifest.sh
+./experiments/test_v61ao_real_model_page_manifest_coverage_audit.sh
 ```
 
-It emits:
+They emit:
 
 - `results/v61k_real_model_page_manifest/manifest_001/`
+- `results/v61ao_real_model_page_manifest_coverage_audit/audit_001/`
 
 Verified current summary:
 
@@ -1308,11 +1343,27 @@ Verified current summary:
 - `real_release_package_ready=0`
 
 This moves v61 from a logical-only 128B fixture toward real-model evidence by
-binding the page manifest to a public MoE model config and license. It also
-shows that reading uncached active expert weights per token is still far over
-the current SSD budget, so the next runtime work must prove persistent hot
-cache, reuse, GPU page-dequant-matmul, and KV residency rather than claiming
-practical near-frontier inference.
+binding the page manifest to a public MoE model config and license, then
+auditing complete metadata coverage over the real checkpoint page map.
+
+The current v61ao coverage audit records:
+
+- `checkpoint_shard_rows=59`
+- `checkpoint_tensor_rows=1739`
+- `checkpoint_unique_page_rows=134161`
+- `checkpoint_page_segment_rows=135841`
+- `moe_layer_expert_tensor_coverage_rows=1344`
+- `moe_layer_expert_tensor_coverage_ready_rows=1344`
+- `remote_hash_bound_tensor_rows=16`
+- `real_model_page_manifest_coverage_ready=1`
+- `full_safetensors_page_hash_binding_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61ao=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
+It also shows that reading uncached active expert weights per token is still
+far over the current SSD budget, so the next runtime work must prove persistent
+hot cache, reuse, GPU page-dequant-matmul, and KV residency rather than
+claiming practical near-frontier inference.
 
 ## Current GPU Page-Kernel Measurement
 
@@ -1550,9 +1601,10 @@ without weakening the boundary:
 25. Closed as v61al checkpoint warehouse activation gate: emit 59 dry-run activation rows over curl-resume, admit 0 rows without a selected full-reserve target, and keep payload execution blocked.
 26. Closed as v61am checkpoint post-activation verification gate: bind activation, local identity, and full page-hash readiness into 59 blocked post-activation rows, with generation/release gates still closed.
 27. Closed as v61an checkpoint full page-hash execution gate: chunk 134161 planned page hashes into 291 execution chunks, hash 0 chunks on the current host, and keep full page-hash coverage blocked.
-28. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-29. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-30. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+28. Closed as v61ao real model page manifest coverage audit: bind v61q/v61v/v61an into 59-shard, 134161-page, 1344-cell MoE manifest coverage evidence while keeping full page-hash coverage and real generation blocked.
+29. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+30. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+31. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1647,9 +1699,13 @@ The current v61 runtime prototype can say:
 - the full page-hash execution gate can schedule 134161 planned page hashes into
   291 resumable chunks, but records zero hashed chunks until activation and
   local shard identity pass
+- the real model page-manifest coverage audit can bind v61q/v61v/v61an into
+  59-shard, 134161-page, 1344-cell MoE metadata coverage with zero checkpoint
+  payload bytes downloaded by v61ao, but still does not provide full page-hash
+  coverage or real generation
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, and checkpoint full page-hash execution gating, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, and real model page-manifest coverage auditing, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
