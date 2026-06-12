@@ -2440,6 +2440,18 @@ Current next boundary:
   bytes committed to the repo. Explicit payload execution, receipt-backed full
   materialization, full page-hash coverage, actual generation, production
   latency, near-frontier, and release claims remain blocked.
+- `v61bw` adds ubuntu-1 partial page-hash witnessing.
+  `experiments/test_v61bw_ubuntu1_partial_page_hash_witness.sh` consumes v61bu
+  and v61q, reads every page of the first identity-verified ubuntu-1 shard, and
+  records `identity_shard_page_rows=2353`, `identity_shard_page_bytes=4932529864`,
+  `page_hash_witness_rows=2353`, `page_hash_witness_bytes=4932529864`,
+  `partial_full_shard_page_hash_ready=1`,
+  `full_safetensors_page_hash_binding_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bw=0`, and zero checkpoint payload
+  bytes committed to the repo. Completed full page-hash coverage, actual
+  generation, production latency, near-frontier, and release claims remain
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
