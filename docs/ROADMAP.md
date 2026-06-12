@@ -2576,6 +2576,44 @@ Current next boundary:
   `checkpoint_payload_bytes_downloaded_by_v61cg=0`, and zero checkpoint payload
   bytes committed to the repo. Actual generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61ch` adds a real-model page manifest release index.
+  `experiments/test_v61ch_real_model_page_manifest_release_index.sh` consumes
+  v61ao, v61cb, and v61cg, emits a zero-payload `release_index/` with source
+  artifact hashes, shard/role/MoE coverage rows, page-hash status, generation
+  handoff status, a zero-payload boundary, an import checklist, and an
+  executable release-index verifier. It records 8 source artifact rows,
+  10 release index files, `redistributable_manifest_index_ready=1`,
+  134161 manifest pages, 135841 tensor/page segment rows, 1344/1344 MoE
+  coverage rows, 2353/134161 verified page hashes, 131808 remaining page
+  hashes, `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61ch=0`, and zero redistributed or
+  committed checkpoint payload bytes. Completed full page-hash coverage,
+  actual generation, production latency, near-frontier, and release claims
+  remain blocked.
+- `v61ci` adds real manifest runtime substitution gating.
+  `experiments/test_v61ci_real_manifest_runtime_substitution_gate.sh` consumes
+  v61j, v61k, and v61ch, then maps the logical SSD-resident fixture surfaces
+  onto the real Mixtral zero-payload manifest/index. It records four
+  logical-fixture replacement contract rows, five runtime substitution binding
+  rows, `logical_fixture_replaced_by_real_manifest_ready=1`,
+  `zero_payload_runtime_input_ready=1`, 134161 manifest pages, 135841
+  tensor/page segment rows, 1344/1344 MoE coverage rows, 2353/134161 verified
+  page hashes, 131808 remaining page hashes,
+  `runtime_execution_admission_ready=0`, `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61ci=0`, and zero checkpoint payload
+  bytes committed to the repo. Full page-hash coverage, real runtime execution,
+  actual generation, production latency, near-frontier, and release claims
+  remain blocked.
+- `v61cj` adds a real manifest immediate-target bridge.
+  `experiments/test_v61cj_real_manifest_immediate_target_bridge.sh` consumes
+  v61ci/v61l/v61m/v61s plus v61n source rows and records 4/4 ready immediate
+  target rows and 3/3 ready runtime bridge rows: fixture replacement, ROCm
+  page-kernel measurement, KV policy, and v61j source-bound QA command replay.
+  It pins `real_manifest_immediate_target_bridge_ready=1`,
+  `gpu_kernel_avg_ms=0.513442`, `kv_cache_policy_ready=1`,
+  `source_bound_query_pass_rows=37`, and keeps full page-hash coverage,
+  complete-source 1000-query generation, actual generation, production latency,
+  near-frontier, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
