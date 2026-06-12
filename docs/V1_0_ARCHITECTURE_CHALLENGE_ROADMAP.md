@@ -446,6 +446,8 @@ Implemented now:
 - `experiments/test_v61aq_moe_remote_hash_execution_gate.sh`
 - `experiments/run_v61ar_moe_remote_hash_result_intake.sh`
 - `experiments/test_v61ar_moe_remote_hash_result_intake.sh`
+- `experiments/run_v61as_hotset_reuse_admission_gate.sh`
+- `experiments/test_v61as_hotset_reuse_admission_gate.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -551,6 +553,7 @@ Implemented now:
 - `results/v61ap_moe_coverage_remote_hash_plan/plan_001/` MoE coverage remote-hash expansion plan artifacts
 - `results/v61aq_moe_remote_hash_execution_gate/gate_001/` MoE remote-hash execution gate artifacts
 - `results/v61ar_moe_remote_hash_result_intake/intake_001/` MoE remote-hash result intake artifacts
+- `results/v61as_hotset_reuse_admission_gate/gate_001/` sampled hotset reuse admission artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -757,6 +760,8 @@ The v61ap MoE coverage remote hash plan is implemented and covered by `experimen
 The v61aq MoE remote hash execution gate is implemented and covered by `experiments/test_v61aq_moe_remote_hash_execution_gate.sh`. It consumes v61ap, emits 1329 guarded curl-range command rows and 21 resumable execution chunks, preserves 15 existing MoE remote hashes, records `remote_hash_execution_ready=0`, `full_moe_coverage_remote_hash_ready=0`, and keeps zero checkpoint payload bytes downloaded or committed by v61aq. It keeps executed remote hashing, full MoE coverage, full page-hash coverage, local materialization, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 The v61ar MoE remote hash result intake gate is implemented and covered by `experiments/test_v61ar_moe_remote_hash_result_intake.sh`. It consumes v61aq, defines the hash-only result return schema for 1329 guarded command rows, preserves 15 existing MoE remote hashes, emits 1344 combined coverage rows, records 0 supplied/accepted result rows and 1329 final-deferred missing rows in the default path, and keeps `remote_hash_result_intake_ready=0`, `full_moe_coverage_remote_hash_ready=0`, and zero checkpoint payload bytes downloaded or committed by v61ar. It keeps full MoE coverage, full page-hash coverage, local materialization, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
+
+The v61as hotset reuse admission gate is implemented and covered by `experiments/test_v61as_hotset_reuse_admission_gate.sh`. It consumes v61ac/v61ad/v61ar, records 37 source-bound token rows, 148 scheduled sampled MoE page touches, 15 unique cold-fill pages, 133 cache-hit rows, `cache_hit_rate=0.898648649`, `persistent_hotset_cold_fill_bytes=31457280`, `persistent_hotset_saved_bytes=278921216`, and `sampled_hotset_reuse_ready=1`, while keeping `full_runtime_hotset_reuse_admission_ready=0` and zero checkpoint payload bytes downloaded or committed by v61as. It keeps full MoE coverage, full page-hash coverage, local materialization, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 ## Immediate Next PR Target
 

@@ -2119,6 +2119,14 @@ Current next boundary:
   coverage, full page-hash coverage, local materialization, actual model
   generation, production latency, near-frontier, and release claims blocked in
   the default no-supplied-result path.
+- `v61as` adds a sampled hotset reuse admission gate.
+  `experiments/test_v61as_hotset_reuse_admission_gate.sh` consumes
+  v61ac/v61ad/v61ar and records 148 scheduled sampled MoE page touches
+  collapsing to 15 unique cold-fill pages plus 133 cache-hit rows, with
+  `sampled_hotset_reuse_ready=1` while keeping full runtime hotset admission,
+  full MoE coverage, full page-hash coverage, local materialization, actual
+  model generation, production latency, near-frontier, and release claims
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
