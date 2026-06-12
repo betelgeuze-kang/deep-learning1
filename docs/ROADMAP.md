@@ -2155,6 +2155,13 @@ Current next boundary:
   fallback ready 1, while keeping actual io_uring execution, registered
   buffers, full runtime admission, actual model generation, production latency,
   near-frontier, and release claims blocked.
+- `v61ax` adds a current-host async-I/O backend selection gate.
+  `experiments/test_v61ax_async_io_backend_selection_gate.sh` consumes
+  v61aw/v61av, records `io_uring_registered_buffer` blocked by EPERM, selects
+  `threaded_odirect` with queue depth 4, 15 hash-match rows, and zero backend
+  errors, while keeping bootstrap admission, actual io_uring execution,
+  registered buffers, full runtime admission, actual model generation,
+  production latency, near-frontier, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
