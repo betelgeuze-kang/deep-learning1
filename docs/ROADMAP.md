@@ -2452,6 +2452,21 @@ Current next boundary:
   bytes committed to the repo. Completed full page-hash coverage, actual
   generation, production latency, near-frontier, and release claims remain
   blocked.
+- `v61bx` adds ubuntu-1 page-hash coverage ledgering.
+  `experiments/test_v61bx_ubuntu1_page_hash_coverage_ledger.sh` consumes v61bw,
+  v61bv, and v61q, promotes the 2353 verified page hashes into a 59-shard
+  checkpoint coverage ledger, and records `verified_page_hash_rows=2353`,
+  `verified_page_hash_bytes=4932529864`,
+  `remaining_page_hash_rows=131808`,
+  `remaining_page_hash_bytes=276308963480`,
+  `remaining_materialization_queue_rows=58`,
+  `partial_page_hash_coverage_ledger_ready=1`,
+  `full_safetensors_page_hash_binding_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bx=0`, and zero checkpoint payload
+  bytes committed to the repo. Completed full page-hash coverage, actual
+  generation, production latency, near-frontier, and release claims remain
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
