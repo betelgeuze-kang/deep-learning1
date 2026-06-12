@@ -2320,6 +2320,18 @@ Current next boundary:
   buffers, full runtime admission, full checkpoint materialization, full
   page-hash coverage, actual model generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61bn` adds ubuntu-1 activation target admission refresh.
+  `experiments/test_v61bn_ubuntu1_activation_admission_refresh_gate.sh`
+  consumes v61az/v61ba/v61bb and re-evaluates activation admission after the
+  ubuntu-1 write witness. It records
+  `selected_activation_target_id=ubuntu-1-write-witness-admitted`, 59/59
+  target-bound handoff rows admitted, zero stale `/tmp` target rows, 59 payload
+  execution blocked rows, `activation_target_admission_ready=1`,
+  `download_execution_ready=0`, `local_checkpoint_materialization_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bn=0`, and zero checkpoint payload
+  bytes committed to the repo. Explicit payload execution, full checkpoint
+  materialization, full page-hash coverage, actual model generation,
+  production latency, near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
