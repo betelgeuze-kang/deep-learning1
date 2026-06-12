@@ -2626,14 +2626,15 @@ Current next boundary:
   near-frontier, and release claims blocked.
 - `v61ck` adds a real generation unblocker operator matrix.
   `experiments/test_v61ck_real_generation_unblocker_operator_matrix.sh`
-  consumes v61cj/v61bv/v61bz/v61ca/v61cb/v61cm/v61cn/v61co/v53u/v61bt/v61cg and records
-  a six-row unblocker matrix plus nine execution-order rows. It pins 6/6
+  consumes v61cj/v61bv/v61bz/v61ca/v61cb/v61cm/v61cn/v61co/v61cq/v61cr/v53u/v61bt/v61cg and records
+  a seven-row unblocker matrix plus eleven execution-order rows. It pins 7/7
   ready operator surfaces, 58 remaining materialization queue rows,
   59 materialization promotion rows with one ready shard and 58 blocked shards,
   286 page-hash execution admission rows with 0 admitted and 286
   materialization-blocked chunks, 37 runtime execution admission candidates
-  with 0 admitted rows, 37 materialization-blocked runtime rows,
-  37 page-hash-admission-blocked runtime rows, 276308963480 missing
+  with 0 admitted rows, 1000 complete-source runtime admission expansion rows,
+  1000 complete-source runtime admission return rows with 0 accepted rows,
+  five missing runtime admission return artifacts, 276308963480 missing
   materialization/page-hash bytes, 131808 remaining page-hash rows,
   7000 human review rows, 1000 adjudication rows, 5 generation result artifacts,
   and
@@ -2702,6 +2703,32 @@ Current next boundary:
   `checkpoint_payload_bytes_downloaded_by_v61cp=0`, and zero checkpoint
   payload bytes committed to the repo. This blocks any claim that the 37-row
   seed replay covers complete-source 1000-query real-model runtime generation.
+- `v61cq` adds complete-source runtime admission expansion packeting.
+  `experiments/test_v61cq_complete_source_runtime_admission_expansion_packet.sh`
+  consumes v61cp/v61cf/v61cc, converts the 0/1000 direct-overlap gap into
+  1000 explicit runtime-admission expansion rows, and records
+  `runtime_admission_expansion_packet_rows=1000`,
+  `runtime_admission_expansion_required_rows=1000`,
+  `new_runtime_admission_rows_required=1000`, five operator command rows, five
+  return artifact rows, `runtime_admission_expansion_packet_ready=1`,
+  `runtime_admission_expansion_execution_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cq=0`, and zero checkpoint
+  payload bytes committed to the repo. This turns the coverage gap into an
+  executable return surface while keeping complete-source runtime execution,
+  actual generation, production latency, near-frontier, and release claims
+  blocked.
+- `v61cr` adds complete-source runtime admission return intake.
+  `experiments/test_v61cr_complete_source_runtime_admission_return_intake.sh`
+  consumes v61cq, defines the five-artifact complete-source runtime admission
+  return surface, and records five expected return artifacts, zero accepted
+  return artifacts, five missing return artifacts, 1000 expected runtime
+  admission result rows, zero accepted runtime admission result rows,
+  `complete_source_runtime_admission_execution_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cr=0`, and zero checkpoint
+  payload bytes committed to the repo. This keeps complete-source runtime
+  admission execution, actual generation, production latency, near-frontier,
+  and release claims blocked until real return rows arrive.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
