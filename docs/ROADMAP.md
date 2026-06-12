@@ -1676,6 +1676,16 @@ Current next boundary:
   at 0/7000, adjudication at 0/1000, `review_return_ready=0`,
   `quality_comparison_claim_ready=0`, `v53_ready=0`,
   `v1_0_comparison_ready=0`, and release claims blocked.
+- `v53u` adds the complete-source review return operator bundle.
+  `experiments/test_v53u_complete_source_review_return_operator_bundle.sh`
+  consumes v53r/v53s and emits reviewer-ready workload chunk rows, return
+  artifact templates, intake commands, and a verifier. It records 21/21 ready
+  reviewer workload chunks, planned return totals of 7000 human review rows,
+  1000 adjudication rows, 21 reviewer identity rows, and 210 conflict rows,
+  plus 8 bundle files, 4 operator command rows, and
+  `review_return_operator_bundle_handoff_ready=1`. It includes no fake review
+  rows and keeps `review_return_ready=0`, `v53_ready=0`,
+  `v1_0_comparison_ready=0`, comparison, and release claims blocked.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
@@ -2613,6 +2623,16 @@ Current next boundary:
   `gpu_kernel_avg_ms=0.513442`, `kv_cache_policy_ready=1`,
   `source_bound_query_pass_rows=37`, and keeps full page-hash coverage,
   complete-source 1000-query generation, actual generation, production latency,
+  near-frontier, and release claims blocked.
+- `v61ck` adds a real generation unblocker operator matrix.
+  `experiments/test_v61ck_real_generation_unblocker_operator_matrix.sh`
+  consumes v61cj/v61bv/v61bz/v61ca/v61cb/v53u/v61bt/v61cg and records
+  a five-row unblocker matrix plus seven execution-order rows. It pins 5/5
+  ready operator surfaces, 58 remaining materialization rows,
+  276308963480 remaining unverified bytes, 131808 remaining page-hash rows,
+  7000 human review rows, 1000 adjudication rows, 5 generation result
+  artifacts, and `generation_unblocker_operator_matrix_ready=1`, while keeping
+  accepted returns at 0 and actual generation, production latency,
   near-frontier, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
