@@ -2426,6 +2426,20 @@ Current next boundary:
   payload bytes committed to the repo. Receipt-backed full materialization, full
   page-hash coverage, actual generation, production latency, near-frontier, and
   release claims remain blocked.
+- `v61bv` adds ubuntu-1 remaining checkpoint materialization queueing.
+  `experiments/test_v61bv_ubuntu1_remaining_checkpoint_materialization_queue.sh`
+  consumes v61bp and v61bu, skips the first identity-verified shard, and rewrites
+  the remaining dry-run-first operator queue as 58 rows across three priority
+  chunks. It records `remaining_unverified_bytes=276308963480`,
+  `local_identity_verified_bytes=4932529864`,
+  `remaining_bytes_fit_current_free_space=1`, `remaining_queue_ready=1`,
+  `dry_run_guard_ready=1`, `payload_execution_launch_ready=0`,
+  `download_execution_ready=0`, `full_checkpoint_materialization_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bv=0`, and zero checkpoint payload
+  bytes committed to the repo. Explicit payload execution, receipt-backed full
+  materialization, full page-hash coverage, actual generation, production
+  latency, near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
