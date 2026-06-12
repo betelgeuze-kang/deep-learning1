@@ -2218,6 +2218,16 @@ Current next boundary:
   payload bytes committed to the repo. Full checkpoint materialization, full
   page-hash coverage, actual model generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61be` adds ubuntu-1 resident BF16 tensor-slice verification.
+  `experiments/test_v61be_ubuntu1_hotset_tensor_slice_verifier.sh` consumes
+  v61bd/v61v, interprets the 16 ubuntu-1 resident sampled hotset pages as real
+  BF16 tensor segments, and records 16 tensor slices, 15 MoE slices plus 1
+  embedding slice, 33550832 tensor-segment bytes, 65536 sampled BF16 values,
+  65536 finite values, zero NaN/Inf values, 16 ubuntu-1 page hash matches,
+  16 direct-read hash matches, `checkpoint_payload_bytes_downloaded_by_v61be=0`,
+  and zero checkpoint payload bytes committed to the repo. Full checkpoint
+  materialization, full page-hash coverage, actual model generation,
+  production latency, near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

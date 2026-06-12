@@ -1659,6 +1659,35 @@ Pass condition:
 - full checkpoint materialization, full page-hash coverage, actual generation,
   production-latency, near-frontier, and release claims remain blocked
 
+### v61be Ubuntu-1 Hotset Tensor-Slice Verifier
+
+Interpret the 16 ubuntu-1 resident sampled hotset pages as BF16 tensor segments
+using the real v61v safetensors tensor/page bindings and the v61bd direct-I/O
+hash witnesses. This proves that the selected NVMe target is not only holding
+opaque page bytes, but page bytes that can be decoded into real checkpoint
+tensor slices.
+
+Outputs:
+
+- `ubuntu1_hotset_tensor_slice_stat_rows.csv`
+- `ubuntu1_hotset_tensor_slice_sample_value_rows.csv`
+- `ubuntu1_hotset_tensor_slice_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61BE_UBUNTU1_HOTSET_TENSOR_SLICE_BOUNDARY.md`
+
+Pass condition:
+
+- v61bd ubuntu-1 direct-I/O evidence is bound
+- v61v tensor/page binding evidence is bound
+- all 16 tensor slices read from the ubuntu-1 hotset root
+- all 16 ubuntu-1 pages match their remote page hashes
+- all 16 tensor slices inherit direct-read hash matches
+- 65536 sampled BF16 values are finite with zero NaN/Inf rows
+- `checkpoint_payload_bytes_downloaded_by_v61be=0`
+- checkpoint payload bytes committed to the repository remain zero
+- full checkpoint materialization, full page-hash coverage, actual generation,
+  production-latency, near-frontier, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1714,9 +1743,10 @@ The benchmark ladder should be ordered by runtime risk:
 49. Ubuntu-1 write sentinel activation witness.
 50. Ubuntu-1 bounded sampled-hotset payload materialization.
 51. Ubuntu-1 bounded sampled-hotset direct-I/O replay.
-52. Complete-source 1000+ QA workload with real model generation.
-53. Same runtime under long-context workloads with source-bound quality checks.
-54. One-command local assistant demo.
+52. Ubuntu-1 resident BF16 tensor-slice interpretation and stats.
+53. Complete-source 1000+ QA workload with real model generation.
+54. Same runtime under long-context workloads with source-bound quality checks.
+55. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1809,6 +1839,7 @@ covered by:
 ./experiments/test_v61bb_ubuntu1_write_sentinel_activation_probe.sh
 ./experiments/test_v61bc_ubuntu1_sampled_hotset_materialization.sh
 ./experiments/test_v61bd_ubuntu1_sampled_hotset_direct_io_replay.sh
+./experiments/test_v61be_ubuntu1_hotset_tensor_slice_verifier.sh
 ```
 
 They emit:
@@ -1826,6 +1857,7 @@ They emit:
 - `results/v61bb_ubuntu1_write_sentinel_activation_probe/write_probe_001/`
 - `results/v61bc_ubuntu1_sampled_hotset_materialization/materialization_001/`
 - `results/v61bd_ubuntu1_sampled_hotset_direct_io_replay/replay_001/`
+- `results/v61be_ubuntu1_hotset_tensor_slice_verifier/verify_001/`
 
 Verified current summary:
 
@@ -2175,13 +2207,45 @@ The current v61bd ubuntu-1 sampled hotset direct-I/O replay records:
 - `full_safetensors_page_hash_binding_ready=0`
 - `actual_model_generation_ready=0`
 
+The current v61be ubuntu-1 hotset tensor-slice verifier records:
+
+- `v61be_ubuntu1_hotset_tensor_slice_verifier_ready=1`
+- `v61bd_ubuntu1_sampled_hotset_direct_io_replay_ready=1`
+- `v61bc_ubuntu1_sampled_hotset_materialization_ready=1`
+- `v61v_remote_page_tensor_binding_ready=1`
+- `model_id=mistralai/Mixtral-8x22B-v0.1`
+- `selected_target_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
+- `ubuntu1_hotset_root=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse/.v61_sampled_hotset_pages`
+- `tensor_slice_rows=16`
+- `moe_tensor_slice_rows=15`
+- `embedding_tensor_slice_rows=1`
+- `tensor_segment_bytes_bound=33550832`
+- `sampled_bf16_value_rows=65536`
+- `sampled_bf16_finite_rows=65536`
+- `sampled_bf16_nan_rows=0`
+- `sampled_bf16_inf_rows=0`
+- `sampled_bf16_nonzero_rows=65536`
+- `ubuntu1_page_under_hotset_root_rows=16`
+- `ubuntu1_page_hash_match_rows=16`
+- `direct_read_hash_match_rows=16`
+- `slice_hash_match_rows=16`
+- `ubuntu1_bf16_tensor_slice_stats_ready=1`
+- `direct_io_bytes_read_total=33554432`
+- `checkpoint_payload_bytes_downloaded_by_v61be=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+- `full_checkpoint_materialization_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `real_100b_open_weight_materialized=0`
+- `actual_model_generation_ready=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
 io_uring preflight plus backend selection plus token/runtime binding plus
 ubuntu-1 capacity admission plus target-bound handoff packaging plus the
 ubuntu-1 write sentinel witness plus ubuntu-1 sampled hotset materialization
-plus ubuntu-1 sampled hotset direct-I/O replay is
+plus ubuntu-1 sampled hotset direct-I/O replay plus ubuntu-1 resident BF16
+tensor-slice verification is
 not full payload
 download execution, checkpoint materialization, bootstrap cold-start admission,
 io_uring SQ/CQ execution, registered-buffer prefetch, or full-runtime
@@ -2442,9 +2506,10 @@ without weakening the boundary:
 41. Closed as v61bb ubuntu-1 write sentinel activation probe: record an operator/escalated write witness under the ubuntu-1 target while keeping checkpoint payload execution blocked.
 42. Closed as v61bc ubuntu-1 sampled hotset materialization: persist the 16 bounded sampled hotset pages under the ubuntu-1 target, verify hashes/readback, and keep full checkpoint payload execution blocked.
 43. Closed as v61bd ubuntu-1 sampled hotset direct-I/O replay: read the ubuntu-1 sampled hotset pages with O_DIRECT, verify hashes, and record target-specific latency/throughput while keeping full checkpoint payload execution blocked.
-44. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-45. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-46. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+44. Closed as v61be ubuntu-1 hotset tensor-slice verifier: interpret those ubuntu-1 resident pages as real BF16 tensor segments, verify finite sampled stats and page/direct-read hash binding, and keep full checkpoint payload execution blocked.
+45. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+46. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+47. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
