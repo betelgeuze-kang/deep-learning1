@@ -2296,6 +2296,17 @@ Current next boundary:
   execution, registered buffers, full checkpoint materialization, full
   page-hash coverage, full runtime admission, actual model generation,
   production latency, near-frontier, and release claims remain blocked.
+- `v61bl` adds ubuntu-1 sampled async prefetch execution evidence.
+  `experiments/test_v61bl_ubuntu1_async_prefetch_execution_probe.sh`
+  consumes v61bk/v61bi/v61bd and executes the 15 ubuntu-1 sampled prefetch
+  issue reads through a queue-depth 4 threaded O_DIRECT worker pool. It records
+  15/15 hash matches, 11/11 steady-state hash matches, zero async prefetch
+  errors, `actual_async_prefetch_execution_ready=1`,
+  `checkpoint_payload_bytes_downloaded_by_v61bl=0`, and zero checkpoint payload
+  bytes committed to the repo. Bootstrap admission, io_uring/registered
+  buffers, full checkpoint materialization, full page-hash coverage, full
+  runtime admission, actual model generation, production latency,
+  near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
