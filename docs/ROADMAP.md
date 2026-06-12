@@ -2492,6 +2492,20 @@ Current next boundary:
   bytes committed to the repo. Explicit page-hash execution, completed full
   page-hash coverage, actual generation, production latency, near-frontier, and
   release claims remain blocked.
+- `v61ca` adds ubuntu-1 remaining page-hash result intake.
+  `experiments/test_v61ca_ubuntu1_remaining_page_hash_result_intake.sh`
+  consumes v61bz, defines the hash-only return surface for the 131808 remaining
+  page hashes, preserves the 2353 existing verified page hashes, and records the
+  default no-result path as missing/final-deferred. It records
+  `accepted_remaining_page_hash_result_rows=0`,
+  `missing_remaining_page_hash_result_rows=131808`,
+  `total_verified_page_hash_rows=2353`,
+  `full_safetensors_page_hash_binding_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61ca=0`, and zero checkpoint payload
+  bytes committed to the repo. Completed full page-hash coverage, actual
+  generation, production latency, near-frontier, and release claims remain
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
