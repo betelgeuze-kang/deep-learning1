@@ -2261,6 +2261,16 @@ Current next boundary:
   payload bytes committed to the repo. Full checkpoint materialization, full
   page-hash coverage, actual model generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61bi` adds ubuntu-1 persistent-hotset reuse admission.
+  `experiments/test_v61bi_ubuntu1_hotset_reuse_admission_gate.sh` consumes
+  v61bg/v61bh/v61ar and collapses 148 scheduled ubuntu-1 page reads into 15
+  unique cold-fill pages plus 133 cache-hit rows. It records cache hit rate
+  0.898648649, cold-fill bytes 31457280, saved bytes 278921216, amortized
+  cold-fill bytes/token 850196.756756757,
+  `checkpoint_payload_bytes_downloaded_by_v61bi=0`, and zero checkpoint
+  payload bytes committed to the repo. Full runtime admission, full page-hash
+  coverage, actual model generation, production latency, near-frontier, and
+  release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
