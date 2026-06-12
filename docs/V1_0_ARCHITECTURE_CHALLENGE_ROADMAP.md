@@ -450,6 +450,8 @@ Implemented now:
 - `experiments/test_v61as_hotset_reuse_admission_gate.sh`
 - `experiments/run_v61at_prefetch_overlap_admission_gate.sh`
 - `experiments/test_v61at_prefetch_overlap_admission_gate.sh`
+- `experiments/run_v61au_prefetch_queue_depth_scheduler_gate.sh`
+- `experiments/test_v61au_prefetch_queue_depth_scheduler_gate.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -557,6 +559,7 @@ Implemented now:
 - `results/v61ar_moe_remote_hash_result_intake/intake_001/` MoE remote-hash result intake artifacts
 - `results/v61as_hotset_reuse_admission_gate/gate_001/` sampled hotset reuse admission artifacts
 - `results/v61at_prefetch_overlap_admission_gate/gate_001/` sampled prefetch-overlap admission artifacts
+- `results/v61au_prefetch_queue_depth_scheduler_gate/gate_001/` sampled prefetch queue-depth scheduler artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -767,6 +770,8 @@ The v61ar MoE remote hash result intake gate is implemented and covered by `expe
 The v61as hotset reuse admission gate is implemented and covered by `experiments/test_v61as_hotset_reuse_admission_gate.sh`. It consumes v61ac/v61ad/v61ar, records 37 source-bound token rows, 148 scheduled sampled MoE page touches, 15 unique cold-fill pages, 133 cache-hit rows, `cache_hit_rate=0.898648649`, `persistent_hotset_cold_fill_bytes=31457280`, `persistent_hotset_saved_bytes=278921216`, and `sampled_hotset_reuse_ready=1`, while keeping `full_runtime_hotset_reuse_admission_ready=0` and zero checkpoint payload bytes downloaded or committed by v61as. It keeps full MoE coverage, full page-hash coverage, local materialization, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 The v61at prefetch overlap admission gate is implemented and covered by `experiments/test_v61at_prefetch_overlap_admission_gate.sh`. It consumes v61l/v61z/v61as, records 36/36 non-bootstrap sampled token rows passing steady-state prefetch overlap, p95 SSD page-read latency 0.956690 ms fitting inside a 2.053768 ms prior-token GPU page-kernel compute window, 25 no-prefetch-required rows, minimum steady-state overlap slack 1.097078 ms, `steady_state_prefetch_overlap_ready=1`, `bootstrap_cold_start_ready=0`, `prefetch_overlap_admission_ready=0`, `full_runtime_hotset_reuse_admission_ready=0`, and zero checkpoint payload bytes downloaded or committed by v61at. It keeps bootstrap cold-start, full runtime admission, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
+
+The v61au prefetch queue-depth scheduler gate is implemented and covered by `experiments/test_v61au_prefetch_queue_depth_scheduler_gate.sh`. It consumes v61at, records 37 scheduler token rows, 15 sampled cold-fill issue rows, 11 steady-state prefetch issue rows, 11/11 steady-state deadline-met rows, 25 no-prefetch-required rows, configured queue depth 4, max steady-state required queue depth 1, `steady_state_scheduler_ready=1`, `bootstrap_scheduler_ready=0`, `prefetch_scheduler_admission_ready=0`, `actual_async_prefetch_execution_ready=0`, and zero checkpoint payload bytes downloaded or committed by v61au. It keeps bootstrap scheduling, actual async I/O, full runtime admission, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 ## Immediate Next PR Target
 

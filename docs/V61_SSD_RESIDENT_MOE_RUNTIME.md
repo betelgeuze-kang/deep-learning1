@@ -1350,6 +1350,38 @@ Pass condition:
 - full runtime admission, actual generation, production-latency, near-frontier,
   and release claims remain blocked
 
+### v61au Prefetch Queue-Depth Scheduler Gate
+
+Turn v61at steady-state overlap evidence into explicit queue-depth and deadline
+scheduler rows. This is the scheduler-admission layer between "the read could
+fit" and "an async prefetch runtime actually issued it."
+
+Outputs:
+
+- `prefetch_scheduler_token_rows.csv`
+- `prefetch_scheduler_issue_rows.csv`
+- `prefetch_queue_depth_rows.csv`
+- `prefetch_deadline_requirement_rows.csv`
+- `prefetch_scheduler_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61AU_PREFETCH_QUEUE_DEPTH_SCHEDULER_GATE_BOUNDARY.md`
+
+Pass condition:
+
+- v61at sampled prefetch-overlap evidence is bound
+- all 11 steady-state sampled prefetch issue rows meet the target-token
+  deadline
+- configured queue depth 4 covers max steady-state required queue depth 1
+- bootstrap cold-fill rows remain blocked because queue depth cannot create a
+  previous compute window
+- `steady_state_scheduler_ready=1`
+- `prefetch_scheduler_admission_ready=0`
+- `actual_async_prefetch_execution_ready=0`
+- checkpoint payload bytes downloaded or committed by v61au remain zero
+- actual io_uring execution, registered-buffer prefetch, full runtime
+  admission, actual generation, production-latency, near-frontier, and release
+  claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1395,9 +1427,10 @@ The benchmark ladder should be ordered by runtime risk:
 39. MoE remote-hash result intake gate.
 40. Sampled persistent-hotset reuse admission gate.
 41. Sampled prefetch-overlap admission gate.
-42. Complete-source 1000+ QA workload with real model generation.
-42. Same runtime under long-context workloads with source-bound quality checks.
-43. One-command local assistant demo.
+42. Sampled prefetch queue-depth/deadline scheduler gate.
+43. Complete-source 1000+ QA workload with real model generation.
+44. Same runtime under long-context workloads with source-bound quality checks.
+45. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1480,6 +1513,7 @@ covered by:
 ./experiments/test_v61ar_moe_remote_hash_result_intake.sh
 ./experiments/test_v61as_hotset_reuse_admission_gate.sh
 ./experiments/test_v61at_prefetch_overlap_admission_gate.sh
+./experiments/test_v61au_prefetch_queue_depth_scheduler_gate.sh
 ```
 
 They emit:
@@ -1487,6 +1521,7 @@ They emit:
 - `results/v61k_real_model_page_manifest/manifest_001/`
 - `results/v61ao_real_model_page_manifest_coverage_audit/audit_001/`
 - `results/v61at_prefetch_overlap_admission_gate/gate_001/`
+- `results/v61au_prefetch_queue_depth_scheduler_gate/gate_001/`
 
 Verified current summary:
 
@@ -1598,11 +1633,37 @@ The current v61at prefetch-overlap admission gate records:
 - `checkpoint_payload_bytes_downloaded_by_v61at=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
+The current v61au prefetch queue-depth scheduler gate records:
+
+- `total_cold_fill_page_rows=15`
+- `bootstrap_cold_fill_page_rows=4`
+- `steady_state_prefetch_issue_rows=11`
+- `steady_state_deadline_met_rows=11`
+- `steady_state_deadline_miss_rows=0`
+- `no_prefetch_required_rows=25`
+- `configured_prefetch_queue_depth=4`
+- `max_steady_state_required_queue_depth=1`
+- `max_bootstrap_required_queue_depth=4`
+- `steady_state_queue_depth_headroom=3`
+- `ssd_read_latency_ms_p95_per_page=0.956690`
+- `prior_token_compute_window_ms=2.053768`
+- `min_deadline_slack_ms=1.097078`
+- `steady_state_scheduler_ready=1`
+- `bootstrap_scheduler_ready=0`
+- `prefetch_scheduler_admission_ready=0`
+- `actual_async_prefetch_execution_ready=0`
+- `actual_io_uring_execution_ready=0`
+- `registered_buffers_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61au=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
 It also shows that reading uncached active expert weights per token is still
-far over the current SSD budget, and that sampled steady-state overlap is not
-bootstrap cold-start or full-runtime admission. The next runtime work must
-continue toward full coverage, local checkpoint materialization, and actual
-generation evidence rather than claiming practical near-frontier inference.
+far over the current SSD budget, and that sampled steady-state overlap plus
+queue-depth admission is not bootstrap cold-start, actual async I/O execution,
+or full-runtime admission. The next runtime work must continue toward full
+coverage, local checkpoint materialization, async prefetch execution, and
+actual generation evidence rather than claiming practical near-frontier
+inference.
 
 ## Current GPU Page-Kernel Measurement
 
@@ -1846,9 +1907,10 @@ without weakening the boundary:
 31. Closed as v61ar MoE remote hash result intake gate: define hash-only result return rows, preserve 15 existing hashes, record 1329 missing rows as final-deferred, and keep full MoE coverage blocked.
 32. Closed as v61as hotset reuse admission gate: collapse 148 sampled MoE page touches to 15 unique cold-fill pages plus 133 cache-hit rows while keeping full runtime admission blocked.
 33. Closed as v61at prefetch overlap admission gate: bind GPU page-kernel timing/direct-I/O p95/hotset reuse rows and show 36/36 non-bootstrap sampled rows pass steady-state overlap while keeping bootstrap/full runtime admission blocked.
-34. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-35. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-36. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+34. Closed as v61au prefetch queue-depth scheduler gate: turn v61at overlap rows into 11/11 steady-state deadline-met scheduler issue rows at queue depth 4 while keeping bootstrap, actual async I/O, and full runtime admission blocked.
+35. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+36. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+37. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -1963,9 +2025,13 @@ The current v61 runtime prototype can say:
 - the sampled prefetch-overlap admission gate shows 36/36 non-bootstrap token
   rows fitting p95 SSD cold-fill reads inside the prior token GPU page-kernel
   window, but bootstrap cold-start and full runtime admission remain blocked
+- the sampled prefetch queue-depth scheduler gate turns those overlap rows into
+  11/11 steady-state deadline-met issue rows at configured queue depth 4, but
+  bootstrap scheduling, actual async I/O, and full runtime admission remain
+  blocked
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, and sampled prefetch-overlap admission gating, not completed real-checkpoint residency, full safetensors page-hash coverage, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, and sampled prefetch queue-depth scheduler admission gating, not completed real-checkpoint residency, full safetensors page-hash coverage, actual async prefetch execution, full KV-in-VRAM residency, or real near-frontier open-weight inference.

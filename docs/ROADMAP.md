@@ -2134,6 +2134,12 @@ Current next boundary:
   page-kernel window, while keeping bootstrap cold-start, full runtime
   admission, actual model generation, production latency, near-frontier, and
   release claims blocked.
+- `v61au` adds a sampled prefetch queue-depth scheduler gate.
+  `experiments/test_v61au_prefetch_queue_depth_scheduler_gate.sh` consumes
+  v61at and records 11/11 steady-state prefetch issue rows meeting deadline at
+  queue depth 4, while keeping bootstrap scheduling, actual async I/O, full
+  runtime admission, actual model generation, production latency, near-frontier,
+  and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
