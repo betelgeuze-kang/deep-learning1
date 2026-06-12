@@ -2359,9 +2359,11 @@ Current next boundary:
   `experiments/test_v61bq_ubuntu1_payload_execution_receipt_intake.sh`
   consumes v61bp, defines the receipt schema for an approved payload execution
   run, and records non-invasive live target-file presence/size rows for all 59
-  shards. The default path records 59 expected receipt rows, 0 supplied/accepted
-  receipts, 59 final-deferred missing rows, 0 live existing shard rows,
-  0 live size-match rows, `payload_execution_receipt_intake_ready=0`,
+  shards. The current path records 59 expected receipt rows, 0 supplied/accepted
+  receipts, 59 final-deferred missing rows, live counts matching the target
+  presence source rows, and currently 1 live existing shard plus 1 live
+  size-match shard after the first external ubuntu-1 shard,
+  `payload_execution_receipt_intake_ready=0`,
   `download_execution_ready=0`, `checkpoint_payload_bytes_downloaded_by_v61bq=0`,
   and zero checkpoint payload bytes committed to the repo. Actual payload
   execution, full checkpoint materialization, full page-hash coverage, actual
@@ -2371,9 +2373,10 @@ Current next boundary:
   `experiments/test_v61br_ubuntu1_post_receipt_materialization_promotion_gate.sh`
   consumes v61bq/v61r/v53t, binds the single outside-repository ubuntu-1 target
   root, rejects stale `/tmp` target promotion, and emits targeted v61t, v61an,
-  and v61ae post-receipt verification command rows. The default path records
-  59 expected receipt rows, 0 accepted receipts, 59 missing receipts,
-  0 live size-match shards, `receipt_backed_materialization_input_ready=0`,
+  and v61ae post-receipt verification command rows. The current path records
+  59 expected receipt rows, 0 accepted receipts, 59 missing receipts, live
+  counts matching v61bq, and currently 1 live size-match shard,
+  `receipt_backed_materialization_input_ready=0`,
   `identity_verification_execution_ready=0`, `required_page_hash_rows=134161`,
   `verified_page_hash_rows=0`, `complete_source_review_return_ready=0`,
   `actual_model_generation_ready=0`, `checkpoint_payload_bytes_downloaded_by_v61br=0`,
@@ -2406,6 +2409,23 @@ Current next boundary:
   `checkpoint_payload_bytes_downloaded_by_v61bt=0`, and zero checkpoint payload
   bytes committed to the repo. Actual model generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61bu` adds ubuntu-1 partial checkpoint materialization witnessing.
+  `experiments/test_v61bu_ubuntu1_partial_checkpoint_materialization_witness.sh`
+  consumes v61bq and v61t, binds the first live external ubuntu-1 shard to local
+  size, safetensors-header, and identity-verification evidence, and records
+  `live_existing_shard_rows=1`, `live_size_match_shard_rows=1`,
+  `local_identity_verified_shard_rows=1`,
+  `local_identity_verified_bytes=4932529864`,
+  `remaining_identity_unverified_shard_rows=58`,
+  `partial_checkpoint_materialization_witness_ready=1`,
+  `full_checkpoint_materialization_ready=0`,
+  `full_safetensors_page_hash_binding_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bu=0`,
+  `observed_external_checkpoint_payload_bytes=4932529864`, and zero checkpoint
+  payload bytes committed to the repo. Receipt-backed full materialization, full
+  page-hash coverage, actual generation, production latency, near-frontier, and
+  release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

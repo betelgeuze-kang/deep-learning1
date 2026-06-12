@@ -46,8 +46,6 @@ expected = {
     "accepted_payload_execution_receipt_rows": "0",
     "invalid_payload_execution_receipt_rows": "0",
     "missing_payload_execution_receipt_rows": "59",
-    "live_existing_shard_rows": "0",
-    "live_size_match_shard_rows": "0",
     "result_schema_ready": "0",
     "result_artifact_ready": "0",
     "payload_execution_receipt_intake_ready": "0",
@@ -102,12 +100,21 @@ if len(required_fields) != 11 or len(templates) != 2:
     raise SystemExit("v61bq required field/template row count mismatch")
 if len(live_rows) != 59 or len(receipt_rows) != 59:
     raise SystemExit("v61bq live/receipt row count mismatch")
+live_existing_count = sum(1 for row in live_rows if row["local_file_exists"] == "1")
+live_size_match_count = sum(1 for row in live_rows if row["size_match"] == "1")
+if summary.get("live_existing_shard_rows") != str(live_existing_count):
+    raise SystemExit("v61bq summary live existing count must match live rows")
+if summary.get("live_size_match_shard_rows") != str(live_size_match_count):
+    raise SystemExit("v61bq summary live size-match count must match live rows")
 if invalid_rows[0]["status"] != "none":
     raise SystemExit("v61bq default path should not create invalid supplied rows")
-if any(row["local_file_exists"] != "0" for row in live_rows):
-    raise SystemExit("v61bq default live presence should have no full local shards")
-if any(row["size_match"] != "0" for row in live_rows):
-    raise SystemExit("v61bq default live presence should have no full size matches")
+for row in live_rows:
+    if row["local_file_exists"] == "0" and row["actual_bytes"] != "0":
+        raise SystemExit("v61bq missing local files must report zero actual bytes")
+    if row["size_match"] == "1" and row["local_file_exists"] != "1":
+        raise SystemExit("v61bq size-match rows must also exist locally")
+    if row["size_match"] == "1" and row["actual_bytes"] != row["expected_bytes"]:
+        raise SystemExit("v61bq size-match rows must match expected bytes")
 if any(not row["target_path"].startswith(ubuntu1_target) for row in live_rows):
     raise SystemExit("v61bq live target paths must remain under ubuntu-1")
 if any("/tmp/" in row["target_path"] for row in live_rows):
@@ -127,8 +134,9 @@ if validation_rows["payload-execution-receipt-input"]["status"] != "blocked":
     raise SystemExit("v61bq receipt input should be blocked without supplied rows")
 if validation_rows["payload-execution-receipt-schema"]["status"] != "blocked":
     raise SystemExit("v61bq receipt schema should be blocked without supplied rows")
-if validation_rows["live-ubuntu1-file-presence"]["status"] != "blocked":
-    raise SystemExit("v61bq live file presence should be blocked without full shards")
+expected_live_presence_status = "pass" if live_size_match_count == 59 else "blocked"
+if validation_rows["live-ubuntu1-file-presence"]["status"] != expected_live_presence_status:
+    raise SystemExit("v61bq live file presence status mismatch")
 if validation_rows["final-deferred-default"]["status"] != "pass":
     raise SystemExit("v61bq default deferral should pass")
 if validation_rows["final-deferred-default"]["missing_rows"] != "59":
@@ -139,6 +147,12 @@ for field, value in expected.items():
         continue
     if field in metric and metric[field] != value:
         raise SystemExit(f"v61bq metric {field}: expected {value}, got {metric[field]}")
+for field, value in {
+    "live_existing_shard_rows": str(live_existing_count),
+    "live_size_match_shard_rows": str(live_size_match_count),
+}.items():
+    if metric.get(field) != value:
+        raise SystemExit(f"v61bq metric {field}: expected {value}, got {metric.get(field)}")
 
 for gate in [
     "v61bp-launch-bundle-input",
@@ -195,8 +209,8 @@ for snippet in [
     "expected_payload_execution_receipt_rows=59",
     "accepted_payload_execution_receipt_rows=0",
     "missing_payload_execution_receipt_rows=59",
-    "live_existing_shard_rows=0",
-    "live_size_match_shard_rows=0",
+    f"live_existing_shard_rows={live_existing_count}",
+    f"live_size_match_shard_rows={live_size_match_count}",
     "payload_execution_receipt_input_supplied=0",
     "payload_execution_receipt_intake_ready=0",
     "download_execution_ready=0",

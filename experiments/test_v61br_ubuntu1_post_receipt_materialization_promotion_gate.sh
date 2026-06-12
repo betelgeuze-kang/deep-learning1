@@ -51,8 +51,6 @@ expected = {
     "expected_payload_execution_receipt_rows": "59",
     "accepted_payload_execution_receipt_rows": "0",
     "missing_payload_execution_receipt_rows": "59",
-    "live_existing_shard_rows": "0",
-    "live_size_match_shard_rows": "0",
     "receipt_backed_materialization_input_ready": "0",
     "identity_verification_execution_ready": "0",
     "local_checkpoint_materialization_ready": "0",
@@ -98,6 +96,13 @@ for rel in required_files:
 requirements = {row["requirement_id"]: row for row in read_csv(run_dir / "ubuntu1_post_receipt_materialization_requirement_rows.csv")}
 if len(requirements) != 10:
     raise SystemExit("v61br requirement row count mismatch")
+source_live_rows = read_csv(run_dir / "source_v61bq/ubuntu1_payload_execution_live_presence_rows.csv")
+live_existing_count = sum(1 for row in source_live_rows if row["local_file_exists"] == "1")
+live_size_match_count = sum(1 for row in source_live_rows if row["size_match"] == "1")
+if summary.get("live_existing_shard_rows") != str(live_existing_count):
+    raise SystemExit("v61br summary live existing count must match source v61bq rows")
+if summary.get("live_size_match_shard_rows") != str(live_size_match_count):
+    raise SystemExit("v61br summary live size-match count must match source v61bq rows")
 for requirement_id in [
     "v61bq-receipt-intake-input",
     "single-ubuntu1-target-root",
@@ -140,6 +145,12 @@ for field, value in expected.items():
         continue
     if field in metric and metric[field] != value:
         raise SystemExit(f"v61br metric {field}: expected {value}, got {metric[field]}")
+for field, value in {
+    "live_existing_shard_rows": str(live_existing_count),
+    "live_size_match_shard_rows": str(live_size_match_count),
+}.items():
+    if metric.get(field) != value:
+        raise SystemExit(f"v61br metric {field}: expected {value}, got {metric.get(field)}")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in ["v61bq-receipt-intake-input", "ubuntu1-target-contract", "manifest-only-no-repo-payload"]:
@@ -179,7 +190,7 @@ for snippet in [
     f"target_root_path={ubuntu1_target}",
     "tmp_target_rows=0",
     "accepted_payload_execution_receipt_rows=0",
-    "live_size_match_shard_rows=0",
+    f"live_size_match_shard_rows={live_size_match_count}",
     "identity_verification_execution_ready=0",
     "required_page_hash_rows=134161",
     "verified_page_hash_rows=0",
