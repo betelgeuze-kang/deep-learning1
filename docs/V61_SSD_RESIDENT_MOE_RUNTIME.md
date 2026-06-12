@@ -2117,6 +2117,44 @@ Pass condition:
   coverage, actual generation, production-latency, near-frontier, and release
   claims remain blocked
 
+### v61br Ubuntu-1 Post-Receipt Materialization Promotion Gate
+
+Consume v61bq receipt rows and convert them into an explicit post-receipt
+promotion checklist for ubuntu-1 materialization verification. The gate emits
+targeted v61t/v61an/v61ae command rows but executes no downloads, full page
+hashing, or Mixtral generation.
+
+Outputs:
+
+- `ubuntu1_post_receipt_materialization_requirement_rows.csv`
+- `ubuntu1_post_receipt_verification_command_rows.csv`
+- `ubuntu1_post_receipt_materialization_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61BR_UBUNTU1_POST_RECEIPT_MATERIALIZATION_PROMOTION_GATE_BOUNDARY.md`
+
+Pass condition:
+
+- v61bq receipt intake evidence is bound
+- the ubuntu-1 target root is single-root, outside-repository, and not `/tmp`
+- post-receipt verification command rows are emitted
+- `expected_payload_execution_receipt_rows=59`
+- `accepted_payload_execution_receipt_rows=0`
+- `missing_payload_execution_receipt_rows=59`
+- `live_existing_shard_rows=0`
+- `live_size_match_shard_rows=0`
+- `receipt_backed_materialization_input_ready=0`
+- `identity_verification_execution_ready=0`
+- `required_page_hash_rows=134161`
+- `verified_page_hash_rows=0`
+- `full_page_hash_execution_ready=0`
+- `complete_source_review_return_ready=0`
+- `actual_model_generation_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61br=0`
+- checkpoint payload bytes committed to the repository remain zero
+- completed checkpoint download, full checkpoint materialization, full
+  safetensors page-hash coverage, actual generation, production-latency,
+  near-frontier, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -2185,9 +2223,10 @@ The benchmark ladder should be ordered by runtime risk:
 62. Ubuntu-1 payload execution readiness gate.
 63. Ubuntu-1 payload execution launch bundle.
 64. Ubuntu-1 payload execution receipt intake.
-65. Complete-source 1000+ QA workload with real model generation.
-66. Same runtime under long-context workloads with source-bound quality checks.
-67. One-command local assistant demo.
+65. Ubuntu-1 post-receipt materialization promotion gate.
+66. Complete-source 1000+ QA workload with real model generation.
+67. Same runtime under long-context workloads with source-bound quality checks.
+68. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -2293,6 +2332,7 @@ covered by:
 ./experiments/test_v61bo_ubuntu1_payload_execution_readiness_gate.sh
 ./experiments/test_v61bp_ubuntu1_payload_execution_launch_bundle.sh
 ./experiments/test_v61bq_ubuntu1_payload_execution_receipt_intake.sh
+./experiments/test_v61br_ubuntu1_post_receipt_materialization_promotion_gate.sh
 ```
 
 They emit:
@@ -2323,6 +2363,7 @@ They emit:
 - `results/v61bo_ubuntu1_payload_execution_readiness_gate/gate_001/`
 - `results/v61bp_ubuntu1_payload_execution_launch_bundle/bundle_001/`
 - `results/v61bq_ubuntu1_payload_execution_receipt_intake/intake_001/`
+- `results/v61br_ubuntu1_post_receipt_materialization_promotion_gate/gate_001/`
 
 Verified current summary:
 
@@ -3115,6 +3156,27 @@ The current v61bq ubuntu-1 payload execution receipt intake records:
 - `checkpoint_payload_bytes_downloaded_by_v61bq=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
+The current v61br ubuntu-1 post-receipt materialization promotion gate records:
+
+- `v61br_ubuntu1_post_receipt_materialization_promotion_gate_ready=1`
+- `target_root_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
+- `target_root_outside_repo=1`
+- `tmp_target_rows=0`
+- `expected_payload_execution_receipt_rows=59`
+- `accepted_payload_execution_receipt_rows=0`
+- `missing_payload_execution_receipt_rows=59`
+- `live_existing_shard_rows=0`
+- `live_size_match_shard_rows=0`
+- `receipt_backed_materialization_input_ready=0`
+- `identity_verification_execution_ready=0`
+- `required_page_hash_rows=134161`
+- `verified_page_hash_rows=0`
+- `full_page_hash_execution_ready=0`
+- `complete_source_review_return_ready=0`
+- `actual_model_generation_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61br=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
@@ -3131,6 +3193,7 @@ prefetch execution plus ubuntu-1 bootstrap cold-start admission plus ubuntu-1
 activation target admission refresh plus ubuntu-1 payload execution readiness
 plus ubuntu-1 payload execution launch bundling
 plus ubuntu-1 payload execution receipt intake
+plus ubuntu-1 post-receipt materialization promotion gating
 is
 not full payload
 download execution, checkpoint materialization, bootstrap prefetch overlap,
@@ -3405,9 +3468,10 @@ without weakening the boundary:
 54. Closed as v61bo ubuntu-1 payload execution readiness gate: record 59/59 target-bound resumable curl rows and three priority execution chunks while keeping actual payload execution, full checkpoint materialization, full page-hash, and generation blocked.
 55. Closed as v61bp ubuntu-1 payload execution launch bundle: emit a dry-run-first operator bundle with 59 launch rows, three priority chunks, guarded approval requirements, and post-download recheck scripts while keeping actual payload execution, full checkpoint materialization, full page-hash, and generation blocked.
 56. Closed as v61bq ubuntu-1 payload execution receipt intake: define receipt rows and live target-file presence rows for 59 launch commands while keeping actual payload execution, full checkpoint materialization, full page-hash, and generation blocked.
-57. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-58. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-59. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+57. Closed as v61br ubuntu-1 post-receipt materialization promotion gate: bind the ubuntu-1 target root and emit targeted v61t/v61an/v61ae post-receipt command rows while keeping receipt-backed materialization, full page-hash, and generation blocked.
+58. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+59. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+60. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -3626,9 +3690,13 @@ The current v61 runtime prototype can say:
   and live target-file presence rows for 59 launch commands, while keeping
   actual payload execution, full checkpoint materialization, full page-hash
   coverage, and generation blocked
+- the ubuntu-1 post-receipt materialization promotion gate binds the ubuntu-1
+  target root and emits targeted v61t/v61an/v61ae post-receipt verification
+  commands, while keeping receipt-backed materialization, full page-hash
+  coverage, and generation blocked
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, ubuntu-1 source-bound token-budget replay, ubuntu-1 KV+weight token-budget replay, ubuntu-1 persistent-hotset reuse admission, ubuntu-1 sampled prefetch-overlap admission, ubuntu-1 sampled prefetch queue-depth scheduler admission, ubuntu-1 sampled threaded O_DIRECT async prefetch execution, ubuntu-1 bootstrap cold-start admission, ubuntu-1 activation target admission refresh, ubuntu-1 payload execution readiness gating, ubuntu-1 payload execution launch bundling, and ubuntu-1 payload execution receipt intake, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, ubuntu-1 source-bound token-budget replay, ubuntu-1 KV+weight token-budget replay, ubuntu-1 persistent-hotset reuse admission, ubuntu-1 sampled prefetch-overlap admission, ubuntu-1 sampled prefetch queue-depth scheduler admission, ubuntu-1 sampled threaded O_DIRECT async prefetch execution, ubuntu-1 bootstrap cold-start admission, ubuntu-1 activation target admission refresh, ubuntu-1 payload execution readiness gating, ubuntu-1 payload execution launch bundling, ubuntu-1 payload execution receipt intake, and ubuntu-1 post-receipt materialization promotion gating, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, or real near-frontier open-weight inference.

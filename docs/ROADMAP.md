@@ -2367,6 +2367,20 @@ Current next boundary:
   execution, full checkpoint materialization, full page-hash coverage, actual
   model generation, production latency, near-frontier, and release claims remain
   blocked.
+- `v61br` adds ubuntu-1 post-receipt materialization promotion gating.
+  `experiments/test_v61br_ubuntu1_post_receipt_materialization_promotion_gate.sh`
+  consumes v61bq/v61r/v53t, binds the single outside-repository ubuntu-1 target
+  root, rejects stale `/tmp` target promotion, and emits targeted v61t, v61an,
+  and v61ae post-receipt verification command rows. The default path records
+  59 expected receipt rows, 0 accepted receipts, 59 missing receipts,
+  0 live size-match shards, `receipt_backed_materialization_input_ready=0`,
+  `identity_verification_execution_ready=0`, `required_page_hash_rows=134161`,
+  `verified_page_hash_rows=0`, `complete_source_review_return_ready=0`,
+  `actual_model_generation_ready=0`, `checkpoint_payload_bytes_downloaded_by_v61br=0`,
+  and zero checkpoint payload bytes committed to the repo. Completed checkpoint
+  download, full checkpoint materialization, full page-hash coverage, actual
+  model generation, production latency, near-frontier, and release claims remain
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
