@@ -1661,10 +1661,12 @@ Current next boundary:
   `v53_ready`, and release claims blocked.
 - `v53s` adds the complete-source review return intake gate.
   `experiments/test_v53s_complete_source_review_return_intake.sh` consumes
-  v53r, writes the returned-review schema and validation rows, expects 7000
-  human review rows, 1000 adjudication rows, reviewer identity/conflict rows,
-  and an acceptance summary, but accepts 0 returned rows in the default no-env
-  path. It records `review_return_ready=0`,
+  v53r, writes the returned-review schema and validation rows, and now requires
+  exact v53r-bound artifacts before the return can open: 7000 human review
+  rows, 1000 p0 adjudication rows, 21 reviewer identity assignment rows, 210
+  assignment-repo conflict rows, and a hash-bound `acceptance_summary.json`.
+  The smoke covers a synthetic supplied-return pass path, but accepts 0
+  returned rows in the default no-env path. It records `review_return_ready=0`,
   `quality_comparison_claim_ready=0`, and `v53_ready=0`, keeping the
   human-reviewed audit, comparison, and release claims blocked.
 - `v53t` adds the complete-source audit readiness gate.

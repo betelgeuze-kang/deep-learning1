@@ -69,12 +69,16 @@ FIELD_REQUIREMENTS = {
         "adjudication_reason_sha256",
     ],
     "reviewer_identity_rows.csv": [
+        "assignment_id",
         "reviewer_id",
         "reviewer_slot_id",
+        "system_id",
+        "review_scope",
         "independence_declared",
         "credential_statement_sha256",
     ],
     "reviewer_conflict_rows.csv": [
+        "assignment_id",
         "reviewer_id",
         "owner_repo",
         "conflict_declared",
@@ -83,6 +87,22 @@ FIELD_REQUIREMENTS = {
 }
 ALLOWED_REVIEW_DECISIONS = {"accept", "reject", "needs-adjudication"}
 ALLOWED_ADJUDICATION_DECISIONS = {"accept", "reject", "exclude-from-comparison"}
+ACCEPTANCE_REQUIRED_FIELDS = [
+    "review_protocol_version",
+    "acceptance_decision",
+    "expected_human_review_rows",
+    "accepted_human_review_rows",
+    "human_review_rows_sha256",
+    "expected_adjudication_rows",
+    "accepted_adjudication_rows",
+    "adjudication_rows_sha256",
+    "expected_reviewer_identity_rows",
+    "accepted_reviewer_identity_rows",
+    "reviewer_identity_rows_sha256",
+    "expected_conflict_disclosure_rows",
+    "accepted_conflict_disclosure_rows",
+    "reviewer_conflict_rows_sha256",
+]
 
 
 def sha256(path):
@@ -148,11 +168,22 @@ for src, rel in [
 review_answer_rows = read_csv(v53r_dir / "review_answer_packet_rows.csv")
 review_queue_rows = read_csv(v53r_dir / "review_queue_rows.csv")
 assignment_rows = read_csv(v53r_dir / "reviewer_assignment_template_rows.csv")
+answer_by_id = {row["answer_id"]: row for row in review_answer_rows}
 answer_ids = {row["answer_id"] for row in review_answer_rows}
 p0_answer_ids = {row["answer_id"] for row in review_queue_rows if row["priority_class"] == "p0_answer_or_policy_mismatch"}
+queue_by_answer_id = {row["answer_id"]: row for row in review_queue_rows if row["answer_id"] in p0_answer_ids}
+assignment_by_id = {row["assignment_id"]: row for row in assignment_rows}
+owner_repos = sorted({row["owner_repo"] for row in review_answer_rows})
+expected_conflict_pairs = {
+    (assignment["assignment_id"], owner_repo)
+    for assignment in assignment_rows
+    for owner_repo in owner_repos
+}
 expected_human_review_rows = len(review_answer_rows)
 expected_adjudication_rows = len(p0_answer_ids)
 expected_assignment_rows = len(assignment_rows)
+expected_reviewer_identity_rows = expected_assignment_rows
+expected_conflict_disclosure_rows = len(expected_conflict_pairs)
 
 required_field_rows = []
 for artifact, status, purpose in RETURN_ARTIFACTS:
@@ -194,12 +225,12 @@ template_rows = [
     {
         "return_artifact": "reviewer_identity_rows.csv",
         "example_row_id": "identity_example",
-        "example_payload": "reviewer_id,reviewer_slot_id,independence_declared,credential_statement_sha256",
+        "example_payload": "assignment_id,reviewer_id,reviewer_slot_id,system_id,review_scope,independence_declared,credential_statement_sha256",
     },
     {
         "return_artifact": "reviewer_conflict_rows.csv",
         "example_row_id": "conflict_example",
-        "example_payload": "reviewer_id,owner_repo,conflict_declared,conflict_statement_sha256",
+        "example_payload": "assignment_id,reviewer_id,owner_repo,conflict_declared,conflict_statement_sha256",
     },
     {
         "return_artifact": "acceptance_summary.json",
@@ -261,13 +292,22 @@ reviewed_answer_ids = set()
 if human_supplied and not [field for field in FIELD_REQUIREMENTS["human_review_rows.csv"] if field not in human_fields]:
     for index, row in enumerate(human_rows, start=1):
         errors = []
-        if row["answer_id"] not in answer_ids:
+        expected_answer = answer_by_id.get(row["answer_id"])
+        if expected_answer is None:
             errors.append("unknown-answer-id")
+        else:
+            for field in ["review_answer_packet_id", "system_id", "query_id"]:
+                if row[field] != expected_answer[field]:
+                    errors.append(f"mismatched-{field}")
+        if row["answer_id"] in reviewed_answer_ids:
+            errors.append("duplicate-answer-id")
         if row["review_decision"] not in ALLOWED_REVIEW_DECISIONS:
             errors.append("invalid-review-decision")
         for field in ["source_support_verified", "citation_verified", "policy_verified"]:
             if row[field] not in {"0", "1"}:
                 errors.append(f"invalid-{field}")
+        if not row["review_comment_sha256"].startswith("sha256:"):
+            errors.append("invalid-review-comment-sha256")
         status = "pass" if not errors else "blocked"
         human_valid_rows += int(status == "pass")
         human_invalid_rows += int(status != "pass")
@@ -289,10 +329,18 @@ adjudicated_answer_ids = set()
 if adjudication_supplied and not [field for field in FIELD_REQUIREMENTS["adjudication_rows.csv"] if field not in adjudication_fields]:
     for index, row in enumerate(adjudication_rows, start=1):
         errors = []
-        if row["answer_id"] not in p0_answer_ids:
+        expected_queue = queue_by_answer_id.get(row["answer_id"])
+        if expected_queue is None:
             errors.append("not-p0-answer-id")
+        else:
+            if row["review_answer_packet_id"] != expected_queue["review_answer_packet_id"]:
+                errors.append("mismatched-review-answer-packet-id")
+        if row["answer_id"] in adjudicated_answer_ids:
+            errors.append("duplicate-adjudication-answer-id")
         if row["adjudication_decision"] not in ALLOWED_ADJUDICATION_DECISIONS:
             errors.append("invalid-adjudication-decision")
+        if not row["adjudication_reason_sha256"].startswith("sha256:"):
+            errors.append("invalid-adjudication-reason-sha256")
         status = "pass" if not errors else "blocked"
         adjudication_valid_rows += int(status == "pass")
         adjudication_invalid_rows += int(status != "pass")
@@ -308,6 +356,163 @@ if adjudication_supplied and not [field for field in FIELD_REQUIREMENTS["adjudic
             }
         )
 
+accepted_identity_rows = 0
+identity_valid_rows = 0
+identity_invalid_rows = 0
+identity_by_assignment = {}
+if identity_supplied and not [field for field in FIELD_REQUIREMENTS["reviewer_identity_rows.csv"] if field not in identity_fields]:
+    for index, row in enumerate(identity_rows, start=1):
+        errors = []
+        assignment = assignment_by_id.get(row["assignment_id"])
+        if assignment is None:
+            errors.append("unknown-assignment-id")
+        else:
+            for field in ["reviewer_slot_id", "system_id", "review_scope"]:
+                if row[field] != assignment[field]:
+                    errors.append(f"mismatched-{field}")
+        if row["assignment_id"] in identity_by_assignment:
+            errors.append("duplicate-assignment-id")
+        if row["independence_declared"] != "1":
+            errors.append("independence-not-declared")
+        if not row["credential_statement_sha256"].startswith("sha256:"):
+            errors.append("invalid-credential-statement-sha256")
+        status = "pass" if not errors else "blocked"
+        identity_valid_rows += int(status == "pass")
+        identity_invalid_rows += int(status != "pass")
+        if status == "pass":
+            identity_by_assignment[row["assignment_id"]] = row["reviewer_id"]
+        validation_rows.append(
+            {
+                "validation_id": f"v53s_reviewer_identity_{index:05d}",
+                "return_artifact": "reviewer_identity_rows.csv",
+                "row_key": row.get("assignment_id", ""),
+                "status": status,
+                "reason": ";".join(errors) if errors else "reviewer identity row accepted",
+            }
+        )
+accepted_identity_rows = len(identity_by_assignment)
+
+accepted_conflict_rows = 0
+conflict_valid_rows = 0
+conflict_invalid_rows = 0
+accepted_conflict_pairs = set()
+if conflict_supplied and not [field for field in FIELD_REQUIREMENTS["reviewer_conflict_rows.csv"] if field not in conflict_fields]:
+    for index, row in enumerate(conflict_rows, start=1):
+        errors = []
+        pair = (row["assignment_id"], row["owner_repo"])
+        if pair not in expected_conflict_pairs:
+            errors.append("unknown-assignment-repo-pair")
+        if pair in accepted_conflict_pairs:
+            errors.append("duplicate-assignment-repo-pair")
+        if row["assignment_id"] in identity_by_assignment and row["reviewer_id"] != identity_by_assignment[row["assignment_id"]]:
+            errors.append("mismatched-reviewer-id")
+        if row["conflict_declared"] not in {"0", "1"}:
+            errors.append("invalid-conflict-declared")
+        if row["conflict_declared"] == "1":
+            errors.append("declared-conflict-requires-reassignment")
+        if not row["conflict_statement_sha256"].startswith("sha256:"):
+            errors.append("invalid-conflict-statement-sha256")
+        status = "pass" if not errors else "blocked"
+        conflict_valid_rows += int(status == "pass")
+        conflict_invalid_rows += int(status != "pass")
+        if status == "pass":
+            accepted_conflict_pairs.add(pair)
+        validation_rows.append(
+            {
+                "validation_id": f"v53s_reviewer_conflict_{index:05d}",
+                "return_artifact": "reviewer_conflict_rows.csv",
+                "row_key": f"{row.get('assignment_id', '')}:{row.get('owner_repo', '')}",
+                "status": status,
+                "reason": ";".join(errors) if errors else "reviewer conflict row accepted",
+            }
+        )
+accepted_conflict_rows = len(accepted_conflict_pairs)
+
+human_review_completed = int(
+    len(human_rows) == expected_human_review_rows
+    and human_valid_rows == expected_human_review_rows
+    and len(reviewed_answer_ids) == expected_human_review_rows
+    and human_invalid_rows == 0
+)
+adjudication_completed = int(
+    len(adjudication_rows) == expected_adjudication_rows
+    and adjudication_valid_rows == expected_adjudication_rows
+    and p0_answer_ids == adjudicated_answer_ids
+    and adjudication_invalid_rows == 0
+)
+reviewer_identity_ready = int(
+    len(identity_rows) == expected_reviewer_identity_rows
+    and identity_valid_rows == expected_reviewer_identity_rows
+    and accepted_identity_rows == expected_reviewer_identity_rows
+    and identity_invalid_rows == 0
+)
+conflict_disclosure_ready = int(
+    len(conflict_rows) == expected_conflict_disclosure_rows
+    and conflict_valid_rows == expected_conflict_disclosure_rows
+    and accepted_conflict_rows == expected_conflict_disclosure_rows
+    and conflict_invalid_rows == 0
+)
+
+acceptance_summary_errors = []
+if acceptance_supplied:
+    try:
+        acceptance_summary = json.loads((supplied_dir / "acceptance_summary.json").read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        acceptance_summary = {}
+        acceptance_summary_errors.append("invalid-json")
+    for field in ACCEPTANCE_REQUIRED_FIELDS:
+        if field not in acceptance_summary:
+            acceptance_summary_errors.append(f"missing-{field}")
+    expected_acceptance_values = {
+        "review_protocol_version": "v53s",
+        "acceptance_decision": "accepted",
+        "expected_human_review_rows": expected_human_review_rows,
+        "accepted_human_review_rows": expected_human_review_rows,
+        "human_review_rows_sha256": human_sha,
+        "expected_adjudication_rows": expected_adjudication_rows,
+        "accepted_adjudication_rows": expected_adjudication_rows,
+        "adjudication_rows_sha256": adjudication_sha,
+        "expected_reviewer_identity_rows": expected_reviewer_identity_rows,
+        "accepted_reviewer_identity_rows": expected_reviewer_identity_rows,
+        "reviewer_identity_rows_sha256": identity_sha,
+        "expected_conflict_disclosure_rows": expected_conflict_disclosure_rows,
+        "accepted_conflict_disclosure_rows": expected_conflict_disclosure_rows,
+        "reviewer_conflict_rows_sha256": conflict_sha,
+    }
+    for field, expected_value in expected_acceptance_values.items():
+        if field in acceptance_summary and str(acceptance_summary[field]) != str(expected_value):
+            acceptance_summary_errors.append(f"mismatched-{field}")
+    validation_rows.append(
+        {
+            "validation_id": "v53s_acceptance_summary",
+            "return_artifact": "acceptance_summary.json",
+            "row_key": "acceptance_summary",
+            "status": "pass" if not acceptance_summary_errors else "blocked",
+            "reason": "acceptance summary hash/count binding accepted" if not acceptance_summary_errors else ";".join(acceptance_summary_errors),
+        }
+    )
+acceptance_summary_ready = int(acceptance_supplied and not acceptance_summary_errors)
+review_return_ready = int(
+    human_review_completed
+    and adjudication_completed
+    and reviewer_identity_ready
+    and conflict_disclosure_ready
+    and acceptance_summary_ready
+)
+
+accepted_by_artifact = {
+    "human_review_rows.csv": human_review_completed,
+    "adjudication_rows.csv": adjudication_completed,
+    "reviewer_identity_rows.csv": reviewer_identity_ready,
+    "reviewer_conflict_rows.csv": conflict_disclosure_ready,
+    "acceptance_summary.json": acceptance_summary_ready,
+}
+for row in artifact_gate_rows:
+    row["accepted"] = str(int(accepted_by_artifact[row["return_artifact"]]))
+    if row["return_artifact"] == "acceptance_summary.json" and acceptance_supplied:
+        row["field_validation_status"] = "pass" if acceptance_summary_ready else "blocked"
+        row["missing_fields"] = ";".join(acceptance_summary_errors)
+
 if not validation_rows:
     validation_rows.append(
         {
@@ -321,26 +526,6 @@ if not validation_rows:
 write_csv(run_dir / "review_return_validation_rows.csv", list(validation_rows[0].keys()), validation_rows)
 write_csv(run_dir / "review_return_artifact_gate_rows.csv", list(artifact_gate_rows[0].keys()), artifact_gate_rows)
 
-accepted_identity_rows = 0
-if identity_supplied and not [field for field in FIELD_REQUIREMENTS["reviewer_identity_rows.csv"] if field not in identity_fields]:
-    accepted_identity_rows = sum(1 for row in identity_rows if row["independence_declared"] == "1")
-accepted_conflict_rows = 0
-if conflict_supplied and not [field for field in FIELD_REQUIREMENTS["reviewer_conflict_rows.csv"] if field not in conflict_fields]:
-    accepted_conflict_rows = len(conflict_rows)
-
-human_review_completed = int(human_valid_rows >= expected_human_review_rows and len(reviewed_answer_ids) >= expected_human_review_rows)
-adjudication_completed = int(adjudication_valid_rows >= expected_adjudication_rows and p0_answer_ids.issubset(adjudicated_answer_ids))
-reviewer_identity_ready = int(accepted_identity_rows >= 3)
-conflict_disclosure_ready = int(accepted_conflict_rows >= 10)
-acceptance_summary_ready = int(acceptance_supplied)
-review_return_ready = int(
-    human_review_completed
-    and adjudication_completed
-    and reviewer_identity_ready
-    and conflict_disclosure_ready
-    and acceptance_summary_ready
-)
-
 metric = {
     "metric_id": "v53s_complete_source_review_return_intake_metrics",
     "v53r_complete_source_review_packet_ready": v53r_summary["v53r_complete_source_review_packet_ready"],
@@ -352,8 +537,12 @@ metric = {
     "accepted_adjudication_rows": str(adjudication_valid_rows),
     "invalid_adjudication_rows": str(adjudication_invalid_rows),
     "expected_reviewer_assignment_rows": str(expected_assignment_rows),
+    "expected_reviewer_identity_rows": str(expected_reviewer_identity_rows),
     "accepted_reviewer_identity_rows": str(accepted_identity_rows),
+    "invalid_reviewer_identity_rows": str(identity_invalid_rows),
+    "expected_conflict_disclosure_rows": str(expected_conflict_disclosure_rows),
     "accepted_conflict_disclosure_rows": str(accepted_conflict_rows),
+    "invalid_conflict_disclosure_rows": str(conflict_invalid_rows),
     "return_artifact_rows": str(len(artifact_gate_rows)),
     "return_validation_rows": str(len(validation_rows)),
     "human_review_completed": str(human_review_completed),
@@ -361,6 +550,7 @@ metric = {
     "reviewer_identity_ready": str(reviewer_identity_ready),
     "conflict_disclosure_ready": str(conflict_disclosure_ready),
     "acceptance_summary_ready": str(acceptance_summary_ready),
+    "acceptance_summary_error_count": str(len(acceptance_summary_errors)),
     "review_return_ready": str(review_return_ready),
     "quality_comparison_claim_ready": "0",
     "v53_ready": "0",
@@ -380,8 +570,9 @@ decision_rows = [
     {"gate": "default-no-env-deferral", "status": "pass" if not supplied_any else "not-applicable", "reason": "no supplied review directory means no fake review rows are accepted"},
     {"gate": "human-review-artifacts", "status": "pass" if human_review_completed else "blocked", "reason": f"accepted_human_review_rows={human_valid_rows}/{expected_human_review_rows}"},
     {"gate": "adjudication-artifacts", "status": "pass" if adjudication_completed else "blocked", "reason": f"accepted_adjudication_rows={adjudication_valid_rows}/{expected_adjudication_rows}"},
-    {"gate": "reviewer-identity", "status": "pass" if reviewer_identity_ready else "blocked", "reason": f"accepted_reviewer_identity_rows={accepted_identity_rows}"},
-    {"gate": "conflict-disclosure", "status": "pass" if conflict_disclosure_ready else "blocked", "reason": f"accepted_conflict_disclosure_rows={accepted_conflict_rows}"},
+    {"gate": "reviewer-identity", "status": "pass" if reviewer_identity_ready else "blocked", "reason": f"accepted_reviewer_identity_rows={accepted_identity_rows}/{expected_reviewer_identity_rows}"},
+    {"gate": "conflict-disclosure", "status": "pass" if conflict_disclosure_ready else "blocked", "reason": f"accepted_conflict_disclosure_rows={accepted_conflict_rows}/{expected_conflict_disclosure_rows}"},
+    {"gate": "acceptance-summary", "status": "pass" if acceptance_summary_ready else "blocked", "reason": f"acceptance_summary_ready={acceptance_summary_ready}; error_count={len(acceptance_summary_errors)}"},
     {"gate": "review-return-ready", "status": "pass" if review_return_ready else "blocked", "reason": f"review_return_ready={review_return_ready}"},
     {"gate": "quality-comparison-claim", "status": "blocked", "reason": "review return intake alone does not open comparison wording"},
     {"gate": "v53-ready", "status": "blocked", "reason": "v53 requires accepted review return plus final audit/release gates"},
@@ -403,11 +594,14 @@ Evidence emitted:
 - expected_adjudication_rows={expected_adjudication_rows}
 - accepted_adjudication_rows={adjudication_valid_rows}
 - expected_reviewer_assignment_rows={expected_assignment_rows}
+- expected_reviewer_identity_rows={expected_reviewer_identity_rows}
 - accepted_reviewer_identity_rows={accepted_identity_rows}
+- expected_conflict_disclosure_rows={expected_conflict_disclosure_rows}
 - accepted_conflict_disclosure_rows={accepted_conflict_rows}
 - review_return_input_supplied={int(supplied_any)}
 - human_review_completed={human_review_completed}
 - adjudication_completed={adjudication_completed}
+- acceptance_summary_ready={acceptance_summary_ready}
 - review_return_ready={review_return_ready}
 - quality_comparison_claim_ready=0
 - v53_ready=0
@@ -431,8 +625,15 @@ manifest = {
     "expected_adjudication_rows": expected_adjudication_rows,
     "accepted_adjudication_rows": adjudication_valid_rows,
     "expected_reviewer_assignment_rows": expected_assignment_rows,
+    "expected_reviewer_identity_rows": expected_reviewer_identity_rows,
+    "accepted_reviewer_identity_rows": accepted_identity_rows,
+    "expected_conflict_disclosure_rows": expected_conflict_disclosure_rows,
+    "accepted_conflict_disclosure_rows": accepted_conflict_rows,
     "human_review_completed": human_review_completed,
     "adjudication_completed": adjudication_completed,
+    "reviewer_identity_ready": reviewer_identity_ready,
+    "conflict_disclosure_ready": conflict_disclosure_ready,
+    "acceptance_summary_ready": acceptance_summary_ready,
     "review_return_ready": review_return_ready,
     "quality_comparison_claim_ready": 0,
     "v53_ready": 0,
