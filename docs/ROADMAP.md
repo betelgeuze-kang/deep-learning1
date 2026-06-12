@@ -2543,6 +2543,39 @@ Current next boundary:
   bytes committed to the repo. Completed full page-hash coverage,
   complete-source review return, actual generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61ce` adds ubuntu-1 generation closure return intake gating.
+  `experiments/test_v61ce_ubuntu1_generation_closure_return_intake.sh`
+  consumes v61cd, v61cb, v53t, v61bt, and v61cc, rechecks the three return
+  families as closure gates, and emits 1000 generation closure admission rows.
+  It records `closure_gate_rows=3`, `generation_closure_admission_rows=1000`,
+  `generation_closure_return_intake_ready=0`,
+  `generation_execution_admitted_rows=0`, `page_hash_blocked_rows=1000`,
+  `review_return_blocked_rows=1000`,
+  `generation_result_artifact_blocked_rows=1000`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61ce=0`, and zero checkpoint payload
+  bytes committed to the repo. Completed full page-hash coverage,
+  complete-source review return, actual generation, production latency,
+  near-frontier, and release claims remain blocked.
+- `v61cf` adds ubuntu-1 source-bound generation execution packeting.
+  `experiments/test_v61cf_ubuntu1_source_bound_generation_execution_packet.sh`
+  consumes v61ce, v53r, and v61bt, emits 1000 execution packet rows, four
+  prompt contract rows, five return artifact rows, and six operator command
+  rows. It records `generation_execution_ready=0`,
+  `generation_execution_admitted_rows=0`, `blocked_execution_rows=1000`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cf=0`, and zero checkpoint payload
+  bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
+- `v61cg` adds ubuntu-1 source-bound generation operator bundling.
+  `experiments/test_v61cg_ubuntu1_source_bound_generation_operator_bundle.sh`
+  consumes v61cf, emits four operator bundle files, four bundle command rows,
+  and an executable packet-shape verifier. It records
+  `operator_bundle_handoff_ready=1`, `generation_operator_execution_ready=0`,
+  `blocked_execution_rows=1000`, `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cg=0`, and zero checkpoint payload
+  bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
