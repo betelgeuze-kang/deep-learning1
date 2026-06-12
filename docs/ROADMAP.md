@@ -2343,6 +2343,18 @@ Current next boundary:
   bytes committed to the repo. Explicit payload execution, full checkpoint
   materialization, full page-hash coverage, actual model generation,
   production latency, near-frontier, and release claims remain blocked.
+- `v61bp` adds an ubuntu-1 payload execution launch bundle.
+  `experiments/test_v61bp_ubuntu1_payload_execution_launch_bundle.sh`
+  consumes v61bo and emits a dry-run-first operator bundle with 59 launch
+  command rows, three priority chunk launch rows, seven bundle files, four
+  syntax/executable script probes, a one-row dry-run probe,
+  `dry_run_guard_ready=1`, `approval_required_rows=2`,
+  `approval_supplied_rows=0`, `payload_execution_launch_ready=0`,
+  `download_execution_ready=0`, `checkpoint_payload_bytes_downloaded_by_v61bp=0`,
+  and zero checkpoint payload bytes committed to the repo. Explicit payload
+  execution approval, full checkpoint materialization, full page-hash coverage,
+  actual model generation, production latency, near-frontier, and release
+  claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
