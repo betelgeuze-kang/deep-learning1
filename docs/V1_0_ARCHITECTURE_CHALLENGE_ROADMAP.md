@@ -468,6 +468,8 @@ Implemented now:
 - `experiments/test_v61bb_ubuntu1_write_sentinel_activation_probe.sh`
 - `experiments/run_v61bc_ubuntu1_sampled_hotset_materialization.sh`
 - `experiments/test_v61bc_ubuntu1_sampled_hotset_materialization.sh`
+- `experiments/run_v61bd_ubuntu1_sampled_hotset_direct_io_replay.sh`
+- `experiments/test_v61bd_ubuntu1_sampled_hotset_direct_io_replay.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -584,6 +586,7 @@ Implemented now:
 - `results/v61ba_ubuntu1_activation_handoff_package/handoff_001/` ubuntu-1 activation handoff artifacts
 - `results/v61bb_ubuntu1_write_sentinel_activation_probe/write_probe_001/` ubuntu-1 write sentinel activation artifacts
 - `results/v61bc_ubuntu1_sampled_hotset_materialization/materialization_001/` ubuntu-1 sampled hotset materialization artifacts
+- `results/v61bd_ubuntu1_sampled_hotset_direct_io_replay/replay_001/` ubuntu-1 sampled hotset direct-I/O artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -812,6 +815,8 @@ The v61ba ubuntu-1 activation handoff package is implemented and covered by `exp
 The v61bb ubuntu-1 write sentinel activation probe is implemented and covered by `experiments/test_v61bb_ubuntu1_write_sentinel_activation_probe.sh`. It consumes v61ba, writes or observes a tiny JSON sentinel under the ubuntu-1 target, records `ubuntu1_write_witness_ready=1`, `operator_write_step_resolved_by_witness=1`, `activation_target_write_witness_ready=1`, keeps `activation_payload_execution_ready=0`, and downloads or commits zero checkpoint payload bytes. It keeps checkpoint payload execution, local materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 The v61bc ubuntu-1 sampled hotset materialization is implemented and covered by `experiments/test_v61bc_ubuntu1_sampled_hotset_materialization.sh`. It consumes v61bb/v61y, copies only the 16 already verified sampled hotset pages under the ubuntu-1 target, records 16/16 page presence, 16/16 hash matches, 16/16 readback hash matches, 33554432 sampled checkpoint payload bytes persisted on ubuntu-1, `checkpoint_payload_bytes_downloaded_by_v61bc=0`, and zero checkpoint payload bytes committed to the repo. It keeps full checkpoint materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
+
+The v61bd ubuntu-1 sampled hotset direct-I/O replay is implemented and covered by `experiments/test_v61bd_ubuntu1_sampled_hotset_direct_io_replay.sh`. It consumes v61bc/v61x, reads the 16 ubuntu-1 sampled hotset pages through O_DIRECT, records 16/16 hash matches, 0 direct-I/O errors, 33554432 direct-I/O bytes, p50/p95 read latency 1.102615/1.234314 ms, 1946.456509 MiB/s sampled throughput, `ssd_read_bytes_per_token=8388608`, `checkpoint_payload_bytes_downloaded_by_v61bd=0`, and zero checkpoint payload bytes committed to the repo. It keeps full checkpoint materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 ## Immediate Next PR Target
 

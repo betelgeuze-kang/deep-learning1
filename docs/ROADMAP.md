@@ -2208,6 +2208,16 @@ Current next boundary:
   and zero checkpoint payload bytes committed to the repo. Full checkpoint
   materialization, full page-hash coverage, actual model generation, production
   latency, near-frontier, and release claims remain blocked.
+- `v61bd` adds ubuntu-1 sampled hotset direct-I/O replay.
+  `experiments/test_v61bd_ubuntu1_sampled_hotset_direct_io_replay.sh`
+  consumes v61bc/v61x, reads the 16 ubuntu-1 sampled hotset pages through
+  O_DIRECT, and records 16/16 hash matches, 0 direct-I/O errors, 33554432
+  direct-I/O bytes, p50/p95 read latency 1.102615/1.234314 ms,
+  1946.456509 MiB/s sampled throughput, `ssd_read_bytes_per_token=8388608`,
+  `checkpoint_payload_bytes_downloaded_by_v61bd=0`, and zero checkpoint
+  payload bytes committed to the repo. Full checkpoint materialization, full
+  page-hash coverage, actual model generation, production latency,
+  near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
