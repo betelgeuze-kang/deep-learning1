@@ -2332,6 +2332,17 @@ Current next boundary:
   bytes committed to the repo. Explicit payload execution, full checkpoint
   materialization, full page-hash coverage, actual model generation,
   production latency, near-frontier, and release claims remain blocked.
+- `v61bo` adds ubuntu-1 payload execution readiness gating.
+  `experiments/test_v61bo_ubuntu1_payload_execution_readiness_gate.sh`
+  consumes v61bn and separates target-bound payload execution preflight from
+  payload execution itself. It records `payload_execution_preflight_ready=1`,
+  59/59 target-bound resumable curl command rows, 59 post-download
+  verification/hash/generation-admission command rows, three priority execution
+  chunks, `payload_execution_ready_rows=0`, `download_execution_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bo=0`, and zero checkpoint payload
+  bytes committed to the repo. Explicit payload execution, full checkpoint
+  materialization, full page-hash coverage, actual model generation,
+  production latency, near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
