@@ -2162,6 +2162,13 @@ Current next boundary:
   errors, while keeping bootstrap admission, actual io_uring execution,
   registered buffers, full runtime admission, actual model generation,
   production latency, near-frontier, and release claims blocked.
+- `v61ay` adds selected-backend token runtime binding.
+  `experiments/test_v61ay_selected_backend_token_runtime_binding.sh` consumes
+  v61ad/v61ax and binds 185/185 KV+weight token budget rows plus 5/5 context
+  profiles to `threaded_odirect`, while keeping actual io_uring execution,
+  registered buffers, full checkpoint materialization, full page-hash coverage,
+  full runtime admission, actual model generation, production latency,
+  near-frontier, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

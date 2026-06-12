@@ -458,6 +458,8 @@ Implemented now:
 - `experiments/test_v61aw_io_uring_registered_buffer_preflight.sh`
 - `experiments/run_v61ax_async_io_backend_selection_gate.sh`
 - `experiments/test_v61ax_async_io_backend_selection_gate.sh`
+- `experiments/run_v61ay_selected_backend_token_runtime_binding.sh`
+- `experiments/test_v61ay_selected_backend_token_runtime_binding.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -569,6 +571,7 @@ Implemented now:
 - `results/v61av_async_prefetch_execution_probe/probe_001/` sampled async prefetch execution artifacts
 - `results/v61aw_io_uring_registered_buffer_preflight/preflight_001/` io_uring registered-buffer preflight artifacts
 - `results/v61ax_async_io_backend_selection_gate/gate_001/` async-I/O backend selection artifacts
+- `results/v61ay_selected_backend_token_runtime_binding/binding_001/` selected-backend token runtime binding artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -787,6 +790,8 @@ The v61av async prefetch execution probe is implemented and covered by `experime
 The v61aw io_uring registered-buffer preflight is implemented and covered by `experiments/test_v61aw_io_uring_registered_buffer_preflight.sh`. It consumes v61av, records current-host Linux UAPI header ready 1, liburing header ready 0, setup/enter/register syscall numbers 425/426/427, `io_uring_setup_errno_name=EPERM`, setup/enter/register ready 0, registered-buffer prefetch ready 0, threaded O_DIRECT fallback ready 1, and zero checkpoint payload bytes downloaded or committed by v61aw. It keeps actual io_uring execution, registered buffers, full runtime admission, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 The v61ax async-I/O backend selection gate is implemented and covered by `experiments/test_v61ax_async_io_backend_selection_gate.sh`. It consumes v61aw/v61av, records `io_uring_registered_buffer` blocked by `io_uring_setup_errno_1_EPERM`, selects `threaded_odirect` as the current-host sampled prefetch backend, records queue depth 4, 15 hash-match rows, zero backend errors, `full_runtime_async_io_admission_ready=0`, and zero checkpoint payload bytes downloaded or committed by v61ax. It keeps bootstrap admission, actual io_uring execution, registered buffers, full runtime admission, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
+
+The v61ay selected-backend token runtime binding is implemented and covered by `experiments/test_v61ay_selected_backend_token_runtime_binding.sh`. It consumes v61ad/v61ax, binds 185/185 combined KV+weight token budget rows and 5/5 context profiles to `threaded_odirect`, records 37 source-bound query rows, 74 full-KV-in-VRAM pass rows, 111 NVMe eviction-required rows, zero host RAM spill bytes, `full_runtime_async_io_admission_ready=0`, and zero checkpoint payload bytes downloaded or committed by v61ay. It keeps actual io_uring execution, registered buffers, full checkpoint materialization, full page-hash coverage, full runtime admission, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 ## Immediate Next PR Target
 

@@ -1479,6 +1479,35 @@ Pass condition:
   admission, actual generation, production-latency, near-frontier, and release
   claims remain blocked
 
+### v61ay Selected-Backend Token Runtime Binding
+
+Bind the v61ax selected current-host async-I/O backend to every v61ad
+KV+weight token budget row. This closes the sampled token/runtime binding layer
+while still leaving materialization, bootstrap admission, full page-hash
+coverage, generation, and production claims blocked.
+
+Outputs:
+
+- `selected_backend_token_runtime_binding_rows.csv`
+- `selected_backend_context_runtime_binding_rows.csv`
+- `selected_backend_runtime_requirement_rows.csv`
+- `selected_backend_runtime_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61AY_SELECTED_BACKEND_TOKEN_RUNTIME_BINDING_BOUNDARY.md`
+
+Pass condition:
+
+- v61ad KV+weight token budget rows are bound
+- v61ax selected backend evidence is bound
+- all 185 combined KV+weight token budget rows bind to `threaded_odirect`
+- all five KV context profiles bind to the selected backend
+- host RAM spill remains zero
+- bootstrap and full runtime async-I/O admission remain `0`
+- checkpoint payload bytes downloaded or committed by v61ay remain zero
+- actual io_uring execution, registered-buffer prefetch, full checkpoint
+  materialization, full page-hash coverage, actual generation,
+  production-latency, near-frontier, and release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1528,9 +1557,10 @@ The benchmark ladder should be ordered by runtime risk:
 43. Sampled async prefetch execution probe.
 44. Current-host io_uring/registered-buffer preflight.
 45. Current-host async-I/O backend selection gate.
-46. Complete-source 1000+ QA workload with real model generation.
-47. Same runtime under long-context workloads with source-bound quality checks.
-48. One-command local assistant demo.
+46. Selected-backend token runtime binding gate.
+47. Complete-source 1000+ QA workload with real model generation.
+48. Same runtime under long-context workloads with source-bound quality checks.
+49. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1617,6 +1647,7 @@ covered by:
 ./experiments/test_v61av_async_prefetch_execution_probe.sh
 ./experiments/test_v61aw_io_uring_registered_buffer_preflight.sh
 ./experiments/test_v61ax_async_io_backend_selection_gate.sh
+./experiments/test_v61ay_selected_backend_token_runtime_binding.sh
 ```
 
 They emit:
@@ -1628,6 +1659,7 @@ They emit:
 - `results/v61av_async_prefetch_execution_probe/probe_001/`
 - `results/v61aw_io_uring_registered_buffer_preflight/preflight_001/`
 - `results/v61ax_async_io_backend_selection_gate/gate_001/`
+- `results/v61ay_selected_backend_token_runtime_binding/binding_001/`
 
 Verified current summary:
 
@@ -1829,12 +1861,42 @@ The current v61ax async-I/O backend selection gate records:
 - `checkpoint_payload_bytes_downloaded_by_v61ax=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
+The current v61ay selected-backend token runtime binding records:
+
+- `v61ay_selected_backend_token_runtime_binding_ready=1`
+- `v61ad_kv_weight_token_budget_replay_ready=1`
+- `v61ax_async_io_backend_selection_gate_ready=1`
+- `selected_async_io_backend=threaded_odirect`
+- `selected_backend_ready=1`
+- `selected_backend_queue_depth=4`
+- `selected_backend_hash_match_rows=15`
+- `selected_backend_error_rows=0`
+- `source_bound_query_rows=37`
+- `source_bound_token_budget_rows=37`
+- `kv_context_profile_rows=5`
+- `combined_kv_weight_budget_rows=185`
+- `selected_backend_bound_token_rows=185`
+- `selected_backend_bound_context_rows=5`
+- `full_kv_vram_budget_pass_rows=74`
+- `nvme_eviction_required_rows=111`
+- `host_ram_spill_bytes_total=0`
+- `total_selected_backend_token_ssd_read_bytes=1551892480`
+- `total_selected_backend_weight_plus_new_kv_bytes=1594327040`
+- `max_context_tokens=8192`
+- `max_token_direct_io_latency_ms_p95=3.826760`
+- `bootstrap_prefetch_admission_ready=0`
+- `actual_io_uring_execution_ready=0`
+- `registered_buffer_prefetch_ready=0`
+- `full_runtime_async_io_admission_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61ay=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
-io_uring preflight plus backend selection is not bootstrap cold-start
-admission, io_uring SQ/CQ execution, registered-buffer prefetch, or
-full-runtime admission. The next runtime work must continue toward full
+io_uring preflight plus backend selection plus token/runtime binding is not
+bootstrap cold-start admission, io_uring SQ/CQ execution, registered-buffer
+prefetch, or full-runtime admission. The next runtime work must continue toward full
 coverage, local checkpoint materialization, io_uring/registered-buffer
 execution, and actual generation evidence rather than claiming practical
 near-frontier inference.
@@ -2085,9 +2147,10 @@ without weakening the boundary:
 35. Closed as v61av async prefetch execution probe: execute 15/15 sampled prefetch issue reads through a queue-depth 4 threaded O_DIRECT worker pool while keeping io_uring, registered buffers, bootstrap admission, and full runtime admission blocked.
 36. Closed as v61aw io_uring registered-buffer preflight: attempt raw `io_uring_setup`, record the current-host `EPERM` blocker, keep setup/enter/register and registered-buffer prefetch readiness at 0, and bind the v61av threaded O_DIRECT fallback as ready.
 37. Closed as v61ax async-I/O backend selection gate: choose `threaded_odirect` on the current host because io_uring registered-buffer prefetch remains blocked, while keeping bootstrap and full runtime admission blocked.
-38. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-39. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-40. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+38. Closed as v61ay selected-backend token runtime binding: bind 185/185 KV+weight token budget rows and 5/5 context profiles to the selected `threaded_odirect` backend while keeping full runtime admission blocked.
+39. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+40. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+41. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -2220,9 +2283,14 @@ The current v61 runtime prototype can say:
   zero backend errors, io_uring registered-buffer candidate ready 0,
   registered-buffer prefetch ready 0, and full runtime async-I/O admission
   still blocked
+- the selected-backend token runtime binding gate binds 185/185 KV+weight token
+  budget rows and 5/5 context profiles to `threaded_odirect`, preserving
+  37 source-bound query rows, 74 full-KV-in-VRAM pass rows, 111 NVMe
+  eviction-required rows, zero host RAM spill bytes, and blocked full runtime
+  async-I/O admission
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, and current-host async-I/O backend selection, not completed real-checkpoint residency, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, and selected-backend token runtime binding, not completed real-checkpoint residency, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, or real near-frontier open-weight inference.
