@@ -440,6 +440,8 @@ Implemented now:
 - `experiments/test_v61an_checkpoint_full_page_hash_execution_gate_target_override.sh`
 - `experiments/run_v61ao_real_model_page_manifest_coverage_audit.sh`
 - `experiments/test_v61ao_real_model_page_manifest_coverage_audit.sh`
+- `experiments/run_v61ap_moe_coverage_remote_hash_plan.sh`
+- `experiments/test_v61ap_moe_coverage_remote_hash_plan.sh`
 - `experiments/run_v54_routehint_generation_1000_contract.sh`
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
@@ -542,6 +544,7 @@ Implemented now:
 - `results/v61am_checkpoint_post_activation_verification_gate/gate_001/` checkpoint post-activation verification gate artifacts
 - `results/v61an_checkpoint_full_page_hash_execution_gate/gate_001/` checkpoint full page-hash execution gate artifacts
 - `results/v61ao_real_model_page_manifest_coverage_audit/audit_001/` real model page-manifest coverage audit artifacts
+- `results/v61ap_moe_coverage_remote_hash_plan/plan_001/` MoE coverage remote-hash expansion plan artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
@@ -742,6 +745,8 @@ The v61am checkpoint post-activation verification gate is implemented and covere
 The v61an checkpoint full page-hash execution gate is implemented and covered by `experiments/test_v61an_checkpoint_full_page_hash_execution_gate.sh` plus `experiments/test_v61an_checkpoint_full_page_hash_execution_gate_target_override.sh`. It consumes v61am/v61t/v61r, turns 134161 planned page hashes into 291 resumable execution chunks, and records 0 hashed chunks, 291 activation-blocked chunks, 0 local page hash verification rows, `full_page_hash_execution_ready=0`, `full_safetensors_page_hash_binding_ready=0`, and zero checkpoint payload bytes downloaded or committed by v61an. The target-override smoke verifies that `V61AN_WAREHOUSE_ROOT` propagates through fresh v61am/v61al/v61ak planning before full page-hash scheduling. It keeps full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 The v61ao real model page-manifest coverage audit is implemented and covered by `experiments/test_v61ao_real_model_page_manifest_coverage_audit.sh`. It consumes v61q/v61v/v61an, audits the real Mixtral checkpoint manifest as metadata-only coverage, and records 59 shards, 1739 tensors, 134161 unique checkpoint pages, 135841 tensor/page segments, 1344/1344 layer-expert-MoE tensor coverage rows, 16 remote-hash-bound sample tensor rows, `real_model_page_manifest_coverage_ready=1`, `full_safetensors_page_hash_binding_ready=0`, and zero checkpoint payload bytes downloaded or committed by v61ao. It keeps local materialization, full page-hash coverage, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
+
+The v61ap MoE coverage remote hash plan is implemented and covered by `experiments/test_v61ap_moe_coverage_remote_hash_plan.sh`. It consumes v61ao/v61q/v61v, emits 1344 representative layer-expert-MoE remote hash plan rows, preserves 15 already remote-hash-bound MoE sample rows, plans 1329 remaining representative range hashes, records `full_moe_coverage_remote_hash_ready=0`, `remote_hash_expansion_execution_ready=0`, and keeps zero checkpoint payload bytes downloaded or committed by v61ap. It keeps executed hash expansion, full page-hash coverage, local materialization, actual Mixtral generation, production latency, near-frontier, and release claims blocked.
 
 ## Immediate Next PR Target
 

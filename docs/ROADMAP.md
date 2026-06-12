@@ -2096,6 +2096,14 @@ Current next boundary:
   payload bytes downloaded or committed by v61ao. Full page-hash coverage,
   local materialization, actual model generation, production latency,
   near-frontier, and release claims stay blocked.
+- `v61ap` adds a MoE coverage remote-hash expansion plan.
+  `experiments/test_v61ap_moe_coverage_remote_hash_plan.sh` consumes
+  v61ao/v61q/v61v and records 1344 representative layer-expert-MoE remote hash
+  plan rows, preserves 15 already remote-hash-bound MoE sample rows, and plans
+  1329 remaining representative range hashes while keeping
+  `full_moe_coverage_remote_hash_ready=0`, remote hash execution, full
+  page-hash coverage, local materialization, actual model generation,
+  production latency, near-frontier, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
