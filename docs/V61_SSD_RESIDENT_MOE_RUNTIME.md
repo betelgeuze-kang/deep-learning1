@@ -1924,6 +1924,43 @@ Pass condition:
   generation, production-latency, near-frontier, and release claims remain
   blocked
 
+### v61bm Ubuntu-1 Bootstrap Cold-Start Admission Gate
+
+Consume v61bl actual threaded O_DIRECT evidence and separate token-0 bootstrap
+from steady-state prefetch. Token 0 still cannot be prefetched against a prior
+compute window, but its four cold-fill pages can be admitted as a blocking
+cold-start batch before generation begins.
+
+Outputs:
+
+- `ubuntu1_bootstrap_cold_start_page_rows.csv`
+- `ubuntu1_bootstrap_cold_start_batch_rows.csv`
+- `ubuntu1_bootstrap_cold_start_requirement_rows.csv`
+- `ubuntu1_bootstrap_cold_start_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61BM_UBUNTU1_BOOTSTRAP_COLD_START_ADMISSION_GATE_BOUNDARY.md`
+
+Pass condition:
+
+- v61bl actual threaded O_DIRECT execution rows are bound
+- four token-0 bootstrap cold-fill page rows are bound
+- 4/4 bootstrap pages hash-match
+- bootstrap cold-start batch elapsed time fits the configured startup budget
+- `bootstrap_cold_start_admission_ready=1`
+- `bootstrap_prefetch_admission_ready=0`
+- `ubuntu1_bootstrap_plus_steady_state_sampled_admission_ready=1`
+- `actual_io_uring_execution_ready=0`
+- `registered_buffers_ready=0`
+- `full_runtime_ubuntu1_hotset_reuse_admission_ready=0`
+- `full_checkpoint_materialization_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61bm=0`
+- checkpoint payload bytes committed to the repository remain zero
+- bootstrap prefetch overlap, io_uring execution, registered buffers, full
+  runtime admission, full checkpoint materialization, full page-hash coverage,
+  actual generation, production-latency, near-frontier, and release claims
+  remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1987,9 +2024,10 @@ The benchmark ladder should be ordered by runtime risk:
 57. Ubuntu-1 sampled prefetch-overlap admission.
 58. Ubuntu-1 sampled prefetch queue-depth scheduler admission.
 59. Ubuntu-1 sampled async prefetch execution probe.
-60. Complete-source 1000+ QA workload with real model generation.
-61. Same runtime under long-context workloads with source-bound quality checks.
-62. One-command local assistant demo.
+60. Ubuntu-1 bootstrap cold-start admission.
+61. Complete-source 1000+ QA workload with real model generation.
+62. Same runtime under long-context workloads with source-bound quality checks.
+63. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -2090,6 +2128,7 @@ covered by:
 ./experiments/test_v61bj_ubuntu1_prefetch_overlap_admission_gate.sh
 ./experiments/test_v61bk_ubuntu1_prefetch_queue_depth_scheduler_gate.sh
 ./experiments/test_v61bl_ubuntu1_async_prefetch_execution_probe.sh
+./experiments/test_v61bm_ubuntu1_bootstrap_cold_start_admission_gate.sh
 ```
 
 They emit:
@@ -2115,6 +2154,7 @@ They emit:
 - `results/v61bj_ubuntu1_prefetch_overlap_admission_gate/gate_001/`
 - `results/v61bk_ubuntu1_prefetch_queue_depth_scheduler_gate/gate_001/`
 - `results/v61bl_ubuntu1_async_prefetch_execution_probe/probe_001/`
+- `results/v61bm_ubuntu1_bootstrap_cold_start_admission_gate/gate_001/`
 
 Verified current summary:
 
@@ -2752,6 +2792,42 @@ The current v61bl ubuntu-1 async prefetch execution probe records:
 - `production_latency_claim_ready=0`
 - `real_release_package_ready=0`
 
+The current v61bm ubuntu-1 bootstrap cold-start admission gate records:
+
+- `v61bm_ubuntu1_bootstrap_cold_start_admission_gate_ready=1`
+- `v61bl_ubuntu1_async_prefetch_execution_probe_ready=1`
+- `v61bk_ubuntu1_prefetch_queue_depth_scheduler_gate_ready=1`
+- `ubuntu1_target_available_bytes=410581364736`
+- `configured_prefetch_queue_depth=4`
+- `configured_bootstrap_cold_start_budget_ms=100.000000`
+- `bootstrap_prefetch_issue_rows=4`
+- `bootstrap_cold_start_admitted_rows=4`
+- `bootstrap_async_prefetch_hash_match_rows=4`
+- `bootstrap_async_prefetch_error_rows=0`
+- `bootstrap_cold_start_bytes_read_total=8388608`
+- `bootstrap_cold_start_read_latency_ms_sum=12.445780`
+- `bootstrap_cold_start_read_latency_ms_max=4.986956`
+- `bootstrap_cold_start_batch_elapsed_ms=9.918070`
+- `bootstrap_cold_start_budget_headroom_ms=90.081930`
+- `ubuntu1_steady_state_prefetch_issue_rows=11`
+- `ubuntu1_steady_state_async_prefetch_hash_match_rows=11`
+- `actual_async_prefetch_execution_ready=1`
+- `bootstrap_cold_start_admission_ready=1`
+- `bootstrap_prefetch_admission_ready=0`
+- `ubuntu1_bootstrap_plus_steady_state_sampled_admission_ready=1`
+- `ubuntu1_prefetch_scheduler_admission_ready=0`
+- `actual_io_uring_execution_ready=0`
+- `registered_buffers_ready=0`
+- `full_runtime_ubuntu1_hotset_reuse_admission_ready=0`
+- `full_checkpoint_materialization_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61bm=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+- `actual_model_generation_ready=0`
+- `near_frontier_claim_ready=0`
+- `production_latency_claim_ready=0`
+- `real_release_package_ready=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
@@ -2764,9 +2840,9 @@ ubuntu-1 source-bound token-budget replay plus ubuntu-1 KV+weight
 token-budget replay plus ubuntu-1 persistent-hotset reuse admission plus
 ubuntu-1 sampled prefetch-overlap admission plus ubuntu-1 sampled
 queue-depth scheduler admission plus ubuntu-1 sampled threaded O_DIRECT async
-prefetch execution is
+prefetch execution plus ubuntu-1 bootstrap cold-start admission is
 not full payload
-download execution, checkpoint materialization, bootstrap cold-start admission,
+download execution, checkpoint materialization, bootstrap prefetch overlap,
 io_uring SQ/CQ execution, registered-buffer prefetch, or full-runtime
 admission. The next runtime work must continue toward explicit payload
 execution, full coverage, local checkpoint materialization, io_uring/registered-buffer
@@ -3033,9 +3109,10 @@ without weakening the boundary:
 49. Closed as v61bj ubuntu-1 prefetch overlap admission gate: bind ubuntu-1 page p95 latency to persistent-hotset reuse rows and show 36/36 non-bootstrap sampled rows pass steady-state overlap while keeping bootstrap/full checkpoint/full page-hash/generation blocked.
 50. Closed as v61bk ubuntu-1 prefetch queue-depth scheduler gate: turn ubuntu-1 overlap rows into 11/11 steady-state deadline-met scheduler issue rows at queue depth 4 while keeping bootstrap, actual async I/O, full checkpoint, full page-hash, and generation blocked.
 51. Closed as v61bl ubuntu-1 async prefetch execution probe: execute 15/15 ubuntu-1 sampled prefetch issue reads through a queue-depth 4 threaded O_DIRECT worker pool while keeping bootstrap admission, io_uring, registered buffers, full checkpoint, full page-hash, and generation blocked.
-52. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-53. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-54. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+52. Closed as v61bm ubuntu-1 bootstrap cold-start admission gate: admit 4/4 token-0 cold-fill pages as a blocking pre-generation batch while keeping bootstrap prefetch overlap, io_uring, full runtime admission, full checkpoint, full page-hash, and generation blocked.
+53. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+54. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+55. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -3233,9 +3310,14 @@ The current v61 runtime prototype can say:
   hash matches, while keeping bootstrap admission, io_uring, registered
   buffers, full checkpoint materialization, full page-hash coverage, and
   generation blocked
+- the ubuntu-1 bootstrap cold-start admission gate admits the four token-0
+  cold-fill reads as a blocking pre-generation batch inside a configured
+  startup budget, while keeping bootstrap prefetch overlap, io_uring,
+  registered buffers, full runtime admission, full checkpoint materialization,
+  full page-hash coverage, and generation blocked
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, ubuntu-1 source-bound token-budget replay, ubuntu-1 KV+weight token-budget replay, ubuntu-1 persistent-hotset reuse admission, ubuntu-1 sampled prefetch-overlap admission, ubuntu-1 sampled prefetch queue-depth scheduler admission, and ubuntu-1 sampled threaded O_DIRECT async prefetch execution, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, ubuntu-1 source-bound token-budget replay, ubuntu-1 KV+weight token-budget replay, ubuntu-1 persistent-hotset reuse admission, ubuntu-1 sampled prefetch-overlap admission, ubuntu-1 sampled prefetch queue-depth scheduler admission, ubuntu-1 sampled threaded O_DIRECT async prefetch execution, and ubuntu-1 bootstrap cold-start admission, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, or real near-frontier open-weight inference.

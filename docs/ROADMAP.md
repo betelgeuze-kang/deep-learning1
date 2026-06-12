@@ -2307,6 +2307,19 @@ Current next boundary:
   buffers, full checkpoint materialization, full page-hash coverage, full
   runtime admission, actual model generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61bm` adds ubuntu-1 sampled bootstrap cold-start admission.
+  `experiments/test_v61bm_ubuntu1_bootstrap_cold_start_admission_gate.sh`
+  consumes v61bl/v61bk, separates token-0 bootstrap from steady-state prefetch,
+  and admits the four bootstrap reads as a blocking pre-generation cold-fill
+  batch. It records 4/4 bootstrap hash matches, 8388608 cold-start bytes read,
+  a 9.918070 ms bootstrap batch inside a configured 100 ms startup budget,
+  `bootstrap_cold_start_admission_ready=1`,
+  `bootstrap_prefetch_admission_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bm=0`, and zero checkpoint payload
+  bytes committed to the repo. Bootstrap prefetch overlap, io_uring/registered
+  buffers, full runtime admission, full checkpoint materialization, full
+  page-hash coverage, actual model generation, production latency,
+  near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
