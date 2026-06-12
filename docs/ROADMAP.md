@@ -2147,6 +2147,14 @@ Current next boundary:
   bootstrap admission, io_uring, registered buffers, full runtime admission,
   actual model generation, production latency, near-frontier, and release claims
   blocked.
+- `v61aw` adds a current-host io_uring registered-buffer preflight.
+  `experiments/test_v61aw_io_uring_registered_buffer_preflight.sh` consumes
+  v61av, records Linux UAPI header ready 1, liburing header ready 0,
+  setup/enter/register syscall numbers 425/426/427, `EPERM` on raw
+  `io_uring_setup`, registered-buffer prefetch ready 0, and threaded O_DIRECT
+  fallback ready 1, while keeping actual io_uring execution, registered
+  buffers, full runtime admission, actual model generation, production latency,
+  near-frontier, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

@@ -1414,6 +1414,39 @@ Pass condition:
   full runtime admission, actual generation, production-latency, near-frontier,
   and release claims remain blocked
 
+### v61aw io_uring Registered-Buffer Preflight
+
+Probe the current host for an io_uring prefetch backend and bind the v61av
+threaded O_DIRECT worker pool as the explicit fallback. This moves the runtime
+from "not tested" to a current-host io_uring/registered-buffer preflight while
+keeping actual SQ/CQ submission and buffer registration blocked.
+
+Outputs:
+
+- `io_uring_capability_rows.csv`
+- `io_uring_setup_probe_rows.csv`
+- `registered_buffer_preflight_rows.csv`
+- `io_uring_requirement_rows.csv`
+- `io_uring_fallback_binding_rows.csv`
+- `io_uring_preflight_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61AW_IO_URING_REGISTERED_BUFFER_PREFLIGHT_BOUNDARY.md`
+
+Pass condition:
+
+- v61av threaded O_DIRECT async prefetch evidence is bound
+- Linux io_uring UAPI header availability is recorded
+- liburing development-header absence is recorded without treating it as raw
+  syscall failure
+- raw `io_uring_setup` is attempted with a valid params structure
+- the current-host `EPERM` setup blocker is recorded
+- setup/enter/register and registered-buffer prefetch readiness remain `0`
+- threaded O_DIRECT fallback readiness remains `1`
+- checkpoint payload bytes downloaded or committed by v61aw remain zero
+- actual io_uring execution, registered-buffer prefetch, full runtime
+  admission, actual generation, production-latency, near-frontier, and release
+  claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1461,9 +1494,10 @@ The benchmark ladder should be ordered by runtime risk:
 41. Sampled prefetch-overlap admission gate.
 42. Sampled prefetch queue-depth/deadline scheduler gate.
 43. Sampled async prefetch execution probe.
-44. Complete-source 1000+ QA workload with real model generation.
-45. Same runtime under long-context workloads with source-bound quality checks.
-46. One-command local assistant demo.
+44. Current-host io_uring/registered-buffer preflight.
+45. Complete-source 1000+ QA workload with real model generation.
+46. Same runtime under long-context workloads with source-bound quality checks.
+47. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1548,6 +1582,7 @@ covered by:
 ./experiments/test_v61at_prefetch_overlap_admission_gate.sh
 ./experiments/test_v61au_prefetch_queue_depth_scheduler_gate.sh
 ./experiments/test_v61av_async_prefetch_execution_probe.sh
+./experiments/test_v61aw_io_uring_registered_buffer_preflight.sh
 ```
 
 They emit:
@@ -1557,6 +1592,7 @@ They emit:
 - `results/v61at_prefetch_overlap_admission_gate/gate_001/`
 - `results/v61au_prefetch_queue_depth_scheduler_gate/gate_001/`
 - `results/v61av_async_prefetch_execution_probe/probe_001/`
+- `results/v61aw_io_uring_registered_buffer_preflight/preflight_001/`
 
 Verified current summary:
 
@@ -1715,11 +1751,35 @@ The current v61av async prefetch execution probe records:
 - `checkpoint_payload_bytes_downloaded_by_v61av=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
+The current v61aw io_uring registered-buffer preflight records:
+
+- `v61aw_io_uring_registered_buffer_preflight_ready=1`
+- `v61av_async_prefetch_execution_probe_ready=1`
+- `v61av_actual_async_prefetch_execution_ready=1`
+- `kernel_release=6.5.0-26-generic`
+- `linux_io_uring_header_ready=1`
+- `liburing_header_ready=0`
+- `io_uring_setup_syscall_number=425`
+- `io_uring_enter_syscall_number=426`
+- `io_uring_register_syscall_number=427`
+- `io_uring_setup_errno=1`
+- `io_uring_setup_errno_name=EPERM`
+- `io_uring_setup_ready=0`
+- `io_uring_enter_ready=0`
+- `io_uring_register_ready=0`
+- `actual_io_uring_execution_ready=0`
+- `registered_buffers_ready=0`
+- `registered_buffer_prefetch_ready=0`
+- `threaded_odirect_fallback_ready=1`
+- `checkpoint_payload_bytes_downloaded_by_v61aw=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
-queue-depth admission plus threaded O_DIRECT execution is not bootstrap
-cold-start admission, io_uring execution, registered-buffer prefetch, or
-full-runtime admission. The next runtime work must continue toward full
+queue-depth admission plus threaded O_DIRECT execution plus current-host
+io_uring preflight is not bootstrap cold-start admission, io_uring SQ/CQ
+execution, registered-buffer prefetch, or full-runtime admission. The next
+runtime work must continue toward full
 coverage, local checkpoint materialization, io_uring/registered-buffer
 execution, and actual generation evidence rather than claiming practical
 near-frontier inference.
@@ -1968,9 +2028,10 @@ without weakening the boundary:
 33. Closed as v61at prefetch overlap admission gate: bind GPU page-kernel timing/direct-I/O p95/hotset reuse rows and show 36/36 non-bootstrap sampled rows pass steady-state overlap while keeping bootstrap/full runtime admission blocked.
 34. Closed as v61au prefetch queue-depth scheduler gate: turn v61at overlap rows into 11/11 steady-state deadline-met scheduler issue rows at queue depth 4 while keeping bootstrap, actual async I/O, and full runtime admission blocked.
 35. Closed as v61av async prefetch execution probe: execute 15/15 sampled prefetch issue reads through a queue-depth 4 threaded O_DIRECT worker pool while keeping io_uring, registered buffers, bootstrap admission, and full runtime admission blocked.
-36. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-37. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-38. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+36. Closed as v61aw io_uring registered-buffer preflight: attempt raw `io_uring_setup`, record the current-host `EPERM` blocker, keep setup/enter/register and registered-buffer prefetch readiness at 0, and bind the v61av threaded O_DIRECT fallback as ready.
+37. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+38. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+39. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -2093,9 +2154,14 @@ The current v61 runtime prototype can say:
   through a queue-depth 4 threaded O_DIRECT worker pool with 15 hash matches,
   but io_uring, registered buffers, bootstrap admission, and full runtime
   admission remain blocked
+- the current-host io_uring registered-buffer preflight records Linux UAPI
+  header ready 1, liburing header ready 0, setup/enter/register syscall numbers
+  425/426/427, raw setup blocked by `EPERM`, setup/enter/register readiness 0,
+  registered-buffer prefetch readiness 0, and threaded O_DIRECT fallback
+  readiness 1
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, and sampled threaded O_DIRECT async prefetch execution, not completed real-checkpoint residency, full safetensors page-hash coverage, io_uring/registered-buffer prefetch, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, and current-host io_uring/registered-buffer preflight, not completed real-checkpoint residency, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, or real near-frontier open-weight inference.
