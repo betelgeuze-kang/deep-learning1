@@ -2626,14 +2626,53 @@ Current next boundary:
   near-frontier, and release claims blocked.
 - `v61ck` adds a real generation unblocker operator matrix.
   `experiments/test_v61ck_real_generation_unblocker_operator_matrix.sh`
-  consumes v61cj/v61bv/v61bz/v61ca/v61cb/v53u/v61bt/v61cg and records
-  a five-row unblocker matrix plus seven execution-order rows. It pins 5/5
-  ready operator surfaces, 58 remaining materialization rows,
-  276308963480 remaining unverified bytes, 131808 remaining page-hash rows,
-  7000 human review rows, 1000 adjudication rows, 5 generation result
-  artifacts, and `generation_unblocker_operator_matrix_ready=1`, while keeping
-  accepted returns at 0 and actual generation, production latency,
+  consumes v61cj/v61bv/v61bz/v61ca/v61cb/v61cm/v61cn/v53u/v61bt/v61cg and records
+  a five-row unblocker matrix plus eight execution-order rows. It pins 5/5
+  ready operator surfaces, 58 remaining materialization queue rows,
+  59 materialization promotion rows with one ready shard and 58 blocked shards,
+  286 page-hash execution admission rows with 0 admitted and 286
+  materialization-blocked chunks, 276308963480 missing materialization/page-hash
+  bytes, 131808 remaining page-hash rows, 7000 human review rows,
+  1000 adjudication rows, 5 generation result artifacts, and
+  `generation_unblocker_operator_matrix_ready=1`, while keeping accepted
+  external returns at 0 and actual generation, production latency,
   near-frontier, and release claims blocked.
+- `v61cl` adds ubuntu-1 remaining checkpoint materialization return intake.
+  `experiments/test_v61cl_ubuntu1_remaining_checkpoint_materialization_return_intake.sh`
+  consumes v61bv, defines the metadata-only return schema for 58 remaining
+  shard materialization receipts, preserves the one existing identity-verified
+  shard, and records 58 expected/missing return rows,
+  276308963480 expected/missing materialization bytes,
+  `remaining_materialization_return_intake_ready=0`,
+  `full_checkpoint_materialization_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cl=0`, and zero checkpoint
+  payload bytes committed to the repo. Completed full materialization, full
+  page-hash coverage, actual generation, production latency, near-frontier,
+  and release claims remain blocked until accepted return rows cover every
+  remaining shard.
+- `v61cm` adds ubuntu-1 full checkpoint materialization promotion gating.
+  `experiments/test_v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate.sh`
+  consumes v61cl, aggregates the return-intake state into 59 shard-level
+  promotion rows, and records one ready identity-verified shard, 58 blocked
+  shards, 58 expected/missing return rows, 276308963480 expected/missing
+  materialization bytes, `total_identity_verified_checkpoint_shard_rows=1`,
+  `full_checkpoint_materialization_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cm=0`, and zero checkpoint
+  payload bytes committed to the repo. Full page-hash coverage, actual
+  generation, production latency, near-frontier, and release claims remain
+  blocked.
+- `v61cn` adds ubuntu-1 page-hash execution materialization admission gating.
+  `experiments/test_v61cn_ubuntu1_page_hash_execution_materialization_admission_gate.sh`
+  consumes v61bz and v61cm, binds 286 remaining page-hash execution chunks to
+  full-checkpoint materialization promotion rows, and records
+  `admitted_page_hash_execution_chunk_rows=0`,
+  `materialization_blocked_page_hash_execution_chunk_rows=286`,
+  `blocked_page_hash_rows=131808`, `blocked_page_hash_bytes=276308963480`,
+  `page_hash_execution_admission_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cn=0`, and zero checkpoint
+  payload bytes committed to the repo. Page-hash execution, completed full
+  page-hash coverage, actual generation, production latency, near-frontier,
+  and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

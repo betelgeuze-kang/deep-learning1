@@ -24,6 +24,8 @@ V61BV_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61bv_ubuntu1_remaining_checkp
 V61BZ_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61bz_ubuntu1_remaining_page_hash_operator_bundle.sh" >/dev/null
 V61CA_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ca_ubuntu1_remaining_page_hash_result_intake.sh" >/dev/null
 V61CB_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cb_ubuntu1_full_page_hash_coverage_promotion_gate.sh" >/dev/null
+V61CM_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate.sh" >/dev/null
+V61CN_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cn_ubuntu1_page_hash_execution_materialization_admission_gate.sh" >/dev/null
 V53U_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53u_complete_source_review_return_operator_bundle.sh" >/dev/null
 V61BT_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh" >/dev/null
 V61CG_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cg_ubuntu1_source_bound_generation_operator_bundle.sh" >/dev/null
@@ -109,6 +111,18 @@ sources = {
         results / "v61cb_ubuntu1_full_page_hash_coverage_promotion_gate" / "gate_001",
         "v61cb_ubuntu1_full_page_hash_coverage_promotion_gate_ready",
     ),
+    "v61cm": (
+        results / "v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_summary.csv",
+        results / "v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_decision.csv",
+        results / "v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate" / "gate_001",
+        "v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_ready",
+    ),
+    "v61cn": (
+        results / "v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_summary.csv",
+        results / "v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_decision.csv",
+        results / "v61cn_ubuntu1_page_hash_execution_materialization_admission_gate" / "gate_001",
+        "v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_ready",
+    ),
     "v53u": (
         results / "v53u_complete_source_review_return_operator_bundle_summary.csv",
         results / "v53u_complete_source_review_return_operator_bundle_decision.csv",
@@ -144,6 +158,8 @@ copy(sources["v61bv"][2] / "remaining_checkpoint_materialization_chunk_rows.csv"
 copy(sources["v61bz"][2] / "remaining_page_hash_operator_file_rows.csv", "source_v61bz/remaining_page_hash_operator_file_rows.csv")
 copy(sources["v61ca"][2] / "remaining_page_hash_result_requirement_rows.csv", "source_v61ca/remaining_page_hash_result_requirement_rows.csv")
 copy(sources["v61cb"][2] / "full_page_hash_coverage_promotion_rows.csv", "source_v61cb/full_page_hash_coverage_promotion_rows.csv")
+copy(sources["v61cm"][2] / "full_checkpoint_materialization_promotion_rows.csv", "source_v61cm/full_checkpoint_materialization_promotion_rows.csv")
+copy(sources["v61cn"][2] / "page_hash_execution_materialization_admission_rows.csv", "source_v61cn/page_hash_execution_materialization_admission_rows.csv")
 copy(sources["v53u"][2] / "reviewer_workload_chunk_rows.csv", "source_v53u/reviewer_workload_chunk_rows.csv")
 copy(sources["v53u"][2] / "review_return_expected_artifact_rows.csv", "source_v53u/review_return_expected_artifact_rows.csv")
 copy(sources["v61bt"][2] / "actual_generation_result_requirement_rows.csv", "source_v61bt/actual_generation_result_requirement_rows.csv")
@@ -154,6 +170,8 @@ v61bv = summaries["v61bv"]
 v61bz = summaries["v61bz"]
 v61ca = summaries["v61ca"]
 v61cb = summaries["v61cb"]
+v61cm = summaries["v61cm"]
+v61cn = summaries["v61cn"]
 v53u = summaries["v53u"]
 v61bt = summaries["v61bt"]
 v61cg = summaries["v61cg"]
@@ -162,25 +180,25 @@ target_root = v61bv["target_root_path"]
 matrix_rows = [
     {
         "unblocker_id": "01-full-checkpoint-materialization",
-        "source_gate": "v61bv",
-        "operator_surface_ready": v61bv["remaining_queue_ready"],
-        "required_rows": v61bv["remaining_queue_rows"],
-        "accepted_rows": "0",
-        "missing_rows": v61bv["remaining_queue_rows"],
-        "required_bytes": v61bv["remaining_unverified_bytes"],
-        "current_ready": v61bv["full_checkpoint_materialization_ready"],
-        "blocking_reason": "remaining checkpoint shards have not been payload-executed/materialized",
+        "source_gate": "v61cm",
+        "operator_surface_ready": v61cm["v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_ready"],
+        "required_rows": v61cm["total_required_checkpoint_shard_rows"],
+        "accepted_rows": v61cm["total_identity_verified_checkpoint_shard_rows"],
+        "missing_rows": v61cm["blocked_checkpoint_materialization_shard_rows"],
+        "required_bytes": v61cm["promotion_missing_materialization_bytes"],
+        "current_ready": v61cm["full_checkpoint_materialization_ready"],
+        "blocking_reason": "remaining checkpoint shards lack accepted materialization return rows",
     },
     {
         "unblocker_id": "02-full-safetensors-page-hash-coverage",
-        "source_gate": "v61bz/v61ca/v61cb",
-        "operator_surface_ready": v61bz["remaining_page_hash_operator_bundle_ready"],
+        "source_gate": "v61cn/v61ca/v61cb",
+        "operator_surface_ready": v61cn["v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_ready"],
         "required_rows": v61ca["expected_remaining_page_hash_result_rows"],
         "accepted_rows": v61ca["accepted_remaining_page_hash_result_rows"],
         "missing_rows": v61ca["missing_remaining_page_hash_result_rows"],
         "required_bytes": v61bz["remaining_page_hash_bytes"],
         "current_ready": v61cb["completed_full_safetensors_page_hash_coverage_ready"],
-        "blocking_reason": "remaining page-hash result rows are absent",
+        "blocking_reason": "page-hash execution is not admitted until full materialization and returned page hashes are absent",
     },
     {
         "unblocker_id": "03-complete-source-human-review-return",
@@ -234,35 +252,42 @@ execution_rows = [
         "expected_return": "58 remaining shards materialized and identity-verifiable",
     },
     {
-        "execution_step": "03-execute-remaining-page-hash",
+        "execution_step": "03-intake-materialization-returns",
+        "depends_on": "v61cl/v61cm",
+        "command": "V61CL_REUSE_EXISTING=0 V61CL_MATERIALIZATION_RETURN_DIR=/path/to/materialization_return ./experiments/run_v61cl_ubuntu1_remaining_checkpoint_materialization_return_intake.sh && V61CM_REUSE_EXISTING=0 ./experiments/run_v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate.sh",
+        "ready_to_run_now": "0",
+        "expected_return": "full_checkpoint_materialization_ready=1 after all 58 remaining returns validate",
+    },
+    {
+        "execution_step": "04-execute-remaining-page-hash",
         "depends_on": "v61bz",
         "command": "run v61bz remaining page-hash operator chunks after materialization",
         "ready_to_run_now": v61bz["remaining_page_hash_operator_bundle_ready"],
         "expected_return": "131808 remaining page-hash result rows",
     },
     {
-        "execution_step": "04-intake-page-hash-results",
+        "execution_step": "05-intake-page-hash-results",
         "depends_on": "v61ca/v61cb",
         "command": "V61CA_REUSE_EXISTING=0 V61CA_PAGE_HASH_RESULT_DIR=/path/to/page_hash_return ./experiments/run_v61ca_ubuntu1_remaining_page_hash_result_intake.sh && V61CB_REUSE_EXISTING=0 ./experiments/run_v61cb_ubuntu1_full_page_hash_coverage_promotion_gate.sh",
         "ready_to_run_now": "0",
         "expected_return": "completed_full_safetensors_page_hash_coverage_ready=1",
     },
     {
-        "execution_step": "05-intake-human-review-return",
+        "execution_step": "06-intake-human-review-return",
         "depends_on": "v53u/v53s/v53t",
         "command": "V53S_REUSE_EXISTING=0 V53S_REVIEW_RETURN_DIR=/path/to/v53_review_return ./experiments/run_v53s_complete_source_review_return_intake.sh && V53T_REUSE_EXISTING=0 ./experiments/run_v53t_complete_source_audit_readiness_gate.sh",
         "ready_to_run_now": "0",
         "expected_return": "review_return_ready=1",
     },
     {
-        "execution_step": "06-run-source-bound-generation",
+        "execution_step": "07-run-source-bound-generation",
         "depends_on": "v61cg",
         "command": "run v61cg operator bundle only after full page-hash and review return pass",
         "ready_to_run_now": "0",
         "expected_return": "five v61bt generation result artifacts",
     },
     {
-        "execution_step": "07-intake-generation-results",
+        "execution_step": "08-intake-generation-results",
         "depends_on": "v61bt/v61ce",
         "command": "V61BT_REUSE_EXISTING=0 V61BT_GENERATION_RESULT_DIR=/path/to/generation_return ./experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh && V61CE_REUSE_EXISTING=0 ./experiments/run_v61ce_ubuntu1_generation_closure_return_intake.sh",
         "ready_to_run_now": "0",
@@ -311,6 +336,7 @@ write_csv(run_dir / "real_generation_claim_boundary_rows.csv", list(claim_rows[0
 )
 (operator_dir / "RETURN_DIRECTORY_LAYOUT.md").write_text(
     "# Return Directory Layout\n\n"
+    "- Materialization return: 58 remaining checkpoint shard receipt rows for v61cl/v61cm.\n"
     "- Page hash return: 131808 remaining hash rows for v61ca.\n"
     "- Review return: v53s human review/adjudication/identity/conflict artifacts.\n"
     "- Generation return: five v61bt artifacts after page-hash and review gates pass.\n",
@@ -327,6 +353,8 @@ required_files=(
   "$MATRIX_DIR/real_generation_operator_execution_order_rows.csv"
   "$MATRIX_DIR/real_generation_claim_boundary_rows.csv"
   "$MATRIX_DIR/source_v61bv/remaining_checkpoint_materialization_queue_rows.csv"
+  "$MATRIX_DIR/source_v61cm/full_checkpoint_materialization_promotion_rows.csv"
+  "$MATRIX_DIR/source_v61cn/page_hash_execution_materialization_admission_rows.csv"
   "$MATRIX_DIR/source_v61ca/remaining_page_hash_result_requirement_rows.csv"
   "$MATRIX_DIR/source_v53u/reviewer_workload_chunk_rows.csv"
   "$MATRIX_DIR/source_v61bt/actual_generation_result_requirement_rows.csv"
@@ -340,7 +368,7 @@ for path in "${required_files[@]}"; do
 done
 
 [[ "$(wc -l < "$MATRIX_DIR/real_generation_unblocker_matrix_rows.csv" | tr -d ' ')" == "6" ]] || { echo "expected five unblocker rows" >&2; exit 1; }
-[[ "$(wc -l < "$MATRIX_DIR/real_generation_operator_execution_order_rows.csv" | tr -d ' ')" == "8" ]] || { echo "expected seven execution order rows" >&2; exit 1; }
+[[ "$(wc -l < "$MATRIX_DIR/real_generation_operator_execution_order_rows.csv" | tr -d ' ')" == "9" ]] || { echo "expected eight execution order rows" >&2; exit 1; }
 [[ "$(wc -l < "$MATRIX_DIR/source_v53u/reviewer_workload_chunk_rows.csv" | tr -d ' ')" == "22" ]] || { echo "expected 21 v53u reviewer chunks" >&2; exit 1; }
 
 if find "$MATRIX_DIR" -type f \( -name '*.safetensors' -o -name '*.bin' -o -name '*.pt' \) | grep -q .; then
@@ -365,7 +393,7 @@ ready_unblocker_surfaces = sum(1 for row in matrix_rows if row["operator_surface
 blocked_unblocker_rows = sum(1 for row in matrix_rows if row["current_ready"] != "1")
 matrix_ready = int(
     ready_unblocker_surfaces == 5
-    and len(execution_rows) == 7
+    and len(execution_rows) == 8
     and int(v61cg["operator_bundle_handoff_ready"]) == 1
     and int(v53u["review_return_operator_bundle_handoff_ready"]) == 1
 )
@@ -378,6 +406,8 @@ metric = {
     "v61bz_ubuntu1_remaining_page_hash_operator_bundle_ready": v61bz["v61bz_ubuntu1_remaining_page_hash_operator_bundle_ready"],
     "v61ca_ubuntu1_remaining_page_hash_result_intake_ready": v61ca["v61ca_ubuntu1_remaining_page_hash_result_intake_ready"],
     "v61cb_ubuntu1_full_page_hash_coverage_promotion_gate_ready": v61cb["v61cb_ubuntu1_full_page_hash_coverage_promotion_gate_ready"],
+    "v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_ready": v61cm["v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_ready"],
+    "v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_ready": v61cn["v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_ready"],
     "v53u_complete_source_review_return_operator_bundle_ready": v53u["v53u_complete_source_review_return_operator_bundle_ready"],
     "v61bt_ubuntu1_actual_generation_result_intake_ready": v61bt["v61bt_ubuntu1_actual_generation_result_intake_ready"],
     "v61cg_ubuntu1_source_bound_generation_operator_bundle_ready": v61cg["v61cg_ubuntu1_source_bound_generation_operator_bundle_ready"],
@@ -389,7 +419,18 @@ metric = {
     "operator_matrix_file_rows": str(len(file_rows)),
     "remaining_materialization_queue_rows": v61bv["remaining_queue_rows"],
     "remaining_unverified_bytes": v61bv["remaining_unverified_bytes"],
+    "checkpoint_materialization_promotion_rows": v61cm["checkpoint_shard_rows"],
+    "ready_checkpoint_materialization_shard_rows": v61cm["ready_checkpoint_materialization_shard_rows"],
+    "blocked_checkpoint_materialization_shard_rows": v61cm["blocked_checkpoint_materialization_shard_rows"],
+    "accepted_remaining_materialization_return_rows": v61cm["accepted_remaining_materialization_return_rows"],
+    "missing_remaining_materialization_return_rows": v61cm["missing_remaining_materialization_return_rows"],
+    "promotion_missing_materialization_bytes": v61cm["promotion_missing_materialization_bytes"],
     "remaining_page_hash_rows": v61ca["expected_remaining_page_hash_result_rows"],
+    "page_hash_execution_admission_ready": v61cn["page_hash_execution_admission_ready"],
+    "admitted_page_hash_execution_chunk_rows": v61cn["admitted_page_hash_execution_chunk_rows"],
+    "materialization_blocked_page_hash_execution_chunk_rows": v61cn["materialization_blocked_page_hash_execution_chunk_rows"],
+    "blocked_page_hash_rows": v61cn["blocked_page_hash_rows"],
+    "blocked_page_hash_bytes": v61cn["blocked_page_hash_bytes"],
     "accepted_remaining_page_hash_result_rows": v61ca["accepted_remaining_page_hash_result_rows"],
     "missing_remaining_page_hash_result_rows": v61ca["missing_remaining_page_hash_result_rows"],
     "expected_human_review_rows": v53u["expected_human_review_rows"],
@@ -402,7 +443,7 @@ metric = {
     "review_return_operator_bundle_handoff_ready": v53u["review_return_operator_bundle_handoff_ready"],
     "generation_operator_bundle_handoff_ready": v61cg["operator_bundle_handoff_ready"],
     "generation_unblocker_operator_matrix_ready": str(matrix_ready),
-    "full_checkpoint_materialization_ready": v61bv["full_checkpoint_materialization_ready"],
+    "full_checkpoint_materialization_ready": v61cm["full_checkpoint_materialization_ready"],
     "completed_full_safetensors_page_hash_coverage_ready": v61cb["completed_full_safetensors_page_hash_coverage_ready"],
     "full_safetensors_page_hash_binding_ready": v61cb["full_safetensors_page_hash_binding_ready"],
     "review_return_ready": v53u["review_return_ready"],
@@ -428,7 +469,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decision_rows = [
     {"gate": "real-manifest-immediate-target-bridge", "status": "pass", "reason": "v61cj immediate target bridge is ready"},
     {"gate": "operator-unblocker-matrix", "status": "pass" if matrix_ready else "blocked", "reason": f"ready_surfaces={ready_unblocker_surfaces}/5"},
-    {"gate": "full-checkpoint-materialization", "status": "blocked", "reason": f"remaining_queue_rows={v61bv['remaining_queue_rows']}"},
+    {"gate": "full-checkpoint-materialization", "status": "blocked", "reason": f"blocked_checkpoint_materialization_shard_rows={v61cm['blocked_checkpoint_materialization_shard_rows']}"},
     {"gate": "completed-full-safetensors-page-hash-coverage", "status": "blocked", "reason": f"accepted_remaining_page_hash_result_rows={v61ca['accepted_remaining_page_hash_result_rows']}/{v61ca['expected_remaining_page_hash_result_rows']}"},
     {"gate": "complete-source-review-return", "status": "blocked", "reason": f"accepted_human_review_rows={v53u['accepted_human_review_rows']}/{v53u['expected_human_review_rows']}"},
     {"gate": "actual-generation-result-return", "status": "blocked", "reason": f"accepted_generation_result_artifacts={v61bt['accepted_generation_result_artifacts']}/{v61bt['expected_generation_result_artifacts']}"},
@@ -451,7 +492,17 @@ Evidence emitted:
 - ready_unblocker_operator_surfaces={ready_unblocker_surfaces}/5
 - remaining_materialization_queue_rows={v61bv['remaining_queue_rows']}
 - remaining_unverified_bytes={v61bv['remaining_unverified_bytes']}
+- checkpoint_materialization_promotion_rows={v61cm['checkpoint_shard_rows']}
+- ready_checkpoint_materialization_shard_rows={v61cm['ready_checkpoint_materialization_shard_rows']}
+- blocked_checkpoint_materialization_shard_rows={v61cm['blocked_checkpoint_materialization_shard_rows']}
+- missing_remaining_materialization_return_rows={v61cm['missing_remaining_materialization_return_rows']}
+- promotion_missing_materialization_bytes={v61cm['promotion_missing_materialization_bytes']}
 - remaining_page_hash_rows={v61ca['expected_remaining_page_hash_result_rows']}
+- page_hash_execution_admission_ready={v61cn['page_hash_execution_admission_ready']}
+- admitted_page_hash_execution_chunk_rows={v61cn['admitted_page_hash_execution_chunk_rows']}
+- materialization_blocked_page_hash_execution_chunk_rows={v61cn['materialization_blocked_page_hash_execution_chunk_rows']}
+- blocked_page_hash_rows={v61cn['blocked_page_hash_rows']}
+- blocked_page_hash_bytes={v61cn['blocked_page_hash_bytes']}
 - accepted_remaining_page_hash_result_rows={v61ca['accepted_remaining_page_hash_result_rows']}
 - expected_human_review_rows={v53u['expected_human_review_rows']}
 - accepted_human_review_rows={v53u['accepted_human_review_rows']}
@@ -460,7 +511,7 @@ Evidence emitted:
 - expected_generation_result_artifacts={v61bt['expected_generation_result_artifacts']}
 - accepted_generation_result_artifacts={v61bt['accepted_generation_result_artifacts']}
 - generation_unblocker_operator_matrix_ready={matrix_ready}
-- full_checkpoint_materialization_ready={v61bv['full_checkpoint_materialization_ready']}
+- full_checkpoint_materialization_ready={v61cm['full_checkpoint_materialization_ready']}
 - completed_full_safetensors_page_hash_coverage_ready={v61cb['completed_full_safetensors_page_hash_coverage_ready']}
 - review_return_ready={v53u['review_return_ready']}
 - actual_model_generation_ready=0
@@ -483,6 +534,8 @@ manifest = {
     "actual_model_generation_ready": 0,
     "checkpoint_payload_bytes_committed_to_repo": 0,
     "source_v61cj_summary_sha256": sha256(sources["v61cj"][0]),
+    "source_v61cm_summary_sha256": sha256(sources["v61cm"][0]),
+    "source_v61cn_summary_sha256": sha256(sources["v61cn"][0]),
     "source_v61cb_summary_sha256": sha256(sources["v61cb"][0]),
     "source_v53u_summary_sha256": sha256(sources["v53u"][0]),
     "source_v61bt_summary_sha256": sha256(sources["v61bt"][0]),
