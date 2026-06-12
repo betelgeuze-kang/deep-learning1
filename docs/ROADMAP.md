@@ -2273,6 +2273,17 @@ Current next boundary:
   payload bytes committed to the repo. Full runtime admission, full page-hash
   coverage, actual model generation, production latency, near-frontier, and
   release claims remain blocked.
+- `v61bj` adds ubuntu-1 sampled prefetch-overlap admission.
+  `experiments/test_v61bj_ubuntu1_prefetch_overlap_admission_gate.sh`
+  consumes v61l/v61bd/v61bi and binds ubuntu-1 O_DIRECT page latency to the
+  ubuntu-1 persistent-hotset reuse ledger. It records 36/36 non-bootstrap
+  steady-state overlap pass rows, 11 actual prefetch rows plus 25
+  no-prefetch-required rows, page p95 read latency 1.309456 ms inside the
+  prior-token GPU page-kernel window 2.053768 ms, minimum steady-state slack
+  0.744312 ms, `checkpoint_payload_bytes_downloaded_by_v61bj=0`, and zero
+  checkpoint payload bytes committed to the repo. Bootstrap cold-start, full
+  checkpoint materialization, full page-hash coverage, actual model generation,
+  production latency, near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
