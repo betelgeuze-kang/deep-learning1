@@ -2140,6 +2140,13 @@ Current next boundary:
   queue depth 4, while keeping bootstrap scheduling, actual async I/O, full
   runtime admission, actual model generation, production latency, near-frontier,
   and release claims blocked.
+- `v61av` adds a sampled async prefetch execution probe.
+  `experiments/test_v61av_async_prefetch_execution_probe.sh` consumes
+  v61au/v61z and executes 15 sampled prefetch issue reads through a queue-depth
+  4 threaded O_DIRECT worker pool with 15/15 hash matches, while keeping
+  bootstrap admission, io_uring, registered buffers, full runtime admission,
+  actual model generation, production latency, near-frontier, and release claims
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
