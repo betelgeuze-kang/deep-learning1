@@ -2199,6 +2199,15 @@ Current next boundary:
   downloaded or committed by v61bb. Download execution, local materialization,
   full page-hash coverage, actual model generation, production latency,
   near-frontier, and release claims remain blocked.
+- `v61bc` adds ubuntu-1 sampled hotset materialization.
+  `experiments/test_v61bc_ubuntu1_sampled_hotset_materialization.sh` consumes
+  v61bb/v61y, copies only the 16 already verified sampled hotset pages under
+  the ubuntu-1 target, and records 16/16 page presence, 16/16 hash matches,
+  16/16 readback hash matches, 33554432 sampled checkpoint payload bytes
+  persisted on ubuntu-1, `checkpoint_payload_bytes_downloaded_by_v61bc=0`,
+  and zero checkpoint payload bytes committed to the repo. Full checkpoint
+  materialization, full page-hash coverage, actual model generation, production
+  latency, near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
