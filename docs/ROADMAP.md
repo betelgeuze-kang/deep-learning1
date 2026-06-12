@@ -2394,6 +2394,18 @@ Current next boundary:
   bytes committed to the repo. Full materialization, full page-hash coverage,
   actual model generation, production latency, near-frontier, and release
   claims remain blocked.
+- `v61bt` adds ubuntu-1 actual generation result intake.
+  `experiments/test_v61bt_ubuntu1_actual_generation_result_intake.sh` consumes
+  v61bs and v53r, defines the source-bound Mixtral answer/citation/abstain,
+  latency, and acceptance result schemas, and supports
+  `V61BT_GENERATION_RESULT_DIR`. The default path records five expected
+  result artifacts, 0 supplied/accepted artifacts, five missing artifacts,
+  `expected_generation_rows=1000`, `generation_query_result_rows=1000`,
+  `accepted_generation_rows=0`, `post_receipt_verification_result_intake_ready=0`,
+  `actual_model_generation_ready=0`, `source_bound_qa_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61bt=0`, and zero checkpoint payload
+  bytes committed to the repo. Actual model generation, production latency,
+  near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

@@ -2195,6 +2195,49 @@ Pass condition:
 - actual generation, production-latency, near-frontier, and release claims
   remain blocked
 
+### v61bt Ubuntu-1 Actual Generation Result Intake
+
+Consume v61bs plus the v53r complete-source review query packet and define the
+returned actual-generation result surface. The gate validates source-bound
+Mixtral answer, citation, abstain/fallback, latency, and acceptance summary
+artifacts, but it does not execute generation or download checkpoint payloads.
+
+Outputs:
+
+- `actual_generation_result_required_field_rows.csv`
+- `actual_generation_result_template_rows.csv`
+- `actual_generation_result_status_rows.csv`
+- `actual_generation_result_validation_rows.csv`
+- `actual_generation_query_result_rows.csv`
+- `actual_generation_result_requirement_rows.csv`
+- `actual_generation_result_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61BT_UBUNTU1_ACTUAL_GENERATION_RESULT_INTAKE_BOUNDARY.md`
+
+Pass condition:
+
+- v61bs post-receipt verification result intake evidence is bound
+- v53r complete-source query packet evidence is bound
+- required result-field rows and templates are emitted
+- `expected_generation_result_artifacts=5`
+- `supplied_generation_result_artifacts=0`
+- `accepted_generation_result_artifacts=0`
+- `missing_generation_result_artifacts=5`
+- `expected_generation_rows=1000`
+- `generation_query_result_rows=1000`
+- `accepted_generation_rows=0`
+- `post_receipt_verification_result_intake_ready=0`
+- `local_checkpoint_materialization_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `complete_source_review_return_ready=0`
+- `generation_admission_result_ready=0`
+- `actual_model_generation_ready=0`
+- `source_bound_qa_generation_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61bt=0`
+- checkpoint payload bytes committed to the repository remain zero
+- actual generation, production-latency, near-frontier, and release claims
+  remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -2265,9 +2308,10 @@ The benchmark ladder should be ordered by runtime risk:
 64. Ubuntu-1 payload execution receipt intake.
 65. Ubuntu-1 post-receipt materialization promotion gate.
 66. Ubuntu-1 post-receipt verification result intake.
-67. Complete-source 1000+ QA workload with real model generation.
-68. Same runtime under long-context workloads with source-bound quality checks.
-69. One-command local assistant demo.
+67. Ubuntu-1 actual generation result intake.
+68. Complete-source 1000+ QA workload with real model generation.
+69. Same runtime under long-context workloads with source-bound quality checks.
+70. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -2375,6 +2419,7 @@ covered by:
 ./experiments/test_v61bq_ubuntu1_payload_execution_receipt_intake.sh
 ./experiments/test_v61br_ubuntu1_post_receipt_materialization_promotion_gate.sh
 ./experiments/test_v61bs_ubuntu1_post_receipt_verification_result_intake.sh
+./experiments/test_v61bt_ubuntu1_actual_generation_result_intake.sh
 ```
 
 They emit:
@@ -2407,6 +2452,7 @@ They emit:
 - `results/v61bq_ubuntu1_payload_execution_receipt_intake/intake_001/`
 - `results/v61br_ubuntu1_post_receipt_materialization_promotion_gate/gate_001/`
 - `results/v61bs_ubuntu1_post_receipt_verification_result_intake/intake_001/`
+- `results/v61bt_ubuntu1_actual_generation_result_intake/intake_001/`
 
 Verified current summary:
 
@@ -3241,6 +3287,30 @@ The current v61bs ubuntu-1 post-receipt verification result intake records:
 - `checkpoint_payload_bytes_downloaded_by_v61bs=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
+The current v61bt ubuntu-1 actual generation result intake records:
+
+- `v61bt_ubuntu1_actual_generation_result_intake_ready=1`
+- `expected_generation_result_artifacts=5`
+- `supplied_generation_result_artifacts=0`
+- `accepted_generation_result_artifacts=0`
+- `missing_generation_result_artifacts=5`
+- `target_root_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
+- `expected_generation_rows=1000`
+- `generation_query_result_rows=1000`
+- `accepted_generation_rows=0`
+- `accepted_answer_rows=0`
+- `accepted_citation_rows=0`
+- `accepted_latency_rows=0`
+- `post_receipt_verification_result_intake_ready=0`
+- `local_checkpoint_materialization_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `complete_source_review_return_ready=0`
+- `generation_admission_result_ready=0`
+- `actual_model_generation_ready=0`
+- `source_bound_qa_generation_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61bt=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
@@ -3259,6 +3329,7 @@ plus ubuntu-1 payload execution launch bundling
 plus ubuntu-1 payload execution receipt intake
 plus ubuntu-1 post-receipt materialization promotion gating
 plus ubuntu-1 post-receipt verification result intake
+plus ubuntu-1 actual generation result intake
 is
 not full payload
 download execution, checkpoint materialization, bootstrap prefetch overlap,
@@ -3535,9 +3606,10 @@ without weakening the boundary:
 56. Closed as v61bq ubuntu-1 payload execution receipt intake: define receipt rows and live target-file presence rows for 59 launch commands while keeping actual payload execution, full checkpoint materialization, full page-hash, and generation blocked.
 57. Closed as v61br ubuntu-1 post-receipt materialization promotion gate: bind the ubuntu-1 target root and emit targeted v61t/v61an/v61ae post-receipt command rows while keeping receipt-backed materialization, full page-hash, and generation blocked.
 58. Closed as v61bs ubuntu-1 post-receipt verification result intake: define result-artifact intake for v61t/v61an/v61ae post-receipt summaries while keeping materialization, full page-hash, generation admission, and actual generation blocked.
-59. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-60. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-61. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+59. Closed as v61bt ubuntu-1 actual generation result intake: define source-bound answer/citation/abstain/latency/acceptance result intake over v61bs and v53r while keeping actual generation, production latency, near-frontier quality, and release claims blocked.
+60. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+61. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+62. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
