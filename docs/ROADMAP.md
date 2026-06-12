@@ -2169,6 +2169,16 @@ Current next boundary:
   registered buffers, full checkpoint materialization, full page-hash coverage,
   full runtime admission, actual model generation, production latency,
   near-frontier, and release claims blocked.
+- `v61az` adds ubuntu-1 warehouse target admission.
+  `experiments/test_v61az_ubuntu1_warehouse_target_admission.sh` consumes
+  v61aj/v61ak/v61ay and records `/dev/nvme0n1p8` label `ubuntu-1` as an
+  outside-repository full-reserve capacity target for the Mixtral checkpoint,
+  with 410615001088 live free bytes, `required_with_reserve_bytes=315601231712`,
+  full-reserve capacity pass 1, operator-margin pass 0, target write/activation
+  readiness 0 in the current managed session, and zero checkpoint payload bytes
+  downloaded or committed by v61az. Download execution, local materialization,
+  full page-hash coverage, actual model generation, production latency,
+  near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

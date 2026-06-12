@@ -1508,6 +1508,39 @@ Pass condition:
   materialization, full page-hash coverage, actual generation,
   production-latency, near-frontier, and release claims remain blocked
 
+### v61az Ubuntu-1 Warehouse Target Admission
+
+Bind the user-approved ubuntu-1 NVMe partition as a live outside-repository
+checkpoint warehouse capacity target without creating the target directory or
+downloading checkpoint payload bytes.
+
+Outputs:
+
+- `ubuntu1_warehouse_capacity_rows.csv`
+- `ubuntu1_warehouse_admission_rows.csv`
+- `ubuntu1_warehouse_operator_command_rows.csv`
+- `ubuntu1_warehouse_requirement_rows.csv`
+- `ubuntu1_warehouse_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61AZ_UBUNTU1_WAREHOUSE_TARGET_ADMISSION_BOUNDARY.md`
+
+Pass condition:
+
+- v61aj storage profile evidence, v61ak target preflight evidence, and v61ay
+  selected-backend runtime binding evidence are bound
+- `/dev/nvme0n1p8` label `ubuntu-1` is observed as an ext4 mount at
+  `/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25`
+- the selected target path is outside the repository
+- live free bytes cover `required_with_reserve_bytes=315601231712`
+- the 512 GiB operator-margin recommendation remains explicit and may stay a
+  recommended gap
+- the current managed session records target write/activation readiness as
+  blocked instead of silently creating the warehouse directory
+- checkpoint payload bytes downloaded or committed by v61az remain zero
+- download execution, local checkpoint materialization, full page-hash coverage,
+  actual generation, production-latency, near-frontier, and release claims
+  remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -1558,9 +1591,10 @@ The benchmark ladder should be ordered by runtime risk:
 44. Current-host io_uring/registered-buffer preflight.
 45. Current-host async-I/O backend selection gate.
 46. Selected-backend token runtime binding gate.
-47. Complete-source 1000+ QA workload with real model generation.
-48. Same runtime under long-context workloads with source-bound quality checks.
-49. One-command local assistant demo.
+47. Ubuntu-1 outside-repository warehouse capacity target admission.
+48. Complete-source 1000+ QA workload with real model generation.
+49. Same runtime under long-context workloads with source-bound quality checks.
+50. One-command local assistant demo.
 
 ## Stop Rules
 
@@ -1648,6 +1682,7 @@ covered by:
 ./experiments/test_v61aw_io_uring_registered_buffer_preflight.sh
 ./experiments/test_v61ax_async_io_backend_selection_gate.sh
 ./experiments/test_v61ay_selected_backend_token_runtime_binding.sh
+./experiments/test_v61az_ubuntu1_warehouse_target_admission.sh
 ```
 
 They emit:
@@ -1660,6 +1695,7 @@ They emit:
 - `results/v61aw_io_uring_registered_buffer_preflight/preflight_001/`
 - `results/v61ax_async_io_backend_selection_gate/gate_001/`
 - `results/v61ay_selected_backend_token_runtime_binding/binding_001/`
+- `results/v61az_ubuntu1_warehouse_target_admission/admission_001/`
 
 Verified current summary:
 
@@ -1891,15 +1927,42 @@ The current v61ay selected-backend token runtime binding records:
 - `checkpoint_payload_bytes_downloaded_by_v61ay=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
+The current v61az ubuntu-1 warehouse target admission records:
+
+- `v61az_ubuntu1_warehouse_target_admission_ready=1`
+- `ubuntu1_mount_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25`
+- `ubuntu1_target_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
+- `ubuntu1_filesystem_source=/dev/nvme0n1p8`
+- `ubuntu1_filesystem_fstype=ext4`
+- `ubuntu1_filesystem_label=ubuntu-1`
+- `ubuntu1_available_bytes_live=410615001088`
+- `required_with_reserve_bytes=315601231712`
+- `recommended_operator_free_bytes=549755813888`
+- `ubuntu1_deficit_to_full_reserve_bytes=0`
+- `ubuntu1_deficit_to_operator_margin_bytes=139140812800`
+- `ubuntu1_full_reserve_capacity_pass=1`
+- `ubuntu1_operator_margin_pass=0`
+- `target_outside_repository=1`
+- `target_parent_write_access_ready=0`
+- `target_prepare_command_ready=1`
+- `operator_write_step_required=1`
+- `selected_capacity_target_id=ubuntu-1-full-reserve-capacity`
+- `selected_activation_target_id=none`
+- `activation_target_ready=0`
+- `download_execution_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61az=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
-io_uring preflight plus backend selection plus token/runtime binding is not
-bootstrap cold-start admission, io_uring SQ/CQ execution, registered-buffer
-prefetch, or full-runtime admission. The next runtime work must continue toward full
-coverage, local checkpoint materialization, io_uring/registered-buffer
-execution, and actual generation evidence rather than claiming practical
-near-frontier inference.
+io_uring preflight plus backend selection plus token/runtime binding plus
+ubuntu-1 capacity admission is not target activation, checkpoint
+materialization, bootstrap cold-start admission, io_uring SQ/CQ execution,
+registered-buffer prefetch, or full-runtime admission. The next runtime work
+must continue toward write-ready activation, full coverage, local checkpoint
+materialization, io_uring/registered-buffer execution, and actual generation
+evidence rather than claiming practical near-frontier inference.
 
 ## Current GPU Page-Kernel Measurement
 
@@ -2148,9 +2211,10 @@ without weakening the boundary:
 36. Closed as v61aw io_uring registered-buffer preflight: attempt raw `io_uring_setup`, record the current-host `EPERM` blocker, keep setup/enter/register and registered-buffer prefetch readiness at 0, and bind the v61av threaded O_DIRECT fallback as ready.
 37. Closed as v61ax async-I/O backend selection gate: choose `threaded_odirect` on the current host because io_uring registered-buffer prefetch remains blocked, while keeping bootstrap and full runtime admission blocked.
 38. Closed as v61ay selected-backend token runtime binding: bind 185/185 KV+weight token budget rows and 5/5 context profiles to the selected `threaded_odirect` backend while keeping full runtime admission blocked.
-39. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
-40. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-41. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+39. Closed as v61az ubuntu-1 warehouse target admission: record ubuntu-1 as a full-reserve outside-repository capacity target while keeping write activation and payload execution blocked in the current managed session.
+40. Promote activation-admitted, identity-verified local shards into completed full safetensors page-hash coverage.
+41. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+42. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -2168,8 +2232,9 @@ The current v61 runtime prototype can say:
 - KV cache residency/eviction has a deterministic VRAM hot plus NVMe cold policy
 - source-bound QA has a citation/abstain workload seed over materialized files
 - checkpoint shard identity, safetensors headers, and sampled page hashes are bound
-- checkpoint residency currently requires 315601231712 bytes with reserve and is
-  blocked by the current 21337460736-byte SSD budget
+- checkpoint residency requires 315601231712 bytes with reserve; the default
+  current target remains budget-blocked, while ubuntu-1 now passes the
+  full-reserve capacity target check with 410615001088 live free bytes
 - local checkpoint materialization has an identity verifier, but the current
   host has 0 local existing shards and 0 identity-verified shards
 - bounded remote page-hash sampling has read 16 full 2 MiB checkpoint pages and
@@ -2288,9 +2353,13 @@ The current v61 runtime prototype can say:
   37 source-bound query rows, 74 full-KV-in-VRAM pass rows, 111 NVMe
   eviction-required rows, zero host RAM spill bytes, and blocked full runtime
   async-I/O admission
+- the ubuntu-1 warehouse target admission gate records `/dev/nvme0n1p8`
+  label `ubuntu-1` as an outside-repository full-reserve capacity target, but
+  the current managed session still blocks target write/activation readiness
+  and performs no checkpoint payload download
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, and selected-backend token runtime binding, not completed real-checkpoint residency, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, and ubuntu-1 full-reserve warehouse capacity admission, not completed real-checkpoint residency, write-ready warehouse activation, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, or real near-frontier open-weight inference.
