@@ -2250,6 +2250,17 @@ Current next boundary:
   and zero checkpoint payload bytes committed to the repo. Full checkpoint
   materialization, full page-hash coverage, actual model generation,
   production latency, near-frontier, and release claims remain blocked.
+- `v61bh` adds ubuntu-1 KV+weight token-budget replay.
+  `experiments/test_v61bh_ubuntu1_kv_weight_token_budget_replay.sh` consumes
+  v61bg/v61m and combines 37 ubuntu-1 token-budget rows with five KV context
+  profiles. It records 185 combined KV+weight budget rows, 185/185 ready rows,
+  74/185 full-KV-in-VRAM pass rows, 111 NVMe cold KV eviction-required rows,
+  zero host RAM spill bytes, 8617984 weight+new-KV bytes/token, max
+  8192-context KV cold tier 1639972864 bytes,
+  `checkpoint_payload_bytes_downloaded_by_v61bh=0`, and zero checkpoint
+  payload bytes committed to the repo. Full checkpoint materialization, full
+  page-hash coverage, actual model generation, production latency,
+  near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
