@@ -2506,6 +2506,19 @@ Current next boundary:
   bytes committed to the repo. Completed full page-hash coverage, actual
   generation, production latency, near-frontier, and release claims remain
   blocked.
+- `v61cb` adds ubuntu-1 full page-hash coverage promotion gating.
+  `experiments/test_v61cb_ubuntu1_full_page_hash_coverage_promotion_gate.sh`
+  consumes v61ca, aggregates 59 shard-level promotion rows, records one ready
+  page-hash shard from the existing witness and 58 blocked shards waiting for
+  remaining result rows, and keeps `total_verified_page_hash_rows=2353` of
+  `total_required_page_hash_rows=134161`. It records
+  `full_page_hash_coverage_promotion_ready=0`,
+  `full_safetensors_page_hash_binding_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cb=0`, and zero checkpoint payload
+  bytes committed to the repo. Completed full page-hash coverage, actual
+  generation, production latency, near-frontier, and release claims remain
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

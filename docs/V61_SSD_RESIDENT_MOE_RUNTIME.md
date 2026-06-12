@@ -2528,6 +2528,45 @@ Pass condition:
   coverage, actual generation, production-latency, near-frontier, and release
   claims remain blocked
 
+### v61cb Ubuntu-1 Full Page-Hash Coverage Promotion Gate
+
+Consume the v61ca result intake and decide whether accepted remaining page-hash
+results plus preserved existing page-hash witness rows are sufficient to promote
+the checkpoint to completed full safetensors page-hash coverage. The default
+path has only the existing verified shard, so the promotion gate stays blocked.
+
+Outputs:
+
+- `full_page_hash_coverage_promotion_rows.csv`
+- `full_page_hash_coverage_promotion_requirement_rows.csv`
+- `full_page_hash_coverage_promotion_metric_rows.csv`
+- `runtime_gap_rows.csv`
+- `V61CB_UBUNTU1_FULL_PAGE_HASH_COVERAGE_PROMOTION_GATE_BOUNDARY.md`
+
+Pass condition:
+
+- v61ca remaining page-hash result intake evidence is bound
+- `checkpoint_shard_rows=59`
+- `ready_full_page_hash_shard_rows=1`
+- `blocked_full_page_hash_shard_rows=58`
+- `existing_verified_page_hash_shard_rows=1`
+- `remaining_page_hash_shard_rows=58`
+- `expected_remaining_page_hash_result_rows=131808`
+- `accepted_remaining_page_hash_result_rows=0`
+- `missing_remaining_page_hash_result_rows=131808`
+- `existing_verified_page_hash_rows=2353`
+- `total_required_page_hash_rows=134161`
+- `total_verified_page_hash_rows=2353`
+- `full_page_hash_coverage_promotion_ready=0`
+- `completed_full_safetensors_page_hash_coverage_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `actual_model_generation_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61cb=0`
+- checkpoint payload bytes committed to the repository remain zero
+- accepted all remaining page-hash results, completed full safetensors
+  page-hash coverage, actual generation, production-latency, near-frontier, and
+  release claims remain blocked
+
 ## Evaluation Ladder
 
 The benchmark ladder should be ordered by runtime risk:
@@ -2719,6 +2758,7 @@ covered by:
 ./experiments/test_v61by_ubuntu1_remaining_page_hash_execution_plan.sh
 ./experiments/test_v61bz_ubuntu1_remaining_page_hash_operator_bundle.sh
 ./experiments/test_v61ca_ubuntu1_remaining_page_hash_result_intake.sh
+./experiments/test_v61cb_ubuntu1_full_page_hash_coverage_promotion_gate.sh
 ```
 
 They emit:
@@ -2759,6 +2799,7 @@ They emit:
 - `results/v61by_ubuntu1_remaining_page_hash_execution_plan/plan_001/`
 - `results/v61bz_ubuntu1_remaining_page_hash_operator_bundle/bundle_001/`
 - `results/v61ca_ubuntu1_remaining_page_hash_result_intake/intake_001/`
+- `results/v61cb_ubuntu1_full_page_hash_coverage_promotion_gate/gate_001/`
 
 Verified current summary:
 
@@ -3784,6 +3825,29 @@ The current v61ca ubuntu-1 remaining page-hash result intake records:
 - `checkpoint_payload_bytes_downloaded_by_v61ca=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
+The current v61cb ubuntu-1 full page-hash coverage promotion gate records:
+
+- `v61cb_ubuntu1_full_page_hash_coverage_promotion_gate_ready=1`
+- `v61ca_ubuntu1_remaining_page_hash_result_intake_ready=1`
+- `target_root_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
+- `checkpoint_shard_rows=59`
+- `ready_full_page_hash_shard_rows=1`
+- `blocked_full_page_hash_shard_rows=58`
+- `existing_verified_page_hash_shard_rows=1`
+- `remaining_page_hash_shard_rows=58`
+- `expected_remaining_page_hash_result_rows=131808`
+- `accepted_remaining_page_hash_result_rows=0`
+- `missing_remaining_page_hash_result_rows=131808`
+- `existing_verified_page_hash_rows=2353`
+- `total_required_page_hash_rows=134161`
+- `total_verified_page_hash_rows=2353`
+- `full_page_hash_coverage_promotion_ready=0`
+- `completed_full_safetensors_page_hash_coverage_ready=0`
+- `full_safetensors_page_hash_binding_ready=0`
+- `actual_model_generation_ready=0`
+- `checkpoint_payload_bytes_downloaded_by_v61cb=0`
+- `checkpoint_payload_bytes_committed_to_repo=0`
+
 It also shows that reading uncached active expert weights per token is still
 far over the current SSD budget, and that sampled steady-state overlap plus
 queue-depth admission plus threaded O_DIRECT execution plus current-host
@@ -3810,6 +3874,7 @@ plus ubuntu-1 page-hash coverage ledgering
 plus ubuntu-1 remaining page-hash execution planning
 plus ubuntu-1 remaining page-hash operator bundling
 plus ubuntu-1 remaining page-hash result intake
+plus ubuntu-1 full page-hash coverage promotion gating
 is
 not full payload
 download execution, checkpoint materialization, bootstrap prefetch overlap,
@@ -4094,9 +4159,10 @@ without weakening the boundary:
 64. Closed as v61by ubuntu-1 remaining page-hash execution plan: skip the 2353 verified page hashes and schedule the remaining 131808 page hashes into 286 guarded chunks while keeping completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
 65. Closed as v61bz ubuntu-1 remaining page-hash operator bundle: convert the 286 remaining page-hash chunks into a dry-run-first, approval-gated operator bundle while keeping explicit page-hash execution, completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
 66. Closed as v61ca ubuntu-1 remaining page-hash result intake: define the hash-only result intake for the 131808 remaining page hashes, preserve the existing 2353 verified page hashes, and record all remaining rows as missing/default-deferred while keeping completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-67. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
-68. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
-69. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+67. Closed as v61cb ubuntu-1 full page-hash coverage promotion gate: aggregate v61ca into 59 shard-level promotion rows, mark one existing shard ready and 58 remaining shards blocked, and keep completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
+68. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
+69. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists.
+70. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -4136,6 +4202,9 @@ The current v61 runtime prototype can say:
 - remaining page-hash result intake now defines the hash-only return surface
   for all 131808 remaining page hashes and records the default no-result path
   as final-deferred while preserving the 2353 verified page hashes
+- full page-hash coverage promotion now has a shard-level decision surface:
+  1 shard is ready from the existing page-hash witness, 58 shards remain
+  blocked pending accepted remaining page-hash result rows
 - bounded remote page-hash sampling has read 16 full 2 MiB checkpoint pages and
   stored hashes only, not payload bytes or full coverage
 - those 16 remote-hashed pages are bound to 16 real tensor/runtime-node rows,
@@ -4359,4 +4428,4 @@ The full local assistant claim additionally requires source-bound tasks with cit
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, ubuntu-1 source-bound token-budget replay, ubuntu-1 KV+weight token-budget replay, ubuntu-1 persistent-hotset reuse admission, ubuntu-1 sampled prefetch-overlap admission, ubuntu-1 sampled prefetch queue-depth scheduler admission, ubuntu-1 sampled threaded O_DIRECT async prefetch execution, ubuntu-1 bootstrap cold-start admission, ubuntu-1 activation target admission refresh, ubuntu-1 payload execution readiness gating, ubuntu-1 payload execution launch bundling, ubuntu-1 payload execution receipt intake, ubuntu-1 post-receipt materialization promotion gating, ubuntu-1 post-receipt verification result intake, ubuntu-1 actual generation result intake, ubuntu-1 partial checkpoint materialization witnessing, ubuntu-1 remaining checkpoint materialization queueing, ubuntu-1 partial page-hash witnessing, ubuntu-1 page-hash coverage ledgering, ubuntu-1 remaining page-hash execution planning, ubuntu-1 remaining page-hash operator bundling, and ubuntu-1 remaining page-hash result intake, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, ubuntu-1 source-bound token-budget replay, ubuntu-1 KV+weight token-budget replay, ubuntu-1 persistent-hotset reuse admission, ubuntu-1 sampled prefetch-overlap admission, ubuntu-1 sampled prefetch queue-depth scheduler admission, ubuntu-1 sampled threaded O_DIRECT async prefetch execution, ubuntu-1 bootstrap cold-start admission, ubuntu-1 activation target admission refresh, ubuntu-1 payload execution readiness gating, ubuntu-1 payload execution launch bundling, ubuntu-1 payload execution receipt intake, ubuntu-1 post-receipt materialization promotion gating, ubuntu-1 post-receipt verification result intake, ubuntu-1 actual generation result intake, ubuntu-1 partial checkpoint materialization witnessing, ubuntu-1 remaining checkpoint materialization queueing, ubuntu-1 partial page-hash witnessing, ubuntu-1 page-hash coverage ledgering, ubuntu-1 remaining page-hash execution planning, ubuntu-1 remaining page-hash operator bundling, ubuntu-1 remaining page-hash result intake, and ubuntu-1 full page-hash coverage promotion gating, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, or real near-frontier open-weight inference.
