@@ -2519,6 +2519,30 @@ Current next boundary:
   bytes committed to the repo. Completed full page-hash coverage, actual
   generation, production latency, near-frontier, and release claims remain
   blocked.
+- `v61cc` adds ubuntu-1 page-hash generation admission bridging.
+  `experiments/test_v61cc_ubuntu1_page_hash_generation_admission_bridge.sh`
+  consumes v61cb, v53t, and v61bt, emits 1000 complete-source generation
+  admission bridge rows, records `generation_execution_admitted_rows=0`,
+  `page_hash_blocked_rows=1000`, `review_return_blocked_rows=1000`,
+  `generation_result_artifact_blocked_rows=1000`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cc=0`, and zero checkpoint payload
+  bytes committed to the repo. Completed full page-hash coverage,
+  complete-source review return, actual generation, production latency,
+  near-frontier, and release claims remain blocked.
+- `v61cd` adds ubuntu-1 generation unblocker closure bundling.
+  `experiments/test_v61cd_ubuntu1_generation_unblocker_closure_bundle.sh`
+  consumes v61cc, v61ca, v53s, and v61bt, emits three closure phases, 11
+  required return artifact rows, and seven operator command rows. It records
+  `page_hash_return_required_rows=131808`,
+  `human_review_required_rows=7000`, `adjudication_required_rows=1000`,
+  `generation_result_required_artifacts=5`,
+  `generation_unblocker_closure_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cd=0`, and zero checkpoint payload
+  bytes committed to the repo. Completed full page-hash coverage,
+  complete-source review return, actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
