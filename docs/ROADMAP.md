@@ -2127,6 +2127,13 @@ Current next boundary:
   full MoE coverage, full page-hash coverage, local materialization, actual
   model generation, production latency, near-frontier, and release claims
   blocked.
+- `v61at` adds a sampled prefetch-overlap admission gate.
+  `experiments/test_v61at_prefetch_overlap_admission_gate.sh` consumes
+  v61l/v61z/v61as and records 36/36 non-bootstrap sampled token rows passing
+  steady-state overlap with p95 SSD page reads inside the prior-token GPU
+  page-kernel window, while keeping bootstrap cold-start, full runtime
+  admission, actual model generation, production latency, near-frontier, and
+  release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
