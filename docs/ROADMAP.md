@@ -3173,6 +3173,38 @@ Current next boundary:
   bytes committed to the repo. This is the operator-facing packet for returning
   review evidence first and generation result evidence second, without
   fabricating either.
+- `v61dg` adds the post-full-shard runtime evidence promotion gate.
+  `experiments/test_v61dg_post_full_shard_runtime_evidence_promotion_gate.sh`
+  binds v61cj/v61l/v61m/v61s/v61cm/v61cb/v61cx/v61cw/v61cs into one
+  post-full-shard evidence boundary. It pins `evidence_rows=16`,
+  `ready_evidence_rows=9`, `blocked_evidence_rows=7`,
+  `post_full_shard_runtime_evidence_ready=1`, 59/59 checkpoint shards,
+  134161/134161 page hashes, ROCm page-kernel avg `0.513442` ms, KV policy
+  ready with host RAM spill disabled, source-bound QA pass 37/37, runtime
+  admission 1000/1000, `generation_execution_admitted_rows=0/1000`,
+  `answer_review_accepted_rows=0/7000`,
+  `accepted_generation_result_artifacts=0/5`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61dg=0`, and zero checkpoint payload
+  bytes committed to the repo. This makes the positive runtime-evidence claim
+  explicit while still blocking generation, latency, near-frontier, and release
+  claims.
+- `v61dh` adds the post-full-shard claim audit gate.
+  `experiments/test_v61dh_post_full_shard_claim_audit_gate.sh` consumes
+  v52y/v53t/v61dg and freezes the current claim posture. It pins
+  `claim_rows=15`, `allowed_claim_rows=7`, `blocked_claim_rows=8`,
+  `claim_invariant_rows=6`, `claim_invariant_pass_rows=6`, `v52_ready=1`,
+  `f_optional_final_disposition=deferred-with-reason-final`,
+  `comparison_30b_150b_wording_status=allowed-with-disclosure`,
+  `v53_machine_complete_source_surface_ready=1`,
+  `accepted_human_review_rows=0/7000`, `accepted_adjudication_rows=0/1000`,
+  `v61_post_full_shard_runtime_evidence_ready=1`,
+  `generation_execution_admitted_rows=0/1000`,
+  `actual_model_generation_ready=0`, `v1_0_comparison_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61dh=0`, and zero checkpoint payload
+  bytes committed to the repo. This makes the evidence-bound allowed claims
+  auditable while keeping actual generation, latency, near-frontier, v1.0
+  comparison, and release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
