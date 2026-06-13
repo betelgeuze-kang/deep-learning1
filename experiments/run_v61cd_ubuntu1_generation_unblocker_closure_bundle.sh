@@ -132,7 +132,7 @@ phase_rows = [
         "accepted_rows": v61ca["accepted_remaining_page_hash_result_rows"],
         "blocked_rows": v61cc["page_hash_blocked_rows"],
         "closure_ready": v61cc["full_safetensors_page_hash_binding_ready"],
-        "reason": "full page-hash coverage remains incomplete",
+        "reason": "full page-hash coverage is complete" if v61cc["full_safetensors_page_hash_binding_ready"] == "1" else "full page-hash coverage remains incomplete",
     },
     {
         "phase_id": "phase-02-complete-source-review-return",
@@ -349,7 +349,7 @@ write_csv(run_dir / "generation_unblocker_metric_rows.csv", list(metric.keys()),
 
 requirement_rows = [
     ("v61cc-admission-bridge-input", "pass", "v61cc ready", v61cc["v61cc_ubuntu1_page_hash_generation_admission_bridge_ready"], "generation admission bridge is bound"),
-    ("remaining-page-hash-return", "blocked", v61ca["expected_remaining_page_hash_result_rows"], v61ca["accepted_remaining_page_hash_result_rows"], "remaining page-hash return rows are missing"),
+    ("remaining-page-hash-return", "pass" if page_hash_closure_ready else "blocked", v61ca["expected_remaining_page_hash_result_rows"], v61ca["accepted_remaining_page_hash_result_rows"], "full page-hash coverage is already complete" if page_hash_closure_ready else "remaining page-hash return rows are missing"),
     ("complete-source-review-return", "blocked", v53s["expected_human_review_rows"], v53s["accepted_human_review_rows"], "human/source review return is missing"),
     ("actual-generation-result-return", "blocked", v61bt["expected_generation_result_artifacts"], v61bt["accepted_generation_result_artifacts"], "actual generation artifacts are missing"),
     ("generation-unblocker-closure", "blocked", v61cc["complete_source_query_rows"], v61cc["generation_execution_admitted_rows"], "page-hash/review/generation returns are not complete"),
@@ -372,7 +372,7 @@ write_csv(
 
 gap_rows = [
     ("v61cc-admission-bridge-input", "ready", "v61cc admission bridge is bound"),
-    ("remaining-page-hash-return", "blocked", f"accepted={v61ca['accepted_remaining_page_hash_result_rows']}/{v61ca['expected_remaining_page_hash_result_rows']}"),
+    ("remaining-page-hash-return", "ready" if page_hash_closure_ready else "blocked", f"accepted={v61ca['accepted_remaining_page_hash_result_rows']}/{v61ca['expected_remaining_page_hash_result_rows']}"),
     ("complete-source-review-return", "blocked", f"accepted={v53s['accepted_human_review_rows']}/{v53s['expected_human_review_rows']}"),
     ("actual-generation-result-return", "blocked", f"accepted_artifacts={v61bt['accepted_generation_result_artifacts']}/{v61bt['expected_generation_result_artifacts']}"),
     ("actual-model-generation", "blocked", f"admitted={v61cc['generation_execution_admitted_rows']}/{v61cc['generation_admission_bridge_rows']}"),
@@ -391,7 +391,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decision_rows = [
     {"gate": "v61cc-admission-bridge-input", "status": "pass", "reason": "v61cc admission bridge is bound"},
     {"gate": "operator-closure-bundle", "status": "pass", "reason": f"return_artifact_rows={len(artifact_dicts)}; operator_command_rows={len(command_rows)}"},
-    {"gate": "remaining-page-hash-return", "status": "blocked", "reason": f"accepted={v61ca['accepted_remaining_page_hash_result_rows']}/{v61ca['expected_remaining_page_hash_result_rows']}"},
+    {"gate": "remaining-page-hash-return", "status": "pass" if page_hash_closure_ready else "blocked", "reason": f"accepted={v61ca['accepted_remaining_page_hash_result_rows']}/{v61ca['expected_remaining_page_hash_result_rows']}"},
     {"gate": "complete-source-review-return", "status": "blocked", "reason": f"accepted={v53s['accepted_human_review_rows']}/{v53s['expected_human_review_rows']}"},
     {"gate": "actual-generation-result-return", "status": "blocked", "reason": f"accepted_artifacts={v61bt['accepted_generation_result_artifacts']}/{v61bt['expected_generation_result_artifacts']}"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": f"admitted={v61cc['generation_execution_admitted_rows']}/{v61cc['generation_admission_bridge_rows']}"},

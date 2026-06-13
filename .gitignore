@@ -7,3 +7,4 @@ results/*
 *.swp
 __pycache__/
 *.pyc
+.cache/

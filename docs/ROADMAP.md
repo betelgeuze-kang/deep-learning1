@@ -1411,18 +1411,18 @@ Current next boundary:
   Release. See `docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md`.
 - `v52` is started as a baseline-war contract scaffold. `experiments/test_v52_llm_rag_baseline_war.sh`
   emits the A-H registry, adapter contracts, symmetric evaluation axes, copied
-  v0.3 source-preview artifacts, and claim boundary, but keeps full v52 blocked
+  v0.3 source-preview artifacts, and claim boundary, but keeps full v51 blocked
   until real 30B and 70B LLM+RAG rows exist.
 - `v52b` adds the first measured small local RAG row for system B.
   `experiments/test_v52b_small_local_rag_measured_row.sh` emits nine measured
   answer rows plus citation/retrieval/resource rows over the v50 public-repo
-  seed, marks the row `v52_absorb_ready=1`, and still keeps full v52 blocked
+  seed, marks the row `v52_absorb_ready=1`, and still keeps full v51 blocked
   until C/D/E real baseline rows exist.
 - `v52f` expands system B from the 9-row seed to a 100-row measured run.
   `experiments/test_v52f_small_local_rag_measured_100.sh` emits 100 answer
   rows plus citation, abstain, wrong-answer guard, resource, source-manifest,
   and 300 retrieval rows over the frozen v53d query IDs. It marks the B-100
-  layer `v52_absorb_ready=1`, but keeps full v52 blocked until A/G/H are run
+  layer `v52_absorb_ready=1`, but keeps full v51 blocked until A/G/H are run
   over the same frozen query set and real C/D/E evidence directories validate.
 - `v52g` expands system B from 100 rows to a stratified 300-row measured run.
   `experiments/test_v52g_small_local_rag_measured_300.sh` emits 300 answer
@@ -1430,20 +1430,20 @@ Current next boundary:
   frozen query/source subset, and 900 retrieval rows over v53e, including 48
   negative/abstain query rows. It marks the B-300 layer `v52_absorb_ready=1`,
   while that layer still kept B-1000, A/G/H same-query-set rows, C/D/E
-  evidence, and full v52 blocked.
+  evidence, and full v51 blocked.
 - `v52h` expands system B to the full 1000-row measured run over v53e.
   `experiments/test_v52h_small_local_rag_measured_1000.sh` emits 1000 answer
   rows plus citation, abstain, wrong-answer guard, resource, source-manifest,
   frozen query/source rows, and 3000 retrieval rows, including 160
   negative/abstain query rows. It closes the B 9->100->300->1000 ladder while
-  keeping A/G/H same-query-set rows, C/D/E evidence, and full v52 blocked.
+  keeping A/G/H same-query-set rows, C/D/E evidence, and full v51 blocked.
 - `v52i` adds the local A/B/G/H same-query measured packet.
   `experiments/test_v52i_abgh_same_query_measured_1000.sh` emits A, B, G,
   and H over the same full frozen v53e query set and source manifest, with
   4000 answer/citation/abstain/wrong-answer/resource rows, 12000 retrieval
   rows, 2000 G/H RouteHint rows, and per-system metrics. It closes the local
   same-query packet while keeping C/D/E evidence, 30B/70B baselines, and full
-  v52 blocked.
+  v51 blocked.
 - `v52j` absorbs the local measured packet into the v52 registry.
   `experiments/test_v52j_measured_registry_absorb.sh` writes a measured
   baseline registry where A/B/G/H are row-backed over v53e, copies the v52i
@@ -1502,7 +1502,7 @@ Current next boundary:
   keeps optional F, full v52, and release claims blocked.
 - `v52y` resolves F optional handling after v52r.
   `experiments/test_v52y_f_optional_final_policy.sh` records F as
-  `deferred-with-reason-final` by default, verifies the v52 ready-condition
+  `deferred-with-reason-final` by default, verifies the v53 ready-condition
   matrix, and sets `v52_ready=1` for the measured-baseline-registry scope while
   keeping measured 100B+/150B result wording, v53 complete-source audit, v1.0
   comparison, and release claims blocked.
@@ -1521,7 +1521,7 @@ Current next boundary:
 - `v52d` adds the 30B/70B open-weight LLM+RAG evidence-intake gate for systems
   D and E. `experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh` emits the
   required D/E evidence schemas, answer/model templates, validation rows, and
-  hash manifest, and still keeps v52 blocked until both real D and E evidence
+  hash manifest, and still keeps v51 blocked until both real D and E evidence
   directories validate.
 - `v52e` adds the optional 100B+ hosted/API LLM+RAG evidence-intake/defer gate
   for system F. `experiments/test_v52e_100b_plus_hosted_llm_rag_optional_intake.sh`
@@ -1535,32 +1535,32 @@ Current next boundary:
 - `v53b` adds a live public repo 10-lock layer.
   `experiments/test_v53b_public_repo_10_lock.sh` resolves HEAD SHAs for 10
   public GitHub repositories and writes the 1000-row query plan, but keeps full
-  v53 blocked until source snapshots, source-span-bound query rows,
+  v51 blocked until source snapshots, source-span-bound query rows,
   answer/citation/resource rows, negative/abstain rows, and review artifacts
   exist.
 - `v53c` adds pinned canary source snapshots for the 10 locked public repos.
   `experiments/test_v53c_public_repo_canary_source_snapshot.sh` fetches
   source/doc/config canary files from the locked HEAD SHAs and records sha256
-  content rows, but keeps full v53 blocked until complete source snapshots and
+  content rows, but keeps full v51 blocked until complete source snapshots and
   the 1000-row audit evidence exist.
 - `v53d` adds a 100-row source-span-bound canary query seed.
   `experiments/test_v53d_canary_source_query_seed_100.sh` derives 10 query rows
   per locked repo from v53c canary source files and records matching source
-  span rows, but keeps full v53 blocked with `missing_query_rows=900`,
+  span rows, but keeps full v51 blocked with `missing_query_rows=900`,
   negative/abstain families missing, and A-H answer/citation/resource rows
   missing.
 - `v53e` adds a 1000-row canary-scope query scale layer.
   `experiments/test_v53e_canary_query_scale_1000.sh` scales the v53d seeds to
   1000 source-span-bound query rows across the 10 locked repos, including 840
   supported rows, 160 negative/abstain rows, and eight query families, but
-  keeps full v53 blocked until complete source snapshots, A-H
+  keeps full v51 blocked until complete source snapshots, A-H
   answer/citation/resource rows, symmetric scorer/policy rows, and review
   artifacts exist.
 - `v53f` adds the A-H answer/citation/resource intake layer.
   `experiments/test_v53f_ah_answer_citation_resource_intake.sh` emits the A-H
   system target matrix, required answer/citation/resource schemas, and 8000
   answer/resource template rows over the frozen v53e query set, but keeps full
-  v53 blocked with `valid_answer_rows=0` until real supplied comparison rows,
+  v51 blocked with `valid_answer_rows=0` until real supplied comparison rows,
   source citation coverage, resource measurements, complete source snapshots,
   and review artifacts exist.
 - `v53g` adds the complete-source manifest layer.
@@ -1686,10 +1686,48 @@ Current next boundary:
   `review_return_operator_bundle_handoff_ready=1`. It includes no fake review
   rows and keeps `review_return_ready=0`, `v53_ready=0`,
   `v1_0_comparison_ready=0`, comparison, and release claims blocked.
+- `v53v` adds the complete-source review return acceptance bridge.
+  `experiments/test_v53v_complete_source_review_return_acceptance_bridge.sh`
+  consumes v53r/v53s/v53t/v53u and emits a 7000-row per-answer acceptance
+  ledger. It records `machine_complete_source_surface_ready=1`,
+  `answer_review_accepted_rows=0`, `human_review_accepted_rows=0`,
+  `adjudication_required_rows=1000`, `adjudication_accepted_rows=0`,
+  `review_return_ready=0`, `quality_comparison_claim_ready=0`,
+  `v53_ready=0`, and `v1_0_comparison_ready=0`, keeping the human-reviewed
+  audit, comparison, and release claims blocked.
+- `v53w` adds the complete-source review return chunk execution queue.
+  `experiments/test_v53w_complete_source_review_return_chunk_execution_queue.sh`
+  consumes v53u/v53v and turns the reviewer workload into 21 dispatch-ready
+  chunks, 8000 human-review/adjudication task rows, 50 chunk return artifact
+  rows, and five aggregate v53s return artifacts. It records
+  `chunk_dispatch_ready=1`, `review_return_ready=0`, `v53_ready=0`, and
+  `v1_0_comparison_ready=0`, keeping actual chunk returns, accepted review
+  rows, comparison, and release claims blocked.
+- `v53x` adds the complete-source review chunk return intake.
+  `experiments/test_v53x_complete_source_review_chunk_return_intake.sh`
+  consumes v53w and validates supplied chunk/aggregate return artifacts when
+  present. The default no-return path records 50 missing chunk artifacts,
+  five missing aggregate artifacts, `chunk_return_intake_ready=0`,
+  `v53s_refresh_ready=0`, `review_return_ready=0`, `v53_ready=0`, and
+  `v1_0_comparison_ready=0`, keeping real returned review evidence,
+  comparison, and release claims blocked.
+- `v53y` adds the complete-source review return refresh gate.
+  `experiments/test_v53y_complete_source_review_return_refresh_gate.sh`
+  optionally accepts `V53Y_REVIEW_RETURN_DIR`, refreshes v53s/v53t/v53v/v53w/v53x
+  against that return directory, and records the post-return chain in five
+  refresh stages. The default no-return path keeps
+  `machine_complete_source_surface_ready=1`, `ready_refresh_stage_rows=1`,
+  `blocked_refresh_stage_rows=4`, `accepted_chunk_return_artifact_rows=0`,
+  `accepted_aggregate_review_return_artifact_rows=0`,
+  `accepted_human_review_rows=0`, `accepted_adjudication_rows=0`,
+  `answer_review_accepted_rows=0`, `v61_review_unblock_ready=0`,
+  `v53_ready=0`, and `v1_0_comparison_ready=0`. This makes the next real
+  action explicit: supply the review return directory, rerun v53y, then refresh
+  v61 generation admission only after the review blocker clears.
 - `v54` is started as a RouteHint generation 1000-row contract scaffold.
   `experiments/test_v54_routehint_generation_1000_contract.sh` emits the
   domain target, invariant, and artifact contracts from v48/v54 seed evidence,
-  and keeps full v54 blocked with `missing_generation_rows=976`.
+  and keeps full v51 blocked with `missing_generation_rows=976`.
 - `v54b` adds the RouteHint generation 1000-row scale run.
   `experiments/test_v54b_routehint_generation_scale_1000.sh` emits 1000
   deterministic local RouteHint generation rows across six domains, including
@@ -1699,7 +1737,7 @@ Current next boundary:
   keeping release and 30B-150B equivalence claims blocked.
 - `v55` is started as a local scaling law main-run contract scaffold.
   `experiments/test_v55_local_scaling_law_main_contract.sh` emits the six-axis
-  / 100-row scaling contract from v51 seed curves, and keeps full v55 blocked
+  / 100-row scaling contract from v51 seed curves, and keeps full v51 blocked
   with `repo_count_axis_ready=0` and `missing_scaling_curve_rows=73`.
 - `v55b` adds the local scaling-law main run.
   `experiments/test_v55b_local_scaling_law_main_120.sh` emits six scaling
@@ -1711,7 +1749,7 @@ Current next boundary:
 - `v56` is started as a RULER/LongBench expanded benchmark contract scaffold.
   `experiments/test_v56_ruler_longbench_expanded_contract.sh` emits the
   official source/evaluator-bound benchmark contract from v49/v45 seed
-  evidence, and keeps full v56 blocked with `ruler_missing_rows=500`,
+  evidence, and keeps full v51 blocked with `ruler_missing_rows=500`,
   `longbench_missing_rows=494`, and `llm_rag_baseline_rows_ready=0`.
 - `v56b` adds the expanded RULER/LongBench candidate-scale run.
   `experiments/test_v56b_ruler_longbench_expanded_scale.sh` emits 1500
@@ -1845,7 +1883,7 @@ Current next boundary:
   consumes v61o, emits an outside-repository warehouse probe, disk budget row,
   checkpoint residency requirements, 59 shard download-plan rows, and 59 local
   shard presence rows. The current host records 281241493344 checkpoint bytes,
-  315601231712 bytes required with reserve, 21337460736 available bytes,
+  315601231712 bytes required with reserve, 391102590976 available bytes,
   `checkpoint_payload_bytes_downloaded_by_v61p=0`, and
   `local_checkpoint_residency_ready=0`. It keeps full page-hash coverage, real
   generation, near-frontier quality, production latency, and release claims
@@ -1881,8 +1919,8 @@ Current next boundary:
   `experiments/test_v61t_local_checkpoint_materialization_verifier_target_override.sh`
   refreshes v61p, binds v61q/v61r, and verifies any local outside-repository
   shards by exact byte length, safetensors header hash, and sampled page hash.
-  The current host records 0 local existing shards, 0 identity-verified shards,
-  `local_checkpoint_materialization_ready=0`, and
+  The current ubuntu-1 override records 59 local existing shards, 59
+  identity-verified shards, `local_checkpoint_materialization_ready=1`, and
   `full_safetensors_page_hash_binding_ready=0`; `V61T_WAREHOUSE_ROOT` forces
   the v61p shard-presence preflight and all verifier target paths to use the
   supplied outside-repository warehouse. Real Mixtral generation, near-frontier
@@ -2371,8 +2409,8 @@ Current next boundary:
   run, and records non-invasive live target-file presence/size rows for all 59
   shards. The current path records 59 expected receipt rows, 0 supplied/accepted
   receipts, 59 final-deferred missing rows, live counts matching the target
-  presence source rows, and currently 1 live existing shard plus 1 live
-  size-match shard after the first external ubuntu-1 shard,
+  presence source rows, and currently 12 live existing shards plus 12 live
+  size-match shards after twelve external ubuntu-1 shards,
   `payload_execution_receipt_intake_ready=0`,
   `download_execution_ready=0`, `checkpoint_payload_bytes_downloaded_by_v61bq=0`,
   and zero checkpoint payload bytes committed to the repo. Actual payload
@@ -2385,7 +2423,7 @@ Current next boundary:
   root, rejects stale `/tmp` target promotion, and emits targeted v61t, v61an,
   and v61ae post-receipt verification command rows. The current path records
   59 expected receipt rows, 0 accepted receipts, 59 missing receipts, live
-  counts matching v61bq, and currently 1 live size-match shard,
+  counts matching v61bq, and currently 10 live size-match shards,
   `receipt_backed_materialization_input_ready=0`,
   `identity_verification_execution_ready=0`, `required_page_hash_rows=134161`,
   `verified_page_hash_rows=0`, `complete_source_review_return_ready=0`,
@@ -2419,154 +2457,139 @@ Current next boundary:
   `checkpoint_payload_bytes_downloaded_by_v61bt=0`, and zero checkpoint payload
   bytes committed to the repo. Actual model generation, production latency,
   near-frontier, and release claims remain blocked.
-- `v61bu` adds ubuntu-1 partial checkpoint materialization witnessing.
+- `v61bu` adds ubuntu-1 checkpoint materialization witnessing.
   `experiments/test_v61bu_ubuntu1_partial_checkpoint_materialization_witness.sh`
-  consumes v61bq and v61t, binds the first live external ubuntu-1 shard to local
+  consumes v61bq and v61t, binds all 59 live external ubuntu-1 shards to local
   size, safetensors-header, and identity-verification evidence, and records
-  `live_existing_shard_rows=1`, `live_size_match_shard_rows=1`,
-  `local_identity_verified_shard_rows=1`,
-  `local_identity_verified_bytes=4932529864`,
-  `remaining_identity_unverified_shard_rows=58`,
+  `local_identity_verified_shard_rows=59`,
+  `local_identity_verified_bytes=281241493344`,
+  `remaining_identity_unverified_shard_rows=0`,
   `partial_checkpoint_materialization_witness_ready=1`,
-  `full_checkpoint_materialization_ready=0`,
-  `full_safetensors_page_hash_binding_ready=0`,
+  `full_checkpoint_materialization_ready=1`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61bu=0`,
-  `observed_external_checkpoint_payload_bytes=4932529864`, and zero checkpoint
-  payload bytes committed to the repo. Receipt-backed full materialization, full
-  page-hash coverage, actual generation, production latency, near-frontier, and
-  release claims remain blocked.
+  `observed_external_checkpoint_payload_bytes=281241493344`, and zero checkpoint
+  payload bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61bv` adds ubuntu-1 remaining checkpoint materialization queueing.
   `experiments/test_v61bv_ubuntu1_remaining_checkpoint_materialization_queue.sh`
-  consumes v61bp and v61bu, skips the first identity-verified shard, and rewrites
-  the remaining dry-run-first operator queue as 58 rows across three priority
-  chunks. It records `remaining_unverified_bytes=276308963480`,
-  `local_identity_verified_bytes=4932529864`,
-  `remaining_bytes_fit_current_free_space=1`, `remaining_queue_ready=1`,
-  `dry_run_guard_ready=1`, `payload_execution_launch_ready=0`,
-  `download_execution_ready=0`, `full_checkpoint_materialization_ready=0`,
+  consumes v61bp and v61bu, skips all 59 identity-verified shards, and records
+  a closed dry-run-first remaining queue with 0 rows and 0 chunks. It records
+  `remaining_unverified_bytes=0`,
+  `local_identity_verified_bytes=281241493344`,
+  `remaining_queue_ready=1`,
+  `dry_run_guard_ready=1`, `full_checkpoint_materialization_ready=1`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61bv=0`, and zero checkpoint payload
-  bytes committed to the repo. Explicit payload execution, receipt-backed full
-  materialization, full page-hash coverage, actual generation, production
-  latency, near-frontier, and release claims remain blocked.
-- `v61bw` adds ubuntu-1 partial page-hash witnessing.
+  bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
+- `v61bw` adds ubuntu-1 page-hash witnessing.
   `experiments/test_v61bw_ubuntu1_partial_page_hash_witness.sh` consumes v61bu
-  and v61q, reads every page of the first identity-verified ubuntu-1 shard, and
-  records `identity_shard_page_rows=2353`, `identity_shard_page_bytes=4932529864`,
-  `page_hash_witness_rows=2353`, `page_hash_witness_bytes=4932529864`,
+  and v61q, reads every page of all 59 identity-verified ubuntu-1 shards, and
+  records `identity_shard_page_rows=134161`, `identity_shard_page_bytes=281241493344`,
+  `page_hash_witness_rows=134161`, `page_hash_witness_bytes=281241493344`,
   `partial_full_shard_page_hash_ready=1`,
-  `full_safetensors_page_hash_binding_ready=0`,
+  `full_safetensors_page_hash_binding_ready=1`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61bw=0`, and zero checkpoint payload
-  bytes committed to the repo. Completed full page-hash coverage, actual
-  generation, production latency, near-frontier, and release claims remain
-  blocked.
+  bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61bx` adds ubuntu-1 page-hash coverage ledgering.
   `experiments/test_v61bx_ubuntu1_page_hash_coverage_ledger.sh` consumes v61bw,
-  v61bv, and v61q, promotes the 2353 verified page hashes into a 59-shard
-  checkpoint coverage ledger, and records `verified_page_hash_rows=2353`,
-  `verified_page_hash_bytes=4932529864`,
-  `remaining_page_hash_rows=131808`,
-  `remaining_page_hash_bytes=276308963480`,
-  `remaining_materialization_queue_rows=58`,
+  v61bv, and v61q, promotes the 134161 verified page hashes into a 59-shard
+  checkpoint coverage ledger, and records `verified_page_hash_rows=134161`,
+  `verified_page_hash_bytes=281241493344`,
+  `remaining_page_hash_rows=0`,
+  `remaining_page_hash_bytes=0`,
+  `remaining_materialization_queue_rows=0`,
   `partial_page_hash_coverage_ledger_ready=1`,
-  `full_safetensors_page_hash_binding_ready=0`,
+  `full_safetensors_page_hash_binding_ready=1`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61bx=0`, and zero checkpoint payload
-  bytes committed to the repo. Completed full page-hash coverage, actual
-  generation, production latency, near-frontier, and release claims remain
-  blocked.
+  bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61by` adds ubuntu-1 remaining page-hash execution planning.
   `experiments/test_v61by_ubuntu1_remaining_page_hash_execution_plan.sh`
-  consumes v61bx and v61bv, skips the 2353 already verified page hashes, and
-  schedules only the remaining 131808 page hashes into 286 guarded chunks. It
-  records `remaining_page_hash_execution_plan_ready=1`,
-  `full_safetensors_page_hash_binding_ready=0`,
+  consumes v61bx and v61bv, skips the 134161 already verified page hashes, and
+  schedules 0 remaining page hashes into 0 guarded chunks. It records
+  `remaining_page_hash_execution_plan_ready=1`,
+  `full_safetensors_page_hash_binding_ready=1`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61by=0`, and zero checkpoint payload
-  bytes committed to the repo. Completed full page-hash coverage, actual
-  generation, production latency, near-frontier, and release claims remain
-  blocked.
+  bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61bz` adds ubuntu-1 remaining page-hash operator bundling.
   `experiments/test_v61bz_ubuntu1_remaining_page_hash_operator_bundle.sh`
-  consumes v61by, mirrors the 286 remaining page-hash chunks into seven
-  dry-run-first operator bundle files with execute, approval, and
-  identity-confirmation guards, verifies script syntax/executable bits and a
-  one-chunk dry-run guard, and records
-  `remaining_page_hash_operator_bundle_ready=1`,
+  consumes v61by, mirrors the 0 remaining page-hash chunks and verified skip
+  rows into seven dry-run-first operator bundle files with execute, approval,
+  and identity-confirmation guards, verifies script syntax/executable bits and
+  records `remaining_page_hash_operator_bundle_ready=1`,
   `page_hash_execution_ready=0`,
-  `full_safetensors_page_hash_binding_ready=0`,
+  `full_safetensors_page_hash_binding_ready=1`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61bz=0`, and zero checkpoint payload
-  bytes committed to the repo. Explicit page-hash execution, completed full
-  page-hash coverage, actual generation, production latency, near-frontier, and
-  release claims remain blocked.
+  bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61ca` adds ubuntu-1 remaining page-hash result intake.
   `experiments/test_v61ca_ubuntu1_remaining_page_hash_result_intake.sh`
-  consumes v61bz, defines the hash-only return surface for the 131808 remaining
-  page hashes, preserves the 2353 existing verified page hashes, and records the
-  default no-result path as missing/final-deferred. It records
+  consumes v61bz, defines the hash-only return surface for 0 remaining page
+  hashes, preserves the 134161 existing verified page hashes, and records the
+  empty-remaining path. It records
   `accepted_remaining_page_hash_result_rows=0`,
-  `missing_remaining_page_hash_result_rows=131808`,
-  `total_verified_page_hash_rows=2353`,
-  `full_safetensors_page_hash_binding_ready=0`,
+  `missing_remaining_page_hash_result_rows=0`,
+  `total_verified_page_hash_rows=134161`,
+  `full_safetensors_page_hash_binding_ready=1`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61ca=0`, and zero checkpoint payload
-  bytes committed to the repo. Completed full page-hash coverage, actual
-  generation, production latency, near-frontier, and release claims remain
-  blocked.
+  bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61cb` adds ubuntu-1 full page-hash coverage promotion gating.
   `experiments/test_v61cb_ubuntu1_full_page_hash_coverage_promotion_gate.sh`
-  consumes v61ca, aggregates 59 shard-level promotion rows, records one ready
-  page-hash shard from the existing witness and 58 blocked shards waiting for
-  remaining result rows, and keeps `total_verified_page_hash_rows=2353` of
-  `total_required_page_hash_rows=134161`. It records
-  `full_page_hash_coverage_promotion_ready=0`,
-  `full_safetensors_page_hash_binding_ready=0`,
+  consumes v61ca, aggregates 59 shard-level promotion rows, records 59 ready
+  page-hash shards and 0 blocked shards, and keeps
+  `total_verified_page_hash_rows=134161` of `total_required_page_hash_rows=134161`.
+  It records `full_page_hash_coverage_promotion_ready=1`,
+  `full_safetensors_page_hash_binding_ready=1`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61cb=0`, and zero checkpoint payload
-  bytes committed to the repo. Completed full page-hash coverage, actual
-  generation, production latency, near-frontier, and release claims remain
-  blocked.
+  bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61cc` adds ubuntu-1 page-hash generation admission bridging.
   `experiments/test_v61cc_ubuntu1_page_hash_generation_admission_bridge.sh`
   consumes v61cb, v53t, and v61bt, emits 1000 complete-source generation
   admission bridge rows, records `generation_execution_admitted_rows=0`,
-  `page_hash_blocked_rows=1000`, `review_return_blocked_rows=1000`,
+  `page_hash_blocked_rows=0`, `review_return_blocked_rows=1000`,
   `generation_result_artifact_blocked_rows=1000`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61cc=0`, and zero checkpoint payload
-  bytes committed to the repo. Completed full page-hash coverage,
-  complete-source review return, actual generation, production latency,
-  near-frontier, and release claims remain blocked.
+  bytes committed to the repo. Complete-source review return, actual generation,
+  production latency, near-frontier, and release claims remain blocked.
 - `v61cd` adds ubuntu-1 generation unblocker closure bundling.
   `experiments/test_v61cd_ubuntu1_generation_unblocker_closure_bundle.sh`
   consumes v61cc, v61ca, v53s, and v61bt, emits three closure phases, 11
   required return artifact rows, and seven operator command rows. It records
-  `page_hash_return_required_rows=131808`,
+  `page_hash_return_required_rows=0`,
+  `page_hash_closure_ready=1`,
   `human_review_required_rows=7000`, `adjudication_required_rows=1000`,
   `generation_result_required_artifacts=5`,
   `generation_unblocker_closure_ready=0`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61cd=0`, and zero checkpoint payload
-  bytes committed to the repo. Completed full page-hash coverage,
-  complete-source review return, actual generation, production latency,
-  near-frontier, and release claims remain blocked.
+  bytes committed to the repo. Complete-source review return, actual generation,
+  production latency, near-frontier, and release claims remain blocked.
 - `v61ce` adds ubuntu-1 generation closure return intake gating.
   `experiments/test_v61ce_ubuntu1_generation_closure_return_intake.sh`
   consumes v61cd, v61cb, v53t, v61bt, and v61cc, rechecks the three return
   families as closure gates, and emits 1000 generation closure admission rows.
   It records `closure_gate_rows=3`, `generation_closure_admission_rows=1000`,
   `generation_closure_return_intake_ready=0`,
-  `generation_execution_admitted_rows=0`, `page_hash_blocked_rows=1000`,
+  `generation_execution_admitted_rows=0`, `page_hash_blocked_rows=0`,
   `review_return_blocked_rows=1000`,
   `generation_result_artifact_blocked_rows=1000`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61ce=0`, and zero checkpoint payload
-  bytes committed to the repo. Completed full page-hash coverage,
-  complete-source review return, actual generation, production latency,
-  near-frontier, and release claims remain blocked.
+  bytes committed to the repo. Complete-source review return, actual generation,
+  production latency, near-frontier, and release claims remain blocked.
 - `v61cf` adds ubuntu-1 source-bound generation execution packeting.
   `experiments/test_v61cf_ubuntu1_source_bound_generation_execution_packet.sh`
   consumes v61ce, v53r, and v61bt, emits 1000 execution packet rows, four
@@ -2594,12 +2617,12 @@ Current next boundary:
   executable release-index verifier. It records 8 source artifact rows,
   10 release index files, `redistributable_manifest_index_ready=1`,
   134161 manifest pages, 135841 tensor/page segment rows, 1344/1344 MoE
-  coverage rows, 2353/134161 verified page hashes, 131808 remaining page
-  hashes, `actual_model_generation_ready=0`,
+  coverage rows, 134161/134161 verified page hashes, 0 remaining page
+  hashes, `completed_full_safetensors_page_hash_coverage_ready=1`,
+  `full_safetensors_page_hash_binding_ready=1`, `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61ch=0`, and zero redistributed or
-  committed checkpoint payload bytes. Completed full page-hash coverage,
-  actual generation, production latency, near-frontier, and release claims
-  remain blocked.
+  committed checkpoint payload bytes. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61ci` adds real manifest runtime substitution gating.
   `experiments/test_v61ci_real_manifest_runtime_substitution_gate.sh` consumes
   v61j, v61k, and v61ch, then maps the logical SSD-resident fixture surfaces
@@ -2607,13 +2630,13 @@ Current next boundary:
   logical-fixture replacement contract rows, five runtime substitution binding
   rows, `logical_fixture_replaced_by_real_manifest_ready=1`,
   `zero_payload_runtime_input_ready=1`, 134161 manifest pages, 135841
-  tensor/page segment rows, 1344/1344 MoE coverage rows, 2353/134161 verified
-  page hashes, 131808 remaining page hashes,
+  tensor/page segment rows, 1344/1344 MoE coverage rows, 134161/134161 verified
+  page hashes, 0 remaining page hashes,
+  `completed_full_safetensors_page_hash_coverage_ready=1`,
   `runtime_execution_admission_ready=0`, `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61ci=0`, and zero checkpoint payload
-  bytes committed to the repo. Full page-hash coverage, real runtime execution,
-  actual generation, production latency, near-frontier, and release claims
-  remain blocked.
+  bytes committed to the repo. Real runtime execution, actual generation,
+  production latency, near-frontier, and release claims remain blocked.
 - `v61cj` adds a real manifest immediate-target bridge.
   `experiments/test_v61cj_real_manifest_immediate_target_bridge.sh` consumes
   v61ci/v61l/v61m/v61s plus v61n source rows and records 4/4 ready immediate
@@ -2621,76 +2644,74 @@ Current next boundary:
   page-kernel measurement, KV policy, and v61j source-bound QA command replay.
   It pins `real_manifest_immediate_target_bridge_ready=1`,
   `gpu_kernel_avg_ms=0.513442`, `kv_cache_policy_ready=1`,
-  `source_bound_query_pass_rows=37`, and keeps full page-hash coverage,
+  `source_bound_query_pass_rows=37`,
+  `completed_full_safetensors_page_hash_coverage_ready=1`, and keeps
   complete-source 1000-query generation, actual generation, production latency,
   near-frontier, and release claims blocked.
 - `v61ck` adds a real generation unblocker operator matrix.
   `experiments/test_v61ck_real_generation_unblocker_operator_matrix.sh`
-  consumes v61cj/v61bv/v61bz/v61ca/v61cb/v61cm/v61cn/v61co/v61cq/v61cr/v53u/v61bt/v61cg and records
-  a seven-row unblocker matrix plus eleven execution-order rows. It pins 7/7
-  ready operator surfaces, 58 remaining materialization queue rows,
-  59 materialization promotion rows with one ready shard and 58 blocked shards,
-  286 page-hash execution admission rows with 0 admitted and 286
-  materialization-blocked chunks, 37 runtime execution admission candidates
-  with 0 admitted rows, 1000 complete-source runtime admission expansion rows,
-  1000 complete-source runtime admission return rows with 0 accepted rows,
-  five missing runtime admission return artifacts, 276308963480 missing
-  materialization/page-hash bytes, 131808 remaining page-hash rows,
-  7000 human review rows, 1000 adjudication rows, 5 generation result artifacts,
-  and
+  consumes v61cj/v61bv/v61bz/v61ca/v61cb/v61cm/v61cn/v61co/v61cq/v61cr/v61cv/v61cw/v53u/v53v/v61bt/v61cg and records
+  a nine-row unblocker matrix plus nine execution-order rows. It pins 9/9
+  ready operator surfaces, 0 remaining materialization queue rows,
+  59 materialization promotion rows with 59 ready shards and 0 blocked shards,
+  0 remaining page-hash execution admission rows, 37 runtime execution admission candidates
+  with 37 admitted rows, 1000 complete-source runtime admission expansion rows,
+  and the newer v61dc/v61cw path accepts 1000/1000 complete-source runtime
+  admission rows. The remaining blockers are 0 missing
+  materialization/page-hash bytes, 0 remaining page-hash rows,
+  v53v 7000-row per-answer review-return acceptance with 0 accepted answer-review rows,
+  7000 human review rows, 1000 adjudication rows, 21 reviewer identity rows,
+  210 conflict disclosure rows, acceptance summary 0, 5 generation result artifacts, and
   `generation_unblocker_operator_matrix_ready=1`, while keeping accepted
   external returns at 0 and actual generation, production latency,
   near-frontier, and release claims blocked.
 - `v61cl` adds ubuntu-1 remaining checkpoint materialization return intake.
   `experiments/test_v61cl_ubuntu1_remaining_checkpoint_materialization_return_intake.sh`
-  consumes v61bv, defines the metadata-only return schema for 58 remaining
-  shard materialization receipts, preserves the one existing identity-verified
-  shard, and records 58 expected/missing return rows,
-  276308963480 expected/missing materialization bytes,
-  `remaining_materialization_return_intake_ready=0`,
-  `full_checkpoint_materialization_ready=0`,
+  consumes v61bv, defines the metadata-only return schema for 0 remaining
+  shard materialization receipts, preserves all 59 existing identity-verified
+  shards, and records 0 expected/missing return rows,
+  0 expected/missing materialization bytes,
+  `remaining_materialization_return_intake_ready=1`,
+  `full_checkpoint_materialization_ready=1`,
   `checkpoint_payload_bytes_downloaded_by_v61cl=0`, and zero checkpoint
-  payload bytes committed to the repo. Completed full materialization, full
-  page-hash coverage, actual generation, production latency, near-frontier,
-  and release claims remain blocked until accepted return rows cover every
-  remaining shard.
+  payload bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61cm` adds ubuntu-1 full checkpoint materialization promotion gating.
   `experiments/test_v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate.sh`
   consumes v61cl, aggregates the return-intake state into 59 shard-level
-  promotion rows, and records one ready identity-verified shard, 58 blocked
-  shards, 58 expected/missing return rows, 276308963480 expected/missing
-  materialization bytes, `total_identity_verified_checkpoint_shard_rows=1`,
-  `full_checkpoint_materialization_ready=0`,
+  promotion rows, and records 59 ready identity-verified shards, 0 blocked
+  shards, 0 expected/missing return rows, 0 expected/missing materialization
+  bytes, `total_identity_verified_checkpoint_shard_rows=59`,
+  `full_checkpoint_materialization_ready=1`,
   `checkpoint_payload_bytes_downloaded_by_v61cm=0`, and zero checkpoint
-  payload bytes committed to the repo. Full page-hash coverage, actual
-  generation, production latency, near-frontier, and release claims remain
-  blocked.
+  payload bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61cn` adds ubuntu-1 page-hash execution materialization admission gating.
   `experiments/test_v61cn_ubuntu1_page_hash_execution_materialization_admission_gate.sh`
-  consumes v61bz and v61cm, binds 286 remaining page-hash execution chunks to
+  consumes v61bz and v61cm, binds 0 remaining page-hash execution chunks to
   full-checkpoint materialization promotion rows, and records
   `admitted_page_hash_execution_chunk_rows=0`,
-  `materialization_blocked_page_hash_execution_chunk_rows=286`,
-  `blocked_page_hash_rows=131808`, `blocked_page_hash_bytes=276308963480`,
-  `page_hash_execution_admission_ready=0`,
+  `materialization_blocked_page_hash_execution_chunk_rows=0`,
+  `blocked_page_hash_rows=0`, `blocked_page_hash_bytes=0`,
+  `page_hash_execution_admission_ready=1`,
+  `completed_full_safetensors_page_hash_coverage_ready=1`,
   `checkpoint_payload_bytes_downloaded_by_v61cn=0`, and zero checkpoint
-  payload bytes committed to the repo. Page-hash execution, completed full
-  page-hash coverage, actual generation, production latency, near-frontier,
-  and release claims remain blocked.
+  payload bytes committed to the repo. Actual generation, production latency,
+  near-frontier, and release claims remain blocked.
 - `v61co` adds real-manifest runtime execution admission bridging.
   `experiments/test_v61co_real_manifest_runtime_execution_admission_bridge.sh`
   consumes v61cj/v61ci/v61cm/v61cn/v61n/v61s, maps the 37 source-bound QA seed
   rows onto real-manifest runtime prerequisites, and records
-  `runtime_execution_candidate_rows=37`, `runtime_execution_admitted_rows=0`,
-  `materialization_blocked_runtime_rows=37`,
-  `page_hash_admission_blocked_runtime_rows=37`,
+  `runtime_execution_candidate_rows=37`, `runtime_execution_admitted_rows=37`,
+  `runtime_execution_blocked_rows=0`,
+  `materialization_blocked_runtime_rows=0`,
+  `page_hash_admission_blocked_runtime_rows=0`,
   `source_bound_query_pass_rows=37`,
-  `real_manifest_runtime_execution_admission_ready=0`,
+  `real_manifest_runtime_execution_admission_ready=1`,
   `checkpoint_payload_bytes_downloaded_by_v61co=0`, and zero checkpoint
-  payload bytes committed to the repo. This narrows the immediate real-runtime
-  blocker to full checkpoint materialization plus page-hash execution admission
-  while keeping actual generation, production latency, near-frontier, and
-  release claims blocked.
+  payload bytes committed to the repo. Complete-source runtime admission return
+  and real generation result evidence remain required before actual generation,
+  production latency, near-frontier, and release claims can unblock.
 - `v61cp` adds complete-source runtime admission coverage gating.
   `experiments/test_v61cp_complete_source_runtime_admission_coverage_gate.sh`
   consumes v61co/v61cf/v61cc, compares the 37-row real-manifest seed runtime
@@ -2720,15 +2741,438 @@ Current next boundary:
 - `v61cr` adds complete-source runtime admission return intake.
   `experiments/test_v61cr_complete_source_runtime_admission_return_intake.sh`
   consumes v61cq, defines the five-artifact complete-source runtime admission
-  return surface, and records five expected return artifacts, zero accepted
-  return artifacts, five missing return artifacts, 1000 expected runtime
-  admission result rows, zero accepted runtime admission result rows,
-  `complete_source_runtime_admission_execution_ready=0`,
+  return surface, and keeps a no-return smoke for five expected/zero accepted
+  artifacts. The v61dc path supplies the five local return artifacts and
+  refreshes v61cr to `accepted_runtime_admission_return_artifacts=5`,
+  `accepted_runtime_admission_result_rows=1000`,
+  `complete_source_runtime_admission_execution_ready=1`,
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61cr=0`, and zero checkpoint
-  payload bytes committed to the repo. This keeps complete-source runtime
-  admission execution, actual generation, production latency, near-frontier,
-  and release claims blocked until real return rows arrive.
+  payload bytes committed to the repo. This accepts runtime admission while
+  keeping actual generation, production latency, near-frontier, and release
+  claims blocked.
+- `v61cv` adds a complete-source runtime admission operator bundle.
+  `experiments/test_v61cv_complete_source_runtime_admission_operator_bundle.sh`
+  consumes v61cq/v61cr/v61cm/v61cb/v61co and emits a dry-run-first operator
+  bundle over the 1000-row runtime admission expansion packet. It records five
+  bundle files, five command rows, five return-template rows,
+  `full_checkpoint_materialization_ready=1`,
+  `completed_full_safetensors_page_hash_coverage_ready=1`,
+  `real_manifest_runtime_execution_admission_ready=1`,
+  `guarded_runtime_admission_command_ready=1`,
+  `complete_source_runtime_admission_execution_ready=1` after v61dc refresh,
+  `checkpoint_payload_bytes_downloaded_by_v61cv=0`, and zero checkpoint
+  payload bytes committed to the repo. This keeps actual generation,
+  production latency, near-frontier, and release claims blocked.
+- `v61cw` adds a complete-source runtime admission acceptance bridge.
+  `experiments/test_v61cw_complete_source_runtime_admission_acceptance_bridge.sh`
+  consumes v61cq/v61cv/v61cr and converts the aggregate runtime-admission
+  return surface into 1000 per-query acceptance rows. It records
+  `runtime_admission_acceptance_rows=1000`,
+  `runtime_admission_accepted_rows=1000` after v61dc refresh,
+  `operator_guard_blocked_acceptance_rows=0`,
+  zero artifact/result/page-binding/budget/identity/safety blocked
+  acceptance rows, `guarded_runtime_admission_command_ready=1`,
+  `complete_source_runtime_admission_execution_ready=1`,
+  `checkpoint_payload_bytes_downloaded_by_v61cw=0`, and zero checkpoint
+  payload bytes committed to the repo. This keeps actual generation,
+  production latency, near-frontier, and release claims blocked.
+- `v61cs` adds complete-source generation execution admission gating.
+  `experiments/test_v61cs_complete_source_generation_execution_admission_gate.sh`
+  consumes v61ck/v61cw/v61cf/v61bt and emits 1000 final admission rows for the
+  real-model generation packet. It pins
+  `generation_execution_admission_rows=1000`,
+  `generation_execution_admitted_rows=0`,
+  `materialization_blocked_generation_rows=0`,
+  `page_hash_blocked_generation_rows=0`,
+  `runtime_admission_blocked_generation_rows=0`,
+  `review_return_blocked_generation_rows=1000`,
+  `generation_operator_bundle_handoff_ready=1`,
+  `generation_execution_packet_ready=1`, `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cs=0`, and zero checkpoint payload
+  bytes committed to the repo. This keeps complete-source generation execution
+  admission, actual generation, production latency, near-frontier, and release
+  claims blocked until review and result-artifact returns are accepted.
+- `v61ct` adds complete-source generation execution operator bundling.
+  `experiments/test_v61ct_complete_source_generation_execution_operator_bundle.sh`
+  consumes v61cs/v61bt and wraps the final admission surface in a dry-run-first
+  operator bundle. It pins `generation_execution_admission_rows=1000`,
+  `generation_execution_admitted_rows=0`, `operator_bundle_file_rows=5`,
+  `operator_command_rows=5`, `ready_operator_command_rows=3`,
+  `generation_result_return_template_rows=5`,
+  `guarded_generation_command_ready=0`,
+  `generation_operator_execution_ready=0`, `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61ct=0`, and zero checkpoint payload
+  bytes committed to the repo. The guard refuses real generation while admission
+  remains 0/1000, keeping actual generation, production latency, near-frontier,
+  and release claims blocked.
+- `v61cu` adds complete-source generation result acceptance bridging.
+  `experiments/test_v61cu_complete_source_generation_result_acceptance_bridge.sh`
+  consumes v61cs/v61ct/v61bt and joins execution admission, guarded operator
+  execution, and result intake into 1000 final acceptance rows. It pins
+  `generation_result_acceptance_rows=1000`,
+  `generation_execution_admitted_rows=0`,
+  `generation_result_accepted_rows=0`, `answer_accepted_rows=0`,
+  `citation_accepted_rows=0`, `latency_accepted_rows=0`,
+  `admission_blocked_acceptance_rows=1000`,
+  `result_artifact_blocked_acceptance_rows=1000`,
+  `actual_model_generation_ready_rows=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cu=0`, and zero checkpoint payload
+  bytes committed to the repo, keeping actual generation, production latency,
+  near-frontier, and release claims blocked.
+- `v61cx` adds the post-full-shard actual generation closure queue.
+  `experiments/test_v61cx_post_full_shard_actual_generation_closure_queue.sh`
+  consumes v61cm/v61cb/v61cv/v61cw/v53u/v53v/v61ct/v61cu and orders the
+  remaining post-full-shard blockers into five closure rows plus three
+  next-action rows. It pins `full_shard_prerequisites_closed=1`,
+  `closed_closure_rows=3`, `blocked_closure_rows=2`,
+  `ready_next_action_rows=3`, 59/59 identity-verified checkpoint shards,
+  134161/134161 verified page hashes, `runtime_admission_accepted_rows=1000`,
+  `answer_review_accepted_rows=0`, `generation_result_accepted_rows=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cx=0`, and zero checkpoint payload
+  bytes committed to the repo. This keeps the next real work ordered as
+  review return, then generation result return.
+- `v61cy` adds a runtime admission chunk execution queue.
+  `experiments/test_v61cy_runtime_admission_chunk_execution_queue.sh`
+  consumes v61cq/v61cv/v61cw/v61cx and splits the 1000-row runtime admission
+  expansion packet into 20 chunks of 50 rows. It pins
+  `runtime_admission_chunk_rows=20`,
+  `runtime_admission_chunk_manifest_rows=1000`,
+  `runtime_admission_chunk_return_artifact_rows=81`,
+  `runtime_admission_aggregate_return_artifact_rows=5`,
+  `ready_runtime_admission_chunk_dispatch_rows=20`,
+  `completed_runtime_admission_chunk_rows=0`,
+  `accepted_runtime_admission_chunk_return_rows=0`,
+  `chunk_dispatch_ready=1`, `chunk_merge_ready=0`,
+  `aggregate_runtime_return_ready=0`,
+  `complete_source_runtime_admission_execution_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cy=0`, and zero checkpoint payload
+  bytes committed to the repo. This makes the first post-full-shard action
+  parallelizable while keeping runtime acceptance and generation claims blocked.
+- `v61cz` adds runtime admission chunk return intake.
+  `experiments/test_v61cz_runtime_admission_chunk_return_intake.sh`
+  consumes v61cy and optionally reads
+  `V61CZ_RUNTIME_ADMISSION_CHUNK_RETURN_DIR` to validate 81 expected chunk
+  return artifacts before any aggregate v61cr return merge. The default
+  no-return path pins `chunk_return_dir_supplied=0`,
+  `accepted_chunk_return_artifacts=0`,
+  `missing_chunk_return_artifacts=81`,
+  `accepted_runtime_admission_chunk_rows=0`,
+  `missing_runtime_admission_chunk_rows=20`,
+  `global_runtime_identity_return_ready=0`,
+  `aggregate_runtime_return_merge_ready=0`,
+  `complete_source_runtime_admission_execution_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61cz=0`, and zero checkpoint payload
+  bytes committed to the repo. This makes partial chunk-return progress
+  measurable while keeping runtime acceptance and generation claims blocked.
+- `v61da` adds the runtime admission aggregate return handoff gate.
+  `experiments/test_v61da_runtime_admission_aggregate_return_handoff_gate.sh`
+  consumes v61cz/v61cr/v61cw and creates the verifier-backed bridge from
+  merge-ready chunk returns into the five aggregate v61cr return files. The
+  default no-return path pins `handoff_artifact_rows=5`,
+  `handoff_ready_rows=0`, `aggregate_runtime_return_handoff_ready=0`,
+  `ready_handoff_command_rows=1`, `runtime_admission_accepted_rows=0`,
+  `complete_source_runtime_admission_execution_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61da=0`, and zero checkpoint payload
+  bytes committed to the repo. This keeps the v61cr/v61cw intake handoff
+  explicit while blocking runtime acceptance and generation claims.
+- `v61db` adds the runtime admission acceptance refresh gate.
+  `experiments/test_v61db_runtime_admission_acceptance_refresh_gate.sh`
+  consumes v61da/v61cr/v61cw/v61cs and binds aggregate handoff, aggregate
+  return intake, per-query runtime acceptance, and generation admission refresh
+  into one four-stage chain. After v61dc refresh it pins
+  `refresh_stage_rows=4`, `ready_refresh_stage_rows=2`,
+  `blocked_refresh_stage_rows=2`, `ready_refresh_command_rows=3`,
+  `accepted_runtime_admission_return_artifacts=5`,
+  `runtime_admission_accepted_rows=1000`,
+  `generation_execution_admitted_rows=0`,
+  `runtime_admission_blocked_generation_rows=0`,
+  `runtime_admission_acceptance_refresh_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61db=0`, and zero checkpoint payload
+  bytes committed to the repo. This makes the post-return refresh path explicit
+  while keeping generation admission and generation claims blocked.
+- `v61dc` adds the complete-source runtime admission local return materializer.
+  `experiments/test_v61dc_complete_source_runtime_admission_local_return_materializer.sh`
+  consumes v61cq/v61cm/v61cb/v61t and materializes the five v61cr return
+  artifacts from closed local checkpoint/page-hash evidence: 1000 runtime
+  result rows, 1000 page-binding rows, 1000 budget rows, 59 identity rows, and
+  1000 safety rows. Its smoke refreshes v61cr/v61cv/v61cw/v61cs, proves
+  runtime admission acceptance reaches 1000/1000 and
+  `runtime_admission_blocked_generation_rows=0`, and keeps review return,
+  generation result return, actual generation, latency, near-frontier, and
+  release claims blocked.
+- `v61dd` adds the review-return generation refresh bridge.
+  `experiments/test_v61dd_review_return_generation_refresh_bridge.sh`
+  refreshes v53y, v61dc runtime return materialization, v61cr/v61cv/v61cw,
+  v61ck, v61cs, v61ct, v61cu, and v61cx in one post-full-shard chain. It pins
+  `refresh_stage_rows=6`, `ready_refresh_stage_rows=2`,
+  `blocked_refresh_stage_rows=4`, `full_shard_prerequisites_closed=1`,
+  `runtime_admission_accepted_rows=1000`,
+  `complete_source_runtime_admission_execution_ready=1`,
+  `answer_review_accepted_rows=0`, `generation_execution_admitted_rows=0`,
+  `generation_result_accepted_rows=0`, `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61dd=0`, and zero checkpoint payload
+  bytes committed to the repo. This makes the remaining post-full-shard
+  blockers explicit: actual review return, generation execution admission,
+  returned generation results, latency evidence, near-frontier quality
+  evidence, and release evidence.
+- `v53z` adds the complete-source review-return to v61 handoff bridge.
+  `experiments/test_v53z_complete_source_review_return_v61_handoff_bridge.sh`
+  binds v53w chunk dispatch, v53x chunk/aggregate intake, v53y review-return
+  refresh, and v61dd post-full-shard generation refresh into one handoff path.
+  The default no-return path pins `handoff_stage_rows=7`,
+  `ready_handoff_stage_rows=3`, `blocked_handoff_stage_rows=4`,
+  `ready_review_chunk_dispatch_rows=21`, `accepted_chunk_return_artifact_rows=0`,
+  `accepted_aggregate_review_return_artifact_rows=0`,
+  `answer_review_accepted_rows=0`, `v61_review_unblock_ready=0`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v53z=0`, and zero checkpoint payload
+  bytes committed to the repo. This keeps the next real action narrow: return
+  the v53 review rows, then refresh v61dd before any actual generation claim.
+- `v53aa` adds the complete-source review chunk work packet.
+  `experiments/test_v53aa_complete_source_review_chunk_work_packet.sh`
+  consumes v53w and v53u, then expands the 21 dispatch-ready chunks into
+  reviewer-facing chunk directories with 8000 task rows, 50 chunk return
+  artifact rows, five aggregate return artifacts, review templates, and a shape
+  verifier. It pins `operator_chunk_packet_rows=21`,
+  `ready_operator_chunk_packet_rows=21`, `operator_packet_file_rows=72`,
+  `ready_operator_packet_file_rows=72`, `answer_review_accepted_rows=0`,
+  `review_return_ready=0`, `v53_ready=0`, and zero checkpoint payload bytes
+  committed to the repo. This makes the actual reviewer dispatch surface
+  concrete without fabricating review evidence.
+- `v53ab` adds the complete-source review dispatch receipt packet.
+  `experiments/test_v53ab_complete_source_review_dispatch_receipt_packet.sh`
+  refreshes v61df and v53aa, embeds the full v53aa work packet, and emits
+  dispatch chunk rows, receipt templates, aggregate return handoff rows, and
+  refresh commands. It pins `dispatch_chunk_rows=21`,
+  `ready_dispatch_chunk_rows=21`, `dispatch_task_rows=8000`,
+  `dispatch_return_artifact_rows=50`, `dispatch_receipt_template_rows=21`,
+  `accepted_dispatch_receipt_rows=0`, `embedded_work_packet_file_rows=72`,
+  `ready_embedded_work_packet_file_rows=72`, `answer_review_accepted_rows=0`,
+  `actual_model_generation_ready=0`, and zero checkpoint payload bytes
+  committed to the repo. This is now the concrete external dispatch/receipt
+  handoff before real review rows can return.
+- `v53ac` adds the complete-source review dispatch archive.
+  `experiments/test_v53ac_complete_source_review_dispatch_archive.sh` archives
+  the v53ab `operator_dispatch/` packet as a transportable tar.gz with file
+  list, checksum file, send instructions, archive member rows, and hash rows.
+  It pins `archive_ready=1`, `archive_sha256_ready=1`,
+  `archive_file_list_ready=1`, `send_readme_ready=1`,
+  `archive_member_files=78`, `required_members_present=1`,
+  `payload_like_archive_member_rows=0`, `dispatch_chunk_rows=21`,
+  `dispatch_task_rows=8000`, `accepted_dispatch_receipt_rows=0`,
+  `answer_review_accepted_rows=0`, `v53_ready=0`,
+  `actual_model_generation_ready=0`, and zero checkpoint payload bytes
+  committed to the repo. This is the sendable external review archive, not a
+  returned-review or generation claim.
+- `v53ad` adds the complete-source review dispatch receipt intake.
+  `experiments/test_v53ad_complete_source_review_dispatch_receipt_intake.sh`
+  consumes v53ac and optionally validates `V53AD_DISPATCH_RECEIPT_DIR` receipt
+  JSON files against 21 review chunk IDs, archive SHA fields, and
+  reviewer/coordinator IDs. The default no-receipt path pins
+  `dispatch_receipt_template_rows=21`, `supplied_dispatch_receipt_rows=0`,
+  `accepted_dispatch_receipt_rows=0`, `missing_dispatch_receipt_rows=21`,
+  `dispatch_receipt_intake_ready=0`, `answer_review_accepted_rows=0`,
+  `review_return_ready=0`, `v53_ready=0`, `actual_model_generation_ready=0`,
+  and zero checkpoint payload bytes committed to the repo. This separates
+  delivery acknowledgement from actual returned-review evidence.
+- `v53ae` adds the complete-source review return to generation rendezvous gate.
+  `experiments/test_v53ae_complete_source_review_return_generation_rendezvous_gate.sh`
+  consumes v53ad, v53z, v61de, and v61cx, optionally propagates
+  `V53AE_DISPATCH_RECEIPT_DIR`, `V53AE_REVIEW_CHUNK_RETURN_DIR`,
+  `V53AE_REVIEW_RETURN_DIR`, and `V53AE_GENERATION_RESULT_DIR`, and emits a
+  nine-stage post-full-shard return gate plus next-action rows. The default
+  no-return path pins `ready_rendezvous_stage_rows=3/9`,
+  `ready_next_action_rows=2/5`, `accepted_dispatch_receipt_rows=0/21`,
+  `accepted_chunk_return_artifact_rows=0/50`,
+  `answer_review_accepted_rows=0/7000`,
+  `full_shard_prerequisites_closed=1`,
+  `runtime_admission_accepted_rows=1000`,
+  `generation_execution_admitted_rows=0/1000`,
+  `accepted_generation_result_artifacts=0/5`,
+  `actual_model_generation_ready=0`, and zero repo payload bytes. This makes
+  review/generation returns the explicit next blocker after full-shard closure.
+- `v53af` adds the external return inbox scaffold.
+  `experiments/test_v53af_external_return_inbox_scaffold.sh` consumes v53ae
+  and v61df, then creates a zero-evidence `return_inbox/` with `.template`
+  files for 21 dispatch receipts, 50 review chunk returns, five aggregate
+  review return artifacts, and five generation result return artifacts. The
+  smoke pins `required_return_artifact_rows=81`,
+  `return_inbox_file_rows=84`, `template_files_accepted_by_default=0`,
+  `answer_review_accepted_rows=0`,
+  `generation_execution_admitted_rows=0`,
+  `accepted_generation_result_artifacts=0`,
+  `actual_model_generation_ready=0`,
+  `full_shard_prerequisites_closed=1`, and zero repo payload bytes. This gives
+  external reviewers/operators the exact return inbox shape without fabricating
+  review or generation evidence.
+- `v53ag` adds the external return inbox archive.
+  `experiments/test_v53ag_external_return_inbox_archive.sh` archives the v53af
+  `return_inbox/` as a transportable tar.gz with file list, checksums, and send
+  instructions. The smoke pins `archive_ready=1`,
+  `archive_sha256_ready=1`, `archive_member_files=84`,
+  `template_archive_member_rows=82`,
+  `return_artifact_template_archive_member_rows=81`,
+  `payload_like_archive_member_rows=0`,
+  `final_evidence_named_archive_member_rows=0`,
+  `answer_review_accepted_rows=0`,
+  `accepted_generation_result_artifacts=0`,
+  `actual_model_generation_ready=0`, and zero repo payload bytes. This is
+  sendable return infrastructure, not accepted return evidence.
+- `v53ah` adds the complete-source external review send bundle.
+  `experiments/test_v53ah_complete_source_external_review_send_bundle.sh`
+  consumes v53ac and v53ag, then puts the review dispatch archive and
+  template-only return inbox archive under one `send_bundle/` with a bundle
+  file list, checksum manifest, send README, and verifier. The smoke pins
+  `send_bundle_ready=1`, `send_bundle_archive_files=2`,
+  `dispatch_archive_member_files=78`,
+  `return_inbox_archive_member_files=84`,
+  `return_artifact_template_archive_member_rows=81`,
+  `nested_payload_like_archive_member_rows=0`,
+  `return_inbox_final_evidence_named_archive_member_rows=0`,
+  `accepted_dispatch_receipt_rows=0/21`,
+  `answer_review_accepted_rows=0/7000`,
+  `generation_execution_admitted_rows=0/1000`,
+  `accepted_generation_result_artifacts=0/5`,
+  `actual_model_generation_ready=0`,
+  `full_shard_prerequisites_closed=1`,
+  `runtime_admission_accepted_rows=1000`, and zero repo payload bytes. This
+  makes the first external send after full-shard closure one transferable
+  packet while keeping all returned-evidence and generation claims blocked.
+- `v53ai` adds the complete-source external return bundle intake.
+  `experiments/test_v53ai_complete_source_external_return_bundle_intake.sh`
+  consumes v53ah, v53ae, and the v53af required artifact index, then maps an
+  optional `V53AI_RETURN_BUNDLE_DIR` into dispatch receipt, review chunk
+  return, aggregate review return, and generation result return directories
+  before refreshing v53ae. The default no-return smoke pins
+  `required_return_artifact_rows=81`,
+  `supplied_return_artifact_rows=0`,
+  `missing_return_artifact_rows=81`,
+  `accepted_by_v53ai_rows=0`,
+  `return_bundle_mapping_ready=1`,
+  `all_return_artifacts_present=0`,
+  `send_bundle_ready=1`,
+  `ready_rendezvous_stage_rows=3/9`,
+  `answer_review_accepted_rows=0/7000`,
+  `generation_execution_admitted_rows=0/1000`,
+  `accepted_generation_result_artifacts=0/5`,
+  `actual_model_generation_ready=0`,
+  `full_shard_prerequisites_closed=1`,
+  `runtime_admission_accepted_rows=1000`, and zero repo payload bytes. This
+  gives the returned packet a single intake command while preserving downstream
+  review/generation acceptance as the only source of truth.
+- `v53aj` adds the complete-source return closure dashboard.
+  `experiments/test_v53aj_complete_source_return_closure_dashboard.sh`
+  consumes v53ai, v53ae, v53v, and v61de, then rolls the post-send path into
+  12 closure items plus five next actions. The default no-return smoke pins
+  `ready_closure_item_rows=3/12`, `ready_next_action_rows=1/5`,
+  `send_bundle_ready=1`,
+  `return_bundle_mapping_ready=1`,
+  `missing_return_artifact_rows=81`,
+  `accepted_dispatch_receipt_rows=0/21`,
+  `accepted_chunk_return_artifact_rows=0/50`,
+  `answer_review_accepted_rows=0/7000`,
+  `accepted_adjudication_rows=0/1000`,
+  `generation_execution_admitted_rows=0/1000`,
+  `accepted_generation_result_artifacts=0/5`,
+  `actual_model_generation_ready=0`,
+  `full_shard_prerequisites_closed=1`,
+  `runtime_admission_accepted_rows=1000`, and zero repo payload bytes. This is
+  the current operator dashboard: only send/mapping/full-shard-runtime are
+  ready, and all returned-evidence/generation claims remain blocked.
+- `v53ak` adds the complete-source external return operator checklist.
+  `experiments/test_v53ak_complete_source_external_return_operator_checklist.sh`
+  consumes v53aj and v53ai, then expands the returned-bundle task into 81
+  checklist rows with final bundle paths, target env vars, downstream gates,
+  and validation commands. The default no-return smoke pins
+  `checklist_rows=81`,
+  `dispatch_receipt_checklist_rows=21`,
+  `review_chunk_return_checklist_rows=50`,
+  `aggregate_review_return_checklist_rows=5`,
+  `generation_result_return_checklist_rows=5`,
+  `supplied_checklist_rows=0`,
+  `missing_checklist_rows=81`,
+  `accepted_by_v53ak_rows=0`,
+  `ready_closure_item_rows=3`,
+  `blocked_closure_item_rows=9`,
+  `actual_model_generation_ready=0`,
+  `full_shard_prerequisites_closed=1`,
+  `runtime_admission_accepted_rows=1000`, and zero repo payload bytes. This is
+  logistics-only: downstream gates remain the only acceptance authority.
+- `v53al` adds the complete-source external return bundle preflight.
+  `experiments/test_v53al_complete_source_external_return_bundle_preflight.sh`
+  consumes v53ak, optionally checks `V53AL_RETURN_BUNDLE_DIR`, and emits a
+  receiver-side verifier over the 81 expected final artifacts. The default
+  no-return smoke pins `preflight_surface_ready=1`,
+  `return_bundle_preflight_pass=0`,
+  `preflight_rows=81`,
+  `preflight_pass_rows=0`,
+  `preflight_missing_rows=81`,
+  `accepted_by_v53al_rows=0`,
+  `verifier_script_ready=1`,
+  `answer_review_accepted_rows=0`,
+  `generation_execution_admitted_rows=0`,
+  `actual_model_generation_ready=0`,
+  `full_shard_prerequisites_closed=1`,
+  `runtime_admission_accepted_rows=1000`, and zero repo payload bytes. This
+  preflight checks presence/non-empty/template names only; downstream gates
+  remain authoritative for evidence acceptance.
+- `v53am` adds the complete-source return acceptance replay.
+  `experiments/test_v53am_complete_source_return_acceptance_replay.sh`
+  consumes v53al and replays the downstream chain in order: dispatch receipts,
+  review chunk returns, aggregate review refresh, v53/v61 handoff, generation
+  result intake, and post-review generation handoff. The default no-return
+  smoke pins `replay_step_rows=11`,
+  `ready_replay_step_rows=2`,
+  `blocked_replay_step_rows=9`,
+  `ready_replay_command_rows=1`,
+  `return_bundle_preflight_pass=0`,
+  `accepted_dispatch_receipt_rows=0/21`,
+  `accepted_chunk_return_artifact_rows=0/50`,
+  `answer_review_accepted_rows=0/7000`,
+  `generation_execution_admitted_rows=0/1000`,
+  `accepted_generation_result_artifacts=0/5`,
+  `actual_model_generation_ready=0`,
+  `accepted_by_v53am_rows=0`,
+  `full_shard_prerequisites_closed=1`,
+  `runtime_admission_accepted_rows=1000`, and zero repo payload bytes. This is
+  the replay command surface for a real returned bundle; it still does not
+  accept evidence itself.
+- `v61de` adds the post-review generation result handoff bridge.
+  `experiments/test_v61de_post_review_generation_result_handoff_bridge.sh`
+  binds v53z, v61ct, v61bt, v61cu, and v61dd into the path that follows an
+  accepted review return: guarded generation admission, real generation result
+  intake, query-level result acceptance, and actual-generation readiness. The
+  default no-return path pins `handoff_stage_rows=8`,
+  `ready_handoff_stage_rows=3`, `blocked_handoff_stage_rows=5`,
+  `runtime_admission_accepted_rows=1000`, `answer_review_accepted_rows=0`,
+  `generation_execution_admitted_rows=0`,
+  `accepted_generation_result_artifacts=0`,
+  `generation_result_accepted_rows=0`, `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61de=0`, and zero checkpoint payload
+  bytes committed to the repo. This keeps post-review generation operationally
+  queued while still blocking actual generation, latency, near-frontier, and
+  release claims until real returned evidence exists.
+- `v61df` adds the external review/generation return operator packet.
+  `experiments/test_v61df_external_review_generation_return_operator_packet.sh`
+  refreshes v53z/v61de and packages v53 review templates plus v61 generation
+  result templates into one zero-payload handoff. It pins
+  `operator_stage_rows=7`, `ready_operator_stage_rows=3`,
+  `blocked_operator_stage_rows=4`, `operator_packet_file_rows=8`,
+  `ready_operator_packet_file_rows=8`, `review_return_required_artifacts=5`,
+  `generation_result_required_artifacts=5`,
+  `answer_review_accepted_rows=0`, `generation_execution_admitted_rows=0`,
+  `accepted_generation_result_artifacts=0`, `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61df=0`, and zero checkpoint payload
+  bytes committed to the repo. This is the operator-facing packet for returning
+  review evidence first and generation result evidence second, without
+  fabricating either.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

@@ -43,6 +43,13 @@ expected_bytes = sum(int(row["remaining_bytes"]) for row in source_queue_rows)
 existing_verified_rows = len(source_skip_rows)
 existing_verified_bytes = sum(int(row["actual_bytes_present"]) for row in source_skip_rows)
 total_required_rows = expected_rows + existing_verified_rows
+no_remaining_queue = expected_rows == 0
+expected_return_status = "pass" if no_remaining_queue else "blocked"
+expected_ready_gap = "ready" if no_remaining_queue else "blocked"
+expected_return_schema_ready = "1" if no_remaining_queue else "0"
+expected_return_artifact_ready = "1" if no_remaining_queue else "0"
+expected_return_intake_ready = "1" if no_remaining_queue else "0"
+expected_full_materialization_ready = "1" if no_remaining_queue else "0"
 
 expected_static = {
     "v61cl_ubuntu1_remaining_checkpoint_materialization_return_intake_ready": "1",
@@ -55,10 +62,10 @@ expected_static = {
     "accepted_remaining_materialization_bytes": "0",
     "total_identity_verified_checkpoint_shard_rows": str(existing_verified_rows),
     "return_schema_template_ready": "1",
-    "return_schema_ready": "0",
-    "return_artifact_ready": "0",
-    "remaining_materialization_return_intake_ready": "0",
-    "full_checkpoint_materialization_ready": "0",
+    "return_schema_ready": expected_return_schema_ready,
+    "return_artifact_ready": expected_return_artifact_ready,
+    "remaining_materialization_return_intake_ready": expected_return_intake_ready,
+    "full_checkpoint_materialization_ready": expected_full_materialization_ready,
     "full_safetensors_page_hash_binding_ready": "0",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
@@ -127,31 +134,33 @@ if invalid_rows[0]["status"] != "none":
     raise SystemExit("v61cl default path should not create invalid supplied rows")
 if len(queue_status_rows) != expected_rows:
     raise SystemExit("v61cl queue status row count mismatch")
-if sum(int(row["missing_return_rows"]) for row in queue_status_rows) != expected_rows:
-    raise SystemExit("v61cl queue missing return row sum mismatch")
-if sum(int(row["missing_bytes"]) for row in queue_status_rows) != expected_bytes:
-    raise SystemExit("v61cl queue missing byte sum mismatch")
-if any(row["accepted_return_rows"] != "0" or row["invalid_return_rows"] != "0" for row in queue_status_rows):
-    raise SystemExit("v61cl default path should accept no return rows")
-if any(row["result_status"] != "deferred-with-reason-final" for row in queue_status_rows):
-    raise SystemExit("v61cl default path should final-defer all queue rows")
-if any(row["checkpoint_payload_bytes_downloaded_by_v61cl"] != "0" for row in queue_status_rows):
-    raise SystemExit("v61cl must not download checkpoint payload bytes")
-if any(row["checkpoint_payload_bytes_committed_to_repo"] != "0" for row in queue_status_rows):
-    raise SystemExit("v61cl must not commit checkpoint payload bytes")
+if expected_rows:
+    if sum(int(row["missing_return_rows"]) for row in queue_status_rows) != expected_rows:
+        raise SystemExit("v61cl queue missing return row sum mismatch")
+    if sum(int(row["missing_bytes"]) for row in queue_status_rows) != expected_bytes:
+        raise SystemExit("v61cl queue missing byte sum mismatch")
+    if any(row["accepted_return_rows"] != "0" or row["invalid_return_rows"] != "0" for row in queue_status_rows):
+        raise SystemExit("v61cl default path should accept no return rows")
+    if any(row["result_status"] != "deferred-with-reason-final" for row in queue_status_rows):
+        raise SystemExit("v61cl default path should final-defer all queue rows")
+    if any(row["checkpoint_payload_bytes_downloaded_by_v61cl"] != "0" for row in queue_status_rows):
+        raise SystemExit("v61cl must not download checkpoint payload bytes")
+    if any(row["checkpoint_payload_bytes_committed_to_repo"] != "0" for row in queue_status_rows):
+        raise SystemExit("v61cl must not commit checkpoint payload bytes")
 
 if len(chunk_status_rows) != len(source_chunk_rows):
     raise SystemExit("v61cl chunk status row count mismatch")
-if sum(int(row["planned_materialization_return_rows"]) for row in chunk_status_rows) != expected_rows:
-    raise SystemExit("v61cl chunk planned return row sum mismatch")
-if sum(int(row["missing_materialization_return_rows"]) for row in chunk_status_rows) != expected_rows:
-    raise SystemExit("v61cl chunk missing return row sum mismatch")
-if sum(int(row["planned_remaining_bytes"]) for row in chunk_status_rows) != expected_bytes:
-    raise SystemExit("v61cl chunk planned byte sum mismatch")
-if sum(int(row["missing_remaining_bytes"]) for row in chunk_status_rows) != expected_bytes:
-    raise SystemExit("v61cl chunk missing byte sum mismatch")
-if any(row["result_status"] != "deferred-with-reason-final" for row in chunk_status_rows):
-    raise SystemExit("v61cl default path should final-defer all chunks")
+if expected_rows:
+    if sum(int(row["planned_materialization_return_rows"]) for row in chunk_status_rows) != expected_rows:
+        raise SystemExit("v61cl chunk planned return row sum mismatch")
+    if sum(int(row["missing_materialization_return_rows"]) for row in chunk_status_rows) != expected_rows:
+        raise SystemExit("v61cl chunk missing return row sum mismatch")
+    if sum(int(row["planned_remaining_bytes"]) for row in chunk_status_rows) != expected_bytes:
+        raise SystemExit("v61cl chunk planned byte sum mismatch")
+    if sum(int(row["missing_remaining_bytes"]) for row in chunk_status_rows) != expected_bytes:
+        raise SystemExit("v61cl chunk missing byte sum mismatch")
+    if any(row["result_status"] != "deferred-with-reason-final" for row in chunk_status_rows):
+        raise SystemExit("v61cl default path should final-defer all chunks")
 
 if len(preservation_rows) != existing_verified_rows:
     raise SystemExit("v61cl preservation row count mismatch")
@@ -160,12 +169,12 @@ if sum(int(row["identity_verified_bytes"]) for row in preservation_rows) != exis
 if any(row["preservation_status"] != "preserved-existing-v61bv-identity-verified-shard" for row in preservation_rows):
     raise SystemExit("v61cl preservation status mismatch")
 
-if validation_rows["remaining-materialization-return-input"]["status"] != "blocked":
-    raise SystemExit("v61cl return input should be blocked without supplied rows")
-if validation_rows["remaining-materialization-return-schema"]["status"] != "blocked":
-    raise SystemExit("v61cl return schema should be blocked without supplied rows")
-if validation_rows["remaining-materialization-return-completeness"]["status"] != "blocked":
-    raise SystemExit("v61cl completeness should be blocked without supplied rows")
+if validation_rows["remaining-materialization-return-input"]["status"] != expected_return_status:
+    raise SystemExit("v61cl return input status mismatch")
+if validation_rows["remaining-materialization-return-schema"]["status"] != expected_return_status:
+    raise SystemExit("v61cl return schema status mismatch")
+if validation_rows["remaining-materialization-return-completeness"]["status"] != expected_return_status:
+    raise SystemExit("v61cl completeness status mismatch")
 if validation_rows["existing-checkpoint-materialization-preservation"]["status"] != "pass":
     raise SystemExit("v61cl existing materialization preservation should pass")
 if validation_rows["final-deferred-default"]["status"] != "pass":
@@ -176,13 +185,11 @@ if validation_rows["final-deferred-default"]["missing_rows"] != str(expected_row
 for requirement_id in ["v61bv-remaining-queue-input", "manifest-only-no-repo-payload"]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61cl requirement should pass: {requirement_id}")
-for requirement_id in [
-    "remaining-materialization-return-artifact",
-    "accepted-all-remaining-materialization-returns",
-    "completed-full-checkpoint-materialization",
-]:
-    if requirements[requirement_id]["status"] != "blocked":
-        raise SystemExit(f"v61cl requirement should stay blocked: {requirement_id}")
+for requirement_id in ["remaining-materialization-return-artifact", "accepted-all-remaining-materialization-returns"]:
+    if requirements[requirement_id]["status"] != expected_return_status:
+        raise SystemExit(f"v61cl requirement status mismatch: {requirement_id}")
+if requirements["completed-full-checkpoint-materialization"]["status"] != ("pass" if no_remaining_queue else "blocked"):
+    raise SystemExit("v61cl completed full materialization requirement status mismatch")
 
 for field, value in {**expected_static, **expected_dynamic}.items():
     if field.startswith("v61cl_"):
@@ -199,28 +206,23 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61cl gate should pass: {gate}")
-for gate in [
-    "remaining-materialization-return-artifact",
-    "accepted-all-remaining-materialization-returns",
-    "completed-full-checkpoint-materialization",
-    "full-safetensors-page-hash-binding",
-    "actual-model-generation",
-    "real-release-package",
-]:
+for gate in ["remaining-materialization-return-artifact", "accepted-all-remaining-materialization-returns"]:
+    if decisions.get(gate) != expected_return_status:
+        raise SystemExit(f"v61cl gate status mismatch: {gate}")
+if decisions.get("completed-full-checkpoint-materialization") != ("pass" if no_remaining_queue else "blocked"):
+    raise SystemExit("v61cl completed full materialization gate status mismatch")
+for gate in ["full-safetensors-page-hash-binding", "actual-model-generation", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v61cl gate should stay blocked: {gate}")
 
 if gaps["v61bv-remaining-queue-input"] != "ready":
     raise SystemExit("v61cl v61bv input gap should be ready")
-for gap in [
-    "remaining-materialization-return-artifact",
-    "accepted-all-remaining-materialization-returns",
-    "completed-full-checkpoint-materialization",
-    "full-safetensors-page-hash-binding",
-    "actual-model-generation",
-    "production-latency",
-    "release-package",
-]:
+for gap in ["remaining-materialization-return-artifact", "accepted-all-remaining-materialization-returns"]:
+    if gaps.get(gap) != expected_ready_gap:
+        raise SystemExit(f"v61cl gap status mismatch: {gap}")
+if gaps.get("completed-full-checkpoint-materialization") != expected_ready_gap:
+    raise SystemExit("v61cl completed full materialization gap status mismatch")
+for gap in ["full-safetensors-page-hash-binding", "actual-model-generation", "production-latency", "release-package"]:
     if gaps.get(gap) != "blocked":
         raise SystemExit(f"v61cl gap should stay blocked: {gap}")
 
@@ -231,8 +233,8 @@ if manifest.get("accepted_remaining_materialization_return_rows") != 0:
     raise SystemExit("v61cl manifest accepted return count mismatch")
 if manifest.get("missing_remaining_materialization_return_rows") != expected_rows:
     raise SystemExit("v61cl manifest missing return count mismatch")
-if manifest.get("full_checkpoint_materialization_ready") != 0:
-    raise SystemExit("v61cl manifest should keep full materialization blocked")
+if manifest.get("full_checkpoint_materialization_ready") != int(no_remaining_queue):
+    raise SystemExit("v61cl manifest full materialization readiness mismatch")
 
 boundary = (run_dir / "V61CL_UBUNTU1_REMAINING_CHECKPOINT_MATERIALIZATION_RETURN_INTAKE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
@@ -245,8 +247,8 @@ for snippet in [
     f"existing_verified_checkpoint_shard_rows={existing_verified_rows}",
     f"total_required_checkpoint_shard_rows={total_required_rows}",
     f"total_identity_verified_checkpoint_shard_rows={existing_verified_rows}",
-    "remaining_materialization_return_intake_ready=0",
-    "full_checkpoint_materialization_ready=0",
+    f"remaining_materialization_return_intake_ready={int(no_remaining_queue)}",
+    f"full_checkpoint_materialization_ready={int(no_remaining_queue)}",
     "checkpoint_payload_bytes_downloaded_by_v61cl=0",
     "Blocked wording",
 ]:

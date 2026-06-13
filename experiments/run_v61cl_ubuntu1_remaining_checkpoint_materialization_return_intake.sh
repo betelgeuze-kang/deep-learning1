@@ -121,8 +121,11 @@ v61bv_decision_path = results / "v61bv_ubuntu1_remaining_checkpoint_materializat
 v61bv_summary = read_csv(v61bv_summary_path)[0]
 if v61bv_summary.get("v61bv_ubuntu1_remaining_checkpoint_materialization_queue_ready") != "1":
     raise SystemExit("v61cl requires v61bv_ubuntu1_remaining_checkpoint_materialization_queue_ready=1")
-if v61bv_summary.get("remaining_queue_ready") != "1":
-    raise SystemExit("v61cl requires v61bv remaining_queue_ready=1")
+remaining_queue_rows_from_summary = int(v61bv_summary.get("remaining_queue_rows", "0"))
+if v61bv_summary.get("remaining_queue_ready") != "1" and not (
+    remaining_queue_rows_from_summary == 0 and v61bv_summary.get("full_checkpoint_materialization_ready") == "1"
+):
+    raise SystemExit("v61cl requires v61bv remaining_queue_ready=1 or completed empty remaining queue")
 
 for src, rel in [
     (v61bv_summary_path, "source_v61bv/v61bv_ubuntu1_remaining_checkpoint_materialization_queue_summary.csv"),
@@ -265,12 +268,38 @@ existing_verified_rows = len(skip_rows)
 existing_verified_bytes = sum(int(row["actual_bytes_present"]) for row in skip_rows)
 total_required_rows = existing_verified_rows + expected_remaining_rows
 total_identity_verified_rows = existing_verified_rows + accepted_return_rows
-return_schema_ready = int(supplied and not missing_fields)
-return_artifact_ready = int(supplied and return_schema_ready and invalid_return_rows == 0 and accepted_return_rows > 0)
-remaining_return_intake_ready = int(return_artifact_ready and accepted_return_rows == expected_remaining_rows)
+no_remaining_queue = expected_remaining_rows == 0
+effective_missing_fields = [] if no_remaining_queue else missing_fields
+return_schema_ready = int(no_remaining_queue or (supplied and not effective_missing_fields))
+return_artifact_ready = int(
+    no_remaining_queue
+    or (supplied and return_schema_ready and invalid_return_rows == 0 and accepted_return_rows > 0)
+)
+remaining_return_intake_ready = int(
+    no_remaining_queue
+    or (return_artifact_ready and accepted_return_rows == expected_remaining_rows)
+)
 full_materialization_ready = int(remaining_return_intake_ready and total_identity_verified_rows == total_required_rows)
 
 queue_status_rows = []
+queue_status_fields = [
+    "remaining_queue_row_id",
+    "resumed_priority_rank",
+    "model_id",
+    "shard_name",
+    "priority_class",
+    "target_path",
+    "expected_bytes",
+    "accepted_return_rows",
+    "invalid_return_rows",
+    "missing_return_rows",
+    "accepted_bytes",
+    "missing_bytes",
+    "result_status",
+    "checkpoint_payload_bytes_downloaded_by_v61cl",
+    "checkpoint_payload_bytes_committed_to_repo",
+    "route_jump_rows",
+]
 for queue in queue_rows:
     queue_id = queue["remaining_queue_row_id"]
     accepted = status_by_queue[queue_id]["accepted_return_rows"]
@@ -304,7 +333,7 @@ for queue in queue_rows:
             "route_jump_rows": "0",
         }
     )
-write_csv(run_dir / "remaining_checkpoint_materialization_return_queue_status_rows.csv", list(queue_status_rows[0].keys()), queue_status_rows)
+write_csv(run_dir / "remaining_checkpoint_materialization_return_queue_status_rows.csv", queue_status_fields, queue_status_rows)
 
 accepted_by_priority = defaultdict(int)
 invalid_by_priority = defaultdict(int)
@@ -316,6 +345,20 @@ for row in queue_status_rows:
     accepted_bytes_by_priority[priority_class] += int(row["accepted_bytes"])
 
 chunk_status_rows = []
+chunk_status_fields = [
+    "remaining_chunk_id",
+    "priority_class",
+    "planned_materialization_return_rows",
+    "accepted_materialization_return_rows",
+    "invalid_materialization_return_rows",
+    "missing_materialization_return_rows",
+    "planned_remaining_bytes",
+    "accepted_remaining_bytes",
+    "missing_remaining_bytes",
+    "result_status",
+    "checkpoint_payload_bytes_downloaded_by_v61cl",
+    "checkpoint_payload_bytes_committed_to_repo",
+]
 for chunk in chunk_rows:
     priority_class = chunk["priority_class"]
     planned = int(chunk["remaining_queue_rows"])
@@ -346,9 +389,19 @@ for chunk in chunk_rows:
             "checkpoint_payload_bytes_committed_to_repo": "0",
         }
     )
-write_csv(run_dir / "remaining_checkpoint_materialization_return_chunk_status_rows.csv", list(chunk_status_rows[0].keys()), chunk_status_rows)
+write_csv(run_dir / "remaining_checkpoint_materialization_return_chunk_status_rows.csv", chunk_status_fields, chunk_status_rows)
 
 preservation_rows = []
+preservation_fields = [
+    "preservation_row_id",
+    "model_id",
+    "shard_name",
+    "target_path",
+    "identity_verified_bytes",
+    "preservation_status",
+    "checkpoint_payload_bytes_downloaded_by_v61cl",
+    "checkpoint_payload_bytes_committed_to_repo",
+]
 for row in skip_rows:
     preservation_rows.append(
         {
@@ -362,26 +415,30 @@ for row in skip_rows:
             "checkpoint_payload_bytes_committed_to_repo": "0",
         }
     )
-write_csv(run_dir / "existing_checkpoint_materialization_preservation_rows.csv", list(preservation_rows[0].keys()), preservation_rows)
+write_csv(run_dir / "existing_checkpoint_materialization_preservation_rows.csv", preservation_fields, preservation_rows)
+
+schema_expected_fields = 0 if no_remaining_queue else len(REQUIRED_RETURN_FIELDS)
+schema_supplied_fields = 0 if no_remaining_queue else len(supplied_fields)
+schema_missing_fields = 0 if no_remaining_queue else len(effective_missing_fields)
 
 validation_rows = [
     {
         "validation_id": "remaining-materialization-return-input",
-        "status": "pass" if supplied else "blocked",
+        "status": "pass" if supplied or no_remaining_queue else "blocked",
         "expected_rows": str(expected_remaining_rows),
         "supplied_rows": str(supplied_return_rows),
         "accepted_rows": str(accepted_return_rows),
         "missing_rows": str(missing_return_rows),
-        "reason": "return artifact supplied" if supplied else "return artifact not supplied",
+        "reason": "no remaining materialization returns required" if no_remaining_queue else ("return artifact supplied" if supplied else "return artifact not supplied"),
     },
     {
         "validation_id": "remaining-materialization-return-schema",
         "status": "pass" if return_schema_ready else "blocked",
-        "expected_rows": str(len(REQUIRED_RETURN_FIELDS)),
-        "supplied_rows": str(len(supplied_fields)),
-        "accepted_rows": str(int(not missing_fields and supplied)),
-        "missing_rows": str(len(missing_fields)),
-        "reason": "all required fields present" if return_schema_ready else "missing supplied artifact or fields",
+        "expected_rows": str(schema_expected_fields),
+        "supplied_rows": str(schema_supplied_fields),
+        "accepted_rows": str(int(return_schema_ready)),
+        "missing_rows": str(schema_missing_fields),
+        "reason": "no return schema required for empty remaining queue" if no_remaining_queue else ("all required fields present" if return_schema_ready else "missing supplied artifact or fields"),
     },
     {
         "validation_id": "remaining-materialization-return-completeness",
@@ -390,7 +447,7 @@ validation_rows = [
         "supplied_rows": str(supplied_return_rows),
         "accepted_rows": str(accepted_return_rows),
         "missing_rows": str(missing_return_rows),
-        "reason": "all remaining materialization returns accepted" if remaining_return_intake_ready else "remaining materialization returns still missing",
+        "reason": "no remaining materialization returns required" if no_remaining_queue else ("all remaining materialization returns accepted" if remaining_return_intake_ready else "remaining materialization returns still missing"),
     },
     {
         "validation_id": "existing-checkpoint-materialization-preservation",
@@ -408,7 +465,7 @@ validation_rows = [
         "supplied_rows": str(supplied_return_rows),
         "accepted_rows": str(accepted_return_rows),
         "missing_rows": str(missing_return_rows),
-        "reason": "default path records explicit missing return rows without claiming execution",
+        "reason": "empty remaining queue needs no return rows" if no_remaining_queue else "default path records explicit missing return rows without claiming execution",
     },
 ]
 write_csv(run_dir / "remaining_checkpoint_materialization_return_validation_rows.csv", list(validation_rows[0].keys()), validation_rows)
@@ -425,15 +482,15 @@ requirement_rows = [
         "requirement_id": "remaining-materialization-return-artifact",
         "status": "pass" if return_artifact_ready else "blocked",
         "required_value": RETURN_FILE,
-        "actual_value": str(int(supplied)),
-        "reason": "requires materialization return CSV from v61bv operator execution",
+        "actual_value": "not-required" if no_remaining_queue else str(int(supplied)),
+        "reason": "no remaining materialization returns required" if no_remaining_queue else "requires materialization return CSV from v61bv operator execution",
     },
     {
         "requirement_id": "accepted-all-remaining-materialization-returns",
         "status": "pass" if remaining_return_intake_ready else "blocked",
         "required_value": str(expected_remaining_rows),
         "actual_value": str(accepted_return_rows),
-        "reason": "full materialization requires every remaining shard return",
+        "reason": "no remaining materialization returns required" if no_remaining_queue else "full materialization requires every remaining shard return",
     },
     {
         "requirement_id": "completed-full-checkpoint-materialization",
@@ -511,8 +568,8 @@ decision_rows = [
     {"gate": "existing-checkpoint-materialization-preservation", "status": "pass", "reason": f"existing_verified_checkpoint_shard_rows={existing_verified_rows}"},
     {"gate": "default-no-env-deferral", "status": "pass" if not supplied else "not-applicable", "reason": "default path defers missing return rows"},
     {"gate": "manifest-only-no-repo-payload", "status": "pass", "reason": "v61cl writes metadata and return rows only"},
-    {"gate": "remaining-materialization-return-artifact", "status": "pass" if return_artifact_ready else "blocked", "reason": f"supplied_remaining_materialization_return_rows={supplied_return_rows}"},
-    {"gate": "accepted-all-remaining-materialization-returns", "status": "pass" if remaining_return_intake_ready else "blocked", "reason": f"accepted_remaining_materialization_return_rows={accepted_return_rows}"},
+    {"gate": "remaining-materialization-return-artifact", "status": "pass" if return_artifact_ready else "blocked", "reason": "no remaining materialization returns required" if no_remaining_queue else f"supplied_remaining_materialization_return_rows={supplied_return_rows}"},
+    {"gate": "accepted-all-remaining-materialization-returns", "status": "pass" if remaining_return_intake_ready else "blocked", "reason": "no remaining materialization returns required" if no_remaining_queue else f"accepted_remaining_materialization_return_rows={accepted_return_rows}"},
     {"gate": "completed-full-checkpoint-materialization", "status": "pass" if full_materialization_ready else "blocked", "reason": f"total_identity_verified_checkpoint_shard_rows={total_identity_verified_rows}"},
     {"gate": "full-safetensors-page-hash-binding", "status": "blocked", "reason": "not a page-hash runner"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "not a generation runner"},
@@ -549,11 +606,11 @@ Evidence emitted:
 - checkpoint_payload_bytes_downloaded_by_v61cl=0
 - checkpoint_payload_bytes_committed_to_repo=0
 
-Allowed wording: remaining checkpoint materialization return intake schema and
-default deferral. Blocked wording: completed full checkpoint materialization,
-full safetensors page-hash binding, actual model generation, production
-latency, near-frontier quality, or release readiness unless accepted return
-rows cover every remaining shard.
+Allowed wording: remaining checkpoint materialization return intake schema,
+default deferral, and completed full checkpoint materialization when no
+remaining queue rows exist or accepted return rows cover every remaining shard.
+Blocked wording: full safetensors page-hash binding, actual model generation,
+production latency, near-frontier quality, or release readiness.
 """
 (run_dir / "V61CL_UBUNTU1_REMAINING_CHECKPOINT_MATERIALIZATION_RETURN_INTAKE_BOUNDARY.md").write_text(boundary, encoding="utf-8")
 

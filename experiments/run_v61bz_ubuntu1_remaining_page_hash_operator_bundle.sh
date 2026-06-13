@@ -106,7 +106,31 @@ if len(skip_rows) < 1:
 
 queue_csv = operator_dir / "remaining_page_hash_execution_chunk_rows.csv"
 skip_csv = operator_dir / "verified_page_hash_skip_rows.csv"
-write_csv(queue_csv, list(chunk_rows[0].keys()), chunk_rows)
+chunk_fields = [
+    "remaining_page_hash_chunk_id",
+    "resumed_priority_rank",
+    "original_priority_rank",
+    "model_id",
+    "shard_name",
+    "priority_class",
+    "target_path",
+    "chunk_index",
+    "chunk_page_start_index",
+    "chunk_page_end_index_exclusive",
+    "planned_page_hash_rows",
+    "shard_remaining_page_hash_rows",
+    "shard_remaining_page_hash_bytes",
+    "remaining_materialization_queued",
+    "full_shard_page_hash_coverage_ready",
+    "dry_run_default",
+    "requires_identity_verification_before_hash",
+    "requires_execute_flag",
+    "requires_approval_phrase",
+    "page_hash_execution_status",
+    "checkpoint_payload_bytes_downloaded_by_v61by",
+    "checkpoint_payload_bytes_committed_to_repo",
+]
+write_csv(queue_csv, chunk_fields, chunk_rows)
 write_csv(skip_csv, list(skip_rows[0].keys()), skip_rows)
 
 result_template_rows = [
@@ -309,8 +333,9 @@ Execution requires:
 - `V61BZ_APPROVAL_PHRASE={approval_phrase}`
 - `V61BZ_IDENTITY_VERIFIED_CONFIRM=1`
 
-The bundle skips the already witnessed `model-00024-of-00059.safetensors`
-page-hash rows and keeps checkpoint payload bytes outside the repository.
+The bundle skips already witnessed page-hash rows and keeps checkpoint payload
+bytes outside the repository. If full safetensors page-hash coverage is already
+complete, the queue is intentionally empty.
 """
 
 write_executable(hash_script, hash_content)
@@ -384,9 +409,10 @@ remaining_pages = int(v61by_summary["remaining_page_hash_rows"])
 remaining_bytes = int(v61by_summary["remaining_page_hash_bytes"])
 verified_pages = int(v61by_summary["verified_page_hash_rows"])
 skipped_pages = int(v61by_summary["skipped_verified_page_hash_rows"])
+full_page_hash_ready = int(v61by_summary["full_safetensors_page_hash_binding_ready"])
 dry_run_guard_ready = int(dry_proc.returncode == 0 and dry_run_rows[0]["dry_run_guard_seen"] == "1")
 script_ready = int(all(row["bash_syntax_pass"] == "1" and row["executable_bit_set"] == "1" for row in script_probe_rows))
-operator_bundle_ready = int(script_ready and dry_run_guard_ready and remaining_chunks > 0)
+operator_bundle_ready = int(script_ready and dry_run_guard_ready and (remaining_chunks > 0 or full_page_hash_ready))
 
 requirement_rows = [
     {
@@ -415,14 +441,14 @@ requirement_rows = [
         "status": "pass" if operator_bundle_ready else "blocked",
         "required_value": str(remaining_chunks),
         "actual_value": str(remaining_chunks),
-        "reason": "operator bundle mirrors all remaining page-hash chunks",
+        "reason": "operator bundle mirrors all remaining page-hash chunks; an empty queue is valid after full coverage",
     },
     {
         "requirement_id": "completed-full-safetensors-page-hash-coverage",
-        "status": "blocked",
+        "status": "pass" if full_page_hash_ready else "blocked",
         "required_value": v61by_summary["total_checkpoint_unique_page_rows"],
         "actual_value": str(verified_pages),
-        "reason": "operator bundle does not execute page hashes by default",
+        "reason": "no remaining page-hash execution is needed when upstream coverage is already complete" if full_page_hash_ready else "operator bundle does not execute page hashes by default",
     },
     {
         "requirement_id": "manifest-only-no-repo-payload",
@@ -450,7 +476,7 @@ metric = {
     "dry_run_guard_ready": str(dry_run_guard_ready),
     "remaining_page_hash_operator_bundle_ready": str(operator_bundle_ready),
     "page_hash_execution_ready": "0",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "full_safetensors_page_hash_binding_ready": str(full_page_hash_ready),
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
     "production_latency_claim_ready": "0",
@@ -464,7 +490,7 @@ write_csv(run_dir / "remaining_page_hash_operator_metric_rows.csv", list(metric.
 gap_rows = [
     ("remaining-page-hash-operator-bundle", "ready" if operator_bundle_ready else "blocked", f"remaining_page_hash_execution_chunk_rows={remaining_chunks}"),
     ("explicit-page-hash-execution", "blocked", "dry-run by default; requires explicit execute flag and approval phrase"),
-    ("completed-full-safetensors-page-hash-coverage", "blocked", f"verified_page_hash_rows={verified_pages}"),
+    ("completed-full-safetensors-page-hash-coverage", "ready" if full_page_hash_ready else "blocked", f"verified_page_hash_rows={verified_pages}"),
     ("actual-model-generation", "blocked", "not a generation runner"),
     ("release-package", "blocked", "no release audit/review evidence"),
 ]
@@ -481,8 +507,8 @@ decision_rows = [
     {"gate": "operator-script-syntax", "status": "pass" if script_ready else "blocked", "reason": f"script_ready={script_ready}"},
     {"gate": "dry-run-guard", "status": "pass" if dry_run_guard_ready else "blocked", "reason": "hash execution defaults to dry-run"},
     {"gate": "remaining-page-hash-operator-bundle", "status": "pass" if operator_bundle_ready else "blocked", "reason": f"remaining_chunks={remaining_chunks}"},
-    {"gate": "explicit-page-hash-execution", "status": "blocked", "reason": "requires V61BZ_EXECUTE_PAGE_HASH=1, approval phrase, and identity confirmation"},
-    {"gate": "completed-full-safetensors-page-hash-coverage", "status": "blocked", "reason": f"verified_page_hash_rows={verified_pages}"},
+    {"gate": "explicit-page-hash-execution", "status": "not-applicable" if full_page_hash_ready and remaining_chunks == 0 else "blocked", "reason": "no remaining page-hash chunks need execution" if full_page_hash_ready and remaining_chunks == 0 else "requires V61BZ_EXECUTE_PAGE_HASH=1, approval phrase, and identity confirmation"},
+    {"gate": "completed-full-safetensors-page-hash-coverage", "status": "pass" if full_page_hash_ready else "blocked", "reason": f"verified_page_hash_rows={verified_pages}"},
     {"gate": "manifest-only-no-repo-payload", "status": "pass", "reason": "v61bz writes scripts and metadata only"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "not a generation runner"},
     {"gate": "real-release-package", "status": "blocked", "reason": "not release evidence"},
@@ -507,15 +533,15 @@ Evidence emitted:
 - dry_run_guard_ready={dry_run_guard_ready}
 - remaining_page_hash_operator_bundle_ready={operator_bundle_ready}
 - page_hash_execution_ready=0
-- full_safetensors_page_hash_binding_ready=0
+- full_safetensors_page_hash_binding_ready={full_page_hash_ready}
 - actual_model_generation_ready=0
 - checkpoint_payload_bytes_downloaded_by_v61bz=0
 - checkpoint_payload_bytes_committed_to_repo=0
 
-Allowed wording: guarded remaining page-hash operator bundle. Blocked wording:
-executed full page hashes, completed full safetensors page-hash coverage,
-actual model generation, production latency, near-frontier quality, or release
-readiness.
+Allowed wording: guarded remaining page-hash operator bundle, or no-op
+remaining operator bundle when upstream full page-hash coverage is complete.
+Blocked wording: actual model generation, production latency, near-frontier
+quality, or release readiness.
 """
 (run_dir / "V61BZ_UBUNTU1_REMAINING_PAGE_HASH_OPERATOR_BUNDLE_BOUNDARY.md").write_text(boundary, encoding="utf-8")
 
@@ -530,7 +556,7 @@ manifest = {
     "dry_run_guard_ready": dry_run_guard_ready,
     "remaining_page_hash_operator_bundle_ready": operator_bundle_ready,
     "page_hash_execution_ready": 0,
-    "full_safetensors_page_hash_binding_ready": 0,
+    "full_safetensors_page_hash_binding_ready": full_page_hash_ready,
     "checkpoint_payload_bytes_downloaded_by_v61bz": 0,
     "checkpoint_payload_bytes_committed_to_repo": 0,
 }

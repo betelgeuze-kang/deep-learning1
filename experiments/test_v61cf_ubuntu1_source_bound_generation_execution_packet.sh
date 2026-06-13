@@ -55,7 +55,7 @@ expected = {
     "generation_execution_ready": "0",
     "generation_execution_admitted_rows": "0",
     "blocked_execution_rows": "1000",
-    "page_hash_closure_ready": "0",
+    "page_hash_closure_ready": "1",
     "review_return_closure_ready": "0",
     "generation_result_closure_ready": "0",
     "actual_model_generation_ready": "0",
@@ -114,7 +114,7 @@ if any(row["execution_admitted"] != "0" for row in packet_rows):
     raise SystemExit("v61cf default packet rows should not be admitted")
 if any(row["checkpoint_payload_bytes_committed_to_repo"] != "0" for row in packet_rows):
     raise SystemExit("v61cf must not commit checkpoint payload bytes")
-if {row["blocked_reason"] for row in packet_rows} != {"generation-closure-return-intake-blocked"}:
+if {row["blocked_reason"] for row in packet_rows} != {"complete-source-review-return;actual-generation-result-return"}:
     raise SystemExit("v61cf blocked reason mismatch")
 if {row["return_artifact"] for row in return_rows} != {
     "real_model_generation_answer_rows.csv",
@@ -127,11 +127,18 @@ if {row["return_artifact"] for row in return_rows} != {
 if any(row["execution_ready"] != "0" for row in command_rows):
     raise SystemExit("v61cf operator commands should remain blocked by default")
 
-for requirement_id in ["v61ce-closure-return-intake-input", "complete-source-query-packet", "manifest-only-no-repo-payload"]:
+for requirement_id in [
+    "v61ce-closure-return-intake-input",
+    "complete-source-query-packet",
+    "full-page-hash-closure",
+    "manifest-only-no-repo-payload",
+]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61cf requirement should pass: {requirement_id}")
 for requirement_id in [
     "generation-closure-return-intake-ready",
+    "complete-source-review-return",
+    "actual-generation-result-return",
     "generation-execution-admission-ready",
     "source-bound-generation-execution-ready",
 ]:
@@ -144,10 +151,17 @@ for field, value in expected.items():
     if field in metric and metric[field] != value:
         raise SystemExit(f"v61cf metric {field}: expected {value}, got {metric[field]}")
 
-for gate in ["v61ce-closure-return-intake-input", "complete-source-query-packet", "manifest-only-no-repo-payload"]:
+for gate in [
+    "v61ce-closure-return-intake-input",
+    "complete-source-query-packet",
+    "full-page-hash-closure",
+    "manifest-only-no-repo-payload",
+]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61cf gate should pass: {gate}")
 for gate in [
+    "complete-source-review-return",
+    "actual-generation-result-return",
     "source-bound-generation-execution",
     "actual-model-generation",
     "production-latency",
@@ -157,10 +171,12 @@ for gate in [
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v61cf gate should stay blocked: {gate}")
 
-for gap in ["v61ce-closure-return-intake-input", "complete-source-query-packet"]:
+for gap in ["v61ce-closure-return-intake-input", "complete-source-query-packet", "full-page-hash-closure"]:
     if gaps.get(gap) != "ready":
         raise SystemExit(f"v61cf gap should be ready: {gap}")
 for gap in [
+    "complete-source-review-return",
+    "actual-generation-result-return",
     "source-bound-generation-execution",
     "actual-model-generation",
     "production-latency",
@@ -180,6 +196,9 @@ for snippet in [
     "generation_execution_ready=0",
     "generation_execution_admitted_rows=0",
     "blocked_execution_rows=1000",
+    "page_hash_closure_ready=1",
+    "review_return_closure_ready=0",
+    "generation_result_closure_ready=0",
     "actual_model_generation_ready=0",
     "checkpoint_payload_bytes_downloaded_by_v61cf=0",
     "Blocked wording",
@@ -200,6 +219,12 @@ if manifest.get("operator_command_rows") != 6:
     raise SystemExit("v61cf manifest command count mismatch")
 if manifest.get("generation_execution_ready") != 0:
     raise SystemExit("v61cf manifest execution should remain blocked")
+if manifest.get("page_hash_closure_ready") != 1:
+    raise SystemExit("v61cf manifest page-hash closure mismatch")
+if manifest.get("review_return_closure_ready") != 0:
+    raise SystemExit("v61cf manifest review closure should remain blocked")
+if manifest.get("generation_result_closure_ready") != 0:
+    raise SystemExit("v61cf manifest generation result closure should remain blocked")
 if manifest.get("actual_model_generation_ready") != 0:
     raise SystemExit("v61cf manifest should keep generation blocked")
 if manifest.get("checkpoint_payload_bytes_downloaded_by_v61cf") != 0:

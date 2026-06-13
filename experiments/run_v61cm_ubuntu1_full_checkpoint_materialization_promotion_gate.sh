@@ -87,10 +87,8 @@ for src, rel in [
 
 queue_status_rows = read_csv(v61cl_dir / "remaining_checkpoint_materialization_return_queue_status_rows.csv")
 preservation_rows = [row for row in read_csv(v61cl_dir / "existing_checkpoint_materialization_preservation_rows.csv") if row["shard_name"] != "none"]
-if not queue_status_rows:
-    raise SystemExit("v61cm requires v61cl queue status rows")
-if not preservation_rows:
-    raise SystemExit("v61cm requires v61cl preservation rows")
+if not queue_status_rows and not preservation_rows:
+    raise SystemExit("v61cm requires v61cl queue status rows or preservation rows")
 
 remaining_by_shard = {row["shard_name"]: row for row in queue_status_rows}
 existing_by_shard = {row["shard_name"]: row for row in preservation_rows}
@@ -319,11 +317,11 @@ Evidence emitted:
 - checkpoint_payload_bytes_downloaded_by_v61cm=0
 - checkpoint_payload_bytes_committed_to_repo=0
 
-Allowed wording: full checkpoint materialization promotion gate with default
-blocked materialization. Blocked wording: completed full checkpoint
-materialization, full safetensors page-hash binding, actual model generation,
-production latency, near-frontier quality, or release readiness until all
-remaining materialization return rows are accepted.
+Allowed wording: full checkpoint materialization promotion gate, including
+completed full checkpoint materialization when every shard is identity-verified
+or has an accepted materialization return. Blocked wording: full safetensors
+page-hash binding, actual model generation, production latency, near-frontier
+quality, or release readiness.
 """
 (run_dir / "V61CM_UBUNTU1_FULL_CHECKPOINT_MATERIALIZATION_PROMOTION_GATE_BOUNDARY.md").write_text(boundary, encoding="utf-8")
 

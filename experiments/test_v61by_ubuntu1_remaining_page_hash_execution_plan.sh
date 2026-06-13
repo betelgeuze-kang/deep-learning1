@@ -48,7 +48,7 @@ expected_static = {
     "total_checkpoint_unique_page_rows": "134161",
     "total_checkpoint_bytes_expected": "281241493344",
     "remaining_page_hash_execution_chunk_size_pages": "512",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "full_safetensors_page_hash_binding_ready": "1",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
     "production_latency_claim_ready": "0",
@@ -86,6 +86,7 @@ metric = read_csv(run_dir / "remaining_page_hash_execution_metric_rows.csv")[0]
 gaps = {row["gap"]: row["status"] for row in read_csv(run_dir / "runtime_gap_rows.csv")}
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 ledger_rows = read_csv(run_dir / "source_v61bx/page_hash_coverage_ledger_rows.csv")
+source_v61bv_summary = read_csv(run_dir / "source_v61bv/v61bv_ubuntu1_remaining_checkpoint_materialization_queue_summary.csv")[0]
 queue_rows = [
     row
     for row in read_csv(run_dir / "source_v61bv/remaining_checkpoint_materialization_queue_rows.csv")
@@ -117,7 +118,7 @@ for field, value in dynamic_expected.items():
     if metric.get(field) != value:
         raise SystemExit(f"v61by metric {field}: expected {value}, got {metric.get(field)}")
 
-if len(queue_rows) != 58:
+if len(queue_rows) != int(source_v61bv_summary["remaining_queue_rows"]):
     raise SystemExit("v61by source remaining queue count mismatch")
 if len(chunk_rows) != expected_chunks:
     raise SystemExit("v61by chunk row count mismatch")
@@ -145,8 +146,8 @@ for requirement_id in [
 ]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61by requirement should pass: {requirement_id}")
-if requirements["completed-full-safetensors-page-hash-coverage"]["status"] != "blocked":
-    raise SystemExit("v61by full coverage should remain blocked")
+if requirements["completed-full-safetensors-page-hash-coverage"]["status"] != "pass":
+    raise SystemExit("v61by full coverage should pass after 0 remaining rows")
 
 for gate in [
     "v61bx-coverage-ledger-input",
@@ -157,13 +158,17 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61by gate should pass: {gate}")
-for gate in ["completed-full-safetensors-page-hash-coverage", "actual-model-generation", "real-release-package"]:
+if decisions.get("completed-full-safetensors-page-hash-coverage") != "pass":
+    raise SystemExit("v61by completed full page-hash gate should pass")
+for gate in ["actual-model-generation", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v61by gate should stay blocked: {gate}")
 
 if gaps["remaining-page-hash-execution-plan"] != "ready":
     raise SystemExit("v61by remaining plan gap should be ready")
-for gap in ["completed-full-safetensors-page-hash-coverage", "actual-model-generation", "production-latency", "release-package"]:
+if gaps.get("completed-full-safetensors-page-hash-coverage") != "ready":
+    raise SystemExit("v61by completed full page-hash gap should be ready")
+for gap in ["actual-model-generation", "production-latency", "release-package"]:
     if gaps.get(gap) != "blocked":
         raise SystemExit(f"v61by gap should stay blocked: {gap}")
 
@@ -174,7 +179,7 @@ for snippet in [
     f"remaining_page_hash_rows={remaining_pages}",
     f"remaining_page_hash_execution_chunk_rows={expected_chunks}",
     "remaining_page_hash_execution_plan_ready=1",
-    "full_safetensors_page_hash_binding_ready=0",
+    "full_safetensors_page_hash_binding_ready=1",
     "actual_model_generation_ready=0",
     "checkpoint_payload_bytes_downloaded_by_v61by=0",
     "checkpoint_payload_bytes_committed_to_repo=0",

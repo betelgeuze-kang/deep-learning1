@@ -7,7 +7,7 @@ RUN_DIR="$RESULTS_DIR/v61cr_complete_source_runtime_admission_return_intake/inta
 SUMMARY_CSV="$RESULTS_DIR/v61cr_complete_source_runtime_admission_return_intake_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v61cr_complete_source_runtime_admission_return_intake_decision.csv"
 
-V61CR_REUSE_EXISTING="${V61CR_REUSE_EXISTING:-1}" "$ROOT_DIR/experiments/run_v61cr_complete_source_runtime_admission_return_intake.sh" >/dev/null
+V61CR_REUSE_EXISTING="${V61CR_REUSE_EXISTING:-0}" "$ROOT_DIR/experiments/run_v61cr_complete_source_runtime_admission_return_intake.sh" >/dev/null
 
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv

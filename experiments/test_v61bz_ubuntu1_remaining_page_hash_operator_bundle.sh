@@ -43,18 +43,18 @@ expected_static = {
     "model_id": "mistralai/Mixtral-8x22B-v0.1",
     "v61by_ubuntu1_remaining_page_hash_execution_plan_ready": "1",
     "target_root_path": ubuntu1_target,
-    "verified_page_hash_rows": "2353",
-    "skipped_verified_page_hash_rows": "2353",
-    "remaining_page_hash_rows": "131808",
-    "remaining_page_hash_bytes": "276308963480",
-    "remaining_page_hash_execution_chunk_rows": "286",
+    "verified_page_hash_rows": "134161",
+    "skipped_verified_page_hash_rows": "134161",
+    "remaining_page_hash_rows": "0",
+    "remaining_page_hash_bytes": "0",
+    "remaining_page_hash_execution_chunk_rows": "0",
     "operator_bundle_file_rows": "7",
     "script_probe_rows": "2",
     "script_bash_syntax_pass_rows": "2",
     "dry_run_guard_ready": "1",
     "remaining_page_hash_operator_bundle_ready": "1",
     "page_hash_execution_ready": "0",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "full_safetensors_page_hash_binding_ready": "1",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
     "production_latency_claim_ready": "0",
@@ -104,7 +104,7 @@ gaps = {row["gap"]: row["status"] for row in read_csv(run_dir / "runtime_gap_row
 
 if operator_chunks != source_chunks:
     raise SystemExit("v61bz operator chunks must mirror source chunks")
-if len(operator_chunks) != 286:
+if len(operator_chunks) != 0:
     raise SystemExit("v61bz chunk count mismatch")
 if any(row["page_hash_execution_status"] != "blocked-pending-materialization" for row in operator_chunks):
     raise SystemExit("v61bz chunks should stay blocked pending materialization")
@@ -137,9 +137,9 @@ if dry_proc.returncode != 0:
     raise SystemExit(f"v61bz dry-run script failed: {dry_proc.stderr}")
 if "dry-run: set V61BZ_EXECUTE_PAGE_HASH=1" not in dry_proc.stdout:
     raise SystemExit("v61bz dry-run guard message missing")
-if "processed 1 remaining page-hash chunks" not in dry_proc.stdout:
-    raise SystemExit("v61bz dry-run should process one chunk")
-if dry_run["exit_code"] != "0" or dry_run["dry_run_guard_seen"] != "1" or dry_run["processed_one_chunk_seen"] != "1":
+if "processed 0 remaining page-hash chunks" not in dry_proc.stdout:
+    raise SystemExit("v61bz dry-run should process zero chunks after full coverage")
+if dry_run["exit_code"] != "0" or dry_run["dry_run_guard_seen"] != "1" or dry_run["processed_one_chunk_seen"] != "0":
     raise SystemExit("v61bz stored dry-run probe mismatch")
 
 blocked_env = os.environ.copy()
@@ -168,8 +168,8 @@ for requirement_id in [
 ]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61bz requirement should pass: {requirement_id}")
-if requirements["completed-full-safetensors-page-hash-coverage"]["status"] != "blocked":
-    raise SystemExit("v61bz full coverage should remain blocked")
+if requirements["completed-full-safetensors-page-hash-coverage"]["status"] != "pass":
+    raise SystemExit("v61bz full coverage should pass after upstream coverage")
 
 for gate in [
     "v61by-remaining-page-hash-plan-input",
@@ -180,12 +180,18 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61bz gate should pass: {gate}")
-for gate in ["explicit-page-hash-execution", "completed-full-safetensors-page-hash-coverage", "actual-model-generation", "real-release-package"]:
+if decisions.get("explicit-page-hash-execution") != "not-applicable":
+    raise SystemExit("v61bz explicit page-hash execution should be not-applicable with zero chunks")
+if decisions.get("completed-full-safetensors-page-hash-coverage") != "pass":
+    raise SystemExit("v61bz completed full page-hash gate should pass")
+for gate in ["actual-model-generation", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v61bz gate should stay blocked: {gate}")
 if gaps["remaining-page-hash-operator-bundle"] != "ready":
     raise SystemExit("v61bz operator bundle gap should be ready")
-for gap in ["explicit-page-hash-execution", "completed-full-safetensors-page-hash-coverage", "actual-model-generation", "release-package"]:
+if gaps.get("completed-full-safetensors-page-hash-coverage") != "ready":
+    raise SystemExit("v61bz completed full page-hash gap should be ready")
+for gap in ["explicit-page-hash-execution", "actual-model-generation", "release-package"]:
     if gaps.get(gap) != "blocked":
         raise SystemExit(f"v61bz gap should stay blocked: {gap}")
 
@@ -195,12 +201,12 @@ for field, value in expected_static.items():
 
 boundary = (run_dir / "V61BZ_UBUNTU1_REMAINING_PAGE_HASH_OPERATOR_BUNDLE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "remaining_page_hash_execution_chunk_rows=286",
+    "remaining_page_hash_execution_chunk_rows=0",
     "operator_bundle_file_rows=7",
     "dry_run_guard_ready=1",
     "remaining_page_hash_operator_bundle_ready=1",
     "page_hash_execution_ready=0",
-    "full_safetensors_page_hash_binding_ready=0",
+    "full_safetensors_page_hash_binding_ready=1",
     "checkpoint_payload_bytes_downloaded_by_v61bz=0",
     "checkpoint_payload_bytes_committed_to_repo=0",
     "Blocked wording",

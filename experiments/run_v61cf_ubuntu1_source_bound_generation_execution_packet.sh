@@ -126,10 +126,22 @@ if set(query_by_id) != set(admission_by_query_id):
 
 generation_closure_return_intake_ready = int(v61ce["generation_closure_return_intake_ready"])
 generation_execution_admission_ready = int(v61ce["generation_execution_admission_ready"])
+page_hash_closure_ready = int(v61ce["page_hash_closure_ready"])
+review_return_closure_ready = int(v61ce["review_return_closure_ready"])
+generation_result_closure_ready = int(v61ce["generation_result_closure_ready"])
 execution_ready = int(generation_closure_return_intake_ready and generation_execution_admission_ready)
 execution_ready_rows = 1000 if execution_ready else 0
 blocked_execution_rows = 0 if execution_ready else 1000
-blocked_reason = "none" if execution_ready else "generation-closure-return-intake-blocked"
+blocked_reasons = []
+if not page_hash_closure_ready:
+    blocked_reasons.append("page-hash-coverage-return")
+if not review_return_closure_ready:
+    blocked_reasons.append("complete-source-review-return")
+if not generation_result_closure_ready:
+    blocked_reasons.append("actual-generation-result-return")
+if not generation_execution_admission_ready and not blocked_reasons:
+    blocked_reasons.append("generation-execution-admission-blocked")
+blocked_reason = "none" if execution_ready else ";".join(blocked_reasons)
 target_root = v61ce["target_root_path"]
 
 prompt_manifest_rows = [
@@ -283,6 +295,27 @@ requirement_rows = [
         "reason": "page-hash, review, and generation result returns are not all closed",
     },
     {
+        "requirement_id": "full-page-hash-closure",
+        "required_value": "1",
+        "actual_value": str(page_hash_closure_ready),
+        "status": status(page_hash_closure_ready),
+        "reason": "v61ce has closed full safetensors page-hash coverage",
+    },
+    {
+        "requirement_id": "complete-source-review-return",
+        "required_value": "1",
+        "actual_value": str(review_return_closure_ready),
+        "status": status(review_return_closure_ready),
+        "reason": "complete-source review/adjudication returns are still absent",
+    },
+    {
+        "requirement_id": "actual-generation-result-return",
+        "required_value": "1",
+        "actual_value": str(generation_result_closure_ready),
+        "status": status(generation_result_closure_ready),
+        "reason": "actual generation result artifacts are still absent",
+    },
+    {
         "requirement_id": "generation-execution-admission-ready",
         "required_value": "1",
         "actual_value": str(generation_execution_admission_ready),
@@ -321,9 +354,9 @@ metric = {
     "generation_execution_ready": str(execution_ready),
     "generation_execution_admitted_rows": str(execution_ready_rows),
     "blocked_execution_rows": str(blocked_execution_rows),
-    "page_hash_closure_ready": v61ce["page_hash_closure_ready"],
-    "review_return_closure_ready": v61ce["review_return_closure_ready"],
-    "generation_result_closure_ready": v61ce["generation_result_closure_ready"],
+    "page_hash_closure_ready": str(page_hash_closure_ready),
+    "review_return_closure_ready": str(review_return_closure_ready),
+    "generation_result_closure_ready": str(generation_result_closure_ready),
     "actual_model_generation_ready": "0",
     "source_bound_qa_generation_ready": "0",
     "near_frontier_claim_ready": "0",
@@ -338,6 +371,9 @@ write_csv(run_dir / "source_bound_generation_execution_metric_rows.csv", list(me
 runtime_gap_rows = [
     ("v61ce-closure-return-intake-input", "ready", "v61ce evidence is bound"),
     ("complete-source-query-packet", "ready", "1000 v53r query rows are bound"),
+    ("full-page-hash-closure", "ready" if page_hash_closure_ready else "blocked", f"page_hash_closure_ready={page_hash_closure_ready}"),
+    ("complete-source-review-return", status(review_return_closure_ready), f"review_return_closure_ready={review_return_closure_ready}"),
+    ("actual-generation-result-return", status(generation_result_closure_ready), f"generation_result_closure_ready={generation_result_closure_ready}"),
     ("source-bound-generation-execution", status(execution_ready), f"blocked_execution_rows={blocked_execution_rows}"),
     ("actual-model-generation", "blocked", "execution packet is not an executed generation run"),
     ("production-latency", "blocked", "not a production latency run"),
@@ -369,18 +405,19 @@ Current state:
 - generation_execution_ready={execution_ready}
 - generation_execution_admitted_rows={execution_ready_rows}
 - blocked_execution_rows={blocked_execution_rows}
-- page_hash_closure_ready={v61ce['page_hash_closure_ready']}
-- review_return_closure_ready={v61ce['review_return_closure_ready']}
-- generation_result_closure_ready={v61ce['generation_result_closure_ready']}
+- page_hash_closure_ready={page_hash_closure_ready}
+- review_return_closure_ready={review_return_closure_ready}
+- generation_result_closure_ready={generation_result_closure_ready}
 - actual_model_generation_ready=0
 - checkpoint_payload_bytes_downloaded_by_v61cf=0
 - checkpoint_payload_bytes_committed_to_repo=0
 
 Blocked wording:
 
-v61cf is an execution packet and handoff contract only. It does not claim actual
-Mixtral generation, completed full safetensors page-hash coverage, production
-latency, near-frontier quality, or a release package.
+v61cf is an execution packet and handoff contract only. It inherits the closed
+full safetensors page-hash state from v61ce, but it does not execute Mixtral
+generation and does not claim production latency, near-frontier quality, or a
+release package.
 """
 (run_dir / "V61CF_UBUNTU1_SOURCE_BOUND_GENERATION_EXECUTION_PACKET_BOUNDARY.md").write_text(boundary, encoding="utf-8")
 
@@ -397,6 +434,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decisions = [
     {"gate": "v61ce-closure-return-intake-input", "status": "pass", "reason": "v61ce evidence is bound"},
     {"gate": "complete-source-query-packet", "status": "pass", "reason": "1000 source-bound query rows are bound"},
+    {"gate": "full-page-hash-closure", "status": status(page_hash_closure_ready), "reason": f"page_hash_closure_ready={page_hash_closure_ready}"},
+    {"gate": "complete-source-review-return", "status": status(review_return_closure_ready), "reason": f"review_return_closure_ready={review_return_closure_ready}"},
+    {"gate": "actual-generation-result-return", "status": status(generation_result_closure_ready), "reason": f"generation_result_closure_ready={generation_result_closure_ready}"},
     {"gate": "source-bound-generation-execution", "status": status(execution_ready), "reason": f"blocked_execution_rows={blocked_execution_rows}"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "v61cf does not execute generation"},
     {"gate": "production-latency", "status": "blocked", "reason": "no production latency evidence"},
@@ -422,6 +462,9 @@ manifest = {
     "generation_execution_ready": execution_ready,
     "generation_execution_admitted_rows": execution_ready_rows,
     "blocked_execution_rows": blocked_execution_rows,
+    "page_hash_closure_ready": page_hash_closure_ready,
+    "review_return_closure_ready": review_return_closure_ready,
+    "generation_result_closure_ready": generation_result_closure_ready,
     "actual_model_generation_ready": 0,
     "checkpoint_payload_bytes_downloaded_by_v61cf": 0,
     "checkpoint_payload_bytes_committed_to_repo": 0,

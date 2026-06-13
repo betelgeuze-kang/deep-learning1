@@ -48,6 +48,13 @@ existing_verified_rows = len(source_preservation_rows)
 existing_verified_bytes = sum(int(row["identity_verified_bytes"]) for row in source_preservation_rows)
 total_required_rows = expected_remaining_rows + existing_verified_rows
 total_identity_verified_rows = existing_verified_rows + expected_accepted_rows
+expected_full_ready = "1" if (
+    total_required_rows == total_identity_verified_rows
+    and expected_missing_rows == 0
+    and expected_missing_bytes == 0
+) else "0"
+expected_full_status = "pass" if expected_full_ready == "1" else "blocked"
+expected_full_gap = "ready" if expected_full_ready == "1" else "blocked"
 
 expected = {
     "v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_ready": "1",
@@ -72,8 +79,8 @@ expected = {
     "promotion_identity_verified_bytes": str(existing_verified_bytes + expected_accepted_bytes),
     "promotion_missing_materialization_bytes": str(expected_missing_bytes),
     "promotion_invalid_materialization_return_rows": "0",
-    "full_checkpoint_materialization_promotion_ready": "0",
-    "full_checkpoint_materialization_ready": "0",
+    "full_checkpoint_materialization_promotion_ready": expected_full_ready,
+    "full_checkpoint_materialization_ready": expected_full_ready,
     "full_safetensors_page_hash_binding_ready": "0",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
@@ -144,8 +151,8 @@ for requirement_id in [
     "all-shard-checkpoint-materialization-ready",
     "completed-full-checkpoint-materialization",
 ]:
-    if requirements[requirement_id]["status"] != "blocked":
-        raise SystemExit(f"v61cm requirement should stay blocked: {requirement_id}")
+    if requirements[requirement_id]["status"] != expected_full_status:
+        raise SystemExit(f"v61cm requirement status mismatch: {requirement_id}")
 
 for field, value in expected.items():
     if field.startswith("v61cm_"):
@@ -160,10 +167,10 @@ for gate in [
     "remaining-materialization-return-intake-ready",
     "all-shard-checkpoint-materialization-ready",
     "completed-full-checkpoint-materialization",
-    "full-safetensors-page-hash-binding",
-    "actual-model-generation",
-    "real-release-package",
 ]:
+    if decisions.get(gate) != expected_full_status:
+        raise SystemExit(f"v61cm gate status mismatch: {gate}")
+for gate in ["full-safetensors-page-hash-binding", "actual-model-generation", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v61cm gate should stay blocked: {gate}")
 
@@ -173,11 +180,10 @@ for gap in [
     "remaining-materialization-return-intake-ready",
     "all-shard-checkpoint-materialization-ready",
     "completed-full-checkpoint-materialization",
-    "full-safetensors-page-hash-binding",
-    "actual-model-generation",
-    "production-latency",
-    "release-package",
 ]:
+    if gaps.get(gap) != expected_full_gap:
+        raise SystemExit(f"v61cm gap status mismatch: {gap}")
+for gap in ["full-safetensors-page-hash-binding", "actual-model-generation", "production-latency", "release-package"]:
     if gaps.get(gap) != "blocked":
         raise SystemExit(f"v61cm gap should stay blocked: {gap}")
 
@@ -188,8 +194,8 @@ if manifest.get("checkpoint_shard_rows") != total_required_rows:
     raise SystemExit("v61cm manifest shard row mismatch")
 if manifest.get("total_identity_verified_checkpoint_shard_rows") != total_identity_verified_rows:
     raise SystemExit("v61cm manifest verified shard mismatch")
-if manifest.get("full_checkpoint_materialization_ready") != 0:
-    raise SystemExit("v61cm manifest should keep full materialization blocked")
+if manifest.get("full_checkpoint_materialization_ready") != int(expected_full_ready):
+    raise SystemExit("v61cm manifest full materialization readiness mismatch")
 
 boundary = (run_dir / "V61CM_UBUNTU1_FULL_CHECKPOINT_MATERIALIZATION_PROMOTION_GATE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
@@ -204,8 +210,8 @@ for snippet in [
     f"existing_verified_checkpoint_shard_rows={existing_verified_rows}",
     f"total_required_checkpoint_shard_rows={total_required_rows}",
     f"total_identity_verified_checkpoint_shard_rows={total_identity_verified_rows}",
-    "full_checkpoint_materialization_promotion_ready=0",
-    "full_checkpoint_materialization_ready=0",
+    f"full_checkpoint_materialization_promotion_ready={expected_full_ready}",
+    f"full_checkpoint_materialization_ready={expected_full_ready}",
     "checkpoint_payload_bytes_downloaded_by_v61cm=0",
     "Blocked wording",
 ]:

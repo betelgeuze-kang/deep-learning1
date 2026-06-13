@@ -59,7 +59,7 @@ expected = {
     "runtime_admission_expansion_execution_ready": "0",
     "generation_execution_admitted_rows": "0",
     "blocked_execution_rows": "1000",
-    "page_hash_blocked_rows": "1000",
+    "page_hash_blocked_rows": "0",
     "review_return_blocked_rows": "1000",
     "generation_result_artifact_blocked_rows": "1000",
     "actual_model_generation_ready": "0",

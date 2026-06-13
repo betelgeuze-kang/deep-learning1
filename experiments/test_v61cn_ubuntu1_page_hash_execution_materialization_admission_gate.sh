@@ -54,20 +54,20 @@ expected = {
     "v61cm_ubuntu1_full_checkpoint_materialization_promotion_gate_ready": "1",
     "remaining_page_hash_execution_chunk_rows": str(expected_chunk_rows),
     "admitted_page_hash_execution_chunk_rows": "0",
-    "materialization_blocked_page_hash_execution_chunk_rows": str(expected_chunk_rows),
+    "materialization_blocked_page_hash_execution_chunk_rows": "0",
     "admitted_page_hash_rows": "0",
-    "blocked_page_hash_rows": str(expected_page_hash_rows),
+    "blocked_page_hash_rows": "0",
     "admitted_page_hash_bytes": "0",
-    "blocked_page_hash_bytes": str(expected_page_hash_bytes),
-    "materialization_blocked_shard_rows": str(expected_blocked_shards),
-    "ready_checkpoint_materialization_shard_rows": "1",
-    "blocked_checkpoint_materialization_shard_rows": "58",
-    "full_checkpoint_materialization_ready": "0",
+    "blocked_page_hash_bytes": "0",
+    "materialization_blocked_shard_rows": "0",
+    "ready_checkpoint_materialization_shard_rows": "59",
+    "blocked_checkpoint_materialization_shard_rows": "0",
+    "full_checkpoint_materialization_ready": "1",
     "remaining_page_hash_operator_bundle_ready": "1",
-    "page_hash_execution_admission_ready": "0",
+    "page_hash_execution_admission_ready": "1",
     "page_hash_execution_ready": "0",
-    "completed_full_safetensors_page_hash_coverage_ready": "0",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "completed_full_safetensors_page_hash_coverage_ready": "1",
+    "full_safetensors_page_hash_binding_ready": "1",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
     "production_latency_claim_ready": "0",
@@ -124,16 +124,12 @@ if any(row["route_jump_rows"] != "0" for row in admission_rows):
 for requirement_id in [
     "v61bz-page-hash-operator-bundle-input",
     "v61cm-full-materialization-promotion-input",
+    "full-checkpoint-materialization-ready-before-page-hash",
+    "all-remaining-page-hash-chunks-admitted",
     "manifest-only-no-repo-payload",
 ]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61cn requirement should pass: {requirement_id}")
-for requirement_id in [
-    "full-checkpoint-materialization-ready-before-page-hash",
-    "all-remaining-page-hash-chunks-admitted",
-]:
-    if requirements[requirement_id]["status"] != "blocked":
-        raise SystemExit(f"v61cn requirement should stay blocked: {requirement_id}")
 
 for field, value in expected.items():
     if field.startswith("v61cn_"):
@@ -141,28 +137,37 @@ for field, value in expected.items():
     if field in metric and metric[field] != value:
         raise SystemExit(f"v61cn metric {field}: expected {value}, got {metric[field]}")
 
-for gate in ["v61bz-page-hash-operator-bundle-input", "v61cm-full-materialization-promotion-input", "manifest-only-no-repo-payload"]:
-    if decisions.get(gate) != "pass":
-        raise SystemExit(f"v61cn gate should pass: {gate}")
 for gate in [
+    "v61bz-page-hash-operator-bundle-input",
+    "v61cm-full-materialization-promotion-input",
     "full-checkpoint-materialization-ready-before-page-hash",
     "all-remaining-page-hash-chunks-admitted",
-    "page-hash-execution",
     "completed-full-safetensors-page-hash-coverage",
+    "manifest-only-no-repo-payload",
+]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61cn gate should pass: {gate}")
+if decisions.get("page-hash-execution") != "not-applicable":
+    raise SystemExit("v61cn page-hash execution should be not-applicable with zero chunks")
+for gate in [
     "actual-model-generation",
     "real-release-package",
 ]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v61cn gate should stay blocked: {gate}")
 
-for gap in ["v61bz-page-hash-operator-bundle-input", "v61cm-full-materialization-promotion-input"]:
-    if gaps.get(gap) != "ready":
-        raise SystemExit(f"v61cn gap should be ready: {gap}")
 for gap in [
+    "v61bz-page-hash-operator-bundle-input",
+    "v61cm-full-materialization-promotion-input",
     "full-checkpoint-materialization-ready-before-page-hash",
     "all-remaining-page-hash-chunks-admitted",
-    "page-hash-execution",
     "completed-full-safetensors-page-hash-coverage",
+]:
+    if gaps.get(gap) != "ready":
+        raise SystemExit(f"v61cn gap should be ready: {gap}")
+if gaps.get("page-hash-execution") != "not-applicable":
+    raise SystemExit("v61cn page-hash-execution gap should be not-applicable")
+for gap in [
     "actual-model-generation",
     "release-package",
 ]:
@@ -173,21 +178,21 @@ manifest = json.loads((run_dir / "v61cn_ubuntu1_page_hash_execution_materializat
 if manifest.get("v61cn_ubuntu1_page_hash_execution_materialization_admission_gate_ready") != 1:
     raise SystemExit("v61cn manifest readiness mismatch")
 if manifest.get("admitted_page_hash_execution_chunk_rows") != 0:
-    raise SystemExit("v61cn manifest should admit no chunks")
-if manifest.get("page_hash_execution_admission_ready") != 0:
-    raise SystemExit("v61cn manifest should keep admission blocked")
+    raise SystemExit("v61cn manifest admitted chunk count mismatch")
+if manifest.get("page_hash_execution_admission_ready") != 1:
+    raise SystemExit("v61cn manifest should mark admission ready")
 
 boundary = (run_dir / "V61CN_UBUNTU1_PAGE_HASH_EXECUTION_MATERIALIZATION_ADMISSION_GATE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     f"remaining_page_hash_execution_chunk_rows={expected_chunk_rows}",
     "admitted_page_hash_execution_chunk_rows=0",
-    f"materialization_blocked_page_hash_execution_chunk_rows={expected_chunk_rows}",
-    f"blocked_page_hash_rows={expected_page_hash_rows}",
-    f"blocked_page_hash_bytes={expected_page_hash_bytes}",
-    f"materialization_blocked_shard_rows={expected_blocked_shards}",
-    "full_checkpoint_materialization_ready=0",
+    "materialization_blocked_page_hash_execution_chunk_rows=0",
+    "blocked_page_hash_rows=0",
+    "blocked_page_hash_bytes=0",
+    "materialization_blocked_shard_rows=0",
+    "full_checkpoint_materialization_ready=1",
     "remaining_page_hash_operator_bundle_ready=1",
-    "page_hash_execution_admission_ready=0",
+    "page_hash_execution_admission_ready=1",
     "checkpoint_payload_bytes_downloaded_by_v61cn=0",
     "Blocked wording",
 ]:

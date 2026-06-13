@@ -55,9 +55,9 @@ expected = {
     "moe_layer_expert_tensor_coverage_rows": "1344",
     "moe_layer_expert_tensor_coverage_ready_rows": "1344",
     "total_required_page_hash_rows": "134161",
-    "total_verified_page_hash_rows": "2353",
-    "remaining_page_hash_rows": "131808",
-    "completed_full_safetensors_page_hash_coverage_ready": "0",
+    "total_verified_page_hash_rows": "134161",
+    "remaining_page_hash_rows": "0",
+    "completed_full_safetensors_page_hash_coverage_ready": "1",
     "real_manifest_uncached_q4_bytes_per_token_estimate": "16911433728",
     "v61j_ssd_read_bytes_per_token_max": "8388608",
     "v61j_ssd_read_budget_pass": "1",
@@ -130,6 +130,10 @@ for requirement_id in [
         raise SystemExit(f"v61ci requirement should pass: {requirement_id}")
 for requirement_id in [
     "completed-full-safetensors-page-hash-coverage",
+]:
+    if requirements[requirement_id]["status"] != "pass":
+        raise SystemExit(f"v61ci requirement should pass: {requirement_id}")
+for requirement_id in [
     "real-manifest-runtime-execution",
     "actual-model-generation",
 ]:
@@ -148,11 +152,11 @@ for gate in [
     "v61ch-zero-payload-release-index-input",
     "logical-fixture-replacement-contract",
     "zero-payload-runtime-input",
+    "completed-full-safetensors-page-hash-coverage",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61ci gate should pass: {gate}")
 for gate in [
-    "completed-full-safetensors-page-hash-coverage",
     "real-manifest-runtime-execution",
     "actual-model-generation",
     "near-frontier-quality",
@@ -167,11 +171,11 @@ for gap in [
     "v61k-real-100b-manifest-input",
     "v61ch-zero-payload-release-index-input",
     "logical-fixture-replacement-contract",
+    "completed-full-safetensors-page-hash-coverage",
 ]:
     if gaps.get(gap) != "ready":
         raise SystemExit(f"v61ci gap should be ready: {gap}")
 for gap in [
-    "completed-full-safetensors-page-hash-coverage",
     "real-manifest-runtime-execution",
     "actual-model-generation",
     "production-latency",
@@ -190,8 +194,8 @@ for snippet in [
     "runtime_substitution_binding_rows=5",
     "logical_fixture_replaced_by_real_manifest_ready=1",
     "checkpoint_unique_page_rows=134161",
-    "total_verified_page_hash_rows=2353",
-    "remaining_page_hash_rows=131808",
+    "total_verified_page_hash_rows=134161",
+    "remaining_page_hash_rows=0",
     "runtime_execution_admission_ready=0",
     "actual_model_generation_ready=0",
     "checkpoint_payload_bytes_downloaded_by_v61ci=0",

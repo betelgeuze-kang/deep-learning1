@@ -52,26 +52,26 @@ expected = {
     "logical_fixture_replaced_by_real_manifest_ready": "1",
     "zero_payload_runtime_input_ready": "1",
     "runtime_execution_candidate_rows": "37",
-    "runtime_execution_admitted_rows": "0",
-    "runtime_execution_blocked_rows": "37",
-    "materialization_blocked_runtime_rows": "37",
-    "page_hash_admission_blocked_runtime_rows": "37",
+    "runtime_execution_admitted_rows": "37",
+    "runtime_execution_blocked_rows": "0",
+    "materialization_blocked_runtime_rows": "0",
+    "page_hash_admission_blocked_runtime_rows": "0",
     "source_bound_query_rows": "37",
     "source_bound_query_pass_rows": "37",
     "checkpoint_shard_rows": "59",
-    "ready_checkpoint_materialization_shard_rows": "1",
-    "blocked_checkpoint_materialization_shard_rows": "58",
-    "missing_remaining_materialization_return_rows": "58",
-    "promotion_missing_materialization_bytes": "276308963480",
-    "full_checkpoint_materialization_ready": "0",
-    "remaining_page_hash_execution_chunk_rows": "286",
+    "ready_checkpoint_materialization_shard_rows": "59",
+    "blocked_checkpoint_materialization_shard_rows": "0",
+    "missing_remaining_materialization_return_rows": "0",
+    "promotion_missing_materialization_bytes": "0",
+    "full_checkpoint_materialization_ready": "1",
+    "remaining_page_hash_execution_chunk_rows": "0",
     "admitted_page_hash_execution_chunk_rows": "0",
-    "materialization_blocked_page_hash_execution_chunk_rows": "286",
-    "blocked_page_hash_rows": "131808",
-    "blocked_page_hash_bytes": "276308963480",
-    "page_hash_execution_admission_ready": "0",
-    "completed_full_safetensors_page_hash_coverage_ready": "0",
-    "real_manifest_runtime_execution_admission_ready": "0",
+    "materialization_blocked_page_hash_execution_chunk_rows": "0",
+    "blocked_page_hash_rows": "0",
+    "blocked_page_hash_bytes": "0",
+    "page_hash_execution_admission_ready": "1",
+    "completed_full_safetensors_page_hash_coverage_ready": "1",
+    "real_manifest_runtime_execution_admission_ready": "1",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
     "production_latency_claim_ready": "0",
@@ -117,10 +117,10 @@ gaps = {row["gap"]: row["status"] for row in read_csv(run_dir / "runtime_gap_row
 
 if len(admission_rows) != 37:
     raise SystemExit("v61co runtime admission row count mismatch")
-if any(row["runtime_execution_admitted"] != "0" for row in admission_rows):
-    raise SystemExit("v61co must not admit runtime execution rows by default")
-if any(row["runtime_execution_admission_status"] != "blocked-full-checkpoint-materialization" for row in admission_rows):
-    raise SystemExit("v61co default rows should be materialization-blocked")
+if any(row["runtime_execution_admitted"] != "1" for row in admission_rows):
+    raise SystemExit("v61co should admit runtime execution rows after full materialization and page-hash coverage")
+if any(row["runtime_execution_admission_status"] != "admitted" for row in admission_rows):
+    raise SystemExit("v61co rows should be admitted")
 if any(row["source_bound_query_pass"] != "1" for row in admission_rows):
     raise SystemExit("v61co source-bound seed rows should all pass before runtime admission")
 if any(row["checkpoint_payload_bytes_downloaded_by_v61co"] != "0" for row in admission_rows):
@@ -133,19 +133,15 @@ if any(row["route_jump_rows"] != "0" for row in admission_rows):
 for requirement_id in [
     "v61cj-real-manifest-immediate-target-bridge-input",
     "v61ci-real-manifest-runtime-substitution-input",
+    "v61cm-full-checkpoint-materialization",
+    "v61cn-page-hash-execution-admission",
+    "v61cn-completed-full-safetensors-page-hash-coverage",
     "v61n-v61s-source-bound-qa-seed",
+    "runtime-execution-admission-over-source-bound-qa",
     "manifest-only-no-repo-payload",
 ]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61co requirement should pass: {requirement_id}")
-for requirement_id in [
-    "v61cm-full-checkpoint-materialization",
-    "v61cn-page-hash-execution-admission",
-    "v61cn-completed-full-safetensors-page-hash-coverage",
-    "runtime-execution-admission-over-source-bound-qa",
-]:
-    if requirements[requirement_id]["status"] != "blocked":
-        raise SystemExit(f"v61co requirement should stay blocked: {requirement_id}")
 
 for field, value in expected.items():
     if field.startswith("v61co_"):
@@ -156,16 +152,16 @@ for field, value in expected.items():
 for gate in [
     "v61cj-real-manifest-immediate-target-bridge-input",
     "v61ci-real-manifest-runtime-substitution-input",
+    "v61cm-full-checkpoint-materialization",
+    "v61cn-page-hash-execution-admission",
+    "completed-full-safetensors-page-hash-coverage",
+    "real-manifest-runtime-execution-admission",
     "v61n-v61s-source-bound-qa-seed",
     "manifest-only-no-repo-payload",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61co gate should pass: {gate}")
 for gate in [
-    "v61cm-full-checkpoint-materialization",
-    "v61cn-page-hash-execution-admission",
-    "completed-full-safetensors-page-hash-coverage",
-    "real-manifest-runtime-execution-admission",
     "actual-model-generation",
     "near-frontier-quality",
     "production-latency",
@@ -177,15 +173,15 @@ for gate in [
 for gap in [
     "v61cj-real-manifest-immediate-target-bridge-input",
     "v61ci-real-manifest-runtime-substitution-input",
+    "v61cm-full-checkpoint-materialization",
+    "v61cn-page-hash-execution-admission",
+    "completed-full-safetensors-page-hash-coverage",
+    "real-manifest-runtime-execution-admission",
     "v61n-v61s-source-bound-qa-seed",
 ]:
     if gaps.get(gap) != "ready":
         raise SystemExit(f"v61co gap should be ready: {gap}")
 for gap in [
-    "v61cm-full-checkpoint-materialization",
-    "v61cn-page-hash-execution-admission",
-    "completed-full-safetensors-page-hash-coverage",
-    "real-manifest-runtime-execution-admission",
     "actual-model-generation",
     "production-latency",
     "near-frontier-quality",
@@ -197,18 +193,18 @@ for gap in [
 boundary = (run_dir / "V61CO_REAL_MANIFEST_RUNTIME_EXECUTION_ADMISSION_BRIDGE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     "runtime_execution_candidate_rows=37",
-    "runtime_execution_admitted_rows=0",
-    "runtime_execution_blocked_rows=37",
-    "materialization_blocked_runtime_rows=37",
-    "page_hash_admission_blocked_runtime_rows=37",
+    "runtime_execution_admitted_rows=37",
+    "runtime_execution_blocked_rows=0",
+    "materialization_blocked_runtime_rows=0",
+    "page_hash_admission_blocked_runtime_rows=0",
     "source_bound_query_pass_rows=37/37",
-    "ready_checkpoint_materialization_shard_rows=1",
-    "blocked_checkpoint_materialization_shard_rows=58",
+    "ready_checkpoint_materialization_shard_rows=59",
+    "blocked_checkpoint_materialization_shard_rows=0",
     "admitted_page_hash_execution_chunk_rows=0",
-    "materialization_blocked_page_hash_execution_chunk_rows=286",
-    "blocked_page_hash_rows=131808",
-    "blocked_page_hash_bytes=276308963480",
-    "real_manifest_runtime_execution_admission_ready=0",
+    "materialization_blocked_page_hash_execution_chunk_rows=0",
+    "blocked_page_hash_rows=0",
+    "blocked_page_hash_bytes=0",
+    "real_manifest_runtime_execution_admission_ready=1",
     "actual_model_generation_ready=0",
     "checkpoint_payload_bytes_downloaded_by_v61co=0",
     "Blocked wording",
@@ -221,10 +217,10 @@ if manifest.get("v61co_real_manifest_runtime_execution_admission_bridge_ready") 
     raise SystemExit("v61co manifest readiness mismatch")
 if manifest.get("runtime_execution_candidate_rows") != 37:
     raise SystemExit("v61co manifest candidate row mismatch")
-if manifest.get("runtime_execution_admitted_rows") != 0:
-    raise SystemExit("v61co manifest should admit no runtime rows")
-if manifest.get("real_manifest_runtime_execution_admission_ready") != 0:
-    raise SystemExit("v61co manifest should keep runtime admission blocked")
+if manifest.get("runtime_execution_admitted_rows") != 37:
+    raise SystemExit("v61co manifest should admit all runtime rows")
+if manifest.get("real_manifest_runtime_execution_admission_ready") != 1:
+    raise SystemExit("v61co manifest should mark runtime admission ready")
 if manifest.get("checkpoint_payload_bytes_committed_to_repo") != 0:
     raise SystemExit("v61co manifest must keep repo payload bytes at zero")
 

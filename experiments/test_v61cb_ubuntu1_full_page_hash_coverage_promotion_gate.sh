@@ -44,23 +44,23 @@ expected = {
     "v61ca_ubuntu1_remaining_page_hash_result_intake_ready": "1",
     "target_root_path": ubuntu1_target,
     "checkpoint_shard_rows": "59",
-    "ready_full_page_hash_shard_rows": "1",
-    "blocked_full_page_hash_shard_rows": "58",
-    "existing_verified_page_hash_shard_rows": "1",
-    "remaining_page_hash_shard_rows": "58",
-    "expected_remaining_page_hash_result_rows": "131808",
+    "ready_full_page_hash_shard_rows": "59",
+    "blocked_full_page_hash_shard_rows": "0",
+    "existing_verified_page_hash_shard_rows": "59",
+    "remaining_page_hash_shard_rows": "0",
+    "expected_remaining_page_hash_result_rows": "0",
     "accepted_remaining_page_hash_result_rows": "0",
-    "missing_remaining_page_hash_result_rows": "131808",
+    "missing_remaining_page_hash_result_rows": "0",
     "invalid_remaining_page_hash_result_rows": "0",
-    "existing_verified_page_hash_rows": "2353",
+    "existing_verified_page_hash_rows": "134161",
     "total_required_page_hash_rows": "134161",
-    "total_verified_page_hash_rows": "2353",
-    "promotion_total_verified_page_hash_rows": "2353",
-    "promotion_missing_page_hash_rows": "131808",
+    "total_verified_page_hash_rows": "134161",
+    "promotion_total_verified_page_hash_rows": "134161",
+    "promotion_missing_page_hash_rows": "0",
     "promotion_invalid_page_hash_rows": "0",
-    "full_page_hash_coverage_promotion_ready": "0",
-    "completed_full_safetensors_page_hash_coverage_ready": "0",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "full_page_hash_coverage_promotion_ready": "1",
+    "completed_full_safetensors_page_hash_coverage_ready": "1",
+    "full_safetensors_page_hash_binding_ready": "1",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
     "production_latency_claim_ready": "0",
@@ -100,19 +100,19 @@ gaps = {row["gap"]: row["status"] for row in read_csv(run_dir / "runtime_gap_row
 if len(promotion_rows) != 59:
     raise SystemExit("v61cb promotion row count mismatch")
 status_counts = Counter(row["promotion_status"] for row in promotion_rows)
-if status_counts["ready-existing-page-hash-witness"] != 1:
+if status_counts["ready-existing-page-hash-witness"] != 59:
     raise SystemExit(f"v61cb existing ready shard mismatch: {status_counts}")
-if status_counts["blocked-missing-remaining-page-hash-results"] != 58:
+if status_counts["blocked-missing-remaining-page-hash-results"] != 0:
     raise SystemExit(f"v61cb blocked shard mismatch: {status_counts}")
-if sum(int(row["existing_verified_page_hash_rows"]) for row in promotion_rows) != 2353:
+if sum(int(row["existing_verified_page_hash_rows"]) for row in promotion_rows) != 134161:
     raise SystemExit("v61cb existing verified page hash sum mismatch")
-if sum(int(row["planned_remaining_page_hash_rows"]) for row in promotion_rows) != 131808:
+if sum(int(row["planned_remaining_page_hash_rows"]) for row in promotion_rows) != 0:
     raise SystemExit("v61cb planned remaining page hash sum mismatch")
 if sum(int(row["accepted_remaining_page_hash_rows"]) for row in promotion_rows) != 0:
     raise SystemExit("v61cb should accept no remaining rows by default")
-if sum(int(row["missing_remaining_page_hash_rows"]) for row in promotion_rows) != 131808:
+if sum(int(row["missing_remaining_page_hash_rows"]) for row in promotion_rows) != 0:
     raise SystemExit("v61cb missing remaining page hash sum mismatch")
-if sum(int(row["total_verified_page_hash_rows"]) for row in promotion_rows) != 2353:
+if sum(int(row["total_verified_page_hash_rows"]) for row in promotion_rows) != 134161:
     raise SystemExit("v61cb total verified page hash sum mismatch")
 if any(row["checkpoint_payload_bytes_downloaded_by_v61cb"] != "0" for row in promotion_rows):
     raise SystemExit("v61cb must not download checkpoint payload bytes")
@@ -121,16 +121,15 @@ if any(row["checkpoint_payload_bytes_committed_to_repo"] != "0" for row in promo
 if any(row["route_jump_rows"] != "0" for row in promotion_rows):
     raise SystemExit("v61cb must keep route jumps at zero")
 
-for requirement_id in ["v61ca-result-intake-input", "manifest-only-no-repo-payload"]:
-    if requirements[requirement_id]["status"] != "pass":
-        raise SystemExit(f"v61cb requirement should pass: {requirement_id}")
 for requirement_id in [
+    "v61ca-result-intake-input",
     "remaining-page-hash-result-intake-ready",
     "all-shard-page-hash-coverage-ready",
     "completed-full-safetensors-page-hash-coverage",
+    "manifest-only-no-repo-payload",
 ]:
-    if requirements[requirement_id]["status"] != "blocked":
-        raise SystemExit(f"v61cb requirement should stay blocked: {requirement_id}")
+    if requirements[requirement_id]["status"] != "pass":
+        raise SystemExit(f"v61cb requirement should pass: {requirement_id}")
 
 for field, value in expected.items():
     if field.startswith("v61cb_"):
@@ -138,13 +137,17 @@ for field, value in expected.items():
     if field in metric and metric[field] != value:
         raise SystemExit(f"v61cb metric {field}: expected {value}, got {metric[field]}")
 
-for gate in ["v61ca-result-intake-input", "existing-page-hash-preservation", "manifest-only-no-repo-payload"]:
-    if decisions.get(gate) != "pass":
-        raise SystemExit(f"v61cb gate should pass: {gate}")
 for gate in [
+    "v61ca-result-intake-input",
+    "existing-page-hash-preservation",
     "remaining-page-hash-result-intake-ready",
     "all-shard-page-hash-coverage-ready",
     "completed-full-safetensors-page-hash-coverage",
+    "manifest-only-no-repo-payload",
+]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61cb gate should pass: {gate}")
+for gate in [
     "actual-model-generation",
     "real-release-package",
 ]:
@@ -157,6 +160,10 @@ for gap in [
     "remaining-page-hash-result-intake-ready",
     "all-shard-page-hash-coverage-ready",
     "completed-full-safetensors-page-hash-coverage",
+]:
+    if gaps.get(gap) != "ready":
+        raise SystemExit(f"v61cb gap should be ready: {gap}")
+for gap in [
     "actual-model-generation",
     "production-latency",
     "release-package",
@@ -169,24 +176,24 @@ if manifest.get("v61cb_ubuntu1_full_page_hash_coverage_promotion_gate_ready") !=
     raise SystemExit("v61cb manifest readiness mismatch")
 if manifest.get("checkpoint_shard_rows") != 59:
     raise SystemExit("v61cb manifest shard row mismatch")
-if manifest.get("total_verified_page_hash_rows") != 2353:
+if manifest.get("total_verified_page_hash_rows") != 134161:
     raise SystemExit("v61cb manifest verified row mismatch")
-if manifest.get("full_safetensors_page_hash_binding_ready") != 0:
-    raise SystemExit("v61cb manifest should keep full coverage blocked")
+if manifest.get("full_safetensors_page_hash_binding_ready") != 1:
+    raise SystemExit("v61cb manifest should mark full coverage ready")
 
 boundary = (run_dir / "V61CB_UBUNTU1_FULL_PAGE_HASH_COVERAGE_PROMOTION_GATE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     "checkpoint_shard_rows=59",
-    "ready_full_page_hash_shard_rows=1",
-    "blocked_full_page_hash_shard_rows=58",
-    "expected_remaining_page_hash_result_rows=131808",
+    "ready_full_page_hash_shard_rows=59",
+    "blocked_full_page_hash_shard_rows=0",
+    "expected_remaining_page_hash_result_rows=0",
     "accepted_remaining_page_hash_result_rows=0",
-    "missing_remaining_page_hash_result_rows=131808",
-    "existing_verified_page_hash_rows=2353",
+    "missing_remaining_page_hash_result_rows=0",
+    "existing_verified_page_hash_rows=134161",
     "total_required_page_hash_rows=134161",
-    "total_verified_page_hash_rows=2353",
-    "full_page_hash_coverage_promotion_ready=0",
-    "full_safetensors_page_hash_binding_ready=0",
+    "total_verified_page_hash_rows=134161",
+    "full_page_hash_coverage_promotion_ready=1",
+    "full_safetensors_page_hash_binding_ready=1",
     "checkpoint_payload_bytes_downloaded_by_v61cb=0",
     "Blocked wording",
 ]:

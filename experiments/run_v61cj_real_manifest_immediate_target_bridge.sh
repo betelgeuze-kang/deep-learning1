@@ -199,6 +199,8 @@ write_csv(run_dir / "real_manifest_runtime_evidence_bridge_rows.csv", list(runti
 ready_target_rows = sum(1 for row in immediate_target_rows if row["target_ready"] == "1")
 bridge_ready_rows = sum(1 for row in runtime_bridge_rows if row["bridge_ready"] == "1")
 immediate_target_bridge_ready = int(ready_target_rows == 4 and bridge_ready_rows == 3)
+full_page_hash_ready = v61ci["completed_full_safetensors_page_hash_coverage_ready"] == "1"
+full_page_hash_status = status(full_page_hash_ready)
 
 requirement_rows = [
     {
@@ -234,7 +236,7 @@ requirement_rows = [
         "status": status(v61ci["completed_full_safetensors_page_hash_coverage_ready"] == "1"),
         "required_value": v61ci["total_required_page_hash_rows"],
         "actual_value": v61ci["total_verified_page_hash_rows"],
-        "reason": "the immediate target bridge does not complete remaining page hashes",
+        "reason": "full safetensors page-hash coverage is inherited from v61ci",
     },
     {
         "requirement_id": "actual-model-generation",
@@ -297,7 +299,7 @@ runtime_gap_rows = [
     {"gap": "gpu-rocm-page-kernel-measurement", "status": "ready", "reason": "v61l GPU measurement is ready"},
     {"gap": "kv-cache-residency-eviction-policy", "status": "ready", "reason": "v61m KV policy is ready"},
     {"gap": "v61j-source-bound-qa-command-pass", "status": "ready", "reason": "v61s one-command QA replay passes"},
-    {"gap": "completed-full-safetensors-page-hash-coverage", "status": "blocked", "reason": f"total_verified_page_hash_rows={v61ci['total_verified_page_hash_rows']}/{v61ci['total_required_page_hash_rows']}"},
+    {"gap": "completed-full-safetensors-page-hash-coverage", "status": "ready" if full_page_hash_ready else "blocked", "reason": f"total_verified_page_hash_rows={v61ci['total_verified_page_hash_rows']}/{v61ci['total_required_page_hash_rows']}"},
     {"gap": "complete-source-1000-query", "status": "blocked", "reason": f"complete_source_1000_query_ready={v61s['complete_source_1000_query_ready']}"},
     {"gap": "actual-model-generation", "status": "blocked", "reason": "not real Mixtral generation"},
     {"gap": "production-latency", "status": "blocked", "reason": "not an end-to-end decode latency report"},
@@ -312,7 +314,7 @@ decision_rows = [
     {"gate": "kv-cache-residency-eviction-policy", "status": "pass", "reason": "v61m KV policy is ready"},
     {"gate": "v61j-source-bound-qa-command-pass", "status": "pass", "reason": "v61s one-command source-bound QA replay passes"},
     {"gate": "real-manifest-immediate-target-bridge", "status": "pass" if immediate_target_bridge_ready else "blocked", "reason": f"ready_targets={ready_target_rows}/4; ready_bridges={bridge_ready_rows}/3"},
-    {"gate": "completed-full-safetensors-page-hash-coverage", "status": "blocked", "reason": f"total_verified_page_hash_rows={v61ci['total_verified_page_hash_rows']}/{v61ci['total_required_page_hash_rows']}"},
+    {"gate": "completed-full-safetensors-page-hash-coverage", "status": full_page_hash_status, "reason": f"total_verified_page_hash_rows={v61ci['total_verified_page_hash_rows']}/{v61ci['total_required_page_hash_rows']}"},
     {"gate": "complete-source-1000-query", "status": "blocked", "reason": f"complete_source_1000_query_ready={v61s['complete_source_1000_query_ready']}"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "not a generation run"},
     {"gate": "production-latency", "status": "blocked", "reason": "not production latency evidence"},
@@ -325,9 +327,9 @@ boundary = f"""# v61cj Real Manifest Immediate Target Bridge Boundary
 
 This artifact binds the v61 real-model immediate targets into one evidence
 surface after v61ci real-manifest runtime substitution. It records that the
-fixture replacement, ROCm page-kernel timing, KV policy, and v61j source-bound
-QA command path are present, while keeping full page-hash coverage and actual
-generation blocked.
+fixture replacement, ROCm page-kernel timing, KV policy, v61j source-bound QA
+command path, and inherited full page-hash coverage are present, while keeping
+actual generation blocked.
 
 Evidence emitted:
 
@@ -348,11 +350,11 @@ Evidence emitted:
 - checkpoint_payload_bytes_downloaded_by_v61cj=0
 - checkpoint_payload_bytes_committed_to_repo=0
 
-Allowed wording: v61 real-model immediate target bridge, ROCm page-kernel timing
-bound to real manifest geometry, KV-cache residency policy, and source-bound QA
-command seed replay. Blocked wording: completed full safetensors page-hash
-coverage, complete-source 1000-query real model generation, production latency,
-near-frontier quality, or release readiness.
+Allowed wording: v61 real-model immediate target bridge, completed full
+safetensors page-hash coverage, ROCm page-kernel timing bound to real manifest
+geometry, KV-cache residency policy, and source-bound QA command seed replay.
+Blocked wording: complete-source 1000-query real model generation, production
+latency, near-frontier quality, or release readiness.
 """
 (run_dir / "V61CJ_REAL_MANIFEST_IMMEDIATE_TARGET_BRIDGE_BOUNDARY.md").write_text(boundary, encoding="utf-8")
 

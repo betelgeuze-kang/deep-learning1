@@ -260,8 +260,9 @@ invalid_result_rows = len(invalid_rows)
 supplied_result_rows = len(supplied_rows)
 missing_result_rows = max(expected_remaining_rows - accepted_result_rows, 0)
 total_verified_rows = existing_verified_rows + accepted_result_rows
-result_schema_ready = int(supplied and not missing_fields)
-result_artifact_ready = int(supplied and result_schema_ready and invalid_result_rows == 0 and accepted_result_rows > 0)
+no_remaining_results_required = expected_remaining_rows == 0
+result_schema_ready = int(no_remaining_results_required or (supplied and not missing_fields))
+result_artifact_ready = int(no_remaining_results_required or (supplied and result_schema_ready and invalid_result_rows == 0 and accepted_result_rows > 0))
 remaining_result_intake_ready = int(result_artifact_ready and accepted_result_rows == expected_remaining_rows)
 full_coverage_ready = int(remaining_result_intake_ready and total_verified_rows == expected_total_rows)
 
@@ -294,7 +295,21 @@ for chunk in chunk_rows:
             "route_jump_rows": "0",
         }
     )
-write_csv(run_dir / "remaining_page_hash_result_chunk_status_rows.csv", list(chunk_status_rows[0].keys()), chunk_status_rows)
+chunk_status_fields = [
+    "remaining_page_hash_chunk_id",
+    "model_id",
+    "shard_name",
+    "target_path",
+    "planned_page_hash_rows",
+    "accepted_page_hash_rows",
+    "invalid_page_hash_rows",
+    "missing_page_hash_rows",
+    "result_status",
+    "checkpoint_payload_bytes_downloaded_by_v61ca",
+    "checkpoint_payload_bytes_committed_to_repo",
+    "route_jump_rows",
+]
+write_csv(run_dir / "remaining_page_hash_result_chunk_status_rows.csv", chunk_status_fields, chunk_status_rows)
 
 preservation_rows = []
 for row in skip_rows:
@@ -316,21 +331,21 @@ write_csv(run_dir / "existing_page_hash_preservation_rows.csv", list(preservatio
 validation_rows = [
     {
         "validation_id": "remaining-page-hash-result-input",
-        "status": "pass" if supplied else "blocked",
+        "status": "pass" if supplied or no_remaining_results_required else "blocked",
         "expected_rows": str(expected_remaining_rows),
         "supplied_rows": str(supplied_result_rows),
         "accepted_rows": str(accepted_result_rows),
         "missing_rows": str(missing_result_rows),
-        "reason": "result artifact supplied" if supplied else "result artifact not supplied",
+        "reason": "no remaining result artifact required" if no_remaining_results_required else ("result artifact supplied" if supplied else "result artifact not supplied"),
     },
     {
         "validation_id": "remaining-page-hash-result-schema",
         "status": "pass" if result_schema_ready else "blocked",
         "expected_rows": str(len(REQUIRED_RESULT_FIELDS)),
         "supplied_rows": str(len(supplied_fields)),
-        "accepted_rows": str(int(not missing_fields and supplied)),
+        "accepted_rows": str(int(result_schema_ready)),
         "missing_rows": str(len(missing_fields)),
-        "reason": "all required fields present" if result_schema_ready else "missing supplied artifact or fields",
+        "reason": "no remaining result schema required" if no_remaining_results_required else ("all required fields present" if result_schema_ready else "missing supplied artifact or fields"),
     },
     {
         "validation_id": "remaining-page-hash-result-completeness",
@@ -352,12 +367,12 @@ validation_rows = [
     },
     {
         "validation_id": "final-deferred-default",
-        "status": "pass" if not supplied else "not-applicable",
+        "status": "not-applicable" if no_remaining_results_required else ("pass" if not supplied else "not-applicable"),
         "expected_rows": str(expected_remaining_rows),
         "supplied_rows": str(supplied_result_rows),
         "accepted_rows": str(accepted_result_rows),
         "missing_rows": str(missing_result_rows),
-        "reason": "default path records explicit missing result rows without claiming execution",
+        "reason": "no remaining result rows are missing" if no_remaining_results_required else "default path records explicit missing result rows without claiming execution",
     },
 ]
 write_csv(run_dir / "remaining_page_hash_result_validation_rows.csv", list(validation_rows[0].keys()), validation_rows)
@@ -375,7 +390,7 @@ requirement_rows = [
         "status": "pass" if result_artifact_ready else "blocked",
         "required_value": RESULT_FILE,
         "actual_value": str(int(supplied)),
-        "reason": "requires hash result CSV from v61bz operator execution",
+        "reason": "no remaining result artifact is required" if no_remaining_results_required else "requires hash result CSV from v61bz operator execution",
     },
     {
         "requirement_id": "accepted-all-remaining-page-hash-results",
@@ -452,7 +467,7 @@ decision_rows = [
     {"gate": "v61bz-operator-bundle-input", "status": "pass", "reason": "v61bz operator bundle is bound"},
     {"gate": "result-schema-template", "status": "pass", "reason": "required result schema is emitted"},
     {"gate": "existing-page-hash-preservation", "status": "pass", "reason": f"existing_verified_page_hash_rows={existing_verified_rows}"},
-    {"gate": "default-no-env-deferral", "status": "pass" if not supplied else "not-applicable", "reason": "default path defers missing result rows"},
+    {"gate": "default-no-env-deferral", "status": "not-applicable" if no_remaining_results_required else ("pass" if not supplied else "not-applicable"), "reason": "no remaining result rows are missing" if no_remaining_results_required else "default path defers missing result rows"},
     {"gate": "manifest-only-no-repo-payload", "status": "pass", "reason": "v61ca writes metadata and hash rows only"},
     {"gate": "remaining-page-hash-result-artifact", "status": "pass" if result_artifact_ready else "blocked", "reason": f"supplied_remaining_page_hash_result_rows={supplied_result_rows}"},
     {"gate": "accepted-all-remaining-page-hash-results", "status": "pass" if remaining_result_intake_ready else "blocked", "reason": f"accepted_remaining_page_hash_result_rows={accepted_result_rows}"},

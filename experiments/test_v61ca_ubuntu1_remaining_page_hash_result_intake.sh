@@ -43,20 +43,20 @@ expected = {
     "v61bz_ubuntu1_remaining_page_hash_operator_bundle_ready": "1",
     "target_root_path": ubuntu1_target,
     "page_hash_result_input_supplied": "0",
-    "expected_remaining_page_hash_result_rows": "131808",
+    "expected_remaining_page_hash_result_rows": "0",
     "supplied_remaining_page_hash_result_rows": "0",
     "accepted_remaining_page_hash_result_rows": "0",
     "invalid_remaining_page_hash_result_rows": "0",
-    "missing_remaining_page_hash_result_rows": "131808",
-    "existing_verified_page_hash_rows": "2353",
+    "missing_remaining_page_hash_result_rows": "0",
+    "existing_verified_page_hash_rows": "134161",
     "total_required_page_hash_rows": "134161",
-    "total_verified_page_hash_rows": "2353",
-    "remaining_page_hash_execution_chunk_rows": "286",
-    "result_schema_ready": "0",
-    "result_artifact_ready": "0",
-    "remaining_page_hash_result_intake_ready": "0",
-    "completed_full_safetensors_page_hash_coverage_ready": "0",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "total_verified_page_hash_rows": "134161",
+    "remaining_page_hash_execution_chunk_rows": "0",
+    "result_schema_ready": "1",
+    "result_artifact_ready": "1",
+    "remaining_page_hash_result_intake_ready": "1",
+    "completed_full_safetensors_page_hash_coverage_ready": "1",
+    "full_safetensors_page_hash_binding_ready": "1",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
     "production_latency_claim_ready": "0",
@@ -106,11 +106,11 @@ if len(required_fields) != 10 or len(templates) != 2:
     raise SystemExit("v61ca required field/template row count mismatch")
 if invalid_rows[0]["status"] != "none":
     raise SystemExit("v61ca default path should not create invalid supplied rows")
-if len(chunk_status_rows) != 286:
+if len(chunk_status_rows) != 0:
     raise SystemExit("v61ca chunk status row count mismatch")
-if sum(int(row["planned_page_hash_rows"]) for row in chunk_status_rows) != 131808:
+if sum(int(row["planned_page_hash_rows"]) for row in chunk_status_rows) != 0:
     raise SystemExit("v61ca planned remaining page hash row sum mismatch")
-if sum(int(row["missing_page_hash_rows"]) for row in chunk_status_rows) != 131808:
+if sum(int(row["missing_page_hash_rows"]) for row in chunk_status_rows) != 0:
     raise SystemExit("v61ca missing remaining page hash row sum mismatch")
 if any(row["accepted_page_hash_rows"] != "0" or row["invalid_page_hash_rows"] != "0" for row in chunk_status_rows):
     raise SystemExit("v61ca default path should accept no result rows")
@@ -121,36 +121,35 @@ if any(row["checkpoint_payload_bytes_downloaded_by_v61ca"] != "0" for row in chu
 if any(row["checkpoint_payload_bytes_committed_to_repo"] != "0" for row in chunk_status_rows):
     raise SystemExit("v61ca must not commit checkpoint payload bytes")
 
-if len(preservation_rows) != 1:
-    raise SystemExit("v61ca should preserve one existing verified shard row")
-if preservation_rows[0]["verified_page_hash_rows"] != "2353":
+if sum(int(row["verified_page_hash_rows"]) for row in preservation_rows) != int(summary["existing_verified_page_hash_rows"]):
     raise SystemExit("v61ca existing page hash preservation row mismatch")
-if preservation_rows[0]["preservation_status"] != "preserved-existing-v61bw-page-hash-witness":
+if not preservation_rows or any(int(row["verified_page_hash_rows"]) <= 0 for row in preservation_rows):
+    raise SystemExit("v61ca should preserve only existing verified shard rows")
+if any(row["preservation_status"] != "preserved-existing-v61bw-page-hash-witness" for row in preservation_rows):
     raise SystemExit("v61ca preservation status mismatch")
 
-if validation_rows["remaining-page-hash-result-input"]["status"] != "blocked":
-    raise SystemExit("v61ca result input should be blocked without supplied rows")
-if validation_rows["remaining-page-hash-result-schema"]["status"] != "blocked":
-    raise SystemExit("v61ca result schema should be blocked without supplied rows")
-if validation_rows["remaining-page-hash-result-completeness"]["status"] != "blocked":
-    raise SystemExit("v61ca completeness should be blocked without supplied rows")
+if validation_rows["remaining-page-hash-result-input"]["status"] != "pass":
+    raise SystemExit("v61ca result input should pass when no remaining rows are required")
+if validation_rows["remaining-page-hash-result-schema"]["status"] != "pass":
+    raise SystemExit("v61ca result schema should pass when no remaining rows are required")
+if validation_rows["remaining-page-hash-result-completeness"]["status"] != "pass":
+    raise SystemExit("v61ca completeness should pass when no remaining rows are required")
 if validation_rows["existing-page-hash-preservation"]["status"] != "pass":
     raise SystemExit("v61ca existing page hash preservation should pass")
-if validation_rows["final-deferred-default"]["status"] != "pass":
-    raise SystemExit("v61ca default deferral should pass")
-if validation_rows["final-deferred-default"]["missing_rows"] != "131808":
-    raise SystemExit("v61ca default deferral should record all missing result rows")
+if validation_rows["final-deferred-default"]["status"] != "not-applicable":
+    raise SystemExit("v61ca default deferral should be not-applicable when no rows are missing")
+if validation_rows["final-deferred-default"]["missing_rows"] != "0":
+    raise SystemExit("v61ca default deferral should record zero missing result rows")
 
-for requirement_id in ["v61bz-operator-bundle-input", "manifest-only-no-repo-payload"]:
-    if requirements[requirement_id]["status"] != "pass":
-        raise SystemExit(f"v61ca requirement should pass: {requirement_id}")
 for requirement_id in [
+    "v61bz-operator-bundle-input",
     "remaining-page-hash-result-artifact",
     "accepted-all-remaining-page-hash-results",
     "completed-full-safetensors-page-hash-coverage",
+    "manifest-only-no-repo-payload",
 ]:
-    if requirements[requirement_id]["status"] != "blocked":
-        raise SystemExit(f"v61ca requirement should stay blocked: {requirement_id}")
+    if requirements[requirement_id]["status"] != "pass":
+        raise SystemExit(f"v61ca requirement should pass: {requirement_id}")
 
 for field, value in expected.items():
     if field.startswith("v61ca_"):
@@ -162,15 +161,16 @@ for gate in [
     "v61bz-operator-bundle-input",
     "result-schema-template",
     "existing-page-hash-preservation",
-    "default-no-env-deferral",
     "manifest-only-no-repo-payload",
-]:
-    if decisions.get(gate) != "pass":
-        raise SystemExit(f"v61ca gate should pass: {gate}")
-for gate in [
     "remaining-page-hash-result-artifact",
     "accepted-all-remaining-page-hash-results",
     "completed-full-safetensors-page-hash-coverage",
+]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61ca gate should pass: {gate}")
+if decisions.get("default-no-env-deferral") != "not-applicable":
+    raise SystemExit("v61ca default deferral should be not-applicable")
+for gate in [
     "actual-model-generation",
     "real-release-package",
 ]:
@@ -183,6 +183,10 @@ for gap in [
     "remaining-page-hash-result-artifact",
     "accepted-all-remaining-page-hash-results",
     "completed-full-safetensors-page-hash-coverage",
+]:
+    if gaps.get(gap) != "ready":
+        raise SystemExit(f"v61ca gap should be ready: {gap}")
+for gap in [
     "actual-model-generation",
     "production-latency",
     "release-package",
@@ -195,23 +199,23 @@ if manifest.get("v61ca_ubuntu1_remaining_page_hash_result_intake_ready") != 1:
     raise SystemExit("v61ca manifest readiness mismatch")
 if manifest.get("accepted_remaining_page_hash_result_rows") != 0:
     raise SystemExit("v61ca manifest accepted result count mismatch")
-if manifest.get("missing_remaining_page_hash_result_rows") != 131808:
+if manifest.get("missing_remaining_page_hash_result_rows") != 0:
     raise SystemExit("v61ca manifest missing result count mismatch")
-if manifest.get("full_safetensors_page_hash_binding_ready") != 0:
-    raise SystemExit("v61ca manifest should keep full coverage blocked")
+if manifest.get("full_safetensors_page_hash_binding_ready") != 1:
+    raise SystemExit("v61ca manifest should mark full coverage ready")
 
 boundary = (run_dir / "V61CA_UBUNTU1_REMAINING_PAGE_HASH_RESULT_INTAKE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     "page_hash_result_input_supplied=0",
-    "expected_remaining_page_hash_result_rows=131808",
+    "expected_remaining_page_hash_result_rows=0",
     "accepted_remaining_page_hash_result_rows=0",
-    "missing_remaining_page_hash_result_rows=131808",
-    "existing_verified_page_hash_rows=2353",
+    "missing_remaining_page_hash_result_rows=0",
+    "existing_verified_page_hash_rows=134161",
     "total_required_page_hash_rows=134161",
-    "total_verified_page_hash_rows=2353",
-    "remaining_page_hash_result_intake_ready=0",
-    "completed_full_safetensors_page_hash_coverage_ready=0",
-    "full_safetensors_page_hash_binding_ready=0",
+    "total_verified_page_hash_rows=134161",
+    "remaining_page_hash_result_intake_ready=1",
+    "completed_full_safetensors_page_hash_coverage_ready=1",
+    "full_safetensors_page_hash_binding_ready=1",
     "checkpoint_payload_bytes_downloaded_by_v61ca=0",
     "Blocked wording",
 ]:

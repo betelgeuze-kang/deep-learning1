@@ -98,8 +98,6 @@ chunk_rows = read_csv(v61bz_dir / "operator_bundle/remaining_page_hash_execution
 promotion_rows = read_csv(v61cm_dir / "full_checkpoint_materialization_promotion_rows.csv")
 materialization_by_shard = {row["shard_name"]: row for row in promotion_rows}
 PAGE_SIZE = 2 * 1024 * 1024
-if not chunk_rows:
-    raise SystemExit("v61cn requires remaining page-hash chunk rows")
 if not materialization_by_shard:
     raise SystemExit("v61cn requires materialization promotion rows")
 
@@ -157,11 +155,34 @@ for index, chunk in enumerate(chunk_rows):
             "route_jump_rows": "0",
         }
     )
-write_csv(run_dir / "page_hash_execution_materialization_admission_rows.csv", list(admission_rows[0].keys()), admission_rows)
+admission_fields = [
+    "admission_row_id",
+    "remaining_page_hash_chunk_id",
+    "model_id",
+    "shard_name",
+    "target_path",
+    "planned_page_hash_rows",
+    "planned_page_hash_bytes",
+    "materialization_promotion_status",
+    "full_shard_materialization_ready",
+    "page_hash_execution_admitted",
+    "page_hash_execution_admission_status",
+    "admission_reason",
+    "checkpoint_payload_bytes_downloaded_by_v61cn",
+    "checkpoint_payload_bytes_committed_to_repo",
+    "route_jump_rows",
+]
+write_csv(run_dir / "page_hash_execution_materialization_admission_rows.csv", admission_fields, admission_rows)
 
 full_materialization_ready = int(v61cm_summary["full_checkpoint_materialization_ready"])
 operator_bundle_ready = int(v61bz_summary["remaining_page_hash_operator_bundle_ready"])
-page_hash_execution_admission_ready = int(operator_bundle_ready and full_materialization_ready and admitted_chunks == len(chunk_rows))
+full_page_hash_ready = int(v61bz_summary["full_safetensors_page_hash_binding_ready"])
+page_hash_execution_admission_ready = int(
+    operator_bundle_ready
+    and full_materialization_ready
+    and admitted_chunks == len(chunk_rows)
+    and (len(chunk_rows) > 0 or full_page_hash_ready)
+)
 
 requirement_rows = [
     {
@@ -190,7 +211,7 @@ requirement_rows = [
         "status": "pass" if admitted_chunks == len(chunk_rows) else "blocked",
         "required_value": str(len(chunk_rows)),
         "actual_value": str(admitted_chunks),
-        "reason": "all remaining page-hash chunks must have materialized shard inputs",
+        "reason": "all remaining page-hash chunks must have materialized shard inputs; no chunks are required after full page-hash coverage",
     },
     {
         "requirement_id": "manifest-only-no-repo-payload",
@@ -222,8 +243,8 @@ metric = {
     "remaining_page_hash_operator_bundle_ready": v61bz_summary["remaining_page_hash_operator_bundle_ready"],
     "page_hash_execution_admission_ready": str(page_hash_execution_admission_ready),
     "page_hash_execution_ready": "0",
-    "completed_full_safetensors_page_hash_coverage_ready": "0",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "completed_full_safetensors_page_hash_coverage_ready": str(full_page_hash_ready),
+    "full_safetensors_page_hash_binding_ready": str(full_page_hash_ready),
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
     "production_latency_claim_ready": "0",
@@ -239,8 +260,8 @@ gap_rows = [
     ("v61cm-full-materialization-promotion-input", "ready", "v61cm materialization promotion is bound"),
     ("full-checkpoint-materialization-ready-before-page-hash", "ready" if full_materialization_ready else "blocked", f"full_checkpoint_materialization_ready={full_materialization_ready}"),
     ("all-remaining-page-hash-chunks-admitted", "ready" if admitted_chunks == len(chunk_rows) else "blocked", f"admitted_page_hash_execution_chunk_rows={admitted_chunks}"),
-    ("page-hash-execution", "blocked", "this gate does not run page hashing"),
-    ("completed-full-safetensors-page-hash-coverage", "blocked", "requires executed and accepted page-hash result rows"),
+    ("page-hash-execution", "not-applicable" if full_page_hash_ready and len(chunk_rows) == 0 else "blocked", "no remaining page-hash chunks need execution" if full_page_hash_ready and len(chunk_rows) == 0 else "this gate does not run page hashing"),
+    ("completed-full-safetensors-page-hash-coverage", "ready" if full_page_hash_ready else "blocked", "full page-hash coverage is already bound upstream" if full_page_hash_ready else "requires executed and accepted page-hash result rows"),
     ("actual-model-generation", "blocked", "not a generation runner"),
     ("release-package", "blocked", "not release evidence"),
 ]
@@ -258,8 +279,8 @@ decision_rows = [
     {"gate": "manifest-only-no-repo-payload", "status": "pass", "reason": "v61cn writes metadata only"},
     {"gate": "full-checkpoint-materialization-ready-before-page-hash", "status": "pass" if full_materialization_ready else "blocked", "reason": f"full_checkpoint_materialization_ready={full_materialization_ready}"},
     {"gate": "all-remaining-page-hash-chunks-admitted", "status": "pass" if admitted_chunks == len(chunk_rows) else "blocked", "reason": f"admitted_page_hash_execution_chunk_rows={admitted_chunks}"},
-    {"gate": "page-hash-execution", "status": "blocked", "reason": "not executed by v61cn"},
-    {"gate": "completed-full-safetensors-page-hash-coverage", "status": "blocked", "reason": "requires accepted page-hash result rows"},
+    {"gate": "page-hash-execution", "status": "not-applicable" if full_page_hash_ready and len(chunk_rows) == 0 else "blocked", "reason": "no remaining page-hash chunks need execution" if full_page_hash_ready and len(chunk_rows) == 0 else "not executed by v61cn"},
+    {"gate": "completed-full-safetensors-page-hash-coverage", "status": "pass" if full_page_hash_ready else "blocked", "reason": "full page-hash coverage is already bound upstream" if full_page_hash_ready else "requires accepted page-hash result rows"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "not a generation runner"},
     {"gate": "real-release-package", "status": "blocked", "reason": "not release evidence"},
 ]
@@ -286,15 +307,16 @@ Evidence emitted:
 - remaining_page_hash_operator_bundle_ready={operator_bundle_ready}
 - page_hash_execution_admission_ready={page_hash_execution_admission_ready}
 - page_hash_execution_ready=0
-- completed_full_safetensors_page_hash_coverage_ready=0
+- completed_full_safetensors_page_hash_coverage_ready={full_page_hash_ready}
+- full_safetensors_page_hash_binding_ready={full_page_hash_ready}
 - actual_model_generation_ready=0
 - checkpoint_payload_bytes_downloaded_by_v61cn=0
 - checkpoint_payload_bytes_committed_to_repo=0
 
-Allowed wording: page-hash execution materialization admission gate with
-default materialization block. Blocked wording: executed page hashing,
-completed full safetensors page-hash coverage, actual model generation,
-production latency, near-frontier quality, or release readiness.
+Allowed wording: page-hash execution materialization admission gate, including
+the no-op path when no remaining page hashes need execution. Blocked wording:
+actual model generation, production latency, near-frontier quality, or release
+readiness.
 """
 (run_dir / "V61CN_UBUNTU1_PAGE_HASH_EXECUTION_MATERIALIZATION_ADMISSION_GATE_BOUNDARY.md").write_text(boundary, encoding="utf-8")
 
@@ -309,6 +331,8 @@ manifest = {
     "admitted_page_hash_execution_chunk_rows": admitted_chunks,
     "materialization_blocked_page_hash_execution_chunk_rows": blocked_chunks,
     "page_hash_execution_admission_ready": page_hash_execution_admission_ready,
+    "completed_full_safetensors_page_hash_coverage_ready": full_page_hash_ready,
+    "full_safetensors_page_hash_binding_ready": full_page_hash_ready,
     "checkpoint_payload_bytes_downloaded_by_v61cn": 0,
     "checkpoint_payload_bytes_committed_to_repo": 0,
 }

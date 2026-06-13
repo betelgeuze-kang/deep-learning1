@@ -48,15 +48,15 @@ expected = {
     "generation_admission_bridge_rows": "1000",
     "machine_complete_source_surface_ready": "1",
     "complete_source_review_return_ready": "0",
-    "full_page_hash_coverage_promotion_ready": "0",
-    "completed_full_safetensors_page_hash_coverage_ready": "0",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "full_page_hash_coverage_promotion_ready": "1",
+    "completed_full_safetensors_page_hash_coverage_ready": "1",
+    "full_safetensors_page_hash_binding_ready": "1",
     "checkpoint_shard_rows": "59",
-    "ready_full_page_hash_shard_rows": "1",
-    "blocked_full_page_hash_shard_rows": "58",
+    "ready_full_page_hash_shard_rows": "59",
+    "blocked_full_page_hash_shard_rows": "0",
     "total_required_page_hash_rows": "134161",
-    "total_verified_page_hash_rows": "2353",
-    "missing_remaining_page_hash_result_rows": "131808",
+    "total_verified_page_hash_rows": "134161",
+    "missing_remaining_page_hash_result_rows": "0",
     "expected_human_review_rows": "7000",
     "accepted_human_review_rows": "0",
     "expected_adjudication_rows": "1000",
@@ -67,7 +67,7 @@ expected = {
     "generation_packet_artifacts_ready": "0",
     "generation_execution_admission_ready": "0",
     "generation_execution_admitted_rows": "0",
-    "page_hash_blocked_rows": "1000",
+    "page_hash_blocked_rows": "0",
     "review_return_blocked_rows": "1000",
     "generation_result_artifact_blocked_rows": "1000",
     "actual_model_generation_ready": "0",
@@ -114,7 +114,7 @@ if len(bridge_rows) != 1000:
     raise SystemExit("v61cc bridge row count mismatch")
 if sum(int(row["generation_execution_admitted"]) for row in bridge_rows) != 0:
     raise SystemExit("v61cc should admit no generation execution by default")
-if sum(int(row["page_hash_blocked"]) for row in bridge_rows) != 1000:
+if sum(int(row["page_hash_blocked"]) for row in bridge_rows) != 0:
     raise SystemExit("v61cc page hash blocker row count mismatch")
 if sum(int(row["review_return_blocked"]) for row in bridge_rows) != 1000:
     raise SystemExit("v61cc review blocker row count mismatch")
@@ -124,8 +124,8 @@ if sum(int(row["actual_model_generation_ready"]) for row in bridge_rows) != 0:
     raise SystemExit("v61cc must keep actual generation blocked")
 if any(row["machine_complete_source_surface_ready"] != "1" for row in bridge_rows):
     raise SystemExit("v61cc complete-source surface should be ready for every row")
-if any(row["full_safetensors_page_hash_binding_ready"] != "0" for row in bridge_rows):
-    raise SystemExit("v61cc full page hash binding should remain blocked")
+if any(row["full_safetensors_page_hash_binding_ready"] != "1" for row in bridge_rows):
+    raise SystemExit("v61cc full page hash binding should be ready")
 if any(row["complete_source_review_return_ready"] != "0" for row in bridge_rows):
     raise SystemExit("v61cc review return should remain blocked")
 if any(row["checkpoint_payload_bytes_downloaded_by_v61cc"] != "0" for row in bridge_rows):
@@ -139,12 +139,12 @@ for requirement_id in [
     "v61cb-page-hash-promotion-input",
     "v53t-complete-source-audit-input",
     "v61bt-generation-result-schema-input",
+    "completed-full-safetensors-page-hash-coverage",
     "manifest-only-no-repo-payload",
 ]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61cc requirement should pass: {requirement_id}")
 for requirement_id in [
-    "completed-full-safetensors-page-hash-coverage",
     "complete-source-review-return",
     "generation-execution-admission",
     "actual-generation-result-artifacts",
@@ -163,12 +163,12 @@ for gate in [
     "v61cb-page-hash-promotion-input",
     "v53t-complete-source-audit-input",
     "v61bt-generation-result-schema-input",
+    "completed-full-safetensors-page-hash-coverage",
     "manifest-only-no-repo-payload",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61cc gate should pass: {gate}")
 for gate in [
-    "completed-full-safetensors-page-hash-coverage",
     "complete-source-review-return",
     "generation-execution-admission",
     "actual-generation-result-artifacts",
@@ -183,11 +183,11 @@ for gap in [
     "v61cb-page-hash-promotion-input",
     "v53t-complete-source-audit-input",
     "v61bt-generation-result-schema-input",
+    "completed-full-safetensors-page-hash-coverage",
 ]:
     if gaps.get(gap) != "ready":
         raise SystemExit(f"v61cc gap should be ready: {gap}")
 for gap in [
-    "completed-full-safetensors-page-hash-coverage",
     "complete-source-review-return",
     "generation-execution-admission",
     "actual-generation-result-artifacts",
@@ -205,12 +205,12 @@ for snippet in [
     "generation_admission_bridge_rows=1000",
     "machine_complete_source_surface_ready=1",
     "complete_source_review_return_ready=0",
-    "full_safetensors_page_hash_binding_ready=0",
-    "total_verified_page_hash_rows=2353",
+    "full_safetensors_page_hash_binding_ready=1",
+    "total_verified_page_hash_rows=134161",
     "total_required_page_hash_rows=134161",
     "generation_execution_admission_ready=0",
     "generation_execution_admitted_rows=0",
-    "page_hash_blocked_rows=1000",
+    "page_hash_blocked_rows=0",
     "review_return_blocked_rows=1000",
     "generation_result_artifact_blocked_rows=1000",
     "actual_model_generation_ready=0",
@@ -227,7 +227,7 @@ if manifest.get("generation_admission_bridge_rows") != 1000:
     raise SystemExit("v61cc manifest row count mismatch")
 if manifest.get("generation_execution_admitted_rows") != 0:
     raise SystemExit("v61cc manifest should admit no rows")
-if manifest.get("total_verified_page_hash_rows") != 2353:
+if manifest.get("total_verified_page_hash_rows") != 134161:
     raise SystemExit("v61cc manifest verified page hash mismatch")
 if manifest.get("actual_model_generation_ready") != 0:
     raise SystemExit("v61cc manifest should keep actual generation blocked")

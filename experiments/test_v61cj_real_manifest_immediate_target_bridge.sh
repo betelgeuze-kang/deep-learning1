@@ -60,9 +60,9 @@ expected = {
     "source_bound_abstain_rows": "10",
     "complete_source_1000_query_ready": "0",
     "total_required_page_hash_rows": "134161",
-    "total_verified_page_hash_rows": "2353",
-    "remaining_page_hash_rows": "131808",
-    "completed_full_safetensors_page_hash_coverage_ready": "0",
+    "total_verified_page_hash_rows": "134161",
+    "remaining_page_hash_rows": "0",
+    "completed_full_safetensors_page_hash_coverage_ready": "1",
     "runtime_execution_admission_ready": "0",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
@@ -128,11 +128,11 @@ for requirement_id in [
     "gpu-rocm-page-kernel-measurement",
     "kv-cache-residency-eviction-policy",
     "v61j-source-bound-qa-command-pass",
+    "completed-full-safetensors-page-hash-coverage",
 ]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61cj requirement should pass: {requirement_id}")
 for requirement_id in [
-    "completed-full-safetensors-page-hash-coverage",
     "actual-model-generation",
 ]:
     if requirements[requirement_id]["status"] != "blocked":
@@ -150,11 +150,11 @@ for gate in [
     "kv-cache-residency-eviction-policy",
     "v61j-source-bound-qa-command-pass",
     "real-manifest-immediate-target-bridge",
+    "completed-full-safetensors-page-hash-coverage",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61cj gate should pass: {gate}")
 for gate in [
-    "completed-full-safetensors-page-hash-coverage",
     "complete-source-1000-query",
     "actual-model-generation",
     "production-latency",
@@ -169,11 +169,11 @@ for gap in [
     "gpu-rocm-page-kernel-measurement",
     "kv-cache-residency-eviction-policy",
     "v61j-source-bound-qa-command-pass",
+    "completed-full-safetensors-page-hash-coverage",
 ]:
     if gaps.get(gap) != "ready":
         raise SystemExit(f"v61cj gap should be ready: {gap}")
 for gap in [
-    "completed-full-safetensors-page-hash-coverage",
     "complete-source-1000-query",
     "actual-model-generation",
     "production-latency",
@@ -194,7 +194,7 @@ for snippet in [
     "gpu_kernel_avg_ms=0.513442",
     "kv_cache_policy_ready=1",
     "source_bound_query_pass_rows=37/37",
-    "completed_full_safetensors_page_hash_coverage_ready=0",
+    "completed_full_safetensors_page_hash_coverage_ready=1",
     "complete_source_1000_query_ready=0",
     "actual_model_generation_ready=0",
     "checkpoint_payload_bytes_downloaded_by_v61cj=0",

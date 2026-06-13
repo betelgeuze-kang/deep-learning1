@@ -51,10 +51,10 @@ expected = {
     "operator_command_rows": "7",
     "complete_source_query_rows": "1000",
     "generation_admission_bridge_rows": "1000",
-    "page_hash_return_required_rows": "131808",
+    "page_hash_return_required_rows": "0",
     "page_hash_return_accepted_rows": "0",
     "total_required_page_hash_rows": "134161",
-    "total_verified_page_hash_rows": "2353",
+    "total_verified_page_hash_rows": "134161",
     "human_review_required_rows": "7000",
     "human_review_accepted_rows": "0",
     "adjudication_required_rows": "1000",
@@ -66,10 +66,10 @@ expected = {
     "generation_result_required_artifacts": "5",
     "generation_result_accepted_artifacts": "0",
     "generation_execution_admitted_rows": "0",
-    "page_hash_blocked_rows": "1000",
+    "page_hash_blocked_rows": "0",
     "review_return_blocked_rows": "1000",
     "generation_result_artifact_blocked_rows": "1000",
-    "page_hash_closure_ready": "0",
+    "page_hash_closure_ready": "1",
     "review_return_closure_ready": "0",
     "generation_result_closure_ready": "0",
     "generation_unblocker_closure_ready": "0",
@@ -124,8 +124,10 @@ if [row["phase_id"] for row in phase_rows] != [
     "phase-03-actual-generation-result-return",
 ]:
     raise SystemExit("v61cd phase order mismatch")
-if any(row["closure_ready"] != "0" for row in phase_rows):
-    raise SystemExit("v61cd default phases should remain blocked")
+if phase_rows[0]["closure_ready"] != "1":
+    raise SystemExit("v61cd page-hash phase should be closed")
+if any(row["closure_ready"] != "0" for row in phase_rows[1:]):
+    raise SystemExit("v61cd review/generation phases should remain blocked")
 if len(artifact_rows) != 11:
     raise SystemExit("v61cd artifact row count mismatch")
 if len(command_rows) != 7:
@@ -150,11 +152,10 @@ required_artifacts = {
 if {row["artifact_name"] for row in artifact_rows} != required_artifacts:
     raise SystemExit("v61cd required artifact set mismatch")
 
-for requirement_id in ["v61cc-admission-bridge-input", "manifest-only-no-repo-payload"]:
+for requirement_id in ["v61cc-admission-bridge-input", "remaining-page-hash-return", "manifest-only-no-repo-payload"]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61cd requirement should pass: {requirement_id}")
 for requirement_id in [
-    "remaining-page-hash-return",
     "complete-source-review-return",
     "actual-generation-result-return",
     "generation-unblocker-closure",
@@ -168,11 +169,10 @@ for field, value in expected.items():
     if field in metric and metric[field] != value:
         raise SystemExit(f"v61cd metric {field}: expected {value}, got {metric[field]}")
 
-for gate in ["v61cc-admission-bridge-input", "operator-closure-bundle", "manifest-only-no-repo-payload"]:
+for gate in ["v61cc-admission-bridge-input", "operator-closure-bundle", "remaining-page-hash-return", "manifest-only-no-repo-payload"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61cd gate should pass: {gate}")
 for gate in [
-    "remaining-page-hash-return",
     "complete-source-review-return",
     "actual-generation-result-return",
     "actual-model-generation",
@@ -184,8 +184,9 @@ for gate in [
 
 if gaps["v61cc-admission-bridge-input"] != "ready":
     raise SystemExit("v61cd v61cc input gap should be ready")
+if gaps.get("remaining-page-hash-return") != "ready":
+    raise SystemExit("v61cd page-hash return gap should be ready")
 for gap in [
-    "remaining-page-hash-return",
     "complete-source-review-return",
     "actual-generation-result-return",
     "actual-model-generation",
@@ -201,12 +202,12 @@ for snippet in [
     "closure_phase_rows=3",
     "return_artifact_rows=11",
     "operator_command_rows=7",
-    "page_hash_return_required_rows=131808",
+    "page_hash_return_required_rows=0",
     "human_review_required_rows=7000",
     "adjudication_required_rows=1000",
     "generation_result_required_artifacts=5",
     "generation_execution_admitted_rows=0",
-    "page_hash_blocked_rows=1000",
+    "page_hash_blocked_rows=0",
     "review_return_blocked_rows=1000",
     "generation_result_artifact_blocked_rows=1000",
     "generation_unblocker_closure_ready=0",
@@ -226,7 +227,7 @@ if manifest.get("return_artifact_rows") != 11:
     raise SystemExit("v61cd manifest artifact count mismatch")
 if manifest.get("operator_command_rows") != 7:
     raise SystemExit("v61cd manifest command count mismatch")
-if manifest.get("page_hash_return_required_rows") != 131808:
+if manifest.get("page_hash_return_required_rows") != 0:
     raise SystemExit("v61cd manifest page-hash required mismatch")
 if manifest.get("human_review_required_rows") != 7000:
     raise SystemExit("v61cd manifest review required mismatch")

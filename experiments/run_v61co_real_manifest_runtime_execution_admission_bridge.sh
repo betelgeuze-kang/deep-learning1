@@ -390,9 +390,9 @@ Evidence emitted:
 - checkpoint_payload_bytes_committed_to_repo=0
 
 Allowed wording: source-bound runtime execution admission bridge over real
-zero-payload manifest evidence. Blocked wording: real Mixtral runtime execution,
-actual model generation, completed full page-hash coverage, near-frontier
-quality, production latency, or release readiness.
+zero-payload manifest evidence after full materialization and page-hash
+coverage. Blocked wording: real Mixtral runtime execution, actual model
+generation, near-frontier quality, production latency, or release readiness.
 """
 (run_dir / "V61CO_REAL_MANIFEST_RUNTIME_EXECUTION_ADMISSION_BRIDGE_BOUNDARY.md").write_text(boundary, encoding="utf-8")
 

@@ -210,7 +210,31 @@ if not skip_page_hash_rows:
         }
     )
 
-write_csv(run_dir / "remaining_page_hash_execution_chunk_rows.csv", list(chunk_rows[0].keys()), chunk_rows)
+chunk_fields = [
+    "remaining_page_hash_chunk_id",
+    "resumed_priority_rank",
+    "original_priority_rank",
+    "model_id",
+    "shard_name",
+    "priority_class",
+    "target_path",
+    "chunk_index",
+    "chunk_page_start_index",
+    "chunk_page_end_index_exclusive",
+    "planned_page_hash_rows",
+    "shard_remaining_page_hash_rows",
+    "shard_remaining_page_hash_bytes",
+    "remaining_materialization_queued",
+    "full_shard_page_hash_coverage_ready",
+    "dry_run_default",
+    "requires_identity_verification_before_hash",
+    "requires_execute_flag",
+    "requires_approval_phrase",
+    "page_hash_execution_status",
+    "checkpoint_payload_bytes_downloaded_by_v61by",
+    "checkpoint_payload_bytes_committed_to_repo",
+]
+write_csv(run_dir / "remaining_page_hash_execution_chunk_rows.csv", chunk_fields, chunk_rows)
 write_csv(run_dir / "verified_page_hash_skip_rows.csv", list(skip_page_hash_rows[0].keys()), skip_page_hash_rows)
 
 total_page_rows = int(v61bx_summary["total_checkpoint_unique_page_rows"])
@@ -219,8 +243,11 @@ verified_page_rows = int(v61bx_summary["verified_page_hash_rows"])
 verified_page_bytes = int(v61bx_summary["verified_page_hash_bytes"])
 remaining_page_rows = int(v61bx_summary["remaining_page_hash_rows"])
 remaining_page_bytes = int(v61bx_summary["remaining_page_hash_bytes"])
-remaining_plan_ready = int(planned_page_rows == remaining_page_rows and planned_page_bytes == remaining_page_bytes and len(chunk_rows) > 0)
 full_page_hash_ready = int(v61bx_summary["full_safetensors_page_hash_binding_ready"])
+remaining_plan_ready = int(
+    (remaining_page_rows == 0 and remaining_page_bytes == 0 and full_page_hash_ready)
+    or (planned_page_rows == remaining_page_rows and planned_page_bytes == remaining_page_bytes and len(chunk_rows) > 0)
+)
 
 requirement_rows = [
     {
@@ -242,7 +269,7 @@ requirement_rows = [
         "status": "pass" if remaining_plan_ready else "blocked",
         "required_value": str(remaining_page_rows),
         "actual_value": str(planned_page_rows),
-        "reason": "only unverified shard pages are scheduled for future hashing",
+        "reason": "only unverified shard pages are scheduled for future hashing; no chunks are needed when full coverage is already complete",
     },
     {
         "requirement_id": "skip-already-verified-page-hash-shards",

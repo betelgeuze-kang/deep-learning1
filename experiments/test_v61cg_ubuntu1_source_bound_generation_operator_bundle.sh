@@ -58,6 +58,9 @@ expected = {
     "generation_execution_ready": "0",
     "generation_execution_admitted_rows": "0",
     "blocked_execution_rows": "1000",
+    "page_hash_closure_ready": "1",
+    "review_return_closure_ready": "0",
+    "generation_result_closure_ready": "0",
     "operator_bundle_handoff_ready": "1",
     "generation_operator_execution_ready": "0",
     "actual_model_generation_ready": "0",
@@ -122,10 +125,17 @@ if {row["bundle_file"] for row in file_rows} != {
 if [row["execution_ready"] for row in command_rows] != ["1", "0", "0", "0"]:
     raise SystemExit("v61cg command readiness mismatch")
 
-for requirement_id in ["v61cf-execution-packet-input", "operator-bundle-shape", "manifest-only-no-repo-payload"]:
+for requirement_id in [
+    "v61cf-execution-packet-input",
+    "operator-bundle-shape",
+    "full-page-hash-closure",
+    "manifest-only-no-repo-payload",
+]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61cg requirement should pass: {requirement_id}")
 for requirement_id in [
+    "complete-source-review-return",
+    "actual-generation-result-return",
     "source-bound-generation-execution-ready",
     "operator-generation-execution-ready",
 ]:
@@ -138,10 +148,17 @@ for field, value in expected.items():
     if field in metric and metric[field] != value:
         raise SystemExit(f"v61cg metric {field}: expected {value}, got {metric[field]}")
 
-for gate in ["v61cf-execution-packet-input", "operator-bundle-shape", "manifest-only-no-repo-payload"]:
+for gate in [
+    "v61cf-execution-packet-input",
+    "operator-bundle-shape",
+    "full-page-hash-closure",
+    "manifest-only-no-repo-payload",
+]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61cg gate should pass: {gate}")
 for gate in [
+    "complete-source-review-return",
+    "actual-generation-result-return",
     "source-bound-generation-execution",
     "actual-model-generation",
     "production-latency",
@@ -151,10 +168,12 @@ for gate in [
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v61cg gate should stay blocked: {gate}")
 
-for gap in ["v61cf-execution-packet-input", "operator-bundle-shape"]:
+for gap in ["v61cf-execution-packet-input", "operator-bundle-shape", "full-page-hash-closure"]:
     if gaps.get(gap) != "ready":
         raise SystemExit(f"v61cg gap should be ready: {gap}")
 for gap in [
+    "complete-source-review-return",
+    "actual-generation-result-return",
     "source-bound-generation-execution",
     "actual-model-generation",
     "production-latency",
@@ -173,6 +192,9 @@ for snippet in [
     "bundle_operator_command_rows=4",
     "total_operator_command_rows=10",
     "operator_bundle_file_rows=4",
+    "page_hash_closure_ready=1",
+    "review_return_closure_ready=0",
+    "generation_result_closure_ready=0",
     "operator_bundle_handoff_ready=1",
     "generation_operator_execution_ready=0",
     "actual_model_generation_ready=0",
@@ -191,6 +213,12 @@ if manifest.get("operator_bundle_file_rows") != 4:
     raise SystemExit("v61cg manifest bundle file count mismatch")
 if manifest.get("operator_bundle_handoff_ready") != 1:
     raise SystemExit("v61cg manifest handoff mismatch")
+if manifest.get("page_hash_closure_ready") != 1:
+    raise SystemExit("v61cg manifest page-hash closure mismatch")
+if manifest.get("review_return_closure_ready") != 0:
+    raise SystemExit("v61cg manifest review closure should remain blocked")
+if manifest.get("generation_result_closure_ready") != 0:
+    raise SystemExit("v61cg manifest generation result closure should remain blocked")
 if manifest.get("generation_operator_execution_ready") != 0:
     raise SystemExit("v61cg manifest execution should remain blocked")
 if manifest.get("actual_model_generation_ready") != 0:

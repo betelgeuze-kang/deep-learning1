@@ -87,8 +87,6 @@ for src, rel in [
 
 chunk_rows = read_csv(v61ca_dir / "remaining_page_hash_result_chunk_status_rows.csv")
 preservation_rows = read_csv(v61ca_dir / "existing_page_hash_preservation_rows.csv")
-if not chunk_rows:
-    raise SystemExit("v61cb requires v61ca chunk status rows")
 if not preservation_rows:
     raise SystemExit("v61cb requires v61ca existing preservation rows")
 

@@ -181,18 +181,18 @@ expansion_execution_ready = 0
 
 operator_rows = [
     {
-        "operator_step": "01-complete-checkpoint-materialization",
-        "depends_on": "v61cm/v61cl/v61bq",
-        "command": "return all 59 checkpoint shard materialization receipts, then rerun v61cm",
-        "ready_to_run_now": "0",
-        "expected_return": "full_checkpoint_materialization_ready=1",
+        "operator_step": "01-verify-generation-admission-prerequisites",
+        "depends_on": "v61cc/v61cf/v61cp",
+        "command": "V61CC_REUSE_EXISTING=0 ./experiments/run_v61cc_ubuntu1_page_hash_generation_admission_bridge.sh && V61CP_REUSE_EXISTING=0 ./experiments/run_v61cp_complete_source_runtime_admission_coverage_gate.sh",
+        "ready_to_run_now": "1",
+        "expected_return": "full page-hash is closed and complete-source runtime coverage gap remains explicit",
     },
     {
-        "operator_step": "02-complete-full-page-hash-coverage",
-        "depends_on": "v61bz/v61ca/v61cb",
-        "command": "execute remaining 286 page-hash chunks and return 131808 hash rows",
-        "ready_to_run_now": "0",
-        "expected_return": "full_safetensors_page_hash_binding_ready=1",
+        "operator_step": "02-verify-runtime-expansion-packet",
+        "depends_on": "v61cq",
+        "command": "./experiments/test_v61cq_complete_source_runtime_admission_expansion_packet.sh",
+        "ready_to_run_now": "1",
+        "expected_return": "1000 complete-source runtime admission expansion rows",
     },
     {
         "operator_step": "03-run-complete-source-runtime-admission",

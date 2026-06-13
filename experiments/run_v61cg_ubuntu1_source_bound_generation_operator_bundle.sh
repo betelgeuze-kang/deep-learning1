@@ -107,6 +107,9 @@ target_root = v61cf["target_root_path"]
 execution_ready = int(v61cf["generation_execution_ready"])
 execution_admitted_rows = int(v61cf["generation_execution_admitted_rows"])
 blocked_execution_rows = int(v61cf["blocked_execution_rows"])
+page_hash_closure_ready = int(v61cf["page_hash_closure_ready"])
+review_return_closure_ready = int(v61cf["review_return_closure_ready"])
+generation_result_closure_ready = int(v61cf["generation_result_closure_ready"])
 operator_bundle_handoff_ready = 1
 generation_operator_execution_ready = int(execution_ready and execution_admitted_rows == len(packet_rows))
 
@@ -259,6 +262,27 @@ requirement_rows = [
         "reason": f"blocked_execution_rows={blocked_execution_rows}",
     },
     {
+        "requirement_id": "full-page-hash-closure",
+        "required_value": "1",
+        "actual_value": str(page_hash_closure_ready),
+        "status": status(page_hash_closure_ready),
+        "reason": "v61cg inherits the v61cf/v61ce full page-hash closure",
+    },
+    {
+        "requirement_id": "complete-source-review-return",
+        "required_value": "1",
+        "actual_value": str(review_return_closure_ready),
+        "status": status(review_return_closure_ready),
+        "reason": "operator generation execution waits for accepted review/adjudication returns",
+    },
+    {
+        "requirement_id": "actual-generation-result-return",
+        "required_value": "1",
+        "actual_value": str(generation_result_closure_ready),
+        "status": status(generation_result_closure_ready),
+        "reason": "operator generation execution still needs returned generation artifacts",
+    },
+    {
         "requirement_id": "operator-generation-execution-ready",
         "required_value": "1000 admitted rows",
         "actual_value": str(execution_admitted_rows),
@@ -293,6 +317,9 @@ metric = {
     "generation_execution_ready": v61cf["generation_execution_ready"],
     "generation_execution_admitted_rows": v61cf["generation_execution_admitted_rows"],
     "blocked_execution_rows": v61cf["blocked_execution_rows"],
+    "page_hash_closure_ready": str(page_hash_closure_ready),
+    "review_return_closure_ready": str(review_return_closure_ready),
+    "generation_result_closure_ready": str(generation_result_closure_ready),
     "operator_bundle_handoff_ready": str(operator_bundle_handoff_ready),
     "generation_operator_execution_ready": str(generation_operator_execution_ready),
     "actual_model_generation_ready": "0",
@@ -309,6 +336,9 @@ write_csv(run_dir / "source_bound_generation_operator_bundle_metric_rows.csv", l
 runtime_gap_rows = [
     ("v61cf-execution-packet-input", "ready", "v61cf packet is bound"),
     ("operator-bundle-shape", "ready", "operator bundle files are present"),
+    ("full-page-hash-closure", "ready" if page_hash_closure_ready else "blocked", f"page_hash_closure_ready={page_hash_closure_ready}"),
+    ("complete-source-review-return", status(review_return_closure_ready), f"review_return_closure_ready={review_return_closure_ready}"),
+    ("actual-generation-result-return", status(generation_result_closure_ready), f"generation_result_closure_ready={generation_result_closure_ready}"),
     ("source-bound-generation-execution", status(execution_ready), f"blocked_execution_rows={blocked_execution_rows}"),
     ("actual-model-generation", "blocked", "operator bundle is not an executed generation run"),
     ("production-latency", "blocked", "not a production latency run"),
@@ -342,6 +372,9 @@ Current state:
 - generation_execution_ready={v61cf['generation_execution_ready']}
 - generation_execution_admitted_rows={v61cf['generation_execution_admitted_rows']}
 - blocked_execution_rows={v61cf['blocked_execution_rows']}
+- page_hash_closure_ready={page_hash_closure_ready}
+- review_return_closure_ready={review_return_closure_ready}
+- generation_result_closure_ready={generation_result_closure_ready}
 - operator_bundle_handoff_ready={operator_bundle_handoff_ready}
 - generation_operator_execution_ready={generation_operator_execution_ready}
 - actual_model_generation_ready=0
@@ -350,9 +383,10 @@ Current state:
 
 Blocked wording:
 
-v61cg is an operator bundle only. It does not claim actual Mixtral generation,
-completed full safetensors page-hash coverage, production latency,
-near-frontier quality, or a release package.
+v61cg is an operator bundle only. It inherits the closed full safetensors
+page-hash state from v61cf/v61ce, but it does not execute Mixtral generation
+and does not claim production latency, near-frontier quality, or a release
+package.
 """
 (run_dir / "V61CG_UBUNTU1_SOURCE_BOUND_GENERATION_OPERATOR_BUNDLE_BOUNDARY.md").write_text(boundary, encoding="utf-8")
 
@@ -367,6 +401,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decisions = [
     {"gate": "v61cf-execution-packet-input", "status": "pass", "reason": "v61cf packet evidence is bound"},
     {"gate": "operator-bundle-shape", "status": "pass", "reason": "operator files and verifier are present"},
+    {"gate": "full-page-hash-closure", "status": status(page_hash_closure_ready), "reason": f"page_hash_closure_ready={page_hash_closure_ready}"},
+    {"gate": "complete-source-review-return", "status": status(review_return_closure_ready), "reason": f"review_return_closure_ready={review_return_closure_ready}"},
+    {"gate": "actual-generation-result-return", "status": status(generation_result_closure_ready), "reason": f"generation_result_closure_ready={generation_result_closure_ready}"},
     {"gate": "source-bound-generation-execution", "status": status(execution_ready), "reason": f"blocked_execution_rows={blocked_execution_rows}"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "v61cg does not execute generation"},
     {"gate": "production-latency", "status": "blocked", "reason": "no production latency evidence"},
@@ -390,6 +427,9 @@ manifest = {
     "bundle_operator_command_rows": len(bundle_command_rows),
     "total_operator_command_rows": len(carried_command_rows) + len(bundle_command_rows),
     "operator_bundle_file_rows": len(bundle_file_dicts),
+    "page_hash_closure_ready": page_hash_closure_ready,
+    "review_return_closure_ready": review_return_closure_ready,
+    "generation_result_closure_ready": generation_result_closure_ready,
     "operator_bundle_handoff_ready": operator_bundle_handoff_ready,
     "generation_operator_execution_ready": generation_operator_execution_ready,
     "actual_model_generation_ready": 0,

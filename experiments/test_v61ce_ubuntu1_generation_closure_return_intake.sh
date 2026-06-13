@@ -50,10 +50,10 @@ expected = {
     "generation_closure_admission_rows": "1000",
     "complete_source_query_rows": "1000",
     "generation_admission_bridge_rows": "1000",
-    "page_hash_return_required_rows": "131808",
+    "page_hash_return_required_rows": "0",
     "page_hash_return_accepted_rows": "0",
     "total_required_page_hash_rows": "134161",
-    "total_verified_page_hash_rows": "2353",
+    "total_verified_page_hash_rows": "134161",
     "human_review_required_rows": "7000",
     "human_review_accepted_rows": "0",
     "adjudication_required_rows": "1000",
@@ -61,13 +61,13 @@ expected = {
     "generation_result_required_artifacts": "5",
     "generation_result_accepted_artifacts": "0",
     "accepted_generation_rows": "0",
-    "page_hash_closure_ready": "0",
+    "page_hash_closure_ready": "1",
     "review_return_closure_ready": "0",
     "generation_result_closure_ready": "0",
     "generation_closure_return_intake_ready": "0",
     "generation_execution_admission_ready": "0",
     "generation_execution_admitted_rows": "0",
-    "page_hash_blocked_rows": "1000",
+    "page_hash_blocked_rows": "0",
     "review_return_blocked_rows": "1000",
     "generation_result_artifact_blocked_rows": "1000",
     "actual_model_generation_ready": "0",
@@ -116,8 +116,10 @@ if [row["closure_gate_id"] for row in gate_rows] != [
     "actual-generation-result-return",
 ]:
     raise SystemExit("v61ce closure gate order mismatch")
-if any(row["closure_ready"] != "0" for row in gate_rows):
-    raise SystemExit("v61ce default closure gates should remain blocked")
+if gate_rows[0]["closure_ready"] != "1":
+    raise SystemExit("v61ce page-hash closure gate should be ready")
+if any(row["closure_ready"] != "0" for row in gate_rows[1:]):
+    raise SystemExit("v61ce review/generation closure gates should remain blocked")
 if len(admission_rows) != 1000:
     raise SystemExit("v61ce admission row count mismatch")
 if any(row["generation_execution_admitted"] != "0" for row in admission_rows):
@@ -125,15 +127,14 @@ if any(row["generation_execution_admitted"] != "0" for row in admission_rows):
 if any(row["checkpoint_payload_bytes_committed_to_repo"] != "0" for row in admission_rows):
     raise SystemExit("v61ce must not commit checkpoint payload bytes")
 if {row["blocked_reason"] for row in admission_rows} != {
-    "page-hash-coverage-return;complete-source-review-return;actual-generation-result-return"
+    "complete-source-review-return;actual-generation-result-return"
 }:
     raise SystemExit("v61ce blocked reason mismatch")
 
-for requirement_id in ["v61cd-closure-bundle-input", "manifest-only-no-repo-payload"]:
+for requirement_id in ["v61cd-closure-bundle-input", "full-page-hash-coverage-return", "manifest-only-no-repo-payload"]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61ce requirement should pass: {requirement_id}")
 for requirement_id in [
-    "full-page-hash-coverage-return",
     "complete-source-review-return",
     "actual-generation-result-return",
     "generation-closure-return-intake",
@@ -147,11 +148,10 @@ for field, value in expected.items():
     if field in metric and metric[field] != value:
         raise SystemExit(f"v61ce metric {field}: expected {value}, got {metric[field]}")
 
-for gate in ["v61cd-closure-bundle-input", "manifest-only-no-repo-payload"]:
+for gate in ["v61cd-closure-bundle-input", "full-page-hash-coverage-return", "manifest-only-no-repo-payload"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61ce gate should pass: {gate}")
 for gate in [
-    "full-page-hash-coverage-return",
     "complete-source-review-return",
     "actual-generation-result-return",
     "generation-closure-return-intake",
@@ -165,8 +165,9 @@ for gate in [
 
 if gaps["v61cd-closure-bundle-input"] != "ready":
     raise SystemExit("v61ce v61cd input gap should be ready")
+if gaps.get("full-page-hash-coverage-return") not in {"ready", "pass"}:
+    raise SystemExit("v61ce page-hash coverage gap should be ready")
 for gap in [
-    "full-page-hash-coverage-return",
     "complete-source-review-return",
     "actual-generation-result-return",
     "generation-closure-return-intake",
@@ -182,7 +183,7 @@ boundary = (run_dir / "V61CE_UBUNTU1_GENERATION_CLOSURE_RETURN_INTAKE_BOUNDARY.m
 for snippet in [
     "closure_gate_rows=3",
     "generation_closure_admission_rows=1000",
-    "total_verified_page_hash_rows=2353",
+    "total_verified_page_hash_rows=134161",
     "total_required_page_hash_rows=134161",
     "human_review_required_rows=7000",
     "adjudication_required_rows=1000",

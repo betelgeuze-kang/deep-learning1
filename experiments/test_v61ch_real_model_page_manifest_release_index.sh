@@ -55,10 +55,10 @@ expected = {
     "release_index_file_rows": "10",
     "redistributable_manifest_index_ready": "1",
     "total_required_page_hash_rows": "134161",
-    "total_verified_page_hash_rows": "2353",
-    "remaining_page_hash_rows": "131808",
-    "completed_full_safetensors_page_hash_coverage_ready": "0",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "total_verified_page_hash_rows": "134161",
+    "remaining_page_hash_rows": "0",
+    "completed_full_safetensors_page_hash_coverage_ready": "1",
+    "full_safetensors_page_hash_binding_ready": "1",
     "operator_bundle_handoff_ready": "1",
     "generation_operator_execution_ready": "0",
     "actual_model_generation_ready": "0",
@@ -143,12 +143,12 @@ for requirement_id in [
     "v61ao-real-model-page-manifest-coverage-input",
     "v61cb-page-hash-coverage-status-input",
     "v61cg-generation-handoff-status-input",
+    "completed-full-safetensors-page-hash-coverage",
     "zero-payload-redistributable-index",
 ]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v61ch requirement should pass: {requirement_id}")
 for requirement_id in [
-    "completed-full-safetensors-page-hash-coverage",
     "real-model-generation",
     "real-release-package",
 ]:
@@ -165,12 +165,12 @@ for gate in [
     "v61ao-real-model-page-manifest-coverage-input",
     "v61cb-page-hash-coverage-status-input",
     "v61cg-generation-handoff-status-input",
+    "completed-full-safetensors-page-hash-coverage",
     "zero-payload-page-manifest-release-index",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61ch gate should pass: {gate}")
 for gate in [
-    "completed-full-safetensors-page-hash-coverage",
     "actual-model-generation",
     "near-frontier-quality",
     "production-latency",
@@ -183,12 +183,12 @@ for gap in [
     "v61ao-real-model-page-manifest-coverage-input",
     "v61cb-page-hash-coverage-status-input",
     "v61cg-generation-handoff-status-input",
+    "completed-full-safetensors-page-hash-coverage",
     "zero-payload-page-manifest-release-index",
 ]:
     if gaps.get(gap) != "ready":
         raise SystemExit(f"v61ch gap should be ready: {gap}")
 for gap in [
-    "completed-full-safetensors-page-hash-coverage",
     "actual-model-generation",
     "production-latency",
     "near-frontier-quality",
@@ -206,8 +206,8 @@ for snippet in [
     "source_artifact_rows=8",
     "release_index_file_rows=10",
     "redistributable_manifest_index_ready=1",
-    "total_verified_page_hash_rows=2353",
-    "remaining_page_hash_rows=131808",
+    "total_verified_page_hash_rows=134161",
+    "remaining_page_hash_rows=0",
     "actual_model_generation_ready=0",
     "redistributed_checkpoint_payload_bytes=0",
     "Blocked wording",
@@ -231,7 +231,7 @@ if manifest.get("release_index_file_rows") != 10:
     raise SystemExit("v61ch manifest file row count mismatch")
 if manifest.get("redistributable_manifest_index_ready") != 1:
     raise SystemExit("v61ch manifest redistributable index mismatch")
-if manifest.get("total_verified_page_hash_rows") != 2353:
+if manifest.get("total_verified_page_hash_rows") != 134161:
     raise SystemExit("v61ch manifest verified page hash count mismatch")
 if manifest.get("actual_model_generation_ready") != 0:
     raise SystemExit("v61ch manifest should keep generation blocked")

@@ -2105,8 +2105,8 @@ Pass condition:
 - `payload_execution_receipt_input_supplied=0`
 - `accepted_payload_execution_receipt_rows=0`
 - `missing_payload_execution_receipt_rows=59`
-- `live_existing_shard_rows=1`
-- `live_size_match_shard_rows=1`
+- `live_existing_shard_rows=8`
+- `live_size_match_shard_rows=8`
 - `payload_execution_receipt_intake_ready=0`
 - `download_execution_ready=0`
 - `local_checkpoint_materialization_ready=0`
@@ -2140,8 +2140,8 @@ Pass condition:
 - `expected_payload_execution_receipt_rows=59`
 - `accepted_payload_execution_receipt_rows=0`
 - `missing_payload_execution_receipt_rows=59`
-- `live_existing_shard_rows=1`
-- `live_size_match_shard_rows=1`
+- `live_existing_shard_rows=8`
+- `live_size_match_shard_rows=8`
 - `receipt_backed_materialization_input_ready=0`
 - `identity_verification_execution_ready=0`
 - `required_page_hash_rows=134161`
@@ -2259,25 +2259,23 @@ Pass condition:
 - v61bq live presence evidence is bound
 - v61t local identity verification evidence is bound
 - `checkpoint_shard_rows=59`
-- `live_existing_shard_rows=1`
-- `live_size_match_shard_rows=1`
-- `local_existing_shard_rows=1`
-- `local_size_match_shard_rows=1`
-- `local_header_hash_match_shard_rows=1`
-- `local_identity_verified_shard_rows=1`
-- `local_identity_verified_bytes=4932529864`
-- `remaining_identity_unverified_shard_rows=58`
-- `remaining_identity_unverified_bytes=276308963480`
+- `live_existing_shard_rows=59`
+- `live_size_match_shard_rows=59`
+- `local_existing_shard_rows=59`
+- `local_size_match_shard_rows=59`
+- `local_header_hash_match_shard_rows=59`
+- `local_identity_verified_shard_rows=59`
+- `local_identity_verified_bytes=281241493344`
+- `remaining_identity_unverified_shard_rows=0`
+- `remaining_identity_unverified_bytes=0`
 - `partial_checkpoint_materialization_witness_ready=1`
-- `full_checkpoint_materialization_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_checkpoint_materialization_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bu=0`
-- `observed_external_checkpoint_payload_bytes=4932529864`
+- `observed_external_checkpoint_payload_bytes=281241493344`
 - checkpoint payload bytes committed to the repository remain zero
-- receipt-backed full materialization, full page-hash coverage, actual
-  generation, production-latency, near-frontier, and release claims remain
-  blocked
+- actual generation, production-latency, near-frontier, and release claims
+  remain blocked
 
 ### v61bv Ubuntu-1 Remaining Checkpoint Materialization Queue
 
@@ -2305,25 +2303,23 @@ Pass condition:
 - v61bp dry-run-first launch bundle evidence is bound
 - v61bu partial materialization witness evidence is bound
 - `checkpoint_shard_rows=59`
-- `verified_identity_shard_rows=1`
-- `skipped_verified_shard_rows=1`
-- `remaining_queue_rows=58`
-- `remaining_chunk_rows=3`
-- `remaining_unverified_bytes=276308963480`
-- `local_identity_verified_bytes=4932529864`
+- `verified_identity_shard_rows=59`
+- `skipped_verified_shard_rows=59`
+- `remaining_queue_rows=0`
+- `remaining_chunk_rows=0`
+- `remaining_unverified_bytes=0`
+- `local_identity_verified_bytes=281241493344`
 - `remaining_bytes_fit_current_free_space=1`
 - `remaining_queue_ready=1`
 - `dry_run_guard_ready=1`
 - `payload_execution_launch_ready=0`
 - `download_execution_ready=0`
-- `full_checkpoint_materialization_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_checkpoint_materialization_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bv=0`
 - checkpoint payload bytes committed to the repository remain zero
-- explicit payload execution, receipt-backed full materialization, full
-  page-hash coverage, actual generation, production-latency, near-frontier, and
-  release claims remain blocked
+- actual generation, production-latency, near-frontier, and release claims
+  remain blocked
 
 ### v61bw Ubuntu-1 Partial Page-Hash Witness
 
@@ -2349,26 +2345,26 @@ Pass condition:
 - v61q real checkpoint page map evidence is bound
 - `checkpoint_shard_rows=59`
 - `total_checkpoint_unique_page_rows=134161`
-- `local_identity_verified_shard_rows=1`
-- `local_identity_verified_bytes=4932529864`
-- `identity_shard_page_rows=2353`
-- `identity_shard_page_bytes=4932529864`
-- `page_hash_witness_rows=2353`
-- `page_hash_witness_bytes=4932529864`
+- `local_identity_verified_shard_rows=59`
+- `local_identity_verified_bytes=281241493344`
+- `identity_shard_page_rows=134161`
+- `identity_shard_page_bytes=281241493344`
+- `page_hash_witness_rows=134161`
+- `page_hash_witness_bytes=281241493344`
 - `partial_full_shard_page_hash_ready=1`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bw=0`
-- `observed_external_checkpoint_payload_bytes=4932529864`
+- `observed_external_checkpoint_payload_bytes=281241493344`
 - checkpoint payload bytes committed to the repository remain zero
-- full safetensors page-hash coverage, actual generation,
-  production-latency, near-frontier, and release claims remain blocked
+- actual generation, production-latency, near-frontier, and release claims
+  remain blocked
 
 ### v61bx Ubuntu-1 Page-Hash Coverage Ledger
 
 Consume the v61bw partial page-hash witness, v61bv remaining materialization
 queue, and v61q real checkpoint page map, then emit a checkpoint-wide coverage
-ledger. This promotes the first identity-verified shard from standalone witness
+ledger. This promotes the 59 identity-verified shards from standalone witness
 rows into full-model accounting: verified rows, remaining rows, queue binding,
 and blocked full-coverage status per shard.
 
@@ -2387,20 +2383,20 @@ Pass condition:
 - v61q real checkpoint page map evidence is bound
 - `checkpoint_shard_rows=59`
 - `total_checkpoint_unique_page_rows=134161`
-- `verified_page_hash_shard_rows=1`
-- `verified_page_hash_rows=2353`
-- `verified_page_hash_bytes=4932529864`
-- `remaining_page_hash_shard_rows=58`
-- `remaining_page_hash_rows=131808`
-- `remaining_page_hash_bytes=276308963480`
-- `remaining_materialization_queue_rows=58`
+- `verified_page_hash_shard_rows=59`
+- `verified_page_hash_rows=134161`
+- `verified_page_hash_bytes=281241493344`
+- `remaining_page_hash_shard_rows=0`
+- `remaining_page_hash_rows=0`
+- `remaining_page_hash_bytes=0`
+- `remaining_materialization_queue_rows=0`
 - `partial_page_hash_coverage_ledger_ready=1`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bx=0`
 - checkpoint payload bytes committed to the repository remain zero
-- completed full safetensors page-hash coverage, actual generation,
-  production-latency, near-frontier, and release claims remain blocked
+- actual generation, production-latency, near-frontier, and release claims
+  remain blocked
 
 ### v61by Ubuntu-1 Remaining Page-Hash Execution Plan
 
@@ -2424,21 +2420,21 @@ Pass condition:
 - v61bv remaining materialization queue evidence is bound
 - `checkpoint_shard_rows=59`
 - `total_checkpoint_unique_page_rows=134161`
-- `verified_page_hash_rows=2353`
-- `verified_page_hash_bytes=4932529864`
-- `skipped_verified_page_hash_rows=2353`
-- `skipped_verified_page_hash_bytes=4932529864`
-- `remaining_page_hash_rows=131808`
-- `remaining_page_hash_bytes=276308963480`
+- `verified_page_hash_rows=134161`
+- `verified_page_hash_bytes=281241493344`
+- `skipped_verified_page_hash_rows=134161`
+- `skipped_verified_page_hash_bytes=281241493344`
+- `remaining_page_hash_rows=0`
+- `remaining_page_hash_bytes=0`
 - `remaining_page_hash_execution_chunk_size_pages=512`
-- `remaining_page_hash_execution_chunk_rows=286`
+- `remaining_page_hash_execution_chunk_rows=0`
 - `remaining_page_hash_execution_plan_ready=1`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61by=0`
 - checkpoint payload bytes committed to the repository remain zero
-- completed full safetensors page-hash coverage, actual generation,
-  production-latency, near-frontier, and release claims remain blocked
+- actual generation, production-latency, near-frontier, and release claims
+  remain blocked
 
 ### v61bz Ubuntu-1 Remaining Page-Hash Operator Bundle
 
@@ -2466,33 +2462,31 @@ Outputs:
 Pass condition:
 
 - v61by remaining page-hash execution plan evidence is bound
-- `verified_page_hash_rows=2353`
-- `skipped_verified_page_hash_rows=2353`
-- `remaining_page_hash_rows=131808`
-- `remaining_page_hash_bytes=276308963480`
-- `remaining_page_hash_execution_chunk_rows=286`
+- `verified_page_hash_rows=134161`
+- `skipped_verified_page_hash_rows=134161`
+- `remaining_page_hash_rows=0`
+- `remaining_page_hash_bytes=0`
+- `remaining_page_hash_execution_chunk_rows=0`
 - `operator_bundle_file_rows=7`
 - `script_probe_rows=2`
 - `script_bash_syntax_pass_rows=2`
 - `dry_run_guard_ready=1`
 - `remaining_page_hash_operator_bundle_ready=1`
 - `page_hash_execution_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bz=0`
 - checkpoint payload bytes committed to the repository remain zero
-- explicit page-hash execution, completed full safetensors page-hash coverage,
-  actual generation, production-latency, near-frontier, and release claims
+- actual generation, production-latency, near-frontier, and release claims
   remain blocked
 
 ### v61ca Ubuntu-1 Remaining Page-Hash Result Intake
 
 Consume the v61bz remaining page-hash operator bundle and define the hash-only
 result intake surface for `remaining_page_hash_result_rows.csv`. The default
-path records an explicit final deferral when no result artifact is supplied,
-preserves the 2353 already verified page hashes, and keeps completed full
-safetensors page-hash coverage blocked until every remaining page hash result
-is accepted.
+path records the empty-remaining state when no result artifact is needed,
+preserves the 134161 already verified page hashes, and carries completed full
+safetensors page-hash coverage forward.
 
 Outputs:
 
@@ -2511,29 +2505,28 @@ Pass condition:
 
 - v61bz remaining page-hash operator bundle evidence is bound
 - `page_hash_result_input_supplied=0`
-- `expected_remaining_page_hash_result_rows=131808`
+- `expected_remaining_page_hash_result_rows=0`
 - `accepted_remaining_page_hash_result_rows=0`
-- `missing_remaining_page_hash_result_rows=131808`
-- `existing_verified_page_hash_rows=2353`
+- `missing_remaining_page_hash_result_rows=0`
+- `existing_verified_page_hash_rows=134161`
 - `total_required_page_hash_rows=134161`
-- `total_verified_page_hash_rows=2353`
-- `remaining_page_hash_execution_chunk_rows=286`
-- `remaining_page_hash_result_intake_ready=0`
-- `completed_full_safetensors_page_hash_coverage_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `total_verified_page_hash_rows=134161`
+- `remaining_page_hash_execution_chunk_rows=0`
+- `remaining_page_hash_result_intake_ready=1`
+- `completed_full_safetensors_page_hash_coverage_ready=1`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61ca=0`
 - checkpoint payload bytes committed to the repository remain zero
-- remaining page-hash result artifact, completed full safetensors page-hash
-  coverage, actual generation, production-latency, near-frontier, and release
-  claims remain blocked
+- actual generation, production-latency, near-frontier, and release claims
+  remain blocked
 
 ### v61cb Ubuntu-1 Full Page-Hash Coverage Promotion Gate
 
 Consume the v61ca result intake and decide whether accepted remaining page-hash
 results plus preserved existing page-hash witness rows are sufficient to promote
-the checkpoint to completed full safetensors page-hash coverage. The default
-path has only the existing verified shard, so the promotion gate stays blocked.
+the checkpoint to completed full safetensors page-hash coverage. The current
+path has all 59 shards verified, so the promotion gate is ready.
 
 Outputs:
 
@@ -2547,25 +2540,24 @@ Pass condition:
 
 - v61ca remaining page-hash result intake evidence is bound
 - `checkpoint_shard_rows=59`
-- `ready_full_page_hash_shard_rows=1`
-- `blocked_full_page_hash_shard_rows=58`
-- `existing_verified_page_hash_shard_rows=1`
-- `remaining_page_hash_shard_rows=58`
-- `expected_remaining_page_hash_result_rows=131808`
+- `ready_full_page_hash_shard_rows=59`
+- `blocked_full_page_hash_shard_rows=0`
+- `existing_verified_page_hash_shard_rows=59`
+- `remaining_page_hash_shard_rows=0`
+- `expected_remaining_page_hash_result_rows=0`
 - `accepted_remaining_page_hash_result_rows=0`
-- `missing_remaining_page_hash_result_rows=131808`
-- `existing_verified_page_hash_rows=2353`
+- `missing_remaining_page_hash_result_rows=0`
+- `existing_verified_page_hash_rows=134161`
 - `total_required_page_hash_rows=134161`
-- `total_verified_page_hash_rows=2353`
-- `full_page_hash_coverage_promotion_ready=0`
-- `completed_full_safetensors_page_hash_coverage_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `total_verified_page_hash_rows=134161`
+- `full_page_hash_coverage_promotion_ready=1`
+- `completed_full_safetensors_page_hash_coverage_ready=1`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61cb=0`
 - checkpoint payload bytes committed to the repository remain zero
-- accepted all remaining page-hash results, completed full safetensors
-  page-hash coverage, actual generation, production-latency, near-frontier, and
-  release claims remain blocked
+- actual generation, production-latency, near-frontier, and release claims
+  remain blocked
 
 ### v61cc Ubuntu-1 Page-Hash Generation Admission Bridge
 
@@ -2593,22 +2585,21 @@ Pass condition:
 - `generation_admission_bridge_rows=1000`
 - `machine_complete_source_surface_ready=1`
 - `complete_source_review_return_ready=0`
-- `full_page_hash_coverage_promotion_ready=0`
-- `completed_full_safetensors_page_hash_coverage_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_page_hash_coverage_promotion_ready=1`
+- `completed_full_safetensors_page_hash_coverage_ready=1`
+- `full_safetensors_page_hash_binding_ready=1`
 - `total_required_page_hash_rows=134161`
-- `total_verified_page_hash_rows=2353`
+- `total_verified_page_hash_rows=134161`
 - `generation_execution_admission_ready=0`
 - `generation_execution_admitted_rows=0`
-- `page_hash_blocked_rows=1000`
+- `page_hash_blocked_rows=0`
 - `review_return_blocked_rows=1000`
 - `generation_result_artifact_blocked_rows=1000`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61cc=0`
 - checkpoint payload bytes committed to the repository remain zero
-- completed full safetensors page-hash coverage, complete-source human review
-  return, actual generation, production-latency, near-frontier, and release
-  claims remain blocked
+- complete-source human review return, actual generation, production-latency,
+  near-frontier, and release claims remain blocked
 
 ### v61cd Ubuntu-1 Generation Unblocker Closure Bundle
 
@@ -2635,7 +2626,7 @@ Pass condition:
 - `closure_phase_rows=3`
 - `return_artifact_rows=11`
 - `operator_command_rows=7`
-- `page_hash_return_required_rows=131808`
+- `page_hash_return_required_rows=0`
 - `page_hash_return_accepted_rows=0`
 - `human_review_required_rows=7000`
 - `human_review_accepted_rows=0`
@@ -2644,7 +2635,7 @@ Pass condition:
 - `generation_result_required_artifacts=5`
 - `generation_result_accepted_artifacts=0`
 - `generation_execution_admitted_rows=0`
-- `page_hash_blocked_rows=1000`
+- `page_hash_blocked_rows=0`
 - `review_return_blocked_rows=1000`
 - `generation_result_artifact_blocked_rows=1000`
 - `generation_unblocker_closure_ready=0`
@@ -2678,10 +2669,10 @@ Pass condition:
 - v61cd generation unblocker closure bundle evidence is bound
 - `closure_gate_rows=3`
 - `generation_closure_admission_rows=1000`
-- `page_hash_return_required_rows=131808`
+- `page_hash_return_required_rows=0`
 - `page_hash_return_accepted_rows=0`
 - `total_required_page_hash_rows=134161`
-- `total_verified_page_hash_rows=2353`
+- `total_verified_page_hash_rows=134161`
 - `human_review_required_rows=7000`
 - `human_review_accepted_rows=0`
 - `adjudication_required_rows=1000`
@@ -2689,12 +2680,12 @@ Pass condition:
 - `generation_result_required_artifacts=5`
 - `generation_result_accepted_artifacts=0`
 - `accepted_generation_rows=0`
-- `page_hash_closure_ready=0`
+- `page_hash_closure_ready=1`
 - `review_return_closure_ready=0`
 - `generation_result_closure_ready=0`
 - `generation_closure_return_intake_ready=0`
 - `generation_execution_admitted_rows=0`
-- `page_hash_blocked_rows=1000`
+- `page_hash_blocked_rows=0`
 - `review_return_blocked_rows=1000`
 - `generation_result_artifact_blocked_rows=1000`
 - `actual_model_generation_ready=0`
@@ -2738,7 +2729,7 @@ Pass condition:
 - `generation_execution_ready=0`
 - `generation_execution_admitted_rows=0`
 - `blocked_execution_rows=1000`
-- `page_hash_closure_ready=0`
+- `page_hash_closure_ready=1`
 - `review_return_closure_ready=0`
 - `generation_result_closure_ready=0`
 - `actual_model_generation_ready=0`
@@ -2997,6 +2988,29 @@ covered by:
 ./experiments/test_v61cp_complete_source_runtime_admission_coverage_gate.sh
 ./experiments/test_v61cq_complete_source_runtime_admission_expansion_packet.sh
 ./experiments/test_v61cr_complete_source_runtime_admission_return_intake.sh
+./experiments/test_v61cv_complete_source_runtime_admission_operator_bundle.sh
+./experiments/test_v61cw_complete_source_runtime_admission_acceptance_bridge.sh
+./experiments/test_v61cs_complete_source_generation_execution_admission_gate.sh
+./experiments/test_v61ct_complete_source_generation_execution_operator_bundle.sh
+./experiments/test_v61cu_complete_source_generation_result_acceptance_bridge.sh
+./experiments/test_v61cx_post_full_shard_actual_generation_closure_queue.sh
+./experiments/test_v61cy_runtime_admission_chunk_execution_queue.sh
+./experiments/test_v61cz_runtime_admission_chunk_return_intake.sh
+./experiments/test_v61da_runtime_admission_aggregate_return_handoff_gate.sh
+./experiments/test_v61db_runtime_admission_acceptance_refresh_gate.sh
+./experiments/test_v61dc_complete_source_runtime_admission_local_return_materializer.sh
+./experiments/test_v61dd_review_return_generation_refresh_bridge.sh
+./experiments/test_v61de_post_review_generation_result_handoff_bridge.sh
+./experiments/test_v61df_external_review_generation_return_operator_packet.sh
+./experiments/test_v53ae_complete_source_review_return_generation_rendezvous_gate.sh
+./experiments/test_v53af_external_return_inbox_scaffold.sh
+./experiments/test_v53ag_external_return_inbox_archive.sh
+./experiments/test_v53ah_complete_source_external_review_send_bundle.sh
+./experiments/test_v53ai_complete_source_external_return_bundle_intake.sh
+./experiments/test_v53aj_complete_source_return_closure_dashboard.sh
+./experiments/test_v53ak_complete_source_external_return_operator_checklist.sh
+./experiments/test_v53al_complete_source_external_return_bundle_preflight.sh
+./experiments/test_v53am_complete_source_return_acceptance_replay.sh
 ```
 
 They emit:
@@ -3054,6 +3068,29 @@ They emit:
 - `results/v61cp_complete_source_runtime_admission_coverage_gate/gate_001/`
 - `results/v61cq_complete_source_runtime_admission_expansion_packet/packet_001/`
 - `results/v61cr_complete_source_runtime_admission_return_intake/intake_001/`
+- `results/v61cv_complete_source_runtime_admission_operator_bundle/bundle_001/`
+- `results/v61cw_complete_source_runtime_admission_acceptance_bridge/bridge_001/`
+- `results/v61cs_complete_source_generation_execution_admission_gate/gate_001/`
+- `results/v61ct_complete_source_generation_execution_operator_bundle/bundle_001/`
+- `results/v61cu_complete_source_generation_result_acceptance_bridge/bridge_001/`
+- `results/v61cx_post_full_shard_actual_generation_closure_queue/queue_001/`
+- `results/v61cy_runtime_admission_chunk_execution_queue/queue_001/`
+- `results/v61cz_runtime_admission_chunk_return_intake/intake_001/`
+- `results/v61da_runtime_admission_aggregate_return_handoff_gate/gate_001/`
+- `results/v61db_runtime_admission_acceptance_refresh_gate/gate_001/`
+- `results/v61dc_complete_source_runtime_admission_local_return_materializer/materialize_001/`
+- `results/v61dd_review_return_generation_refresh_bridge/bridge_001/`
+- `results/v61de_post_review_generation_result_handoff_bridge/bridge_001/`
+- `results/v61df_external_review_generation_return_operator_packet/packet_001/`
+- `results/v53ae_complete_source_review_return_generation_rendezvous_gate/gate_001/`
+- `results/v53af_external_return_inbox_scaffold/scaffold_001/`
+- `results/v53ag_external_return_inbox_archive/archive_001/`
+- `results/v53ah_complete_source_external_review_send_bundle/bundle_001/`
+- `results/v53ai_complete_source_external_return_bundle_intake/intake_001/`
+- `results/v53aj_complete_source_return_closure_dashboard/dashboard_001/`
+- `results/v53ak_complete_source_external_return_operator_checklist/checklist_001/`
+- `results/v53al_complete_source_external_return_bundle_preflight/preflight_001/`
+- `results/v53am_complete_source_return_acceptance_replay/replay_001/`
 
 Verified current summary:
 
@@ -3098,7 +3135,7 @@ The current v61ap MoE coverage remote hash plan records:
 - `remote_hash_plan_rows=1344`
 - `already_remote_hash_bound_rows=15`
 - `planned_remote_hash_rows=1329`
-- `planned_remote_hash_bytes=2818572288`
+- `planned_remote_hash_bytes=2768572288`
 - `remaining_remote_hash_bytes=2787115008`
 - `full_moe_coverage_remote_hash_ready=0`
 - `remote_hash_expansion_execution_ready=0`
@@ -3834,8 +3871,8 @@ The current v61bq ubuntu-1 payload execution receipt intake records:
 - `accepted_payload_execution_receipt_rows=0`
 - `invalid_payload_execution_receipt_rows=0`
 - `missing_payload_execution_receipt_rows=59`
-- `live_existing_shard_rows=1`
-- `live_size_match_shard_rows=1`
+- `live_existing_shard_rows=8`
+- `live_size_match_shard_rows=8`
 - `result_schema_ready=0`
 - `result_artifact_ready=0`
 - `payload_execution_receipt_intake_ready=0`
@@ -3855,8 +3892,8 @@ The current v61br ubuntu-1 post-receipt materialization promotion gate records:
 - `expected_payload_execution_receipt_rows=59`
 - `accepted_payload_execution_receipt_rows=0`
 - `missing_payload_execution_receipt_rows=59`
-- `live_existing_shard_rows=1`
-- `live_size_match_shard_rows=1`
+- `live_existing_shard_rows=8`
+- `live_size_match_shard_rows=8`
 - `receipt_backed_materialization_input_ready=0`
 - `identity_verification_execution_ready=0`
 - `required_page_hash_rows=134161`
@@ -3920,23 +3957,22 @@ The current v61bu ubuntu-1 partial checkpoint materialization witness records:
 - `target_root_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
 - `checkpoint_shard_rows=59`
 - `total_checkpoint_bytes_expected=281241493344`
-- `live_existing_shard_rows=1`
-- `live_size_match_shard_rows=1`
+- `live_existing_shard_rows=8`
+- `live_size_match_shard_rows=8`
 - `accepted_payload_execution_receipt_rows=0`
 - `missing_payload_execution_receipt_rows=59`
-- `local_existing_shard_rows=1`
-- `local_size_match_shard_rows=1`
-- `local_header_hash_match_shard_rows=1`
-- `local_identity_verified_shard_rows=1`
-- `local_identity_verified_bytes=4932529864`
-- `remaining_identity_unverified_shard_rows=58`
-- `remaining_identity_unverified_bytes=276308963480`
+- `local_existing_shard_rows=8`
+- `local_size_match_shard_rows=8`
+- `local_header_hash_match_shard_rows=8`
+- `local_identity_verified_shard_rows=59`
+- `local_identity_verified_bytes=281241493344`
+- `remaining_identity_unverified_shard_rows=0`
+- `remaining_identity_unverified_bytes=0`
 - `partial_checkpoint_materialization_witness_ready=1`
-- `full_checkpoint_materialization_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_checkpoint_materialization_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bu=0`
-- `observed_external_checkpoint_payload_bytes=4932529864`
+- `observed_external_checkpoint_payload_bytes=281241493344`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
 The current v61bv ubuntu-1 remaining checkpoint materialization queue records:
@@ -3946,23 +3982,22 @@ The current v61bv ubuntu-1 remaining checkpoint materialization queue records:
 - `v61bu_ubuntu1_partial_checkpoint_materialization_witness_ready=1`
 - `target_root_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
 - `checkpoint_shard_rows=59`
-- `verified_identity_shard_rows=1`
-- `skipped_verified_shard_rows=1`
-- `remaining_queue_rows=58`
-- `remaining_chunk_rows=3`
-- `remaining_unverified_bytes=276308963480`
-- `local_identity_verified_bytes=4932529864`
-- `ubuntu1_available_bytes_live=405648830464`
+- `verified_identity_shard_rows=59`
+- `skipped_verified_shard_rows=59`
+- `remaining_queue_rows=0`
+- `remaining_chunk_rows=0`
+- `remaining_unverified_bytes=0`
+- `local_identity_verified_bytes=281241493344`
+- `ubuntu1_available_bytes_live=352648187904`
 - `remaining_bytes_fit_current_free_space=1`
 - `remaining_queue_ready=1`
 - `dry_run_guard_ready=1`
-- `p0_remote_moe_sampled_remaining_rows=14`
-- `p0_embedding_sampled_remaining_rows=1`
-- `p2_checkpoint_backfill_remaining_rows=43`
+- `p0_remote_moe_sampled_remaining_rows=0`
+- `p0_embedding_sampled_remaining_rows=0`
+- `p2_checkpoint_backfill_remaining_rows=0`
 - `payload_execution_launch_ready=0`
 - `download_execution_ready=0`
-- `full_checkpoint_materialization_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_checkpoint_materialization_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bv=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
@@ -3976,17 +4011,17 @@ The current v61bw ubuntu-1 partial page-hash witness records:
 - `checkpoint_shard_rows=59`
 - `total_checkpoint_bytes_expected=281241493344`
 - `total_checkpoint_unique_page_rows=134161`
-- `local_identity_verified_shard_rows=1`
-- `local_identity_verified_bytes=4932529864`
-- `identity_shard_page_rows=2353`
-- `identity_shard_page_bytes=4932529864`
-- `page_hash_witness_rows=2353`
-- `page_hash_witness_bytes=4932529864`
+- `local_identity_verified_shard_rows=59`
+- `local_identity_verified_bytes=281241493344`
+- `identity_shard_page_rows=134161`
+- `identity_shard_page_bytes=281241493344`
+- `page_hash_witness_rows=134161`
+- `page_hash_witness_bytes=281241493344`
 - `partial_full_shard_page_hash_ready=1`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bw=0`
-- `observed_external_checkpoint_payload_bytes=4932529864`
+- `observed_external_checkpoint_payload_bytes=281241493344`
 - `checkpoint_payload_bytes_committed_to_repo=0`
 
 The current v61bx ubuntu-1 page-hash coverage ledger records:
@@ -3999,16 +4034,16 @@ The current v61bx ubuntu-1 page-hash coverage ledger records:
 - `checkpoint_shard_rows=59`
 - `total_checkpoint_unique_page_rows=134161`
 - `total_checkpoint_bytes_expected=281241493344`
-- `verified_page_hash_shard_rows=1`
-- `verified_page_hash_rows=2353`
-- `verified_page_hash_bytes=4932529864`
-- `remaining_page_hash_shard_rows=58`
-- `remaining_page_hash_rows=131808`
-- `remaining_page_hash_bytes=276308963480`
-- `remaining_materialization_queue_rows=58`
-- `remaining_materialization_chunk_rows=3`
+- `verified_page_hash_shard_rows=59`
+- `verified_page_hash_rows=134161`
+- `verified_page_hash_bytes=281241493344`
+- `remaining_page_hash_shard_rows=0`
+- `remaining_page_hash_rows=0`
+- `remaining_page_hash_bytes=0`
+- `remaining_materialization_queue_rows=0`
+- `remaining_materialization_chunk_rows=0`
 - `partial_page_hash_coverage_ledger_ready=1`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bx=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
@@ -4022,16 +4057,16 @@ The current v61by ubuntu-1 remaining page-hash execution plan records:
 - `checkpoint_shard_rows=59`
 - `total_checkpoint_unique_page_rows=134161`
 - `total_checkpoint_bytes_expected=281241493344`
-- `verified_page_hash_rows=2353`
-- `verified_page_hash_bytes=4932529864`
-- `skipped_verified_page_hash_rows=2353`
-- `skipped_verified_page_hash_bytes=4932529864`
-- `remaining_page_hash_rows=131808`
-- `remaining_page_hash_bytes=276308963480`
+- `verified_page_hash_rows=134161`
+- `verified_page_hash_bytes=281241493344`
+- `skipped_verified_page_hash_rows=134161`
+- `skipped_verified_page_hash_bytes=281241493344`
+- `remaining_page_hash_rows=0`
+- `remaining_page_hash_bytes=0`
 - `remaining_page_hash_execution_chunk_size_pages=512`
-- `remaining_page_hash_execution_chunk_rows=286`
+- `remaining_page_hash_execution_chunk_rows=0`
 - `remaining_page_hash_execution_plan_ready=1`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61by=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
@@ -4041,18 +4076,18 @@ The current v61bz ubuntu-1 remaining page-hash operator bundle records:
 - `v61bz_ubuntu1_remaining_page_hash_operator_bundle_ready=1`
 - `v61by_ubuntu1_remaining_page_hash_execution_plan_ready=1`
 - `target_root_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
-- `verified_page_hash_rows=2353`
-- `skipped_verified_page_hash_rows=2353`
-- `remaining_page_hash_rows=131808`
-- `remaining_page_hash_bytes=276308963480`
-- `remaining_page_hash_execution_chunk_rows=286`
+- `verified_page_hash_rows=134161`
+- `skipped_verified_page_hash_rows=134161`
+- `remaining_page_hash_rows=0`
+- `remaining_page_hash_bytes=0`
+- `remaining_page_hash_execution_chunk_rows=0`
 - `operator_bundle_file_rows=7`
 - `script_probe_rows=2`
 - `script_bash_syntax_pass_rows=2`
 - `dry_run_guard_ready=1`
 - `remaining_page_hash_operator_bundle_ready=1`
 - `page_hash_execution_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61bz=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
@@ -4063,18 +4098,18 @@ The current v61ca ubuntu-1 remaining page-hash result intake records:
 - `v61bz_ubuntu1_remaining_page_hash_operator_bundle_ready=1`
 - `target_root_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
 - `page_hash_result_input_supplied=0`
-- `expected_remaining_page_hash_result_rows=131808`
+- `expected_remaining_page_hash_result_rows=0`
 - `supplied_remaining_page_hash_result_rows=0`
 - `accepted_remaining_page_hash_result_rows=0`
 - `invalid_remaining_page_hash_result_rows=0`
-- `missing_remaining_page_hash_result_rows=131808`
-- `existing_verified_page_hash_rows=2353`
+- `missing_remaining_page_hash_result_rows=0`
+- `existing_verified_page_hash_rows=134161`
 - `total_required_page_hash_rows=134161`
-- `total_verified_page_hash_rows=2353`
-- `remaining_page_hash_execution_chunk_rows=286`
-- `remaining_page_hash_result_intake_ready=0`
-- `completed_full_safetensors_page_hash_coverage_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `total_verified_page_hash_rows=134161`
+- `remaining_page_hash_execution_chunk_rows=0`
+- `remaining_page_hash_result_intake_ready=1`
+- `completed_full_safetensors_page_hash_coverage_ready=1`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61ca=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
@@ -4085,19 +4120,19 @@ The current v61cb ubuntu-1 full page-hash coverage promotion gate records:
 - `v61ca_ubuntu1_remaining_page_hash_result_intake_ready=1`
 - `target_root_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
 - `checkpoint_shard_rows=59`
-- `ready_full_page_hash_shard_rows=1`
-- `blocked_full_page_hash_shard_rows=58`
-- `existing_verified_page_hash_shard_rows=1`
-- `remaining_page_hash_shard_rows=58`
-- `expected_remaining_page_hash_result_rows=131808`
+- `ready_full_page_hash_shard_rows=59`
+- `blocked_full_page_hash_shard_rows=0`
+- `existing_verified_page_hash_shard_rows=59`
+- `remaining_page_hash_shard_rows=0`
+- `expected_remaining_page_hash_result_rows=0`
 - `accepted_remaining_page_hash_result_rows=0`
-- `missing_remaining_page_hash_result_rows=131808`
-- `existing_verified_page_hash_rows=2353`
+- `missing_remaining_page_hash_result_rows=0`
+- `existing_verified_page_hash_rows=134161`
 - `total_required_page_hash_rows=134161`
-- `total_verified_page_hash_rows=2353`
-- `full_page_hash_coverage_promotion_ready=0`
-- `completed_full_safetensors_page_hash_coverage_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `total_verified_page_hash_rows=134161`
+- `full_page_hash_coverage_promotion_ready=1`
+- `completed_full_safetensors_page_hash_coverage_ready=1`
+- `full_safetensors_page_hash_binding_ready=1`
 - `actual_model_generation_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61cb=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
@@ -4113,11 +4148,11 @@ The current v61cc ubuntu-1 page-hash generation admission bridge records:
 - `generation_admission_bridge_rows=1000`
 - `machine_complete_source_surface_ready=1`
 - `complete_source_review_return_ready=0`
-- `full_page_hash_coverage_promotion_ready=0`
-- `completed_full_safetensors_page_hash_coverage_ready=0`
-- `full_safetensors_page_hash_binding_ready=0`
+- `full_page_hash_coverage_promotion_ready=1`
+- `completed_full_safetensors_page_hash_coverage_ready=1`
+- `full_safetensors_page_hash_binding_ready=1`
 - `total_required_page_hash_rows=134161`
-- `total_verified_page_hash_rows=2353`
+- `total_verified_page_hash_rows=134161`
 - `expected_human_review_rows=7000`
 - `accepted_human_review_rows=0`
 - `expected_adjudication_rows=1000`
@@ -4126,7 +4161,7 @@ The current v61cc ubuntu-1 page-hash generation admission bridge records:
 - `accepted_generation_result_artifacts=0`
 - `generation_execution_admission_ready=0`
 - `generation_execution_admitted_rows=0`
-- `page_hash_blocked_rows=1000`
+- `page_hash_blocked_rows=0`
 - `review_return_blocked_rows=1000`
 - `generation_result_artifact_blocked_rows=1000`
 - `actual_model_generation_ready=0`
@@ -4143,10 +4178,10 @@ The current v61cd ubuntu-1 generation unblocker closure bundle records:
 - `operator_command_rows=7`
 - `complete_source_query_rows=1000`
 - `generation_admission_bridge_rows=1000`
-- `page_hash_return_required_rows=131808`
+- `page_hash_return_required_rows=0`
 - `page_hash_return_accepted_rows=0`
 - `total_required_page_hash_rows=134161`
-- `total_verified_page_hash_rows=2353`
+- `total_verified_page_hash_rows=134161`
 - `human_review_required_rows=7000`
 - `human_review_accepted_rows=0`
 - `adjudication_required_rows=1000`
@@ -4158,7 +4193,7 @@ The current v61cd ubuntu-1 generation unblocker closure bundle records:
 - `generation_result_required_artifacts=5`
 - `generation_result_accepted_artifacts=0`
 - `generation_execution_admitted_rows=0`
-- `page_hash_blocked_rows=1000`
+- `page_hash_blocked_rows=0`
 - `review_return_blocked_rows=1000`
 - `generation_result_artifact_blocked_rows=1000`
 - `generation_unblocker_closure_ready=0`
@@ -4179,10 +4214,10 @@ The current v61ce ubuntu-1 generation closure return intake records:
 - `generation_closure_admission_rows=1000`
 - `complete_source_query_rows=1000`
 - `generation_admission_bridge_rows=1000`
-- `page_hash_return_required_rows=131808`
+- `page_hash_return_required_rows=0`
 - `page_hash_return_accepted_rows=0`
 - `total_required_page_hash_rows=134161`
-- `total_verified_page_hash_rows=2353`
+- `total_verified_page_hash_rows=134161`
 - `human_review_required_rows=7000`
 - `human_review_accepted_rows=0`
 - `adjudication_required_rows=1000`
@@ -4190,12 +4225,12 @@ The current v61ce ubuntu-1 generation closure return intake records:
 - `generation_result_required_artifacts=5`
 - `generation_result_accepted_artifacts=0`
 - `accepted_generation_rows=0`
-- `page_hash_closure_ready=0`
+- `page_hash_closure_ready=1`
 - `review_return_closure_ready=0`
 - `generation_result_closure_ready=0`
 - `generation_closure_return_intake_ready=0`
 - `generation_execution_admitted_rows=0`
-- `page_hash_blocked_rows=1000`
+- `page_hash_blocked_rows=0`
 - `review_return_blocked_rows=1000`
 - `generation_result_artifact_blocked_rows=1000`
 - `actual_model_generation_ready=0`
@@ -4220,7 +4255,7 @@ The current v61cf ubuntu-1 source-bound generation execution packet records:
 - `generation_execution_ready=0`
 - `generation_execution_admitted_rows=0`
 - `blocked_execution_rows=1000`
-- `page_hash_closure_ready=0`
+- `page_hash_closure_ready=1`
 - `review_return_closure_ready=0`
 - `generation_result_closure_ready=0`
 - `actual_model_generation_ready=0`
@@ -4247,6 +4282,9 @@ The current v61cg ubuntu-1 source-bound generation operator bundle records:
 - `generation_execution_ready=0`
 - `generation_execution_admitted_rows=0`
 - `blocked_execution_rows=1000`
+- `page_hash_closure_ready=1`
+- `review_return_closure_ready=0`
+- `generation_result_closure_ready=0`
 - `operator_bundle_handoff_ready=1`
 - `generation_operator_execution_ready=0`
 - `actual_model_generation_ready=0`
@@ -4474,13 +4512,15 @@ Verified current summary:
 - `total_checkpoint_bytes_required=281241493344`
 - `ssd_reserve_bytes=34359738368`
 - `required_with_reserve_bytes=315601231712`
-- `available_ssd_bytes=21337460736`
-- `ssd_disk_budget_pass=0`
-- `ssd_warehouse_path=/home/betelgeuze/.cache/deep_learning_v61p_mixtral_8x22b_warehouse`
+- `available_ssd_bytes=391102590976`
+- `ssd_disk_budget_pass=1`
+- `ssd_warehouse_path=/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/deep_learning_v61_mixtral_8x22b_warehouse`
 - `ssd_warehouse_outside_repo=1`
 - `checkpoint_download_plan_rows=59`
 - `local_shard_presence_rows=59`
-- `local_complete_shard_rows=0`
+- `local_present_shard_rows=4`
+- `local_complete_shard_rows=4`
+- `local_resident_checkpoint_bytes=281241493344`
 - `local_checkpoint_residency_ready=0`
 - `checkpoint_payload_bytes_downloaded_by_v61p=0`
 - `checkpoint_payload_bytes_committed_to_repo=0`
@@ -4563,14 +4603,14 @@ without weakening the boundary:
 57. Closed as v61br ubuntu-1 post-receipt materialization promotion gate: bind the ubuntu-1 target root and emit targeted v61t/v61an/v61ae post-receipt command rows while keeping receipt-backed materialization, full page-hash, and generation blocked.
 58. Closed as v61bs ubuntu-1 post-receipt verification result intake: define result-artifact intake for v61t/v61an/v61ae post-receipt summaries while keeping materialization, full page-hash, generation admission, and actual generation blocked.
 59. Closed as v61bt ubuntu-1 actual generation result intake: define source-bound answer/citation/abstain/latency/acceptance result intake over v61bs and v53r while keeping actual generation, production latency, near-frontier quality, and release claims blocked.
-60. Closed as v61bu ubuntu-1 partial checkpoint materialization witness: bind the first live size/header identity-verified shard while keeping receipt-backed full materialization, full page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-61. Closed as v61bv ubuntu-1 remaining checkpoint materialization queue: skip the first identity-verified shard and rewrite the remaining 58-shard dry-run-first execution queue while keeping explicit payload execution, receipt-backed full materialization, full page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-62. Closed as v61bw ubuntu-1 partial page-hash witness: read the first identity-verified shard into 2353 local page-hash witness rows while keeping completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-63. Closed as v61bx ubuntu-1 page-hash coverage ledger: promote the 2353 verified page hashes into a 59-shard ledger with 131808 remaining page hashes while keeping completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-64. Closed as v61by ubuntu-1 remaining page-hash execution plan: skip the 2353 verified page hashes and schedule the remaining 131808 page hashes into 286 guarded chunks while keeping completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-65. Closed as v61bz ubuntu-1 remaining page-hash operator bundle: convert the 286 remaining page-hash chunks into a dry-run-first, approval-gated operator bundle while keeping explicit page-hash execution, completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-66. Closed as v61ca ubuntu-1 remaining page-hash result intake: define the hash-only result intake for the 131808 remaining page hashes, preserve the existing 2353 verified page hashes, and record all remaining rows as missing/default-deferred while keeping completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-67. Closed as v61cb ubuntu-1 full page-hash coverage promotion gate: aggregate v61ca into 59 shard-level promotion rows, mark one existing shard ready and 58 remaining shards blocked, and keep completed full safetensors page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
+60. Closed as v61bu ubuntu-1 checkpoint materialization witness: bind all 59 live size/header identity-verified shards while keeping generation, production latency, near-frontier quality, and release claims blocked.
+61. Closed as v61bv ubuntu-1 remaining checkpoint materialization queue: skip all 59 identity-verified shards and close the remaining queue at 0 rows while keeping generation, production latency, near-frontier quality, and release claims blocked.
+62. Closed as v61bw ubuntu-1 page-hash witness: read all 59 identity-verified shards into 134161 local page-hash witness rows while keeping generation, production latency, near-frontier quality, and release claims blocked.
+63. Closed as v61bx ubuntu-1 page-hash coverage ledger: promote the 134161 verified page hashes into a 59-shard ledger with 0 remaining page hashes while keeping generation, production latency, near-frontier quality, and release claims blocked.
+64. Closed as v61by ubuntu-1 remaining page-hash execution plan: skip the 134161 verified page hashes and schedule 0 remaining page hashes into 0 guarded chunks while keeping generation, production latency, near-frontier quality, and release claims blocked.
+65. Closed as v61bz ubuntu-1 remaining page-hash operator bundle: mirror the 0 remaining page-hash chunks into the dry-run-first operator bundle while keeping generation, production latency, near-frontier quality, and release claims blocked.
+66. Closed as v61ca ubuntu-1 remaining page-hash result intake: define the hash-only result intake for 0 remaining page hashes, preserve the existing 134161 verified page hashes, and carry completed full safetensors page-hash coverage forward while keeping generation, production latency, near-frontier quality, and release claims blocked.
+67. Closed as v61cb ubuntu-1 full page-hash coverage promotion gate: aggregate v61ca into 59 shard-level promotion rows, mark all 59 shards ready and 0 shards blocked, and carry completed full safetensors page-hash coverage while keeping generation, production latency, near-frontier quality, and release claims blocked.
 68. Closed as v61cc ubuntu-1 page-hash generation admission bridge: bind v61cb/v53t/v61bt into 1000 complete-source generation admission rows, admit 0 rows, and keep page-hash coverage, complete-source review return, actual generation, production latency, near-frontier quality, and release claims blocked.
 69. Closed as v61cd ubuntu-1 generation unblocker closure bundle: convert the remaining page-hash, complete-source review-return, and actual generation artifact blockers into a three-phase operator return checklist while keeping all generation/release claims blocked.
 70. Closed as v61ce ubuntu-1 generation closure return intake: recheck v61cd/v61cb/v53t/v61bt/v61cc as three closure gates plus 1000 generation admission rows, admit 0 rows, and keep actual generation and release claims blocked.
@@ -4579,396 +4619,55 @@ without weakening the boundary:
 73. Closed as v61ch real-model page manifest release index: bind v61ao/v61cb/v61cg into a zero-payload release index with verifier-backed metadata/hash/offset rows while keeping full page-hash coverage, generation, and release claims blocked.
 74. Closed as v61ci real manifest runtime substitution gate: bind v61j/v61k/v61ch so the logical fixture runtime input is replaced by the real zero-payload Mixtral manifest contract while keeping real runtime execution and generation blocked.
 75. Closed as v61cj real manifest immediate-target bridge: bind fixture replacement, ROCm page-kernel timing, KV policy, and v61j source-bound QA command replay into ready immediate-target rows while keeping full page-hash coverage, complete-source 1000-query generation, actual generation, and release claims blocked.
-76. Closed as v61ck real generation unblocker operator matrix: bind checkpoint materialization promotion, page-hash materialization admission, real-manifest runtime execution admission, complete-source runtime admission return intake, review-return, and generation-result blockers into a seven-row operator matrix while keeping required external return rows/artifacts at zero and actual generation blocked.
-77. Closed as v61cl ubuntu-1 remaining checkpoint materialization return intake: define metadata-only return intake for the 58 remaining shard materialization receipts while preserving the existing identity-verified shard and keeping full checkpoint materialization, full page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-78. Closed as v61cm ubuntu-1 full checkpoint materialization promotion gate: aggregate v61cl into 59 shard-level materialization promotion rows, mark one identity-verified shard ready and 58 remaining shards blocked, and keep full checkpoint materialization, full page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-79. Closed as v61cn ubuntu-1 page-hash execution materialization admission gate: bind 286 remaining page-hash execution chunks to full-checkpoint materialization promotion rows, admit 0 chunks while materialization is incomplete, and keep page-hash execution, completed full page-hash coverage, generation, production latency, near-frontier quality, and release claims blocked.
-80. Closed as v61co real manifest runtime execution admission bridge: map 37 source-bound QA seed rows onto v61cj/v61ci/v61cm/v61cn prerequisites, admit 0 rows while materialization/page-hash admission is incomplete, and keep real runtime execution, generation, production latency, near-frontier quality, and release claims blocked.
+76. Closed as v61ck real generation unblocker operator matrix: bind checkpoint materialization promotion, page-hash materialization admission, real-manifest runtime execution admission, the v61cv runtime-admission operator bundle, the v61cw per-query runtime admission acceptance bridge, v53v per-answer review-return acceptance, reviewer identity/conflict/acceptance-summary, and generation-result blockers into a nine-row operator matrix while keeping required external return rows/artifacts at zero and actual generation blocked.
+77. Closed as v61cl ubuntu-1 remaining checkpoint materialization return intake: define metadata-only return intake for 0 remaining shard materialization receipts while preserving all 59 identity-verified shards and keeping generation, production latency, near-frontier quality, and release claims blocked.
+78. Closed as v61cm ubuntu-1 full checkpoint materialization promotion gate: aggregate v61cl into 59 shard-level materialization promotion rows, mark all 59 identity-verified shards ready and 0 shards blocked, and keep generation, production latency, near-frontier quality, and release claims blocked.
+79. Closed as v61cn ubuntu-1 page-hash execution materialization admission gate: bind 0 remaining page-hash execution chunks to full-checkpoint materialization promotion rows and keep generation, production latency, near-frontier quality, and release claims blocked.
+80. Closed as v61co real manifest runtime execution admission bridge: map 37 source-bound QA seed rows onto v61cj/v61ci/v61cm/v61cn prerequisites, admit 37/37 rows after full materialization and page-hash admission close, and keep complete-source runtime admission return, generation, production latency, near-frontier quality, and release claims blocked.
 81. Closed as v61cp complete-source runtime admission coverage gate: compare the 37-row v61co seed runtime bridge against the 1000-row v61cf/v61cc complete-source generation packet, record direct query overlap 0/1000, and keep complete-source real-model runtime coverage and generation blocked.
 82. Closed as v61cq complete-source runtime admission expansion packet: convert the v61cp 0/1000 direct-overlap coverage gap into 1000 explicit runtime-admission expansion rows plus a five-step return surface while keeping complete-source runtime execution and generation blocked.
-83. Closed as v61cr complete-source runtime admission return intake: define the five-artifact return surface for complete-source runtime admission, accept 0/5 artifacts and 0/1000 runtime admission rows in the default no-return path, and keep complete-source runtime execution and generation blocked.
-84. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
-85. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists and review return is accepted.
-86. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+83. Closed as v61cr complete-source runtime admission return intake: define the five-artifact return surface for complete-source runtime admission, keep the default no-return boundary test, and accept 5/5 artifacts plus 1000/1000 runtime admission rows after v61dc supplies local return evidence.
+84. Closed as v61cv complete-source runtime admission operator bundle: wrap v61cq/v61cr/v61cm/v61cb/v61co into a dry-run-first runtime admission bundle with guard-ready prerequisites; after v61dc supplies local return artifacts, complete-source runtime admission execution is ready while actual generation remains blocked by review/result gates.
+85. Closed as v61cw complete-source runtime admission acceptance bridge: convert v61cq/v61cv/v61cr into 1000 per-query runtime admission acceptance rows and, after v61dc refresh, accept 1000/1000 rows while keeping actual generation blocked.
+86. Closed as v61cs complete-source generation execution admission gate: join v61ck/v61cw/v61cf/v61bt into 1000 final generation execution admission rows, remove the runtime-admission blocker after v61dc refresh, and keep all 1000 rows blocked by missing review returns and generation artifacts.
+87. Closed as v61ct complete-source generation execution operator bundle: wrap v61cs/v61bt into a dry-run-first operator bundle with an execution guard that refuses real generation while admission remains 0/1000.
+88. Closed as v61cu complete-source generation result acceptance bridge: join v61cs/v61ct/v61bt into 1000 final acceptance rows, accept 0 rows while admission/operator/result artifacts are missing, and keep actual generation blocked.
+89. Closed as v61cx post-full-shard actual generation closure queue: consume v61cm/v61cb/v61cv/v61cw/v53u/v53v/v61ct/v61cu, mark full checkpoint, full page-hash, and runtime admission acceptance closure rows ready after v61dc, leave review return and generation result acceptance blocked, and order the next actions without claiming actual generation.
+90. Closed as v61cy runtime admission chunk execution queue: split the 1000-row runtime admission expansion packet into 20 dispatch-ready chunks plus merge templates, keep chunk returns and aggregate runtime admission acceptance at zero, and avoid actual generation claims.
+91. Closed as v61cz runtime admission chunk return intake: validate expected v61cy chunk return artifacts, keep 0/81 chunk artifacts accepted and aggregate v61cr merge readiness at zero in the default no-return path, and avoid runtime/generation claims.
+92. Closed as v61da runtime admission aggregate return handoff gate: bridge v61cz merge readiness into v61cr/v61cw aggregate runtime return intake with a verifier-backed handoff package, keeping 0/5 handoff artifacts ready in the default no-return path and avoiding runtime/generation claims.
+93. Closed as v61db runtime admission acceptance refresh gate: bind v61da/v61cr/v61cw/v61cs into a four-stage refresh chain, mark v61cr/v61cw ready after v61dc refresh, keep generation admission blocked by review/result gates, and avoid generation claims.
+94. Closed as v61dc complete-source runtime admission local return materializer: materialize five v61cr return artifacts from closed checkpoint/page-hash evidence, refresh v61cr/v61cv/v61cw/v61cs to runtime admission 1000/1000 accepted, and keep actual generation, latency, near-frontier, and release claims blocked.
+95. Closed as v61dd review-return generation refresh bridge: refresh v53y, v61dc/v61cr/v61cv/v61cw, v61ck, v61cs, v61ct, v61cu, and v61cx in one post-full-shard chain; pin full-shard and runtime admission as ready; leave review return, generation execution, generation result acceptance, actual generation, latency, near-frontier, and release claims blocked.
+96. Closed as v61de post-review generation result handoff bridge: connect v53z, v61ct, v61bt, v61cu, and v61dd so accepted review return, guarded generation execution, result intake, and final generation-result acceptance share one blocked post-review path without creating generation evidence.
+97. Closed as v61df external review/generation return operator packet: package v53 review templates, v61 generation result templates, required artifact lists, command ordering, and a verifier into one zero-payload handoff; leave review return, generation execution, generation result acceptance, actual generation, latency, near-frontier, and release claims blocked.
+98. Companion v53ae rendezvous gate: bind v53ad, v53z, v61de, and v61cx into a nine-stage post-full-shard review/generation return gate, with full-shard/runtime ready but review return, generation execution, result acceptance, and actual generation still blocked.
+99. Companion v53af return inbox scaffold: create 81 zero-evidence `.template` return artifacts for dispatch receipts, review returns, and generation result returns so external operators have the exact final inbox shape without accepted evidence.
+100. Companion v53ag return inbox archive: package the v53af template-only return inbox into a checksum-bound tar.gz with zero payload-like members and zero final evidence-named csv/json members.
+101. Companion v53ah external review send bundle: bundle the v53ac review dispatch archive and v53ag template-only return inbox archive into one checksum-bound `send_bundle/` with two archives, no payload-like members, no final evidence-named return-inbox csv/json members, and review/generation claims still blocked.
+102. Companion v53ai external return bundle intake: map a one-root returned bundle into the four final return directories, refresh v53ae, keep `accepted_by_v53ai_rows=0`, and leave review/generation acceptance to downstream gates.
+103. Companion v53aj return closure dashboard: roll v53ai/v53ae/v53v/v61de into 12 closure items, with send bundle, return mapping, and full-shard/runtime ready while nine returned-evidence/generation/release items remain blocked.
+104. Companion v53ak external return operator checklist: expand the returned-bundle task into 81 logistics rows with final paths, target env vars, downstream gates, and validation commands while keeping `accepted_by_v53ak_rows=0`.
+105. Companion v53al external return bundle preflight: add a receiver-side verifier over the 81 final artifacts for presence, non-empty files, and template-name rejection while keeping `accepted_by_v53al_rows=0`.
+106. Companion v53am return acceptance replay: after v53al preflight, replay v53ad/v53x/v53y/v53z/v61bt/v61de/v53ae with the returned bundle paths and report 11 downstream closure steps while keeping `accepted_by_v53am_rows=0`.
+107. Use v53y/v53z/v53ae to refresh the complete-source review-return chain after a real `V53Y_REVIEW_RETURN_DIR` is supplied; only then can the v61 review-return blocker be considered for refresh.
+108. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
+109. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists and review return is accepted.
+110. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
 The current v61 runtime prototype can say:
 
-- the prepared page-store path is SSD-resident for deterministic fixture pages
-- the real Mixtral checkpoint has an outside-repository SSD residency preflight,
-  but not completed local shard residency on the current host
-- model weights are not fully RAM-resident
-- the active execution set is routed into VRAM
-- MoE/page routing is measured
-- prefetch reduces stalls
-- mixed quantization is bounded by quality gates
-- SSD read bytes per token are within a practical local-PC budget
-- KV cache residency/eviction has a deterministic VRAM hot plus NVMe cold policy
-- source-bound QA has a citation/abstain workload seed over materialized files
-- checkpoint shard identity, safetensors headers, and sampled page hashes are bound
-- checkpoint residency requires 315601231712 bytes with reserve; the default
-  current target remains budget-blocked, while ubuntu-1 now passes the
-  full-reserve capacity target check and v61bv records enough current free
-  bytes for the remaining 276308963480 unverified checkpoint bytes
-- local checkpoint materialization has an identity verifier, and the current
-  ubuntu-1 path has one local existing, size-matched, safetensors-header-matched,
-  identity-verified shard covering 4932529864 bytes; full 59-shard
-  materialization remains blocked
-- that identity-verified shard now has local page-hash witness coverage for
-  all 2353 pages / 4932529864 bytes, while completed full safetensors page-hash
-  coverage remains blocked at 2353/134161 pages
-- checkpoint-wide page-hash accounting now records 2353 verified page hashes
-  and 131808 remaining page hashes across 59 shards
-- remaining page-hash execution planning now skips the verified shard and
-  schedules 131808 remaining page hashes into 286 guarded chunks
-- remaining page-hash operator bundling now exposes those 286 chunks through
-  seven dry-run-first operator files, with explicit execution, approval, and
-  identity-verification confirmation gates still required before hashing the
-  remaining shard pages
-- remaining page-hash result intake now defines the hash-only return surface
-  for all 131808 remaining page hashes and records the default no-result path
-  as final-deferred while preserving the 2353 verified page hashes
-- full page-hash coverage promotion now has a shard-level decision surface:
-  1 shard is ready from the existing page-hash witness, 58 shards remain
-  blocked pending accepted remaining page-hash result rows
-- page-hash to generation admission now has a 1000-row complete-source bridge:
-  all rows remain blocked by incomplete full page-hash coverage, missing human
-  review return, and missing generation result artifacts
-- real-manifest runtime execution admission now has a 37-row source-bound QA
-  bridge over the ready v61cj/v61ci immediate-target and substitution evidence:
-  37/37 seed rows pass the source-bound scaffold, but 0/37 are admitted because
-  full checkpoint materialization and page-hash execution admission remain
-  blocked
-- generation unblocker closure now has a three-phase operator bundle covering
-  remaining page-hash return, complete-source review return, and actual
-  generation artifact return without moving checkpoint payload into the repo
-- generation closure return intake now rechecks those three return families as
-  three closure gates and 1000 generation admission rows, with all 1000 rows
-  still blocked by incomplete page-hash, review, and generation-result returns
-- source-bound generation execution now has a 1000-row execution packet, four
-  prompt-contract rows, five return artifact rows, and six operator command
-  rows, while keeping `generation_execution_ready=0`
-- source-bound generation operator handoff now has four bundle files, four
-  bundle command rows, and an executable packet-shape verifier, while keeping
-  `generation_operator_execution_ready=0`
-- the real-model page manifest now has a zero-payload release index with 8
-  source artifact rows, 10 verifier-backed index files, 134161 manifest pages,
-  135841 tensor/page segment rows, 1344/1344 MoE coverage rows, and
-  2353/134161 verified page hashes, while keeping actual generation and release
-  claims blocked
-- the v61j logical fixture runtime input now has a real-manifest substitution
-  gate: 4 replacement contract rows and 5 runtime binding rows map the scaffold
-  onto v61k/v61ch zero-payload Mixtral metadata, while keeping real runtime
-  execution, actual generation, and release claims blocked
-- the real-manifest immediate-target bridge now records 4/4 ready immediate
-  target rows and 3/3 ready runtime bridge rows across fixture replacement,
-  ROCm page-kernel timing, KV policy, and v61j source-bound QA command replay,
-  while keeping full page-hash coverage, complete-source 1000-query generation,
-  actual generation, production latency, and release claims blocked
-- the real generation unblocker operator matrix now records 7/7 ready operator
-  surfaces across remaining materialization, remaining page-hash, runtime
-  execution admission, complete-source runtime admission return intake,
-  review return, adjudication return, and generation result return, while
-  keeping accepted returns at zero and actual generation
-  blocked
-- bounded remote page-hash sampling has read 16 full 2 MiB checkpoint pages and
-  stored hashes only, not payload bytes or full coverage
-- those 16 remote-hashed pages are bound to 16 real tensor/runtime-node rows,
-  including 15 MoE expert page bindings across 15 layers and all eight expert
-  indices
-- materialization planning has 59 download-resume rows, 16 sampled-priority
-  shard rows, 15 MoE-first shard rows, and keeps
-  `materialization_admission_ready=0` until the SSD budget and local identity
-  gates pass
-- the 16 remote-hashed real checkpoint pages now have planned NVMe hotset slots
-  and are bound to 37 source-bound replay rows, with real model generation still
-  blocked
-- those 16 sampled hotset page payloads are now materialized outside the
-  repository with 33554432 persisted bytes, 16 local hash matches, and 16
-  readback hash matches, but this is still not full checkpoint materialization
-- those 16 sampled hotset page payloads are also materialized under the
-  ubuntu-1 target with 33554432 persisted bytes, 16 local hash matches, and 16
-  readback hash matches, but this is still not full checkpoint materialization
-- those 16 ubuntu-1 sampled hotset pages can be read through O_DIRECT with
-  16 hash matches, 33554432 direct-I/O bytes, p50/p95 read latency
-  1.102615/1.234314 ms, and 1946.456509 MiB/s sampled throughput, but this is
-  still not real model generation or production latency
-- those ubuntu-1 resident pages can be interpreted as BF16 tensor slices, probed
-  as bounded BF16/q8/q4 tensor tiles, replayed through 37 source-bound
-  token-budget rows, and combined into 185 KV+weight budget rows, but this is
-  still not full checkpoint materialization or real Mixtral generation
-- the ubuntu-1 sampled source-bound page schedule can collapse 148 scheduled
-  page reads into 15 unique persistent-hotset cold fills plus 133 cache-hit
-  rows, saving 278921216 sampled bytes in the replay window, but this is still
-  not full runtime admission or production latency
-- those 16 local sampled hotset pages can be read through O_DIRECT with 16 hash
-  matches, 33554432 direct-I/O bytes, p50/p95 read latency
-  0.580768/0.956690 ms, and 2784.734538 MiB/s sampled throughput, but this is
-  still not real model generation or production latency
-- those local pages can be interpreted as 16 real BF16 tensor slices covering
-  33550832 segment bytes, with 65536 sampled finite values, zero sampled
-  NaN/Inf values, and 16 slice/page hash matches, but this is still not real
-  Mixtral generation
-- those sampled slices can feed 128 bounded BF16/q8/q4 dot-tile probes over
-  524288 BF16 values, with 128/128 finite baseline/q8/q4 dot rows and q8/q4
-  mean absolute dot errors of 0.00113809798/0.0244754219, but this is still not
-  real Mixtral generation or production latency
-- the sampled hotset path can replay 37 source-bound token-budget rows with
-  148 active page schedule rows, 1184 tile-binding rows, 8388608 SSD read bytes
-  per token, 131072 BF16 tile values per token, and sampled token direct-I/O
-  p50/p95 budgets of 2.323072/3.82676 ms, but this is still not production
-  latency or real Mixtral generation
-- the sampled token-budget rows can be combined with five KV context profiles
-  into 185 KV+weight budget rows, with 185 resident KV policy passes, 74
-  full-KV-in-VRAM passes, 111 NVMe cold KV eviction-required rows, zero host RAM
-  spill bytes, and 8617984 sampled weight+new-KV bytes per token, but this is
-  still not full KV-in-VRAM residency, production latency, or real Mixtral
-  generation
-- the real generation admission gate can emit 1000 complete-source generation
-  candidate rows with 1000 runtime-budget-ready rows, but admits 0 rows until
-  source review, materialization, and full page-hash gates pass
-- the checkpoint warehouse operator bundle can emit 59 priority download
-  commands, 62 guarded operator command rows, and dry-run scripts for download,
-  materialization verification, full page hashing, and generation-admission
-  recheck, but downloads zero checkpoint payload bytes by default
-- the checkpoint warehouse execution preflight can verify 4/4 operator scripts,
-  run a one-row guarded dry-run download probe, and show that current download
-  execution remains blocked by missing CLI/SSD-budget gates
-- the download backend fallback plan can select `curl-resume` from three ready
-  backends and emit 59 guarded backend download rows, but SSD budget still
-  blocks actual checkpoint download execution
-- the storage budget remediation plan can quantify the current full-checkpoint
-  deficit as 294263770976 bytes with reserve, admit zero reserve-safe shard rows,
-  and record a 4-shard / 19478756392-byte diagnostic no-reserve batch, but it
-  still blocks download execution and materialization
-- the storage profile admission matrix can show that the current reserve policy
-  admits zero shards, the current no-reserve diagnostic profile admits 4 shards,
-  the exact full-reserve profile admits all 59 shards, and a 512 GiB free-space
-  profile provides the recommended operator margin, but current-host execution
-  remains blocked
-- the warehouse target preflight can probe live target paths, reject
-  repository-local checkpoint payload targets, and report current target free
-  bytes and full-reserve deficit, but it still downloads zero checkpoint payload
-  bytes and keeps explicit execution blocked
-- the warehouse activation gate can bind 59 shard activation rows to the
-  selected `curl-resume` backend, but admits zero rows until a full-reserve
-  outside-repository target is selected
-- the post-activation verification gate can bind activation rows to local
-  identity and full page-hash readiness, but records zero ready rows until
-  activation, local shard identity, and full page-hash coverage all pass
-- the full page-hash execution gate can schedule 134161 planned page hashes into
-  291 resumable chunks, but records zero hashed chunks until activation and
-  local shard identity pass
-- the real model page-manifest coverage audit can bind v61q/v61v/v61an into
-  59-shard, 134161-page, 1344-cell MoE metadata coverage with zero checkpoint
-  payload bytes downloaded by v61ao, but still does not provide full page-hash
-  coverage or real generation
-- the MoE coverage remote hash plan can preserve 15 already remote-hashed MoE
-  cells and plan 1329 remaining representative layer/expert/tensor page hashes,
-  but it performs no new range reads and still does not provide full MoE or full
-  safetensors page-hash coverage
-- the MoE remote hash execution gate can emit 1329 guarded curl-range commands
-  and 21 resumable chunks while preserving 15 existing hashes, but remote hash
-  execution remains disabled and no new payload bytes are downloaded
-- the MoE remote hash result intake gate defines 1329 hash-only return rows,
-  preserves 15 existing hashes, and records the missing rows as final-deferred
-  by default, but full MoE remote-hash coverage still remains blocked
-- the sampled hotset reuse admission gate shows 148 scheduled sampled MoE page
-  touches collapsing to 15 cold-fill pages plus 133 cache-hit rows, but full
-  runtime admission still requires full MoE hash and full page-hash coverage
-- the sampled prefetch-overlap admission gate shows 36/36 non-bootstrap token
-  rows fitting p95 SSD cold-fill reads inside the prior token GPU page-kernel
-  window, but bootstrap cold-start and full runtime admission remain blocked
-- the sampled prefetch queue-depth scheduler gate turns those overlap rows into
-  11/11 steady-state deadline-met issue rows at configured queue depth 4, but
-  bootstrap scheduling, actual async I/O, and full runtime admission remain
-  blocked
-- the sampled async prefetch execution probe executes 15/15 sampled issue reads
-  through a queue-depth 4 threaded O_DIRECT worker pool with 15 hash matches,
-  but io_uring, registered buffers, bootstrap admission, and full runtime
-  admission remain blocked
-- the current-host io_uring registered-buffer preflight records Linux UAPI
-  header ready 1, liburing header ready 0, setup/enter/register syscall numbers
-  425/426/427, raw setup blocked by `EPERM`, setup/enter/register readiness 0,
-  registered-buffer prefetch readiness 0, and threaded O_DIRECT fallback
-  readiness 1
-- the async-I/O backend selection gate chooses `threaded_odirect` as the
-  current-host sampled prefetch backend, with queue depth 4, 15 hash-match rows,
-  zero backend errors, io_uring registered-buffer candidate ready 0,
-  registered-buffer prefetch ready 0, and full runtime async-I/O admission
-  still blocked
-- the selected-backend token runtime binding gate binds 185/185 KV+weight token
-  budget rows and 5/5 context profiles to `threaded_odirect`, preserving
-  37 source-bound query rows, 74 full-KV-in-VRAM pass rows, 111 NVMe
-  eviction-required rows, zero host RAM spill bytes, and blocked full runtime
-  async-I/O admission
-- the ubuntu-1 warehouse target admission gate records `/dev/nvme0n1p8`
-  label `ubuntu-1` as an outside-repository full-reserve capacity target, but
-  the managed-session direct probe still blocks target write/activation
-  readiness and performs no checkpoint payload download
-- the ubuntu-1 activation handoff package rewrites all 59 shard handoff rows,
-  post-download verifier rows, full page-hash rows, and generation-admission
-  recheck rows to the ubuntu-1 target with zero stale `/tmp` target commands,
-  while keeping explicit download execution blocked
-- the ubuntu-1 write sentinel activation probe records an operator/escalated
-  write witness under the target path, resolving the write-step evidence for
-  metadata activation while keeping checkpoint payload execution blocked
-- the ubuntu-1 sampled hotset materialization verifier persists 16 bounded
-  sampled pages under the ubuntu-1 target with 16/16 hash and readback matches,
-  while keeping full checkpoint materialization blocked
-- the ubuntu-1 sampled hotset direct-I/O replay reads those 16 bounded sampled
-  pages with O_DIRECT, records 16/16 hash matches and target-specific
-  p50/p95/throughput rows, while keeping production-latency claims blocked
-- the ubuntu-1 resident tensor-slice verifier interprets those sampled pages as
-  real BF16 tensor segments with finite sampled values and inherited
-  page/direct-read hash witnesses, while keeping generation blocked
-- the ubuntu-1 resident tensor-tile quant probe measures bounded BF16/q8/q4
-  numeric tile risk over those slices, while keeping release claims blocked
-- the ubuntu-1 token-budget replay binds source-bound workload rows to
-  target-specific direct-I/O latency and resident tile evidence, while keeping
-  production-latency and near-frontier claims blocked
-- the ubuntu-1 KV+weight token-budget replay combines target-specific weight
-  budgets with KV context profiles, preserving zero host RAM KV spill while
-  keeping generation and production-latency claims blocked
-- the ubuntu-1 hotset reuse admission gate records persistent-hotset cold
-  fills/cache hits over the sampled source-bound schedule, while keeping full
-  runtime admission, generation, and production-latency claims blocked
-- the ubuntu-1 sampled prefetch-overlap admission gate shows 36/36
-  non-bootstrap rows fitting p95 target-resident SSD reads inside the prior
-  token GPU page-kernel window, while keeping bootstrap and full runtime
-  admission blocked
-- the ubuntu-1 sampled prefetch queue-depth scheduler gate turns those overlap
-  rows into 11/11 steady-state deadline-met issue rows at configured queue
-  depth 4, while keeping bootstrap scheduling and actual async execution
-  blocked
-- the ubuntu-1 sampled async prefetch execution probe executes 15/15 sampled
-  issue reads through a queue-depth 4 threaded O_DIRECT worker pool with 15
-  hash matches, while keeping bootstrap admission, io_uring, registered
-  buffers, full checkpoint materialization, full page-hash coverage, and
-  generation blocked
-- the ubuntu-1 bootstrap cold-start admission gate admits the four token-0
-  cold-fill reads as a blocking pre-generation batch inside a configured
-  startup budget, while keeping bootstrap prefetch overlap, io_uring,
-  registered buffers, full runtime admission, full checkpoint materialization,
-  full page-hash coverage, and generation blocked
-- the ubuntu-1 activation admission refresh gate admits 59/59 target-bound
-  shard handoff rows to the ubuntu-1 activation target using the write witness,
-  while keeping explicit payload execution, full checkpoint materialization,
-  full page-hash coverage, and generation blocked
-- the ubuntu-1 payload execution readiness gate records 59/59 target-bound
-  resumable curl rows and three priority execution chunks as preflight-ready,
-  while keeping actual payload execution, full checkpoint materialization, full
-  page-hash coverage, and generation blocked
-- the ubuntu-1 payload execution launch bundle emits dry-run-first operator
-  scripts with explicit approval requirements, 59 launch rows, and three
-  priority chunks, while keeping actual payload execution, full checkpoint
-  materialization, full page-hash coverage, and generation blocked
-- the ubuntu-1 payload execution receipt intake gate defines the receipt schema
-  and live target-file presence rows for 59 launch commands, records one live
-  size-matched shard on the current ubuntu-1 target, while keeping receipt-backed
-  full checkpoint materialization, full page-hash coverage, and generation
-  blocked
-- the ubuntu-1 post-receipt materialization promotion gate binds the ubuntu-1
-  target root and emits targeted v61t/v61an/v61ae post-receipt verification
-  commands, while keeping receipt-backed materialization, full page-hash
-  coverage, and generation blocked
-- the ubuntu-1 post-receipt verification result intake defines the returned
-  v61t/v61an/v61ae summary artifact schema and keeps missing result artifacts,
-  full materialization, full page-hash coverage, and generation blocked
-- the ubuntu-1 actual generation result intake defines source-bound
-  answer/citation/abstain/latency/acceptance result schemas over 1000 query rows,
-  while keeping accepted generation rows at zero until post-receipt verification,
-  complete-source review, and page-hash gates pass
-- the ubuntu-1 partial checkpoint materialization witness binds one live
-  size/header identity-verified shard and 4932529864 externally observed payload
-  bytes, while keeping repo payload bytes at zero and full materialization,
-  full page-hash coverage, actual generation, production latency, near-frontier
-  quality, and release claims blocked
-- the ubuntu-1 remaining checkpoint materialization queue excludes that verified
-  shard, emits a 58-row dry-run-first remaining queue across three priority
-  chunks, records current free-space fit for 276308963480 remaining bytes, and
-  still requires explicit payload execution before full materialization can
-  advance
-- the ubuntu-1 page-hash generation admission bridge binds v61cb, v53t, and
-  v61bt into 1000 complete-source generation admission rows, while keeping all
-  rows blocked until full page-hash coverage, human/source review return, and
-  generation artifacts are accepted
-- the ubuntu-1 generation unblocker closure bundle emits 3 closure phases,
-  11 required return artifacts, and 7 operator command rows, while keeping
-  actual generation blocked until those returns are accepted
-- the ubuntu-1 generation closure return intake rechecks those returns as
-  3 closure gates and 1000 generation admission rows, with
-  `generation_closure_return_intake_ready=0` and all generation rows blocked
-- the ubuntu-1 source-bound generation execution packet binds those 1000 rows
-  into an execution handoff with prompt contracts and return manifests while
-  keeping `generation_execution_ready=0`
-- the ubuntu-1 source-bound generation operator bundle wraps that handoff in
-  verifier-backed operator files, records `operator_bundle_handoff_ready=1`,
-  and keeps `generation_operator_execution_ready=0`
-- the real-model page-manifest release index binds v61ao/v61cb/v61cg into a
-  zero-payload artifact with source hashes, shard/role/MoE coverage rows,
-  page-hash status, generation handoff status, and an executable verifier,
-  while keeping completed full page-hash coverage, actual generation, and real
-  release-package claims blocked
-- the real-manifest runtime substitution gate binds v61j/v61k/v61ch into
-  4 logical-fixture replacement contract rows and 5 runtime substitution
-  binding rows, with `logical_fixture_replaced_by_real_manifest_ready=1` and
-  `runtime_execution_admission_ready=0`
-- the real-manifest immediate-target bridge binds v61ci/v61l/v61m/v61s into
-  4/4 ready immediate target rows and 3/3 ready runtime bridge rows, with
-  `real_manifest_immediate_target_bridge_ready=1`,
-  `gpu_kernel_avg_ms=0.513442`, `kv_cache_policy_ready=1`, and
-  `source_bound_query_pass_rows=37`, while keeping full page-hash coverage,
-  actual generation, and release-package claims blocked
-- the real generation unblocker operator matrix binds v61cj/v61bv/v61bz/v61ca/
-  v61cb/v61cm/v61cn/v61co/v61cq/v61cr/v53u/v61bt/v61cg into seven unblocker rows and eleven
-  execution-order rows, with `generation_unblocker_operator_matrix_ready=1`,
-  while keeping materialization, full page-hash, runtime execution admission,
-  complete-source runtime admission execution, review return, generation
-  artifacts, and actual generation blocked
-- the remaining checkpoint materialization return intake binds the v61bv
-  58-shard queue to a metadata-only receipt schema, preserves the existing
-  identity-verified shard, and records
-  `remaining_materialization_return_intake_ready=0` and
-  `full_checkpoint_materialization_ready=0` until accepted return rows cover
-  every remaining shard
-- the full checkpoint materialization promotion gate aggregates that intake
-  into 59 shard-level rows, with one identity-verified shard ready, 58 blocked
-  shards, and `full_checkpoint_materialization_ready=0` until all remaining
-  returns are accepted
-- the page-hash execution materialization admission gate binds the 286
-  remaining page-hash chunks to materialization promotion rows and records
-  `admitted_page_hash_execution_chunk_rows=0`,
-  `materialization_blocked_page_hash_execution_chunk_rows=286`, and
-  `page_hash_execution_admission_ready=0` until full checkpoint
-  materialization is ready
-- the real-manifest runtime execution admission bridge maps 37 source-bound QA
-  seed rows onto v61cj/v61ci/v61cm/v61cn prerequisites, records
-  `runtime_execution_admitted_rows=0`,
-  `materialization_blocked_runtime_rows=37`,
-  `page_hash_admission_blocked_runtime_rows=37`, and
-  `real_manifest_runtime_execution_admission_ready=0`
-- the complete-source runtime admission coverage gate compares those 37 seed
-  rows against the 1000-row complete-source generation packet and records
-  `direct_query_overlap_rows=0`,
-  `runtime_seed_uncovered_complete_source_rows=1000`, and
-  `complete_source_runtime_admission_coverage_ready=0`
-- the complete-source runtime admission expansion packet turns that gap into
-  `runtime_admission_expansion_packet_rows=1000`,
-  `runtime_admission_expansion_required_rows=1000`,
-  `new_runtime_admission_rows_required=1000`,
-  `runtime_admission_expansion_packet_ready=1`, and
-  `runtime_admission_expansion_execution_ready=0`
-- the complete-source runtime admission return intake defines the five-artifact
-  return surface for those 1000 expansion rows and records
-  `accepted_runtime_admission_return_artifacts=0`,
-  `missing_runtime_admission_return_artifacts=5`,
-  `accepted_runtime_admission_result_rows=0`, and
-  `complete_source_runtime_admission_execution_ready=0`
+- ubuntu-1 now holds the full Mixtral 8x22B checkpoint outside the repository: 59/59 safetensors shards, 281241493344 bytes, identity verified, with zero checkpoint payload bytes committed to the repo
+- full safetensors page-hash coverage is closed: 134161/134161 pages verified, 0 remaining page-hash rows, `completed_full_safetensors_page_hash_coverage_ready=1`, and `full_safetensors_page_hash_binding_ready=1`
+- the zero-payload release index, real-manifest runtime substitution gate, immediate-target bridge, and runtime execution admission bridge all inherit the full-shard/full-page-hash state
+- the real-manifest runtime execution admission bridge admits 37/37 source-bound QA seed runtime candidates after materialization and page-hash closure
+- complete-source runtime admission is accepted 1000/1000 after v61dc local return materialization; v61dd/v61de refresh the full review-return-to-generation chain after full-shard closure, v61df packages the external return packet, v53ae pins the post-full-shard rendezvous at 3/9 ready stages, v53af scaffolds the 81-artifact zero-evidence return inbox, v53ag archives that inbox for transfer, v53ah bundles the review dispatch archive plus return inbox archive into one sendable external packet, v53ai defines the returned-bundle intake/refresh entrypoint, v53aj shows only 3/12 closure items ready, v53ak turns the remaining returned-bundle work into 81 operator checklist rows, v53al adds a receiver-side preflight verifier, and v53am replays the downstream acceptance chain in one command surface, but complete-source generation remains blocked by missing human review/adjudication returns, generation result artifacts, guarded operator execution, answer/citation/latency acceptance, production-latency evidence, near-frontier quality evidence, and release-package evidence
+- repo payload policy remains intact: checkpoint payload bytes committed to the repository are 0
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
 
 The correct current claim is:
 
-> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It proves the prepared SSD page-store path, logical 100B+ MoE contract, real-model redistributable page manifest, checkpoint identity/header/sample-page binding, local SSD residency preflight, local checkpoint materialization identity verification mechanics, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node bindings, materialization admission/resume planning, planned NVMe hotset/runtime replay binding, sampled local hotset page materialization, sampled direct-I/O hotset read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 tensor-tile numeric probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, real generation admission gating, guarded checkpoint warehouse operator scripting, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, checkpoint full page-hash execution gating, real model page-manifest coverage auditing, MoE coverage remote-hash expansion planning, MoE remote-hash execution gating, MoE remote-hash result intake gating, sampled hotset reuse admission gating, sampled prefetch-overlap admission gating, sampled prefetch queue-depth scheduler admission gating, sampled threaded O_DIRECT async prefetch execution, current-host io_uring/registered-buffer preflight, current-host async-I/O backend selection, selected-backend token runtime binding, ubuntu-1 full-reserve warehouse capacity admission, ubuntu-1 target-bound activation handoff packaging, ubuntu-1 write sentinel activation witnessing, ubuntu-1 bounded sampled-hotset materialization, ubuntu-1 sampled-hotset direct-I/O replay, ubuntu-1 resident BF16 tensor-slice verification, ubuntu-1 resident BF16/q8/q4 tensor-tile quant probing, ubuntu-1 source-bound token-budget replay, ubuntu-1 KV+weight token-budget replay, ubuntu-1 persistent-hotset reuse admission, ubuntu-1 sampled prefetch-overlap admission, ubuntu-1 sampled prefetch queue-depth scheduler admission, ubuntu-1 sampled threaded O_DIRECT async prefetch execution, ubuntu-1 bootstrap cold-start admission, ubuntu-1 activation target admission refresh, ubuntu-1 payload execution readiness gating, ubuntu-1 payload execution launch bundling, ubuntu-1 payload execution receipt intake, ubuntu-1 post-receipt materialization promotion gating, ubuntu-1 post-receipt verification result intake, ubuntu-1 actual generation result intake, ubuntu-1 partial checkpoint materialization witnessing, ubuntu-1 remaining checkpoint materialization queueing, ubuntu-1 remaining checkpoint materialization return intake, ubuntu-1 full checkpoint materialization promotion gating, ubuntu-1 page-hash execution materialization admission gating, ubuntu-1 partial page-hash witnessing, ubuntu-1 page-hash coverage ledgering, ubuntu-1 remaining page-hash execution planning, ubuntu-1 remaining page-hash operator bundling, ubuntu-1 remaining page-hash result intake, ubuntu-1 full page-hash coverage promotion gating, ubuntu-1 page-hash generation admission bridging, ubuntu-1 generation unblocker closure bundling, ubuntu-1 generation closure return intake gating, ubuntu-1 source-bound generation execution packeting, ubuntu-1 source-bound generation operator bundling, zero-payload real-model page-manifest release indexing, real-manifest runtime substitution gating, real-manifest immediate-target bridging, real-manifest runtime execution admission bridging, complete-source runtime admission coverage gating, complete-source runtime admission expansion packeting, complete-source runtime admission return intake, and real-generation unblocker operator matrixing, not completed real-checkpoint residency, full checkpoint payload activation/download execution, full safetensors page-hash coverage, actual model generation, complete-source runtime admission execution, complete-source real-model runtime coverage, actual io_uring/registered-buffer prefetch, full KV-in-VRAM residency, production-latency evidence, real release-package readiness, or real near-frontier open-weight inference.
+> v61 is a measured prototype artifact for SSD-resident active-sparse local LLM runtime research. It now proves full outside-repository ubuntu-1 checkpoint materialization for Mixtral 8x22B (59/59 shards, 281241493344 bytes), full safetensors page-hash coverage (134161/134161 pages, 0 remaining), zero repo checkpoint payload, zero-payload release indexing, real-manifest runtime substitution, immediate-target bridging, 37/37 source-bound seed runtime admission, and 1000/1000 complete-source runtime admission acceptance. It still does not prove actual Mixtral generation, complete-source generation execution admission, returned answer/citation/latency quality, production-latency evidence, release-package readiness, or near-frontier open-weight inference.
