@@ -185,6 +185,135 @@ for rel in required_files:
         raise SystemExit(f"v61dl sha256 mismatch: {rel}")
 PY
 
+SUPPLIED_BUNDLE_DIR="$(mktemp -d /tmp/v61dl_critical_return_bundle.XXXXXX)"
+trap 'rm -rf "$SUPPLIED_BUNDLE_DIR"' EXIT
+python3 - "$SUPPLIED_BUNDLE_DIR" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+payloads = {
+    "aggregate_review_return/human_review_rows.csv": "review_id,accepted\nsynthetic-positive-path,1\n",
+    "aggregate_review_return/adjudication_rows.csv": "query_id,accepted\nsynthetic-positive-path,1\n",
+    "aggregate_review_return/reviewer_identity_rows.csv": "reviewer_id,assigned\nsynthetic-positive-path,1\n",
+    "aggregate_review_return/reviewer_conflict_rows.csv": "reviewer_id,repo_id,conflict\nsynthetic-positive-path,repo,0\n",
+    "aggregate_review_return/acceptance_summary.json": json.dumps({"synthetic_positive_path": True}) + "\n",
+    "generation_result_return/real_model_generation_answer_rows.csv": "query_id,answer\nsynthetic-positive-path,answer\n",
+    "generation_result_return/real_model_generation_citation_rows.csv": "query_id,citation\nsynthetic-positive-path,citation\n",
+    "generation_result_return/real_model_generation_abstain_fallback_rows.csv": "query_id,abstain,fallback\nsynthetic-positive-path,0,0\n",
+    "generation_result_return/real_model_generation_latency_rows.csv": "query_id,latency_ms\nsynthetic-positive-path,1\n",
+    "generation_result_return/real_model_generation_acceptance_summary.json": json.dumps({"synthetic_positive_path": True}) + "\n",
+}
+for rel, text in payloads.items():
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+PY
+
+SUPPLIED_RUN_ID="preflight_supplied_pass_smoke"
+SUPPLIED_RUN_DIR="$RESULTS_DIR/$PREFIX/$SUPPLIED_RUN_ID"
+V61DL_RUN_ID="$SUPPLIED_RUN_ID" \
+V61DL_REUSE_EXISTING=0 \
+V61DL_RETURN_BUNDLE_DIR="$SUPPLIED_BUNDLE_DIR" \
+  "$ROOT_DIR/experiments/run_v61dl_critical_return_contract_preflight_gate.sh" >/dev/null
+
+"$SUPPLIED_RUN_DIR/VERIFY_CRITICAL_RETURN_CONTRACT.sh" "$SUPPLIED_BUNDLE_DIR" >/dev/null
+
+python3 - "$SUPPLIED_RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+summary_csv = Path(sys.argv[2])
+decision_csv = Path(sys.argv[3])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "return_bundle_dir_supplied": "1",
+    "return_bundle_dir_exists": "1",
+    "critical_artifact_rows": "10",
+    "critical_preflight_pass_rows": "10",
+    "critical_preflight_missing_rows": "0",
+    "critical_preflight_non_empty_rows": "10",
+    "critical_preflight_ready": "1",
+    "full_preflight_rows": "81",
+    "return_bundle_preflight_pass": "0",
+    "generation_execution_admitted_rows": "0",
+    "actual_model_generation_ready": "0",
+    "checkpoint_payload_bytes_downloaded_by_v61dl": "0",
+    "checkpoint_payload_bytes_committed_to_repo": "0",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v61dl supplied {field}: expected {value}, got {summary.get(field)}")
+
+rows = read_csv(run_dir / "critical_return_contract_preflight_rows.csv")
+if len(rows) != 10:
+    raise SystemExit("v61dl supplied critical row count mismatch")
+if any(row["critical_preflight_pass"] != "1" for row in rows):
+    raise SystemExit("v61dl supplied rows should all pass")
+if any(row["file_exists"] != "1" or row["non_empty_file"] != "1" for row in rows):
+    raise SystemExit("v61dl supplied rows should exist and be non-empty")
+if any(not row["sha256"].startswith("sha256:") for row in rows):
+    raise SystemExit("v61dl supplied rows should record sha256 hashes")
+
+families = {row["contract_family"]: row for row in read_csv(run_dir / "critical_return_contract_preflight_family_rows.csv")}
+for family in ["aggregate-review-return", "generation-result-return"]:
+    if families[family]["critical_preflight_pass_rows"] != "5":
+        raise SystemExit(f"v61dl supplied family should pass: {family}")
+    if families[family]["critical_preflight_ready"] != "1":
+        raise SystemExit(f"v61dl supplied family should be ready: {family}")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+if decisions.get("critical-return-contract-preflight") != "pass":
+    raise SystemExit("v61dl supplied critical preflight decision should pass")
+if decisions.get("full-return-bundle-preflight") != "blocked":
+    raise SystemExit("v61dl supplied full bundle preflight must stay blocked")
+if decisions.get("actual-model-generation") != "blocked":
+    raise SystemExit("v61dl supplied actual generation must stay blocked")
+
+gaps = {row["gap"]: row["status"] for row in read_csv(run_dir / "runtime_gap_rows.csv")}
+if gaps.get("critical-return-contract-preflight") != "ready":
+    raise SystemExit("v61dl supplied critical gap should be ready")
+for gap in ["full-return-bundle-preflight", "actual-model-generation"]:
+    if gaps.get(gap) != "blocked":
+        raise SystemExit(f"v61dl supplied gap should stay blocked: {gap}")
+
+boundary = (run_dir / "V61DL_CRITICAL_RETURN_CONTRACT_PREFLIGHT_GATE_BOUNDARY.md").read_text(encoding="utf-8")
+for snippet in [
+    "critical_preflight_pass_rows=10",
+    "critical_preflight_missing_rows=0",
+    "critical_preflight_ready=1",
+    "return_bundle_dir_supplied=1",
+    "return_bundle_dir_exists=1",
+    "return_bundle_preflight_pass=0",
+    "actual_model_generation_ready=0",
+]:
+    if snippet not in boundary:
+        raise SystemExit(f"v61dl supplied boundary missing snippet: {snippet}")
+
+manifest = json.loads((run_dir / "v61dl_critical_return_contract_preflight_gate_manifest.json").read_text(encoding="utf-8"))
+if manifest.get("critical_preflight_pass_rows") != 10:
+    raise SystemExit("v61dl supplied manifest pass count mismatch")
+if manifest.get("critical_preflight_ready") != 1:
+    raise SystemExit("v61dl supplied manifest readiness mismatch")
+if manifest.get("actual_model_generation_ready") != 0:
+    raise SystemExit("v61dl supplied manifest must keep generation blocked")
+PY
+
+# Restore the canonical no-return summary so V61DL_REUSE_EXISTING=1 keeps
+# checking the default preflight_001 state rather than the positive-path smoke.
+V61DL_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61dl_critical_return_contract_preflight_gate.sh" >/dev/null
+
 if find "$RUN_DIR" -type f \( -name '*.safetensors' -o -name '*.bin' -o -name '*.pt' \) | grep -q .; then
   echo "v61dl produced model/checkpoint payload-like files" >&2
   exit 1

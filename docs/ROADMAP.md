@@ -3143,7 +3143,9 @@ Current next boundary:
   `full_shard_prerequisites_closed=1`,
   `runtime_admission_accepted_rows=1000`, and zero repo payload bytes. This is
   the replay command surface for a real returned bundle; it still does not
-  accept evidence itself.
+  accept evidence itself. Its critical-only supplied fixture verifies
+  `preflight_pass_rows=10/81`, with dispatch/chunk/review/generation acceptance
+  still at 0 and actual generation blocked.
 - `v61de` adds the post-review generation result handoff bridge.
   `experiments/test_v61de_post_review_generation_result_handoff_bridge.sh`
   binds v53z, v61ct, v61bt, v61cu, and v61dd into the path that follows an
@@ -3274,7 +3276,65 @@ Current next boundary:
   `actual_model_generation_ready=0`,
   `checkpoint_payload_bytes_downloaded_by_v61dl=0`, and zero checkpoint payload
   bytes committed to the repo. This makes the 10-file critical return contract
-  locally preflightable without accepting or fabricating returned evidence.
+  locally preflightable without accepting or fabricating returned evidence; the
+  smoke also proves an isolated supplied-return fixture can flip the critical
+  path to 10/10 pass while the canonical default remains no-return.
+- `v61dm` adds the critical return acceptance bridge gate.
+  `experiments/test_v61dm_critical_return_acceptance_bridge_gate.sh`
+  consumes v61dl/v53am and makes the gap between 10-file critical preflight and
+  full returned-evidence acceptance explicit. The default no-return smoke pins
+  `bridge_step_rows=11`, `ready_bridge_step_rows=2`,
+  `blocked_bridge_step_rows=9`, `critical_preflight_pass_rows=0/10`,
+  `full_preflight_pass_rows=0/81`, `return_bundle_preflight_pass=0`,
+  `accepted_dispatch_receipt_rows=0/21`,
+  `accepted_chunk_return_artifact_rows=0/50`,
+  `answer_review_accepted_rows=0/7000`,
+  `accepted_adjudication_rows=0/1000`,
+  `generation_execution_admitted_rows=0/1000`,
+  `accepted_generation_result_artifacts=0/5`,
+  `generation_result_accepted_rows=0/1000`,
+  `actual_model_generation_ready=0`, and zero repo payload bytes. Its
+  critical-only supplied fixture verifies that 10/10 critical files still mean
+  only 10/81 full preflight rows and no review/generation acceptance.
+- `v61dn` adds the residual return completion gate.
+  `experiments/test_v61dn_residual_return_completion_gate.sh` consumes
+  v61dm/v53ak, subtracts the 10 critical aggregate-review/generation-result
+  artifacts from the 81-artifact return checklist, and pins the remaining
+  logistics work to 71 artifacts: 21 dispatch receipts and 50 review chunk
+  returns. The default smoke records `residual_artifact_rows=71`,
+  `dispatch_receipt_residual_rows=21`, `review_chunk_residual_rows=50`,
+  `residual_preflight_pass_rows=0/71`, `critical_preflight_pass_rows=0/10`,
+  `full_preflight_pass_rows=0/81`, `answer_review_accepted_rows=0/7000`,
+  `generation_result_accepted_rows=0/1000`, and `actual_model_generation_ready=0`.
+  The critical-only fixture keeps residual rows at 0/71 even when critical rows
+  reach 10/10.
+- `v61do` adds the full return preflight acceptance boundary gate.
+  `experiments/test_v61do_full_return_preflight_acceptance_boundary_gate.sh`
+  consumes v61dn/v53al/v53am and distinguishes full 81-artifact presence from
+  row-level returned-evidence acceptance. The default smoke records
+  `boundary_stage_rows=9`, `ready_boundary_stage_rows=0`,
+  `blocked_boundary_stage_rows=9`, `full_preflight_pass_rows=0/81`,
+  `answer_review_accepted_rows=0/7000`,
+  `generation_result_accepted_rows=0/1000`, and
+  `actual_model_generation_ready=0`. The full-preflight-only fixture proves
+  81/81 file preflight can pass while dispatch/chunk/review/generation row
+  acceptance remains 0 and actual generation stays blocked.
+- `v61dp` adds the return schema acceptance blocker gate.
+  `experiments/test_v61dp_return_schema_acceptance_blocker_gate.sh` consumes
+  v61do/v53am and groups the post-preflight blockers into four schema/row
+  families: dispatch receipt JSON, review chunk CSV, aggregate review return,
+  and generation result return. The full-preflight-only fixture records
+  `supplied_schema_artifact_rows=31`, `accepted_schema_artifact_rows=0`,
+  `missing_schema_artifact_rows=50`, `invalid_schema_artifact_rows=31`,
+  `accepted_payload_rows=0/17483`, and `actual_model_generation_ready=0`.
+- `v61dq` adds the return schema remediation packet gate.
+  `experiments/test_v61dq_return_schema_remediation_packet_gate.sh` consumes
+  v61dp plus the authoritative v53/v61 return schema sources and emits an
+  operator-facing remediation packet with 81 artifact rows, four schema
+  families, 11 template/header files, four validation commands, and three
+  commands ready now. It keeps `accepted_schema_artifact_rows=0`,
+  `accepted_payload_rows=0/17483`, `schema_acceptance_ready=0`, and
+  `actual_model_generation_ready=0`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
