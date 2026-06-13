@@ -3615,6 +3615,27 @@ Current next boundary:
   can open only dual candidate readiness; real provenance, real acceptance
   closure, actual generation, latency, near-frontier quality, and release claims
   remain blocked until real external return rows close both roots.
+- `v61fc` adds the post-v61fb dual external return operator packet.
+  `experiments/test_v61fc_post_fb_dual_external_return_operator_packet.sh`
+  turns the v53ak/v61et return surfaces into one checksum-bound metadata-only
+  packet with 91 required artifact rows and two provenance contracts. It gives
+  the operator one checklist for the next real external return attempt while
+  keeping row acceptance, generation acceptance closure, actual generation,
+  latency, near-frontier quality, and release claims blocked.
+- `v61fd` adds the post-v61fc real return closure delta ledger.
+  `experiments/test_v61fd_post_fc_real_return_closure_delta_ledger.sh` maps the
+  91-artifact dual packet onto v61ex closure blockers and v53/v61 row deltas:
+  14 open deltas, 91 missing external artifacts, 7000 human review rows, 1000
+  adjudication rows, five generation-result artifacts, 1000 generation-result
+  rows, 1000 generation-execution admission rows, and 1000 final acceptance
+  rows remain missing. Actual generation and release claims remain blocked.
+- `v61fe` adds the post-v61fd real return replay admission guard.
+  `experiments/test_v61fe_post_fd_real_return_replay_admission_guard.sh` turns
+  the v61fd deltas into a fail-closed replay boundary: canonical no-root has 10
+  guard rows with two pass and eight blocked, seven replay-chain rows with only
+  the ledger verifier ready, `real_return_replay_admission_ready=0`,
+  `row_acceptance_ready=0`, and `actual_model_generation_ready=0`. Real roots
+  are required before replay, row acceptance, or generation claims can open.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
