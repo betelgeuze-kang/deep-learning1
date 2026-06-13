@@ -3039,6 +3039,12 @@ covered by:
 ./experiments/test_v61eo_real_generation_intake_evidence_inbox_scaffold.sh
 ./experiments/test_v61ep_real_generation_intake_inbox_archive.sh
 ./experiments/test_v61eq_real_generation_intake_dispatch_seal.sh
+./experiments/test_v61er_real_generation_intake_dispatch_receipt_preflight.sh
+./experiments/test_v61es_dispatch_receipt_to_generation_intake_handoff_guard.sh
+./experiments/test_v61et_real_generation_intake_return_bundle_preflight.sh
+./experiments/test_v61eu_real_generation_intake_return_bundle_fanout_gate.sh
+./experiments/test_v61ev_return_bundle_downstream_replay_gate.sh
+./experiments/test_v61ew_downstream_replay_to_acceptance_bridge.sh
 ./experiments/test_v53ae_complete_source_review_return_generation_rendezvous_gate.sh
 ./experiments/test_v53af_external_return_inbox_scaffold.sh
 ./experiments/test_v53ag_external_return_inbox_archive.sh
@@ -3156,6 +3162,12 @@ They emit:
 - `results/v61eo_real_generation_intake_evidence_inbox_scaffold/scaffold_001/`
 - `results/v61ep_real_generation_intake_inbox_archive/archive_001/`
 - `results/v61eq_real_generation_intake_dispatch_seal/seal_001/`
+- `results/v61er_real_generation_intake_dispatch_receipt_preflight/preflight_001/`
+- `results/v61es_dispatch_receipt_to_generation_intake_handoff_guard/guard_001/`
+- `results/v61et_real_generation_intake_return_bundle_preflight/preflight_001/`
+- `results/v61eu_real_generation_intake_return_bundle_fanout_gate/fanout_001/`
+- `results/v61ev_return_bundle_downstream_replay_gate/replay_001/`
+- `results/v61ew_downstream_replay_to_acceptance_bridge/bridge_001/`
 - `results/v53ae_complete_source_review_return_generation_rendezvous_gate/gate_001/`
 - `results/v53af_external_return_inbox_scaffold/scaffold_001/`
 - `results/v53ag_external_return_inbox_archive/archive_001/`
@@ -4752,19 +4764,25 @@ without weakening the boundary:
 132. Closed as v61eo real generation intake evidence inbox scaffold: consume v61en and v61eh contracts, create a template-only inbox with five generation-result templates, three prerequisite-binding summary templates, and one review-return provenance template, record `inbox_template_rows=9`, `accepted_by_default_rows=0`, `real_generation_intake_handoff_ready=0`, keep final evidence filenames absent by default, and leave actual generation and release claims blocked.
 133. Closed as v61ep real generation intake inbox archive: consume v61eo, package the template-only inbox into a checksum-bound archive, record `archive_member_files=9`, `template_archive_member_rows=9`, `final_evidence_named_archive_member_rows=0`, `payload_like_archive_member_rows=0`, and leave real intake, actual generation, and release claims blocked.
 134. Closed as v61eq real generation intake dispatch seal: consume v61ep/v61en, wrap the template-only archive into a checksum-bound dispatch bundle, record `nested_archive_member_rows=9`, `nested_template_member_rows=9`, `nested_final_evidence_named_member_rows=0`, `bundle_payload_like_file_rows=0`, `accepted_dispatch_receipt_rows=0`, and leave real intake, actual generation, and release claims blocked.
-135. Companion v53ae rendezvous gate: bind v53ad, v53z, v61de, and v61cx into a nine-stage post-full-shard review/generation return gate, with full-shard/runtime ready but review return, generation execution, result acceptance, and actual generation still blocked.
-136. Companion v53af return inbox scaffold: create 81 zero-evidence `.template` return artifacts for dispatch receipts, review returns, and generation result returns so external operators have the exact final inbox shape without accepted evidence.
-137. Companion v53ag return inbox archive: package the v53af template-only return inbox into a checksum-bound tar.gz with zero payload-like members and zero final evidence-named csv/json members.
-138. Companion v53ah external review send bundle: bundle the v53ac review dispatch archive and v53ag template-only return inbox archive into one checksum-bound `send_bundle/` with two archives, no payload-like members, no final evidence-named return-inbox csv/json members, and review/generation claims still blocked.
-139. Companion v53ai external return bundle intake: map a one-root returned bundle into the four final return directories, refresh v53ae, keep `accepted_by_v53ai_rows=0`, and leave review/generation acceptance to downstream gates.
-140. Companion v53aj return closure dashboard: roll v53ai/v53ae/v53v/v61de into 12 closure items, with send bundle, return mapping, and full-shard/runtime ready while nine returned-evidence/generation/release items remain blocked.
-141. Companion v53ak external return operator checklist: expand the returned-bundle task into 81 logistics rows with final paths, target env vars, downstream gates, and validation commands while keeping `accepted_by_v53ak_rows=0`.
-142. Companion v53al external return bundle preflight: add a receiver-side verifier over the 81 final artifacts for presence, non-empty files, and template-name rejection while keeping `accepted_by_v53al_rows=0`.
-143. Companion v53am return acceptance replay: after v53al preflight, replay v53ad/v53x/v53y/v53z/v61bt/v61de/v53ae with the returned bundle paths, report 11 downstream closure steps, and prove a critical-only supplied fixture reaches only `preflight_pass_rows=10/81` while keeping `accepted_by_v53am_rows=0`.
-144. Use v53y/v53z/v53ae to refresh the complete-source review-return chain after a real `V53Y_REVIEW_RETURN_DIR` is supplied; only then can the v61 review-return blocker be considered for refresh.
-145. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
-146. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists and review return is accepted.
-147. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+135. Closed as v61er real generation intake dispatch receipt preflight: consume v61eq, validate optional returned `DISPATCH_RECEIPT.json` against the dispatch bundle checksum and required receipt fields, record canonical `dispatch_receipt_candidate_preflight_ready=0`, prove an isolated fixture receipt reaches candidate preflight while remaining `real_dispatch_receipt_ready=0`, and leave real intake, actual generation, and release claims blocked.
+136. Closed as v61es dispatch receipt to generation intake handoff guard: consume v61er/v61en, prove receipt logistics and generation-evidence intake are separate readiness paths, record canonical `receipt_to_intake_handoff_ready=0`, prove a fixture receipt opens only the receipt-candidate stage, and leave real dispatch receipt, real intake, actual generation, and release claims blocked.
+137. Closed as v61et real generation intake return bundle preflight: consume v61es/v61er/v61ej/v61el/v61eo contracts, define the one-root returned-bundle shape for receipt, five generation-result artifacts, three prerequisite-binding summaries, and provenance, record canonical `present_return_bundle_files=0/10`, prove a fixture bundle reaches candidate preflight with 10/10 files while remaining `real_return_bundle_preflight_ready=0`, and leave downstream row acceptance, actual generation, and release claims blocked.
+138. Closed as v61eu real generation intake return bundle fanout gate: consume v61et plus v61er/v61ej/v61el, fan a selected one-root bundle into receipt, generation-result, and prerequisite-binding receiver preflights, record canonical `fanout_candidate_preflight_ready=0`, prove the fixture bundle reaches `fanout_candidate_preflight_ready=1` while keeping `fanout_real_preflight_ready=0`, and leave downstream row acceptance, actual generation, and release claims blocked.
+139. Closed as v61ev return bundle downstream replay gate: consume v61eu fanout and replay the selected bundle through v61em, v61en, and v61es, record canonical `downstream_replay_candidate_ready=0`, prove the fixture bundle reaches downstream candidate replay while keeping `downstream_replay_real_ready=0`, `receipt_to_intake_handoff_ready=0`, downstream row acceptance, actual generation, and release claims blocked.
+140. Closed as v61ew downstream replay to acceptance bridge: consume selected v61ev replay evidence plus v61bt/v61de/v61cu summaries, compare candidate replay against result intake, post-review handoff, and final result acceptance, record canonical `acceptance_bridge_candidate_ready=0`, prove fixture replay can open only the candidate bridge while `acceptance_bridge_real_ready=0`, and leave actual generation and release claims blocked.
+141. Companion v53ae rendezvous gate: bind v53ad, v53z, v61de, and v61cx into a nine-stage post-full-shard review/generation return gate, with full-shard/runtime ready but review return, generation execution, result acceptance, and actual generation still blocked.
+142. Companion v53af return inbox scaffold: create 81 zero-evidence `.template` return artifacts for dispatch receipts, review returns, and generation result returns so external operators have the exact final inbox shape without accepted evidence.
+143. Companion v53ag return inbox archive: package the v53af template-only return inbox into a checksum-bound tar.gz with zero payload-like members and zero final evidence-named csv/json members.
+144. Companion v53ah external review send bundle: bundle the v53ac review dispatch archive and v53ag template-only return inbox archive into one checksum-bound `send_bundle/` with two archives, no payload-like members, no final evidence-named return-inbox csv/json members, and review/generation claims still blocked.
+145. Companion v53ai external return bundle intake: map a one-root returned bundle into the four final return directories, refresh v53ae, keep `accepted_by_v53ai_rows=0`, and leave review/generation acceptance to downstream gates.
+146. Companion v53aj return closure dashboard: roll v53ai/v53ae/v53v/v61de into 12 closure items, with send bundle, return mapping, and full-shard/runtime ready while nine returned-evidence/generation/release items remain blocked.
+147. Companion v53ak external return operator checklist: expand the returned-bundle task into 81 logistics rows with final paths, target env vars, downstream gates, and validation commands while keeping `accepted_by_v53ak_rows=0`.
+148. Companion v53al external return bundle preflight: add a receiver-side verifier over the 81 final artifacts for presence, non-empty files, and template-name rejection while keeping `accepted_by_v53al_rows=0`.
+149. Companion v53am return acceptance replay: after v53al preflight, replay v53ad/v53x/v53y/v53z/v61bt/v61de/v53ae with the returned bundle paths, report 11 downstream closure steps, and prove a critical-only supplied fixture reaches only `preflight_pass_rows=10/81` while keeping `accepted_by_v53am_rows=0`.
+150. Use v53y/v53z/v53ae to refresh the complete-source review-return chain after a real `V53Y_REVIEW_RETURN_DIR` is supplied; only then can the v61 review-return blocker be considered for refresh.
+151. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
+152. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists and review return is accepted.
+153. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -4790,6 +4808,12 @@ The current v61 runtime prototype can say:
 - v61eo adds the zero-payload evidence inbox scaffold for those remaining rows: nine templates are ready, none are accepted by default, and real intake stays blocked
 - v61ep packages that scaffold as a checksum-bound template archive with zero final-evidence-named members and zero payload-like members
 - v61eq seals the template archive into a checksum-verifiable dispatch bundle while keeping dispatch receipt acceptance, real intake, and actual generation blocked
+- v61er preflights returned dispatch receipts against the v61eq bundle checksum and required fields while keeping fixture receipt success separate from real dispatch, real intake, and actual generation
+- v61es joins receipt preflight to the generation intake work order and proves receipt logistics cannot substitute for real generation-result artifacts or prerequisite binding
+- v61et defines the one-root return-bundle preflight for receipt, generation-result artifacts, prerequisite binding, and provenance while keeping downstream row acceptance and actual generation blocked
+- v61eu fans that one-root bundle into v61er/v61ej/v61el receiver preflights and proves fixture fanout mechanics without opening real fanout or row acceptance
+- v61ev replays that fanout through v61em/v61en/v61es so fixture bundles can exercise downstream mechanics without opening real replay, row acceptance, or actual generation
+- v61ew bridges downstream replay to v61bt/v61de/v61cu acceptance and names the final row-acceptance blockers before any actual generation claim
 - repo payload policy remains intact: checkpoint payload bytes committed to the repository are 0
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.

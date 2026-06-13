@@ -3537,6 +3537,48 @@ Current next boundary:
   members, zero payload-like files, and keeps dispatch receipt acceptance, real
   intake, actual generation, latency, near-frontier quality, and release claims
   blocked.
+- `v61er` adds the real generation intake dispatch receipt preflight.
+  `experiments/test_v61er_real_generation_intake_dispatch_receipt_preflight.sh`
+  consumes v61eq and validates optional returned `DISPATCH_RECEIPT.json` files
+  against the bundle checksum and required receipt fields. The isolated fixture
+  receipt can pass candidate preflight, but fixture classification keeps real
+  dispatch receipt readiness, real intake, actual generation, latency,
+  near-frontier quality, and release claims blocked.
+- `v61es` adds the dispatch receipt to generation intake handoff guard.
+  `experiments/test_v61es_dispatch_receipt_to_generation_intake_handoff_guard.sh`
+  consumes v61er and v61en, then proves receipt logistics and generation
+  evidence are separate readiness paths. A fixture receipt can open only the
+  receipt-candidate stage; real dispatch receipt readiness, real generation
+  intake, actual generation, latency, near-frontier quality, and release claims
+  stay blocked until non-fixture receipt, real generation artifacts, and real
+  prerequisite binding are present together.
+- `v61et` adds the real generation intake return bundle preflight.
+  `experiments/test_v61et_real_generation_intake_return_bundle_preflight.sh`
+  defines the one-root returned-bundle shape for dispatch receipt, five
+  generation-result artifacts, three prerequisite-binding summaries, and
+  review-return provenance. A fixture bundle can reach candidate preflight with
+  10/10 files, but real bundle readiness, downstream row acceptance, actual
+  generation, latency, near-frontier quality, and release claims remain blocked.
+- `v61eu` adds the real generation intake return bundle fanout gate.
+  `experiments/test_v61eu_real_generation_intake_return_bundle_fanout_gate.sh`
+  sends a selected one-root bundle into v61er/v61ej/v61el preflights. The
+  fixture bundle can open all three candidate receiver preflights, but real
+  fanout, downstream row acceptance, actual generation, latency, near-frontier
+  quality, and release claims remain blocked until the bundle and provenance are
+  non-fixture and accepted by downstream gates.
+- `v61ev` adds the return bundle downstream replay gate.
+  `experiments/test_v61ev_return_bundle_downstream_replay_gate.sh` replays the
+  fanout through v61em, v61en, and v61es. The fixture bundle can open downstream
+  candidate replay, but real replay, receipt-to-intake handoff, downstream row
+  acceptance, actual generation, latency, near-frontier quality, and release
+  claims remain blocked until real evidence replaces the fixture path.
+- `v61ew` adds the downstream replay to acceptance bridge.
+  `experiments/test_v61ew_downstream_replay_to_acceptance_bridge.sh` compares
+  selected v61ev replay evidence with v61bt result intake, v61de post-review
+  handoff, and v61cu result acceptance. Fixture replay can open only the
+  candidate bridge; real acceptance, actual generation, latency, near-frontier
+  quality, and release claims remain blocked until v61bt/v61de/v61cu all accept
+  real rows.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
