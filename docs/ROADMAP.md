@@ -3421,6 +3421,28 @@ Current next boundary:
   then restores canonical no-receipt state. This verifies the receipt mechanics
   without counting fixture rows as real external evidence or unblocking review,
   generation, latency, quality, or release claims.
+- `v61ec` adds the review chunk return fixture acceptance gate.
+  `experiments/test_v61ec_review_chunk_return_fixture_acceptance_gate.sh`
+  proves v53x can accept a complete 50 chunk plus five aggregate supplied
+  fixture after v61eb, then restores canonical no-return state. This verifies
+  chunk-return and aggregate v53s-refresh mechanics without counting fixture
+  rows as real external review evidence or unblocking review, generation,
+  latency, quality, or release claims.
+- `v61ed` adds the review return refresh fixture replay gate.
+  `experiments/test_v61ed_review_return_refresh_fixture_replay_gate.sh`
+  proves the downstream v53s/v53v/v53x/v53y refresh chain can reach
+  `answer_review_accepted_rows=7000` and `v61_review_unblock_ready=1` on a
+  complete supplied fixture, then restores canonical no-return state. This
+  verifies replay mechanics without counting fixture rows as real external
+  review evidence or unblocking actual generation, latency, quality, or
+  release claims.
+- `v61ee` adds the post-review generation handoff fixture gate.
+  `experiments/test_v61ee_post_review_generation_handoff_fixture_gate.sh`
+  proves a complete supplied review-return fixture can open the v61de/v53z/v61dd
+  post-review generation execution admission path to 1000/1000 admitted rows,
+  then restores canonical no-return state. This verifies handoff mechanics
+  without counting fixture rows as real generation result artifacts or
+  unblocking actual generation, latency, quality, or release claims.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
