@@ -3579,6 +3579,42 @@ Current next boundary:
   candidate bridge; real acceptance, actual generation, latency, near-frontier
   quality, and release claims remain blocked until v61bt/v61de/v61cu all accept
   real rows.
+- `v61ex` adds the generation acceptance closure work order.
+  `experiments/test_v61ex_generation_acceptance_closure_work_order.sh` consumes
+  a selected v61ew bridge plus v61bt/v61de/v61cu/v61ct summaries and decomposes
+  the remaining acceptance closure into bridge, result-intake, post-review
+  handoff, final acceptance, and claim rows. Fixture bridge readiness can only
+  open the candidate work row; real acceptance, actual generation, latency,
+  near-frontier quality, and release claims remain blocked until all real return
+  rows and acceptance gates close.
+- `v61ey` adds the generation acceptance closure handoff bundle.
+  `experiments/test_v61ey_generation_acceptance_closure_handoff_bundle.sh`
+  packages a selected v61ex work order as metadata-only handoff files with
+  checksum verification and ready-command listing. Fixture work-order readiness
+  is preserved, but real acceptance closure, actual generation, latency,
+  near-frontier quality, and release claims remain blocked until real v61bt,
+  v61de, and v61cu acceptance rows close.
+- `v61ez` adds the post-v61ey active-goal status refresh.
+  `experiments/test_v61ez_active_goal_post_ey_status_refresh.sh` restates the
+  active v52/v53/v61 objective after the acceptance-closure handoff bundle. It
+  permits the operator handoff as metadata-only boundary evidence, but keeps
+  review return, real return-bundle replay, v61bt/v61de/v61cu acceptance,
+  actual generation, latency, near-frontier quality, and release claims blocked
+  until real rows close.
+- `v61fa` adds the post-v61ey acceptance closure execution queue.
+  `experiments/test_v61fa_post_ey_acceptance_closure_execution_queue.sh`
+  expands the v61ez next actions into ordered phases and guarded commands. Only
+  verifier/ready-command printing is ready now; real review return, real
+  return-bundle replay, v61bt/v61de/v61cu acceptance, actual generation,
+  latency, near-frontier quality, and release claims remain blocked until
+  supplied external rows close the queue.
+- `v61fb` adds the post-v61ey external return readiness preflight.
+  `experiments/test_v61fb_post_ey_external_return_readiness_preflight.sh`
+  aggregates the v53 81-artifact external return root and the v61 10-file
+  generation-intake return root through v53al and v61et. Isolated fixture roots
+  can open only dual candidate readiness; real provenance, real acceptance
+  closure, actual generation, latency, near-frontier quality, and release claims
+  remain blocked until real external return rows close both roots.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
