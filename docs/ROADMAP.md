@@ -3636,6 +3636,41 @@ Current next boundary:
   the ledger verifier ready, `real_return_replay_admission_ready=0`,
   `row_acceptance_ready=0`, and `actual_model_generation_ready=0`. Real roots
   are required before replay, row acceptance, or generation claims can open.
+- `v61ff` adds the post-v61fe real manifest replay readiness matrix.
+  `experiments/test_v61ff_post_fe_real_manifest_replay_readiness_matrix.sh`
+  binds the zero-payload page-manifest release index, 59/59 checkpoint shards,
+  134161/134161 page hashes, ROCm/KV/runtime evidence, and 37/37 runtime seed
+  admission rows to the fail-closed replay guard. It records 16 matrix rows with
+  seven ready and nine blocked, keeps `real_return_replay_admission_ready=0`,
+  `row_acceptance_ready=0`, `generation_execution_admitted_rows=0/1000`, and
+  `actual_model_generation_ready=0`, and preserves zero repo checkpoint payload.
+- `v61fg` adds the post-v61ff real manifest external review packet.
+  `experiments/test_v61fg_post_ff_real_manifest_external_review_packet.sh`
+  packages the v61ff matrix as a reviewer-ready zero-payload evidence packet
+  with 13 review checklist rows, eight ready rows, five blocked rows, five
+  claim-boundary rows, six reproduce command rows, and 11 metadata-only packet
+  files. It keeps `external_review_return_ready=0`,
+  `actual_model_generation_ready=0`, and zero repo checkpoint payload.
+- `v61fh` adds the post-v61fg real manifest external review return intake.
+  `experiments/test_v61fh_post_fg_real_manifest_external_review_return_intake.sh`
+  fixes the six-artifact return contract for the reviewer packet. Canonical
+  no-return has zero supplied artifacts, six missing artifacts, zero accepted
+  checklist/claim-boundary rows, `candidate_external_review_return_ready=0`,
+  `external_review_return_ready=0`, and `actual_model_generation_ready=0`;
+  a supplied fixture opens only candidate preflight readiness.
+- `v61fi` adds the post-v61fh real manifest external review acceptance bridge.
+  `experiments/test_v61fi_post_fh_real_manifest_external_review_acceptance_bridge.sh`
+  maps the review-return intake contract onto acceptance blockers. Canonical
+  no-return has 12 bridge rows with four ready and eight blocked, eight blocker
+  rows, six next-action rows with three ready, `external_review_return_ready=0`,
+  `real_return_replay_admission_ready=0`, `row_acceptance_ready=0`, and
+  `actual_model_generation_ready=0`.
+- `v61fj` adds the post-v61fi real manifest external review send/return bundle.
+  `experiments/test_v61fj_post_fi_real_manifest_external_review_send_return_bundle.sh`
+  ships the v61fg review packet with v61fh template-only return scaffolds in one
+  zero-payload directory. It records 11 review-packet files, six return-template
+  files, 23 metadata-only bundle files, zero payload-like files,
+  `external_review_return_ready=0`, and `actual_model_generation_ready=0`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
