@@ -274,7 +274,7 @@ command_rows = [
     {
         "command_id": "02-validate-review-chunk-returns",
         "ready_to_run_now": "1",
-        "command": "V53X_REVIEW_CHUNK_RETURN_DIR=/path/to/final_return_bundle/review_chunk_returns V53X_REUSE_EXISTING=0 ./experiments/run_v53x_complete_source_review_chunk_return_intake.sh",
+        "command": "V53X_REVIEW_CHUNK_RETURN_DIR=/path/to/final_return_bundle V53X_REUSE_EXISTING=0 ./experiments/run_v53x_complete_source_review_chunk_return_intake.sh",
         "expected_transition": "accepted_chunk_return_artifact_rows=50",
     },
     {

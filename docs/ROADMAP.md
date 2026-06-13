@@ -3335,6 +3335,25 @@ Current next boundary:
   commands ready now. It keeps `accepted_schema_artifact_rows=0`,
   `accepted_payload_rows=0/17483`, `schema_acceptance_ready=0`, and
   `actual_model_generation_ready=0`.
+- `v61dr` adds the return bundle schema preflight gate.
+  `experiments/test_v61dr_return_bundle_schema_preflight_gate.sh` consumes
+  v61dq and optionally `V61DR_RETURN_BUNDLE_DIR`, then validates the full
+  81-artifact returned bundle for file presence, non-empty payloads, CSV
+  headers, JSON required fields, and artifact row counts before downstream
+  intake. The canonical no-return path records `schema_preflight_pass_rows=0`,
+  `schema_preflight_missing_rows=81`, `expected_artifact_row_instances=20485`,
+  `observed_artifact_row_instances=0`, `accepted_payload_rows=0/17483`, and
+  `actual_model_generation_ready=0`; the isolated fixture proves 81/81 schema
+  preflight mechanics and the generated verifier without opening acceptance or
+  generation claims.
+- `v61ds` adds the schema-preflight-to-acceptance handoff gate.
+  `experiments/test_v61ds_schema_preflight_acceptance_handoff_gate.sh`
+  consumes v61dr/v53am and emits 12 handoff stages from schema preflight to
+  dispatch/chunk/review/generation acceptance. It keeps only 2/12 stages ready,
+  records `accepted_payload_rows=0/17483`,
+  `return_acceptance_replay_closed=0`, and `actual_model_generation_ready=0`,
+  proving the full returned-bundle verifier is still not downstream review or
+  generation acceptance.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
