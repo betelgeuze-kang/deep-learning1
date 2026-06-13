@@ -3205,6 +3205,76 @@ Current next boundary:
   bytes committed to the repo. This makes the evidence-bound allowed claims
   auditable while keeping actual generation, latency, near-frontier, v1.0
   comparison, and release claims blocked.
+- `v61di` adds the post-claim generation unblock audit gate.
+  `experiments/test_v61di_post_claim_generation_unblock_audit_gate.sh`
+  consumes v61dh/v53am/v61df and audits the exact returned-evidence ladder
+  that remains after full-shard/runtime/claim closure. It pins
+  `unblock_stage_rows=12`, `ready_unblock_stage_rows=6`,
+  `blocked_unblock_stage_rows=6`, `unblock_command_rows=9`,
+  `ready_unblock_command_rows=2`, `claim_audit_ready=1`,
+  `return_acceptance_replay_ready=1`, `return_acceptance_replay_closed=0`,
+  `operator_packet_file_rows=8/8`, `return_bundle_preflight_pass=0`,
+  `accepted_human_review_rows=0/7000`, `accepted_adjudication_rows=0/1000`,
+  `runtime_admission_accepted_rows=1000`,
+  `generation_execution_admitted_rows=0/1000`,
+  `accepted_generation_result_artifacts=0/5`,
+  `generation_result_accepted_rows=0/1000`,
+  `actual_model_generation_ready=0`, `v1_0_comparison_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61di=0`, and zero checkpoint payload
+  bytes committed to the repo. This makes the next unlock review/generation
+  return evidence, not shard/page-hash/runtime evidence.
+- `v61dj` adds the post-claim return evidence contract gate.
+  `experiments/test_v61dj_post_claim_return_evidence_contract_gate.sh`
+  consumes v61di/v61df/v53al and turns the remaining returned-evidence
+  blockers into a machine-readable contract. It pins
+  `return_contract_blocker_rows=6`,
+  `unsatisfied_return_contract_blocker_rows=6`,
+  `return_artifact_contract_rows=10`,
+  `satisfied_return_artifact_contract_rows=0`,
+  `unsatisfied_return_artifact_contract_rows=10`,
+  `return_artifact_family_rows=2`, `return_contract_command_rows=5`,
+  `ready_return_contract_command_rows=2`, `return_bundle_preflight_pass=0`,
+  `preflight_pass_rows=0/81`, `review_return_expected_rows=8232`,
+  `review_return_accepted_rows=0`, `generation_result_expected_rows=4001`,
+  `generation_result_accepted_contract_rows=0`,
+  `generation_execution_admitted_rows=0/1000`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61dj=0`, and zero checkpoint payload
+  bytes committed to the repo. This gives the external operator a concrete
+  acceptance contract without fabricating review or generation evidence.
+- `v61dk` adds the return contract final bundle crosswalk gate.
+  `experiments/test_v61dk_return_contract_final_bundle_crosswalk_gate.sh`
+  consumes v61dj/v53ak/v53al and maps the 10 critical return contract artifacts
+  onto the 81-artifact final return bundle checklist and preflight rows. It
+  pins `contract_artifact_rows=10`, `crosswalk_rows=10`,
+  `mapped_crosswalk_rows=10`, `unmapped_crosswalk_rows=0`,
+  `family_crosswalk_rows=2`, `contract_preflight_pass_rows=0`,
+  `contract_preflight_missing_rows=10`, `full_preflight_rows=81`,
+  `full_preflight_pass_rows=0`, `full_preflight_missing_rows=81`,
+  `return_bundle_preflight_pass=0`, `operator_checklist_rows=81`,
+  `aggregate_review_crosswalk_rows=5`, `generation_result_crosswalk_rows=5`,
+  `review_return_expected_rows=8232`, `generation_result_expected_rows=4001`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61dk=0`, and zero checkpoint payload
+  bytes committed to the repo. This proves the critical return contract is
+  mapped to exact final bundle paths while the evidence itself remains missing.
+- `v61dl` adds the critical return contract preflight gate.
+  `experiments/test_v61dl_critical_return_contract_preflight_gate.sh`
+  consumes v61dk and optionally `V61DL_RETURN_BUNDLE_DIR`, emits
+  `VERIFY_CRITICAL_RETURN_CONTRACT.sh`, and checks the 10 critical final return
+  paths directly. It pins `critical_artifact_rows=10`,
+  `critical_preflight_pass_rows=0`, `critical_preflight_missing_rows=10`,
+  `critical_preflight_non_empty_rows=0`, `critical_preflight_ready=0`,
+  `return_bundle_dir_supplied=0`, `return_bundle_dir_exists=0`,
+  `critical_family_rows=2`, `critical_command_rows=3`,
+  `ready_critical_command_rows=2`, `full_preflight_rows=81`,
+  `return_bundle_preflight_pass=0`, `review_return_expected_rows=8232`,
+  `generation_result_expected_rows=4001`,
+  `generation_execution_admitted_rows=0/1000`,
+  `actual_model_generation_ready=0`,
+  `checkpoint_payload_bytes_downloaded_by_v61dl=0`, and zero checkpoint payload
+  bytes committed to the repo. This makes the 10-file critical return contract
+  locally preflightable without accepting or fabricating returned evidence.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
