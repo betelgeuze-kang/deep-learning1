@@ -3457,6 +3457,41 @@ Current next boundary:
   acceptance plus 1000/1000 generation-result row acceptance. It restores the
   canonical no-binding state and keeps real generation, latency, quality, and
   release claims blocked.
+- `v61eh` adds the real generation result return packet.
+  `experiments/test_v61eh_real_generation_result_return_packet.sh` consumes
+  v61eg plus the review/generation operator packet, v61ct, v61dg, v61ck,
+  v61cs, v61dd, v61de, and v61bt. It packages the real-return surface as five
+  required generation-result artifacts, 42 required fields, five prerequisite
+  binding contract rows, seven stage rows, five command rows, and a local
+  verifier while keeping fixture rows out of real evidence. It records
+  `real_prerequisite_binding_ready=0`, `generation_execution_admitted_rows=0`,
+  `accepted_generation_result_artifacts=0`, `real_generation_result_artifacts=0`,
+  and `actual_model_generation_ready=0`.
+- `v61ei` adds the post-v61eh active-goal status refresh.
+  `experiments/test_v61ei_active_goal_post_eh_status_refresh.sh` consumes
+  v61dx and v61eh, then restates the v52/v53/v61 objective after the real
+  generation-result return packet. It records four machine-ready sections,
+  10 requirement rows with 4 ready and 6 blocked, the ready v52 optional-F
+  disposition, the ready v53 complete-source machine surface, ready v61
+  full-shard/page-runtime evidence, and the ready generation-return packet
+  while keeping review return, real prerequisite binding, actual generation,
+  latency, quality, and release claims blocked.
+- `v61ej` adds the real generation return receiver preflight.
+  `experiments/test_v61ej_real_generation_return_receiver_preflight.sh`
+  consumes v61eh and v53r, validates optional returned generation-result files
+  against the five-artifact/42-field v61bt schema, and proves the v61ef fixture
+  can pass schema/hash/row preflight in an isolated run. The canonical summary
+  is restored to no-return with `generation_result_receiver_preflight_ready=0`,
+  `real_generation_result_artifacts=0`, and `actual_model_generation_ready=0`.
+- `v61ek` adds the preflight-to-generation intake handoff guard.
+  `experiments/test_v61ek_preflight_to_generation_intake_handoff_guard.sh`
+  consumes v61ej, v61eh, v61bt, and v61de, selects a receiver-preflight run,
+  and emits the next v61bt/v61de intake commands while preventing preflight
+  success from becoming generation acceptance. Canonical no-return keeps
+  `selected_generation_result_receiver_preflight_ready=0`, v61bt/v61de handoff
+  readiness at 0, and actual generation blocked; the fixture-selected preflight
+  makes only the selected-preflight stage ready and still blocks intake without
+  real prerequisite binding.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
