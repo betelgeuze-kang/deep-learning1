@@ -3408,6 +3408,19 @@ Current next boundary:
   emits metadata-only submission files and keeps review return, generation
   execution, actual generation, latency, quality, and release claims blocked
   until real reviewer outputs are supplied.
+- `v61ea` adds the external review dispatch seal gate.
+  `experiments/test_v61ea_external_review_dispatch_seal_gate.sh` consumes
+  v61dz/v53ah/v53ad and binds the active-goal review runway to the
+  checksum-bound external send bundle plus dispatch receipt intake surface.
+  It keeps the concrete next action at one send-ready bundle while receipts,
+  review return, generation execution, actual generation, latency, quality,
+  and release claims remain blocked until real returned evidence arrives.
+- `v61eb` adds the dispatch receipt fixture acceptance gate.
+  `experiments/test_v61eb_dispatch_receipt_fixture_acceptance_gate.sh`
+  proves v53ad can accept a complete 21-receipt supplied fixture after v61ea,
+  then restores canonical no-receipt state. This verifies the receipt mechanics
+  without counting fixture rows as real external evidence or unblocking review,
+  generation, latency, quality, or release claims.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
