@@ -3385,6 +3385,29 @@ Current next boundary:
   3/5 handoff stages ready, 2/5 blocked, all bundle files metadata-only,
   81 artifact work rows, 76 immediately preparable artifacts, and
   `actual_model_generation_ready=0`.
+- `v61dx` adds the active goal status audit gate.
+  `experiments/test_v61dx_active_goal_status_audit_gate.sh` consumes
+  v52y/v53t/v61dg/v61dh/v61dw and turns the active v52/v53/v61 objective into
+  3 section rows and 24 requirement rows: v52 F optional handling is ready,
+  the v53 machine complete-source surface is ready but review/adjudication
+  return is blocked, and v61 real-model runtime evidence is ready while
+  actual generation, production latency, near-frontier, v1.0 comparison, and
+  release claims remain blocked.
+- `v61dy` adds the active goal critical path runway.
+  `experiments/test_v61dy_active_goal_critical_path_runway.sh` consumes
+  v61dx/v61dw and fixes the review-first unlock order into 8 phase rows,
+  4 artifact families, 9 command dependency rows, 5 next-action rows, and
+  6 passing invariants. It identifies 76 review-side return artifacts as
+  ready to prepare and keeps the 5 generation-result artifacts, actual
+  generation, latency, near-frontier quality, v1.0 comparison, and release
+  claims blocked until review return and guarded generation execution close.
+- `v61dz` adds the review return chunk submission runway.
+  `experiments/test_v61dz_review_return_chunk_submission_runway.sh` consumes
+  v61dy/v53w and narrows the next operator step to 21 dispatch-ready review
+  chunks, 8000 review/adjudication tasks, and 50 chunk-return artifacts. It
+  emits metadata-only submission files and keeps review return, generation
+  execution, actual generation, latency, quality, and release claims blocked
+  until real reviewer outputs are supplied.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
