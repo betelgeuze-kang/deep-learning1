@@ -10,6 +10,7 @@ SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 REVIEW_RETURN_DIR="${V61DE_REVIEW_RETURN_DIR:-}"
 GENERATION_RESULT_DIR="${V61DE_GENERATION_RESULT_DIR:-}"
+PREREQUISITE_BINDING_DIR="${V61DE_PREREQUISITE_BINDING_DIR:-}"
 
 if [[ "${V61DE_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
   echo "v61de_post_review_generation_result_handoff_bridge_dir: $RUN_DIR"
@@ -28,8 +29,12 @@ else
 fi
 
 V61CT_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61ct_complete_source_generation_execution_operator_bundle.sh" >/dev/null
-if [[ -n "$GENERATION_RESULT_DIR" ]]; then
+if [[ -n "$GENERATION_RESULT_DIR" && -n "$PREREQUISITE_BINDING_DIR" ]]; then
+  V61BT_GENERATION_RESULT_DIR="$GENERATION_RESULT_DIR" V61BT_PREREQUISITE_BINDING_DIR="$PREREQUISITE_BINDING_DIR" V61BT_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh" >/dev/null
+elif [[ -n "$GENERATION_RESULT_DIR" ]]; then
   V61BT_GENERATION_RESULT_DIR="$GENERATION_RESULT_DIR" V61BT_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh" >/dev/null
+elif [[ -n "$PREREQUISITE_BINDING_DIR" ]]; then
+  V61BT_PREREQUISITE_BINDING_DIR="$PREREQUISITE_BINDING_DIR" V61BT_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh" >/dev/null
 else
   V61BT_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh" >/dev/null
 fi
@@ -40,7 +45,7 @@ else
   V61DD_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61dd_review_return_generation_refresh_bridge.sh" >/dev/null
 fi
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$REVIEW_RETURN_DIR" "$GENERATION_RESULT_DIR" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$REVIEW_RETURN_DIR" "$GENERATION_RESULT_DIR" "$PREREQUISITE_BINDING_DIR" <<'PY'
 import csv
 import hashlib
 import json
@@ -55,8 +60,10 @@ summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
 review_return_arg = sys.argv[5]
 generation_result_arg = sys.argv[6]
+binding_arg = sys.argv[7]
 review_return_dir = Path(review_return_arg).expanduser().resolve() if review_return_arg else None
 generation_result_dir = Path(generation_result_arg).expanduser().resolve() if generation_result_arg else None
+prerequisite_binding_dir = Path(binding_arg).expanduser().resolve() if binding_arg else None
 results = root / "results"
 operator_dir = run_dir / "operator_bundle"
 operator_dir.mkdir(parents=True, exist_ok=True)
@@ -152,6 +159,8 @@ review_return_dir_supplied = int(review_return_dir is not None)
 review_return_dir_exists = int(review_return_dir is not None and review_return_dir.is_dir())
 generation_result_dir_supplied = int(generation_result_dir is not None)
 generation_result_dir_exists = int(generation_result_dir is not None and generation_result_dir.is_dir())
+prerequisite_binding_dir_supplied = int(prerequisite_binding_dir is not None)
+prerequisite_binding_dir_exists = int(prerequisite_binding_dir is not None and prerequisite_binding_dir.is_dir())
 
 handoff_surface_ready = 1
 full_shard_runtime_ready = int(
@@ -317,6 +326,9 @@ metric = {
     "review_return_dir_exists": str(review_return_dir_exists),
     "generation_result_dir_supplied": str(generation_result_dir_supplied),
     "generation_result_dir_exists": str(generation_result_dir_exists),
+    "prerequisite_binding_dir_supplied": str(prerequisite_binding_dir_supplied),
+    "prerequisite_binding_dir_exists": str(prerequisite_binding_dir_exists),
+    "v61bt_prerequisite_binding_ready": v61bt.get("prerequisite_binding_ready", "0"),
     "v53z_complete_source_review_return_v61_handoff_bridge_ready": v53z["v53z_complete_source_review_return_v61_handoff_bridge_ready"],
     "v61ct_complete_source_generation_execution_operator_bundle_ready": v61ct["v61ct_complete_source_generation_execution_operator_bundle_ready"],
     "v61bt_ubuntu1_actual_generation_result_intake_ready": v61bt["v61bt_ubuntu1_actual_generation_result_intake_ready"],
@@ -441,6 +453,9 @@ Evidence emitted:
 - review_return_dir_exists={review_return_dir_exists}
 - generation_result_dir_supplied={generation_result_dir_supplied}
 - generation_result_dir_exists={generation_result_dir_exists}
+- prerequisite_binding_dir_supplied={prerequisite_binding_dir_supplied}
+- prerequisite_binding_dir_exists={prerequisite_binding_dir_exists}
+- v61bt_prerequisite_binding_ready={v61bt.get('prerequisite_binding_ready', '0')}
 - handoff_stage_rows={len(stage_rows)}
 - ready_handoff_stage_rows={ready_stage_rows}
 - blocked_handoff_stage_rows={blocked_stage_rows}
@@ -472,6 +487,9 @@ manifest = {
     "review_return_dir_exists": review_return_dir_exists,
     "generation_result_dir_supplied": generation_result_dir_supplied,
     "generation_result_dir_exists": generation_result_dir_exists,
+    "prerequisite_binding_dir_supplied": prerequisite_binding_dir_supplied,
+    "prerequisite_binding_dir_exists": prerequisite_binding_dir_exists,
+    "v61bt_prerequisite_binding_ready": int(v61bt.get("prerequisite_binding_ready", "0") or "0"),
     "handoff_stage_rows": len(stage_rows),
     "ready_handoff_stage_rows": ready_stage_rows,
     "blocked_handoff_stage_rows": blocked_stage_rows,

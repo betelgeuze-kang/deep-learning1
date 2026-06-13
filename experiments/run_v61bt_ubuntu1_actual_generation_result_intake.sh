@@ -9,6 +9,7 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 SUPPLIED_DIR="${V61BT_GENERATION_RESULT_DIR:-}"
+PREREQUISITE_BINDING_DIR="${V61BT_PREREQUISITE_BINDING_DIR:-}"
 
 if [[ "${V61BT_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
   echo "v61bt_ubuntu1_actual_generation_result_intake_dir: $RUN_DIR"
@@ -23,7 +24,7 @@ mkdir -p "$RUN_DIR"
 V61BS_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61bs_ubuntu1_post_receipt_verification_result_intake.sh" >/dev/null
 V53R_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53r_complete_source_review_packet.sh" >/dev/null
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$SUPPLIED_DIR" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$SUPPLIED_DIR" "$PREREQUISITE_BINDING_DIR" <<'PY'
 import csv
 import hashlib
 import json
@@ -38,8 +39,10 @@ run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
 supplied_arg = sys.argv[5].strip()
+binding_arg = sys.argv[6].strip()
 results = root / "results"
 supplied_dir = Path(supplied_arg).expanduser().resolve() if supplied_arg else None
+binding_dir = Path(binding_arg).expanduser().resolve() if binding_arg else None
 model_id = "mistralai/Mixtral-8x22B-v0.1"
 SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
@@ -192,12 +195,84 @@ full_hash_ready = int(v61bs_summary["full_safetensors_page_hash_binding_ready"])
 materialization_ready = int(v61bs_summary["local_checkpoint_materialization_ready"])
 review_return_ready = int(v61bs_summary["complete_source_review_return_ready"])
 post_receipt_verification_result_intake_ready = int(v61bs_summary["post_receipt_verification_result_intake_ready"])
+prerequisite_binding_dir_supplied = int(binding_dir is not None)
+prerequisite_binding_dir_exists = int(binding_dir is not None and binding_dir.is_dir())
+prerequisite_binding_ready = 0
+prerequisite_binding_source = "v61bs-default"
+prerequisite_binding_reason = "not-supplied"
+
+if binding_dir is not None:
+    if not binding_dir.is_dir():
+        prerequisite_binding_reason = "binding-dir-not-found"
+    else:
+        binding_sources = {
+            "v61ck": binding_dir / "v61ck_real_generation_unblocker_operator_matrix_summary.csv",
+            "v61cs": binding_dir / "v61cs_complete_source_generation_execution_admission_gate_summary.csv",
+            "v61dd": binding_dir / "v61dd_review_return_generation_refresh_bridge_summary.csv",
+        }
+        missing_binding_sources = [name for name, path in binding_sources.items() if not path.is_file()]
+        if missing_binding_sources:
+            prerequisite_binding_reason = "missing-binding-sources:" + ";".join(missing_binding_sources)
+        else:
+            for name, path in binding_sources.items():
+                copy(path, f"source_prerequisite_binding/{path.name}")
+            binding_v61ck = read_csv(binding_sources["v61ck"])[0]
+            binding_v61cs = read_csv(binding_sources["v61cs"])[0]
+            binding_v61dd = read_csv(binding_sources["v61dd"])[0]
+            binding_materialization_ready = int(binding_v61ck.get("full_checkpoint_materialization_ready", "0") == "1")
+            binding_full_hash_ready = int(
+                binding_v61ck.get("completed_full_safetensors_page_hash_coverage_ready", "0") == "1"
+                and binding_v61ck.get("full_safetensors_page_hash_binding_ready", "0") == "1"
+            )
+            binding_review_ready = int(
+                binding_v61dd.get("review_return_ready", "0") == "1"
+                and binding_v61dd.get("v61_review_unblock_ready", "0") == "1"
+                and binding_v61cs.get("complete_source_review_return_ready", "0") == "1"
+            )
+            binding_admission_ready = int(
+                binding_v61cs.get("generation_execution_admission_ready", "0") == "1"
+                and binding_v61cs.get("generation_execution_admitted_rows", "0")
+                == binding_v61cs.get("generation_execution_admission_rows", "")
+                and binding_v61cs.get("generation_execution_admission_rows", "0") == str(expected_generation_rows)
+            )
+            binding_target_root = binding_v61ck.get("target_root_path", "")
+            binding_model_match = int(
+                binding_v61ck.get("model_id") == model_id
+                and binding_v61cs.get("model_id") == model_id
+                and binding_v61dd.get("model_id") == model_id
+            )
+            binding_target_match = int(binding_target_root == target_root)
+            prerequisite_binding_ready = int(
+                binding_model_match
+                and binding_target_match
+                and binding_materialization_ready
+                and binding_full_hash_ready
+                and binding_review_ready
+                and binding_admission_ready
+            )
+            prerequisite_binding_source = "v61ck/v61cs/v61dd"
+            prerequisite_binding_reason = (
+                "ready"
+                if prerequisite_binding_ready
+                else (
+                    f"model_match={binding_model_match}; target_match={binding_target_match}; "
+                    f"materialization={binding_materialization_ready}; full_hash={binding_full_hash_ready}; "
+                    f"review={binding_review_ready}; admission={binding_admission_ready}"
+                )
+            )
+            if prerequisite_binding_ready:
+                materialization_ready = binding_materialization_ready
+                full_hash_ready = binding_full_hash_ready
+                review_return_ready = binding_review_ready
+                generation_admission_ready = binding_admission_ready
+
 generation_prerequisites_ready = int(
     generation_admission_ready and full_hash_ready and materialization_ready and review_return_ready
 )
 generation_prerequisite_state = (
     f"materialization={materialization_ready}; full_hash={full_hash_ready}; "
-    f"review={review_return_ready}; admission={generation_admission_ready}"
+    f"review={review_return_ready}; admission={generation_admission_ready}; "
+    f"binding={prerequisite_binding_ready}; binding_reason={prerequisite_binding_reason}"
 )
 
 required_field_rows = []
@@ -439,6 +514,11 @@ metric = {
     "model_id": model_id,
     "v61bs_ubuntu1_post_receipt_verification_result_intake_ready": v61bs_summary["v61bs_ubuntu1_post_receipt_verification_result_intake_ready"],
     "post_receipt_verification_result_intake_ready": str(post_receipt_verification_result_intake_ready),
+    "prerequisite_binding_dir_supplied": str(prerequisite_binding_dir_supplied),
+    "prerequisite_binding_dir_exists": str(prerequisite_binding_dir_exists),
+    "prerequisite_binding_ready": str(prerequisite_binding_ready),
+    "prerequisite_binding_source": prerequisite_binding_source,
+    "prerequisite_binding_reason": prerequisite_binding_reason,
     "generation_result_input_supplied": str(int(supplied_dir is not None)),
     "expected_generation_result_artifacts": str(len(ALL_ARTIFACTS)),
     "supplied_generation_result_artifacts": str(supplied_artifacts),
@@ -519,6 +599,11 @@ Evidence emitted:
 - accepted_generation_rows={accepted_answer_rows}
 - accepted_answer_rows={accepted_answer_rows}
 - post_receipt_verification_result_intake_ready={post_receipt_verification_result_intake_ready}
+- prerequisite_binding_dir_supplied={prerequisite_binding_dir_supplied}
+- prerequisite_binding_dir_exists={prerequisite_binding_dir_exists}
+- prerequisite_binding_ready={prerequisite_binding_ready}
+- prerequisite_binding_source={prerequisite_binding_source}
+- prerequisite_binding_reason={prerequisite_binding_reason}
 - local_checkpoint_materialization_ready={materialization_ready}
 - full_safetensors_page_hash_binding_ready={full_hash_ready}
 - complete_source_review_return_ready={review_return_ready}
@@ -543,6 +628,8 @@ manifest = {
     "source_v61bs_summary_sha256": sha256(v61bs_summary_path),
     "source_v53r_summary_sha256": sha256(v53r_summary_path),
     "generation_result_input_supplied": int(supplied_dir is not None),
+    "prerequisite_binding_dir_supplied": prerequisite_binding_dir_supplied,
+    "prerequisite_binding_ready": prerequisite_binding_ready,
     "expected_generation_result_artifacts": len(ALL_ARTIFACTS),
     "accepted_generation_result_artifacts": accepted_artifacts,
     "expected_generation_rows": expected_generation_rows,

@@ -3443,6 +3443,20 @@ Current next boundary:
   then restores canonical no-return state. This verifies handoff mechanics
   without counting fixture rows as real generation result artifacts or
   unblocking actual generation, latency, quality, or release claims.
+- `v61ef` adds the generation result fixture prerequisite-gap gate.
+  `experiments/test_v61ef_generation_result_fixture_prereq_gap_gate.sh`
+  proves five supplied generation-result artifacts can reach v61bt after the
+  v61ee handoff while still being rejected because v61bt's prerequisite snapshot
+  is not aligned with the refreshed v61de review-return/generation-admission
+  path. This turns the next blocker into a precise binding gap without claiming
+  real generation, latency, quality, or release readiness.
+- `v61eg` adds the generation result prerequisite-binding fixture gate.
+  `experiments/test_v61eg_generation_result_prereq_binding_fixture_gate.sh`
+  adds an explicit v61bt binding directory from refreshed v61ck/v61cs/v61dd
+  evidence and proves the same supplied fixture can reach 5/5 result artifact
+  acceptance plus 1000/1000 generation-result row acceptance. It restores the
+  canonical no-binding state and keeps real generation, latency, quality, and
+  release claims blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
