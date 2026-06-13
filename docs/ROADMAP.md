@@ -3354,6 +3354,37 @@ Current next boundary:
   `return_acceptance_replay_closed=0`, and `actual_model_generation_ready=0`,
   proving the full returned-bundle verifier is still not downstream review or
   generation acceptance.
+- `v61dt` adds the return bundle closure replay gate.
+  `experiments/test_v61dt_return_bundle_closure_replay_gate.sh` accepts one
+  optional `V61DT_RETURN_BUNDLE_DIR` and fans it into v61dr, v53am, and v61ds.
+  The canonical no-return path keeps only 4/15 closure stages ready and records
+  `schema_preflight_pass_rows=0/81`, `preflight_pass_rows=0/81`,
+  `accepted_payload_rows=0/17483`, `return_acceptance_replay_closed=0`, and
+  `actual_model_generation_ready=0`. The critical-only supplied-bundle smoke
+  reaches `preflight_pass_rows=10/81` while preserving the schema acceptance,
+  review/generation acceptance, and actual-generation blockers.
+- `v61du` adds the return bundle acceptance delta ledger.
+  `experiments/test_v61du_return_bundle_acceptance_delta_ledger.sh` consumes
+  v61dt and converts each closure stage into target/observed/missing deltas:
+  4/15 stages closed, 11/15 open, 1/10 families closed, 9/10 open,
+  `missing_payload_rows=17483`, `missing_answer_review_rows=7000`,
+  `missing_adjudication_rows=1000`, `missing_generation_execution_rows=1000`,
+  `missing_generation_result_artifacts=5`, and
+  `missing_generation_result_rows=1000`, with actual generation still blocked.
+- `v61dv` adds the return bundle operator work order.
+  `experiments/test_v61dv_return_bundle_operator_work_order.sh` consumes
+  v61du/v61dq/v53ak and turns missing deltas into staged operator work:
+  9 work-order stages, 4 ready now, 81 artifact work rows, 76 immediately
+  preparable review/dispatch/aggregate artifacts, and 5 generation-result
+  artifacts blocked until generation execution is admitted. It keeps
+  `missing_payload_rows=17483` and `actual_model_generation_ready=0`.
+- `v61dw` adds the return bundle operator handoff bundle.
+  `experiments/test_v61dw_return_bundle_operator_handoff_bundle.sh` consumes
+  v61dv and emits a metadata-only bundle with work-order CSVs, checksum rows,
+  `VERIFY_HANDOFF_BUNDLE.sh`, and `READY_NOW_COMMANDS.sh`. It keeps
+  3/5 handoff stages ready, 2/5 blocked, all bundle files metadata-only,
+  81 artifact work rows, 76 immediately preparable artifacts, and
+  `actual_model_generation_ready=0`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
