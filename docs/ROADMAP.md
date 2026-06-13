@@ -3492,6 +3492,51 @@ Current next boundary:
   readiness at 0, and actual generation blocked; the fixture-selected preflight
   makes only the selected-preflight stage ready and still blocks intake without
   real prerequisite binding.
+- `v61el` adds the real prerequisite binding receiver preflight.
+  `experiments/test_v61el_real_prerequisite_binding_receiver_preflight.sh`
+  consumes v61eh, v61ek, v61bt, v61de, and the v61ck/v61cs/v61dd binding
+  summaries, validates optional `V61EL_PREREQUISITE_BINDING_DIR`, and separates
+  candidate preflight readiness from real prerequisite binding. Canonical
+  no-binding keeps `binding_candidate_preflight_ready=0`; the v61eg fixture
+  binding passes the 3-file/10-field candidate preflight but remains fixture
+  classified with `real_prerequisite_binding_ready=0`, so v61bt/v61de intake
+  and actual generation stay blocked.
+- `v61em` adds the generation-intake dual preflight rendezvous.
+  `experiments/test_v61em_generation_intake_dual_preflight_rendezvous.sh`
+  consumes selected v61ej generation-result and v61el prerequisite-binding
+  preflight runs, then separates dual candidate readiness from real v61bt/v61de
+  intake handoff. Canonical no-return/no-binding keeps the rendezvous blocked;
+  fixture generation preflight plus fixture binding preflight can open
+  `dual_candidate_preflight_rendezvous_ready=1`, but real intake stays blocked
+  because `selected_real_prerequisite_binding_ready=0`.
+- `v61en` adds the real generation intake work order.
+  `experiments/test_v61en_real_generation_intake_work_order.sh` consumes a
+  selected v61em rendezvous and converts the remaining real-intake blockers
+  into work rows, command rows, and blocker rows. Canonical no-return/no-binding
+  keeps 6 blocker rows open; the fixture dual-candidate rendezvous opens only
+  candidate work rows and still leaves 5 blockers open for non-fixture binding,
+  real review-return provenance, real prerequisite binding, real intake handoff,
+  and actual generation acceptance.
+- `v61eo` adds the real generation intake evidence inbox scaffold.
+  `experiments/test_v61eo_real_generation_intake_evidence_inbox_scaffold.sh`
+  consumes v61en and the v61eh required artifact/field contracts, then emits a
+  template-only inbox for five generation-result artifacts, three prerequisite
+  binding summaries, and one review-return provenance artifact. It records nine
+  ready templates, zero accepted-by-default rows, and keeps real intake, actual
+  generation, latency, near-frontier quality, and release claims blocked.
+- `v61ep` adds the real generation intake inbox archive.
+  `experiments/test_v61ep_real_generation_intake_inbox_archive.sh` consumes
+  v61eo and packages only the template inbox into a checksum-bound tar.gz. It
+  records nine archive members, all template-only, zero final evidence-named
+  members, zero payload-like members, and keeps real intake, actual generation,
+  latency, near-frontier quality, and release claims blocked.
+- `v61eq` adds the real generation intake dispatch seal.
+  `experiments/test_v61eq_real_generation_intake_dispatch_seal.sh` consumes
+  v61ep and v61en, wraps the template archive into a checksum-bound dispatch
+  bundle, records nine nested template members, zero final evidence-named
+  members, zero payload-like files, and keeps dispatch receipt acceptance, real
+  intake, actual generation, latency, near-frontier quality, and release claims
+  blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
