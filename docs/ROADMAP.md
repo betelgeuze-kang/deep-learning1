@@ -3671,6 +3671,56 @@ Current next boundary:
   zero-payload directory. It records 11 review-packet files, six return-template
   files, 23 metadata-only bundle files, zero payload-like files,
   `external_review_return_ready=0`, and `actual_model_generation_ready=0`.
+- `v61fk` adds the post-v61fj real manifest external review dispatch archive
+  and receipt gate.
+  `experiments/test_v61fk_post_fj_real_manifest_external_review_dispatch_archive_receipt_gate.sh`
+  packages the zero-payload send/return directory as a checksum-bound transfer
+  archive and defines optional `DISPATCH_RECEIPT.json` preflight. Canonical
+  no-receipt records 23 archive members, 11 review-packet members, six
+  return-template members, zero payload-like members, eight receipt fields,
+  `dispatch_receipt_candidate_preflight_ready=0`,
+  `real_dispatch_receipt_ready=0`, `external_review_return_ready=0`, and
+  `actual_model_generation_ready=0`; a fixture receipt opens only candidate
+  mechanics.
+- `v61fl` adds the post-v61fk real manifest external review return handoff
+  guard.
+  `experiments/test_v61fl_post_fk_real_manifest_external_review_return_handoff_guard.sh`
+  proves dispatch logistics and accepted review returns remain separate gates.
+  Canonical no-receipt/no-review-return records nine stages with two ready and
+  seven blocked, 10 open blockers, five commands with two ready,
+  `receipt_to_review_return_handoff_ready=0`,
+  `real_return_replay_admission_ready=0`, `row_acceptance_ready=0`, and
+  `actual_model_generation_ready=0`; a fixture dispatch receipt opens only the
+  candidate receipt stage.
+- `v61fm` adds the post-v61fl real manifest external review return work order.
+  `experiments/test_v61fm_post_fl_real_manifest_external_review_return_work_order.sh`
+  expands the six v61fh review-return artifacts into explicit reviewer work:
+  six immediately preparable work rows, 32 required field rows, zero accepted
+  work rows, six acceptance-blocked rows, and six metadata-only work-package
+  files. It keeps `external_review_return_ready=0`,
+  `receipt_to_review_return_handoff_ready=0`, and
+  `actual_model_generation_ready=0`; a fixture receipt changes only
+  dispatch-candidate status.
+- `v61fn` adds the post-v61fm real manifest external review acceptance replay
+  gate.
+  `experiments/test_v61fn_post_fm_real_manifest_external_review_acceptance_replay_gate.sh`
+  selects a return-intake run and replays the boundary through v61fi/v61fl/v61fe
+  readiness. Canonical no-return records 10 replay stages with two ready and
+  eight blocked, seven open blockers, one ready command,
+  `selected_return_artifacts_preflight_pass=0/6`,
+  `external_review_return_ready=0`, `real_return_replay_admission_ready=0`,
+  `row_acceptance_ready=0`, and `actual_model_generation_ready=0`; the v61fh
+  fixture opens only candidate return preflight.
+- `v61fo` adds the post-v61fn real manifest external review return replay
+  entrypoint.
+  `experiments/test_v61fo_post_fn_real_manifest_external_review_return_replay_entrypoint.sh`
+  emits a fail-closed one-command operator script over the v61fh->v61fi->v61fl
+  ->v61fn replay order. Canonical no-env records two required env rows, five
+  metadata-only entrypoint files, eight stages with two ready and six blocked,
+  four commands with two ready, `replay_entrypoint_admitted=0`,
+  `external_review_return_ready=0`, and `actual_model_generation_ready=0`; a
+  fixture return directory is rejected without `real-external-review-return`
+  provenance.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
