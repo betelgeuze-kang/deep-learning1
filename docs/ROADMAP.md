@@ -3932,12 +3932,13 @@ Current next boundary:
   manifest, env template, witness/env precheck, witness-directory-to-CSV
   builder, guarded precheck/build wrapper, materializer, receipt builder,
   verifier, v61gh assembly wrapper, fail-closed
-  minimal-slice-to-dual-replay wrapper, and content-witness contract for final
+  minimal-slice-to-dual-replay wrapper, witness-dir-to-dual-replay final
+  wrapper, and content-witness contract for final
   assembly authority. Canonical scaffold keeps 13 final-file templates, one
   minimal-slice template, and seven witness manifest rows non-evidence, the
-  env/precheck/builder/prepare-wrapper/materializer ready, receipt/preflight 0,
-  two ready local commands, eight blocked
-  precheck/build/prepare/materialize/receipt/preflight/assembly/replay commands,
+  env/precheck/builder/prepare-wrapper/final-wrapper/materializer ready,
+  receipt/preflight 0, two ready local commands, nine blocked
+  precheck/build/prepare/materialize/receipt/preflight/assembly/replay/final-wrapper commands,
   assembled roots 0/2, real review/generation rows zero,
   `authority_bound_replay_admission_ready=0`, `actual_model_generation_ready=0`,
   and zero checkpoint payload bytes.

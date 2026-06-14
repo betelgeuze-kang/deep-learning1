@@ -1208,6 +1208,24 @@ materializer.chmod(0o755)
 )
 (scaffold_dir / "RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh").chmod(0o755)
 
+(scaffold_dir / "RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh").write_text(
+    "\n".join([
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        "DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"",
+        ": \"${V61GI_CONTENT_WITNESS_DIR:?set V61GI_CONTENT_WITNESS_DIR to final witness files}\"",
+        ": \"${V61GI_MINIMAL_SLICE_ROWS_CSV:?set V61GI_MINIMAL_SLICE_ROWS_CSV to the generated one-row CSV path}\"",
+        ": \"${V61GI_OPERATOR_INPUT_ROOT:?set V61GI_OPERATOR_INPUT_ROOT to an empty external operator input root}\"",
+        ": \"${V61GI_OUTPUT_ROOT:?set V61GI_OUTPUT_ROOT to an external assembly output root}\"",
+        ": \"${V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY_STATEMENT:?set final assembly authority statement}\"",
+        "\"$DIR/RUN_PRECHECK_AND_BUILD_MINIMAL_SLICE_IF_READY.sh\" >/dev/null",
+        "\"$DIR/RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh\"",
+        "",
+    ]),
+    encoding="utf-8",
+)
+(scaffold_dir / "RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh").chmod(0o755)
+
 (scaffold_dir / "VERIFY_AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD.sh").write_text(
     "\n".join([
         "#!/usr/bin/env bash",
@@ -1228,6 +1246,7 @@ materializer.chmod(0o755)
         "test -x \"$DIR/VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py\"",
         "test -x \"$DIR/RUN_V61GH_ASSEMBLY_IF_OPERATOR_INPUT_READY.sh\"",
         "test -x \"$DIR/RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh\"",
+        "test -x \"$DIR/RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh\"",
         "if find \"$DIR/operator_input_templates\" -type f ! -name '*.template' | grep -q .; then",
         "  echo 'non-template file found in operator input templates' >&2",
         "  exit 1",
@@ -1261,6 +1280,7 @@ materializer.chmod(0o755)
         "echo 'After OPERATOR_INPUT_RECEIPT.json exists: V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py'",
         "echo 'Then: V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> V61GI_OUTPUT_ROOT=<external-output-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_V61GH_ASSEMBLY_IF_OPERATOR_INPUT_READY.sh'",
         "echo 'One-command final path: V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_OPERATOR_INPUT_ROOT=<empty-external-operator-root> V61GI_OUTPUT_ROOT=<external-output-root> V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY_STATEMENT=<final-statement> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh'",
+        "echo 'Witness-dir final path: V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_OPERATOR_INPUT_ROOT=<empty-external-operator-root> V61GI_OUTPUT_ROOT=<external-output-root> V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY_STATEMENT=<final-statement> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh'",
         "",
     ]),
     encoding="utf-8",
@@ -1287,6 +1307,7 @@ command_rows = [
     {"command_id": "08-preflight-final-operator-input", "ready_to_run_now": "0", "command": "V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py", "purpose": "requires final non-template operator files and receipt"},
     {"command_id": "09-run-v61gh-assembly", "ready_to_run_now": "0", "command": "V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> V61GI_OUTPUT_ROOT=<external-output-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_V61GH_ASSEMBLY_IF_OPERATOR_INPUT_READY.sh", "purpose": "assemble roots and rerun v61gg outside the repo"},
     {"command_id": "10-run-minimal-slice-to-dual-replay", "ready_to_run_now": "0", "command": "V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_OPERATOR_INPUT_ROOT=<empty-external-operator-root> V61GI_OUTPUT_ROOT=<external-output-root> V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY_STATEMENT=<final-statement> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh", "purpose": "materialize final witness-bound input, run v61gj assembly, and assert subset dual replay counters"},
+    {"command_id": "11-run-witness-dir-to-dual-replay", "ready_to_run_now": "0", "command": "V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_OPERATOR_INPUT_ROOT=<empty-external-operator-root> V61GI_OUTPUT_ROOT=<external-output-root> V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY_STATEMENT=<final-statement> V61GI_REVIEWER_ID=<id> V61GI_ADJUDICATOR_ID=<id> V61GI_GENERATION_ID=<id> V61GI_CITATION_ID=<id> V61GI_CHECKPOINT_ROOT=<root> V61GI_LATENCY_ROW_ID=<id> V61GI_PROMPT_TOKENS=<n> V61GI_OUTPUT_TOKENS=<n> V61GI_PREFILL_MS=<ms> V61GI_DECODE_MS=<ms> V61GI_TOTAL_MS=<ms> V61GI_TOKENS_PER_SECOND=<n> V61GI_V53_AUTHORITY_STATEMENT=<statement> V61GI_V61_AUTHORITY_STATEMENT=<statement> V61GI_EXTERNAL_RETURN_ATTESTATION=<attestation> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh", "purpose": "precheck witness files, build the minimal slice, materialize final input, run v61gj assembly, and assert subset dual replay counters"},
 ]
 write_csv(run_dir / "authority_bound_operator_input_scaffold_command_rows.csv", list(command_rows[0].keys()), command_rows)
 shutil.copy2(run_dir / "authority_bound_operator_input_scaffold_command_rows.csv", scaffold_dir / "AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD_COMMAND_ROWS.csv")
@@ -1319,6 +1340,7 @@ summary = {
     "operator_input_minimal_slice_precheck_ready": 1,
     "operator_input_minimal_slice_builder_ready": 1,
     "operator_input_minimal_slice_prepare_wrapper_ready": 1,
+    "operator_input_witness_dir_final_replay_wrapper_ready": 1,
     "operator_input_materializer_ready": 1,
     "operator_input_receipt_builder_ready": 1,
     "template_counts_as_evidence_rows": sum(row["counts_as_evidence"] == "1" for row in template_rows),
@@ -1361,6 +1383,7 @@ decision_rows = [
     {"gate": "operator-input-minimal-slice-precheck", "status": "pass", "evidence": "operator_input_minimal_slice_precheck_ready=1"},
     {"gate": "operator-input-minimal-slice-builder", "status": "pass", "evidence": "operator_input_minimal_slice_builder_ready=1"},
     {"gate": "operator-input-minimal-slice-prepare-wrapper", "status": "pass", "evidence": "operator_input_minimal_slice_prepare_wrapper_ready=1"},
+    {"gate": "operator-input-witness-dir-final-replay-wrapper", "status": "pass", "evidence": "operator_input_witness_dir_final_replay_wrapper_ready=1"},
     {"gate": "operator-input-materializer", "status": "pass", "evidence": "operator_input_materializer_ready=1"},
     {"gate": "operator-input-receipt-builder", "status": "pass", "evidence": "operator_input_receipt_builder_ready=1"},
     {"gate": "templates-count-as-evidence", "status": "pass", "evidence": "template_counts_as_evidence_rows=0"},
@@ -1401,6 +1424,7 @@ manifest = {
         "- operator_input_minimal_slice_precheck_ready=1",
         "- operator_input_minimal_slice_builder_ready=1",
         "- operator_input_minimal_slice_prepare_wrapper_ready=1",
+        "- operator_input_witness_dir_final_replay_wrapper_ready=1",
         "- operator_input_materializer_ready=1",
         "- operator_input_receipt_builder_ready=1",
         "- template_counts_as_evidence_rows=0",
@@ -1430,6 +1454,7 @@ boundary = "\n".join([
     "- operator_input_minimal_slice_precheck_ready=1",
     "- operator_input_minimal_slice_builder_ready=1",
     "- operator_input_minimal_slice_prepare_wrapper_ready=1",
+    "- operator_input_witness_dir_final_replay_wrapper_ready=1",
     "- operator_input_materializer_ready=1",
     "- operator_input_receipt_builder_ready=1",
     "- template_counts_as_evidence_rows=0",

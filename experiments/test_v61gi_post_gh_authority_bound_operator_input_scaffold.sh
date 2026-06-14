@@ -191,6 +191,12 @@ if "$SCAFFOLD_DIR/RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh" >/tmp/v61gi_mini
 fi
 grep -q "V61GI_MINIMAL_SLICE_ROWS_CSV" /tmp/v61gi_minimal_slice_replay_noenv.err
 
+if "$SCAFFOLD_DIR/RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh" >/tmp/v61gi_witness_dir_final_replay_noenv.out 2>/tmp/v61gi_witness_dir_final_replay_noenv.err; then
+  echo "v61gi unexpectedly accepted missing env for witness-dir final replay" >&2
+  exit 1
+fi
+grep -q "V61GI_CONTENT_WITNESS_DIR" /tmp/v61gi_witness_dir_final_replay_noenv.err
+
 if V61GI_OPERATOR_INPUT_ROOT="$SCAFFOLD_DIR/operator_input_templates" \
   "$SCAFFOLD_DIR/VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py" >/tmp/v61gi_template_preflight.out 2>/tmp/v61gi_template_preflight.err; then
   echo "v61gi unexpectedly accepted template input root" >&2
@@ -241,11 +247,12 @@ expected = {
     "operator_input_minimal_slice_precheck_ready": "1",
     "operator_input_minimal_slice_builder_ready": "1",
     "operator_input_minimal_slice_prepare_wrapper_ready": "1",
+    "operator_input_witness_dir_final_replay_wrapper_ready": "1",
     "operator_input_materializer_ready": "1",
     "operator_input_receipt_builder_ready": "1",
     "template_counts_as_evidence_rows": "0",
     "ready_command_rows": "2",
-    "blocked_command_rows": "8",
+    "blocked_command_rows": "9",
     "operator_input_root_supplied": "0",
     "operator_input_receipt_ready": "0",
     "operator_input_preflight_ready": "0",
@@ -305,6 +312,7 @@ required_files = [
     "authority_bound_operator_input_scaffold/VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py",
     "authority_bound_operator_input_scaffold/RUN_V61GH_ASSEMBLY_IF_OPERATOR_INPUT_READY.sh",
     "authority_bound_operator_input_scaffold/RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh",
+    "authority_bound_operator_input_scaffold/RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh",
     "authority_bound_operator_input_scaffold/VERIFY_AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD.sh",
     "authority_bound_operator_input_scaffold/READY_NOW_COMMANDS.sh",
     "source_v61gh/v61gh_post_gg_authority_bound_partial_root_workbench_summary.csv",
@@ -324,6 +332,7 @@ for rel in [
     "VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py",
     "RUN_V61GH_ASSEMBLY_IF_OPERATOR_INPUT_READY.sh",
     "RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh",
+    "RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh",
     "VERIFY_AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD.sh",
     "READY_NOW_COMMANDS.sh",
 ]:
@@ -384,7 +393,7 @@ for snippet in ["V61GI_CONTENT_WITNESS_DIR", "V61GI_MINIMAL_SLICE_PRECHECK_CSV",
     if snippet not in env_template:
         raise SystemExit(f"v61gi env template missing snippet: {snippet}")
 
-for gate in ["source-v61gh-ready", "operator-input-scaffold", "operator-input-minimal-slice-template", "operator-input-content-witness-manifest", "operator-input-minimal-slice-env-template", "operator-input-minimal-slice-precheck", "operator-input-minimal-slice-builder", "operator-input-minimal-slice-prepare-wrapper", "operator-input-materializer", "operator-input-receipt-builder", "templates-count-as-evidence", "zero-repo-checkpoint-payload"]:
+for gate in ["source-v61gh-ready", "operator-input-scaffold", "operator-input-minimal-slice-template", "operator-input-content-witness-manifest", "operator-input-minimal-slice-env-template", "operator-input-minimal-slice-precheck", "operator-input-minimal-slice-builder", "operator-input-minimal-slice-prepare-wrapper", "operator-input-witness-dir-final-replay-wrapper", "operator-input-materializer", "operator-input-receipt-builder", "templates-count-as-evidence", "zero-repo-checkpoint-payload"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61gi expected pass decision: {gate}")
 for gate in [
@@ -415,6 +424,7 @@ for snippet in [
     "operator_input_minimal_slice_precheck_ready=1",
     "operator_input_minimal_slice_builder_ready=1",
     "operator_input_minimal_slice_prepare_wrapper_ready=1",
+    "operator_input_witness_dir_final_replay_wrapper_ready=1",
     "operator_input_materializer_ready=1",
     "operator_input_receipt_builder_ready=1",
     "template_counts_as_evidence_rows=0",
