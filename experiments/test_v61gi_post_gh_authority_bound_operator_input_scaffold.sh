@@ -9,12 +9,20 @@ SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 SCAFFOLD_DIR="$RUN_DIR/authority_bound_operator_input_scaffold"
 MINIMAL_BUILDER_WITNESS_DIR="${TMPDIR:-/tmp}/v61gi minimal builder witnesses"
+MINIMAL_PRECHECK_CSV="${TMPDIR:-/tmp}/v61gi_minimal_precheck_rows.csv"
 MINIMAL_BUILDER_CSV="${TMPDIR:-/tmp}/v61gi_minimal_builder_rows.csv"
 
 V61GI_REUSE_EXISTING="${V61GI_REUSE_EXISTING:-0}" "$ROOT_DIR/experiments/run_v61gi_post_gh_authority_bound_operator_input_scaffold.sh" >/dev/null
 
 "$SCAFFOLD_DIR/VERIFY_AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD.sh" >/dev/null
 "$SCAFFOLD_DIR/READY_NOW_COMMANDS.sh" >/dev/null
+
+if env -u V61GI_CONTENT_WITNESS_DIR -u V61GI_MINIMAL_SLICE_ROWS_CSV \
+  "$SCAFFOLD_DIR/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py" >/tmp/v61gi_minimal_precheck_noenv.out 2>/tmp/v61gi_minimal_precheck_noenv.err; then
+  echo "v61gi unexpectedly accepted missing env for minimal slice precheck" >&2
+  exit 1
+fi
+grep -q "missing-env:V61GI_CONTENT_WITNESS_DIR" /tmp/v61gi_minimal_precheck_noenv.out
 
 if env -u V61GI_CONTENT_WITNESS_DIR -u V61GI_MINIMAL_SLICE_ROWS_CSV \
   "$SCAFFOLD_DIR/BUILD_MINIMAL_SLICE_ROWS_FROM_WITNESS_DIR.py" >/tmp/v61gi_minimal_builder_noenv.out 2>/tmp/v61gi_minimal_builder_noenv.err; then
@@ -24,6 +32,7 @@ fi
 grep -q "V61GI_CONTENT_WITNESS_DIR" /tmp/v61gi_minimal_builder_noenv.err
 
 rm -rf "$MINIMAL_BUILDER_WITNESS_DIR"
+rm -f "$MINIMAL_PRECHECK_CSV"
 rm -f "$MINIMAL_BUILDER_CSV"
 python3 - "$MINIMAL_BUILDER_WITNESS_DIR" <<'PY'
 import sys
@@ -42,6 +51,42 @@ payloads = {
 }
 for name, text in payloads.items():
     (root / name).write_text(text + "\n", encoding="utf-8")
+PY
+
+V61GI_CONTENT_WITNESS_DIR="$MINIMAL_BUILDER_WITNESS_DIR" \
+V61GI_MINIMAL_SLICE_PRECHECK_CSV="$MINIMAL_PRECHECK_CSV" \
+V61GI_MINIMAL_SLICE_ROWS_CSV="$MINIMAL_BUILDER_CSV" \
+V61GI_REVIEWER_ID="reviewer-builder-alpha" \
+V61GI_ADJUDICATOR_ID="adjudicator-builder-alpha" \
+V61GI_GENERATION_ID="generation-builder-alpha" \
+V61GI_CITATION_ID="citation-builder-alpha" \
+V61GI_CHECKPOINT_ROOT="/external/checkpoint/builder-alpha" \
+V61GI_LATENCY_ROW_ID="latency-builder-alpha" \
+V61GI_PROMPT_TOKENS="128" \
+V61GI_OUTPUT_TOKENS="32" \
+V61GI_PREFILL_MS="11.5" \
+V61GI_DECODE_MS="23.0" \
+V61GI_TOTAL_MS="34.5" \
+V61GI_TOKENS_PER_SECOND="92.75" \
+V61GI_V53_AUTHORITY_STATEMENT="External reviewer authority statement finalized for builder smoke with independent accountability." \
+V61GI_V61_AUTHORITY_STATEMENT="External generation operator authority statement finalized for builder smoke with independent accountability." \
+V61GI_EXTERNAL_RETURN_ATTESTATION="External return attestation finalized for builder smoke with immutable witness hash binding." \
+"$SCAFFOLD_DIR/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py" >/tmp/v61gi_minimal_precheck_positive.out
+
+python3 - "$MINIMAL_PRECHECK_CSV" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+rows = list(csv.DictReader(Path(sys.argv[1]).open(newline="", encoding="utf-8")))
+if not rows:
+    raise SystemExit("v61gi precheck report missing rows")
+if any(row["status"] != "pass" for row in rows):
+    raise SystemExit("v61gi precheck report must pass for complete witness fixture")
+witness_rows = [row for row in rows if row["check_id"].startswith("witness:")]
+if len(witness_rows) != 7:
+    raise SystemExit("v61gi precheck must report seven witness rows")
+print("v61gi minimal slice precheck smoke passed")
 PY
 
 V61GI_CONTENT_WITNESS_DIR="$MINIMAL_BUILDER_WITNESS_DIR" \
@@ -146,12 +191,13 @@ expected = {
     "operator_input_minimal_slice_template_rows": "1",
     "operator_input_content_witness_manifest_rows": "7",
     "operator_input_minimal_slice_env_template_ready": "1",
+    "operator_input_minimal_slice_precheck_ready": "1",
     "operator_input_minimal_slice_builder_ready": "1",
     "operator_input_materializer_ready": "1",
     "operator_input_receipt_builder_ready": "1",
     "template_counts_as_evidence_rows": "0",
     "ready_command_rows": "2",
-    "blocked_command_rows": "6",
+    "blocked_command_rows": "7",
     "operator_input_root_supplied": "0",
     "operator_input_receipt_ready": "0",
     "operator_input_preflight_ready": "0",
@@ -203,6 +249,7 @@ required_files = [
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD_COMMAND_ROWS.csv",
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD_MANIFEST.json",
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD.md",
+    "authority_bound_operator_input_scaffold/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py",
     "authority_bound_operator_input_scaffold/BUILD_MINIMAL_SLICE_ROWS_FROM_WITNESS_DIR.py",
     "authority_bound_operator_input_scaffold/MATERIALIZE_OPERATOR_INPUT_FROM_MINIMAL_SLICE.py",
     "authority_bound_operator_input_scaffold/BUILD_OPERATOR_INPUT_RECEIPT_IF_FINAL.py",
@@ -221,6 +268,7 @@ for rel in required_files:
 
 for rel in [
     "MATERIALIZE_OPERATOR_INPUT_FROM_MINIMAL_SLICE.py",
+    "CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py",
     "BUILD_MINIMAL_SLICE_ROWS_FROM_WITNESS_DIR.py",
     "BUILD_OPERATOR_INPUT_RECEIPT_IF_FINAL.py",
     "VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py",
@@ -282,11 +330,11 @@ if any(row["operator_supplies_directly"] != "0" for row in marker_rows):
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 env_template = (scaffold_dir / "MINIMAL_SLICE_ENV_TEMPLATE.sh").read_text(encoding="utf-8")
-for snippet in ["V61GI_CONTENT_WITNESS_DIR", "V61GI_MINIMAL_SLICE_ROWS_CSV", "V61GI_OPERATOR_INPUT_ROOT", "V61GI_OUTPUT_ROOT"]:
+for snippet in ["V61GI_CONTENT_WITNESS_DIR", "V61GI_MINIMAL_SLICE_PRECHECK_CSV", "V61GI_MINIMAL_SLICE_ROWS_CSV", "V61GI_OPERATOR_INPUT_ROOT", "V61GI_OUTPUT_ROOT"]:
     if snippet not in env_template:
         raise SystemExit(f"v61gi env template missing snippet: {snippet}")
 
-for gate in ["source-v61gh-ready", "operator-input-scaffold", "operator-input-minimal-slice-template", "operator-input-content-witness-manifest", "operator-input-minimal-slice-env-template", "operator-input-minimal-slice-builder", "operator-input-materializer", "operator-input-receipt-builder", "templates-count-as-evidence", "zero-repo-checkpoint-payload"]:
+for gate in ["source-v61gh-ready", "operator-input-scaffold", "operator-input-minimal-slice-template", "operator-input-content-witness-manifest", "operator-input-minimal-slice-env-template", "operator-input-minimal-slice-precheck", "operator-input-minimal-slice-builder", "operator-input-materializer", "operator-input-receipt-builder", "templates-count-as-evidence", "zero-repo-checkpoint-payload"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61gi expected pass decision: {gate}")
 for gate in [
@@ -314,6 +362,7 @@ for snippet in [
     "operator_input_minimal_slice_template_rows=1",
     "operator_input_content_witness_manifest_rows=7",
     "operator_input_minimal_slice_env_template_ready=1",
+    "operator_input_minimal_slice_precheck_ready=1",
     "operator_input_minimal_slice_builder_ready=1",
     "operator_input_materializer_ready=1",
     "operator_input_receipt_builder_ready=1",
