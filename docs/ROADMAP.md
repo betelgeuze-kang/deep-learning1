@@ -4092,9 +4092,9 @@ Current next boundary:
   the final runner can be used. Canonical no-root and initialized-workspace
   smokes keep all real counters zero. The current ubuntu-1 audit has
   `workspace_layout_ready=1`, `ready_path_env_rows=4/4`, and
-  `open_gap_rows=23` split as seven final witness files plus 16 final env
-  values; replay, row acceptance, generation acceptance closure, and actual
-  generation remain blocked.
+  `open_gap_rows=22` split as six remaining human/generation witness files plus
+  16 final env values after source witness promotion; replay, row acceptance,
+  generation acceptance closure, and actual generation remain blocked.
 - `v61gw` adds the post-v61gv first-real-slice live checklist publisher.
   `experiments/test_v61gw_post_gv_first_real_slice_live_checklist_publisher.sh`
   writes the current gap audit into a repo-external workspace only when
@@ -4116,8 +4116,8 @@ Current next boundary:
   publishes a fail-closed `RUN_GAP_READY_FIRST_REAL_SLICE.sh` plus audit-only
   helper, README, and manifest into the repo-external workspace. The guarded
   runner reruns v61gv and exits before env sourcing or final replay unless
-  `workspace_gap_preflight_ready=1`; the current ubuntu-1 run stops at the same
-  23 open witness/env items with all real counters zero.
+  `workspace_gap_preflight_ready=1`; the current ubuntu-1 run stops at 22 open
+  witness/env items with all real counters zero after source witness promotion.
 - `v61gz` adds the post-v61gy first-real-slice source witness candidate.
   `experiments/test_v61gz_post_gy_first_real_slice_source_witness_candidate.sh`
   verifies the selected v53h source snapshot hash and publishes
@@ -4130,7 +4130,8 @@ Current next boundary:
   `experiments/test_v61ha_post_gz_first_real_slice_source_witness_promotion_audit.sh`
   optionally runs the explicit source witness promotion helper in a
   repo-external workspace, reruns v61gv, and proves one mechanical source
-  witness can become ready, reducing open items to 22. This still leaves human
+  witness can become ready, reducing open items to 22. The live ubuntu-1
+  workspace now has that source witness ready; this still leaves human
   review/adjudication witnesses, generation witnesses, env values, replay, row
   acceptance, and actual generation blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
