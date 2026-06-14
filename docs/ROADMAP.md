@@ -4092,14 +4092,15 @@ Current next boundary:
   the final runner can be used. Canonical no-root and initialized-workspace
   smokes keep all real counters zero. The current ubuntu-1 audit has
   `workspace_layout_ready=1`, `ready_path_env_rows=4/4`, and
-  `open_gap_rows=22` split as six remaining human/generation witness files plus
-  16 final env values after source witness promotion; replay, row acceptance,
+  `open_gap_rows=21` split as six remaining human/generation witness files plus
+  15 final env values after source witness promotion and checkpoint-root env
+  validation; replay, row acceptance,
   generation acceptance closure, and actual generation remain blocked.
 - `v61gw` adds the post-v61gv first-real-slice live checklist publisher.
   `experiments/test_v61gw_post_gv_first_real_slice_live_checklist_publisher.sh`
   writes the current gap audit into a repo-external workspace only when
   publishing is explicit. The ubuntu-1 workspace now has `live_gap_checklist/`
-  with the 23 missing witness/env items, copied audit CSVs, and a rerun script.
+  with the 21 missing witness/env items, copied audit CSVs, and a rerun script.
   This is metadata-only: real return execution, row acceptance, generation
   acceptance closure, and actual generation remain blocked.
 - `v61gx` adds the post-v61gw first-real-slice context bundle publisher.
@@ -4116,8 +4117,9 @@ Current next boundary:
   publishes a fail-closed `RUN_GAP_READY_FIRST_REAL_SLICE.sh` plus audit-only
   helper, README, and manifest into the repo-external workspace. The guarded
   runner reruns v61gv and exits before env sourcing or final replay unless
-  `workspace_gap_preflight_ready=1`; the current ubuntu-1 run stops at 22 open
-  witness/env items with all real counters zero after source witness promotion.
+  `workspace_gap_preflight_ready=1`; the current ubuntu-1 run stops at 21 open
+  witness/env items with all real counters zero after source witness promotion
+  and checkpoint-root env validation.
 - `v61gz` adds the post-v61gy first-real-slice source witness candidate.
   `experiments/test_v61gz_post_gy_first_real_slice_source_witness_candidate.sh`
   verifies the selected v53h source snapshot hash and publishes
@@ -4130,10 +4132,58 @@ Current next boundary:
   `experiments/test_v61ha_post_gz_first_real_slice_source_witness_promotion_audit.sh`
   optionally runs the explicit source witness promotion helper in a
   repo-external workspace, reruns v61gv, and proves one mechanical source
-  witness can become ready, reducing open items to 22. The live ubuntu-1
+  witness can become ready, reducing open items before any review/generation
+  evidence is accepted. The live ubuntu-1
   workspace now has that source witness ready; this still leaves human
   review/adjudication witnesses, generation witnesses, env values, replay, row
   acceptance, and actual generation blocked.
+- `v61hb` adds the post-v61ha first-real-slice checkpoint-root env audit.
+  `experiments/test_v61hb_post_ha_first_real_slice_checkpoint_root_env_audit.sh`
+  validates a repo-external 59-shard checkpoint root and only replaces the
+  `V61GI_CHECKPOINT_ROOT` placeholder when explicitly requested. The live
+  ubuntu-1 workspace now points at the 281241493344-byte 59/59 safetensors
+  root, `ready_value_env_rows=1/16`, and `open_gap_rows=21`; all real
+  review/adjudication, generation-result, replay, row-acceptance, actual
+  generation, production-latency, near-frontier, v1.0 comparison, and release
+  counters remain zero or blocked.
+- `v61hc` adds the post-v61hb first-real-slice precheck-runner publisher.
+  `experiments/test_v61hc_post_hb_first_real_slice_precheck_runner_publisher.sh`
+  publishes a repo-external `RUN_PRECHECK_FIRST_REAL_SLICE_INPUTS_ONLY.sh`
+  that sources the env template and runs only the v61gi minimal-slice input
+  precheck. It writes `precheck_runner/FIRST_REAL_SLICE_INPUT_PRECHECK_ROWS.csv`
+  and never builds roots or executes replay. The live ubuntu-1 report passes
+  checkpoint root and source witness, blocks the remaining reviewer/adjudicator,
+  generation, citation, latency, authority, attestation, and six witness-file
+  items, and keeps every real review/generation/replay counter zero.
+- `v61hd` adds the post-v61hc first-real-slice external return form publisher.
+  `experiments/test_v61hd_post_hc_first_real_slice_external_return_form_publisher.sh`
+  publishes `external_return_form/FIRST_REAL_SLICE_EXTERNAL_RETURN_FORM.json.template`
+  plus a validator into a repo-external workspace. The form locks the selected
+  query/source/answer context and gathers final v53 review/adjudication plus
+  v61 generation/latency/authority values in one JSON file. The live ubuntu-1
+  template validation fails closed with 24 blocked checks, proving the template
+  itself is not evidence; all real return, replay, acceptance, generation,
+  latency, near-frontier, comparison, and release counters remain zero or
+  blocked.
+- `v61he` adds the post-v61hd first-real-slice form materializer publisher.
+  `experiments/test_v61he_post_hd_first_real_slice_form_materializer_publisher.sh`
+  publishes a filled-form materializer beside the external return form. The
+  materializer reruns the form validator and only then writes final witness
+  files plus final env values; it does not build roots, execute replay, or
+  accept evidence by itself. A synthetic filled-form smoke proves the mechanics
+  can make `workspace_gap_preflight_ready=1` while all real counters remain 0.
+  The live ubuntu-1 workspace still contains only the template, so it remains
+  `open_gap_rows=21` until a real filled external return form is supplied.
+- `v61hf` adds the post-v61he first-real-slice filled-form handoff publisher.
+  `experiments/test_v61hf_post_he_first_real_slice_filled_form_handoff_publisher.sh`
+  publishes `RUN_FILLED_FORM_TO_GUARDED_FIRST_REAL_SLICE.sh` at the external
+  workspace root. The handoff requires a filled external return form, runs the
+  materializer, precheck-only runner, and v61gv gap audit, and exits before
+  guarded replay unless the workspace is gap-ready and
+  `V61HF_EXECUTE_GUARDED_REPLAY=1` is explicitly set. The smoke proves only the
+  guarded handoff mechanics with synthetic input; real review/generation/replay
+  counters remain 0, and the live ubuntu-1 workspace stays `open_gap_rows=21`
+  until a real filled form is supplied.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
