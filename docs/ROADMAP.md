@@ -3847,6 +3847,26 @@ Current next boundary:
   with seven ready and 11 blocked, 91 missing external return artifacts,
   missing review rows 7000, missing adjudication rows 1000,
   `actual_model_generation_ready=0`, and zero checkpoint payload bytes.
+- `v61ga` adds the post-v61fz generation unblock runway.
+  `experiments/test_v61ga_post_fz_generation_unblock_runway.sh` binds v61fz,
+  v53ao, and v61fu into a metadata-only actual-generation runway. Canonical
+  no-return records v52/v53/full-shard runtime evidence ready, v53ao ready
+  actions 2/2 successful with four real-return actions blocked, 18 runway
+  requirements with five ready and 13 blocked, six minimum return batches all
+  blocked, five replay commands with two ready and three blocked, 14 open delta
+  focus rows, 91 missing external return artifacts, review rows 0/7000,
+  adjudication rows 0/1000, generation-result artifacts 0/5,
+  generation-result rows 0/1000, `actual_model_generation_ready=0`, and zero
+  checkpoint payload bytes.
+- `v61gb` adds the post-v61ga generation unblock runway receipt.
+  `experiments/test_v61gb_post_ga_generation_unblock_runway_receipt.sh`
+  executes only the two local-ready runway verification commands, records four
+  stdout/stderr receipt streams, and keeps the three real-root/replay/refresh
+  commands unexecuted. Canonical receipt records two ready commands executed
+  and successful, three blocked commands with zero execution attempts, five
+  stages with three ready and two blocked, 18 runway requirements with five
+  ready and 13 blocked, six blocked minimum batches,
+  `actual_model_generation_ready=0`, and zero checkpoint payload bytes.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
