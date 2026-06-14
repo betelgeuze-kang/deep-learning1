@@ -3984,6 +3984,45 @@ Current next boundary:
   shell-quoted operator-input command row to ready only after assembly admission,
   and copies the operator-replay source evidence into its own package when final
   operator input is supplied.
+- `v61gk` adds the post-v61gj first-real-slice closure packet.
+  `experiments/test_v61gk_post_gj_first_real_slice_closure_packet.sh`
+  consumes v61gi, v61gf, and v61gj, then bundles the selected context, review
+  worksheet, minimal-slice templates, content-witness rows, required artifact
+  rows, target counters, and guarded final commands into one zero-payload
+  operator handoff. Canonical no-evidence keeps `contains_real_external_evidence=0`,
+  `first_real_slice_closure_ready=0`, real review/adjudication/generation rows
+  zero, replay admission zero, production/near-frontier/v1.0/release claims zero,
+  and zero checkpoint payload bytes while exposing the exact 13 required artifact
+  rows, seven witness rows, and 15 target counters needed to open the first
+  subset replay. Its checker deliberately fails until real external rows open
+  the v53/v61 subset gates.
+- `v61gl` adds the post-v61gk first-real-slice witness preflight.
+  `experiments/test_v61gl_post_gk_first_real_slice_witness_preflight.sh`
+  accepts optional `V61GL_CONTENT_WITNESS_DIR`, validates the seven witness
+  files for repo-external location, presence, non-empty content, and
+  placeholder/template/fixture rejection, and keeps real review/adjudication,
+  generation, replay, actual-generation, production, near-frontier, comparison,
+  and release counters blocked. Canonical no-witness keeps ready witness rows
+  0/7 and `content_witness_preflight_ready=0`; the supplied repo-external
+  witness smoke opens only witness preflight, and the nonfinal witness smoke
+  keeps it blocked.
+- `v61gm` adds the post-v61gl first-real-slice env/path preflight.
+  `experiments/test_v61gm_post_gl_first_real_slice_env_preflight.sh`
+  validates repo-external final paths, reviewer/adjudicator/generation/citation
+  IDs, checkpoint root, latency metrics, authority statements, and return
+  attestation, then runs the existing v61gi minimal-slice precheck only when
+  witness/path/env readiness is satisfied. Canonical no-env keeps path rows 0/4
+  ready, value env rows 0/16 ready, `env_path_preflight_ready=0`, and v61gi
+  precheck not-run; the final-looking env smoke opens only env/precheck readiness,
+  and the nonfinal env smoke keeps it blocked without counting real evidence.
+- `v61gn` adds the post-v61gm first-real-slice minimal CSV builder.
+  `experiments/test_v61gn_post_gm_first_real_slice_minimal_csv_builder.sh`
+  runs the existing v61gi witness-dir builder only after env/path and v61gi
+  precheck readiness are satisfied and `V61GN_EXECUTE_BUILD=1` is supplied.
+  Canonical no-build keeps `build_admitted=0`, `minimal_slice_csv_ready=0`,
+  real counters zero, and `actual_model_generation_ready=0`; the env-ready build
+  smoke writes and validates only the one-row minimal-slice CSV, while final root
+  materialization and dual replay remain downstream.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
