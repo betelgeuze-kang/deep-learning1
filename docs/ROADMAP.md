@@ -4086,6 +4086,15 @@ Current next boundary:
   smokes keep all real counters zero; the initialized path opens only workspace
   layout readiness while final witness files, replay, row acceptance, and actual
   generation remain blocked.
+- `v61gv` adds the post-v61gu first-real-slice workspace gap audit.
+  `experiments/test_v61gv_post_gu_first_real_slice_workspace_gap_audit.sh`
+  reads a repo-external work root and emits exact missing witness/env rows before
+  the final runner can be used. Canonical no-root and initialized-workspace
+  smokes keep all real counters zero. The current ubuntu-1 audit has
+  `workspace_layout_ready=1`, `ready_path_env_rows=4/4`, and
+  `open_gap_rows=23` split as seven final witness files plus 16 final env
+  values; replay, row acceptance, generation acceptance closure, and actual
+  generation remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
