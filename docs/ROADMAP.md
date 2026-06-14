@@ -4102,6 +4102,15 @@ Current next boundary:
   with the 23 missing witness/env items, copied audit CSVs, and a rerun script.
   This is metadata-only: real return execution, row acceptance, generation
   acceptance closure, and actual generation remain blocked.
+- `v61gx` adds the post-v61gw first-real-slice context bundle publisher.
+  `experiments/test_v61gx_post_gw_first_real_slice_context_bundle_publisher.sh`
+  publishes the selected minimal-slice context, review worksheet, witness
+  manifest, witness-to-context map, README, and rerun script into
+  `operator_context/` in a repo-external workspace only when publishing is
+  explicit. The ubuntu-1 workspace now has nine metadata-only operator context
+  files beside the live checklist; final witness files, workspace preflight,
+  replay, row acceptance, generation acceptance closure, and actual generation
+  remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
