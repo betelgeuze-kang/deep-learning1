@@ -121,6 +121,26 @@ AUTHORITY_STATEMENT_RELS = {
     "v53/operator_attestation/reviewer_authority_statement.txt",
     "v61/review_return_provenance/operator_attestation/generation_operator_authority_statement.txt",
 }
+RECEIPT_REL = "OPERATOR_INPUT_RECEIPT.json"
+RECEIPT_PROTOCOL_VERSION = "v61gj-operator-input-receipt-v1"
+RECEIPT_ALLOWED_SOURCE_CLASSES = {
+    "real-authority-bound-partial-return",
+    "real-external-review-and-generation-return",
+}
+RECEIPT_REQUIRED_KEYS = [
+    "receipt_protocol_version",
+    "source_class",
+    "finalized",
+    "created_at_utc",
+    "operator_input_root_id",
+    "declared_artifact_count",
+    "selected_slice_ids",
+    "artifact_hashes",
+    "external_return_attestation",
+    "assembly_authority",
+    "assembly_authority_statement",
+]
+RECEIPT_NONFINAL_TOKENS = ["replace_with", "template", "fixture", "synthetic", "dry run", "sample", "example"]
 
 
 def sha256(path):
@@ -244,6 +264,130 @@ def validate_authority_statement(rel, text):
     if any(token in lowered for token in nonfinal_tokens):
         errors.append("authority-statement-nonfinal-text")
     return int(not errors), ";".join(errors)
+
+
+def validate_operator_receipt(operator_root, required_rows, selected_rows):
+    path = operator_root / RECEIPT_REL if operator_root is not None else None
+    result = {
+        "receipt_relative_path": RECEIPT_REL,
+        "exists": "0",
+        "schema_valid": "0",
+        "hash_binding_ready": "0",
+        "selected_slice_binding_ready": "0",
+        "finality_ready": "0",
+        "ready": "0",
+        "assembly_authority_ready": "0",
+        "bytes": "0",
+        "sha256": "",
+        "errors": "missing",
+    }
+    if path is None or not path.is_file():
+        return result
+
+    errors = []
+    result["exists"] = "1"
+    result["bytes"] = str(path.stat().st_size)
+    result["sha256"] = sha256(path)
+    text = path.read_text(encoding="utf-8", errors="replace")
+    lowered = text.lower()
+    if any(token in lowered for token in RECEIPT_NONFINAL_TOKENS):
+        errors.append("receipt-nonfinal-text")
+
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        result["errors"] = f"json-unreadable:{exc}"
+        return result
+    if not isinstance(payload, dict):
+        result["errors"] = "json-not-object"
+        return result
+
+    schema_errors = []
+    missing = sorted(set(RECEIPT_REQUIRED_KEYS) - set(payload))
+    if missing:
+        schema_errors.append("missing-json-keys:" + ";".join(missing))
+    if payload.get("receipt_protocol_version") != RECEIPT_PROTOCOL_VERSION:
+        schema_errors.append("protocol-version-mismatch")
+    if payload.get("source_class") not in RECEIPT_ALLOWED_SOURCE_CLASSES:
+        schema_errors.append("source-class-not-accepted")
+    if payload.get("finalized") is not True:
+        schema_errors.append("not-finalized")
+    if count_value(payload.get("declared_artifact_count")) != len(required_rows):
+        schema_errors.append("declared-artifact-count-mismatch")
+    attestation = str(payload.get("external_return_attestation", ""))
+    if len(attestation.strip()) < 40:
+        schema_errors.append("external-return-attestation-too-short")
+    assembly_authority = str(payload.get("assembly_authority", ""))
+    assembly_authority_statement = str(payload.get("assembly_authority_statement", ""))
+    assembly_authority_ready = 1
+    if assembly_authority != "operator-final-real-return":
+        assembly_authority_ready = 0
+    if assembly_authority == "operator-final-real-return" and len(assembly_authority_statement.strip()) < 40:
+        assembly_authority_ready = 0
+        schema_errors.append("assembly-authority-statement-too-short")
+
+    selected_slice_ids = payload.get("selected_slice_ids", {})
+    selected_ids = {row["slice_id"] for row in selected_rows}
+    selected_slice_ready = 1
+    if not isinstance(selected_slice_ids, dict):
+        selected_slice_ready = 0
+        schema_errors.append("selected-slice-ids-not-object")
+    else:
+        if selected_slice_ids.get("v53") != "v53-partial-review-slice":
+            selected_slice_ready = 0
+            schema_errors.append("selected-v53-slice-mismatch")
+        if selected_slice_ids.get("v61") != "v61-partial-generation-slice":
+            selected_slice_ready = 0
+            schema_errors.append("selected-v61-slice-mismatch")
+        if selected_slice_ids.get("v53") not in selected_ids or selected_slice_ids.get("v61") not in selected_ids:
+            selected_slice_ready = 0
+            schema_errors.append("selected-slice-id-not-in-workbench")
+
+    artifact_hashes = payload.get("artifact_hashes", {})
+    hash_binding_ready = 1
+    if not isinstance(artifact_hashes, dict):
+        hash_binding_ready = 0
+        schema_errors.append("artifact-hashes-not-object")
+    else:
+        required_rels = [row["final_relative_path"] for row in required_rows]
+        missing_hashes = sorted(set(required_rels) - set(artifact_hashes))
+        unexpected_hashes = sorted(set(artifact_hashes) - set(required_rels))
+        if missing_hashes:
+            hash_binding_ready = 0
+            schema_errors.append("missing-artifact-hashes:" + ";".join(missing_hashes))
+        if unexpected_hashes:
+            hash_binding_ready = 0
+            schema_errors.append("unexpected-artifact-hashes:" + ";".join(unexpected_hashes))
+        for rel in required_rels:
+            supplied_hash = artifact_hashes.get(rel, "")
+            if supplied_hash and not SHA_RE.match(supplied_hash):
+                hash_binding_ready = 0
+                schema_errors.append(f"invalid-artifact-hash:{rel}")
+                continue
+            file_path = operator_root / rel
+            if not file_path.is_file():
+                hash_binding_ready = 0
+                schema_errors.append(f"artifact-file-missing:{rel}")
+                continue
+            if supplied_hash != sha256(file_path):
+                hash_binding_ready = 0
+                schema_errors.append(f"artifact-hash-mismatch:{rel}")
+
+    if schema_errors:
+        errors.extend(schema_errors)
+    result["schema_valid"] = str(int(not schema_errors))
+    result["hash_binding_ready"] = str(hash_binding_ready)
+    result["selected_slice_binding_ready"] = str(selected_slice_ready)
+    result["finality_ready"] = str(int(not any(token in lowered for token in RECEIPT_NONFINAL_TOKENS)))
+    result["assembly_authority_ready"] = str(assembly_authority_ready)
+    result["ready"] = str(int(
+        result["schema_valid"] == "1"
+        and result["hash_binding_ready"] == "1"
+        and result["selected_slice_binding_ready"] == "1"
+        and result["finality_ready"] == "1"
+    ))
+    result["errors"] = ";".join(errors)
+    return result
 
 
 def read_operator_csv(operator_root, rel):
@@ -500,6 +644,7 @@ marker_rows = read_csv(source_paths["v61gi_generated_marker_rows"])
 selected_slice_rows = read_csv(source_paths["v61gh_selected_rows"])
 operator_root_supplied = int(operator_input_root is not None)
 operator_root_exists = int(operator_input_root is not None and operator_input_root.is_dir())
+operator_input_root_outside_repo = int(operator_input_root is not None and not is_inside(operator_input_root, root))
 output_root_supplied = int(output_root is not None)
 output_root_outside_repo = int(output_root is not None and not is_inside(output_root, root))
 
@@ -582,6 +727,22 @@ for row in preflight_rows:
     row["ready"] = str(int(row["ready"] == "1" and consistency_ready and selected_slice_ready and row["authority_statement_ready"] == "1"))
 write_csv(run_dir / "operator_input_receiver_preflight_rows.csv", list(preflight_rows[0].keys()), preflight_rows)
 
+receipt_rows = [validate_operator_receipt(operator_input_root, required_rows, selected_slice_rows) if operator_root_exists else {
+    "receipt_relative_path": RECEIPT_REL,
+    "exists": "0",
+    "schema_valid": "0",
+    "hash_binding_ready": "0",
+    "selected_slice_binding_ready": "0",
+    "finality_ready": "0",
+    "assembly_authority_ready": "0",
+    "ready": "0",
+    "bytes": "0",
+    "sha256": "",
+    "errors": "missing",
+}]
+write_csv(run_dir / "operator_input_receiver_receipt_rows.csv", list(receipt_rows[0].keys()), receipt_rows)
+receipt_row = receipt_rows[0]
+
 present_operator_input_rows = sum(row["exists"] == "1" for row in preflight_rows)
 ready_operator_input_rows = sum(row["ready"] == "1" for row in preflight_rows)
 schema_valid_rows = sum(row["schema_valid"] == "1" for row in preflight_rows)
@@ -597,8 +758,15 @@ operator_input_selected_slice_binding_ready = int(selected_slice_binding_ready_r
 authority_statement_required_rows = sum(row["authority_bound"] == "1" for row in preflight_rows)
 authority_statement_ready_rows = sum(row["authority_bound"] == "1" and row["authority_statement_ready"] == "1" for row in preflight_rows)
 operator_input_authority_statement_ready = int(authority_statement_required_rows > 0 and authority_statement_ready_rows == authority_statement_required_rows)
-operator_input_preflight_ready = int(ready_operator_input_rows == len(required_rows) and len(required_rows) > 0)
-assembly_admitted = int(operator_input_preflight_ready and output_root_supplied and output_root_outside_repo)
+operator_input_receipt_supplied = int(receipt_row["exists"] == "1")
+operator_input_receipt_schema_ready = int(receipt_row["schema_valid"] == "1")
+operator_input_receipt_hash_binding_ready = int(receipt_row["hash_binding_ready"] == "1")
+operator_input_receipt_selected_slice_binding_ready = int(receipt_row["selected_slice_binding_ready"] == "1")
+operator_input_receipt_finality_ready = int(receipt_row["finality_ready"] == "1")
+operator_input_assembly_authority_ready = int(receipt_row["assembly_authority_ready"] == "1")
+operator_input_receipt_ready = int(receipt_row["ready"] == "1")
+operator_input_preflight_ready = int(ready_operator_input_rows == len(required_rows) and len(required_rows) > 0 and operator_input_receipt_ready)
+assembly_admitted = int(operator_input_preflight_ready and operator_input_assembly_authority_ready and operator_input_root_outside_repo and output_root_supplied and output_root_outside_repo)
 assembly_executed = 0
 assembly_exit_code = ""
 assembly_stdout = ""
@@ -679,22 +847,25 @@ stage_rows = [
     {"stage_id": "01-v61gi-source-ready", "status": "ready", "evidence": "v61gi ready"},
     {"stage_id": "02-operator-input-root-supplied", "status": "ready" if operator_root_supplied else "blocked", "evidence": f"operator_input_root_supplied={operator_root_supplied}"},
     {"stage_id": "03-operator-input-root-exists", "status": "ready" if operator_root_exists else "blocked", "evidence": f"operator_root_exists={operator_root_exists}"},
-    {"stage_id": "04-final-input-schema", "status": "ready" if operator_input_schema_ready else "blocked", "evidence": f"schema_valid_rows={schema_valid_rows}/{len(required_rows)}"},
-    {"stage_id": "05-final-input-minimum-rows", "status": "ready" if operator_input_minimum_row_count_ready else "blocked", "evidence": f"minimum_row_count_ready_rows={minimum_row_count_ready_rows}/{len(required_rows)}"},
-    {"stage_id": "06-final-input-hash-binding", "status": "ready" if operator_input_hash_binding_ready else "blocked", "evidence": f"hash_binding_ready_rows={hash_binding_ready_rows}/{len(required_rows)}"},
-    {"stage_id": "07-final-input-cross-file-consistency", "status": "ready" if operator_input_cross_file_consistency_ready else "blocked", "evidence": f"cross_file_consistency_ready_rows={cross_file_consistency_ready_rows}/{len(required_rows)}"},
-    {"stage_id": "08-final-input-selected-slice-binding", "status": "ready" if operator_input_selected_slice_binding_ready else "blocked", "evidence": f"selected_slice_binding_ready_rows={selected_slice_binding_ready_rows}/{len(required_rows)}"},
-    {"stage_id": "09-final-input-authority-statement", "status": "ready" if operator_input_authority_statement_ready else "blocked", "evidence": f"authority_statement_ready_rows={authority_statement_ready_rows}/{authority_statement_required_rows}"},
-    {"stage_id": "10-final-input-preflight", "status": "ready" if operator_input_preflight_ready else "blocked", "evidence": f"ready_operator_input_rows={ready_operator_input_rows}/{len(required_rows)}"},
-    {"stage_id": "11-output-root-outside-repo", "status": "ready" if output_root_outside_repo else "blocked", "evidence": f"output_root_supplied={output_root_supplied}; output_root_outside_repo={output_root_outside_repo}"},
-    {"stage_id": "12-assembly-admitted", "status": "ready" if assembly_admitted else "blocked", "evidence": f"assembly_admitted={assembly_admitted}"},
-    {"stage_id": "13-assembly-executed", "status": "ready" if assembly_executed else "blocked", "evidence": f"assembly_executed={assembly_executed}; exit_code={assembly_exit_code}"},
-    {"stage_id": "14-row-acceptance", "status": "ready" if row_acceptance_ready else "blocked", "evidence": f"row_acceptance_ready={row_acceptance_ready}; review_rows={real_external_review_return_rows}; adjudication_rows={real_adjudication_rows}"},
-    {"stage_id": "15-dual-external-return-real", "status": "ready" if dual_external_return_real_ready else "blocked", "evidence": f"dual_external_return_real_ready={dual_external_return_real_ready}; generation_artifacts={real_generation_result_artifacts}"},
-    {"stage_id": "16-real-return-replay-admission", "status": "ready" if real_return_replay_admission_ready else "blocked", "evidence": f"real_return_replay_admission_ready={real_return_replay_admission_ready}"},
-    {"stage_id": "17-generation-acceptance-closure", "status": "ready" if generation_acceptance_closure_ready else "blocked", "evidence": f"generation_acceptance_closure_ready={generation_acceptance_closure_ready}; generation_result_accepted_rows={generation_result_accepted_rows}"},
-    {"stage_id": "18-authority-bound-replay-admission", "status": "ready" if authority_bound_replay_admission_ready else "blocked", "evidence": f"authority_bound_replay_admission_ready={authority_bound_replay_admission_ready}"},
-    {"stage_id": "19-actual-generation", "status": "blocked", "evidence": "actual_model_generation_ready=0"},
+    {"stage_id": "04-operator-input-root-outside-repo", "status": "ready" if operator_input_root_outside_repo else "blocked", "evidence": f"operator_input_root_outside_repo={operator_input_root_outside_repo}"},
+    {"stage_id": "05-operator-input-receipt", "status": "ready" if operator_input_receipt_ready else "blocked", "evidence": f"operator_input_receipt_ready={operator_input_receipt_ready}; hash_binding={operator_input_receipt_hash_binding_ready}"},
+    {"stage_id": "06-operator-input-assembly-authority", "status": "ready" if operator_input_assembly_authority_ready else "blocked", "evidence": f"operator_input_assembly_authority_ready={operator_input_assembly_authority_ready}"},
+    {"stage_id": "07-final-input-schema", "status": "ready" if operator_input_schema_ready else "blocked", "evidence": f"schema_valid_rows={schema_valid_rows}/{len(required_rows)}"},
+    {"stage_id": "08-final-input-minimum-rows", "status": "ready" if operator_input_minimum_row_count_ready else "blocked", "evidence": f"minimum_row_count_ready_rows={minimum_row_count_ready_rows}/{len(required_rows)}"},
+    {"stage_id": "09-final-input-hash-binding", "status": "ready" if operator_input_hash_binding_ready else "blocked", "evidence": f"hash_binding_ready_rows={hash_binding_ready_rows}/{len(required_rows)}"},
+    {"stage_id": "10-final-input-cross-file-consistency", "status": "ready" if operator_input_cross_file_consistency_ready else "blocked", "evidence": f"cross_file_consistency_ready_rows={cross_file_consistency_ready_rows}/{len(required_rows)}"},
+    {"stage_id": "11-final-input-selected-slice-binding", "status": "ready" if operator_input_selected_slice_binding_ready else "blocked", "evidence": f"selected_slice_binding_ready_rows={selected_slice_binding_ready_rows}/{len(required_rows)}"},
+    {"stage_id": "12-final-input-authority-statement", "status": "ready" if operator_input_authority_statement_ready else "blocked", "evidence": f"authority_statement_ready_rows={authority_statement_ready_rows}/{authority_statement_required_rows}"},
+    {"stage_id": "13-final-input-preflight", "status": "ready" if operator_input_preflight_ready else "blocked", "evidence": f"ready_operator_input_rows={ready_operator_input_rows}/{len(required_rows)}; receipt_ready={operator_input_receipt_ready}"},
+    {"stage_id": "14-output-root-outside-repo", "status": "ready" if output_root_outside_repo else "blocked", "evidence": f"output_root_supplied={output_root_supplied}; output_root_outside_repo={output_root_outside_repo}"},
+    {"stage_id": "15-assembly-admitted", "status": "ready" if assembly_admitted else "blocked", "evidence": f"assembly_admitted={assembly_admitted}; input_root_outside_repo={operator_input_root_outside_repo}; assembly_authority={operator_input_assembly_authority_ready}"},
+    {"stage_id": "16-assembly-executed", "status": "ready" if assembly_executed else "blocked", "evidence": f"assembly_executed={assembly_executed}; exit_code={assembly_exit_code}"},
+    {"stage_id": "17-row-acceptance", "status": "ready" if row_acceptance_ready else "blocked", "evidence": f"row_acceptance_ready={row_acceptance_ready}; review_rows={real_external_review_return_rows}; adjudication_rows={real_adjudication_rows}"},
+    {"stage_id": "18-dual-external-return-real", "status": "ready" if dual_external_return_real_ready else "blocked", "evidence": f"dual_external_return_real_ready={dual_external_return_real_ready}; generation_artifacts={real_generation_result_artifacts}"},
+    {"stage_id": "19-real-return-replay-admission", "status": "ready" if real_return_replay_admission_ready else "blocked", "evidence": f"real_return_replay_admission_ready={real_return_replay_admission_ready}"},
+    {"stage_id": "20-generation-acceptance-closure", "status": "ready" if generation_acceptance_closure_ready else "blocked", "evidence": f"generation_acceptance_closure_ready={generation_acceptance_closure_ready}; generation_result_accepted_rows={generation_result_accepted_rows}"},
+    {"stage_id": "21-authority-bound-replay-admission", "status": "ready" if authority_bound_replay_admission_ready else "blocked", "evidence": f"authority_bound_replay_admission_ready={authority_bound_replay_admission_ready}"},
+    {"stage_id": "22-actual-generation", "status": "blocked", "evidence": "actual_model_generation_ready=0"},
 ]
 write_csv(run_dir / "operator_input_receiver_stage_rows.csv", list(stage_rows[0].keys()), stage_rows)
 
@@ -714,6 +885,7 @@ command_rows = [
 write_csv(run_dir / "operator_input_receiver_command_rows.csv", list(command_rows[0].keys()), command_rows)
 
 for rel, src in [
+    ("OPERATOR_INPUT_RECEIVER_RECEIPT_ROWS.csv", run_dir / "operator_input_receiver_receipt_rows.csv"),
     ("OPERATOR_INPUT_RECEIVER_PREFLIGHT_ROWS.csv", run_dir / "operator_input_receiver_preflight_rows.csv"),
     ("OPERATOR_INPUT_RECEIVER_STAGE_ROWS.csv", run_dir / "operator_input_receiver_stage_rows.csv"),
     ("OPERATOR_INPUT_RECEIVER_COMMAND_ROWS.csv", run_dir / "operator_input_receiver_command_rows.csv"),
@@ -726,6 +898,7 @@ for rel, src in [
         "set -euo pipefail",
         "DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"",
         "test -s \"$DIR/OPERATOR_INPUT_RECEIVER_PREFLIGHT_ROWS.csv\"",
+        "test -s \"$DIR/OPERATOR_INPUT_RECEIVER_RECEIPT_ROWS.csv\"",
         "test -s \"$DIR/OPERATOR_INPUT_RECEIVER_STAGE_ROWS.csv\"",
         "test -s \"$DIR/OPERATOR_INPUT_RECEIVER_COMMAND_ROWS.csv\"",
         "test -s \"$DIR/OPERATOR_INPUT_RECEIVER_MANIFEST.json\"",
@@ -744,9 +917,17 @@ summary = {
     "v61gi_post_gh_authority_bound_operator_input_scaffold_ready": 1,
     "operator_input_root_supplied": operator_root_supplied,
     "operator_input_root_exists": operator_root_exists,
+    "operator_input_root_outside_repo": operator_input_root_outside_repo,
     "operator_input_required_rows": len(required_rows),
     "present_operator_input_rows": present_operator_input_rows,
     "ready_operator_input_rows": ready_operator_input_rows,
+    "operator_input_receipt_supplied": operator_input_receipt_supplied,
+    "operator_input_receipt_schema_ready": operator_input_receipt_schema_ready,
+    "operator_input_receipt_hash_binding_ready": operator_input_receipt_hash_binding_ready,
+    "operator_input_receipt_selected_slice_binding_ready": operator_input_receipt_selected_slice_binding_ready,
+    "operator_input_receipt_finality_ready": operator_input_receipt_finality_ready,
+    "operator_input_assembly_authority_ready": operator_input_assembly_authority_ready,
+    "operator_input_receipt_ready": operator_input_receipt_ready,
     "schema_valid_rows": schema_valid_rows,
     "operator_input_schema_ready": operator_input_schema_ready,
     "minimum_row_count_ready_rows": minimum_row_count_ready_rows,
@@ -824,6 +1005,9 @@ write_csv(run_dir / f"{prefix}_summary.csv", list(summary.keys()), [summary])
 decision_rows = [
     {"gate": "source-v61gi-ready", "status": "pass", "evidence": "v61gi ready"},
     {"gate": "operator-input-root-supplied", "status": "pass" if operator_root_supplied else "blocked", "evidence": f"operator_input_root_supplied={operator_root_supplied}"},
+    {"gate": "operator-input-root-outside-repo", "status": "pass" if operator_input_root_outside_repo else "blocked", "evidence": f"operator_input_root_outside_repo={operator_input_root_outside_repo}"},
+    {"gate": "operator-input-receipt", "status": "pass" if operator_input_receipt_ready else "blocked", "evidence": f"operator_input_receipt_ready={operator_input_receipt_ready}; hash_binding={operator_input_receipt_hash_binding_ready}; finality={operator_input_receipt_finality_ready}"},
+    {"gate": "operator-input-assembly-authority", "status": "pass" if operator_input_assembly_authority_ready else "blocked", "evidence": f"operator_input_assembly_authority_ready={operator_input_assembly_authority_ready}"},
     {"gate": "operator-input-schema", "status": "pass" if operator_input_schema_ready else "blocked", "evidence": f"schema_valid_rows={schema_valid_rows}/{len(required_rows)}"},
     {"gate": "operator-input-minimum-rows", "status": "pass" if operator_input_minimum_row_count_ready else "blocked", "evidence": f"minimum_row_count_ready_rows={minimum_row_count_ready_rows}/{len(required_rows)}"},
     {"gate": "operator-input-hash-binding", "status": "pass" if operator_input_hash_binding_ready else "blocked", "evidence": f"hash_binding_ready_rows={hash_binding_ready_rows}/{len(required_rows)}"},
@@ -858,8 +1042,11 @@ boundary = "\n".join([
     "",
     "- v61gj_post_gi_operator_input_receiver_ready=1",
     f"- operator_input_root_supplied={operator_root_supplied}",
+    f"- operator_input_root_outside_repo={operator_input_root_outside_repo}",
     f"- present_operator_input_rows={present_operator_input_rows}",
     f"- ready_operator_input_rows={ready_operator_input_rows}",
+    f"- operator_input_receipt_ready={operator_input_receipt_ready}",
+    f"- operator_input_assembly_authority_ready={operator_input_assembly_authority_ready}",
     f"- operator_input_preflight_ready={operator_input_preflight_ready}",
     f"- assembly_admitted={assembly_admitted}",
     f"- assembly_executed={assembly_executed}",

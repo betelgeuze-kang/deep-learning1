@@ -13,7 +13,13 @@ INVALID_SCHEMA_ROOT="${TMPDIR:-/tmp}/v61gj invalid schema input"
 INVALID_CONSISTENCY_ROOT="${TMPDIR:-/tmp}/v61gj invalid consistency input"
 INVALID_SELECTED_ROOT="${TMPDIR:-/tmp}/v61gj invalid selected slice input"
 INVALID_AUTHORITY_ROOT="${TMPDIR:-/tmp}/v61gj invalid authority input"
+MISSING_RECEIPT_ROOT="${TMPDIR:-/tmp}/v61gj missing receipt input"
+MATERIALIZED_ROOT="${TMPDIR:-/tmp}/v61gj materialized minimal slice input"
+MINIMAL_SLICE_CSV="${TMPDIR:-/tmp}/v61gj_minimal_slice_rows.csv"
+INTERNAL_READY_ROOT="$RESULTS_DIR/v61gj_internal_ready_root_reject/operator_input_root"
+SCAFFOLD_DIR="$RESULTS_DIR/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold"
 
+V61GI_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61gi_post_gh_authority_bound_operator_input_scaffold.sh" >/dev/null
 V61GJ_REUSE_EXISTING="${V61GJ_REUSE_EXISTING:-0}" "$ROOT_DIR/experiments/run_v61gj_post_gi_operator_input_receiver.sh" >/dev/null
 
 "$RECEIVER_DIR/VERIFY_OPERATOR_INPUT_RECEIVER.sh" >/dev/null
@@ -51,9 +57,17 @@ expected = {
     "v61gi_post_gh_authority_bound_operator_input_scaffold_ready": "1",
     "operator_input_root_supplied": "0",
     "operator_input_root_exists": "0",
+    "operator_input_root_outside_repo": "0",
     "operator_input_required_rows": "12",
     "present_operator_input_rows": "0",
     "ready_operator_input_rows": "0",
+    "operator_input_receipt_supplied": "0",
+    "operator_input_receipt_schema_ready": "0",
+    "operator_input_receipt_hash_binding_ready": "0",
+    "operator_input_receipt_selected_slice_binding_ready": "0",
+    "operator_input_receipt_finality_ready": "0",
+    "operator_input_assembly_authority_ready": "0",
+    "operator_input_receipt_ready": "0",
     "schema_valid_rows": "0",
     "operator_input_schema_ready": "0",
     "minimum_row_count_ready_rows": "0",
@@ -101,9 +115,9 @@ expected = {
     "checkpoint_payload_bytes_downloaded_by_v61gj": "0",
     "checkpoint_payload_bytes_committed_to_repo": "0",
     "route_jump_rows": "0",
-    "stage_rows": "19",
+    "stage_rows": "22",
     "ready_stage_rows": "1",
-    "blocked_stage_rows": "18",
+    "blocked_stage_rows": "21",
     "source_file_rows": "7",
     "payload_like_package_file_rows": "0",
 }
@@ -115,6 +129,7 @@ required_files = [
     "operator_input_receiver_preflight_rows.csv",
     "operator_input_receiver_stage_rows.csv",
     "operator_input_receiver_command_rows.csv",
+    "operator_input_receiver_receipt_rows.csv",
     "operator_input_receiver_package_file_rows.csv",
     "operator_input_receiver_source_rows.csv",
     "V61GJ_POST_GI_OPERATOR_INPUT_RECEIVER_BOUNDARY.md",
@@ -124,6 +139,7 @@ required_files = [
     "operator_input_receiver/OPERATOR_INPUT_RECEIVER_PREFLIGHT_ROWS.csv",
     "operator_input_receiver/OPERATOR_INPUT_RECEIVER_STAGE_ROWS.csv",
     "operator_input_receiver/OPERATOR_INPUT_RECEIVER_COMMAND_ROWS.csv",
+    "operator_input_receiver/OPERATOR_INPUT_RECEIVER_RECEIPT_ROWS.csv",
     "operator_input_receiver/OPERATOR_INPUT_RECEIVER_MANIFEST.json",
     "operator_input_receiver/VERIFY_OPERATOR_INPUT_RECEIVER.sh",
     "source_v61gi/v61gi_post_gh_authority_bound_operator_input_scaffold_summary.csv",
@@ -149,6 +165,9 @@ for gate in ["source-v61gi-ready", "zero-repo-checkpoint-payload"]:
         raise SystemExit(f"v61gj expected pass decision: {gate}")
 for gate in [
     "operator-input-root-supplied",
+    "operator-input-root-outside-repo",
+    "operator-input-receipt",
+    "operator-input-assembly-authority",
     "operator-input-schema",
     "operator-input-minimum-rows",
     "operator-input-hash-binding",
@@ -178,8 +197,11 @@ boundary = (run_dir / "V61GJ_POST_GI_OPERATOR_INPUT_RECEIVER_BOUNDARY.md").read_
 for snippet in [
     "v61gj_post_gi_operator_input_receiver_ready=1",
     "operator_input_root_supplied=0",
+    "operator_input_root_outside_repo=0",
     "present_operator_input_rows=0",
     "ready_operator_input_rows=0",
+    "operator_input_receipt_ready=0",
+    "operator_input_assembly_authority_ready=0",
     "operator_input_preflight_ready=0",
     "assembly_admitted=0",
     "assembly_executed=0",
@@ -780,6 +802,417 @@ for gate in ["operator-input-preflight", "assembly-admitted", "assembly-executed
         raise SystemExit(f"v61gj invalid authority must keep gate blocked: {gate}")
 
 print("v61gj invalid authority statement rejection smoke passed")
+PY
+
+rm -rf "$MISSING_RECEIPT_ROOT"
+python3 - "$INVALID_AUTHORITY_ROOT" "$MISSING_RECEIPT_ROOT" <<'PY'
+import shutil
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1])
+target = Path(sys.argv[2])
+shutil.copytree(source, target)
+statement = (
+    "External authority statement finalized for this partial return handoff with "
+    "independent reviewer/operator accountability and immutable file-hash binding.\n"
+)
+(target / "v53/operator_attestation/reviewer_authority_statement.txt").write_text(statement, encoding="utf-8")
+(target / "v61/review_return_provenance/operator_attestation/generation_operator_authority_statement.txt").write_text(statement, encoding="utf-8")
+PY
+
+V61GJ_RUN_ID="missing_receipt_reject" \
+V61GJ_OPERATOR_INPUT_ROOT="$MISSING_RECEIPT_ROOT" \
+V61GJ_OUTPUT_ROOT="${TMPDIR:-/tmp}/v61gj missing receipt reject output" \
+V61GJ_EXECUTE_ASSEMBLY=1 \
+V61GJ_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61gj_post_gi_operator_input_receiver.sh" >/dev/null
+
+python3 - "$SUMMARY_CSV" "$DECISION_CSV" "$RESULTS_DIR/$PREFIX/missing_receipt_reject/operator_input_receiver_preflight_rows.csv" "$RESULTS_DIR/$PREFIX/missing_receipt_reject/operator_input_receiver_receipt_rows.csv" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+summary_csv = Path(sys.argv[1])
+decision_csv = Path(sys.argv[2])
+preflight_csv = Path(sys.argv[3])
+receipt_csv = Path(sys.argv[4])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "operator_input_root_supplied": "1",
+    "operator_input_root_exists": "1",
+    "present_operator_input_rows": "12",
+    "ready_operator_input_rows": "12",
+    "operator_input_receipt_supplied": "0",
+    "operator_input_receipt_ready": "0",
+    "operator_input_schema_ready": "1",
+    "operator_input_hash_binding_ready": "1",
+    "operator_input_cross_file_consistency_ready": "1",
+    "operator_input_selected_slice_binding_ready": "1",
+    "operator_input_authority_statement_ready": "1",
+    "operator_input_preflight_ready": "0",
+    "assembly_admitted": "0",
+    "assembly_executed": "0",
+    "row_acceptance_ready": "0",
+    "dual_external_return_real_ready": "0",
+    "real_return_replay_admission_ready": "0",
+    "generation_acceptance_closure_ready": "0",
+    "authority_bound_replay_admission_ready": "0",
+    "actual_model_generation_ready": "0",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v61gj missing receipt {field}: expected {value}, got {summary.get(field)}")
+
+rows = read_csv(preflight_csv)
+if any(row.get("ready") != "1" for row in rows):
+    raise SystemExit("v61gj missing receipt fixture should have all 12 final files ready")
+
+receipt_rows = read_csv(receipt_csv)
+if receipt_rows[0].get("ready") != "0" or receipt_rows[0].get("errors") != "missing":
+    raise SystemExit("v61gj missing receipt row should be blocked as missing")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+for gate in [
+    "operator-input-schema",
+    "operator-input-minimum-rows",
+    "operator-input-hash-binding",
+    "operator-input-cross-file-consistency",
+    "operator-input-selected-slice-binding",
+    "operator-input-authority-statement",
+]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61gj missing receipt expected pass decision before receipt gate: {gate}")
+for gate in ["operator-input-receipt", "operator-input-preflight", "assembly-admitted", "assembly-executed"]:
+    if decisions.get(gate) != "blocked":
+        raise SystemExit(f"v61gj missing receipt must keep gate blocked: {gate}")
+
+print("v61gj missing receipt rejection smoke passed")
+PY
+
+V61GI_OPERATOR_INPUT_ROOT="$MISSING_RECEIPT_ROOT" \
+V61GI_OPERATOR_INPUT_RECEIPT_SOURCE_CLASS="real-authority-bound-partial-return" \
+V61GI_OPERATOR_INPUT_RECEIPT_ATTESTATION="External return attestation finalized for this partial subset handoff with file-hash binding to every supplied review and generation artifact." \
+"$SCAFFOLD_DIR/BUILD_OPERATOR_INPUT_RECEIPT_IF_FINAL.py" >/dev/null
+
+V61GJ_RUN_ID="receipt_built_preflight_only" \
+V61GJ_OPERATOR_INPUT_ROOT="$MISSING_RECEIPT_ROOT" \
+V61GJ_EXECUTE_ASSEMBLY=1 \
+V61GJ_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61gj_post_gi_operator_input_receiver.sh" >/dev/null
+
+python3 - "$SUMMARY_CSV" "$DECISION_CSV" "$RESULTS_DIR/$PREFIX/receipt_built_preflight_only/operator_input_receiver_receipt_rows.csv" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+summary_csv = Path(sys.argv[1])
+decision_csv = Path(sys.argv[2])
+receipt_csv = Path(sys.argv[3])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "operator_input_root_supplied": "1",
+    "operator_input_root_exists": "1",
+    "present_operator_input_rows": "12",
+    "ready_operator_input_rows": "12",
+    "operator_input_receipt_supplied": "1",
+    "operator_input_receipt_schema_ready": "1",
+    "operator_input_receipt_hash_binding_ready": "1",
+    "operator_input_receipt_selected_slice_binding_ready": "1",
+    "operator_input_receipt_finality_ready": "1",
+    "operator_input_assembly_authority_ready": "0",
+    "operator_input_receipt_ready": "1",
+    "operator_input_preflight_ready": "1",
+    "output_root_supplied": "0",
+    "assembly_admitted": "0",
+    "assembly_executed": "0",
+    "row_acceptance_ready": "0",
+    "dual_external_return_real_ready": "0",
+    "real_return_replay_admission_ready": "0",
+    "generation_acceptance_closure_ready": "0",
+    "authority_bound_replay_admission_ready": "0",
+    "actual_model_generation_ready": "0",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v61gj receipt-built {field}: expected {value}, got {summary.get(field)}")
+
+receipt_row = read_csv(receipt_csv)[0]
+if receipt_row.get("ready") != "1" or receipt_row.get("errors"):
+    raise SystemExit(f"v61gj built receipt should be ready without errors: {receipt_row}")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+for gate in [
+    "operator-input-receipt",
+    "operator-input-schema",
+    "operator-input-minimum-rows",
+    "operator-input-hash-binding",
+    "operator-input-cross-file-consistency",
+    "operator-input-selected-slice-binding",
+    "operator-input-authority-statement",
+    "operator-input-preflight",
+]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61gj receipt-built expected pass decision: {gate}")
+if decisions.get("operator-input-assembly-authority") != "blocked":
+    raise SystemExit("v61gj receipt-built must keep assembly-authority blocked")
+for gate in ["assembly-admitted", "assembly-executed", "row-acceptance", "dual-external-return-real", "real-return-replay-admission", "generation-acceptance-closure"]:
+    if decisions.get(gate) != "blocked":
+        raise SystemExit(f"v61gj receipt-built must keep gate blocked without output root/replay: {gate}")
+
+print("v61gj receipt builder preflight-only smoke passed")
+PY
+
+rm -rf "$MATERIALIZED_ROOT"
+python3 - "$MINIMAL_SLICE_CSV" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+row = {
+    "reviewer_id": "reviewer-final-alpha",
+    "adjudicator_id": "adjudicator-final-alpha",
+    "generation_id": "generation-final-alpha",
+    "citation_id": "citation-final-alpha",
+    "model_id": "mistralai/Mixtral-8x22B-v0.1",
+    "checkpoint_root": "/external/checkpoint/root-alpha",
+    "latency_row_id": "latency-final-alpha",
+    "review_comment_sha256": "sha256:" + ("1" * 64),
+    "adjudication_reason_sha256": "sha256:" + ("2" * 64),
+    "credential_statement_sha256": "sha256:" + ("3" * 64),
+    "conflict_statement_sha256": "sha256:" + ("4" * 64),
+    "answer_text_sha256": "sha256:" + ("5" * 64),
+    "run_transcript_sha256": "sha256:" + ("6" * 64),
+    "source_file_sha256": "sha256:" + ("7" * 64),
+    "prompt_tokens": "128",
+    "output_tokens": "32",
+    "prefill_ms": "11.5",
+    "decode_ms": "23.0",
+    "total_ms": "34.5",
+    "tokens_per_second": "92.75",
+    "v53_authority_statement": "External reviewer authority statement finalized for the partial return handoff with independent accountability.",
+    "v61_authority_statement": "External generation operator authority statement finalized for the partial return handoff with independent accountability.",
+    "external_return_attestation": "External return attestation finalized for this partial subset handoff with immutable hash binding to every supplied artifact.",
+}
+path.parent.mkdir(parents=True, exist_ok=True)
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(row.keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerow(row)
+PY
+
+V61GI_MINIMAL_SLICE_ROWS_CSV="$MINIMAL_SLICE_CSV" \
+V61GI_OPERATOR_INPUT_ROOT="$MATERIALIZED_ROOT" \
+"$SCAFFOLD_DIR/MATERIALIZE_OPERATOR_INPUT_FROM_MINIMAL_SLICE.py" >/dev/null
+
+V61GJ_RUN_ID="materialized_minimal_preflight_only" \
+V61GJ_OPERATOR_INPUT_ROOT="$MATERIALIZED_ROOT" \
+V61GJ_EXECUTE_ASSEMBLY=1 \
+V61GJ_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61gj_post_gi_operator_input_receiver.sh" >/dev/null
+
+python3 - "$SUMMARY_CSV" "$DECISION_CSV" "$RESULTS_DIR/$PREFIX/materialized_minimal_preflight_only/operator_input_receiver_preflight_rows.csv" "$RESULTS_DIR/$PREFIX/materialized_minimal_preflight_only/operator_input_receiver_receipt_rows.csv" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+summary_csv = Path(sys.argv[1])
+decision_csv = Path(sys.argv[2])
+preflight_csv = Path(sys.argv[3])
+receipt_csv = Path(sys.argv[4])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "operator_input_root_supplied": "1",
+    "operator_input_root_exists": "1",
+    "present_operator_input_rows": "12",
+    "ready_operator_input_rows": "12",
+    "operator_input_receipt_supplied": "1",
+    "operator_input_receipt_schema_ready": "1",
+    "operator_input_receipt_hash_binding_ready": "1",
+    "operator_input_receipt_selected_slice_binding_ready": "1",
+    "operator_input_receipt_finality_ready": "1",
+    "operator_input_assembly_authority_ready": "0",
+    "operator_input_receipt_ready": "1",
+    "operator_input_preflight_ready": "1",
+    "output_root_supplied": "0",
+    "assembly_admitted": "0",
+    "assembly_executed": "0",
+    "row_acceptance_ready": "0",
+    "dual_external_return_real_ready": "0",
+    "real_return_replay_admission_ready": "0",
+    "generation_acceptance_closure_ready": "0",
+    "authority_bound_replay_admission_ready": "0",
+    "actual_model_generation_ready": "0",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v61gj materialized minimal {field}: expected {value}, got {summary.get(field)}")
+
+if any(row.get("ready") != "1" for row in read_csv(preflight_csv)):
+    raise SystemExit("v61gj materialized minimal final files should all pass preflight")
+receipt_row = read_csv(receipt_csv)[0]
+if receipt_row.get("ready") != "1" or receipt_row.get("errors"):
+    raise SystemExit(f"v61gj materialized minimal receipt should be ready without errors: {receipt_row}")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+for gate in [
+    "operator-input-receipt",
+    "operator-input-schema",
+    "operator-input-minimum-rows",
+    "operator-input-hash-binding",
+    "operator-input-cross-file-consistency",
+    "operator-input-selected-slice-binding",
+    "operator-input-authority-statement",
+    "operator-input-preflight",
+]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61gj materialized minimal expected pass decision: {gate}")
+if decisions.get("operator-input-assembly-authority") != "blocked":
+    raise SystemExit("v61gj materialized minimal must keep assembly-authority blocked")
+for gate in ["assembly-admitted", "assembly-executed", "row-acceptance", "dual-external-return-real", "real-return-replay-admission", "generation-acceptance-closure"]:
+    if decisions.get(gate) != "blocked":
+        raise SystemExit(f"v61gj materialized minimal must keep gate blocked without output root/replay: {gate}")
+
+print("v61gj materialized minimal preflight-only smoke passed")
+PY
+
+V61GJ_RUN_ID="materialized_minimal_output_no_authority_reject" \
+V61GJ_OPERATOR_INPUT_ROOT="$MATERIALIZED_ROOT" \
+V61GJ_OUTPUT_ROOT="${TMPDIR:-/tmp}/v61gj materialized output no authority reject" \
+V61GJ_EXECUTE_ASSEMBLY=1 \
+V61GJ_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61gj_post_gi_operator_input_receiver.sh" >/dev/null
+
+python3 - "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+summary_csv = Path(sys.argv[1])
+decision_csv = Path(sys.argv[2])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "operator_input_root_supplied": "1",
+    "operator_input_root_exists": "1",
+    "ready_operator_input_rows": "12",
+    "operator_input_receipt_ready": "1",
+    "operator_input_assembly_authority_ready": "0",
+    "operator_input_preflight_ready": "1",
+    "output_root_supplied": "1",
+    "output_root_outside_repo": "1",
+    "assembly_admitted": "0",
+    "assembly_executed": "0",
+    "row_acceptance_ready": "0",
+    "dual_external_return_real_ready": "0",
+    "real_return_replay_admission_ready": "0",
+    "generation_acceptance_closure_ready": "0",
+    "actual_model_generation_ready": "0",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v61gj output no authority {field}: expected {value}, got {summary.get(field)}")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+for gate in ["operator-input-receipt", "operator-input-preflight"]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61gj output no authority expected pass decision: {gate}")
+for gate in ["operator-input-assembly-authority", "assembly-admitted", "assembly-executed", "row-acceptance", "dual-external-return-real", "real-return-replay-admission", "generation-acceptance-closure"]:
+    if decisions.get(gate) != "blocked":
+        raise SystemExit(f"v61gj output no authority must keep gate blocked: {gate}")
+
+print("v61gj output-root without assembly authority rejection smoke passed")
+PY
+
+rm -rf "$RESULTS_DIR/v61gj_internal_ready_root_reject"
+V61GI_MINIMAL_SLICE_ROWS_CSV="$MINIMAL_SLICE_CSV" \
+V61GI_OPERATOR_INPUT_ROOT="$INTERNAL_READY_ROOT" \
+V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY="operator-final-real-return" \
+V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY_STATEMENT="External assembly authority finalized for real operator return promotion with independent accountability and root-hash review." \
+"$SCAFFOLD_DIR/MATERIALIZE_OPERATOR_INPUT_FROM_MINIMAL_SLICE.py" >/dev/null
+
+V61GJ_RUN_ID="internal_ready_root_reject" \
+V61GJ_OPERATOR_INPUT_ROOT="$INTERNAL_READY_ROOT" \
+V61GJ_OUTPUT_ROOT="${TMPDIR:-/tmp}/v61gj internal ready root reject output" \
+V61GJ_EXECUTE_ASSEMBLY=1 \
+V61GJ_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61gj_post_gi_operator_input_receiver.sh" >/dev/null
+
+python3 - "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+summary_csv = Path(sys.argv[1])
+decision_csv = Path(sys.argv[2])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "operator_input_root_supplied": "1",
+    "operator_input_root_exists": "1",
+    "operator_input_root_outside_repo": "0",
+    "ready_operator_input_rows": "12",
+    "operator_input_receipt_ready": "1",
+    "operator_input_assembly_authority_ready": "1",
+    "operator_input_preflight_ready": "1",
+    "output_root_supplied": "1",
+    "output_root_outside_repo": "1",
+    "assembly_admitted": "0",
+    "assembly_executed": "0",
+    "row_acceptance_ready": "0",
+    "dual_external_return_real_ready": "0",
+    "real_return_replay_admission_ready": "0",
+    "generation_acceptance_closure_ready": "0",
+    "actual_model_generation_ready": "0",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v61gj internal ready root {field}: expected {value}, got {summary.get(field)}")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+for gate in ["operator-input-receipt", "operator-input-assembly-authority", "operator-input-preflight"]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61gj internal ready root expected pass decision: {gate}")
+for gate in ["operator-input-root-outside-repo", "assembly-admitted", "assembly-executed", "row-acceptance", "dual-external-return-real", "real-return-replay-admission", "generation-acceptance-closure"]:
+    if decisions.get(gate) != "blocked":
+        raise SystemExit(f"v61gj internal ready root must keep gate blocked: {gate}")
+
+print("v61gj repo-internal ready root rejection smoke passed")
 PY
 
 V61GJ_RUN_ID="receiver_001" \
