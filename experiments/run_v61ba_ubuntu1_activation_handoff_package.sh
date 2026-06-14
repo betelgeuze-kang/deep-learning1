@@ -101,7 +101,8 @@ if len(priority_rows) != 59:
     raise SystemExit("v61ba expects 59 priority rows")
 
 priority_by_shard = {row["shard_name"]: row for row in priority_rows}
-target_dir = Path(v61az_summary["selected_capacity_target_path"])
+target_path_raw = v61az_summary.get("selected_capacity_target_path") or v61az_summary["ubuntu1_target_path"]
+target_dir = Path(target_path_raw).expanduser().resolve()
 selected_capacity_target_id = v61az_summary["selected_capacity_target_id"]
 selected_backend_id = v61az_summary["selected_backend_id"]
 capacity_target_ready = int(v61az_summary["ubuntu1_full_reserve_capacity_pass"] == "1" and v61az_summary["target_outside_repository"] == "1")

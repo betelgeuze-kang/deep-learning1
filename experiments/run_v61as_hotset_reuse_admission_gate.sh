@@ -114,12 +114,15 @@ token_rows = read_csv(v61ac_dir / "hotset_token_budget_rows.csv")
 schedule_rows = read_csv(v61ac_dir / "hotset_token_budget_page_schedule_rows.csv")
 kv_rows = read_csv(v61ad_dir / "kv_weight_token_budget_rows.csv")
 coverage_rows = read_csv(v61ar_dir / "moe_remote_hash_combined_coverage_rows.csv")
-if len(token_rows) != 37:
-    raise SystemExit("v61as expects 37 token rows")
-if len(schedule_rows) != 148:
-    raise SystemExit("v61as expects 148 scheduled page rows")
-if len(kv_rows) != 185:
-    raise SystemExit("v61as expects 185 KV+weight rows")
+expected_token_rows = int(v61ac_summary["token_budget_rows"])
+expected_schedule_rows = int(v61ac_summary["token_page_schedule_rows"])
+expected_kv_rows = int(v61ad_summary["combined_kv_weight_budget_rows"])
+if len(token_rows) != expected_token_rows:
+    raise SystemExit(f"v61as expects {expected_token_rows} token rows")
+if len(schedule_rows) != expected_schedule_rows:
+    raise SystemExit(f"v61as expects {expected_schedule_rows} scheduled page rows")
+if len(kv_rows) != expected_kv_rows:
+    raise SystemExit(f"v61as expects {expected_kv_rows} KV+weight rows")
 if len(coverage_rows) != 1344:
     raise SystemExit("v61as expects 1344 MoE hash coverage rows")
 if any(row["direct_read_hash_match"] != "1" for row in schedule_rows):
@@ -228,7 +231,7 @@ write_csv(run_dir / "hotset_reuse_token_rows.csv", list(token_reuse_rows[0].keys
 
 window_rows = [
     {
-        "reuse_window_id": "v61as_source_bound_37_query_window",
+        "reuse_window_id": f"v61as_source_bound_{source_bound_rows}_query_window",
         "source_bound_token_budget_rows": str(source_bound_rows),
         "scheduled_hotset_page_read_rows": str(scheduled_rows),
         "unique_hotset_page_rows": str(unique_pages),
@@ -248,10 +251,10 @@ window_rows = [
 write_csv(run_dir / "hotset_reuse_window_rows.csv", list(window_rows[0].keys()), window_rows)
 
 sampled_hotset_reuse_ready = int(
-    source_bound_rows == 37
-    and scheduled_rows == 148
+    source_bound_rows == expected_token_rows
+    and scheduled_rows == expected_schedule_rows
     and unique_pages == 15
-    and cache_hit_rows == 133
+    and cache_hit_rows == scheduled_rows - unique_pages
     and cache_miss_rows == 15
     and all(row["token_reuse_ready"] == "1" for row in token_reuse_rows)
 )
@@ -265,10 +268,10 @@ full_runtime_hotset_reuse_admission_ready = int(
 )
 
 requirement_rows = [
-    {"requirement_id": "v61ac-hotset-token-budget-input", "status": "pass", "actual": str(source_bound_rows), "required": "37", "reason": "source-bound sampled token rows are present"},
-    {"requirement_id": "v61ad-kv-weight-budget-input", "status": "pass", "actual": str(len(kv_rows)), "required": "185", "reason": "KV+weight sampled budget rows are present"},
+    {"requirement_id": "v61ac-hotset-token-budget-input", "status": "pass", "actual": str(source_bound_rows), "required": str(expected_token_rows), "reason": "source-bound sampled token rows are present"},
+    {"requirement_id": "v61ad-kv-weight-budget-input", "status": "pass", "actual": str(len(kv_rows)), "required": str(expected_kv_rows), "reason": "KV+weight sampled budget rows are present"},
     {"requirement_id": "v61ar-remote-hash-result-input", "status": "pass", "actual": v61ar_summary["v61ar_moe_remote_hash_result_intake_ready"], "required": "1", "reason": "remote-hash result intake boundary is bound"},
-    {"requirement_id": "sampled-hotset-reuse", "status": "pass" if sampled_hotset_reuse_ready else "blocked", "actual": str(cache_hit_rows), "required": "133", "reason": "scheduled reads collapse to unique hotset page cold fills plus cache hits"},
+    {"requirement_id": "sampled-hotset-reuse", "status": "pass" if sampled_hotset_reuse_ready else "blocked", "actual": str(cache_hit_rows), "required": str(scheduled_rows - unique_pages), "reason": "scheduled reads collapse to unique hotset page cold fills plus cache hits"},
     {"requirement_id": "full-moe-remote-hash-coverage", "status": "pass" if full_moe_coverage_remote_hash_ready else "blocked", "actual": v61ar_summary["verified_remote_hash_rows"], "required": v61ar_summary["required_moe_remote_hash_rows"], "reason": "default v61ar has no supplied hash result rows"},
     {"requirement_id": "remote-hash-result-artifacts", "status": "pass" if remote_hash_result_intake_ready else "blocked", "actual": v61ar_summary["accepted_remote_hash_result_rows"], "required": v61ar_summary["expected_remote_hash_result_rows"], "reason": "hash-only result rows are final-deferred by default"},
     {"requirement_id": "full-runtime-hotset-reuse-admission", "status": "pass" if full_runtime_hotset_reuse_admission_ready else "blocked", "actual": "0", "required": "1", "reason": "sampled reuse is ready but full MoE hash/page coverage is not"},
@@ -312,8 +315,8 @@ metric = {
 write_csv(run_dir / "hotset_reuse_metric_rows.csv", list(metric.keys()), [metric])
 
 gap_rows = [
-    ("v61ac-hotset-token-budget-input", "ready", "37 sampled source-bound token rows are bound"),
-    ("v61ad-kv-weight-budget-input", "ready", "185 KV+weight budget rows are bound"),
+    ("v61ac-hotset-token-budget-input", "ready", f"{source_bound_rows} sampled source-bound token rows are bound"),
+    ("v61ad-kv-weight-budget-input", "ready", f"{len(kv_rows)} KV+weight budget rows are bound"),
     ("sampled-hotset-reuse", "ready" if sampled_hotset_reuse_ready else "blocked", f"{cache_hit_rows}/{scheduled_rows} scheduled page reads become cache hits after {unique_pages} cold fills"),
     ("full-moe-remote-hash-coverage", "blocked", f"{v61ar_summary['verified_remote_hash_rows']}/{v61ar_summary['required_moe_remote_hash_rows']} representative cells hash-verified"),
     ("remote-hash-result-artifacts", "blocked", f"{v61ar_summary['accepted_remote_hash_result_rows']}/{v61ar_summary['expected_remote_hash_result_rows']} supplied result rows accepted"),

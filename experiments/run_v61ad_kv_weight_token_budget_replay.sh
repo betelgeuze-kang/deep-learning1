@@ -105,8 +105,9 @@ token_rows = read_csv(v61ac_dir / "hotset_token_budget_rows.csv")
 kv_profiles = read_csv(v61m_dir / "kv_budget_profile_rows.csv")
 kv_geometry = read_csv(v61m_dir / "kv_cache_geometry_rows.csv")[0]
 policy = read_csv(v61m_dir / "kv_residency_policy_rows.csv")[0]
-if len(token_rows) != 37:
-    raise SystemExit("v61ad expects 37 token budget rows")
+expected_token_rows = int(v61ac_summary["token_budget_rows"])
+if len(token_rows) != expected_token_rows:
+    raise SystemExit(f"v61ad expects {expected_token_rows} token budget rows")
 if len(kv_profiles) != 5:
     raise SystemExit("v61ad expects five KV profile rows")
 
@@ -195,11 +196,11 @@ max_context_tokens = max(int(row["context_tokens"]) for row in combined_rows)
 max_kv_resident_vram_bytes = max(int(row["kv_resident_vram_bytes"]) for row in combined_rows)
 max_kv_evicted_nvme_bytes = max(int(row["kv_evicted_nvme_bytes"]) for row in combined_rows)
 budget_ready = int(
-    combined_count == 185
-    and combined_ready_rows == 185
-    and vram_policy_pass_rows == 185
-    and full_kv_vram_pass_rows == 74
-    and nvme_eviction_required_rows == 111
+    combined_count == expected_token_rows * len(kv_profiles)
+    and combined_ready_rows == combined_count
+    and vram_policy_pass_rows == combined_count
+    and full_kv_vram_pass_rows == expected_token_rows * 2
+    and nvme_eviction_required_rows == combined_count - (expected_token_rows * 2)
     and host_ram_spill_bytes_total == 0
 )
 
@@ -235,7 +236,7 @@ metric_rows = [
 ]
 
 runtime_gap_rows = [
-    {"gap": "v61ac-hotset-token-budget-input", "status": "ready", "evidence": "37 source-bound sampled hotset token-budget rows are ready"},
+    {"gap": "v61ac-hotset-token-budget-input", "status": "ready", "evidence": f"{len(token_rows)} source-bound sampled hotset token-budget rows are ready"},
     {"gap": "v61m-kv-cache-policy-input", "status": "ready", "evidence": "KV VRAM-hot plus NVMe-cold policy is ready with host RAM spill disabled"},
     {"gap": "combined-kv-weight-token-budget", "status": "ready" if budget_ready else "blocked", "evidence": f"{combined_ready_rows}/{combined_count} combined rows pass sampled weight and KV policy gates"},
     {"gap": "full-kv-vram-residency", "status": "blocked", "evidence": f"only {full_kv_vram_pass_rows}/{combined_count} combined rows fit full KV in VRAM"},

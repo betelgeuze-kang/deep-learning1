@@ -42,27 +42,45 @@ def as_float(value):
     return parsed
 
 
+def fmt(value):
+    if math.isfinite(value):
+        return f"{value:.9g}"
+    return str(value)
+
+
 summary = read_csv(summary_csv)[0]
+source_v61x_summary = read_csv(run_dir / "source_v61x/v61x_hotset_runtime_replay_manifest_summary.csv")[0]
+source_v61z_summary = read_csv(run_dir / "source_v61z/v61z_hotset_direct_io_replay_summary.csv")[0]
+source_v61ab_metric = read_csv(run_dir / "source_v61ab/hotset_tensor_tile_quant_metric_rows.csv")[0]
+source_bound_workload_rows = int(source_v61x_summary["hotset_workload_binding_rows"])
+active_page_reads_per_token = 4
+active_tile_probe_rows_per_token = 32
+expected_schedule_rows = source_bound_workload_rows * active_page_reads_per_token
+expected_tile_rows = source_bound_workload_rows * active_tile_probe_rows_per_token
+expected_token_p50 = fmt(float(source_v61z_summary["direct_io_read_latency_ms_p50"]) * active_page_reads_per_token)
+expected_token_p95 = fmt(float(source_v61z_summary["direct_io_read_latency_ms_p95"]) * active_page_reads_per_token)
+expected_q8_budget = fmt(float(source_v61ab_metric["q8_abs_error_mean"]) * active_tile_probe_rows_per_token)
+expected_q4_budget = fmt(float(source_v61ab_metric["q4_abs_error_mean"]) * active_tile_probe_rows_per_token)
 expected = {
     "v61ac_hotset_token_budget_replay_ready": "1",
     "v61x_hotset_runtime_replay_manifest_ready": "1",
     "v61z_hotset_direct_io_replay_ready": "1",
     "v61ab_hotset_tensor_tile_quant_probe_ready": "1",
     "model_id": "mistralai/Mixtral-8x22B-v0.1",
-    "source_bound_workload_binding_rows": "37",
-    "token_budget_rows": "37",
-    "token_page_schedule_rows": "148",
-    "token_tile_binding_rows": "1184",
-    "finite_token_budget_rows": "37",
-    "finite_tile_binding_rows": "1184",
+    "source_bound_workload_binding_rows": str(source_bound_workload_rows),
+    "token_budget_rows": str(source_bound_workload_rows),
+    "token_page_schedule_rows": str(expected_schedule_rows),
+    "token_tile_binding_rows": str(expected_tile_rows),
+    "finite_token_budget_rows": str(source_bound_workload_rows),
+    "finite_tile_binding_rows": str(expected_tile_rows),
     "active_page_reads_per_token": "4",
     "active_tile_probe_rows_per_token": "32",
     "tile_bf16_values_per_token": "131072",
     "ssd_read_bytes_per_token": "8388608",
-    "token_direct_io_latency_ms_p50": "2.323072",
-    "token_direct_io_latency_ms_p95": "3.82676",
-    "q8_abs_error_budget_mean_per_token": "0.0364191354",
-    "q4_abs_error_budget_mean_per_token": "0.783213501",
+    "token_direct_io_latency_ms_p50": expected_token_p50,
+    "token_direct_io_latency_ms_p95": expected_token_p95,
+    "q8_abs_error_budget_mean_per_token": expected_q8_budget,
+    "q4_abs_error_budget_mean_per_token": expected_q4_budget,
     "hotset_token_budget_replay_ready": "1",
     "checkpoint_payload_bytes_committed_to_repo": "0",
     "full_checkpoint_materialization_ready": "0",
@@ -131,11 +149,11 @@ tile_rows = read_csv(run_dir / "hotset_token_budget_tile_binding_rows.csv")
 metric = read_csv(run_dir / "hotset_token_budget_metric_rows.csv")[0]
 gaps = {row["gap"]: row["status"] for row in read_csv(run_dir / "runtime_gap_rows.csv")}
 
-if len(budget_rows) != 37:
+if len(budget_rows) != source_bound_workload_rows:
     raise SystemExit("v61ac token budget row count mismatch")
-if len(schedule_rows) != 148:
+if len(schedule_rows) != expected_schedule_rows:
     raise SystemExit("v61ac page schedule row count mismatch")
-if len(tile_rows) != 1184:
+if len(tile_rows) != expected_tile_rows:
     raise SystemExit("v61ac tile binding row count mismatch")
 if any(row["hotset_token_budget_replay_ready"] != "1" for row in budget_rows):
     raise SystemExit("v61ac all token budget rows should be ready")
@@ -200,19 +218,19 @@ for gap in [
 manifest = json.loads((run_dir / "v61ac_hotset_token_budget_replay_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v61ac_hotset_token_budget_replay_ready") != 1:
     raise SystemExit("v61ac manifest readiness mismatch")
-if manifest.get("token_budget_rows") != 37 or manifest.get("token_tile_binding_rows") != 1184:
+if manifest.get("token_budget_rows") != source_bound_workload_rows or manifest.get("token_tile_binding_rows") != expected_tile_rows:
     raise SystemExit("v61ac manifest row count mismatch")
 if manifest.get("actual_model_generation_ready") != 0:
     raise SystemExit("v61ac manifest should keep generation blocked")
 
 boundary = (run_dir / "V61AC_HOTSET_TOKEN_BUDGET_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "token_budget_rows=37",
-    "token_page_schedule_rows=148",
-    "token_tile_binding_rows=1184",
+    f"token_budget_rows={source_bound_workload_rows}",
+    f"token_page_schedule_rows={expected_schedule_rows}",
+    f"token_tile_binding_rows={expected_tile_rows}",
     "ssd_read_bytes_per_token=8388608",
-    "token_direct_io_latency_ms_p50=2.323072",
-    "token_direct_io_latency_ms_p95=3.82676",
+    f"token_direct_io_latency_ms_p50={expected_token_p50}",
+    f"token_direct_io_latency_ms_p95={expected_token_p95}",
     "actual_model_generation_ready=0",
     "Blocked wording",
 ]:

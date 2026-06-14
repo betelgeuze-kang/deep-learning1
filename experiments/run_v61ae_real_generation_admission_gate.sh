@@ -127,13 +127,20 @@ query_packets = read_csv(v53r_dir / "review_query_packet_rows.csv")
 runtime_budget_rows = read_csv(v61ad_dir / "kv_weight_token_budget_rows.csv")
 if len(query_packets) != 1000:
     raise SystemExit("v61ae expects 1000 review query packet rows")
-if len(runtime_budget_rows) != 185:
-    raise SystemExit("v61ae expects 185 v61ad runtime budget rows")
+expected_runtime_budget_rows = int(v61ad_summary["combined_kv_weight_budget_rows"])
+if len(runtime_budget_rows) != expected_runtime_budget_rows:
+    raise SystemExit(f"v61ae expects {expected_runtime_budget_rows} v61ad runtime budget rows")
 
 materialization_ready = int(v61t_summary["local_checkpoint_materialization_ready"])
 page_hash_ready = int(v61r_summary["full_safetensors_page_hash_binding_ready"])
 materialization_admission_ready = int(v61w_summary["materialization_admission_ready"])
 human_review_ready = int(v53r_summary["review_artifacts_ready"]) and int(v53r_summary["human_review_completed"])
+local_identity_verified_shard_rows = int(v61t_summary["local_identity_verified_shard_rows"])
+checkpoint_shard_rows = int(v61t_summary["checkpoint_shard_rows"])
+verified_page_hash_rows = int(v61r_summary["verified_page_hash_rows"])
+page_hash_sweep_plan_rows = int(v61r_summary["page_hash_sweep_plan_rows"])
+local_checkpoint_status = "ready" if materialization_ready else "blocked"
+full_page_hash_status = "ready" if page_hash_ready else "blocked"
 
 candidate_rows = []
 runtime_budget_ready_rows = 0
@@ -217,17 +224,17 @@ requirement_rows = [
     },
     {
         "requirement": "local-checkpoint-materialization",
-        "status": "blocked",
-        "evidence": "v61t records zero identity-verified local checkpoint shards",
-        "ready_rows": "0",
-        "blocked_rows": str(len(candidate_rows)),
+        "status": local_checkpoint_status,
+        "evidence": f"v61t records {local_identity_verified_shard_rows}/{checkpoint_shard_rows} identity-verified local checkpoint shards",
+        "ready_rows": str(len(candidate_rows) if materialization_ready else 0),
+        "blocked_rows": str(0 if materialization_ready else len(candidate_rows)),
     },
     {
         "requirement": "full-safetensors-page-hash-binding",
-        "status": "blocked",
-        "evidence": "v61r records zero verified local page hashes out of 134161 planned pages",
-        "ready_rows": "0",
-        "blocked_rows": str(len(candidate_rows)),
+        "status": full_page_hash_status,
+        "evidence": f"v61r records {verified_page_hash_rows}/{page_hash_sweep_plan_rows} verified local page hashes",
+        "ready_rows": str(len(candidate_rows) if page_hash_ready else 0),
+        "blocked_rows": str(0 if page_hash_ready else len(candidate_rows)),
     },
     {
         "requirement": "real-model-generation",
@@ -275,8 +282,16 @@ runtime_gap_rows = [
     {"gap": "generation-candidate-surface", "status": "ready", "evidence": "1000 generation candidate rows are emitted"},
     {"gap": "human-source-review-artifacts", "status": "blocked", "evidence": "review_artifacts_ready=0 and human_review_completed=0"},
     {"gap": "materialization-admission", "status": "blocked", "evidence": "materialization_admission_ready=0"},
-    {"gap": "local-checkpoint-materialization", "status": "blocked", "evidence": "local_identity_verified_shard_rows=0/59"},
-    {"gap": "full-safetensors-page-hash-binding", "status": "blocked", "evidence": "verified_page_hash_rows=0/134161"},
+    {
+        "gap": "local-checkpoint-materialization",
+        "status": local_checkpoint_status,
+        "evidence": f"local_identity_verified_shard_rows={local_identity_verified_shard_rows}/{checkpoint_shard_rows}",
+    },
+    {
+        "gap": "full-safetensors-page-hash-binding",
+        "status": full_page_hash_status,
+        "evidence": f"verified_page_hash_rows={verified_page_hash_rows}/{page_hash_sweep_plan_rows}",
+    },
     {"gap": "actual-model-generation", "status": "blocked", "evidence": "generation admission has 0 admitted candidate rows"},
     {"gap": "near-frontier-quality", "status": "blocked", "evidence": "quality claims require real generation and review"},
     {"gap": "production-latency", "status": "blocked", "evidence": "admission gate is not production latency evidence"},
@@ -290,8 +305,16 @@ decision_rows = [
     {"gate": "manifest-only-no-repo-payload", "status": "pass", "reason": "metadata only; checkpoint payload bytes remain outside the repository"},
     {"gate": "human-source-review-artifacts", "status": "blocked", "reason": "human/source review artifacts are not returned"},
     {"gate": "materialization-admission", "status": "blocked", "reason": "SSD budget and local shard requirements are not met"},
-    {"gate": "local-checkpoint-materialization", "status": "blocked", "reason": "0/59 local shards are identity verified"},
-    {"gate": "full-safetensors-page-hash-binding", "status": "blocked", "reason": "0/134161 local page hashes are verified"},
+    {
+        "gate": "local-checkpoint-materialization",
+        "status": "pass" if materialization_ready else "blocked",
+        "reason": f"{local_identity_verified_shard_rows}/{checkpoint_shard_rows} local shards are identity verified",
+    },
+    {
+        "gate": "full-safetensors-page-hash-binding",
+        "status": "pass" if page_hash_ready else "blocked",
+        "reason": f"{verified_page_hash_rows}/{page_hash_sweep_plan_rows} local page hashes are verified",
+    },
     {"gate": "real-model-generation", "status": "blocked", "reason": "generation admission has 0 admitted candidate rows"},
     {"gate": "near-frontier-quality", "status": "blocked", "reason": "near-frontier quality requires real generation and review"},
     {"gate": "production-latency", "status": "blocked", "reason": "admission gate is not production latency evidence"},
@@ -400,8 +423,8 @@ Blocked wording:
 
 - human_source_review_artifacts=blocked
 - materialization_admission_ready=0
-- local_checkpoint_materialization_ready=0
-- full_safetensors_page_hash_binding_ready=0
+- local_checkpoint_materialization_ready={v61t_summary['local_checkpoint_materialization_ready']}
+- full_safetensors_page_hash_binding_ready={v61r_summary['full_safetensors_page_hash_binding_ready']}
 - actual_model_generation_ready=0
 - near_frontier_claim_ready=0
 - production_latency_claim_ready=0

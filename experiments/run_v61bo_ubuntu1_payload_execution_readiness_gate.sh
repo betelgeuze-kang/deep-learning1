@@ -73,10 +73,6 @@ v61bn_decision_path = results / "v61bn_ubuntu1_activation_admission_refresh_gate
 v61bn_summary = read_csv(v61bn_summary_path)[0]
 if v61bn_summary.get("v61bn_ubuntu1_activation_admission_refresh_gate_ready") != "1":
     raise SystemExit("v61bo requires v61bn_ubuntu1_activation_admission_refresh_gate_ready=1")
-if v61bn_summary.get("activation_target_admission_ready") != "1":
-    raise SystemExit("v61bo requires activation_target_admission_ready=1")
-if v61bn_summary.get("activation_target_admitted_rows") != "59":
-    raise SystemExit("v61bo requires 59 activation target admitted rows")
 if v61bn_summary.get("selected_backend_id") != "curl-resume":
     raise SystemExit("v61bo requires selected_backend_id=curl-resume")
 if v61bn_summary.get("selected_backend_ready") != "1":
@@ -211,15 +207,18 @@ post_download_generation_admission_command_rows = sum(int(row["post_download_gen
 payload_execution_ready_rows = sum(int(row["payload_execution_ready"]) for row in readiness_rows)
 payload_execution_blocked_rows = len(readiness_rows) - payload_execution_ready_rows
 expected_bytes_total = sum(int(row["expected_bytes"]) for row in readiness_rows)
+activation_target_admitted_rows = int(v61bn_summary["activation_target_admitted_rows"])
+activation_target_admission_ready = int(v61bn_summary["activation_target_admission_ready"])
+activation_target_rows = len(activation_rows)
 
 requirement_rows = [
     {"requirement_id": "v61bn-activation-admission-input", "status": "pass", "actual": v61bn_summary["v61bn_ubuntu1_activation_admission_refresh_gate_ready"], "required": "1", "reason": "v61bn activation target admission evidence is ready"},
-    {"requirement_id": "ubuntu1-activation-target-admitted", "status": "pass", "actual": v61bn_summary["activation_target_admitted_rows"], "required": "59", "reason": "all 59 shard rows are admitted to the ubuntu-1 activation target"},
-    {"requirement_id": "target-bound-download-commands", "status": "pass" if target_bound_download_command_rows == 59 else "blocked", "actual": str(target_bound_download_command_rows), "required": "59", "reason": "all download commands resolve under the ubuntu-1 target"},
-    {"requirement_id": "curl-resume-command-plan", "status": "pass" if curl_resume_command_rows == 59 else "blocked", "actual": str(curl_resume_command_rows), "required": "59", "reason": "all shard downloads have resumable curl command previews"},
-    {"requirement_id": "post-download-verification-commands", "status": "pass" if post_download_verify_command_rows == 59 else "blocked", "actual": str(post_download_verify_command_rows), "required": "59", "reason": "all rows include post-download local materialization verification commands"},
-    {"requirement_id": "post-download-full-page-hash-commands", "status": "pass" if post_download_full_page_hash_command_rows == 59 else "blocked", "actual": str(post_download_full_page_hash_command_rows), "required": "59", "reason": "all rows include full page-hash recheck commands"},
-    {"requirement_id": "post-download-generation-admission-commands", "status": "pass" if post_download_generation_admission_command_rows == 59 else "blocked", "actual": str(post_download_generation_admission_command_rows), "required": "59", "reason": "all rows include generation admission recheck commands"},
+    {"requirement_id": "ubuntu1-activation-target-admitted", "status": "pass" if activation_target_admission_ready else "blocked", "actual": v61bn_summary["activation_target_admitted_rows"], "required": str(activation_target_rows), "reason": "all shard rows are admitted to the ubuntu-1 activation target"},
+    {"requirement_id": "target-bound-download-commands", "status": "pass" if target_bound_download_command_rows == activation_target_rows else "blocked", "actual": str(target_bound_download_command_rows), "required": str(activation_target_rows), "reason": "all download commands resolve under the ubuntu-1 target"},
+    {"requirement_id": "curl-resume-command-plan", "status": "pass" if curl_resume_command_rows == activation_target_rows else "blocked", "actual": str(curl_resume_command_rows), "required": str(activation_target_rows), "reason": "all shard downloads have resumable curl command previews"},
+    {"requirement_id": "post-download-verification-commands", "status": "pass" if post_download_verify_command_rows == activation_target_rows else "blocked", "actual": str(post_download_verify_command_rows), "required": str(activation_target_rows), "reason": "all rows include post-download local materialization verification commands"},
+    {"requirement_id": "post-download-full-page-hash-commands", "status": "pass" if post_download_full_page_hash_command_rows == activation_target_rows else "blocked", "actual": str(post_download_full_page_hash_command_rows), "required": str(activation_target_rows), "reason": "all rows include full page-hash recheck commands"},
+    {"requirement_id": "post-download-generation-admission-commands", "status": "pass" if post_download_generation_admission_command_rows == activation_target_rows else "blocked", "actual": str(post_download_generation_admission_command_rows), "required": str(activation_target_rows), "reason": "all rows include generation admission recheck commands"},
     {"requirement_id": "payload-execution-preflight", "status": "pass" if payload_execution_preflight_ready else "blocked", "actual": str(payload_execution_preflight_ready), "required": "1", "reason": "all target-bound commands are ready for an explicitly approved payload execution run"},
     {"requirement_id": "manifest-only-no-repo-payload", "status": "pass", "actual": "0", "required": "0", "reason": "v61bo records readiness only and downloads no checkpoint payload"},
     {"requirement_id": "explicit-payload-execution", "status": "blocked", "actual": "0", "required": "1", "reason": "checkpoint payload download execution remains disabled until explicit operator approval"},
@@ -276,9 +275,9 @@ write_csv(summary_csv, list(metric.keys())[1:], [{k: v for k, v in metric.items(
 
 runtime_gap_rows = [
     ("v61bn-activation-admission-input", "ready", "v61bn activation target admission is ready"),
-    ("ubuntu1-activation-target-admitted", "ready", "59/59 shard rows are admitted to the ubuntu-1 target"),
-    ("target-bound-download-commands", "ready", f"target_bound_download_command_rows={target_bound_download_command_rows}/59"),
-    ("curl-resume-command-plan", "ready", f"curl_resume_command_rows={curl_resume_command_rows}/59"),
+    ("ubuntu1-activation-target-admitted", "ready" if activation_target_admission_ready else "blocked", f"{activation_target_admitted_rows}/{activation_target_rows} shard rows are admitted to the ubuntu-1 target"),
+    ("target-bound-download-commands", "ready" if target_bound_download_command_rows == activation_target_rows else "blocked", f"target_bound_download_command_rows={target_bound_download_command_rows}/{activation_target_rows}"),
+    ("curl-resume-command-plan", "ready" if curl_resume_command_rows == activation_target_rows else "blocked", f"curl_resume_command_rows={curl_resume_command_rows}/{activation_target_rows}"),
     ("payload-execution-preflight", "ready" if payload_execution_preflight_ready else "blocked", f"payload_execution_preflight_ready={payload_execution_preflight_ready}"),
     ("explicit-payload-execution", "blocked", "checkpoint payload download execution remains disabled"),
     ("local-checkpoint-materialization", "blocked", "full checkpoint shards are not identity verified"),
@@ -291,10 +290,10 @@ write_csv(run_dir / "runtime_gap_rows.csv", ["gap", "status", "reason"], [{"gap"
 
 decision_rows = [
     {"gate": "v61bn-activation-admission-input", "status": "pass", "reason": "v61bn activation target admission evidence is ready"},
-    {"gate": "ubuntu1-activation-target-admitted", "status": "pass", "reason": "59/59 shard rows are admitted to the ubuntu-1 activation target"},
-    {"gate": "target-bound-download-commands", "status": "pass" if target_bound_download_command_rows == 59 else "blocked", "reason": f"target_bound_download_command_rows={target_bound_download_command_rows}/59"},
-    {"gate": "curl-resume-command-plan", "status": "pass" if curl_resume_command_rows == 59 else "blocked", "reason": f"curl_resume_command_rows={curl_resume_command_rows}/59"},
-    {"gate": "post-download-verification-commands", "status": "pass" if post_download_verify_command_rows == 59 else "blocked", "reason": f"post_download_verify_command_rows={post_download_verify_command_rows}/59"},
+    {"gate": "ubuntu1-activation-target-admitted", "status": "pass" if activation_target_admission_ready else "blocked", "reason": f"{activation_target_admitted_rows}/{activation_target_rows} shard rows are admitted to the ubuntu-1 activation target"},
+    {"gate": "target-bound-download-commands", "status": "pass" if target_bound_download_command_rows == activation_target_rows else "blocked", "reason": f"target_bound_download_command_rows={target_bound_download_command_rows}/{activation_target_rows}"},
+    {"gate": "curl-resume-command-plan", "status": "pass" if curl_resume_command_rows == activation_target_rows else "blocked", "reason": f"curl_resume_command_rows={curl_resume_command_rows}/{activation_target_rows}"},
+    {"gate": "post-download-verification-commands", "status": "pass" if post_download_verify_command_rows == activation_target_rows else "blocked", "reason": f"post_download_verify_command_rows={post_download_verify_command_rows}/{activation_target_rows}"},
     {"gate": "payload-execution-preflight", "status": "pass" if payload_execution_preflight_ready else "blocked", "reason": f"payload_execution_preflight_ready={payload_execution_preflight_ready}"},
     {"gate": "manifest-only-no-repo-payload", "status": "pass", "reason": "v61bo records readiness only and downloads no checkpoint payload"},
     {"gate": "explicit-payload-execution", "status": "blocked", "reason": "operator approval/download execution remains disabled"},

@@ -35,18 +35,24 @@ def read_csv(path):
 
 
 summary = read_csv(summary_csv)[0]
+source_v61ac_summary = read_csv(run_dir / "source_v61ac/v61ac_hotset_token_budget_replay_summary.csv")[0]
+source_bound_token_budget_rows = int(source_v61ac_summary["token_budget_rows"])
+kv_context_profile_rows = 5
+combined_rows_expected = source_bound_token_budget_rows * kv_context_profile_rows
+full_kv_vram_budget_pass_rows = source_bound_token_budget_rows * 2
+nvme_eviction_required_rows = combined_rows_expected - full_kv_vram_budget_pass_rows
 expected = {
     "v61ad_kv_weight_token_budget_replay_ready": "1",
     "v61ac_hotset_token_budget_replay_ready": "1",
     "v61m_kv_cache_residency_eviction_policy_ready": "1",
     "model_id": "mistralai/Mixtral-8x22B-v0.1",
-    "source_bound_token_budget_rows": "37",
-    "kv_context_profile_rows": "5",
-    "combined_kv_weight_budget_rows": "185",
-    "combined_kv_weight_budget_ready_rows": "185",
-    "vram_policy_pass_rows": "185",
-    "full_kv_vram_budget_pass_rows": "74",
-    "nvme_eviction_required_rows": "111",
+    "source_bound_token_budget_rows": str(source_bound_token_budget_rows),
+    "kv_context_profile_rows": str(kv_context_profile_rows),
+    "combined_kv_weight_budget_rows": str(combined_rows_expected),
+    "combined_kv_weight_budget_ready_rows": str(combined_rows_expected),
+    "vram_policy_pass_rows": str(combined_rows_expected),
+    "full_kv_vram_budget_pass_rows": str(full_kv_vram_budget_pass_rows),
+    "nvme_eviction_required_rows": str(nvme_eviction_required_rows),
     "host_ram_spill_bytes_total": "0",
     "hot_window_tokens": "1024",
     "sink_tokens": "128",
@@ -116,15 +122,15 @@ gaps = {row["gap"]: row["status"] for row in read_csv(run_dir / "runtime_gap_row
 
 if len(profile_rows) != 5:
     raise SystemExit("v61ad KV profile row count mismatch")
-if len(combined_rows) != 185:
+if len(combined_rows) != combined_rows_expected:
     raise SystemExit("v61ad combined budget row count mismatch")
-if sum(1 for row in combined_rows if row["combined_kv_weight_budget_ready"] == "1") != 185:
+if sum(1 for row in combined_rows if row["combined_kv_weight_budget_ready"] == "1") != combined_rows_expected:
     raise SystemExit("v61ad all combined rows should be ready")
-if sum(1 for row in combined_rows if row["kv_vram_budget_pass"] == "1") != 185:
+if sum(1 for row in combined_rows if row["kv_vram_budget_pass"] == "1") != combined_rows_expected:
     raise SystemExit("v61ad all combined rows should pass resident KV VRAM budget")
-if sum(1 for row in combined_rows if row["full_kv_vram_budget_pass"] == "1") != 74:
+if sum(1 for row in combined_rows if row["full_kv_vram_budget_pass"] == "1") != full_kv_vram_budget_pass_rows:
     raise SystemExit("v61ad full KV VRAM pass count mismatch")
-if sum(1 for row in combined_rows if row["kv_nvme_eviction_required"] == "1") != 111:
+if sum(1 for row in combined_rows if row["kv_nvme_eviction_required"] == "1") != nvme_eviction_required_rows:
     raise SystemExit("v61ad NVMe eviction-required count mismatch")
 if any(row["host_ram_spill_bytes"] != "0" for row in combined_rows):
     raise SystemExit("v61ad must not use host RAM KV spill")
@@ -177,7 +183,7 @@ for gap in [
 manifest = json.loads((run_dir / "v61ad_kv_weight_token_budget_replay_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v61ad_kv_weight_token_budget_replay_ready") != 1:
     raise SystemExit("v61ad manifest readiness mismatch")
-if manifest.get("combined_kv_weight_budget_rows") != 185:
+if manifest.get("combined_kv_weight_budget_rows") != combined_rows_expected:
     raise SystemExit("v61ad manifest row count mismatch")
 if manifest.get("host_ram_spill_bytes_total") != 0:
     raise SystemExit("v61ad manifest should keep host RAM spill at zero")
@@ -186,10 +192,10 @@ if manifest.get("actual_model_generation_ready") != 0:
 
 boundary = (run_dir / "V61AD_KV_WEIGHT_TOKEN_BUDGET_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "combined_kv_weight_budget_rows=185",
-    "combined_kv_weight_budget_ready_rows=185",
-    "full_kv_vram_budget_pass_rows=74",
-    "nvme_eviction_required_rows=111",
+    f"combined_kv_weight_budget_rows={combined_rows_expected}",
+    f"combined_kv_weight_budget_ready_rows={combined_rows_expected}",
+    f"full_kv_vram_budget_pass_rows={full_kv_vram_budget_pass_rows}",
+    f"nvme_eviction_required_rows={nvme_eviction_required_rows}",
     "host_ram_spill_bytes_total=0",
     "weight_plus_new_kv_bytes_per_token=8617984",
     "actual_model_generation_ready=0",

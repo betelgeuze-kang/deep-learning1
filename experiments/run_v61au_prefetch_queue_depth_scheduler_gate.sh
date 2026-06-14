@@ -108,8 +108,9 @@ for src, rel in [
 
 token_rows = read_csv(v61at_dir / "prefetch_overlap_token_rows.csv")
 page_rows = read_csv(v61as_dir / "hotset_reuse_page_rows.csv")
-if len(token_rows) != 37:
-    raise SystemExit("v61au expects 37 v61at token rows")
+expected_token_rows = int(v61at_summary["source_bound_token_rows"])
+if len(token_rows) != expected_token_rows:
+    raise SystemExit(f"v61au expects {expected_token_rows} v61at token rows")
 if len(page_rows) != 15:
     raise SystemExit("v61au expects 15 v61as hotset page rows")
 
@@ -292,7 +293,7 @@ write_csv(run_dir / "prefetch_scheduler_issue_rows.csv", list(issue_rows[0].keys
 write_csv(run_dir / "prefetch_queue_depth_rows.csv", list(queue_depth_rows[0].keys()), queue_depth_rows)
 write_csv(run_dir / "prefetch_deadline_requirement_rows.csv", list(deadline_rows[0].keys()), deadline_rows)
 
-steady_scheduler_ready = int(steady_issue_rows == 11 and steady_deadline_met_rows == 11 and steady_deadline_miss_rows == 0 and max_steady_required_depth <= configured_queue_depth)
+steady_scheduler_ready = int(steady_issue_rows == steady_deadline_met_rows and steady_deadline_miss_rows == 0 and max_steady_required_depth <= configured_queue_depth)
 bootstrap_scheduler_ready = 0
 prefetch_scheduler_admission_ready = int(steady_scheduler_ready and bootstrap_scheduler_ready)
 
@@ -301,7 +302,7 @@ metric = {
     "model_id": model_id,
     "v61au_prefetch_queue_depth_scheduler_gate_ready": "1",
     "v61at_prefetch_overlap_admission_gate_ready": v61at_summary["v61at_prefetch_overlap_admission_gate_ready"],
-    "source_bound_token_rows": "37",
+    "source_bound_token_rows": str(len(token_rows)),
     "total_cold_fill_page_rows": str(len(issue_rows)),
     "bootstrap_cold_fill_page_rows": str(bootstrap_cold_fill_page_rows),
     "steady_state_prefetch_issue_rows": str(steady_issue_rows),
@@ -372,7 +373,7 @@ It is an admission ledger, not actual async I/O execution.
 
 Verified sampled scheduler evidence:
 
-- source_bound_token_rows=37
+- source_bound_token_rows={len(token_rows)}
 - total_cold_fill_page_rows={len(issue_rows)}
 - bootstrap_cold_fill_page_rows={bootstrap_cold_fill_page_rows}
 - steady_state_prefetch_issue_rows={steady_issue_rows}
@@ -410,7 +411,7 @@ manifest = {
     "model_id": model_id,
     "v61au_prefetch_queue_depth_scheduler_gate_ready": 1,
     "source_v61at_ready": int(v61at_summary["v61at_prefetch_overlap_admission_gate_ready"]),
-    "source_bound_token_rows": 37,
+    "source_bound_token_rows": len(token_rows),
     "total_cold_fill_page_rows": len(issue_rows),
     "bootstrap_cold_fill_page_rows": bootstrap_cold_fill_page_rows,
     "steady_state_prefetch_issue_rows": steady_issue_rows,

@@ -138,6 +138,8 @@ for src, rel in [
 
 kv_policy = read_csv(v61m_dir / "kv_residency_policy_rows.csv")[0]
 qa_rows = read_csv(v61s_dir / "source_bound_workload_pass_rows.csv")
+source_bound_query_rows = int(v61s_summary["source_bound_query_rows"])
+source_bound_query_pass_rows = int(v61s_summary["source_bound_query_pass_rows"])
 remote_sample_rows = {row["remote_sample_id"]: row for row in read_csv(v61u_dir / "remote_page_hash_sample_rows.csv")}
 binding_rows = read_csv(v61v_dir / "remote_sample_tensor_binding_rows.csv")
 runtime_nodes = {row["binding_id"]: row for row in read_csv(v61v_dir / "remote_sample_runtime_node_rows.csv")}
@@ -145,8 +147,10 @@ priority_rows = {row["shard_name"]: row for row in read_csv(v61w_dir / "checkpoi
 
 if len(binding_rows) != 16 or len(runtime_nodes) != 16:
     raise SystemExit("v61x expects 16 remote sample runtime bindings")
-if len(qa_rows) != 37:
-    raise SystemExit("v61x expects 37 source-bound replay rows")
+if len(qa_rows) != source_bound_query_rows:
+    raise SystemExit(f"v61x expects {source_bound_query_rows} source-bound replay rows")
+if source_bound_query_pass_rows != source_bound_query_rows:
+    raise SystemExit(f"v61x expects all source-bound replay rows to pass: {source_bound_query_pass_rows}/{source_bound_query_rows}")
 
 hotset_page_rows = []
 slot_rows = []
@@ -282,9 +286,9 @@ runtime_gap_rows = [
     {"gap": "v61w-materialization-plan-input", "status": "ready", "evidence": "v61w summary ready and copied"},
     {"gap": "v61v-remote-tensor-binding-input", "status": "ready", "evidence": "16 remote-hashed tensor/runtime node rows copied"},
     {"gap": "v61m-kv-policy-input", "status": "ready", "evidence": "kv_cache_policy_ready=1 and host_ram_kv_spill_enabled=0"},
-    {"gap": "v61s-source-bound-replay-input", "status": "ready", "evidence": "37/37 source-bound replay rows pass"},
+    {"gap": "v61s-source-bound-replay-input", "status": "ready", "evidence": f"{source_bound_query_pass_rows}/{source_bound_query_rows} source-bound replay rows pass"},
     {"gap": "nvme-hotset-manifest", "status": "ready", "evidence": "16 planned outside-repository hotset slots emitted"},
-    {"gap": "source-bound-replay-binding", "status": "ready", "evidence": "37 workload rows bound to the hotset manifest"},
+    {"gap": "source-bound-replay-binding", "status": "ready", "evidence": f"{len(workload_rows)} workload rows bound to the hotset manifest"},
     {"gap": "hotset-payload-materialization", "status": "blocked", "evidence": "local page payload bytes are not materialized"},
     {"gap": "ssd-disk-budget-admission", "status": "blocked", "evidence": "v61w materialization_admission_ready=0"},
     {"gap": "local-checkpoint-materialization", "status": "blocked", "evidence": "v61w local_checkpoint_materialization_ready=0"},
@@ -299,7 +303,7 @@ decision_rows = [
     {"gate": "v61w-materialization-plan-input", "status": "pass", "reason": "download resume plan and MoE-first priority rows are present"},
     {"gate": "v61v-remote-page-tensor-binding-input", "status": "pass", "reason": "16 remote-hashed pages are tensor/runtime-node bound"},
     {"gate": "v61m-kv-cache-policy-input", "status": "pass", "reason": "KV policy is ready and host RAM KV spill remains disabled"},
-    {"gate": "v61s-source-bound-replay-input", "status": "pass", "reason": "one-command source-bound QA replay passes 37/37 rows"},
+    {"gate": "v61s-source-bound-replay-input", "status": "pass", "reason": f"one-command source-bound QA replay passes {source_bound_query_pass_rows}/{source_bound_query_rows} rows"},
     {"gate": "nvme-hotset-manifest", "status": "pass", "reason": "planned hotset slots are outside the repository and hash-bound"},
     {"gate": "source-bound-replay-binding", "status": "pass", "reason": "source-bound workload rows are bound to the hotset manifest"},
     {"gate": "manifest-only-no-repo-payload", "status": "pass", "reason": "no checkpoint payload bytes are written or committed by v61x"},

@@ -34,27 +34,46 @@ def read_csv(path):
         return list(csv.DictReader(handle))
 
 
+def fmt(value):
+    return f"{value:.9f}"
+
+
 summary = read_csv(summary_csv)[0]
+source_token_rows = read_csv(run_dir / "source_v61ac/hotset_token_budget_rows.csv")
+source_schedule_rows = read_csv(run_dir / "source_v61ac/hotset_token_budget_page_schedule_rows.csv")
+source_kv_rows = read_csv(run_dir / "source_v61ad/kv_weight_token_budget_rows.csv")
+source_bound_rows = len(source_token_rows)
+scheduled_rows = len(source_schedule_rows)
+unique_pages = len({row["direct_read_id"] for row in source_schedule_rows})
+cache_miss_rows = unique_pages
+cache_hit_rows = scheduled_rows - unique_pages
+page_bytes = 2097152
+uncached_total = scheduled_rows * page_bytes
+cold_fill_total = unique_pages * page_bytes
+saved_bytes = cache_hit_rows * page_bytes
+uncached_per_token = uncached_total // source_bound_rows
+amortized_cold = cold_fill_total / source_bound_rows
+amortized_saved = saved_bytes / source_bound_rows
 expected = {
     "v61as_hotset_reuse_admission_gate_ready": "1",
     "v61ac_hotset_token_budget_replay_ready": "1",
     "v61ad_kv_weight_token_budget_replay_ready": "1",
     "v61ar_moe_remote_hash_result_intake_ready": "1",
     "model_id": "mistralai/Mixtral-8x22B-v0.1",
-    "source_bound_token_budget_rows": "37",
-    "scheduled_hotset_page_read_rows": "148",
-    "unique_hotset_page_rows": "15",
-    "cache_miss_page_rows": "15",
-    "cache_hit_page_rows": "133",
-    "cache_hit_rate": "0.898648649",
-    "reuse_factor": "9.866666667",
+    "source_bound_token_budget_rows": str(source_bound_rows),
+    "scheduled_hotset_page_read_rows": str(scheduled_rows),
+    "unique_hotset_page_rows": str(unique_pages),
+    "cache_miss_page_rows": str(cache_miss_rows),
+    "cache_hit_page_rows": str(cache_hit_rows),
+    "cache_hit_rate": fmt(cache_hit_rows / scheduled_rows),
+    "reuse_factor": fmt(scheduled_rows / unique_pages),
     "page_bytes": "2097152",
-    "uncached_ssd_read_bytes_total": "310378496",
-    "persistent_hotset_cold_fill_bytes": "31457280",
-    "persistent_hotset_saved_bytes": "278921216",
-    "uncached_ssd_read_bytes_per_token": "8388608",
-    "amortized_cold_fill_bytes_per_token": "850196.756756757",
-    "amortized_saved_bytes_per_token": "7538411.243243244",
+    "uncached_ssd_read_bytes_total": str(uncached_total),
+    "persistent_hotset_cold_fill_bytes": str(cold_fill_total),
+    "persistent_hotset_saved_bytes": str(saved_bytes),
+    "uncached_ssd_read_bytes_per_token": str(uncached_per_token),
+    "amortized_cold_fill_bytes_per_token": fmt(amortized_cold),
+    "amortized_saved_bytes_per_token": fmt(amortized_saved),
     "sampled_hotset_reuse_ready": "1",
     "remote_hash_result_intake_ready": "0",
     "full_moe_coverage_remote_hash_ready": "0",
@@ -82,6 +101,7 @@ required_files = [
     "V61AS_HOTSET_REUSE_ADMISSION_GATE_BOUNDARY.md",
     "v61as_hotset_reuse_admission_gate_manifest.json",
     "sha256_manifest.csv",
+    "source_v61ac/hotset_token_budget_rows.csv",
     "source_v61ac/hotset_token_budget_page_schedule_rows.csv",
     "source_v61ad/kv_weight_token_budget_rows.csv",
     "source_v61ar/moe_remote_hash_combined_coverage_rows.csv",
@@ -99,14 +119,14 @@ metric = read_csv(run_dir / "hotset_reuse_metric_rows.csv")[0]
 gaps = {row["gap"]: row["status"] for row in read_csv(run_dir / "runtime_gap_rows.csv")}
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 
-if len(page_rows) != 15 or len(token_rows) != 37 or len(window_rows) != 1:
+if len(page_rows) != unique_pages or len(token_rows) != source_bound_rows or len(window_rows) != 1:
     raise SystemExit("v61as row count mismatch")
-if sum(int(row["scheduled_page_read_rows"]) for row in page_rows) != 148:
-    raise SystemExit("v61as page rows should cover 148 scheduled reads")
-if sum(int(row["cache_miss_page_rows"]) for row in page_rows) != 15:
-    raise SystemExit("v61as page rows should record 15 cold fills")
-if sum(int(row["cache_hit_page_rows"]) for row in page_rows) != 133:
-    raise SystemExit("v61as page rows should record 133 cache hits")
+if sum(int(row["scheduled_page_read_rows"]) for row in page_rows) != scheduled_rows:
+    raise SystemExit(f"v61as page rows should cover {scheduled_rows} scheduled reads")
+if sum(int(row["cache_miss_page_rows"]) for row in page_rows) != cache_miss_rows:
+    raise SystemExit(f"v61as page rows should record {cache_miss_rows} cold fills")
+if sum(int(row["cache_hit_page_rows"]) for row in page_rows) != cache_hit_rows:
+    raise SystemExit(f"v61as page rows should record {cache_hit_rows} cache hits")
 if min(int(row["scheduled_page_read_rows"]) for row in page_rows) < 8:
     raise SystemExit("v61as every reused page should be touched at least 8 times")
 if max(int(row["scheduled_page_read_rows"]) for row in page_rows) > 12:
@@ -120,12 +140,12 @@ if any(row["checkpoint_payload_bytes_committed_to_repo"] != "0" for row in page_
 if any(row["actual_model_generation_ready"] != "0" for row in page_rows + token_rows):
     raise SystemExit("v61as must keep generation blocked")
 
-if sum(int(row["scheduled_page_rows"]) for row in token_rows) != 148:
+if sum(int(row["scheduled_page_rows"]) for row in token_rows) != scheduled_rows:
     raise SystemExit("v61as token rows should cover all scheduled rows")
-if sum(int(row["cache_miss_page_rows"]) for row in token_rows) != 15:
-    raise SystemExit("v61as token rows should record 15 misses")
-if sum(int(row["cache_hit_page_rows"]) for row in token_rows) != 133:
-    raise SystemExit("v61as token rows should record 133 hits")
+if sum(int(row["cache_miss_page_rows"]) for row in token_rows) != cache_miss_rows:
+    raise SystemExit(f"v61as token rows should record {cache_miss_rows} misses")
+if sum(int(row["cache_hit_page_rows"]) for row in token_rows) != cache_hit_rows:
+    raise SystemExit(f"v61as token rows should record {cache_hit_rows} hits")
 if token_rows[0]["cache_miss_page_rows"] != "4" or token_rows[0]["cache_hit_page_rows"] != "0":
     raise SystemExit("v61as first token should cold-fill four pages")
 if any(row["token_reuse_ready"] != "1" for row in token_rows):
@@ -198,7 +218,7 @@ for gap in [
 manifest = json.loads((run_dir / "v61as_hotset_reuse_admission_gate_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v61as_hotset_reuse_admission_gate_ready") != 1:
     raise SystemExit("v61as manifest readiness mismatch")
-if manifest.get("cache_hit_page_rows") != 133 or manifest.get("unique_hotset_page_rows") != 15:
+if manifest.get("cache_hit_page_rows") != cache_hit_rows or manifest.get("unique_hotset_page_rows") != unique_pages:
     raise SystemExit("v61as manifest reuse count mismatch")
 if manifest.get("full_runtime_hotset_reuse_admission_ready") != 0:
     raise SystemExit("v61as manifest should keep full runtime admission blocked")
@@ -207,12 +227,12 @@ if manifest.get("checkpoint_payload_bytes_downloaded_by_v61as") != 0:
 
 boundary = (run_dir / "V61AS_HOTSET_REUSE_ADMISSION_GATE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "scheduled_hotset_page_read_rows=148",
-    "unique_hotset_page_rows=15",
-    "cache_miss_page_rows=15",
-    "cache_hit_page_rows=133",
-    "persistent_hotset_cold_fill_bytes=31457280",
-    "persistent_hotset_saved_bytes=278921216",
+    f"scheduled_hotset_page_read_rows={scheduled_rows}",
+    f"unique_hotset_page_rows={unique_pages}",
+    f"cache_miss_page_rows={cache_miss_rows}",
+    f"cache_hit_page_rows={cache_hit_rows}",
+    f"persistent_hotset_cold_fill_bytes={cold_fill_total}",
+    f"persistent_hotset_saved_bytes={saved_bytes}",
     "sampled_hotset_reuse_ready=1",
     "full_runtime_hotset_reuse_admission_ready=0",
     "checkpoint_payload_bytes_downloaded_by_v61as=0",

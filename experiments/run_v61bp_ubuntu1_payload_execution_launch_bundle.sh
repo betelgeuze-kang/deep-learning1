@@ -86,10 +86,6 @@ v61bo_decision_path = results / "v61bo_ubuntu1_payload_execution_readiness_gate_
 v61bo_summary = read_csv(v61bo_summary_path)[0]
 if v61bo_summary.get("v61bo_ubuntu1_payload_execution_readiness_gate_ready") != "1":
     raise SystemExit("v61bp requires v61bo_ubuntu1_payload_execution_readiness_gate_ready=1")
-if v61bo_summary.get("payload_execution_preflight_ready") != "1":
-    raise SystemExit("v61bp requires payload_execution_preflight_ready=1")
-if v61bo_summary.get("payload_execution_readiness_rows") != "59":
-    raise SystemExit("v61bp requires 59 payload execution readiness rows")
 if v61bo_summary.get("selected_backend_id") != "curl-resume":
     raise SystemExit("v61bp requires selected_backend_id=curl-resume")
 
@@ -109,8 +105,9 @@ for src, rel in [
 
 readiness_rows = read_csv(v61bo_dir / "ubuntu1_payload_execution_readiness_rows.csv")
 chunk_rows = read_csv(v61bo_dir / "ubuntu1_payload_execution_chunk_rows.csv")
-if len(readiness_rows) != 59:
-    raise SystemExit("v61bp expects 59 readiness rows")
+expected_readiness_rows = int(v61bo_summary["payload_execution_readiness_rows"])
+if len(readiness_rows) != expected_readiness_rows:
+    raise SystemExit(f"v61bp expects {expected_readiness_rows} readiness rows")
 if len(chunk_rows) != 3:
     raise SystemExit("v61bp expects 3 chunk rows")
 

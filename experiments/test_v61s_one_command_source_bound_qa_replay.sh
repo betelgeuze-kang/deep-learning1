@@ -35,6 +35,9 @@ def read_csv(path):
 
 
 summary = read_csv(summary_csv)[0]
+v61n_summary = read_csv(run_dir / "source_v61n/v61n_source_bound_qa_workload_summary.csv")[0]
+source_bound_query_rows = v61n_summary["source_bound_query_rows"]
+source_bound_abstain_rows = v61n_summary["source_bound_abstain_rows"]
 expected = {
     "v61s_one_command_source_bound_qa_replay_ready": "1",
     "v61j_one_command_ssd_resident_demo_ready": "1",
@@ -43,12 +46,12 @@ expected = {
     "entrypoint_mode": "--source-bound-qa",
     "one_command_exit_code": "0",
     "one_command_source_bound_qa_pass": "1",
-    "source_bound_query_rows": "37",
-    "source_bound_query_pass_rows": "37",
-    "source_bound_citation_rows": "37",
-    "source_bound_resource_rows": "37",
-    "source_bound_abstain_rows": "10",
-    "abstain_policy_pass_rows": "10",
+    "source_bound_query_rows": source_bound_query_rows,
+    "source_bound_query_pass_rows": source_bound_query_rows,
+    "source_bound_citation_rows": source_bound_query_rows,
+    "source_bound_resource_rows": source_bound_query_rows,
+    "source_bound_abstain_rows": source_bound_abstain_rows,
+    "abstain_policy_pass_rows": source_bound_abstain_rows,
     "runtime_binding_ready": "1",
     "actual_model_generation_ready": "0",
     "complete_source_1000_query_ready": "0",
@@ -121,11 +124,11 @@ if replay["entrypoint_mode"] != "--source-bound-qa":
     raise SystemExit("v61s should exercise the --source-bound-qa entrypoint mode")
 
 pass_rows = read_csv(run_dir / "source_bound_workload_pass_rows.csv")
-if len(pass_rows) != 37:
+if len(pass_rows) != int(source_bound_query_rows):
     raise SystemExit("v61s workload pass row count mismatch")
 if any(row["source_bound_query_pass"] != "1" for row in pass_rows):
     raise SystemExit("v61s every source-bound query should pass")
-if sum(1 for row in pass_rows if row["requires_abstain"] == "1") != 10:
+if sum(1 for row in pass_rows if row["requires_abstain"] == "1") != int(source_bound_abstain_rows):
     raise SystemExit("v61s abstain row count mismatch")
 if any(row["actual_model_generation_ready"] != "0" for row in pass_rows):
     raise SystemExit("v61s should not claim actual model generation")
@@ -133,7 +136,7 @@ if any(row["actual_model_generation_ready"] != "0" for row in pass_rows):
 manifest = json.loads((run_dir / "v61s_one_command_source_bound_qa_replay_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v61s_one_command_source_bound_qa_replay_ready") != 1:
     raise SystemExit("v61s manifest readiness mismatch")
-if manifest.get("one_command_source_bound_qa_pass") != 1 or manifest.get("source_bound_query_rows") != 37:
+if manifest.get("one_command_source_bound_qa_pass") != 1 or manifest.get("source_bound_query_rows") != int(source_bound_query_rows):
     raise SystemExit("v61s manifest source-bound pass mismatch")
 if manifest.get("actual_model_generation_ready") != 0 or manifest.get("full_safetensors_page_hash_binding_ready") != 0:
     raise SystemExit("v61s manifest should keep generation/hash coverage blocked")
@@ -142,7 +145,7 @@ boundary = (run_dir / "V61S_ONE_COMMAND_SOURCE_BOUND_QA_REPLAY_BOUNDARY.md").rea
 for snippet in [
     "v61 one-command source-bound QA seed replay",
     "one_command_exit_code=0",
-    "source_bound_query_pass_rows=37",
+    f"source_bound_query_pass_rows={source_bound_query_rows}",
     "one_command_source_bound_qa_pass=1",
     "Blocked wording",
 ]:

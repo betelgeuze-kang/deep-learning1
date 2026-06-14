@@ -108,8 +108,9 @@ for src, rel in [
     copy(src, rel)
 
 token_rows = read_csv(v61as_dir / "hotset_reuse_token_rows.csv")
-if len(token_rows) != 37:
-    raise SystemExit("v61at expects 37 hotset reuse token rows")
+expected_token_rows = int(v61as_summary["source_bound_token_budget_rows"])
+if len(token_rows) != expected_token_rows:
+    raise SystemExit(f"v61at expects {expected_token_rows} hotset reuse token rows")
 
 gpu_kernel_ms = float(v61l_summary["gpu_kernel_avg_ms"])
 read_p95_ms = float(v61z_summary["direct_io_read_latency_ms_p95"])
@@ -198,14 +199,15 @@ cold_fill_p95_total_ms = int(v61as_summary["cache_miss_page_rows"]) * read_p95_m
 saved_p95_ms = uncached_p95_total_ms - cold_fill_p95_total_ms
 token_compute_window_ms = 4 * gpu_kernel_ms
 bootstrap_cold_fill_p95_ms = 4 * read_p95_ms
-steady_state_prefetch_overlap_ready = int(steady_rows == 36 and steady_pass_rows == 36 and steady_blocked_rows == 0)
+expected_steady_rows = max(0, len(token_rows) - 1)
+steady_state_prefetch_overlap_ready = int(steady_rows == expected_steady_rows and steady_pass_rows == expected_steady_rows and steady_blocked_rows == 0)
 bootstrap_cold_start_ready = 0
 prefetch_overlap_admission_ready = int(steady_state_prefetch_overlap_ready and bootstrap_cold_start_ready)
 
 window_rows = [
     {
-        "prefetch_window_id": "v61at_source_bound_37_query_prefetch_window",
-        "source_bound_token_rows": "37",
+        "prefetch_window_id": f"v61at_source_bound_{len(token_rows)}_query_prefetch_window",
+        "source_bound_token_rows": str(len(token_rows)),
         "scheduled_hotset_page_read_rows": v61as_summary["scheduled_hotset_page_read_rows"],
         "unique_hotset_page_rows": v61as_summary["unique_hotset_page_rows"],
         "bootstrap_cold_start_rows": str(bootstrap_rows),
@@ -233,7 +235,7 @@ requirement_rows = [
     {"requirement_id": "v61l-gpu-page-kernel-input", "status": "pass", "actual": v61l_summary["gpu_kernel_avg_ms"], "required": ">0", "reason": "GPU page-kernel timing is bound"},
     {"requirement_id": "v61z-direct-io-latency-input", "status": "pass", "actual": v61z_summary["direct_io_read_latency_ms_p95"], "required": ">0", "reason": "direct-I/O p95 latency is bound"},
     {"requirement_id": "v61as-hotset-reuse-input", "status": "pass", "actual": v61as_summary["sampled_hotset_reuse_ready"], "required": "1", "reason": "sampled hotset reuse gate is ready"},
-    {"requirement_id": "steady-state-prefetch-overlap", "status": "pass" if steady_state_prefetch_overlap_ready else "blocked", "actual": str(steady_pass_rows), "required": "36", "reason": "all non-bootstrap tokens fit cold-fill p95 inside prior token compute window"},
+    {"requirement_id": "steady-state-prefetch-overlap", "status": "pass" if steady_state_prefetch_overlap_ready else "blocked", "actual": str(steady_pass_rows), "required": str(expected_steady_rows), "reason": "all non-bootstrap tokens fit cold-fill p95 inside prior token compute window"},
     {"requirement_id": "bootstrap-cold-start", "status": "blocked", "actual": "0", "required": "1", "reason": "first-token cold fill has no prior compute window"},
     {"requirement_id": "full-prefetch-overlap-admission", "status": "blocked", "actual": str(prefetch_overlap_admission_ready), "required": "1", "reason": "steady-state overlap passes but bootstrap and full runtime gates remain open"},
     {"requirement_id": "manifest-only-no-repo-payload", "status": "pass", "actual": "0", "required": "0", "reason": "v61at emits timing overlap rows only"},
@@ -246,7 +248,7 @@ metric = {
     "v61l_gpu_page_dequant_matmul_measurement_ready": v61l_summary["v61l_gpu_page_dequant_matmul_measurement_ready"],
     "v61z_hotset_direct_io_replay_ready": v61z_summary["v61z_hotset_direct_io_replay_ready"],
     "v61as_hotset_reuse_admission_gate_ready": v61as_summary["v61as_hotset_reuse_admission_gate_ready"],
-    "source_bound_token_rows": "37",
+    "source_bound_token_rows": str(len(token_rows)),
     "scheduled_hotset_page_read_rows": v61as_summary["scheduled_hotset_page_read_rows"],
     "unique_hotset_page_rows": v61as_summary["unique_hotset_page_rows"],
     "bootstrap_cold_start_rows": str(bootstrap_rows),
@@ -320,7 +322,7 @@ admission blocked.
 
 Evidence emitted:
 
-- source_bound_token_rows=37
+- source_bound_token_rows={len(token_rows)}
 - steady_state_token_rows={steady_rows}
 - steady_state_prefetch_overlap_pass_rows={steady_pass_rows}
 - steady_state_prefetch_overlap_blocked_rows={steady_blocked_rows}

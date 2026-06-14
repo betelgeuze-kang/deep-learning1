@@ -116,13 +116,14 @@ workload_rows = read_csv(v61x_dir / "hotset_source_bound_workload_binding_rows.c
 direct_rows = read_csv(v61z_dir / "hotset_direct_io_read_rows.csv")
 tile_rows = read_csv(v61ab_dir / "hotset_tensor_tile_probe_rows.csv")
 metric = read_csv(v61ab_dir / "hotset_tensor_tile_quant_metric_rows.csv")[0]
+expected_workload_rows = int(v61x_summary["hotset_workload_binding_rows"])
 
 moe_direct_rows = [
     row for row in direct_rows
     if row["node_type"] == "moe_expert_page_node" and row["direct_read_hash_match"] == "1"
 ]
-if len(workload_rows) != 37:
-    raise SystemExit("v61ac expects 37 source-bound workload bindings")
+if len(workload_rows) != expected_workload_rows:
+    raise SystemExit(f"v61ac expects {expected_workload_rows} source-bound workload bindings")
 if len(moe_direct_rows) != 15:
     raise SystemExit("v61ac expects 15 hash-matched MoE direct-read rows")
 
@@ -260,10 +261,10 @@ for query_index, workload in enumerate(workload_rows):
 tile_binding_count = len(tile_binding_rows)
 schedule_count = len(schedule_rows)
 budget_ready = int(
-    len(budget_rows) == 37
-    and schedule_count == 37 * active_page_reads_per_token
-    and tile_binding_count == 37 * active_page_reads_per_token * tiles_per_page
-    and finite_budget_rows == 37
+    len(budget_rows) == expected_workload_rows
+    and schedule_count == expected_workload_rows * active_page_reads_per_token
+    and tile_binding_count == expected_workload_rows * active_page_reads_per_token * tiles_per_page
+    and finite_budget_rows == expected_workload_rows
     and finite_tile_binding_rows == tile_binding_count
 )
 
@@ -297,7 +298,7 @@ metric_rows = [
 ]
 
 runtime_gap_rows = [
-    {"gap": "v61x-source-bound-replay-binding", "status": "ready", "evidence": "37 source-bound workload bindings are hotset-bound"},
+    {"gap": "v61x-source-bound-replay-binding", "status": "ready", "evidence": f"{len(workload_rows)} source-bound workload bindings are hotset-bound"},
     {"gap": "v61z-direct-io-latency-input", "status": "ready", "evidence": f"direct-I/O p50/p95 per page are {fmt(direct_p50_ms)}/{fmt(direct_p95_ms)} ms"},
     {"gap": "v61ab-numeric-tile-input", "status": "ready", "evidence": "128 finite BF16/q8/q4 tile probes are available"},
     {"gap": "hotset-token-budget-replay", "status": "ready" if budget_ready else "blocked", "evidence": f"{finite_budget_rows}/{len(budget_rows)} token budget rows are finite and hash-bound"},

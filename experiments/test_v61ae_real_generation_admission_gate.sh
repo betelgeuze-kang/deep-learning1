@@ -35,6 +35,14 @@ def read_csv(path):
 
 
 summary = read_csv(summary_csv)[0]
+source_v61r_summary = read_csv(run_dir / "source_v61r/v61r_full_page_hash_sweep_plan_summary.csv")[0]
+source_v61t_summary = read_csv(run_dir / "source_v61t/v61t_local_checkpoint_materialization_verifier_summary.csv")[0]
+source_v61w_summary = read_csv(run_dir / "source_v61w/v61w_materialization_admission_resume_plan_summary.csv")[0]
+local_checkpoint_ready = source_v61t_summary["local_checkpoint_materialization_ready"]
+materialization_admission_ready = source_v61w_summary["materialization_admission_ready"]
+page_hash_ready = source_v61r_summary["full_safetensors_page_hash_binding_ready"]
+materialization_blocked = str(int(not (int(local_checkpoint_ready) and int(materialization_admission_ready))))
+page_hash_blocked = str(int(not int(page_hash_ready)))
 expected = {
     "v61ae_real_generation_admission_gate_ready": "1",
     "v61ad_kv_weight_token_budget_replay_ready": "1",
@@ -53,15 +61,15 @@ expected = {
     "generation_admitted_rows": "0",
     "runtime_budget_ready_rows": "1000",
     "source_review_blocked_rows": "1000",
-    "materialization_blocked_rows": "1000",
-    "page_hash_blocked_rows": "1000",
-    "local_identity_verified_shard_rows": "0",
-    "checkpoint_shard_rows": "59",
-    "full_page_hash_verified_rows": "0",
-    "page_hash_sweep_plan_rows": "134161",
-    "materialization_admission_ready": "0",
-    "local_checkpoint_materialization_ready": "0",
-    "full_safetensors_page_hash_binding_ready": "0",
+    "materialization_blocked_rows": str(1000 * int(materialization_blocked)),
+    "page_hash_blocked_rows": str(1000 * int(page_hash_blocked)),
+    "local_identity_verified_shard_rows": source_v61t_summary["local_identity_verified_shard_rows"],
+    "checkpoint_shard_rows": source_v61t_summary["checkpoint_shard_rows"],
+    "full_page_hash_verified_rows": source_v61r_summary["verified_page_hash_rows"],
+    "page_hash_sweep_plan_rows": source_v61r_summary["page_hash_sweep_plan_rows"],
+    "materialization_admission_ready": materialization_admission_ready,
+    "local_checkpoint_materialization_ready": local_checkpoint_ready,
+    "full_safetensors_page_hash_binding_ready": page_hash_ready,
     "real_generation_admission_ready": "0",
     "actual_model_generation_ready": "0",
     "near_frontier_claim_ready": "0",
@@ -85,8 +93,11 @@ required_files = [
     "source_v61ad/kv_weight_token_budget_rows.csv",
     "source_v53r/review_query_packet_rows.csv",
     "source_v53r/review_queue_rows.csv",
+    "source_v61r/v61r_full_page_hash_sweep_plan_summary.csv",
     "source_v61r/page_hash_sweep_metric_rows.csv",
+    "source_v61t/v61t_local_checkpoint_materialization_verifier_summary.csv",
     "source_v61t/local_checkpoint_materialization_metric_rows.csv",
+    "source_v61w/v61w_materialization_admission_resume_plan_summary.csv",
     "source_v61w/materialization_admission_rows.csv",
 ]
 for rel in required_files:
@@ -103,11 +114,21 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61ae gate should pass: {gate}")
+if local_checkpoint_ready == "1":
+    if decisions.get("local-checkpoint-materialization") != "pass":
+        raise SystemExit("v61ae local-checkpoint-materialization gate should pass")
+else:
+    if decisions.get("local-checkpoint-materialization") != "blocked":
+        raise SystemExit("v61ae local-checkpoint-materialization gate should stay blocked")
+if page_hash_ready == "1":
+    if decisions.get("full-safetensors-page-hash-binding") != "pass":
+        raise SystemExit("v61ae full-safetensors-page-hash-binding gate should pass")
+else:
+    if decisions.get("full-safetensors-page-hash-binding") != "blocked":
+        raise SystemExit("v61ae full-safetensors-page-hash-binding gate should stay blocked")
 for gate in [
     "human-source-review-artifacts",
     "materialization-admission",
-    "local-checkpoint-materialization",
-    "full-safetensors-page-hash-binding",
     "real-model-generation",
     "near-frontier-quality",
     "production-latency",
@@ -137,13 +158,13 @@ for row in candidate_rows:
     checks = {
         "runtime_budget_ready": "1",
         "source_review_artifacts_ready": "0",
-        "local_checkpoint_materialization_ready": "0",
-        "materialization_admission_ready": "0",
-        "full_safetensors_page_hash_binding_ready": "0",
+        "local_checkpoint_materialization_ready": local_checkpoint_ready,
+        "materialization_admission_ready": materialization_admission_ready,
+        "full_safetensors_page_hash_binding_ready": page_hash_ready,
         "generation_admitted": "0",
         "source_review_blocked": "1",
-        "materialization_blocked": "1",
-        "page_hash_blocked": "1",
+        "materialization_blocked": materialization_blocked,
+        "page_hash_blocked": page_hash_blocked,
         "checkpoint_payload_bytes_committed_to_repo": "0",
         "actual_model_generation_ready": "0",
         "production_latency_claim_ready": "0",
@@ -158,11 +179,21 @@ for requirement in [
 ]:
     if requirements.get(requirement) != "ready":
         raise SystemExit(f"v61ae requirement should be ready: {requirement}")
+if local_checkpoint_ready == "1":
+    if requirements.get("local-checkpoint-materialization") != "ready":
+        raise SystemExit("v61ae local-checkpoint-materialization requirement should be ready")
+else:
+    if requirements.get("local-checkpoint-materialization") != "blocked":
+        raise SystemExit("v61ae local-checkpoint-materialization requirement should stay blocked")
+if page_hash_ready == "1":
+    if requirements.get("full-safetensors-page-hash-binding") != "ready":
+        raise SystemExit("v61ae full-safetensors-page-hash-binding requirement should be ready")
+else:
+    if requirements.get("full-safetensors-page-hash-binding") != "blocked":
+        raise SystemExit("v61ae full-safetensors-page-hash-binding requirement should stay blocked")
 for requirement in [
     "human-source-review-artifacts",
     "materialization-admission",
-    "local-checkpoint-materialization",
-    "full-safetensors-page-hash-binding",
     "real-model-generation",
 ]:
     if requirements.get(requirement) != "blocked":
@@ -175,11 +206,21 @@ for gap in [
 ]:
     if gaps.get(gap) != "ready":
         raise SystemExit(f"v61ae gap should be ready: {gap}")
+if local_checkpoint_ready == "1":
+    if gaps.get("local-checkpoint-materialization") != "ready":
+        raise SystemExit("v61ae local-checkpoint-materialization gap should be ready")
+else:
+    if gaps.get("local-checkpoint-materialization") != "blocked":
+        raise SystemExit("v61ae local-checkpoint-materialization gap should stay blocked")
+if page_hash_ready == "1":
+    if gaps.get("full-safetensors-page-hash-binding") != "ready":
+        raise SystemExit("v61ae full-safetensors-page-hash-binding gap should be ready")
+else:
+    if gaps.get("full-safetensors-page-hash-binding") != "blocked":
+        raise SystemExit("v61ae full-safetensors-page-hash-binding gap should stay blocked")
 for gap in [
     "human-source-review-artifacts",
     "materialization-admission",
-    "local-checkpoint-materialization",
-    "full-safetensors-page-hash-binding",
     "actual-model-generation",
     "near-frontier-quality",
     "production-latency",

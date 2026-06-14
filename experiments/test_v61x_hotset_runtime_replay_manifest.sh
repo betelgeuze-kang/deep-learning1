@@ -44,6 +44,8 @@ def inside_repo(path):
 
 
 summary = read_csv(summary_csv)[0]
+source_v61s_summary = read_csv(run_dir / "source_v61s/v61s_one_command_source_bound_qa_replay_summary.csv")[0]
+source_bound_query_rows = source_v61s_summary["source_bound_query_rows"]
 expected = {
     "v61x_hotset_runtime_replay_manifest_ready": "1",
     "v61w_materialization_admission_resume_plan_ready": "1",
@@ -53,13 +55,13 @@ expected = {
     "model_id": "mistralai/Mixtral-8x22B-v0.1",
     "hotset_page_rows": "16",
     "hotset_runtime_slot_rows": "16",
-    "hotset_workload_binding_rows": "37",
+    "hotset_workload_binding_rows": source_bound_query_rows,
     "moe_hotset_page_rows": "15",
     "embedding_hotset_page_rows": "1",
     "remote_hash_bound_rows": "16",
     "remote_page_hash_sample_ready_rows": "16",
-    "source_bound_query_rows": "37",
-    "source_bound_query_pass_rows": "37",
+    "source_bound_query_rows": source_bound_query_rows,
+    "source_bound_query_pass_rows": source_bound_query_rows,
     "hotset_manifest_ready": "1",
     "source_bound_replay_binding_ready": "1",
     "hotset_payload_materialization_ready": "0",
@@ -133,7 +135,7 @@ workload_rows = read_csv(run_dir / "hotset_source_bound_workload_binding_rows.cs
 metric = read_csv(run_dir / "hotset_runtime_replay_metric_rows.csv")[0]
 gaps = {row["gap"]: row["status"] for row in read_csv(run_dir / "runtime_gap_rows.csv")}
 
-if len(page_rows) != 16 or len(slot_rows) != 16 or len(workload_rows) != 37:
+if len(page_rows) != 16 or len(slot_rows) != 16 or len(workload_rows) != int(source_bound_query_rows):
     raise SystemExit("v61x artifact row counts mismatch")
 if sum(1 for row in page_rows if row["node_type"] == "moe_expert_page_node") != 15:
     raise SystemExit("v61x MoE hotset page count mismatch")
@@ -214,7 +216,7 @@ for gap in [
 manifest = json.loads((run_dir / "v61x_hotset_runtime_replay_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v61x_hotset_runtime_replay_manifest_ready") != 1:
     raise SystemExit("v61x manifest readiness mismatch")
-if manifest.get("hotset_page_rows") != 16 or manifest.get("hotset_workload_binding_rows") != 37:
+if manifest.get("hotset_page_rows") != 16 or manifest.get("hotset_workload_binding_rows") != int(source_bound_query_rows):
     raise SystemExit("v61x manifest row counts mismatch")
 if manifest.get("checkpoint_payload_bytes_downloaded_by_v61x") != 0:
     raise SystemExit("v61x manifest should record zero v61x payload downloads")
@@ -232,7 +234,7 @@ for snippet in [
     "hotset_page_rows=16",
     "moe_hotset_page_rows=15",
     "embedding_hotset_page_rows=1",
-    "source_bound_query_pass_rows=37",
+    f"source_bound_query_pass_rows={source_bound_query_rows}",
     "hotset_manifest_ready=1",
     "checkpoint_payload_bytes_downloaded_by_v61x=0",
     "hotset_payload_materialization_ready=0",
