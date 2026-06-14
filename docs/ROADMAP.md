@@ -4118,6 +4118,14 @@ Current next boundary:
   runner reruns v61gv and exits before env sourcing or final replay unless
   `workspace_gap_preflight_ready=1`; the current ubuntu-1 run stops at the same
   23 open witness/env items with all real counters zero.
+- `v61gz` adds the post-v61gy first-real-slice source witness candidate.
+  `experiments/test_v61gz_post_gy_first_real_slice_source_witness_candidate.sh`
+  verifies the selected v53h source snapshot hash and publishes
+  `source_witness_candidate/` with `source_file.txt.candidate`, verifier,
+  explicit promotion helper, README, and manifest. The ubuntu-1 candidate hash
+  matches the worksheet source file, but v61gz does not promote it by default;
+  source promotion alone still leaves workspace preflight, real row acceptance,
+  dual replay, and actual generation blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
