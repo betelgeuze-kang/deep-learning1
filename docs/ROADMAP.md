@@ -4209,6 +4209,30 @@ Current next boundary:
   operator-input files, dual output roots, and v61gp replay counters are ready.
   It is read-only with respect to evidence and currently reports the live next
   action as filling and validating the first real-slice external return form.
+- `v61hj` adds the post-v61hi real subset counter bridge.
+  `experiments/test_v61hj_post_hi_real_subset_counter_bridge.sh` verifies a
+  read-only default plus a publish-only workspace runner. The bridge validates
+  the filled form and authority ack, can optionally call the existing ack wrapper,
+  and then runs the v61gf dual partial-return counter audit over assembled output
+  roots. It does not count synthetic smoke data as real evidence.
+- `v61hk` adds the post-v61hj external return form fill packet.
+  `experiments/test_v61hk_post_hj_first_real_slice_external_return_form_fill_packet.sh`
+  publishes a values-file template, field-by-field values validator, worksheet,
+  builder, and validate/materialize/audit handoff. The builder rejects
+  placeholder/template/fixture/synthetic values before writing a filled form, so
+  validation remains blocked until real operator values are supplied.
+- `v61hl` adds the post-v61hk dual replay authority ack fill packet.
+  `experiments/test_v61hl_post_hk_dual_replay_authority_ack_fill_packet.sh`
+  publishes a final authority-statement values template, values validator,
+  builder, and readiness handoff. The builder computes `filled_form_sha256` from
+  the real filled form and validates the ack before writing it.
+- `v61hm` adds the post-v61hl first real-slice readiness pipeline.
+  `experiments/test_v61hm_post_hl_first_real_slice_readiness_pipeline.sh`
+  verifies a safe orchestrator that can publish
+  `RUN_FIRST_REAL_SLICE_READINESS_PIPELINE.sh`, run values preflights,
+  materialize the filled form and no-replay operator input when real values are
+  present, build the authority ack, and rerun the readiness audit without ever
+  arming dual replay.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
