@@ -4126,6 +4126,13 @@ Current next boundary:
   matches the worksheet source file, but v61gz does not promote it by default;
   source promotion alone still leaves workspace preflight, real row acceptance,
   dual replay, and actual generation blocked.
+- `v61ha` adds the post-v61gz first-real-slice source witness promotion audit.
+  `experiments/test_v61ha_post_gz_first_real_slice_source_witness_promotion_audit.sh`
+  optionally runs the explicit source witness promotion helper in a
+  repo-external workspace, reruns v61gv, and proves one mechanical source
+  witness can become ready, reducing open items to 22. This still leaves human
+  review/adjudication witnesses, generation witnesses, env values, replay, row
+  acceptance, and actual generation blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
