@@ -3721,6 +3721,59 @@ Current next boundary:
   `external_review_return_ready=0`, and `actual_model_generation_ready=0`; a
   fixture return directory is rejected without `real-external-review-return`
   provenance.
+- `v61fp` adds the post-v61fo full-shard-to-real-review replay closure ledger.
+  `experiments/test_v61fp_post_fo_full_shard_to_real_review_replay_closure_ledger.sh`
+  consumes v61fo/v61ff/v61dg/v61fn/v61fm/v61fe and proves the full-shard,
+  full-page-hash, runtime-evidence, and runtime-admission prerequisites are
+  closed while the real review-return and generation-result path remains
+  blocked. Canonical no-return records 16 ledger rows with seven closed and
+  nine blocked, six next actions with two ready, `full_shard_prerequisites_closed=1`,
+  `runtime_admission_accepted_rows=1000`,
+  `generation_execution_admitted_rows=0/1000`,
+  `accepted_generation_result_artifacts=0/5`, and
+  `actual_model_generation_ready=0`; a fixture return root can close only the
+  root-present row and does not satisfy real provenance.
+- `v61fq` adds the post-v61fp v1.0 comparison readiness refresh.
+  `experiments/test_v61fq_post_fp_v1_comparison_readiness_refresh.sh`
+  consumes v52y/v53t/v53am/v61dh/v61fp and separates disclosure-bound
+  comparison wording from actual v1.0 readiness. Canonical no-return records
+  `v52_ready=1`, `f_optional_final_disposition=deferred-with-reason-final`,
+  `comparison_30b_150b_wording_status=allowed-with-disclosure`,
+  `v53_machine_complete_source_surface_ready=1`, 10 complete-source repos,
+  1000 queries, 7000 answer rows, accepted human review 0/7000, accepted
+  adjudication 0/1000, `full_shard_prerequisites_closed=1`, 21 readiness rows
+  with 11 ready and 10 blocked, eight claim-boundary rows with four allowed and
+  four blocked, `v1_0_comparison_ready=0`, and
+  `actual_model_generation_ready=0`.
+- `v61fr` adds the post-v61fq v1.0 ready-command handoff.
+  `experiments/test_v61fr_post_fq_v1_ready_command_handoff.sh` consumes
+  v61fq/v53ah/v53al/v61fo and emits a metadata-only handoff package with a
+  verifier, ready-command printer, command rows, stage rows, and required
+  external input rows. Canonical no-return records `send_bundle_ready=1`, two
+  send-bundle archives, 81 return-artifact templates, seven handoff stages with
+  three ready and four blocked, eight commands with four ready and four
+  blocked, five required external inputs with zero present,
+  `return_bundle_preflight_pass=0`, `external_review_return_ready=0`,
+  `v1_0_comparison_ready=0`, and `actual_model_generation_ready=0`.
+- `v61fs` adds the post-v61fr ready-command execution receipt.
+  `experiments/test_v61fs_post_fr_ready_command_execution_receipt.sh` executes
+  only the four ready local commands from v61fr, writes stdout/stderr receipt
+  files, and records the four external-input commands without executing them.
+  Canonical execution records four ready command rows, four successful
+  executions, zero blocked-command execution attempts, eight receipt files,
+  six stages with three ready and three blocked, five missing external inputs,
+  `v1_0_comparison_ready=0`, and `actual_model_generation_ready=0`.
+- `v61ft` adds the active-goal completion audit.
+  `experiments/test_v61ft_active_goal_completion_audit.sh` consumes
+  v52y/v53t/v61dg/v61fq/v61fs and writes a requirement/section/blocker ledger
+  for the current objective without marking it complete. Canonical audit records
+  `active_goal_complete=0`, 20 requirement rows with 13 pass and seven blocked,
+  three objective sections with one pass and two blocked, seven blocker rows,
+  five next actions with two ready, `v52_ready=1`,
+  `v53_machine_complete_source_surface_ready=1`,
+  `post_full_shard_runtime_evidence_ready=1`, successful ready commands 4/4,
+  external inputs 0/5, `v1_0_comparison_ready=0`, and
+  `actual_model_generation_ready=0`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
