@@ -4023,6 +4023,59 @@ Current next boundary:
   real counters zero, and `actual_model_generation_ready=0`; the env-ready build
   smoke writes and validates only the one-row minimal-slice CSV, while final root
   materialization and dual replay remain downstream.
+- `v61go` adds the post-v61gn first-real-slice operator input materializer.
+  `experiments/test_v61go_post_gn_first_real_slice_operator_input_materializer.sh`
+  runs the existing v61gi materializer only after the one-row minimal CSV is
+  ready, a repo-external operator input root is supplied, and
+  `V61GO_EXECUTE_MATERIALIZE=1` is explicit. It then runs v61gj receiver
+  preflight-only with output-root assembly intentionally withheld. Canonical
+  no-materialize keeps `materialize_admitted=0`, final operator input files
+  0/20, receiver preflight 0, real counters zero, and
+  `actual_model_generation_ready=0`; the materialize-ready smoke opens final
+  input, receipt, content-witness, and v61gj preflight readiness without opening
+  assembly, dual replay, or real-evidence counters.
+- `v61gp` adds the post-v61go first-real-slice dual replay executor.
+  `experiments/test_v61gp_post_go_first_real_slice_dual_replay_executor.sh`
+  runs v61gj preflight with output-root assembly withheld, and only passes an
+  output root into assembly/replay when the operator input root and output root
+  are repo-external, `V61GP_EXECUTE_REPLAY=1` is explicit, and the exact real
+  external return acknowledgement is supplied. Canonical no-root keeps replay
+  admitted/executed zero, all real counters zero, and
+  `actual_model_generation_ready=0`; the candidate-root smoke opens only final
+  input preflight and proves dual replay, row acceptance, generation acceptance
+  closure, and real-evidence counters stay blocked without that acknowledgement.
+- `v61gq` adds the post-v61gp first-real-slice end-to-end guarded chain.
+  `experiments/test_v61gq_post_gp_first_real_slice_end_to_end_guarded_chain.sh`
+  gives the operator a single guarded command over v61gn/v61go/v61gp: build the
+  one-row minimal CSV, materialize the final input root, then call the guarded
+  dual replay executor. It only runs when `V61GQ_EXECUTE_CHAIN=1` is explicit.
+  Canonical no-chain keeps all requested real counters zero and
+  `actual_model_generation_ready=0`; the candidate no-ack smoke reaches final
+  input preflight but proves replay execution, row acceptance, dual-return
+  readiness, generation acceptance closure, and real-evidence counters remain
+  blocked without the exact external acknowledgement.
+- `v61gr` adds the post-v61gq receipt-bound external acknowledgement gate.
+  `experiments/test_v61gr_post_gq_receipt_bound_external_ack_gate.sh` accepts a
+  repo-external acknowledgement JSON and requires exact acknowledgement text,
+  final statement, scope, source class, and `operator_input_receipt_sha256`
+  binding to the materialized `OPERATOR_INPUT_RECEIPT.json`. Canonical no-ack
+  keeps all requested real counters zero; the ack-ready/no-execute smoke opens
+  only receipt-bound ack and replay-admission readiness, and the bad-hash smoke
+  proves a mismatched receipt hash cannot admit replay.
+- `v61gs` adds the post-v61gr external ack packet builder.
+  `experiments/test_v61gs_post_gr_external_ack_packet_builder.sh` emits the
+  ack schema, receipt-prefilled JSON template, validator, and handoff commands.
+  Canonical no-root keeps the template non-evidence and all real counters zero;
+  the ack-ready smoke validates a receipt-bound ack without executing replay,
+  and the bad-hash smoke rejects a mismatched receipt hash.
+- `v61gt` adds the post-v61gs ack-packet-to-replay handoff.
+  `experiments/test_v61gt_post_gs_ack_packet_to_replay_handoff.sh` validates a
+  repo-external acknowledgement file with the selected v61gs validator run and
+  admits the v61gr handoff only when the operator input root, output root, and
+  acknowledgement file are all repo-external and receipt-bound. Canonical
+  no-handoff keeps all real counters zero and `actual_model_generation_ready=0`;
+  the ack-ready/no-execute smoke opens only handoff admission, and the bad-hash
+  smoke blocks replay admission before v61gr execution.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
