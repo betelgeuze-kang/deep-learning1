@@ -245,6 +245,8 @@ expected = {
     "operator_input_content_witness_manifest_rows": "7",
     "operator_input_minimal_slice_context_files": "2",
     "operator_input_minimal_slice_context_ready": "1",
+    "operator_input_minimal_slice_review_worksheet_files": "2",
+    "operator_input_minimal_slice_review_worksheet_ready": "1",
     "operator_input_minimal_slice_env_template_ready": "1",
     "operator_input_minimal_slice_precheck_ready": "1",
     "operator_input_minimal_slice_builder_ready": "1",
@@ -275,7 +277,7 @@ expected = {
     "checkpoint_payload_bytes_downloaded_by_v61gi": "0",
     "checkpoint_payload_bytes_committed_to_repo": "0",
     "route_jump_rows": "0",
-    "source_file_rows": "5",
+    "source_file_rows": "10",
     "payload_like_package_file_rows": "0",
 }
 for field, value in expected.items():
@@ -289,6 +291,7 @@ required_files = [
     "authority_bound_operator_minimal_slice_template_rows.csv",
     "authority_bound_operator_content_witness_manifest_rows.csv",
     "authority_bound_operator_minimal_slice_context_rows.csv",
+    "authority_bound_operator_minimal_slice_review_worksheet_rows.csv",
     "authority_bound_operator_input_scaffold_command_rows.csv",
     "authority_bound_operator_input_scaffold_source_rows.csv",
     "authority_bound_operator_input_scaffold_package_file_rows.csv",
@@ -302,9 +305,12 @@ required_files = [
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_TEMPLATE_ROWS.csv",
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_CONTENT_WITNESS_MANIFEST_ROWS.csv",
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_CONTEXT_ROWS.csv",
+    "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_REVIEW_WORKSHEET_ROWS.csv",
     "authority_bound_operator_input_scaffold/MINIMAL_SLICE_ROWS.csv.template",
     "authority_bound_operator_input_scaffold/MINIMAL_SLICE_SELECTED_CONTEXT.json",
     "authority_bound_operator_input_scaffold/MINIMAL_SLICE_SELECTED_CONTEXT.md",
+    "authority_bound_operator_input_scaffold/MINIMAL_SLICE_REVIEW_WORKSHEET.json",
+    "authority_bound_operator_input_scaffold/MINIMAL_SLICE_REVIEW_WORKSHEET.md",
     "authority_bound_operator_input_scaffold/MINIMAL_SLICE_ENV_TEMPLATE.sh",
     "authority_bound_operator_input_scaffold/MINIMAL_SLICE_OPERATOR_README.md",
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD_COMMAND_ROWS.csv",
@@ -351,6 +357,7 @@ template_rows = read_csv(run_dir / "authority_bound_operator_input_template_file
 minimal_slice_template_rows = read_csv(run_dir / "authority_bound_operator_minimal_slice_template_rows.csv")
 content_witness_manifest_rows = read_csv(run_dir / "authority_bound_operator_content_witness_manifest_rows.csv")
 minimal_slice_context_rows = read_csv(run_dir / "authority_bound_operator_minimal_slice_context_rows.csv")
+review_worksheet_rows = read_csv(run_dir / "authority_bound_operator_minimal_slice_review_worksheet_rows.csv")
 if len(input_rows) != 12:
     raise SystemExit("v61gi expected 12 operator input rows")
 if len(marker_rows) != 2:
@@ -371,6 +378,10 @@ if len(minimal_slice_context_rows) != 2:
     raise SystemExit("v61gi expected two minimal slice context files")
 if any(row["counts_as_evidence"] != "0" for row in minimal_slice_context_rows):
     raise SystemExit("v61gi selected context must not count as evidence")
+if len(review_worksheet_rows) != 2:
+    raise SystemExit("v61gi expected two minimal slice review worksheet files")
+if any(row["counts_as_evidence"] != "0" for row in review_worksheet_rows):
+    raise SystemExit("v61gi review worksheet must not count as evidence")
 if {row["required_filename"] for row in content_witness_manifest_rows} != {
     "review_comment.txt",
     "adjudication_reason.txt",
@@ -426,7 +437,21 @@ for snippet in ["review_answer_packet_id=", "source_span_id=", "RUN_WITNESS_DIR_
     if snippet not in context_md:
         raise SystemExit(f"v61gi selected context md missing snippet: {snippet}")
 
-for gate in ["source-v61gh-ready", "operator-input-scaffold", "operator-input-minimal-slice-template", "operator-input-content-witness-manifest", "operator-input-minimal-slice-context", "operator-input-minimal-slice-env-template", "operator-input-minimal-slice-precheck", "operator-input-minimal-slice-builder", "operator-input-minimal-slice-prepare-wrapper", "operator-input-witness-dir-final-replay-wrapper", "operator-input-materializer", "operator-input-receipt-builder", "templates-count-as-evidence", "zero-repo-checkpoint-payload"]:
+worksheet = json.loads((scaffold_dir / "MINIMAL_SLICE_REVIEW_WORKSHEET.json").read_text(encoding="utf-8"))
+if worksheet.get("counts_as_evidence") != 0:
+    raise SystemExit("v61gi review worksheet json must be non-evidence")
+if worksheet.get("selected_query_row", {}).get("query_id") != "v53i_0001":
+    raise SystemExit("v61gi review worksheet query mismatch")
+if worksheet.get("selected_answer_row", {}).get("answer_id") != "v53m_C_v53i_0001":
+    raise SystemExit("v61gi review worksheet answer mismatch")
+if worksheet.get("selected_source_span_row", {}).get("source_span_id") != "v53i_0001_span_001":
+    raise SystemExit("v61gi review worksheet source span mismatch")
+worksheet_md = (scaffold_dir / "MINIMAL_SLICE_REVIEW_WORKSHEET.md").read_text(encoding="utf-8")
+for snippet in ["question=", "answer_text=", "evidence_text=", "source_file_sha256="]:
+    if snippet not in worksheet_md:
+        raise SystemExit(f"v61gi review worksheet md missing snippet: {snippet}")
+
+for gate in ["source-v61gh-ready", "operator-input-scaffold", "operator-input-minimal-slice-template", "operator-input-content-witness-manifest", "operator-input-minimal-slice-context", "operator-input-minimal-slice-review-worksheet", "operator-input-minimal-slice-env-template", "operator-input-minimal-slice-precheck", "operator-input-minimal-slice-builder", "operator-input-minimal-slice-prepare-wrapper", "operator-input-witness-dir-final-replay-wrapper", "operator-input-materializer", "operator-input-receipt-builder", "templates-count-as-evidence", "zero-repo-checkpoint-payload"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61gi expected pass decision: {gate}")
 for gate in [
@@ -455,6 +480,8 @@ for snippet in [
     "operator_input_content_witness_manifest_rows=7",
     "operator_input_minimal_slice_context_files=2",
     "operator_input_minimal_slice_context_ready=1",
+    "operator_input_minimal_slice_review_worksheet_files=2",
+    "operator_input_minimal_slice_review_worksheet_ready=1",
     "operator_input_minimal_slice_env_template_ready=1",
     "operator_input_minimal_slice_precheck_ready=1",
     "operator_input_minimal_slice_builder_ready=1",

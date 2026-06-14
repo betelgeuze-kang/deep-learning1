@@ -64,6 +64,13 @@ def write_csv(path, fieldnames, rows):
         writer.writerows(rows)
 
 
+def find_one(rows, key, value, label):
+    hits = [row for row in rows if row.get(key) == value]
+    if len(hits) != 1:
+        raise SystemExit(f"expected one {label} where {key}={value}; got {len(hits)}")
+    return hits[0]
+
+
 def copy_source(source_id, src, folder):
     dst = run_dir / folder / src.name
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -83,6 +90,11 @@ source_paths = {
     "v61gh_contracts": results / "v61gh_post_gg_authority_bound_partial_root_workbench" / "workbench_001" / "authority_bound_partial_root_input_contract_rows.csv",
     "v61gh_selected": results / "v61gh_post_gg_authority_bound_partial_root_workbench" / "workbench_001" / "authority_bound_partial_root_selected_slice_rows.csv",
     "v61gh_commands": results / "v61gh_post_gg_authority_bound_partial_root_workbench" / "workbench_001" / "authority_bound_partial_root_workbench_command_rows.csv",
+    "v53m_system_c_answer_rows": results / "v53m_complete_source_system_c_local_model_rag_measured" / "measured_001" / "system_c_answer_rows.csv",
+    "v53m_system_c_citation_rows": results / "v53m_complete_source_system_c_local_model_rag_measured" / "measured_001" / "system_c_citation_rows.csv",
+    "v53m_system_c_resource_rows": results / "v53m_complete_source_system_c_local_model_rag_measured" / "measured_001" / "system_c_resource_rows.csv",
+    "v53i_complete_source_query_rows": results / "v53i_complete_source_query_instantiation" / "instantiate_001" / "complete_source_query_rows.csv",
+    "v53i_complete_source_span_rows": results / "v53i_complete_source_query_instantiation" / "instantiate_001" / "complete_source_span_rows.csv",
 }
 for source_id, path in source_paths.items():
     if not path.is_file():
@@ -209,6 +221,11 @@ def write_template(rel, text):
 
 v53_selected = next(row for row in selected if row["slice_id"] == "v53-partial-review-slice")
 v61_selected = next(row for row in selected if row["slice_id"] == "v61-partial-generation-slice")
+selected_answer_row = find_one(read_csv(source_paths["v53m_system_c_answer_rows"]), "answer_id", v53_selected["answer_id"], "selected answer row")
+selected_citation_row = find_one(read_csv(source_paths["v53m_system_c_citation_rows"]), "answer_id", v53_selected["answer_id"], "selected citation row")
+selected_resource_row = find_one(read_csv(source_paths["v53m_system_c_resource_rows"]), "answer_id", v53_selected["answer_id"], "selected resource row")
+selected_query_row = find_one(read_csv(source_paths["v53i_complete_source_query_rows"]), "query_id", v53_selected["query_id"], "selected query row")
+selected_span_row = find_one(read_csv(source_paths["v53i_complete_source_span_rows"]), "source_span_id", v53_selected["source_span_id"], "selected source span row")
 
 template_specs = {
     "v53/aggregate_review_return/human_review_rows.csv.template": (
@@ -418,6 +435,96 @@ minimal_slice_context_rows = [
 ]
 write_csv(run_dir / "authority_bound_operator_minimal_slice_context_rows.csv", list(minimal_slice_context_rows[0].keys()), minimal_slice_context_rows)
 
+review_worksheet_json = scaffold_dir / "MINIMAL_SLICE_REVIEW_WORKSHEET.json"
+review_worksheet_md = scaffold_dir / "MINIMAL_SLICE_REVIEW_WORKSHEET.md"
+review_worksheet_payload = {
+    "worksheet_protocol_version": "v61gi-minimal-slice-review-worksheet-v1",
+    "counts_as_evidence": 0,
+    "selected_query_row": selected_query_row,
+    "selected_source_span_row": selected_span_row,
+    "selected_answer_row": selected_answer_row,
+    "selected_citation_row": selected_citation_row,
+    "selected_resource_row": selected_resource_row,
+    "required_witness_files": {
+        "review_comment.txt": "external reviewer decision notes over selected answer/citation/source",
+        "adjudication_reason.txt": "external adjudicator reason over selected review row",
+        "answer_text.txt": "real generation answer text witness for the selected v61 query",
+        "source_file.txt": "source file content witness for the selected citation/source span",
+    },
+}
+review_worksheet_json.write_text(
+    json.dumps(review_worksheet_payload, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+review_worksheet_md.write_text(
+    "\n".join([
+        "# v61gi Minimal Slice Review Worksheet",
+        "",
+        "This worksheet is an operator guide only. It does not count as external review, adjudication, generation, latency, quality, comparison, or release evidence.",
+        "",
+        "Selected query:",
+        "",
+        f"- query_id={selected_query_row['query_id']}",
+        f"- owner_repo={selected_query_row['owner_repo']}",
+        f"- audit_type={selected_query_row['audit_type']}",
+        f"- question={selected_query_row['question']}",
+        f"- expected_behavior={selected_query_row['expected_behavior']}",
+        f"- expected_answer={selected_query_row['expected_answer']}",
+        "",
+        "Selected source span:",
+        "",
+        f"- source_span_id={selected_span_row['source_span_id']}",
+        f"- path={selected_span_row['path']}",
+        f"- line_start={selected_span_row['line_start']}",
+        f"- line_end={selected_span_row['line_end']}",
+        f"- evidence_text={selected_span_row['evidence_text']}",
+        f"- source_file_sha256={selected_span_row['source_file_sha256']}",
+        f"- local_relpath={selected_span_row['local_relpath']}",
+        "",
+        "Selected existing machine answer for external review:",
+        "",
+        f"- answer_id={selected_answer_row['answer_id']}",
+        f"- system_id={selected_answer_row['system_id']}",
+        f"- answer_text={selected_answer_row['answer_text']}",
+        f"- answer_text_sha256={selected_answer_row['answer_text_sha256']}",
+        f"- strict_expected_answer_match={selected_answer_row['strict_expected_answer_match']}",
+        "",
+        "Selected citation:",
+        "",
+        f"- citation_id={selected_citation_row['citation_id']}",
+        f"- citation_text={selected_citation_row['citation_text']}",
+        f"- path={selected_citation_row['path']}",
+        f"- line_start={selected_citation_row['line_start']}",
+        f"- line_end={selected_citation_row['line_end']}",
+        "",
+        "Selected resource row:",
+        "",
+        f"- resource_row_id={selected_resource_row['resource_row_id']}",
+        f"- model_name={selected_resource_row['model_name']}",
+        f"- latency_ms={selected_resource_row['latency_ms']}",
+        f"- external_network_used={selected_resource_row['external_network_used']}",
+        "",
+        "Write final witness files under `V61GI_CONTENT_WITNESS_DIR`, then run `RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh`.",
+        "",
+    ]),
+    encoding="utf-8",
+)
+review_worksheet_rows = [
+    {
+        "worksheet_file": review_worksheet_json.name,
+        "bytes": str(review_worksheet_json.stat().st_size),
+        "sha256": sha256(review_worksheet_json),
+        "counts_as_evidence": "0",
+    },
+    {
+        "worksheet_file": review_worksheet_md.name,
+        "bytes": str(review_worksheet_md.stat().st_size),
+        "sha256": sha256(review_worksheet_md),
+        "counts_as_evidence": "0",
+    },
+]
+write_csv(run_dir / "authority_bound_operator_minimal_slice_review_worksheet_rows.csv", list(review_worksheet_rows[0].keys()), review_worksheet_rows)
+
 env_template = scaffold_dir / "MINIMAL_SLICE_ENV_TEMPLATE.sh"
 env_template.write_text(
     "\n".join([
@@ -456,7 +563,7 @@ operator_readme.write_text(
     "\n".join([
         "# v61gi Minimal Slice Operator Input",
         "",
-        "Review `MINIMAL_SLICE_SELECTED_CONTEXT.md` and `MINIMAL_SLICE_SELECTED_CONTEXT.json` before creating witness files.",
+        "Review `MINIMAL_SLICE_SELECTED_CONTEXT.md` and `MINIMAL_SLICE_REVIEW_WORKSHEET.md` before creating witness files.",
         "",
         "Required witness filenames under `V61GI_CONTENT_WITNESS_DIR`:",
         "",
@@ -1307,9 +1414,12 @@ materializer.chmod(0o755)
         "test -s \"$DIR/AUTHORITY_BOUND_OPERATOR_INPUT_TEMPLATE_FILE_ROWS.csv\"",
         "test -s \"$DIR/AUTHORITY_BOUND_OPERATOR_CONTENT_WITNESS_MANIFEST_ROWS.csv\"",
         "test -s \"$DIR/AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_CONTEXT_ROWS.csv\"",
+        "test -s \"$DIR/AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_REVIEW_WORKSHEET_ROWS.csv\"",
         "test -s \"$DIR/MINIMAL_SLICE_ROWS.csv.template\"",
         "test -s \"$DIR/MINIMAL_SLICE_SELECTED_CONTEXT.json\"",
         "test -s \"$DIR/MINIMAL_SLICE_SELECTED_CONTEXT.md\"",
+        "test -s \"$DIR/MINIMAL_SLICE_REVIEW_WORKSHEET.json\"",
+        "test -s \"$DIR/MINIMAL_SLICE_REVIEW_WORKSHEET.md\"",
         "test -s \"$DIR/MINIMAL_SLICE_ENV_TEMPLATE.sh\"",
         "test -s \"$DIR/MINIMAL_SLICE_OPERATOR_README.md\"",
         "test -x \"$DIR/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py\"",
@@ -1343,6 +1453,7 @@ materializer.chmod(0o755)
         "echo 'results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/VERIFY_AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD.sh'",
         "echo 'Minimal slice CSV template: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MINIMAL_SLICE_ROWS.csv.template'",
         "echo 'Minimal slice selected context: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MINIMAL_SLICE_SELECTED_CONTEXT.md'",
+        "echo 'Minimal slice review worksheet: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MINIMAL_SLICE_REVIEW_WORKSHEET.md'",
         "echo 'Minimal slice env template: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MINIMAL_SLICE_ENV_TEMPLATE.sh'",
         "echo 'Content witness manifest: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_CONTENT_WITNESS_MANIFEST_ROWS.csv'",
         "echo 'Precheck witness/env readiness: V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_REVIEWER_ID=<id> ... results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py'",
@@ -1369,6 +1480,7 @@ for rel, src in [
     ("AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_TEMPLATE_ROWS.csv", run_dir / "authority_bound_operator_minimal_slice_template_rows.csv"),
     ("AUTHORITY_BOUND_OPERATOR_CONTENT_WITNESS_MANIFEST_ROWS.csv", run_dir / "authority_bound_operator_content_witness_manifest_rows.csv"),
     ("AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_CONTEXT_ROWS.csv", run_dir / "authority_bound_operator_minimal_slice_context_rows.csv"),
+    ("AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_REVIEW_WORKSHEET_ROWS.csv", run_dir / "authority_bound_operator_minimal_slice_review_worksheet_rows.csv"),
 ]:
     shutil.copy2(src, scaffold_dir / rel)
 
@@ -1414,6 +1526,8 @@ summary = {
     "operator_input_content_witness_manifest_rows": len(content_witness_manifest_rows),
     "operator_input_minimal_slice_context_files": len(minimal_slice_context_rows),
     "operator_input_minimal_slice_context_ready": 1,
+    "operator_input_minimal_slice_review_worksheet_files": len(review_worksheet_rows),
+    "operator_input_minimal_slice_review_worksheet_ready": 1,
     "operator_input_minimal_slice_env_template_ready": 1,
     "operator_input_minimal_slice_precheck_ready": 1,
     "operator_input_minimal_slice_builder_ready": 1,
@@ -1458,6 +1572,7 @@ decision_rows = [
     {"gate": "operator-input-minimal-slice-template", "status": "pass", "evidence": f"minimal_slice_template_rows={len(minimal_slice_template_rows)}"},
     {"gate": "operator-input-content-witness-manifest", "status": "pass", "evidence": f"content_witness_manifest_rows={len(content_witness_manifest_rows)}"},
     {"gate": "operator-input-minimal-slice-context", "status": "pass", "evidence": f"operator_input_minimal_slice_context_files={len(minimal_slice_context_rows)}"},
+    {"gate": "operator-input-minimal-slice-review-worksheet", "status": "pass", "evidence": f"operator_input_minimal_slice_review_worksheet_files={len(review_worksheet_rows)}"},
     {"gate": "operator-input-minimal-slice-env-template", "status": "pass", "evidence": "operator_input_minimal_slice_env_template_ready=1"},
     {"gate": "operator-input-minimal-slice-precheck", "status": "pass", "evidence": "operator_input_minimal_slice_precheck_ready=1"},
     {"gate": "operator-input-minimal-slice-builder", "status": "pass", "evidence": "operator_input_minimal_slice_builder_ready=1"},
@@ -1501,6 +1616,8 @@ manifest = {
         f"- operator_input_content_witness_manifest_rows={summary['operator_input_content_witness_manifest_rows']}",
         f"- operator_input_minimal_slice_context_files={summary['operator_input_minimal_slice_context_files']}",
         "- operator_input_minimal_slice_context_ready=1",
+        f"- operator_input_minimal_slice_review_worksheet_files={summary['operator_input_minimal_slice_review_worksheet_files']}",
+        "- operator_input_minimal_slice_review_worksheet_ready=1",
         "- operator_input_minimal_slice_env_template_ready=1",
         "- operator_input_minimal_slice_precheck_ready=1",
         "- operator_input_minimal_slice_builder_ready=1",
@@ -1533,6 +1650,8 @@ boundary = "\n".join([
     f"- operator_input_content_witness_manifest_rows={summary['operator_input_content_witness_manifest_rows']}",
     f"- operator_input_minimal_slice_context_files={summary['operator_input_minimal_slice_context_files']}",
     "- operator_input_minimal_slice_context_ready=1",
+    f"- operator_input_minimal_slice_review_worksheet_files={summary['operator_input_minimal_slice_review_worksheet_files']}",
+    "- operator_input_minimal_slice_review_worksheet_ready=1",
     "- operator_input_minimal_slice_env_template_ready=1",
     "- operator_input_minimal_slice_precheck_ready=1",
     "- operator_input_minimal_slice_builder_ready=1",
