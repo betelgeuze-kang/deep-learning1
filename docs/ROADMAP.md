@@ -3774,6 +3774,34 @@ Current next boundary:
   `post_full_shard_runtime_evidence_ready=1`, successful ready commands 4/4,
   external inputs 0/5, `v1_0_comparison_ready=0`, and
   `actual_model_generation_ready=0`.
+- `v61fu` adds the post-v61ft external return closure frontier.
+  `experiments/test_v61fu_post_ft_external_return_closure_frontier.sh`
+  consumes v61ft/v61ez/v61fd/v61fc and joins the active-goal audit with the
+  real-return delta ledger. Canonical frontier records `active_goal_complete=0`,
+  15 frontier requirements with seven ready and eight blocked, 14 open delta
+  rows, 91 missing external return artifacts split as 81 v53 artifacts and
+  10 v61 generation-intake artifacts, missing human review rows 7000, missing
+  adjudication rows 1000, missing generation-result artifacts 5, missing
+  generation-result rows 1000, four ready verification/frontier actions,
+  `dual_external_return_real_ready=0`, `generation_acceptance_closure_ready=0`,
+  and `actual_model_generation_ready=0`.
+- `v61fv` adds the post-v61fu dual return replay entrypoint.
+  `experiments/test_v61fv_post_fu_dual_return_replay_entrypoint.sh` consumes
+  v61fu and emits the fail-closed operator script for the real v53/v61 return
+  replay sequence. Canonical no-env records four required env rows, 10 stages
+  with one ready and nine blocked, three commands with two ready,
+  `entrypoint_admitted_by_default=0`, fixture provenance rejection,
+  `dual_external_return_real_ready=0`, `generation_acceptance_closure_ready=0`,
+  and `actual_model_generation_ready=0`.
+- `v61fw` adds the post-v61fv dual return replay entrypoint receipt.
+  `experiments/test_v61fw_post_fv_dual_return_replay_entrypoint_receipt.sh`
+  executes only the two local-ready entrypoint commands, records stdout/stderr
+  receipts, proves no-env and fixture-provenance rejection, and leaves the real
+  replay command unexecuted. Canonical receipt records two ready commands
+  executed and successful, one blocked command with zero execution attempts,
+  two guard probes passed, eight receipt stream files,
+  `real_replay_command_executed=0`, `dual_external_return_real_ready=0`, and
+  `actual_model_generation_ready=0`.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.

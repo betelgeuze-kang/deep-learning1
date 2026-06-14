@@ -3068,6 +3068,9 @@ covered by:
 ./experiments/test_v61fr_post_fq_v1_ready_command_handoff.sh
 ./experiments/test_v61fs_post_fr_ready_command_execution_receipt.sh
 ./experiments/test_v61ft_active_goal_completion_audit.sh
+./experiments/test_v61fu_post_ft_external_return_closure_frontier.sh
+./experiments/test_v61fv_post_fu_dual_return_replay_entrypoint.sh
+./experiments/test_v61fw_post_fv_dual_return_replay_entrypoint_receipt.sh
 ./experiments/test_v53ae_complete_source_review_return_generation_rendezvous_gate.sh
 ./experiments/test_v53af_external_return_inbox_scaffold.sh
 ./experiments/test_v53ag_external_return_inbox_archive.sh
@@ -3214,6 +3217,9 @@ They emit:
 - `results/v61fr_post_fq_v1_ready_command_handoff/handoff_001/`
 - `results/v61fs_post_fr_ready_command_execution_receipt/receipt_001/`
 - `results/v61ft_active_goal_completion_audit/audit_001/`
+- `results/v61fu_post_ft_external_return_closure_frontier/frontier_001/`
+- `results/v61fv_post_fu_dual_return_replay_entrypoint/entrypoint_001/`
+- `results/v61fw_post_fv_dual_return_replay_entrypoint_receipt/receipt_001/`
 - `results/v53ae_complete_source_review_return_generation_rendezvous_gate/gate_001/`
 - `results/v53af_external_return_inbox_scaffold/scaffold_001/`
 - `results/v53ag_external_return_inbox_archive/archive_001/`
@@ -4839,19 +4845,22 @@ without weakening the boundary:
 161. Closed as v61fr post-v61fq v1.0 ready-command handoff: consume v61fq/v53ah/v53al/v61fo, emit a metadata-only handoff package with verifier, ready-command printer, command rows, stage rows, and required external input rows, record `send_bundle_ready=1`, two send-bundle archives, 81 return-artifact template rows, seven handoff stages with three ready and four blocked, eight handoff commands with four ready and four blocked, five required external inputs with zero present, `return_bundle_preflight_pass=0`, `external_review_return_ready=0`, `v1_0_comparison_ready=0`, `actual_model_generation_ready=0`, and zero repo checkpoint payload.
 162. Closed as v61fs post-v61fr ready-command execution receipt: consume v61fr, execute only the four ready local commands, write stdout/stderr receipt files, record four ready command rows, four executed and successful ready commands, four blocked command rows with zero execution attempts, eight receipt files, six stages with three ready and three blocked, five missing external inputs, `return_bundle_preflight_pass=0`, `external_review_return_ready=0`, `v1_0_comparison_ready=0`, `actual_model_generation_ready=0`, and zero repo checkpoint payload.
 163. Closed as v61ft active-goal completion audit: consume v52y/v53t/v61dg/v61fq/v61fs, emit a metadata-only active-goal audit package with requirement rows, section rows, blocker rows, next-action rows, and source copies, record `active_goal_complete=0`, 20 requirement rows with 13 pass and seven blocked, three objective sections with one pass and two blocked, seven blocker rows, five next actions with two ready, `v52_ready=1`, `v53_machine_complete_source_surface_ready=1`, `post_full_shard_runtime_evidence_ready=1`, successful ready commands 4/4, external inputs 0/5, `v1_0_comparison_ready=0`, `actual_model_generation_ready=0`, and zero repo checkpoint payload.
-164. Companion v53ae rendezvous gate: bind v53ad, v53z, v61de, and v61cx into a nine-stage post-full-shard review/generation return gate, with full-shard/runtime ready but review return, generation execution, result acceptance, and actual generation still blocked.
-165. Companion v53af return inbox scaffold: create 81 zero-evidence `.template` return artifacts for dispatch receipts, review returns, and generation result returns so external operators have the exact final inbox shape without accepted evidence.
-166. Companion v53ag return inbox archive: package the v53af template-only return inbox into a checksum-bound tar.gz with zero payload-like members and zero final evidence-named csv/json members.
-167. Companion v53ah external review send bundle: bundle the v53ac review dispatch archive and v53ag template-only return inbox archive into one checksum-bound `send_bundle/` with two archives, no payload-like members, no final evidence-named return-inbox csv/json members, and review/generation claims still blocked.
-168. Companion v53ai external return bundle intake: map a one-root returned bundle into the four final return directories, refresh v53ae, keep `accepted_by_v53ai_rows=0`, and leave review/generation acceptance to downstream gates.
-169. Companion v53aj return closure dashboard: roll v53ai/v53ae/v53v/v61de into 12 closure items, with send bundle, return mapping, and full-shard/runtime ready while nine returned-evidence/generation/release items remain blocked.
-170. Companion v53ak external return operator checklist: expand the returned-bundle task into 81 logistics rows with final paths, target env vars, downstream gates, and validation commands while keeping `accepted_by_v53ak_rows=0`.
-171. Companion v53al external return bundle preflight: add a receiver-side verifier over the 81 final artifacts for presence, non-empty files, and template-name rejection while keeping `accepted_by_v53al_rows=0`.
-172. Companion v53am return acceptance replay: after v53al preflight, replay v53ad/v53x/v53y/v53z/v61bt/v61de/v53ae with the returned bundle paths, report 11 downstream closure steps, and prove a critical-only supplied fixture reaches only `preflight_pass_rows=10/81` while keeping `accepted_by_v53am_rows=0`.
-173. Use v53y/v53z/v53ae to refresh the complete-source review-return chain after a real `V53Y_REVIEW_RETURN_DIR` is supplied; only then can the v61 review-return blocker be considered for refresh.
-174. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
-175. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists and review return is accepted.
-176. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
+164. Closed as v61fu post-v61ft external return closure frontier: consume v61ft/v61ez/v61fd/v61fc, emit a metadata-only frontier package with requirement rows, delta rows, action rows, source copies, and verifier, record `active_goal_complete=0`, 15 frontier requirements with seven ready and eight blocked, 14 open delta rows, 91 missing external return artifacts split as 81 v53 artifacts and 10 v61 generation-intake artifacts, missing human review rows 7000, missing adjudication rows 1000, missing generation-result artifacts 5, missing generation-result rows 1000, `dual_external_return_real_ready=0`, `generation_acceptance_closure_ready=0`, `actual_model_generation_ready=0`, and zero repo checkpoint payload.
+165. Closed as v61fv post-v61fu dual return replay entrypoint: consume v61fu, emit a metadata-only fail-closed replay entrypoint with required env rows, stage rows, command rows, env template, guarded script, verifier, and ready-command printer, record four required env rows, 10 stages with one ready and nine blocked, three commands with two ready, `entrypoint_admitted_by_default=0`, `dual_external_return_real_ready=0`, `generation_acceptance_closure_ready=0`, `actual_model_generation_ready=0`, zero repo checkpoint payload, and prove fixture provenance is rejected.
+166. Closed as v61fw post-v61fv dual return replay entrypoint receipt: consume v61fv, execute only the two local-ready entrypoint commands, write stdout/stderr receipts, run no-env and fixture-provenance guard probes, record two ready commands executed and successful, one blocked command with zero execution attempts, two guard probes passed, eight receipt stream files, six stages with four ready and two blocked, `real_replay_command_executed=0`, `dual_external_return_real_ready=0`, `actual_model_generation_ready=0`, and zero repo checkpoint payload.
+167. Companion v53ae rendezvous gate: bind v53ad, v53z, v61de, and v61cx into a nine-stage post-full-shard review/generation return gate, with full-shard/runtime ready but review return, generation execution, result acceptance, and actual generation still blocked.
+168. Companion v53af return inbox scaffold: create 81 zero-evidence `.template` return artifacts for dispatch receipts, review returns, and generation result returns so external operators have the exact final inbox shape without accepted evidence.
+169. Companion v53ag return inbox archive: package the v53af template-only return inbox into a checksum-bound tar.gz with zero payload-like members and zero final evidence-named csv/json members.
+170. Companion v53ah external review send bundle: bundle the v53ac review dispatch archive and v53ag template-only return inbox archive into one checksum-bound `send_bundle/` with two archives, no payload-like members, no final evidence-named return-inbox csv/json members, and review/generation claims still blocked.
+171. Companion v53ai external return bundle intake: map a one-root returned bundle into the four final return directories, refresh v53ae, keep `accepted_by_v53ai_rows=0`, and leave review/generation acceptance to downstream gates.
+172. Companion v53aj return closure dashboard: roll v53ai/v53ae/v53v/v61de into 12 closure items, with send bundle, return mapping, and full-shard/runtime ready while nine returned-evidence/generation/release items remain blocked.
+173. Companion v53ak external return operator checklist: expand the returned-bundle task into 81 logistics rows with final paths, target env vars, downstream gates, and validation commands while keeping `accepted_by_v53ak_rows=0`.
+174. Companion v53al external return bundle preflight: add a receiver-side verifier over the 81 final artifacts for presence, non-empty files, and template-name rejection while keeping `accepted_by_v53al_rows=0`.
+175. Companion v53am return acceptance replay: after v53al preflight, replay v53ad/v53x/v53y/v53z/v61bt/v61de/v53ae with the returned bundle paths, report 11 downstream closure steps, and prove a critical-only supplied fixture reaches only `preflight_pass_rows=10/81` while keeping `accepted_by_v53am_rows=0`.
+176. Use v53y/v53z/v53ae to refresh the complete-source review-return chain after a real `V53Y_REVIEW_RETURN_DIR` is supplied; only then can the v61 review-return blocker be considered for refresh.
+177. Promote activation-admitted, identity-verified local shards plus accepted remaining page-hash results into completed full safetensors page-hash coverage.
+178. Promote the v53i complete-source query set into A-H QA and real model generation only after checkpoint/page hash binding exists and review return is accepted.
+179. Keep real 100B materialization, near-frontier quality, production latency, and release claims blocked until external review passes.
 
 ## Success Shape
 
@@ -4906,6 +4915,9 @@ The current v61 runtime prototype can say:
 - v61fr packages the ready local verification commands and required external inputs after v61fq while keeping return preflight, replay, generation-result acceptance, v1.0 comparison, actual generation, and release claims blocked
 - v61fs executes the ready local verification commands from v61fr and records stdout/stderr receipts while leaving all external-input commands unexecuted and blocked
 - v61ft records the current active-goal audit as incomplete with 13 passing requirements and seven blocked requirements, preserving the external-review-return, actual-generation, comparison, and release blockers
+- v61fu narrows the remaining incomplete state to 91 missing external return artifacts, 14 open delta rows, and two real return roots while preserving actual-generation, comparison, latency, near-frontier, and release blockers
+- v61fv provides the fail-closed dual-return replay entrypoint while rejecting missing env and fixture provenance
+- v61fw executes the local-ready entrypoint verification commands and records fail-closed receipt evidence while leaving the real replay command unexecuted without real roots
 - repo payload policy remains intact: checkpoint payload bytes committed to the repository are 0
 
 The full local assistant claim additionally requires source-bound tasks with citation, abstain, and fallback evidence over real open-weight model rows.
