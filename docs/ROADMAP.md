@@ -4095,6 +4095,13 @@ Current next boundary:
   `open_gap_rows=23` split as seven final witness files plus 16 final env
   values; replay, row acceptance, generation acceptance closure, and actual
   generation remain blocked.
+- `v61gw` adds the post-v61gv first-real-slice live checklist publisher.
+  `experiments/test_v61gw_post_gv_first_real_slice_live_checklist_publisher.sh`
+  writes the current gap audit into a repo-external workspace only when
+  publishing is explicit. The ubuntu-1 workspace now has `live_gap_checklist/`
+  with the 23 missing witness/env items, copied audit CSVs, and a rerun script.
+  This is metadata-only: real return execution, row acceptance, generation
+  acceptance closure, and actual generation remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
