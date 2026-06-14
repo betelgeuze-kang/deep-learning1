@@ -401,7 +401,7 @@ operator_readme.write_text(
         "",
         "1. Fill `MINIMAL_SLICE_ENV_TEMPLATE.sh` with real external operator values.",
         "2. Run `CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py` to check env and witness readiness without creating evidence rows.",
-        "3. Run `BUILD_MINIMAL_SLICE_ROWS_FROM_WITNESS_DIR.py` to hash witness files into a one-row CSV.",
+        "3. Run `RUN_PRECHECK_AND_BUILD_MINIMAL_SLICE_IF_READY.sh` to precheck and hash witness files into a one-row CSV.",
         "4. Run `RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh` with external input/output roots.",
         "",
         "This package is still zero-evidence until those external files are supplied.",
@@ -824,6 +824,30 @@ minimal_slice_builder.write_text(
 )
 minimal_slice_builder.chmod(0o755)
 
+(scaffold_dir / "RUN_PRECHECK_AND_BUILD_MINIMAL_SLICE_IF_READY.sh").write_text(
+    "\n".join([
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        "DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"",
+        "PRECHECK_CSV=\"${V61GI_MINIMAL_SLICE_PRECHECK_CSV:-}\"",
+        "if [[ -z \"$PRECHECK_CSV\" && -n \"${V61GI_MINIMAL_SLICE_ROWS_CSV:-}\" ]]; then",
+        "  PRECHECK_CSV=\"${V61GI_MINIMAL_SLICE_ROWS_CSV}.precheck.csv\"",
+        "fi",
+        "if [[ -n \"$PRECHECK_CSV\" ]]; then",
+        "  export V61GI_MINIMAL_SLICE_PRECHECK_CSV=\"$PRECHECK_CSV\"",
+        "fi",
+        "\"$DIR/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py\" >/dev/null",
+        "\"$DIR/BUILD_MINIMAL_SLICE_ROWS_FROM_WITNESS_DIR.py\"",
+        "if [[ -n \"$PRECHECK_CSV\" ]]; then",
+        "  echo \"minimal slice precheck report: $PRECHECK_CSV\"",
+        "fi",
+        "echo \"minimal slice CSV: $V61GI_MINIMAL_SLICE_ROWS_CSV\"",
+        "",
+    ]),
+    encoding="utf-8",
+)
+(scaffold_dir / "RUN_PRECHECK_AND_BUILD_MINIMAL_SLICE_IF_READY.sh").chmod(0o755)
+
 materializer = scaffold_dir / "MATERIALIZE_OPERATOR_INPUT_FROM_MINIMAL_SLICE.py"
 materializer.write_text(
     "\n".join([
@@ -1198,6 +1222,7 @@ materializer.chmod(0o755)
         "test -s \"$DIR/MINIMAL_SLICE_OPERATOR_README.md\"",
         "test -x \"$DIR/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py\"",
         "test -x \"$DIR/BUILD_MINIMAL_SLICE_ROWS_FROM_WITNESS_DIR.py\"",
+        "test -x \"$DIR/RUN_PRECHECK_AND_BUILD_MINIMAL_SLICE_IF_READY.sh\"",
         "test -x \"$DIR/MATERIALIZE_OPERATOR_INPUT_FROM_MINIMAL_SLICE.py\"",
         "test -x \"$DIR/BUILD_OPERATOR_INPUT_RECEIPT_IF_FINAL.py\"",
         "test -x \"$DIR/VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py\"",
@@ -1228,6 +1253,7 @@ materializer.chmod(0o755)
         "echo 'Content witness manifest: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_CONTENT_WITNESS_MANIFEST_ROWS.csv'",
         "echo 'Precheck witness/env readiness: V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_REVIEWER_ID=<id> ... results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py'",
         "echo 'Build CSV from witness directory: V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_REVIEWER_ID=<id> ... results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/BUILD_MINIMAL_SLICE_ROWS_FROM_WITNESS_DIR.py'",
+        "echo 'Precheck and build in one guarded step: V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_REVIEWER_ID=<id> ... results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_PRECHECK_AND_BUILD_MINIMAL_SLICE_IF_READY.sh'",
         "echo 'From a one-row minimal slice CSV with witness paths: V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MATERIALIZE_OPERATOR_INPUT_FROM_MINIMAL_SLICE.py'",
         "echo 'After final files exist: V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> V61GI_OPERATOR_INPUT_RECEIPT_SOURCE_CLASS=real-authority-bound-partial-return V61GI_OPERATOR_INPUT_RECEIPT_ATTESTATION=<final-attestation> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/BUILD_OPERATOR_INPUT_RECEIPT_IF_FINAL.py'",
         "echo 'Assembly authority, only after real external finalization: V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY=operator-final-real-return V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY_STATEMENT=<final-assembly-authority-statement>'",
@@ -1255,11 +1281,12 @@ command_rows = [
     {"command_id": "02-print-ready-commands", "ready_to_run_now": "1", "command": "results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/READY_NOW_COMMANDS.sh", "purpose": "print final input preflight and assembly commands"},
     {"command_id": "03-precheck-minimal-slice-inputs", "ready_to_run_now": "0", "command": "V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_REVIEWER_ID=<id> V61GI_ADJUDICATOR_ID=<id> V61GI_GENERATION_ID=<id> V61GI_CITATION_ID=<id> V61GI_CHECKPOINT_ROOT=<root> V61GI_LATENCY_ROW_ID=<id> V61GI_PROMPT_TOKENS=<n> V61GI_OUTPUT_TOKENS=<n> V61GI_PREFILL_MS=<ms> V61GI_DECODE_MS=<ms> V61GI_TOTAL_MS=<ms> V61GI_TOKENS_PER_SECOND=<n> V61GI_V53_AUTHORITY_STATEMENT=<statement> V61GI_V61_AUTHORITY_STATEMENT=<statement> V61GI_EXTERNAL_RETURN_ATTESTATION=<attestation> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py", "purpose": "fail-closed CSV precheck for witness directory and metadata before building the one-row minimal slice"},
     {"command_id": "04-build-minimal-slice-from-witness-dir", "ready_to_run_now": "0", "command": "V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_REVIEWER_ID=<id> V61GI_ADJUDICATOR_ID=<id> V61GI_GENERATION_ID=<id> V61GI_CITATION_ID=<id> V61GI_CHECKPOINT_ROOT=<root> V61GI_LATENCY_ROW_ID=<id> V61GI_PROMPT_TOKENS=<n> V61GI_OUTPUT_TOKENS=<n> V61GI_PREFILL_MS=<ms> V61GI_DECODE_MS=<ms> V61GI_TOTAL_MS=<ms> V61GI_TOKENS_PER_SECOND=<n> V61GI_V53_AUTHORITY_STATEMENT=<statement> V61GI_V61_AUTHORITY_STATEMENT=<statement> V61GI_EXTERNAL_RETURN_ATTESTATION=<attestation> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/BUILD_MINIMAL_SLICE_ROWS_FROM_WITNESS_DIR.py", "purpose": "hash witness files and write the one-row minimal slice CSV"},
-    {"command_id": "05-materialize-minimal-slice", "ready_to_run_now": "0", "command": "V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MATERIALIZE_OPERATOR_INPUT_FROM_MINIMAL_SLICE.py", "purpose": "materialize final files and receipt from one accepted subset row; final assembly authority requires content witness path fields"},
-    {"command_id": "06-build-operator-input-receipt", "ready_to_run_now": "0", "command": "V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> V61GI_OPERATOR_INPUT_RECEIPT_SOURCE_CLASS=real-authority-bound-partial-return V61GI_OPERATOR_INPUT_RECEIPT_ATTESTATION=<final-attestation> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/BUILD_OPERATOR_INPUT_RECEIPT_IF_FINAL.py", "purpose": "hash-bind final operator files and content witnesses into OPERATOR_INPUT_RECEIPT.json; assembly authority must be explicit"},
-    {"command_id": "07-preflight-final-operator-input", "ready_to_run_now": "0", "command": "V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py", "purpose": "requires final non-template operator files and receipt"},
-    {"command_id": "08-run-v61gh-assembly", "ready_to_run_now": "0", "command": "V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> V61GI_OUTPUT_ROOT=<external-output-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_V61GH_ASSEMBLY_IF_OPERATOR_INPUT_READY.sh", "purpose": "assemble roots and rerun v61gg outside the repo"},
-    {"command_id": "09-run-minimal-slice-to-dual-replay", "ready_to_run_now": "0", "command": "V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_OPERATOR_INPUT_ROOT=<empty-external-operator-root> V61GI_OUTPUT_ROOT=<external-output-root> V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY_STATEMENT=<final-statement> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh", "purpose": "materialize final witness-bound input, run v61gj assembly, and assert subset dual replay counters"},
+    {"command_id": "05-precheck-and-build-minimal-slice", "ready_to_run_now": "0", "command": "V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_REVIEWER_ID=<id> V61GI_ADJUDICATOR_ID=<id> V61GI_GENERATION_ID=<id> V61GI_CITATION_ID=<id> V61GI_CHECKPOINT_ROOT=<root> V61GI_LATENCY_ROW_ID=<id> V61GI_PROMPT_TOKENS=<n> V61GI_OUTPUT_TOKENS=<n> V61GI_PREFILL_MS=<ms> V61GI_DECODE_MS=<ms> V61GI_TOTAL_MS=<ms> V61GI_TOKENS_PER_SECOND=<n> V61GI_V53_AUTHORITY_STATEMENT=<statement> V61GI_V61_AUTHORITY_STATEMENT=<statement> V61GI_EXTERNAL_RETURN_ATTESTATION=<attestation> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_PRECHECK_AND_BUILD_MINIMAL_SLICE_IF_READY.sh", "purpose": "run the fail-closed precheck and only then write the one-row minimal slice CSV"},
+    {"command_id": "06-materialize-minimal-slice", "ready_to_run_now": "0", "command": "V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MATERIALIZE_OPERATOR_INPUT_FROM_MINIMAL_SLICE.py", "purpose": "materialize final files and receipt from one accepted subset row; final assembly authority requires content witness path fields"},
+    {"command_id": "07-build-operator-input-receipt", "ready_to_run_now": "0", "command": "V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> V61GI_OPERATOR_INPUT_RECEIPT_SOURCE_CLASS=real-authority-bound-partial-return V61GI_OPERATOR_INPUT_RECEIPT_ATTESTATION=<final-attestation> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/BUILD_OPERATOR_INPUT_RECEIPT_IF_FINAL.py", "purpose": "hash-bind final operator files and content witnesses into OPERATOR_INPUT_RECEIPT.json; assembly authority must be explicit"},
+    {"command_id": "08-preflight-final-operator-input", "ready_to_run_now": "0", "command": "V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/VERIFY_OPERATOR_INPUT_ROOT_IF_SUPPLIED.py", "purpose": "requires final non-template operator files and receipt"},
+    {"command_id": "09-run-v61gh-assembly", "ready_to_run_now": "0", "command": "V61GI_OPERATOR_INPUT_ROOT=<operator-input-root> V61GI_OUTPUT_ROOT=<external-output-root> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_V61GH_ASSEMBLY_IF_OPERATOR_INPUT_READY.sh", "purpose": "assemble roots and rerun v61gg outside the repo"},
+    {"command_id": "10-run-minimal-slice-to-dual-replay", "ready_to_run_now": "0", "command": "V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_OPERATOR_INPUT_ROOT=<empty-external-operator-root> V61GI_OUTPUT_ROOT=<external-output-root> V61GI_OPERATOR_INPUT_ASSEMBLY_AUTHORITY_STATEMENT=<final-statement> results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/RUN_MINIMAL_SLICE_TO_DUAL_REPLAY_IF_FINAL.sh", "purpose": "materialize final witness-bound input, run v61gj assembly, and assert subset dual replay counters"},
 ]
 write_csv(run_dir / "authority_bound_operator_input_scaffold_command_rows.csv", list(command_rows[0].keys()), command_rows)
 shutil.copy2(run_dir / "authority_bound_operator_input_scaffold_command_rows.csv", scaffold_dir / "AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD_COMMAND_ROWS.csv")
@@ -1291,6 +1318,7 @@ summary = {
     "operator_input_minimal_slice_env_template_ready": 1,
     "operator_input_minimal_slice_precheck_ready": 1,
     "operator_input_minimal_slice_builder_ready": 1,
+    "operator_input_minimal_slice_prepare_wrapper_ready": 1,
     "operator_input_materializer_ready": 1,
     "operator_input_receipt_builder_ready": 1,
     "template_counts_as_evidence_rows": sum(row["counts_as_evidence"] == "1" for row in template_rows),
@@ -1332,6 +1360,7 @@ decision_rows = [
     {"gate": "operator-input-minimal-slice-env-template", "status": "pass", "evidence": "operator_input_minimal_slice_env_template_ready=1"},
     {"gate": "operator-input-minimal-slice-precheck", "status": "pass", "evidence": "operator_input_minimal_slice_precheck_ready=1"},
     {"gate": "operator-input-minimal-slice-builder", "status": "pass", "evidence": "operator_input_minimal_slice_builder_ready=1"},
+    {"gate": "operator-input-minimal-slice-prepare-wrapper", "status": "pass", "evidence": "operator_input_minimal_slice_prepare_wrapper_ready=1"},
     {"gate": "operator-input-materializer", "status": "pass", "evidence": "operator_input_materializer_ready=1"},
     {"gate": "operator-input-receipt-builder", "status": "pass", "evidence": "operator_input_receipt_builder_ready=1"},
     {"gate": "templates-count-as-evidence", "status": "pass", "evidence": "template_counts_as_evidence_rows=0"},
@@ -1371,6 +1400,7 @@ manifest = {
         "- operator_input_minimal_slice_env_template_ready=1",
         "- operator_input_minimal_slice_precheck_ready=1",
         "- operator_input_minimal_slice_builder_ready=1",
+        "- operator_input_minimal_slice_prepare_wrapper_ready=1",
         "- operator_input_materializer_ready=1",
         "- operator_input_receipt_builder_ready=1",
         "- template_counts_as_evidence_rows=0",
@@ -1399,6 +1429,7 @@ boundary = "\n".join([
     "- operator_input_minimal_slice_env_template_ready=1",
     "- operator_input_minimal_slice_precheck_ready=1",
     "- operator_input_minimal_slice_builder_ready=1",
+    "- operator_input_minimal_slice_prepare_wrapper_ready=1",
     "- operator_input_materializer_ready=1",
     "- operator_input_receipt_builder_ready=1",
     "- template_counts_as_evidence_rows=0",
