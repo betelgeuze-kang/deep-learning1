@@ -3934,12 +3934,25 @@ Current next boundary:
 - `v61gj` adds the post-v61gi operator input receiver.
   `experiments/test_v61gj_post_gi_operator_input_receiver.sh` accepts an
   optional final `V61GJ_OPERATOR_INPUT_ROOT`, preflights the 12 final operator
-  files, and only admits assembly when `V61GJ_OUTPUT_ROOT` is outside the repo.
+  files for schema, minimum rows, acceptance-summary SHA-256 bindings, and
+  cross-file ID consistency plus selected-slice binding and authority-statement
+  finality, and only admits assembly when `V61GJ_OUTPUT_ROOT` is outside the
+  repo.
   Canonical no-input keeps preflight rows 0/12 ready, assembly admitted/executed
   0, assembled roots 0/2, real review/generation rows zero,
+  `row_acceptance_ready=0`, `dual_external_return_real_ready=0`,
+  `real_return_replay_admission_ready=0`,
+  `generation_acceptance_closure_ready=0`,
   `authority_bound_replay_admission_ready=0`, `actual_model_generation_ready=0`,
-  and zero checkpoint payload bytes; its template-tree probe rejects scaffold
-  templates as final input.
+  and zero checkpoint payload bytes; its template-tree, invalid-schema,
+  invalid-consistency, invalid-selected-slice, and invalid-authority probes
+  reject scaffold templates, malformed final files, mismatched row IDs, wrong
+  subset-target rows, or nonfinal authority statements as final input. It also
+  exposes each preflight family as a separate stage/decision gate, promotes the
+  subset replay gates directly from the assembly replay summaries, flips the
+  shell-quoted operator-input command row to ready only after assembly admission,
+  and copies the operator-replay source evidence into its own package when final
+  operator input is supplied.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
