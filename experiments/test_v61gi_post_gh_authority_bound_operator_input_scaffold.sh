@@ -13,6 +13,8 @@ MINIMAL_PRECHECK_CSV="${TMPDIR:-/tmp}/v61gi_minimal_precheck_rows.csv"
 MINIMAL_BUILDER_CSV="${TMPDIR:-/tmp}/v61gi_minimal_builder_rows.csv"
 MINIMAL_WRAPPER_PRECHECK_CSV="${TMPDIR:-/tmp}/v61gi_minimal_wrapper_precheck_rows.csv"
 MINIMAL_WRAPPER_CSV="${TMPDIR:-/tmp}/v61gi_minimal_wrapper_rows.csv"
+MINIMAL_NONFINAL_WITNESS_DIR="${TMPDIR:-/tmp}/v61gi nonfinal witness reject"
+MINIMAL_NONFINAL_CSV="${TMPDIR:-/tmp}/v61gi_minimal_nonfinal_rows.csv"
 
 V61GI_REUSE_EXISTING="${V61GI_REUSE_EXISTING:-0}" "$ROOT_DIR/experiments/run_v61gi_post_gh_authority_bound_operator_input_scaffold.sh" >/dev/null
 
@@ -45,6 +47,8 @@ rm -f "$MINIMAL_PRECHECK_CSV"
 rm -f "$MINIMAL_BUILDER_CSV"
 rm -f "$MINIMAL_WRAPPER_PRECHECK_CSV"
 rm -f "$MINIMAL_WRAPPER_CSV"
+rm -rf "$MINIMAL_NONFINAL_WITNESS_DIR"
+rm -f "$MINIMAL_NONFINAL_CSV"
 python3 - "$MINIMAL_BUILDER_WITNESS_DIR" <<'PY'
 import sys
 from pathlib import Path
@@ -63,6 +67,63 @@ payloads = {
 for name, text in payloads.items():
     (root / name).write_text(text + "\n", encoding="utf-8")
 PY
+
+python3 - "$MINIMAL_BUILDER_WITNESS_DIR" "$MINIMAL_NONFINAL_WITNESS_DIR" <<'PY'
+import shutil
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1])
+target = Path(sys.argv[2])
+shutil.copytree(source, target)
+(target / "review_comment.txt").write_text("REPLACE_WITH_EXTERNAL_REVIEW_COMMENT\n", encoding="utf-8")
+PY
+
+if V61GI_CONTENT_WITNESS_DIR="$MINIMAL_NONFINAL_WITNESS_DIR" \
+  V61GI_MINIMAL_SLICE_ROWS_CSV="$MINIMAL_NONFINAL_CSV" \
+  V61GI_REVIEWER_ID="reviewer-nonfinal-alpha" \
+  V61GI_ADJUDICATOR_ID="adjudicator-nonfinal-alpha" \
+  V61GI_GENERATION_ID="generation-nonfinal-alpha" \
+  V61GI_CITATION_ID="citation-nonfinal-alpha" \
+  V61GI_CHECKPOINT_ROOT="/external/checkpoint/nonfinal-alpha" \
+  V61GI_LATENCY_ROW_ID="latency-nonfinal-alpha" \
+  V61GI_PROMPT_TOKENS="128" \
+  V61GI_OUTPUT_TOKENS="32" \
+  V61GI_PREFILL_MS="11.5" \
+  V61GI_DECODE_MS="23.0" \
+  V61GI_TOTAL_MS="34.5" \
+  V61GI_TOKENS_PER_SECOND="92.75" \
+  V61GI_V53_AUTHORITY_STATEMENT="External reviewer authority statement finalized for nonfinal witness reject smoke with accountability." \
+  V61GI_V61_AUTHORITY_STATEMENT="External generation operator authority statement finalized for nonfinal witness reject smoke." \
+  V61GI_EXTERNAL_RETURN_ATTESTATION="External return attestation finalized for nonfinal witness reject smoke with immutable witness hash binding." \
+  "$SCAFFOLD_DIR/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py" >/tmp/v61gi_nonfinal_witness_precheck.out 2>/tmp/v61gi_nonfinal_witness_precheck.err; then
+  echo "v61gi unexpectedly accepted nonfinal witness content in precheck" >&2
+  exit 1
+fi
+grep -q "nonfinal-content-witness:review_comment.txt" /tmp/v61gi_nonfinal_witness_precheck.out
+
+if V61GI_CONTENT_WITNESS_DIR="$MINIMAL_NONFINAL_WITNESS_DIR" \
+  V61GI_MINIMAL_SLICE_ROWS_CSV="$MINIMAL_NONFINAL_CSV" \
+  V61GI_REVIEWER_ID="reviewer-nonfinal-alpha" \
+  V61GI_ADJUDICATOR_ID="adjudicator-nonfinal-alpha" \
+  V61GI_GENERATION_ID="generation-nonfinal-alpha" \
+  V61GI_CITATION_ID="citation-nonfinal-alpha" \
+  V61GI_CHECKPOINT_ROOT="/external/checkpoint/nonfinal-alpha" \
+  V61GI_LATENCY_ROW_ID="latency-nonfinal-alpha" \
+  V61GI_PROMPT_TOKENS="128" \
+  V61GI_OUTPUT_TOKENS="32" \
+  V61GI_PREFILL_MS="11.5" \
+  V61GI_DECODE_MS="23.0" \
+  V61GI_TOTAL_MS="34.5" \
+  V61GI_TOKENS_PER_SECOND="92.75" \
+  V61GI_V53_AUTHORITY_STATEMENT="External reviewer authority statement finalized for nonfinal witness reject smoke with accountability." \
+  V61GI_V61_AUTHORITY_STATEMENT="External generation operator authority statement finalized for nonfinal witness reject smoke." \
+  V61GI_EXTERNAL_RETURN_ATTESTATION="External return attestation finalized for nonfinal witness reject smoke with immutable witness hash binding." \
+  "$SCAFFOLD_DIR/BUILD_MINIMAL_SLICE_ROWS_FROM_WITNESS_DIR.py" >/tmp/v61gi_nonfinal_witness_builder.out 2>/tmp/v61gi_nonfinal_witness_builder.err; then
+  echo "v61gi unexpectedly built minimal slice from nonfinal witness content" >&2
+  exit 1
+fi
+grep -q "nonfinal-content-witness:review_comment.txt" /tmp/v61gi_nonfinal_witness_builder.err
 
 V61GI_CONTENT_WITNESS_DIR="$MINIMAL_BUILDER_WITNESS_DIR" \
 V61GI_MINIMAL_SLICE_PRECHECK_CSV="$MINIMAL_WRAPPER_PRECHECK_CSV" \

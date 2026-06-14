@@ -3936,7 +3936,8 @@ Current next boundary:
   verifier, v61gh assembly wrapper, fail-closed
   minimal-slice-to-dual-replay wrapper, witness-dir-to-dual-replay final
   wrapper, and content-witness contract for final
-  assembly authority. Canonical scaffold keeps 13 final-file templates, one
+  assembly authority, rejecting witness placeholder/template/fixture content
+  before hashing or materialization. Canonical scaffold keeps 13 final-file templates, one
   minimal-slice template, seven witness manifest rows, two selected-context
   files, and two review worksheet files non-evidence, the
   context/worksheet/env/precheck/builder/prepare-wrapper/final-wrapper/materializer ready,
@@ -3957,7 +3958,8 @@ Current next boundary:
   authority plus `V61GJ_OUTPUT_ROOT` outside the repo are supplied. Final
   assembly authority also requires hash-bound content witness files for review
   comment, adjudication reason, credential/conflict statements, answer text, run
-  transcript, and source file.
+  transcript, and source file, and rejects nonfinal witness text even when the
+  receipt hash matches.
   Canonical no-input keeps input root outside repo 0, receipt ready 0,
   assembly authority 0, preflight rows 0/12 ready, assembly admitted/executed 0,
   assembled roots 0/2,
@@ -3968,10 +3970,10 @@ Current next boundary:
   `authority_bound_replay_admission_ready=0`, `actual_model_generation_ready=0`,
   and zero checkpoint payload bytes; its template-tree, invalid-schema,
   invalid-consistency, invalid-selected-slice, invalid-authority,
-  missing-receipt, missing-content-witness, and repo-internal-ready-root probes
+  missing-receipt, missing/nonfinal-content-witness, and repo-internal-ready-root probes
   reject scaffold templates, malformed final files, mismatched row IDs, wrong
   subset-target rows, nonfinal authority statements, receipt-less otherwise-ready
-  final files, final-authority receipts without content witnesses, or
+  final files, final-authority receipts without real content witnesses, or
   repo-internal ready roots as final input for assembly/replay. Receipts built by
   the scaffold builder or minimal-slice materializer open receiver preflight but
   still keep assembly/replay blocked without explicit assembly authority,

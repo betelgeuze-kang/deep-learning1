@@ -16,6 +16,7 @@ INVALID_AUTHORITY_ROOT="${TMPDIR:-/tmp}/v61gj invalid authority input"
 MISSING_RECEIPT_ROOT="${TMPDIR:-/tmp}/v61gj missing receipt input"
 MATERIALIZED_ROOT="${TMPDIR:-/tmp}/v61gj materialized minimal slice input"
 MISSING_WITNESS_ROOT="${TMPDIR:-/tmp}/v61gj missing content witness input"
+NONFINAL_WITNESS_ROOT="${TMPDIR:-/tmp}/v61gj nonfinal content witness input"
 MINIMAL_SLICE_CSV="${TMPDIR:-/tmp}/v61gj_minimal_slice_rows.csv"
 CONTENT_WITNESS_DIR="${TMPDIR:-/tmp}/v61gj minimal content witness"
 INTERNAL_READY_ROOT="$RESULTS_DIR/v61gj_internal_ready_root_reject/operator_input_root"
@@ -1233,6 +1234,121 @@ for gate in ["operator-input-receipt", "operator-input-assembly-authority", "ope
         raise SystemExit(f"v61gj missing content witness must keep gate blocked: {gate}")
 
 print("v61gj missing content witness rejection smoke passed")
+PY
+
+rm -rf "$NONFINAL_WITNESS_ROOT"
+python3 - "$MATERIALIZED_ROOT" "$NONFINAL_WITNESS_ROOT" <<'PY'
+import hashlib
+import json
+import shutil
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1])
+target = Path(sys.argv[2])
+shutil.copytree(source, target)
+content_witness_files = {
+    "review_comment_sha256": "operator_content_witness/review_comment.txt",
+    "adjudication_reason_sha256": "operator_content_witness/adjudication_reason.txt",
+    "credential_statement_sha256": "operator_content_witness/credential_statement.txt",
+    "conflict_statement_sha256": "operator_content_witness/conflict_statement.txt",
+    "answer_text_sha256": "operator_content_witness/answer_text.txt",
+    "run_transcript_sha256": "operator_content_witness/run_transcript.txt",
+    "source_file_sha256": "operator_content_witness/source_file.txt",
+}
+content_witness_texts = {
+    "review_comment_sha256": "REPLACE_WITH_EXTERNAL_REVIEW_COMMENT\n",
+    "adjudication_reason_sha256": "Final adjudication reason supplied by the external reviewer for the selected row.\n",
+    "credential_statement_sha256": "Final credential statement binds the external reviewer identity to this return.\n",
+    "conflict_statement_sha256": "Final conflict statement records no blocking conflict for this selected row.\n",
+    "answer_text_sha256": "Final answer text supplied by the external generation operator for this selected row.\n",
+    "run_transcript_sha256": "Final run transcript records the external generation command and observed outputs.\n",
+    "source_file_sha256": "Final source file statement binds the cited source material to this return.\n",
+}
+for witness_id, rel in content_witness_files.items():
+    witness = target / rel
+    witness.parent.mkdir(parents=True, exist_ok=True)
+    witness.write_text(content_witness_texts[witness_id], encoding="utf-8")
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+receipt_path = target / "OPERATOR_INPUT_RECEIPT.json"
+payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+payload["assembly_authority"] = "operator-final-real-return"
+payload["assembly_authority_statement"] = "External assembly authority finalized for real operator return promotion with independent accountability and root-hash review."
+payload["content_witness_files"] = content_witness_files
+payload["content_witness_hashes"] = {
+    witness_id: sha256(target / rel)
+    for witness_id, rel in content_witness_files.items()
+}
+receipt_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+V61GJ_RUN_ID="nonfinal_content_witness_reject" \
+V61GJ_OPERATOR_INPUT_ROOT="$NONFINAL_WITNESS_ROOT" \
+V61GJ_OUTPUT_ROOT="${TMPDIR:-/tmp}/v61gj nonfinal content witness reject output" \
+V61GJ_EXECUTE_ASSEMBLY=1 \
+V61GJ_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61gj_post_gi_operator_input_receiver.sh" >/dev/null
+
+python3 - "$SUMMARY_CSV" "$DECISION_CSV" "$RESULTS_DIR/$PREFIX/nonfinal_content_witness_reject/operator_input_receiver_receipt_rows.csv" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+summary_csv = Path(sys.argv[1])
+decision_csv = Path(sys.argv[2])
+receipt_csv = Path(sys.argv[3])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "operator_input_root_supplied": "1",
+    "operator_input_root_exists": "1",
+    "ready_operator_input_rows": "12",
+    "operator_input_receipt_content_witness_ready": "0",
+    "operator_input_receipt_ready": "0",
+    "operator_input_assembly_authority_ready": "0",
+    "operator_input_preflight_ready": "0",
+    "output_root_supplied": "1",
+    "output_root_outside_repo": "1",
+    "assembly_admitted": "0",
+    "assembly_executed": "0",
+    "row_acceptance_ready": "0",
+    "dual_external_return_real_ready": "0",
+    "real_return_replay_admission_ready": "0",
+    "generation_acceptance_closure_ready": "0",
+    "actual_model_generation_ready": "0",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v61gj nonfinal content witness {field}: expected {value}, got {summary.get(field)}")
+
+receipt_row = read_csv(receipt_csv)[0]
+if receipt_row.get("content_witness_ready") != "0":
+    raise SystemExit("v61gj nonfinal content witness row must record content_witness_ready=0")
+if "content-witness-nonfinal-text:review_comment_sha256" not in receipt_row.get("errors", ""):
+    raise SystemExit(f"v61gj nonfinal content witness should explain nonfinal witness text: {receipt_row}")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+for gate in ["operator-input-schema", "operator-input-minimum-rows", "operator-input-hash-binding", "operator-input-cross-file-consistency", "operator-input-selected-slice-binding", "operator-input-authority-statement"]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61gj nonfinal content witness expected file preflight pass: {gate}")
+for gate in ["operator-input-receipt", "operator-input-assembly-authority", "operator-input-preflight", "assembly-admitted", "assembly-executed", "row-acceptance"]:
+    if decisions.get(gate) != "blocked":
+        raise SystemExit(f"v61gj nonfinal content witness must keep gate blocked: {gate}")
+
+print("v61gj nonfinal content witness rejection smoke passed")
 PY
 
 V61GJ_RUN_ID="materialized_minimal_output_no_authority_reject" \

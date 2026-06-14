@@ -388,6 +388,11 @@ def validate_operator_receipt(operator_root, required_rows, selected_rows):
                 content_witness_ready = 0
                 schema_errors.append(f"content-witness-file-empty:{witness_id}")
                 continue
+            witness_text = file_path.read_text(encoding="utf-8", errors="replace")
+            if any(token in witness_text.lower() for token in RECEIPT_NONFINAL_TOKENS):
+                content_witness_ready = 0
+                schema_errors.append(f"content-witness-nonfinal-text:{witness_id}")
+                continue
             if supplied_hash != sha256(file_path):
                 content_witness_ready = 0
                 schema_errors.append(f"content-witness-hash-mismatch:{witness_id}")
