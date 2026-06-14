@@ -4111,6 +4111,13 @@ Current next boundary:
   files beside the live checklist; final witness files, workspace preflight,
   replay, row acceptance, generation acceptance closure, and actual generation
   remain blocked.
+- `v61gy` adds the post-v61gx first-real-slice guarded execution publisher.
+  `experiments/test_v61gy_post_gx_first_real_slice_guarded_execution_publisher.sh`
+  publishes a fail-closed `RUN_GAP_READY_FIRST_REAL_SLICE.sh` plus audit-only
+  helper, README, and manifest into the repo-external workspace. The guarded
+  runner reruns v61gv and exits before env sourcing or final replay unless
+  `workspace_gap_preflight_ready=1`; the current ubuntu-1 run stops at the same
+  23 open witness/env items with all real counters zero.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
