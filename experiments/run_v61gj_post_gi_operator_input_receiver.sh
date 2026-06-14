@@ -136,11 +136,22 @@ RECEIPT_REQUIRED_KEYS = [
     "declared_artifact_count",
     "selected_slice_ids",
     "artifact_hashes",
+    "content_witness_files",
+    "content_witness_hashes",
     "external_return_attestation",
     "assembly_authority",
     "assembly_authority_statement",
 ]
 RECEIPT_NONFINAL_TOKENS = ["replace_with", "template", "fixture", "synthetic", "dry run", "sample", "example"]
+RECEIPT_CONTENT_WITNESS_RELS = {
+    "review_comment_sha256": "operator_content_witness/review_comment.txt",
+    "adjudication_reason_sha256": "operator_content_witness/adjudication_reason.txt",
+    "credential_statement_sha256": "operator_content_witness/credential_statement.txt",
+    "conflict_statement_sha256": "operator_content_witness/conflict_statement.txt",
+    "answer_text_sha256": "operator_content_witness/answer_text.txt",
+    "run_transcript_sha256": "operator_content_witness/run_transcript.txt",
+    "source_file_sha256": "operator_content_witness/source_file.txt",
+}
 
 
 def sha256(path):
@@ -274,6 +285,7 @@ def validate_operator_receipt(operator_root, required_rows, selected_rows):
         "schema_valid": "0",
         "hash_binding_ready": "0",
         "selected_slice_binding_ready": "0",
+        "content_witness_ready": "0",
         "finality_ready": "0",
         "ready": "0",
         "assembly_authority_ready": "0",
@@ -325,6 +337,62 @@ def validate_operator_receipt(operator_root, required_rows, selected_rows):
     if assembly_authority == "operator-final-real-return" and len(assembly_authority_statement.strip()) < 40:
         assembly_authority_ready = 0
         schema_errors.append("assembly-authority-statement-too-short")
+
+    content_witness_files = payload.get("content_witness_files", {})
+    content_witness_hashes = payload.get("content_witness_hashes", {})
+    content_witness_ready = 1
+    if not isinstance(content_witness_files, dict):
+        content_witness_ready = 0
+        schema_errors.append("content-witness-files-not-object")
+    if not isinstance(content_witness_hashes, dict):
+        content_witness_ready = 0
+        schema_errors.append("content-witness-hashes-not-object")
+    if isinstance(content_witness_files, dict) and isinstance(content_witness_hashes, dict):
+        unexpected_files = sorted(set(content_witness_files) - set(RECEIPT_CONTENT_WITNESS_RELS))
+        unexpected_hashes = sorted(set(content_witness_hashes) - set(RECEIPT_CONTENT_WITNESS_RELS))
+        if unexpected_files:
+            content_witness_ready = 0
+            schema_errors.append("unexpected-content-witness-files:" + ";".join(unexpected_files))
+        if unexpected_hashes:
+            content_witness_ready = 0
+            schema_errors.append("unexpected-content-witness-hashes:" + ";".join(unexpected_hashes))
+        require_witnesses = assembly_authority == "operator-final-real-return"
+        if require_witnesses:
+            missing_files = sorted(set(RECEIPT_CONTENT_WITNESS_RELS) - set(content_witness_files))
+            missing_hashes = sorted(set(RECEIPT_CONTENT_WITNESS_RELS) - set(content_witness_hashes))
+            if missing_files:
+                content_witness_ready = 0
+                schema_errors.append("missing-content-witness-files:" + ";".join(missing_files))
+            if missing_hashes:
+                content_witness_ready = 0
+                schema_errors.append("missing-content-witness-hashes:" + ";".join(missing_hashes))
+        for witness_id, expected_rel in RECEIPT_CONTENT_WITNESS_RELS.items():
+            supplied_rel = content_witness_files.get(witness_id)
+            supplied_hash = content_witness_hashes.get(witness_id)
+            if supplied_rel is None and supplied_hash is None and not require_witnesses:
+                continue
+            if supplied_rel != expected_rel:
+                content_witness_ready = 0
+                schema_errors.append(f"content-witness-rel-mismatch:{witness_id}")
+                continue
+            if not isinstance(supplied_hash, str) or not SHA_RE.match(supplied_hash):
+                content_witness_ready = 0
+                schema_errors.append(f"invalid-content-witness-hash:{witness_id}")
+                continue
+            file_path = operator_root / supplied_rel
+            if not file_path.is_file():
+                content_witness_ready = 0
+                schema_errors.append(f"content-witness-file-missing:{witness_id}")
+                continue
+            if file_path.stat().st_size == 0:
+                content_witness_ready = 0
+                schema_errors.append(f"content-witness-file-empty:{witness_id}")
+                continue
+            if supplied_hash != sha256(file_path):
+                content_witness_ready = 0
+                schema_errors.append(f"content-witness-hash-mismatch:{witness_id}")
+    if assembly_authority == "operator-final-real-return" and not content_witness_ready:
+        assembly_authority_ready = 0
 
     selected_slice_ids = payload.get("selected_slice_ids", {})
     selected_ids = {row["slice_id"] for row in selected_rows}
@@ -378,6 +446,7 @@ def validate_operator_receipt(operator_root, required_rows, selected_rows):
     result["schema_valid"] = str(int(not schema_errors))
     result["hash_binding_ready"] = str(hash_binding_ready)
     result["selected_slice_binding_ready"] = str(selected_slice_ready)
+    result["content_witness_ready"] = str(content_witness_ready)
     result["finality_ready"] = str(int(not any(token in lowered for token in RECEIPT_NONFINAL_TOKENS)))
     result["assembly_authority_ready"] = str(assembly_authority_ready)
     result["ready"] = str(int(
@@ -733,6 +802,7 @@ receipt_rows = [validate_operator_receipt(operator_input_root, required_rows, se
     "schema_valid": "0",
     "hash_binding_ready": "0",
     "selected_slice_binding_ready": "0",
+    "content_witness_ready": "0",
     "finality_ready": "0",
     "assembly_authority_ready": "0",
     "ready": "0",
@@ -762,6 +832,7 @@ operator_input_receipt_supplied = int(receipt_row["exists"] == "1")
 operator_input_receipt_schema_ready = int(receipt_row["schema_valid"] == "1")
 operator_input_receipt_hash_binding_ready = int(receipt_row["hash_binding_ready"] == "1")
 operator_input_receipt_selected_slice_binding_ready = int(receipt_row["selected_slice_binding_ready"] == "1")
+operator_input_receipt_content_witness_ready = int(receipt_row["content_witness_ready"] == "1")
 operator_input_receipt_finality_ready = int(receipt_row["finality_ready"] == "1")
 operator_input_assembly_authority_ready = int(receipt_row["assembly_authority_ready"] == "1")
 operator_input_receipt_ready = int(receipt_row["ready"] == "1")
@@ -848,8 +919,8 @@ stage_rows = [
     {"stage_id": "02-operator-input-root-supplied", "status": "ready" if operator_root_supplied else "blocked", "evidence": f"operator_input_root_supplied={operator_root_supplied}"},
     {"stage_id": "03-operator-input-root-exists", "status": "ready" if operator_root_exists else "blocked", "evidence": f"operator_root_exists={operator_root_exists}"},
     {"stage_id": "04-operator-input-root-outside-repo", "status": "ready" if operator_input_root_outside_repo else "blocked", "evidence": f"operator_input_root_outside_repo={operator_input_root_outside_repo}"},
-    {"stage_id": "05-operator-input-receipt", "status": "ready" if operator_input_receipt_ready else "blocked", "evidence": f"operator_input_receipt_ready={operator_input_receipt_ready}; hash_binding={operator_input_receipt_hash_binding_ready}"},
-    {"stage_id": "06-operator-input-assembly-authority", "status": "ready" if operator_input_assembly_authority_ready else "blocked", "evidence": f"operator_input_assembly_authority_ready={operator_input_assembly_authority_ready}"},
+    {"stage_id": "05-operator-input-receipt", "status": "ready" if operator_input_receipt_ready else "blocked", "evidence": f"operator_input_receipt_ready={operator_input_receipt_ready}; hash_binding={operator_input_receipt_hash_binding_ready}; content_witness={operator_input_receipt_content_witness_ready}"},
+    {"stage_id": "06-operator-input-assembly-authority", "status": "ready" if operator_input_assembly_authority_ready else "blocked", "evidence": f"operator_input_assembly_authority_ready={operator_input_assembly_authority_ready}; content_witness={operator_input_receipt_content_witness_ready}"},
     {"stage_id": "07-final-input-schema", "status": "ready" if operator_input_schema_ready else "blocked", "evidence": f"schema_valid_rows={schema_valid_rows}/{len(required_rows)}"},
     {"stage_id": "08-final-input-minimum-rows", "status": "ready" if operator_input_minimum_row_count_ready else "blocked", "evidence": f"minimum_row_count_ready_rows={minimum_row_count_ready_rows}/{len(required_rows)}"},
     {"stage_id": "09-final-input-hash-binding", "status": "ready" if operator_input_hash_binding_ready else "blocked", "evidence": f"hash_binding_ready_rows={hash_binding_ready_rows}/{len(required_rows)}"},
@@ -925,6 +996,7 @@ summary = {
     "operator_input_receipt_schema_ready": operator_input_receipt_schema_ready,
     "operator_input_receipt_hash_binding_ready": operator_input_receipt_hash_binding_ready,
     "operator_input_receipt_selected_slice_binding_ready": operator_input_receipt_selected_slice_binding_ready,
+    "operator_input_receipt_content_witness_ready": operator_input_receipt_content_witness_ready,
     "operator_input_receipt_finality_ready": operator_input_receipt_finality_ready,
     "operator_input_assembly_authority_ready": operator_input_assembly_authority_ready,
     "operator_input_receipt_ready": operator_input_receipt_ready,
@@ -1006,8 +1078,8 @@ decision_rows = [
     {"gate": "source-v61gi-ready", "status": "pass", "evidence": "v61gi ready"},
     {"gate": "operator-input-root-supplied", "status": "pass" if operator_root_supplied else "blocked", "evidence": f"operator_input_root_supplied={operator_root_supplied}"},
     {"gate": "operator-input-root-outside-repo", "status": "pass" if operator_input_root_outside_repo else "blocked", "evidence": f"operator_input_root_outside_repo={operator_input_root_outside_repo}"},
-    {"gate": "operator-input-receipt", "status": "pass" if operator_input_receipt_ready else "blocked", "evidence": f"operator_input_receipt_ready={operator_input_receipt_ready}; hash_binding={operator_input_receipt_hash_binding_ready}; finality={operator_input_receipt_finality_ready}"},
-    {"gate": "operator-input-assembly-authority", "status": "pass" if operator_input_assembly_authority_ready else "blocked", "evidence": f"operator_input_assembly_authority_ready={operator_input_assembly_authority_ready}"},
+    {"gate": "operator-input-receipt", "status": "pass" if operator_input_receipt_ready else "blocked", "evidence": f"operator_input_receipt_ready={operator_input_receipt_ready}; hash_binding={operator_input_receipt_hash_binding_ready}; content_witness={operator_input_receipt_content_witness_ready}; finality={operator_input_receipt_finality_ready}"},
+    {"gate": "operator-input-assembly-authority", "status": "pass" if operator_input_assembly_authority_ready else "blocked", "evidence": f"operator_input_assembly_authority_ready={operator_input_assembly_authority_ready}; content_witness={operator_input_receipt_content_witness_ready}"},
     {"gate": "operator-input-schema", "status": "pass" if operator_input_schema_ready else "blocked", "evidence": f"schema_valid_rows={schema_valid_rows}/{len(required_rows)}"},
     {"gate": "operator-input-minimum-rows", "status": "pass" if operator_input_minimum_row_count_ready else "blocked", "evidence": f"minimum_row_count_ready_rows={minimum_row_count_ready_rows}/{len(required_rows)}"},
     {"gate": "operator-input-hash-binding", "status": "pass" if operator_input_hash_binding_ready else "blocked", "evidence": f"hash_binding_ready_rows={hash_binding_ready_rows}/{len(required_rows)}"},
@@ -1046,6 +1118,7 @@ boundary = "\n".join([
     f"- present_operator_input_rows={present_operator_input_rows}",
     f"- ready_operator_input_rows={ready_operator_input_rows}",
     f"- operator_input_receipt_ready={operator_input_receipt_ready}",
+    f"- operator_input_receipt_content_witness_ready={operator_input_receipt_content_witness_ready}",
     f"- operator_input_assembly_authority_ready={operator_input_assembly_authority_ready}",
     f"- operator_input_preflight_ready={operator_input_preflight_ready}",
     f"- assembly_admitted={assembly_admitted}",

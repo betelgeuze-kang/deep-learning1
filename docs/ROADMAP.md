@@ -3928,10 +3928,15 @@ Current next boundary:
   splits the 14 root artifact contracts into 12 final operator input files plus
   two generated provenance markers, emits `.template` files for the final input
   tree plus `OPERATOR_INPUT_RECEIPT.json.template`, and provides a minimal-slice
-  materializer, receipt builder, verifier, and v61gh assembly wrapper. Canonical
-  scaffold keeps 13 templates non-evidence, the materializer/builder ready,
-  receipt/preflight 0, two ready local commands, four blocked
-  materialize/receipt/preflight/assembly commands,
+  CSV template with content-witness path fields, a seven-row content-witness
+  manifest, env template, witness-directory-to-CSV builder, materializer,
+  receipt builder, verifier, v61gh assembly wrapper, fail-closed
+  minimal-slice-to-dual-replay wrapper, and content-witness contract for final
+  assembly authority. Canonical scaffold keeps 13 final-file templates, one
+  minimal-slice template, and seven witness manifest rows non-evidence, the
+  env/builder/materializer ready, receipt/preflight 0, two ready local commands,
+  six blocked
+  build/materialize/receipt/preflight/assembly/replay commands,
   assembled roots 0/2, real review/generation rows zero,
   `authority_bound_replay_admission_ready=0`, `actual_model_generation_ready=0`,
   and zero checkpoint payload bytes.
@@ -3939,12 +3944,15 @@ Current next boundary:
   `experiments/test_v61gj_post_gi_operator_input_receiver.sh` accepts an
   optional final `V61GJ_OPERATOR_INPUT_ROOT`, preflights top-level
   `OPERATOR_INPUT_RECEIPT.json` for source class, finality, selected-slice IDs,
-  and hash binding to all 12 final files, then preflights those files for schema,
-  minimum rows, acceptance-summary SHA-256 bindings, cross-file ID consistency,
-  selected-slice binding, and authority-statement finality, and only admits
-  assembly when the input root itself is outside the repo and explicit
-  `operator-final-real-return` assembly authority plus `V61GJ_OUTPUT_ROOT`
-  outside the repo are supplied.
+  content-witness binding, and hash binding to all 12 final files, then
+  preflights those files for schema, minimum rows, acceptance-summary SHA-256
+  bindings, cross-file ID consistency, selected-slice binding, and
+  authority-statement finality, and only admits assembly when the input root
+  itself is outside the repo and explicit `operator-final-real-return` assembly
+  authority plus `V61GJ_OUTPUT_ROOT` outside the repo are supplied. Final
+  assembly authority also requires hash-bound content witness files for review
+  comment, adjudication reason, credential/conflict statements, answer text, run
+  transcript, and source file.
   Canonical no-input keeps input root outside repo 0, receipt ready 0,
   assembly authority 0, preflight rows 0/12 ready, assembly admitted/executed 0,
   assembled roots 0/2,
@@ -3955,13 +3963,15 @@ Current next boundary:
   `authority_bound_replay_admission_ready=0`, `actual_model_generation_ready=0`,
   and zero checkpoint payload bytes; its template-tree, invalid-schema,
   invalid-consistency, invalid-selected-slice, invalid-authority,
-  missing-receipt, and repo-internal-ready-root probes reject scaffold templates,
-  malformed final files, mismatched row IDs, wrong subset-target rows, nonfinal
-  authority statements, receipt-less otherwise-ready final files, or repo-internal
-  ready roots as final input for assembly/replay. Receipts built by the scaffold
-  builder or minimal-slice materializer open receiver preflight but still keep
-  assembly/replay blocked without explicit assembly authority, a repo-external
-  input root, and a repo-external output root. It also
+  missing-receipt, missing-content-witness, and repo-internal-ready-root probes
+  reject scaffold templates, malformed final files, mismatched row IDs, wrong
+  subset-target rows, nonfinal authority statements, receipt-less otherwise-ready
+  final files, final-authority receipts without content witnesses, or
+  repo-internal ready roots as final input for assembly/replay. Receipts built by
+  the scaffold builder or minimal-slice materializer open receiver preflight but
+  still keep assembly/replay blocked without explicit assembly authority,
+  content witnesses, a repo-external input root, and a repo-external output root.
+  It also
   exposes each preflight family as a separate stage/decision gate, promotes the
   subset replay gates directly from the assembly replay summaries, flips the
   shell-quoted operator-input command row to ready only after assembly admission,

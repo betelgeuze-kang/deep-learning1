@@ -15,7 +15,9 @@ INVALID_SELECTED_ROOT="${TMPDIR:-/tmp}/v61gj invalid selected slice input"
 INVALID_AUTHORITY_ROOT="${TMPDIR:-/tmp}/v61gj invalid authority input"
 MISSING_RECEIPT_ROOT="${TMPDIR:-/tmp}/v61gj missing receipt input"
 MATERIALIZED_ROOT="${TMPDIR:-/tmp}/v61gj materialized minimal slice input"
+MISSING_WITNESS_ROOT="${TMPDIR:-/tmp}/v61gj missing content witness input"
 MINIMAL_SLICE_CSV="${TMPDIR:-/tmp}/v61gj_minimal_slice_rows.csv"
+CONTENT_WITNESS_DIR="${TMPDIR:-/tmp}/v61gj minimal content witness"
 INTERNAL_READY_ROOT="$RESULTS_DIR/v61gj_internal_ready_root_reject/operator_input_root"
 SCAFFOLD_DIR="$RESULTS_DIR/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold"
 
@@ -65,6 +67,7 @@ expected = {
     "operator_input_receipt_schema_ready": "0",
     "operator_input_receipt_hash_binding_ready": "0",
     "operator_input_receipt_selected_slice_binding_ready": "0",
+    "operator_input_receipt_content_witness_ready": "0",
     "operator_input_receipt_finality_ready": "0",
     "operator_input_assembly_authority_ready": "0",
     "operator_input_receipt_ready": "0",
@@ -934,6 +937,7 @@ expected = {
     "operator_input_receipt_schema_ready": "1",
     "operator_input_receipt_hash_binding_ready": "1",
     "operator_input_receipt_selected_slice_binding_ready": "1",
+    "operator_input_receipt_content_witness_ready": "1",
     "operator_input_receipt_finality_ready": "1",
     "operator_input_assembly_authority_ready": "0",
     "operator_input_receipt_ready": "1",
@@ -979,12 +983,54 @@ print("v61gj receipt builder preflight-only smoke passed")
 PY
 
 rm -rf "$MATERIALIZED_ROOT"
-python3 - "$MINIMAL_SLICE_CSV" <<'PY'
+rm -rf "$CONTENT_WITNESS_DIR"
+python3 - "$MINIMAL_SLICE_CSV" "$CONTENT_WITNESS_DIR" <<'PY'
 import csv
+import hashlib
 import sys
 from pathlib import Path
 
 path = Path(sys.argv[1])
+content_dir = Path(sys.argv[2])
+content_dir.mkdir(parents=True, exist_ok=True)
+
+
+def write_witness(name, text):
+    witness = content_dir / name
+    witness.write_text(text + "\n", encoding="utf-8")
+    digest = hashlib.sha256(witness.read_bytes()).hexdigest()
+    return witness, "sha256:" + digest
+
+
+review_comment, review_comment_sha = write_witness(
+    "review_comment.txt",
+    "Reviewer verified source support, citation binding, and policy alignment for the selected answer row.",
+)
+adjudication_reason, adjudication_reason_sha = write_witness(
+    "adjudication_reason.txt",
+    "Adjudicator accepted the reviewer decision after checking row identity, source support, and conflict disclosures.",
+)
+credential_statement, credential_statement_sha = write_witness(
+    "credential_statement.txt",
+    "Reviewer identity and role statement for the selected partial return are recorded for accountable external review.",
+)
+conflict_statement, conflict_statement_sha = write_witness(
+    "conflict_statement.txt",
+    "Reviewer conflict disclosure records no conflict for the selected repository and review assignment.",
+)
+answer_text, answer_text_sha = write_witness(
+    "answer_text.txt",
+    "The selected source-bound answer was produced over the referenced source span and retained for hash verification.",
+)
+run_transcript, run_transcript_sha = write_witness(
+    "run_transcript.txt",
+    "Generation run transcript records prompt binding, checkpoint identity, decode timing, and result disposition.",
+)
+source_file, source_file_sha = write_witness(
+    "source_file.txt",
+    "Referenced source content for the selected citation row is retained as a hash-bound witness file.",
+)
+
 row = {
     "reviewer_id": "reviewer-final-alpha",
     "adjudicator_id": "adjudicator-final-alpha",
@@ -993,13 +1039,20 @@ row = {
     "model_id": "mistralai/Mixtral-8x22B-v0.1",
     "checkpoint_root": "/external/checkpoint/root-alpha",
     "latency_row_id": "latency-final-alpha",
-    "review_comment_sha256": "sha256:" + ("1" * 64),
-    "adjudication_reason_sha256": "sha256:" + ("2" * 64),
-    "credential_statement_sha256": "sha256:" + ("3" * 64),
-    "conflict_statement_sha256": "sha256:" + ("4" * 64),
-    "answer_text_sha256": "sha256:" + ("5" * 64),
-    "run_transcript_sha256": "sha256:" + ("6" * 64),
-    "source_file_sha256": "sha256:" + ("7" * 64),
+    "review_comment_sha256": review_comment_sha,
+    "adjudication_reason_sha256": adjudication_reason_sha,
+    "credential_statement_sha256": credential_statement_sha,
+    "conflict_statement_sha256": conflict_statement_sha,
+    "answer_text_sha256": answer_text_sha,
+    "run_transcript_sha256": run_transcript_sha,
+    "source_file_sha256": source_file_sha,
+    "review_comment_content_path": str(review_comment),
+    "adjudication_reason_content_path": str(adjudication_reason),
+    "credential_statement_content_path": str(credential_statement),
+    "conflict_statement_content_path": str(conflict_statement),
+    "answer_text_content_path": str(answer_text),
+    "run_transcript_content_path": str(run_transcript),
+    "source_file_content_path": str(source_file),
     "prompt_tokens": "128",
     "output_tokens": "32",
     "prefill_ms": "11.5",
@@ -1053,6 +1106,7 @@ expected = {
     "operator_input_receipt_schema_ready": "1",
     "operator_input_receipt_hash_binding_ready": "1",
     "operator_input_receipt_selected_slice_binding_ready": "1",
+    "operator_input_receipt_content_witness_ready": "1",
     "operator_input_receipt_finality_ready": "1",
     "operator_input_assembly_authority_ready": "0",
     "operator_input_receipt_ready": "1",
@@ -1099,6 +1153,88 @@ for gate in ["assembly-admitted", "assembly-executed", "row-acceptance", "dual-e
 print("v61gj materialized minimal preflight-only smoke passed")
 PY
 
+rm -rf "$MISSING_WITNESS_ROOT"
+python3 - "$MATERIALIZED_ROOT" "$MISSING_WITNESS_ROOT" <<'PY'
+import json
+import shutil
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1])
+target = Path(sys.argv[2])
+shutil.copytree(source, target)
+shutil.rmtree(target / "operator_content_witness", ignore_errors=True)
+receipt_path = target / "OPERATOR_INPUT_RECEIPT.json"
+payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+payload["assembly_authority"] = "operator-final-real-return"
+payload["assembly_authority_statement"] = "External assembly authority finalized for real operator return promotion with independent accountability and root-hash review."
+payload["content_witness_files"] = {}
+payload["content_witness_hashes"] = {}
+receipt_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+V61GJ_RUN_ID="missing_content_witness_reject" \
+V61GJ_OPERATOR_INPUT_ROOT="$MISSING_WITNESS_ROOT" \
+V61GJ_OUTPUT_ROOT="${TMPDIR:-/tmp}/v61gj missing content witness reject output" \
+V61GJ_EXECUTE_ASSEMBLY=1 \
+V61GJ_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61gj_post_gi_operator_input_receiver.sh" >/dev/null
+
+python3 - "$SUMMARY_CSV" "$DECISION_CSV" "$RESULTS_DIR/$PREFIX/missing_content_witness_reject/operator_input_receiver_receipt_rows.csv" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+summary_csv = Path(sys.argv[1])
+decision_csv = Path(sys.argv[2])
+receipt_csv = Path(sys.argv[3])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "operator_input_root_supplied": "1",
+    "operator_input_root_exists": "1",
+    "ready_operator_input_rows": "12",
+    "operator_input_receipt_content_witness_ready": "0",
+    "operator_input_receipt_ready": "0",
+    "operator_input_assembly_authority_ready": "0",
+    "operator_input_preflight_ready": "0",
+    "output_root_supplied": "1",
+    "output_root_outside_repo": "1",
+    "assembly_admitted": "0",
+    "assembly_executed": "0",
+    "row_acceptance_ready": "0",
+    "dual_external_return_real_ready": "0",
+    "real_return_replay_admission_ready": "0",
+    "generation_acceptance_closure_ready": "0",
+    "actual_model_generation_ready": "0",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v61gj missing content witness {field}: expected {value}, got {summary.get(field)}")
+
+receipt_row = read_csv(receipt_csv)[0]
+if receipt_row.get("content_witness_ready") != "0":
+    raise SystemExit("v61gj missing content witness row must record content_witness_ready=0")
+if "missing-content-witness" not in receipt_row.get("errors", ""):
+    raise SystemExit(f"v61gj missing content witness should explain missing witness files: {receipt_row}")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+for gate in ["operator-input-schema", "operator-input-minimum-rows", "operator-input-hash-binding", "operator-input-cross-file-consistency", "operator-input-selected-slice-binding", "operator-input-authority-statement"]:
+    if decisions.get(gate) != "pass":
+        raise SystemExit(f"v61gj missing content witness expected file preflight pass: {gate}")
+for gate in ["operator-input-receipt", "operator-input-assembly-authority", "operator-input-preflight", "assembly-admitted", "assembly-executed", "row-acceptance"]:
+    if decisions.get(gate) != "blocked":
+        raise SystemExit(f"v61gj missing content witness must keep gate blocked: {gate}")
+
+print("v61gj missing content witness rejection smoke passed")
+PY
+
 V61GJ_RUN_ID="materialized_minimal_output_no_authority_reject" \
 V61GJ_OPERATOR_INPUT_ROOT="$MATERIALIZED_ROOT" \
 V61GJ_OUTPUT_ROOT="${TMPDIR:-/tmp}/v61gj materialized output no authority reject" \
@@ -1126,6 +1262,7 @@ expected = {
     "operator_input_root_exists": "1",
     "ready_operator_input_rows": "12",
     "operator_input_receipt_ready": "1",
+    "operator_input_receipt_content_witness_ready": "1",
     "operator_input_assembly_authority_ready": "0",
     "operator_input_preflight_ready": "1",
     "output_root_supplied": "1",
@@ -1188,6 +1325,7 @@ expected = {
     "operator_input_root_outside_repo": "0",
     "ready_operator_input_rows": "12",
     "operator_input_receipt_ready": "1",
+    "operator_input_receipt_content_witness_ready": "1",
     "operator_input_assembly_authority_ready": "1",
     "operator_input_preflight_ready": "1",
     "output_root_supplied": "1",
