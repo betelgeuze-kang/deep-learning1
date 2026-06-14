@@ -4233,6 +4233,58 @@ Current next boundary:
   materialize the filled form and no-replay operator input when real values are
   present, build the authority ack, and rerun the readiness audit without ever
   arming dual replay.
+- `v61hn` adds the post-v61hm value intake closeout packet.
+  `experiments/test_v61hn_post_hm_first_real_slice_value_intake_closeout_packet.sh`
+  verifies that the live workspace can receive a metadata-only TODO/gate/command
+  packet for the first real-slice values. The current live packet reports the
+  two missing values files plus 21 first-form fields and one authority-ack field,
+  while keeping row acceptance, generation closure, actual generation, and dual
+  replay blocked.
+- `v61ho` adds the post-v61hn values capture runner.
+  `experiments/test_v61ho_post_hn_first_real_slice_values_capture_runner.sh`
+  verifies placeholder rejection and transactional write of the first values JSON
+  only after the existing v61hk validator passes. The live publication adds
+  env-driven capture scripts for form values and later ack values without
+  creating filled forms, replay outputs, accepted rows, or generation evidence.
+- `v61hp` adds the post-v61ho env-file capture handoff.
+  `experiments/test_v61hp_post_ho_first_real_slice_env_file_capture_handoff.sh`
+  verifies that a restricted parser accepts only enumerated `V61HO_*` keys,
+  rejects the placeholder template, and writes the first values JSON only through
+  the existing validator-gated v61ho runner. The live publication adds the
+  `FIRST_REAL_SLICE_VALUES.env` template and wrapper without creating any values,
+  filled forms, replay outputs, accepted rows, or generation evidence.
+- `v61hq` adds the post-v61hp env-file-to-readiness no-replay pipeline.
+  `experiments/test_v61hq_post_hp_first_real_slice_env_file_to_readiness_no_replay_pipeline.sh`
+  verifies the published runner, missing-env fail-closed behavior, and a stubbed
+  no-replay execution path. The live runner can chain values capture, filled-form
+  materialization, no-replay operator input, authority ack build, and readiness
+  audit after `FIRST_REAL_SLICE_VALUES.env` is filled, while never setting
+  `V61HG_EXECUTE_DUAL_REPLAY=1`.
+- `v61hr` adds the post-v61hq env-file preflight gate.
+  `experiments/test_v61hr_post_hq_first_real_slice_env_file_preflight_gate.sh`
+  verifies placeholder rejection, a passing filled-env preflight, and no values
+  JSON/form/ack creation. The live path keeps the env workfile present but
+  blocked until the remaining real external values and final acknowledgement are
+  supplied.
+- `v61hs` adds the post-v61hr env workfile initializer.
+  `experiments/test_v61hs_post_hr_first_real_slice_env_workfile_initializer.sh`
+  verifies publish-only behavior plus placeholder workfile initialization without
+  creating values JSON, forms, acks, replay outputs, accepted rows, or generation
+  evidence. The live workfile is present but preflight-blocked on 23 rows, so the
+  next action is replacing placeholders with real external values.
+- `v61ht` adds the post-v61hs redacted env repair packet.
+  `experiments/test_v61ht_post_hs_first_real_slice_env_repair_packet.sh`
+  verifies that the repair TODO is derived only from the preflight report and
+  contains no env values. The live repair packet lists 23 blocked fields and keeps
+  values JSON, filled form, authority ack, replay, accepted rows, and generation
+  evidence absent.
+- `v61hu` adds the post-v61ht transactional env replacement applier.
+  `experiments/test_v61hu_post_ht_first_real_slice_env_replacement_applier.sh`
+  verifies that a blank replacement CSV template can be derived from the redacted
+  repair TODO, empty replacements are rejected, and filled replacements are
+  applied atomically only after the env preflight passes. The applier writes no
+  values JSON, filled form, authority ack, replay output, accepted row, generation
+  evidence, or checkpoint payload by itself.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
