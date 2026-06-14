@@ -4184,6 +4184,31 @@ Current next boundary:
   guarded handoff mechanics with synthetic input; real review/generation/replay
   counters remain 0, and the live ubuntu-1 workspace stays `open_gap_rows=21`
   until a real filled form is supplied.
+- `v61hg` adds the post-v61hf first-real-slice operator replay handoff publisher.
+  `experiments/test_v61hg_post_hf_first_real_slice_operator_replay_handoff_publisher.sh`
+  publishes `RUN_FILLED_FORM_TO_OPERATOR_INPUT_AND_OPTIONAL_DUAL_REPLAY.sh`
+  at the external workspace root. The handoff consumes a filled form,
+  materializes witness/env values, builds the one-row minimal-slice CSV,
+  materializes the v61gj operator input root through v61go, and stops before
+  v61gp dual replay unless `V61HG_EXECUTE_DUAL_REPLAY=1` plus a final external
+  authority ack are supplied. The smoke proves operator-input preflight only;
+  real review/generation/replay counters remain 0 until a real filled form and
+  replay authority are supplied.
+- `v61hh` adds the post-v61hg dual replay authority ack publisher.
+  `experiments/test_v61hh_post_hg_dual_replay_authority_ack_publisher.sh`
+  publishes `DUAL_REPLAY_AUTHORITY_ACK.json.template`, a validator, and
+  `RUN_OPERATOR_REPLAY_WITH_AUTHORITY_ACK_FILE.sh` into the external workspace.
+  The ack file must be finalized, bind to the filled form sha256, attest real
+  external return authority, and carry the explicit replay ack before v61hg/v61gp
+  are armed. The smoke validates the durable ack contract while keeping all real
+  review/generation/replay counters 0.
+- `v61hi` adds the post-v61hh real subset execution readiness audit.
+  `experiments/test_v61hi_post_hh_real_subset_execution_readiness_audit.sh`
+  publishes `RUN_REAL_SUBSET_EXECUTION_READINESS_AUDIT.sh` into the external
+  workspace and reports whether the filled form, authority ack, materialized
+  operator-input files, dual output roots, and v61gp replay counters are ready.
+  It is read-only with respect to evidence and currently reports the live next
+  action as filling and validating the first real-slice external return form.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
