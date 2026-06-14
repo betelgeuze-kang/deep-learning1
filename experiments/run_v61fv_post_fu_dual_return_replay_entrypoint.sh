@@ -26,6 +26,7 @@ import csv
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -138,7 +139,7 @@ run_script.write_text(
     "\n".join([
         "#!/usr/bin/env bash",
         "set -euo pipefail",
-        "ROOT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/../../..\" && pwd)\"",
+        f"ROOT_DIR={shlex.quote(str(root))}",
         ": \"${V61FV_V53_RETURN_BUNDLE_DIR:?set V61FV_V53_RETURN_BUNDLE_DIR to the real v53 external return root}\"",
         ": \"${V61FV_V53_RETURN_PROVENANCE:?set V61FV_V53_RETURN_PROVENANCE=real-external-return-bundle}\"",
         ": \"${V61FV_V61_RETURN_BUNDLE_DIR:?set V61FV_V61_RETURN_BUNDLE_DIR to the real v61 generation-intake return root}\"",

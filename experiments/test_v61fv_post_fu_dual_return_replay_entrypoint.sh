@@ -137,6 +137,13 @@ for rel in [
     if not os.access(run_dir / rel, os.X_OK):
         raise SystemExit(f"v61fv executable bit missing: {rel}")
 
+run_script_text = (entrypoint_dir / "RUN_DUAL_RETURN_REPLAY_IF_READY.sh").read_text(encoding="utf-8")
+expected_root = str(run_dir.parents[2])
+if expected_root not in run_script_text:
+    raise SystemExit("v61fv replay script must pin the real repository root")
+if 'ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."' in run_script_text:
+    raise SystemExit("v61fv replay script must not infer repo root from the results directory")
+
 env_rows = read_csv(run_dir / "dual_return_replay_required_env_rows.csv")
 if [row["env_var"] for row in env_rows] != [
     "V61FV_V53_RETURN_BUNDLE_DIR",

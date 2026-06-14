@@ -3146,6 +3146,25 @@ Current next boundary:
   accept evidence itself. Its critical-only supplied fixture verifies
   `preflight_pass_rows=10/81`, with dispatch/chunk/review/generation acceptance
   still at 0 and actual generation blocked.
+- `v53an` adds the complete-source actual review return frontier.
+  `experiments/test_v53an_complete_source_actual_review_return_frontier.sh`
+  consumes v53am/v53ak/v53al and the latest v61fz status ledger. Canonical
+  no-return records 16 frontier requirements with six ready and 10 blocked,
+  10 blocker rows, six actions with two ready and four blocked, 81 checklist
+  rows with 81 missing, preflight 0/81, dispatch receipts 0/21, review chunk
+  returns 0/50, human review 0/7000, adjudication 0/1000, generation execution
+  0/1000, generation-result artifacts 0/5, `v53_ready=0`,
+  `actual_model_generation_ready=0`, and zero checkpoint payload bytes.
+- `v53ao` adds the complete-source actual review return frontier receipt.
+  `experiments/test_v53ao_complete_source_actual_review_return_frontier_receipt.sh`
+  consumes v53an, executes only the two local-ready frontier actions, and
+  records stdout/stderr receipt streams while leaving real returned-bundle
+  actions unexecuted. Canonical no-return records two ready actions executed
+  and successful, four blocked actions with zero execution attempts, four
+  receipt stream files, five stages with three ready and two blocked, 81
+  checklist rows with 81 missing, preflight 0/81, human review 0/7000,
+  adjudication 0/1000, `actual_model_generation_ready=0`, and zero checkpoint
+  payload bytes.
 - `v61de` adds the post-review generation result handoff bridge.
   `experiments/test_v61de_post_review_generation_result_handoff_bridge.sh`
   binds v53z, v61ct, v61bt, v61cu, and v61dd into the path that follows an
@@ -3802,6 +3821,32 @@ Current next boundary:
   two guard probes passed, eight receipt stream files,
   `real_replay_command_executed=0`, `dual_external_return_real_ready=0`, and
   `actual_model_generation_ready=0`.
+- `v61fx` adds the post-v61fw dual return operator handoff bundle.
+  `experiments/test_v61fx_post_fw_dual_return_operator_handoff_bundle.sh`
+  joins v61fc/v61fd/v61fu/v61fv/v61fw into one metadata-only operator bundle
+  for the two real return roots. Canonical no-root records two root contracts,
+  91 total required artifacts, 14 open deltas, 15 source rows, 10 package
+  files, eight stages with five ready and three blocked, eight actions with
+  four ready and four blocked, `real_replay_command_executed=0`,
+  `dual_external_return_real_ready=0`, and `actual_model_generation_ready=0`.
+- `v61fy` adds the post-v61fx operator handoff receipt.
+  `experiments/test_v61fy_post_fx_operator_handoff_receipt.sh` executes the
+  four local-ready handoff actions, records stdout/stderr receipts, proves
+  no-env and fixture-provenance rejection on the packaged replay script, and
+  verifies the script pins the real repository root. Canonical receipt records
+  four ready actions executed and successful, four blocked actions with zero
+  execution attempts, two guard probes passed, 12 receipt stream files,
+  `root_pinned_replay_script_ready=1`, `real_replay_command_executed=0`, and
+  `actual_model_generation_ready=0`.
+- `v61fz` adds the post-v61fy active-goal status refresh.
+  `experiments/test_v61fz_post_fy_active_goal_status_refresh.sh` binds
+  v61ft/v61fu/v61fx/v61fy into the latest pass/blocked ledger. Canonical
+  refresh records `active_goal_complete=0`, v52 ready, v53 complete-source
+  machine surface 10 repos / 1000 queries / 7000 answer rows, post-full-shard
+  runtime evidence ready, root-pinned handoff receipt ready, 18 requirements
+  with seven ready and 11 blocked, 91 missing external return artifacts,
+  missing review rows 7000, missing adjudication rows 1000,
+  `actual_model_generation_ready=0`, and zero checkpoint payload bytes.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
