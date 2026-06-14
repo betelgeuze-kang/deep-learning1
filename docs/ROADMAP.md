@@ -3929,14 +3929,16 @@ Current next boundary:
   two generated provenance markers, emits `.template` files for the final input
   tree plus `OPERATOR_INPUT_RECEIPT.json.template`, and provides a minimal-slice
   CSV template with content-witness path fields, a seven-row content-witness
-  manifest, env template, witness/env precheck, witness-directory-to-CSV
-  builder, guarded precheck/build wrapper, materializer, receipt builder,
+  manifest, two non-evidence selected-slice context files, env template,
+  witness/env precheck, witness-directory-to-CSV builder, guarded precheck/build
+  wrapper, materializer, receipt builder,
   verifier, v61gh assembly wrapper, fail-closed
   minimal-slice-to-dual-replay wrapper, witness-dir-to-dual-replay final
   wrapper, and content-witness contract for final
   assembly authority. Canonical scaffold keeps 13 final-file templates, one
-  minimal-slice template, and seven witness manifest rows non-evidence, the
-  env/precheck/builder/prepare-wrapper/final-wrapper/materializer ready,
+  minimal-slice template, seven witness manifest rows, and two selected-context
+  files non-evidence, the
+  context/env/precheck/builder/prepare-wrapper/final-wrapper/materializer ready,
   receipt/preflight 0, two ready local commands, nine blocked
   precheck/build/prepare/materialize/receipt/preflight/assembly/replay/final-wrapper commands,
   assembled roots 0/2, real review/generation rows zero,

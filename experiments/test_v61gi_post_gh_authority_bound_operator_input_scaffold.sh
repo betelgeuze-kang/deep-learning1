@@ -243,6 +243,8 @@ expected = {
     "operator_input_receipt_template_rows": "1",
     "operator_input_minimal_slice_template_rows": "1",
     "operator_input_content_witness_manifest_rows": "7",
+    "operator_input_minimal_slice_context_files": "2",
+    "operator_input_minimal_slice_context_ready": "1",
     "operator_input_minimal_slice_env_template_ready": "1",
     "operator_input_minimal_slice_precheck_ready": "1",
     "operator_input_minimal_slice_builder_ready": "1",
@@ -286,6 +288,7 @@ required_files = [
     "authority_bound_operator_input_template_file_rows.csv",
     "authority_bound_operator_minimal_slice_template_rows.csv",
     "authority_bound_operator_content_witness_manifest_rows.csv",
+    "authority_bound_operator_minimal_slice_context_rows.csv",
     "authority_bound_operator_input_scaffold_command_rows.csv",
     "authority_bound_operator_input_scaffold_source_rows.csv",
     "authority_bound_operator_input_scaffold_package_file_rows.csv",
@@ -298,7 +301,10 @@ required_files = [
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_INPUT_TEMPLATE_FILE_ROWS.csv",
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_TEMPLATE_ROWS.csv",
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_CONTENT_WITNESS_MANIFEST_ROWS.csv",
+    "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_CONTEXT_ROWS.csv",
     "authority_bound_operator_input_scaffold/MINIMAL_SLICE_ROWS.csv.template",
+    "authority_bound_operator_input_scaffold/MINIMAL_SLICE_SELECTED_CONTEXT.json",
+    "authority_bound_operator_input_scaffold/MINIMAL_SLICE_SELECTED_CONTEXT.md",
     "authority_bound_operator_input_scaffold/MINIMAL_SLICE_ENV_TEMPLATE.sh",
     "authority_bound_operator_input_scaffold/MINIMAL_SLICE_OPERATOR_README.md",
     "authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD_COMMAND_ROWS.csv",
@@ -344,6 +350,7 @@ marker_rows = read_csv(run_dir / "authority_bound_operator_generated_marker_rows
 template_rows = read_csv(run_dir / "authority_bound_operator_input_template_file_rows.csv")
 minimal_slice_template_rows = read_csv(run_dir / "authority_bound_operator_minimal_slice_template_rows.csv")
 content_witness_manifest_rows = read_csv(run_dir / "authority_bound_operator_content_witness_manifest_rows.csv")
+minimal_slice_context_rows = read_csv(run_dir / "authority_bound_operator_minimal_slice_context_rows.csv")
 if len(input_rows) != 12:
     raise SystemExit("v61gi expected 12 operator input rows")
 if len(marker_rows) != 2:
@@ -360,6 +367,10 @@ if len(minimal_slice_template_rows) != 1:
     raise SystemExit("v61gi expected one minimal slice template row")
 if len(content_witness_manifest_rows) != 7:
     raise SystemExit("v61gi expected seven content witness manifest rows")
+if len(minimal_slice_context_rows) != 2:
+    raise SystemExit("v61gi expected two minimal slice context files")
+if any(row["counts_as_evidence"] != "0" for row in minimal_slice_context_rows):
+    raise SystemExit("v61gi selected context must not count as evidence")
 if {row["required_filename"] for row in content_witness_manifest_rows} != {
     "review_comment.txt",
     "adjudication_reason.txt",
@@ -393,7 +404,29 @@ for snippet in ["V61GI_CONTENT_WITNESS_DIR", "V61GI_MINIMAL_SLICE_PRECHECK_CSV",
     if snippet not in env_template:
         raise SystemExit(f"v61gi env template missing snippet: {snippet}")
 
-for gate in ["source-v61gh-ready", "operator-input-scaffold", "operator-input-minimal-slice-template", "operator-input-content-witness-manifest", "operator-input-minimal-slice-env-template", "operator-input-minimal-slice-precheck", "operator-input-minimal-slice-builder", "operator-input-minimal-slice-prepare-wrapper", "operator-input-witness-dir-final-replay-wrapper", "operator-input-materializer", "operator-input-receipt-builder", "templates-count-as-evidence", "zero-repo-checkpoint-payload"]:
+context = json.loads((scaffold_dir / "MINIMAL_SLICE_SELECTED_CONTEXT.json").read_text(encoding="utf-8"))
+if context.get("counts_as_evidence") != 0:
+    raise SystemExit("v61gi selected context json must be non-evidence")
+if context.get("selected_slice_ids", {}).get("v53") != "v53-partial-review-slice":
+    raise SystemExit("v61gi selected context missing v53 slice id")
+if context.get("selected_slice_ids", {}).get("v61") != "v61-partial-generation-slice":
+    raise SystemExit("v61gi selected context missing v61 slice id")
+if set(context.get("required_witness_files", [])) != {
+    "review_comment.txt",
+    "adjudication_reason.txt",
+    "credential_statement.txt",
+    "conflict_statement.txt",
+    "answer_text.txt",
+    "run_transcript.txt",
+    "source_file.txt",
+}:
+    raise SystemExit("v61gi selected context witness file set mismatch")
+context_md = (scaffold_dir / "MINIMAL_SLICE_SELECTED_CONTEXT.md").read_text(encoding="utf-8")
+for snippet in ["review_answer_packet_id=", "source_span_id=", "RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh"]:
+    if snippet not in context_md:
+        raise SystemExit(f"v61gi selected context md missing snippet: {snippet}")
+
+for gate in ["source-v61gh-ready", "operator-input-scaffold", "operator-input-minimal-slice-template", "operator-input-content-witness-manifest", "operator-input-minimal-slice-context", "operator-input-minimal-slice-env-template", "operator-input-minimal-slice-precheck", "operator-input-minimal-slice-builder", "operator-input-minimal-slice-prepare-wrapper", "operator-input-witness-dir-final-replay-wrapper", "operator-input-materializer", "operator-input-receipt-builder", "templates-count-as-evidence", "zero-repo-checkpoint-payload"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61gi expected pass decision: {gate}")
 for gate in [
@@ -420,6 +453,8 @@ for snippet in [
     "operator_input_receipt_template_rows=1",
     "operator_input_minimal_slice_template_rows=1",
     "operator_input_content_witness_manifest_rows=7",
+    "operator_input_minimal_slice_context_files=2",
+    "operator_input_minimal_slice_context_ready=1",
     "operator_input_minimal_slice_env_template_ready=1",
     "operator_input_minimal_slice_precheck_ready=1",
     "operator_input_minimal_slice_builder_ready=1",

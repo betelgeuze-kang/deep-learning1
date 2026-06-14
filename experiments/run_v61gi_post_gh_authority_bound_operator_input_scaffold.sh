@@ -349,6 +349,75 @@ content_witness_manifest_rows = [
 ]
 write_csv(run_dir / "authority_bound_operator_content_witness_manifest_rows.csv", list(content_witness_manifest_rows[0].keys()), content_witness_manifest_rows)
 
+minimal_slice_context_json = scaffold_dir / "MINIMAL_SLICE_SELECTED_CONTEXT.json"
+minimal_slice_context_md = scaffold_dir / "MINIMAL_SLICE_SELECTED_CONTEXT.md"
+minimal_slice_context_payload = {
+    "context_protocol_version": "v61gi-minimal-slice-selected-context-v1",
+    "counts_as_evidence": 0,
+    "selected_slice_ids": {
+        "v53": "v53-partial-review-slice",
+        "v61": "v61-partial-generation-slice",
+    },
+    "v53_selected_review_slice": v53_selected,
+    "v61_selected_generation_slice": v61_selected,
+    "required_witness_files": [row["required_filename"] for row in content_witness_manifest_rows],
+    "operator_final_command": "RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh",
+}
+minimal_slice_context_json.write_text(
+    json.dumps(minimal_slice_context_payload, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+minimal_slice_context_md.write_text(
+    "\n".join([
+        "# v61gi Minimal Slice Selected Context",
+        "",
+        "This context file is an operator guide only. It does not count as external review, adjudication, generation, latency, quality, comparison, or release evidence.",
+        "",
+        "v53 selected review slice:",
+        "",
+        f"- slice_id={v53_selected['slice_id']}",
+        f"- review_answer_packet_id={v53_selected['review_answer_packet_id']}",
+        f"- answer_id={v53_selected['answer_id']}",
+        f"- system_id={v53_selected['system_id']}",
+        f"- query_id={v53_selected['query_id']}",
+        f"- assignment_id={v53_selected['assignment_id']}",
+        f"- reviewer_slot_id={v53_selected['reviewer_slot_id']}",
+        f"- owner_repo={v53_selected['owner_repo']}",
+        "",
+        "v61 selected generation slice:",
+        "",
+        f"- slice_id={v61_selected['slice_id']}",
+        f"- query_id={v61_selected['query_id']}",
+        f"- source_span_id={v61_selected['source_span_id']}",
+        f"- review_query_packet_id={v61_selected.get('review_query_packet_id', '')}",
+        "",
+        "Required witness filenames:",
+        "",
+        *[f"- `{row['required_filename']}`: {row['purpose']}" for row in content_witness_manifest_rows],
+        "",
+        "Final operator command:",
+        "",
+        "`RUN_WITNESS_DIR_TO_DUAL_REPLAY_IF_FINAL.sh`",
+        "",
+    ]),
+    encoding="utf-8",
+)
+minimal_slice_context_rows = [
+    {
+        "context_file": minimal_slice_context_json.name,
+        "bytes": str(minimal_slice_context_json.stat().st_size),
+        "sha256": sha256(minimal_slice_context_json),
+        "counts_as_evidence": "0",
+    },
+    {
+        "context_file": minimal_slice_context_md.name,
+        "bytes": str(minimal_slice_context_md.stat().st_size),
+        "sha256": sha256(minimal_slice_context_md),
+        "counts_as_evidence": "0",
+    },
+]
+write_csv(run_dir / "authority_bound_operator_minimal_slice_context_rows.csv", list(minimal_slice_context_rows[0].keys()), minimal_slice_context_rows)
+
 env_template = scaffold_dir / "MINIMAL_SLICE_ENV_TEMPLATE.sh"
 env_template.write_text(
     "\n".join([
@@ -386,6 +455,8 @@ operator_readme = scaffold_dir / "MINIMAL_SLICE_OPERATOR_README.md"
 operator_readme.write_text(
     "\n".join([
         "# v61gi Minimal Slice Operator Input",
+        "",
+        "Review `MINIMAL_SLICE_SELECTED_CONTEXT.md` and `MINIMAL_SLICE_SELECTED_CONTEXT.json` before creating witness files.",
         "",
         "Required witness filenames under `V61GI_CONTENT_WITNESS_DIR`:",
         "",
@@ -1235,7 +1306,10 @@ materializer.chmod(0o755)
         "test -s \"$DIR/AUTHORITY_BOUND_OPERATOR_GENERATED_MARKER_ROWS.csv\"",
         "test -s \"$DIR/AUTHORITY_BOUND_OPERATOR_INPUT_TEMPLATE_FILE_ROWS.csv\"",
         "test -s \"$DIR/AUTHORITY_BOUND_OPERATOR_CONTENT_WITNESS_MANIFEST_ROWS.csv\"",
+        "test -s \"$DIR/AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_CONTEXT_ROWS.csv\"",
         "test -s \"$DIR/MINIMAL_SLICE_ROWS.csv.template\"",
+        "test -s \"$DIR/MINIMAL_SLICE_SELECTED_CONTEXT.json\"",
+        "test -s \"$DIR/MINIMAL_SLICE_SELECTED_CONTEXT.md\"",
         "test -s \"$DIR/MINIMAL_SLICE_ENV_TEMPLATE.sh\"",
         "test -s \"$DIR/MINIMAL_SLICE_OPERATOR_README.md\"",
         "test -x \"$DIR/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py\"",
@@ -1268,6 +1342,7 @@ materializer.chmod(0o755)
         "echo 'v61gi ready-now commands verify the scaffold only; operator input preflight needs final non-template files.'",
         "echo 'results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/VERIFY_AUTHORITY_BOUND_OPERATOR_INPUT_SCAFFOLD.sh'",
         "echo 'Minimal slice CSV template: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MINIMAL_SLICE_ROWS.csv.template'",
+        "echo 'Minimal slice selected context: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MINIMAL_SLICE_SELECTED_CONTEXT.md'",
         "echo 'Minimal slice env template: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/MINIMAL_SLICE_ENV_TEMPLATE.sh'",
         "echo 'Content witness manifest: results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/AUTHORITY_BOUND_OPERATOR_CONTENT_WITNESS_MANIFEST_ROWS.csv'",
         "echo 'Precheck witness/env readiness: V61GI_CONTENT_WITNESS_DIR=<witness-dir> V61GI_MINIMAL_SLICE_ROWS_CSV=<minimal-slice.csv> V61GI_REVIEWER_ID=<id> ... results/v61gi_post_gh_authority_bound_operator_input_scaffold/scaffold_001/authority_bound_operator_input_scaffold/CHECK_MINIMAL_SLICE_OPERATOR_INPUTS.py'",
@@ -1293,6 +1368,7 @@ for rel, src in [
     ("AUTHORITY_BOUND_OPERATOR_INPUT_TEMPLATE_FILE_ROWS.csv", run_dir / "authority_bound_operator_input_template_file_rows.csv"),
     ("AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_TEMPLATE_ROWS.csv", run_dir / "authority_bound_operator_minimal_slice_template_rows.csv"),
     ("AUTHORITY_BOUND_OPERATOR_CONTENT_WITNESS_MANIFEST_ROWS.csv", run_dir / "authority_bound_operator_content_witness_manifest_rows.csv"),
+    ("AUTHORITY_BOUND_OPERATOR_MINIMAL_SLICE_CONTEXT_ROWS.csv", run_dir / "authority_bound_operator_minimal_slice_context_rows.csv"),
 ]:
     shutil.copy2(src, scaffold_dir / rel)
 
@@ -1336,6 +1412,8 @@ summary = {
     "operator_input_receipt_template_rows": 1,
     "operator_input_minimal_slice_template_rows": len(minimal_slice_template_rows),
     "operator_input_content_witness_manifest_rows": len(content_witness_manifest_rows),
+    "operator_input_minimal_slice_context_files": len(minimal_slice_context_rows),
+    "operator_input_minimal_slice_context_ready": 1,
     "operator_input_minimal_slice_env_template_ready": 1,
     "operator_input_minimal_slice_precheck_ready": 1,
     "operator_input_minimal_slice_builder_ready": 1,
@@ -1379,6 +1457,7 @@ decision_rows = [
     {"gate": "operator-input-scaffold", "status": "pass", "evidence": f"template_file_rows={len(template_rows)}"},
     {"gate": "operator-input-minimal-slice-template", "status": "pass", "evidence": f"minimal_slice_template_rows={len(minimal_slice_template_rows)}"},
     {"gate": "operator-input-content-witness-manifest", "status": "pass", "evidence": f"content_witness_manifest_rows={len(content_witness_manifest_rows)}"},
+    {"gate": "operator-input-minimal-slice-context", "status": "pass", "evidence": f"operator_input_minimal_slice_context_files={len(minimal_slice_context_rows)}"},
     {"gate": "operator-input-minimal-slice-env-template", "status": "pass", "evidence": "operator_input_minimal_slice_env_template_ready=1"},
     {"gate": "operator-input-minimal-slice-precheck", "status": "pass", "evidence": "operator_input_minimal_slice_precheck_ready=1"},
     {"gate": "operator-input-minimal-slice-builder", "status": "pass", "evidence": "operator_input_minimal_slice_builder_ready=1"},
@@ -1420,6 +1499,8 @@ manifest = {
         f"- operator_input_receipt_template_rows={summary['operator_input_receipt_template_rows']}",
         f"- operator_input_minimal_slice_template_rows={summary['operator_input_minimal_slice_template_rows']}",
         f"- operator_input_content_witness_manifest_rows={summary['operator_input_content_witness_manifest_rows']}",
+        f"- operator_input_minimal_slice_context_files={summary['operator_input_minimal_slice_context_files']}",
+        "- operator_input_minimal_slice_context_ready=1",
         "- operator_input_minimal_slice_env_template_ready=1",
         "- operator_input_minimal_slice_precheck_ready=1",
         "- operator_input_minimal_slice_builder_ready=1",
@@ -1450,6 +1531,8 @@ boundary = "\n".join([
     f"- operator_input_receipt_template_rows={summary['operator_input_receipt_template_rows']}",
     f"- operator_input_minimal_slice_template_rows={summary['operator_input_minimal_slice_template_rows']}",
     f"- operator_input_content_witness_manifest_rows={summary['operator_input_content_witness_manifest_rows']}",
+    f"- operator_input_minimal_slice_context_files={summary['operator_input_minimal_slice_context_files']}",
+    "- operator_input_minimal_slice_context_ready=1",
     "- operator_input_minimal_slice_env_template_ready=1",
     "- operator_input_minimal_slice_precheck_ready=1",
     "- operator_input_minimal_slice_builder_ready=1",
