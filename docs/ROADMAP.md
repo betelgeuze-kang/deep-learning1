@@ -3867,6 +3867,35 @@ Current next boundary:
   stages with three ready and two blocked, 18 runway requirements with five
   ready and 13 blocked, six blocked minimum batches,
   `actual_model_generation_ready=0`, and zero checkpoint payload bytes.
+- `v61gc` adds the post-v61gb dual return root admission snapshot.
+  `experiments/test_v61gc_post_gb_dual_return_root_admission_snapshot.sh`
+  consumes v61gb, v61fx, v61fv, and v61fc, then snapshots the exact `V61FV_*`
+  root/env contract and the 91 required return artifacts before root-pinned
+  replay. Canonical no-root records two root contracts, four required env rows,
+  zero supplied/existing/admitted roots, 91 required artifacts with zero present
+  and 91 missing, eight root-family artifact rows, five command rows with two
+  ready and zero executed, six stages with two ready and four blocked,
+  `actual_model_generation_ready=0`, and zero checkpoint payload bytes.
+- `v61gd` adds the post-v61gc v53 partial external return slice intake.
+  `experiments/test_v61gd_post_gc_v53_partial_external_return_slice_intake.sh`
+  consumes v61gc and v53r, then validates a supplied v53 root subset under
+  `aggregate_review_return/` plus a non-fixture
+  `REAL_EXTERNAL_RETURN_PROVENANCE.json` marker. Canonical no-root records zero
+  real external review return rows, zero real adjudication rows, zero slice
+  answer-review accepted rows, `partial_real_slice_ready=0`,
+  `actual_model_generation_ready=0`, and zero checkpoint payload bytes; its
+  fixture-candidate probe proves candidate rows do not count as real evidence.
+- `v61ge` adds the post-v61gd v61 partial generation-intake slice intake.
+  `experiments/test_v61ge_post_gd_v61_partial_generation_intake_slice.sh`
+  consumes v61gd, then validates a supplied generation-result subset under
+  `generation_result_return/` plus a non-fixture
+  `review_return_provenance/REAL_REVIEW_RETURN_PROVENANCE.json` marker.
+  Canonical no-root records zero real generation-result artifacts, zero accepted
+  generation-result artifacts, zero generation-result accepted rows, zero
+  accepted answer/citation/latency rows, `partial_real_generation_slice_ready=0`,
+  `actual_model_generation_ready=0`, and zero checkpoint payload bytes; its
+  fixture-candidate probe proves candidate generation rows do not count as real
+  evidence.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
