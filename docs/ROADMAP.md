@@ -4076,6 +4076,16 @@ Current next boundary:
   no-handoff keeps all real counters zero and `actual_model_generation_ready=0`;
   the ack-ready/no-execute smoke opens only handoff admission, and the bad-hash
   smoke blocks replay admission before v61gr execution.
+- `v61gu` adds the post-v61gt first-real-slice operator workspace initializer.
+  `experiments/test_v61gu_post_gt_first_real_slice_operator_workspace_initializer.sh`
+  consumes v61gi/v61gt and creates a repo-external work root only when
+  `V61GU_INITIALIZE_WORKSPACE=1` and `V61GU_WORK_ROOT` points outside the repo.
+  The initialized workspace contains witness templates, an empty final witness
+  directory, minimal-slice and output roots, an env template, verifier, and the
+  final witness-dir runner. Canonical no-workspace and initialized-workspace
+  smokes keep all real counters zero; the initialized path opens only workspace
+  layout readiness while final witness files, replay, row acceptance, and actual
+  generation remain blocked.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
