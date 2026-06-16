@@ -176,6 +176,12 @@ for rel in [
     "source_v54c/sha256_manifest.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_query_budget_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/v53g_complete_source_manifest_summary.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_answer_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_citation_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_evaluator_rows.csv",
@@ -318,9 +324,11 @@ requirements = [
         and as_int(v53t, "complete_source_query_rows") >= 1000
         and as_int(v53t, "complete_source_span_rows") >= 1000
         and as_int(v53t, "unsupported_control_rows") >= 100
-        and as_int(v53t, "doc_code_conflict_rows") > 0,
+        and as_int(v53t, "doc_code_conflict_rows") > 0
+        and as_int(v53t, "foundation_direct_pinned_manifest_ready") == 1
+        and as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready") == 1,
         "v53 source-bound 10-repo/1000-query freeze is missing",
-        "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
+        "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
         "v53-foundation-freeze-missing",
     ),
     req(
@@ -526,7 +534,12 @@ summary = {
     "v59_ready": int(v59_summary.get("v59_ready", "0")),
     "required_30b_70b_baselines_ready": int(as_int(v52, "required_30b_baseline_ready") == 1 and as_int(v52, "required_70b_baseline_ready") == 1),
     "real_30b_70b_rows_ready": int(as_int(v52, "required_30b_baseline_ready") == 1 and as_int(v52, "required_70b_baseline_ready") == 1),
-    "public_repo_query_scale_ready": int(as_int(v53t, "pm_v53_freeze_ready") == 1),
+    "public_repo_query_scale_ready": int(as_int(v53t, "pm_v53_freeze_ready") == 1 and as_int(v53t, "foundation_direct_pinned_manifest_ready") == 1),
+    "v53_direct_pinned_manifest_ready": as_int(v53t, "foundation_direct_pinned_manifest_ready"),
+    "v53_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
+    "v53_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
+    "v53_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
+    "pm_pr_v53_direct_pinned_manifest_ready": as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready"),
     "local_abgh_prebaseline_ready": int(as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1),
     "h10_real_label_promotion_ready": as_int(h10, "h10_real_label_promotion_ready"),
     "h10_source_verified_eval_ready": as_int(h10, "h10_source_verified_eval_ready"),
@@ -572,6 +585,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- local evidence-bound RouteMemory/RouteHint QA and audit preview.\n\n"
     "Current pass surfaces:\n\n"
     "- v53 10-repo / 1000 source-span-bound query PM freeze\n"
+    "- direct v53 repo/file/content manifest evidence copied through v59e PM sidecar\n"
     "- internal A/B/G/H same-query pre-baseline without public comparison claim\n"
     "- v54 complete-source 1000-row grounded generation with raw prompt stuffing blocked\n"
     "- v59e one-command PM foundation replay with PR split sidecar and execution lock\n\n"
@@ -613,6 +627,11 @@ manifest = {
     "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
     "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
     "h10_pm_acceptance_sha256": sha_or_empty(run_dir / "source_h10_pm" / "pm_h10_real_label_acceptance_rows.csv"),
+    "v53_direct_pinned_manifest_ready": as_int(v53t, "foundation_direct_pinned_manifest_ready"),
+    "v53_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
+    "v53_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
+    "v53_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
+    "pm_pr_v53_direct_pinned_manifest_ready": as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready"),
     "v54c_recommended_output_files_ready": v54c_recommended_output_files_ready,
     "v54c_recommended_output_file_rows": len(v54c_recommended_output_rels),
 }

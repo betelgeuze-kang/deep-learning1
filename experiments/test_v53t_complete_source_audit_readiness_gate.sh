@@ -72,6 +72,13 @@ expected = {
     "foundation_freeze_blocked_rows": "0",
     "foundation_machine_freeze_ready": "1",
     "foundation_direct_evidence_ready": "1",
+    "foundation_direct_pinned_manifest_ready": "1",
+    "foundation_direct_repo_manifest_ready": "1",
+    "foundation_direct_content_snapshot_ready": "1",
+    "foundation_direct_repo_manifest_rows": "10",
+    "foundation_direct_file_manifest_rows": "11266",
+    "foundation_direct_content_repo_rows": "10",
+    "foundation_direct_content_snapshot_rows": "11266",
     "foundation_real_adapter_freeze_rows": "4",
     "foundation_real_adapter_freeze_pass_rows": "4",
     "foundation_real_adapter_freeze_blocked_rows": "0",
@@ -132,6 +139,12 @@ required_files = [
     "source_v53i/v53i_complete_source_query_instantiation_summary.csv",
     "source_v53i/complete_source_query_rows.csv",
     "source_v53i/complete_source_span_rows.csv",
+    "source_v53i/source_v53h/complete_source_content_repo_rows.csv",
+    "source_v53i/source_v53h/complete_source_content_snapshot_rows.csv",
+    "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+    "source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv",
+    "source_v53i/source_v53h/source_v53g/complete_source_query_budget_rows.csv",
+    "source_v53i/source_v53h/source_v53g/v53g_complete_source_manifest_summary.csv",
     "source_v53ap/v53ap_complete_source_abgh_same_query_measured_summary.csv",
     "source_v53ap/abgh_system_rows.csv",
     "source_v53ap/abgh_answer_rows.csv",
@@ -204,9 +217,17 @@ if pm_freeze_checks["missing-specific-abstain-control"]["actual_value"] != "30":
     raise SystemExit("v53t PM freeze missing-specific actual value mismatch")
 if pm_freeze_checks["replayable-artifact-chain"]["status"] != "pass" or "direct_ready=1" not in pm_freeze_checks["replayable-artifact-chain"]["actual_value"]:
     raise SystemExit("v53t replayable artifact chain should be backed by direct row evidence")
+if "direct_pinned_manifest_ready=1" not in pm_freeze_checks["pinned-public-repo-manifest"]["actual_value"]:
+    raise SystemExit("v53t pinned manifest check should expose direct pinned manifest readiness")
+if "repo_manifest=10" not in pm_freeze_checks["replayable-artifact-chain"]["actual_value"]:
+    raise SystemExit("v53t replayable artifact chain should include direct repo manifest rows")
 
 query_rows = read_csv(run_dir / "source_v53i/complete_source_query_rows.csv")
 span_rows = read_csv(run_dir / "source_v53i/complete_source_span_rows.csv")
+content_repo_rows = read_csv(run_dir / "source_v53i/source_v53h/complete_source_content_repo_rows.csv")
+content_snapshot_rows = read_csv(run_dir / "source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
+repo_coverage_rows = read_csv(run_dir / "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
+file_manifest_rows = read_csv(run_dir / "source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
 answer_rows = read_csv(run_dir / "source_v53ap/abgh_answer_rows.csv")
 citation_rows = read_csv(run_dir / "source_v53ap/abgh_citation_rows.csv")
 evaluator_rows = read_csv(run_dir / "source_v53ap/abgh_evaluator_rows.csv")
@@ -222,6 +243,19 @@ if len(query_rows) != 1000 or len(span_rows) != 1000:
     raise SystemExit("v53t should copy direct 1000 query/span rows")
 if any(not row["source_span_id"] for row in query_rows):
     raise SystemExit("v53t direct query rows should bind source spans")
+if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
+    raise SystemExit("v53t should copy direct 10-repo manifest and content repo rows")
+if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
+    raise SystemExit("v53t should copy direct complete-source file/content manifest rows")
+if any(len(row["head_sha"]) != 40 or row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
+    raise SystemExit("v53t repo coverage rows should bind pinned HEAD SHAs and ready tree manifests")
+if any(len(row["head_sha"]) != 40 or row["content_snapshot_ready"] != "1" for row in content_repo_rows):
+    raise SystemExit("v53t content repo rows should bind pinned HEAD SHAs and ready content snapshots")
+repo_heads = {(row["owner_repo"], row["head_sha"]) for row in repo_coverage_rows}
+content_heads = {(row["owner_repo"], row["head_sha"]) for row in content_repo_rows}
+query_heads = {(row["owner_repo"], row["head_sha"]) for row in query_rows}
+if repo_heads != content_heads or not query_heads.issubset(repo_heads):
+    raise SystemExit("v53t direct repo/content/query rows should share pinned repo HEAD bindings")
 for table_name, rows in [
     ("answer", answer_rows),
     ("citation", citation_rows),
@@ -301,6 +335,10 @@ if foundation_freeze_rows["doc-code-conflict-control"]["actual_value"] != "140":
     raise SystemExit("v53t foundation freeze doc-code conflict actual value mismatch")
 if foundation_freeze_rows["source-span-bound-query-surface"]["evidence_path"] != "source_v53i/complete_source_query_rows.csv":
     raise SystemExit("v53t source-span freeze evidence should point at direct query rows")
+if foundation_freeze_rows["pinned-public-repo-manifest"]["evidence_path"] != "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv":
+    raise SystemExit("v53t pinned manifest evidence should point at direct repo coverage rows")
+if "direct_pinned_manifest_ready=1" not in foundation_freeze_rows["pinned-public-repo-manifest"]["actual_value"]:
+    raise SystemExit("v53t foundation freeze should expose direct pinned manifest readiness")
 if foundation_freeze_rows["answer-citation-separated-evaluator"]["evidence_path"] != "source_v53ap/abgh_evaluator_rows.csv":
     raise SystemExit("v53t separated evaluator evidence should point at direct evaluator rows")
 if foundation_freeze_rows["abgh-same-query-measured-run"]["evidence_path"] != "source_v53ap/abgh_evaluator_rows.csv":
@@ -388,6 +426,13 @@ for snippet in [
     "foundation_freeze_certificate_rows=10",
     "foundation_machine_freeze_ready=1",
     "foundation_direct_evidence_ready=1",
+    "foundation_direct_pinned_manifest_ready=1",
+    "foundation_direct_repo_manifest_ready=1",
+    "foundation_direct_content_snapshot_ready=1",
+    "foundation_direct_repo_manifest_rows=10",
+    "foundation_direct_file_manifest_rows=11266",
+    "foundation_direct_content_repo_rows=10",
+    "foundation_direct_content_snapshot_rows=11266",
     "foundation_real_adapter_freeze_rows=4",
     "foundation_real_adapter_evidence_ready=1",
     "foundation_real_adapter_same_query_rows_ready=1",
@@ -444,6 +489,16 @@ if manifest.get("foundation_machine_freeze_ready") != 1:
     raise SystemExit("v53t manifest foundation machine freeze mismatch")
 if manifest.get("foundation_direct_evidence_ready") != 1:
     raise SystemExit("v53t manifest should record direct foundation evidence readiness")
+if (
+    manifest.get("foundation_direct_pinned_manifest_ready") != 1
+    or manifest.get("foundation_direct_repo_manifest_ready") != 1
+    or manifest.get("foundation_direct_content_snapshot_ready") != 1
+    or manifest.get("foundation_direct_repo_manifest_rows") != 10
+    or manifest.get("foundation_direct_file_manifest_rows") != 11266
+    or manifest.get("foundation_direct_content_repo_rows") != 10
+    or manifest.get("foundation_direct_content_snapshot_rows") != 11266
+):
+    raise SystemExit("v53t manifest direct pinned manifest evidence mismatch")
 if (
     manifest.get("foundation_real_adapter_freeze_rows") != 4
     or manifest.get("foundation_real_adapter_freeze_blocked_rows") != 0

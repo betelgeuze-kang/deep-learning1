@@ -129,6 +129,12 @@ v53t_direct_copied = {}
 for src_rel in [
     "source_v53i/complete_source_query_rows.csv",
     "source_v53i/complete_source_span_rows.csv",
+    "source_v53i/source_v53h/complete_source_content_repo_rows.csv",
+    "source_v53i/source_v53h/complete_source_content_snapshot_rows.csv",
+    "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+    "source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv",
+    "source_v53i/source_v53h/source_v53g/complete_source_query_budget_rows.csv",
+    "source_v53i/source_v53h/source_v53g/v53g_complete_source_manifest_summary.csv",
     "source_v53ap/abgh_answer_rows.csv",
     "source_v53ap/abgh_citation_rows.csv",
     "source_v53ap/abgh_evaluator_rows.csv",
@@ -232,12 +238,23 @@ slice_specs = [
     {
         "slice_id": "v53-public-repo-source-manifest",
         "scope": "pinned 10+ repo source manifest",
-        "required_artifacts": "v53t complete-source audit readiness summary, PM freeze rows, and foundation freeze certificate",
+        "required_artifacts": "v53t direct repo coverage, file manifest, content snapshot rows, PM freeze rows, and foundation freeze certificate",
         "merge_condition": "commits, licenses, source files, repo count, and hashes are bound",
         "claim_ok": as_int(v53t, "v53_ready") == 0 and as_int(v53t, "real_release_package_ready") == 0,
-        "replay_ok": as_int(v53t, "complete_source_repo_count") >= 10 and as_int(v53t, "machine_complete_source_surface_ready") == 1 and as_int(v53t, "foundation_machine_freeze_ready") == 1,
+        "replay_ok": as_int(v53t, "complete_source_repo_count") >= 10
+        and as_int(v53t, "machine_complete_source_surface_ready") == 1
+        and as_int(v53t, "foundation_machine_freeze_ready") == 1
+        and as_int(v53t, "foundation_direct_pinned_manifest_ready") == 1
+        and bool(v53t_direct_copied.get("source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv"))
+        and bool(v53t_direct_copied.get("source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv"))
+        and bool(v53t_direct_copied.get("source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")),
         "blocker_ok": as_int(v53t, "review_return_ready") == 0 and as_int(v53t, "quality_comparison_claim_ready") == 0,
-        "reason": "10 public repos are present in the complete-source PM foundation freeze certificate",
+        "reason": (
+            "10 public repos are present with direct pinned repo/file/content manifests; "
+            f"repo_manifest_rows={v53t.get('foundation_direct_repo_manifest_rows', '0')} "
+            f"file_manifest_rows={v53t.get('foundation_direct_file_manifest_rows', '0')} "
+            f"content_snapshot_rows={v53t.get('foundation_direct_content_snapshot_rows', '0')}"
+        ),
     },
     {
         "slice_id": "v53-query-instantiation-1000",
@@ -418,7 +435,7 @@ claim_boundary_rows = [
         "v53-public-repo-source-manifest",
         "10 public repos and complete-source manifest surface are machine-bound for PM freeze",
         "human-reviewed quality comparison, public benchmark claim, or v53 final readiness",
-        "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
+        "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
     ),
     claim_boundary_row(
         "v53-query-instantiation-1000",
@@ -619,9 +636,22 @@ pm_roadmap_rows = [
         "M2",
         "pinned-public-repo-manifest",
         "v53 has a pinned 10+ public-repo source manifest",
-        as_int(v53t, "complete_source_repo_count") >= 10 and as_int(v53t, "machine_complete_source_surface_ready") == 1 and as_int(v53t, "foundation_machine_freeze_ready") == 1,
-        "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
-        f"complete_source_repo_count={v53t.get('complete_source_repo_count', '0')} foundation_machine_freeze_ready={v53t.get('foundation_machine_freeze_ready', '0')}",
+        as_int(v53t, "complete_source_repo_count") >= 10
+        and as_int(v53t, "machine_complete_source_surface_ready") == 1
+        and as_int(v53t, "foundation_machine_freeze_ready") == 1
+        and as_int(v53t, "foundation_direct_pinned_manifest_ready") == 1
+        and bool(v53t_direct_copied.get("source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv"))
+        and bool(v53t_direct_copied.get("source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv"))
+        and bool(v53t_direct_copied.get("source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")),
+        v53t_direct_copied.get("source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv") or "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
+        (
+            f"complete_source_repo_count={v53t.get('complete_source_repo_count', '0')} "
+            f"foundation_machine_freeze_ready={v53t.get('foundation_machine_freeze_ready', '0')} "
+            f"foundation_direct_pinned_manifest_ready={v53t.get('foundation_direct_pinned_manifest_ready', '0')} "
+            f"repo_manifest_rows={v53t.get('foundation_direct_repo_manifest_rows', '0')} "
+            f"file_manifest_rows={v53t.get('foundation_direct_file_manifest_rows', '0')} "
+            f"content_snapshot_rows={v53t.get('foundation_direct_content_snapshot_rows', '0')}"
+        ),
         "v53-source-manifest-missing",
     ),
     req(
@@ -1688,6 +1718,10 @@ summary = {
     "pm_foundation_ready": str(pm_foundation_ready),
     "v53_foundation_freeze_certificate_rows": v53t.get("foundation_freeze_certificate_rows", "0"),
     "v53_foundation_machine_freeze_ready": v53t.get("foundation_machine_freeze_ready", "0"),
+    "v53_foundation_direct_pinned_manifest_ready": v53t.get("foundation_direct_pinned_manifest_ready", "0"),
+    "v53_foundation_direct_repo_manifest_rows": v53t.get("foundation_direct_repo_manifest_rows", "0"),
+    "v53_foundation_direct_file_manifest_rows": v53t.get("foundation_direct_file_manifest_rows", "0"),
+    "v53_foundation_direct_content_snapshot_rows": v53t.get("foundation_direct_content_snapshot_rows", "0"),
     "pm_pr_slice_file_rows": str(slice_file_row_count),
     "pm_pr_slice_file_existing_rows": str(slice_file_existing_rows),
     "pm_pr_slices_with_file_rows": str(slice_with_file_rows),
@@ -1739,6 +1773,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- pm_foundation_ready={pm_foundation_ready}\n"
     f"- v53_foundation_freeze_certificate_rows={v53t.get('foundation_freeze_certificate_rows', '0')}\n"
     f"- v53_foundation_machine_freeze_ready={v53t.get('foundation_machine_freeze_ready', '0')}\n"
+    f"- v53_foundation_direct_pinned_manifest_ready={v53t.get('foundation_direct_pinned_manifest_ready', '0')}\n"
+    f"- v53_foundation_direct_repo_manifest_rows={v53t.get('foundation_direct_repo_manifest_rows', '0')}\n"
+    f"- v53_foundation_direct_file_manifest_rows={v53t.get('foundation_direct_file_manifest_rows', '0')}\n"
+    f"- v53_foundation_direct_content_snapshot_rows={v53t.get('foundation_direct_content_snapshot_rows', '0')}\n"
     f"- pm_pr_slice_file_rows={slice_file_row_count}\n"
     f"- pm_pr_slice_verification_rows={slice_verification_row_count}\n"
     f"- pm_pr_claim_boundary_rows={claim_boundary_row_count}\n"
@@ -1775,6 +1813,10 @@ manifest = {
     "pm_foundation_ready": pm_foundation_ready,
     "v53_foundation_freeze_certificate_rows": as_int(v53t, "foundation_freeze_certificate_rows"),
     "v53_foundation_machine_freeze_ready": as_int(v53t, "foundation_machine_freeze_ready"),
+    "v53_foundation_direct_pinned_manifest_ready": as_int(v53t, "foundation_direct_pinned_manifest_ready"),
+    "v53_foundation_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
+    "v53_foundation_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
+    "v53_foundation_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
     "pm_pr_slice_file_rows": slice_file_row_count,
     "pm_pr_slice_file_existing_rows": slice_file_existing_rows,
     "pm_pr_slice_verification_rows": slice_verification_row_count,

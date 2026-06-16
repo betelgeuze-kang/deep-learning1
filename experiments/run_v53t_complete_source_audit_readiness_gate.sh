@@ -9,7 +9,7 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/complete_source_abgh_real_adapter_freeze_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_query_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_span_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_adapter_trace_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/adapter_selection_contract_rows.csv" ]] && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_real_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
+if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/complete_source_abgh_real_adapter_freeze_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_query_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_span_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_repo_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_adapter_trace_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/adapter_selection_contract_rows.csv" ]] && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_pinned_manifest_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_real_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
   echo "v53t_complete_source_audit_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -112,6 +112,12 @@ for src, rel in [
     (v53i_dir / "complete_source_query_family_rows.csv", "source_v53i/complete_source_query_family_rows.csv"),
     (v53i_dir / "complete_source_control_family_rows.csv", "source_v53i/complete_source_control_family_rows.csv"),
     (v53i_dir / "complete_source_query_repo_rows.csv", "source_v53i/complete_source_query_repo_rows.csv"),
+    (v53i_dir / "source_v53h/complete_source_content_repo_rows.csv", "source_v53i/source_v53h/complete_source_content_repo_rows.csv"),
+    (v53i_dir / "source_v53h/complete_source_content_snapshot_rows.csv", "source_v53i/source_v53h/complete_source_content_snapshot_rows.csv"),
+    (v53i_dir / "source_v53h/source_v53g/complete_source_repo_coverage_rows.csv", "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv"),
+    (v53i_dir / "source_v53h/source_v53g/complete_source_file_manifest_rows.csv", "source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv"),
+    (v53i_dir / "source_v53h/source_v53g/complete_source_query_budget_rows.csv", "source_v53i/source_v53h/source_v53g/complete_source_query_budget_rows.csv"),
+    (v53i_dir / "source_v53h/source_v53g/v53g_complete_source_manifest_summary.csv", "source_v53i/source_v53h/source_v53g/v53g_complete_source_manifest_summary.csv"),
     (v53ap_dir / "abgh_system_rows.csv", "source_v53ap/abgh_system_rows.csv"),
     (v53ap_dir / "abgh_answer_rows.csv", "source_v53ap/abgh_answer_rows.csv"),
     (v53ap_dir / "abgh_citation_rows.csv", "source_v53ap/abgh_citation_rows.csv"),
@@ -149,6 +155,10 @@ v53s = summaries["v53s"]
 v53i_family_rows = read_csv(v53i_dir / "complete_source_query_family_rows.csv")
 v53i_query_rows = read_csv(v53i_dir / "complete_source_query_rows.csv")
 v53i_span_rows = read_csv(v53i_dir / "complete_source_span_rows.csv")
+v53i_content_repo_rows = read_csv(v53i_dir / "source_v53h/complete_source_content_repo_rows.csv")
+v53i_content_snapshot_rows = read_csv(v53i_dir / "source_v53h/complete_source_content_snapshot_rows.csv")
+v53i_repo_coverage_rows = read_csv(v53i_dir / "source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
+v53i_file_manifest_rows = read_csv(v53i_dir / "source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
 v53ap_answer_rows = read_csv(v53ap_dir / "abgh_answer_rows.csv")
 v53ap_citation_rows = read_csv(v53ap_dir / "abgh_citation_rows.csv")
 v53ap_evaluator_rows = read_csv(v53ap_dir / "abgh_evaluator_rows.csv")
@@ -173,6 +183,24 @@ missing_specific_control_rows = sum(
     count for family, count in family_query_rows.items() if "missing" in family
 )
 doc_code_conflict_rows = family_query_rows.get("doc_code_conflict", 0)
+foundation_direct_repo_manifest_ready = int(
+    len(v53i_repo_coverage_rows) == 10
+    and all(len(row.get("head_sha", "")) == 40 for row in v53i_repo_coverage_rows)
+    and all(row.get("complete_source_tree_manifest_ready") == "1" for row in v53i_repo_coverage_rows)
+    and sum(int(row.get("query_eligible_file_rows", "0") or "0") for row in v53i_repo_coverage_rows) > 0
+)
+foundation_direct_content_snapshot_ready = int(
+    len(v53i_content_repo_rows) == 10
+    and all(len(row.get("head_sha", "")) == 40 for row in v53i_content_repo_rows)
+    and all(row.get("content_snapshot_ready") == "1" for row in v53i_content_repo_rows)
+    and sum(int(row.get("content_materialized_file_rows", "0") or "0") for row in v53i_content_repo_rows) > 0
+)
+foundation_direct_pinned_manifest_ready = int(
+    foundation_direct_repo_manifest_ready
+    and foundation_direct_content_snapshot_ready
+    and len(v53i_file_manifest_rows) > 0
+    and len(v53i_content_snapshot_rows) > 0
+)
 current_v53i_query_rows_sha256 = sha256(v53i_dir / "complete_source_query_rows.csv")
 v53ap_query_rows_sha256 = v53ap["source_query_rows_sha256"]
 v53aq_query_rows_sha256 = v53aq["source_query_rows_sha256"]
@@ -292,9 +320,9 @@ requirements = [
     },
     {
         "requirement_id": "complete-source-content-and-query-surface",
-        "status": "pass" if v53i["complete_source_query_rows_ready"] == "1" and v53i["repo_count"] == "10" else "blocked",
-        "required_value": "10 repos / 1000 queries / 1000 spans",
-        "actual_value": f"{v53i['repo_count']} repos / {v53i['complete_source_query_rows']} queries / {v53i['complete_source_span_rows']} spans",
+        "status": "pass" if v53i["complete_source_query_rows_ready"] == "1" and v53i["repo_count"] == "10" and foundation_direct_pinned_manifest_ready else "blocked",
+        "required_value": "10 direct pinned repos / 1000 queries / 1000 spans",
+        "actual_value": f"{v53i['repo_count']} repos / {v53i['complete_source_query_rows']} queries / {v53i['complete_source_span_rows']} spans / direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}",
         "reason": "complete source snapshot and query/span surface must meet the v1.0 minimum",
     },
     {
@@ -370,10 +398,10 @@ v53_ready = int(machine_complete_source_surface_ready and review_return_ready an
 pm_freeze_checks = [
     {
         "check_id": "pinned-public-repo-manifest",
-        "status": "pass" if v53i["repo_count"] == "10" else "blocked",
-        "required_value": ">=10 pinned public repos",
-        "actual_value": v53i["repo_count"],
-        "reason": "v53 foundation requires the public repo source manifest to be pinned before comparisons",
+        "status": "pass" if v53i["repo_count"] == "10" and foundation_direct_pinned_manifest_ready else "blocked",
+        "required_value": ">=10 direct pinned public repo manifest rows plus content snapshot rows",
+        "actual_value": f"repo_count={v53i['repo_count']}; repo_manifest_rows={len(v53i_repo_coverage_rows)}; file_manifest_rows={len(v53i_file_manifest_rows)}; content_repo_rows={len(v53i_content_repo_rows)}; content_snapshot_rows={len(v53i_content_snapshot_rows)}; direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}",
+        "reason": "v53 foundation requires direct pinned repo/source/content manifests before comparisons",
     },
     {
         "check_id": "source-span-bound-1000",
@@ -429,9 +457,9 @@ pm_freeze_checks = [
     },
     {
         "check_id": "replayable-artifact-chain",
-        "status": "pass" if foundation_direct_evidence_ready else "blocked",
-        "required_value": "direct query/span and A/B/G/H answer/citation/evaluator/resource rows copied into v53t",
-        "actual_value": f"query={len(v53i_query_rows)}; span={len(v53i_span_rows)}; evaluator={len(v53ap_evaluator_rows)}; direct_ready={foundation_direct_evidence_ready}",
+        "status": "pass" if foundation_direct_evidence_ready and foundation_direct_pinned_manifest_ready else "blocked",
+        "required_value": "direct repo manifest, query/span, and A/B/G/H answer/citation/evaluator/resource rows copied into v53t",
+        "actual_value": f"repo_manifest={len(v53i_repo_coverage_rows)}; file_manifest={len(v53i_file_manifest_rows)}; content_snapshot={len(v53i_content_snapshot_rows)}; query={len(v53i_query_rows)}; span={len(v53i_span_rows)}; evaluator={len(v53ap_evaluator_rows)}; direct_ready={foundation_direct_evidence_ready}; direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}",
         "reason": "output artifacts must be replayable and hash-bound",
     },
     {
@@ -451,10 +479,10 @@ foundation_freeze_rows = [
     {
         "certificate_id": "v53-complete-source-foundation-freeze",
         "criterion_id": "pinned-public-repo-manifest",
-        "status": "pass" if v53i["repo_count"] == "10" else "blocked",
-        "required_value": "10 pinned public repositories",
-        "actual_value": v53i["repo_count"],
-        "evidence_path": "source_v53i/v53i_complete_source_query_instantiation_summary.csv",
+        "status": "pass" if v53i["repo_count"] == "10" and foundation_direct_pinned_manifest_ready else "blocked",
+        "required_value": "10 direct pinned public repositories with Git tree and content snapshot manifests",
+        "actual_value": f"repo_manifest_rows={len(v53i_repo_coverage_rows)}; file_manifest_rows={len(v53i_file_manifest_rows)}; content_repo_rows={len(v53i_content_repo_rows)}; content_snapshot_rows={len(v53i_content_snapshot_rows)}; direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}",
+        "evidence_path": "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
         "claim_boundary": "Allows 10-repo public source manifest wording only; does not imply release readiness",
     },
     {
@@ -526,9 +554,9 @@ foundation_freeze_rows = [
     {
         "certificate_id": "v53-complete-source-foundation-freeze",
         "criterion_id": "replayable-artifact-chain",
-        "status": "pass" if foundation_direct_evidence_ready else "blocked",
-        "required_value": "hash-bound direct query/span and A/B/G/H row artifacts",
-        "actual_value": f"direct_ready={foundation_direct_evidence_ready}; evaluator_rows={len(v53ap_evaluator_rows)}",
+        "status": "pass" if foundation_direct_evidence_ready and foundation_direct_pinned_manifest_ready else "blocked",
+        "required_value": "hash-bound direct repo manifest, query/span, and A/B/G/H row artifacts",
+        "actual_value": f"direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}; direct_ready={foundation_direct_evidence_ready}; evaluator_rows={len(v53ap_evaluator_rows)}",
         "evidence_path": "sha256_manifest.csv",
         "claim_boundary": "Allows replayable artifact wording for the emitted local run packet",
     },
@@ -668,6 +696,13 @@ metric = {
     "foundation_freeze_blocked_rows": str(foundation_freeze_blocked_rows),
     "foundation_machine_freeze_ready": str(foundation_machine_freeze_ready),
     "foundation_direct_evidence_ready": str(foundation_direct_evidence_ready),
+    "foundation_direct_pinned_manifest_ready": str(foundation_direct_pinned_manifest_ready),
+    "foundation_direct_repo_manifest_ready": str(foundation_direct_repo_manifest_ready),
+    "foundation_direct_content_snapshot_ready": str(foundation_direct_content_snapshot_ready),
+    "foundation_direct_repo_manifest_rows": str(len(v53i_repo_coverage_rows)),
+    "foundation_direct_file_manifest_rows": str(len(v53i_file_manifest_rows)),
+    "foundation_direct_content_repo_rows": str(len(v53i_content_repo_rows)),
+    "foundation_direct_content_snapshot_rows": str(len(v53i_content_snapshot_rows)),
     "foundation_real_adapter_freeze_rows": str(len(real_adapter_freeze_rows)),
     "foundation_real_adapter_freeze_pass_rows": str(foundation_real_adapter_freeze_pass_rows),
     "foundation_real_adapter_freeze_blocked_rows": str(foundation_real_adapter_freeze_blocked_rows),
@@ -767,6 +802,13 @@ Evidence emitted:
 - foundation_freeze_certificate_rows={len(foundation_freeze_rows)}
 - foundation_machine_freeze_ready={foundation_machine_freeze_ready}
 - foundation_direct_evidence_ready={foundation_direct_evidence_ready}
+- foundation_direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}
+- foundation_direct_repo_manifest_ready={foundation_direct_repo_manifest_ready}
+- foundation_direct_content_snapshot_ready={foundation_direct_content_snapshot_ready}
+- foundation_direct_repo_manifest_rows={len(v53i_repo_coverage_rows)}
+- foundation_direct_file_manifest_rows={len(v53i_file_manifest_rows)}
+- foundation_direct_content_repo_rows={len(v53i_content_repo_rows)}
+- foundation_direct_content_snapshot_rows={len(v53i_content_snapshot_rows)}
 - foundation_real_adapter_freeze_rows={len(real_adapter_freeze_rows)}
 - foundation_real_adapter_evidence_ready={foundation_real_adapter_evidence_ready}
 - foundation_real_adapter_same_query_rows_ready={foundation_real_adapter_same_query_rows_ready}
@@ -831,6 +873,13 @@ manifest = {
     "foundation_freeze_blocked_rows": foundation_freeze_blocked_rows,
     "foundation_machine_freeze_ready": foundation_machine_freeze_ready,
     "foundation_direct_evidence_ready": foundation_direct_evidence_ready,
+    "foundation_direct_pinned_manifest_ready": foundation_direct_pinned_manifest_ready,
+    "foundation_direct_repo_manifest_ready": foundation_direct_repo_manifest_ready,
+    "foundation_direct_content_snapshot_ready": foundation_direct_content_snapshot_ready,
+    "foundation_direct_repo_manifest_rows": len(v53i_repo_coverage_rows),
+    "foundation_direct_file_manifest_rows": len(v53i_file_manifest_rows),
+    "foundation_direct_content_repo_rows": len(v53i_content_repo_rows),
+    "foundation_direct_content_snapshot_rows": len(v53i_content_snapshot_rows),
     "foundation_real_adapter_freeze_rows": len(real_adapter_freeze_rows),
     "foundation_real_adapter_freeze_blocked_rows": foundation_real_adapter_freeze_blocked_rows,
     "foundation_real_adapter_evidence_ready": foundation_real_adapter_evidence_ready,

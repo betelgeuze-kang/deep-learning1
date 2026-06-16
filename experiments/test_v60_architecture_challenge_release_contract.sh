@@ -59,6 +59,11 @@ expected = {
     "required_30b_70b_baselines_ready": "0",
     "real_30b_70b_rows_ready": "0",
     "public_repo_query_scale_ready": "1",
+    "v53_direct_pinned_manifest_ready": "1",
+    "v53_direct_repo_manifest_rows": "10",
+    "v53_direct_file_manifest_rows": "11266",
+    "v53_direct_content_snapshot_rows": "11266",
+    "pm_pr_v53_direct_pinned_manifest_ready": "1",
     "local_abgh_prebaseline_ready": "1",
     "h10_real_label_promotion_ready": "0",
     "h10_source_verified_eval_ready": "0",
@@ -170,6 +175,12 @@ required_files = [
     "source_v59e/source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_query_budget_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/v53g_complete_source_manifest_summary.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_answer_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_citation_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_evaluator_rows.csv",
@@ -215,6 +226,19 @@ if "coherent_wrong_key_rows=288" not in v60_pm_v53t_real_adapter_rows["real-adap
     raise SystemExit("v60 should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in v60_pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v60 should preserve v53aq public comparison blocker")
+
+repo_coverage_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
+file_manifest_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
+content_repo_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv")
+content_snapshot_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
+if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
+    raise SystemExit("v60 should carry direct 10-repo manifest rows through v59e/PM sidecar")
+if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
+    raise SystemExit("v60 should carry direct file/content manifest rows through v59e/PM sidecar")
+if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
+    raise SystemExit("v60 repo coverage rows should preserve ready tree manifests")
+if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
+    raise SystemExit("v60 content repo rows should preserve ready content snapshots")
 
 v54c_expected_counts = {
     "answer_rows.csv": 1000,
@@ -266,6 +290,9 @@ for row in requirements:
     evidence_path = run_dir / row["evidence_path"]
     if not evidence_path.is_file() or evidence_path.stat().st_size == 0:
         raise SystemExit(f"v60 requirement evidence path is not replayable: {row['requirement']} -> {row['evidence_path']}")
+v53_req = next(row for row in requirements if row["requirement"] == "v53_public_repo_source_bound_1000_corpus")
+if v53_req["evidence_path"] != "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv":
+    raise SystemExit("v60 v53 requirement should point directly at copied repo coverage rows")
 h10_req = next(row for row in requirements if row["requirement"] == "h10_real_label_source_verified_scorer")
 if h10_req["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
     raise SystemExit("v60 h10 requirement should point directly at PM h10 criteria rows")
@@ -319,6 +346,14 @@ if manifest.get("real_release_package_ready") != 0 or manifest.get("release_requ
     raise SystemExit("v60 manifest should keep release blocked")
 if manifest.get("release_requirement_ready_rows") != 6:
     raise SystemExit("v60 manifest should record six PM-foundation ready requirements")
+if (
+    manifest.get("v53_direct_pinned_manifest_ready") != 1
+    or manifest.get("v53_direct_repo_manifest_rows") != 10
+    or manifest.get("v53_direct_file_manifest_rows") != 11266
+    or manifest.get("v53_direct_content_snapshot_rows") != 11266
+    or manifest.get("pm_pr_v53_direct_pinned_manifest_ready") != 1
+):
+    raise SystemExit("v60 manifest should record direct v53 pinned manifest evidence")
 if manifest.get("h10_pm_criteria_rows") != 6 or manifest.get("h10_pm_criteria_ready") != 1:
     raise SystemExit("v60 manifest should record direct h10 PM criteria evidence")
 if manifest.get("h10_pm_external_label_blocked") != 1 or manifest.get("h10_pm_source_provenance_binding_ready") != 1:
@@ -338,6 +373,7 @@ for snippet in [
     "not the completed v1.0 Architecture Challenge Release",
     "Allowed wording",
     "v53 10-repo / 1000 source-span-bound query PM freeze",
+    "direct v53 repo/file/content manifest evidence copied through v59e PM sidecar",
     "real 30B/70B LLM+RAG comparison rows",
     "h10 real external/human label promotion evidence",
     "h10 PM criteria rows",

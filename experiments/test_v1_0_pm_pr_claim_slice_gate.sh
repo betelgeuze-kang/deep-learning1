@@ -47,6 +47,10 @@ expected = {
     "pm_foundation_ready": "1",
     "v53_foundation_freeze_certificate_rows": "10",
     "v53_foundation_machine_freeze_ready": "1",
+    "v53_foundation_direct_pinned_manifest_ready": "1",
+    "v53_foundation_direct_repo_manifest_rows": "10",
+    "v53_foundation_direct_file_manifest_rows": "11266",
+    "v53_foundation_direct_content_snapshot_rows": "11266",
     "pm_pr_slice_file_rows": "41",
     "pm_pr_slice_file_existing_rows": "41",
     "pm_pr_slices_with_file_rows": "10",
@@ -133,8 +137,13 @@ if "public-source download/refresh readiness" not in claim_by_id["v59-one-comman
     raise SystemExit("v59 claim boundary should block public-source download/refresh readiness")
 if claim_by_id["v59-one-command-demo"]["evidence_path"] != "source_v59e/public_source_replay_policy_rows.csv":
     raise SystemExit("v59 claim boundary should bind to public source replay policy rows")
+if claim_by_id["v53-public-repo-source-manifest"]["evidence_path"] != "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv":
+    raise SystemExit("v53 source-manifest claim boundary should bind to direct repo coverage rows")
 
 by_id = {row["slice_id"]: row for row in slice_rows}
+for snippet in ["repo_manifest_rows=10", "file_manifest_rows=11266", "content_snapshot_rows=11266"]:
+    if snippet not in by_id["v53-public-repo-source-manifest"]["reason"]:
+        raise SystemExit(f"v53 source-manifest slice should expose direct manifest count: {snippet}")
 if by_id["v53-system-a-b-g-h-measured"]["current_status"] != "ready-for-review":
     raise SystemExit("A/B/G/H slice should be ready for internal pre-baseline review")
 if by_id["v59-one-command-demo"]["current_status"] != "pm-foundation-ready-full-demo-blocked":
@@ -179,6 +188,17 @@ for requirement_id in [
 ]:
     if roadmap_by_id.get(requirement_id, {}).get("status") != "ready":
         raise SystemExit(f"PM roadmap requirement should be ready: {requirement_id}")
+pinned_manifest_row = roadmap_by_id["pinned-public-repo-manifest"]
+if pinned_manifest_row["evidence_path"] != "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv":
+    raise SystemExit("PM pinned source manifest should bind directly to v53t copied repo coverage rows")
+for snippet in [
+    "foundation_direct_pinned_manifest_ready=1",
+    "repo_manifest_rows=10",
+    "file_manifest_rows=11266",
+    "content_snapshot_rows=11266",
+]:
+    if snippet not in pinned_manifest_row["reason"]:
+        raise SystemExit(f"PM pinned source manifest should expose {snippet}")
 answer_citation_row = roadmap_by_id["answer-citation-separated"]
 if answer_citation_row["evidence_path"] != "source_v53t/source_v53ap/abgh_evaluator_rows.csv":
     raise SystemExit("PM answer/citation separation should bind directly to the v53t copied evaluator rows")
@@ -560,6 +580,12 @@ required_files = [
     "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_v53t/source_v53i/complete_source_span_rows.csv",
+    "source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
+    "source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv",
+    "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+    "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv",
+    "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_query_budget_rows.csv",
+    "source_v53t/source_v53i/source_v53h/source_v53g/v53g_complete_source_manifest_summary.csv",
     "source_v53t/source_v53ap/abgh_answer_rows.csv",
     "source_v53t/source_v53ap/abgh_citation_rows.csv",
     "source_v53t/source_v53ap/abgh_evaluator_rows.csv",
@@ -574,6 +600,19 @@ for rel in required_files:
     path = run_dir / rel
     if not path.is_file() or path.stat().st_size == 0:
         raise SystemExit(f"missing PM PR slice gate artifact: {rel}")
+
+repo_coverage_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
+file_manifest_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
+content_repo_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv")
+content_snapshot_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
+if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
+    raise SystemExit("PM PR sidecar should carry direct 10-repo manifest rows")
+if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
+    raise SystemExit("PM PR sidecar should carry direct file/content manifest rows")
+if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
+    raise SystemExit("PM PR sidecar repo coverage rows should preserve ready tree manifests")
+if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
+    raise SystemExit("PM PR sidecar content repo rows should preserve ready content snapshots")
 
 real_adapter_freeze_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")}
 if len(real_adapter_freeze_rows) != 4:
@@ -602,6 +641,13 @@ if manifest.get("pm_roadmap_requirement_rows") != 20 or manifest.get("pm_foundat
     raise SystemExit("PM PR manifest roadmap audit mismatch")
 if manifest.get("v53_foundation_freeze_certificate_rows") != 10 or manifest.get("v53_foundation_machine_freeze_ready") != 1:
     raise SystemExit("PM PR manifest v53 foundation freeze mismatch")
+if (
+    manifest.get("v53_foundation_direct_pinned_manifest_ready") != 1
+    or manifest.get("v53_foundation_direct_repo_manifest_rows") != 10
+    or manifest.get("v53_foundation_direct_file_manifest_rows") != 11266
+    or manifest.get("v53_foundation_direct_content_snapshot_rows") != 11266
+):
+    raise SystemExit("PM PR manifest direct pinned manifest evidence mismatch")
 if manifest.get("pm_pr_slice_file_rows") != 41 or manifest.get("pm_pr_slice_verification_rows") != 17:
     raise SystemExit("PM PR manifest file/verification ledger mismatch")
 if manifest.get("pm_pr_claim_boundary_rows") != 10 or manifest.get("pm_pr_claim_boundary_pass_rows") != 10:
@@ -644,6 +690,10 @@ for snippet in [
     "pm_foundation_ready=1",
     "v53_foundation_freeze_certificate_rows=10",
     "v53_foundation_machine_freeze_ready=1",
+    "v53_foundation_direct_pinned_manifest_ready=1",
+    "v53_foundation_direct_repo_manifest_rows=10",
+    "v53_foundation_direct_file_manifest_rows=11266",
+    "v53_foundation_direct_content_snapshot_rows=11266",
     "pm_pr_slice_file_rows=41",
     "pm_pr_slice_verification_rows=17",
     "pm_pr_claim_boundary_rows=10",

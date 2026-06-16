@@ -117,6 +117,10 @@ expected = {
     "pm_pr_current_merge_ready_rows": "9",
     "pm_pr_current_blocked_rows": "1",
     "pm_pr_tests_only_merge_condition_rows": "0",
+    "pm_pr_v53_direct_pinned_manifest_ready": "1",
+    "pm_pr_v53_direct_repo_manifest_rows": "10",
+    "pm_pr_v53_direct_file_manifest_rows": "11266",
+    "pm_pr_v53_direct_content_snapshot_rows": "11266",
     "pm_pr_review_packet_rows": "10",
     "pm_pr_review_packet_files": "10",
     "pm_pr_review_packet_bundle_ready": "1",
@@ -245,6 +249,12 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_query_budget_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/v53g_complete_source_manifest_summary.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_answer_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_citation_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_evaluator_rows.csv",
@@ -282,6 +292,19 @@ if "coherent_wrong_key_rows=288" not in pm_v53t_real_adapter_rows["real-adapter-
     raise SystemExit("v59e PM sidecar should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e PM sidecar should preserve v53aq public comparison blocker")
+
+repo_coverage_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
+file_manifest_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
+content_repo_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv")
+content_snapshot_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
+if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
+    raise SystemExit("v59e PM sidecar should carry direct 10-repo manifest rows")
+if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
+    raise SystemExit("v59e PM sidecar should carry direct file/content manifest rows")
+if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
+    raise SystemExit("v59e PM sidecar repo coverage rows should preserve ready tree manifests")
+if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
+    raise SystemExit("v59e PM sidecar content repo rows should preserve ready content snapshots")
 
 h10_v53t_real_adapter_rows = {
     row["criterion_id"]: row
@@ -370,6 +393,13 @@ if (
     raise SystemExit("v59e manifest should preserve the v58d blind-review return blocker boundary")
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
+if (
+    manifest.get("pm_pr_v53_direct_pinned_manifest_ready") != 1
+    or manifest.get("pm_pr_v53_direct_repo_manifest_rows") != 10
+    or manifest.get("pm_pr_v53_direct_file_manifest_rows") != 11266
+    or manifest.get("pm_pr_v53_direct_content_snapshot_rows") != 11266
+):
+    raise SystemExit("v59e manifest should record direct v53 pinned manifest evidence")
 if manifest.get("pm_scope_drift_allowed") != 0:
     raise SystemExit("v59e manifest should keep PM scope drift locked")
 if manifest.get("one_command_replay_preflight_ready") != 1:
