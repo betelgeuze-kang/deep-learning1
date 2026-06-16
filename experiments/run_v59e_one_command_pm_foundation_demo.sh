@@ -1011,9 +1011,9 @@ execution_lock_ready = int(
     and as_int(pr_summary, "pm_new_scaffold_default_allowed") == 0
 )
 external_return_template_ready = int(
-    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 24
+    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 25
     and as_int(pr_summary, "pm_external_return_template_fixture_allowed_rows") == 0
-    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 24
+    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 25
 )
 pm_pr_claim_slice_bundle_ready = int(
     as_int(pr_summary, "v1_0_pm_pr_claim_slice_gate_ready") == 1
@@ -1166,7 +1166,7 @@ decision_rows.extend(
         {
             "gate": "pm-external-return-templates",
             "status": "pass" if external_return_template_ready else "blocked",
-            "reason": "24 no-fixture approval-required return templates are packaged for blocker closure",
+            "reason": "25 no-fixture approval-required return templates are packaged for blocker closure",
         },
         {
             "gate": "one-command-replay-preflight",

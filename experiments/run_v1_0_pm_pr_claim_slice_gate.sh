@@ -1200,6 +1200,15 @@ blocker_required_artifact_rows = [
     ),
     required_artifact_row(
         "v60-release-evidence-missing",
+        "v59-public-source-download-refresh",
+        "public source download/refresh evidence bundle",
+        "artifact-directory",
+        "approved live/downloaded public-source refresh evidence with pinned repo URLs, commit SHAs, tree/content hashes, download command transcript, no private fixture, and sha256 manifest",
+        "defer until public-source download/network approval is granted for the full v59 public demo",
+        "full_public_source_download_ready=1 only after approved download/refresh evidence is replay/hash-bound",
+    ),
+    required_artifact_row(
+        "v60-release-evidence-missing",
         "v60-release-sha256-manifest",
         "release sha256 manifest",
         "hash-manifest",
@@ -1299,6 +1308,7 @@ def return_template_for_artifact(row):
         "v60-release-claim-audit": "claim_id,allowed_claim,blocked_claim,evidence_path,evidence_sha256,reviewer_decision,non_fixture_declared,approval_reference",
         "v60-human-release-review": "release_review_id,reviewer_id_hash,release_packet_sha256,accepted_for_public_v1,required_corrections,conflict_disclosure_sha256,non_fixture_declared,approval_reference",
         "v59e-replay-preflight": "check,status,evidence,claim_boundary,preflight_rows_sha256,one_command_replay_preflight_ready,full_public_source_download_ready,non_fixture_declared,approval_reference",
+        "v59-public-source-download-refresh": "source_repo_id,repo_url,pinned_commit_sha,tree_sha256,content_manifest_path,download_command_sha256,download_transcript_sha256,sha256_manifest_path,network_download_approval_reference,non_fixture_declared",
         "v60-release-sha256-manifest": "path,sha256,bytes,artifact_role,authority_uri,non_fixture_declared",
     }
     return f"{base_rel}.csv", "csv", headers[artifact_id] + "\n"

@@ -53,7 +53,7 @@ expected = {
     "full_public_source_download_ready": "0",
     "pm_pr_claim_slice_bundle_ready": "1",
     "pm_scope_drift_allowed": "0",
-    "pm_external_return_template_rows": "24",
+    "pm_external_return_template_rows": "25",
     "one_command_replay_preflight_ready": "1",
     "v59_ready": "0",
     "required_30b_70b_baselines_ready": "0",
