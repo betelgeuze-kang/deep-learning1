@@ -9,8 +9,9 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv" ]] \
-  && grep -q 'v53t_real_adapter_freeze_ready' "$SUMMARY_CSV"; then
+if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv" ]] \
+  && grep -q 'v53t_real_adapter_freeze_ready' "$SUMMARY_CSV" \
+  && grep -q 'v53aq_same_query_internal_prebaseline_rows_ready' "$SUMMARY_CSV"; then
   echo "v10_h10_real_label_promotion_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -168,6 +169,7 @@ copy(v53aq_dir / "abgh_system_metric_rows.csv", "source_v53aq/abgh_system_metric
 copy(v53aq_dir / "abgh_adapter_trace_rows.csv", "source_v53aq/abgh_adapter_trace_rows.csv")
 copy(v53aq_dir / "abgh_evaluator_rows.csv", "source_v53aq/abgh_evaluator_rows.csv")
 copy(v53aq_dir / "abgh_wrong_answer_guard_rows.csv", "source_v53aq/abgh_wrong_answer_guard_rows.csv")
+copy(v53aq_dir / "abgh_same_query_internal_prebaseline_rows.csv", "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
 copy(v53aq_dir / "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md")
 copy(v53t_summary_path, "source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv")
 copy(v53t_dir / "complete_source_abgh_real_adapter_freeze_rows.csv", "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")
@@ -243,6 +245,7 @@ v53ap_evaluator_rows = read_csv(v53ap_dir / "abgh_evaluator_rows.csv")
 v53aq_adapter_trace_rows = read_csv(v53aq_dir / "abgh_adapter_trace_rows.csv")
 v53aq_evaluator_rows = read_csv(v53aq_dir / "abgh_evaluator_rows.csv")
 v53aq_metric_rows = read_csv(v53aq_dir / "abgh_system_metric_rows.csv")
+v53aq_prebaseline_rows = read_csv(v53aq_dir / "abgh_same_query_internal_prebaseline_rows.csv")
 v53aq_metrics_by_system = {row["system_id"]: row for row in v53aq_metric_rows}
 v53t_real_adapter_freeze_rows = read_csv(v53t_dir / "complete_source_abgh_real_adapter_freeze_rows.csv")
 v53t_freeze_by_criterion = {row["criterion_id"]: row for row in v53t_real_adapter_freeze_rows}
@@ -301,6 +304,28 @@ v53aq_real_adapter_provenance_ready = int(
     and all(row["selection_oracle_field_used"] == "0" for row in v53aq_evaluator_rows)
     and all(row["real_system_performance_claim_ready"] == "1" for row in v53aq_evaluator_rows)
 )
+v53aq_same_query_prebaseline_ledger_ready = int(
+    as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
+    and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
+    and len(v53aq_prebaseline_rows) == 1000
+    and {row["systems"] for row in v53aq_prebaseline_rows} == {"A/B/G/H"}
+    and all(row["answer_row_count"] == "4" for row in v53aq_prebaseline_rows)
+    and all(row["citation_row_count"] == "4" for row in v53aq_prebaseline_rows)
+    and all(row["evaluator_row_count"] == "4" for row in v53aq_prebaseline_rows)
+    and all(row["resource_row_count"] == "4" for row in v53aq_prebaseline_rows)
+    and all(row["adapter_trace_row_count"] == "4" for row in v53aq_prebaseline_rows)
+    and all(row["same_query_all_systems"] == "1" for row in v53aq_prebaseline_rows)
+    and all(row["same_evaluator_contract"] == "1" for row in v53aq_prebaseline_rows)
+    and all(row["same_resource_bound"] == "1" for row in v53aq_prebaseline_rows)
+    and all(row["selection_question_text_only_all"] == "1" for row in v53aq_prebaseline_rows)
+    and all(row["selection_oracle_field_used_any"] == "0" for row in v53aq_prebaseline_rows)
+    and all(row["expected_answer_oracle_replay_any"] == "0" for row in v53aq_prebaseline_rows)
+    and all(row["deterministic_source_span_adapter_execution_any"] == "0" for row in v53aq_prebaseline_rows)
+    and all(row["g_h_routehint_no_raw_context"] == "1" for row in v53aq_prebaseline_rows)
+    and all(row["public_comparison_claim_ready"] == "0" for row in v53aq_prebaseline_rows)
+    and all(row["required_30b_baseline_ready"] == "0" for row in v53aq_prebaseline_rows)
+    and all(row["required_70b_baseline_ready"] == "0" for row in v53aq_prebaseline_rows)
+)
 v53aq_wrong_key_signal_ready = int(
     v53aq_real_adapter_provenance_ready == 1
     and v53t_real_adapter_freeze_ready == 1
@@ -328,6 +353,7 @@ source_provenance_binding_ready = int(
     and v53ap_adapter_trace_provenance_ready == 1
     and v53ap_evaluator_provenance_ready == 1
     and v53aq_real_adapter_provenance_ready == 1
+    and v53aq_same_query_prebaseline_ledger_ready == 1
     and v53t_real_adapter_freeze_ready == 1
     and as_int(v54c, "citation_correct_rows") == as_int(v54c, "generation_rows")
 )
@@ -356,6 +382,7 @@ same_query_real_adapter_ready = int(
     and as_int(v53aq, "same_evaluator_contract_all_local_systems") == 1
     and as_int(v53aq, "same_resource_contract_all_local_systems") == 1
     and v53aq_real_adapter_provenance_ready == 1
+    and v53aq_same_query_prebaseline_ledger_ready == 1
     and v53aq.get("systems") == "A/B/G/H"
 )
 
@@ -420,7 +447,7 @@ acceptance_rows = [
         "criterion": "source-provenance-binding",
         "machine_evidence_status": "pass" if source_provenance_binding_ready else "blocked",
         "real_label_status": "pass" if source_provenance_binding_ready and external_human_label_evidence_ready else "blocked",
-        "evidence": f"v53q_scorer_rows={v53q.get('symmetric_scorer_rows')}; v53ap_adapter_trace_rows={len(v53ap_adapter_trace_rows)}; v53ap_evaluator_rows={len(v53ap_evaluator_rows)}; v53aq_adapter_trace_rows={len(v53aq_adapter_trace_rows)}; v53aq_evaluator_rows={len(v53aq_evaluator_rows)}; v53t_real_adapter_freeze_rows={len(v53t_real_adapter_freeze_rows)}; v54c_citation_correct={v54c.get('citation_correct_rows')}",
+        "evidence": f"v53q_scorer_rows={v53q.get('symmetric_scorer_rows')}; v53ap_adapter_trace_rows={len(v53ap_adapter_trace_rows)}; v53ap_evaluator_rows={len(v53ap_evaluator_rows)}; v53aq_adapter_trace_rows={len(v53aq_adapter_trace_rows)}; v53aq_evaluator_rows={len(v53aq_evaluator_rows)}; v53aq_same_query_internal_prebaseline_rows={len(v53aq_prebaseline_rows)}; v53aq_same_query_internal_prebaseline_rows_ready={v53aq_same_query_prebaseline_ledger_ready}; v53t_real_adapter_freeze_rows={len(v53t_real_adapter_freeze_rows)}; v54c_citation_correct={v54c.get('citation_correct_rows')}",
         "blocker": "accepted external/human label evidence must bind provenance rows" if not external_human_label_evidence_ready else "",
     },
     {
@@ -456,6 +483,8 @@ summary = {
     "v53aq_wrong_key_signal_ready": str(v53aq_wrong_key_signal_ready),
     "v53aq_adapter_trace_rows": str(len(v53aq_adapter_trace_rows)),
     "v53aq_evaluator_rows": str(len(v53aq_evaluator_rows)),
+    "v53aq_same_query_internal_prebaseline_rows": str(len(v53aq_prebaseline_rows)),
+    "v53aq_same_query_internal_prebaseline_rows_ready": str(v53aq_same_query_prebaseline_ledger_ready),
     "v53aq_selection_question_text_only": v53aq.get("selection_question_text_only", "0"),
     "v53aq_selection_oracle_field_used": v53aq.get("selection_oracle_field_used", "1"),
     "v53aq_expected_answer_oracle_replay": v53aq.get("expected_answer_oracle_replay", "0"),
@@ -524,6 +553,8 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- v53aq_wrong_key_signal_ready={v53aq_wrong_key_signal_ready}\n"
     f"- v53aq_adapter_trace_rows={len(v53aq_adapter_trace_rows)}\n"
     f"- v53aq_evaluator_rows={len(v53aq_evaluator_rows)}\n"
+    f"- v53aq_same_query_internal_prebaseline_rows={len(v53aq_prebaseline_rows)}\n"
+    f"- v53aq_same_query_internal_prebaseline_rows_ready={v53aq_same_query_prebaseline_ledger_ready}\n"
     f"- v53aq_selection_question_text_only={v53aq.get('selection_question_text_only', '0')}\n"
     f"- v53aq_selection_oracle_field_used={v53aq.get('selection_oracle_field_used', '1')}\n"
     f"- v53aq_coherent_wrong_key_rows={v53aq.get('coherent_wrong_key_rows', '0')}\n"
@@ -556,6 +587,8 @@ manifest = {
     "v53aq_wrong_key_signal_ready": v53aq_wrong_key_signal_ready,
     "v53aq_adapter_trace_rows": len(v53aq_adapter_trace_rows),
     "v53aq_evaluator_rows": len(v53aq_evaluator_rows),
+    "v53aq_same_query_internal_prebaseline_rows": len(v53aq_prebaseline_rows),
+    "v53aq_same_query_internal_prebaseline_rows_ready": v53aq_same_query_prebaseline_ledger_ready,
     "v53aq_selection_question_text_only": as_int(v53aq, "selection_question_text_only"),
     "v53aq_selection_oracle_field_used": as_int(v53aq, "selection_oracle_field_used"),
     "v53aq_real_adapter_execution_ready": as_int(v53aq, "real_adapter_execution_ready"),
@@ -577,6 +610,7 @@ manifest = {
         "v53q": sha256(v53q_summary_path),
         "v53ap": sha256(v53ap_summary_path),
         "v53aq": sha256(v53aq_summary_path),
+        "v53aq_same_query_internal_prebaseline": sha256(v53aq_dir / "abgh_same_query_internal_prebaseline_rows.csv"),
         "v53t": sha256(v53t_summary_path),
         "v54c": sha256(v54c_summary_path),
     },

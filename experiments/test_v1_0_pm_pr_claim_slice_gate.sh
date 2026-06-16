@@ -252,6 +252,8 @@ for snippet in [
     "missing-query-abstain",
     "source-provenance-binding",
     "external-human-label-evidence",
+    "v53aq_same_query_internal_prebaseline_rows=1000",
+    "v53aq_same_query_internal_prebaseline_rows_ready=1",
 ]:
     if snippet not in h10_readiness_row["reason"]:
         raise SystemExit(f"PM h10 readiness row should expose {snippet}")
@@ -273,6 +275,26 @@ if h10_criteria["external-human-label-evidence"]["real_label_status"] != "blocke
     raise SystemExit("PM h10 acceptance source should keep external/human evidence blocked")
 if "v53ap_evaluator_rows=4000" not in h10_criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("PM h10 acceptance source should cite v53ap evaluator provenance")
+if "v53aq_same_query_internal_prebaseline_rows=1000" not in h10_criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("PM h10 acceptance source should cite v53aq same-query prebaseline rows")
+if "v53aq_same_query_internal_prebaseline_rows_ready=1" not in h10_criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("PM h10 acceptance source should cite v53aq same-query prebaseline readiness")
+h10_v53aq_prebaseline_rows = read_csv(run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
+if len(h10_v53aq_prebaseline_rows) != 1000:
+    raise SystemExit("PM h10 source bundle should carry 1000 v53aq same-query prebaseline rows")
+if any(
+    row["same_query_all_systems"] != "1"
+    or row["same_evaluator_contract"] != "1"
+    or row["same_resource_bound"] != "1"
+    or row["selection_question_text_only_all"] != "1"
+    or row["selection_oracle_field_used_any"] != "0"
+    or row["expected_answer_oracle_replay_any"] != "0"
+    or row["deterministic_source_span_adapter_execution_any"] != "0"
+    or row["g_h_routehint_no_raw_context"] != "1"
+    or row["public_comparison_claim_ready"] != "0"
+    for row in h10_v53aq_prebaseline_rows
+):
+    raise SystemExit("PM h10 source bundle should preserve v53aq same-query/no-oracle/no-public-claim boundary")
 v54_slice = by_id["v54-routehint-generation-contract"]
 for snippet in ["answer=1000", "citation=1000", "unsupported=160", "abstain=160", "resource=1000", "guard=1000"]:
     if snippet not in v54_slice["reason"]:
@@ -590,6 +612,7 @@ required_files = [
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_h10_pm/h10_real_label_evidence_template.csv",
     "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
+    "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",

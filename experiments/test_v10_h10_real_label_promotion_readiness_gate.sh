@@ -54,6 +54,8 @@ expected = {
     "v53aq_wrong_key_signal_ready": "1",
     "v53aq_adapter_trace_rows": "4000",
     "v53aq_evaluator_rows": "4000",
+    "v53aq_same_query_internal_prebaseline_rows": "1000",
+    "v53aq_same_query_internal_prebaseline_rows_ready": "1",
     "v53aq_selection_question_text_only": "1",
     "v53aq_selection_oracle_field_used": "0",
     "v53aq_expected_answer_oracle_replay": "0",
@@ -101,6 +103,7 @@ required_files = [
     "source_v53aq/abgh_system_metric_rows.csv",
     "source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v53aq/abgh_evaluator_rows.csv",
+    "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v53aq/abgh_wrong_answer_guard_rows.csv",
     "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
@@ -140,6 +143,10 @@ if "v53aq_adapter_trace_rows=4000" not in criteria["source-provenance-binding"][
     raise SystemExit("source provenance criterion should cite v53aq adapter trace rows")
 if "v53aq_evaluator_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("source provenance criterion should cite v53aq evaluator rows")
+if "v53aq_same_query_internal_prebaseline_rows=1000" not in criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("source provenance criterion should cite v53aq same-query prebaseline rows")
+if "v53aq_same_query_internal_prebaseline_rows_ready=1" not in criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("source provenance criterion should cite v53aq same-query prebaseline readiness")
 if "v53t_real_adapter_freeze_rows=4" not in criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("source provenance criterion should cite v53t real-adapter freeze rows")
 if criteria["external-human-label-evidence"]["real_label_status"] != "blocked":
@@ -203,6 +210,34 @@ if any(
 ):
     raise SystemExit("h10 PM gate v53aq evaluator rows should preserve real-adapter separate evaluation")
 
+v53aq_prebaseline_rows = read_csv(run_dir / "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
+if len(v53aq_prebaseline_rows) != 1000:
+    raise SystemExit("h10 PM gate should copy 1000 v53aq same-query internal prebaseline rows")
+if {row["systems"] for row in v53aq_prebaseline_rows} != {"A/B/G/H"}:
+    raise SystemExit("h10 PM gate v53aq same-query ledger should cover A/B/G/H")
+for row in v53aq_prebaseline_rows:
+    expected = {
+        "answer_row_count": "4",
+        "citation_row_count": "4",
+        "evaluator_row_count": "4",
+        "resource_row_count": "4",
+        "adapter_trace_row_count": "4",
+        "same_query_all_systems": "1",
+        "same_evaluator_contract": "1",
+        "same_resource_bound": "1",
+        "selection_question_text_only_all": "1",
+        "selection_oracle_field_used_any": "0",
+        "expected_answer_oracle_replay_any": "0",
+        "deterministic_source_span_adapter_execution_any": "0",
+        "g_h_routehint_no_raw_context": "1",
+        "public_comparison_claim_ready": "0",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+    }
+    for field, value in expected.items():
+        if row[field] != value:
+            raise SystemExit(f"h10 PM gate v53aq same-query ledger should preserve {field}={value}")
+
 v53t_real_adapter_rows = {
     row["criterion_id"]: row
     for row in read_csv(run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")
@@ -253,6 +288,10 @@ if manifest.get("v53aq_real_adapter_provenance_ready") != 1 or manifest.get("v53
     raise SystemExit("manifest should record v53aq real-adapter evidence readiness")
 if manifest.get("v53aq_adapter_trace_rows") != 4000 or manifest.get("v53aq_evaluator_rows") != 4000:
     raise SystemExit("manifest should record v53aq provenance row counts")
+if manifest.get("v53aq_same_query_internal_prebaseline_rows") != 1000:
+    raise SystemExit("manifest should record v53aq same-query prebaseline row count")
+if manifest.get("v53aq_same_query_internal_prebaseline_rows_ready") != 1:
+    raise SystemExit("manifest should record v53aq same-query prebaseline readiness")
 if manifest.get("v53aq_selection_question_text_only") != 1 or manifest.get("v53aq_selection_oracle_field_used") != 0:
     raise SystemExit("manifest should record v53aq query-text-only selection boundary")
 if manifest.get("v53t_complete_source_audit_readiness_gate_ready") != 1:
@@ -286,6 +325,8 @@ for snippet in [
     "v53aq_wrong_key_signal_ready=1",
     "v53aq_adapter_trace_rows=4000",
     "v53aq_evaluator_rows=4000",
+    "v53aq_same_query_internal_prebaseline_rows=1000",
+    "v53aq_same_query_internal_prebaseline_rows_ready=1",
     "v53aq_selection_question_text_only=1",
     "v53aq_selection_oracle_field_used=0",
     "v53aq_coherent_wrong_key_rows=287",

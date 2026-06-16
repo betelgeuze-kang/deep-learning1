@@ -174,12 +174,14 @@ h10_pm_dir = results / "v10_h10_real_label_promotion_readiness_gate" / "gate_001
 h10_acceptance_rows_path = h10_pm_dir / "pm_h10_real_label_acceptance_rows.csv"
 h10_template_path = h10_pm_dir / "h10_real_label_evidence_template.csv"
 h10_evidence_acceptance_path = h10_pm_dir / "h10_real_label_evidence_acceptance_rows.csv"
+h10_v53aq_prebaseline_path = h10_pm_dir / "source_v53aq" / "abgh_same_query_internal_prebaseline_rows.csv"
 h10_acceptance_rows_copied = copy_if_exists(
     h10_acceptance_rows_path,
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
 )
 copy_if_exists(h10_template_path, "source_h10_pm/h10_real_label_evidence_template.csv")
 copy_if_exists(h10_evidence_acceptance_path, "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv")
+copy_if_exists(h10_v53aq_prebaseline_path, "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
 h10_acceptance_rows = read_rows(h10_acceptance_rows_path)
 h10_acceptance_by_criterion = {
     row.get("criterion", ""): row
@@ -789,6 +791,7 @@ pm_roadmap_rows = [
         "h10-readiness-ledger",
         "h10 scorer promotion criteria are represented as real-label readiness rows",
         as_int(h10_pm, "v10_h10_real_label_promotion_readiness_gate_ready") == 1
+        and as_int(h10_pm, "v53aq_same_query_internal_prebaseline_rows_ready") == 1
         and len(h10_acceptance_rows) == 6
         and set(h10_acceptance_by_criterion) == {
             "coherent-wrong-key-reduction",
@@ -802,7 +805,9 @@ pm_roadmap_rows = [
         (
             f"h10_readiness_gate={h10_pm.get('v10_h10_real_label_promotion_readiness_gate_ready', '0')} "
             f"criteria_rows={len(h10_acceptance_rows)} "
-            f"criteria={','.join(sorted(h10_acceptance_by_criterion))}"
+            f"criteria={','.join(sorted(h10_acceptance_by_criterion))} "
+            f"v53aq_same_query_internal_prebaseline_rows={h10_pm.get('v53aq_same_query_internal_prebaseline_rows', '0')} "
+            f"v53aq_same_query_internal_prebaseline_rows_ready={h10_pm.get('v53aq_same_query_internal_prebaseline_rows_ready', '0')}"
         ),
         "h10-readiness-ledger-missing",
     ),

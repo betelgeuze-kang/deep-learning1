@@ -234,6 +234,7 @@ required_files = [
     "source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
+    "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -251,6 +252,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
@@ -336,6 +338,27 @@ if "coherent_wrong_key_rows=287" not in h10_v53t_real_adapter_rows["real-adapter
     raise SystemExit("v59e h10 PM source bundle should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in h10_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e h10 PM source bundle should preserve public comparison blocker")
+
+for label, path in [
+    ("h10 PM source bundle", run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
+    ("PM sidecar h10 bundle", run_dir / "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
+]:
+    rows = read_csv(path)
+    if len(rows) != 1000:
+        raise SystemExit(f"v59e {label} should carry 1000 v53aq same-query prebaseline rows")
+    if any(
+        row["same_query_all_systems"] != "1"
+        or row["same_evaluator_contract"] != "1"
+        or row["same_resource_bound"] != "1"
+        or row["selection_question_text_only_all"] != "1"
+        or row["selection_oracle_field_used_any"] != "0"
+        or row["expected_answer_oracle_replay_any"] != "0"
+        or row["deterministic_source_span_adapter_execution_any"] != "0"
+        or row["g_h_routehint_no_raw_context"] != "1"
+        or row["public_comparison_claim_ready"] != "0"
+        for row in rows
+    ):
+        raise SystemExit(f"v59e {label} should preserve v53aq same-query/no-oracle/no-public-claim boundary")
 
 v54c_expected_counts = {
     "answer_rows.csv": 1000,

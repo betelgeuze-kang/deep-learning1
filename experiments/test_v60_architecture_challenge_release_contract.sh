@@ -78,7 +78,7 @@ expected = {
     "h10_pm_criteria_ready": "1",
     "h10_pm_external_label_blocked": "1",
     "h10_pm_source_provenance_binding_ready": "1",
-    "h10_pm_copied_files": "10",
+    "h10_pm_copied_files": "11",
     "v54c_recommended_output_files_ready": "1",
     "v54c_recommended_output_file_rows": "9",
     "routehint_generation_main_ready": "1",
@@ -161,11 +161,13 @@ required_files = [
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/adapter_selection_contract_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
+    "source_v59e/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v59e/source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_v59e/source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v59e/source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -213,6 +215,7 @@ required_files = [
     "source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
+    "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -331,10 +334,36 @@ if h10_by_criterion["source-provenance-binding"]["machine_evidence_status"] != "
     raise SystemExit("v60 h10 source provenance criterion should carry pass machine evidence")
 if "v53ap_evaluator_rows=4000" not in h10_by_criterion["source-provenance-binding"]["evidence"]:
     raise SystemExit("v60 h10 source provenance criterion should bind v53ap evaluator rows")
+if "v53aq_same_query_internal_prebaseline_rows=1000" not in h10_by_criterion["source-provenance-binding"]["evidence"]:
+    raise SystemExit("v60 h10 source provenance criterion should bind v53aq same-query prebaseline rows")
+if "v53aq_same_query_internal_prebaseline_rows_ready=1" not in h10_by_criterion["source-provenance-binding"]["evidence"]:
+    raise SystemExit("v60 h10 source provenance criterion should bind v53aq same-query prebaseline readiness")
 if "v53t_real_adapter_freeze_rows=4" not in h10_by_criterion["source-provenance-binding"]["evidence"]:
     raise SystemExit("v60 h10 source provenance criterion should bind v53t real-adapter freeze rows")
 if h10_by_criterion["external-human-label-evidence"]["real_label_status"] != "blocked":
     raise SystemExit("v60 h10 external/human label criterion should remain blocked")
+
+for label, path in [
+    ("v59e direct h10 bundle", run_dir / "source_v59e/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
+    ("v59e PM sidecar h10 bundle", run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
+    ("v60 direct h10 bundle", run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
+]:
+    rows = read_csv(path)
+    if len(rows) != 1000:
+        raise SystemExit(f"v60 {label} should carry 1000 v53aq same-query prebaseline rows")
+    if any(
+        row["same_query_all_systems"] != "1"
+        or row["same_evaluator_contract"] != "1"
+        or row["same_resource_bound"] != "1"
+        or row["selection_question_text_only_all"] != "1"
+        or row["selection_oracle_field_used_any"] != "0"
+        or row["expected_answer_oracle_replay_any"] != "0"
+        or row["deterministic_source_span_adapter_execution_any"] != "0"
+        or row["g_h_routehint_no_raw_context"] != "1"
+        or row["public_comparison_claim_ready"] != "0"
+        for row in rows
+    ):
+        raise SystemExit(f"v60 {label} should preserve v53aq same-query/no-oracle/no-public-claim boundary")
 
 allowed = read_csv(run_dir / "allowed_claim_rows.csv")
 for claim in ["architecture-challenge-contract-scaffold", "pm-foundation-replay-bundle", "local-architecture-preview"]:
