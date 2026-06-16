@@ -139,6 +139,7 @@ for rel in [
     "pm_foundation_stage_replay_rows.csv",
     "pm_foundation_one_command_rows.csv",
     "pm_foundation_replay_preflight_rows.csv",
+    "local_abgh_row_contract_replay_rows.csv",
     "public_source_replay_policy_rows.csv",
     "public_source_snapshot_replay_rows.csv",
     "challenge_bundle_file_rows.csv",
@@ -352,9 +353,12 @@ requirements = [
         and as_int(v53ap, "internal_v1_0_pre_baseline_run") == 1
         and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
         and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
-        and as_int(v53ap, "public_comparison_claim_ready") == 0,
+        and as_int(v53ap, "public_comparison_claim_ready") == 0
+        and as_int(v59e, "local_abgh_row_contract_replay_ready") == 1
+        and as_int(v59e, "local_abgh_row_contract_replay_rows") == 2
+        and as_int(v59e, "local_abgh_row_contract_replay_pass_rows") == 2,
         "A/B/G/H same-query internal pre-baseline is missing or overclaimed",
-        "source_v59e/source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+        "source_v59e/local_abgh_row_contract_replay_rows.csv",
         "abgh-prebaseline-missing",
     ),
     req(
@@ -566,6 +570,9 @@ summary = {
     "local_abgh_prebaseline_ready": int(as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1),
     "local_abgh_prebaseline_ledger_ready": as_int(v53aq, "same_query_internal_prebaseline_rows_ready"),
     "local_abgh_prebaseline_ledger_rows": as_int(v53aq, "same_query_internal_prebaseline_rows"),
+    "local_abgh_row_contract_replay_ready": as_int(v59e, "local_abgh_row_contract_replay_ready"),
+    "local_abgh_row_contract_replay_rows": as_int(v59e, "local_abgh_row_contract_replay_rows"),
+    "local_abgh_row_contract_replay_pass_rows": as_int(v59e, "local_abgh_row_contract_replay_pass_rows"),
     "h10_real_label_promotion_ready": as_int(h10, "h10_real_label_promotion_ready"),
     "h10_source_verified_eval_ready": as_int(h10, "h10_source_verified_eval_ready"),
     "h10_external_human_label_evidence_ready": as_int(h10, "external_human_label_evidence_ready"),
@@ -619,6 +626,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- direct v53 1000-row query-span binding audit copied through v59e PM sidecar\n"
     "- direct v53 repo/file/content manifest evidence copied through v59e PM sidecar\n"
     "- internal A/B/G/H same-query pre-baseline without public comparison claim\n"
+    "- direct v59e A/B/G/H row-contract replay ledger for v53ap/v53aq answer/citation/evaluator/resource rows\n"
     "- direct 1000-row A/B/G/H same-query internal pre-baseline ledger copied through v59e PM sidecar\n"
     "- v54 complete-source 1000-row grounded generation with raw prompt stuffing blocked\n"
     "- v59e one-command PM foundation replay with PR split sidecar and execution lock\n\n"
@@ -654,6 +662,7 @@ manifest = {
     "v59_manifest_sha256": sha_or_empty(v59_dir / "v59_one_command_challenge_demo_manifest.json"),
     "v59e_summary_sha256": sha256(results / "v59e_one_command_pm_foundation_demo_summary.csv"),
     "v59e_manifest_sha256": sha256(v59e_dir / "v59e_one_command_pm_foundation_demo_manifest.json"),
+    "v59e_local_abgh_row_contract_replay_sha256": sha256(v59e_dir / "local_abgh_row_contract_replay_rows.csv"),
     "v59e_public_source_snapshot_replay_sha256": sha256(v59e_dir / "public_source_snapshot_replay_rows.csv"),
     "v59e_v58_blind_eval_required_artifact_sha256": sha256(v59e_dir / "v58_blind_eval_required_artifact_rows.csv"),
     "v59e_v58_blind_eval_return_template_sha256": sha256(v59e_dir / "v58_blind_eval_return_template_rows.csv"),

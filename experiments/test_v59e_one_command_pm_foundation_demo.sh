@@ -60,7 +60,9 @@ expected = {
     "v53ap_complete_source_abgh_same_query_measured_ready": "1",
     "v53aq_complete_source_abgh_real_adapter_measured_ready": "1",
     "local_abgh_baseline_run_ready": "1",
-    "local_abgh_row_contract_replay_ready": "0",
+    "local_abgh_row_contract_replay_rows": "2",
+    "local_abgh_row_contract_replay_pass_rows": "2",
+    "local_abgh_row_contract_replay_ready": "1",
     "local_abgh_deterministic_adapter_ready": "1",
     "local_abgh_real_adapter_ready": "1",
     "v53ap_expected_answer_oracle_replay": "0",
@@ -180,6 +182,7 @@ for gate in [
     "local-abgh-baseline-run",
     "local-abgh-deterministic-adapter-run",
     "local-abgh-real-adapter-run",
+    "local-abgh-row-contract-replay",
     "evaluator-check",
     "grounded-generation-outputs",
     "h10-real-label-readiness-ledger",
@@ -206,6 +209,7 @@ required_files = [
     "pm_foundation_stage_replay_rows.csv",
     "pm_foundation_one_command_rows.csv",
     "pm_foundation_replay_preflight_rows.csv",
+    "local_abgh_row_contract_replay_rows.csv",
     "public_source_replay_policy_rows.csv",
     "public_source_snapshot_replay_rows.csv",
     "challenge_bundle_file_rows.csv",
@@ -335,6 +339,57 @@ for label, rows in [("direct", v53aq_prebaseline_rows), ("PM sidecar", pm_v53aq_
         raise SystemExit(f"v59e should carry 1000 {label} v53aq same-query ledger rows")
     if any(row["same_evaluator_contract"] != "1" or row["same_resource_bound"] != "1" or row["public_comparison_claim_ready"] != "0" for row in rows):
         raise SystemExit(f"v59e {label} v53aq same-query ledger should preserve evaluator/resource and public-comparison boundary")
+local_abgh_contract_rows = {
+    row["source_stage"]: row
+    for row in read_csv(run_dir / "local_abgh_row_contract_replay_rows.csv")
+}
+if set(local_abgh_contract_rows) != {"v53ap", "v53aq"}:
+    raise SystemExit("v59e local A/B/G/H row-contract replay should cover v53ap and v53aq")
+for stage, row in local_abgh_contract_rows.items():
+    if (
+        row["status"] != "pass"
+        or row["systems"] != "A/B/G/H"
+        or row["expected_query_rows"] != "1000"
+        or row["observed_query_rows"] != "1000"
+        or row["answer_rows"] != "4000"
+        or row["citation_rows"] != "4000"
+        or row["evaluator_rows"] != "4000"
+        or row["resource_rows"] != "4000"
+        or row["same_query_row_contract"] != "1"
+        or row["same_evaluator_contract_all_local_systems"] != "1"
+        or row["same_resource_contract_all_local_systems"] != "1"
+        or row["evaluator_bound_rows"] != "4000"
+        or row["answer_resource_bound_rows"] != "4000"
+        or row["answer_eval_separate_rows"] != "4000"
+        or row["citation_eval_separate_rows"] != "4000"
+        or row["resource_eval_separate_rows"] != "4000"
+        or row["resource_row_bound_rows"] != "4000"
+        or row["expected_answer_oracle_replay_zero_rows"] != "4000"
+        or row["expected_answer_oracle_replay_any"] != "0"
+        or row["no_external_model_rows"] != "4000"
+        or row["no_external_network_rows"] != "4000"
+        or row["public_comparison_claim_ready"] != "0"
+    ):
+        raise SystemExit(f"v59e {stage} row-contract replay should pass row/evaluator/resource/public-claim checks")
+if (
+    local_abgh_contract_rows["v53ap"]["deterministic_source_span_adapter_execution_rows"] != "4000"
+    or local_abgh_contract_rows["v53ap"]["actual_adapter_execution_ready_rows"] != "4000"
+    or local_abgh_contract_rows["v53ap"]["real_adapter_execution_ready_rows"] != "0"
+    or local_abgh_contract_rows["v53ap"]["real_system_performance_claim_ready_rows"] != "0"
+    or local_abgh_contract_rows["v53ap"]["same_query_internal_prebaseline_rows"] != "0"
+):
+    raise SystemExit("v59e v53ap row-contract replay should preserve deterministic adapter and blocked real-performance boundary")
+if (
+    local_abgh_contract_rows["v53aq"]["deterministic_source_span_adapter_execution_rows"] != "0"
+    or local_abgh_contract_rows["v53aq"]["actual_adapter_execution_ready_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["real_adapter_execution_ready_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["real_system_performance_claim_ready_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["selection_question_text_only_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["selection_oracle_field_used_rows"] != "0"
+    or local_abgh_contract_rows["v53aq"]["same_query_internal_prebaseline_rows"] != "1000"
+    or local_abgh_contract_rows["v53aq"]["same_query_internal_prebaseline_ready"] != "1"
+):
+    raise SystemExit("v59e v53aq row-contract replay should preserve query-text-only real-adapter and 1000-row prebaseline boundary")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("v59e PM sidecar repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -411,7 +466,9 @@ if (
 ):
     raise SystemExit("v59e manifest should preserve public source replay/download boundary")
 if (
-    manifest.get("local_abgh_row_contract_replay_ready") != 0
+    manifest.get("local_abgh_row_contract_replay_rows") != 2
+    or manifest.get("local_abgh_row_contract_replay_pass_rows") != 2
+    or manifest.get("local_abgh_row_contract_replay_ready") != 1
     or manifest.get("local_abgh_deterministic_adapter_ready") != 1
     or manifest.get("v53ap_expected_answer_oracle_replay") != 0
     or manifest.get("v53ap_deterministic_source_span_adapter_execution") != 1
@@ -419,6 +476,8 @@ if (
     or manifest.get("v53ap_actual_adapter_execution_ready") != 1
 ):
     raise SystemExit("v59e manifest should preserve the v53ap deterministic adapter boundary")
+if "local_abgh_row_contract_replay_rows_sha256" not in manifest:
+    raise SystemExit("v59e manifest should hash-bind local A/B/G/H row-contract replay rows")
 if (
     manifest.get("local_abgh_real_adapter_ready") != 1
     or manifest.get("v53aq_complete_source_abgh_real_adapter_measured_ready") != 1
@@ -495,7 +554,9 @@ for snippet in [
     "public_source_download_executed=0",
     "public_source_download_approval_required=1",
     "full_public_source_download_ready=0",
-    "local_abgh_row_contract_replay_ready=0",
+    "local_abgh_row_contract_replay_rows=2",
+    "local_abgh_row_contract_replay_pass_rows=2",
+    "local_abgh_row_contract_replay_ready=1",
     "local_abgh_deterministic_adapter_ready=1",
     "local_abgh_real_adapter_ready=1",
     "v53ap_expected_answer_oracle_replay=0",
@@ -576,6 +637,8 @@ if "public_source_snapshot_replay_rows.csv" not in {row["path"] for row in bundl
     raise SystemExit("v59e bundle index should include public source snapshot replay rows")
 if "pm_foundation_replay_preflight_rows.csv" not in {row["path"] for row in bundle_rows}:
     raise SystemExit("v59e bundle index should include replay preflight rows")
+if "local_abgh_row_contract_replay_rows.csv" not in {row["path"] for row in bundle_rows}:
+    raise SystemExit("v59e bundle index should include local A/B/G/H row-contract replay rows")
 for rel in ["v58_blind_eval_required_artifact_rows.csv", "v58_blind_eval_return_template_rows.csv"]:
     if rel not in {row["path"] for row in bundle_rows}:
         raise SystemExit(f"v59e bundle index should include {rel}")
@@ -622,6 +685,7 @@ expected_preflight_checks = {
     "no-private-fixture",
     "no-manual-postprocessing",
     "no-undocumented-local-state",
+    "local-abgh-row-contract-replay",
     "pm-pr-sidecar-packaged",
     "v58-required-return-artifacts-packaged",
     "blocker-false-positive-closed",
@@ -631,6 +695,8 @@ if {row["check"] for row in preflight_rows} != expected_preflight_checks:
     raise SystemExit("v59e replay preflight checks mismatch")
 if any(row["status"] != "pass" for row in preflight_rows):
     raise SystemExit("v59e replay preflight should pass every default local check")
+if not any(row["check"] == "local-abgh-row-contract-replay" and "row-contract checked" in row["claim_boundary"] for row in preflight_rows):
+    raise SystemExit("v59e replay preflight should preserve local A/B/G/H row-contract boundary")
 if not any(row["check"] == "no-live-download-default" and "approval-required" in row["claim_boundary"] for row in preflight_rows):
     raise SystemExit("v59e replay preflight should preserve download approval boundary")
 if not any(row["check"] == "no-manual-postprocessing" and "written by the command" in row["evidence"] for row in preflight_rows):

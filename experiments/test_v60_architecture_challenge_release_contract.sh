@@ -74,6 +74,9 @@ expected = {
     "local_abgh_prebaseline_ready": "1",
     "local_abgh_prebaseline_ledger_ready": "1",
     "local_abgh_prebaseline_ledger_rows": "1000",
+    "local_abgh_row_contract_replay_ready": "1",
+    "local_abgh_row_contract_replay_rows": "2",
+    "local_abgh_row_contract_replay_pass_rows": "2",
     "h10_real_label_promotion_ready": "0",
     "h10_source_verified_eval_ready": "0",
     "h10_external_human_label_evidence_ready": "0",
@@ -155,6 +158,7 @@ required_files = [
     "source_v59e/pm_foundation_stage_replay_rows.csv",
     "source_v59e/pm_foundation_one_command_rows.csv",
     "source_v59e/pm_foundation_replay_preflight_rows.csv",
+    "source_v59e/local_abgh_row_contract_replay_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v59e/public_source_snapshot_replay_rows.csv",
     "source_v59e/challenge_bundle_file_rows.csv",
@@ -256,6 +260,10 @@ content_repo_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gat
 content_snapshot_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
 binding_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv")
 abgh_prebaseline_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
+local_abgh_contract_rows = {
+    row["source_stage"]: row
+    for row in read_csv(run_dir / "source_v59e/local_abgh_row_contract_replay_rows.csv")
+}
 if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
     raise SystemExit("v60 should carry direct 10-repo manifest rows through v59e/PM sidecar")
 if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
@@ -266,6 +274,41 @@ if len(abgh_prebaseline_rows) != 1000:
     raise SystemExit("v60 should carry 1000 A/B/G/H same-query internal pre-baseline ledger rows through v59e/PM sidecar")
 if any(row["same_evaluator_contract"] != "1" or row["same_resource_bound"] != "1" or row["public_comparison_claim_ready"] != "0" for row in abgh_prebaseline_rows):
     raise SystemExit("v60 A/B/G/H internal pre-baseline ledger should preserve evaluator/resource and public-comparison boundary")
+if set(local_abgh_contract_rows) != {"v53ap", "v53aq"}:
+    raise SystemExit("v60 should carry v59e local A/B/G/H row-contract replay rows for v53ap and v53aq")
+for stage, row in local_abgh_contract_rows.items():
+    if (
+        row["status"] != "pass"
+        or row["systems"] != "A/B/G/H"
+        or row["expected_query_rows"] != "1000"
+        or row["observed_query_rows"] != "1000"
+        or row["answer_rows"] != "4000"
+        or row["citation_rows"] != "4000"
+        or row["evaluator_rows"] != "4000"
+        or row["resource_rows"] != "4000"
+        or row["same_query_row_contract"] != "1"
+        or row["same_evaluator_contract_all_local_systems"] != "1"
+        or row["same_resource_contract_all_local_systems"] != "1"
+        or row["answer_eval_separate_rows"] != "4000"
+        or row["citation_eval_separate_rows"] != "4000"
+        or row["resource_eval_separate_rows"] != "4000"
+        or row["expected_answer_oracle_replay_any"] != "0"
+        or row["no_external_model_rows"] != "4000"
+        or row["no_external_network_rows"] != "4000"
+        or row["public_comparison_claim_ready"] != "0"
+    ):
+        raise SystemExit(f"v60 should preserve passing v59e {stage} local A/B/G/H row-contract replay")
+if (
+    local_abgh_contract_rows["v53ap"]["deterministic_source_span_adapter_execution_rows"] != "4000"
+    or local_abgh_contract_rows["v53ap"]["real_adapter_execution_ready_rows"] != "0"
+    or local_abgh_contract_rows["v53ap"]["real_system_performance_claim_ready_rows"] != "0"
+    or local_abgh_contract_rows["v53aq"]["deterministic_source_span_adapter_execution_rows"] != "0"
+    or local_abgh_contract_rows["v53aq"]["real_adapter_execution_ready_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["selection_question_text_only_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["selection_oracle_field_used_rows"] != "0"
+    or local_abgh_contract_rows["v53aq"]["same_query_internal_prebaseline_rows"] != "1000"
+):
+    raise SystemExit("v60 should preserve v53ap deterministic and v53aq real-adapter row-contract boundaries")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("v60 repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -326,8 +369,8 @@ if v53_req["evidence_path"] != "source_v59e/source_pm_pr_claim_slice_gate/source
     raise SystemExit("v60 v53 requirement should point directly at copied query-span binding audit rows")
 h10_req = next(row for row in requirements if row["requirement"] == "h10_real_label_source_verified_scorer")
 abgh_req = next(row for row in requirements if row["requirement"] == "v53_abgh_same_query_internal_prebaseline")
-if abgh_req["evidence_path"] != "source_v59e/source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv":
-    raise SystemExit("v60 A/B/G/H pre-baseline requirement should point directly at copied same-query ledger rows")
+if abgh_req["evidence_path"] != "source_v59e/local_abgh_row_contract_replay_rows.csv":
+    raise SystemExit("v60 A/B/G/H pre-baseline requirement should point directly at copied row-contract replay rows")
 if h10_req["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
     raise SystemExit("v60 h10 requirement should point directly at PM h10 criteria rows")
 v58_req = next(row for row in requirements if row["requirement"] == "v58_real_blind_eval")
@@ -478,6 +521,8 @@ if (
     raise SystemExit("v60 manifest should record direct v53 pinned manifest evidence")
 if "v59e_public_source_snapshot_replay_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind v59e public source snapshot replay rows")
+if "v59e_local_abgh_row_contract_replay_sha256" not in manifest:
+    raise SystemExit("v60 manifest should hash-bind v59e local A/B/G/H row-contract replay rows")
 if "v59e_v58_blind_eval_required_artifact_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind v58 required artifact rows")
 if "v59e_v58_blind_eval_return_template_sha256" not in manifest:
@@ -503,6 +548,7 @@ for snippet in [
     "v53 10-repo / 1000 source-span-bound query PM freeze",
     "direct v53 1000-row query-span binding audit copied through v59e PM sidecar",
     "direct v53 repo/file/content manifest evidence copied through v59e PM sidecar",
+    "direct v59e A/B/G/H row-contract replay ledger",
     "direct 1000-row A/B/G/H same-query internal pre-baseline ledger copied through v59e PM sidecar",
     "real 30B/70B LLM+RAG comparison rows",
     "h10 real external/human label promotion evidence",

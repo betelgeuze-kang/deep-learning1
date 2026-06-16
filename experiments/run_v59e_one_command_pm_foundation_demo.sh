@@ -75,6 +75,167 @@ def as_int(row, key, default="0"):
     return int(float(row.get(key, default) or default))
 
 
+LOCAL_ABGH_SYSTEMS = {"A", "B", "G", "H"}
+LOCAL_ABGH_SYSTEMS_TEXT = "A/B/G/H"
+LOCAL_ABGH_QUERY_ROWS = 1000
+LOCAL_ABGH_SYSTEM_ROWS = 4
+LOCAL_ABGH_TOTAL_ROWS = LOCAL_ABGH_QUERY_ROWS * LOCAL_ABGH_SYSTEM_ROWS
+
+
+def count_value(rows, key, value):
+    return sum(1 for row in rows if row.get(key, "") == value)
+
+
+def count_not_value(rows, key, value):
+    return sum(1 for row in rows if row.get(key, "") != value)
+
+
+def complete_query_system_contract(rows):
+    by_query = {}
+    for row in rows:
+        by_query.setdefault(row.get("query_id", ""), set()).add(row.get("system_id", ""))
+    by_query.pop("", None)
+    return int(
+        len(by_query) == LOCAL_ABGH_QUERY_ROWS
+        and all(systems == LOCAL_ABGH_SYSTEMS for systems in by_query.values())
+    )
+
+
+def system_text(rows):
+    systems = sorted({row.get("system_id", "") for row in rows if row.get("system_id", "")})
+    return "/".join(systems)
+
+
+def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, claim_boundary):
+    answer_rows = read_csv(stage_dir / "abgh_answer_rows.csv")
+    citation_rows = read_csv(stage_dir / "abgh_citation_rows.csv")
+    evaluator_rows = read_csv(stage_dir / "abgh_evaluator_rows.csv")
+    resource_rows = read_csv(stage_dir / "abgh_resource_rows.csv")
+    answer_ids = {row["answer_id"] for row in answer_rows}
+    citation_ids = {row["citation_id"] for row in citation_rows}
+    resource_ids = {row["resource_row_id"] for row in resource_rows}
+    evaluator_bound_rows = sum(
+        1
+        for row in evaluator_rows
+        if row.get("answer_id") in answer_ids
+        and row.get("citation_id") in citation_ids
+        and row.get("resource_row_id") in resource_ids
+    )
+    answer_resource_bound_rows = sum(1 for row in answer_rows if row.get("resource_row_id") in resource_ids)
+    same_query_row_contract = int(
+        complete_query_system_contract(answer_rows)
+        and complete_query_system_contract(citation_rows)
+        and complete_query_system_contract(evaluator_rows)
+        and complete_query_system_contract(resource_rows)
+    )
+    answer_eval_separate_rows = count_value(evaluator_rows, "answer_eval_separate", "1")
+    citation_eval_separate_rows = count_value(evaluator_rows, "citation_eval_separate", "1")
+    resource_eval_separate_rows = count_value(evaluator_rows, "resource_eval_separate", "1")
+    resource_row_bound_rows = count_value(evaluator_rows, "resource_row_bound", "1")
+    expected_answer_oracle_replay_zero_rows = count_value(evaluator_rows, "expected_answer_oracle_replay", "0")
+    expected_answer_oracle_replay_any = count_not_value(evaluator_rows, "expected_answer_oracle_replay", "0")
+    no_external_model_rows = count_value(resource_rows, "external_model_used", "0")
+    no_external_network_rows = count_value(resource_rows, "external_network_used", "0")
+    deterministic_source_span_adapter_execution_rows = count_value(resource_rows, "deterministic_source_span_adapter_execution", "1")
+    actual_adapter_execution_ready_rows = count_value(resource_rows, "actual_adapter_execution_ready", "1")
+    real_adapter_execution_ready_rows = count_value(resource_rows, "real_adapter_execution_ready", "1")
+    real_system_performance_claim_ready_rows = count_value(evaluator_rows, "real_system_performance_claim_ready", "1")
+    selection_question_text_only_rows = count_value(evaluator_rows, "selection_question_text_only", "1")
+    selection_oracle_field_used_rows = count_value(evaluator_rows, "selection_oracle_field_used", "1")
+    common_ready = int(
+        as_int(summary_row, ready_field) == 1
+        and summary_row.get("systems") == LOCAL_ABGH_SYSTEMS_TEXT
+        and system_text(answer_rows) == LOCAL_ABGH_SYSTEMS_TEXT
+        and len(answer_rows) == LOCAL_ABGH_TOTAL_ROWS
+        and len(citation_rows) == LOCAL_ABGH_TOTAL_ROWS
+        and len(evaluator_rows) == LOCAL_ABGH_TOTAL_ROWS
+        and len(resource_rows) == LOCAL_ABGH_TOTAL_ROWS
+        and same_query_row_contract == 1
+        and as_int(summary_row, "same_query_set_all_local_systems") == 1
+        and as_int(summary_row, "same_evaluator_contract_all_local_systems") == 1
+        and as_int(summary_row, "same_resource_contract_all_local_systems") == 1
+        and evaluator_bound_rows == LOCAL_ABGH_TOTAL_ROWS
+        and answer_resource_bound_rows == LOCAL_ABGH_TOTAL_ROWS
+        and answer_eval_separate_rows == LOCAL_ABGH_TOTAL_ROWS
+        and citation_eval_separate_rows == LOCAL_ABGH_TOTAL_ROWS
+        and resource_eval_separate_rows == LOCAL_ABGH_TOTAL_ROWS
+        and resource_row_bound_rows == LOCAL_ABGH_TOTAL_ROWS
+        and expected_answer_oracle_replay_zero_rows == LOCAL_ABGH_TOTAL_ROWS
+        and expected_answer_oracle_replay_any == 0
+        and no_external_model_rows == LOCAL_ABGH_TOTAL_ROWS
+        and no_external_network_rows == LOCAL_ABGH_TOTAL_ROWS
+        and as_int(summary_row, "public_comparison_claim_ready") == 0
+    )
+    if stage == "v53ap":
+        stage_ready = int(
+            common_ready
+            and deterministic_source_span_adapter_execution_rows == LOCAL_ABGH_TOTAL_ROWS
+            and actual_adapter_execution_ready_rows == LOCAL_ABGH_TOTAL_ROWS
+            and real_adapter_execution_ready_rows == 0
+            and real_system_performance_claim_ready_rows == 0
+            and as_int(summary_row, "deterministic_source_span_adapter_execution") == 1
+            and as_int(summary_row, "real_system_performance_claim_ready") == 0
+        )
+        prebaseline_rows = 0
+        prebaseline_ready = 0
+    else:
+        prebaseline_rows = as_int(summary_row, "same_query_internal_prebaseline_rows")
+        prebaseline_ready = as_int(summary_row, "same_query_internal_prebaseline_rows_ready")
+        stage_ready = int(
+            common_ready
+            and deterministic_source_span_adapter_execution_rows == 0
+            and actual_adapter_execution_ready_rows == LOCAL_ABGH_TOTAL_ROWS
+            and real_adapter_execution_ready_rows == LOCAL_ABGH_TOTAL_ROWS
+            and real_system_performance_claim_ready_rows == LOCAL_ABGH_TOTAL_ROWS
+            and selection_question_text_only_rows == LOCAL_ABGH_TOTAL_ROWS
+            and selection_oracle_field_used_rows == 0
+            and as_int(summary_row, "selection_question_text_only") == 1
+            and as_int(summary_row, "selection_oracle_field_used") == 0
+            and as_int(summary_row, "deterministic_source_span_adapter_execution") == 0
+            and as_int(summary_row, "real_adapter_execution_ready") == 1
+            and as_int(summary_row, "real_system_performance_claim_ready") == 1
+            and prebaseline_ready == 1
+            and prebaseline_rows == LOCAL_ABGH_QUERY_ROWS
+        )
+    return {
+        "contract_id": f"{stage}-local-abgh-row-contract-replay",
+        "source_stage": stage,
+        "evidence_path": f"source_{stage}/abgh_evaluator_rows.csv",
+        "systems": system_text(answer_rows),
+        "expected_query_rows": str(LOCAL_ABGH_QUERY_ROWS),
+        "observed_query_rows": str(len({row.get("query_id", "") for row in answer_rows if row.get("query_id", "")})),
+        "expected_system_rows": str(LOCAL_ABGH_SYSTEM_ROWS),
+        "answer_rows": str(len(answer_rows)),
+        "citation_rows": str(len(citation_rows)),
+        "evaluator_rows": str(len(evaluator_rows)),
+        "resource_rows": str(len(resource_rows)),
+        "same_query_row_contract": str(same_query_row_contract),
+        "same_evaluator_contract_all_local_systems": str(as_int(summary_row, "same_evaluator_contract_all_local_systems")),
+        "same_resource_contract_all_local_systems": str(as_int(summary_row, "same_resource_contract_all_local_systems")),
+        "evaluator_bound_rows": str(evaluator_bound_rows),
+        "answer_resource_bound_rows": str(answer_resource_bound_rows),
+        "answer_eval_separate_rows": str(answer_eval_separate_rows),
+        "citation_eval_separate_rows": str(citation_eval_separate_rows),
+        "resource_eval_separate_rows": str(resource_eval_separate_rows),
+        "resource_row_bound_rows": str(resource_row_bound_rows),
+        "expected_answer_oracle_replay_zero_rows": str(expected_answer_oracle_replay_zero_rows),
+        "expected_answer_oracle_replay_any": str(expected_answer_oracle_replay_any),
+        "no_external_model_rows": str(no_external_model_rows),
+        "no_external_network_rows": str(no_external_network_rows),
+        "deterministic_source_span_adapter_execution_rows": str(deterministic_source_span_adapter_execution_rows),
+        "actual_adapter_execution_ready_rows": str(actual_adapter_execution_ready_rows),
+        "real_adapter_execution_ready_rows": str(real_adapter_execution_ready_rows),
+        "real_system_performance_claim_ready_rows": str(real_system_performance_claim_ready_rows),
+        "selection_question_text_only_rows": str(selection_question_text_only_rows),
+        "selection_oracle_field_used_rows": str(selection_oracle_field_used_rows),
+        "same_query_internal_prebaseline_rows": str(prebaseline_rows),
+        "same_query_internal_prebaseline_ready": str(prebaseline_ready),
+        "public_comparison_claim_ready": str(as_int(summary_row, "public_comparison_claim_ready")),
+        "status": "pass" if stage_ready else "blocked",
+        "claim_boundary": claim_boundary,
+    }
+
+
 v53t_dir = results / "v53t_complete_source_audit_readiness_gate" / "gate_001"
 v53ap_dir = results / "v53ap_complete_source_abgh_same_query_measured" / "measured_001"
 v53aq_dir = results / "v53aq_complete_source_abgh_real_adapter_measured" / "measured_001"
@@ -608,7 +769,43 @@ local_abgh_real_adapter_ready = int(
     and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
     and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
 )
-local_abgh_row_contract_replay_ready = 0
+local_abgh_row_contract_replay_rows = [
+    build_local_abgh_row_contract(
+        "v53ap",
+        v53ap_dir,
+        v53ap,
+        "v53ap_complete_source_abgh_same_query_measured_ready",
+        "internal v1.0 pre-baseline A/B/G/H deterministic source-span adapter row contract; real system performance and public comparison remain blocked",
+    ),
+    build_local_abgh_row_contract(
+        "v53aq",
+        v53aq_dir,
+        v53aq,
+        "v53aq_complete_source_abgh_real_adapter_measured_ready",
+        "internal v1.0 pre-baseline A/B/G/H query-text-only real-adapter row contract; public comparison remains blocked until D/E 30B/70B and blind eval evidence exist",
+    ),
+]
+write_csv(
+    run_dir / "local_abgh_row_contract_replay_rows.csv",
+    list(local_abgh_row_contract_replay_rows[0].keys()),
+    local_abgh_row_contract_replay_rows,
+)
+local_abgh_row_contract_replay_pass_rows = sum(1 for row in local_abgh_row_contract_replay_rows if row["status"] == "pass")
+local_abgh_row_contract_replay_ready = int(
+    len(local_abgh_row_contract_replay_rows) == 2
+    and local_abgh_row_contract_replay_pass_rows == 2
+    and local_abgh_baseline_run_ready == 1
+    and local_abgh_deterministic_adapter_ready == 1
+    and local_abgh_real_adapter_ready == 1
+)
+bundle_rows.append(
+    {
+        "path": "local_abgh_row_contract_replay_rows.csv",
+        "source_stage": "v59e_core",
+        "artifact_role": "local_abgh_row_contract_replay",
+    }
+)
+write_csv(run_dir / "challenge_bundle_file_rows.csv", list(bundle_rows[0].keys()), bundle_rows)
 grounded_generation_outputs_ready = int(
     as_int(v54c, "answer_rows") == 1000
     and as_int(v54c, "citation_rows") == 1000
@@ -654,6 +851,7 @@ gate_rows = [
     ("local-abgh-baseline-run", "pass" if local_abgh_baseline_run_ready else "blocked", "A/B/G/H answer/citation/resource row-contract rows are copied"),
     ("local-abgh-deterministic-adapter-run", "pass" if local_abgh_deterministic_adapter_ready else "blocked", "v53ap generates A/B/G/H answers from deterministic source-span adapters and keeps real performance comparison blocked"),
     ("local-abgh-real-adapter-run", "pass" if local_abgh_real_adapter_ready else "blocked", "v53aq runs query-text-only A/B/G/H adapters and keeps public comparison blocked"),
+    ("local-abgh-row-contract-replay", "pass" if local_abgh_row_contract_replay_ready else "blocked", "v53ap/v53aq answer, citation, evaluator, and resource rows replay as the same 1000-query A/B/G/H contract"),
     ("evaluator-check", "pass" if answer_citation_separate_eval else "blocked", "answer and citation/source checks remain separate"),
     ("grounded-generation-outputs", "pass" if grounded_generation_outputs_ready else "blocked", "v54c recommended output artifacts are copied"),
     ("h10-real-label-readiness-ledger", "pass" if h10_blocker_ledger_ready else "blocked", "h10 real-label promotion blocker ledger is copied"),
@@ -705,6 +903,8 @@ summary = {
     "v53ap_complete_source_abgh_same_query_measured_ready": v53ap["v53ap_complete_source_abgh_same_query_measured_ready"],
     "v53aq_complete_source_abgh_real_adapter_measured_ready": v53aq["v53aq_complete_source_abgh_real_adapter_measured_ready"],
     "local_abgh_baseline_run_ready": str(local_abgh_baseline_run_ready),
+    "local_abgh_row_contract_replay_rows": str(len(local_abgh_row_contract_replay_rows)),
+    "local_abgh_row_contract_replay_pass_rows": str(local_abgh_row_contract_replay_pass_rows),
     "local_abgh_row_contract_replay_ready": str(local_abgh_row_contract_replay_ready),
     "local_abgh_deterministic_adapter_ready": str(local_abgh_deterministic_adapter_ready),
     "local_abgh_real_adapter_ready": str(local_abgh_real_adapter_ready),
@@ -783,6 +983,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- public_source_download_executed={summary['public_source_download_executed']}\n"
     f"- full_public_source_download_ready={summary['full_public_source_download_ready']}\n"
     f"- local_abgh_baseline_run_ready={summary['local_abgh_baseline_run_ready']}\n"
+    f"- local_abgh_row_contract_replay_rows={summary['local_abgh_row_contract_replay_rows']}\n"
+    f"- local_abgh_row_contract_replay_pass_rows={summary['local_abgh_row_contract_replay_pass_rows']}\n"
     f"- local_abgh_row_contract_replay_ready={summary['local_abgh_row_contract_replay_ready']}\n"
     f"- local_abgh_deterministic_adapter_ready={summary['local_abgh_deterministic_adapter_ready']}\n"
     f"- local_abgh_real_adapter_ready={summary['local_abgh_real_adapter_ready']}\n"
@@ -818,6 +1020,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- public_source_download_approval_required={summary['public_source_download_approval_required']}\n"
     f"- full_public_source_download_ready={summary['full_public_source_download_ready']}\n"
     f"- local_abgh_baseline_run_ready={summary['local_abgh_baseline_run_ready']}\n"
+    f"- local_abgh_row_contract_replay_rows={summary['local_abgh_row_contract_replay_rows']}\n"
+    f"- local_abgh_row_contract_replay_pass_rows={summary['local_abgh_row_contract_replay_pass_rows']}\n"
     f"- local_abgh_row_contract_replay_ready={summary['local_abgh_row_contract_replay_ready']}\n"
     f"- local_abgh_deterministic_adapter_ready={summary['local_abgh_deterministic_adapter_ready']}\n"
     f"- local_abgh_real_adapter_ready={summary['local_abgh_real_adapter_ready']}\n"
@@ -889,7 +1093,10 @@ manifest = {
         "public-comparison-win",
         "public-abgh-comparison",
     ],
+    "local_abgh_row_contract_replay_rows": len(local_abgh_row_contract_replay_rows),
+    "local_abgh_row_contract_replay_pass_rows": local_abgh_row_contract_replay_pass_rows,
     "local_abgh_row_contract_replay_ready": local_abgh_row_contract_replay_ready,
+    "local_abgh_row_contract_replay_rows_sha256": sha256(run_dir / "local_abgh_row_contract_replay_rows.csv"),
     "local_abgh_deterministic_adapter_ready": local_abgh_deterministic_adapter_ready,
     "local_abgh_real_adapter_ready": local_abgh_real_adapter_ready,
     "v53ap_expected_answer_oracle_replay": as_int(v53ap, "expected_answer_oracle_replay"),
@@ -1246,6 +1453,14 @@ preflight_specs = [
         "local replay state is described by copied artifacts and summaries",
     ),
     (
+        "local-abgh-row-contract-replay",
+        as_int(summary, "local_abgh_row_contract_replay_ready") == 1
+        and as_int(summary, "local_abgh_row_contract_replay_rows") == 2
+        and as_int(summary, "local_abgh_row_contract_replay_pass_rows") == 2,
+        "v53ap/v53aq A/B/G/H row contracts replay answer/citation/evaluator/resource rows over 1000 queries",
+        "same-query local A/B/G/H replay is row-contract checked without public comparison wording",
+    ),
+    (
         "pm-pr-sidecar-packaged",
         pm_pr_claim_slice_bundle_ready == 1,
         "PM PR claim-slice sidecar, packets, locks, and templates are copied",
@@ -1387,6 +1602,7 @@ manifest["v58_return_template_ready_rows"] = v58_return_template_ready_rows
 manifest["v58_return_template_fixture_allowed_rows"] = v58_return_template_fixture_allowed_rows
 manifest["one_command_replay_preflight_ready"] = one_command_replay_preflight_ready
 manifest["pm_foundation_replay_preflight_rows_sha256"] = sha256(run_dir / "pm_foundation_replay_preflight_rows.csv")
+manifest["local_abgh_row_contract_replay_rows_sha256"] = sha256(run_dir / "local_abgh_row_contract_replay_rows.csv")
 manifest["v58_blind_eval_required_artifact_rows_sha256"] = sha256(run_dir / "v58_blind_eval_required_artifact_rows.csv")
 manifest["v58_blind_eval_return_template_rows_sha256"] = sha256(run_dir / "v58_blind_eval_return_template_rows.csv")
 manifest["public_source_snapshot_replay_rows_sha256"] = sha256(run_dir / "public_source_snapshot_replay_rows.csv")
