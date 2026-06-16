@@ -50,15 +50,29 @@ expected = {
     "v53ap_same_evaluator_contract_ready": "1",
     "v53ap_same_resource_contract_ready": "1",
     "v53ap_system_distinct_adapter_trace_ready": "1",
+    "v53aq_real_adapter_provenance_ready": "1",
+    "v53aq_wrong_key_signal_ready": "1",
+    "v53aq_adapter_trace_rows": "4000",
+    "v53aq_evaluator_rows": "4000",
+    "v53aq_selection_question_text_only": "1",
+    "v53aq_selection_oracle_field_used": "0",
+    "v53aq_expected_answer_oracle_replay": "0",
+    "v53aq_deterministic_source_span_adapter_execution": "0",
+    "v53aq_real_adapter_execution_ready": "1",
+    "v53aq_real_system_performance_claim_ready": "1",
+    "v53aq_answer_hash_match_rows": "3712",
+    "v53aq_coherent_wrong_key_rows": "288",
     "missing_query_abstain_ready": "1",
     "wrong_answer_guard_ready": "1",
     "same_query_abgh_ready": "1",
+    "same_query_real_adapter_ready": "1",
     "external_human_label_evidence_ready": "0",
     "supplied_real_label_evidence_rows": "0",
     "accepted_real_label_evidence_rows": "0",
     "fixture_or_synthetic_label_evidence_rows": "0",
     "v53q_complete_source_symmetric_scorer_policy_ready": "1",
     "v53ap_complete_source_abgh_same_query_measured_ready": "1",
+    "v53aq_complete_source_abgh_real_adapter_measured_ready": "1",
     "v54c_complete_source_grounded_generation_1000_ready": "1",
     "real_release_package_ready": "0",
 }
@@ -78,6 +92,12 @@ required_files = [
     "source_v53ap/abgh_system_metric_rows.csv",
     "source_v53ap/abgh_adapter_trace_rows.csv",
     "source_v53ap/abgh_evaluator_rows.csv",
+    "source_v53aq/adapter_selection_contract_rows.csv",
+    "source_v53aq/abgh_system_metric_rows.csv",
+    "source_v53aq/abgh_adapter_trace_rows.csv",
+    "source_v53aq/abgh_evaluator_rows.csv",
+    "source_v53aq/abgh_wrong_answer_guard_rows.csv",
+    "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "source_v54c/wrong_answer_guard_rows.csv",
 ]
 for rel in required_files:
@@ -98,10 +118,18 @@ for criterion in [
         raise SystemExit(f"missing PM h10 criterion: {criterion}")
 if criteria["source-provenance-binding"]["machine_evidence_status"] != "pass":
     raise SystemExit("source provenance should be machine-bound")
+if "v53aq_coherent_wrong_key_rows=288" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
+    raise SystemExit("coherent wrong-key criterion should cite v53aq wrong-key evidence")
+if "v53aq_H_coherent_wrong_key_rows=0" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
+    raise SystemExit("coherent wrong-key criterion should cite v53aq H wrong-key evidence")
 if "v53ap_adapter_trace_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("source provenance criterion should cite v53ap adapter trace rows")
 if "v53ap_evaluator_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("source provenance criterion should cite v53ap evaluator rows")
+if "v53aq_adapter_trace_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("source provenance criterion should cite v53aq adapter trace rows")
+if "v53aq_evaluator_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("source provenance criterion should cite v53aq evaluator rows")
 if criteria["external-human-label-evidence"]["real_label_status"] != "blocked":
     raise SystemExit("external/human label evidence should remain blocked by default")
 
@@ -130,10 +158,44 @@ if any(
 ):
     raise SystemExit("h10 PM gate v53ap evaluator rows should preserve separate source-bound non-oracle evaluation")
 
+v53aq_adapter_traces = read_csv(run_dir / "source_v53aq/abgh_adapter_trace_rows.csv")
+v53aq_evaluators = read_csv(run_dir / "source_v53aq/abgh_evaluator_rows.csv")
+if len(v53aq_adapter_traces) != 4000:
+    raise SystemExit("h10 PM gate should copy 4000 v53aq adapter trace rows")
+if {row["system_id"] for row in v53aq_adapter_traces} != {"A", "B", "G", "H"}:
+    raise SystemExit("h10 PM gate v53aq adapter traces should cover A/B/G/H")
+if any(
+    row["selection_question_text_used"] != "1"
+    or row["selection_oracle_field_used"] != "0"
+    or row["expected_answer_oracle_replay"] != "0"
+    or row["deterministic_source_span_adapter_execution"] != "0"
+    for row in v53aq_adapter_traces
+):
+    raise SystemExit("h10 PM gate v53aq adapter traces should preserve query-text-only non-oracle selection")
+if len(v53aq_evaluators) != 4000:
+    raise SystemExit("h10 PM gate should copy 4000 v53aq evaluator rows")
+if {row["system_id"] for row in v53aq_evaluators} != {"A", "B", "G", "H"}:
+    raise SystemExit("h10 PM gate v53aq evaluator rows should cover A/B/G/H")
+if {row["evaluator_contract_id"] for row in v53aq_evaluators} != {"v53aq-query-text-only-answer-citation-resource-v1"}:
+    raise SystemExit("h10 PM gate v53aq evaluator rows should share the v53aq evaluator contract")
+if any(
+    row["answer_eval_separate"] != "1"
+    or row["citation_eval_separate"] != "1"
+    or row["resource_eval_separate"] != "1"
+    or row["selection_question_text_only"] != "1"
+    or row["selection_oracle_field_used"] != "0"
+    or row["expected_answer_oracle_replay"] != "0"
+    or row["deterministic_source_span_adapter_execution"] != "0"
+    or row["real_system_performance_claim_ready"] != "1"
+    for row in v53aq_evaluators
+):
+    raise SystemExit("h10 PM gate v53aq evaluator rows should preserve real-adapter separate evaluation")
+
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
     "v53-complete-source-symmetric-scorer-policy",
     "v53ap-abgh-same-query-prebaseline",
+    "v53aq-abgh-real-adapter-evidence",
     "v54c-grounded-generation-guard",
     "h10-diagnostic-scorer-signal",
 ]:
@@ -157,6 +219,12 @@ if manifest.get("v53ap_adapter_trace_provenance_ready") != 1 or manifest.get("v5
     raise SystemExit("manifest should record v53ap adapter trace provenance readiness")
 if manifest.get("v53ap_evaluator_provenance_ready") != 1 or manifest.get("v53ap_evaluator_rows") != 4000:
     raise SystemExit("manifest should record v53ap evaluator provenance readiness")
+if manifest.get("v53aq_real_adapter_provenance_ready") != 1 or manifest.get("v53aq_wrong_key_signal_ready") != 1:
+    raise SystemExit("manifest should record v53aq real-adapter evidence readiness")
+if manifest.get("v53aq_adapter_trace_rows") != 4000 or manifest.get("v53aq_evaluator_rows") != 4000:
+    raise SystemExit("manifest should record v53aq provenance row counts")
+if manifest.get("v53aq_selection_question_text_only") != 1 or manifest.get("v53aq_selection_oracle_field_used") != 0:
+    raise SystemExit("manifest should record v53aq query-text-only selection boundary")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -174,6 +242,13 @@ for snippet in [
     "v53ap_adapter_trace_rows=4000",
     "v53ap_evaluator_provenance_ready=1",
     "v53ap_evaluator_rows=4000",
+    "v53aq_real_adapter_provenance_ready=1",
+    "v53aq_wrong_key_signal_ready=1",
+    "v53aq_adapter_trace_rows=4000",
+    "v53aq_evaluator_rows=4000",
+    "v53aq_selection_question_text_only=1",
+    "v53aq_selection_oracle_field_used=0",
+    "v53aq_coherent_wrong_key_rows=288",
     "Blocked wording",
 ]:
     if snippet not in boundary:

@@ -45,7 +45,7 @@ h10-p: runner-owned runtime fetcher replay contract passes for h10-o attestation
 h10-q: live-network runtime evidence import gate passes for provided live-network rows, while real source import remains blocked.
 h10-r: real teacher-source import/review chain gate passes contract/guard tests, while official authority and real source verification remain blocked.
 h10-s: source-verified learned scorer student-only eval gate passes metric/guard tests, while final scorer eval readiness remains blocked until official real teacher-source authority exists.
-h10 PM real-label readiness: complete-source scorer provenance, A/B/G/H same-query rows plus v53ap adapter-trace and evaluator-row provenance, v54 grounded-generation guards, and h10 diagnostic scorer signal are bound into a PM acceptance ledger, while h10 real-label promotion remains blocked until accepted external/human label evidence and h10 source-verified evaluation exist.
+h10 PM real-label readiness: complete-source scorer provenance, A/B/G/H same-query rows plus v53ap adapter-trace/evaluator provenance, v53aq query-text-only real-adapter wrong-key/provenance evidence, v54 grounded-generation guards, and h10 diagnostic scorer signal are bound into a PM acceptance ledger, while h10 real-label promotion remains blocked until accepted external/human label evidence and h10 source-verified evaluation exist.
 v1.0 PM PR claim slice gate: the current v52-v60/v61 surface is split into ten review slices with explicit merge conditions and local review-packet markdown for claim boundary, replayable artifacts, and false-positive blocker closure; tests-only merge readiness is forbidden.
 h7-b: promotion gate blocks default route-memory promotion.
 h7-c: promotion review gate binds h7-b, h10-r, h10-s, v08-ab, h11-d, and h9-h, passes review/threshold guardrails, and still blocks default promotion until real evidence exists across every input.
@@ -678,7 +678,7 @@ v59e: One-command PM foundation demo is implemented and covered by `experiments/
 
 v1.0 PM PR claim slice gate is implemented and covered by `experiments/test_v1_0_pm_pr_claim_slice_gate.sh`. It assembles `results/v1_0_pm_pr_claim_slice_gate/gate_001/` without rerunning heavy experiments, reads the current roadmap and summary rows, writes `pm_pr_slice_rows.csv`, `pm_pr_merge_gate_rows.csv`, `pm_pr_claim_boundary_rows.csv`, `pm_pr_slice_file_rows.csv`, `pm_pr_slice_verification_rows.csv`, `pm_pr_review_packet_rows.csv`, ten local markdown review packets under `review_packets/`, `pm_roadmap_requirement_rows.csv`, `pm_execution_lock_rows.csv`, `pm_blocker_closure_queue_rows.csv`, `pm_blocker_closure_packet_rows.csv`, six local blocker-closure packets under `blocker_packets/`, `pm_blocker_required_artifact_rows.csv`, `pm_external_return_template_rows.csv`, copied source summaries, copied v53t foundation-freeze rows plus direct query/span and A/B/G/H evaluator evidence, copied v53aq real-adapter selection/evaluator evidence, copied h10 PM real-label acceptance/template rows, 22 no-fixture return templates under `return_templates/`, `V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md`, `v1_0_pm_pr_claim_slice_gate_manifest.json`, and `sha256_manifest.csv`. The smoke verifies ten recommended slices, ten local review packet files, ten allowed/blocked claim-boundary rows, 30 merge-gate rows, 41 slice-file rows, 17 verification-command rows, zero tests-only merge conditions, explicit false-positive blocker closure for every slice, 20 PM roadmap requirement rows with 14 ready and six blocked, direct v53 evaluator-row evidence for answer/citation separation, a ready A/B/G/H real-adapter execution row bound to v53aq query-text-only evaluator evidence, direct h10 criteria-row evidence for coherent wrong-key, chunk exact, near-miss, missing abstain, provenance binding, and external/human-label blockers, ten execution-lock rows that disallow default v62/v63 scope drift, six deferred/approval-required blocker closure rows, six local blocker-closure packets, 22 no-fixture required-artifact rows, and 22 approval-required return templates for v56 replay artifacts, D/E 30B/70B baselines, h10 real-label promotion, v58c intake artifact, v58 full blind eval, and v60 release readiness. The review, blocker, and return-template packets are local runbooks only and do not push, open, merge, publish, approve external execution, or replace real evidence.
 
-v60: Architecture Challenge release-audit gate is implemented and covered by `experiments/test_v60_architecture_challenge_release_contract.sh`. The runner assembles `results/v60_architecture_challenge_release_contract/contract_001/` from the current v59e PM foundation bundle, the PM PR claim-slice sidecar, and source summaries for v52/v53/v54/h10. It now carries direct v53t query/span and A/B/G/H evaluator evidence forward from the PM sidecar, copies the h10 PM real-label criteria ledger into `source_h10_pm/`, and makes the h10 release requirement point directly at `pm_h10_real_label_acceptance_rows.csv` rather than only at a summary/blocker row. Legacy v59 scaffold source is copied only when already present; rebuilding it requires explicit `V60_REBUILD_SOURCE_CHAIN=1`. The gate writes `release_requirement_rows.csv`, `allowed_claim_rows.csv`, `forbidden_claim_rows.csv`, `release_decision_rows.csv`, `legacy_v59_contract_source_rows.csv`, copied PM foundation evidence, direct v53/h10 PM criteria evidence, `V60_ARCHITECTURE_CHALLENGE_RELEASE_BOUNDARY.md`, `v60_architecture_challenge_release_manifest.json`, and `sha256_manifest.csv`. The smoke verifies `v60_release_contract_ready=1`, 14 release requirements with six PM-foundation requirements ready and eight blockers still closed, three limited allowed claims, 11 forbidden claims, v53 10-repo/1000-query freeze, A/B/G/H internal pre-baseline, v54c 1000 grounded-generation rows, direct h10 criteria rows, v59e one-command PM replay, PM execution lock, and no-fixture return templates. It keeps `v60_ready=0`, `real_release_package_ready=0`, D/E 30B/70B baselines, h10 real labels, v56 replay artifact, v58c blind-response intake artifact, v58 real blind eval, full v59 public demo, human release review, and release package blocked.
+v60: Architecture Challenge release-audit gate is implemented and covered by `experiments/test_v60_architecture_challenge_release_contract.sh`. The runner assembles `results/v60_architecture_challenge_release_contract/contract_001/` from the current v59e PM foundation bundle, the PM PR claim-slice sidecar, and source summaries for v52/v53/v54/h10. It now carries direct v53t query/span and A/B/G/H evaluator evidence forward from the PM sidecar, copies the h10 PM real-label criteria ledger plus nested v53aq real-adapter trace/evaluator/metric evidence into `source_h10_pm/`, and makes the h10 release requirement point directly at `pm_h10_real_label_acceptance_rows.csv` rather than only at a summary/blocker row. Legacy v59 scaffold source is copied only when already present; rebuilding it requires explicit `V60_REBUILD_SOURCE_CHAIN=1`. The gate writes `release_requirement_rows.csv`, `allowed_claim_rows.csv`, `forbidden_claim_rows.csv`, `release_decision_rows.csv`, `legacy_v59_contract_source_rows.csv`, copied PM foundation evidence, direct v53/h10 PM criteria evidence, `V60_ARCHITECTURE_CHALLENGE_RELEASE_BOUNDARY.md`, `v60_architecture_challenge_release_manifest.json`, and `sha256_manifest.csv`. The smoke verifies `v60_release_contract_ready=1`, 14 release requirements with six PM-foundation requirements ready and eight blockers still closed, three limited allowed claims, 11 forbidden claims, v53 10-repo/1000-query freeze, A/B/G/H internal pre-baseline, v54c 1000 grounded-generation rows, direct h10 criteria rows, copied v53aq real-adapter evidence under h10 PM, v59e one-command PM replay, PM execution lock, and no-fixture return templates. It keeps `v60_ready=0`, `real_release_package_ready=0`, D/E 30B/70B baselines, h10 real labels, v56 replay artifact, v58c blind-response intake artifact, v58 real blind eval, full v59 public demo, human release review, and release package blocked.
 
 v60c: Release-blocker replay entrypoint is implemented and covered by `experiments/test_v60c_release_blocker_replay_entrypoint.sh`. The runner consumes v60, copies the PM blocker closure and return-template evidence, and emits `results/v60c_release_blocker_replay_entrypoint/entrypoint_001/` with required env rows, stage rows, command rows, a metadata-only entrypoint bundle, boundary, manifest, and sha256 manifest. The guarded script requires eight explicit env values, repo-external evidence paths, and `V60C_REAL_EVIDENCE_PROVENANCE=real-v60-release-blocker-evidence`; no env, fixture provenance, and repo-internal roots are rejected before any local replay command runs. The smoke verifies `v60c_release_blocker_replay_entrypoint_ready=1`, two ready metadata-verification stages, ten blocked real-evidence/release stages, `remote_mutation_approved=0`, `network_required_by_default=0`, `downloads_required_by_default=0`, zero repo payload, and continued `v60_ready=0` / `real_release_package_ready=0`.
 
@@ -1058,12 +1058,13 @@ Latest completed status:
   h10-r have official real teacher-source authority.
 - The h10 PM real-label promotion readiness gate binds h10-s to the current
   complete-source PM surface: v53q symmetric scorer/provenance rows, v53ap
-  A/B/G/H same-query deterministic source-span adapter rows plus
-  `abgh_adapter_trace_rows.csv` and `abgh_evaluator_rows.csv`, and v54c grounded-generation
-  answer/citation/abstain/wrong-answer guard rows. It emits
+  A/B/G/H same-query deterministic source-span adapter rows, v53aq
+  query-text-only real-adapter wrong-key/provenance rows, and v54c
+  grounded-generation answer/citation/abstain/wrong-answer guard rows. It emits
   `pm_h10_real_label_acceptance_rows.csv`, a real-label evidence template,
   supplied-evidence acceptance rows, a claim boundary, and a sha256 manifest.
-  It marks the machine provenance/missing/guard surfaces ready but keeps
+  It marks the machine provenance/missing/guard surfaces ready and records the
+  v53aq 4000-trace/4000-evaluator real-adapter evidence, but keeps
   `h10_real_label_promotion_ready=0` until accepted external/human label
   evidence and h10 source-verified eval readiness are both present.
 - h10-l remains the route-memory learned-scorer/source binding gate. It keeps
@@ -2565,8 +2566,9 @@ Expected:
 
 This gate translates the PM h10 scorer milestone into a machine-checkable
 acceptance ledger without fabricating real labels. It consumes h10-s, v53q,
-v53ap, and v54c, then separates local/diagnostic scorer signal from the
-external or human label evidence required for promotion.
+v53ap, v53aq, and v54c, then separates local/diagnostic scorer signal and
+query-text-only real-adapter wrong-key/provenance evidence from the external or
+human label evidence required for promotion.
 
 ```bash
 experiments/run_v10_h10_real_label_promotion_readiness_gate.sh
@@ -2584,6 +2586,9 @@ source_provenance_binding_ready = 1
 missing_query_abstain_ready = 1
 wrong_answer_guard_ready = 1
 same_query_abgh_ready = 1
+same_query_real_adapter_ready = 1
+v53aq_real_adapter_provenance_ready = 1
+v53aq_wrong_key_signal_ready = 1
 external_human_label_evidence_ready = 0
 ```
 
@@ -2592,6 +2597,8 @@ Expected:
 - coherent wrong-key, chunk exact, near-miss slash, missing-query abstain,
   source provenance, and external/human label evidence each get explicit
   acceptance rows
+- coherent wrong-key evidence cites the v53aq real-adapter split: A has 288
+  coherent wrong-key rows and H has zero under scorer/policy traces
 - v53/v54 machine evidence can pass without becoming h10 real-label promotion
 - fixture or synthetic label evidence is rejected by the non-fixture check
 - malformed supplied label evidence CSVs are rejected
