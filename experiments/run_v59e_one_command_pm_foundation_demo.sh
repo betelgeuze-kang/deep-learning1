@@ -342,6 +342,30 @@ pm_checks = {row["check_id"]: row for row in read_csv(v53t_dir / "complete_sourc
 pinned_public_sources_verified = int(pm_checks.get("pinned-public-repo-manifest", {}).get("status") == "pass")
 answer_citation_separate_eval = int(pm_checks.get("answer-citation-separate-eval", {}).get("status") == "pass")
 blocker_false_positive_closed = int(pm_checks.get("blocker-false-positive-closed", {}).get("status") == "pass")
+public_source_policy_rows = [
+    {
+        "policy_id": "v59e-pm-foundation-source-replay-policy",
+        "pinned_public_sources_verified": str(pinned_public_sources_verified),
+        "source_snapshot_replay_used": "1",
+        "public_source_download_executed": "0",
+        "public_source_download_approval_required": "1",
+        "network_required_by_default": "0",
+        "downloads_required_by_default": "0",
+        "full_public_source_download_ready": "0",
+        "evidence_path": "source_v53t/complete_source_pm_freeze_check_rows.csv",
+        "blocker_status": "blocked-full-public-demo",
+        "reason": "v59e replays the pinned v53 complete-source snapshot; live public-source download/refresh requires explicit approval and belongs to the full v59 public demo path",
+    }
+]
+write_csv(run_dir / "public_source_replay_policy_rows.csv", list(public_source_policy_rows[0].keys()), public_source_policy_rows)
+bundle_rows.append(
+    {
+        "path": "public_source_replay_policy_rows.csv",
+        "source_stage": "v59e_core",
+        "artifact_role": "source_replay_policy",
+    }
+)
+write_csv(run_dir / "challenge_bundle_file_rows.csv", list(bundle_rows[0].keys()), bundle_rows)
 route_memory_artifact_ready = int(as_int(v53ap, "routehint_rows") == 2000 and as_int(v54c, "compact_routehint_rows") == 1000)
 local_abgh_baseline_run_ready = int(
     v53ap.get("systems") == "A/B/G/H"
@@ -391,6 +415,8 @@ challenge_bundle_ready = int(all(row["ready"] == "1" for row in stage_rows) and 
 
 gate_rows = [
     ("pinned-public-sources-verified", "pass" if pinned_public_sources_verified else "blocked", "v53t PM freeze has pinned 10-repo manifest check"),
+    ("public-source-replay-policy", "pass", "PM foundation replay uses hash-bound pinned source artifacts and records that live downloads are not executed by default"),
+    ("public-source-download-execution", "blocked", "full v59 public demo still needs explicit approval and live/downloaded public-source refresh evidence"),
     ("complete-source-query-freeze", "pass" if as_int(v53t, "pm_v53_freeze_ready") else "blocked", "v53t PM freeze checks pass"),
     ("route-memory-artifact-built", "pass" if route_memory_artifact_ready else "blocked", "v53ap/v54c RouteHint artifacts are replayed"),
     ("local-abgh-baseline-run", "pass" if local_abgh_baseline_run_ready else "blocked", "A/B/G/H answer/citation/resource row-contract rows are copied"),
@@ -433,6 +459,10 @@ summary = {
     "full_ready_stage_rows": str(sum(1 for row in stage_rows if row["full_ready"] == "1")),
     "bundle_files": str(len(bundle_rows)),
     "pinned_public_sources_verified": str(pinned_public_sources_verified),
+    "source_snapshot_replay_used": "1",
+    "public_source_download_executed": "0",
+    "public_source_download_approval_required": "1",
+    "full_public_source_download_ready": "0",
     "pm_v53_freeze_ready": v53t["pm_v53_freeze_ready"],
     "v53ap_complete_source_abgh_same_query_measured_ready": v53ap["v53ap_complete_source_abgh_same_query_measured_ready"],
     "local_abgh_baseline_run_ready": str(local_abgh_baseline_run_ready),
@@ -489,6 +519,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     "review split and the v56 replay-artifact blocker are visible beside this bundle. "
     "It is intentionally not the completed v59 public challenge demo.\n\n"
     f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
+    f"- source_snapshot_replay_used={summary['source_snapshot_replay_used']}\n"
+    f"- public_source_download_executed={summary['public_source_download_executed']}\n"
+    f"- full_public_source_download_ready={summary['full_public_source_download_ready']}\n"
     f"- local_abgh_baseline_run_ready={summary['local_abgh_baseline_run_ready']}\n"
     f"- local_abgh_row_contract_replay_ready={summary['local_abgh_row_contract_replay_ready']}\n"
     f"- local_abgh_deterministic_adapter_ready={summary['local_abgh_deterministic_adapter_ready']}\n"
@@ -511,6 +544,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     "This one-command bundle exists to make the PM foundation replayable. It must not be used as a v1.0 public challenge or release claim.\n\n"
     f"- v59e_one_command_pm_foundation_demo_ready={summary['v59e_one_command_pm_foundation_demo_ready']}\n"
     f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
+    f"- source_snapshot_replay_used={summary['source_snapshot_replay_used']}\n"
+    f"- public_source_download_executed={summary['public_source_download_executed']}\n"
+    f"- public_source_download_approval_required={summary['public_source_download_approval_required']}\n"
+    f"- full_public_source_download_ready={summary['full_public_source_download_ready']}\n"
     f"- local_abgh_baseline_run_ready={summary['local_abgh_baseline_run_ready']}\n"
     f"- local_abgh_row_contract_replay_ready={summary['local_abgh_row_contract_replay_ready']}\n"
     f"- local_abgh_deterministic_adapter_ready={summary['local_abgh_deterministic_adapter_ready']}\n"
@@ -547,6 +584,10 @@ manifest = {
     "v59_ready": 0,
     "stage_rows": len(stage_rows),
     "bundle_files": len(bundle_rows),
+    "source_snapshot_replay_used": 1,
+    "public_source_download_executed": 0,
+    "public_source_download_approval_required": 1,
+    "full_public_source_download_ready": 0,
     "source_summary_sha256": {
         "v53t": sha256(results / "v53t_complete_source_audit_readiness_gate_summary.csv"),
         "v53ap": sha256(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv"),

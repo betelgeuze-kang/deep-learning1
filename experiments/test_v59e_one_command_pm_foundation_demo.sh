@@ -48,6 +48,10 @@ expected = {
     "ready_stage_rows": "6",
     "full_ready_stage_rows": "1",
     "pinned_public_sources_verified": "1",
+    "source_snapshot_replay_used": "1",
+    "public_source_download_executed": "0",
+    "public_source_download_approval_required": "1",
+    "full_public_source_download_ready": "0",
     "pm_v53_freeze_ready": "1",
     "v53ap_complete_source_abgh_same_query_measured_ready": "1",
     "local_abgh_baseline_run_ready": "1",
@@ -132,6 +136,7 @@ if [row["full_ready"] for row in stage_rows] != ["0", "0", "1", "0", "0", "0"]:
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
     "pinned-public-sources-verified",
+    "public-source-replay-policy",
     "complete-source-query-freeze",
     "route-memory-artifact-built",
     "local-abgh-baseline-run",
@@ -151,13 +156,14 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v59e gate should pass: {gate}")
-for gate in ["v58-blind-response-intake", "real-blind-eval", "full-v59-public-demo", "real-release-package"]:
+for gate in ["public-source-download-execution", "v58-blind-response-intake", "real-blind-eval", "full-v59-public-demo", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v59e gate should remain blocked: {gate}")
 
 required_files = [
     "pm_foundation_stage_replay_rows.csv",
     "pm_foundation_one_command_rows.csv",
+    "public_source_replay_policy_rows.csv",
     "challenge_bundle_file_rows.csv",
     "pm_foundation_demo_gate_rows.csv",
     "pm_foundation_demo.sh",
@@ -208,6 +214,13 @@ if "h10-real-label-promotion" not in manifest.get("blocked_claims", []):
 if "real-abgh-system-performance" not in manifest.get("blocked_claims", []):
     raise SystemExit("v59e manifest should block real A/B/G/H system performance claims")
 if (
+    manifest.get("source_snapshot_replay_used") != 1
+    or manifest.get("public_source_download_executed") != 0
+    or manifest.get("public_source_download_approval_required") != 1
+    or manifest.get("full_public_source_download_ready") != 0
+):
+    raise SystemExit("v59e manifest should preserve public source replay/download boundary")
+if (
     manifest.get("local_abgh_row_contract_replay_ready") != 0
     or manifest.get("local_abgh_deterministic_adapter_ready") != 1
     or manifest.get("v53ap_expected_answer_oracle_replay") != 0
@@ -241,6 +254,10 @@ boundary = (run_dir / "V59E_ONE_COMMAND_PM_FOUNDATION_BOUNDARY.md").read_text(en
 for snippet in [
     "v59e_one_command_pm_foundation_demo_ready=1",
     "pm_v53_freeze_ready=1",
+    "source_snapshot_replay_used=1",
+    "public_source_download_executed=0",
+    "public_source_download_approval_required=1",
+    "full_public_source_download_ready=0",
     "local_abgh_row_contract_replay_ready=0",
     "local_abgh_deterministic_adapter_ready=1",
     "v53ap_expected_answer_oracle_replay=0",
@@ -263,6 +280,25 @@ for snippet in [
 ]:
     if snippet not in boundary:
         raise SystemExit(f"v59e boundary missing: {snippet}")
+
+policy_rows = read_csv(run_dir / "public_source_replay_policy_rows.csv")
+if len(policy_rows) != 1:
+    raise SystemExit("v59e should emit one public source replay policy row")
+policy = policy_rows[0]
+if (
+    policy["pinned_public_sources_verified"] != "1"
+    or policy["source_snapshot_replay_used"] != "1"
+    or policy["public_source_download_executed"] != "0"
+    or policy["public_source_download_approval_required"] != "1"
+    or policy["network_required_by_default"] != "0"
+    or policy["downloads_required_by_default"] != "0"
+    or policy["full_public_source_download_ready"] != "0"
+    or policy["blocker_status"] != "blocked-full-public-demo"
+):
+    raise SystemExit("v59e public source replay policy boundary mismatch")
+bundle_rows = read_csv(run_dir / "challenge_bundle_file_rows.csv")
+if "public_source_replay_policy_rows.csv" not in {row["path"] for row in bundle_rows}:
+    raise SystemExit("v59e bundle index should include public source replay policy rows")
 
 pr_summary = read_csv(pr_slice_summary_csv)[0]
 if pr_summary.get("v1_0_pm_pr_claim_slice_gate_ready") != "1":

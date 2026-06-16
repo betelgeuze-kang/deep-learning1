@@ -47,6 +47,10 @@ expected = {
     "allowed_claim_rows": "3",
     "forbidden_claim_rows": "11",
     "v59e_one_command_pm_foundation_demo_ready": "1",
+    "source_snapshot_replay_used": "1",
+    "public_source_download_executed": "0",
+    "public_source_download_approval_required": "1",
+    "full_public_source_download_ready": "0",
     "pm_pr_claim_slice_bundle_ready": "1",
     "pm_scope_drift_allowed": "0",
     "pm_external_return_template_rows": "22",
@@ -115,6 +119,7 @@ required_files = [
     "legacy_v59_contract_source_rows.csv",
     "source_v59e/pm_foundation_stage_replay_rows.csv",
     "source_v59e/pm_foundation_one_command_rows.csv",
+    "source_v59e/public_source_replay_policy_rows.csv",
     "source_v59e/challenge_bundle_file_rows.csv",
     "source_v59e/pm_foundation_demo_gate_rows.csv",
     "source_v59e/README_RESULT.md",
@@ -218,6 +223,7 @@ for snippet in [
     "real 30B/70B LLM+RAG comparison rows",
     "h10 real external/human label promotion evidence",
     "v58c blind-response intake artifact",
+    "approved public-source download/refresh evidence",
     "Do not publish v1.0 release",
 ]:
     if snippet not in boundary:

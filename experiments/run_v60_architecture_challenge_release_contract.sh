@@ -130,6 +130,7 @@ write_csv(
 for rel in [
     "pm_foundation_stage_replay_rows.csv",
     "pm_foundation_one_command_rows.csv",
+    "public_source_replay_policy_rows.csv",
     "challenge_bundle_file_rows.csv",
     "pm_foundation_demo_gate_rows.csv",
     "README_RESULT.md",
@@ -289,8 +290,10 @@ requirements = [
     ),
     req(
         "full_v59_public_demo_real_replay",
-        as_int(v59e, "full_v1_public_demo_ready") == 1 and as_int(v59e, "v59_ready") == 1,
-        "v59e is a PM foundation replay, not a full public challenge demo over all real rows",
+        as_int(v59e, "full_v1_public_demo_ready") == 1
+        and as_int(v59e, "v59_ready") == 1
+        and as_int(v59e, "full_public_source_download_ready") == 1,
+        "v59e is a PM foundation replay, not a full public challenge demo over all real rows with approved public-source download/refresh evidence",
         "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv",
         "full-v59-public-demo-missing",
     ),
@@ -391,6 +394,10 @@ summary = {
     "legacy_v59_contract_source_ready": legacy_v59_contract_ready,
     "legacy_v59_contract_copied_files": legacy_v59_copied_files,
     "v59e_one_command_pm_foundation_demo_ready": as_int(v59e, "v59e_one_command_pm_foundation_demo_ready"),
+    "source_snapshot_replay_used": as_int(v59e, "source_snapshot_replay_used"),
+    "public_source_download_executed": as_int(v59e, "public_source_download_executed"),
+    "public_source_download_approval_required": as_int(v59e, "public_source_download_approval_required"),
+    "full_public_source_download_ready": as_int(v59e, "full_public_source_download_ready"),
     "pm_pr_claim_slice_bundle_ready": as_int(v59e, "pm_pr_claim_slice_bundle_ready"),
     "pm_scope_drift_allowed": as_int(v59e, "pm_scope_drift_allowed"),
     "pm_external_return_template_rows": as_int(v59e, "pm_external_return_template_rows"),
@@ -439,6 +446,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- v58c blind-response intake artifact or explicit dependency closure\n"
     "- v58 real blind eval responses and human review\n"
     "- full v59 public challenge replay over all real rows\n"
+    "- approved public-source download/refresh evidence for the full v59 public replay\n"
     "- human/release review\n"
     "- real release package\n\n"
     "Do not publish v1.0 release, 30B-150B win, public comparison win, h10 scientific contribution, Transformer replacement, frontier local LLM, long-context solved, GPU acceleration, expert replacement, or production-release claims from this gate.\n",

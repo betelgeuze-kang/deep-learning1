@@ -240,8 +240,14 @@ slice_specs = [
         "merge_condition": "no private fixture, undocumented local state, network/download requirement, or manual post-processing is needed for the PM foundation replay",
         "claim_ok": as_int(v59e, "v59_ready") == 0 and as_int(v59e, "full_v1_public_demo_ready") == 0,
         "replay_ok": as_int(v59e, "one_command_entrypoint_ready") == 1 and as_int(v59e, "challenge_bundle_ready") == 1,
-        "blocker_ok": as_int(v59e, "private_fixture_required") == 0 and as_int(v59e, "manual_postprocessing_required") == 0 and as_int(v59e, "undocumented_local_state_required") == 0,
-        "reason": "PM foundation one-command replay is ready while full public demo stays blocked",
+        "blocker_ok": as_int(v59e, "private_fixture_required") == 0
+        and as_int(v59e, "manual_postprocessing_required") == 0
+        and as_int(v59e, "undocumented_local_state_required") == 0
+        and as_int(v59e, "network_required") == 0
+        and as_int(v59e, "downloads_required") == 0
+        and as_int(v59e, "public_source_download_executed") == 0
+        and as_int(v59e, "full_public_source_download_ready") == 0,
+        "reason": "PM foundation one-command replay is ready without network/downloads while full public source refresh stays blocked",
     },
     {
         "slice_id": "v61-ssd-moe-runtime-roadmap",
@@ -683,9 +689,15 @@ pm_roadmap_rows = [
         "M6",
         "v59-one-command-foundation",
         "v59 one-command PM foundation replay writes a challenge bundle without hidden local state",
-        as_int(v59e, "v59e_one_command_pm_foundation_demo_ready") == 1 and as_int(v59e, "challenge_bundle_ready") == 1 and as_int(v59e, "undocumented_local_state_required") == 0,
+        as_int(v59e, "v59e_one_command_pm_foundation_demo_ready") == 1
+        and as_int(v59e, "challenge_bundle_ready") == 1
+        and as_int(v59e, "undocumented_local_state_required") == 0
+        and as_int(v59e, "network_required") == 0
+        and as_int(v59e, "downloads_required") == 0
+        and as_int(v59e, "public_source_download_executed") == 0
+        and as_int(v59e, "full_public_source_download_ready") == 0,
         "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
-        f"v59e_ready={v59e.get('v59e_one_command_pm_foundation_demo_ready', '0')} bundle={v59e.get('challenge_bundle_ready', '0')}",
+        f"v59e_ready={v59e.get('v59e_one_command_pm_foundation_demo_ready', '0')} bundle={v59e.get('challenge_bundle_ready', '0')} public_source_download_executed={v59e.get('public_source_download_executed', '0')} full_public_source_download_ready={v59e.get('full_public_source_download_ready', '0')}",
         "v59-foundation-demo-missing",
     ),
     req(
