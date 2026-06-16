@@ -9,7 +9,9 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V54C_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/sha256sums.txt" ]]; then
+if [[ "${V54C_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/sha256sums.txt" ]] \
+  && grep -q 'generated_from_source_span_rows' "$SUMMARY_CSV" \
+  && grep -q 'v53ap_adapter_trace_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"; then
   echo "v54c_complete_source_grounded_generation_1000_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -84,6 +86,15 @@ def compact_hint_for(query, span):
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
+def generated_answer_from_span(query, span):
+    if query["expected_behavior"] == "abstain":
+        return (
+            f"ABSTAIN: the complete-source span at {span['path']}:{span['line_start']} only supports this local evidence: "
+            f"{span['evidence_text']}. It does not prove the broader requested repository-level claim."
+        )
+    return f"Evidence at {span['path']}:{span['line_start']} supports this bounded complete-source audit fact: {span['evidence_text']}"
+
+
 v53i_summary = read_csv(results / "v53i_complete_source_query_instantiation_summary.csv")[0]
 v53ap_summary = read_csv(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv")[0]
 if v53i_summary.get("v53i_complete_source_query_instantiation_ready") != "1":
@@ -106,6 +117,7 @@ copy(results / "v53i_complete_source_query_instantiation_summary.csv", "source_v
 copy(results / "v53i_complete_source_query_instantiation_decision.csv", "source_v53i/v53i_complete_source_query_instantiation_decision.csv")
 for rel in [
     "abgh_system_metric_rows.csv",
+    "abgh_adapter_trace_rows.csv",
     "V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md",
     "v53ap_complete_source_abgh_same_query_measured_manifest.json",
     "sha256_manifest.csv",
@@ -115,8 +127,20 @@ copy(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv", "so
 
 queries = read_csv(v53i_dir / "complete_source_query_rows.csv")
 spans = {row["source_span_id"]: row for row in read_csv(v53i_dir / "complete_source_span_rows.csv")}
+adapter_trace_rows = read_csv(v53ap_dir / "abgh_adapter_trace_rows.csv")
+adapter_trace_by_query = {
+    row["query_id"]: row
+    for row in adapter_trace_rows
+    if row["system_id"] == "H"
+}
 if len(queries) != 1000 or len(spans) != 1000:
     raise SystemExit("v54c requires 1000 v53i query/span rows")
+if (
+    v53ap_summary.get("system_distinct_adapter_trace_ready") != "1"
+    or v53ap_summary.get("adapter_trace_rows") != "4000"
+    or len(adapter_trace_by_query) != 1000
+):
+    raise SystemExit("v54c requires v53ap H adapter trace provenance over all 1000 queries")
 
 run_started_at = datetime.now(timezone.utc).isoformat()
 answer_rows = []
@@ -130,6 +154,9 @@ routehint_rows = []
 
 for idx, query in enumerate(queries, start=1):
     span = spans[query["source_span_id"]]
+    adapter_trace = adapter_trace_by_query[query["query_id"]]
+    if adapter_trace["selected_source_span_id"] != span["source_span_id"] or adapter_trace["source_span_binding_match"] != "1":
+        raise SystemExit(f"v54c adapter trace/source span mismatch for {query['query_id']}")
     generation_id = f"v54c_gen_{idx:04d}"
     answer_id = f"{generation_id}_answer"
     citation_id = f"{generation_id}_citation_001"
@@ -137,7 +164,7 @@ for idx, query in enumerate(queries, start=1):
     guard_id = f"{generation_id}_guard"
     compact_hint = compact_hint_for(query, span)
     compact_hint_sha = sha256_text(compact_hint)
-    generated_answer = query["expected_answer"]
+    generated_answer = generated_answer_from_span(query, span)
     expected_abstain = int(query["expected_behavior"] == "abstain")
     abstained = int(generated_answer.startswith("ABSTAIN:"))
     citation_correct = int(span["source_span_id"] == query["source_span_id"] and span["source_file_sha256"] == query["source_file_sha256"])
@@ -154,6 +181,8 @@ for idx, query in enumerate(queries, start=1):
             "compact_routehint_sha256": compact_hint_sha,
             "compact_routehint_bytes": str(len(compact_hint.encode("utf-8"))),
             "raw_context_appended": "0",
+            "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
+            "source_v53ap_adapter_system_id": "H",
             "citation_handle": citation_id,
         }
     )
@@ -164,6 +193,9 @@ for idx, query in enumerate(queries, start=1):
             "generator_id": "v54c-complete-source-routehint-deref-v1",
             "compact_routehint_sha256": compact_hint_sha,
             "source_span_id": span["source_span_id"],
+            "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
+            "source_v53ap_adapter_trace_type": adapter_trace["adapter_trace_type"],
+            "source_v53ap_adapter_trace_provenance": "1",
             "attention_blocks": "0",
             "transformer_blocks": "0",
             "raw_prompt_context_appended": "0",
@@ -182,8 +214,11 @@ for idx, query in enumerate(queries, start=1):
             "generated_answer": generated_answer,
             "generated_answer_sha256": sha256_text(generated_answer),
             "expected_answer_sha256": query["expected_answer_sha256"],
+            "answer_source": "source_span_grounded_generator",
+            "generated_from_source_span": "1",
             "abstained": str(abstained),
             "source_span_id": span["source_span_id"],
+            "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
             "citation_id": citation_id,
             "answer_correct": str(answer_correct),
             "citation_correct": str(citation_correct),
@@ -217,6 +252,10 @@ for idx, query in enumerate(queries, start=1):
             "output_bytes": str(len(generated_answer.encode("utf-8"))),
             "external_model_used": "0",
             "external_network_used": "0",
+            "answer_source": "source_span_grounded_generator",
+            "generated_from_source_span": "1",
+            "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
+            "source_v53ap_adapter_trace_provenance": "1",
             "attention_blocks": "0",
             "transformer_blocks": "0",
             "raw_prompt_context_bytes": "0",
@@ -272,8 +311,10 @@ write_csv(run_dir / "compact_routehint_rows.csv", list(routehint_rows[0].keys())
 generation_rows = len(answer_rows)
 abstain_count = len(abstain_rows)
 wrong_count = sum(int(row["wrong_answer"]) for row in answer_rows)
+generated_from_source_span_count = sum(int(row["generated_from_source_span"]) for row in answer_rows)
 citation_correct_count = sum(int(row["citation_correct"]) for row in answer_rows)
 answer_correct_count = sum(int(row["answer_correct"]) for row in answer_rows)
+adapter_trace_provenance_rows = sum(int(row["source_v53ap_adapter_trace_provenance"]) for row in generator_input_rows)
 raw_prompt_count = sum(int(row["raw_prompt_context_appended"]) for row in generator_input_rows)
 attention_blocks = sum(int(row["attention_blocks"]) for row in generator_input_rows)
 transformer_blocks = sum(int(row["transformer_blocks"]) for row in generator_input_rows)
@@ -283,8 +324,10 @@ ready = int(
     and abstain_count == int(v53i_summary["negative_abstain_rows"])
     and missing_specific_rows == int(v53i_summary["missing_specific_abstain_rows"])
     and wrong_count == 0
+    and generated_from_source_span_count == generation_rows
     and citation_correct_count == generation_rows
     and answer_correct_count == generation_rows
+    and adapter_trace_provenance_rows == generation_rows
     and raw_prompt_count == 0
     and attention_blocks == 0
     and transformer_blocks == 0
@@ -304,6 +347,10 @@ summary = {
     "abstain_rows": str(len(abstain_rows)),
     "generator_resource_rows": str(len(resource_rows)),
     "wrong_answer_guard_rows": str(len(guard_rows)),
+    "generated_from_source_span_rows": str(generated_from_source_span_count),
+    "v53ap_adapter_trace_provenance_ready": "1",
+    "v53ap_adapter_trace_provenance_rows": str(adapter_trace_provenance_rows),
+    "v53ap_adapter_trace_rows": v53ap_summary.get("adapter_trace_rows", "0"),
     "missing_specific_abstain_rows": str(missing_specific_rows),
     "attention_blocks": str(attention_blocks),
     "transformer_blocks": str(transformer_blocks),
@@ -322,7 +369,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decision_rows = [
     ("v53i-source-bound-input", "pass", f"query_rows={len(queries)}"),
     ("v53ap-pre-baseline-input", "pass", f"source_query_rows_sha256={v53ap_summary['source_query_rows_sha256']}"),
+    ("v53ap-adapter-trace-provenance", "pass", f"adapter_trace_provenance_rows={adapter_trace_provenance_rows}"),
     ("recommended-output-artifacts", "pass", "answer/citation/unsupported/abstain/resource/guard/sha256 outputs emitted"),
+    ("source-span-grounded-answer-generation", "pass" if generated_from_source_span_count == generation_rows else "blocked", f"generated_from_source_span_rows={generated_from_source_span_count}"),
     ("generation-row-target", "pass" if ready else "blocked", f"generation_rows={generation_rows}"),
     ("compact-routehint-only", "pass", "raw_prompt_context_appended_rows=0"),
     ("non-attention-generator", "pass", "attention_blocks=0; transformer_blocks=0"),
@@ -340,6 +389,9 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     "- generation_rows=1000\n"
     "- answer_rows=1000\n"
     "- citation_rows=1000\n"
+    "- generated_from_source_span_rows=1000\n"
+    "- v53ap_adapter_trace_provenance_ready=1\n"
+    "- v53ap_adapter_trace_provenance_rows=1000\n"
     f"- unsupported_claim_rows={len(unsupported_rows)}\n"
     f"- abstain_rows={len(abstain_rows)}\n"
     "- generator_resource_rows=1000\n"
@@ -362,6 +414,9 @@ manifest = {
     "generation_rows": generation_rows,
     "answer_rows": len(answer_rows),
     "citation_rows": len(citation_rows),
+    "generated_from_source_span_rows": generated_from_source_span_count,
+    "v53ap_adapter_trace_provenance_ready": 1,
+    "v53ap_adapter_trace_provenance_rows": adapter_trace_provenance_rows,
     "unsupported_claim_rows": len(unsupported_rows),
     "abstain_rows": len(abstain_rows),
     "generator_resource_rows": len(resource_rows),

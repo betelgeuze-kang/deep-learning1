@@ -157,6 +157,7 @@ required_files = [
     "source_v53ap/abgh_citation_rows.csv",
     "source_v53ap/abgh_adapter_trace_rows.csv",
     "source_v54c/answer_rows.csv",
+    "source_v54c/generator_input_rows.csv",
     "source_v54c/sha256sums.txt",
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv",

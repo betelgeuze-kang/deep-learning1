@@ -158,6 +158,7 @@ stage_specs = [
             (v54c_dir / "abstain_rows.csv", "source_v54c/abstain_rows.csv"),
             (v54c_dir / "generator_resource_rows.csv", "source_v54c/generator_resource_rows.csv"),
             (v54c_dir / "wrong_answer_guard_rows.csv", "source_v54c/wrong_answer_guard_rows.csv"),
+            (v54c_dir / "generator_input_rows.csv", "source_v54c/generator_input_rows.csv"),
             (v54c_dir / "compact_routehint_rows.csv", "source_v54c/compact_routehint_rows.csv"),
             (v54c_dir / "sha256sums.txt", "source_v54c/sha256sums.txt"),
             (v54c_dir / "V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md", "source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"),
