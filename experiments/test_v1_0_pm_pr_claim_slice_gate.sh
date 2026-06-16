@@ -179,6 +179,10 @@ if answer_citation_row["evidence_path"] != "source_v53t/complete_source_foundati
     raise SystemExit("PM answer/citation separation should bind directly to the v53t foundation freeze rows")
 if "answer_hash_match_rows=6000; citation_span_match_rows=7000" not in answer_citation_row["reason"]:
     raise SystemExit("PM answer/citation separation should expose v53 answer/citation/scorer/policy counts")
+abgh_surface_row = roadmap_by_id["abgh-same-query-measured"]
+for snippet in ["same_query=1", "same_source=1", "same_evaluator=1", "same_resource=1"]:
+    if snippet not in abgh_surface_row["reason"]:
+        raise SystemExit(f"PM A/B/G/H same-surface row should expose {snippet}")
 expected_blocked = {
     "v56-replay-artifact": "v56-replay-artifact-missing",
     "de-30b70b-symmetric-baselines": "de-30b70b-baselines-missing",

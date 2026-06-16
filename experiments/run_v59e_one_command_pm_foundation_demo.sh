@@ -194,6 +194,7 @@ stage_specs = [
             (v53ap_dir / "abgh_system_rows.csv", "source_v53ap/abgh_system_rows.csv"),
             (v53ap_dir / "abgh_answer_rows.csv", "source_v53ap/abgh_answer_rows.csv"),
             (v53ap_dir / "abgh_citation_rows.csv", "source_v53ap/abgh_citation_rows.csv"),
+            (v53ap_dir / "abgh_evaluator_rows.csv", "source_v53ap/abgh_evaluator_rows.csv"),
             (v53ap_dir / "abgh_adapter_trace_rows.csv", "source_v53ap/abgh_adapter_trace_rows.csv"),
             (v53ap_dir / "abgh_abstain_rows.csv", "source_v53ap/abgh_abstain_rows.csv"),
             (v53ap_dir / "abgh_wrong_answer_guard_rows.csv", "source_v53ap/abgh_wrong_answer_guard_rows.csv"),
@@ -341,7 +342,10 @@ route_memory_artifact_ready = int(as_int(v53ap, "routehint_rows") == 2000 and as
 local_abgh_baseline_run_ready = int(
     v53ap.get("systems") == "A/B/G/H"
     and as_int(v53ap, "answer_rows") == 4000
+    and as_int(v53ap, "evaluator_rows") == 4000
     and as_int(v53ap, "resource_rows") == 4000
+    and as_int(v53ap, "same_evaluator_contract_all_local_systems") == 1
+    and as_int(v53ap, "same_resource_contract_all_local_systems") == 1
 )
 local_abgh_deterministic_adapter_ready = int(
     local_abgh_baseline_run_ready

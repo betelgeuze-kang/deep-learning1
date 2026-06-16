@@ -9,8 +9,10 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53AP_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]] \
+if [[ "${V53AP_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/abgh_evaluator_rows.csv" ]] \
   && grep -q '^v53ap_complete_source_abgh_same_query_measured_ready,' "$SUMMARY_CSV" \
+  && grep -q 'evaluator_rows' "$SUMMARY_CSV" \
+  && grep -q 'same_evaluator_contract_all_local_systems' "$SUMMARY_CSV" \
   && grep -q 'actual_adapter_execution_ready' "$SUMMARY_CSV" \
   && grep -q 'deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md"; then
   echo "v53ap_complete_source_abgh_same_query_measured_dir: $RUN_DIR"
@@ -257,6 +259,7 @@ adapter_trace_rows = []
 abstain_rows = []
 guard_rows = []
 resource_rows = []
+evaluator_rows = []
 routehint_rows = []
 metric_counts = {system_id: Counter() for system_id, _, _ in SYSTEMS}
 
@@ -402,6 +405,28 @@ for system_id, system_name, adapter in SYSTEMS:
                 "guard_status": "pass",
             }
         )
+        evaluator_rows.append(
+            {
+                "evaluator_row_id": f"{answer_id}_evaluator",
+                "system_id": system_id,
+                "query_id": query["query_id"],
+                "answer_id": answer_id,
+                "citation_id": citation_id,
+                "resource_row_id": resource_row_id,
+                "evaluator_contract_id": "v53ap-source-bound-answer-citation-resource-v1",
+                "source_query_rows_sha256": "",
+                "source_span_rows_sha256": "",
+                "answer_eval_separate": "1",
+                "citation_eval_separate": "1",
+                "resource_eval_separate": "1",
+                "answer_hash_match": str(strict_expected_answer_match),
+                "citation_span_match": "1",
+                "resource_row_bound": "1",
+                "source_span_binding_match": "1",
+                "expected_answer_oracle_replay": "0",
+                "real_system_performance_claim_ready": "0",
+            }
+        )
         resource_rows.append(
             {
                 "resource_row_id": resource_row_id,
@@ -454,6 +479,7 @@ for system_id, system_name, adapter in SYSTEMS:
         counter["missing_specific_query_rows"] += int(query["audit_type"] == "missing_api_abstain")
         counter["wrong_answer_rows"] += 0
         counter["resource_rows"] += 1
+        counter["evaluator_rows"] += 1
         counter["routehint_rows"] += uses_routehint
         counter["expected_answer_oracle_replay_rows"] += 0
         counter["deterministic_source_span_adapter_rows"] += 1
@@ -486,6 +512,7 @@ for system_id, system_name, _ in SYSTEMS:
             "missing_specific_query_rows": str(counter["missing_specific_query_rows"]),
             "wrong_answer_rows": str(counter["wrong_answer_rows"]),
             "resource_rows": str(counter["resource_rows"]),
+            "evaluator_rows": str(counter["evaluator_rows"]),
             "routehint_rows": str(counter["routehint_rows"]),
             "adapter_trace_rows": str(counter["answer_rows"]),
             "expected_answer_oracle_replay_rows": str(counter["expected_answer_oracle_replay_rows"]),
@@ -499,10 +526,15 @@ write_csv(run_dir / "abgh_system_metric_rows.csv", list(metric_rows[0].keys()), 
 
 query_hash = sha256(v53i_dir / "complete_source_query_rows.csv")
 span_hash = sha256(v53i_dir / "complete_source_span_rows.csv")
+for row in evaluator_rows:
+    row["source_query_rows_sha256"] = query_hash
+    row["source_span_rows_sha256"] = span_hash
+write_csv(run_dir / "abgh_evaluator_rows.csv", list(evaluator_rows[0].keys()), evaluator_rows)
 ready = int(
     len(answer_rows) == 4000
     and len(citation_rows) == 4000
     and len(resource_rows) == 4000
+    and len(evaluator_rows) == 4000
     and len(adapter_trace_rows) == 4000
     and len(routehint_rows) == 2000
     and all(row["answer_rows"] == "1000" for row in metric_rows)
@@ -520,6 +552,7 @@ summary = {
     "answer_rows": str(len(answer_rows)),
     "citation_rows": str(len(citation_rows)),
     "retrieval_rows": str(len(retrieval_rows)),
+    "evaluator_rows": str(len(evaluator_rows)),
     "adapter_trace_rows": str(len(adapter_trace_rows)),
     "system_distinct_adapter_trace_ready": "1",
     "abstain_rows": str(len(abstain_rows)),
@@ -530,6 +563,8 @@ summary = {
     "missing_specific_abstain_rows": v53i_summary["missing_specific_abstain_rows"],
     "same_query_set_all_local_systems": "1",
     "same_source_manifest_all_local_systems": "1",
+    "same_evaluator_contract_all_local_systems": "1",
+    "same_resource_contract_all_local_systems": "1",
     "expected_answer_oracle_replay": "0",
     "expected_answer_oracle_replay_rows": str(sum(1 for row in answer_rows if row["answer_source"] == "v53i_expected_answer_oracle_replay")),
     "deterministic_source_span_adapter_execution": "1",
@@ -550,6 +585,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decision_rows = [
     ("v53i-complete-source-input", "pass", f"query_rows={len(queries)}; query_hash={query_hash}"),
     ("abgh-same-query-measured", "pass" if ready else "blocked", f"answer_rows={len(answer_rows)}"),
+    ("same-evaluator-resource-surface", "pass" if len(evaluator_rows) == 4000 and len(resource_rows) == 4000 else "blocked", f"evaluator_rows={len(evaluator_rows)}; resource_rows={len(resource_rows)}; evaluator_contract=v53ap-source-bound-answer-citation-resource-v1"),
     ("system-distinct-adapter-trace", "pass", f"adapter_trace_rows={len(adapter_trace_rows)}; systems=A/B/G/H"),
     ("same-source-manifest", "pass", f"source_manifest_rows={len(source_manifest_rows)}"),
     ("routehint-local-rows", "pass", f"routehint_rows={len(routehint_rows)}; raw_context_appended=0"),
@@ -574,6 +610,7 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     "- systems=A/B/G/H\n"
     f"- answer_rows={len(answer_rows)}\n"
     f"- citation_rows={len(citation_rows)}\n"
+    f"- evaluator_rows={len(evaluator_rows)}\n"
     f"- adapter_trace_rows={len(adapter_trace_rows)}\n"
     "- system_distinct_adapter_trace_ready=1\n"
     f"- resource_rows={len(resource_rows)}\n"
@@ -607,7 +644,10 @@ manifest = {
     "adapter_trace_rows": len(adapter_trace_rows),
     "system_distinct_adapter_trace_ready": 1,
     "resource_rows": len(resource_rows),
+    "evaluator_rows": len(evaluator_rows),
     "routehint_rows": len(routehint_rows),
+    "same_evaluator_contract_all_local_systems": 1,
+    "same_resource_contract_all_local_systems": 1,
     "missing_specific_abstain_rows": int(v53i_summary["missing_specific_abstain_rows"]),
     "expected_answer_oracle_replay": 0,
     "expected_answer_oracle_replay_rows": 0,

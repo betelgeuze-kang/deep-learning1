@@ -163,6 +163,7 @@ required_files = [
     "source_v53t/complete_source_pm_freeze_check_rows.csv",
     "source_v53ap/abgh_answer_rows.csv",
     "source_v53ap/abgh_citation_rows.csv",
+    "source_v53ap/abgh_evaluator_rows.csv",
     "source_v53ap/abgh_adapter_trace_rows.csv",
     "source_v54c/answer_rows.csv",
     "source_v54c/generator_input_rows.csv",

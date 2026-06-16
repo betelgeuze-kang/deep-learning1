@@ -194,7 +194,12 @@ slice_specs = [
         "required_artifacts": "v53ap A/B/G/H answer/citation/resource/guard rows",
         "merge_condition": "internal-only comparison wording; same source/query/evaluator/resource rows; no D/E public comparison claim",
         "claim_ok": as_int(v53ap, "internal_v1_0_pre_baseline_run") == 1 and as_int(v53ap, "public_comparison_claim_ready") == 0,
-        "replay_ok": as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1 and v53ap.get("systems") == "A/B/G/H",
+        "replay_ok": as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1
+        and v53ap.get("systems") == "A/B/G/H"
+        and as_int(v53ap, "same_query_set_all_local_systems") == 1
+        and as_int(v53ap, "same_source_manifest_all_local_systems") == 1
+        and as_int(v53ap, "same_evaluator_contract_all_local_systems") == 1
+        and as_int(v53ap, "same_resource_contract_all_local_systems") == 1,
         "blocker_ok": as_int(v53ap, "required_30b_baseline_ready") == 0 and as_int(v53ap, "required_70b_baseline_ready") == 0,
         "reason": "A/B/G/H are measured over the frozen complete-source query set",
     },
@@ -572,10 +577,22 @@ pm_roadmap_rows = [
     req(
         "M3",
         "abgh-same-query-measured",
-        "A/B/G/H are measured on the same complete-source query set",
-        as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1 and v53ap.get("systems") == "A/B/G/H" and as_int(v53ap, "same_query_set_all_local_systems") == 1,
+        "A/B/G/H are measured on the same complete-source query/source/evaluator/resource surface",
+        as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1
+        and v53ap.get("systems") == "A/B/G/H"
+        and as_int(v53ap, "same_query_set_all_local_systems") == 1
+        and as_int(v53ap, "same_source_manifest_all_local_systems") == 1
+        and as_int(v53ap, "same_evaluator_contract_all_local_systems") == 1
+        and as_int(v53ap, "same_resource_contract_all_local_systems") == 1
+        and as_int(v53ap, "evaluator_rows") == 4000
+        and as_int(v53ap, "resource_rows") == 4000,
         "source_summaries/v53ap_complete_source_abgh_same_query_measured_summary.csv",
-        f"systems={v53ap.get('systems', '')} same_query={v53ap.get('same_query_set_all_local_systems', '0')}",
+        (
+            f"systems={v53ap.get('systems', '')} same_query={v53ap.get('same_query_set_all_local_systems', '0')} "
+            f"same_source={v53ap.get('same_source_manifest_all_local_systems', '0')} "
+            f"same_evaluator={v53ap.get('same_evaluator_contract_all_local_systems', '0')} "
+            f"same_resource={v53ap.get('same_resource_contract_all_local_systems', '0')}"
+        ),
         "abgh-same-query-missing",
     ),
     req(

@@ -50,6 +50,7 @@ expected = {
     "answer_rows": "4000",
     "citation_rows": "4000",
     "retrieval_rows": "4000",
+    "evaluator_rows": "4000",
     "adapter_trace_rows": "4000",
     "system_distinct_adapter_trace_ready": "1",
     "abstain_rows": "4000",
@@ -60,6 +61,8 @@ expected = {
     "missing_specific_abstain_rows": "30",
     "same_query_set_all_local_systems": "1",
     "same_source_manifest_all_local_systems": "1",
+    "same_evaluator_contract_all_local_systems": "1",
+    "same_resource_contract_all_local_systems": "1",
     "expected_answer_oracle_replay": "0",
     "expected_answer_oracle_replay_rows": "0",
     "deterministic_source_span_adapter_execution": "1",
@@ -90,6 +93,7 @@ required_files = [
     "abgh_answer_rows.csv",
     "abgh_citation_rows.csv",
     "abgh_retrieval_rows.csv",
+    "abgh_evaluator_rows.csv",
     "abgh_adapter_trace_rows.csv",
     "abgh_abstain_rows.csv",
     "abgh_wrong_answer_guard_rows.csv",
@@ -114,6 +118,7 @@ queries = read_csv(run_dir / "source_v53i/complete_source_query_rows.csv")
 answers = read_csv(run_dir / "abgh_answer_rows.csv")
 citations = read_csv(run_dir / "abgh_citation_rows.csv")
 retrieval = read_csv(run_dir / "abgh_retrieval_rows.csv")
+evaluators = read_csv(run_dir / "abgh_evaluator_rows.csv")
 adapter_traces = read_csv(run_dir / "abgh_adapter_trace_rows.csv")
 abstain = read_csv(run_dir / "abgh_abstain_rows.csv")
 guards = read_csv(run_dir / "abgh_wrong_answer_guard_rows.csv")
@@ -139,6 +144,7 @@ for table_name, rows in [
     ("answers", answers),
     ("citations", citations),
     ("retrieval", retrieval),
+    ("evaluators", evaluators),
     ("adapter_traces", adapter_traces),
     ("abstain", abstain),
     ("guards", guards),
@@ -154,6 +160,26 @@ if len(hints) != 2000 or {row["system_id"] for row in hints} != {"G", "H"}:
     raise SystemExit("v53ap RouteHint rows should cover G/H only")
 if any(row["raw_context_appended"] != "0" for row in hints):
     raise SystemExit("v53ap RouteHint rows must not append raw context")
+
+if {row["evaluator_contract_id"] for row in evaluators} != {"v53ap-source-bound-answer-citation-resource-v1"}:
+    raise SystemExit("v53ap evaluator rows should share one evaluator contract")
+if any(
+    row["answer_eval_separate"] != "1"
+    or row["citation_eval_separate"] != "1"
+    or row["resource_eval_separate"] != "1"
+    or row["answer_hash_match"] != "1"
+    or row["citation_span_match"] != "1"
+    or row["resource_row_bound"] != "1"
+    or row["source_span_binding_match"] != "1"
+    or row["expected_answer_oracle_replay"] != "0"
+    or row["real_system_performance_claim_ready"] != "0"
+    for row in evaluators
+):
+    raise SystemExit("v53ap evaluator rows should separately bind answer/citation/resource checks without public performance claims")
+if {row["source_query_rows_sha256"] for row in evaluators} != {summary["source_query_rows_sha256"]}:
+    raise SystemExit("v53ap evaluator rows should bind the shared query hash")
+if {row["source_span_rows_sha256"] for row in evaluators} != {summary["source_span_rows_sha256"]}:
+    raise SystemExit("v53ap evaluator rows should bind the shared span hash")
 
 trace_types = {
     "A": "lexical-source-span",
@@ -214,7 +240,7 @@ for row in guards:
 if set(metrics) != SYSTEMS:
     raise SystemExit("v53ap metric system coverage mismatch")
 for system_id, row in metrics.items():
-    if row["answer_rows"] != "1000" or row["citation_correct_rows"] != "1000" or row["resource_rows"] != "1000":
+    if row["answer_rows"] != "1000" or row["citation_correct_rows"] != "1000" or row["resource_rows"] != "1000" or row["evaluator_rows"] != "1000":
         raise SystemExit(f"v53ap metric counts mismatch for {system_id}")
     if row["adapter_trace_rows"] != "1000":
         raise SystemExit(f"v53ap adapter trace metric mismatch for {system_id}")
@@ -234,6 +260,7 @@ decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
     "v53i-complete-source-input",
     "abgh-same-query-measured",
+    "same-evaluator-resource-surface",
     "system-distinct-adapter-trace",
     "same-source-manifest",
     "routehint-local-rows",
@@ -259,6 +286,9 @@ if (
     or manifest.get("expected_answer_oracle_replay_rows") != 0
     or manifest.get("deterministic_source_span_adapter_execution") != 1
     or manifest.get("deterministic_source_span_adapter_rows") != 4000
+    or manifest.get("evaluator_rows") != 4000
+    or manifest.get("same_evaluator_contract_all_local_systems") != 1
+    or manifest.get("same_resource_contract_all_local_systems") != 1
     or manifest.get("adapter_trace_rows") != 4000
     or manifest.get("system_distinct_adapter_trace_ready") != 1
     or manifest.get("source_span_binding_match_rows") != 4000
@@ -273,6 +303,7 @@ for snippet in [
     "internal v1.0 pre-baseline",
     "systems=A/B/G/H",
     "answer_rows=4000",
+    "evaluator_rows=4000",
     "adapter_trace_rows=4000",
     "system_distinct_adapter_trace_ready=1",
     "routehint_rows=2000",
