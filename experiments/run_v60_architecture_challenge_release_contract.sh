@@ -169,6 +169,8 @@ for rel in [
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json",
     "v58c_pm_blind_response_intake_dependency_summary.csv",
     "v58c_pm_blind_response_intake_dependency_rows.csv",
+    "v58d_pm_blind_review_return_dependency_summary.csv",
+    "v58d_pm_blind_review_return_dependency_rows.csv",
 ]:
     copy(v59e_dir / rel, f"source_v59e/{rel}")
 copy(results / "v59e_one_command_pm_foundation_demo_summary.csv", "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv")
@@ -495,6 +497,11 @@ summary = {
     "v58c_blind_response_intake_ready": as_int(v59e, "v58c_blind_response_evidence_intake_ready"),
     "v58c_intake_artifact_available": as_int(v59e, "v58c_intake_artifact_available"),
     "v58c_dependency_blocker_ready": as_int(v59e, "v58c_dependency_blocker_ready"),
+    "v58d_blind_review_return_intake_ready": as_int(v59e, "v58d_blind_review_return_intake_ready"),
+    "v58d_review_artifact_available": as_int(v59e, "v58d_review_artifact_available"),
+    "v58d_dependency_blocker_ready": as_int(v59e, "v58d_dependency_blocker_ready"),
+    "v58d_human_blind_review_ready": as_int(v59e, "v58d_human_blind_review_ready"),
+    "v58d_inter_rater_rows_ready": as_int(v59e, "v58d_inter_rater_rows_ready"),
     "blind_eval_ready": as_int(v59e, "v58_full_blind_eval_ready"),
     "one_command_pm_foundation_ready": as_int(v59e, "v59e_one_command_pm_foundation_demo_ready"),
     "one_command_real_replay_ready": 0,
@@ -527,6 +534,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- h10 real external/human label promotion evidence\n"
     "- v56 expanded benchmark replay artifact\n"
     "- v58c blind-response intake artifact or explicit dependency closure\n"
+    "- v58d blind-review/adjudication return artifact or explicit dependency closure\n"
     "- v58 real blind eval responses and human review\n"
     "- full v59 public challenge replay over all real rows\n"
     "- approved public-source download/refresh evidence for the full v59 public replay\n"

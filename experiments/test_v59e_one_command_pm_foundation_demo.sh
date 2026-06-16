@@ -44,8 +44,8 @@ expected = {
     "v59_ready": "0",
     "one_command_entrypoint_ready": "1",
     "challenge_bundle_ready": "1",
-    "stage_rows": "7",
-    "ready_stage_rows": "7",
+    "stage_rows": "8",
+    "ready_stage_rows": "8",
     "full_ready_stage_rows": "1",
     "pinned_public_sources_verified": "1",
     "source_snapshot_replay_used": "1",
@@ -91,6 +91,14 @@ expected = {
     "v58c_required_blind_response_ready": "0",
     "v58c_blind_response_absorb_ready": "0",
     "v58c_human_blind_review_ready": "0",
+    "v58d_review_artifact_available": "0",
+    "v58d_dependency_blocker_ready": "1",
+    "v58d_blind_review_return_intake_ready": "0",
+    "v58d_expected_required_review_rows": "0",
+    "v58d_required_blind_review_ready": "0",
+    "v58d_required_adjudication_ready": "0",
+    "v58d_human_blind_review_ready": "0",
+    "v58d_inter_rater_rows_ready": "0",
     "v58_full_blind_eval_ready": "0",
     "answer_citation_separate_eval": "1",
     "blocker_false_positive_closed": "1",
@@ -136,11 +144,11 @@ if int(summary["bundle_files"]) < 35:
     raise SystemExit("v59e should copy a substantial PM foundation bundle")
 
 stage_rows = read_csv(run_dir / "pm_foundation_stage_replay_rows.csv")
-if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v53aq", "v54c", "h10_pm", "v58c_dependency", "v58_blocker"]:
+if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v53aq", "v54c", "h10_pm", "v58c_dependency", "v58d_dependency", "v58_blocker"]:
     raise SystemExit("v59e stage order mismatch")
 if any(row["ready"] != "1" for row in stage_rows):
     raise SystemExit("v59e all PM stages should be replay-ready")
-if [row["full_ready"] for row in stage_rows] != ["0", "0", "0", "1", "0", "0", "0"]:
+if [row["full_ready"] for row in stage_rows] != ["0", "0", "0", "1", "0", "0", "0", "0"]:
     raise SystemExit("v59e should only mark v54 generation as full-ready")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
@@ -156,6 +164,7 @@ for gate in [
     "grounded-generation-outputs",
     "h10-real-label-readiness-ledger",
     "v58c-intake-dependency-blocker",
+    "v58d-review-return-dependency-blocker",
     "v58-blind-eval-blocker-ledger",
     "no-hidden-local-state",
     "blocker-false-positive-closed",
@@ -167,7 +176,7 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v59e gate should pass: {gate}")
-for gate in ["public-source-download-execution", "v58-blind-response-intake", "real-blind-eval", "full-v59-public-demo", "real-release-package"]:
+for gate in ["public-source-download-execution", "v58-blind-response-intake", "v58-blind-review-intake", "real-blind-eval", "full-v59-public-demo", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v59e gate should remain blocked: {gate}")
 
@@ -206,6 +215,7 @@ required_files = [
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
     "source_v58c_dependency/v58c_pm_blind_response_intake_dependency_rows.csv",
+    "source_v58d_dependency/v58d_pm_blind_review_return_dependency_rows.csv",
     "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_decision.csv",
@@ -288,6 +298,14 @@ if (
     or manifest.get("v58c_human_blind_review_ready") != 0
 ):
     raise SystemExit("v59e manifest should preserve the v58c blind-response intake blocker boundary")
+if (
+    manifest.get("v58d_review_artifact_available") != 0
+    or manifest.get("v58d_dependency_blocker_ready") != 1
+    or manifest.get("v58d_blind_review_return_intake_ready") != 0
+    or manifest.get("v58d_expected_required_review_rows") != 0
+    or manifest.get("v58d_human_blind_review_ready") != 0
+):
+    raise SystemExit("v59e manifest should preserve the v58d blind-review return blocker boundary")
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
 if manifest.get("pm_scope_drift_allowed") != 0:
@@ -329,6 +347,11 @@ for snippet in [
     "v58c_expected_blind_response_rows=0",
     "v58c_required_blind_response_ready=0",
     "v58c_human_blind_review_ready=0",
+    "v58d_review_artifact_available=0",
+    "v58d_dependency_blocker_ready=1",
+    "v58d_blind_review_return_intake_ready=0",
+    "v58d_expected_required_review_rows=0",
+    "v58d_human_blind_review_ready=0",
     "v58_full_blind_eval_ready=0",
     "pm_pr_claim_slice_bundle_ready=1",
     "pm_scope_drift_allowed=0",
