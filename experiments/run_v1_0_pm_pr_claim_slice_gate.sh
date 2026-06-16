@@ -270,9 +270,20 @@ slice_specs = [
         "required_artifacts": "v54c answer/citation/unsupported/abstain/resource/guard rows and sha256sums",
         "merge_condition": "raw prompt stuffing remains zero; unsupported answers are guarded; recommended generation outputs exist",
         "claim_ok": as_int(v54c, "human_review_ready") == 0 and as_int(v54c, "real_release_package_ready") == 0,
-        "replay_ok": as_int(v54c, "v54c_complete_source_grounded_generation_1000_ready") == 1 and as_int(v54c, "answer_rows") == 1000,
+        "replay_ok": as_int(v54c, "v54c_complete_source_grounded_generation_1000_ready") == 1
+        and as_int(v54c, "answer_rows") == 1000
+        and as_int(v54c, "citation_rows") == 1000
+        and as_int(v54c, "unsupported_claim_rows") == 160
+        and as_int(v54c, "abstain_rows") == 160
+        and as_int(v54c, "generator_resource_rows") == 1000
+        and as_int(v54c, "wrong_answer_guard_rows") == 1000,
         "blocker_ok": as_int(v54c, "raw_prompt_context_appended_rows") == 0 and as_int(v54c, "wrong_answer_rows") == 0,
-        "reason": "v54c emits PM-recommended generation outputs with no raw prompt stuffing",
+        "reason": (
+            "v54c emits PM-recommended generation outputs with no raw prompt stuffing; "
+            f"answer={v54c.get('answer_rows', '0')} citation={v54c.get('citation_rows', '0')} "
+            f"unsupported={v54c.get('unsupported_claim_rows', '0')} abstain={v54c.get('abstain_rows', '0')} "
+            f"resource={v54c.get('generator_resource_rows', '0')} guard={v54c.get('wrong_answer_guard_rows', '0')}"
+        ),
     },
     {
         "slice_id": "v56-ruler-longbench-expanded",
@@ -757,9 +768,22 @@ pm_roadmap_rows = [
         "M5",
         "v54-grounded-generation-outputs",
         "v54 emits 1000 grounded answer/citation/unsupported/abstain/resource/guard rows",
-        as_int(v54c, "v54c_complete_source_grounded_generation_1000_ready") == 1 and as_int(v54c, "answer_rows") == 1000 and as_int(v54c, "citation_rows") == 1000,
+        as_int(v54c, "v54c_complete_source_grounded_generation_1000_ready") == 1
+        and as_int(v54c, "answer_rows") == 1000
+        and as_int(v54c, "citation_rows") == 1000
+        and as_int(v54c, "unsupported_claim_rows") == 160
+        and as_int(v54c, "abstain_rows") == 160
+        and as_int(v54c, "generator_resource_rows") == 1000
+        and as_int(v54c, "wrong_answer_guard_rows") == 1000,
         "source_summaries/v54c_complete_source_grounded_generation_1000_summary.csv",
-        f"answer_rows={v54c.get('answer_rows', '0')} citation_rows={v54c.get('citation_rows', '0')}",
+        (
+            f"answer_rows={v54c.get('answer_rows', '0')} "
+            f"citation_rows={v54c.get('citation_rows', '0')} "
+            f"unsupported_claim_rows={v54c.get('unsupported_claim_rows', '0')} "
+            f"abstain_rows={v54c.get('abstain_rows', '0')} "
+            f"generator_resource_rows={v54c.get('generator_resource_rows', '0')} "
+            f"wrong_answer_guard_rows={v54c.get('wrong_answer_guard_rows', '0')}"
+        ),
         "v54-grounded-generation-missing",
     ),
     req(

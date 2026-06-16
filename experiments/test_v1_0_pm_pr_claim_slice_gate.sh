@@ -238,6 +238,21 @@ if h10_criteria["external-human-label-evidence"]["real_label_status"] != "blocke
     raise SystemExit("PM h10 acceptance source should keep external/human evidence blocked")
 if "v53ap_evaluator_rows=4000" not in h10_criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("PM h10 acceptance source should cite v53ap evaluator provenance")
+v54_slice = by_id["v54-routehint-generation-contract"]
+for snippet in ["answer=1000", "citation=1000", "unsupported=160", "abstain=160", "resource=1000", "guard=1000"]:
+    if snippet not in v54_slice["reason"]:
+        raise SystemExit(f"PM v54 slice should expose recommended output count: {snippet}")
+v54_roadmap_row = roadmap_by_id["v54-grounded-generation-outputs"]
+for snippet in [
+    "answer_rows=1000",
+    "citation_rows=1000",
+    "unsupported_claim_rows=160",
+    "abstain_rows=160",
+    "generator_resource_rows=1000",
+    "wrong_answer_guard_rows=1000",
+]:
+    if snippet not in v54_roadmap_row["reason"]:
+        raise SystemExit(f"PM v54 roadmap row should expose recommended output count: {snippet}")
 abgh_surface_row = roadmap_by_id["abgh-same-query-measured"]
 for snippet in ["same_query=1", "same_source=1", "same_evaluator=1", "same_resource=1"]:
     if snippet not in abgh_surface_row["reason"]:

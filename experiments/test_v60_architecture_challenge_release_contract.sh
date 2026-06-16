@@ -68,6 +68,8 @@ expected = {
     "h10_pm_external_label_blocked": "1",
     "h10_pm_source_provenance_binding_ready": "1",
     "h10_pm_copied_files": "10",
+    "v54c_recommended_output_files_ready": "1",
+    "v54c_recommended_output_file_rows": "9",
     "routehint_generation_main_ready": "1",
     "scaling_law_main_ready": "0",
     "expanded_benchmark_ready": "0",
@@ -156,6 +158,16 @@ required_files = [
     "source_v59e/source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_v59e/source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v59e/source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
+    "source_v59e/source_v54c/answer_rows.csv",
+    "source_v59e/source_v54c/citation_rows.csv",
+    "source_v59e/source_v54c/unsupported_claim_rows.csv",
+    "source_v59e/source_v54c/abstain_rows.csv",
+    "source_v59e/source_v54c/generator_resource_rows.csv",
+    "source_v59e/source_v54c/wrong_answer_guard_rows.csv",
+    "source_v59e/source_v54c/generator_input_rows.csv",
+    "source_v59e/source_v54c/compact_routehint_rows.csv",
+    "source_v59e/source_v54c/sha256sums.txt",
+    "source_v59e/source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_answer_rows.csv",
@@ -203,6 +215,25 @@ if "coherent_wrong_key_rows=288" not in v60_pm_v53t_real_adapter_rows["real-adap
     raise SystemExit("v60 should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in v60_pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v60 should preserve v53aq public comparison blocker")
+
+v54c_expected_counts = {
+    "answer_rows.csv": 1000,
+    "citation_rows.csv": 1000,
+    "unsupported_claim_rows.csv": 160,
+    "abstain_rows.csv": 160,
+    "generator_resource_rows.csv": 1000,
+    "wrong_answer_guard_rows.csv": 1000,
+    "compact_routehint_rows.csv": 1000,
+}
+for filename, expected_count in v54c_expected_counts.items():
+    rows = read_csv(run_dir / "source_v59e/source_v54c" / filename)
+    if len(rows) != expected_count:
+        raise SystemExit(f"v60 should carry {expected_count} v54c rows for {filename}, got {len(rows)}")
+v54c_generator_inputs = read_csv(run_dir / "source_v59e/source_v54c/generator_input_rows.csv")
+if len(v54c_generator_inputs) != 1000:
+    raise SystemExit("v60 should carry 1000 v54c generator input rows")
+if any(row["raw_prompt_context_appended"] != "0" or row["raw_prompt_context_bytes"] != "0" for row in v54c_generator_inputs):
+    raise SystemExit("v60 v54c generator inputs should preserve no raw prompt stuffing")
 
 requirements = read_csv(run_dir / "release_requirement_rows.csv")
 if len(requirements) != 14:
@@ -292,6 +323,8 @@ if manifest.get("h10_pm_criteria_rows") != 6 or manifest.get("h10_pm_criteria_re
     raise SystemExit("v60 manifest should record direct h10 PM criteria evidence")
 if manifest.get("h10_pm_external_label_blocked") != 1 or manifest.get("h10_pm_source_provenance_binding_ready") != 1:
     raise SystemExit("v60 manifest should preserve h10 blocker/provenance boundary")
+if manifest.get("v54c_recommended_output_files_ready") != 1 or manifest.get("v54c_recommended_output_file_rows") != 9:
+    raise SystemExit("v60 manifest should record direct v54c recommended output file evidence")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:

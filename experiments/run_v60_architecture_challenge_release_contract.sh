@@ -163,6 +163,17 @@ for rel in [
     "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
+    "source_v54c/answer_rows.csv",
+    "source_v54c/citation_rows.csv",
+    "source_v54c/unsupported_claim_rows.csv",
+    "source_v54c/abstain_rows.csv",
+    "source_v54c/generator_resource_rows.csv",
+    "source_v54c/wrong_answer_guard_rows.csv",
+    "source_v54c/generator_input_rows.csv",
+    "source_v54c/compact_routehint_rows.csv",
+    "source_v54c/sha256sums.txt",
+    "source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md",
+    "source_v54c/sha256_manifest.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_answer_rows.csv",
@@ -256,6 +267,29 @@ h10_pm_source_provenance_binding_ready = int(
     and as_int(h10, "v53t_real_adapter_freeze_ready") == 1
 )
 
+v54c_recommended_output_rels = [
+    "source_v54c/answer_rows.csv",
+    "source_v54c/citation_rows.csv",
+    "source_v54c/unsupported_claim_rows.csv",
+    "source_v54c/abstain_rows.csv",
+    "source_v54c/generator_resource_rows.csv",
+    "source_v54c/wrong_answer_guard_rows.csv",
+    "source_v54c/generator_input_rows.csv",
+    "source_v54c/compact_routehint_rows.csv",
+    "source_v54c/sha256sums.txt",
+]
+v54c_recommended_output_files_ready = int(
+    all((run_dir / "source_v59e" / rel).is_file() and (run_dir / "source_v59e" / rel).stat().st_size > 0 for rel in v54c_recommended_output_rels)
+    and as_int(v54c, "answer_rows") == 1000
+    and as_int(v54c, "citation_rows") == 1000
+    and as_int(v54c, "unsupported_claim_rows") == 160
+    and as_int(v54c, "abstain_rows") == 160
+    and as_int(v54c, "generator_resource_rows") == 1000
+    and as_int(v54c, "wrong_answer_guard_rows") == 1000
+    and as_int(v54c, "compact_routehint_rows") == 1000
+    and as_int(v54c, "raw_prompt_context_appended_rows") == 0
+)
+
 
 def req(requirement, ready, blocker, evidence_path, release_blocker_class):
     return {
@@ -304,6 +338,7 @@ requirements = [
         as_int(v54c, "v54c_complete_source_grounded_generation_1000_ready") == 1
         and as_int(v54c, "answer_rows") >= 1000
         and as_int(v54c, "citation_rows") >= 1000
+        and v54c_recommended_output_files_ready == 1
         and as_int(v54c, "raw_prompt_context_appended_rows") == 0
         and as_int(v54c, "wrong_answer_rows") == 0,
         "1000 grounded generation rows without raw prompt stuffing are missing",
@@ -501,6 +536,8 @@ summary = {
     "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
     "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
     "h10_pm_copied_files": h10_pm_copied_files,
+    "v54c_recommended_output_files_ready": v54c_recommended_output_files_ready,
+    "v54c_recommended_output_file_rows": len(v54c_recommended_output_rels),
     "routehint_generation_main_ready": int(as_int(v54c, "v54c_complete_source_grounded_generation_1000_ready") == 1),
     "scaling_law_main_ready": 0,
     "expanded_benchmark_ready": int(as_int(pm_pr, "replay_artifact_pass_rows") == as_int(pm_pr, "recommended_pr_slice_rows")),
@@ -576,6 +613,8 @@ manifest = {
     "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
     "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
     "h10_pm_acceptance_sha256": sha_or_empty(run_dir / "source_h10_pm" / "pm_h10_real_label_acceptance_rows.csv"),
+    "v54c_recommended_output_files_ready": v54c_recommended_output_files_ready,
+    "v54c_recommended_output_file_rows": len(v54c_recommended_output_rels),
 }
 (run_dir / "v60_architecture_challenge_release_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

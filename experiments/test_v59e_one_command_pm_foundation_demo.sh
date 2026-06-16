@@ -206,10 +206,17 @@ required_files = [
     "source_v53aq/routehint_rows.csv",
     "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "source_v54c/answer_rows.csv",
+    "source_v54c/citation_rows.csv",
+    "source_v54c/unsupported_claim_rows.csv",
+    "source_v54c/abstain_rows.csv",
+    "source_v54c/generator_resource_rows.csv",
+    "source_v54c/wrong_answer_guard_rows.csv",
     "source_v54c/generator_input_rows.csv",
+    "source_v54c/compact_routehint_rows.csv",
     "source_v54c/source_v53ap/abgh_adapter_trace_rows.csv",
     "source_v54c/source_v53ap/abgh_evaluator_rows.csv",
     "source_v54c/sha256sums.txt",
+    "source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md",
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_h10_pm/source_v53ap/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53ap/abgh_evaluator_rows.csv",
@@ -287,6 +294,25 @@ if "coherent_wrong_key_rows=288" not in h10_v53t_real_adapter_rows["real-adapter
     raise SystemExit("v59e h10 PM source bundle should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in h10_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e h10 PM source bundle should preserve public comparison blocker")
+
+v54c_expected_counts = {
+    "answer_rows.csv": 1000,
+    "citation_rows.csv": 1000,
+    "unsupported_claim_rows.csv": 160,
+    "abstain_rows.csv": 160,
+    "generator_resource_rows.csv": 1000,
+    "wrong_answer_guard_rows.csv": 1000,
+    "compact_routehint_rows.csv": 1000,
+}
+for filename, expected_count in v54c_expected_counts.items():
+    rows = read_csv(run_dir / "source_v54c" / filename)
+    if len(rows) != expected_count:
+        raise SystemExit(f"v59e should carry {expected_count} v54c rows for {filename}, got {len(rows)}")
+generator_inputs = read_csv(run_dir / "source_v54c/generator_input_rows.csv")
+if len(generator_inputs) != 1000:
+    raise SystemExit("v59e should carry 1000 v54c generator input rows")
+if any(row["raw_prompt_context_appended"] != "0" or row["raw_prompt_context_bytes"] != "0" for row in generator_inputs):
+    raise SystemExit("v59e v54c generator inputs should preserve the no raw prompt stuffing boundary")
 
 manifest = json.loads((run_dir / "v59e_one_command_pm_foundation_demo_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v59e_one_command_pm_foundation_demo_ready") != 1 or manifest.get("v59_ready") != 0:
