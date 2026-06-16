@@ -45,6 +45,10 @@ expected = {
     "source_provenance_binding_ready": "1",
     "v53ap_adapter_trace_provenance_ready": "1",
     "v53ap_adapter_trace_rows": "4000",
+    "v53ap_evaluator_provenance_ready": "1",
+    "v53ap_evaluator_rows": "4000",
+    "v53ap_same_evaluator_contract_ready": "1",
+    "v53ap_same_resource_contract_ready": "1",
     "v53ap_system_distinct_adapter_trace_ready": "1",
     "missing_query_abstain_ready": "1",
     "wrong_answer_guard_ready": "1",
@@ -73,6 +77,7 @@ required_files = [
     "source_v53q/symmetric_system_metric_rows.csv",
     "source_v53ap/abgh_system_metric_rows.csv",
     "source_v53ap/abgh_adapter_trace_rows.csv",
+    "source_v53ap/abgh_evaluator_rows.csv",
     "source_v54c/wrong_answer_guard_rows.csv",
 ]
 for rel in required_files:
@@ -95,16 +100,35 @@ if criteria["source-provenance-binding"]["machine_evidence_status"] != "pass":
     raise SystemExit("source provenance should be machine-bound")
 if "v53ap_adapter_trace_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("source provenance criterion should cite v53ap adapter trace rows")
+if "v53ap_evaluator_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("source provenance criterion should cite v53ap evaluator rows")
 if criteria["external-human-label-evidence"]["real_label_status"] != "blocked":
     raise SystemExit("external/human label evidence should remain blocked by default")
 
 adapter_traces = read_csv(run_dir / "source_v53ap/abgh_adapter_trace_rows.csv")
+evaluators = read_csv(run_dir / "source_v53ap/abgh_evaluator_rows.csv")
 if len(adapter_traces) != 4000:
     raise SystemExit("h10 PM gate should copy 4000 v53ap adapter trace rows")
 if {row["system_id"] for row in adapter_traces} != {"A", "B", "G", "H"}:
     raise SystemExit("h10 PM gate v53ap adapter traces should cover A/B/G/H")
 if any(row["source_span_binding_match"] != "1" or row["expected_answer_oracle_replay"] != "0" for row in adapter_traces):
     raise SystemExit("h10 PM gate v53ap adapter traces should preserve provenance/non-oracle boundary")
+if len(evaluators) != 4000:
+    raise SystemExit("h10 PM gate should copy 4000 v53ap evaluator rows")
+if {row["system_id"] for row in evaluators} != {"A", "B", "G", "H"}:
+    raise SystemExit("h10 PM gate v53ap evaluator rows should cover A/B/G/H")
+if {row["evaluator_contract_id"] for row in evaluators} != {"v53ap-source-bound-answer-citation-resource-v1"}:
+    raise SystemExit("h10 PM gate v53ap evaluator rows should share the v53ap evaluator contract")
+if any(
+    row["answer_eval_separate"] != "1"
+    or row["citation_eval_separate"] != "1"
+    or row["resource_eval_separate"] != "1"
+    or row["source_span_binding_match"] != "1"
+    or row["expected_answer_oracle_replay"] != "0"
+    or row["real_system_performance_claim_ready"] != "0"
+    for row in evaluators
+):
+    raise SystemExit("h10 PM gate v53ap evaluator rows should preserve separate source-bound non-oracle evaluation")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
@@ -131,6 +155,8 @@ if manifest.get("source_provenance_binding_ready") != 1 or manifest.get("same_qu
     raise SystemExit("manifest should record machine evidence readiness")
 if manifest.get("v53ap_adapter_trace_provenance_ready") != 1 or manifest.get("v53ap_adapter_trace_rows") != 4000:
     raise SystemExit("manifest should record v53ap adapter trace provenance readiness")
+if manifest.get("v53ap_evaluator_provenance_ready") != 1 or manifest.get("v53ap_evaluator_rows") != 4000:
+    raise SystemExit("manifest should record v53ap evaluator provenance readiness")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -146,6 +172,8 @@ for snippet in [
     "source_provenance_binding_ready=1",
     "v53ap_adapter_trace_provenance_ready=1",
     "v53ap_adapter_trace_rows=4000",
+    "v53ap_evaluator_provenance_ready=1",
+    "v53ap_evaluator_rows=4000",
     "Blocked wording",
 ]:
     if snippet not in boundary:

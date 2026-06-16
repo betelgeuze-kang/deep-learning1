@@ -169,6 +169,8 @@ required_files = [
     "source_v54c/generator_input_rows.csv",
     "source_v54c/sha256sums.txt",
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
+    "source_h10_pm/source_v53ap/abgh_adapter_trace_rows.csv",
+    "source_h10_pm/source_v53ap/abgh_evaluator_rows.csv",
     "source_v58c_dependency/v58c_pm_blind_response_intake_dependency_rows.csv",
     "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",

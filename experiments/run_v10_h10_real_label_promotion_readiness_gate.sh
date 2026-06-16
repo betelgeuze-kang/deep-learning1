@@ -9,7 +9,8 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" ]] \
+  && grep -q 'v53ap_evaluator_rows' "$SUMMARY_CSV"; then
   echo "v10_h10_real_label_promotion_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -147,6 +148,7 @@ copy(v53q_dir / "sha256_manifest.csv", "source_v53q/sha256_manifest.csv")
 copy(v53ap_summary_path, "source_v53ap/v53ap_complete_source_abgh_same_query_measured_summary.csv")
 copy(v53ap_dir / "abgh_system_metric_rows.csv", "source_v53ap/abgh_system_metric_rows.csv")
 copy(v53ap_dir / "abgh_adapter_trace_rows.csv", "source_v53ap/abgh_adapter_trace_rows.csv")
+copy(v53ap_dir / "abgh_evaluator_rows.csv", "source_v53ap/abgh_evaluator_rows.csv")
 copy(v53ap_dir / "V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md", "source_v53ap/V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md")
 copy(v54c_summary_path, "source_v54c/v54c_complete_source_grounded_generation_1000_summary.csv")
 copy(v54c_dir / "answer_rows.csv", "source_v54c/answer_rows.csv")
@@ -215,6 +217,7 @@ accepted_human_reviewed_rows = sum(1 for row in accepted_label_rows if as_int(ro
 accepted_label_row_total = sum(as_int(row, "label_rows") for row in accepted_label_rows)
 fixture_or_synthetic_rows = sum(1 for row in supplied_rows if as_int(row, "fixture_or_synthetic_declared") == 1)
 v53ap_adapter_trace_rows = read_csv(v53ap_dir / "abgh_adapter_trace_rows.csv")
+v53ap_evaluator_rows = read_csv(v53ap_dir / "abgh_evaluator_rows.csv")
 v53ap_adapter_trace_provenance_ready = int(
     as_int(v53ap, "system_distinct_adapter_trace_ready") == 1
     and as_int(v53ap, "adapter_trace_rows") == 4000
@@ -223,6 +226,20 @@ v53ap_adapter_trace_provenance_ready = int(
     and all(row["source_span_binding_match"] == "1" for row in v53ap_adapter_trace_rows)
     and all(row["expected_answer_oracle_replay"] == "0" for row in v53ap_adapter_trace_rows)
     and all(row["real_system_performance_claim_ready"] == "0" for row in v53ap_adapter_trace_rows)
+)
+v53ap_evaluator_provenance_ready = int(
+    as_int(v53ap, "same_evaluator_contract_all_local_systems") == 1
+    and as_int(v53ap, "same_resource_contract_all_local_systems") == 1
+    and as_int(v53ap, "evaluator_rows") == 4000
+    and len(v53ap_evaluator_rows) == 4000
+    and {row["system_id"] for row in v53ap_evaluator_rows} == {"A", "B", "G", "H"}
+    and {row["evaluator_contract_id"] for row in v53ap_evaluator_rows} == {"v53ap-source-bound-answer-citation-resource-v1"}
+    and all(row["answer_eval_separate"] == "1" for row in v53ap_evaluator_rows)
+    and all(row["citation_eval_separate"] == "1" for row in v53ap_evaluator_rows)
+    and all(row["resource_eval_separate"] == "1" for row in v53ap_evaluator_rows)
+    and all(row["source_span_binding_match"] == "1" for row in v53ap_evaluator_rows)
+    and all(row["expected_answer_oracle_replay"] == "0" for row in v53ap_evaluator_rows)
+    and all(row["real_system_performance_claim_ready"] == "0" for row in v53ap_evaluator_rows)
 )
 
 h10_diagnostic_scorer_signal_ready = int(
@@ -235,6 +252,7 @@ source_provenance_binding_ready = int(
     and as_int(v53q, "citation_span_match_rows") == as_int(v53q, "core_answer_rows")
     and as_int(v53q, "resource_row_bound_rows") == as_int(v53q, "core_answer_rows")
     and v53ap_adapter_trace_provenance_ready == 1
+    and v53ap_evaluator_provenance_ready == 1
     and as_int(v54c, "citation_correct_rows") == as_int(v54c, "generation_rows")
 )
 missing_query_abstain_ready = int(
@@ -250,7 +268,10 @@ wrong_answer_guard_ready = int(
 same_query_abgh_ready = int(
     as_int(v53ap, "same_query_set_all_local_systems") == 1
     and as_int(v53ap, "same_source_manifest_all_local_systems") == 1
+    and as_int(v53ap, "same_evaluator_contract_all_local_systems") == 1
+    and as_int(v53ap, "same_resource_contract_all_local_systems") == 1
     and v53ap_adapter_trace_provenance_ready == 1
+    and v53ap_evaluator_provenance_ready == 1
     and v53ap.get("systems") == "A/B/G/H"
 )
 
@@ -308,7 +329,7 @@ acceptance_rows = [
         "criterion": "source-provenance-binding",
         "machine_evidence_status": "pass" if source_provenance_binding_ready else "blocked",
         "real_label_status": "pass" if source_provenance_binding_ready and external_human_label_evidence_ready else "blocked",
-        "evidence": f"v53q_scorer_rows={v53q.get('symmetric_scorer_rows')}; v53ap_adapter_trace_rows={len(v53ap_adapter_trace_rows)}; v54c_citation_correct={v54c.get('citation_correct_rows')}",
+        "evidence": f"v53q_scorer_rows={v53q.get('symmetric_scorer_rows')}; v53ap_adapter_trace_rows={len(v53ap_adapter_trace_rows)}; v53ap_evaluator_rows={len(v53ap_evaluator_rows)}; v54c_citation_correct={v54c.get('citation_correct_rows')}",
         "blocker": "accepted external/human label evidence must bind provenance rows" if not external_human_label_evidence_ready else "",
     },
     {
@@ -335,6 +356,10 @@ summary = {
     "source_provenance_binding_ready": str(source_provenance_binding_ready),
     "v53ap_adapter_trace_provenance_ready": str(v53ap_adapter_trace_provenance_ready),
     "v53ap_adapter_trace_rows": str(len(v53ap_adapter_trace_rows)),
+    "v53ap_evaluator_provenance_ready": str(v53ap_evaluator_provenance_ready),
+    "v53ap_evaluator_rows": str(len(v53ap_evaluator_rows)),
+    "v53ap_same_evaluator_contract_ready": v53ap.get("same_evaluator_contract_all_local_systems", "0"),
+    "v53ap_same_resource_contract_ready": v53ap.get("same_resource_contract_all_local_systems", "0"),
     "v53ap_system_distinct_adapter_trace_ready": v53ap.get("system_distinct_adapter_trace_ready", "0"),
     "missing_query_abstain_ready": str(missing_query_abstain_ready),
     "wrong_answer_guard_ready": str(wrong_answer_guard_ready),
@@ -362,7 +387,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 
 decision_rows = [
     ("v53-complete-source-symmetric-scorer-policy", "pass" if source_provenance_binding_ready else "blocked", "source provenance and symmetric scorer rows are bound"),
-    ("v53ap-abgh-same-query-prebaseline", "pass" if same_query_abgh_ready else "blocked", "A/B/G/H share v53i complete-source query/source set and adapter trace provenance"),
+    ("v53ap-abgh-same-query-prebaseline", "pass" if same_query_abgh_ready else "blocked", "A/B/G/H share v53i complete-source query/source/evaluator/resource set and adapter trace provenance"),
     ("v54c-grounded-generation-guard", "pass" if wrong_answer_guard_ready and missing_query_abstain_ready else "blocked", "wrong-answer and missing/abstain guards are present"),
     ("h10-diagnostic-scorer-signal", "pass" if h10_diagnostic_scorer_signal_ready else "blocked", "local h10 diagnostic scorer separates correct/coherent-wrong rows"),
     ("h10-source-verified-eval", "pass" if h10_source_verified_eval_ready else "blocked", h10s.get("reason", "source-verified eval missing")),
@@ -381,6 +406,8 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- source_provenance_binding_ready={source_provenance_binding_ready}\n"
     f"- v53ap_adapter_trace_provenance_ready={v53ap_adapter_trace_provenance_ready}\n"
     f"- v53ap_adapter_trace_rows={len(v53ap_adapter_trace_rows)}\n"
+    f"- v53ap_evaluator_provenance_ready={v53ap_evaluator_provenance_ready}\n"
+    f"- v53ap_evaluator_rows={len(v53ap_evaluator_rows)}\n"
     f"- missing_query_abstain_ready={missing_query_abstain_ready}\n"
     f"- wrong_answer_guard_ready={wrong_answer_guard_ready}\n"
     f"- same_query_abgh_ready={same_query_abgh_ready}\n"
@@ -400,6 +427,10 @@ manifest = {
     "source_provenance_binding_ready": source_provenance_binding_ready,
     "v53ap_adapter_trace_provenance_ready": v53ap_adapter_trace_provenance_ready,
     "v53ap_adapter_trace_rows": len(v53ap_adapter_trace_rows),
+    "v53ap_evaluator_provenance_ready": v53ap_evaluator_provenance_ready,
+    "v53ap_evaluator_rows": len(v53ap_evaluator_rows),
+    "v53ap_same_evaluator_contract_ready": as_int(v53ap, "same_evaluator_contract_all_local_systems"),
+    "v53ap_same_resource_contract_ready": as_int(v53ap, "same_resource_contract_all_local_systems"),
     "missing_query_abstain_ready": missing_query_abstain_ready,
     "wrong_answer_guard_ready": wrong_answer_guard_ready,
     "same_query_abgh_ready": same_query_abgh_ready,

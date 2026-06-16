@@ -235,6 +235,8 @@ stage_specs = [
             (h10_dir / "pm_h10_real_label_acceptance_rows.csv", "source_h10_pm/pm_h10_real_label_acceptance_rows.csv"),
             (h10_dir / "h10_real_label_evidence_template.csv", "source_h10_pm/h10_real_label_evidence_template.csv"),
             (h10_dir / "h10_real_label_evidence_acceptance_rows.csv", "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv"),
+            (h10_dir / "source_v53ap/abgh_adapter_trace_rows.csv", "source_h10_pm/source_v53ap/abgh_adapter_trace_rows.csv"),
+            (h10_dir / "source_v53ap/abgh_evaluator_rows.csv", "source_h10_pm/source_v53ap/abgh_evaluator_rows.csv"),
             (h10_dir / "V10_H10_REAL_LABEL_PROMOTION_READINESS_BOUNDARY.md", "source_h10_pm/V10_H10_REAL_LABEL_PROMOTION_READINESS_BOUNDARY.md"),
             (h10_dir / "sha256_manifest.csv", "source_h10_pm/sha256_manifest.csv"),
         ],
