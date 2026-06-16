@@ -11,7 +11,9 @@ DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
 if [[ "${V54C_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/sha256sums.txt" ]] \
   && grep -q 'generated_from_source_span_rows' "$SUMMARY_CSV" \
-  && grep -q 'v53ap_adapter_trace_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"; then
+  && grep -q 'v53ap_evaluator_provenance_ready' "$SUMMARY_CSV" \
+  && grep -q 'v53ap_adapter_trace_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md" \
+  && grep -q 'v53ap_evaluator_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"; then
   echo "v54c_complete_source_grounded_generation_1000_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -118,6 +120,7 @@ copy(results / "v53i_complete_source_query_instantiation_decision.csv", "source_
 for rel in [
     "abgh_system_metric_rows.csv",
     "abgh_adapter_trace_rows.csv",
+    "abgh_evaluator_rows.csv",
     "V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md",
     "v53ap_complete_source_abgh_same_query_measured_manifest.json",
     "sha256_manifest.csv",
@@ -133,6 +136,12 @@ adapter_trace_by_query = {
     for row in adapter_trace_rows
     if row["system_id"] == "H"
 }
+evaluator_rows = read_csv(v53ap_dir / "abgh_evaluator_rows.csv")
+evaluator_by_query = {
+    row["query_id"]: row
+    for row in evaluator_rows
+    if row["system_id"] == "H"
+}
 if len(queries) != 1000 or len(spans) != 1000:
     raise SystemExit("v54c requires 1000 v53i query/span rows")
 if (
@@ -141,6 +150,12 @@ if (
     or len(adapter_trace_by_query) != 1000
 ):
     raise SystemExit("v54c requires v53ap H adapter trace provenance over all 1000 queries")
+if (
+    v53ap_summary.get("same_evaluator_contract_all_local_systems") != "1"
+    or v53ap_summary.get("evaluator_rows") != "4000"
+    or len(evaluator_by_query) != 1000
+):
+    raise SystemExit("v54c requires v53ap H evaluator provenance over all 1000 queries")
 
 run_started_at = datetime.now(timezone.utc).isoformat()
 answer_rows = []
@@ -155,8 +170,21 @@ routehint_rows = []
 for idx, query in enumerate(queries, start=1):
     span = spans[query["source_span_id"]]
     adapter_trace = adapter_trace_by_query[query["query_id"]]
+    evaluator = evaluator_by_query[query["query_id"]]
     if adapter_trace["selected_source_span_id"] != span["source_span_id"] or adapter_trace["source_span_binding_match"] != "1":
         raise SystemExit(f"v54c adapter trace/source span mismatch for {query['query_id']}")
+    if evaluator["answer_id"] != adapter_trace["answer_id"]:
+        raise SystemExit(f"v54c evaluator/adapter answer mismatch for {query['query_id']}")
+    if (
+        evaluator["answer_eval_separate"] != "1"
+        or evaluator["citation_eval_separate"] != "1"
+        or evaluator["resource_eval_separate"] != "1"
+        or evaluator["resource_row_bound"] != "1"
+        or evaluator["source_span_binding_match"] != "1"
+        or evaluator["expected_answer_oracle_replay"] != "0"
+        or evaluator["real_system_performance_claim_ready"] != "0"
+    ):
+        raise SystemExit(f"v54c evaluator provenance is not source-bound/separate for {query['query_id']}")
     generation_id = f"v54c_gen_{idx:04d}"
     answer_id = f"{generation_id}_answer"
     citation_id = f"{generation_id}_citation_001"
@@ -183,6 +211,8 @@ for idx, query in enumerate(queries, start=1):
             "raw_context_appended": "0",
             "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
             "source_v53ap_adapter_system_id": "H",
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+            "source_v53ap_evaluator_contract_id": evaluator["evaluator_contract_id"],
             "citation_handle": citation_id,
         }
     )
@@ -196,6 +226,13 @@ for idx, query in enumerate(queries, start=1):
             "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
             "source_v53ap_adapter_trace_type": adapter_trace["adapter_trace_type"],
             "source_v53ap_adapter_trace_provenance": "1",
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+            "source_v53ap_evaluator_contract_id": evaluator["evaluator_contract_id"],
+            "source_v53ap_evaluator_provenance": "1",
+            "source_v53ap_answer_eval_separate": evaluator["answer_eval_separate"],
+            "source_v53ap_citation_eval_separate": evaluator["citation_eval_separate"],
+            "source_v53ap_resource_eval_separate": evaluator["resource_eval_separate"],
+            "source_v53ap_evaluator_resource_row_bound": evaluator["resource_row_bound"],
             "attention_blocks": "0",
             "transformer_blocks": "0",
             "raw_prompt_context_appended": "0",
@@ -219,6 +256,7 @@ for idx, query in enumerate(queries, start=1):
             "abstained": str(abstained),
             "source_span_id": span["source_span_id"],
             "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
             "citation_id": citation_id,
             "answer_correct": str(answer_correct),
             "citation_correct": str(citation_correct),
@@ -239,6 +277,7 @@ for idx, query in enumerate(queries, start=1):
             "source_file_sha256": span["source_file_sha256"],
             "citation_text_sha256": span["evidence_text_sha256"],
             "citation_correct": str(citation_correct),
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
         }
     )
     resource_rows.append(
@@ -256,6 +295,13 @@ for idx, query in enumerate(queries, start=1):
             "generated_from_source_span": "1",
             "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
             "source_v53ap_adapter_trace_provenance": "1",
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+            "source_v53ap_evaluator_contract_id": evaluator["evaluator_contract_id"],
+            "source_v53ap_evaluator_provenance": "1",
+            "source_v53ap_answer_eval_separate": evaluator["answer_eval_separate"],
+            "source_v53ap_citation_eval_separate": evaluator["citation_eval_separate"],
+            "source_v53ap_resource_eval_separate": evaluator["resource_eval_separate"],
+            "source_v53ap_evaluator_resource_row_bound": evaluator["resource_row_bound"],
             "attention_blocks": "0",
             "transformer_blocks": "0",
             "raw_prompt_context_bytes": "0",
@@ -272,6 +318,11 @@ for idx, query in enumerate(queries, start=1):
             "answer_correct": str(answer_correct),
             "citation_correct": str(citation_correct),
             "abstain_correct": str(abstain_correct),
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+            "source_v53ap_answer_eval_separate": evaluator["answer_eval_separate"],
+            "source_v53ap_citation_eval_separate": evaluator["citation_eval_separate"],
+            "source_v53ap_resource_eval_separate": evaluator["resource_eval_separate"],
+            "source_v53ap_evaluator_resource_row_bound": evaluator["resource_row_bound"],
             "wrong_answer": str(wrong_answer),
             "guard_status": "pass" if wrong_answer == 0 else "wrong-answer",
         }
@@ -315,6 +366,11 @@ generated_from_source_span_count = sum(int(row["generated_from_source_span"]) fo
 citation_correct_count = sum(int(row["citation_correct"]) for row in answer_rows)
 answer_correct_count = sum(int(row["answer_correct"]) for row in answer_rows)
 adapter_trace_provenance_rows = sum(int(row["source_v53ap_adapter_trace_provenance"]) for row in generator_input_rows)
+evaluator_provenance_rows = sum(int(row["source_v53ap_evaluator_provenance"]) for row in generator_input_rows)
+answer_eval_separate_rows = sum(int(row["source_v53ap_answer_eval_separate"]) for row in generator_input_rows)
+citation_eval_separate_rows = sum(int(row["source_v53ap_citation_eval_separate"]) for row in generator_input_rows)
+resource_eval_separate_rows = sum(int(row["source_v53ap_resource_eval_separate"]) for row in generator_input_rows)
+resource_row_bound_rows = sum(int(row["source_v53ap_evaluator_resource_row_bound"]) for row in generator_input_rows)
 raw_prompt_count = sum(int(row["raw_prompt_context_appended"]) for row in generator_input_rows)
 attention_blocks = sum(int(row["attention_blocks"]) for row in generator_input_rows)
 transformer_blocks = sum(int(row["transformer_blocks"]) for row in generator_input_rows)
@@ -328,6 +384,11 @@ ready = int(
     and citation_correct_count == generation_rows
     and answer_correct_count == generation_rows
     and adapter_trace_provenance_rows == generation_rows
+    and evaluator_provenance_rows == generation_rows
+    and answer_eval_separate_rows == generation_rows
+    and citation_eval_separate_rows == generation_rows
+    and resource_eval_separate_rows == generation_rows
+    and resource_row_bound_rows == generation_rows
     and raw_prompt_count == 0
     and attention_blocks == 0
     and transformer_blocks == 0
@@ -351,6 +412,14 @@ summary = {
     "v53ap_adapter_trace_provenance_ready": "1",
     "v53ap_adapter_trace_provenance_rows": str(adapter_trace_provenance_rows),
     "v53ap_adapter_trace_rows": v53ap_summary.get("adapter_trace_rows", "0"),
+    "v53ap_evaluator_provenance_ready": "1",
+    "v53ap_evaluator_provenance_rows": str(evaluator_provenance_rows),
+    "v53ap_evaluator_rows": v53ap_summary.get("evaluator_rows", "0"),
+    "v53ap_same_evaluator_contract_all_local_systems": v53ap_summary.get("same_evaluator_contract_all_local_systems", "0"),
+    "v53ap_answer_eval_separate_rows": str(answer_eval_separate_rows),
+    "v53ap_citation_eval_separate_rows": str(citation_eval_separate_rows),
+    "v53ap_resource_eval_separate_rows": str(resource_eval_separate_rows),
+    "v53ap_evaluator_resource_row_bound_rows": str(resource_row_bound_rows),
     "missing_specific_abstain_rows": str(missing_specific_rows),
     "attention_blocks": str(attention_blocks),
     "transformer_blocks": str(transformer_blocks),
@@ -370,6 +439,7 @@ decision_rows = [
     ("v53i-source-bound-input", "pass", f"query_rows={len(queries)}"),
     ("v53ap-pre-baseline-input", "pass", f"source_query_rows_sha256={v53ap_summary['source_query_rows_sha256']}"),
     ("v53ap-adapter-trace-provenance", "pass", f"adapter_trace_provenance_rows={adapter_trace_provenance_rows}"),
+    ("v53ap-evaluator-provenance", "pass", f"evaluator_provenance_rows={evaluator_provenance_rows}; answer_eval_separate_rows={answer_eval_separate_rows}; citation_eval_separate_rows={citation_eval_separate_rows}"),
     ("recommended-output-artifacts", "pass", "answer/citation/unsupported/abstain/resource/guard/sha256 outputs emitted"),
     ("source-span-grounded-answer-generation", "pass" if generated_from_source_span_count == generation_rows else "blocked", f"generated_from_source_span_rows={generated_from_source_span_count}"),
     ("generation-row-target", "pass" if ready else "blocked", f"generation_rows={generation_rows}"),
@@ -392,6 +462,11 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     "- generated_from_source_span_rows=1000\n"
     "- v53ap_adapter_trace_provenance_ready=1\n"
     "- v53ap_adapter_trace_provenance_rows=1000\n"
+    "- v53ap_evaluator_provenance_ready=1\n"
+    "- v53ap_evaluator_provenance_rows=1000\n"
+    "- v53ap_answer_eval_separate_rows=1000\n"
+    "- v53ap_citation_eval_separate_rows=1000\n"
+    "- v53ap_resource_eval_separate_rows=1000\n"
     f"- unsupported_claim_rows={len(unsupported_rows)}\n"
     f"- abstain_rows={len(abstain_rows)}\n"
     "- generator_resource_rows=1000\n"
@@ -417,6 +492,12 @@ manifest = {
     "generated_from_source_span_rows": generated_from_source_span_count,
     "v53ap_adapter_trace_provenance_ready": 1,
     "v53ap_adapter_trace_provenance_rows": adapter_trace_provenance_rows,
+    "v53ap_evaluator_provenance_ready": 1,
+    "v53ap_evaluator_provenance_rows": evaluator_provenance_rows,
+    "v53ap_answer_eval_separate_rows": answer_eval_separate_rows,
+    "v53ap_citation_eval_separate_rows": citation_eval_separate_rows,
+    "v53ap_resource_eval_separate_rows": resource_eval_separate_rows,
+    "v53ap_evaluator_resource_row_bound_rows": resource_row_bound_rows,
     "unsupported_claim_rows": len(unsupported_rows),
     "abstain_rows": len(abstain_rows),
     "generator_resource_rows": len(resource_rows),

@@ -55,6 +55,14 @@ expected = {
     "v53ap_adapter_trace_provenance_ready": "1",
     "v53ap_adapter_trace_provenance_rows": "1000",
     "v53ap_adapter_trace_rows": "4000",
+    "v53ap_evaluator_provenance_ready": "1",
+    "v53ap_evaluator_provenance_rows": "1000",
+    "v53ap_evaluator_rows": "4000",
+    "v53ap_same_evaluator_contract_all_local_systems": "1",
+    "v53ap_answer_eval_separate_rows": "1000",
+    "v53ap_citation_eval_separate_rows": "1000",
+    "v53ap_resource_eval_separate_rows": "1000",
+    "v53ap_evaluator_resource_row_bound_rows": "1000",
     "missing_specific_abstain_rows": "30",
     "attention_blocks": "0",
     "transformer_blocks": "0",
@@ -95,6 +103,7 @@ required_files = [
     "source_v53i/complete_source_control_family_rows.csv",
     "source_v53ap/abgh_system_metric_rows.csv",
     "source_v53ap/abgh_adapter_trace_rows.csv",
+    "source_v53ap/abgh_evaluator_rows.csv",
     "source_v53ap/v53ap_complete_source_abgh_same_query_measured_summary.csv",
 ]
 for rel in required_files:
@@ -113,6 +122,7 @@ guards = read_csv(run_dir / "wrong_answer_guard_rows.csv")
 inputs = read_csv(run_dir / "generator_input_rows.csv")
 hints = read_csv(run_dir / "compact_routehint_rows.csv")
 adapter_traces = read_csv(run_dir / "source_v53ap/abgh_adapter_trace_rows.csv")
+evaluator_rows = read_csv(run_dir / "source_v53ap/abgh_evaluator_rows.csv")
 
 for rows, name, count in [
     (answers, "answer", 1000),
@@ -133,6 +143,20 @@ if len(adapter_traces) != 4000 or {row["system_id"] for row in adapter_traces} !
     raise SystemExit("v54c should copy v53ap A/B/G/H adapter trace provenance")
 if any(row["source_span_binding_match"] != "1" for row in adapter_traces):
     raise SystemExit("v54c copied adapter traces must remain source-span bound")
+h_evaluators = {row["query_id"]: row for row in evaluator_rows if row["system_id"] == "H"}
+if len(evaluator_rows) != 4000 or {row["system_id"] for row in evaluator_rows} != {"A", "B", "G", "H"}:
+    raise SystemExit("v54c should copy v53ap A/B/G/H evaluator provenance")
+if len(h_evaluators) != 1000:
+    raise SystemExit("v54c should bind one H evaluator row per query")
+for row in evaluator_rows:
+    if row["evaluator_contract_id"] != "v53ap-source-bound-answer-citation-resource-v1":
+        raise SystemExit("v54c evaluator rows should preserve the v53ap evaluator contract")
+    if row["answer_eval_separate"] != "1" or row["citation_eval_separate"] != "1" or row["resource_eval_separate"] != "1":
+        raise SystemExit("v54c evaluator rows should keep answer/citation/resource checks separate")
+    if row["resource_row_bound"] != "1" or row["source_span_binding_match"] != "1":
+        raise SystemExit("v54c evaluator rows should stay resource/source-span bound")
+    if row["expected_answer_oracle_replay"] != "0" or row["real_system_performance_claim_ready"] != "0":
+        raise SystemExit("v54c evaluator rows should keep oracle replay and performance claims closed")
 
 for row in answers:
     query = queries[row["query_id"]]
@@ -149,12 +173,24 @@ for row in answers:
         raise SystemExit("v54c answer should bind the frozen source span")
     if not row["source_v53ap_adapter_trace_id"].startswith("v53ap_H_"):
         raise SystemExit("v54c answer should bind the v53ap H adapter trace provenance")
+    if row["source_v53ap_evaluator_row_id"] != h_evaluators[row["query_id"]]["evaluator_row_id"]:
+        raise SystemExit("v54c answer should bind the v53ap H evaluator row")
     if row["answer_correct"] != "1" or row["citation_correct"] != "1" or row["wrong_answer"] != "0":
         raise SystemExit("v54c answer should be correct, cited, and wrong-answer clean")
 
 for row in inputs:
     if row["source_v53ap_adapter_trace_provenance"] != "1" or row["source_v53ap_adapter_trace_type"] != "routememory-routehint-scorer-policy":
         raise SystemExit("v54c generator input should bind v53ap H adapter trace provenance")
+    if row["source_v53ap_evaluator_row_id"] != h_evaluators[row["query_id"]]["evaluator_row_id"]:
+        raise SystemExit("v54c generator input should bind the v53ap H evaluator row")
+    if row["source_v53ap_evaluator_contract_id"] != "v53ap-source-bound-answer-citation-resource-v1":
+        raise SystemExit("v54c generator input should preserve the v53ap evaluator contract")
+    if row["source_v53ap_evaluator_provenance"] != "1":
+        raise SystemExit("v54c generator input should disclose evaluator provenance")
+    if row["source_v53ap_answer_eval_separate"] != "1" or row["source_v53ap_citation_eval_separate"] != "1" or row["source_v53ap_resource_eval_separate"] != "1":
+        raise SystemExit("v54c generator input should bind separate answer/citation/resource evaluation")
+    if row["source_v53ap_evaluator_resource_row_bound"] != "1":
+        raise SystemExit("v54c generator input should bind evaluator resource rows")
     if row["attention_blocks"] != "0" or row["transformer_blocks"] != "0":
         raise SystemExit("v54c generator should be non-attention")
     if row["raw_prompt_context_appended"] != "0" or row["raw_prompt_context_bytes"] != "0" or row["retrieved_text_in_prompt"] != "0":
@@ -164,6 +200,10 @@ for row in hints:
         raise SystemExit("v54c compact RouteHint should not append raw context")
     if row["source_v53ap_adapter_system_id"] != "H" or not row["source_v53ap_adapter_trace_id"].startswith("v53ap_H_"):
         raise SystemExit("v54c compact RouteHint should bind v53ap H adapter trace provenance")
+    if row["source_v53ap_evaluator_row_id"] != h_evaluators[row["query_id"]]["evaluator_row_id"]:
+        raise SystemExit("v54c compact RouteHint should bind v53ap H evaluator provenance")
+    if row["source_v53ap_evaluator_contract_id"] != "v53ap-source-bound-answer-citation-resource-v1":
+        raise SystemExit("v54c compact RouteHint should preserve v53ap evaluator contract")
 for row in resources:
     if row["external_model_used"] != "0" or row["external_network_used"] != "0":
         raise SystemExit("v54c resources should stay local/no external model")
@@ -173,9 +213,25 @@ for row in resources:
         raise SystemExit("v54c resources should disclose source-span grounded generation")
     if row["source_v53ap_adapter_trace_provenance"] != "1" or not row["source_v53ap_adapter_trace_id"].startswith("v53ap_H_"):
         raise SystemExit("v54c resources should bind v53ap H adapter trace provenance")
+    if row["source_v53ap_evaluator_row_id"] != h_evaluators[row["query_id"]]["evaluator_row_id"]:
+        raise SystemExit("v54c resources should bind v53ap H evaluator provenance")
+    if row["source_v53ap_evaluator_contract_id"] != "v53ap-source-bound-answer-citation-resource-v1":
+        raise SystemExit("v54c resources should preserve v53ap evaluator contract")
+    if row["source_v53ap_evaluator_provenance"] != "1":
+        raise SystemExit("v54c resources should disclose evaluator provenance")
+    if row["source_v53ap_answer_eval_separate"] != "1" or row["source_v53ap_citation_eval_separate"] != "1" or row["source_v53ap_resource_eval_separate"] != "1":
+        raise SystemExit("v54c resources should bind separate answer/citation/resource evaluation")
+    if row["source_v53ap_evaluator_resource_row_bound"] != "1":
+        raise SystemExit("v54c resources should bind evaluator resource rows")
 for row in guards:
     if row["answer_correct"] != "1" or row["citation_correct"] != "1" or row["abstain_correct"] != "1":
         raise SystemExit("v54c guards should pass answer/citation/abstain checks")
+    if row["source_v53ap_evaluator_row_id"] != h_evaluators[row["query_id"]]["evaluator_row_id"]:
+        raise SystemExit("v54c guards should bind v53ap H evaluator provenance")
+    if row["source_v53ap_answer_eval_separate"] != "1" or row["source_v53ap_citation_eval_separate"] != "1" or row["source_v53ap_resource_eval_separate"] != "1":
+        raise SystemExit("v54c guards should preserve separate evaluator checks")
+    if row["source_v53ap_evaluator_resource_row_bound"] != "1":
+        raise SystemExit("v54c guards should preserve evaluator resource binding")
     if row["wrong_answer"] != "0" or row["guard_status"] != "pass":
         raise SystemExit("v54c guards should block wrong answers")
 
@@ -190,6 +246,7 @@ for gate in [
     "v53i-source-bound-input",
     "v53ap-pre-baseline-input",
     "v53ap-adapter-trace-provenance",
+    "v53ap-evaluator-provenance",
     "recommended-output-artifacts",
     "source-span-grounded-answer-generation",
     "generation-row-target",
@@ -212,6 +269,15 @@ if manifest.get("generated_from_source_span_rows") != 1000:
     raise SystemExit("v54c manifest should record source-span generated answers")
 if manifest.get("v53ap_adapter_trace_provenance_ready") != 1 or manifest.get("v53ap_adapter_trace_provenance_rows") != 1000:
     raise SystemExit("v54c manifest should record v53ap adapter trace provenance")
+if manifest.get("v53ap_evaluator_provenance_ready") != 1 or manifest.get("v53ap_evaluator_provenance_rows") != 1000:
+    raise SystemExit("v54c manifest should record v53ap evaluator provenance")
+if (
+    manifest.get("v53ap_answer_eval_separate_rows") != 1000
+    or manifest.get("v53ap_citation_eval_separate_rows") != 1000
+    or manifest.get("v53ap_resource_eval_separate_rows") != 1000
+    or manifest.get("v53ap_evaluator_resource_row_bound_rows") != 1000
+):
+    raise SystemExit("v54c manifest should preserve separate evaluator/resource binding rows")
 if manifest.get("raw_prompt_context_appended_rows") != 0 or manifest.get("wrong_answer_rows") != 0:
     raise SystemExit("v54c manifest invariant mismatch")
 if manifest.get("real_release_package_ready") != 0:
@@ -237,6 +303,11 @@ for snippet in [
     "generated_from_source_span_rows=1000",
     "v53ap_adapter_trace_provenance_ready=1",
     "v53ap_adapter_trace_provenance_rows=1000",
+    "v53ap_evaluator_provenance_ready=1",
+    "v53ap_evaluator_provenance_rows=1000",
+    "v53ap_answer_eval_separate_rows=1000",
+    "v53ap_citation_eval_separate_rows=1000",
+    "v53ap_resource_eval_separate_rows=1000",
     "generator_resource_rows=1000",
     "wrong_answer_guard_rows=1000",
     "raw_prompt_context_appended_rows=0",

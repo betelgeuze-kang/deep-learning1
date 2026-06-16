@@ -220,6 +220,8 @@ stage_specs = [
             (v54c_dir / "wrong_answer_guard_rows.csv", "source_v54c/wrong_answer_guard_rows.csv"),
             (v54c_dir / "generator_input_rows.csv", "source_v54c/generator_input_rows.csv"),
             (v54c_dir / "compact_routehint_rows.csv", "source_v54c/compact_routehint_rows.csv"),
+            (v54c_dir / "source_v53ap/abgh_adapter_trace_rows.csv", "source_v54c/source_v53ap/abgh_adapter_trace_rows.csv"),
+            (v54c_dir / "source_v53ap/abgh_evaluator_rows.csv", "source_v54c/source_v53ap/abgh_evaluator_rows.csv"),
             (v54c_dir / "sha256sums.txt", "source_v54c/sha256sums.txt"),
             (v54c_dir / "V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md", "source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"),
             (v54c_dir / "sha256_manifest.csv", "source_v54c/sha256_manifest.csv"),
@@ -362,6 +364,11 @@ grounded_generation_outputs_ready = int(
     as_int(v54c, "answer_rows") == 1000
     and as_int(v54c, "citation_rows") == 1000
     and as_int(v54c, "wrong_answer_guard_rows") == 1000
+    and as_int(v54c, "v53ap_adapter_trace_provenance_rows") == 1000
+    and as_int(v54c, "v53ap_evaluator_provenance_rows") == 1000
+    and as_int(v54c, "v53ap_answer_eval_separate_rows") == 1000
+    and as_int(v54c, "v53ap_citation_eval_separate_rows") == 1000
+    and as_int(v54c, "v53ap_resource_eval_separate_rows") == 1000
     and as_int(v54c, "raw_prompt_context_appended_rows") == 0
 )
 h10_blocker_ledger_ready = int(as_int(h10, "v10_h10_real_label_promotion_readiness_gate_ready") == 1 and as_int(h10, "h10_real_label_promotion_ready") == 0)
@@ -440,6 +447,11 @@ summary = {
     "route_memory_artifact_ready": str(route_memory_artifact_ready),
     "v54c_complete_source_grounded_generation_1000_ready": v54c["v54c_complete_source_grounded_generation_1000_ready"],
     "grounded_generation_outputs_ready": str(grounded_generation_outputs_ready),
+    "v54c_v53ap_evaluator_provenance_ready": v54c.get("v53ap_evaluator_provenance_ready", "0"),
+    "v54c_v53ap_evaluator_provenance_rows": v54c.get("v53ap_evaluator_provenance_rows", "0"),
+    "v54c_v53ap_answer_eval_separate_rows": v54c.get("v53ap_answer_eval_separate_rows", "0"),
+    "v54c_v53ap_citation_eval_separate_rows": v54c.get("v53ap_citation_eval_separate_rows", "0"),
+    "v54c_v53ap_resource_eval_separate_rows": v54c.get("v53ap_resource_eval_separate_rows", "0"),
     "h10_real_label_readiness_gate_ready": h10["v10_h10_real_label_promotion_readiness_gate_ready"],
     "h10_real_label_promotion_ready": h10["h10_real_label_promotion_ready"],
     "v58_pm_blind_eval_blocker_ready": v58_blocker_summary["v58_pm_blind_eval_blocker_ready"],
@@ -482,6 +494,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- local_abgh_deterministic_adapter_ready={summary['local_abgh_deterministic_adapter_ready']}\n"
     f"- v53ap_actual_adapter_execution_ready={summary['v53ap_actual_adapter_execution_ready']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
+    f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
+    f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
     f"- v58c_intake_artifact_available={summary['v58c_intake_artifact_available']}\n"
     f"- v58c_blind_response_evidence_intake_ready={summary['v58c_blind_response_evidence_intake_ready']}\n"
@@ -507,6 +521,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53ap_real_system_performance_claim_ready={summary['v53ap_real_system_performance_claim_ready']}\n"
     f"- route_memory_artifact_ready={summary['route_memory_artifact_ready']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
+    f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
+    f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
     f"- v58c_intake_artifact_available={summary['v58c_intake_artifact_available']}\n"
     f"- v58c_dependency_blocker_ready={summary['v58c_dependency_blocker_ready']}\n"
@@ -554,6 +570,11 @@ manifest = {
     "v53ap_deterministic_source_span_adapter_rows": as_int(v53ap, "deterministic_source_span_adapter_rows"),
     "v53ap_actual_adapter_execution_ready": as_int(v53ap, "actual_adapter_execution_ready"),
     "v53ap_real_system_performance_claim_ready": as_int(v53ap, "real_system_performance_claim_ready"),
+    "v54c_v53ap_evaluator_provenance_ready": as_int(v54c, "v53ap_evaluator_provenance_ready"),
+    "v54c_v53ap_evaluator_provenance_rows": as_int(v54c, "v53ap_evaluator_provenance_rows"),
+    "v54c_v53ap_answer_eval_separate_rows": as_int(v54c, "v53ap_answer_eval_separate_rows"),
+    "v54c_v53ap_citation_eval_separate_rows": as_int(v54c, "v53ap_citation_eval_separate_rows"),
+    "v54c_v53ap_resource_eval_separate_rows": as_int(v54c, "v53ap_resource_eval_separate_rows"),
     "v58c_intake_artifact_available": v58c_available,
     "v58c_dependency_blocker_ready": v58c_dependency_blocker_ready,
     "v58c_blind_response_evidence_intake_ready": as_int(v58c, "v58c_blind_response_evidence_intake_ready"),
