@@ -25,6 +25,7 @@ import json
 import os
 import shutil
 import sys
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -492,17 +493,69 @@ pm_checks = {row["check_id"]: row for row in read_csv(v53t_dir / "complete_sourc
 pinned_public_sources_verified = int(pm_checks.get("pinned-public-repo-manifest", {}).get("status") == "pass")
 answer_citation_separate_eval = int(pm_checks.get("answer-citation-separate-eval", {}).get("status") == "pass")
 blocker_false_positive_closed = int(pm_checks.get("blocker-false-positive-closed", {}).get("status") == "pass")
+repo_coverage_rows = read_csv(v53t_dir / "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
+file_manifest_rows = read_csv(v53t_dir / "source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
+content_repo_rows = read_csv(v53t_dir / "source_v53i/source_v53h/complete_source_content_repo_rows.csv")
+content_snapshot_rows = read_csv(v53t_dir / "source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
+content_repo_by_id = {row["repo_id"]: row for row in content_repo_rows}
+file_rows_by_repo = Counter(row["repo_id"] for row in file_manifest_rows)
+content_rows_by_repo = Counter(row["repo_id"] for row in content_snapshot_rows if row.get("content_materialized") == "1")
+repo_url_by_id = {}
+for row in file_manifest_rows:
+    repo_url_by_id.setdefault(row["repo_id"], row.get("repo_url", ""))
+public_source_snapshot_replay_rows = []
+for repo in sorted(repo_coverage_rows, key=lambda row: int(row["repo_slot"])):
+    content_repo = content_repo_by_id.get(repo["repo_id"], {})
+    manifest_file_rows = file_rows_by_repo[repo["repo_id"]]
+    content_snapshot_file_rows = content_rows_by_repo[repo["repo_id"]]
+    replay_ready = int(
+        repo.get("complete_source_tree_manifest_ready") == "1"
+        and content_repo.get("content_snapshot_ready") == "1"
+        and int(content_repo.get("manifest_file_rows", "0") or "0") == manifest_file_rows
+        and int(content_repo.get("content_materialized_file_rows", "0") or "0") == content_snapshot_file_rows
+    )
+    public_source_snapshot_replay_rows.append(
+        {
+            "repo_slot": repo["repo_slot"],
+            "repo_id": repo["repo_id"],
+            "owner_repo": repo["owner_repo"],
+            "repo_url": repo_url_by_id.get(repo["repo_id"], ""),
+            "pinned_commit_sha": repo["head_sha"],
+            "manifest_file_rows": str(manifest_file_rows),
+            "content_snapshot_rows": str(content_snapshot_file_rows),
+            "query_eligible_content_rows": content_repo.get("query_eligible_content_rows", "0"),
+            "content_bytes_materialized": content_repo.get("content_bytes_materialized", "0"),
+            "tree_manifest_ready": repo.get("complete_source_tree_manifest_ready", "0"),
+            "content_snapshot_ready": content_repo.get("content_snapshot_ready", "0"),
+            "source_snapshot_replay_used": "1",
+            "public_source_download_executed": "0",
+            "network_required_by_default": "0",
+            "downloads_required_by_default": "0",
+            "replay_status": "pass" if replay_ready else "blocked",
+            "evidence_path": "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv",
+        }
+    )
+write_csv(run_dir / "public_source_snapshot_replay_rows.csv", list(public_source_snapshot_replay_rows[0].keys()), public_source_snapshot_replay_rows)
+public_source_snapshot_replay_pass_rows = sum(1 for row in public_source_snapshot_replay_rows if row["replay_status"] == "pass")
+public_source_snapshot_replay_ready = int(
+    len(public_source_snapshot_replay_rows) == 10
+    and public_source_snapshot_replay_pass_rows == 10
+    and pinned_public_sources_verified == 1
+)
 public_source_policy_rows = [
     {
         "policy_id": "v59e-pm-foundation-source-replay-policy",
         "pinned_public_sources_verified": str(pinned_public_sources_verified),
+        "public_source_snapshot_replay_rows": str(len(public_source_snapshot_replay_rows)),
+        "public_source_snapshot_replay_pass_rows": str(public_source_snapshot_replay_pass_rows),
+        "public_source_snapshot_replay_ready": str(public_source_snapshot_replay_ready),
         "source_snapshot_replay_used": "1",
         "public_source_download_executed": "0",
         "public_source_download_approval_required": "1",
         "network_required_by_default": "0",
         "downloads_required_by_default": "0",
         "full_public_source_download_ready": "0",
-        "evidence_path": "source_v53t/complete_source_pm_freeze_check_rows.csv",
+        "evidence_path": "public_source_snapshot_replay_rows.csv",
         "blocker_status": "blocked-full-public-demo",
         "reason": "v59e replays the pinned v53 complete-source snapshot; live public-source download/refresh requires explicit approval and belongs to the full v59 public demo path",
     }
@@ -513,6 +566,13 @@ bundle_rows.append(
         "path": "public_source_replay_policy_rows.csv",
         "source_stage": "v59e_core",
         "artifact_role": "source_replay_policy",
+    }
+)
+bundle_rows.append(
+    {
+        "path": "public_source_snapshot_replay_rows.csv",
+        "source_stage": "v59e_core",
+        "artifact_role": "source_snapshot_replay",
     }
 )
 write_csv(run_dir / "challenge_bundle_file_rows.csv", list(bundle_rows[0].keys()), bundle_rows)
@@ -634,6 +694,9 @@ summary = {
     "full_ready_stage_rows": str(sum(1 for row in stage_rows if row["full_ready"] == "1")),
     "bundle_files": str(len(bundle_rows)),
     "pinned_public_sources_verified": str(pinned_public_sources_verified),
+    "public_source_snapshot_replay_rows": str(len(public_source_snapshot_replay_rows)),
+    "public_source_snapshot_replay_pass_rows": str(public_source_snapshot_replay_pass_rows),
+    "public_source_snapshot_replay_ready": str(public_source_snapshot_replay_ready),
     "source_snapshot_replay_used": "1",
     "public_source_download_executed": "0",
     "public_source_download_approval_required": "1",
@@ -715,6 +778,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     "It is intentionally not the completed v59 public challenge demo.\n\n"
     f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
     f"- source_snapshot_replay_used={summary['source_snapshot_replay_used']}\n"
+    f"- public_source_snapshot_replay_ready={summary['public_source_snapshot_replay_ready']}\n"
+    f"- public_source_snapshot_replay_rows={summary['public_source_snapshot_replay_rows']}\n"
     f"- public_source_download_executed={summary['public_source_download_executed']}\n"
     f"- full_public_source_download_ready={summary['full_public_source_download_ready']}\n"
     f"- local_abgh_baseline_run_ready={summary['local_abgh_baseline_run_ready']}\n"
@@ -747,6 +812,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v59e_one_command_pm_foundation_demo_ready={summary['v59e_one_command_pm_foundation_demo_ready']}\n"
     f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
     f"- source_snapshot_replay_used={summary['source_snapshot_replay_used']}\n"
+    f"- public_source_snapshot_replay_ready={summary['public_source_snapshot_replay_ready']}\n"
+    f"- public_source_snapshot_replay_rows={summary['public_source_snapshot_replay_rows']}\n"
     f"- public_source_download_executed={summary['public_source_download_executed']}\n"
     f"- public_source_download_approval_required={summary['public_source_download_approval_required']}\n"
     f"- full_public_source_download_ready={summary['full_public_source_download_ready']}\n"
@@ -798,6 +865,9 @@ manifest = {
     "stage_rows": len(stage_rows),
     "bundle_files": len(bundle_rows),
     "source_snapshot_replay_used": 1,
+    "public_source_snapshot_replay_rows": len(public_source_snapshot_replay_rows),
+    "public_source_snapshot_replay_pass_rows": public_source_snapshot_replay_pass_rows,
+    "public_source_snapshot_replay_ready": public_source_snapshot_replay_ready,
     "public_source_download_executed": 0,
     "public_source_download_approval_required": 1,
     "full_public_source_download_ready": 0,
@@ -1095,8 +1165,11 @@ preflight_specs = [
     ),
     (
         "pinned-source-snapshot-replay",
-        as_int(summary, "pinned_public_sources_verified") == 1 and as_int(summary, "source_snapshot_replay_used") == 1,
-        "v53t pinned-source snapshot evidence is replayed",
+        as_int(summary, "pinned_public_sources_verified") == 1
+        and as_int(summary, "source_snapshot_replay_used") == 1
+        and as_int(summary, "public_source_snapshot_replay_ready") == 1
+        and as_int(summary, "public_source_snapshot_replay_rows") == 10,
+        "v53t pinned-source snapshot evidence is replayed for 10 public repos",
         "pinned public sources are checked through replayed hashes",
     ),
     (
@@ -1245,6 +1318,7 @@ manifest["pm_scope_drift_allowed"] = as_int(pr_summary, "pm_scope_drift_allowed"
 manifest["pm_external_return_template_files"] = len(return_template_files)
 manifest["one_command_replay_preflight_ready"] = one_command_replay_preflight_ready
 manifest["pm_foundation_replay_preflight_rows_sha256"] = sha256(run_dir / "pm_foundation_replay_preflight_rows.csv")
+manifest["public_source_snapshot_replay_rows_sha256"] = sha256(run_dir / "public_source_snapshot_replay_rows.csv")
 manifest["source_summary_sha256"]["pm_pr_claim_slice_gate"] = sha256(pr_summary_csv)
 manifest["pm_pr_claim_slice_gate_manifest_sha256"] = sha256(pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json")
 manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")

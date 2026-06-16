@@ -48,6 +48,9 @@ expected = {
     "forbidden_claim_rows": "11",
     "v59e_one_command_pm_foundation_demo_ready": "1",
     "source_snapshot_replay_used": "1",
+    "public_source_snapshot_replay_rows": "10",
+    "public_source_snapshot_replay_pass_rows": "10",
+    "public_source_snapshot_replay_ready": "1",
     "public_source_download_executed": "0",
     "public_source_download_approval_required": "1",
     "full_public_source_download_ready": "0",
@@ -147,6 +150,7 @@ required_files = [
     "source_v59e/pm_foundation_one_command_rows.csv",
     "source_v59e/pm_foundation_replay_preflight_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
+    "source_v59e/public_source_snapshot_replay_rows.csv",
     "source_v59e/challenge_bundle_file_rows.csv",
     "source_v59e/pm_foundation_demo_gate_rows.csv",
     "source_v59e/README_RESULT.md",
@@ -343,6 +347,25 @@ if "v53t_real_adapter_freeze_rows=4" not in h10_by_criterion["source-provenance-
 if h10_by_criterion["external-human-label-evidence"]["real_label_status"] != "blocked":
     raise SystemExit("v60 h10 external/human label criterion should remain blocked")
 
+public_source_snapshot_rows = read_csv(run_dir / "source_v59e/public_source_snapshot_replay_rows.csv")
+if len(public_source_snapshot_rows) != 10:
+    raise SystemExit("v60 should carry ten v59e public source snapshot replay rows")
+if len({row["owner_repo"] for row in public_source_snapshot_rows}) != 10:
+    raise SystemExit("v60 public source snapshot replay rows should cover ten distinct repositories")
+if any(
+    row["replay_status"] != "pass"
+    or row["tree_manifest_ready"] != "1"
+    or row["content_snapshot_ready"] != "1"
+    or row["source_snapshot_replay_used"] != "1"
+    or row["public_source_download_executed"] != "0"
+    or row["network_required_by_default"] != "0"
+    or row["downloads_required_by_default"] != "0"
+    or not row["repo_url"].startswith("https://github.com/")
+    or len(row["pinned_commit_sha"]) != 40
+    for row in public_source_snapshot_rows
+):
+    raise SystemExit("v60 should preserve v59e pinned no-download public source snapshot replay evidence")
+
 for label, path in [
     ("v59e direct h10 bundle", run_dir / "source_v59e/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
     ("v59e PM sidecar h10 bundle", run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
@@ -409,6 +432,8 @@ if (
     or manifest.get("pm_pr_v53_direct_pinned_manifest_ready") != 1
 ):
     raise SystemExit("v60 manifest should record direct v53 pinned manifest evidence")
+if "v59e_public_source_snapshot_replay_sha256" not in manifest:
+    raise SystemExit("v60 manifest should hash-bind v59e public source snapshot replay rows")
 if manifest.get("h10_pm_criteria_rows") != 6 or manifest.get("h10_pm_criteria_ready") != 1:
     raise SystemExit("v60 manifest should record direct h10 PM criteria evidence")
 if manifest.get("h10_pm_external_label_blocked") != 1 or manifest.get("h10_pm_source_provenance_binding_ready") != 1:

@@ -49,6 +49,9 @@ expected = {
     "ready_stage_rows": "8",
     "full_ready_stage_rows": "1",
     "pinned_public_sources_verified": "1",
+    "public_source_snapshot_replay_rows": "10",
+    "public_source_snapshot_replay_pass_rows": "10",
+    "public_source_snapshot_replay_ready": "1",
     "source_snapshot_replay_used": "1",
     "public_source_download_executed": "0",
     "public_source_download_approval_required": "1",
@@ -196,6 +199,7 @@ required_files = [
     "pm_foundation_one_command_rows.csv",
     "pm_foundation_replay_preflight_rows.csv",
     "public_source_replay_policy_rows.csv",
+    "public_source_snapshot_replay_rows.csv",
     "challenge_bundle_file_rows.csv",
     "pm_foundation_demo_gate_rows.csv",
     "pm_foundation_demo.sh",
@@ -388,6 +392,9 @@ if "public-abgh-comparison" not in manifest.get("blocked_claims", []):
     raise SystemExit("v59e manifest should block public A/B/G/H comparison claims")
 if (
     manifest.get("source_snapshot_replay_used") != 1
+    or manifest.get("public_source_snapshot_replay_rows") != 10
+    or manifest.get("public_source_snapshot_replay_pass_rows") != 10
+    or manifest.get("public_source_snapshot_replay_ready") != 1
     or manifest.get("public_source_download_executed") != 0
     or manifest.get("public_source_download_approval_required") != 1
     or manifest.get("full_public_source_download_ready") != 0
@@ -464,6 +471,8 @@ for snippet in [
     "v59e_one_command_pm_foundation_demo_ready=1",
     "pm_v53_freeze_ready=1",
     "source_snapshot_replay_used=1",
+    "public_source_snapshot_replay_ready=1",
+    "public_source_snapshot_replay_rows=10",
     "public_source_download_executed=0",
     "public_source_download_approval_required=1",
     "full_public_source_download_ready=0",
@@ -508,6 +517,9 @@ if len(policy_rows) != 1:
 policy = policy_rows[0]
 if (
     policy["pinned_public_sources_verified"] != "1"
+    or policy["public_source_snapshot_replay_rows"] != "10"
+    or policy["public_source_snapshot_replay_pass_rows"] != "10"
+    or policy["public_source_snapshot_replay_ready"] != "1"
     or policy["source_snapshot_replay_used"] != "1"
     or policy["public_source_download_executed"] != "0"
     or policy["public_source_download_approval_required"] != "1"
@@ -517,9 +529,29 @@ if (
     or policy["blocker_status"] != "blocked-full-public-demo"
 ):
     raise SystemExit("v59e public source replay policy boundary mismatch")
+snapshot_rows = read_csv(run_dir / "public_source_snapshot_replay_rows.csv")
+if len(snapshot_rows) != 10:
+    raise SystemExit("v59e should emit ten public source snapshot replay rows")
+if len({row["owner_repo"] for row in snapshot_rows}) != 10:
+    raise SystemExit("v59e public source snapshot replay rows should cover ten distinct repositories")
+if any(
+    row["replay_status"] != "pass"
+    or row["tree_manifest_ready"] != "1"
+    or row["content_snapshot_ready"] != "1"
+    or row["source_snapshot_replay_used"] != "1"
+    or row["public_source_download_executed"] != "0"
+    or row["network_required_by_default"] != "0"
+    or row["downloads_required_by_default"] != "0"
+    or not row["repo_url"].startswith("https://github.com/")
+    or len(row["pinned_commit_sha"]) != 40
+    for row in snapshot_rows
+):
+    raise SystemExit("v59e public source snapshot replay rows should preserve pinned no-download source evidence")
 bundle_rows = read_csv(run_dir / "challenge_bundle_file_rows.csv")
 if "public_source_replay_policy_rows.csv" not in {row["path"] for row in bundle_rows}:
     raise SystemExit("v59e bundle index should include public source replay policy rows")
+if "public_source_snapshot_replay_rows.csv" not in {row["path"] for row in bundle_rows}:
+    raise SystemExit("v59e bundle index should include public source snapshot replay rows")
 if "pm_foundation_replay_preflight_rows.csv" not in {row["path"] for row in bundle_rows}:
     raise SystemExit("v59e bundle index should include replay preflight rows")
 
