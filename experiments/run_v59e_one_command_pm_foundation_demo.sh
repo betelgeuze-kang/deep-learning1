@@ -76,11 +76,35 @@ v53t_dir = results / "v53t_complete_source_audit_readiness_gate" / "gate_001"
 v53ap_dir = results / "v53ap_complete_source_abgh_same_query_measured" / "measured_001"
 v54c_dir = results / "v54c_complete_source_grounded_generation_1000" / "generation_001"
 h10_dir = results / "v10_h10_real_label_promotion_readiness_gate" / "gate_001"
+v58c_dir = results / "v58c_blind_response_evidence_intake" / "intake_001"
 
 v53t = first_row(results / "v53t_complete_source_audit_readiness_gate_summary.csv")
 v53ap = first_row(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv")
 v54c = first_row(results / "v54c_complete_source_grounded_generation_1000_summary.csv")
 h10 = first_row(results / "v10_h10_real_label_promotion_readiness_gate_summary.csv")
+v58c_summary_path = results / "v58c_blind_response_evidence_intake_summary.csv"
+v58c_required_artifacts = [
+    v58c_dir / "blind_response_required_field_rows.csv",
+    v58c_dir / "blind_response_row_template.csv",
+    v58c_dir / "run_identity_template_rows.csv",
+    v58c_dir / "blind_response_validation_rows.csv",
+    v58c_dir / "blind_response_intake_gate_rows.csv",
+    v58c_dir / "V58C_BLIND_RESPONSE_EVIDENCE_INTAKE_BOUNDARY.md",
+    v58c_dir / "v58c_blind_response_evidence_intake_manifest.json",
+    v58c_dir / "sha256_manifest.csv",
+]
+v58c_available = int(v58c_summary_path.is_file() and all(path.is_file() and path.stat().st_size > 0 for path in v58c_required_artifacts))
+if v58c_available:
+    v58c = first_row(v58c_summary_path)
+else:
+    v58c = {
+        "v58c_blind_response_evidence_intake_ready": "0",
+        "expected_blind_response_rows": "0",
+        "required_blind_response_ready": "0",
+        "blind_response_absorb_ready": "0",
+        "human_blind_review_ready": "0",
+        "v58_full_blind_eval_ready": "0",
+    }
 
 if v53t.get("pm_v53_freeze_ready") != "1":
     raise SystemExit("v59e requires pm_v53_freeze_ready=1")
@@ -90,6 +114,41 @@ if v54c.get("v54c_complete_source_grounded_generation_1000_ready") != "1":
     raise SystemExit("v59e requires v54c ready")
 if h10.get("v10_h10_real_label_promotion_readiness_gate_ready") != "1":
     raise SystemExit("v59e requires h10 PM readiness gate")
+
+v58c_dependency_blocker_summary = {
+    "v58c_pm_blind_response_intake_dependency_blocker_ready": "1",
+    "v58c_intake_artifact_available": str(v58c_available),
+    "v58c_blind_response_evidence_intake_ready": v58c["v58c_blind_response_evidence_intake_ready"],
+    "v58_full_blind_eval_ready": "0",
+    "required_blind_response_ready": v58c["required_blind_response_ready"],
+    "human_blind_review_ready": v58c["human_blind_review_ready"],
+}
+write_csv(
+    run_dir / "v58c_pm_blind_response_intake_dependency_summary.csv",
+    list(v58c_dependency_blocker_summary.keys()),
+    [v58c_dependency_blocker_summary],
+)
+write_csv(
+    run_dir / "v58c_pm_blind_response_intake_dependency_rows.csv",
+    ["gate", "status", "reason"],
+    [
+        {
+            "gate": "v58c-intake-artifact",
+            "status": "pass" if v58c_available else "blocked",
+            "reason": "v58c intake artifact is available" if v58c_available else "v58c intake artifact is not present; refusing implicit v58/v57/v56 seed rebuild",
+        },
+        {
+            "gate": "required-blind-response-ready",
+            "status": "pass" if v58c.get("required_blind_response_ready") == "1" else "blocked",
+            "reason": "required blind responses validate" if v58c.get("required_blind_response_ready") == "1" else "real D/E/G/H blind response rows are not supplied",
+        },
+        {
+            "gate": "human-blind-review",
+            "status": "blocked",
+            "reason": "human blind review and adjudication rows are not supplied",
+        },
+    ],
+)
 
 v58_blocker_summary = {
     "v58_pm_blind_eval_blocker_ready": "1",
@@ -180,6 +239,47 @@ stage_specs = [
         ],
         "claim_boundary": "h10 real-label promotion readiness ledger; promotion still blocked",
     },
+]
+
+if v58c_available:
+    stage_specs.append(
+        {
+            "stage": "v58c",
+            "summary_path": results / "v58c_blind_response_evidence_intake_summary.csv",
+            "ready_field": "v58c_blind_response_evidence_intake_ready",
+            "full_ready_field": "v58_full_blind_eval_ready",
+            "artifacts": [
+                (v58c_dir / "blind_response_required_field_rows.csv", "source_v58c/blind_response_required_field_rows.csv"),
+                (v58c_dir / "blind_response_row_template.csv", "source_v58c/blind_response_row_template.csv"),
+                (v58c_dir / "run_identity_template_rows.csv", "source_v58c/run_identity_template_rows.csv"),
+                (v58c_dir / "blind_response_validation_rows.csv", "source_v58c/blind_response_validation_rows.csv"),
+                (v58c_dir / "blind_response_intake_gate_rows.csv", "source_v58c/blind_response_intake_gate_rows.csv"),
+                (v58c_dir / "V58C_BLIND_RESPONSE_EVIDENCE_INTAKE_BOUNDARY.md", "source_v58c/V58C_BLIND_RESPONSE_EVIDENCE_INTAKE_BOUNDARY.md"),
+                (v58c_dir / "v58c_blind_response_evidence_intake_manifest.json", "source_v58c/v58c_blind_response_evidence_intake_manifest.json"),
+                (v58c_dir / "sha256_manifest.csv", "source_v58c/sha256_manifest.csv"),
+                (v58c_dir / "source_v58b/blind_query_freeze_rows.csv", "source_v58c/source_v58b/blind_query_freeze_rows.csv"),
+                (v58c_dir / "source_v58b/sealed_identity_key_rows.csv", "source_v58c/source_v58b/sealed_identity_key_rows.csv"),
+                (v58c_dir / "source_v58b/blind_response_template_rows.csv", "source_v58c/source_v58b/blind_response_template_rows.csv"),
+                (v58c_dir / "source_v58b/sha256_manifest.csv", "source_v58c/source_v58b/sha256_manifest.csv"),
+            ],
+            "claim_boundary": "v58 blind response evidence intake; real response rows and human blind review still blocked",
+        }
+    )
+else:
+    stage_specs.append(
+        {
+            "stage": "v58c_dependency",
+            "summary_path": run_dir / "v58c_pm_blind_response_intake_dependency_summary.csv",
+            "ready_field": "v58c_pm_blind_response_intake_dependency_blocker_ready",
+            "full_ready_field": "v58_full_blind_eval_ready",
+            "artifacts": [
+                (run_dir / "v58c_pm_blind_response_intake_dependency_rows.csv", "source_v58c_dependency/v58c_pm_blind_response_intake_dependency_rows.csv"),
+            ],
+            "claim_boundary": "v58c blind response intake dependency blocker; implicit v58/v57/v56 seed rebuild is refused",
+        }
+    )
+
+stage_specs.append(
     {
         "stage": "v58_blocker",
         "summary_path": run_dir / "v58_pm_blind_eval_blocker_summary.csv",
@@ -189,8 +289,8 @@ stage_specs = [
             (run_dir / "v58_pm_blind_eval_blocker_rows.csv", "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv"),
         ],
         "claim_boundary": "v58 blind eval blocker ledger; real blind eval still blocked",
-    },
-]
+    }
+)
 
 stage_rows = []
 bundle_rows = []
@@ -259,7 +359,20 @@ grounded_generation_outputs_ready = int(
     and as_int(v54c, "raw_prompt_context_appended_rows") == 0
 )
 h10_blocker_ledger_ready = int(as_int(h10, "v10_h10_real_label_promotion_readiness_gate_ready") == 1 and as_int(h10, "h10_real_label_promotion_ready") == 0)
-blind_eval_blocker_ready = int(as_int(v58_blocker_summary, "v58_pm_blind_eval_blocker_ready") == 1 and as_int(v58_blocker_summary, "v58_full_blind_eval_ready") == 0)
+blind_response_intake_ready = int(
+    v58c_available
+    and
+    as_int(v58c, "v58c_blind_response_evidence_intake_ready") == 1
+    and as_int(v58c, "expected_blind_response_rows") == 2500
+    and as_int(v58c, "required_blind_response_ready") == 0
+    and as_int(v58c, "human_blind_review_ready") == 0
+)
+v58c_dependency_blocker_ready = int(not v58c_available and as_int(v58c_dependency_blocker_summary, "v58c_pm_blind_response_intake_dependency_blocker_ready") == 1)
+blind_eval_blocker_ready = int(
+    (blind_response_intake_ready or v58c_dependency_blocker_ready)
+    and as_int(v58_blocker_summary, "v58_pm_blind_eval_blocker_ready") == 1
+    and as_int(v58_blocker_summary, "v58_full_blind_eval_ready") == 0
+)
 no_hidden_state_ready = 1
 challenge_bundle_ready = int(all(row["ready"] == "1" for row in stage_rows) and len(bundle_rows) >= 35)
 
@@ -272,6 +385,8 @@ gate_rows = [
     ("evaluator-check", "pass" if answer_citation_separate_eval else "blocked", "answer and citation/source checks remain separate"),
     ("grounded-generation-outputs", "pass" if grounded_generation_outputs_ready else "blocked", "v54c recommended output artifacts are copied"),
     ("h10-real-label-readiness-ledger", "pass" if h10_blocker_ledger_ready else "blocked", "h10 real-label promotion blocker ledger is copied"),
+    ("v58-blind-response-intake", "pass" if blind_response_intake_ready else "blocked", "v58c response schema/templates/validation rows are copied without fake responses"),
+    ("v58c-intake-dependency-blocker", "pass" if (blind_response_intake_ready or v58c_dependency_blocker_ready) else "blocked", "v58c intake is copied when present; otherwise implicit v58/v57/v56 seed rebuild remains blocked"),
     ("v58-blind-eval-blocker-ledger", "pass" if blind_eval_blocker_ready else "blocked", "v58 real-response and human-review blockers are explicit"),
     ("no-hidden-local-state", "pass" if no_hidden_state_ready else "blocked", "no private fixture, download, network, or manual post-processing required for this local replay"),
     ("blocker-false-positive-closed", "pass" if blocker_false_positive_closed else "blocked", "comparison and release blockers remain closed"),
@@ -322,6 +437,13 @@ summary = {
     "h10_real_label_readiness_gate_ready": h10["v10_h10_real_label_promotion_readiness_gate_ready"],
     "h10_real_label_promotion_ready": h10["h10_real_label_promotion_ready"],
     "v58_pm_blind_eval_blocker_ready": v58_blocker_summary["v58_pm_blind_eval_blocker_ready"],
+    "v58c_intake_artifact_available": str(v58c_available),
+    "v58c_dependency_blocker_ready": str(v58c_dependency_blocker_ready),
+    "v58c_blind_response_evidence_intake_ready": v58c["v58c_blind_response_evidence_intake_ready"],
+    "v58c_expected_blind_response_rows": v58c["expected_blind_response_rows"],
+    "v58c_required_blind_response_ready": v58c["required_blind_response_ready"],
+    "v58c_blind_response_absorb_ready": v58c["blind_response_absorb_ready"],
+    "v58c_human_blind_review_ready": v58c["human_blind_review_ready"],
     "v58_full_blind_eval_ready": v58_blocker_summary["v58_full_blind_eval_ready"],
     "answer_citation_separate_eval": str(answer_citation_separate_eval),
     "blocker_false_positive_closed": str(blocker_false_positive_closed),
@@ -343,7 +465,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     "```\n\n"
     "This bundle replays the current PM foundation: v53 complete-source freeze, "
     "A/B/G/H same-query deterministic source-span adapter rows, v54c grounded generation rows, h10 "
-    "real-label promotion readiness ledger, and the v58 blind-eval blocker ledger. "
+    "real-label promotion readiness ledger, the v58c blind-response intake dependency check, "
+    "and the v58 blind-eval blocker ledger. "
     "The repository entrypoint then refreshes the PM PR claim-slice gate so the "
     "review split and the v56 replay-artifact blocker are visible beside this bundle. "
     "It is intentionally not the completed v59 public challenge demo.\n\n"
@@ -354,6 +477,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53ap_actual_adapter_execution_ready={summary['v53ap_actual_adapter_execution_ready']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
+    f"- v58c_intake_artifact_available={summary['v58c_intake_artifact_available']}\n"
+    f"- v58c_blind_response_evidence_intake_ready={summary['v58c_blind_response_evidence_intake_ready']}\n"
+    f"- v58c_required_blind_response_ready={summary['v58c_required_blind_response_ready']}\n"
     f"- v58_full_blind_eval_ready={summary['v58_full_blind_eval_ready']}\n"
     f"- full_v1_public_demo_ready={summary['full_v1_public_demo_ready']}\n\n"
     "Still blocked: accepted external/human h10 labels, real blind responses, human blind review, full v59 public replay, and v60 release review.\n",
@@ -376,6 +502,12 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- route_memory_artifact_ready={summary['route_memory_artifact_ready']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
+    f"- v58c_intake_artifact_available={summary['v58c_intake_artifact_available']}\n"
+    f"- v58c_dependency_blocker_ready={summary['v58c_dependency_blocker_ready']}\n"
+    f"- v58c_blind_response_evidence_intake_ready={summary['v58c_blind_response_evidence_intake_ready']}\n"
+    f"- v58c_expected_blind_response_rows={summary['v58c_expected_blind_response_rows']}\n"
+    f"- v58c_required_blind_response_ready={summary['v58c_required_blind_response_ready']}\n"
+    f"- v58c_human_blind_review_ready={summary['v58c_human_blind_review_ready']}\n"
     f"- v58_full_blind_eval_ready={summary['v58_full_blind_eval_ready']}\n"
     f"- undocumented_local_state_required={summary['undocumented_local_state_required']}\n"
     f"- private_fixture_required={summary['private_fixture_required']}\n"
@@ -398,6 +530,7 @@ manifest = {
         "v53ap": sha256(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv"),
         "v54c": sha256(results / "v54c_complete_source_grounded_generation_1000_summary.csv"),
         "h10_pm": sha256(results / "v10_h10_real_label_promotion_readiness_gate_summary.csv"),
+        "v58c": sha256(results / "v58c_blind_response_evidence_intake_summary.csv") if v58c_available else sha256(run_dir / "v58c_pm_blind_response_intake_dependency_summary.csv"),
         "v58_blocker": sha256(run_dir / "v58_pm_blind_eval_blocker_summary.csv"),
     },
     "blocked_claims": [
@@ -415,6 +548,12 @@ manifest = {
     "v53ap_deterministic_source_span_adapter_rows": as_int(v53ap, "deterministic_source_span_adapter_rows"),
     "v53ap_actual_adapter_execution_ready": as_int(v53ap, "actual_adapter_execution_ready"),
     "v53ap_real_system_performance_claim_ready": as_int(v53ap, "real_system_performance_claim_ready"),
+    "v58c_intake_artifact_available": v58c_available,
+    "v58c_dependency_blocker_ready": v58c_dependency_blocker_ready,
+    "v58c_blind_response_evidence_intake_ready": as_int(v58c, "v58c_blind_response_evidence_intake_ready"),
+    "v58c_expected_blind_response_rows": as_int(v58c, "expected_blind_response_rows"),
+    "v58c_required_blind_response_ready": as_int(v58c, "required_blind_response_ready"),
+    "v58c_human_blind_review_ready": as_int(v58c, "human_blind_review_ready"),
     "real_release_package_ready": 0,
 }
 (run_dir / "v59e_one_command_pm_foundation_demo_manifest.json").write_text(

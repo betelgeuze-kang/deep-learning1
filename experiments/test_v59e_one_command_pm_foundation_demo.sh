@@ -44,8 +44,8 @@ expected = {
     "v59_ready": "0",
     "one_command_entrypoint_ready": "1",
     "challenge_bundle_ready": "1",
-    "stage_rows": "5",
-    "ready_stage_rows": "5",
+    "stage_rows": "6",
+    "ready_stage_rows": "6",
     "full_ready_stage_rows": "1",
     "pinned_public_sources_verified": "1",
     "pm_v53_freeze_ready": "1",
@@ -65,6 +65,13 @@ expected = {
     "h10_real_label_readiness_gate_ready": "1",
     "h10_real_label_promotion_ready": "0",
     "v58_pm_blind_eval_blocker_ready": "1",
+    "v58c_intake_artifact_available": "0",
+    "v58c_dependency_blocker_ready": "1",
+    "v58c_blind_response_evidence_intake_ready": "0",
+    "v58c_expected_blind_response_rows": "0",
+    "v58c_required_blind_response_ready": "0",
+    "v58c_blind_response_absorb_ready": "0",
+    "v58c_human_blind_review_ready": "0",
     "v58_full_blind_eval_ready": "0",
     "answer_citation_separate_eval": "1",
     "blocker_false_positive_closed": "1",
@@ -110,11 +117,11 @@ if int(summary["bundle_files"]) < 35:
     raise SystemExit("v59e should copy a substantial PM foundation bundle")
 
 stage_rows = read_csv(run_dir / "pm_foundation_stage_replay_rows.csv")
-if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v54c", "h10_pm", "v58_blocker"]:
+if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v54c", "h10_pm", "v58c_dependency", "v58_blocker"]:
     raise SystemExit("v59e stage order mismatch")
 if any(row["ready"] != "1" for row in stage_rows):
     raise SystemExit("v59e all PM stages should be replay-ready")
-if [row["full_ready"] for row in stage_rows] != ["0", "0", "1", "0", "0"]:
+if [row["full_ready"] for row in stage_rows] != ["0", "0", "1", "0", "0", "0"]:
     raise SystemExit("v59e should only mark v54 generation as full-ready")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
@@ -127,6 +134,7 @@ for gate in [
     "evaluator-check",
     "grounded-generation-outputs",
     "h10-real-label-readiness-ledger",
+    "v58c-intake-dependency-blocker",
     "v58-blind-eval-blocker-ledger",
     "no-hidden-local-state",
     "blocker-false-positive-closed",
@@ -138,7 +146,7 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v59e gate should pass: {gate}")
-for gate in ["real-blind-eval", "full-v59-public-demo", "real-release-package"]:
+for gate in ["v58-blind-response-intake", "real-blind-eval", "full-v59-public-demo", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v59e gate should remain blocked: {gate}")
 
@@ -160,6 +168,7 @@ required_files = [
     "source_v54c/generator_input_rows.csv",
     "source_v54c/sha256sums.txt",
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
+    "source_v58c_dependency/v58c_pm_blind_response_intake_dependency_rows.csv",
     "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_decision.csv",
@@ -194,6 +203,15 @@ if (
     or manifest.get("v53ap_actual_adapter_execution_ready") != 1
 ):
     raise SystemExit("v59e manifest should preserve the v53ap deterministic adapter boundary")
+if (
+    manifest.get("v58c_intake_artifact_available") != 0
+    or manifest.get("v58c_dependency_blocker_ready") != 1
+    or manifest.get("v58c_blind_response_evidence_intake_ready") != 0
+    or manifest.get("v58c_expected_blind_response_rows") != 0
+    or manifest.get("v58c_required_blind_response_ready") != 0
+    or manifest.get("v58c_human_blind_review_ready") != 0
+):
+    raise SystemExit("v59e manifest should preserve the v58c blind-response intake blocker boundary")
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
 if manifest.get("pm_scope_drift_allowed") != 0:
@@ -217,6 +235,12 @@ for snippet in [
     "v53ap_deterministic_source_span_adapter_rows=4000",
     "v53ap_actual_adapter_execution_ready=1",
     "h10_real_label_promotion_ready=0",
+    "v58c_intake_artifact_available=0",
+    "v58c_dependency_blocker_ready=1",
+    "v58c_blind_response_evidence_intake_ready=0",
+    "v58c_expected_blind_response_rows=0",
+    "v58c_required_blind_response_ready=0",
+    "v58c_human_blind_review_ready=0",
     "v58_full_blind_eval_ready=0",
     "pm_pr_claim_slice_bundle_ready=1",
     "pm_scope_drift_allowed=0",
