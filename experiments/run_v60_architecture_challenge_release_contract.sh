@@ -44,6 +44,7 @@ results = root / "results"
 v59_dir = results / "v59_one_command_challenge_demo_contract" / "contract_001"
 v59e_dir = results / "v59e_one_command_pm_foundation_demo" / "pm_foundation_001"
 pm_pr_dir = results / "v1_0_pm_pr_claim_slice_gate" / "gate_001"
+h10_pm_dir = results / "v10_h10_real_label_promotion_readiness_gate" / "gate_001"
 
 
 def sha256(path):
@@ -67,6 +68,13 @@ def read_first(path):
     with path.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     return rows[0] if rows else {}
+
+
+def read_rows(path):
+    if not path.is_file() or path.stat().st_size == 0:
+        return []
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
 
 
 def as_int(row, key, default="0"):
@@ -143,6 +151,9 @@ for rel in [
     "source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
+    "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json",
     "v58c_pm_blind_response_intake_dependency_summary.csv",
@@ -164,6 +175,23 @@ for summary_name in [
     if src.is_file() and src.stat().st_size > 0:
         copy(src, f"source_summaries/{summary_name}")
 
+h10_pm_files = [
+    "pm_h10_real_label_acceptance_rows.csv",
+    "h10_real_label_evidence_template.csv",
+    "h10_real_label_evidence_acceptance_rows.csv",
+]
+h10_pm_copied_files = 0
+for rel in h10_pm_files:
+    for src in [
+        h10_pm_dir / rel,
+        v59e_dir / "source_pm_pr_claim_slice_gate" / "source_h10_pm" / rel,
+        pm_pr_dir / "source_h10_pm" / rel,
+    ]:
+        if src.is_file() and src.stat().st_size > 0:
+            copy(src, f"source_h10_pm/{rel}")
+            h10_pm_copied_files += 1
+            break
+
 v52 = read_first(results / "v52_llm_rag_baseline_war_summary.csv")
 v53t = read_first(results / "v53t_complete_source_audit_readiness_gate_summary.csv")
 v53ap = read_first(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv")
@@ -171,6 +199,32 @@ v54c = read_first(results / "v54c_complete_source_grounded_generation_1000_summa
 h10 = read_first(results / "v10_h10_real_label_promotion_readiness_gate_summary.csv")
 v59e = read_first(results / "v59e_one_command_pm_foundation_demo_summary.csv")
 pm_pr = read_first(results / "v1_0_pm_pr_claim_slice_gate_summary.csv")
+
+expected_h10_pm_criteria = {
+    "coherent-wrong-key-reduction",
+    "chunk-exact-increase",
+    "near-miss-slash",
+    "missing-query-abstain",
+    "source-provenance-binding",
+    "external-human-label-evidence",
+}
+h10_pm_acceptance_rows = read_rows(run_dir / "source_h10_pm" / "pm_h10_real_label_acceptance_rows.csv")
+h10_pm_criteria = {row.get("criterion", ""): row for row in h10_pm_acceptance_rows}
+h10_pm_criteria_ready = int(
+    len(h10_pm_acceptance_rows) == len(expected_h10_pm_criteria)
+    and set(h10_pm_criteria) == expected_h10_pm_criteria
+)
+h10_external_row = h10_pm_criteria.get("external-human-label-evidence", {})
+h10_source_row = h10_pm_criteria.get("source-provenance-binding", {})
+h10_pm_external_label_blocked = int(
+    h10_external_row.get("machine_evidence_status") == "blocked"
+    and h10_external_row.get("real_label_status") == "blocked"
+)
+h10_pm_source_provenance_binding_ready = int(
+    h10_source_row.get("machine_evidence_status") == "pass"
+    and "v53ap_evaluator_rows=4000" in h10_source_row.get("evidence", "")
+    and as_int(h10, "source_provenance_binding_ready") == 1
+)
 
 
 def req(requirement, ready, blocker, evidence_path, release_blocker_class):
@@ -257,11 +311,13 @@ requirements = [
     ),
     req(
         "h10_real_label_source_verified_scorer",
-        as_int(h10, "h10_real_label_promotion_ready") == 1
+        h10_pm_criteria_ready == 1
+        and h10_pm_source_provenance_binding_ready == 1
+        and as_int(h10, "h10_real_label_promotion_ready") == 1
         and as_int(h10, "external_human_label_evidence_ready") == 1
         and as_int(h10, "h10_source_verified_eval_ready") == 1,
-        "accepted external/human h10 labels and source-verified eval evidence are missing",
-        "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
+        "h10 PM criteria rows are present, but accepted external/human labels and source-verified eval evidence are missing",
+        "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
         "external-human-label-evidence-missing",
     ),
     req(
@@ -368,7 +424,7 @@ decision_rows = [
     ("local-abgh-prebaseline", "pass", "A/B/G/H same-query internal pre-baseline is ready without public comparison claim"),
     ("v54-grounded-generation-1000", "pass", "1000 grounded generation rows are present with raw prompt stuffing blocked"),
     ("real-30b-70b-baselines", "blocked", "real 30B/70B LLM+RAG rows are missing"),
-    ("h10-real-label-promotion", "blocked", "accepted external/human real-label evidence is missing"),
+    ("h10-real-label-promotion", "blocked", "h10 PM criteria rows are replayable, but accepted external/human real-label evidence is missing"),
     ("v56-replay-artifact", "blocked", "v56 expanded benchmark replay artifact remains missing"),
     ("v58c-blind-response-intake", "blocked", "v58c intake artifact is missing or blocked by explicit seed-rebuild guard"),
     ("v58-real-blind-eval", "blocked", "real blind responses and human blind review are missing"),
@@ -407,6 +463,13 @@ summary = {
     "public_repo_query_scale_ready": int(as_int(v53t, "pm_v53_freeze_ready") == 1),
     "local_abgh_prebaseline_ready": int(as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1),
     "h10_real_label_promotion_ready": as_int(h10, "h10_real_label_promotion_ready"),
+    "h10_source_verified_eval_ready": as_int(h10, "h10_source_verified_eval_ready"),
+    "h10_external_human_label_evidence_ready": as_int(h10, "external_human_label_evidence_ready"),
+    "h10_pm_criteria_rows": len(h10_pm_acceptance_rows),
+    "h10_pm_criteria_ready": h10_pm_criteria_ready,
+    "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
+    "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
+    "h10_pm_copied_files": h10_pm_copied_files,
     "routehint_generation_main_ready": int(as_int(v54c, "v54c_complete_source_grounded_generation_1000_ready") == 1),
     "scaling_law_main_ready": 0,
     "expanded_benchmark_ready": int(as_int(pm_pr, "replay_artifact_pass_rows") == as_int(pm_pr, "recommended_pr_slice_rows")),
@@ -439,6 +502,8 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- internal A/B/G/H same-query pre-baseline without public comparison claim\n"
     "- v54 complete-source 1000-row grounded generation with raw prompt stuffing blocked\n"
     "- v59e one-command PM foundation replay with PR split sidecar and execution lock\n\n"
+    "Current blocker evidence surfaces:\n\n"
+    "- h10 PM criteria rows are copied for coherent wrong-key, chunk exact, near-miss, missing-query abstain, source provenance binding, and external/human label blockers.\n\n"
     "Still blocked:\n\n"
     "- real 30B/70B LLM+RAG comparison rows\n"
     "- h10 real external/human label promotion evidence\n"
@@ -469,6 +534,11 @@ manifest = {
     "v59e_summary_sha256": sha256(results / "v59e_one_command_pm_foundation_demo_summary.csv"),
     "v59e_manifest_sha256": sha256(v59e_dir / "v59e_one_command_pm_foundation_demo_manifest.json"),
     "pm_pr_summary_sha256": sha256(results / "v1_0_pm_pr_claim_slice_gate_summary.csv"),
+    "h10_pm_criteria_rows": len(h10_pm_acceptance_rows),
+    "h10_pm_criteria_ready": h10_pm_criteria_ready,
+    "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
+    "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
+    "h10_pm_acceptance_sha256": sha_or_empty(run_dir / "source_h10_pm" / "pm_h10_real_label_acceptance_rows.csv"),
 }
 (run_dir / "v60_architecture_challenge_release_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

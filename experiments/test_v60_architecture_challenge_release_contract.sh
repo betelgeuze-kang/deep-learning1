@@ -60,6 +60,13 @@ expected = {
     "public_repo_query_scale_ready": "1",
     "local_abgh_prebaseline_ready": "1",
     "h10_real_label_promotion_ready": "0",
+    "h10_source_verified_eval_ready": "0",
+    "h10_external_human_label_evidence_ready": "0",
+    "h10_pm_criteria_rows": "6",
+    "h10_pm_criteria_ready": "1",
+    "h10_pm_external_label_blocked": "1",
+    "h10_pm_source_provenance_binding_ready": "1",
+    "h10_pm_copied_files": "3",
     "routehint_generation_main_ready": "1",
     "scaling_law_main_ready": "0",
     "expanded_benchmark_ready": "0",
@@ -131,6 +138,9 @@ required_files = [
     "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_v59e/v58c_pm_blind_response_intake_dependency_summary.csv",
     "source_v59e/v58c_pm_blind_response_intake_dependency_rows.csv",
     "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv",
@@ -140,6 +150,9 @@ required_files = [
     "source_summaries/v53ap_complete_source_abgh_same_query_measured_summary.csv",
     "source_summaries/v54c_complete_source_grounded_generation_1000_summary.csv",
     "source_summaries/v10_h10_real_label_promotion_readiness_gate_summary.csv",
+    "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
+    "source_h10_pm/h10_real_label_evidence_template.csv",
+    "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
 ]
 for rel in required_files:
     path = run_dir / rel
@@ -177,6 +190,27 @@ for row in requirements:
     evidence_path = run_dir / row["evidence_path"]
     if not evidence_path.is_file() or evidence_path.stat().st_size == 0:
         raise SystemExit(f"v60 requirement evidence path is not replayable: {row['requirement']} -> {row['evidence_path']}")
+h10_req = next(row for row in requirements if row["requirement"] == "h10_real_label_source_verified_scorer")
+if h10_req["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
+    raise SystemExit("v60 h10 requirement should point directly at PM h10 criteria rows")
+h10_rows = read_csv(run_dir / h10_req["evidence_path"])
+expected_h10_criteria = {
+    "coherent-wrong-key-reduction",
+    "chunk-exact-increase",
+    "near-miss-slash",
+    "missing-query-abstain",
+    "source-provenance-binding",
+    "external-human-label-evidence",
+}
+if {row["criterion"] for row in h10_rows} != expected_h10_criteria:
+    raise SystemExit("v60 h10 PM criteria rows should cover all six PM scorer criteria")
+h10_by_criterion = {row["criterion"]: row for row in h10_rows}
+if h10_by_criterion["source-provenance-binding"]["machine_evidence_status"] != "pass":
+    raise SystemExit("v60 h10 source provenance criterion should carry pass machine evidence")
+if "v53ap_evaluator_rows=4000" not in h10_by_criterion["source-provenance-binding"]["evidence"]:
+    raise SystemExit("v60 h10 source provenance criterion should bind v53ap evaluator rows")
+if h10_by_criterion["external-human-label-evidence"]["real_label_status"] != "blocked":
+    raise SystemExit("v60 h10 external/human label criterion should remain blocked")
 
 allowed = read_csv(run_dir / "allowed_claim_rows.csv")
 for claim in ["architecture-challenge-contract-scaffold", "pm-foundation-replay-bundle", "local-architecture-preview"]:
@@ -207,6 +241,10 @@ if manifest.get("real_release_package_ready") != 0 or manifest.get("release_requ
     raise SystemExit("v60 manifest should keep release blocked")
 if manifest.get("release_requirement_ready_rows") != 6:
     raise SystemExit("v60 manifest should record six PM-foundation ready requirements")
+if manifest.get("h10_pm_criteria_rows") != 6 or manifest.get("h10_pm_criteria_ready") != 1:
+    raise SystemExit("v60 manifest should record direct h10 PM criteria evidence")
+if manifest.get("h10_pm_external_label_blocked") != 1 or manifest.get("h10_pm_source_provenance_binding_ready") != 1:
+    raise SystemExit("v60 manifest should preserve h10 blocker/provenance boundary")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -222,6 +260,7 @@ for snippet in [
     "v53 10-repo / 1000 source-span-bound query PM freeze",
     "real 30B/70B LLM+RAG comparison rows",
     "h10 real external/human label promotion evidence",
+    "h10 PM criteria rows",
     "v58c blind-response intake artifact",
     "approved public-source download/refresh evidence",
     "Do not publish v1.0 release",
