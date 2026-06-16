@@ -174,6 +174,11 @@ for requirement_id in [
 ]:
     if roadmap_by_id.get(requirement_id, {}).get("status") != "ready":
         raise SystemExit(f"PM roadmap requirement should be ready: {requirement_id}")
+answer_citation_row = roadmap_by_id["answer-citation-separated"]
+if answer_citation_row["evidence_path"] != "source_v53t/complete_source_foundation_freeze_rows.csv":
+    raise SystemExit("PM answer/citation separation should bind directly to the v53t foundation freeze rows")
+if "answer_hash_match_rows=6000; citation_span_match_rows=7000" not in answer_citation_row["reason"]:
+    raise SystemExit("PM answer/citation separation should expose v53 answer/citation/scorer/policy counts")
 expected_blocked = {
     "v56-replay-artifact": "v56-replay-artifact-missing",
     "de-30b70b-symmetric-baselines": "de-30b70b-baselines-missing",
@@ -434,6 +439,7 @@ required_files = [
     "pm_blocker_closure_packet_rows.csv",
     "pm_blocker_required_artifact_rows.csv",
     "source_summary_rows.csv",
+    "source_v53t/complete_source_foundation_freeze_rows.csv",
     "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md",
     "v1_0_pm_pr_claim_slice_gate_manifest.json",
     "sha256_manifest.csv",

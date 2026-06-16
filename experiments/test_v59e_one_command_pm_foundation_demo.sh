@@ -178,6 +178,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/pm_blocker_closure_packet_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/review_packets/docs__v1-roadmap.md",
     "source_pm_pr_claim_slice_gate/blocker_packets/v58c-intake-artifact-missing.md",
     "source_pm_pr_claim_slice_gate/blocker_packets/v58-real-blind-eval-missing.md",

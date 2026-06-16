@@ -53,6 +53,13 @@ def read_first(path):
     return rows[0] if rows else {}
 
 
+def read_rows(path):
+    if not path.is_file() or path.stat().st_size == 0:
+        return []
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
 def as_int(row, key, default="0"):
     try:
         return int(float(row.get(key, default) or default))
@@ -104,6 +111,17 @@ for key, path in summary_sources.items():
         }
     )
 copy_if_exists(roadmap, "source_docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md")
+v53t_foundation_freeze_path = results / "v53t_complete_source_audit_readiness_gate" / "gate_001" / "complete_source_foundation_freeze_rows.csv"
+v53t_foundation_freeze_copied = copy_if_exists(
+    v53t_foundation_freeze_path,
+    "source_v53t/complete_source_foundation_freeze_rows.csv",
+)
+v53t_foundation_freeze_rows = read_rows(v53t_foundation_freeze_path)
+v53t_foundation_by_id = {
+    row.get("criterion_id", ""): row
+    for row in v53t_foundation_freeze_rows
+}
+v53t_answer_citation_foundation = v53t_foundation_by_id.get("answer-citation-separated-evaluator", {})
 write_csv(run_dir / "source_summary_rows.csv", list(copied_summary_rows[0].keys()), copied_summary_rows)
 
 slice_ids = [
@@ -542,9 +560,13 @@ pm_roadmap_rows = [
         "M2",
         "answer-citation-separated",
         "evaluator separates answer and citation/source checks",
-        as_int(v59e, "answer_citation_separate_eval") == 1,
-        "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
-        f"answer_citation_separate_eval={v59e.get('answer_citation_separate_eval', '0')}",
+        v53t_answer_citation_foundation.get("status") == "pass"
+        and v53t_answer_citation_foundation.get("actual_value") == "answer_hash_match_rows=6000; citation_span_match_rows=7000",
+        v53t_foundation_freeze_copied or "source_v53t/complete_source_foundation_freeze_rows.csv",
+        (
+            f"criterion_status={v53t_answer_citation_foundation.get('status', 'missing')} "
+            f"actual_value={v53t_answer_citation_foundation.get('actual_value', '')}"
+        ),
         "answer-citation-eval-not-separated",
     ),
     req(

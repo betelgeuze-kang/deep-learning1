@@ -665,6 +665,7 @@ pm_pr_core_files = [
     (pr_run_dir / "pm_blocker_required_artifact_rows.csv", "source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv", "evidence"),
     (pr_run_dir / "pm_execution_lock_rows.csv", "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv", "evidence"),
     (pr_run_dir / "pm_external_return_template_rows.csv", "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/complete_source_foundation_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv", "evidence"),
     (pr_run_dir / "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "source_pm_pr_claim_slice_gate/V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "boundary"),
     (pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json", "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json", "manifest"),
 ]
