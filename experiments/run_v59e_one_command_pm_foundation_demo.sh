@@ -1270,6 +1270,7 @@ pm_pr_core_files = [
     (pr_run_dir / "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/routehint_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/routehint_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "source_pm_pr_claim_slice_gate/source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "boundary"),
+    (pr_run_dir / "source_v59e/local_abgh_row_contract_replay_rows.csv", "source_pm_pr_claim_slice_gate/source_v59e/local_abgh_row_contract_replay_rows.csv", "evidence"),
     (pr_run_dir / "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "source_pm_pr_claim_slice_gate/V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "boundary"),
     (pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json", "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json", "manifest"),
 ]
@@ -1303,9 +1304,9 @@ execution_lock_ready = int(
     and as_int(pr_summary, "pm_new_scaffold_default_allowed") == 0
 )
 external_return_template_ready = int(
-    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 25
+    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 26
     and as_int(pr_summary, "pm_external_return_template_fixture_allowed_rows") == 0
-    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 25
+    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 26
 )
 v58_blocker_classes = {"v58c-intake-artifact-missing", "v58-real-blind-eval-missing"}
 pm_required_artifact_rows = read_csv(pr_run_dir / "pm_blocker_required_artifact_rows.csv")
@@ -1528,7 +1529,7 @@ decision_rows.extend(
         {
             "gate": "pm-external-return-templates",
             "status": "pass" if external_return_template_ready else "blocked",
-            "reason": "25 no-fixture approval-required return templates are packaged for blocker closure",
+            "reason": "26 no-fixture approval-required return templates are packaged for blocker closure",
         },
         {
             "gate": "v58-required-return-artifacts",

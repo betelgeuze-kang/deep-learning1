@@ -193,6 +193,7 @@ for rel in [
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_resource_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_adapter_trace_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v59e/local_abgh_row_contract_replay_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json",
     "v58c_pm_blind_response_intake_dependency_summary.csv",

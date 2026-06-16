@@ -72,18 +72,18 @@ expected = {
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_ready_rows": "6",
     "pm_blocker_closure_packet_approval_rows": "6",
-    "pm_blocker_required_artifact_rows": "25",
-    "pm_blocker_required_artifact_approval_rows": "25",
+    "pm_blocker_required_artifact_rows": "26",
+    "pm_blocker_required_artifact_approval_rows": "26",
     "pm_blocker_required_artifact_fixture_allowed_rows": "0",
     "pm_execution_lock_rows": "10",
     "pm_execution_lock_active_rows": "10",
     "pm_scope_drift_allowed": "0",
     "pm_new_scaffold_default_allowed": "0",
-    "pm_external_return_template_rows": "25",
-    "pm_external_return_template_files": "25",
-    "pm_external_return_template_ready_rows": "25",
+    "pm_external_return_template_rows": "26",
+    "pm_external_return_template_files": "26",
+    "pm_external_return_template_ready_rows": "26",
     "pm_external_return_template_fixture_allowed_rows": "0",
-    "pm_external_return_template_approval_rows": "25",
+    "pm_external_return_template_approval_rows": "26",
     "draft_pr_2_split_required": "1",
     "tests_only_merge_condition_rows": "0",
     "full_v1_release_ready": "0",
@@ -225,8 +225,8 @@ if "real_system_performance_claim_ready=0" not in abgh_ready_row["reason"]:
 abgh_real_row = roadmap_by_id["abgh-real-system-adapter-execution"]
 if abgh_real_row["status"] != "ready":
     raise SystemExit("PM A/B/G/H real adapter execution should be ready after v53aq real-adapter run")
-if abgh_real_row["evidence_path"] != "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv":
-    raise SystemExit("PM A/B/G/H real adapter row should bind directly to the v53aq same-query ledger")
+if abgh_real_row["evidence_path"] != "source_v59e/local_abgh_row_contract_replay_rows.csv":
+    raise SystemExit("PM A/B/G/H real adapter row should bind directly to the v59e row-contract replay ledger")
 for snippet in [
     "real_adapter_execution_ready=1",
     "actual_adapter_execution_ready=1",
@@ -236,6 +236,9 @@ for snippet in [
     "real_system_performance_claim_ready=1",
     "same_query_internal_prebaseline_rows_ready=1",
     "same_query_internal_prebaseline_rows=1000",
+    "local_abgh_row_contract_replay_ready=1",
+    "local_abgh_row_contract_replay_rows=2",
+    "local_abgh_row_contract_replay_pass_rows=2",
     "answer_hash_match_rows=3713",
     "coherent_wrong_key_rows=287",
 ]:
@@ -315,7 +318,7 @@ for snippet in ["same_query=1", "same_source=1", "same_evaluator=1", "same_resou
     if snippet not in abgh_surface_row["reason"]:
         raise SystemExit(f"PM A/B/G/H same-surface row should expose {snippet}")
 v59_foundation_row = roadmap_by_id["v59-one-command-foundation"]
-for snippet in ["public_source_download_executed=0", "full_public_source_download_ready=0", "policy_blocker=blocked-full-public-demo"]:
+for snippet in ["local_abgh_row_contract_replay_ready=1", "public_source_download_executed=0", "full_public_source_download_ready=0", "policy_blocker=blocked-full-public-demo"]:
     if snippet not in v59_foundation_row["reason"]:
         raise SystemExit(f"PM v59 foundation row should expose {snippet}")
 expected_blocked = {
@@ -462,8 +465,8 @@ for row in blocker_packet_rows:
 blocker_packet_by_id = {row["blocker_class"]: row for row in blocker_packet_rows}
 if blocker_packet_by_id["de-30b70b-baselines-missing"]["required_artifact_rows"] != "4":
     raise SystemExit("D/E blocker packet should list four required artifact rows")
-if blocker_packet_by_id["v60-release-evidence-missing"]["required_artifact_rows"] != "6":
-    raise SystemExit("v60 blocker packet should list six required artifact rows")
+if blocker_packet_by_id["v60-release-evidence-missing"]["required_artifact_rows"] != "7":
+    raise SystemExit("v60 blocker packet should list seven required artifact rows")
 if blocker_packet_by_id["v58c-intake-artifact-missing"]["required_artifact_rows"] != "3":
     raise SystemExit("v58c blocker packet should list three required artifact rows")
 if blocker_packet_by_id["v58-real-blind-eval-missing"]["required_artifact_rows"] != "5":
@@ -474,8 +477,8 @@ if "V58C_REUSE_EXISTING=0" not in blocker_packet_by_id["v58c-intake-artifact-mis
     raise SystemExit("v58c blocker packet should carry the intake artifact rebuild command")
 
 required_artifact_rows = read_csv(run_dir / "pm_blocker_required_artifact_rows.csv")
-if len(required_artifact_rows) != 25:
-    raise SystemExit("PM blocker required artifact ledger should have 25 rows")
+if len(required_artifact_rows) != 26:
+    raise SystemExit("PM blocker required artifact ledger should have 26 rows")
 if {row["blocker_class"] for row in required_artifact_rows} != set(expected_blocked.values()):
     raise SystemExit("PM blocker required artifact ledger should cover the six blocker classes")
 if any(row["fixture_allowed"] != "0" for row in required_artifact_rows):
@@ -494,6 +497,7 @@ for key in [
     ("v58-real-blind-eval-missing", "v58-blind-response-rows"),
     ("v58-real-blind-eval-missing", "v58d-review-return-intake"),
     ("v60-release-evidence-missing", "v59e-replay-preflight"),
+    ("v60-release-evidence-missing", "v59e-local-abgh-row-contract-replay"),
     ("v60-release-evidence-missing", "v59-public-source-download-refresh"),
     ("v60-release-evidence-missing", "v60-human-release-review"),
 ]:
@@ -511,6 +515,10 @@ if "v58c_blind_response_evidence_intake_summary.csv" not in artifact_key[("v58c-
     raise SystemExit("v58c intake summary row should name the v58c summary")
 if "pm_foundation_replay_preflight_rows.csv" not in artifact_key[("v60-release-evidence-missing", "v59e-replay-preflight")]["artifact_path_or_env"]:
     raise SystemExit("v59e replay preflight artifact row should name the preflight rows")
+if "local_abgh_row_contract_replay_rows.csv" not in artifact_key[("v60-release-evidence-missing", "v59e-local-abgh-row-contract-replay")]["artifact_path_or_env"]:
+    raise SystemExit("v59e local A/B/G/H row-contract artifact row should name the row-contract replay rows")
+if "local_abgh_row_contract_replay_ready=1" not in artifact_key[("v60-release-evidence-missing", "v59e-local-abgh-row-contract-replay")]["acceptance_signal"]:
+    raise SystemExit("v59e local A/B/G/H row-contract artifact should close only when row-contract replay is ready")
 if "public source download/refresh evidence bundle" not in artifact_key[("v60-release-evidence-missing", "v59-public-source-download-refresh")]["artifact_path_or_env"]:
     raise SystemExit("public-source download/refresh required artifact should be explicit")
 if "full_public_source_download_ready=1" not in artifact_key[("v60-release-evidence-missing", "v59-public-source-download-refresh")]["acceptance_signal"]:
@@ -548,8 +556,8 @@ if "release" not in lock_by_id["v60-release-gate-last"]["scope"]:
     raise SystemExit("v60 execution lock should cover the release gate")
 
 template_rows = read_csv(run_dir / "pm_external_return_template_rows.csv")
-if len(template_rows) != 25:
-    raise SystemExit("PM external return template ledger should have 25 rows")
+if len(template_rows) != 26:
+    raise SystemExit("PM external return template ledger should have 26 rows")
 if any(row["template_ready"] != "1" for row in template_rows):
     raise SystemExit("all PM external return templates should be ready")
 if any(row["fixture_allowed"] != "0" for row in template_rows):
@@ -587,6 +595,10 @@ v59e_preflight_template = (run_dir / template_by_key[("v60-release-evidence-miss
 for header in ["one_command_replay_preflight_ready", "full_public_source_download_ready", "preflight_rows_sha256"]:
     if header not in v59e_preflight_template:
         raise SystemExit(f"v59e replay preflight template missing header: {header}")
+v59e_abgh_template = (run_dir / template_by_key[("v60-release-evidence-missing", "v59e-local-abgh-row-contract-replay")]["template_path"]).read_text(encoding="utf-8")
+for header in ["contract_id", "source_stage", "answer_rows", "evaluator_rows", "public_comparison_claim_ready"]:
+    if header not in v59e_abgh_template:
+        raise SystemExit(f"v59e local A/B/G/H row-contract template missing header: {header}")
 public_source_refresh_template = (run_dir / template_by_key[("v60-release-evidence-missing", "v59-public-source-download-refresh")]["template_path"]).read_text(encoding="utf-8")
 for header in ["repo_url", "pinned_commit_sha", "tree_sha256", "download_transcript_sha256", "network_download_approval_reference", "non_fixture_declared"]:
     if header not in public_source_refresh_template:
@@ -614,6 +626,7 @@ required_files = [
     "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
+    "source_v59e/local_abgh_row_contract_replay_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v53t/complete_source_query_span_binding_audit_rows.csv",
@@ -648,6 +661,10 @@ content_repo_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/comp
 content_snapshot_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
 binding_rows = read_csv(run_dir / "source_v53t/complete_source_query_span_binding_audit_rows.csv")
 v53aq_prebaseline_rows = read_csv(run_dir / "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
+local_abgh_contract_rows = {
+    row["source_stage"]: row
+    for row in read_csv(run_dir / "source_v59e/local_abgh_row_contract_replay_rows.csv")
+}
 if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
     raise SystemExit("PM PR sidecar should carry direct 10-repo manifest rows")
 if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
@@ -656,6 +673,23 @@ if len(binding_rows) != 1000 or any(row["binding_status"] != "pass" for row in b
     raise SystemExit("PM PR sidecar should carry 1000 passing query-span binding audit rows")
 if len(v53aq_prebaseline_rows) != 1000 or any(row["same_evaluator_contract"] != "1" or row["same_resource_bound"] != "1" for row in v53aq_prebaseline_rows):
     raise SystemExit("PM PR sidecar should carry 1000 v53aq same-query evaluator/resource ledger rows")
+if set(local_abgh_contract_rows) != {"v53ap", "v53aq"}:
+    raise SystemExit("PM PR sidecar should carry v59e local A/B/G/H row-contract rows for v53ap and v53aq")
+if any(
+    row["status"] != "pass"
+    or row["systems"] != "A/B/G/H"
+    or row["answer_rows"] != "4000"
+    or row["citation_rows"] != "4000"
+    or row["evaluator_rows"] != "4000"
+    or row["resource_rows"] != "4000"
+    or row["same_query_row_contract"] != "1"
+    or row["same_evaluator_contract_all_local_systems"] != "1"
+    or row["same_resource_contract_all_local_systems"] != "1"
+    or row["expected_answer_oracle_replay_any"] != "0"
+    or row["public_comparison_claim_ready"] != "0"
+    for row in local_abgh_contract_rows.values()
+):
+    raise SystemExit("PM PR sidecar should preserve passing local A/B/G/H row-contract replay boundaries")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("PM PR sidecar repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -719,17 +753,17 @@ if manifest.get("pm_blocker_closure_packet_rows") != 6 or manifest.get("pm_block
     raise SystemExit("PM PR manifest blocker closure packet mismatch")
 if manifest.get("pm_blocker_closure_packet_ready_rows") != 6 or manifest.get("pm_blocker_closure_packet_approval_rows") != 6:
     raise SystemExit("PM PR manifest blocker closure packet readiness mismatch")
-if manifest.get("pm_blocker_required_artifact_rows") != 25 or manifest.get("pm_blocker_required_artifact_fixture_allowed_rows") != 0:
+if manifest.get("pm_blocker_required_artifact_rows") != 26 or manifest.get("pm_blocker_required_artifact_fixture_allowed_rows") != 0:
     raise SystemExit("PM PR manifest blocker required artifact mismatch")
 if manifest.get("pm_execution_lock_rows") != 10 or manifest.get("pm_execution_lock_active_rows") != 10:
     raise SystemExit("PM PR manifest execution lock row mismatch")
 if manifest.get("pm_scope_drift_allowed") != 0 or manifest.get("pm_new_scaffold_default_allowed") != 0:
     raise SystemExit("PM PR manifest should disallow scope drift and default new scaffolds")
-if manifest.get("pm_external_return_template_rows") != 25 or manifest.get("pm_external_return_template_files") != 25:
+if manifest.get("pm_external_return_template_rows") != 26 or manifest.get("pm_external_return_template_files") != 26:
     raise SystemExit("PM PR manifest external return template count mismatch")
-if manifest.get("pm_external_return_template_ready_rows") != 25 or manifest.get("pm_external_return_template_fixture_allowed_rows") != 0:
+if manifest.get("pm_external_return_template_ready_rows") != 26 or manifest.get("pm_external_return_template_fixture_allowed_rows") != 0:
     raise SystemExit("PM PR manifest external return template readiness mismatch")
-if manifest.get("pm_external_return_template_approval_rows") != 25:
+if manifest.get("pm_external_return_template_approval_rows") != 26:
     raise SystemExit("PM PR manifest external return templates should require approval")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
@@ -762,12 +796,12 @@ for snippet in [
     "pm_blocker_closure_queue_rows=6",
     "pm_blocker_closure_packet_rows=6",
     "pm_blocker_closure_packet_files=6",
-    "pm_blocker_required_artifact_rows=25",
+    "pm_blocker_required_artifact_rows=26",
     "pm_execution_lock_rows=10",
     "pm_scope_drift_allowed=0",
     "pm_new_scaffold_default_allowed=0",
-    "pm_external_return_template_rows=25",
-    "pm_external_return_template_files=25",
+    "pm_external_return_template_rows=26",
+    "pm_external_return_template_files=26",
     "tests_only_merge_condition_rows=0",
     "Blocked wording",
 ]:

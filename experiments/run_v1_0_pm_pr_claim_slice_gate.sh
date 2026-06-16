@@ -170,6 +170,34 @@ v59e_public_source_policy_copied = copy_if_exists(
 )
 v59e_public_source_policy_rows = read_rows(v59e_public_source_policy_path)
 v59e_public_source_policy = v59e_public_source_policy_rows[0] if v59e_public_source_policy_rows else {}
+v59e_local_abgh_row_contract_path = results / "v59e_one_command_pm_foundation_demo" / "pm_foundation_001" / "local_abgh_row_contract_replay_rows.csv"
+v59e_local_abgh_row_contract_copied = copy_if_exists(
+    v59e_local_abgh_row_contract_path,
+    "source_v59e/local_abgh_row_contract_replay_rows.csv",
+)
+v59e_local_abgh_row_contract_rows = read_rows(v59e_local_abgh_row_contract_path)
+v59e_local_abgh_row_contract_ready = int(
+    len(v59e_local_abgh_row_contract_rows) == 2
+    and as_int(summaries["v59e"], "local_abgh_row_contract_replay_ready") == 1
+    and as_int(summaries["v59e"], "local_abgh_row_contract_replay_rows") == 2
+    and as_int(summaries["v59e"], "local_abgh_row_contract_replay_pass_rows") == 2
+    and bool(v59e_local_abgh_row_contract_copied)
+    and {row.get("source_stage", "") for row in v59e_local_abgh_row_contract_rows} == {"v53ap", "v53aq"}
+    and all(
+        row.get("status") == "pass"
+        and row.get("systems") == "A/B/G/H"
+        and row.get("answer_rows") == "4000"
+        and row.get("citation_rows") == "4000"
+        and row.get("evaluator_rows") == "4000"
+        and row.get("resource_rows") == "4000"
+        and row.get("same_query_row_contract") == "1"
+        and row.get("same_evaluator_contract_all_local_systems") == "1"
+        and row.get("same_resource_contract_all_local_systems") == "1"
+        and row.get("expected_answer_oracle_replay_any") == "0"
+        and row.get("public_comparison_claim_ready") == "0"
+        for row in v59e_local_abgh_row_contract_rows
+    )
+)
 h10_pm_dir = results / "v10_h10_real_label_promotion_readiness_gate" / "gate_001"
 h10_acceptance_rows_path = h10_pm_dir / "pm_h10_real_label_acceptance_rows.csv"
 h10_template_path = h10_pm_dir / "h10_real_label_evidence_template.csv"
@@ -751,8 +779,9 @@ pm_roadmap_rows = [
         and as_int(v53aq, "evaluator_rows") == 4000
         and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
         and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
-        and bool(v53aq_direct_copied.get("abgh_same_query_internal_prebaseline_rows.csv")),
-        v53aq_direct_copied.get("abgh_same_query_internal_prebaseline_rows.csv") or "source_summaries/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+        and bool(v53aq_direct_copied.get("abgh_same_query_internal_prebaseline_rows.csv"))
+        and v59e_local_abgh_row_contract_ready == 1,
+        v59e_local_abgh_row_contract_copied or v53aq_direct_copied.get("abgh_same_query_internal_prebaseline_rows.csv") or "source_summaries/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
         (
             f"real_adapter_execution_ready={v53aq.get('real_adapter_execution_ready', '0')} "
             f"actual_adapter_execution_ready={v53aq.get('actual_adapter_execution_ready', '0')} "
@@ -763,6 +792,9 @@ pm_roadmap_rows = [
             f"real_system_performance_claim_ready={v53aq.get('real_system_performance_claim_ready', '0')} "
             f"same_query_internal_prebaseline_rows_ready={v53aq.get('same_query_internal_prebaseline_rows_ready', '0')} "
             f"same_query_internal_prebaseline_rows={v53aq.get('same_query_internal_prebaseline_rows', '0')} "
+            f"local_abgh_row_contract_replay_ready={v59e.get('local_abgh_row_contract_replay_ready', '0')} "
+            f"local_abgh_row_contract_replay_rows={v59e.get('local_abgh_row_contract_replay_rows', '0')} "
+            f"local_abgh_row_contract_replay_pass_rows={v59e.get('local_abgh_row_contract_replay_pass_rows', '0')} "
             f"answer_hash_match_rows={v53aq.get('answer_hash_match_rows', '0')} "
             f"coherent_wrong_key_rows={v53aq.get('coherent_wrong_key_rows', '0')}"
         ),
@@ -896,6 +928,7 @@ pm_roadmap_rows = [
         (
             f"v59e_ready={v59e.get('v59e_one_command_pm_foundation_demo_ready', '0')} "
             f"bundle={v59e.get('challenge_bundle_ready', '0')} "
+            f"local_abgh_row_contract_replay_ready={v59e.get('local_abgh_row_contract_replay_ready', '0')} "
             f"public_source_download_executed={v59e.get('public_source_download_executed', '0')} "
             f"full_public_source_download_ready={v59e.get('full_public_source_download_ready', '0')} "
             f"policy_blocker={v59e_public_source_policy.get('blocker_status', 'missing')}"
@@ -1256,6 +1289,15 @@ blocker_required_artifact_rows = [
     ),
     required_artifact_row(
         "v60-release-evidence-missing",
+        "v59e-local-abgh-row-contract-replay",
+        "results/v59e_one_command_pm_foundation_demo/pm_foundation_001/local_abgh_row_contract_replay_rows.csv",
+        "csv",
+        "two passing v53ap/v53aq local A/B/G/H row-contract replay rows with 4000 answer/citation/evaluator/resource rows each and public comparison closed",
+        "experiments/test_v59e_one_command_pm_foundation_demo.sh",
+        "local_abgh_row_contract_replay_ready=1 and public_comparison_claim_ready=0 for the internal pre-baseline path",
+    ),
+    required_artifact_row(
+        "v60-release-evidence-missing",
         "v59-public-source-download-refresh",
         "public source download/refresh evidence bundle",
         "artifact-directory",
@@ -1364,6 +1406,7 @@ def return_template_for_artifact(row):
         "v60-release-claim-audit": "claim_id,allowed_claim,blocked_claim,evidence_path,evidence_sha256,reviewer_decision,non_fixture_declared,approval_reference",
         "v60-human-release-review": "release_review_id,reviewer_id_hash,release_packet_sha256,accepted_for_public_v1,required_corrections,conflict_disclosure_sha256,non_fixture_declared,approval_reference",
         "v59e-replay-preflight": "check,status,evidence,claim_boundary,preflight_rows_sha256,one_command_replay_preflight_ready,full_public_source_download_ready,non_fixture_declared,approval_reference",
+        "v59e-local-abgh-row-contract-replay": "contract_id,source_stage,evidence_path,systems,answer_rows,citation_rows,evaluator_rows,resource_rows,same_query_row_contract,same_evaluator_contract_all_local_systems,same_resource_contract_all_local_systems,expected_answer_oracle_replay_any,public_comparison_claim_ready,status,sha256_manifest_path,non_fixture_declared,approval_reference",
         "v59-public-source-download-refresh": "source_repo_id,repo_url,pinned_commit_sha,tree_sha256,content_manifest_path,download_command_sha256,download_transcript_sha256,sha256_manifest_path,network_download_approval_reference,non_fixture_declared",
         "v60-release-sha256-manifest": "path,sha256,bytes,artifact_role,authority_uri,non_fixture_declared",
     }

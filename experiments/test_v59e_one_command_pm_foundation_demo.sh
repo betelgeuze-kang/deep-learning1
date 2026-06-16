@@ -137,16 +137,16 @@ expected = {
     "pm_blocker_closure_packet_rows": "6",
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_bundle_ready": "1",
-    "pm_blocker_required_artifact_rows": "25",
+    "pm_blocker_required_artifact_rows": "26",
     "pm_blocker_required_artifact_fixture_allowed_rows": "0",
     "pm_execution_lock_rows": "10",
     "pm_execution_lock_active_rows": "10",
     "pm_scope_drift_allowed": "0",
     "pm_new_scaffold_default_allowed": "0",
-    "pm_external_return_template_rows": "25",
-    "pm_external_return_template_files": "25",
+    "pm_external_return_template_rows": "26",
+    "pm_external_return_template_files": "26",
     "pm_external_return_template_fixture_allowed_rows": "0",
-    "pm_external_return_template_approval_rows": "25",
+    "pm_external_return_template_approval_rows": "26",
     "pm_external_return_template_bundle_ready": "1",
     "v58_return_artifact_contract_ready": "1",
     "v58_required_artifact_rows": "8",
@@ -294,6 +294,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53aq/routehint_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
+    "source_pm_pr_claim_slice_gate/source_v59e/local_abgh_row_contract_replay_rows.csv",
     "source_pm_pr_claim_slice_gate/review_packets/docs__v1-roadmap.md",
     "source_pm_pr_claim_slice_gate/blocker_packets/v58c-intake-artifact-missing.md",
     "source_pm_pr_claim_slice_gate/blocker_packets/v58-real-blind-eval-missing.md",
@@ -343,8 +344,14 @@ local_abgh_contract_rows = {
     row["source_stage"]: row
     for row in read_csv(run_dir / "local_abgh_row_contract_replay_rows.csv")
 }
+pm_local_abgh_contract_rows = {
+    row["source_stage"]: row
+    for row in read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v59e/local_abgh_row_contract_replay_rows.csv")
+}
 if set(local_abgh_contract_rows) != {"v53ap", "v53aq"}:
     raise SystemExit("v59e local A/B/G/H row-contract replay should cover v53ap and v53aq")
+if pm_local_abgh_contract_rows != local_abgh_contract_rows:
+    raise SystemExit("v59e PM sidecar should carry the same local A/B/G/H row-contract replay rows")
 for stage, row in local_abgh_contract_rows.items():
     if (
         row["status"] != "pass"
@@ -717,7 +724,7 @@ if pr_summary.get("pm_blocker_closure_packet_files") != "6":
     raise SystemExit("v59e one-command PR slice gate should emit six blocker packets")
 if pr_summary.get("pm_execution_lock_rows") != "10" or pr_summary.get("pm_scope_drift_allowed") != "0":
     raise SystemExit("v59e one-command PR slice gate should keep the PM execution lock active")
-if pr_summary.get("pm_external_return_template_files") != "25" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
+if pr_summary.get("pm_external_return_template_files") != "26" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
     raise SystemExit("v59e one-command PR slice gate should emit no-fixture return templates")
 
 pr_slice_rows = read_csv(pr_slice_run_dir / "pm_pr_slice_rows.csv")
