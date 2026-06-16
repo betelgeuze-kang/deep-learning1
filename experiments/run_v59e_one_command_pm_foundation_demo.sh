@@ -303,6 +303,7 @@ stage_specs = [
             (v53aq_dir / "abgh_adapter_trace_rows.csv", "source_v53aq/abgh_adapter_trace_rows.csv"),
             (v53aq_dir / "abgh_wrong_answer_guard_rows.csv", "source_v53aq/abgh_wrong_answer_guard_rows.csv"),
             (v53aq_dir / "abgh_resource_rows.csv", "source_v53aq/abgh_resource_rows.csv"),
+            (v53aq_dir / "abgh_same_query_internal_prebaseline_rows.csv", "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
             (v53aq_dir / "route_memory_rows.csv", "source_v53aq/route_memory_rows.csv"),
             (v53aq_dir / "routehint_rows.csv", "source_v53aq/routehint_rows.csv"),
             (v53aq_dir / "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"),
@@ -543,6 +544,8 @@ local_abgh_real_adapter_ready = int(
     and as_int(v53aq, "deterministic_source_span_adapter_execution") == 0
     and as_int(v53aq, "real_adapter_execution_ready") == 1
     and as_int(v53aq, "real_system_performance_claim_ready") == 1
+    and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
+    and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
 )
 local_abgh_row_contract_replay_ready = 0
 grounded_generation_outputs_ready = int(
@@ -652,6 +655,8 @@ summary = {
     "v53aq_deterministic_source_span_adapter_execution": v53aq.get("deterministic_source_span_adapter_execution", "1"),
     "v53aq_real_adapter_execution_ready": v53aq.get("real_adapter_execution_ready", "0"),
     "v53aq_real_system_performance_claim_ready": v53aq.get("real_system_performance_claim_ready", "0"),
+    "v53aq_same_query_internal_prebaseline_rows_ready": v53aq.get("same_query_internal_prebaseline_rows_ready", "0"),
+    "v53aq_same_query_internal_prebaseline_rows": v53aq.get("same_query_internal_prebaseline_rows", "0"),
     "v53aq_answer_hash_match_rows": v53aq.get("answer_hash_match_rows", "0"),
     "v53aq_coherent_wrong_key_rows": v53aq.get("coherent_wrong_key_rows", "0"),
     "same_query_abgh_ready": v53ap["same_query_set_all_local_systems"],
@@ -983,6 +988,7 @@ pm_pr_core_files = [
     (pr_run_dir / "source_v53aq/abgh_system_metric_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/abgh_system_metric_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/abgh_evaluator_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/abgh_evaluator_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/abgh_adapter_trace_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/abgh_adapter_trace_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/routehint_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/routehint_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "source_pm_pr_claim_slice_gate/source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "boundary"),
     (pr_run_dir / "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "source_pm_pr_claim_slice_gate/V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "boundary"),

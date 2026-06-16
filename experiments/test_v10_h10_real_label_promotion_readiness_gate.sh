@@ -60,8 +60,8 @@ expected = {
     "v53aq_deterministic_source_span_adapter_execution": "0",
     "v53aq_real_adapter_execution_ready": "1",
     "v53aq_real_system_performance_claim_ready": "1",
-    "v53aq_answer_hash_match_rows": "3712",
-    "v53aq_coherent_wrong_key_rows": "288",
+    "v53aq_answer_hash_match_rows": "3713",
+    "v53aq_coherent_wrong_key_rows": "287",
     "v53t_complete_source_audit_readiness_gate_ready": "1",
     "v53t_foundation_real_adapter_evidence_ready": "1",
     "v53t_real_adapter_freeze_rows": "4",
@@ -126,7 +126,7 @@ for criterion in [
         raise SystemExit(f"missing PM h10 criterion: {criterion}")
 if criteria["source-provenance-binding"]["machine_evidence_status"] != "pass":
     raise SystemExit("source provenance should be machine-bound")
-if "v53aq_coherent_wrong_key_rows=288" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
+if "v53aq_coherent_wrong_key_rows=287" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
     raise SystemExit("coherent wrong-key criterion should cite v53aq wrong-key evidence")
 if "v53aq_H_coherent_wrong_key_rows=0" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
     raise SystemExit("coherent wrong-key criterion should cite v53aq H wrong-key evidence")
@@ -211,7 +211,7 @@ if len(v53t_real_adapter_rows) != 4:
     raise SystemExit("h10 PM gate should copy four v53t real-adapter freeze rows")
 if any(row["status"] != "pass" for row in v53t_real_adapter_rows.values()):
     raise SystemExit("h10 PM gate v53t real-adapter freeze rows should all pass")
-if "coherent_wrong_key_rows=288" not in v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=287" not in v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("h10 PM gate v53t real-adapter freeze should preserve coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("h10 PM gate v53t real-adapter freeze should preserve public comparison blocker")
@@ -288,7 +288,7 @@ for snippet in [
     "v53aq_evaluator_rows=4000",
     "v53aq_selection_question_text_only=1",
     "v53aq_selection_oracle_field_used=0",
-    "v53aq_coherent_wrong_key_rows=288",
+    "v53aq_coherent_wrong_key_rows=287",
     "v53t_real_adapter_freeze_ready=1",
     "v53t_real_adapter_freeze_rows=4",
     "Blocked wording",

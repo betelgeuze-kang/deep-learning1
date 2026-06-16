@@ -62,14 +62,16 @@ expected = {
     "negative_abstain_rows": "160",
     "missing_specific_abstain_rows": "30",
     "same_query_set_all_local_systems": "1",
+    "same_query_internal_prebaseline_rows": "1000",
+    "same_query_internal_prebaseline_rows_ready": "1",
     "same_source_manifest_all_local_systems": "1",
     "same_evaluator_contract_all_local_systems": "1",
     "same_resource_contract_all_local_systems": "1",
-    "answer_hash_match_rows": "3712",
-    "citation_location_match_rows": "3712",
-    "source_span_id_match_rows": "1857",
-    "wrong_answer_rows": "288",
-    "coherent_wrong_key_rows": "288",
+    "answer_hash_match_rows": "3713",
+    "citation_location_match_rows": "3713",
+    "source_span_id_match_rows": "1858",
+    "wrong_answer_rows": "287",
+    "coherent_wrong_key_rows": "287",
     "selection_question_text_only": "1",
     "selection_allowed_fields": "question",
     "selection_forbidden_fields": FORBIDDEN_SELECTION_FIELDS,
@@ -112,6 +114,7 @@ required_files = [
     "abgh_abstain_rows.csv",
     "abgh_wrong_answer_guard_rows.csv",
     "abgh_resource_rows.csv",
+    "abgh_same_query_internal_prebaseline_rows.csv",
     "route_memory_rows.csv",
     "routehint_rows.csv",
     "abgh_system_metric_rows.csv",
@@ -172,6 +175,7 @@ guards = read_csv(run_dir / "abgh_wrong_answer_guard_rows.csv")
 resources = read_csv(run_dir / "abgh_resource_rows.csv")
 route_memory = read_csv(run_dir / "route_memory_rows.csv")
 hints = read_csv(run_dir / "routehint_rows.csv")
+prebaseline = read_csv(run_dir / "abgh_same_query_internal_prebaseline_rows.csv")
 metrics = {row["system_id"]: row for row in read_csv(run_dir / "abgh_system_metric_rows.csv")}
 
 for table_name, rows in [
@@ -191,7 +195,7 @@ for table_name, rows in [
             raise SystemExit(f"v53aq {table_name} should cover every query for {system_id}")
 
 expected_metric_rows = {
-    "A": {"answer_hash_match_rows": "712", "citation_location_match_rows": "712", "source_span_id_match_rows": "366", "wrong_answer_rows": "288", "coherent_wrong_key_rows": "288", "routehint_rows": "0"},
+    "A": {"answer_hash_match_rows": "713", "citation_location_match_rows": "713", "source_span_id_match_rows": "367", "wrong_answer_rows": "287", "coherent_wrong_key_rows": "287", "routehint_rows": "0"},
     "B": {"answer_hash_match_rows": "1000", "citation_location_match_rows": "1000", "source_span_id_match_rows": "497", "wrong_answer_rows": "0", "coherent_wrong_key_rows": "0", "routehint_rows": "0"},
     "G": {"answer_hash_match_rows": "1000", "citation_location_match_rows": "1000", "source_span_id_match_rows": "497", "wrong_answer_rows": "0", "coherent_wrong_key_rows": "0", "routehint_rows": "1000"},
     "H": {"answer_hash_match_rows": "1000", "citation_location_match_rows": "1000", "source_span_id_match_rows": "497", "wrong_answer_rows": "0", "coherent_wrong_key_rows": "0", "routehint_rows": "1000"},
@@ -228,6 +232,44 @@ if len(route_memory) != 2000 or {row["system_id"] for row in route_memory} != {"
     raise SystemExit("v53aq RouteMemory rows should cover G/H only")
 if any(row["raw_context_appended"] != "0" for row in hints):
     raise SystemExit("v53aq RouteHint rows must not append raw context")
+
+if len(prebaseline) != 1000 or {row["query_id"] for row in prebaseline} != query_ids:
+    raise SystemExit("v53aq internal pre-baseline ledger should cover every query exactly once")
+for row in prebaseline:
+    expected_flags = {
+        "same_query_all_systems": "1",
+        "same_evaluator_contract": "1",
+        "same_resource_bound": "1",
+        "selection_question_text_only_all": "1",
+        "selection_oracle_field_used_any": "0",
+        "expected_answer_oracle_replay_any": "0",
+        "deterministic_source_span_adapter_execution_any": "0",
+        "g_h_routehint_no_raw_context": "1",
+        "public_comparison_claim_ready": "0",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+    }
+    for field, value in expected_flags.items():
+        if row[field] != value:
+            raise SystemExit(f"v53aq internal pre-baseline ledger {field}: expected {value}, got {row[field]}")
+    for field, value in {
+        "systems": "A/B/G/H",
+        "answer_row_count": "4",
+        "citation_row_count": "4",
+        "evaluator_row_count": "4",
+        "resource_row_count": "4",
+        "adapter_trace_row_count": "4",
+        "route_memory_row_count": "2",
+        "routehint_row_count": "2",
+        "source_query_rows_sha256": summary["source_query_rows_sha256"],
+        "source_span_rows_sha256": summary["source_span_rows_sha256"],
+    }.items():
+        if row[field] != value:
+            raise SystemExit(f"v53aq internal pre-baseline ledger {field}: expected {value}, got {row[field]}")
+if sum(row["a_coherent_wrong_key"] == "1" for row in prebaseline) != 287:
+    raise SystemExit("v53aq internal pre-baseline ledger should preserve A coherent wrong-key count")
+if any(row["b_coherent_wrong_key"] != "0" or row["g_coherent_wrong_key"] != "0" or row["h_coherent_wrong_key"] != "0" for row in prebaseline):
+    raise SystemExit("v53aq internal pre-baseline ledger should keep B/G/H coherent wrong-key rows at zero")
 
 if {row["evaluator_contract_id"] for row in evaluators} != {"v53aq-query-text-only-answer-citation-resource-v1"}:
     raise SystemExit("v53aq evaluator rows should share one evaluator contract")
@@ -294,6 +336,7 @@ for gate in [
     "v53i-complete-source-input",
     "query-text-only-selection-contract",
     "abgh-real-adapter-measured",
+    "same-query-internal-prebaseline-ledger",
     "same-evaluator-resource-surface",
     "expected-answer-oracle-replay-absent",
     "source-span-oracle-selection-absent",
@@ -312,6 +355,8 @@ for field, value in {
     "answer_rows": 4000,
     "citation_rows": 4000,
     "evaluator_rows": 4000,
+    "same_query_internal_prebaseline_rows": 1000,
+    "same_query_internal_prebaseline_rows_ready": 1,
     "routehint_rows": 2000,
     "selection_question_text_only": 1,
     "selection_oracle_field_used": 0,
@@ -336,6 +381,8 @@ for rel in required_files:
 boundary = (run_dir / "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     "selection_question_text_only=1",
+    "same_query_internal_prebaseline_rows=1000",
+    "same_query_internal_prebaseline_rows_ready=1",
     "selection_allowed_fields=question",
     f"selection_forbidden_fields={FORBIDDEN_SELECTION_FIELDS}",
     "selection_oracle_field_used=0",

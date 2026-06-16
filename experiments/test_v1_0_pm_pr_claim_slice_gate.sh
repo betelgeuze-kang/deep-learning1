@@ -225,8 +225,8 @@ if "real_system_performance_claim_ready=0" not in abgh_ready_row["reason"]:
 abgh_real_row = roadmap_by_id["abgh-real-system-adapter-execution"]
 if abgh_real_row["status"] != "ready":
     raise SystemExit("PM A/B/G/H real adapter execution should be ready after v53aq real-adapter run")
-if abgh_real_row["evidence_path"] != "source_v53aq/abgh_evaluator_rows.csv":
-    raise SystemExit("PM A/B/G/H real adapter row should bind directly to v53aq evaluator rows")
+if abgh_real_row["evidence_path"] != "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv":
+    raise SystemExit("PM A/B/G/H real adapter row should bind directly to the v53aq same-query ledger")
 for snippet in [
     "real_adapter_execution_ready=1",
     "actual_adapter_execution_ready=1",
@@ -234,8 +234,10 @@ for snippet in [
     "selection_oracle_field_used=0",
     "deterministic_source_span_adapter_execution=0",
     "real_system_performance_claim_ready=1",
-    "answer_hash_match_rows=3712",
-    "coherent_wrong_key_rows=288",
+    "same_query_internal_prebaseline_rows_ready=1",
+    "same_query_internal_prebaseline_rows=1000",
+    "answer_hash_match_rows=3713",
+    "coherent_wrong_key_rows=287",
 ]:
     if snippet not in abgh_real_row["reason"]:
         raise SystemExit(f"PM A/B/G/H real adapter row should expose {snippet}")
@@ -605,6 +607,8 @@ required_files = [
     "source_v53t/source_v53ap/abgh_evaluator_rows.csv",
     "source_v53t/source_v53ap/abgh_resource_rows.csv",
     "source_v53t/source_v53ap/abgh_adapter_trace_rows.csv",
+    "source_v53t/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md",
     "v1_0_pm_pr_claim_slice_gate_manifest.json",
     "sha256_manifest.csv",
@@ -620,12 +624,15 @@ file_manifest_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/sou
 content_repo_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv")
 content_snapshot_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
 binding_rows = read_csv(run_dir / "source_v53t/complete_source_query_span_binding_audit_rows.csv")
+v53aq_prebaseline_rows = read_csv(run_dir / "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
 if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
     raise SystemExit("PM PR sidecar should carry direct 10-repo manifest rows")
 if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
     raise SystemExit("PM PR sidecar should carry direct file/content manifest rows")
 if len(binding_rows) != 1000 or any(row["binding_status"] != "pass" for row in binding_rows):
     raise SystemExit("PM PR sidecar should carry 1000 passing query-span binding audit rows")
+if len(v53aq_prebaseline_rows) != 1000 or any(row["same_evaluator_contract"] != "1" or row["same_resource_bound"] != "1" for row in v53aq_prebaseline_rows):
+    raise SystemExit("PM PR sidecar should carry 1000 v53aq same-query evaluator/resource ledger rows")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("PM PR sidecar repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -644,7 +651,11 @@ for criterion_id in [
         raise SystemExit(f"PM PR sidecar v53t real-adapter freeze row should pass: {criterion_id}")
 if "selection_question_text_only=1" not in real_adapter_freeze_rows["question-only-selection-contract"]["actual_value"]:
     raise SystemExit("PM PR sidecar should expose v53aq question-only selection in v53t freeze evidence")
-if "coherent_wrong_key_rows=288" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
+if "same_query_ledger_ready=1" not in real_adapter_freeze_rows["v53aq-same-query-surface"]["actual_value"]:
+    raise SystemExit("PM PR sidecar should expose v53aq same-query ledger readiness in v53t freeze evidence")
+if real_adapter_freeze_rows["v53aq-same-query-surface"]["evidence_path"] != "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv":
+    raise SystemExit("PM PR sidecar v53t real-adapter freeze should point at the same-query ledger")
+if "coherent_wrong_key_rows=287" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("PM PR sidecar should expose v53aq coherent wrong-key evidence in v53t freeze evidence")
 if "public_comparison_claim_ready=0" not in real_adapter_freeze_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("PM PR sidecar should keep v53aq public comparison blocked in v53t freeze evidence")

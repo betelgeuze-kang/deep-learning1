@@ -9,10 +9,12 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/abgh_evaluator_rows.csv" ]] \
+if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/abgh_evaluator_rows.csv" && -s "$RUN_DIR/abgh_same_query_internal_prebaseline_rows.csv" ]] \
   && grep -q '^v53aq_complete_source_abgh_real_adapter_measured_ready,' "$SUMMARY_CSV" \
   && grep -q 'selection_question_text_only' "$SUMMARY_CSV" \
   && grep -q 'real_adapter_execution_ready' "$SUMMARY_CSV" \
+  && grep -q 'same_query_internal_prebaseline_rows_ready' "$SUMMARY_CSV" \
+  && grep -q 'same_query_internal_prebaseline_rows=1000' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'selection_forbidden_fields=query_id,expected_answer,expected_answer_sha256,source_span_id,source_path,source_line_start,source_line_end' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"; then
   echo "v53aq_complete_source_abgh_real_adapter_measured_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
@@ -645,6 +647,118 @@ total_citation_location_match = sum(int(row["citation_location_match_rows"]) for
 total_source_span_id_match = sum(int(row["source_span_id_match_rows"]) for row in metric_rows)
 total_wrong = sum(int(row["wrong_answer_rows"]) for row in metric_rows)
 total_coherent_wrong = sum(int(row["coherent_wrong_key_rows"]) for row in metric_rows)
+answers_by_key = {(row["system_id"], row["query_id"]): row for row in answer_rows}
+citations_by_key = {(row["system_id"], row["query_id"]): row for row in citation_rows}
+evaluators_by_key = {(row["system_id"], row["query_id"]): row for row in evaluator_rows}
+resources_by_key = {(row["system_id"], row["query_id"]): row for row in resource_rows}
+traces_by_key = {(row["system_id"], row["query_id"]): row for row in adapter_trace_rows}
+guards_by_key = {(row["system_id"], row["query_id"]): row for row in guard_rows}
+route_memory_by_key = {(row["system_id"], row["query_id"]): row for row in route_memory_rows}
+routehint_by_key = {(row["system_id"], row["query_id"]): row for row in routehint_rows}
+same_query_internal_prebaseline_rows = []
+for query in queries:
+    query_id = query["query_id"]
+    query_answers = [answers_by_key.get((system_id, query_id)) for system_id, _, _ in SYSTEMS]
+    query_citations = [citations_by_key.get((system_id, query_id)) for system_id, _, _ in SYSTEMS]
+    query_evaluators = [evaluators_by_key.get((system_id, query_id)) for system_id, _, _ in SYSTEMS]
+    query_resources = [resources_by_key.get((system_id, query_id)) for system_id, _, _ in SYSTEMS]
+    query_traces = [traces_by_key.get((system_id, query_id)) for system_id, _, _ in SYSTEMS]
+    query_guards = [guards_by_key.get((system_id, query_id)) for system_id, _, _ in SYSTEMS]
+    present_answers = [row for row in query_answers if row]
+    present_citations = [row for row in query_citations if row]
+    present_evaluators = [row for row in query_evaluators if row]
+    present_resources = [row for row in query_resources if row]
+    present_traces = [row for row in query_traces if row]
+    same_query_all_systems = int(
+        len(present_answers) == 4
+        and len(present_citations) == 4
+        and len(present_evaluators) == 4
+        and len(present_resources) == 4
+        and len(present_traces) == 4
+        and {row["query_id"] for row in present_answers + present_citations + present_evaluators + present_resources + present_traces} == {query_id}
+    )
+    same_evaluator_contract = int(
+        len(present_evaluators) == 4
+        and {row["evaluator_contract_id"] for row in present_evaluators} == {"v53aq-query-text-only-answer-citation-resource-v1"}
+        and all(row["source_query_rows_sha256"] == query_hash and row["source_span_rows_sha256"] == span_hash for row in present_evaluators)
+    )
+    same_resource_bound = int(
+        len(present_evaluators) == 4
+        and len(present_resources) == 4
+        and all(row["resource_row_bound"] == "1" for row in present_evaluators)
+    )
+    selection_question_text_only_all = int(
+        len(present_evaluators) == 4
+        and len(present_traces) == 4
+        and all(row["selection_question_text_only"] == "1" for row in present_evaluators)
+        and all(row["selection_question_text_used"] == "1" for row in present_traces)
+    )
+    selection_oracle_field_used_any = int(
+        any(row.get("selection_oracle_field_used") == "1" for row in present_evaluators + present_traces)
+    )
+    expected_answer_oracle_replay_any = int(
+        any(row.get("expected_answer_oracle_replay") == "1" for row in present_evaluators + present_traces + present_resources)
+    )
+    deterministic_source_span_adapter_execution_any = int(
+        any(row.get("deterministic_source_span_adapter_execution") == "1" for row in present_evaluators + present_traces)
+    )
+    gh_routehint_no_raw_context = int(
+        all((system_id, query_id) in routehint_by_key for system_id in {"G", "H"})
+        and all(routehint_by_key[(system_id, query_id)]["raw_context_appended"] == "0" for system_id in {"G", "H"})
+        and all(traces_by_key[(system_id, query_id)]["raw_context_appended"] == "0" for system_id in {"G", "H"})
+    )
+    row = {
+        "prebaseline_row_id": f"v53aq_internal_prebaseline_{query_id}",
+        "query_id": query_id,
+        "query_set_id": "v53i_complete_source_1000",
+        "source_query_rows_sha256": query_hash,
+        "source_span_rows_sha256": span_hash,
+        "systems": "A/B/G/H",
+        "answer_row_count": str(len(present_answers)),
+        "citation_row_count": str(len(present_citations)),
+        "evaluator_row_count": str(len(present_evaluators)),
+        "resource_row_count": str(len(present_resources)),
+        "adapter_trace_row_count": str(len(present_traces)),
+        "route_memory_row_count": str(sum(1 for system_id in {"G", "H"} if (system_id, query_id) in route_memory_by_key)),
+        "routehint_row_count": str(sum(1 for system_id in {"G", "H"} if (system_id, query_id) in routehint_by_key)),
+        "same_query_all_systems": str(same_query_all_systems),
+        "same_evaluator_contract": str(same_evaluator_contract),
+        "same_resource_bound": str(same_resource_bound),
+        "selection_question_text_only_all": str(selection_question_text_only_all),
+        "selection_oracle_field_used_any": str(selection_oracle_field_used_any),
+        "expected_answer_oracle_replay_any": str(expected_answer_oracle_replay_any),
+        "deterministic_source_span_adapter_execution_any": str(deterministic_source_span_adapter_execution_any),
+        "g_h_routehint_no_raw_context": str(gh_routehint_no_raw_context),
+        "a_answer_hash_match": answers_by_key[("A", query_id)]["answer_hash_match"],
+        "b_answer_hash_match": answers_by_key[("B", query_id)]["answer_hash_match"],
+        "g_answer_hash_match": answers_by_key[("G", query_id)]["answer_hash_match"],
+        "h_answer_hash_match": answers_by_key[("H", query_id)]["answer_hash_match"],
+        "a_coherent_wrong_key": guards_by_key[("A", query_id)]["coherent_wrong_key"],
+        "b_coherent_wrong_key": guards_by_key[("B", query_id)]["coherent_wrong_key"],
+        "g_coherent_wrong_key": guards_by_key[("G", query_id)]["coherent_wrong_key"],
+        "h_coherent_wrong_key": guards_by_key[("H", query_id)]["coherent_wrong_key"],
+        "public_comparison_claim_ready": "0",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+        "claim_boundary": "internal v1.0 pre-baseline A/B/G/H per-query ledger only; no public comparison or D/E replacement claim",
+    }
+    same_query_internal_prebaseline_rows.append(row)
+write_csv(
+    run_dir / "abgh_same_query_internal_prebaseline_rows.csv",
+    list(same_query_internal_prebaseline_rows[0].keys()),
+    same_query_internal_prebaseline_rows,
+)
+same_query_internal_prebaseline_rows_ready = int(
+    len(same_query_internal_prebaseline_rows) == 1000
+    and all(row["same_query_all_systems"] == "1" for row in same_query_internal_prebaseline_rows)
+    and all(row["same_evaluator_contract"] == "1" for row in same_query_internal_prebaseline_rows)
+    and all(row["same_resource_bound"] == "1" for row in same_query_internal_prebaseline_rows)
+    and all(row["selection_question_text_only_all"] == "1" for row in same_query_internal_prebaseline_rows)
+    and all(row["selection_oracle_field_used_any"] == "0" for row in same_query_internal_prebaseline_rows)
+    and all(row["expected_answer_oracle_replay_any"] == "0" for row in same_query_internal_prebaseline_rows)
+    and all(row["deterministic_source_span_adapter_execution_any"] == "0" for row in same_query_internal_prebaseline_rows)
+    and all(row["public_comparison_claim_ready"] == "0" for row in same_query_internal_prebaseline_rows)
+)
 ready = int(
     len(answer_rows) == 4000
     and len(citation_rows) == 4000
@@ -655,6 +769,7 @@ ready = int(
     and len(route_memory_rows) == 2000
     and all(row["answer_rows"] == "1000" for row in metric_rows)
     and all(row["selection_oracle_field_used"] == "0" for row in adapter_trace_rows)
+    and same_query_internal_prebaseline_rows_ready == 1
 )
 
 summary = {
@@ -680,6 +795,8 @@ summary = {
     "negative_abstain_rows": v53i_summary["negative_abstain_rows"],
     "missing_specific_abstain_rows": v53i_summary["missing_specific_abstain_rows"],
     "same_query_set_all_local_systems": "1",
+    "same_query_internal_prebaseline_rows": str(len(same_query_internal_prebaseline_rows)),
+    "same_query_internal_prebaseline_rows_ready": str(same_query_internal_prebaseline_rows_ready),
     "same_source_manifest_all_local_systems": "1",
     "same_evaluator_contract_all_local_systems": "1",
     "same_resource_contract_all_local_systems": "1",
@@ -715,6 +832,7 @@ decision_rows = [
     ("v53i-complete-source-input", "pass", f"query_rows={len(queries)}; query_hash={query_hash}"),
     ("query-text-only-selection-contract", "pass", "adapter selection receives question text only; forbidden ground-truth fields are evaluator-only"),
     ("abgh-real-adapter-measured", "pass" if ready else "blocked", f"answer_rows={len(answer_rows)}; evaluator_rows={len(evaluator_rows)}; routehint_rows={len(routehint_rows)}"),
+    ("same-query-internal-prebaseline-ledger", "pass" if same_query_internal_prebaseline_rows_ready else "blocked", f"ledger_rows={len(same_query_internal_prebaseline_rows)}; same_evaluator_resource_surface={same_query_internal_prebaseline_rows_ready}"),
     ("same-evaluator-resource-surface", "pass" if len(evaluator_rows) == 4000 and len(resource_rows) == 4000 else "blocked", "answer/citation/resource checks are separate on one evaluator contract"),
     ("expected-answer-oracle-replay-absent", "pass", "expected_answer_oracle_replay=0; answers are generated from selected source spans"),
     ("source-span-oracle-selection-absent", "pass", "source_span_id/source_path/source_line/query_id are not adapter-selection inputs"),
@@ -735,6 +853,8 @@ boundary = (
     f"- source_query_rows_sha256={query_hash}\n"
     f"- source_span_rows_sha256={span_hash}\n"
     "- systems=A/B/G/H\n"
+    f"- same_query_internal_prebaseline_rows={len(same_query_internal_prebaseline_rows)}\n"
+    f"- same_query_internal_prebaseline_rows_ready={same_query_internal_prebaseline_rows_ready}\n"
     f"- answer_rows={len(answer_rows)}\n"
     f"- citation_rows={len(citation_rows)}\n"
     f"- evaluator_rows={len(evaluator_rows)}\n"
@@ -784,6 +904,8 @@ manifest = {
     "route_memory_rows": len(route_memory_rows),
     "routehint_rows": len(routehint_rows),
     "answer_hash_match_rows": total_answer_hash_match,
+    "same_query_internal_prebaseline_rows": len(same_query_internal_prebaseline_rows),
+    "same_query_internal_prebaseline_rows_ready": same_query_internal_prebaseline_rows_ready,
     "citation_location_match_rows": total_citation_location_match,
     "source_span_id_match_rows": total_source_span_id_match,
     "wrong_answer_rows": total_wrong,

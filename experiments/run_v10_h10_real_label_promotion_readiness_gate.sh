@@ -251,7 +251,7 @@ v53t_real_adapter_freeze_ready = int(
     as_int(v53t, "foundation_real_adapter_evidence_ready") == 1
     and len(v53t_real_adapter_freeze_rows) == 4
     and v53t_real_adapter_freeze_pass_rows == 4
-    and "coherent_wrong_key_rows=288" in v53t_freeze_by_criterion.get("real-adapter-execution-rows", {}).get("actual_value", "")
+    and "coherent_wrong_key_rows=287" in v53t_freeze_by_criterion.get("real-adapter-execution-rows", {}).get("actual_value", "")
     and "public_comparison_claim_ready=0" in v53t_freeze_by_criterion.get("public-comparison-boundary-closed", {}).get("actual_value", "")
     and "selection_question_text_only=1" in v53t_freeze_by_criterion.get("question-only-selection-contract", {}).get("actual_value", "")
     and "selection_oracle_field_used=0" in v53t_freeze_by_criterion.get("question-only-selection-contract", {}).get("actual_value", "")

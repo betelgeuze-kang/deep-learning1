@@ -71,8 +71,10 @@ expected = {
     "v53aq_deterministic_source_span_adapter_execution": "0",
     "v53aq_real_adapter_execution_ready": "1",
     "v53aq_real_system_performance_claim_ready": "1",
-    "v53aq_answer_hash_match_rows": "3712",
-    "v53aq_coherent_wrong_key_rows": "288",
+    "v53aq_same_query_internal_prebaseline_rows_ready": "1",
+    "v53aq_same_query_internal_prebaseline_rows": "1000",
+    "v53aq_answer_hash_match_rows": "3713",
+    "v53aq_coherent_wrong_key_rows": "287",
     "same_query_abgh_ready": "1",
     "route_memory_artifact_ready": "1",
     "v54c_complete_source_grounded_generation_1000_ready": "1",
@@ -210,6 +212,7 @@ required_files = [
     "source_v53aq/abgh_system_metric_rows.csv",
     "source_v53aq/abgh_evaluator_rows.csv",
     "source_v53aq/abgh_adapter_trace_rows.csv",
+    "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v53aq/routehint_rows.csv",
     "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "source_v54c/answer_rows.csv",
@@ -251,6 +254,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
@@ -292,7 +296,7 @@ if len(pm_v53t_real_adapter_rows) != 4:
     raise SystemExit("v59e PM sidecar should carry four v53t real-adapter freeze rows")
 if pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["status"] != "pass":
     raise SystemExit("v59e PM sidecar should carry passing v53t real-adapter execution evidence")
-if "coherent_wrong_key_rows=288" not in pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=287" not in pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("v59e PM sidecar should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e PM sidecar should preserve v53aq public comparison blocker")
@@ -302,12 +306,19 @@ file_manifest_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v5
 content_repo_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv")
 content_snapshot_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
 binding_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv")
+v53aq_prebaseline_rows = read_csv(run_dir / "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
+pm_v53aq_prebaseline_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
 if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
     raise SystemExit("v59e PM sidecar should carry direct 10-repo manifest rows")
 if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
     raise SystemExit("v59e PM sidecar should carry direct file/content manifest rows")
 if len(binding_rows) != 1000 or any(row["binding_status"] != "pass" for row in binding_rows):
     raise SystemExit("v59e PM sidecar should carry 1000 passing query-span binding audit rows")
+for label, rows in [("direct", v53aq_prebaseline_rows), ("PM sidecar", pm_v53aq_prebaseline_rows)]:
+    if len(rows) != 1000:
+        raise SystemExit(f"v59e should carry 1000 {label} v53aq same-query ledger rows")
+    if any(row["same_evaluator_contract"] != "1" or row["same_resource_bound"] != "1" or row["public_comparison_claim_ready"] != "0" for row in rows):
+        raise SystemExit(f"v59e {label} v53aq same-query ledger should preserve evaluator/resource and public-comparison boundary")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("v59e PM sidecar repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -321,7 +332,7 @@ if len(h10_v53t_real_adapter_rows) != 4:
     raise SystemExit("v59e h10 PM source bundle should carry four v53t real-adapter freeze rows")
 if h10_v53t_real_adapter_rows["real-adapter-execution-rows"]["status"] != "pass":
     raise SystemExit("v59e h10 PM source bundle should carry passing v53t real-adapter execution evidence")
-if "coherent_wrong_key_rows=288" not in h10_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=287" not in h10_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("v59e h10 PM source bundle should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in h10_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e h10 PM source bundle should preserve public comparison blocker")
@@ -377,8 +388,8 @@ if (
     or manifest.get("v53aq_deterministic_source_span_adapter_execution") != 0
     or manifest.get("v53aq_real_adapter_execution_ready") != 1
     or manifest.get("v53aq_real_system_performance_claim_ready") != 1
-    or manifest.get("v53aq_answer_hash_match_rows") != 3712
-    or manifest.get("v53aq_coherent_wrong_key_rows") != 288
+    or manifest.get("v53aq_answer_hash_match_rows") != 3713
+    or manifest.get("v53aq_coherent_wrong_key_rows") != 287
 ):
     raise SystemExit("v59e manifest should preserve the v53aq real-adapter boundary")
 if (
@@ -443,8 +454,8 @@ for snippet in [
     "v53aq_real_adapter_execution_ready=1",
     "v53aq_selection_question_text_only=1",
     "v53aq_selection_oracle_field_used=0",
-    "v53aq_answer_hash_match_rows=3712",
-    "v53aq_coherent_wrong_key_rows=288",
+    "v53aq_answer_hash_match_rows=3713",
+    "v53aq_coherent_wrong_key_rows=287",
     "v54c_v53ap_evaluator_provenance_ready=1",
     "v54c_v53ap_evaluator_provenance_rows=1000",
     "h10_real_label_promotion_ready=0",

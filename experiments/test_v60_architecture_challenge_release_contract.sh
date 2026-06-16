@@ -69,6 +69,8 @@ expected = {
     "v53_direct_content_snapshot_rows": "11266",
     "pm_pr_v53_direct_pinned_manifest_ready": "1",
     "local_abgh_prebaseline_ready": "1",
+    "local_abgh_prebaseline_ledger_ready": "1",
+    "local_abgh_prebaseline_ledger_rows": "1000",
     "h10_real_label_promotion_ready": "0",
     "h10_source_verified_eval_ready": "0",
     "h10_external_human_label_evidence_ready": "0",
@@ -191,6 +193,7 @@ required_files = [
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_evaluator_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_resource_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_adapter_trace_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v59e/v58c_pm_blind_response_intake_dependency_summary.csv",
     "source_v59e/v58c_pm_blind_response_intake_dependency_rows.csv",
     "source_v59e/v58d_pm_blind_review_return_dependency_summary.csv",
@@ -227,7 +230,7 @@ if len(v60_pm_v53t_real_adapter_rows) != 4:
     raise SystemExit("v60 should carry four v53t real-adapter freeze rows through v59e/PM sidecar")
 if v60_pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["status"] != "pass":
     raise SystemExit("v60 should carry passing v53t real-adapter execution evidence")
-if "coherent_wrong_key_rows=288" not in v60_pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=287" not in v60_pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("v60 should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in v60_pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v60 should preserve v53aq public comparison blocker")
@@ -237,12 +240,17 @@ file_manifest_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_ga
 content_repo_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv")
 content_snapshot_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
 binding_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv")
+abgh_prebaseline_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
 if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
     raise SystemExit("v60 should carry direct 10-repo manifest rows through v59e/PM sidecar")
 if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
     raise SystemExit("v60 should carry direct file/content manifest rows through v59e/PM sidecar")
 if len(binding_rows) != 1000 or any(row["binding_status"] != "pass" for row in binding_rows):
     raise SystemExit("v60 should carry 1000 passing query-span binding audit rows through v59e/PM sidecar")
+if len(abgh_prebaseline_rows) != 1000:
+    raise SystemExit("v60 should carry 1000 A/B/G/H same-query internal pre-baseline ledger rows through v59e/PM sidecar")
+if any(row["same_evaluator_contract"] != "1" or row["same_resource_bound"] != "1" or row["public_comparison_claim_ready"] != "0" for row in abgh_prebaseline_rows):
+    raise SystemExit("v60 A/B/G/H internal pre-baseline ledger should preserve evaluator/resource and public-comparison boundary")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("v60 repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -302,6 +310,9 @@ v53_req = next(row for row in requirements if row["requirement"] == "v53_public_
 if v53_req["evidence_path"] != "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv":
     raise SystemExit("v60 v53 requirement should point directly at copied query-span binding audit rows")
 h10_req = next(row for row in requirements if row["requirement"] == "h10_real_label_source_verified_scorer")
+abgh_req = next(row for row in requirements if row["requirement"] == "v53_abgh_same_query_internal_prebaseline")
+if abgh_req["evidence_path"] != "source_v59e/source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv":
+    raise SystemExit("v60 A/B/G/H pre-baseline requirement should point directly at copied same-query ledger rows")
 if h10_req["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
     raise SystemExit("v60 h10 requirement should point directly at PM h10 criteria rows")
 h10_rows = read_csv(run_dir / h10_req["evidence_path"])
@@ -390,6 +401,7 @@ for snippet in [
     "v53 10-repo / 1000 source-span-bound query PM freeze",
     "direct v53 1000-row query-span binding audit copied through v59e PM sidecar",
     "direct v53 repo/file/content manifest evidence copied through v59e PM sidecar",
+    "direct 1000-row A/B/G/H same-query internal pre-baseline ledger copied through v59e PM sidecar",
     "real 30B/70B LLM+RAG comparison rows",
     "h10 real external/human label promotion evidence",
     "h10 PM criteria rows",

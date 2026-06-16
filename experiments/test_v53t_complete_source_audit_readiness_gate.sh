@@ -88,6 +88,8 @@ expected = {
     "foundation_real_adapter_freeze_blocked_rows": "0",
     "foundation_real_adapter_evidence_ready": "1",
     "foundation_real_adapter_same_query_rows_ready": "1",
+    "foundation_real_adapter_same_query_ledger_ready": "1",
+    "foundation_real_adapter_same_query_ledger_rows": "1000",
     "foundation_real_adapter_evaluator_rows": "4000",
     "foundation_real_adapter_evaluator_separate_rows": "4000",
     "v53aq_question_only_selection_contract_ready": "1",
@@ -119,8 +121,8 @@ expected = {
     "v53aq_actual_adapter_execution_ready": "1",
     "v53aq_real_adapter_execution_ready": "1",
     "v53aq_real_system_performance_claim_ready": "1",
-    "v53aq_answer_hash_match_rows": "3712",
-    "v53aq_coherent_wrong_key_rows": "288",
+    "v53aq_answer_hash_match_rows": "3713",
+    "v53aq_coherent_wrong_key_rows": "287",
     "v53aq_public_comparison_claim_ready": "0",
     "v1_0_comparison_ready": "0",
     "real_release_package_ready": "0",
@@ -167,6 +169,7 @@ required_files = [
     "source_v53aq/abgh_resource_rows.csv",
     "source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v53aq/abgh_system_metric_rows.csv",
+    "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v53aq/routehint_rows.csv",
     "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "source_v53q/v53q_complete_source_symmetric_scorer_policy_summary.csv",
@@ -248,6 +251,7 @@ v53aq_citations = read_csv(run_dir / "source_v53aq/abgh_citation_rows.csv")
 v53aq_evaluators = read_csv(run_dir / "source_v53aq/abgh_evaluator_rows.csv")
 v53aq_resources = read_csv(run_dir / "source_v53aq/abgh_resource_rows.csv")
 v53aq_adapter_traces = read_csv(run_dir / "source_v53aq/abgh_adapter_trace_rows.csv")
+v53aq_prebaseline = read_csv(run_dir / "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
 v53aq_selection_contract = {row["field_name"]: row for row in read_csv(run_dir / "source_v53aq/adapter_selection_contract_rows.csv")}
 if len(query_rows) != 1000 or len(span_rows) != 1000:
     raise SystemExit("v53t should copy direct 1000 query/span rows")
@@ -341,6 +345,26 @@ if any(
     for row in v53aq_evaluators
 ):
     raise SystemExit("v53t v53aq evaluator rows should preserve question-only real-adapter boundaries")
+if len(v53aq_prebaseline) != 1000 or {row["query_id"] for row in v53aq_prebaseline} != query_ids:
+    raise SystemExit("v53t should copy 1000 v53aq same-query internal pre-baseline ledger rows")
+for row in v53aq_prebaseline:
+    for field, value in {
+        "same_query_all_systems": "1",
+        "same_evaluator_contract": "1",
+        "same_resource_bound": "1",
+        "selection_question_text_only_all": "1",
+        "selection_oracle_field_used_any": "0",
+        "expected_answer_oracle_replay_any": "0",
+        "deterministic_source_span_adapter_execution_any": "0",
+        "g_h_routehint_no_raw_context": "1",
+        "public_comparison_claim_ready": "0",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+    }.items():
+        if row[field] != value:
+            raise SystemExit(f"v53t v53aq same-query ledger {field}: expected {value}, got {row[field]}")
+if sum(row["a_coherent_wrong_key"] == "1" for row in v53aq_prebaseline) != 287:
+    raise SystemExit("v53t v53aq same-query ledger should preserve A coherent wrong-key count")
 
 foundation_freeze_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "complete_source_foundation_freeze_rows.csv")}
 if len(foundation_freeze_rows) != 10:
@@ -395,9 +419,13 @@ for criterion_id in [
         raise SystemExit(f"v53t real-adapter freeze criterion should pass: {criterion_id}")
 if "same_query_hash=1" not in real_adapter_freeze_rows["v53aq-same-query-surface"]["actual_value"]:
     raise SystemExit("v53t real-adapter freeze should bind the same v53i query hash")
+if "same_query_ledger_ready=1" not in real_adapter_freeze_rows["v53aq-same-query-surface"]["actual_value"]:
+    raise SystemExit("v53t real-adapter freeze should expose same-query ledger readiness")
+if real_adapter_freeze_rows["v53aq-same-query-surface"]["evidence_path"] != "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv":
+    raise SystemExit("v53t real-adapter same-query evidence should point at the direct per-query ledger")
 if "selection_question_text_only=1" not in real_adapter_freeze_rows["question-only-selection-contract"]["actual_value"]:
     raise SystemExit("v53t real-adapter freeze should expose question-only selection")
-if "coherent_wrong_key_rows=288" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=287" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("v53t real-adapter freeze should expose coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in real_adapter_freeze_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v53t real-adapter freeze should keep public comparison blocked")
@@ -474,6 +502,8 @@ for snippet in [
     "foundation_real_adapter_freeze_rows=4",
     "foundation_real_adapter_evidence_ready=1",
     "foundation_real_adapter_same_query_rows_ready=1",
+    "foundation_real_adapter_same_query_ledger_ready=1",
+    "foundation_real_adapter_same_query_ledger_rows=1000",
     "foundation_real_adapter_evaluator_rows=4000",
     "foundation_real_adapter_evaluator_separate_rows=4000",
     "v53aq_question_only_selection_contract_ready=1",
@@ -499,8 +529,8 @@ for snippet in [
     "v53aq_deterministic_source_span_adapter_execution=0",
     "v53aq_actual_adapter_execution_ready=1",
     "v53aq_real_adapter_execution_ready=1",
-    "v53aq_answer_hash_match_rows=3712",
-    "v53aq_coherent_wrong_key_rows=288",
+    "v53aq_answer_hash_match_rows=3713",
+    "v53aq_coherent_wrong_key_rows=287",
     "v53aq_public_comparison_claim_ready=0",
     "v1_0_comparison_ready=0",
 ]:
@@ -549,6 +579,8 @@ if (
     or manifest.get("foundation_real_adapter_freeze_blocked_rows") != 0
     or manifest.get("foundation_real_adapter_evidence_ready") != 1
     or manifest.get("foundation_real_adapter_same_query_rows_ready") != 1
+    or manifest.get("foundation_real_adapter_same_query_ledger_ready") != 1
+    or manifest.get("foundation_real_adapter_same_query_ledger_rows") != 1000
     or manifest.get("foundation_real_adapter_evaluator_rows") != 4000
     or manifest.get("foundation_real_adapter_evaluator_separate_rows") != 4000
     or manifest.get("v53aq_question_only_selection_contract_ready") != 1
@@ -574,8 +606,8 @@ if (
     or manifest.get("v53aq_deterministic_source_span_adapter_execution") != 0
     or manifest.get("v53aq_actual_adapter_execution_ready") != 1
     or manifest.get("v53aq_real_adapter_execution_ready") != 1
-    or manifest.get("v53aq_answer_hash_match_rows") != 3712
-    or manifest.get("v53aq_coherent_wrong_key_rows") != 288
+    or manifest.get("v53aq_answer_hash_match_rows") != 3713
+    or manifest.get("v53aq_coherent_wrong_key_rows") != 287
     or manifest.get("v53aq_public_comparison_claim_ready") != 0
 ):
     raise SystemExit("v53t manifest v53aq real-adapter boundary mismatch")

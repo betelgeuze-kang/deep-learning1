@@ -188,6 +188,7 @@ for rel in [
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_evaluator_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_resource_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_adapter_trace_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json",
     "v58c_pm_blind_response_intake_dependency_summary.csv",
@@ -239,6 +240,7 @@ for rel in h10_pm_files:
 v52 = read_first(results / "v52_llm_rag_baseline_war_summary.csv")
 v53t = read_first(results / "v53t_complete_source_audit_readiness_gate_summary.csv")
 v53ap = read_first(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv")
+v53aq = read_first(results / "v53aq_complete_source_abgh_real_adapter_measured_summary.csv")
 v54c = read_first(results / "v54c_complete_source_grounded_generation_1000_summary.csv")
 h10 = read_first(results / "v10_h10_real_label_promotion_readiness_gate_summary.csv")
 v59e = read_first(results / "v59e_one_command_pm_foundation_demo_summary.csv")
@@ -339,9 +341,11 @@ requirements = [
         as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1
         and as_int(v53ap, "same_query_set_all_local_systems") == 1
         and as_int(v53ap, "internal_v1_0_pre_baseline_run") == 1
+        and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
+        and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
         and as_int(v53ap, "public_comparison_claim_ready") == 0,
         "A/B/G/H same-query internal pre-baseline is missing or overclaimed",
-        "source_summaries/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+        "source_v59e/source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
         "abgh-prebaseline-missing",
     ),
     req(
@@ -548,6 +552,8 @@ summary = {
     "v53_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
     "pm_pr_v53_direct_pinned_manifest_ready": as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready"),
     "local_abgh_prebaseline_ready": int(as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1),
+    "local_abgh_prebaseline_ledger_ready": as_int(v53aq, "same_query_internal_prebaseline_rows_ready"),
+    "local_abgh_prebaseline_ledger_rows": as_int(v53aq, "same_query_internal_prebaseline_rows"),
     "h10_real_label_promotion_ready": as_int(h10, "h10_real_label_promotion_ready"),
     "h10_source_verified_eval_ready": as_int(h10, "h10_source_verified_eval_ready"),
     "h10_external_human_label_evidence_ready": as_int(h10, "external_human_label_evidence_ready"),
@@ -595,6 +601,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- direct v53 1000-row query-span binding audit copied through v59e PM sidecar\n"
     "- direct v53 repo/file/content manifest evidence copied through v59e PM sidecar\n"
     "- internal A/B/G/H same-query pre-baseline without public comparison claim\n"
+    "- direct 1000-row A/B/G/H same-query internal pre-baseline ledger copied through v59e PM sidecar\n"
     "- v54 complete-source 1000-row grounded generation with raw prompt stuffing blocked\n"
     "- v59e one-command PM foundation replay with PR split sidecar and execution lock\n\n"
     "Current blocker evidence surfaces:\n\n"

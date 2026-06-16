@@ -141,6 +141,7 @@ for src_rel in [
     "source_v53ap/abgh_evaluator_rows.csv",
     "source_v53ap/abgh_resource_rows.csv",
     "source_v53ap/abgh_adapter_trace_rows.csv",
+    "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
 ]:
     v53t_direct_copied[src_rel] = copy_if_exists(v53t_run_dir / src_rel, f"source_v53t/{src_rel}")
 v53aq_run_dir = results / "v53aq_complete_source_abgh_real_adapter_measured" / "measured_001"
@@ -155,6 +156,7 @@ for src_rel in [
     "abgh_resource_rows.csv",
     "abgh_adapter_trace_rows.csv",
     "abgh_wrong_answer_guard_rows.csv",
+    "abgh_same_query_internal_prebaseline_rows.csv",
     "route_memory_rows.csv",
     "routehint_rows.csv",
     "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
@@ -745,8 +747,10 @@ pm_roadmap_rows = [
         and as_int(v53aq, "expected_answer_oracle_replay") == 0
         and as_int(v53aq, "deterministic_source_span_adapter_execution") == 0
         and as_int(v53aq, "evaluator_rows") == 4000
-        and bool(v53aq_direct_copied.get("abgh_evaluator_rows.csv")),
-        v53aq_direct_copied.get("abgh_evaluator_rows.csv") or "source_summaries/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+        and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
+        and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
+        and bool(v53aq_direct_copied.get("abgh_same_query_internal_prebaseline_rows.csv")),
+        v53aq_direct_copied.get("abgh_same_query_internal_prebaseline_rows.csv") or "source_summaries/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
         (
             f"real_adapter_execution_ready={v53aq.get('real_adapter_execution_ready', '0')} "
             f"actual_adapter_execution_ready={v53aq.get('actual_adapter_execution_ready', '0')} "
@@ -755,6 +759,8 @@ pm_roadmap_rows = [
             f"expected_answer_oracle_replay={v53aq.get('expected_answer_oracle_replay', '0')} "
             f"deterministic_source_span_adapter_execution={v53aq.get('deterministic_source_span_adapter_execution', '1')} "
             f"real_system_performance_claim_ready={v53aq.get('real_system_performance_claim_ready', '0')} "
+            f"same_query_internal_prebaseline_rows_ready={v53aq.get('same_query_internal_prebaseline_rows_ready', '0')} "
+            f"same_query_internal_prebaseline_rows={v53aq.get('same_query_internal_prebaseline_rows', '0')} "
             f"answer_hash_match_rows={v53aq.get('answer_hash_match_rows', '0')} "
             f"coherent_wrong_key_rows={v53aq.get('coherent_wrong_key_rows', '0')}"
         ),
