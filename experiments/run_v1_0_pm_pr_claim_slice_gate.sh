@@ -123,6 +123,21 @@ v59e_public_source_policy_copied = copy_if_exists(
 )
 v59e_public_source_policy_rows = read_rows(v59e_public_source_policy_path)
 v59e_public_source_policy = v59e_public_source_policy_rows[0] if v59e_public_source_policy_rows else {}
+h10_pm_dir = results / "v10_h10_real_label_promotion_readiness_gate" / "gate_001"
+h10_acceptance_rows_path = h10_pm_dir / "pm_h10_real_label_acceptance_rows.csv"
+h10_template_path = h10_pm_dir / "h10_real_label_evidence_template.csv"
+h10_evidence_acceptance_path = h10_pm_dir / "h10_real_label_evidence_acceptance_rows.csv"
+h10_acceptance_rows_copied = copy_if_exists(
+    h10_acceptance_rows_path,
+    "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
+)
+copy_if_exists(h10_template_path, "source_h10_pm/h10_real_label_evidence_template.csv")
+copy_if_exists(h10_evidence_acceptance_path, "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv")
+h10_acceptance_rows = read_rows(h10_acceptance_rows_path)
+h10_acceptance_by_criterion = {
+    row.get("criterion", ""): row
+    for row in h10_acceptance_rows
+}
 v53t_foundation_freeze_rows = read_rows(v53t_foundation_freeze_path)
 v53t_foundation_by_id = {
     row.get("criterion_id", ""): row
@@ -630,9 +645,22 @@ pm_roadmap_rows = [
         "M4",
         "h10-readiness-ledger",
         "h10 scorer promotion criteria are represented as real-label readiness rows",
-        as_int(h10_pm, "v10_h10_real_label_promotion_readiness_gate_ready") == 1,
-        "source_summaries/v10_h10_real_label_promotion_readiness_gate_summary.csv",
-        f"h10_readiness_gate={h10_pm.get('v10_h10_real_label_promotion_readiness_gate_ready', '0')}",
+        as_int(h10_pm, "v10_h10_real_label_promotion_readiness_gate_ready") == 1
+        and len(h10_acceptance_rows) == 6
+        and set(h10_acceptance_by_criterion) == {
+            "coherent-wrong-key-reduction",
+            "chunk-exact-increase",
+            "near-miss-slash",
+            "missing-query-abstain",
+            "source-provenance-binding",
+            "external-human-label-evidence",
+        },
+        h10_acceptance_rows_copied or "source_summaries/v10_h10_real_label_promotion_readiness_gate_summary.csv",
+        (
+            f"h10_readiness_gate={h10_pm.get('v10_h10_real_label_promotion_readiness_gate_ready', '0')} "
+            f"criteria_rows={len(h10_acceptance_rows)} "
+            f"criteria={','.join(sorted(h10_acceptance_by_criterion))}"
+        ),
         "h10-readiness-ledger-missing",
     ),
     req(

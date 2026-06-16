@@ -183,6 +183,38 @@ if answer_citation_row["evidence_path"] != "source_v53t/complete_source_foundati
     raise SystemExit("PM answer/citation separation should bind directly to the v53t foundation freeze rows")
 if "answer_hash_match_rows=6000; citation_span_match_rows=7000" not in answer_citation_row["reason"]:
     raise SystemExit("PM answer/citation separation should expose v53 answer/citation/scorer/policy counts")
+h10_readiness_row = roadmap_by_id["h10-readiness-ledger"]
+if h10_readiness_row["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
+    raise SystemExit("PM h10 readiness should bind directly to the h10 acceptance rows")
+for snippet in [
+    "criteria_rows=6",
+    "coherent-wrong-key-reduction",
+    "chunk-exact-increase",
+    "near-miss-slash",
+    "missing-query-abstain",
+    "source-provenance-binding",
+    "external-human-label-evidence",
+]:
+    if snippet not in h10_readiness_row["reason"]:
+        raise SystemExit(f"PM h10 readiness row should expose {snippet}")
+h10_acceptance_rows = read_csv(run_dir / "source_h10_pm/pm_h10_real_label_acceptance_rows.csv")
+if len(h10_acceptance_rows) != 6:
+    raise SystemExit("PM h10 acceptance source rows should expose six criteria")
+h10_criteria = {row["criterion"]: row for row in h10_acceptance_rows}
+for criterion in [
+    "coherent-wrong-key-reduction",
+    "chunk-exact-increase",
+    "near-miss-slash",
+    "missing-query-abstain",
+    "source-provenance-binding",
+    "external-human-label-evidence",
+]:
+    if criterion not in h10_criteria:
+        raise SystemExit(f"PM h10 acceptance source missing criterion: {criterion}")
+if h10_criteria["external-human-label-evidence"]["real_label_status"] != "blocked":
+    raise SystemExit("PM h10 acceptance source should keep external/human evidence blocked")
+if "v53ap_evaluator_rows=4000" not in h10_criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("PM h10 acceptance source should cite v53ap evaluator provenance")
 abgh_surface_row = roadmap_by_id["abgh-same-query-measured"]
 for snippet in ["same_query=1", "same_source=1", "same_evaluator=1", "same_resource=1"]:
     if snippet not in abgh_surface_row["reason"]:
@@ -455,6 +487,9 @@ required_files = [
     "pm_blocker_closure_packet_rows.csv",
     "pm_blocker_required_artifact_rows.csv",
     "source_summary_rows.csv",
+    "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
+    "source_h10_pm/h10_real_label_evidence_template.csv",
+    "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
     "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md",
