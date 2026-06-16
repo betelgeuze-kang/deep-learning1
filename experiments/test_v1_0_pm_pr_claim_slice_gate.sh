@@ -41,9 +41,9 @@ expected = {
     "merge_condition_defined_rows": "10",
     "merge_gate_rows": "30",
     "blocker_false_positive_pass_rows": "10",
-    "pm_roadmap_requirement_rows": "19",
+    "pm_roadmap_requirement_rows": "20",
     "pm_roadmap_ready_rows": "13",
-    "pm_roadmap_blocked_rows": "6",
+    "pm_roadmap_blocked_rows": "7",
     "pm_foundation_ready": "1",
     "v53_foundation_freeze_certificate_rows": "10",
     "v53_foundation_machine_freeze_ready": "1",
@@ -158,8 +158,8 @@ for slice_id in ["docs/v1-roadmap", "v53-query-instantiation-1000", "v53-system-
         raise SystemExit(f"core PM slice should pass current review gate: {slice_id}")
 
 roadmap_rows = read_csv(run_dir / "pm_roadmap_requirement_rows.csv")
-if len(roadmap_rows) != 19:
-    raise SystemExit("PM roadmap requirement ledger should cover 19 current requirements")
+if len(roadmap_rows) != 20:
+    raise SystemExit("PM roadmap requirement ledger should cover 20 current requirements")
 roadmap_by_id = {row["requirement_id"]: row for row in roadmap_rows}
 for requirement_id in [
     "pr-split-ledger",
@@ -183,6 +183,21 @@ if answer_citation_row["evidence_path"] != "source_v53t/source_v53ap/abgh_evalua
     raise SystemExit("PM answer/citation separation should bind directly to the v53t copied evaluator rows")
 if "direct_separate_evaluator_rows=4000" not in answer_citation_row["reason"]:
     raise SystemExit("PM answer/citation separation should expose direct v53 evaluator row counts")
+abgh_ready_row = roadmap_by_id["abgh-same-query-measured"]
+if "deterministic_source_span_adapter_execution=1" not in abgh_ready_row["reason"]:
+    raise SystemExit("PM A/B/G/H ready row should disclose deterministic source-span adapter execution")
+if "real_system_performance_claim_ready=0" not in abgh_ready_row["reason"]:
+    raise SystemExit("PM A/B/G/H ready row should keep real performance claim boundary closed")
+abgh_real_row = roadmap_by_id["abgh-real-system-adapter-execution"]
+if abgh_real_row["status"] != "blocked":
+    raise SystemExit("PM A/B/G/H real adapter execution should remain blocked until actual adapters run")
+for snippet in [
+    "actual_adapter_execution_ready=1",
+    "deterministic_source_span_adapter_execution=1",
+    "real_system_performance_claim_ready=0",
+]:
+    if snippet not in abgh_real_row["reason"]:
+        raise SystemExit(f"PM A/B/G/H real adapter blocker should expose {snippet}")
 h10_readiness_row = roadmap_by_id["h10-readiness-ledger"]
 if h10_readiness_row["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
     raise SystemExit("PM h10 readiness should bind directly to the h10 acceptance rows")
@@ -514,7 +529,7 @@ if manifest.get("recommended_pr_slice_rows") != 10 or manifest.get("real_release
     raise SystemExit("PM PR manifest readiness mismatch")
 if manifest.get("slice_ids") != expected_order:
     raise SystemExit("PM PR manifest slice order mismatch")
-if manifest.get("pm_roadmap_requirement_rows") != 19 or manifest.get("pm_foundation_ready") != 1:
+if manifest.get("pm_roadmap_requirement_rows") != 20 or manifest.get("pm_foundation_ready") != 1:
     raise SystemExit("PM PR manifest roadmap audit mismatch")
 if manifest.get("v53_foundation_freeze_certificate_rows") != 10 or manifest.get("v53_foundation_machine_freeze_ready") != 1:
     raise SystemExit("PM PR manifest v53 foundation freeze mismatch")
@@ -556,7 +571,7 @@ boundary = (run_dir / "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md").read_text(encod
 for snippet in [
     "recommended_pr_slice_rows=10",
     "merge_condition_defined_rows=10",
-    "pm_roadmap_requirement_rows=19",
+    "pm_roadmap_requirement_rows=20",
     "pm_foundation_ready=1",
     "v53_foundation_freeze_certificate_rows=10",
     "v53_foundation_machine_freeze_ready=1",

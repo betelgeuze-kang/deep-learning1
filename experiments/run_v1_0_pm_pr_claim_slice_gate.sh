@@ -626,7 +626,7 @@ pm_roadmap_rows = [
     req(
         "M3",
         "abgh-same-query-measured",
-        "A/B/G/H are measured on the same complete-source query/source/evaluator/resource surface",
+        "A/B/G/H deterministic source-span adapters are measured on the same complete-source query/source/evaluator/resource surface",
         as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1
         and v53ap.get("systems") == "A/B/G/H"
         and as_int(v53ap, "same_query_set_all_local_systems") == 1
@@ -640,9 +640,28 @@ pm_roadmap_rows = [
             f"systems={v53ap.get('systems', '')} same_query={v53ap.get('same_query_set_all_local_systems', '0')} "
             f"same_source={v53ap.get('same_source_manifest_all_local_systems', '0')} "
             f"same_evaluator={v53ap.get('same_evaluator_contract_all_local_systems', '0')} "
-            f"same_resource={v53ap.get('same_resource_contract_all_local_systems', '0')}"
+            f"same_resource={v53ap.get('same_resource_contract_all_local_systems', '0')} "
+            f"deterministic_source_span_adapter_execution={v53ap.get('deterministic_source_span_adapter_execution', '0')} "
+            f"real_system_performance_claim_ready={v53ap.get('real_system_performance_claim_ready', '0')}"
         ),
         "abgh-same-query-missing",
+    ),
+    req(
+        "M3",
+        "abgh-real-system-adapter-execution",
+        "A/B/G/H actual BM25/local-RAG/RouteMemory adapters run on v53i without expected-answer or source-span oracle replay",
+        as_int(v53ap, "real_system_performance_claim_ready") == 1
+        and as_int(v53ap, "actual_adapter_execution_ready") == 1
+        and as_int(v53ap, "expected_answer_oracle_replay") == 0
+        and as_int(v53ap, "deterministic_source_span_adapter_execution") == 0,
+        "source_summaries/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+        (
+            f"actual_adapter_execution_ready={v53ap.get('actual_adapter_execution_ready', '0')} "
+            f"expected_answer_oracle_replay={v53ap.get('expected_answer_oracle_replay', '0')} "
+            f"deterministic_source_span_adapter_execution={v53ap.get('deterministic_source_span_adapter_execution', '0')} "
+            f"real_system_performance_claim_ready={v53ap.get('real_system_performance_claim_ready', '0')}"
+        ),
+        "abgh-real-adapter-execution-missing",
     ),
     req(
         "M3",

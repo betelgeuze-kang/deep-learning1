@@ -115,9 +115,9 @@ expected = {
     "pm_external_return_template_fixture_allowed_rows": "0",
     "pm_external_return_template_approval_rows": "22",
     "pm_external_return_template_bundle_ready": "1",
-    "pm_roadmap_requirement_rows": "19",
+    "pm_roadmap_requirement_rows": "20",
     "pm_roadmap_ready_rows": "13",
-    "pm_roadmap_blocked_rows": "6",
+    "pm_roadmap_blocked_rows": "7",
 }
 for field, value in expected.items():
     if summary.get(field) != value:
