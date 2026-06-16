@@ -129,6 +129,10 @@ for slice_id, forbidden in {
 }.items():
     if forbidden not in claim_by_id[slice_id]["blocked_claim"]:
         raise SystemExit(f"claim boundary should block {forbidden} for {slice_id}")
+if "public-source download/refresh readiness" not in claim_by_id["v59-one-command-demo"]["blocked_claim"]:
+    raise SystemExit("v59 claim boundary should block public-source download/refresh readiness")
+if claim_by_id["v59-one-command-demo"]["evidence_path"] != "source_v59e/public_source_replay_policy_rows.csv":
+    raise SystemExit("v59 claim boundary should bind to public source replay policy rows")
 
 by_id = {row["slice_id"]: row for row in slice_rows}
 if by_id["v53-system-a-b-g-h-measured"]["current_status"] != "ready-for-review":
@@ -183,6 +187,10 @@ abgh_surface_row = roadmap_by_id["abgh-same-query-measured"]
 for snippet in ["same_query=1", "same_source=1", "same_evaluator=1", "same_resource=1"]:
     if snippet not in abgh_surface_row["reason"]:
         raise SystemExit(f"PM A/B/G/H same-surface row should expose {snippet}")
+v59_foundation_row = roadmap_by_id["v59-one-command-foundation"]
+for snippet in ["public_source_download_executed=0", "full_public_source_download_ready=0", "policy_blocker=blocked-full-public-demo"]:
+    if snippet not in v59_foundation_row["reason"]:
+        raise SystemExit(f"PM v59 foundation row should expose {snippet}")
 expected_blocked = {
     "v56-replay-artifact": "v56-replay-artifact-missing",
     "de-30b70b-symmetric-baselines": "de-30b70b-baselines-missing",
@@ -265,6 +273,10 @@ if review_packet_by_id["v53-system-a-b-g-h-measured"]["next_action"] != "review-
     raise SystemExit("A/B/G/H review packet should be reviewable")
 if "experiments/test_v58c_blind_response_evidence_intake.sh" not in review_packet_by_id["v58-blind-eval-contract"]["deferred_commands"]:
     raise SystemExit("v58 review packet should carry the deferred real-response command")
+v59_packet_text = (run_dir / review_packet_by_id["v59-one-command-demo"]["packet_path"]).read_text(encoding="utf-8")
+for snippet in ["public-source download/refresh readiness", "pinned-source snapshot replay", "network, downloads"]:
+    if snippet not in v59_packet_text:
+        raise SystemExit(f"v59 review packet should expose public-source replay boundary: {snippet}")
 
 closure_rows = read_csv(run_dir / "pm_blocker_closure_queue_rows.csv")
 if len(closure_rows) != 6:
@@ -443,6 +455,7 @@ required_files = [
     "pm_blocker_closure_packet_rows.csv",
     "pm_blocker_required_artifact_rows.csv",
     "source_summary_rows.csv",
+    "source_v59e/public_source_replay_policy_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
     "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md",
     "v1_0_pm_pr_claim_slice_gate_manifest.json",

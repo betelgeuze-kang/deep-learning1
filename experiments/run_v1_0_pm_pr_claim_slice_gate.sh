@@ -116,6 +116,13 @@ v53t_foundation_freeze_copied = copy_if_exists(
     v53t_foundation_freeze_path,
     "source_v53t/complete_source_foundation_freeze_rows.csv",
 )
+v59e_public_source_policy_path = results / "v59e_one_command_pm_foundation_demo" / "pm_foundation_001" / "public_source_replay_policy_rows.csv"
+v59e_public_source_policy_copied = copy_if_exists(
+    v59e_public_source_policy_path,
+    "source_v59e/public_source_replay_policy_rows.csv",
+)
+v59e_public_source_policy_rows = read_rows(v59e_public_source_policy_path)
+v59e_public_source_policy = v59e_public_source_policy_rows[0] if v59e_public_source_policy_rows else {}
 v53t_foundation_freeze_rows = read_rows(v53t_foundation_freeze_path)
 v53t_foundation_by_id = {
     row.get("criterion_id", ""): row
@@ -380,9 +387,9 @@ claim_boundary_rows = [
     ),
     claim_boundary_row(
         "v59-one-command-demo",
-        "v59e PM foundation one-command replay is ready without private fixtures, hidden state, network, or manual postprocessing",
-        "full v59 public challenge demo, v58 blind completion, h10 promotion, or v60 release readiness",
-        "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
+        "v59e PM foundation one-command replay is ready without private fixtures, hidden state, network, downloads, or manual postprocessing, using pinned-source snapshot replay",
+        "full v59 public challenge demo, public-source download/refresh readiness, v58 blind completion, h10 promotion, or v60 release readiness",
+        v59e_public_source_policy_copied or "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
     ),
     claim_boundary_row(
         "v61-ssd-moe-runtime-roadmap",
@@ -697,7 +704,13 @@ pm_roadmap_rows = [
         and as_int(v59e, "public_source_download_executed") == 0
         and as_int(v59e, "full_public_source_download_ready") == 0,
         "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
-        f"v59e_ready={v59e.get('v59e_one_command_pm_foundation_demo_ready', '0')} bundle={v59e.get('challenge_bundle_ready', '0')} public_source_download_executed={v59e.get('public_source_download_executed', '0')} full_public_source_download_ready={v59e.get('full_public_source_download_ready', '0')}",
+        (
+            f"v59e_ready={v59e.get('v59e_one_command_pm_foundation_demo_ready', '0')} "
+            f"bundle={v59e.get('challenge_bundle_ready', '0')} "
+            f"public_source_download_executed={v59e.get('public_source_download_executed', '0')} "
+            f"full_public_source_download_ready={v59e.get('full_public_source_download_ready', '0')} "
+            f"policy_blocker={v59e_public_source_policy.get('blocker_status', 'missing')}"
+        ),
         "v59-foundation-demo-missing",
     ),
     req(
