@@ -961,6 +961,7 @@ pm_pr_core_files = [
     (pr_run_dir / "source_h10_pm/h10_real_label_evidence_template.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_foundation_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/source_v53i/complete_source_query_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/source_v53i/complete_source_span_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/source_v53ap/abgh_answer_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_answer_rows.csv", "evidence"),

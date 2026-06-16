@@ -74,7 +74,10 @@ that foundation: 10 pinned public repositories, 1000 source-span-bound queries,
 10%+ negative/abstain controls, unsupported/missing/doc-code-conflict rows,
 direct copied query/span evidence, 4000 direct separate answer/citation/resource
 evaluator rows, A/B/G/H same-query deterministic source-span adapter/evaluator rows, replay
-hashes, and a closed public-comparison boundary. The h10 PM real-label
+hashes, and a closed public-comparison boundary. It also emits
+`complete_source_abgh_real_adapter_freeze_rows.csv` to bind the v53aq
+query-text-only real-adapter evidence into the same PM freeze packet without
+opening public-comparison wording. The h10 PM real-label
 readiness gate now makes the scorer-promotion blocker explicit: provenance,
 v53ap adapter trace, v53aq query-text-only real-adapter wrong-key/provenance
 evidence, missing/abstain, and wrong-answer guard surfaces can be machine-bound,
@@ -785,7 +788,7 @@ The v53r complete-source review packet layer prepares the frozen v53i/v53q evide
 
 The v53s complete-source review return intake layer binds v53r to the expected external returned-review artifacts without fabricating review judgments. It records `expected_human_review_rows=7000`, `expected_adjudication_rows=1000`, `expected_reviewer_assignment_rows=21`, accepted human/adjudication rows 0 in the default path, `review_return_ready=0`, `quality_comparison_claim_ready=0`, and `v53_ready=0`, while keeping human-reviewed audit, comparison, and release claims blocked.
 
-The v53t complete-source audit readiness gate binds v52y/v53i/v53ap/v53q/v53r/v53s into one readiness matrix. It records `machine_complete_source_surface_ready=1` for the complete-source query/scoring/review-packet surface, `pm_v53_freeze_ready=1` for the source-bound 1000-row plus A/B/G/H same-query PM gate, `foundation_direct_evidence_ready=1` for copied direct query/span and A/B/G/H evaluator evidence, `v53ap_expected_answer_oracle_replay=0`, `v53ap_deterministic_source_span_adapter_execution=1`, `v53ap_actual_adapter_execution_ready=1`, accepted human review rows 0/7000, accepted adjudication rows 0/1000, `review_return_ready=0`, `quality_comparison_claim_ready=0`, `v53_ready=0`, `v1_0_comparison_ready=0`, and `real_release_package_ready=0`.
+The v53t complete-source audit readiness gate binds v52y/v53i/v53ap/v53aq/v53q/v53r/v53s into one readiness matrix. It records `machine_complete_source_surface_ready=1` for the complete-source query/scoring/review-packet surface, `pm_v53_freeze_ready=1` for the source-bound 1000-row plus A/B/G/H same-query PM gate, `foundation_direct_evidence_ready=1` for copied direct query/span and v53ap deterministic A/B/G/H evaluator evidence, and `foundation_real_adapter_evidence_ready=1` for copied v53aq query-text-only real-adapter evidence. The v53aq certificate rows preserve `selection_question_text_only=1`, `selection_oracle_field_used=0`, `v53aq_real_adapter_execution_ready=1`, 3712 answer-hash matches, 288 coherent wrong-key rows, and `public_comparison_claim_ready=0`. It also records `v53ap_expected_answer_oracle_replay=0`, `v53ap_deterministic_source_span_adapter_execution=1`, `v53ap_actual_adapter_execution_ready=1`, accepted human review rows 0/7000, accepted adjudication rows 0/1000, `review_return_ready=0`, `quality_comparison_claim_ready=0`, `v53_ready=0`, `v1_0_comparison_ready=0`, and `real_release_package_ready=0`.
 
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 

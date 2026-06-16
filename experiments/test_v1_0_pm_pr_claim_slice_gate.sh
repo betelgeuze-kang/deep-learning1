@@ -533,6 +533,7 @@ required_files = [
     "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
+    "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_v53t/source_v53i/complete_source_span_rows.csv",
     "source_v53t/source_v53ap/abgh_answer_rows.csv",
@@ -549,6 +550,24 @@ for rel in required_files:
     path = run_dir / rel
     if not path.is_file() or path.stat().st_size == 0:
         raise SystemExit(f"missing PM PR slice gate artifact: {rel}")
+
+real_adapter_freeze_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")}
+if len(real_adapter_freeze_rows) != 4:
+    raise SystemExit("PM PR sidecar should copy four v53t real-adapter freeze rows")
+for criterion_id in [
+    "v53aq-same-query-surface",
+    "question-only-selection-contract",
+    "real-adapter-execution-rows",
+    "public-comparison-boundary-closed",
+]:
+    if real_adapter_freeze_rows.get(criterion_id, {}).get("status") != "pass":
+        raise SystemExit(f"PM PR sidecar v53t real-adapter freeze row should pass: {criterion_id}")
+if "selection_question_text_only=1" not in real_adapter_freeze_rows["question-only-selection-contract"]["actual_value"]:
+    raise SystemExit("PM PR sidecar should expose v53aq question-only selection in v53t freeze evidence")
+if "coherent_wrong_key_rows=288" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
+    raise SystemExit("PM PR sidecar should expose v53aq coherent wrong-key evidence in v53t freeze evidence")
+if "public_comparison_claim_ready=0" not in real_adapter_freeze_rows["public-comparison-boundary-closed"]["actual_value"]:
+    raise SystemExit("PM PR sidecar should keep v53aq public comparison blocked in v53t freeze evidence")
 
 manifest = json.loads((run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("recommended_pr_slice_rows") != 10 or manifest.get("real_release_package_ready") != 0:

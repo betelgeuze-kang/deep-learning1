@@ -148,6 +148,7 @@ required_files = [
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/adapter_selection_contract_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
@@ -183,6 +184,19 @@ for rel in required_files:
     path = run_dir / rel
     if not path.is_file() or path.stat().st_size == 0:
         raise SystemExit(f"missing v60 artifact: {rel}")
+
+v60_pm_v53t_real_adapter_rows = {
+    row["criterion_id"]: row
+    for row in read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")
+}
+if len(v60_pm_v53t_real_adapter_rows) != 4:
+    raise SystemExit("v60 should carry four v53t real-adapter freeze rows through v59e/PM sidecar")
+if v60_pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["status"] != "pass":
+    raise SystemExit("v60 should carry passing v53t real-adapter execution evidence")
+if "coherent_wrong_key_rows=288" not in v60_pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+    raise SystemExit("v60 should preserve v53aq coherent wrong-key evidence")
+if "public_comparison_claim_ready=0" not in v60_pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
+    raise SystemExit("v60 should preserve v53aq public comparison blocker")
 
 requirements = read_csv(run_dir / "release_requirement_rows.csv")
 if len(requirements) != 14:

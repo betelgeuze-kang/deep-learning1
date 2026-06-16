@@ -119,6 +119,11 @@ v53t_foundation_freeze_copied = copy_if_exists(
     v53t_foundation_freeze_path,
     "source_v53t/complete_source_foundation_freeze_rows.csv",
 )
+v53t_real_adapter_freeze_path = results / "v53t_complete_source_audit_readiness_gate" / "gate_001" / "complete_source_abgh_real_adapter_freeze_rows.csv"
+v53t_real_adapter_freeze_copied = copy_if_exists(
+    v53t_real_adapter_freeze_path,
+    "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+)
 v53t_run_dir = results / "v53t_complete_source_audit_readiness_gate" / "gate_001"
 v53t_direct_copied = {}
 for src_rel in [
