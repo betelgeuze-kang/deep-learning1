@@ -4285,6 +4285,14 @@ Current next boundary:
   applied atomically only after the env preflight passes. The applier writes no
   values JSON, filled form, authority ack, replay output, accepted row, generation
   evidence, or checkpoint payload by itself.
+- `v61hv` adds the post-v61hu replacements-to-readiness no-replay pipeline.
+  `experiments/test_v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline.sh`
+  verifies that a filled replacement CSV can be typed/redacted-preflighted and
+  handed to one no-replay runner that applies replacements and then delegates to
+  the env-file-to-readiness pipeline, while missing rows, unknown keys,
+  placeholders, non-positive numeric values, false attestations, and too-short
+  text fail closed, reports do not leak replacement values, and
+  `V61HG_EXECUTE_DUAL_REPLAY=1` is never set by this path.
 - The claim remains local evidence-bound QA/audit assistance until those
   challenge gates pass, not Transformer replacement, frontier local LLM, GPU
   acceleration, long-context solved, or expert replacement.
