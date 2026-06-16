@@ -9,8 +9,8 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" ]] \
-  && grep -q 'v53aq_evaluator_rows' "$SUMMARY_CSV"; then
+if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv" ]] \
+  && grep -q 'v53t_real_adapter_freeze_ready' "$SUMMARY_CSV"; then
   echo "v10_h10_real_label_promotion_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -24,6 +24,7 @@ mkdir -p "$RUN_DIR"
 V53Q_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53q_complete_source_symmetric_scorer_policy.sh" >/dev/null
 V53AP_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53ap_complete_source_abgh_same_query_measured.sh" >/dev/null
 V53AQ_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53aq_complete_source_abgh_real_adapter_measured.sh" >/dev/null
+V53T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53t_complete_source_audit_readiness_gate.sh" >/dev/null
 V54C_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v54c_complete_source_grounded_generation_1000.sh" >/dev/null
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "${V10_H10_REAL_LABEL_EVIDENCE_CSV:-}" <<'PY'
@@ -124,16 +125,19 @@ h10s_decision_path = results / "v10_source_verified_learned_chunk_scorer_eval_ga
 v53q_summary_path = results / "v53q_complete_source_symmetric_scorer_policy_summary.csv"
 v53ap_summary_path = results / "v53ap_complete_source_abgh_same_query_measured_summary.csv"
 v53aq_summary_path = results / "v53aq_complete_source_abgh_real_adapter_measured_summary.csv"
+v53t_summary_path = results / "v53t_complete_source_audit_readiness_gate_summary.csv"
 v54c_summary_path = results / "v54c_complete_source_grounded_generation_1000_summary.csv"
 v53q_dir = results / "v53q_complete_source_symmetric_scorer_policy" / "score_001"
 v53ap_dir = results / "v53ap_complete_source_abgh_same_query_measured" / "measured_001"
 v53aq_dir = results / "v53aq_complete_source_abgh_real_adapter_measured" / "measured_001"
+v53t_dir = results / "v53t_complete_source_audit_readiness_gate" / "gate_001"
 v54c_dir = results / "v54c_complete_source_grounded_generation_1000" / "generation_001"
 
 h10s = first_row(h10s_summary_path)
 v53q = first_row(v53q_summary_path)
 v53ap = first_row(v53ap_summary_path)
 v53aq = first_row(v53aq_summary_path)
+v53t = first_row(v53t_summary_path)
 v54c = first_row(v54c_summary_path)
 
 if v53q.get("v53q_complete_source_symmetric_scorer_policy_ready") != "1":
@@ -142,6 +146,8 @@ if v53ap.get("v53ap_complete_source_abgh_same_query_measured_ready") != "1":
     raise SystemExit("h10 PM gate requires v53ap A/B/G/H same-query readiness")
 if v53aq.get("v53aq_complete_source_abgh_real_adapter_measured_ready") != "1":
     raise SystemExit("h10 PM gate requires v53aq A/B/G/H real-adapter readiness")
+if v53t.get("v53t_complete_source_audit_readiness_gate_ready") != "1" or v53t.get("foundation_real_adapter_evidence_ready") != "1":
+    raise SystemExit("h10 PM gate requires v53t complete-source real-adapter freeze readiness")
 if v54c.get("v54c_complete_source_grounded_generation_1000_ready") != "1":
     raise SystemExit("h10 PM gate requires v54c grounded generation readiness")
 
@@ -163,6 +169,9 @@ copy(v53aq_dir / "abgh_adapter_trace_rows.csv", "source_v53aq/abgh_adapter_trace
 copy(v53aq_dir / "abgh_evaluator_rows.csv", "source_v53aq/abgh_evaluator_rows.csv")
 copy(v53aq_dir / "abgh_wrong_answer_guard_rows.csv", "source_v53aq/abgh_wrong_answer_guard_rows.csv")
 copy(v53aq_dir / "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md")
+copy(v53t_summary_path, "source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv")
+copy(v53t_dir / "complete_source_abgh_real_adapter_freeze_rows.csv", "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")
+copy(v53t_dir / "complete_source_foundation_freeze_rows.csv", "source_v53t/complete_source_foundation_freeze_rows.csv")
 copy(v54c_summary_path, "source_v54c/v54c_complete_source_grounded_generation_1000_summary.csv")
 copy(v54c_dir / "answer_rows.csv", "source_v54c/answer_rows.csv")
 copy(v54c_dir / "citation_rows.csv", "source_v54c/citation_rows.csv")
@@ -235,6 +244,18 @@ v53aq_adapter_trace_rows = read_csv(v53aq_dir / "abgh_adapter_trace_rows.csv")
 v53aq_evaluator_rows = read_csv(v53aq_dir / "abgh_evaluator_rows.csv")
 v53aq_metric_rows = read_csv(v53aq_dir / "abgh_system_metric_rows.csv")
 v53aq_metrics_by_system = {row["system_id"]: row for row in v53aq_metric_rows}
+v53t_real_adapter_freeze_rows = read_csv(v53t_dir / "complete_source_abgh_real_adapter_freeze_rows.csv")
+v53t_freeze_by_criterion = {row["criterion_id"]: row for row in v53t_real_adapter_freeze_rows}
+v53t_real_adapter_freeze_pass_rows = sum(1 for row in v53t_real_adapter_freeze_rows if row["status"] == "pass")
+v53t_real_adapter_freeze_ready = int(
+    as_int(v53t, "foundation_real_adapter_evidence_ready") == 1
+    and len(v53t_real_adapter_freeze_rows) == 4
+    and v53t_real_adapter_freeze_pass_rows == 4
+    and "coherent_wrong_key_rows=288" in v53t_freeze_by_criterion.get("real-adapter-execution-rows", {}).get("actual_value", "")
+    and "public_comparison_claim_ready=0" in v53t_freeze_by_criterion.get("public-comparison-boundary-closed", {}).get("actual_value", "")
+    and "selection_question_text_only=1" in v53t_freeze_by_criterion.get("question-only-selection-contract", {}).get("actual_value", "")
+    and "selection_oracle_field_used=0" in v53t_freeze_by_criterion.get("question-only-selection-contract", {}).get("actual_value", "")
+)
 v53ap_adapter_trace_provenance_ready = int(
     as_int(v53ap, "system_distinct_adapter_trace_ready") == 1
     and as_int(v53ap, "adapter_trace_rows") == 4000
@@ -282,6 +303,7 @@ v53aq_real_adapter_provenance_ready = int(
 )
 v53aq_wrong_key_signal_ready = int(
     v53aq_real_adapter_provenance_ready == 1
+    and v53t_real_adapter_freeze_ready == 1
     and as_int(v53aq, "coherent_wrong_key_rows") > 0
     and as_int(v53aq, "wrong_answer_rows") == as_int(v53aq, "coherent_wrong_key_rows")
     and as_int(v53aq_metrics_by_system.get("A", {}), "coherent_wrong_key_rows") > 0
@@ -306,6 +328,7 @@ source_provenance_binding_ready = int(
     and v53ap_adapter_trace_provenance_ready == 1
     and v53ap_evaluator_provenance_ready == 1
     and v53aq_real_adapter_provenance_ready == 1
+    and v53t_real_adapter_freeze_ready == 1
     and as_int(v54c, "citation_correct_rows") == as_int(v54c, "generation_rows")
 )
 missing_query_abstain_ready = int(
@@ -367,7 +390,8 @@ acceptance_rows = [
             f"h10s_coherent_wrong_negative_rate={h10s.get('coherent_wrong_negative_rate', '0')}; "
             f"v53aq_coherent_wrong_key_rows={v53aq.get('coherent_wrong_key_rows', '0')}; "
             f"v53aq_A_coherent_wrong_key_rows={v53aq_metrics_by_system.get('A', {}).get('coherent_wrong_key_rows', '0')}; "
-            f"v53aq_H_coherent_wrong_key_rows={v53aq_metrics_by_system.get('H', {}).get('coherent_wrong_key_rows', '0')}"
+            f"v53aq_H_coherent_wrong_key_rows={v53aq_metrics_by_system.get('H', {}).get('coherent_wrong_key_rows', '0')}; "
+            f"v53t_real_adapter_freeze_ready={v53t_real_adapter_freeze_ready}"
         ),
         "blocker": "real source-verified eval and external/human labels required" if not coherent_wrong_real_label_ready else "",
     },
@@ -396,7 +420,7 @@ acceptance_rows = [
         "criterion": "source-provenance-binding",
         "machine_evidence_status": "pass" if source_provenance_binding_ready else "blocked",
         "real_label_status": "pass" if source_provenance_binding_ready and external_human_label_evidence_ready else "blocked",
-        "evidence": f"v53q_scorer_rows={v53q.get('symmetric_scorer_rows')}; v53ap_adapter_trace_rows={len(v53ap_adapter_trace_rows)}; v53ap_evaluator_rows={len(v53ap_evaluator_rows)}; v53aq_adapter_trace_rows={len(v53aq_adapter_trace_rows)}; v53aq_evaluator_rows={len(v53aq_evaluator_rows)}; v54c_citation_correct={v54c.get('citation_correct_rows')}",
+        "evidence": f"v53q_scorer_rows={v53q.get('symmetric_scorer_rows')}; v53ap_adapter_trace_rows={len(v53ap_adapter_trace_rows)}; v53ap_evaluator_rows={len(v53ap_evaluator_rows)}; v53aq_adapter_trace_rows={len(v53aq_adapter_trace_rows)}; v53aq_evaluator_rows={len(v53aq_evaluator_rows)}; v53t_real_adapter_freeze_rows={len(v53t_real_adapter_freeze_rows)}; v54c_citation_correct={v54c.get('citation_correct_rows')}",
         "blocker": "accepted external/human label evidence must bind provenance rows" if not external_human_label_evidence_ready else "",
     },
     {
@@ -440,6 +464,11 @@ summary = {
     "v53aq_real_system_performance_claim_ready": v53aq.get("real_system_performance_claim_ready", "0"),
     "v53aq_answer_hash_match_rows": v53aq.get("answer_hash_match_rows", "0"),
     "v53aq_coherent_wrong_key_rows": v53aq.get("coherent_wrong_key_rows", "0"),
+    "v53t_complete_source_audit_readiness_gate_ready": v53t.get("v53t_complete_source_audit_readiness_gate_ready", "0"),
+    "v53t_foundation_real_adapter_evidence_ready": v53t.get("foundation_real_adapter_evidence_ready", "0"),
+    "v53t_real_adapter_freeze_rows": str(len(v53t_real_adapter_freeze_rows)),
+    "v53t_real_adapter_freeze_pass_rows": str(v53t_real_adapter_freeze_pass_rows),
+    "v53t_real_adapter_freeze_ready": str(v53t_real_adapter_freeze_ready),
     "missing_query_abstain_ready": str(missing_query_abstain_ready),
     "wrong_answer_guard_ready": str(wrong_answer_guard_ready),
     "same_query_abgh_ready": str(same_query_abgh_ready),
@@ -470,6 +499,7 @@ decision_rows = [
     ("v53-complete-source-symmetric-scorer-policy", "pass" if source_provenance_binding_ready else "blocked", "source provenance and symmetric scorer rows are bound"),
     ("v53ap-abgh-same-query-prebaseline", "pass" if same_query_abgh_ready else "blocked", "A/B/G/H share v53i complete-source query/source/evaluator/resource set and adapter trace provenance"),
     ("v53aq-abgh-real-adapter-evidence", "pass" if same_query_real_adapter_ready and v53aq_wrong_key_signal_ready else "blocked", "A/B/G/H query-text-only real-adapter rows expose wrong-key and provenance evidence"),
+    ("v53t-real-adapter-freeze", "pass" if v53t_real_adapter_freeze_ready else "blocked", "v53t foundation freeze certificate binds v53aq real-adapter wrong-key evidence and public-comparison blocker"),
     ("v54c-grounded-generation-guard", "pass" if wrong_answer_guard_ready and missing_query_abstain_ready else "blocked", "wrong-answer and missing/abstain guards are present"),
     ("h10-diagnostic-scorer-signal", "pass" if h10_diagnostic_scorer_signal_ready else "blocked", "local h10 diagnostic scorer separates correct/coherent-wrong rows"),
     ("h10-source-verified-eval", "pass" if h10_source_verified_eval_ready else "blocked", h10s.get("reason", "source-verified eval missing")),
@@ -497,6 +527,8 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- v53aq_selection_question_text_only={v53aq.get('selection_question_text_only', '0')}\n"
     f"- v53aq_selection_oracle_field_used={v53aq.get('selection_oracle_field_used', '1')}\n"
     f"- v53aq_coherent_wrong_key_rows={v53aq.get('coherent_wrong_key_rows', '0')}\n"
+    f"- v53t_real_adapter_freeze_ready={v53t_real_adapter_freeze_ready}\n"
+    f"- v53t_real_adapter_freeze_rows={len(v53t_real_adapter_freeze_rows)}\n"
     f"- missing_query_abstain_ready={missing_query_abstain_ready}\n"
     f"- wrong_answer_guard_ready={wrong_answer_guard_ready}\n"
     f"- same_query_abgh_ready={same_query_abgh_ready}\n"
@@ -530,6 +562,11 @@ manifest = {
     "v53aq_real_system_performance_claim_ready": as_int(v53aq, "real_system_performance_claim_ready"),
     "v53aq_answer_hash_match_rows": as_int(v53aq, "answer_hash_match_rows"),
     "v53aq_coherent_wrong_key_rows": as_int(v53aq, "coherent_wrong_key_rows"),
+    "v53t_complete_source_audit_readiness_gate_ready": as_int(v53t, "v53t_complete_source_audit_readiness_gate_ready"),
+    "v53t_foundation_real_adapter_evidence_ready": as_int(v53t, "foundation_real_adapter_evidence_ready"),
+    "v53t_real_adapter_freeze_rows": len(v53t_real_adapter_freeze_rows),
+    "v53t_real_adapter_freeze_pass_rows": v53t_real_adapter_freeze_pass_rows,
+    "v53t_real_adapter_freeze_ready": v53t_real_adapter_freeze_ready,
     "missing_query_abstain_ready": missing_query_abstain_ready,
     "wrong_answer_guard_ready": wrong_answer_guard_ready,
     "same_query_abgh_ready": same_query_abgh_ready,
@@ -540,6 +577,7 @@ manifest = {
         "v53q": sha256(v53q_summary_path),
         "v53ap": sha256(v53ap_summary_path),
         "v53aq": sha256(v53aq_summary_path),
+        "v53t": sha256(v53t_summary_path),
         "v54c": sha256(v54c_summary_path),
     },
     "real_release_package_ready": 0,

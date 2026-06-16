@@ -160,6 +160,9 @@ for rel in [
     "source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
+    "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
+    "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_answer_rows.csv",
@@ -199,6 +202,9 @@ h10_pm_files = [
     "source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v53aq/abgh_evaluator_rows.csv",
     "source_v53aq/abgh_system_metric_rows.csv",
+    "source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
+    "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_v53t/complete_source_foundation_freeze_rows.csv",
 ]
 h10_pm_copied_files = 0
 for rel in h10_pm_files:
@@ -244,8 +250,10 @@ h10_pm_source_provenance_binding_ready = int(
     h10_source_row.get("machine_evidence_status") == "pass"
     and "v53ap_evaluator_rows=4000" in h10_source_row.get("evidence", "")
     and "v53aq_evaluator_rows=4000" in h10_source_row.get("evidence", "")
+    and "v53t_real_adapter_freeze_rows=4" in h10_source_row.get("evidence", "")
     and as_int(h10, "source_provenance_binding_ready") == 1
     and as_int(h10, "v53aq_real_adapter_provenance_ready") == 1
+    and as_int(h10, "v53t_real_adapter_freeze_ready") == 1
 )
 
 

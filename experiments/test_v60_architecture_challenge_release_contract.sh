@@ -67,7 +67,7 @@ expected = {
     "h10_pm_criteria_ready": "1",
     "h10_pm_external_label_blocked": "1",
     "h10_pm_source_provenance_binding_ready": "1",
-    "h10_pm_copied_files": "7",
+    "h10_pm_copied_files": "10",
     "routehint_generation_main_ready": "1",
     "scaling_law_main_ready": "0",
     "expanded_benchmark_ready": "0",
@@ -153,6 +153,9 @@ required_files = [
     "source_v59e/source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
+    "source_v59e/source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
+    "source_v59e/source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_v59e/source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_answer_rows.csv",
@@ -179,6 +182,9 @@ required_files = [
     "source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
+    "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
+    "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
 ]
 for rel in required_files:
     path = run_dir / rel
@@ -248,6 +254,8 @@ if h10_by_criterion["source-provenance-binding"]["machine_evidence_status"] != "
     raise SystemExit("v60 h10 source provenance criterion should carry pass machine evidence")
 if "v53ap_evaluator_rows=4000" not in h10_by_criterion["source-provenance-binding"]["evidence"]:
     raise SystemExit("v60 h10 source provenance criterion should bind v53ap evaluator rows")
+if "v53t_real_adapter_freeze_rows=4" not in h10_by_criterion["source-provenance-binding"]["evidence"]:
+    raise SystemExit("v60 h10 source provenance criterion should bind v53t real-adapter freeze rows")
 if h10_by_criterion["external-human-label-evidence"]["real_label_status"] != "blocked":
     raise SystemExit("v60 h10 external/human label criterion should remain blocked")
 

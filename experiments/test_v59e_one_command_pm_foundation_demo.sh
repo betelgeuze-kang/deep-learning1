@@ -217,6 +217,9 @@ required_files = [
     "source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
+    "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
+    "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_v58c_dependency/v58c_pm_blind_response_intake_dependency_rows.csv",
     "source_v58d_dependency/v58d_pm_blind_review_return_dependency_rows.csv",
     "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv",
@@ -271,6 +274,19 @@ if "coherent_wrong_key_rows=288" not in pm_v53t_real_adapter_rows["real-adapter-
     raise SystemExit("v59e PM sidecar should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e PM sidecar should preserve v53aq public comparison blocker")
+
+h10_v53t_real_adapter_rows = {
+    row["criterion_id"]: row
+    for row in read_csv(run_dir / "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")
+}
+if len(h10_v53t_real_adapter_rows) != 4:
+    raise SystemExit("v59e h10 PM source bundle should carry four v53t real-adapter freeze rows")
+if h10_v53t_real_adapter_rows["real-adapter-execution-rows"]["status"] != "pass":
+    raise SystemExit("v59e h10 PM source bundle should carry passing v53t real-adapter execution evidence")
+if "coherent_wrong_key_rows=288" not in h10_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+    raise SystemExit("v59e h10 PM source bundle should preserve v53aq coherent wrong-key evidence")
+if "public_comparison_claim_ready=0" not in h10_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
+    raise SystemExit("v59e h10 PM source bundle should preserve public comparison blocker")
 
 manifest = json.loads((run_dir / "v59e_one_command_pm_foundation_demo_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v59e_one_command_pm_foundation_demo_ready") != 1 or manifest.get("v59_ready") != 0:

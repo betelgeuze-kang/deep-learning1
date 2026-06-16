@@ -62,6 +62,11 @@ expected = {
     "v53aq_real_system_performance_claim_ready": "1",
     "v53aq_answer_hash_match_rows": "3712",
     "v53aq_coherent_wrong_key_rows": "288",
+    "v53t_complete_source_audit_readiness_gate_ready": "1",
+    "v53t_foundation_real_adapter_evidence_ready": "1",
+    "v53t_real_adapter_freeze_rows": "4",
+    "v53t_real_adapter_freeze_pass_rows": "4",
+    "v53t_real_adapter_freeze_ready": "1",
     "missing_query_abstain_ready": "1",
     "wrong_answer_guard_ready": "1",
     "same_query_abgh_ready": "1",
@@ -98,6 +103,9 @@ required_files = [
     "source_v53aq/abgh_evaluator_rows.csv",
     "source_v53aq/abgh_wrong_answer_guard_rows.csv",
     "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
+    "source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
+    "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_v54c/wrong_answer_guard_rows.csv",
 ]
 for rel in required_files:
@@ -122,6 +130,8 @@ if "v53aq_coherent_wrong_key_rows=288" not in criteria["coherent-wrong-key-reduc
     raise SystemExit("coherent wrong-key criterion should cite v53aq wrong-key evidence")
 if "v53aq_H_coherent_wrong_key_rows=0" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
     raise SystemExit("coherent wrong-key criterion should cite v53aq H wrong-key evidence")
+if "v53t_real_adapter_freeze_ready=1" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
+    raise SystemExit("coherent wrong-key criterion should cite v53t real-adapter freeze readiness")
 if "v53ap_adapter_trace_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("source provenance criterion should cite v53ap adapter trace rows")
 if "v53ap_evaluator_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
@@ -130,6 +140,8 @@ if "v53aq_adapter_trace_rows=4000" not in criteria["source-provenance-binding"][
     raise SystemExit("source provenance criterion should cite v53aq adapter trace rows")
 if "v53aq_evaluator_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("source provenance criterion should cite v53aq evaluator rows")
+if "v53t_real_adapter_freeze_rows=4" not in criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("source provenance criterion should cite v53t real-adapter freeze rows")
 if criteria["external-human-label-evidence"]["real_label_status"] != "blocked":
     raise SystemExit("external/human label evidence should remain blocked by default")
 
@@ -191,11 +203,29 @@ if any(
 ):
     raise SystemExit("h10 PM gate v53aq evaluator rows should preserve real-adapter separate evaluation")
 
+v53t_real_adapter_rows = {
+    row["criterion_id"]: row
+    for row in read_csv(run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")
+}
+if len(v53t_real_adapter_rows) != 4:
+    raise SystemExit("h10 PM gate should copy four v53t real-adapter freeze rows")
+if any(row["status"] != "pass" for row in v53t_real_adapter_rows.values()):
+    raise SystemExit("h10 PM gate v53t real-adapter freeze rows should all pass")
+if "coherent_wrong_key_rows=288" not in v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+    raise SystemExit("h10 PM gate v53t real-adapter freeze should preserve coherent wrong-key evidence")
+if "public_comparison_claim_ready=0" not in v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
+    raise SystemExit("h10 PM gate v53t real-adapter freeze should preserve public comparison blocker")
+if "selection_question_text_only=1" not in v53t_real_adapter_rows["question-only-selection-contract"]["actual_value"]:
+    raise SystemExit("h10 PM gate v53t real-adapter freeze should preserve question-only selection")
+if "selection_oracle_field_used=0" not in v53t_real_adapter_rows["question-only-selection-contract"]["actual_value"]:
+    raise SystemExit("h10 PM gate v53t real-adapter freeze should preserve no-oracle selection")
+
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
     "v53-complete-source-symmetric-scorer-policy",
     "v53ap-abgh-same-query-prebaseline",
     "v53aq-abgh-real-adapter-evidence",
+    "v53t-real-adapter-freeze",
     "v54c-grounded-generation-guard",
     "h10-diagnostic-scorer-signal",
 ]:
@@ -225,6 +255,16 @@ if manifest.get("v53aq_adapter_trace_rows") != 4000 or manifest.get("v53aq_evalu
     raise SystemExit("manifest should record v53aq provenance row counts")
 if manifest.get("v53aq_selection_question_text_only") != 1 or manifest.get("v53aq_selection_oracle_field_used") != 0:
     raise SystemExit("manifest should record v53aq query-text-only selection boundary")
+if manifest.get("v53t_complete_source_audit_readiness_gate_ready") != 1:
+    raise SystemExit("manifest should record v53t audit-readiness gate readiness")
+if manifest.get("v53t_foundation_real_adapter_evidence_ready") != 1:
+    raise SystemExit("manifest should record v53t foundation real-adapter evidence readiness")
+if manifest.get("v53t_real_adapter_freeze_rows") != 4 or manifest.get("v53t_real_adapter_freeze_pass_rows") != 4:
+    raise SystemExit("manifest should record v53t real-adapter freeze row counts")
+if manifest.get("v53t_real_adapter_freeze_ready") != 1:
+    raise SystemExit("manifest should record v53t real-adapter freeze readiness")
+if "v53t" not in manifest.get("source_summary_sha256", {}):
+    raise SystemExit("manifest should hash-bind the v53t summary")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -249,6 +289,8 @@ for snippet in [
     "v53aq_selection_question_text_only=1",
     "v53aq_selection_oracle_field_used=0",
     "v53aq_coherent_wrong_key_rows=288",
+    "v53t_real_adapter_freeze_ready=1",
+    "v53t_real_adapter_freeze_rows=4",
     "Blocked wording",
 ]:
     if snippet not in boundary:
