@@ -43,6 +43,9 @@ expected = {
     "h10_source_verified_eval_ready": "0",
     "h10_diagnostic_scorer_signal_ready": "1",
     "source_provenance_binding_ready": "1",
+    "v53ap_adapter_trace_provenance_ready": "1",
+    "v53ap_adapter_trace_rows": "4000",
+    "v53ap_system_distinct_adapter_trace_ready": "1",
     "missing_query_abstain_ready": "1",
     "wrong_answer_guard_ready": "1",
     "same_query_abgh_ready": "1",
@@ -69,6 +72,7 @@ required_files = [
     "source_h10s/v10_source_verified_learned_chunk_scorer_eval_gate_smoke_summary.csv",
     "source_v53q/symmetric_system_metric_rows.csv",
     "source_v53ap/abgh_system_metric_rows.csv",
+    "source_v53ap/abgh_adapter_trace_rows.csv",
     "source_v54c/wrong_answer_guard_rows.csv",
 ]
 for rel in required_files:
@@ -89,8 +93,18 @@ for criterion in [
         raise SystemExit(f"missing PM h10 criterion: {criterion}")
 if criteria["source-provenance-binding"]["machine_evidence_status"] != "pass":
     raise SystemExit("source provenance should be machine-bound")
+if "v53ap_adapter_trace_rows=4000" not in criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("source provenance criterion should cite v53ap adapter trace rows")
 if criteria["external-human-label-evidence"]["real_label_status"] != "blocked":
     raise SystemExit("external/human label evidence should remain blocked by default")
+
+adapter_traces = read_csv(run_dir / "source_v53ap/abgh_adapter_trace_rows.csv")
+if len(adapter_traces) != 4000:
+    raise SystemExit("h10 PM gate should copy 4000 v53ap adapter trace rows")
+if {row["system_id"] for row in adapter_traces} != {"A", "B", "G", "H"}:
+    raise SystemExit("h10 PM gate v53ap adapter traces should cover A/B/G/H")
+if any(row["source_span_binding_match"] != "1" or row["expected_answer_oracle_replay"] != "0" for row in adapter_traces):
+    raise SystemExit("h10 PM gate v53ap adapter traces should preserve provenance/non-oracle boundary")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
@@ -115,6 +129,8 @@ if manifest.get("h10_real_label_promotion_ready") != 0:
     raise SystemExit("manifest must keep h10 real-label promotion blocked")
 if manifest.get("source_provenance_binding_ready") != 1 or manifest.get("same_query_abgh_ready") != 1:
     raise SystemExit("manifest should record machine evidence readiness")
+if manifest.get("v53ap_adapter_trace_provenance_ready") != 1 or manifest.get("v53ap_adapter_trace_rows") != 4000:
+    raise SystemExit("manifest should record v53ap adapter trace provenance readiness")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -128,6 +144,8 @@ for snippet in [
     "h10_real_label_promotion_ready=0",
     "external_human_label_evidence_ready=0",
     "source_provenance_binding_ready=1",
+    "v53ap_adapter_trace_provenance_ready=1",
+    "v53ap_adapter_trace_rows=4000",
     "Blocked wording",
 ]:
     if snippet not in boundary:

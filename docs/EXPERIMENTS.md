@@ -45,7 +45,7 @@ h10-p: runner-owned runtime fetcher replay contract passes for h10-o attestation
 h10-q: live-network runtime evidence import gate passes for provided live-network rows, while real source import remains blocked.
 h10-r: real teacher-source import/review chain gate passes contract/guard tests, while official authority and real source verification remain blocked.
 h10-s: source-verified learned scorer student-only eval gate passes metric/guard tests, while final scorer eval readiness remains blocked until official real teacher-source authority exists.
-h10 PM real-label readiness: complete-source scorer provenance, A/B/G/H same-query rows, v54 grounded-generation guards, and h10 diagnostic scorer signal are bound into a PM acceptance ledger, while h10 real-label promotion remains blocked until accepted external/human label evidence and h10 source-verified evaluation exist.
+h10 PM real-label readiness: complete-source scorer provenance, A/B/G/H same-query rows plus v53ap adapter trace provenance, v54 grounded-generation guards, and h10 diagnostic scorer signal are bound into a PM acceptance ledger, while h10 real-label promotion remains blocked until accepted external/human label evidence and h10 source-verified evaluation exist.
 v1.0 PM PR claim slice gate: the current v52-v60/v61 surface is split into ten review slices with explicit merge conditions and local review-packet markdown for claim boundary, replayable artifacts, and false-positive blocker closure; tests-only merge readiness is forbidden.
 h7-b: promotion gate blocks default route-memory promotion.
 h7-c: promotion review gate binds h7-b, h10-r, h10-s, v08-ab, h11-d, and h9-h, passes review/threshold guardrails, and still blocks default promotion until real evidence exists across every input.
@@ -1052,7 +1052,8 @@ Latest completed status:
   h10-r have official real teacher-source authority.
 - The h10 PM real-label promotion readiness gate binds h10-s to the current
   complete-source PM surface: v53q symmetric scorer/provenance rows, v53ap
-  A/B/G/H same-query deterministic source-span adapter rows, and v54c grounded-generation
+  A/B/G/H same-query deterministic source-span adapter rows plus
+  `abgh_adapter_trace_rows.csv`, and v54c grounded-generation
   answer/citation/abstain/wrong-answer guard rows. It emits
   `pm_h10_real_label_acceptance_rows.csv`, a real-label evidence template,
   supplied-evidence acceptance rows, a claim boundary, and a sha256 manifest.
