@@ -116,6 +116,18 @@ v53t_foundation_freeze_copied = copy_if_exists(
     v53t_foundation_freeze_path,
     "source_v53t/complete_source_foundation_freeze_rows.csv",
 )
+v53t_run_dir = results / "v53t_complete_source_audit_readiness_gate" / "gate_001"
+v53t_direct_copied = {}
+for src_rel in [
+    "source_v53i/complete_source_query_rows.csv",
+    "source_v53i/complete_source_span_rows.csv",
+    "source_v53ap/abgh_answer_rows.csv",
+    "source_v53ap/abgh_citation_rows.csv",
+    "source_v53ap/abgh_evaluator_rows.csv",
+    "source_v53ap/abgh_resource_rows.csv",
+    "source_v53ap/abgh_adapter_trace_rows.csv",
+]:
+    v53t_direct_copied[src_rel] = copy_if_exists(v53t_run_dir / src_rel, f"source_v53t/{src_rel}")
 v59e_public_source_policy_path = results / "v59e_one_command_pm_foundation_demo" / "pm_foundation_001" / "public_source_replay_policy_rows.csv"
 v59e_public_source_policy_copied = copy_if_exists(
     v59e_public_source_policy_path,
@@ -575,9 +587,14 @@ pm_roadmap_rows = [
         "M2",
         "source-span-query-freeze",
         "v53 has 1000 source-span-bound query rows",
-        as_int(v53t, "complete_source_query_rows") == 1000 and as_int(v53t, "complete_source_span_rows") == 1000 and as_int(v53t, "foundation_freeze_certificate_rows") == 10,
-        "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
-        f"query_rows={v53t.get('complete_source_query_rows', '0')} span_rows={v53t.get('complete_source_span_rows', '0')} foundation_certificate_rows={v53t.get('foundation_freeze_certificate_rows', '0')}",
+        as_int(v53t, "complete_source_query_rows") == 1000
+        and as_int(v53t, "complete_source_span_rows") == 1000
+        and as_int(v53t, "foundation_direct_query_rows") == 1000
+        and as_int(v53t, "foundation_direct_span_rows") == 1000
+        and bool(v53t_direct_copied.get("source_v53i/complete_source_query_rows.csv"))
+        and bool(v53t_direct_copied.get("source_v53i/complete_source_span_rows.csv")),
+        v53t_direct_copied.get("source_v53i/complete_source_query_rows.csv") or "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
+        f"query_rows={v53t.get('complete_source_query_rows', '0')} span_rows={v53t.get('complete_source_span_rows', '0')} direct_query_rows={v53t.get('foundation_direct_query_rows', '0')} direct_span_rows={v53t.get('foundation_direct_span_rows', '0')}",
         "v53-query-freeze-missing",
     ),
     req(
@@ -594,11 +611,15 @@ pm_roadmap_rows = [
         "answer-citation-separated",
         "evaluator separates answer and citation/source checks",
         v53t_answer_citation_foundation.get("status") == "pass"
-        and v53t_answer_citation_foundation.get("actual_value") == "answer_hash_match_rows=6000; citation_span_match_rows=7000",
-        v53t_foundation_freeze_copied or "source_v53t/complete_source_foundation_freeze_rows.csv",
+        and v53t_answer_citation_foundation.get("actual_value") == "direct_separate_evaluator_rows=4000"
+        and v53t_answer_citation_foundation.get("evidence_path") == "source_v53ap/abgh_evaluator_rows.csv"
+        and as_int(v53t, "foundation_direct_evaluator_separate_rows") == 4000
+        and bool(v53t_direct_copied.get("source_v53ap/abgh_evaluator_rows.csv")),
+        v53t_direct_copied.get("source_v53ap/abgh_evaluator_rows.csv") or v53t_foundation_freeze_copied or "source_v53t/complete_source_foundation_freeze_rows.csv",
         (
             f"criterion_status={v53t_answer_citation_foundation.get('status', 'missing')} "
-            f"actual_value={v53t_answer_citation_foundation.get('actual_value', '')}"
+            f"actual_value={v53t_answer_citation_foundation.get('actual_value', '')} "
+            f"direct_evaluator_rows={v53t.get('foundation_direct_abgh_evaluator_rows', '0')}"
         ),
         "answer-citation-eval-not-separated",
     ),

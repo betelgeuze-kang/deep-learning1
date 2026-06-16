@@ -737,6 +737,13 @@ pm_pr_core_files = [
     (pr_run_dir / "source_h10_pm/h10_real_label_evidence_template.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_foundation_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/source_v53i/complete_source_query_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/source_v53i/complete_source_span_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/source_v53ap/abgh_answer_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_answer_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/source_v53ap/abgh_citation_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_citation_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/source_v53ap/abgh_evaluator_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_evaluator_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/source_v53ap/abgh_resource_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_resource_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/source_v53ap/abgh_adapter_trace_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_adapter_trace_rows.csv", "evidence"),
     (pr_run_dir / "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "source_pm_pr_claim_slice_gate/V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "boundary"),
     (pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json", "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json", "manifest"),
 ]

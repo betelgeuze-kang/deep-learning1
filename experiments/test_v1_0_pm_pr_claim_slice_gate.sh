@@ -179,10 +179,10 @@ for requirement_id in [
     if roadmap_by_id.get(requirement_id, {}).get("status") != "ready":
         raise SystemExit(f"PM roadmap requirement should be ready: {requirement_id}")
 answer_citation_row = roadmap_by_id["answer-citation-separated"]
-if answer_citation_row["evidence_path"] != "source_v53t/complete_source_foundation_freeze_rows.csv":
-    raise SystemExit("PM answer/citation separation should bind directly to the v53t foundation freeze rows")
-if "answer_hash_match_rows=6000; citation_span_match_rows=7000" not in answer_citation_row["reason"]:
-    raise SystemExit("PM answer/citation separation should expose v53 answer/citation/scorer/policy counts")
+if answer_citation_row["evidence_path"] != "source_v53t/source_v53ap/abgh_evaluator_rows.csv":
+    raise SystemExit("PM answer/citation separation should bind directly to the v53t copied evaluator rows")
+if "direct_separate_evaluator_rows=4000" not in answer_citation_row["reason"]:
+    raise SystemExit("PM answer/citation separation should expose direct v53 evaluator row counts")
 h10_readiness_row = roadmap_by_id["h10-readiness-ledger"]
 if h10_readiness_row["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
     raise SystemExit("PM h10 readiness should bind directly to the h10 acceptance rows")
@@ -492,6 +492,13 @@ required_files = [
     "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
+    "source_v53t/source_v53i/complete_source_query_rows.csv",
+    "source_v53t/source_v53i/complete_source_span_rows.csv",
+    "source_v53t/source_v53ap/abgh_answer_rows.csv",
+    "source_v53t/source_v53ap/abgh_citation_rows.csv",
+    "source_v53t/source_v53ap/abgh_evaluator_rows.csv",
+    "source_v53t/source_v53ap/abgh_resource_rows.csv",
+    "source_v53t/source_v53ap/abgh_adapter_trace_rows.csv",
     "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md",
     "v1_0_pm_pr_claim_slice_gate_manifest.json",
     "sha256_manifest.csv",

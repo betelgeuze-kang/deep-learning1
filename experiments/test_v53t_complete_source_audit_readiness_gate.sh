@@ -70,6 +70,16 @@ expected = {
     "foundation_freeze_pass_rows": "10",
     "foundation_freeze_blocked_rows": "0",
     "foundation_machine_freeze_ready": "1",
+    "foundation_direct_evidence_ready": "1",
+    "foundation_direct_query_rows": "1000",
+    "foundation_direct_span_rows": "1000",
+    "foundation_direct_abgh_answer_rows": "4000",
+    "foundation_direct_abgh_citation_rows": "4000",
+    "foundation_direct_abgh_evaluator_rows": "4000",
+    "foundation_direct_abgh_resource_rows": "4000",
+    "foundation_direct_abgh_adapter_trace_rows": "4000",
+    "foundation_direct_evaluator_separate_rows": "4000",
+    "foundation_direct_same_query_rows_ready": "1",
     "unsupported_control_rows": "100",
     "ambiguous_control_rows": "30",
     "missing_specific_control_rows": "30",
@@ -99,7 +109,15 @@ required_files = [
     "sha256_manifest.csv",
     "source_v52y/v52y_f_optional_final_policy_summary.csv",
     "source_v53i/v53i_complete_source_query_instantiation_summary.csv",
+    "source_v53i/complete_source_query_rows.csv",
+    "source_v53i/complete_source_span_rows.csv",
     "source_v53ap/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+    "source_v53ap/abgh_system_rows.csv",
+    "source_v53ap/abgh_answer_rows.csv",
+    "source_v53ap/abgh_citation_rows.csv",
+    "source_v53ap/abgh_evaluator_rows.csv",
+    "source_v53ap/abgh_resource_rows.csv",
+    "source_v53ap/abgh_adapter_trace_rows.csv",
     "source_v53ap/abgh_system_metric_rows.csv",
     "source_v53ap/V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md",
     "source_v53q/v53q_complete_source_symmetric_scorer_policy_summary.csv",
@@ -153,6 +171,43 @@ for check_id in [
         raise SystemExit(f"v53t PM freeze check should pass: {check_id}")
 if pm_freeze_checks["missing-specific-abstain-control"]["actual_value"] != "30":
     raise SystemExit("v53t PM freeze missing-specific actual value mismatch")
+if pm_freeze_checks["replayable-artifact-chain"]["status"] != "pass" or "direct_ready=1" not in pm_freeze_checks["replayable-artifact-chain"]["actual_value"]:
+    raise SystemExit("v53t replayable artifact chain should be backed by direct row evidence")
+
+query_rows = read_csv(run_dir / "source_v53i/complete_source_query_rows.csv")
+span_rows = read_csv(run_dir / "source_v53i/complete_source_span_rows.csv")
+answer_rows = read_csv(run_dir / "source_v53ap/abgh_answer_rows.csv")
+citation_rows = read_csv(run_dir / "source_v53ap/abgh_citation_rows.csv")
+evaluator_rows = read_csv(run_dir / "source_v53ap/abgh_evaluator_rows.csv")
+resource_rows = read_csv(run_dir / "source_v53ap/abgh_resource_rows.csv")
+adapter_trace_rows = read_csv(run_dir / "source_v53ap/abgh_adapter_trace_rows.csv")
+if len(query_rows) != 1000 or len(span_rows) != 1000:
+    raise SystemExit("v53t should copy direct 1000 query/span rows")
+if any(not row["source_span_id"] for row in query_rows):
+    raise SystemExit("v53t direct query rows should bind source spans")
+for table_name, rows in [
+    ("answer", answer_rows),
+    ("citation", citation_rows),
+    ("evaluator", evaluator_rows),
+    ("resource", resource_rows),
+    ("adapter_trace", adapter_trace_rows),
+]:
+    if len(rows) != 4000:
+        raise SystemExit(f"v53t should copy 4000 direct A/B/G/H {table_name} rows")
+query_ids = {row["query_id"] for row in query_rows}
+for system_id in {"A", "B", "G", "H"}:
+    if {row["query_id"] for row in evaluator_rows if row["system_id"] == system_id} != query_ids:
+        raise SystemExit(f"v53t direct evaluator rows should cover all queries for {system_id}")
+if any(
+    row["answer_eval_separate"] != "1"
+    or row["citation_eval_separate"] != "1"
+    or row["resource_eval_separate"] != "1"
+    or row["answer_hash_match"] != "1"
+    or row["citation_span_match"] != "1"
+    or row["resource_row_bound"] != "1"
+    for row in evaluator_rows
+):
+    raise SystemExit("v53t direct evaluator rows should separately bind answer/citation/resource checks")
 
 foundation_freeze_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "complete_source_foundation_freeze_rows.csv")}
 if len(foundation_freeze_rows) != 10:
@@ -177,6 +232,12 @@ if foundation_freeze_rows["missing-specific-abstain-control"]["actual_value"] !=
     raise SystemExit("v53t foundation freeze missing-specific actual value mismatch")
 if foundation_freeze_rows["doc-code-conflict-control"]["actual_value"] != "140":
     raise SystemExit("v53t foundation freeze doc-code conflict actual value mismatch")
+if foundation_freeze_rows["source-span-bound-query-surface"]["evidence_path"] != "source_v53i/complete_source_query_rows.csv":
+    raise SystemExit("v53t source-span freeze evidence should point at direct query rows")
+if foundation_freeze_rows["answer-citation-separated-evaluator"]["evidence_path"] != "source_v53ap/abgh_evaluator_rows.csv":
+    raise SystemExit("v53t separated evaluator evidence should point at direct evaluator rows")
+if foundation_freeze_rows["abgh-same-query-measured-run"]["evidence_path"] != "source_v53ap/abgh_evaluator_rows.csv":
+    raise SystemExit("v53t A/B/G/H same-query evidence should point at direct evaluator rows")
 if "real system performance" not in foundation_freeze_rows["abgh-same-query-measured-run"]["claim_boundary"]:
     raise SystemExit("v53t foundation freeze should keep A/B/G/H real system performance boundary closed")
 if "forbids public comparison" not in foundation_freeze_rows["public-comparison-boundary-closed"]["claim_boundary"]:
@@ -238,6 +299,12 @@ for snippet in [
     "pm_freeze_blocked_rows=0",
     "foundation_freeze_certificate_rows=10",
     "foundation_machine_freeze_ready=1",
+    "foundation_direct_evidence_ready=1",
+    "foundation_direct_query_rows=1000",
+    "foundation_direct_span_rows=1000",
+    "foundation_direct_abgh_evaluator_rows=4000",
+    "foundation_direct_evaluator_separate_rows=4000",
+    "foundation_direct_same_query_rows_ready=1",
     "unsupported_control_rows=100",
     "missing_specific_control_rows=30",
     "doc_code_conflict_rows=140",
@@ -271,6 +338,16 @@ if (
     raise SystemExit("v53t manifest v53ap deterministic adapter boundary mismatch")
 if manifest.get("foundation_machine_freeze_ready") != 1:
     raise SystemExit("v53t manifest foundation machine freeze mismatch")
+if manifest.get("foundation_direct_evidence_ready") != 1:
+    raise SystemExit("v53t manifest should record direct foundation evidence readiness")
+if (
+    manifest.get("foundation_direct_query_rows") != 1000
+    or manifest.get("foundation_direct_span_rows") != 1000
+    or manifest.get("foundation_direct_abgh_evaluator_rows") != 4000
+    or manifest.get("foundation_direct_evaluator_separate_rows") != 4000
+    or manifest.get("foundation_direct_same_query_rows_ready") != 1
+):
+    raise SystemExit("v53t manifest direct foundation row counts mismatch")
 if manifest.get("missing_specific_control_rows") != 30 or manifest.get("abgh_same_query_ready") != 1:
     raise SystemExit("v53t manifest PM freeze evidence mismatch")
 if manifest.get("same_complete_source_query_hash") != 1:
