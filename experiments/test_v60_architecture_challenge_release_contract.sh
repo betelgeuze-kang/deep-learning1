@@ -96,6 +96,12 @@ expected = {
     "v58d_dependency_blocker_ready": "1",
     "v58d_human_blind_review_ready": "0",
     "v58d_inter_rater_rows_ready": "0",
+    "v58_return_artifact_contract_ready": "1",
+    "v58_required_artifact_rows": "8",
+    "v58_required_artifact_fixture_allowed_rows": "0",
+    "v58_return_template_rows": "8",
+    "v58_return_template_ready_rows": "8",
+    "v58_return_template_fixture_allowed_rows": "0",
     "blind_eval_ready": "0",
     "one_command_pm_foundation_ready": "1",
     "one_command_real_replay_ready": "0",
@@ -204,6 +210,8 @@ required_files = [
     "source_v59e/v58c_pm_blind_response_intake_dependency_rows.csv",
     "source_v59e/v58d_pm_blind_review_return_dependency_summary.csv",
     "source_v59e/v58d_pm_blind_review_return_dependency_rows.csv",
+    "source_v59e/v58_blind_eval_required_artifact_rows.csv",
+    "source_v59e/v58_blind_eval_return_template_rows.csv",
     "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv",
     "source_pm_pr/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_summaries/v52_llm_rag_baseline_war_summary.csv",
@@ -322,6 +330,9 @@ if abgh_req["evidence_path"] != "source_v59e/source_pm_pr_claim_slice_gate/sourc
     raise SystemExit("v60 A/B/G/H pre-baseline requirement should point directly at copied same-query ledger rows")
 if h10_req["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
     raise SystemExit("v60 h10 requirement should point directly at PM h10 criteria rows")
+v58_req = next(row for row in requirements if row["requirement"] == "v58_real_blind_eval")
+if v58_req["evidence_path"] != "source_v59e/v58_blind_eval_required_artifact_rows.csv":
+    raise SystemExit("v60 v58 real blind-eval requirement should point directly at v58 required artifact rows")
 h10_rows = read_csv(run_dir / h10_req["evidence_path"])
 expected_h10_criteria = {
     "coherent-wrong-key-reduction",
@@ -365,6 +376,39 @@ if any(
     for row in public_source_snapshot_rows
 ):
     raise SystemExit("v60 should preserve v59e pinned no-download public source snapshot replay evidence")
+
+v58_required_rows = read_csv(run_dir / "source_v59e/v58_blind_eval_required_artifact_rows.csv")
+if len(v58_required_rows) != 8:
+    raise SystemExit("v60 should carry eight v58 required artifact rows")
+v58_required_by_blocker = {}
+for row in v58_required_rows:
+    v58_required_by_blocker.setdefault(row["blocker_class"], []).append(row)
+if len(v58_required_by_blocker.get("v58c-intake-artifact-missing", [])) != 3:
+    raise SystemExit("v60 v58 required artifact rows should include three v58c intake artifacts")
+if len(v58_required_by_blocker.get("v58-real-blind-eval-missing", [])) != 5:
+    raise SystemExit("v60 v58 required artifact rows should include five real blind-eval artifacts")
+if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" for row in v58_required_rows):
+    raise SystemExit("v60 v58 required artifact rows should forbid fixtures and require approval")
+expected_v58_artifacts = {
+    "v58c-intake-summary",
+    "v58c-intake-artifacts",
+    "v58c-source-v58b-freeze",
+    "v58-blind-response-rows",
+    "v58-run-identity-rows",
+    "v58-human-review-rows",
+    "v58d-review-return-intake",
+    "v58-sha256-manifest",
+}
+if {row["artifact_id"] for row in v58_required_rows} != expected_v58_artifacts:
+    raise SystemExit("v60 v58 required artifact ids mismatch")
+
+v58_template_rows = read_csv(run_dir / "source_v59e/v58_blind_eval_return_template_rows.csv")
+if len(v58_template_rows) != 8:
+    raise SystemExit("v60 should carry eight v58 return template rows")
+if {row["artifact_id"] for row in v58_template_rows} != expected_v58_artifacts:
+    raise SystemExit("v60 v58 return template ids mismatch")
+if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" or row["template_ready"] != "1" for row in v58_template_rows):
+    raise SystemExit("v60 v58 return templates should be ready, no-fixture, approval-required")
 
 for label, path in [
     ("v59e direct h10 bundle", run_dir / "source_v59e/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
@@ -434,6 +478,10 @@ if (
     raise SystemExit("v60 manifest should record direct v53 pinned manifest evidence")
 if "v59e_public_source_snapshot_replay_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind v59e public source snapshot replay rows")
+if "v59e_v58_blind_eval_required_artifact_sha256" not in manifest:
+    raise SystemExit("v60 manifest should hash-bind v58 required artifact rows")
+if "v59e_v58_blind_eval_return_template_sha256" not in manifest:
+    raise SystemExit("v60 manifest should hash-bind v58 return template rows")
 if manifest.get("h10_pm_criteria_rows") != 6 or manifest.get("h10_pm_criteria_ready") != 1:
     raise SystemExit("v60 manifest should record direct h10 PM criteria evidence")
 if manifest.get("h10_pm_external_label_blocked") != 1 or manifest.get("h10_pm_source_provenance_binding_ready") != 1:

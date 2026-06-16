@@ -146,6 +146,13 @@ expected = {
     "pm_external_return_template_fixture_allowed_rows": "0",
     "pm_external_return_template_approval_rows": "25",
     "pm_external_return_template_bundle_ready": "1",
+    "v58_return_artifact_contract_ready": "1",
+    "v58_required_artifact_rows": "8",
+    "v58_required_artifact_approval_rows": "8",
+    "v58_required_artifact_fixture_allowed_rows": "0",
+    "v58_return_template_rows": "8",
+    "v58_return_template_ready_rows": "8",
+    "v58_return_template_fixture_allowed_rows": "0",
     "pm_roadmap_requirement_rows": "20",
     "pm_roadmap_ready_rows": "14",
     "pm_roadmap_blocked_rows": "6",
@@ -186,6 +193,7 @@ for gate in [
     "pm-pr-claim-slice-gate",
     "pm-execution-lock",
     "pm-external-return-templates",
+    "v58-required-return-artifacts",
     "one-command-replay-preflight",
 ]:
     if decisions.get(gate) != "pass":
@@ -245,6 +253,8 @@ required_files = [
     "source_v58c_dependency/v58c_pm_blind_response_intake_dependency_rows.csv",
     "source_v58d_dependency/v58d_pm_blind_review_return_dependency_rows.csv",
     "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv",
+    "v58_blind_eval_required_artifact_rows.csv",
+    "v58_blind_eval_return_template_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_decision.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_slice_rows.csv",
@@ -439,6 +449,15 @@ if (
     or manifest.get("v58d_human_blind_review_ready") != 0
 ):
     raise SystemExit("v59e manifest should preserve the v58d blind-review return blocker boundary")
+if (
+    manifest.get("v58_return_artifact_contract_ready") != 1
+    or manifest.get("v58_required_artifact_rows") != 8
+    or manifest.get("v58_required_artifact_fixture_allowed_rows") != 0
+    or manifest.get("v58_return_template_rows") != 8
+    or manifest.get("v58_return_template_ready_rows") != 8
+    or manifest.get("v58_return_template_fixture_allowed_rows") != 0
+):
+    raise SystemExit("v59e manifest should record v58 required return artifact contract readiness")
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
 if (
@@ -503,6 +522,9 @@ for snippet in [
     "v58d_expected_required_review_rows=0",
     "v58d_human_blind_review_ready=0",
     "v58_full_blind_eval_ready=0",
+    "v58_return_artifact_contract_ready=1",
+    "v58_required_artifact_fixture_allowed_rows=0",
+    "v58_return_template_fixture_allowed_rows=0",
     "pm_pr_claim_slice_bundle_ready=1",
     "pm_scope_drift_allowed=0",
     "one_command_replay_preflight_ready=1",
@@ -554,6 +576,42 @@ if "public_source_snapshot_replay_rows.csv" not in {row["path"] for row in bundl
     raise SystemExit("v59e bundle index should include public source snapshot replay rows")
 if "pm_foundation_replay_preflight_rows.csv" not in {row["path"] for row in bundle_rows}:
     raise SystemExit("v59e bundle index should include replay preflight rows")
+for rel in ["v58_blind_eval_required_artifact_rows.csv", "v58_blind_eval_return_template_rows.csv"]:
+    if rel not in {row["path"] for row in bundle_rows}:
+        raise SystemExit(f"v59e bundle index should include {rel}")
+
+v58_required_rows = read_csv(run_dir / "v58_blind_eval_required_artifact_rows.csv")
+if len(v58_required_rows) != 8:
+    raise SystemExit("v59e should emit eight v58 required artifact rows")
+v58_required_by_blocker = {}
+for row in v58_required_rows:
+    v58_required_by_blocker.setdefault(row["blocker_class"], []).append(row)
+if len(v58_required_by_blocker.get("v58c-intake-artifact-missing", [])) != 3:
+    raise SystemExit("v59e v58 required artifact rows should include three v58c intake artifacts")
+if len(v58_required_by_blocker.get("v58-real-blind-eval-missing", [])) != 5:
+    raise SystemExit("v59e v58 required artifact rows should include five real blind-eval artifacts")
+if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" for row in v58_required_rows):
+    raise SystemExit("v59e v58 required artifact rows should forbid fixtures and require approval")
+expected_v58_artifacts = {
+    "v58c-intake-summary",
+    "v58c-intake-artifacts",
+    "v58c-source-v58b-freeze",
+    "v58-blind-response-rows",
+    "v58-run-identity-rows",
+    "v58-human-review-rows",
+    "v58d-review-return-intake",
+    "v58-sha256-manifest",
+}
+if {row["artifact_id"] for row in v58_required_rows} != expected_v58_artifacts:
+    raise SystemExit("v59e v58 required artifact ids mismatch")
+
+v58_template_rows = read_csv(run_dir / "v58_blind_eval_return_template_rows.csv")
+if len(v58_template_rows) != 8:
+    raise SystemExit("v59e should emit eight v58 return template rows")
+if {row["artifact_id"] for row in v58_template_rows} != expected_v58_artifacts:
+    raise SystemExit("v59e v58 return template ids mismatch")
+if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" or row["template_ready"] != "1" for row in v58_template_rows):
+    raise SystemExit("v59e v58 return templates should be ready, no-fixture, approval-required")
 
 preflight_rows = read_csv(run_dir / "pm_foundation_replay_preflight_rows.csv")
 expected_preflight_checks = {
@@ -565,6 +623,7 @@ expected_preflight_checks = {
     "no-manual-postprocessing",
     "no-undocumented-local-state",
     "pm-pr-sidecar-packaged",
+    "v58-required-return-artifacts-packaged",
     "blocker-false-positive-closed",
     "no-remote-mutation",
 }
