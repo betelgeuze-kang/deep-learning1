@@ -12,6 +12,8 @@ DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
+V53AQ_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53aq_complete_source_abgh_real_adapter_measured.sh" >/dev/null
+
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib
@@ -90,6 +92,7 @@ summary_sources = {
     "v52y": results / "v52y_f_optional_final_policy_summary.csv",
     "v53t": results / "v53t_complete_source_audit_readiness_gate_summary.csv",
     "v53ap": results / "v53ap_complete_source_abgh_same_query_measured_summary.csv",
+    "v53aq": results / "v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
     "v54c": results / "v54c_complete_source_grounded_generation_1000_summary.csv",
     "h10_pm": results / "v10_h10_real_label_promotion_readiness_gate_summary.csv",
     "v56b": results / "v56b_ruler_longbench_expanded_scale_summary.csv",
@@ -128,6 +131,24 @@ for src_rel in [
     "source_v53ap/abgh_adapter_trace_rows.csv",
 ]:
     v53t_direct_copied[src_rel] = copy_if_exists(v53t_run_dir / src_rel, f"source_v53t/{src_rel}")
+v53aq_run_dir = results / "v53aq_complete_source_abgh_real_adapter_measured" / "measured_001"
+v53aq_direct_copied = {}
+for src_rel in [
+    "adapter_selection_contract_rows.csv",
+    "abgh_system_rows.csv",
+    "abgh_system_metric_rows.csv",
+    "abgh_answer_rows.csv",
+    "abgh_citation_rows.csv",
+    "abgh_evaluator_rows.csv",
+    "abgh_resource_rows.csv",
+    "abgh_adapter_trace_rows.csv",
+    "abgh_wrong_answer_guard_rows.csv",
+    "route_memory_rows.csv",
+    "routehint_rows.csv",
+    "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
+    "sha256_manifest.csv",
+]:
+    v53aq_direct_copied[src_rel] = copy_if_exists(v53aq_run_dir / src_rel, f"source_v53aq/{src_rel}")
 v59e_public_source_policy_path = results / "v59e_one_command_pm_foundation_demo" / "pm_foundation_001" / "public_source_replay_policy_rows.csv"
 v59e_public_source_policy_copied = copy_if_exists(
     v59e_public_source_policy_path,
@@ -175,6 +196,7 @@ v52 = summaries["v52"]
 v52y = summaries["v52y"]
 v53t = summaries["v53t"]
 v53ap = summaries["v53ap"]
+v53aq = summaries["v53aq"]
 v54c = summaries["v54c"]
 h10_pm = summaries["h10_pm"]
 v56b = summaries["v56b"]
@@ -460,6 +482,8 @@ slice_file_rows = [
     file_row("v53-query-instantiation-1000", "experiments/test_v53t_complete_source_audit_readiness_gate.sh", "readiness-smoke", "include"),
     file_row("v53-system-a-b-g-h-measured", "experiments/run_v53ap_complete_source_abgh_same_query_measured.sh", "runner", "include"),
     file_row("v53-system-a-b-g-h-measured", "experiments/test_v53ap_complete_source_abgh_same_query_measured.sh", "smoke", "include"),
+    file_row("v53-system-a-b-g-h-measured", "experiments/run_v53aq_complete_source_abgh_real_adapter_measured.sh", "real-adapter-runner", "include"),
+    file_row("v53-system-a-b-g-h-measured", "experiments/test_v53aq_complete_source_abgh_real_adapter_measured.sh", "real-adapter-smoke", "include"),
     file_row("v54-routehint-generation-contract", "experiments/run_v54c_complete_source_grounded_generation_1000.sh", "runner", "include"),
     file_row("v54-routehint-generation-contract", "experiments/test_v54c_complete_source_grounded_generation_1000.sh", "smoke", "include"),
     file_row("v56-ruler-longbench-expanded", "experiments/run_v56_ruler_longbench_expanded_contract.sh", "contract-runner", "include"),
@@ -501,6 +525,7 @@ slice_verification_rows = [
     command_row("v53-query-instantiation-1000", "experiments/test_v53i_complete_source_query_instantiation.sh", "1000 source-span query rows and controls", "local-smoke"),
     command_row("v53-query-instantiation-1000", "experiments/test_v53t_complete_source_audit_readiness_gate.sh", "PM freeze/audit readiness", "local-smoke"),
     command_row("v53-system-a-b-g-h-measured", "experiments/test_v53ap_complete_source_abgh_same_query_measured.sh", "A/B/G/H same-query measured rows", "local-smoke"),
+    command_row("v53-system-a-b-g-h-measured", "experiments/test_v53aq_complete_source_abgh_real_adapter_measured.sh", "A/B/G/H query-text-only real adapter rows", "local-smoke"),
     command_row("v54-routehint-generation-contract", "experiments/test_v54c_complete_source_grounded_generation_1000.sh", "grounded generation outputs and no raw prompt stuffing", "local-smoke"),
     command_row("v56-ruler-longbench-expanded", "experiments/test_v56_ruler_longbench_expanded_contract.sh", "v56 contract or missing-seed fail-closed guard", "local-smoke"),
     command_row("v56-ruler-longbench-expanded", "experiments/test_v56b_ruler_longbench_expanded_scale.sh", "v56b replay or missing-contract fail-closed guard", "local-smoke"),
@@ -649,17 +674,28 @@ pm_roadmap_rows = [
     req(
         "M3",
         "abgh-real-system-adapter-execution",
-        "A/B/G/H actual BM25/local-RAG/RouteMemory adapters run on v53i without expected-answer or source-span oracle replay",
-        as_int(v53ap, "real_system_performance_claim_ready") == 1
-        and as_int(v53ap, "actual_adapter_execution_ready") == 1
-        and as_int(v53ap, "expected_answer_oracle_replay") == 0
-        and as_int(v53ap, "deterministic_source_span_adapter_execution") == 0,
-        "source_summaries/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+        "A/B/G/H actual BM25/local-RAG/RouteMemory adapters run on v53i with query-text-only selection and no expected-answer/source-span oracle replay",
+        as_int(v53aq, "v53aq_complete_source_abgh_real_adapter_measured_ready") == 1
+        and as_int(v53aq, "real_system_performance_claim_ready") == 1
+        and as_int(v53aq, "real_adapter_execution_ready") == 1
+        and as_int(v53aq, "actual_adapter_execution_ready") == 1
+        and as_int(v53aq, "selection_question_text_only") == 1
+        and as_int(v53aq, "selection_oracle_field_used") == 0
+        and as_int(v53aq, "expected_answer_oracle_replay") == 0
+        and as_int(v53aq, "deterministic_source_span_adapter_execution") == 0
+        and as_int(v53aq, "evaluator_rows") == 4000
+        and bool(v53aq_direct_copied.get("abgh_evaluator_rows.csv")),
+        v53aq_direct_copied.get("abgh_evaluator_rows.csv") or "source_summaries/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
         (
-            f"actual_adapter_execution_ready={v53ap.get('actual_adapter_execution_ready', '0')} "
-            f"expected_answer_oracle_replay={v53ap.get('expected_answer_oracle_replay', '0')} "
-            f"deterministic_source_span_adapter_execution={v53ap.get('deterministic_source_span_adapter_execution', '0')} "
-            f"real_system_performance_claim_ready={v53ap.get('real_system_performance_claim_ready', '0')}"
+            f"real_adapter_execution_ready={v53aq.get('real_adapter_execution_ready', '0')} "
+            f"actual_adapter_execution_ready={v53aq.get('actual_adapter_execution_ready', '0')} "
+            f"selection_question_text_only={v53aq.get('selection_question_text_only', '0')} "
+            f"selection_oracle_field_used={v53aq.get('selection_oracle_field_used', '1')} "
+            f"expected_answer_oracle_replay={v53aq.get('expected_answer_oracle_replay', '0')} "
+            f"deterministic_source_span_adapter_execution={v53aq.get('deterministic_source_span_adapter_execution', '1')} "
+            f"real_system_performance_claim_ready={v53aq.get('real_system_performance_claim_ready', '0')} "
+            f"answer_hash_match_rows={v53aq.get('answer_hash_match_rows', '0')} "
+            f"coherent_wrong_key_rows={v53aq.get('coherent_wrong_key_rows', '0')}"
         ),
         "abgh-real-adapter-execution-missing",
     ),

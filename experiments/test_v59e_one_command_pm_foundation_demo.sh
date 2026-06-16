@@ -44,8 +44,8 @@ expected = {
     "v59_ready": "0",
     "one_command_entrypoint_ready": "1",
     "challenge_bundle_ready": "1",
-    "stage_rows": "6",
-    "ready_stage_rows": "6",
+    "stage_rows": "7",
+    "ready_stage_rows": "7",
     "full_ready_stage_rows": "1",
     "pinned_public_sources_verified": "1",
     "source_snapshot_replay_used": "1",
@@ -54,14 +54,24 @@ expected = {
     "full_public_source_download_ready": "0",
     "pm_v53_freeze_ready": "1",
     "v53ap_complete_source_abgh_same_query_measured_ready": "1",
+    "v53aq_complete_source_abgh_real_adapter_measured_ready": "1",
     "local_abgh_baseline_run_ready": "1",
     "local_abgh_row_contract_replay_ready": "0",
     "local_abgh_deterministic_adapter_ready": "1",
+    "local_abgh_real_adapter_ready": "1",
     "v53ap_expected_answer_oracle_replay": "0",
     "v53ap_deterministic_source_span_adapter_execution": "1",
     "v53ap_deterministic_source_span_adapter_rows": "4000",
     "v53ap_actual_adapter_execution_ready": "1",
     "v53ap_real_system_performance_claim_ready": "0",
+    "v53aq_selection_question_text_only": "1",
+    "v53aq_selection_oracle_field_used": "0",
+    "v53aq_expected_answer_oracle_replay": "0",
+    "v53aq_deterministic_source_span_adapter_execution": "0",
+    "v53aq_real_adapter_execution_ready": "1",
+    "v53aq_real_system_performance_claim_ready": "1",
+    "v53aq_answer_hash_match_rows": "3712",
+    "v53aq_coherent_wrong_key_rows": "288",
     "same_query_abgh_ready": "1",
     "route_memory_artifact_ready": "1",
     "v54c_complete_source_grounded_generation_1000_ready": "1",
@@ -116,8 +126,8 @@ expected = {
     "pm_external_return_template_approval_rows": "22",
     "pm_external_return_template_bundle_ready": "1",
     "pm_roadmap_requirement_rows": "20",
-    "pm_roadmap_ready_rows": "13",
-    "pm_roadmap_blocked_rows": "7",
+    "pm_roadmap_ready_rows": "14",
+    "pm_roadmap_blocked_rows": "6",
 }
 for field, value in expected.items():
     if summary.get(field) != value:
@@ -126,11 +136,11 @@ if int(summary["bundle_files"]) < 35:
     raise SystemExit("v59e should copy a substantial PM foundation bundle")
 
 stage_rows = read_csv(run_dir / "pm_foundation_stage_replay_rows.csv")
-if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v54c", "h10_pm", "v58c_dependency", "v58_blocker"]:
+if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v53aq", "v54c", "h10_pm", "v58c_dependency", "v58_blocker"]:
     raise SystemExit("v59e stage order mismatch")
 if any(row["ready"] != "1" for row in stage_rows):
     raise SystemExit("v59e all PM stages should be replay-ready")
-if [row["full_ready"] for row in stage_rows] != ["0", "0", "1", "0", "0", "0"]:
+if [row["full_ready"] for row in stage_rows] != ["0", "0", "0", "1", "0", "0", "0"]:
     raise SystemExit("v59e should only mark v54 generation as full-ready")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
@@ -141,6 +151,7 @@ for gate in [
     "route-memory-artifact-built",
     "local-abgh-baseline-run",
     "local-abgh-deterministic-adapter-run",
+    "local-abgh-real-adapter-run",
     "evaluator-check",
     "grounded-generation-outputs",
     "h10-real-label-readiness-ledger",
@@ -176,6 +187,12 @@ required_files = [
     "source_v53ap/abgh_citation_rows.csv",
     "source_v53ap/abgh_evaluator_rows.csv",
     "source_v53ap/abgh_adapter_trace_rows.csv",
+    "source_v53aq/adapter_selection_contract_rows.csv",
+    "source_v53aq/abgh_system_metric_rows.csv",
+    "source_v53aq/abgh_evaluator_rows.csv",
+    "source_v53aq/abgh_adapter_trace_rows.csv",
+    "source_v53aq/routehint_rows.csv",
+    "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "source_v54c/answer_rows.csv",
     "source_v54c/generator_input_rows.csv",
     "source_v54c/source_v53ap/abgh_adapter_trace_rows.csv",
@@ -205,6 +222,12 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_evaluator_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_resource_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_adapter_trace_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/adapter_selection_contract_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/abgh_system_metric_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/abgh_evaluator_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/abgh_adapter_trace_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/routehint_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "source_pm_pr_claim_slice_gate/review_packets/docs__v1-roadmap.md",
     "source_pm_pr_claim_slice_gate/blocker_packets/v58c-intake-artifact-missing.md",
     "source_pm_pr_claim_slice_gate/blocker_packets/v58-real-blind-eval-missing.md",
@@ -221,8 +244,8 @@ if manifest.get("v59e_one_command_pm_foundation_demo_ready") != 1 or manifest.ge
     raise SystemExit("v59e manifest readiness mismatch")
 if "h10-real-label-promotion" not in manifest.get("blocked_claims", []):
     raise SystemExit("v59e manifest should block h10 real-label promotion")
-if "real-abgh-system-performance" not in manifest.get("blocked_claims", []):
-    raise SystemExit("v59e manifest should block real A/B/G/H system performance claims")
+if "public-abgh-comparison" not in manifest.get("blocked_claims", []):
+    raise SystemExit("v59e manifest should block public A/B/G/H comparison claims")
 if (
     manifest.get("source_snapshot_replay_used") != 1
     or manifest.get("public_source_download_executed") != 0
@@ -239,6 +262,19 @@ if (
     or manifest.get("v53ap_actual_adapter_execution_ready") != 1
 ):
     raise SystemExit("v59e manifest should preserve the v53ap deterministic adapter boundary")
+if (
+    manifest.get("local_abgh_real_adapter_ready") != 1
+    or manifest.get("v53aq_complete_source_abgh_real_adapter_measured_ready") != 1
+    or manifest.get("v53aq_selection_question_text_only") != 1
+    or manifest.get("v53aq_selection_oracle_field_used") != 0
+    or manifest.get("v53aq_expected_answer_oracle_replay") != 0
+    or manifest.get("v53aq_deterministic_source_span_adapter_execution") != 0
+    or manifest.get("v53aq_real_adapter_execution_ready") != 1
+    or manifest.get("v53aq_real_system_performance_claim_ready") != 1
+    or manifest.get("v53aq_answer_hash_match_rows") != 3712
+    or manifest.get("v53aq_coherent_wrong_key_rows") != 288
+):
+    raise SystemExit("v59e manifest should preserve the v53aq real-adapter boundary")
 if (
     manifest.get("v58c_intake_artifact_available") != 0
     or manifest.get("v58c_dependency_blocker_ready") != 1
@@ -270,10 +306,16 @@ for snippet in [
     "full_public_source_download_ready=0",
     "local_abgh_row_contract_replay_ready=0",
     "local_abgh_deterministic_adapter_ready=1",
+    "local_abgh_real_adapter_ready=1",
     "v53ap_expected_answer_oracle_replay=0",
     "v53ap_deterministic_source_span_adapter_execution=1",
     "v53ap_deterministic_source_span_adapter_rows=4000",
     "v53ap_actual_adapter_execution_ready=1",
+    "v53aq_real_adapter_execution_ready=1",
+    "v53aq_selection_question_text_only=1",
+    "v53aq_selection_oracle_field_used=0",
+    "v53aq_answer_hash_match_rows=3712",
+    "v53aq_coherent_wrong_key_rows=288",
     "v54c_v53ap_evaluator_provenance_ready=1",
     "v54c_v53ap_evaluator_provenance_rows=1000",
     "h10_real_label_promotion_ready=0",

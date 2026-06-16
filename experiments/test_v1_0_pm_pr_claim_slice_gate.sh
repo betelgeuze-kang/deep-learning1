@@ -42,15 +42,15 @@ expected = {
     "merge_gate_rows": "30",
     "blocker_false_positive_pass_rows": "10",
     "pm_roadmap_requirement_rows": "20",
-    "pm_roadmap_ready_rows": "13",
-    "pm_roadmap_blocked_rows": "7",
+    "pm_roadmap_ready_rows": "14",
+    "pm_roadmap_blocked_rows": "6",
     "pm_foundation_ready": "1",
     "v53_foundation_freeze_certificate_rows": "10",
     "v53_foundation_machine_freeze_ready": "1",
-    "pm_pr_slice_file_rows": "39",
-    "pm_pr_slice_file_existing_rows": "39",
+    "pm_pr_slice_file_rows": "41",
+    "pm_pr_slice_file_existing_rows": "41",
     "pm_pr_slices_with_file_rows": "10",
-    "pm_pr_slice_verification_rows": "16",
+    "pm_pr_slice_verification_rows": "17",
     "pm_pr_slices_with_verification_rows": "10",
     "pm_pr_claim_boundary_rows": "10",
     "pm_pr_claim_boundary_pass_rows": "10",
@@ -169,6 +169,7 @@ for requirement_id in [
     "negative-and-conflict-controls",
     "answer-citation-separated",
     "abgh-same-query-measured",
+    "abgh-real-system-adapter-execution",
     "internal-pre-baseline-boundary",
     "h10-readiness-ledger",
     "v54-grounded-generation-outputs",
@@ -189,15 +190,22 @@ if "deterministic_source_span_adapter_execution=1" not in abgh_ready_row["reason
 if "real_system_performance_claim_ready=0" not in abgh_ready_row["reason"]:
     raise SystemExit("PM A/B/G/H ready row should keep real performance claim boundary closed")
 abgh_real_row = roadmap_by_id["abgh-real-system-adapter-execution"]
-if abgh_real_row["status"] != "blocked":
-    raise SystemExit("PM A/B/G/H real adapter execution should remain blocked until actual adapters run")
+if abgh_real_row["status"] != "ready":
+    raise SystemExit("PM A/B/G/H real adapter execution should be ready after v53aq real-adapter run")
+if abgh_real_row["evidence_path"] != "source_v53aq/abgh_evaluator_rows.csv":
+    raise SystemExit("PM A/B/G/H real adapter row should bind directly to v53aq evaluator rows")
 for snippet in [
+    "real_adapter_execution_ready=1",
     "actual_adapter_execution_ready=1",
-    "deterministic_source_span_adapter_execution=1",
-    "real_system_performance_claim_ready=0",
+    "selection_question_text_only=1",
+    "selection_oracle_field_used=0",
+    "deterministic_source_span_adapter_execution=0",
+    "real_system_performance_claim_ready=1",
+    "answer_hash_match_rows=3712",
+    "coherent_wrong_key_rows=288",
 ]:
     if snippet not in abgh_real_row["reason"]:
-        raise SystemExit(f"PM A/B/G/H real adapter blocker should expose {snippet}")
+        raise SystemExit(f"PM A/B/G/H real adapter row should expose {snippet}")
 h10_readiness_row = roadmap_by_id["h10-readiness-ledger"]
 if h10_readiness_row["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
     raise SystemExit("PM h10 readiness should bind directly to the h10 acceptance rows")
@@ -254,8 +262,8 @@ for requirement_id, blocker in expected_blocked.items():
         raise SystemExit(f"PM roadmap blocker mismatch for {requirement_id}: {row}")
 
 file_rows = read_csv(run_dir / "pm_pr_slice_file_rows.csv")
-if len(file_rows) != 39:
-    raise SystemExit("PM PR file ledger should have 39 rows")
+if len(file_rows) != 41:
+    raise SystemExit("PM PR file ledger should have 41 rows")
 if len({row["slice_id"] for row in file_rows}) != 10:
     raise SystemExit("PM PR file ledger should cover all ten slices")
 if any(row["exists"] != "1" for row in file_rows):
@@ -266,6 +274,7 @@ for key in [
     ("docs/v1-roadmap", "docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md"),
     ("v53-query-instantiation-1000", "experiments/run_v53i_complete_source_query_instantiation.sh"),
     ("v53-system-a-b-g-h-measured", "experiments/run_v53ap_complete_source_abgh_same_query_measured.sh"),
+    ("v53-system-a-b-g-h-measured", "experiments/run_v53aq_complete_source_abgh_real_adapter_measured.sh"),
     ("v54-routehint-generation-contract", "experiments/run_v54c_complete_source_grounded_generation_1000.sh"),
     ("v56-ruler-longbench-expanded", "experiments/run_v56b_ruler_longbench_expanded_scale.sh"),
     ("v59-one-command-demo", "examples/v1_0_architecture_challenge_pm_foundation_demo.sh"),
@@ -274,13 +283,14 @@ for key in [
         raise SystemExit(f"PM PR file ledger missing {key}")
 
 verification_rows = read_csv(run_dir / "pm_pr_slice_verification_rows.csv")
-if len(verification_rows) != 16:
-    raise SystemExit("PM PR verification ledger should have 16 rows")
+if len(verification_rows) != 17:
+    raise SystemExit("PM PR verification ledger should have 17 rows")
 if len({row["slice_id"] for row in verification_rows}) != 10:
     raise SystemExit("PM PR verification ledger should cover all ten slices")
 verification_key = {(row["slice_id"], row["command"]): row for row in verification_rows}
 for key in [
     ("v53-system-a-b-g-h-measured", "experiments/test_v53ap_complete_source_abgh_same_query_measured.sh"),
+    ("v53-system-a-b-g-h-measured", "experiments/test_v53aq_complete_source_abgh_real_adapter_measured.sh"),
     ("v54-routehint-generation-contract", "experiments/test_v54c_complete_source_grounded_generation_1000.sh"),
     ("v56-ruler-longbench-expanded", "experiments/test_v56b_ruler_longbench_expanded_scale.sh"),
     ("v59-one-command-demo", "experiments/test_v59e_one_command_pm_foundation_demo.sh"),
@@ -533,7 +543,7 @@ if manifest.get("pm_roadmap_requirement_rows") != 20 or manifest.get("pm_foundat
     raise SystemExit("PM PR manifest roadmap audit mismatch")
 if manifest.get("v53_foundation_freeze_certificate_rows") != 10 or manifest.get("v53_foundation_machine_freeze_ready") != 1:
     raise SystemExit("PM PR manifest v53 foundation freeze mismatch")
-if manifest.get("pm_pr_slice_file_rows") != 39 or manifest.get("pm_pr_slice_verification_rows") != 16:
+if manifest.get("pm_pr_slice_file_rows") != 41 or manifest.get("pm_pr_slice_verification_rows") != 17:
     raise SystemExit("PM PR manifest file/verification ledger mismatch")
 if manifest.get("pm_pr_claim_boundary_rows") != 10 or manifest.get("pm_pr_claim_boundary_pass_rows") != 10:
     raise SystemExit("PM PR manifest claim boundary ledger mismatch")
@@ -575,8 +585,8 @@ for snippet in [
     "pm_foundation_ready=1",
     "v53_foundation_freeze_certificate_rows=10",
     "v53_foundation_machine_freeze_ready=1",
-    "pm_pr_slice_file_rows=39",
-    "pm_pr_slice_verification_rows=16",
+    "pm_pr_slice_file_rows=41",
+    "pm_pr_slice_verification_rows=17",
     "pm_pr_claim_boundary_rows=10",
     "pm_pr_review_packet_rows=10",
     "pm_pr_review_packet_files=10",
