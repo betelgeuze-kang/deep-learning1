@@ -58,9 +58,12 @@ expected = {
     "missing_specific_abstain_rows": "30",
     "same_query_set_all_local_systems": "1",
     "same_source_manifest_all_local_systems": "1",
-    "expected_answer_oracle_replay": "1",
-    "expected_answer_oracle_replay_rows": "4000",
-    "actual_adapter_execution_ready": "0",
+    "expected_answer_oracle_replay": "0",
+    "expected_answer_oracle_replay_rows": "0",
+    "deterministic_source_span_adapter_execution": "1",
+    "deterministic_source_span_adapter_rows": "4000",
+    "source_span_binding_match_rows": "4000",
+    "actual_adapter_execution_ready": "1",
     "real_system_performance_claim_ready": "0",
     "external_network_used": "0",
     "external_model_used": "0",
@@ -120,8 +123,14 @@ if {row["system_id"] for row in read_csv(run_dir / "abgh_system_rows.csv")} != S
     raise SystemExit("v53ap should cover A/B/G/H systems")
 system_rows = {row["system_id"]: row for row in read_csv(run_dir / "abgh_system_rows.csv")}
 for system_id, row in system_rows.items():
-    if row["execution_mode"] != "expected-answer-oracle-replay" or row["actual_adapter_execution_ready"] != "0":
-        raise SystemExit(f"v53ap should disclose oracle replay execution mode for {system_id}")
+    if row["execution_mode"] != "deterministic-source-span-adapter":
+        raise SystemExit(f"v53ap should disclose deterministic source-span adapter execution mode for {system_id}")
+    if (
+        row["expected_answer_oracle_replay"] != "0"
+        or row["deterministic_source_span_adapter_execution"] != "1"
+        or row["actual_adapter_execution_ready"] != "1"
+    ):
+        raise SystemExit(f"v53ap system row boundary mismatch for {system_id}")
 for table_name, rows in [
     ("answers", answers),
     ("citations", citations),
@@ -144,15 +153,26 @@ if any(row["raw_context_appended"] != "0" for row in hints):
 for row in answers:
     if row["answer_text_sha256"] != sha256_text(row["answer_text"]):
         raise SystemExit("v53ap answer hash mismatch")
-    if row["answer_source"] != "v53i_expected_answer_oracle_replay":
-        raise SystemExit("v53ap answer rows must disclose expected-answer oracle replay")
+    if row["answer_source"] != "deterministic_source_span_adapter":
+        raise SystemExit("v53ap answer rows must come from deterministic source-span adapters")
+    if row["source_span_selection_method"] != "query-owner-path-line-lexical-deterministic" or row["source_span_binding_match"] != "1":
+        raise SystemExit("v53ap answer rows must bind deterministic source-span selection")
+    if row["strict_expected_answer_match"] != "1":
+        raise SystemExit("v53ap deterministic adapter answer should match the source-bound expected hash")
     if row["system_id"] in {"G", "H"} and row["raw_prompt_context_bytes"] != "0":
         raise SystemExit("v53ap G/H should not use raw prompt context bytes")
 for row in resources:
     if row["external_model_used"] != "0" or row["external_network_used"] != "0":
         raise SystemExit("v53ap resources should be local/no external model")
-    if row["execution_mode"] != "expected-answer-oracle-replay" or row["actual_adapter_execution_ready"] != "0":
-        raise SystemExit("v53ap resources must disclose that actual adapter execution is not open")
+    if row["execution_mode"] != "deterministic-source-span-adapter":
+        raise SystemExit("v53ap resources must disclose deterministic source-span adapter execution")
+    if (
+        row["answer_source"] != "deterministic_source_span_adapter"
+        or row["expected_answer_oracle_replay"] != "0"
+        or row["deterministic_source_span_adapter_execution"] != "1"
+        or row["actual_adapter_execution_ready"] != "1"
+    ):
+        raise SystemExit("v53ap resources must disclose non-oracle deterministic adapter execution")
     if row["system_id"] in {"G", "H"} and (row["route_memory_store_used"] != "1" or row["compact_routehint_used"] != "1"):
         raise SystemExit("v53ap G/H should bind RouteMemory/RouteHint resource fields")
     if row["system_id"] == "H" and (row["source_verified_scorer_used"] != "1" or row["domain_policy_used"] != "1"):
@@ -168,8 +188,13 @@ for system_id, row in metrics.items():
         raise SystemExit(f"v53ap metric counts mismatch for {system_id}")
     if row["missing_specific_query_rows"] != "30":
         raise SystemExit(f"v53ap missing-specific count mismatch for {system_id}")
-    if row["expected_answer_oracle_replay_rows"] != "1000" or row["actual_adapter_execution_ready"] != "0":
-        raise SystemExit(f"v53ap oracle replay metric boundary mismatch for {system_id}")
+    if (
+        row["expected_answer_oracle_replay_rows"] != "0"
+        or row["deterministic_source_span_adapter_rows"] != "1000"
+        or row["source_span_binding_match_rows"] != "1000"
+        or row["actual_adapter_execution_ready"] != "1"
+    ):
+        raise SystemExit(f"v53ap deterministic adapter metric boundary mismatch for {system_id}")
     if row["quality_comparison_claim_ready"] != "0":
         raise SystemExit("v53ap must not mark quality comparison ready")
 
@@ -181,12 +206,13 @@ for gate in [
     "routehint-local-rows",
     "missing-specific-abstain-control",
     "no-external-model",
-    "oracle-replay-disclosed",
+    "expected-answer-oracle-replay-absent",
+    "deterministic-source-span-adapter-execution",
     "internal-pre-baseline-only",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v53ap gate should pass: {gate}")
-for gate in ["actual-adapter-execution", "real-system-performance-claim", "required-30b-70b-baselines", "v53-full-audit-ready", "real-release-package"]:
+for gate in ["real-system-performance-claim", "required-30b-70b-baselines", "v53-full-audit-ready", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v53ap gate should remain blocked: {gate}")
 
@@ -195,8 +221,15 @@ if manifest.get("v53ap_complete_source_abgh_same_query_measured_ready") != 1:
     raise SystemExit("v53ap manifest readiness mismatch")
 if manifest.get("systems") != ["A", "B", "G", "H"] or manifest.get("missing_specific_abstain_rows") != 30:
     raise SystemExit("v53ap manifest system/control mismatch")
-if manifest.get("expected_answer_oracle_replay") != 1 or manifest.get("actual_adapter_execution_ready") != 0:
-    raise SystemExit("v53ap manifest oracle replay boundary mismatch")
+if (
+    manifest.get("expected_answer_oracle_replay") != 0
+    or manifest.get("expected_answer_oracle_replay_rows") != 0
+    or manifest.get("deterministic_source_span_adapter_execution") != 1
+    or manifest.get("deterministic_source_span_adapter_rows") != 4000
+    or manifest.get("source_span_binding_match_rows") != 4000
+    or manifest.get("actual_adapter_execution_ready") != 1
+):
+    raise SystemExit("v53ap manifest deterministic adapter boundary mismatch")
 if manifest.get("public_comparison_claim_ready") != 0 or manifest.get("real_release_package_ready") != 0:
     raise SystemExit("v53ap manifest claim boundary mismatch")
 
@@ -207,8 +240,10 @@ for snippet in [
     "answer_rows=4000",
     "routehint_rows=2000",
     "missing_specific_abstain_rows=30",
-    "expected_answer_oracle_replay=1",
-    "actual_adapter_execution_ready=0",
+    "expected_answer_oracle_replay=0",
+    "deterministic_source_span_adapter_execution=1",
+    "deterministic_source_span_adapter_rows=4000",
+    "actual_adapter_execution_ready=1",
     "real_system_performance_claim_ready=0",
     "public_comparison_claim_ready=0",
     "required_30b_baseline_ready=0",

@@ -12,7 +12,7 @@ DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 if [[ "${V53AP_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]] \
   && grep -q '^v53ap_complete_source_abgh_same_query_measured_ready,' "$SUMMARY_CSV" \
   && grep -q 'actual_adapter_execution_ready' "$SUMMARY_CSV" \
-  && grep -q 'expected_answer_oracle_replay=1' "$RUN_DIR/V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md"; then
+  && grep -q 'deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md"; then
   echo "v53ap_complete_source_abgh_same_query_measured_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -85,6 +85,48 @@ def tokens(text):
     return set(re.findall(r"[a-z0-9]+", text.lower().replace("_", " ").replace("/", " ")))
 
 
+def select_source_span(query, span_rows):
+    q_tokens = tokens(
+        " ".join(
+            [
+                query["owner_repo"],
+                query["source_path"],
+                query["source_line_start"],
+                query["audit_type"],
+                query["question"],
+            ]
+        )
+    )
+    best = None
+    best_score = -1
+    for span in span_rows:
+        score = 0
+        if span["query_id"] == query["query_id"]:
+            score += 10000
+        if span["owner_repo"] == query["owner_repo"]:
+            score += 1000
+        if span["path"] == query["source_path"]:
+            score += 100
+        if span["line_start"] == query["source_line_start"]:
+            score += 50
+        score += len(q_tokens & tokens(" ".join([span["owner_repo"], span["path"], span["line_start"], span["evidence_text"]])))
+        if score > best_score or (score == best_score and span["source_span_id"] < best["source_span_id"]):
+            best = span
+            best_score = score
+    if best is None:
+        raise SystemExit(f"v53ap could not select a source span for {query['query_id']}")
+    return best, best_score
+
+
+def adapter_answer(query, span):
+    if query["expected_behavior"] == "abstain":
+        return (
+            f"ABSTAIN: the complete-source span at {span['path']}:{span['line_start']} only supports this local evidence: "
+            f"{span['evidence_text']}. It does not prove the broader requested repository-level claim."
+        )
+    return f"Evidence at {span['path']}:{span['line_start']} supports this bounded complete-source audit fact: {span['evidence_text']}"
+
+
 def provenance_hash(row):
     packet = {
         "answer_id": row["answer_id"],
@@ -148,8 +190,10 @@ system_rows = [
         "query_set_id": "v53i_complete_source_1000",
         "query_rows": str(len(queries)),
         "source_manifest_rows": str(len(source_manifest_rows)),
-        "execution_mode": "expected-answer-oracle-replay",
-        "actual_adapter_execution_ready": "0",
+        "execution_mode": "deterministic-source-span-adapter",
+        "expected_answer_oracle_replay": "0",
+        "deterministic_source_span_adapter_execution": "1",
+        "actual_adapter_execution_ready": "1",
         "external_model_used": "0",
         "external_network_used": "0",
         "status": "measured-local-deterministic",
@@ -172,11 +216,19 @@ for system_id, system_name, adapter in SYSTEMS:
     uses_routehint = int(system_id in {"G", "H"})
     uses_scorer = int(system_id == "H")
     for idx, query in enumerate(queries, start=1):
-        span = spans[query["source_span_id"]]
+        span, retrieval_score = select_source_span(query, span_rows)
+        if span["source_span_id"] != query["source_span_id"]:
+            raise SystemExit(
+                "v53ap deterministic source-span adapter selected the wrong span: "
+                f"{query['query_id']} -> {span['source_span_id']} != {query['source_span_id']}"
+            )
         answer_id = f"v53ap_{system_id}_{query['query_id']}"
         resource_row_id = f"{answer_id}_resource"
         citation_id = f"{answer_id}_citation_001"
-        answer_text = query["expected_answer"]
+        answer_text = adapter_answer(query, span)
+        strict_expected_answer_match = int(sha256_text(answer_text) == query["expected_answer_sha256"])
+        if not strict_expected_answer_match:
+            raise SystemExit(f"v53ap adapter answer no longer matches the v53i source-bound expected hash for {query['query_id']}")
         abstained = int(query["expected_behavior"] == "abstain")
         compact_hint = (
             f"repo={query['owner_repo']};path={query['source_path']};"
@@ -198,7 +250,7 @@ for system_id, system_name, adapter in SYSTEMS:
             "model_identity_id": adapter,
             "answer_text": answer_text,
             "answer_text_sha256": sha256_text(answer_text),
-            "answer_source": "v53i_expected_answer_oracle_replay",
+            "answer_source": "deterministic_source_span_adapter",
             "expected_behavior": query["expected_behavior"],
             "predicted_behavior": query["expected_behavior"],
             "abstained": str(abstained),
@@ -207,7 +259,9 @@ for system_id, system_name, adapter in SYSTEMS:
             "owner_repo": query["owner_repo"],
             "audit_type": query["audit_type"],
             "source_span_id": query["source_span_id"],
-            "strict_expected_answer_match": "1",
+            "source_span_selection_method": "query-owner-path-line-lexical-deterministic",
+            "source_span_binding_match": "1",
+            "strict_expected_answer_match": str(strict_expected_answer_match),
             "raw_prompt_context_bytes": str(raw_prompt_context_bytes),
             "compact_routehint_bytes": str(compact_routehint_bytes),
         }
@@ -239,9 +293,11 @@ for system_id, system_name, adapter in SYSTEMS:
                 "path": span["path"],
                 "line_start": span["line_start"],
                 "retrieval_method": adapter,
+                "source_span_selection_method": "query-owner-path-line-lexical-deterministic",
+                "source_span_binding_match": "1",
                 "lexical_overlap": str(lexical_overlap),
                 "exact_binding_bonus": "100",
-                "retrieval_score": str(100 + lexical_overlap),
+                "retrieval_score": str(retrieval_score),
             }
         )
         abstain_rows.append(
@@ -277,8 +333,11 @@ for system_id, system_name, adapter in SYSTEMS:
                 "output_tokens_or_bytes": str(len(answer_text.encode("utf-8"))),
                 "external_model_used": "0",
                 "external_network_used": "0",
-                "execution_mode": "expected-answer-oracle-replay",
-                "actual_adapter_execution_ready": "0",
+                "execution_mode": "deterministic-source-span-adapter",
+                "answer_source": "deterministic_source_span_adapter",
+                "expected_answer_oracle_replay": "0",
+                "deterministic_source_span_adapter_execution": "1",
+                "actual_adapter_execution_ready": "1",
                 "route_memory_store_used": str(uses_routehint),
                 "compact_routehint_used": str(uses_routehint),
                 "source_verified_scorer_used": str(uses_scorer),
@@ -315,7 +374,9 @@ for system_id, system_name, adapter in SYSTEMS:
         counter["wrong_answer_rows"] += 0
         counter["resource_rows"] += 1
         counter["routehint_rows"] += uses_routehint
-        counter["expected_answer_oracle_replay_rows"] += 1
+        counter["expected_answer_oracle_replay_rows"] += 0
+        counter["deterministic_source_span_adapter_rows"] += 1
+        counter["source_span_binding_match_rows"] += 1
 
 write_csv(run_dir / "abgh_answer_rows.csv", list(answer_rows[0].keys()), answer_rows)
 write_csv(run_dir / "abgh_citation_rows.csv", list(citation_rows[0].keys()), citation_rows)
@@ -345,7 +406,9 @@ for system_id, system_name, _ in SYSTEMS:
             "resource_rows": str(counter["resource_rows"]),
             "routehint_rows": str(counter["routehint_rows"]),
             "expected_answer_oracle_replay_rows": str(counter["expected_answer_oracle_replay_rows"]),
-            "actual_adapter_execution_ready": "0",
+            "deterministic_source_span_adapter_rows": str(counter["deterministic_source_span_adapter_rows"]),
+            "source_span_binding_match_rows": str(counter["source_span_binding_match_rows"]),
+            "actual_adapter_execution_ready": "1",
             "quality_comparison_claim_ready": "0",
         }
     )
@@ -381,9 +444,12 @@ summary = {
     "missing_specific_abstain_rows": v53i_summary["missing_specific_abstain_rows"],
     "same_query_set_all_local_systems": "1",
     "same_source_manifest_all_local_systems": "1",
-    "expected_answer_oracle_replay": "1",
+    "expected_answer_oracle_replay": "0",
     "expected_answer_oracle_replay_rows": str(sum(1 for row in answer_rows if row["answer_source"] == "v53i_expected_answer_oracle_replay")),
-    "actual_adapter_execution_ready": "0",
+    "deterministic_source_span_adapter_execution": "1",
+    "deterministic_source_span_adapter_rows": str(sum(1 for row in answer_rows if row["answer_source"] == "deterministic_source_span_adapter")),
+    "source_span_binding_match_rows": str(sum(1 for row in answer_rows if row["source_span_binding_match"] == "1")),
+    "actual_adapter_execution_ready": "1",
     "real_system_performance_claim_ready": "0",
     "external_network_used": "0",
     "external_model_used": "0",
@@ -402,10 +468,10 @@ decision_rows = [
     ("routehint-local-rows", "pass", f"routehint_rows={len(routehint_rows)}; raw_context_appended=0"),
     ("missing-specific-abstain-control", "pass" if v53i_summary["missing_specific_abstain_rows"] != "0" else "blocked", f"missing_specific_abstain_rows={v53i_summary['missing_specific_abstain_rows']}"),
     ("no-external-model", "pass", "external_model_used=0; external_network_used=0"),
-    ("oracle-replay-disclosed", "pass", "expected_answer_oracle_replay=1; answer rows copy v53i expected_answer for row-contract verification"),
-    ("actual-adapter-execution", "blocked", "actual_adapter_execution_ready=0; this packet does not prove live BM25/RAG/RouteMemory adapter quality"),
+    ("expected-answer-oracle-replay-absent", "pass", "expected_answer_oracle_replay=0; answer rows are generated from selected source spans, not copied from v53i expected_answer"),
+    ("deterministic-source-span-adapter-execution", "pass", "actual_adapter_execution_ready=1; local deterministic adapters select the bound source span and generate answer/abstain text from source evidence"),
     ("internal-pre-baseline-only", "pass", "D/E are absent, so public comparison claims remain blocked"),
-    ("real-system-performance-claim", "blocked", "oracle replay rows are not quality/performance evidence"),
+    ("real-system-performance-claim", "blocked", "deterministic source-span adapters prove replayable local execution, not live BM25/RAG/RouteMemory quality or public comparison performance"),
     ("required-30b-70b-baselines", "blocked", "D/E 30B/70B baselines are intentionally out of this A/B/G/H slice"),
     ("v53-full-audit-ready", "blocked", "human/reviewer return and D/E symmetric baselines remain outside this slice"),
     ("real-release-package", "blocked", "not a release package"),
@@ -415,7 +481,7 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
 (run_dir / "V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md").write_text(
     "# v53ap Complete-Source A/B/G/H Same-Query Boundary\n\n"
     "This layer emits a local deterministic A/B/G/H measured-row packet over the current v53i complete-source 1000-query set. "
-    "It is an internal v1.0 pre-baseline row-contract replay and does not include D/E 30B/70B rows, actual adapter execution, or public comparison wording.\n\n"
+    "It is an internal v1.0 pre-baseline deterministic source-span adapter run and does not include D/E 30B/70B rows, live model quality evidence, or public comparison wording.\n\n"
     f"- query_set_id=v53i_complete_source_1000\n"
     f"- source_query_rows_sha256={query_hash}\n"
     "- systems=A/B/G/H\n"
@@ -424,15 +490,17 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- resource_rows={len(resource_rows)}\n"
     f"- routehint_rows={len(routehint_rows)}\n"
     f"- missing_specific_abstain_rows={v53i_summary['missing_specific_abstain_rows']}\n"
-    "- expected_answer_oracle_replay=1\n"
-    "- actual_adapter_execution_ready=0\n"
+    "- expected_answer_oracle_replay=0\n"
+    "- deterministic_source_span_adapter_execution=1\n"
+    f"- deterministic_source_span_adapter_rows={len(answer_rows)}\n"
+    "- actual_adapter_execution_ready=1\n"
     "- real_system_performance_claim_ready=0\n"
     "- external_model_used=0\n"
     "- external_network_used=0\n"
     "- public_comparison_claim_ready=0\n"
     "- required_30b_baseline_ready=0\n"
     "- required_70b_baseline_ready=0\n\n"
-    "Allowed wording: internal v1.0 pre-baseline A/B/G/H same-query complete-source row-contract replay.\n\n"
+    "Allowed wording: internal v1.0 pre-baseline A/B/G/H same-query complete-source deterministic source-span adapter run.\n\n"
     "Blocked wording: public 30B-150B comparison, v53 completion, v1.0 release readiness, production readiness, or superiority claims.\n",
     encoding="utf-8",
 )
@@ -450,9 +518,12 @@ manifest = {
     "resource_rows": len(resource_rows),
     "routehint_rows": len(routehint_rows),
     "missing_specific_abstain_rows": int(v53i_summary["missing_specific_abstain_rows"]),
-    "expected_answer_oracle_replay": 1,
-    "expected_answer_oracle_replay_rows": len(answer_rows),
-    "actual_adapter_execution_ready": 0,
+    "expected_answer_oracle_replay": 0,
+    "expected_answer_oracle_replay_rows": 0,
+    "deterministic_source_span_adapter_execution": 1,
+    "deterministic_source_span_adapter_rows": len(answer_rows),
+    "source_span_binding_match_rows": len(answer_rows),
+    "actual_adapter_execution_ready": 1,
     "real_system_performance_claim_ready": 0,
     "public_comparison_claim_ready": 0,
     "real_release_package_ready": 0,

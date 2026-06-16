@@ -9,7 +9,7 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" ]] && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=0' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
+if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" ]] && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
   echo "v53t_complete_source_audit_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -299,8 +299,8 @@ pm_freeze_checks = [
         "actual_value": "; ".join(
             f"{system_id}:{system_metric_by_id.get(system_id, {}).get('answer_rows', '0')}"
             for system_id in abgh_systems
-        ) + f"; same_query_hash={same_complete_source_query_hash}; expected_answer_oracle_replay={v53ap.get('expected_answer_oracle_replay', '0')}; actual_adapter_execution_ready={v53ap.get('actual_adapter_execution_ready', '0')}",
-        "reason": "A/B/G/H must use the same complete-source query set, while actual adapter quality remains blocked before public D/E comparison wording",
+        ) + f"; same_query_hash={same_complete_source_query_hash}; expected_answer_oracle_replay={v53ap.get('expected_answer_oracle_replay', '0')}; deterministic_source_span_adapter_execution={v53ap.get('deterministic_source_span_adapter_execution', '0')}; actual_adapter_execution_ready={v53ap.get('actual_adapter_execution_ready', '0')}",
+        "reason": "A/B/G/H must use the same complete-source query set; deterministic source-span adapter execution is local/replayable, while public quality comparison remains blocked before D/E and review evidence",
     },
     {
         "check_id": "replayable-artifact-chain",
@@ -390,13 +390,13 @@ foundation_freeze_rows = [
         "certificate_id": "v53-complete-source-foundation-freeze",
         "criterion_id": "abgh-same-query-measured-run",
         "status": "pass" if abgh_same_query_ready else "blocked",
-        "required_value": "A/B/G/H row-contract replay over the same v53i query hash",
+        "required_value": "A/B/G/H deterministic source-span adapter run over the same v53i query hash",
         "actual_value": "; ".join(
             f"{system_id}:{system_metric_by_id.get(system_id, {}).get('answer_rows', '0')}"
             for system_id in abgh_systems
-        ) + f"; same_query_hash={same_complete_source_query_hash}; expected_answer_oracle_replay={v53ap.get('expected_answer_oracle_replay', '0')}; actual_adapter_execution_ready={v53ap.get('actual_adapter_execution_ready', '0')}",
+        ) + f"; same_query_hash={same_complete_source_query_hash}; expected_answer_oracle_replay={v53ap.get('expected_answer_oracle_replay', '0')}; deterministic_source_span_adapter_execution={v53ap.get('deterministic_source_span_adapter_execution', '0')}; actual_adapter_execution_ready={v53ap.get('actual_adapter_execution_ready', '0')}",
         "evidence_path": "source_v53ap/abgh_system_metric_rows.csv",
-        "claim_boundary": "Allows internal v1.0 pre-baseline A/B/G/H row-contract wording only; actual adapter performance and public comparison remain blocked",
+        "claim_boundary": "Allows internal v1.0 pre-baseline A/B/G/H deterministic source-span adapter wording only; real system performance and public comparison remain blocked",
     },
     {
         "certificate_id": "v53-complete-source-foundation-freeze",
@@ -504,6 +504,8 @@ metric = {
     "v53ap_query_rows_sha256": v53ap_query_rows_sha256,
     "abgh_same_query_ready": str(abgh_same_query_ready),
     "v53ap_expected_answer_oracle_replay": v53ap.get("expected_answer_oracle_replay", "0"),
+    "v53ap_deterministic_source_span_adapter_execution": v53ap.get("deterministic_source_span_adapter_execution", "0"),
+    "v53ap_deterministic_source_span_adapter_rows": v53ap.get("deterministic_source_span_adapter_rows", "0"),
     "v53ap_actual_adapter_execution_ready": v53ap.get("actual_adapter_execution_ready", "0"),
     "v53ap_real_system_performance_claim_ready": v53ap.get("real_system_performance_claim_ready", "0"),
     "v1_0_comparison_ready": "0",
@@ -567,6 +569,8 @@ Evidence emitted:
 - same_complete_source_query_hash={same_complete_source_query_hash}
 - abgh_same_query_ready={abgh_same_query_ready}
 - v53ap_expected_answer_oracle_replay={v53ap.get('expected_answer_oracle_replay', '0')}
+- v53ap_deterministic_source_span_adapter_execution={v53ap.get('deterministic_source_span_adapter_execution', '0')}
+- v53ap_deterministic_source_span_adapter_rows={v53ap.get('deterministic_source_span_adapter_rows', '0')}
 - v53ap_actual_adapter_execution_ready={v53ap.get('actual_adapter_execution_ready', '0')}
 - v53ap_real_system_performance_claim_ready={v53ap.get('real_system_performance_claim_ready', '0')}
 - v1_0_comparison_ready=0
@@ -575,10 +579,10 @@ Evidence emitted:
 Allowed wording: machine-prepared PM-freeze complete-source benchmark surface
 over 10 locked repositories, 1000 source-span-bound queries, explicit
 unsupported/missing/doc-code-conflict controls, and internal A/B/G/H
-same-query row-contract pre-baseline rows.
+same-query deterministic source-span adapter pre-baseline rows.
 
 Blocked wording: human-reviewed complete-source audit, 30B-150B quality
-comparison, actual A/B/G/H adapter performance, v53 readiness, v1.0 comparison
+comparison, real A/B/G/H system performance, v53 readiness, v1.0 comparison
 readiness, production readiness, or release readiness.
 """
 (run_dir / "V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md").write_text(boundary, encoding="utf-8")
@@ -605,6 +609,8 @@ manifest = {
     "v53ap_query_rows_sha256": v53ap_query_rows_sha256,
     "abgh_same_query_ready": abgh_same_query_ready,
     "v53ap_expected_answer_oracle_replay": int(v53ap.get("expected_answer_oracle_replay", "0")),
+    "v53ap_deterministic_source_span_adapter_execution": int(v53ap.get("deterministic_source_span_adapter_execution", "0")),
+    "v53ap_deterministic_source_span_adapter_rows": int(v53ap.get("deterministic_source_span_adapter_rows", "0")),
     "v53ap_actual_adapter_execution_ready": int(v53ap.get("actual_adapter_execution_ready", "0")),
     "v53ap_real_system_performance_claim_ready": int(v53ap.get("real_system_performance_claim_ready", "0")),
     "v1_0_comparison_ready": 0,
