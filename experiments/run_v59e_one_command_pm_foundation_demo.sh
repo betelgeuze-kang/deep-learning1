@@ -1052,6 +1052,96 @@ summary["pm_external_return_template_bundle_ready"] = str(external_return_templa
 summary["pm_roadmap_requirement_rows"] = pr_summary["pm_roadmap_requirement_rows"]
 summary["pm_roadmap_ready_rows"] = pr_summary["pm_roadmap_ready_rows"]
 summary["pm_roadmap_blocked_rows"] = pr_summary["pm_roadmap_blocked_rows"]
+entrypoint_path = root / "examples/v1_0_architecture_challenge_pm_foundation_demo.sh"
+generated_replay_path = run_dir / "pm_foundation_demo.sh"
+preflight_specs = [
+    (
+        "entrypoint-present",
+        entrypoint_path.is_file() and bool(entrypoint_path.stat().st_mode & 0o111),
+        "examples/v1_0_architecture_challenge_pm_foundation_demo.sh is executable",
+        "reviewer command exists in the repository",
+    ),
+    (
+        "generated-replay-script-present",
+        generated_replay_path.is_file() and bool(generated_replay_path.stat().st_mode & 0o111),
+        "pm_foundation_demo.sh is generated in the bundle",
+        "bundle-local replay script exists",
+    ),
+    (
+        "pinned-source-snapshot-replay",
+        as_int(summary, "pinned_public_sources_verified") == 1 and as_int(summary, "source_snapshot_replay_used") == 1,
+        "v53t pinned-source snapshot evidence is replayed",
+        "pinned public sources are checked through replayed hashes",
+    ),
+    (
+        "no-live-download-default",
+        as_int(summary, "public_source_download_executed") == 0
+        and as_int(summary, "public_source_download_approval_required") == 1
+        and as_int(summary, "network_required") == 0
+        and as_int(summary, "downloads_required") == 0,
+        "network/download execution is not required by default",
+        "live public-source refresh remains approval-required",
+    ),
+    (
+        "no-private-fixture",
+        as_int(summary, "private_fixture_required") == 0,
+        "private_fixture_required=0",
+        "one-command PM replay does not require private fixtures",
+    ),
+    (
+        "no-manual-postprocessing",
+        as_int(summary, "manual_postprocessing_required") == 0,
+        "manual_postprocessing_required=0; reviewer artifact is written by the command",
+        "reviewer artifact is written by the command",
+    ),
+    (
+        "no-undocumented-local-state",
+        as_int(summary, "undocumented_local_state_required") == 0,
+        "undocumented_local_state_required=0",
+        "local replay state is described by copied artifacts and summaries",
+    ),
+    (
+        "pm-pr-sidecar-packaged",
+        pm_pr_claim_slice_bundle_ready == 1,
+        "PM PR claim-slice sidecar, packets, locks, and templates are copied",
+        "review slicing evidence is packaged with the replay",
+    ),
+    (
+        "blocker-false-positive-closed",
+        as_int(summary, "blocker_false_positive_closed") == 1 and as_int(summary, "pm_pr_tests_only_merge_condition_rows") == 0,
+        "blockers remain explicit and tests-only merge conditions are absent",
+        "merge readiness is claim-boundary/replay/blocker based",
+    ),
+    (
+        "no-remote-mutation",
+        True,
+        "no push/open/merge/release command is executed by v59e",
+        "local replay is metadata/artifact generation only",
+    ),
+]
+preflight_rows = [
+    {
+        "check": check,
+        "status": "pass" if passed else "blocked",
+        "evidence": evidence,
+        "claim_boundary": claim_boundary,
+    }
+    for check, passed, evidence, claim_boundary in preflight_specs
+]
+write_csv(run_dir / "pm_foundation_replay_preflight_rows.csv", ["check", "status", "evidence", "claim_boundary"], preflight_rows)
+one_command_replay_preflight_ready = int(all(row["status"] == "pass" for row in preflight_rows))
+bundle_rows.append(
+    {
+        "path": "pm_foundation_replay_preflight_rows.csv",
+        "source_stage": "v59e_core",
+        "artifact_role": "preflight",
+    }
+)
+summary["one_command_replay_preflight_ready"] = str(one_command_replay_preflight_ready)
+summary["challenge_bundle_ready"] = str(
+    int(as_int(summary, "challenge_bundle_ready") == 1 and pm_pr_claim_slice_bundle_ready == 1 and one_command_replay_preflight_ready == 1)
+)
+summary["bundle_files"] = str(len(bundle_rows))
 write_csv(summary_csv, list(summary.keys()), [summary])
 
 write_csv(run_dir / "challenge_bundle_file_rows.csv", list(bundle_rows[0].keys()), bundle_rows)
@@ -1072,7 +1162,12 @@ decision_rows.extend(
         {
             "gate": "pm-external-return-templates",
             "status": "pass" if external_return_template_ready else "blocked",
-            "reason": "19 no-fixture approval-required return templates are packaged for blocker closure",
+            "reason": "22 no-fixture approval-required return templates are packaged for blocker closure",
+        },
+        {
+            "gate": "one-command-replay-preflight",
+            "status": "pass" if one_command_replay_preflight_ready else "blocked",
+            "reason": "entrypoint, no-network/default-download, no-private-fixture, no-manual-postprocessing, PM sidecar, and blocker boundaries are machine-checked",
         },
     ]
 )
@@ -1087,7 +1182,8 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + f"- pm_blocker_closure_packet_files={summary['pm_blocker_closure_packet_files']}\n"
     + f"- pm_execution_lock_rows={summary['pm_execution_lock_rows']}\n"
     + f"- pm_scope_drift_allowed={summary['pm_scope_drift_allowed']}\n"
-    + f"- pm_external_return_template_files={summary['pm_external_return_template_files']}\n",
+    + f"- pm_external_return_template_files={summary['pm_external_return_template_files']}\n"
+    + f"- one_command_replay_preflight_ready={summary['one_command_replay_preflight_ready']}\n",
     encoding="utf-8",
 )
 
@@ -1099,7 +1195,8 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + f"- pm_pr_tests_only_merge_condition_rows={summary['pm_pr_tests_only_merge_condition_rows']}\n"
     + f"- pm_scope_drift_allowed={summary['pm_scope_drift_allowed']}\n"
     + f"- pm_new_scaffold_default_allowed={summary['pm_new_scaffold_default_allowed']}\n"
-    + f"- pm_external_return_template_fixture_allowed_rows={summary['pm_external_return_template_fixture_allowed_rows']}\n",
+    + f"- pm_external_return_template_fixture_allowed_rows={summary['pm_external_return_template_fixture_allowed_rows']}\n"
+    + f"- one_command_replay_preflight_ready={summary['one_command_replay_preflight_ready']}\n",
     encoding="utf-8",
 )
 
@@ -1113,6 +1210,8 @@ manifest["pm_blocker_closure_packet_files"] = len(blocker_packet_files)
 manifest["pm_execution_lock_rows"] = as_int(pr_summary, "pm_execution_lock_rows")
 manifest["pm_scope_drift_allowed"] = as_int(pr_summary, "pm_scope_drift_allowed")
 manifest["pm_external_return_template_files"] = len(return_template_files)
+manifest["one_command_replay_preflight_ready"] = one_command_replay_preflight_ready
+manifest["pm_foundation_replay_preflight_rows_sha256"] = sha256(run_dir / "pm_foundation_replay_preflight_rows.csv")
 manifest["source_summary_sha256"]["pm_pr_claim_slice_gate"] = sha256(pr_summary_csv)
 manifest["pm_pr_claim_slice_gate_manifest_sha256"] = sha256(pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json")
 manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")

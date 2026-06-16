@@ -44,6 +44,7 @@ expected = {
     "v59_ready": "0",
     "one_command_entrypoint_ready": "1",
     "challenge_bundle_ready": "1",
+    "one_command_replay_preflight_ready": "1",
     "stage_rows": "8",
     "ready_stage_rows": "8",
     "full_ready_stage_rows": "1",
@@ -173,6 +174,7 @@ for gate in [
     "pm-pr-claim-slice-gate",
     "pm-execution-lock",
     "pm-external-return-templates",
+    "one-command-replay-preflight",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v59e gate should pass: {gate}")
@@ -183,6 +185,7 @@ for gate in ["public-source-download-execution", "v58-blind-response-intake", "v
 required_files = [
     "pm_foundation_stage_replay_rows.csv",
     "pm_foundation_one_command_rows.csv",
+    "pm_foundation_replay_preflight_rows.csv",
     "public_source_replay_policy_rows.csv",
     "challenge_bundle_file_rows.csv",
     "pm_foundation_demo_gate_rows.csv",
@@ -310,6 +313,8 @@ if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
 if manifest.get("pm_scope_drift_allowed") != 0:
     raise SystemExit("v59e manifest should keep PM scope drift locked")
+if manifest.get("one_command_replay_preflight_ready") != 1:
+    raise SystemExit("v59e manifest should record replay preflight readiness")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -355,6 +360,7 @@ for snippet in [
     "v58_full_blind_eval_ready=0",
     "pm_pr_claim_slice_bundle_ready=1",
     "pm_scope_drift_allowed=0",
+    "one_command_replay_preflight_ready=1",
     "Blocked wording",
 ]:
     if snippet not in boundary:
@@ -378,6 +384,30 @@ if (
 bundle_rows = read_csv(run_dir / "challenge_bundle_file_rows.csv")
 if "public_source_replay_policy_rows.csv" not in {row["path"] for row in bundle_rows}:
     raise SystemExit("v59e bundle index should include public source replay policy rows")
+if "pm_foundation_replay_preflight_rows.csv" not in {row["path"] for row in bundle_rows}:
+    raise SystemExit("v59e bundle index should include replay preflight rows")
+
+preflight_rows = read_csv(run_dir / "pm_foundation_replay_preflight_rows.csv")
+expected_preflight_checks = {
+    "entrypoint-present",
+    "generated-replay-script-present",
+    "pinned-source-snapshot-replay",
+    "no-live-download-default",
+    "no-private-fixture",
+    "no-manual-postprocessing",
+    "no-undocumented-local-state",
+    "pm-pr-sidecar-packaged",
+    "blocker-false-positive-closed",
+    "no-remote-mutation",
+}
+if {row["check"] for row in preflight_rows} != expected_preflight_checks:
+    raise SystemExit("v59e replay preflight checks mismatch")
+if any(row["status"] != "pass" for row in preflight_rows):
+    raise SystemExit("v59e replay preflight should pass every default local check")
+if not any(row["check"] == "no-live-download-default" and "approval-required" in row["claim_boundary"] for row in preflight_rows):
+    raise SystemExit("v59e replay preflight should preserve download approval boundary")
+if not any(row["check"] == "no-manual-postprocessing" and "written by the command" in row["evidence"] for row in preflight_rows):
+    raise SystemExit("v59e replay preflight should reject manual post-processing dependency")
 
 pr_summary = read_csv(pr_slice_summary_csv)[0]
 if pr_summary.get("v1_0_pm_pr_claim_slice_gate_ready") != "1":

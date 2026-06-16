@@ -138,6 +138,7 @@ write_csv(
 for rel in [
     "pm_foundation_stage_replay_rows.csv",
     "pm_foundation_one_command_rows.csv",
+    "pm_foundation_replay_preflight_rows.csv",
     "public_source_replay_policy_rows.csv",
     "challenge_bundle_file_rows.csv",
     "pm_foundation_demo_gate_rows.csv",
@@ -477,6 +478,7 @@ summary = {
     "pm_pr_claim_slice_bundle_ready": as_int(v59e, "pm_pr_claim_slice_bundle_ready"),
     "pm_scope_drift_allowed": as_int(v59e, "pm_scope_drift_allowed"),
     "pm_external_return_template_rows": as_int(v59e, "pm_external_return_template_rows"),
+    "one_command_replay_preflight_ready": as_int(v59e, "one_command_replay_preflight_ready"),
     "v59_ready": int(v59_summary.get("v59_ready", "0")),
     "required_30b_70b_baselines_ready": int(as_int(v52, "required_30b_baseline_ready") == 1 and as_int(v52, "required_70b_baseline_ready") == 1),
     "real_30b_70b_rows_ready": int(as_int(v52, "required_30b_baseline_ready") == 1 and as_int(v52, "required_70b_baseline_ready") == 1),
