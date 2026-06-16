@@ -143,7 +143,7 @@ stage_specs = [
             (v53ap_dir / "V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md", "source_v53ap/V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md"),
             (v53ap_dir / "sha256_manifest.csv", "source_v53ap/sha256_manifest.csv"),
         ],
-        "claim_boundary": "internal v1.0 pre-baseline A/B/G/H same-query run",
+        "claim_boundary": "internal v1.0 pre-baseline A/B/G/H same-query row-contract replay; actual adapter performance blocked",
     },
     {
         "stage": "v54c",
@@ -241,6 +241,12 @@ local_abgh_baseline_run_ready = int(
     and as_int(v53ap, "answer_rows") == 4000
     and as_int(v53ap, "resource_rows") == 4000
 )
+local_abgh_row_contract_replay_ready = int(
+    local_abgh_baseline_run_ready
+    and as_int(v53ap, "expected_answer_oracle_replay") == 1
+    and as_int(v53ap, "actual_adapter_execution_ready") == 0
+    and as_int(v53ap, "real_system_performance_claim_ready") == 0
+)
 grounded_generation_outputs_ready = int(
     as_int(v54c, "answer_rows") == 1000
     and as_int(v54c, "citation_rows") == 1000
@@ -256,7 +262,8 @@ gate_rows = [
     ("pinned-public-sources-verified", "pass" if pinned_public_sources_verified else "blocked", "v53t PM freeze has pinned 10-repo manifest check"),
     ("complete-source-query-freeze", "pass" if as_int(v53t, "pm_v53_freeze_ready") else "blocked", "v53t PM freeze checks pass"),
     ("route-memory-artifact-built", "pass" if route_memory_artifact_ready else "blocked", "v53ap/v54c RouteHint artifacts are replayed"),
-    ("local-abgh-baseline-run", "pass" if local_abgh_baseline_run_ready else "blocked", "A/B/G/H answer/citation/resource rows are copied"),
+    ("local-abgh-baseline-run", "pass" if local_abgh_baseline_run_ready else "blocked", "A/B/G/H answer/citation/resource row-contract rows are copied"),
+    ("local-abgh-row-contract-replay", "pass" if local_abgh_row_contract_replay_ready else "blocked", "v53ap discloses expected-answer oracle replay and keeps actual adapter performance blocked"),
     ("evaluator-check", "pass" if answer_citation_separate_eval else "blocked", "answer and citation/source checks remain separate"),
     ("grounded-generation-outputs", "pass" if grounded_generation_outputs_ready else "blocked", "v54c recommended output artifacts are copied"),
     ("h10-real-label-readiness-ledger", "pass" if h10_blocker_ledger_ready else "blocked", "h10 real-label promotion blocker ledger is copied"),
@@ -296,6 +303,10 @@ summary = {
     "pm_v53_freeze_ready": v53t["pm_v53_freeze_ready"],
     "v53ap_complete_source_abgh_same_query_measured_ready": v53ap["v53ap_complete_source_abgh_same_query_measured_ready"],
     "local_abgh_baseline_run_ready": str(local_abgh_baseline_run_ready),
+    "local_abgh_row_contract_replay_ready": str(local_abgh_row_contract_replay_ready),
+    "v53ap_expected_answer_oracle_replay": v53ap.get("expected_answer_oracle_replay", "0"),
+    "v53ap_actual_adapter_execution_ready": v53ap.get("actual_adapter_execution_ready", "0"),
+    "v53ap_real_system_performance_claim_ready": v53ap.get("real_system_performance_claim_ready", "0"),
     "same_query_abgh_ready": v53ap["same_query_set_all_local_systems"],
     "route_memory_artifact_ready": str(route_memory_artifact_ready),
     "v54c_complete_source_grounded_generation_1000_ready": v54c["v54c_complete_source_grounded_generation_1000_ready"],
@@ -323,13 +334,15 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     "./examples/v1_0_architecture_challenge_pm_foundation_demo.sh\n"
     "```\n\n"
     "This bundle replays the current PM foundation: v53 complete-source freeze, "
-    "A/B/G/H same-query pre-baseline rows, v54c grounded generation rows, h10 "
+    "A/B/G/H same-query row-contract replay rows, v54c grounded generation rows, h10 "
     "real-label promotion readiness ledger, and the v58 blind-eval blocker ledger. "
     "The repository entrypoint then refreshes the PM PR claim-slice gate so the "
     "review split and the v56 replay-artifact blocker are visible beside this bundle. "
     "It is intentionally not the completed v59 public challenge demo.\n\n"
     f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
     f"- local_abgh_baseline_run_ready={summary['local_abgh_baseline_run_ready']}\n"
+    f"- local_abgh_row_contract_replay_ready={summary['local_abgh_row_contract_replay_ready']}\n"
+    f"- v53ap_actual_adapter_execution_ready={summary['v53ap_actual_adapter_execution_ready']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
     f"- v58_full_blind_eval_ready={summary['v58_full_blind_eval_ready']}\n"
@@ -344,6 +357,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v59e_one_command_pm_foundation_demo_ready={summary['v59e_one_command_pm_foundation_demo_ready']}\n"
     f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
     f"- local_abgh_baseline_run_ready={summary['local_abgh_baseline_run_ready']}\n"
+    f"- local_abgh_row_contract_replay_ready={summary['local_abgh_row_contract_replay_ready']}\n"
+    f"- v53ap_expected_answer_oracle_replay={summary['v53ap_expected_answer_oracle_replay']}\n"
+    f"- v53ap_actual_adapter_execution_ready={summary['v53ap_actual_adapter_execution_ready']}\n"
+    f"- v53ap_real_system_performance_claim_ready={summary['v53ap_real_system_performance_claim_ready']}\n"
     f"- route_memory_artifact_ready={summary['route_memory_artifact_ready']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
@@ -377,7 +394,12 @@ manifest = {
         "h10-real-label-promotion",
         "v1_0-release-ready",
         "public-comparison-win",
+        "actual-abgh-adapter-performance",
     ],
+    "local_abgh_row_contract_replay_ready": local_abgh_row_contract_replay_ready,
+    "v53ap_expected_answer_oracle_replay": as_int(v53ap, "expected_answer_oracle_replay"),
+    "v53ap_actual_adapter_execution_ready": as_int(v53ap, "actual_adapter_execution_ready"),
+    "v53ap_real_system_performance_claim_ready": as_int(v53ap, "real_system_performance_claim_ready"),
     "real_release_package_ready": 0,
 }
 (run_dir / "v59e_one_command_pm_foundation_demo_manifest.json").write_text(

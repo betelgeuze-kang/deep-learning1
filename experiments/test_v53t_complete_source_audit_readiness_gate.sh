@@ -76,6 +76,9 @@ expected = {
     "doc_code_conflict_rows": "140",
     "same_complete_source_query_hash": "1",
     "abgh_same_query_ready": "1",
+    "v53ap_expected_answer_oracle_replay": "1",
+    "v53ap_actual_adapter_execution_ready": "0",
+    "v53ap_real_system_performance_claim_ready": "0",
     "v1_0_comparison_ready": "0",
     "real_release_package_ready": "0",
 }
@@ -172,8 +175,8 @@ if foundation_freeze_rows["missing-specific-abstain-control"]["actual_value"] !=
     raise SystemExit("v53t foundation freeze missing-specific actual value mismatch")
 if foundation_freeze_rows["doc-code-conflict-control"]["actual_value"] != "140":
     raise SystemExit("v53t foundation freeze doc-code conflict actual value mismatch")
-if "public comparison remains blocked" not in foundation_freeze_rows["abgh-same-query-measured-run"]["claim_boundary"]:
-    raise SystemExit("v53t foundation freeze should keep A/B/G/H public comparison boundary closed")
+if "actual adapter performance" not in foundation_freeze_rows["abgh-same-query-measured-run"]["claim_boundary"]:
+    raise SystemExit("v53t foundation freeze should keep A/B/G/H actual adapter performance boundary closed")
 if "forbids public comparison" not in foundation_freeze_rows["public-comparison-boundary-closed"]["claim_boundary"]:
     raise SystemExit("v53t foundation freeze should explicitly forbid public comparison wording")
 
@@ -238,6 +241,9 @@ for snippet in [
     "doc_code_conflict_rows=140",
     "same_complete_source_query_hash=1",
     "abgh_same_query_ready=1",
+    "v53ap_expected_answer_oracle_replay=1",
+    "v53ap_actual_adapter_execution_ready=0",
+    "v53ap_real_system_performance_claim_ready=0",
     "v1_0_comparison_ready=0",
 ]:
     if snippet not in boundary:
@@ -258,6 +264,8 @@ if manifest.get("missing_specific_control_rows") != 30 or manifest.get("abgh_sam
     raise SystemExit("v53t manifest PM freeze evidence mismatch")
 if manifest.get("same_complete_source_query_hash") != 1:
     raise SystemExit("v53t manifest query hash binding mismatch")
+if manifest.get("v53ap_expected_answer_oracle_replay") != 1 or manifest.get("v53ap_actual_adapter_execution_ready") != 0:
+    raise SystemExit("v53t manifest should preserve the v53ap oracle replay boundary")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:

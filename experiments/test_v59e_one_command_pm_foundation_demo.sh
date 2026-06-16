@@ -51,6 +51,10 @@ expected = {
     "pm_v53_freeze_ready": "1",
     "v53ap_complete_source_abgh_same_query_measured_ready": "1",
     "local_abgh_baseline_run_ready": "1",
+    "local_abgh_row_contract_replay_ready": "1",
+    "v53ap_expected_answer_oracle_replay": "1",
+    "v53ap_actual_adapter_execution_ready": "0",
+    "v53ap_real_system_performance_claim_ready": "0",
     "same_query_abgh_ready": "1",
     "route_memory_artifact_ready": "1",
     "v54c_complete_source_grounded_generation_1000_ready": "1",
@@ -116,6 +120,7 @@ for gate in [
     "complete-source-query-freeze",
     "route-memory-artifact-built",
     "local-abgh-baseline-run",
+    "local-abgh-row-contract-replay",
     "evaluator-check",
     "grounded-generation-outputs",
     "h10-real-label-readiness-ledger",
@@ -173,6 +178,10 @@ if manifest.get("v59e_one_command_pm_foundation_demo_ready") != 1 or manifest.ge
     raise SystemExit("v59e manifest readiness mismatch")
 if "h10-real-label-promotion" not in manifest.get("blocked_claims", []):
     raise SystemExit("v59e manifest should block h10 real-label promotion")
+if "actual-abgh-adapter-performance" not in manifest.get("blocked_claims", []):
+    raise SystemExit("v59e manifest should block actual A/B/G/H adapter performance")
+if manifest.get("local_abgh_row_contract_replay_ready") != 1 or manifest.get("v53ap_actual_adapter_execution_ready") != 0:
+    raise SystemExit("v59e manifest should preserve the v53ap row-contract replay boundary")
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
 if manifest.get("pm_scope_drift_allowed") != 0:
@@ -189,6 +198,9 @@ boundary = (run_dir / "V59E_ONE_COMMAND_PM_FOUNDATION_BOUNDARY.md").read_text(en
 for snippet in [
     "v59e_one_command_pm_foundation_demo_ready=1",
     "pm_v53_freeze_ready=1",
+    "local_abgh_row_contract_replay_ready=1",
+    "v53ap_expected_answer_oracle_replay=1",
+    "v53ap_actual_adapter_execution_ready=0",
     "h10_real_label_promotion_ready=0",
     "v58_full_blind_eval_ready=0",
     "pm_pr_claim_slice_bundle_ready=1",

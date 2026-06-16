@@ -58,6 +58,10 @@ expected = {
     "missing_specific_abstain_rows": "30",
     "same_query_set_all_local_systems": "1",
     "same_source_manifest_all_local_systems": "1",
+    "expected_answer_oracle_replay": "1",
+    "expected_answer_oracle_replay_rows": "4000",
+    "actual_adapter_execution_ready": "0",
+    "real_system_performance_claim_ready": "0",
     "external_network_used": "0",
     "external_model_used": "0",
     "internal_v1_0_pre_baseline_run": "1",
@@ -114,6 +118,10 @@ if len(queries) != 1000:
     raise SystemExit("v53ap should bind 1000 source queries")
 if {row["system_id"] for row in read_csv(run_dir / "abgh_system_rows.csv")} != SYSTEMS:
     raise SystemExit("v53ap should cover A/B/G/H systems")
+system_rows = {row["system_id"]: row for row in read_csv(run_dir / "abgh_system_rows.csv")}
+for system_id, row in system_rows.items():
+    if row["execution_mode"] != "expected-answer-oracle-replay" or row["actual_adapter_execution_ready"] != "0":
+        raise SystemExit(f"v53ap should disclose oracle replay execution mode for {system_id}")
 for table_name, rows in [
     ("answers", answers),
     ("citations", citations),
@@ -136,11 +144,15 @@ if any(row["raw_context_appended"] != "0" for row in hints):
 for row in answers:
     if row["answer_text_sha256"] != sha256_text(row["answer_text"]):
         raise SystemExit("v53ap answer hash mismatch")
+    if row["answer_source"] != "v53i_expected_answer_oracle_replay":
+        raise SystemExit("v53ap answer rows must disclose expected-answer oracle replay")
     if row["system_id"] in {"G", "H"} and row["raw_prompt_context_bytes"] != "0":
         raise SystemExit("v53ap G/H should not use raw prompt context bytes")
 for row in resources:
     if row["external_model_used"] != "0" or row["external_network_used"] != "0":
         raise SystemExit("v53ap resources should be local/no external model")
+    if row["execution_mode"] != "expected-answer-oracle-replay" or row["actual_adapter_execution_ready"] != "0":
+        raise SystemExit("v53ap resources must disclose that actual adapter execution is not open")
     if row["system_id"] in {"G", "H"} and (row["route_memory_store_used"] != "1" or row["compact_routehint_used"] != "1"):
         raise SystemExit("v53ap G/H should bind RouteMemory/RouteHint resource fields")
     if row["system_id"] == "H" and (row["source_verified_scorer_used"] != "1" or row["domain_policy_used"] != "1"):
@@ -156,6 +168,8 @@ for system_id, row in metrics.items():
         raise SystemExit(f"v53ap metric counts mismatch for {system_id}")
     if row["missing_specific_query_rows"] != "30":
         raise SystemExit(f"v53ap missing-specific count mismatch for {system_id}")
+    if row["expected_answer_oracle_replay_rows"] != "1000" or row["actual_adapter_execution_ready"] != "0":
+        raise SystemExit(f"v53ap oracle replay metric boundary mismatch for {system_id}")
     if row["quality_comparison_claim_ready"] != "0":
         raise SystemExit("v53ap must not mark quality comparison ready")
 
@@ -167,11 +181,12 @@ for gate in [
     "routehint-local-rows",
     "missing-specific-abstain-control",
     "no-external-model",
+    "oracle-replay-disclosed",
     "internal-pre-baseline-only",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v53ap gate should pass: {gate}")
-for gate in ["required-30b-70b-baselines", "v53-full-audit-ready", "real-release-package"]:
+for gate in ["actual-adapter-execution", "real-system-performance-claim", "required-30b-70b-baselines", "v53-full-audit-ready", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v53ap gate should remain blocked: {gate}")
 
@@ -180,6 +195,8 @@ if manifest.get("v53ap_complete_source_abgh_same_query_measured_ready") != 1:
     raise SystemExit("v53ap manifest readiness mismatch")
 if manifest.get("systems") != ["A", "B", "G", "H"] or manifest.get("missing_specific_abstain_rows") != 30:
     raise SystemExit("v53ap manifest system/control mismatch")
+if manifest.get("expected_answer_oracle_replay") != 1 or manifest.get("actual_adapter_execution_ready") != 0:
+    raise SystemExit("v53ap manifest oracle replay boundary mismatch")
 if manifest.get("public_comparison_claim_ready") != 0 or manifest.get("real_release_package_ready") != 0:
     raise SystemExit("v53ap manifest claim boundary mismatch")
 
@@ -190,6 +207,9 @@ for snippet in [
     "answer_rows=4000",
     "routehint_rows=2000",
     "missing_specific_abstain_rows=30",
+    "expected_answer_oracle_replay=1",
+    "actual_adapter_execution_ready=0",
+    "real_system_performance_claim_ready=0",
     "public_comparison_claim_ready=0",
     "required_30b_baseline_ready=0",
     "required_70b_baseline_ready=0",
