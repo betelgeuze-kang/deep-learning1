@@ -19,6 +19,65 @@ The v1.0 claim must stay bounded:
 - allowed: local evidence-bound QA/audit architecture, source-cited answers, abstention, deterministic lineage, RouteHint generation, scaling evidence
 - blocked until proven: general LLM replacement, Transformer replacement, frontier local LLM, expert replacement, GPU speedup, production release readiness
 
+## PM Execution Order
+
+The current v52-v60/v61 work should be reviewed as small claim-bound slices,
+not as one broad draft PR. Keep v61 as a separate R&D option until the v52-v60
+v1.0 evidence path is ready.
+
+The machine-readable slice ledger is emitted by
+`experiments/run_v1_0_pm_pr_claim_slice_gate.sh`. It writes
+`pm_pr_slice_rows.csv`, `pm_pr_merge_gate_rows.csv`, a claim-boundary file, and
+a sha256 manifest. Merge readiness is intentionally defined by claim boundary,
+replayable artifacts, and false-positive blocker closure rather than by tests
+alone.
+
+Recommended review slices:
+
+| Slice | Scope | Merge condition |
+| --- | --- | --- |
+| `docs/v1-roadmap` | roadmap, claim boundary, release blockers | allowed and blocked claims are explicit |
+| `v52-baseline-registry-contract` | A-H baseline registry/schema contract | replayable output schema and symmetric verifier contract exist |
+| `v53-public-repo-source-manifest` | pinned 10+ repo source manifest | commits, licenses, source files, and hashes are bound |
+| `v53-query-instantiation-1000` | 1000 source-span-bound query rows | every query binds to a pinned source span and control rows are explicit |
+| `v53-system-a-b-g-h-measured` | same-query A/B/G/H pre-baseline rows | internal-only comparison wording, no D/E public comparison claim |
+| `v54-routehint-generation-contract` | grounded RouteHint generation contract | raw prompt stuffing remains zero and unsupported answers are guarded |
+| `v56-ruler-longbench-expanded` | source/evaluator-bound benchmark expansion | official source/evaluator hashes and raw prediction rows are replayable |
+| `v58-blind-eval-contract` | blind evaluation contract | identity hiding, symmetric citation verification, and failure rows exist |
+| `v59-one-command-demo` | reviewer command and artifact bundle | no private fixture, local state, or manual post-processing is required |
+| `v61-ssd-moe-runtime-roadmap` | SSD-resident runtime R&D roadmap | no dense local speed, near-frontier, or release-ready claim is implied |
+
+The PM PR claim-slice gate emits both machine-readable ledgers and ten local
+review packet markdown files under `results/v1_0_pm_pr_claim_slice_gate/gate_001/review_packets/`.
+Those packets are draft PR-body material only; they do not push, open, merge,
+or publish any PR. The same gate also emits five local blocker-closure packets
+under `results/v1_0_pm_pr_claim_slice_gate/gate_001/blocker_packets/` for the
+approval-required v56 replay, D/E 30B/70B, h10 real-label, v58 blind-eval, and
+v60 release blockers. The `pm_execution_lock_rows.csv` ledger locks the team to
+closing v52-v60/v61 review slices and real evidence blockers, with default
+v62/v63 scaffold drift disallowed. The gate also emits 19 no-fixture external
+return templates under `return_templates/` so D/E, h10, v58, v56, and v60
+evidence can be supplied in the expected shape without changing protocols.
+The v59e PM foundation one-command bundle refreshes this gate and copies those
+review packets, blocker packets, execution locks, and return templates under
+`source_pm_pr_claim_slice_gate/` so the PM split is replayable from the same
+local bundle while still blocking release and public-comparison claims.
+
+The first execution priority is v53: freeze the complete-source 1000-row
+benchmark surface, then close an A/B/G/H same-query measured run over that
+surface. D/E 30B/70B rows, h10 source-verified scorer promotion, v54
+generation, v58 blind eval, and v59 public demo become meaningful only after
+that source/query/evaluator foundation is stable. The v53t audit gate now emits
+`complete_source_foundation_freeze_rows.csv` as the explicit PM certificate for
+that foundation: 10 pinned public repositories, 1000 source-span-bound queries,
+10%+ negative/abstain controls, unsupported/missing/doc-code-conflict rows,
+separate answer/citation evaluation, A/B/G/H same-query measured rows, replay
+hashes, and a closed public-comparison boundary. The h10 PM real-label
+readiness gate now makes the scorer-promotion blocker explicit: provenance,
+missing/abstain, and wrong-answer guard surfaces can be machine-bound, but
+promotion remains blocked without accepted external/human label evidence and
+h10 source-verified eval readiness.
+
 ## Baseline Matrix
 
 Every v1.0 comparison run should emit the same query IDs, source manifests, answer rows, citation rows, abstain rows, wrong-answer guard rows, resource rows, and sha256 manifest for all baselines.
@@ -169,6 +228,7 @@ Implementation objectives:
 - Run expanded RULER NIAH and LongBench subsets with official source snapshots, evaluator hashes, split manifests, raw prediction rows, RouteMemory lineage, metrics, and provenance.
 - Include LLM+RAG baseline rows from v52 where allowed by the benchmark format.
 - Keep source/result bridges ready for independent review.
+- Reuse existing seed/contract replay artifacts by default; opt into seed or contract regeneration only after the runtime/resource budget is explicitly approved.
 
 Acceptance gates:
 
@@ -183,6 +243,7 @@ Acceptance gates:
 Stop rule:
 
 - Do not use benchmark score claims without official source/evaluator binding and reproducible raw prediction rows.
+- Do not let the v56/v56b smoke path silently regenerate v49/v45/v34/v33 benchmark packets.
 
 ## v57: Domain Expert Packs
 
@@ -290,6 +351,8 @@ Stop rule:
 
 Implemented now:
 
+- `experiments/run_v1_0_pm_pr_claim_slice_gate.sh`
+- `experiments/test_v1_0_pm_pr_claim_slice_gate.sh`
 - `experiments/run_v52_llm_rag_baseline_war.sh`
 - `experiments/test_v52_llm_rag_baseline_war.sh`
 - `experiments/run_v52b_small_local_rag_measured_row.sh`
@@ -368,6 +431,8 @@ Implemented now:
 - `experiments/test_v53n_complete_source_system_g_routehint_measured.sh`
 - `experiments/run_v53o_complete_source_system_h_routehint_scorer_policy_measured.sh`
 - `experiments/test_v53o_complete_source_system_h_routehint_scorer_policy_measured.sh`
+- `experiments/run_v53ap_complete_source_abgh_same_query_measured.sh`
+- `experiments/test_v53ap_complete_source_abgh_same_query_measured.sh`
 - `experiments/run_v53p_complete_source_system_de_open_weight_rag_measured.sh`
 - `experiments/test_v53p_complete_source_system_de_open_weight_rag_measured.sh`
 - `experiments/run_v53q_complete_source_symmetric_scorer_policy.sh`
@@ -484,6 +549,8 @@ Implemented now:
 - `experiments/test_v54_routehint_generation_1000_contract.sh`
 - `experiments/run_v54b_routehint_generation_scale_1000.sh`
 - `experiments/test_v54b_routehint_generation_scale_1000.sh`
+- `experiments/run_v54c_complete_source_grounded_generation_1000.sh`
+- `experiments/test_v54c_complete_source_grounded_generation_1000.sh`
 - `experiments/run_v55_local_scaling_law_main_contract.sh`
 - `experiments/test_v55_local_scaling_law_main_contract.sh`
 - `experiments/run_v55b_local_scaling_law_main_120.sh`
@@ -511,6 +578,9 @@ Implemented now:
 - `examples/v1_0_architecture_challenge_measured_registry_demo.sh`
 - `experiments/run_v59c_one_command_measured_registry_demo.sh`
 - `experiments/test_v59c_one_command_measured_registry_demo.sh`
+- `examples/v1_0_architecture_challenge_pm_foundation_demo.sh`
+- `experiments/run_v59e_one_command_pm_foundation_demo.sh`
+- `experiments/test_v59e_one_command_pm_foundation_demo.sh`
 - `experiments/run_v60_architecture_challenge_release_contract.sh`
 - `experiments/test_v60_architecture_challenge_release_contract.sh`
 - `experiments/run_v60b_release_preflight_candidate_audit.sh`
@@ -604,6 +674,7 @@ Implemented now:
 - `results/v61bi_ubuntu1_hotset_reuse_admission_gate/gate_001/` ubuntu-1 sampled hotset reuse admission artifacts
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
+- `results/v54c_complete_source_grounded_generation_1000/generation_001/` 1000-row complete-source grounded generation artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
 - `results/v55b_local_scaling_law_main_120/main_001/` six-axis / 360-row local scaling-law main artifacts
 - `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
@@ -616,6 +687,7 @@ Implemented now:
 - `results/v59_one_command_challenge_demo_contract/contract_001/` contract artifacts
 - `results/v59b_one_command_candidate_demo/candidate_001/` one-command candidate/intake-chain replay artifacts
 - `results/v59c_one_command_measured_registry_demo/measured_registry_001/` one-command measured-registry replay artifacts
+- `results/v59e_one_command_pm_foundation_demo/pm_foundation_001/` one-command PM foundation replay artifacts
 - `results/v60_architecture_challenge_release_contract/contract_001/` contract artifacts
 - `results/v60b_release_preflight_candidate_audit/preflight_001/` release preflight candidate-audit artifacts
 
@@ -681,7 +753,7 @@ The v53g complete-source manifest layer binds the 10 locked repositories to recu
 
 The v53h complete-source content snapshot layer materializes the v53g manifest from pinned Git blobs. It records 11318 content files, 11318 content sha256 rows, 124845122 content bytes, 11312 query-eligible content rows, and 10 content-ready repositories. It marks `complete_source_content_snapshot_ready=1` while intentionally keeping `v53_ready=0`, complete-source span extraction, complete-source 1000+ query rows, A-H answer/citation/resource rows, review artifacts, and release claims blocked.
 
-The v53i complete-source query instantiation layer applies the v53g eight-family 1000-query budget to line-level spans from the v53h materialized content snapshot. It records 1000 complete-source query rows, 1000 matching source-span rows, 840 supported rows, 160 negative/abstain rows, eight families, and 10-repo coverage. It marks `complete_source_query_rows_ready=1` while intentionally keeping `v53_ready=0`, A-H answer/citation/resource rows, symmetric scorer/policy rows, review artifacts, and release claims blocked.
+The v53i complete-source query instantiation layer applies the v53g 1000-query budget to line-level spans from the v53h materialized content snapshot and makes the missing-API abstain control explicit. It records 1000 complete-source query rows, 1000 matching source-span rows, 840 supported rows, 160 negative/abstain rows, 30 missing-specific abstain rows, 140 doc-code conflict rows, nine families, and 10-repo coverage. It marks `complete_source_query_rows_ready=1` while intentionally keeping `v53_ready=0`, A-H answer/citation/resource rows, symmetric scorer/policy rows, review artifacts, and release claims blocked.
 
 The v53j complete-source A-H intake layer promotes the v53f answer/citation/resource evidence surface onto the v53i complete-source query set. It records 7000 A/B/C/D/E/G/H core answer/resource/citation targets, binds optional F to the v52y `deferred-with-reason-final` policy, and emits validation templates over the same 1000 complete-source query IDs. It intentionally keeps `v53_ready=0`, supplied core answer/citation/resource rows, symmetric scorer/policy rows, review artifacts, and release claims blocked.
 
@@ -695,6 +767,8 @@ The v53n complete-source System G RouteMemory+RouteHint measured layer supplies 
 
 The v53o complete-source System H RouteMemory+RouteHint+source-verified-scorer+domain-policy measured layer supplies H answer/citation/resource rows over the same frozen v53i 1000-query set and mirrors combined A+B+C+G+H rows into a partial `supplied_v53j/` directory. It records 1000 System H answer rows, 1000 citation rows, 1000 resource rows, 1000 retrieval rows, 1000 route-memory evidence rows, 1000 compact RouteHint rows, 1000 source-verified scorer rows, 1000 domain-policy rows, raw prompt context bytes 0, and 5000 combined A+B+C+G+H answer/citation/resource rows. It intentionally keeps `v53_ready=0`, D/E rows, symmetric scorer/policy rows, review artifacts, and release claims blocked.
 
+The v53ap complete-source A/B/G/H same-query measured layer closes the PM pre-baseline run over the frozen v53i 1000-query set without waiting for D/E. It records 4000 answer rows, 4000 citation rows, 4000 retrieval rows, 4000 abstain rows, 4000 wrong-answer guard rows, 4000 resource rows, 2000 G/H RouteHint rows, the shared source/query hashes, and `internal_v1_0_pre_baseline_run=1`. It intentionally keeps public comparison wording, required 30B/70B baselines, `v53_ready`, and release claims blocked.
+
 The v53p complete-source System D/E open-weight RAG measured layer supplies D and E answer/citation/resource rows over the same frozen v53i 1000-query set and mirrors combined A+B+C+D+E+G+H rows into a partial `supplied_v53j/` directory. It binds v52p/v52q D/E model identity evidence, records 1000 D answer rows, 1000 E answer rows, 2000 D/E citation rows, 2000 D/E resource rows, 160 D and 160 E abstain rows, and 7000 combined core answer/citation/resource rows. It intentionally keeps `v53_ready=0`, D/E quality comparison claims, symmetric scorer/policy rows, review artifacts, and release claims blocked.
 
 The v53q complete-source symmetric scorer/policy layer applies the same source-verification scorer and domain/abstain policy checks to all A/B/C/D/E/G/H rows over the frozen v53i 1000-query set. It records 7000 scorer rows, 7000 policy rows, 1000 query metric rows, 6000 answer-hash match rows, 1000 preserved C mismatch rows, 7000 source/resource-bound rows, and `symmetric_scorer_policy_rows_ready=1`. It intentionally keeps `v53_ready=0`, quality comparison claims, review artifacts, and release claims blocked.
@@ -703,11 +777,13 @@ The v53r complete-source review packet layer prepares the frozen v53i/v53q evide
 
 The v53s complete-source review return intake layer binds v53r to the expected external returned-review artifacts without fabricating review judgments. It records `expected_human_review_rows=7000`, `expected_adjudication_rows=1000`, `expected_reviewer_assignment_rows=21`, accepted human/adjudication rows 0 in the default path, `review_return_ready=0`, `quality_comparison_claim_ready=0`, and `v53_ready=0`, while keeping human-reviewed audit, comparison, and release claims blocked.
 
-The v53t complete-source audit readiness gate binds v52y/v53i/v53q/v53r/v53s into one readiness matrix. It records `machine_complete_source_surface_ready=1` for the complete-source query/scoring/review-packet surface, accepted human review rows 0/7000, accepted adjudication rows 0/1000, `review_return_ready=0`, `quality_comparison_claim_ready=0`, `v53_ready=0`, `v1_0_comparison_ready=0`, and `real_release_package_ready=0`.
+The v53t complete-source audit readiness gate binds v52y/v53i/v53ap/v53q/v53r/v53s into one readiness matrix. It records `machine_complete_source_surface_ready=1` for the complete-source query/scoring/review-packet surface, `pm_v53_freeze_ready=1` for the source-bound 1000-row plus A/B/G/H same-query PM gate, accepted human review rows 0/7000, accepted adjudication rows 0/1000, `review_return_ready=0`, `quality_comparison_claim_ready=0`, `v53_ready=0`, `v1_0_comparison_ready=0`, and `real_release_package_ready=0`.
 
 The v54 scaffold emits a 1000-row RouteHint generation target, six domain targets, no-attention/no-raw-context invariants, artifact contract rows, v48/v54 seed evidence copies, and claim boundary. It intentionally keeps `v54_generation_1000_ready=0` and `missing_generation_rows=976`.
 
 The v54b scale layer emits 1000 deterministic local RouteHint generation rows across six domains, with RouteMemory evidence rows, compact RouteHint rows, generator input rows, grounded generation rows, citation rows, abstain rows, unsupported-claim rows, resource rows, and hash manifests. It marks `v54_generation_1000_ready=1` with `attention_blocks=0`, `transformer_blocks=0`, `raw_prompt_context_appended_rows=0`, and `wrong_answer_rows=0`, while keeping release and 30B-150B equivalence claims blocked.
+
+The v54c complete-source grounded generation layer replays the v54 1000-row generation target over the frozen v53i complete-source query/source-span benchmark and the v53ap A/B/G/H pre-baseline surface. It emits `answer_rows.csv`, `citation_rows.csv`, `unsupported_claim_rows.csv`, `abstain_rows.csv`, `generator_resource_rows.csv`, `wrong_answer_guard_rows.csv`, compact RouteHint and generator-input rows, a sha256 manifest, and `sha256sums.txt`. It marks `v54_generation_1000_ready=1`, `attention_blocks=0`, `transformer_blocks=0`, `raw_prompt_context_appended_rows=0`, `wrong_answer_rows=0`, and `missing_specific_abstain_rows=30`, while keeping human-reviewed generation quality, public 30B-150B comparison wording, release readiness, and production claims blocked.
 
 The v55 scaffold emits a six-axis / 100-row scaling-law target, fit contract rows, no-oracle/no-extractor/RouteMemory-lineage invariants, v51 seed curve copies, and claim boundary. It intentionally keeps `v55_local_scaling_law_ready=0`, `repo_count_axis_ready=0`, and `missing_scaling_curve_rows=73`.
 
@@ -733,7 +809,9 @@ The v59b candidate layer emits a repository one-command candidate entrypoint, v5
 
 The v59c measured-registry layer emits a repository one-command measured-registry entrypoint, v52m measured-registry bundle, v53e-v58c candidate-chain copies, stage/gate rows, replay command, README_RESULT, hash manifest, and claim boundary. It marks only `v59c_one_command_measured_registry_demo_ready=1`; it hash-binds A/B/C/G/H over the shared 1000-query v53e source manifest into the v59 replay path while keeping `v59_ready=0`, D/E real evidence rows, optional F handling, complete-source audit, human domain review, human blind review, full challenge demo, and release claims blocked.
 
-The v60 scaffold emits release requirement rows, allowed claim rows, forbidden claim rows, release decision rows, v59 source bundle copies, hash manifest, and claim boundary. It intentionally keeps `v60_ready=0`, all ten release requirements blocked, `real_release_package_ready=0`, and all v1.0 comparison/release claims blocked until real measured rows and human/release review evidence exist.
+The v59e PM foundation layer emits a repository one-command PM entrypoint over the current v53 complete-source PM freeze, v53ap A/B/G/H same-query pre-baseline rows, v54c grounded-generation output rows, h10 real-label readiness ledger, and a v58 blind-eval blocker ledger. It marks only `v59e_one_command_pm_foundation_demo_ready=1`; it keeps `v59_ready=0`, h10 real-label promotion, real blind eval, full v59 public demo, v60 release, and public comparison wording blocked.
+
+The v60 release gate emits release requirement rows, allowed claim rows, forbidden claim rows, release decision rows, copied v59e PM foundation evidence, PM PR sidecar evidence, source summaries, hash manifest, and claim boundary. It intentionally keeps `v60_ready=0` and `real_release_package_ready=0` while distinguishing six current PM-foundation ready requirements from seven still-blocked release requirements: D/E 30B/70B baselines, h10 real external/human labels, v56 replay artifact, v58 real blind eval, full v59 public demo, human release review, and release package. Legacy v59 scaffold evidence is copied only when already present; rebuilding it requires explicit `V60_REBUILD_SOURCE_CHAIN=1`.
 
 The v60b preflight layer consumes the v59b candidate replay and emits release-preflight requirement rows, claim rows, stage release-audit rows, decision rows, copied v59b source evidence, hash manifest, and claim boundary. It marks only `v60b_release_preflight_candidate_audit_ready=1`; it keeps `v60_ready=0`, real 30B/70B rows, complete-source audit, human domain review, human blind review, human release review, release package, and all v1.0 release/comparison/superiority claims blocked.
 
@@ -855,17 +933,19 @@ The next implementation PR should extend v52-v60 from contract scaffold to measu
 6. In progress as v52s/v52u/v52v/v52t: NVMe weight-tier contract, mmap reader scaffold, ROCm HIP bind, and explicit D/E local deferral; next extend tiered matmul decode (v52w) or external bake, then v52p/q/r and v59c.
 7. Closed as v52y default policy: keep F explicitly final-deferred with reason unless supplied evidence validates, and scope `v52_ready=1` to the measured baseline registry rather than v1.0 comparison readiness.
 8. Closed as v53g/v53h/v53i/v53j/v53k/v53l/v53m/v53n/v53o/v53p/v53q/v53r/v53s/v53t seeds: expand v53c canary snapshots into a recursive complete-source tree manifest, complete-source content snapshot, 1000-row complete-source query/source-span instantiation, complete-source A/B/C/D/E/G/H intake surface, System A/B/C/G/H local measured rows, System D/E open-weight RAG supplied rows, symmetric scorer/policy rows, a complete-source review packet for the 10 locked repositories, a returned-review intake gate, and a complete-source audit readiness gate.
-9. Return actual human/source review artifacts, adjudication rows, reviewer identity/conflict rows, and quality-comparison evidence over the frozen v53i/v53r/v53s/v53t complete-source packet.
-10. Promote the v54b 1000-row RouteHint generation scale run into the v59 replay bundle and release-review packet.
-11. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
-12. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
-13. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
-14. Promote the v58c response intake into a real 500+ row blind evaluation by supplying valid D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
-15. Promote the v59c measured-registry replay into a full challenge demo by replacing remaining candidate/intake rows with real v52-v58 measured/reviewed rows and writing a reviewer-ready artifact bundle.
-16. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
-17. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
-18. Closed as v61a-v61j prototype: replace the broken v52w-style page-to-kernel numeric path with a deterministic SSD page-store -> direct I/O reader -> RouteHint prefetch/VRAM cache -> CPU page-dequant-matmul -> expert router -> predictive prefetch -> mixed quant planner -> dense stress blocker -> logical 128B MoE active-sparse contract -> one-command demo chain, including token-level SSD I/O metrics and no-RAM-resident full-model audit rows.
-19. Closed as v61k manifest seed: replace the logical-only model reference with a legally redistributable Mixtral 8x22B page manifest, while keeping checkpoint weight materialization and runtime claims blocked.
-20. Closed as v61l/v61m/v61n/v61o/v61p/v61q/v61r/v61s/v61t/v61u/v61v/v61w/v61x/v61y/v61z/v61aa/v61ab/v61ac/v61ad/v61ae/v61af/v61ag/v61ah/v61ai/v61aj/v61ak/v61al/v61am/v61an measurement seeds: add GPU/ROCm page-dequant-matmul timing, KV-cache residency/eviction policy, a source-bound QA workload seed, checkpoint index/header/sampled page-hash probes, local SSD checkpoint residency preflight, real safetensors-header-derived checkpoint page mapping, a full page-hash sweep plan, one-command source-bound QA replay, local checkpoint materialization identity verification, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node binding, materialization admission/download-resume planning, NVMe hotset runtime replay manifest binding, sampled hotset local materialization, sampled hotset direct-I/O read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 numeric tile probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, sampled real generation admission gate, guarded checkpoint warehouse operator bundle, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, and checkpoint full page-hash execution gating over the v61k/v53g evidence path, while keeping full checkpoint materialization blocked, host-RAM KV spill disabled, full-KV-in-VRAM blocked for long context, full page-hash coverage blocked, real Mixtral generation blocked, production latency blocked, and complete-source A-H QA blocked. Next v61 runtime steps are satisfying the v61p/v61w/v61ai/v61aj/v61ak/v61al/v61am/v61an SSD/target/activation/post-activation/full-hash budget and full local shard presence requirements outside the repository, completing full safetensors page-hash coverage, and real model generation over source-bound workloads without opening near-frontier or release claims until external review passes.
+9. Closed as h10 PM real-label readiness gate: bind h10-s to v53q/v53ap/v54c and emit a PM acceptance ledger for coherent wrong-key reduction, chunk exact increase, near-miss slash, missing-query abstain, source provenance binding, and external/human label evidence, while keeping `h10_real_label_promotion_ready=0`.
+10. Return actual human/source review artifacts, adjudication rows, reviewer identity/conflict rows, and quality-comparison evidence over the frozen v53i/v53r/v53s/v53t complete-source packet.
+11. Supply accepted external/human h10 label evidence and h10 source-verified eval rows before promoting h10 as a real-label scorer contribution.
+12. Promote the v54c complete-source 1000-row grounded generation run into the v59 replay bundle and release-review packet.
+13. Promote the v55b six-axis / 360-row scaling-law main run into the v59 replay bundle and release-review packet, keeping GPU and production latency claims blocked until reviewed.
+14. Promote the v56b 1500-row RULER/LongBench candidate-scale run into a symmetric benchmark packet by adding v52 LLM+RAG baseline rows and independent external verification where available.
+15. Promote the v57b candidate rows into human-reviewed gold query sets by returning expert decisions, adjudication rows, privacy review, policy diffs, blind review forms, and reproducibility manifests for the six domain packs.
+16. Promote the v58c response intake into a real 500+ row blind evaluation by supplying valid D/E required responses, optional F response or final deferral, G/H responses, sealed-system scoring, human blind review, and inter-rater/adjudication rows.
+17. Promote the v59e PM foundation replay into a full challenge demo by replacing blocker-ledger rows with real v52-v58 measured/reviewed rows, real blind responses, and a reviewer-ready artifact bundle.
+18. Promote the v60b preflight into a real release audit only after v52-v59 real measured/reviewed rows exist, then supply human/release review evidence and a real release artifact package.
+19. Keep comparison claims blocked until D/E are real, the citation verifier is symmetric, v53 reaches the repo/query scale target, v54 reaches the 1000-row generation target, v55 reaches the scaling-law main target, v56 reaches expanded benchmark scale, v57 has human-reviewed domain pack rows, v58 has real blind-eval rows, v59 replays those rows through one command, and v60 release requirements pass.
+20. Closed as v61a-v61j prototype: replace the broken v52w-style page-to-kernel numeric path with a deterministic SSD page-store -> direct I/O reader -> RouteHint prefetch/VRAM cache -> CPU page-dequant-matmul -> expert router -> predictive prefetch -> mixed quant planner -> dense stress blocker -> logical 128B MoE active-sparse contract -> one-command demo chain, including token-level SSD I/O metrics and no-RAM-resident full-model audit rows.
+21. Closed as v61k manifest seed: replace the logical-only model reference with a legally redistributable Mixtral 8x22B page manifest, while keeping checkpoint weight materialization and runtime claims blocked.
+22. Closed as v61l/v61m/v61n/v61o/v61p/v61q/v61r/v61s/v61t/v61u/v61v/v61w/v61x/v61y/v61z/v61aa/v61ab/v61ac/v61ad/v61ae/v61af/v61ag/v61ah/v61ai/v61aj/v61ak/v61al/v61am/v61an measurement seeds: add GPU/ROCm page-dequant-matmul timing, KV-cache residency/eviction policy, a source-bound QA workload seed, checkpoint index/header/sampled page-hash probes, local SSD checkpoint residency preflight, real safetensors-header-derived checkpoint page mapping, a full page-hash sweep plan, one-command source-bound QA replay, local checkpoint materialization identity verification, bounded remote checkpoint page-hash samples, remote-hashed page tensor/runtime-node binding, materialization admission/download-resume planning, NVMe hotset runtime replay manifest binding, sampled hotset local materialization, sampled hotset direct-I/O read replay, sampled BF16 tensor-slice interpretation, sampled BF16/q8/q4 numeric tile probes, sampled source-bound hotset token-budget replay, sampled KV+weight token-budget replay, sampled real generation admission gate, guarded checkpoint warehouse operator bundle, checkpoint warehouse execution preflight, checkpoint download backend fallback planning, checkpoint storage budget remediation planning, checkpoint storage profile admission matrixing, checkpoint warehouse target preflight, checkpoint warehouse activation gating, checkpoint post-activation verification gating, and checkpoint full page-hash execution gating over the v61k/v53g evidence path, while keeping full checkpoint materialization blocked, host-RAM KV spill disabled, full-KV-in-VRAM blocked for long context, full page-hash coverage blocked, real Mixtral generation blocked, production latency blocked, and complete-source A-H QA blocked. Next v61 runtime steps are satisfying the v61p/v61w/v61ai/v61aj/v61ak/v61al/v61am/v61an SSD/target/activation/post-activation/full-hash budget and full local shard presence requirements outside the repository, completing full safetensors page-hash coverage, and real model generation over source-bound workloads without opening near-frontier or release claims until external review passes.
 
 This completes the v52-v60 contract scaffold chain without weakening the claim boundary. It does not complete the v1.0 Architecture Challenge itself.

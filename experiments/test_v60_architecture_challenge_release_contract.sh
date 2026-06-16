@@ -41,20 +41,27 @@ summary = summary_rows[0]
 expected = {
     "v60_release_contract_ready": "1",
     "v60_ready": "0",
-    "release_requirement_rows": "10",
-    "release_requirement_ready_rows": "0",
-    "release_requirement_blocked_rows": "10",
-    "allowed_claim_rows": "2",
-    "forbidden_claim_rows": "8",
-    "v59_one_command_challenge_demo_contract_ready": "1",
+    "release_requirement_rows": "13",
+    "release_requirement_ready_rows": "6",
+    "release_requirement_blocked_rows": "7",
+    "allowed_claim_rows": "3",
+    "forbidden_claim_rows": "11",
+    "v59e_one_command_pm_foundation_demo_ready": "1",
+    "pm_pr_claim_slice_bundle_ready": "1",
+    "pm_scope_drift_allowed": "0",
+    "pm_external_return_template_rows": "19",
     "v59_ready": "0",
+    "required_30b_70b_baselines_ready": "0",
     "real_30b_70b_rows_ready": "0",
-    "public_repo_query_scale_ready": "0",
-    "routehint_generation_main_ready": "0",
+    "public_repo_query_scale_ready": "1",
+    "local_abgh_prebaseline_ready": "1",
+    "h10_real_label_promotion_ready": "0",
+    "routehint_generation_main_ready": "1",
     "scaling_law_main_ready": "0",
     "expanded_benchmark_ready": "0",
     "domain_expert_pack_ready": "0",
     "blind_eval_ready": "0",
+    "one_command_pm_foundation_ready": "1",
     "one_command_real_replay_ready": "0",
     "human_release_review_ready": "0",
     "real_release_package_ready": "0",
@@ -62,15 +69,31 @@ expected = {
 for field, value in expected.items():
     if summary.get(field) != value:
         raise SystemExit(f"v60 {field}: expected {value}, got {summary.get(field)}")
+if summary.get("v59_one_command_challenge_demo_contract_ready") not in {"0", "1"}:
+    raise SystemExit("v60 legacy v59 contract readiness should be explicit")
+if summary.get("legacy_v59_contract_source_ready") not in {"0", "1"}:
+    raise SystemExit("v60 legacy v59 source readiness should be explicit")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
-for gate in ["v60-release-contract", "v59-contract-input", "claim-boundary"]:
+for gate in [
+    "v60-release-contract",
+    "v59e-pm-foundation-input",
+    "pm-pr-claim-slice-input",
+    "claim-boundary",
+    "v53-foundation-freeze",
+    "local-abgh-prebaseline",
+    "v54-grounded-generation-1000",
+]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v60 gate should pass: {gate}")
+if decisions.get("v59-contract-input") not in {"pass", "blocked"}:
+    raise SystemExit("v60 legacy v59 input gate should be explicit")
 for gate in [
     "real-30b-70b-baselines",
-    "full-scale-code-doc-qa",
-    "generation-scaling-benchmark-domain-blind-main-runs",
+    "h10-real-label-promotion",
+    "v56-replay-artifact",
+    "v58-real-blind-eval",
+    "full-v59-public-demo",
     "human-release-review",
     "real-release-package",
 ]:
@@ -85,15 +108,27 @@ required_files = [
     "V60_ARCHITECTURE_CHALLENGE_RELEASE_BOUNDARY.md",
     "v60_architecture_challenge_release_manifest.json",
     "sha256_manifest.csv",
-    "source_v59/challenge_stage_contract_rows.csv",
-    "source_v59/one_command_demo_rows.csv",
-    "source_v59/one_command_demo_gate_rows.csv",
-    "source_v59/README_RESULT.md",
-    "source_v59/V59_ONE_COMMAND_CHALLENGE_DEMO_BOUNDARY.md",
-    "source_v59/v59_one_command_challenge_demo_manifest.json",
-    "source_v59/sha256_manifest.csv",
-    "source_v59/v59_one_command_challenge_demo_contract_summary.csv",
-    "source_v59/v59_one_command_challenge_demo_contract_decision.csv",
+    "legacy_v59_contract_source_rows.csv",
+    "source_v59e/pm_foundation_stage_replay_rows.csv",
+    "source_v59e/pm_foundation_one_command_rows.csv",
+    "source_v59e/challenge_bundle_file_rows.csv",
+    "source_v59e/pm_foundation_demo_gate_rows.csv",
+    "source_v59e/README_RESULT.md",
+    "source_v59e/V59E_ONE_COMMAND_PM_FOUNDATION_BOUNDARY.md",
+    "source_v59e/v59e_one_command_pm_foundation_demo_manifest.json",
+    "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_slice_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
+    "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv",
+    "source_pm_pr/v1_0_pm_pr_claim_slice_gate_summary.csv",
+    "source_summaries/v52_llm_rag_baseline_war_summary.csv",
+    "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
+    "source_summaries/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+    "source_summaries/v54c_complete_source_grounded_generation_1000_summary.csv",
+    "source_summaries/v10_h10_real_label_promotion_readiness_gate_summary.csv",
 ]
 for rel in required_files:
     path = run_dir / rel
@@ -101,13 +136,38 @@ for rel in required_files:
         raise SystemExit(f"missing v60 artifact: {rel}")
 
 requirements = read_csv(run_dir / "release_requirement_rows.csv")
-if len(requirements) != 10:
-    raise SystemExit("v60 should list ten release requirements")
-if any(row["ready"] != "0" or row["status"] != "blocked" for row in requirements):
-    raise SystemExit("v60 release requirements should all remain blocked")
+if len(requirements) != 13:
+    raise SystemExit("v60 should list thirteen release requirements")
+ready_reqs = {row["requirement"] for row in requirements if row["ready"] == "1" and row["status"] == "pass"}
+expected_ready = {
+    "v52_baseline_registry_contract",
+    "v53_public_repo_source_bound_1000_corpus",
+    "v53_abgh_same_query_internal_prebaseline",
+    "v54_grounded_generation_1000",
+    "v59_pm_foundation_one_command_bundle",
+    "pm_pr_claim_slice_gate_and_execution_lock",
+}
+if ready_reqs != expected_ready:
+    raise SystemExit(f"v60 ready requirements mismatch: {ready_reqs}")
+blocked_reqs = {row["requirement"] for row in requirements if row["ready"] == "0" and row["status"] == "blocked"}
+for requirement in [
+    "required_30b_70b_symmetric_baselines",
+    "h10_real_label_source_verified_scorer",
+    "v56_expanded_ruler_longbench_replay_artifact",
+    "v58_real_blind_eval",
+    "full_v59_public_demo_real_replay",
+    "human_release_review",
+    "release_artifact_package",
+]:
+    if requirement not in blocked_reqs:
+        raise SystemExit(f"v60 requirement should remain blocked: {requirement}")
+for row in requirements:
+    evidence_path = run_dir / row["evidence_path"]
+    if not evidence_path.is_file() or evidence_path.stat().st_size == 0:
+        raise SystemExit(f"v60 requirement evidence path is not replayable: {row['requirement']} -> {row['evidence_path']}")
 
 allowed = read_csv(run_dir / "allowed_claim_rows.csv")
-for claim in ["architecture-challenge-contract-scaffold", "local-architecture-preview"]:
+for claim in ["architecture-challenge-contract-scaffold", "pm-foundation-replay-bundle", "local-architecture-preview"]:
     if claim not in {row["claim_id"] for row in allowed}:
         raise SystemExit(f"v60 allowed claim missing {claim}")
 
@@ -115,6 +175,9 @@ forbidden = {row["claim_id"] for row in read_csv(run_dir / "forbidden_claim_rows
 for claim in [
     "v1_0_release_ready",
     "beats_30b_150b_llm_rag",
+    "public_comparison_win",
+    "h10_scientific_contribution_claim",
+    "v59_public_demo_complete",
     "transformer_replacement",
     "frontier_local_llm_equivalence",
     "long_context_solved",
@@ -128,8 +191,10 @@ for claim in [
 manifest = json.loads((run_dir / "v60_architecture_challenge_release_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v60_release_contract_ready") != 1 or manifest.get("v60_ready") != 0:
     raise SystemExit("v60 manifest readiness boundary mismatch")
-if manifest.get("real_release_package_ready") != 0 or manifest.get("release_requirement_blocked_rows") != 10:
+if manifest.get("real_release_package_ready") != 0 or manifest.get("release_requirement_blocked_rows") != 7:
     raise SystemExit("v60 manifest should keep release blocked")
+if manifest.get("release_requirement_ready_rows") != 6:
+    raise SystemExit("v60 manifest should record six PM-foundation ready requirements")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -142,7 +207,9 @@ boundary = (run_dir / "V60_ARCHITECTURE_CHALLENGE_RELEASE_BOUNDARY.md").read_tex
 for snippet in [
     "not the completed v1.0 Architecture Challenge Release",
     "Allowed wording",
-    "real 30B/70B/100B+ LLM+RAG comparison rows",
+    "v53 10-repo / 1000 source-span-bound query PM freeze",
+    "real 30B/70B LLM+RAG comparison rows",
+    "h10 real external/human label promotion evidence",
     "Do not publish v1.0 release",
 ]:
     if snippet not in boundary:

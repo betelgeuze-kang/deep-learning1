@@ -31,9 +31,10 @@ TARGET_FAMILY_ROWS = {
     "docs_truthfulness": 160,
     "examples_tests_alignment": 100,
     "unsupported_claim_abstain": 100,
-    "ambiguous_source_abstain": 60,
+    "ambiguous_source_abstain": 30,
+    "missing_api_abstain": 30,
 }
-NEGATIVE_FAMILIES = {"unsupported_claim_abstain", "ambiguous_source_abstain"}
+NEGATIVE_FAMILIES = {"unsupported_claim_abstain", "ambiguous_source_abstain", "missing_api_abstain"}
 
 
 def sha256(path):
@@ -72,15 +73,19 @@ expected = {
     "complete_source_span_rows": "1000",
     "supported_source_span_bound_rows": "840",
     "negative_abstain_rows": "160",
+    "unsupported_control_rows": "100",
+    "ambiguous_control_rows": "30",
+    "missing_specific_abstain_rows": "30",
+    "doc_code_conflict_rows": "140",
     "repo_count": "10",
-    "family_count": "8",
+    "family_count": "9",
     "target_query_rows_min": "1000",
     "missing_query_rows": "0",
-    "query_eligible_content_rows": "11312",
+    "query_eligible_content_rows": "11260",
     "source_file_rows": "3160",
-    "doc_file_rows": "4026",
+    "doc_file_rows": "3973",
     "config_file_rows": "342",
-    "test_file_rows": "3790",
+    "test_file_rows": "3791",
     "ah_answer_citation_resource_rows_ready": "0",
     "review_artifacts_ready": "0",
     "real_release_package_ready": "0",
@@ -114,6 +119,7 @@ required_files = [
     "complete_source_query_rows.csv",
     "complete_source_span_rows.csv",
     "complete_source_query_family_rows.csv",
+    "complete_source_control_family_rows.csv",
     "complete_source_query_repo_rows.csv",
     "complete_source_query_gap_rows.csv",
     "V53I_COMPLETE_SOURCE_QUERY_INSTANTIATION_BOUNDARY.md",
@@ -156,8 +162,8 @@ if any(not re.fullmatch(r"[0-9a-f]{40}", row["head_sha"]) for row in queries):
     raise SystemExit("v53i query rows should bind to pinned HEAD SHA")
 
 family_rows = read_csv(run_dir / "complete_source_query_family_rows.csv")
-if len(family_rows) != 8:
-    raise SystemExit("v53i should write eight family rows")
+if len(family_rows) != 9:
+    raise SystemExit("v53i should write nine family rows")
 for row in family_rows:
     family = row["audit_type"]
     if int(row["target_query_rows"]) != TARGET_FAMILY_ROWS[family]:
@@ -179,6 +185,24 @@ if any(row["expected_behavior"] != "abstain" or not row["expected_answer"].start
     raise SystemExit("v53i negative rows should require abstention")
 if any(row["expected_behavior"] != "answer-with-citation" for row in supported):
     raise SystemExit("v53i supported rows should expect cited answers")
+missing_specific = [row for row in negative if row["audit_type"] == "missing_api_abstain"]
+if len(missing_specific) != 30:
+    raise SystemExit("v53i should include 30 missing-specific abstain rows")
+if any("v53i_missing_api_" not in row["question"] for row in missing_specific):
+    raise SystemExit("v53i missing-specific rows should name the missing API control")
+
+control_rows = {row["control_family"]: row for row in read_csv(run_dir / "complete_source_control_family_rows.csv")}
+expected_controls = {
+    "unsupported_claim_abstain": ("100", "present"),
+    "ambiguous_source_abstain": ("30", "present"),
+    "missing_api_abstain": ("30", "present"),
+    "doc_code_conflict": ("140", "present"),
+}
+if set(control_rows) != set(expected_controls):
+    raise SystemExit("v53i control family rows mismatch")
+for control_family, (rows, status) in expected_controls.items():
+    if control_rows[control_family]["query_rows"] != rows or control_rows[control_family]["status"] != status:
+        raise SystemExit(f"v53i control family mismatch: {control_family}")
 
 repo_rows = read_csv(run_dir / "complete_source_query_repo_rows.csv")
 if len(repo_rows) != 10 or any(int(row["complete_source_query_rows"]) <= 0 for row in repo_rows):
@@ -242,6 +266,8 @@ if manifest.get("v53i_complete_source_query_instantiation_ready") != 1 or manife
     raise SystemExit("v53i manifest readiness boundary mismatch")
 if manifest.get("complete_source_query_rows") != 1000 or manifest.get("negative_abstain_rows") != 160:
     raise SystemExit("v53i manifest count mismatch")
+if manifest.get("missing_specific_abstain_rows") != 30 or manifest.get("unsupported_control_rows") != 100:
+    raise SystemExit("v53i manifest control family mismatch")
 if manifest.get("target_family_rows") != TARGET_FAMILY_ROWS:
     raise SystemExit("v53i manifest family target mismatch")
 if manifest.get("ah_answer_citation_resource_rows_ready") != 0:
@@ -259,6 +285,7 @@ for snippet in [
     "1000-query budget",
     "complete_source_query_rows=1000",
     "negative_abstain_rows=160",
+    "missing_specific_abstain_rows=30",
     "ah_answer_citation_resource_rows_ready=0",
     "Do not publish v53 completion",
 ]:

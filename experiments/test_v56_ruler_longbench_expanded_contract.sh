@@ -6,6 +6,57 @@ RESULTS_DIR="$ROOT_DIR/results"
 RUN_DIR="$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001"
 SUMMARY_CSV="$RESULTS_DIR/v56_ruler_longbench_expanded_contract_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v56_ruler_longbench_expanded_contract_decision.csv"
+V49_DIR="$RESULTS_DIR/v49_ruler_niah_200_500_scale/scale_001"
+V45_DIR="$RESULTS_DIR/v45_longbench_v2_small_slice/slice_001"
+
+required_seed_files=(
+  "$RESULTS_DIR/v49_ruler_niah_200_500_scale_summary.csv"
+  "$V49_DIR/V49_RULER_NIAH_200_500_BOUNDARY.md"
+  "$V49_DIR/scale_rows.csv"
+  "$V49_DIR/v49_ruler_niah_200_500_scale_manifest.json"
+  "$V49_DIR/sha256_manifest.csv"
+  "$V49_DIR/evidence/expanded_result_rows_200.csv"
+  "$V49_DIR/evidence/expanded_result_rows_500.csv"
+  "$V49_DIR/evidence/candidate_result_rows_200.csv"
+  "$V49_DIR/evidence/candidate_result_rows_500.csv"
+  "$RESULTS_DIR/v45_longbench_v2_small_slice_summary.csv"
+  "$V45_DIR/V45_LONGBENCH_V2_SMALL_SLICE_BOUNDARY.md"
+  "$V45_DIR/v45_longbench_v2_small_slice_manifest.json"
+  "$V45_DIR/sha256_manifest.csv"
+  "$V45_DIR/official_return/raw_predictions.jsonl"
+  "$V45_DIR/official_return/prediction_lineage.jsonl"
+  "$V45_DIR/official_return/metrics.json"
+  "$V45_DIR/official_return/provenance_manifest.json"
+  "$V45_DIR/official_return/official_source_snapshot.json"
+  "$V45_DIR/official_return/official_evaluator_status.json"
+  "$V45_DIR/official_return/candidate_result_rows.csv"
+  "$V45_DIR/official_source_snapshot/download_rows.csv"
+)
+
+missing_seed_files=()
+for path in "${required_seed_files[@]}"; do
+  if [ ! -s "$path" ]; then
+    missing_seed_files+=("$path")
+  fi
+done
+
+if [ "${#missing_seed_files[@]}" -gt 0 ] && [ "${V56_REQUIRE_READY_TEST:-0}" != "1" ]; then
+  set +e
+  output="$("$ROOT_DIR/experiments/run_v56_ruler_longbench_expanded_contract.sh" 2>&1 >/dev/null)"
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
+    echo "v56 should fail closed when seed artifacts are missing" >&2
+    exit 1
+  fi
+  if ! grep -q "refusing implicit v49/v45 regeneration" <<<"$output"; then
+    echo "v56 missing-seed guard did not explain the refusal" >&2
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
+  echo "v56 RULER/LongBench missing-seed guard smoke passed"
+  exit 0
+fi
 
 "$ROOT_DIR/experiments/run_v56_ruler_longbench_expanded_contract.sh" >/dev/null
 

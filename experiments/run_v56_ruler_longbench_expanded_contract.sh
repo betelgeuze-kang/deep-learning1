@@ -8,12 +8,57 @@ RUN_ID="${V56_CONTRACT_RUN_ID:-contract_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+V49_DIR="$RESULTS_DIR/v49_ruler_niah_200_500_scale/scale_001"
+V45_DIR="$RESULTS_DIR/v45_longbench_v2_small_slice/slice_001"
+V49_SUMMARY="$RESULTS_DIR/v49_ruler_niah_200_500_scale_summary.csv"
+V45_SUMMARY="$RESULTS_DIR/v45_longbench_v2_small_slice_summary.csv"
+
+required_seed_files=(
+  "$V49_SUMMARY"
+  "$V49_DIR/V49_RULER_NIAH_200_500_BOUNDARY.md"
+  "$V49_DIR/scale_rows.csv"
+  "$V49_DIR/v49_ruler_niah_200_500_scale_manifest.json"
+  "$V49_DIR/sha256_manifest.csv"
+  "$V49_DIR/evidence/expanded_result_rows_200.csv"
+  "$V49_DIR/evidence/expanded_result_rows_500.csv"
+  "$V49_DIR/evidence/candidate_result_rows_200.csv"
+  "$V49_DIR/evidence/candidate_result_rows_500.csv"
+  "$V45_SUMMARY"
+  "$V45_DIR/V45_LONGBENCH_V2_SMALL_SLICE_BOUNDARY.md"
+  "$V45_DIR/v45_longbench_v2_small_slice_manifest.json"
+  "$V45_DIR/sha256_manifest.csv"
+  "$V45_DIR/official_return/raw_predictions.jsonl"
+  "$V45_DIR/official_return/prediction_lineage.jsonl"
+  "$V45_DIR/official_return/metrics.json"
+  "$V45_DIR/official_return/provenance_manifest.json"
+  "$V45_DIR/official_return/official_source_snapshot.json"
+  "$V45_DIR/official_return/official_evaluator_status.json"
+  "$V45_DIR/official_return/candidate_result_rows.csv"
+  "$V45_DIR/official_source_snapshot/download_rows.csv"
+)
+
+missing_seed_files=()
+for path in "${required_seed_files[@]}"; do
+  if [ ! -s "$path" ]; then
+    missing_seed_files+=("$path")
+  fi
+done
+
+if [ "${#missing_seed_files[@]}" -gt 0 ] || [ "${V56_FORCE_SEED_REBUILD:-0}" = "1" ]; then
+  if [ "${V56_ALLOW_SEED_REBUILD:-0}" != "1" ]; then
+    {
+      echo "v56 seed artifacts are missing or rebuild was requested; refusing implicit v49/v45 regeneration."
+      echo "Set V56_ALLOW_SEED_REBUILD=1 to opt into the v49/v45 seed regeneration chain."
+      printf 'missing_seed_artifact=%s\n' "${missing_seed_files[@]}"
+    } >&2
+    exit 2
+  fi
+  "$ROOT_DIR/experiments/run_v49_ruler_niah_200_500_scale.sh" >/dev/null
+  "$ROOT_DIR/experiments/run_v45_longbench_v2_small_slice.sh" >/dev/null
+fi
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
-
-"$ROOT_DIR/experiments/run_v49_ruler_niah_200_500_scale.sh" >/dev/null
-"$ROOT_DIR/experiments/run_v45_longbench_v2_small_slice.sh" >/dev/null
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv

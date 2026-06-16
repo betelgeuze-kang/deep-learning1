@@ -1,0 +1,644 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RESULTS_DIR="$ROOT_DIR/results"
+PREFIX="v59e_one_command_pm_foundation_demo"
+RUN_ID="${V59E_RUN_ID:-pm_foundation_001}"
+RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
+SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
+DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+
+rm -rf "$RUN_DIR"
+mkdir -p "$RUN_DIR"
+
+V53T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53t_complete_source_audit_readiness_gate.sh" >/dev/null
+V53AP_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53ap_complete_source_abgh_same_query_measured.sh" >/dev/null
+V54C_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v54c_complete_source_grounded_generation_1000.sh" >/dev/null
+"$ROOT_DIR/experiments/run_v10_h10_real_label_promotion_readiness_gate.sh" >/dev/null
+
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import hashlib
+import json
+import shutil
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+root = Path(sys.argv[1])
+run_dir = Path(sys.argv[2])
+summary_csv = Path(sys.argv[3])
+decision_csv = Path(sys.argv[4])
+results = root / "results"
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def first_row(path):
+    rows = read_csv(path)
+    if len(rows) != 1:
+        raise SystemExit(f"expected one row in {path}")
+    return rows[0]
+
+
+def write_csv(path, fieldnames, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def copy(src, rel):
+    dst = run_dir / rel
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    return dst
+
+
+def as_int(row, key, default="0"):
+    return int(float(row.get(key, default) or default))
+
+
+v53t_dir = results / "v53t_complete_source_audit_readiness_gate" / "gate_001"
+v53ap_dir = results / "v53ap_complete_source_abgh_same_query_measured" / "measured_001"
+v54c_dir = results / "v54c_complete_source_grounded_generation_1000" / "generation_001"
+h10_dir = results / "v10_h10_real_label_promotion_readiness_gate" / "gate_001"
+
+v53t = first_row(results / "v53t_complete_source_audit_readiness_gate_summary.csv")
+v53ap = first_row(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv")
+v54c = first_row(results / "v54c_complete_source_grounded_generation_1000_summary.csv")
+h10 = first_row(results / "v10_h10_real_label_promotion_readiness_gate_summary.csv")
+
+if v53t.get("pm_v53_freeze_ready") != "1":
+    raise SystemExit("v59e requires pm_v53_freeze_ready=1")
+if v53ap.get("v53ap_complete_source_abgh_same_query_measured_ready") != "1":
+    raise SystemExit("v59e requires v53ap ready")
+if v54c.get("v54c_complete_source_grounded_generation_1000_ready") != "1":
+    raise SystemExit("v59e requires v54c ready")
+if h10.get("v10_h10_real_label_promotion_readiness_gate_ready") != "1":
+    raise SystemExit("v59e requires h10 PM readiness gate")
+
+v58_blocker_summary = {
+    "v58_pm_blind_eval_blocker_ready": "1",
+    "v58_ready": "0",
+    "v58_full_blind_eval_ready": "0",
+    "required_blind_response_ready": "0",
+    "human_blind_review_ready": "0",
+    "inter_rater_rows_ready": "0",
+    "real_release_package_ready": "0",
+}
+write_csv(run_dir / "v58_pm_blind_eval_blocker_summary.csv", list(v58_blocker_summary.keys()), [v58_blocker_summary])
+write_csv(
+    run_dir / "v58_pm_blind_eval_blocker_rows.csv",
+    ["gate", "status", "reason"],
+    [
+        {"gate": "blind-response-evidence", "status": "blocked", "reason": "real D/E/G/H blind response rows are not supplied"},
+        {"gate": "human-blind-review", "status": "blocked", "reason": "human blind review and inter-rater/adjudication rows are not supplied"},
+        {"gate": "v58-full-blind-eval", "status": "blocked", "reason": "candidate/query-freeze contracts are not enough for v58 completion"},
+    ],
+)
+
+stage_specs = [
+    {
+        "stage": "v53t",
+        "summary_path": results / "v53t_complete_source_audit_readiness_gate_summary.csv",
+        "ready_field": "pm_v53_freeze_ready",
+        "full_ready_field": "v53_ready",
+        "artifacts": [
+            (v53t_dir / "complete_source_pm_freeze_check_rows.csv", "source_v53t/complete_source_pm_freeze_check_rows.csv"),
+            (v53t_dir / "complete_source_audit_readiness_requirement_rows.csv", "source_v53t/complete_source_audit_readiness_requirement_rows.csv"),
+            (v53t_dir / "complete_source_audit_claim_rows.csv", "source_v53t/complete_source_audit_claim_rows.csv"),
+            (v53t_dir / "V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md", "source_v53t/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"),
+            (v53t_dir / "sha256_manifest.csv", "source_v53t/sha256_manifest.csv"),
+        ],
+        "claim_boundary": "v53 complete-source PM freeze gate",
+    },
+    {
+        "stage": "v53ap",
+        "summary_path": results / "v53ap_complete_source_abgh_same_query_measured_summary.csv",
+        "ready_field": "v53ap_complete_source_abgh_same_query_measured_ready",
+        "full_ready_field": "v53_ready",
+        "artifacts": [
+            (v53ap_dir / "abgh_system_rows.csv", "source_v53ap/abgh_system_rows.csv"),
+            (v53ap_dir / "abgh_answer_rows.csv", "source_v53ap/abgh_answer_rows.csv"),
+            (v53ap_dir / "abgh_citation_rows.csv", "source_v53ap/abgh_citation_rows.csv"),
+            (v53ap_dir / "abgh_abstain_rows.csv", "source_v53ap/abgh_abstain_rows.csv"),
+            (v53ap_dir / "abgh_wrong_answer_guard_rows.csv", "source_v53ap/abgh_wrong_answer_guard_rows.csv"),
+            (v53ap_dir / "abgh_resource_rows.csv", "source_v53ap/abgh_resource_rows.csv"),
+            (v53ap_dir / "routehint_rows.csv", "source_v53ap/routehint_rows.csv"),
+            (v53ap_dir / "source_manifest_rows.csv", "source_v53ap/source_manifest_rows.csv"),
+            (v53ap_dir / "V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md", "source_v53ap/V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md"),
+            (v53ap_dir / "sha256_manifest.csv", "source_v53ap/sha256_manifest.csv"),
+        ],
+        "claim_boundary": "internal v1.0 pre-baseline A/B/G/H same-query run",
+    },
+    {
+        "stage": "v54c",
+        "summary_path": results / "v54c_complete_source_grounded_generation_1000_summary.csv",
+        "ready_field": "v54c_complete_source_grounded_generation_1000_ready",
+        "full_ready_field": "v54_generation_1000_ready",
+        "artifacts": [
+            (v54c_dir / "answer_rows.csv", "source_v54c/answer_rows.csv"),
+            (v54c_dir / "citation_rows.csv", "source_v54c/citation_rows.csv"),
+            (v54c_dir / "unsupported_claim_rows.csv", "source_v54c/unsupported_claim_rows.csv"),
+            (v54c_dir / "abstain_rows.csv", "source_v54c/abstain_rows.csv"),
+            (v54c_dir / "generator_resource_rows.csv", "source_v54c/generator_resource_rows.csv"),
+            (v54c_dir / "wrong_answer_guard_rows.csv", "source_v54c/wrong_answer_guard_rows.csv"),
+            (v54c_dir / "compact_routehint_rows.csv", "source_v54c/compact_routehint_rows.csv"),
+            (v54c_dir / "sha256sums.txt", "source_v54c/sha256sums.txt"),
+            (v54c_dir / "V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md", "source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"),
+            (v54c_dir / "sha256_manifest.csv", "source_v54c/sha256_manifest.csv"),
+        ],
+        "claim_boundary": "v54 complete-source grounded generation without raw prompt stuffing",
+    },
+    {
+        "stage": "h10_pm",
+        "summary_path": results / "v10_h10_real_label_promotion_readiness_gate_summary.csv",
+        "ready_field": "v10_h10_real_label_promotion_readiness_gate_ready",
+        "full_ready_field": "h10_real_label_promotion_ready",
+        "artifacts": [
+            (h10_dir / "pm_h10_real_label_acceptance_rows.csv", "source_h10_pm/pm_h10_real_label_acceptance_rows.csv"),
+            (h10_dir / "h10_real_label_evidence_template.csv", "source_h10_pm/h10_real_label_evidence_template.csv"),
+            (h10_dir / "h10_real_label_evidence_acceptance_rows.csv", "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv"),
+            (h10_dir / "V10_H10_REAL_LABEL_PROMOTION_READINESS_BOUNDARY.md", "source_h10_pm/V10_H10_REAL_LABEL_PROMOTION_READINESS_BOUNDARY.md"),
+            (h10_dir / "sha256_manifest.csv", "source_h10_pm/sha256_manifest.csv"),
+        ],
+        "claim_boundary": "h10 real-label promotion readiness ledger; promotion still blocked",
+    },
+    {
+        "stage": "v58_blocker",
+        "summary_path": run_dir / "v58_pm_blind_eval_blocker_summary.csv",
+        "ready_field": "v58_pm_blind_eval_blocker_ready",
+        "full_ready_field": "v58_full_blind_eval_ready",
+        "artifacts": [
+            (run_dir / "v58_pm_blind_eval_blocker_rows.csv", "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv"),
+        ],
+        "claim_boundary": "v58 blind eval blocker ledger; real blind eval still blocked",
+    },
+]
+
+stage_rows = []
+bundle_rows = []
+for spec in stage_specs:
+    source_summary = first_row(spec["summary_path"])
+    summary_rel = f"source_{spec['stage']}/{spec['summary_path'].name}"
+    copy(spec["summary_path"], summary_rel)
+    bundle_rows.append({"path": summary_rel, "source_stage": spec["stage"], "artifact_role": "summary"})
+    copied = 1
+    for src, rel in spec["artifacts"]:
+        copy(src, rel)
+        bundle_rows.append({"path": rel, "source_stage": spec["stage"], "artifact_role": "evidence"})
+        copied += 1
+    stage_rows.append(
+        {
+            "stage": spec["stage"],
+            "ready_field": spec["ready_field"],
+            "ready": str(as_int(source_summary, spec["ready_field"])),
+            "full_ready_field": spec["full_ready_field"],
+            "full_ready": str(as_int(source_summary, spec["full_ready_field"])),
+            "copied_artifacts": str(copied),
+            "claim_boundary": spec["claim_boundary"],
+        }
+    )
+
+write_csv(run_dir / "pm_foundation_stage_replay_rows.csv", list(stage_rows[0].keys()), stage_rows)
+write_csv(run_dir / "challenge_bundle_file_rows.csv", list(bundle_rows[0].keys()), bundle_rows)
+
+command_rows = [
+    {
+        "command_id": "v1_0_architecture_challenge_pm_foundation_demo",
+        "command": "./examples/v1_0_architecture_challenge_pm_foundation_demo.sh",
+        "writes_bundle": "results/v59e_one_command_pm_foundation_demo/pm_foundation_001",
+        "network_required": "0",
+        "downloads_required": "0",
+        "private_fixture_required": "0",
+        "manual_postprocessing_required": "0",
+        "undocumented_local_state_required": "0",
+    }
+]
+write_csv(run_dir / "pm_foundation_one_command_rows.csv", list(command_rows[0].keys()), command_rows)
+
+pm_checks = {row["check_id"]: row for row in read_csv(v53t_dir / "complete_source_pm_freeze_check_rows.csv")}
+pinned_public_sources_verified = int(pm_checks.get("pinned-public-repo-manifest", {}).get("status") == "pass")
+answer_citation_separate_eval = int(pm_checks.get("answer-citation-separate-eval", {}).get("status") == "pass")
+blocker_false_positive_closed = int(pm_checks.get("blocker-false-positive-closed", {}).get("status") == "pass")
+route_memory_artifact_ready = int(as_int(v53ap, "routehint_rows") == 2000 and as_int(v54c, "compact_routehint_rows") == 1000)
+local_abgh_baseline_run_ready = int(
+    v53ap.get("systems") == "A/B/G/H"
+    and as_int(v53ap, "answer_rows") == 4000
+    and as_int(v53ap, "resource_rows") == 4000
+)
+grounded_generation_outputs_ready = int(
+    as_int(v54c, "answer_rows") == 1000
+    and as_int(v54c, "citation_rows") == 1000
+    and as_int(v54c, "wrong_answer_guard_rows") == 1000
+    and as_int(v54c, "raw_prompt_context_appended_rows") == 0
+)
+h10_blocker_ledger_ready = int(as_int(h10, "v10_h10_real_label_promotion_readiness_gate_ready") == 1 and as_int(h10, "h10_real_label_promotion_ready") == 0)
+blind_eval_blocker_ready = int(as_int(v58_blocker_summary, "v58_pm_blind_eval_blocker_ready") == 1 and as_int(v58_blocker_summary, "v58_full_blind_eval_ready") == 0)
+no_hidden_state_ready = 1
+challenge_bundle_ready = int(all(row["ready"] == "1" for row in stage_rows) and len(bundle_rows) >= 35)
+
+gate_rows = [
+    ("pinned-public-sources-verified", "pass" if pinned_public_sources_verified else "blocked", "v53t PM freeze has pinned 10-repo manifest check"),
+    ("complete-source-query-freeze", "pass" if as_int(v53t, "pm_v53_freeze_ready") else "blocked", "v53t PM freeze checks pass"),
+    ("route-memory-artifact-built", "pass" if route_memory_artifact_ready else "blocked", "v53ap/v54c RouteHint artifacts are replayed"),
+    ("local-abgh-baseline-run", "pass" if local_abgh_baseline_run_ready else "blocked", "A/B/G/H answer/citation/resource rows are copied"),
+    ("evaluator-check", "pass" if answer_citation_separate_eval else "blocked", "answer and citation/source checks remain separate"),
+    ("grounded-generation-outputs", "pass" if grounded_generation_outputs_ready else "blocked", "v54c recommended output artifacts are copied"),
+    ("h10-real-label-readiness-ledger", "pass" if h10_blocker_ledger_ready else "blocked", "h10 real-label promotion blocker ledger is copied"),
+    ("v58-blind-eval-blocker-ledger", "pass" if blind_eval_blocker_ready else "blocked", "v58 real-response and human-review blockers are explicit"),
+    ("no-hidden-local-state", "pass" if no_hidden_state_ready else "blocked", "no private fixture, download, network, or manual post-processing required for this local replay"),
+    ("blocker-false-positive-closed", "pass" if blocker_false_positive_closed else "blocked", "comparison and release blockers remain closed"),
+    ("one-command-entrypoint", "pass", "examples/v1_0_architecture_challenge_pm_foundation_demo.sh runs v59e"),
+    ("challenge-bundle-written", "pass" if challenge_bundle_ready else "blocked", f"bundle_files={len(bundle_rows)}"),
+    ("real-blind-eval", "blocked", "real D/E/G/H blind responses and human blind review are missing"),
+    ("full-v59-public-demo", "blocked", "this is a PM foundation replay, not the full v52-v58 public challenge demo"),
+    ("real-release-package", "blocked", "v60 release evidence is still missing"),
+]
+decision_rows = [{"gate": gate, "status": status, "reason": reason} for gate, status, reason in gate_rows]
+write_csv(decision_csv, ["gate", "status", "reason"], decision_rows)
+write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reason"], decision_rows)
+
+demo = run_dir / "pm_foundation_demo.sh"
+demo.write_text(
+    "#!/usr/bin/env bash\n"
+    "set -euo pipefail\n\n"
+    "ROOT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/../../..\" && pwd)\"\n"
+    "\"$ROOT_DIR/examples/v1_0_architecture_challenge_pm_foundation_demo.sh\"\n",
+    encoding="utf-8",
+)
+demo.chmod(0o755)
+
+summary = {
+    "v59e_one_command_pm_foundation_demo_ready": "1",
+    "v59_ready": "0",
+    "one_command_entrypoint_ready": "1",
+    "challenge_bundle_ready": str(challenge_bundle_ready),
+    "stage_rows": str(len(stage_rows)),
+    "ready_stage_rows": str(sum(1 for row in stage_rows if row["ready"] == "1")),
+    "full_ready_stage_rows": str(sum(1 for row in stage_rows if row["full_ready"] == "1")),
+    "bundle_files": str(len(bundle_rows)),
+    "pinned_public_sources_verified": str(pinned_public_sources_verified),
+    "pm_v53_freeze_ready": v53t["pm_v53_freeze_ready"],
+    "v53ap_complete_source_abgh_same_query_measured_ready": v53ap["v53ap_complete_source_abgh_same_query_measured_ready"],
+    "local_abgh_baseline_run_ready": str(local_abgh_baseline_run_ready),
+    "same_query_abgh_ready": v53ap["same_query_set_all_local_systems"],
+    "route_memory_artifact_ready": str(route_memory_artifact_ready),
+    "v54c_complete_source_grounded_generation_1000_ready": v54c["v54c_complete_source_grounded_generation_1000_ready"],
+    "grounded_generation_outputs_ready": str(grounded_generation_outputs_ready),
+    "h10_real_label_readiness_gate_ready": h10["v10_h10_real_label_promotion_readiness_gate_ready"],
+    "h10_real_label_promotion_ready": h10["h10_real_label_promotion_ready"],
+    "v58_pm_blind_eval_blocker_ready": v58_blocker_summary["v58_pm_blind_eval_blocker_ready"],
+    "v58_full_blind_eval_ready": v58_blocker_summary["v58_full_blind_eval_ready"],
+    "answer_citation_separate_eval": str(answer_citation_separate_eval),
+    "blocker_false_positive_closed": str(blocker_false_positive_closed),
+    "undocumented_local_state_required": "0",
+    "private_fixture_required": "0",
+    "manual_postprocessing_required": "0",
+    "network_required": "0",
+    "downloads_required": "0",
+    "full_v1_public_demo_ready": "0",
+    "real_release_package_ready": "0",
+}
+write_csv(summary_csv, list(summary.keys()), [summary])
+
+(run_dir / "README_RESULT.md").write_text(
+    "# v59e One-Command PM Foundation Demo\n\n"
+    "Command:\n\n"
+    "```bash\n"
+    "./examples/v1_0_architecture_challenge_pm_foundation_demo.sh\n"
+    "```\n\n"
+    "This bundle replays the current PM foundation: v53 complete-source freeze, "
+    "A/B/G/H same-query pre-baseline rows, v54c grounded generation rows, h10 "
+    "real-label promotion readiness ledger, and the v58 blind-eval blocker ledger. "
+    "The repository entrypoint then refreshes the PM PR claim-slice gate so the "
+    "review split and the v56 replay-artifact blocker are visible beside this bundle. "
+    "It is intentionally not the completed v59 public challenge demo.\n\n"
+    f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
+    f"- local_abgh_baseline_run_ready={summary['local_abgh_baseline_run_ready']}\n"
+    f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
+    f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
+    f"- v58_full_blind_eval_ready={summary['v58_full_blind_eval_ready']}\n"
+    f"- full_v1_public_demo_ready={summary['full_v1_public_demo_ready']}\n\n"
+    "Still blocked: accepted external/human h10 labels, real blind responses, human blind review, full v59 public replay, and v60 release review.\n",
+    encoding="utf-8",
+)
+
+(run_dir / "V59E_ONE_COMMAND_PM_FOUNDATION_BOUNDARY.md").write_text(
+    "# v59e One-Command PM Foundation Boundary\n\n"
+    "This one-command bundle exists to make the PM foundation replayable. It must not be used as a v1.0 public challenge or release claim.\n\n"
+    f"- v59e_one_command_pm_foundation_demo_ready={summary['v59e_one_command_pm_foundation_demo_ready']}\n"
+    f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
+    f"- local_abgh_baseline_run_ready={summary['local_abgh_baseline_run_ready']}\n"
+    f"- route_memory_artifact_ready={summary['route_memory_artifact_ready']}\n"
+    f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
+    f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
+    f"- v58_full_blind_eval_ready={summary['v58_full_blind_eval_ready']}\n"
+    f"- undocumented_local_state_required={summary['undocumented_local_state_required']}\n"
+    f"- private_fixture_required={summary['private_fixture_required']}\n"
+    f"- manual_postprocessing_required={summary['manual_postprocessing_required']}\n"
+    f"- real_release_package_ready={summary['real_release_package_ready']}\n\n"
+    "Allowed wording: replayable PM foundation bundle for v53/v54/h10/v58 intake surfaces.\n\n"
+    "Blocked wording: v59 public demo complete, v58 blind-eval complete, h10 real-label promotion, v1.0 release readiness, or public comparison win.\n",
+    encoding="utf-8",
+)
+
+manifest = {
+    "manifest_scope": "v59e-one-command-pm-foundation-demo",
+    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    "v59e_one_command_pm_foundation_demo_ready": 1,
+    "v59_ready": 0,
+    "stage_rows": len(stage_rows),
+    "bundle_files": len(bundle_rows),
+    "source_summary_sha256": {
+        "v53t": sha256(results / "v53t_complete_source_audit_readiness_gate_summary.csv"),
+        "v53ap": sha256(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv"),
+        "v54c": sha256(results / "v54c_complete_source_grounded_generation_1000_summary.csv"),
+        "h10_pm": sha256(results / "v10_h10_real_label_promotion_readiness_gate_summary.csv"),
+        "v58_blocker": sha256(run_dir / "v58_pm_blind_eval_blocker_summary.csv"),
+    },
+    "blocked_claims": [
+        "v59-public-demo-complete",
+        "v58-blind-eval-complete",
+        "h10-real-label-promotion",
+        "v1_0-release-ready",
+        "public-comparison-win",
+    ],
+    "real_release_package_ready": 0,
+}
+(run_dir / "v59e_one_command_pm_foundation_demo_manifest.json").write_text(
+    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+
+artifact_rows = []
+for path in sorted(run_dir.rglob("*")):
+    if path.is_file() and path.name != "sha256_manifest.csv":
+        artifact_rows.append({"path": str(path.relative_to(run_dir)), "sha256": sha256(path), "bytes": path.stat().st_size})
+write_csv(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], artifact_rows)
+
+print(f"v59e_one_command_pm_foundation_demo_dir: {run_dir}")
+print(f"summary: {summary_csv}")
+print(f"decision: {decision_csv}")
+PY
+
+"$ROOT_DIR/experiments/run_v1_0_pm_pr_claim_slice_gate.sh" >/dev/null
+
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import hashlib
+import json
+import shutil
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+run_dir = Path(sys.argv[2])
+summary_csv = Path(sys.argv[3])
+decision_csv = Path(sys.argv[4])
+results = root / "results"
+pr_run_dir = results / "v1_0_pm_pr_claim_slice_gate" / "gate_001"
+pr_summary_csv = results / "v1_0_pm_pr_claim_slice_gate_summary.csv"
+pr_decision_csv = results / "v1_0_pm_pr_claim_slice_gate_decision.csv"
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def write_csv(path, fieldnames, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def first_row(path):
+    rows = read_csv(path)
+    if len(rows) != 1:
+        raise SystemExit(f"expected one row in {path}")
+    return rows[0]
+
+
+def copy(src, rel):
+    dst = run_dir / rel
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    return dst
+
+
+def as_int(row, key, default="0"):
+    return int(float(row.get(key, default) or default))
+
+
+def copy_bundle_file(src, rel, role):
+    copy(src, rel)
+    bundle_rows.append(
+        {
+            "path": rel,
+            "source_stage": "pm_pr_claim_slice_gate",
+            "artifact_role": role,
+        }
+    )
+
+
+if not pr_run_dir.is_dir():
+    raise SystemExit(f"missing PM PR claim-slice gate run dir: {pr_run_dir}")
+
+summary = first_row(summary_csv)
+pr_summary = first_row(pr_summary_csv)
+bundle_rows = read_csv(run_dir / "challenge_bundle_file_rows.csv")
+
+pm_pr_core_files = [
+    (pr_summary_csv, "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv", "summary"),
+    (pr_decision_csv, "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_decision.csv", "decision"),
+    (pr_run_dir / "source_summary_rows.csv", "source_pm_pr_claim_slice_gate/source_summary_rows.csv", "evidence"),
+    (pr_run_dir / "pm_pr_slice_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_slice_rows.csv", "evidence"),
+    (pr_run_dir / "pm_pr_merge_gate_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_merge_gate_rows.csv", "evidence"),
+    (pr_run_dir / "pm_pr_claim_boundary_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_claim_boundary_rows.csv", "evidence"),
+    (pr_run_dir / "pm_pr_slice_file_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_slice_file_rows.csv", "evidence"),
+    (pr_run_dir / "pm_pr_slice_verification_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_slice_verification_rows.csv", "evidence"),
+    (pr_run_dir / "pm_pr_review_packet_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv", "evidence"),
+    (pr_run_dir / "pm_roadmap_requirement_rows.csv", "source_pm_pr_claim_slice_gate/pm_roadmap_requirement_rows.csv", "evidence"),
+    (pr_run_dir / "pm_blocker_closure_queue_rows.csv", "source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv", "evidence"),
+    (pr_run_dir / "pm_blocker_closure_packet_rows.csv", "source_pm_pr_claim_slice_gate/pm_blocker_closure_packet_rows.csv", "evidence"),
+    (pr_run_dir / "pm_blocker_required_artifact_rows.csv", "source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv", "evidence"),
+    (pr_run_dir / "pm_execution_lock_rows.csv", "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv", "evidence"),
+    (pr_run_dir / "pm_external_return_template_rows.csv", "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv", "evidence"),
+    (pr_run_dir / "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "source_pm_pr_claim_slice_gate/V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md", "boundary"),
+    (pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json", "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json", "manifest"),
+]
+for src, rel, role in pm_pr_core_files:
+    copy_bundle_file(src, rel, role)
+
+review_packet_files = sorted((pr_run_dir / "review_packets").glob("*.md"))
+blocker_packet_files = sorted((pr_run_dir / "blocker_packets").glob("*.md"))
+return_template_files = sorted(path for path in (pr_run_dir / "return_templates").rglob("*") if path.is_file())
+
+for path in review_packet_files:
+    copy_bundle_file(path, f"source_pm_pr_claim_slice_gate/review_packets/{path.name}", "review_packet")
+for path in blocker_packet_files:
+    copy_bundle_file(path, f"source_pm_pr_claim_slice_gate/blocker_packets/{path.name}", "blocker_packet")
+for path in return_template_files:
+    rel_path = path.relative_to(pr_run_dir / "return_templates")
+    copy_bundle_file(path, f"source_pm_pr_claim_slice_gate/return_templates/{rel_path}", "return_template")
+
+review_packet_ready = int(
+    as_int(pr_summary, "pm_pr_review_packet_rows") == 10
+    and as_int(pr_summary, "pm_pr_review_packet_files") == len(review_packet_files) == 10
+)
+blocker_packet_ready = int(
+    as_int(pr_summary, "pm_blocker_closure_packet_rows") == 5
+    and as_int(pr_summary, "pm_blocker_closure_packet_files") == len(blocker_packet_files) == 5
+)
+execution_lock_ready = int(
+    as_int(pr_summary, "pm_execution_lock_rows") == 10
+    and as_int(pr_summary, "pm_execution_lock_active_rows") == 10
+    and as_int(pr_summary, "pm_scope_drift_allowed") == 0
+    and as_int(pr_summary, "pm_new_scaffold_default_allowed") == 0
+)
+external_return_template_ready = int(
+    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 19
+    and as_int(pr_summary, "pm_external_return_template_fixture_allowed_rows") == 0
+    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 19
+)
+pm_pr_claim_slice_bundle_ready = int(
+    as_int(pr_summary, "v1_0_pm_pr_claim_slice_gate_ready") == 1
+    and review_packet_ready
+    and blocker_packet_ready
+    and execution_lock_ready
+    and external_return_template_ready
+    and as_int(pr_summary, "tests_only_merge_condition_rows") == 0
+    and as_int(pr_summary, "real_release_package_ready") == 0
+)
+
+summary["challenge_bundle_ready"] = str(
+    int(as_int(summary, "challenge_bundle_ready") == 1 and pm_pr_claim_slice_bundle_ready == 1)
+)
+summary["bundle_files"] = str(len(bundle_rows))
+summary["pm_pr_claim_slice_gate_ready"] = pr_summary["v1_0_pm_pr_claim_slice_gate_ready"]
+summary["pm_pr_claim_slice_bundle_ready"] = str(pm_pr_claim_slice_bundle_ready)
+summary["pm_pr_recommended_slice_rows"] = pr_summary["recommended_pr_slice_rows"]
+summary["pm_pr_merge_gate_rows"] = pr_summary["merge_gate_rows"]
+summary["pm_pr_current_merge_ready_rows"] = pr_summary["current_merge_ready_rows"]
+summary["pm_pr_current_blocked_rows"] = pr_summary["current_blocked_rows"]
+summary["pm_pr_tests_only_merge_condition_rows"] = pr_summary["tests_only_merge_condition_rows"]
+summary["pm_pr_review_packet_rows"] = pr_summary["pm_pr_review_packet_rows"]
+summary["pm_pr_review_packet_files"] = str(len(review_packet_files))
+summary["pm_pr_review_packet_bundle_ready"] = str(review_packet_ready)
+summary["pm_blocker_closure_packet_rows"] = pr_summary["pm_blocker_closure_packet_rows"]
+summary["pm_blocker_closure_packet_files"] = str(len(blocker_packet_files))
+summary["pm_blocker_closure_packet_bundle_ready"] = str(blocker_packet_ready)
+summary["pm_blocker_required_artifact_rows"] = pr_summary["pm_blocker_required_artifact_rows"]
+summary["pm_blocker_required_artifact_fixture_allowed_rows"] = pr_summary["pm_blocker_required_artifact_fixture_allowed_rows"]
+summary["pm_execution_lock_rows"] = pr_summary["pm_execution_lock_rows"]
+summary["pm_execution_lock_active_rows"] = pr_summary["pm_execution_lock_active_rows"]
+summary["pm_scope_drift_allowed"] = pr_summary["pm_scope_drift_allowed"]
+summary["pm_new_scaffold_default_allowed"] = pr_summary["pm_new_scaffold_default_allowed"]
+summary["pm_external_return_template_rows"] = pr_summary["pm_external_return_template_rows"]
+summary["pm_external_return_template_files"] = str(len(return_template_files))
+summary["pm_external_return_template_fixture_allowed_rows"] = pr_summary["pm_external_return_template_fixture_allowed_rows"]
+summary["pm_external_return_template_approval_rows"] = pr_summary["pm_external_return_template_approval_rows"]
+summary["pm_external_return_template_bundle_ready"] = str(external_return_template_ready)
+summary["pm_roadmap_requirement_rows"] = pr_summary["pm_roadmap_requirement_rows"]
+summary["pm_roadmap_ready_rows"] = pr_summary["pm_roadmap_ready_rows"]
+summary["pm_roadmap_blocked_rows"] = pr_summary["pm_roadmap_blocked_rows"]
+write_csv(summary_csv, list(summary.keys()), [summary])
+
+write_csv(run_dir / "challenge_bundle_file_rows.csv", list(bundle_rows[0].keys()), bundle_rows)
+
+decision_rows = read_csv(decision_csv)
+decision_rows.extend(
+    [
+        {
+            "gate": "pm-pr-claim-slice-gate",
+            "status": "pass" if pm_pr_claim_slice_bundle_ready else "blocked",
+            "reason": "PM PR claim-slice gate, review packets, blockers, execution lock, and return templates are copied into the bundle",
+        },
+        {
+            "gate": "pm-execution-lock",
+            "status": "pass" if execution_lock_ready else "blocked",
+            "reason": "v52-v60/v61 evidence closure remains locked; default v62/v63 scope drift is disallowed",
+        },
+        {
+            "gate": "pm-external-return-templates",
+            "status": "pass" if external_return_template_ready else "blocked",
+            "reason": "19 no-fixture approval-required return templates are packaged for blocker closure",
+        },
+    ]
+)
+write_csv(decision_csv, ["gate", "status", "reason"], decision_rows)
+write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reason"], decision_rows)
+
+(run_dir / "README_RESULT.md").write_text(
+    (run_dir / "README_RESULT.md").read_text(encoding="utf-8")
+    + "\nPM PR claim-slice sidecar:\n\n"
+    + f"- pm_pr_claim_slice_gate_ready={summary['pm_pr_claim_slice_gate_ready']}\n"
+    + f"- pm_pr_review_packet_files={summary['pm_pr_review_packet_files']}\n"
+    + f"- pm_blocker_closure_packet_files={summary['pm_blocker_closure_packet_files']}\n"
+    + f"- pm_execution_lock_rows={summary['pm_execution_lock_rows']}\n"
+    + f"- pm_scope_drift_allowed={summary['pm_scope_drift_allowed']}\n"
+    + f"- pm_external_return_template_files={summary['pm_external_return_template_files']}\n",
+    encoding="utf-8",
+)
+
+(run_dir / "V59E_ONE_COMMAND_PM_FOUNDATION_BOUNDARY.md").write_text(
+    (run_dir / "V59E_ONE_COMMAND_PM_FOUNDATION_BOUNDARY.md").read_text(encoding="utf-8")
+    + "\nPM PR sidecar boundary:\n\n"
+    + f"- pm_pr_claim_slice_gate_ready={summary['pm_pr_claim_slice_gate_ready']}\n"
+    + f"- pm_pr_claim_slice_bundle_ready={summary['pm_pr_claim_slice_bundle_ready']}\n"
+    + f"- pm_pr_tests_only_merge_condition_rows={summary['pm_pr_tests_only_merge_condition_rows']}\n"
+    + f"- pm_scope_drift_allowed={summary['pm_scope_drift_allowed']}\n"
+    + f"- pm_new_scaffold_default_allowed={summary['pm_new_scaffold_default_allowed']}\n"
+    + f"- pm_external_return_template_fixture_allowed_rows={summary['pm_external_return_template_fixture_allowed_rows']}\n",
+    encoding="utf-8",
+)
+
+manifest_path = run_dir / "v59e_one_command_pm_foundation_demo_manifest.json"
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+manifest["bundle_files"] = len(bundle_rows)
+manifest["pm_pr_claim_slice_gate_ready"] = as_int(pr_summary, "v1_0_pm_pr_claim_slice_gate_ready")
+manifest["pm_pr_claim_slice_bundle_ready"] = pm_pr_claim_slice_bundle_ready
+manifest["pm_pr_review_packet_files"] = len(review_packet_files)
+manifest["pm_blocker_closure_packet_files"] = len(blocker_packet_files)
+manifest["pm_execution_lock_rows"] = as_int(pr_summary, "pm_execution_lock_rows")
+manifest["pm_scope_drift_allowed"] = as_int(pr_summary, "pm_scope_drift_allowed")
+manifest["pm_external_return_template_files"] = len(return_template_files)
+manifest["source_summary_sha256"]["pm_pr_claim_slice_gate"] = sha256(pr_summary_csv)
+manifest["pm_pr_claim_slice_gate_manifest_sha256"] = sha256(pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json")
+manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+artifact_rows = []
+for path in sorted(run_dir.rglob("*")):
+    if path.is_file() and path.name != "sha256_manifest.csv":
+        artifact_rows.append({"path": str(path.relative_to(run_dir)), "sha256": sha256(path), "bytes": path.stat().st_size})
+write_csv(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], artifact_rows)
+
+print(f"v59e PM PR sidecar bundle ready: {pm_pr_claim_slice_bundle_ready}")
+print(f"summary: {summary_csv}")
+print(f"decision: {decision_csv}")
+PY

@@ -6,6 +6,46 @@ RESULTS_DIR="$ROOT_DIR/results"
 RUN_DIR="$RESULTS_DIR/v56b_ruler_longbench_expanded_scale/scale_001"
 SUMMARY_CSV="$RESULTS_DIR/v56b_ruler_longbench_expanded_scale_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v56b_ruler_longbench_expanded_scale_decision.csv"
+CONTRACT_DIR="$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001"
+
+required_contract_files=(
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract_summary.csv"
+  "$CONTRACT_DIR/benchmark_family_target_rows.csv"
+  "$CONTRACT_DIR/expanded_benchmark_artifact_contract_rows.csv"
+  "$CONTRACT_DIR/benchmark_invariant_rows.csv"
+  "$CONTRACT_DIR/V56_RULER_LONGBENCH_EXPANDED_BOUNDARY.md"
+  "$CONTRACT_DIR/v56_ruler_longbench_expanded_manifest.json"
+  "$CONTRACT_DIR/sha256_manifest.csv"
+  "$CONTRACT_DIR/source_v49/evidence/expanded_result_rows_500.csv"
+  "$CONTRACT_DIR/source_v49/v49_ruler_niah_200_500_scale_manifest.json"
+  "$CONTRACT_DIR/source_v45/official_return/raw_predictions.jsonl"
+  "$CONTRACT_DIR/source_v45/official_return/official_evaluator_status.json"
+)
+
+missing_contract_files=()
+for path in "${required_contract_files[@]}"; do
+  if [ ! -s "$path" ]; then
+    missing_contract_files+=("$path")
+  fi
+done
+
+if [ "${#missing_contract_files[@]}" -gt 0 ] && [ "${V56B_REQUIRE_READY_TEST:-0}" != "1" ]; then
+  set +e
+  output="$("$ROOT_DIR/experiments/run_v56b_ruler_longbench_expanded_scale.sh" 2>&1 >/dev/null)"
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
+    echo "v56b should fail closed when contract artifacts are missing" >&2
+    exit 1
+  fi
+  if ! grep -q "refusing implicit v56/v49/v45 regeneration" <<<"$output"; then
+    echo "v56b missing-contract guard did not explain the refusal" >&2
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
+  echo "v56b RULER/LongBench missing-contract guard smoke passed"
+  exit 0
+fi
 
 "$ROOT_DIR/experiments/run_v56b_ruler_longbench_expanded_scale.sh" >/dev/null
 

@@ -8,11 +8,44 @@ RUN_ID="${V56B_RUN_ID:-scale_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+CONTRACT_DIR="$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001"
+CONTRACT_SUMMARY="$RESULTS_DIR/v56_ruler_longbench_expanded_contract_summary.csv"
+
+required_contract_files=(
+  "$CONTRACT_SUMMARY"
+  "$CONTRACT_DIR/benchmark_family_target_rows.csv"
+  "$CONTRACT_DIR/expanded_benchmark_artifact_contract_rows.csv"
+  "$CONTRACT_DIR/benchmark_invariant_rows.csv"
+  "$CONTRACT_DIR/V56_RULER_LONGBENCH_EXPANDED_BOUNDARY.md"
+  "$CONTRACT_DIR/v56_ruler_longbench_expanded_manifest.json"
+  "$CONTRACT_DIR/sha256_manifest.csv"
+  "$CONTRACT_DIR/source_v49/evidence/expanded_result_rows_500.csv"
+  "$CONTRACT_DIR/source_v49/v49_ruler_niah_200_500_scale_manifest.json"
+  "$CONTRACT_DIR/source_v45/official_return/raw_predictions.jsonl"
+  "$CONTRACT_DIR/source_v45/official_return/official_evaluator_status.json"
+)
+
+missing_contract_files=()
+for path in "${required_contract_files[@]}"; do
+  if [ ! -s "$path" ]; then
+    missing_contract_files+=("$path")
+  fi
+done
+
+if [ "${#missing_contract_files[@]}" -gt 0 ] || [ "${V56B_FORCE_CONTRACT_REBUILD:-0}" = "1" ]; then
+  if [ "${V56B_ALLOW_CONTRACT_REBUILD:-0}" != "1" ]; then
+    {
+      echo "v56 contract artifacts are missing or rebuild was requested; refusing implicit v56/v49/v45 regeneration."
+      echo "Run the v56 contract explicitly, or set V56B_ALLOW_CONTRACT_REBUILD=1 after approving the regeneration budget."
+      printf 'missing_contract_artifact=%s\n' "${missing_contract_files[@]}"
+    } >&2
+    exit 2
+  fi
+  "$ROOT_DIR/experiments/run_v56_ruler_longbench_expanded_contract.sh" >/dev/null
+fi
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
-
-"$ROOT_DIR/experiments/run_v56_ruler_longbench_expanded_contract.sh" >/dev/null
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv

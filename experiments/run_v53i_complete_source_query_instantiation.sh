@@ -9,7 +9,7 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53I_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V53I_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_control_family_rows.csv" ]] && grep -q '^missing_api_abstain,' "$RUN_DIR/complete_source_query_family_rows.csv"; then
   echo "v53i_complete_source_query_instantiation_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -39,7 +39,13 @@ decision_csv = Path(sys.argv[4])
 results = root / "results"
 v53h_dir = results / "v53h_complete_source_content_snapshot" / "snapshot_001"
 
-NEGATIVE_FAMILIES = {"unsupported_claim_abstain", "ambiguous_source_abstain"}
+NEGATIVE_FAMILIES = {"unsupported_claim_abstain", "ambiguous_source_abstain", "missing_api_abstain"}
+DERIVED_FAMILY_SPLITS = {
+    "ambiguous_source_abstain": [
+        ("ambiguous_source_abstain", 30),
+        ("missing_api_abstain", 30),
+    ],
+}
 
 
 def sha256(path):
@@ -117,6 +123,8 @@ def abstain_question(family, row, line_no, variant_id):
     path = row["path"]
     if family == "unsupported_claim_abstain":
         return f"[v53i:{variant_id}] Does the complete-source corpus prove a broad production-readiness claim for {owner_repo} from only the pinned evidence at {path}:{line_no}?"
+    if family == "missing_api_abstain":
+        return f"[v53i:{variant_id}] Does {owner_repo} expose the intentionally missing API `v53i_missing_api_{variant_id}` based only on the pinned evidence at {path}:{line_no}?"
     return f"[v53i:{variant_id}] If {owner_repo} has only the cited complete-source span at {path}:{line_no}, should the auditor answer a broader ambiguous repository-level claim?"
 
 
@@ -165,6 +173,29 @@ def select_rows(pool, target):
     return selected
 
 
+def derive_query_budget_rows(source_budget_rows):
+    derived = []
+    for row in source_budget_rows:
+        family = row["audit_type"]
+        splits = DERIVED_FAMILY_SPLITS.get(family)
+        if not splits:
+            kept_row = dict(row)
+            kept_row["derived_from_audit_type"] = ""
+            derived.append(kept_row)
+            continue
+        original_target = int(row["target_query_rows"])
+        split_total = sum(target for _, target in splits)
+        if split_total != original_target:
+            raise SystemExit(f"derived family split for {family} sums to {split_total}, expected {original_target}")
+        for split_family, split_target in splits:
+            split_row = dict(row)
+            split_row["audit_type"] = split_family
+            split_row["target_query_rows"] = str(split_target)
+            split_row["derived_from_audit_type"] = family
+            derived.append(split_row)
+    return derived
+
+
 v53h_summary = read_csv(results / "v53h_complete_source_content_snapshot_summary.csv")[0]
 if v53h_summary.get("v53h_complete_source_content_snapshot_ready") != "1":
     raise SystemExit("v53i requires v53h_complete_source_content_snapshot_ready=1")
@@ -189,7 +220,8 @@ for rel in [
 copy(results / "v53h_complete_source_content_snapshot_summary.csv", "source_v53h/v53h_complete_source_content_snapshot_summary.csv")
 
 content_rows = read_csv(v53h_dir / "complete_source_content_snapshot_rows.csv")
-budget_rows = read_csv(v53h_dir / "source_v53g/complete_source_query_budget_rows.csv")
+source_budget_rows = read_csv(v53h_dir / "source_v53g/complete_source_query_budget_rows.csv")
+budget_rows = derive_query_budget_rows(source_budget_rows)
 eligible_rows = [
     row
     for row in content_rows
@@ -291,6 +323,19 @@ for family_budget in budget_rows:
     )
 write_csv(run_dir / "complete_source_query_family_rows.csv", list(family_rows[0].keys()), family_rows)
 
+control_family_rows = []
+for family in ["unsupported_claim_abstain", "ambiguous_source_abstain", "missing_api_abstain", "doc_code_conflict"]:
+    control_family_rows.append(
+        {
+            "control_family": family,
+            "query_rows": str(family_counts.get(family, 0)),
+            "negative_or_abstain_family": str(int(family in NEGATIVE_FAMILIES)),
+            "pm_freeze_required": "1",
+            "status": "present" if family_counts.get(family, 0) > 0 else "missing",
+        }
+    )
+write_csv(run_dir / "complete_source_control_family_rows.csv", list(control_family_rows[0].keys()), control_family_rows)
+
 content_by_repo = {row["owner_repo"]: row for row in read_csv(v53h_dir / "complete_source_content_repo_rows.csv")}
 repo_rows = []
 for owner_repo in sorted(content_by_repo):
@@ -329,6 +374,10 @@ supported_rows = len(query_rows) - negative_rows
 repo_count = len(repo_counts)
 family_count = len(family_counts)
 missing_query_rows = max(0, target_query_rows - len(query_rows))
+unsupported_control_rows = family_counts.get("unsupported_claim_abstain", 0)
+ambiguous_control_rows = family_counts.get("ambiguous_source_abstain", 0)
+missing_specific_abstain_rows = family_counts.get("missing_api_abstain", 0)
+doc_code_conflict_rows = family_counts.get("doc_code_conflict", 0)
 v53i_ready = int(
     len(query_rows) >= 1000
     and len(query_rows) == target_query_rows
@@ -336,6 +385,9 @@ v53i_ready = int(
     and negative_rows == 160
     and repo_count == 10
     and family_count == len(budget_rows)
+    and unsupported_control_rows > 0
+    and missing_specific_abstain_rows > 0
+    and doc_code_conflict_rows > 0
     and all(row["status"] == "instantiated" for row in family_rows)
 )
 
@@ -350,6 +402,10 @@ summary = {
     "complete_source_span_rows": str(len(span_rows)),
     "supported_source_span_bound_rows": str(supported_rows),
     "negative_abstain_rows": str(negative_rows),
+    "unsupported_control_rows": str(unsupported_control_rows),
+    "ambiguous_control_rows": str(ambiguous_control_rows),
+    "missing_specific_abstain_rows": str(missing_specific_abstain_rows),
+    "doc_code_conflict_rows": str(doc_code_conflict_rows),
     "repo_count": str(repo_count),
     "family_count": str(family_count),
     "target_query_rows_min": "1000",
@@ -371,6 +427,9 @@ decision_rows = [
     ("source-span-binding", "pass" if len(span_rows) == len(query_rows) else "blocked", f"complete_source_span_rows={len(span_rows)}"),
     ("family-budget-targets", "pass" if all(row["status"] == "instantiated" for row in family_rows) else "blocked", f"target_query_rows={target_query_rows}"),
     ("negative-abstain-target", "pass" if negative_rows == 160 else "blocked", f"negative_abstain_rows={negative_rows}"),
+    ("unsupported-control", "pass" if unsupported_control_rows > 0 else "blocked", f"unsupported_control_rows={unsupported_control_rows}"),
+    ("missing-specific-abstain-control", "pass" if missing_specific_abstain_rows > 0 else "blocked", f"missing_specific_abstain_rows={missing_specific_abstain_rows}"),
+    ("doc-code-conflict-control", "pass" if doc_code_conflict_rows > 0 else "blocked", f"doc_code_conflict_rows={doc_code_conflict_rows}"),
     ("repo-coverage", "pass" if repo_count == 10 else "blocked", f"repo_count={repo_count}"),
     ("supplied-a-h-answer-rows", "blocked", "A-H answer/citation/resource rows are still absent for the v53i complete-source query set"),
     ("citation-resource-coverage", "blocked", "complete-source query rows have expected answers and spans but no supplied A-H resource rows"),
@@ -382,12 +441,17 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": g, "status": s, 
 
 (run_dir / "V53I_COMPLETE_SOURCE_QUERY_INSTANTIATION_BOUNDARY.md").write_text(
     "# v53i Complete Source Query Instantiation Boundary\n\n"
-    "This layer instantiates the v53g eight-family 1000-query budget over the v53h materialized complete-source content snapshot. "
+    "This layer instantiates a PM-freeze nine-family 1000-query budget over the v53h materialized complete-source content snapshot. "
+    "The original v53g ambiguous abstain budget is split into ambiguous and missing-API abstain controls without changing the 1000-row total. "
     "Each query row is bound to a line-level source span and content sha256 from the pinned complete-source corpus.\n\n"
     f"- complete_source_query_rows={len(query_rows)}\n"
     f"- complete_source_span_rows={len(span_rows)}\n"
     f"- supported_source_span_bound_rows={supported_rows}\n"
     f"- negative_abstain_rows={negative_rows}\n"
+    f"- unsupported_control_rows={unsupported_control_rows}\n"
+    f"- ambiguous_control_rows={ambiguous_control_rows}\n"
+    f"- missing_specific_abstain_rows={missing_specific_abstain_rows}\n"
+    f"- doc_code_conflict_rows={doc_code_conflict_rows}\n"
     f"- repo_count={repo_count}\n"
     f"- family_count={family_count}\n"
     "- complete_source_query_rows_ready=1\n"
@@ -412,6 +476,10 @@ manifest = {
     "complete_source_span_rows": len(span_rows),
     "supported_source_span_bound_rows": supported_rows,
     "negative_abstain_rows": negative_rows,
+    "unsupported_control_rows": unsupported_control_rows,
+    "ambiguous_control_rows": ambiguous_control_rows,
+    "missing_specific_abstain_rows": missing_specific_abstain_rows,
+    "doc_code_conflict_rows": doc_code_conflict_rows,
     "repo_count": repo_count,
     "family_count": family_count,
     "target_family_rows": {row["audit_type"]: int(row["target_query_rows"]) for row in family_rows},
@@ -431,6 +499,7 @@ artifact_rels = [
     "complete_source_query_rows.csv",
     "complete_source_span_rows.csv",
     "complete_source_query_family_rows.csv",
+    "complete_source_control_family_rows.csv",
     "complete_source_query_repo_rows.csv",
     "complete_source_query_gap_rows.csv",
     "V53I_COMPLETE_SOURCE_QUERY_INSTANTIATION_BOUNDARY.md",
