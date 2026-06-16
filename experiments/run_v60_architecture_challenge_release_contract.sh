@@ -176,6 +176,7 @@ for rel in [
     "source_v54c/sha256_manifest.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
@@ -325,10 +326,12 @@ requirements = [
         and as_int(v53t, "complete_source_span_rows") >= 1000
         and as_int(v53t, "unsupported_control_rows") >= 100
         and as_int(v53t, "doc_code_conflict_rows") > 0
+        and as_int(v53t, "foundation_query_span_binding_audit_ready") == 1
+        and as_int(v59e, "pm_pr_v53_query_span_binding_audit_ready") == 1
         and as_int(v53t, "foundation_direct_pinned_manifest_ready") == 1
         and as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready") == 1,
         "v53 source-bound 10-repo/1000-query freeze is missing",
-        "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+        "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
         "v53-foundation-freeze-missing",
     ),
     req(
@@ -535,6 +538,10 @@ summary = {
     "required_30b_70b_baselines_ready": int(as_int(v52, "required_30b_baseline_ready") == 1 and as_int(v52, "required_70b_baseline_ready") == 1),
     "real_30b_70b_rows_ready": int(as_int(v52, "required_30b_baseline_ready") == 1 and as_int(v52, "required_70b_baseline_ready") == 1),
     "public_repo_query_scale_ready": int(as_int(v53t, "pm_v53_freeze_ready") == 1 and as_int(v53t, "foundation_direct_pinned_manifest_ready") == 1),
+    "v53_query_span_binding_audit_ready": as_int(v53t, "foundation_query_span_binding_audit_ready"),
+    "v53_query_span_binding_audit_rows": as_int(v53t, "foundation_query_span_binding_audit_rows"),
+    "v53_query_span_binding_pass_rows": as_int(v53t, "foundation_query_span_binding_pass_rows"),
+    "pm_pr_v53_query_span_binding_audit_ready": as_int(v59e, "pm_pr_v53_query_span_binding_audit_ready"),
     "v53_direct_pinned_manifest_ready": as_int(v53t, "foundation_direct_pinned_manifest_ready"),
     "v53_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
     "v53_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
@@ -585,6 +592,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- local evidence-bound RouteMemory/RouteHint QA and audit preview.\n\n"
     "Current pass surfaces:\n\n"
     "- v53 10-repo / 1000 source-span-bound query PM freeze\n"
+    "- direct v53 1000-row query-span binding audit copied through v59e PM sidecar\n"
     "- direct v53 repo/file/content manifest evidence copied through v59e PM sidecar\n"
     "- internal A/B/G/H same-query pre-baseline without public comparison claim\n"
     "- v54 complete-source 1000-row grounded generation with raw prompt stuffing blocked\n"
@@ -627,6 +635,10 @@ manifest = {
     "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
     "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
     "h10_pm_acceptance_sha256": sha_or_empty(run_dir / "source_h10_pm" / "pm_h10_real_label_acceptance_rows.csv"),
+    "v53_query_span_binding_audit_ready": as_int(v53t, "foundation_query_span_binding_audit_ready"),
+    "v53_query_span_binding_audit_rows": as_int(v53t, "foundation_query_span_binding_audit_rows"),
+    "v53_query_span_binding_pass_rows": as_int(v53t, "foundation_query_span_binding_pass_rows"),
+    "pm_pr_v53_query_span_binding_audit_ready": as_int(v59e, "pm_pr_v53_query_span_binding_audit_ready"),
     "v53_direct_pinned_manifest_ready": as_int(v53t, "foundation_direct_pinned_manifest_ready"),
     "v53_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
     "v53_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),

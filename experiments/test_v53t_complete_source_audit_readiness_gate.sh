@@ -72,6 +72,10 @@ expected = {
     "foundation_freeze_blocked_rows": "0",
     "foundation_machine_freeze_ready": "1",
     "foundation_direct_evidence_ready": "1",
+    "foundation_query_span_binding_audit_ready": "1",
+    "foundation_query_span_binding_audit_rows": "1000",
+    "foundation_query_span_binding_pass_rows": "1000",
+    "foundation_query_span_binding_blocked_rows": "0",
     "foundation_direct_pinned_manifest_ready": "1",
     "foundation_direct_repo_manifest_ready": "1",
     "foundation_direct_content_snapshot_ready": "1",
@@ -130,6 +134,7 @@ required_files = [
     "complete_source_pm_freeze_check_rows.csv",
     "complete_source_foundation_freeze_rows.csv",
     "complete_source_abgh_real_adapter_freeze_rows.csv",
+    "complete_source_query_span_binding_audit_rows.csv",
     "complete_source_audit_claim_rows.csv",
     "complete_source_audit_readiness_metric_rows.csv",
     "V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md",
@@ -217,13 +222,18 @@ if pm_freeze_checks["missing-specific-abstain-control"]["actual_value"] != "30":
     raise SystemExit("v53t PM freeze missing-specific actual value mismatch")
 if pm_freeze_checks["replayable-artifact-chain"]["status"] != "pass" or "direct_ready=1" not in pm_freeze_checks["replayable-artifact-chain"]["actual_value"]:
     raise SystemExit("v53t replayable artifact chain should be backed by direct row evidence")
+if "binding_audit_pass=1000" not in pm_freeze_checks["source-span-bound-1000"]["actual_value"]:
+    raise SystemExit("v53t source-span PM check should expose 1000 passing binding-audit rows")
 if "direct_pinned_manifest_ready=1" not in pm_freeze_checks["pinned-public-repo-manifest"]["actual_value"]:
     raise SystemExit("v53t pinned manifest check should expose direct pinned manifest readiness")
 if "repo_manifest=10" not in pm_freeze_checks["replayable-artifact-chain"]["actual_value"]:
     raise SystemExit("v53t replayable artifact chain should include direct repo manifest rows")
+if "binding_audit_pass=1000" not in pm_freeze_checks["replayable-artifact-chain"]["actual_value"]:
+    raise SystemExit("v53t replayable artifact chain should include binding audit rows")
 
 query_rows = read_csv(run_dir / "source_v53i/complete_source_query_rows.csv")
 span_rows = read_csv(run_dir / "source_v53i/complete_source_span_rows.csv")
+binding_rows = read_csv(run_dir / "complete_source_query_span_binding_audit_rows.csv")
 content_repo_rows = read_csv(run_dir / "source_v53i/source_v53h/complete_source_content_repo_rows.csv")
 content_snapshot_rows = read_csv(run_dir / "source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
 repo_coverage_rows = read_csv(run_dir / "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
@@ -241,8 +251,30 @@ v53aq_adapter_traces = read_csv(run_dir / "source_v53aq/abgh_adapter_trace_rows.
 v53aq_selection_contract = {row["field_name"]: row for row in read_csv(run_dir / "source_v53aq/adapter_selection_contract_rows.csv")}
 if len(query_rows) != 1000 or len(span_rows) != 1000:
     raise SystemExit("v53t should copy direct 1000 query/span rows")
+if len(binding_rows) != 1000:
+    raise SystemExit("v53t should emit 1000 query-span binding audit rows")
 if any(not row["source_span_id"] for row in query_rows):
     raise SystemExit("v53t direct query rows should bind source spans")
+if any(row["binding_status"] != "pass" for row in binding_rows):
+    raise SystemExit("v53t query-span binding audit rows should all pass")
+for flag in [
+    "source_span_required",
+    "span_row_present",
+    "query_id_match",
+    "owner_repo_match",
+    "head_sha_match",
+    "path_match",
+    "line_start_match",
+    "line_end_match",
+    "source_file_sha256_match",
+    "git_blob_sha_match",
+    "content_row_present",
+    "content_row_materialized",
+]:
+    if any(row[flag] != "1" for row in binding_rows):
+        raise SystemExit(f"v53t binding audit should pass {flag} for every query")
+if {row["query_id"] for row in binding_rows} != {row["query_id"] for row in query_rows}:
+    raise SystemExit("v53t binding audit rows should cover every query ID")
 if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
     raise SystemExit("v53t should copy direct 10-repo manifest and content repo rows")
 if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
@@ -333,8 +365,10 @@ if foundation_freeze_rows["missing-specific-abstain-control"]["actual_value"] !=
     raise SystemExit("v53t foundation freeze missing-specific actual value mismatch")
 if foundation_freeze_rows["doc-code-conflict-control"]["actual_value"] != "140":
     raise SystemExit("v53t foundation freeze doc-code conflict actual value mismatch")
-if foundation_freeze_rows["source-span-bound-query-surface"]["evidence_path"] != "source_v53i/complete_source_query_rows.csv":
-    raise SystemExit("v53t source-span freeze evidence should point at direct query rows")
+if foundation_freeze_rows["source-span-bound-query-surface"]["evidence_path"] != "complete_source_query_span_binding_audit_rows.csv":
+    raise SystemExit("v53t source-span freeze evidence should point at direct binding audit rows")
+if "binding_audit_pass=1000" not in foundation_freeze_rows["source-span-bound-query-surface"]["actual_value"]:
+    raise SystemExit("v53t source-span freeze should expose binding audit pass rows")
 if foundation_freeze_rows["pinned-public-repo-manifest"]["evidence_path"] != "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv":
     raise SystemExit("v53t pinned manifest evidence should point at direct repo coverage rows")
 if "direct_pinned_manifest_ready=1" not in foundation_freeze_rows["pinned-public-repo-manifest"]["actual_value"]:
@@ -426,6 +460,10 @@ for snippet in [
     "foundation_freeze_certificate_rows=10",
     "foundation_machine_freeze_ready=1",
     "foundation_direct_evidence_ready=1",
+    "foundation_query_span_binding_audit_ready=1",
+    "foundation_query_span_binding_audit_rows=1000",
+    "foundation_query_span_binding_pass_rows=1000",
+    "foundation_query_span_binding_blocked_rows=0",
     "foundation_direct_pinned_manifest_ready=1",
     "foundation_direct_repo_manifest_ready=1",
     "foundation_direct_content_snapshot_ready=1",
@@ -489,6 +527,13 @@ if manifest.get("foundation_machine_freeze_ready") != 1:
     raise SystemExit("v53t manifest foundation machine freeze mismatch")
 if manifest.get("foundation_direct_evidence_ready") != 1:
     raise SystemExit("v53t manifest should record direct foundation evidence readiness")
+if (
+    manifest.get("foundation_query_span_binding_audit_ready") != 1
+    or manifest.get("foundation_query_span_binding_audit_rows") != 1000
+    or manifest.get("foundation_query_span_binding_pass_rows") != 1000
+    or manifest.get("foundation_query_span_binding_blocked_rows") != 0
+):
+    raise SystemExit("v53t manifest query-span binding audit mismatch")
 if (
     manifest.get("foundation_direct_pinned_manifest_ready") != 1
     or manifest.get("foundation_direct_repo_manifest_ready") != 1

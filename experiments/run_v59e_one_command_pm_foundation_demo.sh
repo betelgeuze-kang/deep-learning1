@@ -965,6 +965,7 @@ pm_pr_core_files = [
     (pr_run_dir / "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_foundation_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/complete_source_query_span_binding_audit_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/source_v53i/complete_source_query_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/source_v53i/complete_source_span_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv", "evidence"),
@@ -1042,6 +1043,9 @@ summary["pm_pr_merge_gate_rows"] = pr_summary["merge_gate_rows"]
 summary["pm_pr_current_merge_ready_rows"] = pr_summary["current_merge_ready_rows"]
 summary["pm_pr_current_blocked_rows"] = pr_summary["current_blocked_rows"]
 summary["pm_pr_tests_only_merge_condition_rows"] = pr_summary["tests_only_merge_condition_rows"]
+summary["pm_pr_v53_query_span_binding_audit_ready"] = pr_summary.get("v53_foundation_query_span_binding_audit_ready", "0")
+summary["pm_pr_v53_query_span_binding_audit_rows"] = pr_summary.get("v53_foundation_query_span_binding_audit_rows", "0")
+summary["pm_pr_v53_query_span_binding_pass_rows"] = pr_summary.get("v53_foundation_query_span_binding_pass_rows", "0")
 summary["pm_pr_v53_direct_pinned_manifest_ready"] = pr_summary.get("v53_foundation_direct_pinned_manifest_ready", "0")
 summary["pm_pr_v53_direct_repo_manifest_rows"] = pr_summary.get("v53_foundation_direct_repo_manifest_rows", "0")
 summary["pm_pr_v53_direct_file_manifest_rows"] = pr_summary.get("v53_foundation_direct_file_manifest_rows", "0")
@@ -1220,6 +1224,9 @@ manifest["bundle_files"] = len(bundle_rows)
 manifest["pm_pr_claim_slice_gate_ready"] = as_int(pr_summary, "v1_0_pm_pr_claim_slice_gate_ready")
 manifest["pm_pr_claim_slice_bundle_ready"] = pm_pr_claim_slice_bundle_ready
 manifest["pm_pr_review_packet_files"] = len(review_packet_files)
+manifest["pm_pr_v53_query_span_binding_audit_ready"] = as_int(pr_summary, "v53_foundation_query_span_binding_audit_ready")
+manifest["pm_pr_v53_query_span_binding_audit_rows"] = as_int(pr_summary, "v53_foundation_query_span_binding_audit_rows")
+manifest["pm_pr_v53_query_span_binding_pass_rows"] = as_int(pr_summary, "v53_foundation_query_span_binding_pass_rows")
 manifest["pm_pr_v53_direct_pinned_manifest_ready"] = as_int(pr_summary, "v53_foundation_direct_pinned_manifest_ready")
 manifest["pm_pr_v53_direct_repo_manifest_rows"] = as_int(pr_summary, "v53_foundation_direct_repo_manifest_rows")
 manifest["pm_pr_v53_direct_file_manifest_rows"] = as_int(pr_summary, "v53_foundation_direct_file_manifest_rows")

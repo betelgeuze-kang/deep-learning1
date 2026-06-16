@@ -127,6 +127,7 @@ v53t_real_adapter_freeze_copied = copy_if_exists(
 v53t_run_dir = results / "v53t_complete_source_audit_readiness_gate" / "gate_001"
 v53t_direct_copied = {}
 for src_rel in [
+    "complete_source_query_span_binding_audit_rows.csv",
     "source_v53i/complete_source_query_rows.csv",
     "source_v53i/complete_source_span_rows.csv",
     "source_v53i/source_v53h/complete_source_content_repo_rows.csv",
@@ -183,6 +184,7 @@ h10_acceptance_by_criterion = {
     for row in h10_acceptance_rows
 }
 v53t_foundation_freeze_rows = read_rows(v53t_foundation_freeze_path)
+v53t_query_span_binding_rows = read_rows(v53t_run_dir / "complete_source_query_span_binding_audit_rows.csv")
 v53t_foundation_by_id = {
     row.get("criterion_id", ""): row
     for row in v53t_foundation_freeze_rows
@@ -662,10 +664,23 @@ pm_roadmap_rows = [
         and as_int(v53t, "complete_source_span_rows") == 1000
         and as_int(v53t, "foundation_direct_query_rows") == 1000
         and as_int(v53t, "foundation_direct_span_rows") == 1000
+        and as_int(v53t, "foundation_query_span_binding_audit_ready") == 1
+        and as_int(v53t, "foundation_query_span_binding_pass_rows") == 1000
+        and len(v53t_query_span_binding_rows) == 1000
+        and all(row.get("binding_status") == "pass" for row in v53t_query_span_binding_rows)
+        and bool(v53t_direct_copied.get("complete_source_query_span_binding_audit_rows.csv"))
         and bool(v53t_direct_copied.get("source_v53i/complete_source_query_rows.csv"))
         and bool(v53t_direct_copied.get("source_v53i/complete_source_span_rows.csv")),
-        v53t_direct_copied.get("source_v53i/complete_source_query_rows.csv") or "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
-        f"query_rows={v53t.get('complete_source_query_rows', '0')} span_rows={v53t.get('complete_source_span_rows', '0')} direct_query_rows={v53t.get('foundation_direct_query_rows', '0')} direct_span_rows={v53t.get('foundation_direct_span_rows', '0')}",
+        v53t_direct_copied.get("complete_source_query_span_binding_audit_rows.csv") or "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
+        (
+            f"query_rows={v53t.get('complete_source_query_rows', '0')} "
+            f"span_rows={v53t.get('complete_source_span_rows', '0')} "
+            f"direct_query_rows={v53t.get('foundation_direct_query_rows', '0')} "
+            f"direct_span_rows={v53t.get('foundation_direct_span_rows', '0')} "
+            f"binding_audit_ready={v53t.get('foundation_query_span_binding_audit_ready', '0')} "
+            f"binding_audit_rows={v53t.get('foundation_query_span_binding_audit_rows', '0')} "
+            f"binding_audit_pass_rows={v53t.get('foundation_query_span_binding_pass_rows', '0')}"
+        ),
         "v53-query-freeze-missing",
     ),
     req(
@@ -1718,6 +1733,9 @@ summary = {
     "pm_foundation_ready": str(pm_foundation_ready),
     "v53_foundation_freeze_certificate_rows": v53t.get("foundation_freeze_certificate_rows", "0"),
     "v53_foundation_machine_freeze_ready": v53t.get("foundation_machine_freeze_ready", "0"),
+    "v53_foundation_query_span_binding_audit_ready": v53t.get("foundation_query_span_binding_audit_ready", "0"),
+    "v53_foundation_query_span_binding_audit_rows": v53t.get("foundation_query_span_binding_audit_rows", "0"),
+    "v53_foundation_query_span_binding_pass_rows": v53t.get("foundation_query_span_binding_pass_rows", "0"),
     "v53_foundation_direct_pinned_manifest_ready": v53t.get("foundation_direct_pinned_manifest_ready", "0"),
     "v53_foundation_direct_repo_manifest_rows": v53t.get("foundation_direct_repo_manifest_rows", "0"),
     "v53_foundation_direct_file_manifest_rows": v53t.get("foundation_direct_file_manifest_rows", "0"),
@@ -1773,6 +1791,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- pm_foundation_ready={pm_foundation_ready}\n"
     f"- v53_foundation_freeze_certificate_rows={v53t.get('foundation_freeze_certificate_rows', '0')}\n"
     f"- v53_foundation_machine_freeze_ready={v53t.get('foundation_machine_freeze_ready', '0')}\n"
+    f"- v53_foundation_query_span_binding_audit_ready={v53t.get('foundation_query_span_binding_audit_ready', '0')}\n"
+    f"- v53_foundation_query_span_binding_audit_rows={v53t.get('foundation_query_span_binding_audit_rows', '0')}\n"
+    f"- v53_foundation_query_span_binding_pass_rows={v53t.get('foundation_query_span_binding_pass_rows', '0')}\n"
     f"- v53_foundation_direct_pinned_manifest_ready={v53t.get('foundation_direct_pinned_manifest_ready', '0')}\n"
     f"- v53_foundation_direct_repo_manifest_rows={v53t.get('foundation_direct_repo_manifest_rows', '0')}\n"
     f"- v53_foundation_direct_file_manifest_rows={v53t.get('foundation_direct_file_manifest_rows', '0')}\n"
@@ -1813,6 +1834,9 @@ manifest = {
     "pm_foundation_ready": pm_foundation_ready,
     "v53_foundation_freeze_certificate_rows": as_int(v53t, "foundation_freeze_certificate_rows"),
     "v53_foundation_machine_freeze_ready": as_int(v53t, "foundation_machine_freeze_ready"),
+    "v53_foundation_query_span_binding_audit_ready": as_int(v53t, "foundation_query_span_binding_audit_ready"),
+    "v53_foundation_query_span_binding_audit_rows": as_int(v53t, "foundation_query_span_binding_audit_rows"),
+    "v53_foundation_query_span_binding_pass_rows": as_int(v53t, "foundation_query_span_binding_pass_rows"),
     "v53_foundation_direct_pinned_manifest_ready": as_int(v53t, "foundation_direct_pinned_manifest_ready"),
     "v53_foundation_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
     "v53_foundation_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),

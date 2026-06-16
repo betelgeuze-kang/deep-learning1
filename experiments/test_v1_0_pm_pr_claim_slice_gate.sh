@@ -47,6 +47,9 @@ expected = {
     "pm_foundation_ready": "1",
     "v53_foundation_freeze_certificate_rows": "10",
     "v53_foundation_machine_freeze_ready": "1",
+    "v53_foundation_query_span_binding_audit_ready": "1",
+    "v53_foundation_query_span_binding_audit_rows": "1000",
+    "v53_foundation_query_span_binding_pass_rows": "1000",
     "v53_foundation_direct_pinned_manifest_ready": "1",
     "v53_foundation_direct_repo_manifest_rows": "10",
     "v53_foundation_direct_file_manifest_rows": "11266",
@@ -199,6 +202,16 @@ for snippet in [
 ]:
     if snippet not in pinned_manifest_row["reason"]:
         raise SystemExit(f"PM pinned source manifest should expose {snippet}")
+source_span_row = roadmap_by_id["source-span-query-freeze"]
+if source_span_row["evidence_path"] != "source_v53t/complete_source_query_span_binding_audit_rows.csv":
+    raise SystemExit("PM source-span query freeze should bind directly to the v53t binding audit rows")
+for snippet in [
+    "binding_audit_ready=1",
+    "binding_audit_rows=1000",
+    "binding_audit_pass_rows=1000",
+]:
+    if snippet not in source_span_row["reason"]:
+        raise SystemExit(f"PM source-span query freeze should expose {snippet}")
 answer_citation_row = roadmap_by_id["answer-citation-separated"]
 if answer_citation_row["evidence_path"] != "source_v53t/source_v53ap/abgh_evaluator_rows.csv":
     raise SystemExit("PM answer/citation separation should bind directly to the v53t copied evaluator rows")
@@ -578,6 +591,7 @@ required_files = [
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_v53t/complete_source_query_span_binding_audit_rows.csv",
     "source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_v53t/source_v53i/complete_source_span_rows.csv",
     "source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
@@ -605,10 +619,13 @@ repo_coverage_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/sou
 file_manifest_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
 content_repo_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv")
 content_snapshot_rows = read_csv(run_dir / "source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
+binding_rows = read_csv(run_dir / "source_v53t/complete_source_query_span_binding_audit_rows.csv")
 if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
     raise SystemExit("PM PR sidecar should carry direct 10-repo manifest rows")
 if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
     raise SystemExit("PM PR sidecar should carry direct file/content manifest rows")
+if len(binding_rows) != 1000 or any(row["binding_status"] != "pass" for row in binding_rows):
+    raise SystemExit("PM PR sidecar should carry 1000 passing query-span binding audit rows")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("PM PR sidecar repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -641,6 +658,12 @@ if manifest.get("pm_roadmap_requirement_rows") != 20 or manifest.get("pm_foundat
     raise SystemExit("PM PR manifest roadmap audit mismatch")
 if manifest.get("v53_foundation_freeze_certificate_rows") != 10 or manifest.get("v53_foundation_machine_freeze_ready") != 1:
     raise SystemExit("PM PR manifest v53 foundation freeze mismatch")
+if (
+    manifest.get("v53_foundation_query_span_binding_audit_ready") != 1
+    or manifest.get("v53_foundation_query_span_binding_audit_rows") != 1000
+    or manifest.get("v53_foundation_query_span_binding_pass_rows") != 1000
+):
+    raise SystemExit("PM PR manifest query-span binding audit mismatch")
 if (
     manifest.get("v53_foundation_direct_pinned_manifest_ready") != 1
     or manifest.get("v53_foundation_direct_repo_manifest_rows") != 10
@@ -690,6 +713,9 @@ for snippet in [
     "pm_foundation_ready=1",
     "v53_foundation_freeze_certificate_rows=10",
     "v53_foundation_machine_freeze_ready=1",
+    "v53_foundation_query_span_binding_audit_ready=1",
+    "v53_foundation_query_span_binding_audit_rows=1000",
+    "v53_foundation_query_span_binding_pass_rows=1000",
     "v53_foundation_direct_pinned_manifest_ready=1",
     "v53_foundation_direct_repo_manifest_rows=10",
     "v53_foundation_direct_file_manifest_rows=11266",

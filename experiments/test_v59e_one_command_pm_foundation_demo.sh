@@ -117,6 +117,9 @@ expected = {
     "pm_pr_current_merge_ready_rows": "9",
     "pm_pr_current_blocked_rows": "1",
     "pm_pr_tests_only_merge_condition_rows": "0",
+    "pm_pr_v53_query_span_binding_audit_ready": "1",
+    "pm_pr_v53_query_span_binding_audit_rows": "1000",
+    "pm_pr_v53_query_span_binding_pass_rows": "1000",
     "pm_pr_v53_direct_pinned_manifest_ready": "1",
     "pm_pr_v53_direct_repo_manifest_rows": "10",
     "pm_pr_v53_direct_file_manifest_rows": "11266",
@@ -247,6 +250,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
@@ -297,10 +301,13 @@ repo_coverage_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v5
 file_manifest_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
 content_repo_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv")
 content_snapshot_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
+binding_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv")
 if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
     raise SystemExit("v59e PM sidecar should carry direct 10-repo manifest rows")
 if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
     raise SystemExit("v59e PM sidecar should carry direct file/content manifest rows")
+if len(binding_rows) != 1000 or any(row["binding_status"] != "pass" for row in binding_rows):
+    raise SystemExit("v59e PM sidecar should carry 1000 passing query-span binding audit rows")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("v59e PM sidecar repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -393,6 +400,12 @@ if (
     raise SystemExit("v59e manifest should preserve the v58d blind-review return blocker boundary")
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
+if (
+    manifest.get("pm_pr_v53_query_span_binding_audit_ready") != 1
+    or manifest.get("pm_pr_v53_query_span_binding_audit_rows") != 1000
+    or manifest.get("pm_pr_v53_query_span_binding_pass_rows") != 1000
+):
+    raise SystemExit("v59e manifest should record direct v53 query-span binding audit evidence")
 if (
     manifest.get("pm_pr_v53_direct_pinned_manifest_ready") != 1
     or manifest.get("pm_pr_v53_direct_repo_manifest_rows") != 10

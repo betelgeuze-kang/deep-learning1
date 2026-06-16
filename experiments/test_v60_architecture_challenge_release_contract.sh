@@ -59,6 +59,10 @@ expected = {
     "required_30b_70b_baselines_ready": "0",
     "real_30b_70b_rows_ready": "0",
     "public_repo_query_scale_ready": "1",
+    "v53_query_span_binding_audit_ready": "1",
+    "v53_query_span_binding_audit_rows": "1000",
+    "v53_query_span_binding_pass_rows": "1000",
+    "pm_pr_v53_query_span_binding_audit_ready": "1",
     "v53_direct_pinned_manifest_ready": "1",
     "v53_direct_repo_manifest_rows": "10",
     "v53_direct_file_manifest_rows": "11266",
@@ -175,6 +179,7 @@ required_files = [
     "source_v59e/source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
@@ -231,10 +236,13 @@ repo_coverage_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_ga
 file_manifest_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
 content_repo_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv")
 content_snapshot_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
+binding_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv")
 if len(repo_coverage_rows) != 10 or len(content_repo_rows) != 10:
     raise SystemExit("v60 should carry direct 10-repo manifest rows through v59e/PM sidecar")
 if len(file_manifest_rows) != 11266 or len(content_snapshot_rows) != 11266:
     raise SystemExit("v60 should carry direct file/content manifest rows through v59e/PM sidecar")
+if len(binding_rows) != 1000 or any(row["binding_status"] != "pass" for row in binding_rows):
+    raise SystemExit("v60 should carry 1000 passing query-span binding audit rows through v59e/PM sidecar")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("v60 repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -291,8 +299,8 @@ for row in requirements:
     if not evidence_path.is_file() or evidence_path.stat().st_size == 0:
         raise SystemExit(f"v60 requirement evidence path is not replayable: {row['requirement']} -> {row['evidence_path']}")
 v53_req = next(row for row in requirements if row["requirement"] == "v53_public_repo_source_bound_1000_corpus")
-if v53_req["evidence_path"] != "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv":
-    raise SystemExit("v60 v53 requirement should point directly at copied repo coverage rows")
+if v53_req["evidence_path"] != "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv":
+    raise SystemExit("v60 v53 requirement should point directly at copied query-span binding audit rows")
 h10_req = next(row for row in requirements if row["requirement"] == "h10_real_label_source_verified_scorer")
 if h10_req["evidence_path"] != "source_h10_pm/pm_h10_real_label_acceptance_rows.csv":
     raise SystemExit("v60 h10 requirement should point directly at PM h10 criteria rows")
@@ -347,6 +355,13 @@ if manifest.get("real_release_package_ready") != 0 or manifest.get("release_requ
 if manifest.get("release_requirement_ready_rows") != 6:
     raise SystemExit("v60 manifest should record six PM-foundation ready requirements")
 if (
+    manifest.get("v53_query_span_binding_audit_ready") != 1
+    or manifest.get("v53_query_span_binding_audit_rows") != 1000
+    or manifest.get("v53_query_span_binding_pass_rows") != 1000
+    or manifest.get("pm_pr_v53_query_span_binding_audit_ready") != 1
+):
+    raise SystemExit("v60 manifest should record direct v53 query-span binding audit evidence")
+if (
     manifest.get("v53_direct_pinned_manifest_ready") != 1
     or manifest.get("v53_direct_repo_manifest_rows") != 10
     or manifest.get("v53_direct_file_manifest_rows") != 11266
@@ -373,6 +388,7 @@ for snippet in [
     "not the completed v1.0 Architecture Challenge Release",
     "Allowed wording",
     "v53 10-repo / 1000 source-span-bound query PM freeze",
+    "direct v53 1000-row query-span binding audit copied through v59e PM sidecar",
     "direct v53 repo/file/content manifest evidence copied through v59e PM sidecar",
     "real 30B/70B LLM+RAG comparison rows",
     "h10 real external/human label promotion evidence",
