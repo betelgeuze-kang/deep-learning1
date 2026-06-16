@@ -41,9 +41,9 @@ summary = summary_rows[0]
 expected = {
     "v60_release_contract_ready": "1",
     "v60_ready": "0",
-    "release_requirement_rows": "13",
+    "release_requirement_rows": "14",
     "release_requirement_ready_rows": "6",
-    "release_requirement_blocked_rows": "7",
+    "release_requirement_blocked_rows": "8",
     "allowed_claim_rows": "3",
     "forbidden_claim_rows": "11",
     "v59e_one_command_pm_foundation_demo_ready": "1",
@@ -60,6 +60,9 @@ expected = {
     "scaling_law_main_ready": "0",
     "expanded_benchmark_ready": "0",
     "domain_expert_pack_ready": "0",
+    "v58c_blind_response_intake_ready": "0",
+    "v58c_intake_artifact_available": "0",
+    "v58c_dependency_blocker_ready": "1",
     "blind_eval_ready": "0",
     "one_command_pm_foundation_ready": "1",
     "one_command_real_replay_ready": "0",
@@ -92,6 +95,7 @@ for gate in [
     "real-30b-70b-baselines",
     "h10-real-label-promotion",
     "v56-replay-artifact",
+    "v58c-blind-response-intake",
     "v58-real-blind-eval",
     "full-v59-public-demo",
     "human-release-review",
@@ -122,6 +126,8 @@ required_files = [
     "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
+    "source_v59e/v58c_pm_blind_response_intake_dependency_summary.csv",
+    "source_v59e/v58c_pm_blind_response_intake_dependency_rows.csv",
     "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv",
     "source_pm_pr/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_summaries/v52_llm_rag_baseline_war_summary.csv",
@@ -136,8 +142,8 @@ for rel in required_files:
         raise SystemExit(f"missing v60 artifact: {rel}")
 
 requirements = read_csv(run_dir / "release_requirement_rows.csv")
-if len(requirements) != 13:
-    raise SystemExit("v60 should list thirteen release requirements")
+if len(requirements) != 14:
+    raise SystemExit("v60 should list fourteen release requirements")
 ready_reqs = {row["requirement"] for row in requirements if row["ready"] == "1" and row["status"] == "pass"}
 expected_ready = {
     "v52_baseline_registry_contract",
@@ -154,6 +160,7 @@ for requirement in [
     "required_30b_70b_symmetric_baselines",
     "h10_real_label_source_verified_scorer",
     "v56_expanded_ruler_longbench_replay_artifact",
+    "v58c_blind_response_intake_artifact",
     "v58_real_blind_eval",
     "full_v59_public_demo_real_replay",
     "human_release_review",
@@ -191,7 +198,7 @@ for claim in [
 manifest = json.loads((run_dir / "v60_architecture_challenge_release_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v60_release_contract_ready") != 1 or manifest.get("v60_ready") != 0:
     raise SystemExit("v60 manifest readiness boundary mismatch")
-if manifest.get("real_release_package_ready") != 0 or manifest.get("release_requirement_blocked_rows") != 7:
+if manifest.get("real_release_package_ready") != 0 or manifest.get("release_requirement_blocked_rows") != 8:
     raise SystemExit("v60 manifest should keep release blocked")
 if manifest.get("release_requirement_ready_rows") != 6:
     raise SystemExit("v60 manifest should record six PM-foundation ready requirements")
@@ -210,6 +217,7 @@ for snippet in [
     "v53 10-repo / 1000 source-span-bound query PM freeze",
     "real 30B/70B LLM+RAG comparison rows",
     "h10 real external/human label promotion evidence",
+    "v58c blind-response intake artifact",
     "Do not publish v1.0 release",
 ]:
     if snippet not in boundary:

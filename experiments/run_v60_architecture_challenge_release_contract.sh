@@ -17,11 +17,12 @@ V59_CONTRACT_DIR="$RESULTS_DIR/v59_one_command_challenge_demo_contract/contract_
 V59E_SUMMARY="$RESULTS_DIR/v59e_one_command_pm_foundation_demo_summary.csv"
 V59E_DIR="$RESULTS_DIR/v59e_one_command_pm_foundation_demo/pm_foundation_001"
 V59E_READY_ARTIFACT="$V59E_DIR/pm_foundation_stage_replay_rows.csv"
+V59E_V58C_DEPENDENCY_ARTIFACT="$V59E_DIR/v58c_pm_blind_response_intake_dependency_summary.csv"
 
 if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" ]]; then
   "$ROOT_DIR/experiments/run_v59_one_command_challenge_demo_contract.sh" >/dev/null
 fi
-if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" || ! -s "$V59E_SUMMARY" || ! -s "$V59E_READY_ARTIFACT" ]]; then
+if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" || ! -s "$V59E_SUMMARY" || ! -s "$V59E_READY_ARTIFACT" || ! -s "$V59E_V58C_DEPENDENCY_ARTIFACT" ]]; then
   "$ROOT_DIR/experiments/run_v59e_one_command_pm_foundation_demo.sh" >/dev/null
 fi
 
@@ -143,6 +144,8 @@ for rel in [
     "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json",
+    "v58c_pm_blind_response_intake_dependency_summary.csv",
+    "v58c_pm_blind_response_intake_dependency_rows.csv",
 ]:
     copy(v59e_dir / rel, f"source_v59e/{rel}")
 copy(results / "v59e_one_command_pm_foundation_demo_summary.csv", "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv")
@@ -268,6 +271,16 @@ requirements = [
         "v56-replay-artifact-missing",
     ),
     req(
+        "v58c_blind_response_intake_artifact",
+        as_int(v59e, "v58c_blind_response_evidence_intake_ready") == 1
+        and as_int(v59e, "v58c_expected_blind_response_rows") == 2500
+        and as_int(v59e, "v58c_required_blind_response_ready") == 0
+        and as_int(v59e, "v58c_human_blind_review_ready") == 0,
+        "v58c blind-response intake artifact is absent; implicit v58/v57/v56 seed rebuild remains blocked",
+        "source_v59e/v58c_pm_blind_response_intake_dependency_rows.csv",
+        "v58c-intake-artifact-missing",
+    ),
+    req(
         "v58_real_blind_eval",
         as_int(v59e, "v58_full_blind_eval_ready") == 1,
         "real D/E/G/H blind responses, human blind review, and adjudication rows are missing",
@@ -354,6 +367,7 @@ decision_rows = [
     ("real-30b-70b-baselines", "blocked", "real 30B/70B LLM+RAG rows are missing"),
     ("h10-real-label-promotion", "blocked", "accepted external/human real-label evidence is missing"),
     ("v56-replay-artifact", "blocked", "v56 expanded benchmark replay artifact remains missing"),
+    ("v58c-blind-response-intake", "blocked", "v58c intake artifact is missing or blocked by explicit seed-rebuild guard"),
     ("v58-real-blind-eval", "blocked", "real blind responses and human blind review are missing"),
     ("full-v59-public-demo", "blocked", "current one-command bundle is PM foundation replay, not full public challenge demo"),
     ("human-release-review", "blocked", "human/release review return is missing"),
@@ -390,6 +404,9 @@ summary = {
     "scaling_law_main_ready": 0,
     "expanded_benchmark_ready": int(as_int(pm_pr, "replay_artifact_pass_rows") == as_int(pm_pr, "recommended_pr_slice_rows")),
     "domain_expert_pack_ready": 0,
+    "v58c_blind_response_intake_ready": as_int(v59e, "v58c_blind_response_evidence_intake_ready"),
+    "v58c_intake_artifact_available": as_int(v59e, "v58c_intake_artifact_available"),
+    "v58c_dependency_blocker_ready": as_int(v59e, "v58c_dependency_blocker_ready"),
     "blind_eval_ready": as_int(v59e, "v58_full_blind_eval_ready"),
     "one_command_pm_foundation_ready": as_int(v59e, "v59e_one_command_pm_foundation_demo_ready"),
     "one_command_real_replay_ready": 0,
@@ -419,6 +436,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- real 30B/70B LLM+RAG comparison rows\n"
     "- h10 real external/human label promotion evidence\n"
     "- v56 expanded benchmark replay artifact\n"
+    "- v58c blind-response intake artifact or explicit dependency closure\n"
     "- v58 real blind eval responses and human review\n"
     "- full v59 public challenge replay over all real rows\n"
     "- human/release review\n"

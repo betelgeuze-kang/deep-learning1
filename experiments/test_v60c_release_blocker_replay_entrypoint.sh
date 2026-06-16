@@ -85,16 +85,16 @@ expected = {
     "entrypoint_admitted_by_default": "0",
     "required_env_rows": "8",
     "present_required_env_rows_by_default": "0",
-    "stage_rows": "11",
+    "stage_rows": "12",
     "ready_stage_rows": "2",
-    "blocked_stage_rows": "9",
+    "blocked_stage_rows": "10",
     "command_rows": "3",
     "ready_command_rows": "2",
     "blocked_command_rows": "1",
-    "release_requirement_rows": "13",
+    "release_requirement_rows": "14",
     "release_requirement_ready_rows": "6",
-    "release_requirement_blocked_rows": "7",
-    "blocked_release_requirement_rows": "7",
+    "release_requirement_blocked_rows": "8",
+    "blocked_release_requirement_rows": "8",
     "metadata_only_entrypoint_file_rows": "9",
     "payload_like_entrypoint_file_rows": "0",
     "remote_mutation_approved": "0",
@@ -104,6 +104,9 @@ expected = {
     "real_30b_70b_rows_ready": "0",
     "h10_real_label_promotion_ready": "0",
     "expanded_benchmark_ready": "0",
+    "v58c_blind_response_intake_ready": "0",
+    "v58c_intake_artifact_available": "0",
+    "v58c_dependency_blocker_ready": "1",
     "blind_eval_ready": "0",
     "one_command_real_replay_ready": "0",
     "human_release_review_ready": "0",
@@ -166,12 +169,12 @@ if [row["env_var"] for row in env_rows] != [
     raise SystemExit("v60c required env rows mismatch")
 
 stages = read_csv(run_dir / "release_blocker_replay_stage_rows.csv")
-if len(stages) != 11:
-    raise SystemExit("v60c expected eleven stage rows")
+if len(stages) != 12:
+    raise SystemExit("v60c expected twelve stage rows")
 if sum(row["status"] == "ready" for row in stages) != 2:
     raise SystemExit("v60c expected two ready stages by default")
-if sum(row["status"] == "blocked" for row in stages) != 9:
-    raise SystemExit("v60c expected nine blocked stages by default")
+if sum(row["status"] == "blocked" for row in stages) != 10:
+    raise SystemExit("v60c expected ten blocked stages by default")
 
 commands = read_csv(run_dir / "release_blocker_replay_command_rows.csv")
 if [row["ready_to_run_now"] for row in commands] != ["1", "1", "0"]:
@@ -225,9 +228,12 @@ for snippet in [
     "v60c_release_blocker_replay_entrypoint_ready=1",
     "entrypoint_admitted_by_default=0",
     "required_env_rows=8",
-    "blocked_release_requirement_rows=7",
+    "blocked_release_requirement_rows=8",
     "real_30b_70b_rows_ready=0",
     "h10_real_label_promotion_ready=0",
+    "v58c_blind_response_intake_ready=0",
+    "v58c_intake_artifact_available=0",
+    "v58c_dependency_blocker_ready=1",
     "blind_eval_ready=0",
     "v60_ready=0",
     "real_release_package_ready=0",

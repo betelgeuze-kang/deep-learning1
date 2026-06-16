@@ -171,11 +171,12 @@ stage_rows = [
     {"stage_id": "04-d-e-30b70b-baselines", "status": "blocked", "evidence": "V60C_30B_EVIDENCE_DIR and V60C_70B_EVIDENCE_DIR unset", "blocking_reason": "real D/E baseline evidence required"},
     {"stage_id": "05-h10-real-labels", "status": "blocked", "evidence": "V60C_H10_REAL_LABEL_EVIDENCE_CSV unset", "blocking_reason": "external/human source-verified label evidence required"},
     {"stage_id": "06-v56-replay-artifact", "status": "blocked", "evidence": "V60C_V56_REPLAY_ARTIFACT_DIR unset", "blocking_reason": "v56 replay artifact required"},
-    {"stage_id": "07-v58-real-blind-eval", "status": "blocked", "evidence": "V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR unset", "blocking_reason": "real blind responses and human blind review required"},
-    {"stage_id": "08-full-v59-public-demo", "status": "blocked", "evidence": "full_v1_public_demo_ready=0", "blocking_reason": "full public replay over all real rows is missing"},
-    {"stage_id": "09-human-release-review", "status": "blocked", "evidence": "V60C_HUMAN_RELEASE_REVIEW_DIR unset", "blocking_reason": "human release review required"},
-    {"stage_id": "10-release-package", "status": "blocked", "evidence": "V60C_RELEASE_PACKAGE_DIR unset", "blocking_reason": "release package required"},
-    {"stage_id": "11-v60-release-ready", "status": "blocked", "evidence": "v60_ready=0 and real_release_package_ready=0", "blocking_reason": "all release blockers must close first"},
+    {"stage_id": "07-v58c-blind-response-intake", "status": "blocked", "evidence": "v58c_intake_artifact_available=0", "blocking_reason": "v58c response intake artifact or dependency closure required"},
+    {"stage_id": "08-v58-real-blind-eval", "status": "blocked", "evidence": "V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR unset", "blocking_reason": "real blind responses and human blind review required"},
+    {"stage_id": "09-full-v59-public-demo", "status": "blocked", "evidence": "full_v1_public_demo_ready=0", "blocking_reason": "full public replay over all real rows is missing"},
+    {"stage_id": "10-human-release-review", "status": "blocked", "evidence": "V60C_HUMAN_RELEASE_REVIEW_DIR unset", "blocking_reason": "human release review required"},
+    {"stage_id": "11-release-package", "status": "blocked", "evidence": "V60C_RELEASE_PACKAGE_DIR unset", "blocking_reason": "release package required"},
+    {"stage_id": "12-v60-release-ready", "status": "blocked", "evidence": "v60_ready=0 and real_release_package_ready=0", "blocking_reason": "all release blockers must close first"},
 ]
 write_csv(run_dir / "release_blocker_replay_stage_rows.csv", list(stage_rows[0].keys()), stage_rows)
 
@@ -366,7 +367,7 @@ entrypoint_readme.write_text(
     "`real-v60-release-blocker-evidence` provenance string. Fixture or repo-internal "
     "inputs are rejected before replay commands run.\n\n"
     "Current ready commands are verification-only. Release remains blocked until "
-    "D/E 30B/70B evidence, h10 real labels, v56 replay artifact, v58 blind eval, "
+    "D/E 30B/70B evidence, h10 real labels, v56 replay artifact, v58c intake artifact, v58 blind eval, "
     "human release review, and a real release package are accepted.\n",
     encoding="utf-8",
 )
@@ -424,6 +425,9 @@ summary = {
     "real_30b_70b_rows_ready": v60_summary["real_30b_70b_rows_ready"],
     "h10_real_label_promotion_ready": v60_summary["h10_real_label_promotion_ready"],
     "expanded_benchmark_ready": v60_summary["expanded_benchmark_ready"],
+    "v58c_blind_response_intake_ready": v60_summary["v58c_blind_response_intake_ready"],
+    "v58c_intake_artifact_available": v60_summary["v58c_intake_artifact_available"],
+    "v58c_dependency_blocker_ready": v60_summary["v58c_dependency_blocker_ready"],
     "blind_eval_ready": v60_summary["blind_eval_ready"],
     "one_command_real_replay_ready": v60_summary["one_command_real_replay_ready"],
     "human_release_review_ready": v60_summary["human_release_review_ready"],
@@ -443,6 +447,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- blocked_release_requirement_rows={summary['blocked_release_requirement_rows']}\n"
     f"- real_30b_70b_rows_ready={summary['real_30b_70b_rows_ready']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
+    f"- v58c_blind_response_intake_ready={summary['v58c_blind_response_intake_ready']}\n"
+    f"- v58c_intake_artifact_available={summary['v58c_intake_artifact_available']}\n"
+    f"- v58c_dependency_blocker_ready={summary['v58c_dependency_blocker_ready']}\n"
     f"- blind_eval_ready={summary['blind_eval_ready']}\n"
     f"- v60_ready={summary['v60_ready']}\n"
     f"- real_release_package_ready={summary['real_release_package_ready']}\n"
