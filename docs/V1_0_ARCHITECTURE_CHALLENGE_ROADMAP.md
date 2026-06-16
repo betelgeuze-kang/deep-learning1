@@ -55,9 +55,10 @@ under `results/v1_0_pm_pr_claim_slice_gate/gate_001/blocker_packets/` for the
 approval-required v56 replay, D/E 30B/70B, h10 real-label, v58c/v58d intake artifacts,
 v58 blind-eval, and v60 release blockers. The `pm_execution_lock_rows.csv` ledger locks the team to
 closing v52-v60/v61 review slices and real evidence blockers, with default
-v62/v63 scaffold drift disallowed. The gate also emits 22 no-fixture external
-return templates under `return_templates/` so D/E, h10, v58c, v58, v56, and v60
-evidence can be supplied in the expected shape without changing protocols.
+v62/v63 scaffold drift disallowed. The gate also emits 24 no-fixture external
+return templates under `return_templates/` so D/E, h10, v58c, v58/v58d, v59e
+preflight, v56, and v60 evidence can be supplied in the expected shape without
+changing protocols.
 The v59e PM foundation one-command bundle refreshes this gate and copies those
 review packets, blocker packets, execution locks, and return templates under
 `source_pm_pr_claim_slice_gate/` so the PM split is replayable from the same

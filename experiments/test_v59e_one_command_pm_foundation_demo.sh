@@ -123,16 +123,16 @@ expected = {
     "pm_blocker_closure_packet_rows": "6",
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_bundle_ready": "1",
-    "pm_blocker_required_artifact_rows": "22",
+    "pm_blocker_required_artifact_rows": "24",
     "pm_blocker_required_artifact_fixture_allowed_rows": "0",
     "pm_execution_lock_rows": "10",
     "pm_execution_lock_active_rows": "10",
     "pm_scope_drift_allowed": "0",
     "pm_new_scaffold_default_allowed": "0",
-    "pm_external_return_template_rows": "22",
-    "pm_external_return_template_files": "22",
+    "pm_external_return_template_rows": "24",
+    "pm_external_return_template_files": "24",
     "pm_external_return_template_fixture_allowed_rows": "0",
-    "pm_external_return_template_approval_rows": "22",
+    "pm_external_return_template_approval_rows": "24",
     "pm_external_return_template_bundle_ready": "1",
     "pm_roadmap_requirement_rows": "20",
     "pm_roadmap_ready_rows": "14",
@@ -249,6 +249,8 @@ required_files = [
     "source_pm_pr_claim_slice_gate/blocker_packets/v58c-intake-artifact-missing.md",
     "source_pm_pr_claim_slice_gate/blocker_packets/v58-real-blind-eval-missing.md",
     "source_pm_pr_claim_slice_gate/return_templates/v58c-intake-artifact-missing/v58c-intake-summary.csv",
+    "source_pm_pr_claim_slice_gate/return_templates/v58-real-blind-eval-missing/v58d-review-return-intake.csv",
+    "source_pm_pr_claim_slice_gate/return_templates/v60-release-evidence-missing/v59e-replay-preflight.csv",
     "source_pm_pr_claim_slice_gate/return_templates/external-human-label-evidence-missing/h10-label-evidence-csv.csv",
 ]
 for rel in required_files:
@@ -424,7 +426,7 @@ if pr_summary.get("pm_blocker_closure_packet_files") != "6":
     raise SystemExit("v59e one-command PR slice gate should emit six blocker packets")
 if pr_summary.get("pm_execution_lock_rows") != "10" or pr_summary.get("pm_scope_drift_allowed") != "0":
     raise SystemExit("v59e one-command PR slice gate should keep the PM execution lock active")
-if pr_summary.get("pm_external_return_template_files") != "22" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
+if pr_summary.get("pm_external_return_template_files") != "24" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
     raise SystemExit("v59e one-command PR slice gate should emit no-fixture return templates")
 
 pr_slice_rows = read_csv(pr_slice_run_dir / "pm_pr_slice_rows.csv")

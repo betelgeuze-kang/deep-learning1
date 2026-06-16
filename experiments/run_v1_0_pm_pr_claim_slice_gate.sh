@@ -1090,6 +1090,15 @@ blocker_required_artifact_rows = [
     ),
     required_artifact_row(
         "v58-real-blind-eval-missing",
+        "v58d-review-return-intake",
+        "results/v58d_blind_review_return_intake/intake_001/",
+        "artifact-directory",
+        "blind review/adjudication required-field rows, review/adjudication return templates, validation rows, gate rows, score/failure-case output surfaces, dependency rows, boundary, manifest, and sha256_manifest.csv",
+        "experiments/test_v58d_blind_review_return_intake.sh",
+        "v58d intake artifact exists while review/adjudication evidence and full blind eval remain blocked unless real returns are supplied",
+    ),
+    required_artifact_row(
+        "v58-real-blind-eval-missing",
         "v58-sha256-manifest",
         "V58C_BLIND_RESPONSE_EVIDENCE_DIR/sha256_manifest.csv",
         "csv",
@@ -1150,6 +1159,15 @@ blocker_required_artifact_rows = [
         "human release review and reviewer acceptance evidence for public v1.0 package",
         "defer until upstream evidence and human release review are supplied",
         "real_release_package_ready=1 only after human release acceptance",
+    ),
+    required_artifact_row(
+        "v60-release-evidence-missing",
+        "v59e-replay-preflight",
+        "results/v59e_one_command_pm_foundation_demo/pm_foundation_001/pm_foundation_replay_preflight_rows.csv",
+        "csv",
+        "entrypoint, generated replay script, pinned-source snapshot replay, no default live download, no private fixture, no manual post-processing, no undocumented local state, PM sidecar packaging, blocker false-positive closure, and no remote mutation checks",
+        "experiments/test_v59e_one_command_pm_foundation_demo.sh",
+        "one_command_replay_preflight_ready=1 while full v59 public demo and public-source refresh readiness remain blocked",
     ),
     required_artifact_row(
         "v60-release-evidence-missing",
@@ -1243,6 +1261,7 @@ def return_template_for_artifact(row):
         "v58-blind-response-rows": "blind_response_id,blind_query_id,source_system_id,response_text_sha256,citation_rows_path,abstain_flag,latency_ms,resource_units,output_sha256,non_fixture_declared,approval_reference",
         "v58-run-identity-rows": "source_system_id,blind_system_id,model_architecture,size_class,run_metadata_sha256,credential_redacted,identity_key_sha256,non_fixture_declared,approval_reference",
         "v58-human-review-rows": "blind_review_id,blind_response_id,reviewer_id_hash,answer_score,citation_score,abstain_score,identity_hidden,adjudication_required,adjudication_result,conflict_disclosure_sha256,non_fixture_declared,approval_reference",
+        "v58d-review-return-intake": "artifact_path,required_field_rows_path,review_template_path,adjudication_template_path,validation_rows_path,gate_rows_path,score_rows_path,failure_case_rows_path,boundary_path,manifest_path,sha256_manifest_path,non_fixture_declared,approval_reference",
         "v58-sha256-manifest": "path,sha256,bytes,artifact_role,authority_uri,non_fixture_declared",
         "v58c-intake-summary": "summary_path,v58c_blind_response_evidence_intake_ready,required_blind_response_ready,human_blind_review_ready,sha256_manifest_path,non_fixture_declared,approval_reference",
         "v58c-intake-artifacts": "artifact_path,artifact_kind,required_response_template_rows,validation_rows,boundary_path,manifest_path,sha256_manifest_path,non_fixture_declared,approval_reference",
@@ -1250,6 +1269,7 @@ def return_template_for_artifact(row):
         "v60-upstream-readiness": "upstream_id,ready_flag,summary_path,summary_sha256,blocker_class,non_fixture_declared,approval_reference",
         "v60-release-claim-audit": "claim_id,allowed_claim,blocked_claim,evidence_path,evidence_sha256,reviewer_decision,non_fixture_declared,approval_reference",
         "v60-human-release-review": "release_review_id,reviewer_id_hash,release_packet_sha256,accepted_for_public_v1,required_corrections,conflict_disclosure_sha256,non_fixture_declared,approval_reference",
+        "v59e-replay-preflight": "check,status,evidence,claim_boundary,preflight_rows_sha256,one_command_replay_preflight_ready,full_public_source_download_ready,non_fixture_declared,approval_reference",
         "v60-release-sha256-manifest": "path,sha256,bytes,artifact_role,authority_uri,non_fixture_declared",
     }
     return f"{base_rel}.csv", "csv", headers[artifact_id] + "\n"
