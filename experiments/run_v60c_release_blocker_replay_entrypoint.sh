@@ -148,6 +148,13 @@ required_env_rows = [
         "purpose": "v58 real blind eval evidence",
     },
     {
+        "env_var": "V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR",
+        "required_value": "repo-external directory",
+        "required_shape": "approved public-source refresh evidence with pinned repo URLs, commit SHAs, tree/content hashes, download transcript, and sha256 manifest",
+        "present_by_default": "0",
+        "purpose": "full v59 public-source replay/download refresh evidence",
+    },
+    {
         "env_var": "V60C_HUMAN_RELEASE_REVIEW_DIR",
         "required_value": "repo-external directory",
         "required_shape": "human release review decision, conflict disclosure, and release claim audit",
@@ -164,6 +171,64 @@ required_env_rows = [
 ]
 write_csv(run_dir / "release_blocker_replay_required_env_rows.csv", list(required_env_rows[0].keys()), required_env_rows)
 
+pm_required_artifact_rows = read_csv(run_dir / "source_pm/pm_blocker_required_artifact_rows.csv")
+pm_return_template_rows = read_csv(run_dir / "source_pm/pm_external_return_template_rows.csv")
+template_by_key = {(row["blocker_class"], row["artifact_id"]): row for row in pm_return_template_rows}
+
+
+def replay_target_for(row):
+    blocker = row["blocker_class"]
+    artifact = row["artifact_id"]
+    if blocker == "v56-replay-artifact-missing":
+        return "V60C_V56_REPLAY_ARTIFACT_DIR", "06-v56-replay-artifact", "repo-external-dir"
+    if blocker == "de-30b70b-baselines-missing":
+        if artifact.startswith("d-"):
+            return "V60C_30B_EVIDENCE_DIR", "04-d-e-30b70b-baselines", "repo-external-dir"
+        return "V60C_70B_EVIDENCE_DIR", "04-d-e-30b70b-baselines", "repo-external-dir"
+    if blocker == "external-human-label-evidence-missing":
+        return "V60C_H10_REAL_LABEL_EVIDENCE_CSV", "05-h10-real-labels", "repo-external-file"
+    if blocker == "v58c-intake-artifact-missing":
+        return "V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR", "07-v58c-blind-response-intake", "repo-external-dir"
+    if blocker == "v58-real-blind-eval-missing":
+        return "V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR", "08-v58-real-blind-eval", "repo-external-dir"
+    if artifact == "v59-public-source-download-refresh":
+        return "V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR", "09-public-source-download-refresh", "repo-external-dir"
+    if artifact == "v60-human-release-review":
+        return "V60C_HUMAN_RELEASE_REVIEW_DIR", "11-human-release-review", "repo-external-dir"
+    if artifact == "v60-release-sha256-manifest":
+        return "V60C_RELEASE_PACKAGE_DIR", "12-release-package", "repo-external-dir"
+    return "none-local-v60-source-copy", "02-pm-foundation-pass-surfaces", "metadata-only"
+
+
+pm_artifact_map_rows = []
+for row in pm_required_artifact_rows:
+    key = (row["blocker_class"], row["artifact_id"])
+    template = template_by_key.get(key)
+    if template is None:
+        raise SystemExit(f"missing return template row for PM required artifact: {key}")
+    replay_env, replay_stage, evidence_root_kind = replay_target_for(row)
+    pm_artifact_map_rows.append(
+        {
+            "blocker_class": row["blocker_class"],
+            "artifact_id": row["artifact_id"],
+            "artifact_path_or_env": row["artifact_path_or_env"],
+            "artifact_kind": row["artifact_kind"],
+            "validation_command": row["validation_command"],
+            "acceptance_signal": row["acceptance_signal"],
+            "source_fixture_allowed": row["fixture_allowed"],
+            "source_approval_required": row["approval_required"],
+            "return_template_path": template["template_path"],
+            "return_template_ready": template["template_ready"],
+            "return_template_sha256": template["template_sha256"],
+            "replay_env_var": replay_env,
+            "replay_stage_id": replay_stage,
+            "evidence_root_kind": evidence_root_kind,
+            "default_replay_admitted": "0",
+            "status": "fail-closed",
+        }
+    )
+write_csv(run_dir / "release_blocker_replay_artifact_map_rows.csv", list(pm_artifact_map_rows[0].keys()), pm_artifact_map_rows)
+
 stage_rows = [
     {"stage_id": "01-v60-release-gate", "status": "ready", "evidence": "v60_release_contract_ready=1", "blocking_reason": ""},
     {"stage_id": "02-pm-foundation-pass-surfaces", "status": "ready", "evidence": "six PM-foundation requirements are ready", "blocking_reason": ""},
@@ -173,10 +238,11 @@ stage_rows = [
     {"stage_id": "06-v56-replay-artifact", "status": "blocked", "evidence": "V60C_V56_REPLAY_ARTIFACT_DIR unset", "blocking_reason": "v56 replay artifact required"},
     {"stage_id": "07-v58c-blind-response-intake", "status": "blocked", "evidence": "v58c_intake_artifact_available=0", "blocking_reason": "v58c response intake artifact or dependency closure required"},
     {"stage_id": "08-v58-real-blind-eval", "status": "blocked", "evidence": "V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR unset", "blocking_reason": "real blind responses and human blind review required"},
-    {"stage_id": "09-full-v59-public-demo", "status": "blocked", "evidence": "full_v1_public_demo_ready=0", "blocking_reason": "full public replay over all real rows is missing"},
-    {"stage_id": "10-human-release-review", "status": "blocked", "evidence": "V60C_HUMAN_RELEASE_REVIEW_DIR unset", "blocking_reason": "human release review required"},
-    {"stage_id": "11-release-package", "status": "blocked", "evidence": "V60C_RELEASE_PACKAGE_DIR unset", "blocking_reason": "release package required"},
-    {"stage_id": "12-v60-release-ready", "status": "blocked", "evidence": "v60_ready=0 and real_release_package_ready=0", "blocking_reason": "all release blockers must close first"},
+    {"stage_id": "09-public-source-download-refresh", "status": "blocked", "evidence": "V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR unset and full_public_source_download_ready=0", "blocking_reason": "approved public-source refresh/download evidence required"},
+    {"stage_id": "10-full-v59-public-demo", "status": "blocked", "evidence": "full_v1_public_demo_ready=0", "blocking_reason": "full public replay over all real rows is missing"},
+    {"stage_id": "11-human-release-review", "status": "blocked", "evidence": "V60C_HUMAN_RELEASE_REVIEW_DIR unset", "blocking_reason": "human release review required"},
+    {"stage_id": "12-release-package", "status": "blocked", "evidence": "V60C_RELEASE_PACKAGE_DIR unset", "blocking_reason": "release package required"},
+    {"stage_id": "13-v60-release-ready", "status": "blocked", "evidence": "v60_ready=0 and real_release_package_ready=0", "blocking_reason": "all release blockers must close first"},
 ]
 write_csv(run_dir / "release_blocker_replay_stage_rows.csv", list(stage_rows[0].keys()), stage_rows)
 
@@ -213,6 +279,7 @@ env_template.write_text(
             "export V60C_H10_REAL_LABEL_EVIDENCE_CSV=/path/outside/repo/h10_real_label_evidence.csv",
             "export V60C_V56_REPLAY_ARTIFACT_DIR=/path/outside/repo/v56_replay_artifacts",
             "export V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR=/path/outside/repo/v58_blind_response_evidence",
+            "export V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR=/path/outside/repo/public_source_refresh_evidence",
             "export V60C_HUMAN_RELEASE_REVIEW_DIR=/path/outside/repo/human_release_review",
             "export V60C_RELEASE_PACKAGE_DIR=/path/outside/repo/v60_release_package",
             "",
@@ -235,6 +302,7 @@ run_script.write_text(
             ": \"${V60C_H10_REAL_LABEL_EVIDENCE_CSV:?set V60C_H10_REAL_LABEL_EVIDENCE_CSV}\"",
             ": \"${V60C_V56_REPLAY_ARTIFACT_DIR:?set V60C_V56_REPLAY_ARTIFACT_DIR}\"",
             ": \"${V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR:?set V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR}\"",
+            ": \"${V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR:?set V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR}\"",
             ": \"${V60C_HUMAN_RELEASE_REVIEW_DIR:?set V60C_HUMAN_RELEASE_REVIEW_DIR}\"",
             ": \"${V60C_RELEASE_PACKAGE_DIR:?set V60C_RELEASE_PACKAGE_DIR}\"",
             "if [[ \"$V60C_REAL_EVIDENCE_PROVENANCE\" != \"real-v60-release-blocker-evidence\" ]]; then",
@@ -278,6 +346,7 @@ run_script.write_text(
             "require_external_file \"$V60C_H10_REAL_LABEL_EVIDENCE_CSV\" V60C_H10_REAL_LABEL_EVIDENCE_CSV",
             "require_external_dir \"$V60C_V56_REPLAY_ARTIFACT_DIR\" V60C_V56_REPLAY_ARTIFACT_DIR",
             "require_external_dir \"$V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR\" V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR",
+            "require_external_dir \"$V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR\" V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR",
             "require_external_dir \"$V60C_HUMAN_RELEASE_REVIEW_DIR\" V60C_HUMAN_RELEASE_REVIEW_DIR",
             "require_external_dir \"$V60C_RELEASE_PACKAGE_DIR\" V60C_RELEASE_PACKAGE_DIR",
             "V52D_30B_LLM_RAG_EVIDENCE_DIR=\"$V60C_30B_EVIDENCE_DIR\" \\",
@@ -339,12 +408,14 @@ ready_script.chmod(0o755)
 shutil.copy2(run_dir / "release_blocker_replay_required_env_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_REQUIRED_ENV_ROWS.csv")
 shutil.copy2(run_dir / "release_blocker_replay_stage_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_STAGE_ROWS.csv")
 shutil.copy2(run_dir / "release_blocker_replay_command_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_COMMAND_ROWS.csv")
+shutil.copy2(run_dir / "release_blocker_replay_artifact_map_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_ARTIFACT_MAP_ROWS.csv")
 
 entrypoint_manifest = {
     "artifact": "v60c_release_blocker_replay_entrypoint",
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
     "entrypoint_admitted_by_default": 0,
     "required_env_rows": len(required_env_rows),
+    "pm_required_artifact_map_rows": len(pm_artifact_map_rows),
     "stage_rows": len(stage_rows),
     "ready_stage_rows": sum(1 for row in stage_rows if row["status"] == "ready"),
     "blocked_stage_rows": sum(1 for row in stage_rows if row["status"] == "blocked"),
@@ -368,7 +439,7 @@ entrypoint_readme.write_text(
     "inputs are rejected before replay commands run.\n\n"
     "Current ready commands are verification-only. Release remains blocked until "
     "D/E 30B/70B evidence, h10 real labels, v56 replay artifact, v58c intake artifact, v58 blind eval, "
-    "human release review, and a real release package are accepted.\n",
+    "approved public-source refresh evidence, human release review, and a real release package are accepted.\n",
     encoding="utf-8",
 )
 
@@ -415,6 +486,11 @@ summary = {
     "release_requirement_ready_rows": v60_summary["release_requirement_ready_rows"],
     "release_requirement_blocked_rows": v60_summary["release_requirement_blocked_rows"],
     "blocked_release_requirement_rows": str(len(blocked_release_requirements)),
+    "pm_required_artifact_map_rows": str(len(pm_artifact_map_rows)),
+    "pm_required_artifact_map_fixture_allowed_rows": str(sum(1 for row in pm_artifact_map_rows if row["source_fixture_allowed"] == "1")),
+    "pm_required_artifact_map_approval_rows": str(sum(1 for row in pm_artifact_map_rows if row["source_approval_required"] == "1")),
+    "pm_required_artifact_map_template_bound_rows": str(sum(1 for row in pm_artifact_map_rows if row["return_template_ready"] == "1")),
+    "pm_required_artifact_map_default_admitted_rows": str(sum(1 for row in pm_artifact_map_rows if row["default_replay_admitted"] == "1")),
     "entrypoint_file_rows": str(len(entrypoint_files)),
     "metadata_only_entrypoint_file_rows": str(sum(1 for row in entrypoint_files if row["metadata_only"] == "1")),
     "payload_like_entrypoint_file_rows": str(sum(1 for row in entrypoint_files if row["payload_like"] == "1")),
@@ -445,6 +521,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- ready_stage_rows={summary['ready_stage_rows']}\n"
     f"- blocked_stage_rows={summary['blocked_stage_rows']}\n"
     f"- blocked_release_requirement_rows={summary['blocked_release_requirement_rows']}\n"
+    f"- pm_required_artifact_map_rows={summary['pm_required_artifact_map_rows']}\n"
+    f"- pm_required_artifact_map_fixture_allowed_rows={summary['pm_required_artifact_map_fixture_allowed_rows']}\n"
+    f"- pm_required_artifact_map_approval_rows={summary['pm_required_artifact_map_approval_rows']}\n"
+    f"- pm_required_artifact_map_template_bound_rows={summary['pm_required_artifact_map_template_bound_rows']}\n"
     f"- real_30b_70b_rows_ready={summary['real_30b_70b_rows_ready']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
     f"- v58c_blind_response_intake_ready={summary['v58c_blind_response_intake_ready']}\n"
@@ -465,6 +545,7 @@ manifest = {
     "v60c_release_blocker_replay_entrypoint_ready": 1,
     "entrypoint_admitted_by_default": 0,
     "required_env_rows": len(required_env_rows),
+    "pm_required_artifact_map_rows": len(pm_artifact_map_rows),
     "stage_rows": len(stage_rows),
     "blocked_release_requirement_rows": len(blocked_release_requirements),
     "real_release_package_ready": 0,

@@ -20,7 +20,7 @@ if "$ENTRYPOINT_DIR/RUN_RELEASE_BLOCKER_REPLAY_IF_READY.sh" >/tmp/v60c_no_env.ou
 fi
 grep -q "V60C_REAL_EVIDENCE_PROVENANCE" /tmp/v60c_no_env.err
 
-mkdir -p "$FIXTURE_ROOT/d30" "$FIXTURE_ROOT/e70" "$FIXTURE_ROOT/v56" "$FIXTURE_ROOT/v58" "$FIXTURE_ROOT/review" "$FIXTURE_ROOT/release"
+mkdir -p "$FIXTURE_ROOT/d30" "$FIXTURE_ROOT/e70" "$FIXTURE_ROOT/v56" "$FIXTURE_ROOT/v58" "$FIXTURE_ROOT/public_source" "$FIXTURE_ROOT/review" "$FIXTURE_ROOT/release"
 printf 'query_id,label_id\n' > "$FIXTURE_ROOT/h10_labels.csv"
 if V60C_REAL_EVIDENCE_PROVENANCE="fixture-release-evidence" \
   V60C_30B_EVIDENCE_DIR="$FIXTURE_ROOT/d30" \
@@ -28,6 +28,7 @@ if V60C_REAL_EVIDENCE_PROVENANCE="fixture-release-evidence" \
   V60C_H10_REAL_LABEL_EVIDENCE_CSV="$FIXTURE_ROOT/h10_labels.csv" \
   V60C_V56_REPLAY_ARTIFACT_DIR="$FIXTURE_ROOT/v56" \
   V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR="$FIXTURE_ROOT/v58" \
+  V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR="$FIXTURE_ROOT/public_source" \
   V60C_HUMAN_RELEASE_REVIEW_DIR="$FIXTURE_ROOT/review" \
   V60C_RELEASE_PACKAGE_DIR="$FIXTURE_ROOT/release" \
   "$ENTRYPOINT_DIR/RUN_RELEASE_BLOCKER_REPLAY_IF_READY.sh" >/tmp/v60c_fixture.out 2>/tmp/v60c_fixture.err; then
@@ -42,6 +43,7 @@ if V60C_REAL_EVIDENCE_PROVENANCE="real-v60-release-blocker-evidence" \
   V60C_H10_REAL_LABEL_EVIDENCE_CSV="$FIXTURE_ROOT/h10_labels.csv" \
   V60C_V56_REPLAY_ARTIFACT_DIR="$FIXTURE_ROOT/v56" \
   V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR="$FIXTURE_ROOT/v58" \
+  V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR="$FIXTURE_ROOT/public_source" \
   V60C_HUMAN_RELEASE_REVIEW_DIR="$FIXTURE_ROOT/review" \
   V60C_RELEASE_PACKAGE_DIR="$FIXTURE_ROOT/release" \
   "$ENTRYPOINT_DIR/RUN_RELEASE_BLOCKER_REPLAY_IF_READY.sh" >/tmp/v60c_repo_internal.out 2>/tmp/v60c_repo_internal.err; then
@@ -83,11 +85,11 @@ expected = {
     "v60c_release_blocker_replay_entrypoint_ready": "1",
     "v60_release_contract_ready": "1",
     "entrypoint_admitted_by_default": "0",
-    "required_env_rows": "8",
+    "required_env_rows": "9",
     "present_required_env_rows_by_default": "0",
-    "stage_rows": "12",
+    "stage_rows": "13",
     "ready_stage_rows": "2",
-    "blocked_stage_rows": "10",
+    "blocked_stage_rows": "11",
     "command_rows": "3",
     "ready_command_rows": "2",
     "blocked_command_rows": "1",
@@ -95,7 +97,12 @@ expected = {
     "release_requirement_ready_rows": "6",
     "release_requirement_blocked_rows": "8",
     "blocked_release_requirement_rows": "8",
-    "metadata_only_entrypoint_file_rows": "9",
+    "pm_required_artifact_map_rows": "26",
+    "pm_required_artifact_map_fixture_allowed_rows": "0",
+    "pm_required_artifact_map_approval_rows": "26",
+    "pm_required_artifact_map_template_bound_rows": "26",
+    "pm_required_artifact_map_default_admitted_rows": "0",
+    "metadata_only_entrypoint_file_rows": "10",
     "payload_like_entrypoint_file_rows": "0",
     "remote_mutation_approved": "0",
     "network_required_by_default": "0",
@@ -121,6 +128,7 @@ if int(summary["entrypoint_file_rows"]) < 7:
 
 required_files = [
     "release_blocker_replay_required_env_rows.csv",
+    "release_blocker_replay_artifact_map_rows.csv",
     "release_blocker_replay_stage_rows.csv",
     "release_blocker_replay_command_rows.csv",
     "release_blocker_replay_entrypoint_file_rows.csv",
@@ -132,6 +140,7 @@ required_files = [
     "release_blocker_replay_entrypoint/VERIFY_RELEASE_BLOCKER_REPLAY_ENTRYPOINT.sh",
     "release_blocker_replay_entrypoint/READY_NOW_COMMANDS.sh",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_REQUIRED_ENV_ROWS.csv",
+    "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_ARTIFACT_MAP_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_STAGE_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_COMMAND_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_MANIFEST.json",
@@ -163,18 +172,50 @@ if [row["env_var"] for row in env_rows] != [
     "V60C_H10_REAL_LABEL_EVIDENCE_CSV",
     "V60C_V56_REPLAY_ARTIFACT_DIR",
     "V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR",
+    "V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR",
     "V60C_HUMAN_RELEASE_REVIEW_DIR",
     "V60C_RELEASE_PACKAGE_DIR",
 ]:
     raise SystemExit("v60c required env rows mismatch")
 
+artifact_map_rows = read_csv(run_dir / "release_blocker_replay_artifact_map_rows.csv")
+if len(artifact_map_rows) != 26:
+    raise SystemExit("v60c should map all 26 PM required artifacts into replay targets")
+if any(row["source_fixture_allowed"] != "0" for row in artifact_map_rows):
+    raise SystemExit("v60c PM artifact map must preserve fixture-forbidden boundaries")
+if any(row["source_approval_required"] != "1" for row in artifact_map_rows):
+    raise SystemExit("v60c PM artifact map must preserve approval-required boundaries")
+if any(row["return_template_ready"] != "1" for row in artifact_map_rows):
+    raise SystemExit("v60c PM artifact map must bind every artifact to a ready return template")
+if any(row["default_replay_admitted"] != "0" or row["status"] != "fail-closed" for row in artifact_map_rows):
+    raise SystemExit("v60c PM artifact map must fail closed by default")
+artifact_map_by_key = {(row["blocker_class"], row["artifact_id"]): row for row in artifact_map_rows}
+expected_artifact_targets = {
+    ("de-30b70b-baselines-missing", "d-model-identity"): ("V60C_30B_EVIDENCE_DIR", "04-d-e-30b70b-baselines"),
+    ("de-30b70b-baselines-missing", "e-model-identity"): ("V60C_70B_EVIDENCE_DIR", "04-d-e-30b70b-baselines"),
+    ("external-human-label-evidence-missing", "h10-label-evidence-csv"): ("V60C_H10_REAL_LABEL_EVIDENCE_CSV", "05-h10-real-labels"),
+    ("v56-replay-artifact-missing", "v56b-scale-artifacts"): ("V60C_V56_REPLAY_ARTIFACT_DIR", "06-v56-replay-artifact"),
+    ("v58c-intake-artifact-missing", "v58c-intake-summary"): ("V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR", "07-v58c-blind-response-intake"),
+    ("v58-real-blind-eval-missing", "v58-human-review-rows"): ("V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR", "08-v58-real-blind-eval"),
+    ("v60-release-evidence-missing", "v59-public-source-download-refresh"): ("V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR", "09-public-source-download-refresh"),
+    ("v60-release-evidence-missing", "v59e-local-abgh-row-contract-replay"): ("none-local-v60-source-copy", "02-pm-foundation-pass-surfaces"),
+    ("v60-release-evidence-missing", "v60-human-release-review"): ("V60C_HUMAN_RELEASE_REVIEW_DIR", "11-human-release-review"),
+    ("v60-release-evidence-missing", "v60-release-sha256-manifest"): ("V60C_RELEASE_PACKAGE_DIR", "12-release-package"),
+}
+for key, (env_var, stage_id) in expected_artifact_targets.items():
+    row = artifact_map_by_key.get(key)
+    if row is None:
+        raise SystemExit(f"v60c PM artifact map missing {key}")
+    if row["replay_env_var"] != env_var or row["replay_stage_id"] != stage_id:
+        raise SystemExit(f"v60c PM artifact map target mismatch for {key}")
+
 stages = read_csv(run_dir / "release_blocker_replay_stage_rows.csv")
-if len(stages) != 12:
-    raise SystemExit("v60c expected twelve stage rows")
+if len(stages) != 13:
+    raise SystemExit("v60c expected thirteen stage rows")
 if sum(row["status"] == "ready" for row in stages) != 2:
     raise SystemExit("v60c expected two ready stages by default")
-if sum(row["status"] == "blocked" for row in stages) != 10:
-    raise SystemExit("v60c expected ten blocked stages by default")
+if sum(row["status"] == "blocked" for row in stages) != 11:
+    raise SystemExit("v60c expected eleven blocked stages by default")
 
 commands = read_csv(run_dir / "release_blocker_replay_command_rows.csv")
 if [row["ready_to_run_now"] for row in commands] != ["1", "1", "0"]:
@@ -195,8 +236,10 @@ if manifest.get("real_release_package_ready") != 0:
     raise SystemExit("v60c manifest must keep release blocked")
 
 entry_manifest = json.loads((entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_MANIFEST.json").read_text(encoding="utf-8"))
-if entry_manifest.get("required_env_rows") != 8:
+if entry_manifest.get("required_env_rows") != 9:
     raise SystemExit("v60c entrypoint manifest required env mismatch")
+if entry_manifest.get("pm_required_artifact_map_rows") != 26:
+    raise SystemExit("v60c entrypoint manifest PM artifact map mismatch")
 if entry_manifest.get("checkpoint_payload_bytes_committed_to_repo") != 0:
     raise SystemExit("v60c entrypoint manifest must keep repo payload zero")
 
@@ -208,6 +251,7 @@ for snippet in [
     "V52D_30B_LLM_RAG_EVIDENCE_DIR",
     "V10_H10_REAL_LABEL_EVIDENCE_CSV",
     "V58C_BLIND_RESPONSE_EVIDENCE_DIR",
+    "V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR",
     "rejecting repo-internal evidence",
 ]:
     if snippet not in run_script:
@@ -227,8 +271,12 @@ boundary = (run_dir / "V60C_RELEASE_BLOCKER_REPLAY_ENTRYPOINT_BOUNDARY.md").read
 for snippet in [
     "v60c_release_blocker_replay_entrypoint_ready=1",
     "entrypoint_admitted_by_default=0",
-    "required_env_rows=8",
+    "required_env_rows=9",
     "blocked_release_requirement_rows=8",
+    "pm_required_artifact_map_rows=26",
+    "pm_required_artifact_map_fixture_allowed_rows=0",
+    "pm_required_artifact_map_approval_rows=26",
+    "pm_required_artifact_map_template_bound_rows=26",
     "real_30b_70b_rows_ready=0",
     "h10_real_label_promotion_ready=0",
     "v58c_blind_response_intake_ready=0",
