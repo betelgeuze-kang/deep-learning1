@@ -9,7 +9,10 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53N_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V53N_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]] \
+  && grep -q '^v53n_complete_source_system_g_routehint_ready,' "$SUMMARY_CSV" \
+  && grep -q 'expected_answer_oracle_replay' "$SUMMARY_CSV" \
+  && grep -q 'expected_answer_oracle_replay=1' "$RUN_DIR/V53N_COMPLETE_SOURCE_SYSTEM_G_BOUNDARY.md"; then
   echo "v53n_complete_source_system_g_routehint_measured_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -62,6 +65,17 @@ def write_csv(path, fieldnames, rows):
 def read_csv(path):
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
+
+
+def union_fieldnames(rows):
+    fieldnames = []
+    seen = set()
+    for row in rows:
+        for field in row:
+            if field not in seen:
+                seen.add(field)
+                fieldnames.append(field)
+    return fieldnames
 
 
 def copy(src, rel):
@@ -156,6 +170,7 @@ for idx, query in enumerate(queries, start=1):
         "model_identity_id": "system_g_routememory_routehint_source_bound_v1",
         "answer_text": answer_text,
         "answer_text_sha256": sha256_text(answer_text),
+        "answer_source": "v53i_expected_answer_oracle_replay",
         "expected_behavior": query["expected_behavior"],
         "predicted_behavior": query["expected_behavior"],
         "abstained": str(int(query["expected_behavior"] == "abstain")),
@@ -288,6 +303,9 @@ for idx, query in enumerate(queries, start=1):
             "run_started_at_utc": run_started_at,
             "retrieved_span_rows": "1",
             "external_network_used": "0",
+            "answer_source": "v53i_expected_answer_oracle_replay",
+            "execution_mode": "expected-answer-oracle-replay",
+            "actual_adapter_execution_ready": "0",
         }
     )
     guard_rows.append(
@@ -314,9 +332,9 @@ write_csv(run_dir / "routehint_scorer_policy_preview_rows.csv", list(scorer_rows
 combined_abcg_answers = combined_abc_answers + answer_rows
 combined_abcg_citations = combined_abc_citations + citation_rows
 combined_abcg_resources = combined_abc_resources + resource_rows
-write_csv(run_dir / "supplied_v53j" / "answer_rows.csv", list(combined_abcg_answers[0].keys()), combined_abcg_answers)
+write_csv(run_dir / "supplied_v53j" / "answer_rows.csv", union_fieldnames(combined_abcg_answers), combined_abcg_answers)
 write_csv(run_dir / "supplied_v53j" / "citation_rows.csv", list(combined_abcg_citations[0].keys()), combined_abcg_citations)
-write_csv(run_dir / "supplied_v53j" / "resource_rows.csv", list(combined_abcg_resources[0].keys()), combined_abcg_resources)
+write_csv(run_dir / "supplied_v53j" / "resource_rows.csv", union_fieldnames(combined_abcg_resources), combined_abcg_resources)
 
 validation_rows = []
 for system_id in ["A", "B", "C", "D", "E", "G", "H"]:
@@ -355,6 +373,12 @@ metric_rows = [
         "external_model_used": "0",
         "external_network_used": "0",
         "symmetric_scorer_policy_rows_ready": "0",
+        "answer_source": "v53i_expected_answer_oracle_replay",
+        "execution_mode": "expected-answer-oracle-replay",
+        "expected_answer_oracle_replay": "1",
+        "expected_answer_oracle_replay_rows": str(len(answer_rows)),
+        "actual_adapter_execution_ready": "0",
+        "real_system_performance_claim_ready": "0",
     }
 ]
 write_csv(run_dir / "system_g_metric_rows.csv", list(metric_rows[0].keys()), metric_rows)
@@ -392,6 +416,12 @@ summary = {
     "symmetric_scorer_policy_rows_ready": "0",
     "review_artifacts_ready": "0",
     "real_release_package_ready": "0",
+    "answer_source": "v53i_expected_answer_oracle_replay",
+    "execution_mode": "expected-answer-oracle-replay",
+    "expected_answer_oracle_replay": "1",
+    "expected_answer_oracle_replay_rows": str(len(answer_rows)),
+    "actual_adapter_execution_ready": "0",
+    "real_system_performance_claim_ready": "0",
 }
 write_csv(summary_csv, list(summary.keys()), [summary])
 
@@ -403,9 +433,12 @@ decision_rows = [
     ("system-g-route-memory-evidence", "pass", f"route_memory_evidence_rows={len(route_memory_rows)}"),
     ("system-g-compact-routehint", "pass", f"compact_routehint_rows={len(routehint_rows)}; raw_prompt_context_bytes=0"),
     ("v53j-compatible-combined-abcg-supplied-dir", "pass", "combined A+B+C+G supplied_v53j rows emitted"),
+    ("oracle-replay-disclosed", "pass", "expected_answer_oracle_replay=1; answer rows copy v53i expected_answer for row-contract verification"),
     ("all-core-systems-ready", "blocked", "D/E/H supplied rows are still absent"),
     ("symmetric-scorer-policy-rows", "blocked", "G emits scorer-policy preview rows only; symmetric scorer/policy rows over all systems are absent"),
     ("human-review-artifacts", "blocked", "human/release review artifacts are not supplied"),
+    ("actual-adapter-execution", "blocked", "actual_adapter_execution_ready=0; this packet does not prove live RouteMemory/RouteHint adapter quality"),
+    ("real-system-performance-claim", "blocked", "oracle replay rows are not quality/performance evidence"),
     ("v53-full-public-repo-audit", "blocked", "Systems A/B/C/G are measured; remaining core systems and review evidence are still required"),
     ("real-release-package", "blocked", "v53n is not a release package"),
 ]
@@ -414,7 +447,7 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": g, "status": s, 
 (run_dir / "V53N_COMPLETE_SOURCE_SYSTEM_G_BOUNDARY.md").write_text(
     "# v53n Complete Source System G RouteHint Boundary\n\n"
     "This layer supplies System G RouteMemory + RouteHint answer, citation, resource, route-memory, and compact-hint rows over the same v53i complete-source 1000-query set used by v53k/v53l/v53m. "
-    "It emits a combined A+B+C+G partial supplied_v53j directory. This is not the completed v53 audit.\n\n"
+    "It emits a combined A+B+C+G partial supplied_v53j directory. This is a row-contract replay packet and not actual RouteMemory/RouteHint adapter performance evidence.\n\n"
     "- system_id=G\n"
     "- complete_source_query_rows=1000\n"
     f"- g_answer_rows={len(answer_rows)}\n"
@@ -425,8 +458,17 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": g, "status": s, 
     "- g_raw_prompt_context_bytes=0\n"
     f"- g_strict_expected_answer_match_rows={len(answer_rows)}\n"
     f"- combined_abcg_answer_rows={len(combined_abcg_answers)}\n"
+    "- answer_source=v53i_expected_answer_oracle_replay\n"
+    "- execution_mode=expected-answer-oracle-replay\n"
+    "- expected_answer_oracle_replay=1\n"
+    f"- expected_answer_oracle_replay_rows={len(answer_rows)}\n"
+    "- actual_adapter_execution_ready=0\n"
+    "- real_system_performance_claim_ready=0\n"
     "- remaining_core_systems=D/E/H\n"
     "- v53_ready=0\n\n"
+    "Claim boundary:\n\n"
+    "- Each System G answer row copies the frozen v53i `expected_answer` for the bound query, so this packet verifies that the G row contract can carry the v53i expected answer alongside route-memory/RouteHint rows. It does not prove live RouteMemory/RouteHint adapter quality.\n"
+    "- Resource rows record `execution_mode=expected-answer-oracle-replay` and `actual_adapter_execution_ready=0`, so do not interpret these rows as actual G adapter performance evidence.\n\n"
     "Still blocked:\n\n"
     "- supplied D/E/H answer/citation/resource rows over the same complete-source query IDs\n"
     "- symmetric scorer/policy rows over all systems\n"
@@ -448,6 +490,12 @@ manifest = {
     "g_route_memory_evidence_rows": len(route_memory_rows),
     "g_compact_routehint_rows": len(routehint_rows),
     "combined_abcg_answer_rows": len(combined_abcg_answers),
+    "answer_source": "v53i_expected_answer_oracle_replay",
+    "execution_mode": "expected-answer-oracle-replay",
+    "expected_answer_oracle_replay": 1,
+    "expected_answer_oracle_replay_rows": len(answer_rows),
+    "actual_adapter_execution_ready": 0,
+    "real_system_performance_claim_ready": 0,
     "remaining_core_systems": ["D", "E", "H"],
     "v53m_summary_sha256": sha256(results / "v53m_complete_source_system_c_local_model_rag_measured_summary.csv"),
     "real_release_package_ready": 0,

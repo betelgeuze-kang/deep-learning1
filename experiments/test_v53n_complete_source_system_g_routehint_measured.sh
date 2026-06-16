@@ -49,6 +49,19 @@ def read_csv(path):
         return list(csv.DictReader(handle))
 
 
+def rows_match_with_blank_schema_extension(actual_rows, expected_rows):
+    if len(actual_rows) != len(expected_rows):
+        return False
+    for actual, expected in zip(actual_rows, expected_rows):
+        for key, value in expected.items():
+            if actual.get(key) != value:
+                return False
+        for key, value in actual.items():
+            if key not in expected and value not in ("", None):
+                return False
+    return True
+
+
 summary = read_csv(summary_csv)[0]
 expected = {
     "v53n_complete_source_system_g_routehint_ready": "1",
@@ -82,6 +95,12 @@ expected = {
     "symmetric_scorer_policy_rows_ready": "0",
     "review_artifacts_ready": "0",
     "real_release_package_ready": "0",
+    "answer_source": "v53i_expected_answer_oracle_replay",
+    "execution_mode": "expected-answer-oracle-replay",
+    "expected_answer_oracle_replay": "1",
+    "expected_answer_oracle_replay_rows": "1000",
+    "actual_adapter_execution_ready": "0",
+    "real_system_performance_claim_ready": "0",
 }
 for field, value in expected.items():
     if summary.get(field) != value:
@@ -96,6 +115,7 @@ for gate in [
     "system-g-route-memory-evidence",
     "system-g-compact-routehint",
     "v53j-compatible-combined-abcg-supplied-dir",
+    "oracle-replay-disclosed",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v53n gate should pass: {gate}")
@@ -103,6 +123,8 @@ for gate in [
     "all-core-systems-ready",
     "symmetric-scorer-policy-rows",
     "human-review-artifacts",
+    "actual-adapter-execution",
+    "real-system-performance-claim",
     "v53-full-public-repo-audit",
     "real-release-package",
 ]:
@@ -170,6 +192,8 @@ for answer in answers:
         raise SystemExit("v53n answer should match expected answer")
     if answer["answer_text_sha256"] != query["expected_answer_sha256"]:
         raise SystemExit("v53n answer hash mismatch")
+    if answer["answer_source"] != "v53i_expected_answer_oracle_replay":
+        raise SystemExit("v53n answer rows must disclose expected-answer oracle replay")
     if answer["output_provenance_sha256"] != provenance_hash(answer):
         raise SystemExit("v53n output provenance hash mismatch")
     if answer["resource_row_id"] not in resource_by_id:
@@ -193,6 +217,12 @@ for row in resources:
         raise SystemExit("v53n resources should be local/no external model")
     if row["model_name"] != "deterministic-routememory-routehint-source-bound":
         raise SystemExit("v53n resource model name mismatch")
+    if row["execution_mode"] != "expected-answer-oracle-replay":
+        raise SystemExit("v53n resources must disclose expected-answer oracle replay execution mode")
+    if row["actual_adapter_execution_ready"] != "0":
+        raise SystemExit("v53n resources must not claim actual adapter execution")
+    if row["answer_source"] != "v53i_expected_answer_oracle_replay":
+        raise SystemExit("v53n resources must disclose expected-answer oracle replay source")
 for row in retrieval:
     query = queries[row["query_id"]]
     if row["source_span_id"] != query["source_span_id"] or row["rank"] != "1":
@@ -215,11 +245,11 @@ combined_abc_resources = read_csv(run_dir / "source_v53m/supplied_v53j/resource_
 combined_answers = read_csv(run_dir / "supplied_v53j/answer_rows.csv")
 combined_citations = read_csv(run_dir / "supplied_v53j/citation_rows.csv")
 combined_resources = read_csv(run_dir / "supplied_v53j/resource_rows.csv")
-if combined_answers != combined_abc_answers + answers:
+if not rows_match_with_blank_schema_extension(combined_answers, combined_abc_answers + answers):
     raise SystemExit("v53n supplied_v53j answer rows should combine A+B+C+G")
 if combined_citations != combined_abc_citations + citations:
     raise SystemExit("v53n supplied_v53j citation rows should combine A+B+C+G")
-if combined_resources != combined_abc_resources + resources:
+if not rows_match_with_blank_schema_extension(combined_resources, combined_abc_resources + resources):
     raise SystemExit("v53n supplied_v53j resource rows should combine A+B+C+G")
 
 validation = {row["system_id"]: row for row in read_csv(run_dir / "v53j_partial_supplied_validation_rows.csv")}
@@ -233,12 +263,24 @@ for system_id in ["D", "E", "H"]:
 metric = read_csv(run_dir / "system_g_metric_rows.csv")[0]
 if metric["raw_prompt_context_bytes"] != "0" or metric["symmetric_scorer_policy_rows_ready"] != "0":
     raise SystemExit("v53n metric boundary mismatch")
+if metric["expected_answer_oracle_replay"] != "1" or metric["expected_answer_oracle_replay_rows"] != "1000":
+    raise SystemExit("v53n metric oracle replay disclosure mismatch")
+if metric["actual_adapter_execution_ready"] != "0" or metric["real_system_performance_claim_ready"] != "0":
+    raise SystemExit("v53n metric must not claim actual adapter execution or system performance")
+if metric["answer_source"] != "v53i_expected_answer_oracle_replay" or metric["execution_mode"] != "expected-answer-oracle-replay":
+    raise SystemExit("v53n metric must carry oracle replay source and execution mode")
 
 manifest = json.loads((run_dir / "v53n_complete_source_system_g_routehint_measured_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v53n_complete_source_system_g_routehint_ready") != 1 or manifest.get("v53_ready") != 0:
     raise SystemExit("v53n manifest readiness boundary mismatch")
 if manifest.get("remaining_core_systems") != ["D", "E", "H"]:
     raise SystemExit("v53n manifest remaining core systems mismatch")
+if manifest.get("expected_answer_oracle_replay") != 1 or manifest.get("expected_answer_oracle_replay_rows") != 1000:
+    raise SystemExit("v53n manifest oracle replay boundary mismatch")
+if manifest.get("actual_adapter_execution_ready") != 0 or manifest.get("real_system_performance_claim_ready") != 0:
+    raise SystemExit("v53n manifest must not claim actual adapter execution or system performance")
+if manifest.get("answer_source") != "v53i_expected_answer_oracle_replay" or manifest.get("execution_mode") != "expected-answer-oracle-replay":
+    raise SystemExit("v53n manifest must carry oracle replay source and execution mode")
 
 boundary = (run_dir / "V53N_COMPLETE_SOURCE_SYSTEM_G_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
@@ -246,6 +288,11 @@ for snippet in [
     "g_answer_rows=1000",
     "g_raw_prompt_context_bytes=0",
     "combined_abcg_answer_rows=4000",
+    "answer_source=v53i_expected_answer_oracle_replay",
+    "execution_mode=expected-answer-oracle-replay",
+    "expected_answer_oracle_replay=1",
+    "actual_adapter_execution_ready=0",
+    "real_system_performance_claim_ready=0",
     "remaining_core_systems=D/E/H",
     "Do not publish v53 completion",
 ]:

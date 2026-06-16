@@ -77,6 +77,12 @@ expected = {
     "symmetric_scorer_policy_rows_ready": "0",
     "review_artifacts_ready": "0",
     "real_release_package_ready": "0",
+    "answer_source": "v53i_expected_answer_oracle_replay",
+    "execution_mode": "expected-answer-oracle-replay",
+    "expected_answer_oracle_replay": "1",
+    "expected_answer_oracle_replay_rows": "1000",
+    "actual_adapter_execution_ready": "0",
+    "real_system_performance_claim_ready": "0",
 }
 for field, value in expected.items():
     if summary.get(field) != value:
@@ -89,6 +95,7 @@ for gate in [
     "system-a-citation-rows",
     "system-a-resource-rows",
     "v53j-compatible-supplied-dir",
+    "oracle-replay-disclosed",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v53k gate should pass: {gate}")
@@ -96,6 +103,8 @@ for gate in [
     "all-core-systems-ready",
     "symmetric-scorer-policy-rows",
     "human-review-artifacts",
+    "actual-adapter-execution",
+    "real-system-performance-claim",
     "v53-full-public-repo-audit",
     "real-release-package",
 ]:
@@ -158,6 +167,8 @@ for answer in answers:
         raise SystemExit("v53k System A should answer from the frozen expected source fact")
     if answer["answer_text_sha256"] != sha256_text(answer["answer_text"]):
         raise SystemExit("v53k answer hash mismatch")
+    if answer["answer_source"] != "v53i_expected_answer_oracle_replay":
+        raise SystemExit("v53k answer rows must disclose expected-answer oracle replay")
     if answer["expected_behavior"] != query["expected_behavior"] or answer["predicted_behavior"] != query["expected_behavior"]:
         raise SystemExit("v53k answer behavior mismatch")
     if answer["strict_expected_answer_match"] != "1":
@@ -189,6 +200,12 @@ for resource in resources:
         raise SystemExit("v53k resource latency should be positive")
     if resource["model_name"] != "deterministic-lexical-exact-source-span":
         raise SystemExit("v53k resource model identity mismatch")
+    if resource["execution_mode"] != "expected-answer-oracle-replay":
+        raise SystemExit("v53k resources must disclose expected-answer oracle replay execution mode")
+    if resource["actual_adapter_execution_ready"] != "0":
+        raise SystemExit("v53k resources must not claim actual adapter execution")
+    if resource["answer_source"] != "v53i_expected_answer_oracle_replay":
+        raise SystemExit("v53k resources must disclose expected-answer oracle replay source")
 
 for row in retrieval:
     query = queries[row["query_id"]]
@@ -219,12 +236,24 @@ if metric["answer_rows"] != "1000" or metric["strict_expected_answer_match_rows"
     raise SystemExit("v53k System A metric rows mismatch")
 if metric["supported_rows"] != "840" or metric["negative_abstain_rows"] != "160":
     raise SystemExit("v53k supported/negative split mismatch")
+if metric["expected_answer_oracle_replay"] != "1" or metric["expected_answer_oracle_replay_rows"] != "1000":
+    raise SystemExit("v53k metric oracle replay disclosure mismatch")
+if metric["actual_adapter_execution_ready"] != "0" or metric["real_system_performance_claim_ready"] != "0":
+    raise SystemExit("v53k metric must not claim actual adapter execution or system performance")
+if metric["answer_source"] != "v53i_expected_answer_oracle_replay" or metric["execution_mode"] != "expected-answer-oracle-replay":
+    raise SystemExit("v53k metric must carry oracle replay source and execution mode")
 
 manifest = json.loads((run_dir / "v53k_complete_source_system_a_lexical_measured_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v53k_complete_source_system_a_lexical_ready") != 1 or manifest.get("v53_ready") != 0:
     raise SystemExit("v53k manifest readiness boundary mismatch")
 if manifest.get("remaining_core_systems") != ["B", "C", "D", "E", "G", "H"]:
     raise SystemExit("v53k manifest remaining core systems mismatch")
+if manifest.get("expected_answer_oracle_replay") != 1 or manifest.get("expected_answer_oracle_replay_rows") != 1000:
+    raise SystemExit("v53k manifest oracle replay boundary mismatch")
+if manifest.get("actual_adapter_execution_ready") != 0 or manifest.get("real_system_performance_claim_ready") != 0:
+    raise SystemExit("v53k manifest must not claim actual adapter execution or system performance")
+if manifest.get("answer_source") != "v53i_expected_answer_oracle_replay" or manifest.get("execution_mode") != "expected-answer-oracle-replay":
+    raise SystemExit("v53k manifest must carry oracle replay source and execution mode")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -238,6 +267,11 @@ for snippet in [
     "System A lexical/BM25-compatible",
     "a_answer_rows=1000",
     "v53j_compatible_answer_rows=1000",
+    "answer_source=v53i_expected_answer_oracle_replay",
+    "execution_mode=expected-answer-oracle-replay",
+    "expected_answer_oracle_replay=1",
+    "actual_adapter_execution_ready=0",
+    "real_system_performance_claim_ready=0",
     "remaining_core_systems=B/C/D/E/G/H",
     "Do not publish v53 completion",
 ]:

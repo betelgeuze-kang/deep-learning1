@@ -9,7 +9,10 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53K_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V53K_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]] \
+  && grep -q '^v53k_complete_source_system_a_lexical_ready,' "$SUMMARY_CSV" \
+  && grep -q 'expected_answer_oracle_replay' "$SUMMARY_CSV" \
+  && grep -q 'expected_answer_oracle_replay=1' "$RUN_DIR/V53K_COMPLETE_SOURCE_SYSTEM_A_BOUNDARY.md"; then
   echo "v53k_complete_source_system_a_lexical_measured_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -136,6 +139,7 @@ for idx, query in enumerate(queries, start=1):
         "model_identity_id": "system_a_lexical_exact_source_span_v1",
         "answer_text": answer_text,
         "answer_text_sha256": sha256_text(answer_text),
+        "answer_source": "v53i_expected_answer_oracle_replay",
         "expected_behavior": query["expected_behavior"],
         "predicted_behavior": query["expected_behavior"],
         "abstained": str(int(query["expected_behavior"] == "abstain")),
@@ -185,6 +189,9 @@ for idx, query in enumerate(queries, start=1):
             "run_started_at_utc": run_started_at,
             "retrieved_span_rows": "1",
             "external_network_used": "0",
+            "answer_source": "v53i_expected_answer_oracle_replay",
+            "execution_mode": "expected-answer-oracle-replay",
+            "actual_adapter_execution_ready": "0",
         }
     )
 
@@ -258,6 +265,12 @@ metric_rows = [
         "negative_abstain_rows": str(sum(1 for row in queries if row["negative_or_abstain"] == "1")),
         "external_model_used": "0",
         "external_network_used": "0",
+        "answer_source": "v53i_expected_answer_oracle_replay",
+        "execution_mode": "expected-answer-oracle-replay",
+        "expected_answer_oracle_replay": "1",
+        "expected_answer_oracle_replay_rows": str(len(answer_rows)),
+        "actual_adapter_execution_ready": "0",
+        "real_system_performance_claim_ready": "0",
     }
 ]
 write_csv(run_dir / "system_a_metric_rows.csv", list(metric_rows[0].keys()), metric_rows)
@@ -292,6 +305,12 @@ summary = {
     "symmetric_scorer_policy_rows_ready": "0",
     "review_artifacts_ready": "0",
     "real_release_package_ready": "0",
+    "answer_source": "v53i_expected_answer_oracle_replay",
+    "execution_mode": "expected-answer-oracle-replay",
+    "expected_answer_oracle_replay": "1",
+    "expected_answer_oracle_replay_rows": str(len(answer_rows)),
+    "actual_adapter_execution_ready": "0",
+    "real_system_performance_claim_ready": "0",
 }
 write_csv(summary_csv, list(summary.keys()), [summary])
 
@@ -301,9 +320,12 @@ decision_rows = [
     ("system-a-citation-rows", "pass" if len(citation_rows) == 1000 else "blocked", f"a_citation_rows={len(citation_rows)}"),
     ("system-a-resource-rows", "pass" if len(resource_rows) == 1000 else "blocked", f"a_resource_rows={len(resource_rows)}"),
     ("v53j-compatible-supplied-dir", "pass", "supplied_v53j/answer_rows.csv,citation_rows.csv,resource_rows.csv emitted"),
+    ("oracle-replay-disclosed", "pass", "expected_answer_oracle_replay=1; answer rows copy v53i expected_answer for row-contract verification"),
     ("all-core-systems-ready", "blocked", "B/C/D/E/G/H supplied rows are still absent"),
     ("symmetric-scorer-policy-rows", "blocked", "symmetric scorer/policy rows over v53k are absent"),
     ("human-review-artifacts", "blocked", "human/release review artifacts are not supplied"),
+    ("actual-adapter-execution", "blocked", "actual_adapter_execution_ready=0; this packet does not prove live BM25 adapter quality"),
+    ("real-system-performance-claim", "blocked", "oracle replay rows are not quality/performance evidence"),
     ("v53-full-public-repo-audit", "blocked", "System A is measured; remaining core systems and review evidence are still required"),
     ("real-release-package", "blocked", "v53k is not a release package"),
 ]
@@ -311,16 +333,25 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": g, "status": s, 
 
 (run_dir / "V53K_COMPLETE_SOURCE_SYSTEM_A_BOUNDARY.md").write_text(
     "# v53k Complete Source System A Lexical Boundary\n\n"
-    "This layer supplies real System A lexical/BM25-compatible answer, citation, and resource rows over the v53i complete-source 1000-query set. "
-    "It is one core-system measured packet for v53j, not the completed v53 audit.\n\n"
+    "This layer supplies System A lexical/BM25-compatible answer, citation, and resource rows over the v53i complete-source 1000-query set. "
+    "It is one core-system row-contract replay packet for v53j, not the completed v53 audit and not actual adapter performance evidence.\n\n"
     f"- system_id=A\n"
     f"- complete_source_query_rows=1000\n"
     f"- a_answer_rows={len(answer_rows)}\n"
     f"- a_citation_rows={len(citation_rows)}\n"
     f"- a_resource_rows={len(resource_rows)}\n"
     f"- v53j_compatible_answer_rows={len(answer_rows)}\n"
+    "- answer_source=v53i_expected_answer_oracle_replay\n"
+    "- execution_mode=expected-answer-oracle-replay\n"
+    "- expected_answer_oracle_replay=1\n"
+    f"- expected_answer_oracle_replay_rows={len(answer_rows)}\n"
+    "- actual_adapter_execution_ready=0\n"
+    "- real_system_performance_claim_ready=0\n"
     "- remaining_core_systems=B/C/D/E/G/H\n"
     "- v53_ready=0\n\n"
+    "Claim boundary:\n\n"
+    "- Each System A answer row copies the frozen v53i `expected_answer` for the bound query, so this packet verifies that the A row contract can carry the v53i expected answer. It does not prove live BM25 adapter quality.\n"
+    "- Resource rows record `execution_mode=expected-answer-oracle-replay` and `actual_adapter_execution_ready=0`, so do not interpret these rows as actual A adapter performance evidence.\n\n"
     "Still blocked:\n\n"
     "- supplied B/C/D/E/G/H answer/citation/resource rows over the same complete-source query IDs\n"
     "- symmetric scorer/policy rows\n"
@@ -339,6 +370,12 @@ manifest = {
     "a_answer_rows": len(answer_rows),
     "a_citation_rows": len(citation_rows),
     "a_resource_rows": len(resource_rows),
+    "answer_source": "v53i_expected_answer_oracle_replay",
+    "execution_mode": "expected-answer-oracle-replay",
+    "expected_answer_oracle_replay": 1,
+    "expected_answer_oracle_replay_rows": len(answer_rows),
+    "actual_adapter_execution_ready": 0,
+    "real_system_performance_claim_ready": 0,
     "remaining_core_systems": ["B", "C", "D", "E", "G", "H"],
     "v53j_summary_sha256": sha256(results / "v53j_complete_source_ah_answer_citation_resource_intake_summary.csv"),
     "real_release_package_ready": 0,
