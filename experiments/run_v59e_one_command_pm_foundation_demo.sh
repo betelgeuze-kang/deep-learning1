@@ -688,8 +688,8 @@ review_packet_ready = int(
     and as_int(pr_summary, "pm_pr_review_packet_files") == len(review_packet_files) == 10
 )
 blocker_packet_ready = int(
-    as_int(pr_summary, "pm_blocker_closure_packet_rows") == 5
-    and as_int(pr_summary, "pm_blocker_closure_packet_files") == len(blocker_packet_files) == 5
+    as_int(pr_summary, "pm_blocker_closure_packet_rows") == 6
+    and as_int(pr_summary, "pm_blocker_closure_packet_files") == len(blocker_packet_files) == 6
 )
 execution_lock_ready = int(
     as_int(pr_summary, "pm_execution_lock_rows") == 10
@@ -698,9 +698,9 @@ execution_lock_ready = int(
     and as_int(pr_summary, "pm_new_scaffold_default_allowed") == 0
 )
 external_return_template_ready = int(
-    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 19
+    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 22
     and as_int(pr_summary, "pm_external_return_template_fixture_allowed_rows") == 0
-    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 19
+    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 22
 )
 pm_pr_claim_slice_bundle_ready = int(
     as_int(pr_summary, "v1_0_pm_pr_claim_slice_gate_ready") == 1

@@ -621,6 +621,18 @@ pm_roadmap_rows = [
     ),
     req(
         "M6",
+        "v58c-blind-response-intake-artifact",
+        "v58c blind-response intake artifact exists without implicit v58/v57/v56 seed rebuild",
+        as_int(v59e, "v58c_blind_response_evidence_intake_ready") == 1
+        and as_int(v59e, "v58c_expected_blind_response_rows") == 2500
+        and as_int(v59e, "v58c_required_blind_response_ready") == 0
+        and as_int(v59e, "v58c_human_blind_review_ready") == 0,
+        "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
+        f"v58c_intake_artifact_available={v59e.get('v58c_intake_artifact_available', '0')} v58c_dependency_blocker_ready={v59e.get('v58c_dependency_blocker_ready', '0')}",
+        "v58c-intake-artifact-missing",
+    ),
+    req(
+        "M6",
         "v58-full-blind-eval",
         "v58 real blind eval has real D/E/G/H responses, identity hiding, human review, and adjudication rows",
         as_int(v59e, "v58_full_blind_eval_ready") == 1,
@@ -720,6 +732,17 @@ blocker_closure_rows = [
         "v58 blocker ledger only; no blind-eval completion claim",
     ),
     closure_row(
+        "v58c-intake-artifact-missing",
+        "M6",
+        "v58c-blind-response-intake-artifact",
+        "v58c blind-response intake summary and intake_001 artifact directory with response templates, run identity templates, validation rows, source_v58b freeze evidence, boundary, manifest, and sha256 manifest",
+        "V58C_REUSE_EXISTING=0 experiments/test_v58c_blind_response_evidence_intake.sh",
+        "v58-seed-rebuild-or-real-response-intake-approval-required",
+        "defer-until-v58c-intake-artifact-or-real-response-evidence-approved",
+        "v58c_blind_response_evidence_intake_ready=1 while required_blind_response_ready=0 and human_blind_review_ready=0 remain correctly bounded",
+        "v58c intake artifact missing; no blind-response intake or blind-eval completion claim",
+    ),
+    closure_row(
         "v60-release-evidence-missing",
         "M6",
         "v60-public-release-gate",
@@ -731,6 +754,18 @@ blocker_closure_rows = [
         "pre-v1.0 research artifact; no release-ready/public-win/production claim",
     ),
 ]
+blocker_order = {
+    "v56-replay-artifact-missing": 0,
+    "de-30b70b-baselines-missing": 1,
+    "external-human-label-evidence-missing": 2,
+    "v58c-intake-artifact-missing": 3,
+    "v58-real-blind-eval-missing": 4,
+    "v60-release-evidence-missing": 5,
+}
+blocker_closure_rows = sorted(
+    blocker_closure_rows,
+    key=lambda row: blocker_order[row["blocker_class"]],
+)
 write_csv(run_dir / "pm_blocker_closure_queue_rows.csv", list(blocker_closure_rows[0].keys()), blocker_closure_rows)
 
 
@@ -895,6 +930,33 @@ blocker_required_artifact_rows = [
         "blind response evidence is replay/hash-bound",
     ),
     required_artifact_row(
+        "v58c-intake-artifact-missing",
+        "v58c-intake-summary",
+        "results/v58c_blind_response_evidence_intake_summary.csv",
+        "summary-csv",
+        "v58c_blind_response_evidence_intake_ready=1 with required_blind_response_ready=0 and human_blind_review_ready=0",
+        "V58C_REUSE_EXISTING=0 experiments/test_v58c_blind_response_evidence_intake.sh",
+        "v58c summary exists and keeps full blind eval blocked",
+    ),
+    required_artifact_row(
+        "v58c-intake-artifact-missing",
+        "v58c-intake-artifacts",
+        "results/v58c_blind_response_evidence_intake/intake_001/",
+        "artifact-directory",
+        "blind_response_required_field_rows.csv, blind_response_row_template.csv, run_identity_template_rows.csv, validation/gate rows, boundary, manifest, sha256_manifest.csv",
+        "V58C_REUSE_EXISTING=0 experiments/test_v58c_blind_response_evidence_intake.sh",
+        "v58c intake artifact directory is replay/hash-bound",
+    ),
+    required_artifact_row(
+        "v58c-intake-artifact-missing",
+        "v58c-source-v58b-freeze",
+        "results/v58c_blind_response_evidence_intake/intake_001/source_v58b/",
+        "artifact-directory",
+        "copied v58b blind query freeze, sealed answer/identity keys, blind response templates, evidence budgets, and sha256_manifest.csv",
+        "V58C_REUSE_EXISTING=0 experiments/test_v58c_blind_response_evidence_intake.sh",
+        "v58c intake binds to the frozen v58b blind-query surface",
+    ),
+    required_artifact_row(
         "v60-release-evidence-missing",
         "v60-upstream-readiness",
         "v52-v59 readiness summaries",
@@ -1014,6 +1076,9 @@ def return_template_for_artifact(row):
         "v58-run-identity-rows": "source_system_id,blind_system_id,model_architecture,size_class,run_metadata_sha256,credential_redacted,identity_key_sha256,non_fixture_declared,approval_reference",
         "v58-human-review-rows": "blind_review_id,blind_response_id,reviewer_id_hash,answer_score,citation_score,abstain_score,identity_hidden,adjudication_required,adjudication_result,conflict_disclosure_sha256,non_fixture_declared,approval_reference",
         "v58-sha256-manifest": "path,sha256,bytes,artifact_role,authority_uri,non_fixture_declared",
+        "v58c-intake-summary": "summary_path,v58c_blind_response_evidence_intake_ready,required_blind_response_ready,human_blind_review_ready,sha256_manifest_path,non_fixture_declared,approval_reference",
+        "v58c-intake-artifacts": "artifact_path,artifact_kind,required_response_template_rows,validation_rows,boundary_path,manifest_path,sha256_manifest_path,non_fixture_declared,approval_reference",
+        "v58c-source-v58b-freeze": "source_v58b_path,blind_query_freeze_rows_path,sealed_identity_key_rows_path,blind_response_template_rows_path,sha256_manifest_path,non_fixture_declared,approval_reference",
         "v60-upstream-readiness": "upstream_id,ready_flag,summary_path,summary_sha256,blocker_class,non_fixture_declared,approval_reference",
         "v60-release-claim-audit": "claim_id,allowed_claim,blocked_claim,evidence_path,evidence_sha256,reviewer_decision,non_fixture_declared,approval_reference",
         "v60-human-release-review": "release_review_id,reviewer_id_hash,release_packet_sha256,accepted_for_public_v1,required_corrections,conflict_disclosure_sha256,non_fixture_declared,approval_reference",

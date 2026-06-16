@@ -49,7 +49,7 @@ expected = {
     "v59e_one_command_pm_foundation_demo_ready": "1",
     "pm_pr_claim_slice_bundle_ready": "1",
     "pm_scope_drift_allowed": "0",
-    "pm_external_return_template_rows": "19",
+    "pm_external_return_template_rows": "22",
     "v59_ready": "0",
     "required_30b_70b_baselines_ready": "0",
     "real_30b_70b_rows_ready": "0",

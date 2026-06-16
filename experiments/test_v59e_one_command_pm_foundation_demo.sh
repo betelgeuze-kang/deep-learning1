@@ -92,23 +92,23 @@ expected = {
     "pm_pr_review_packet_rows": "10",
     "pm_pr_review_packet_files": "10",
     "pm_pr_review_packet_bundle_ready": "1",
-    "pm_blocker_closure_packet_rows": "5",
-    "pm_blocker_closure_packet_files": "5",
+    "pm_blocker_closure_packet_rows": "6",
+    "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_bundle_ready": "1",
-    "pm_blocker_required_artifact_rows": "19",
+    "pm_blocker_required_artifact_rows": "22",
     "pm_blocker_required_artifact_fixture_allowed_rows": "0",
     "pm_execution_lock_rows": "10",
     "pm_execution_lock_active_rows": "10",
     "pm_scope_drift_allowed": "0",
     "pm_new_scaffold_default_allowed": "0",
-    "pm_external_return_template_rows": "19",
-    "pm_external_return_template_files": "19",
+    "pm_external_return_template_rows": "22",
+    "pm_external_return_template_files": "22",
     "pm_external_return_template_fixture_allowed_rows": "0",
-    "pm_external_return_template_approval_rows": "19",
+    "pm_external_return_template_approval_rows": "22",
     "pm_external_return_template_bundle_ready": "1",
-    "pm_roadmap_requirement_rows": "18",
+    "pm_roadmap_requirement_rows": "19",
     "pm_roadmap_ready_rows": "13",
-    "pm_roadmap_blocked_rows": "5",
+    "pm_roadmap_blocked_rows": "6",
 }
 for field, value in expected.items():
     if summary.get(field) != value:
@@ -179,7 +179,9 @@ required_files = [
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
     "source_pm_pr_claim_slice_gate/review_packets/docs__v1-roadmap.md",
+    "source_pm_pr_claim_slice_gate/blocker_packets/v58c-intake-artifact-missing.md",
     "source_pm_pr_claim_slice_gate/blocker_packets/v58-real-blind-eval-missing.md",
+    "source_pm_pr_claim_slice_gate/return_templates/v58c-intake-artifact-missing/v58c-intake-summary.csv",
     "source_pm_pr_claim_slice_gate/return_templates/external-human-label-evidence-missing/h10-label-evidence-csv.csv",
 ]
 for rel in required_files:
@@ -260,11 +262,11 @@ if pr_summary.get("real_release_package_ready") != "0":
     raise SystemExit("v59e one-command PR slice gate must keep release blocked")
 if pr_summary.get("pm_pr_review_packet_files") != "10":
     raise SystemExit("v59e one-command PR slice gate should emit ten review packets")
-if pr_summary.get("pm_blocker_closure_packet_files") != "5":
-    raise SystemExit("v59e one-command PR slice gate should emit five blocker packets")
+if pr_summary.get("pm_blocker_closure_packet_files") != "6":
+    raise SystemExit("v59e one-command PR slice gate should emit six blocker packets")
 if pr_summary.get("pm_execution_lock_rows") != "10" or pr_summary.get("pm_scope_drift_allowed") != "0":
     raise SystemExit("v59e one-command PR slice gate should keep the PM execution lock active")
-if pr_summary.get("pm_external_return_template_files") != "19" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
+if pr_summary.get("pm_external_return_template_files") != "22" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
     raise SystemExit("v59e one-command PR slice gate should emit no-fixture return templates")
 
 pr_slice_rows = read_csv(pr_slice_run_dir / "pm_pr_slice_rows.csv")

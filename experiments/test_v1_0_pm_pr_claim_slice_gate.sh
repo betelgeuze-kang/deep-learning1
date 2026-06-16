@@ -41,9 +41,9 @@ expected = {
     "merge_condition_defined_rows": "10",
     "merge_gate_rows": "30",
     "blocker_false_positive_pass_rows": "10",
-    "pm_roadmap_requirement_rows": "18",
+    "pm_roadmap_requirement_rows": "19",
     "pm_roadmap_ready_rows": "13",
-    "pm_roadmap_blocked_rows": "5",
+    "pm_roadmap_blocked_rows": "6",
     "pm_foundation_ready": "1",
     "v53_foundation_freeze_certificate_rows": "10",
     "v53_foundation_machine_freeze_ready": "1",
@@ -58,25 +58,25 @@ expected = {
     "pm_pr_review_packet_files": "10",
     "pm_pr_review_packet_ready_rows": "10",
     "pm_pr_review_packet_blocked_slice_rows": "1",
-    "pm_blocker_closure_queue_rows": "5",
-    "pm_blocker_closure_deferred_rows": "5",
-    "pm_blocker_closure_approval_required_rows": "5",
-    "pm_blocker_closure_packet_rows": "5",
-    "pm_blocker_closure_packet_files": "5",
-    "pm_blocker_closure_packet_ready_rows": "5",
-    "pm_blocker_closure_packet_approval_rows": "5",
-    "pm_blocker_required_artifact_rows": "19",
-    "pm_blocker_required_artifact_approval_rows": "19",
+    "pm_blocker_closure_queue_rows": "6",
+    "pm_blocker_closure_deferred_rows": "6",
+    "pm_blocker_closure_approval_required_rows": "6",
+    "pm_blocker_closure_packet_rows": "6",
+    "pm_blocker_closure_packet_files": "6",
+    "pm_blocker_closure_packet_ready_rows": "6",
+    "pm_blocker_closure_packet_approval_rows": "6",
+    "pm_blocker_required_artifact_rows": "22",
+    "pm_blocker_required_artifact_approval_rows": "22",
     "pm_blocker_required_artifact_fixture_allowed_rows": "0",
     "pm_execution_lock_rows": "10",
     "pm_execution_lock_active_rows": "10",
     "pm_scope_drift_allowed": "0",
     "pm_new_scaffold_default_allowed": "0",
-    "pm_external_return_template_rows": "19",
-    "pm_external_return_template_files": "19",
-    "pm_external_return_template_ready_rows": "19",
+    "pm_external_return_template_rows": "22",
+    "pm_external_return_template_files": "22",
+    "pm_external_return_template_ready_rows": "22",
     "pm_external_return_template_fixture_allowed_rows": "0",
-    "pm_external_return_template_approval_rows": "19",
+    "pm_external_return_template_approval_rows": "22",
     "draft_pr_2_split_required": "1",
     "tests_only_merge_condition_rows": "0",
     "full_v1_release_ready": "0",
@@ -154,8 +154,8 @@ for slice_id in ["docs/v1-roadmap", "v53-query-instantiation-1000", "v53-system-
         raise SystemExit(f"core PM slice should pass current review gate: {slice_id}")
 
 roadmap_rows = read_csv(run_dir / "pm_roadmap_requirement_rows.csv")
-if len(roadmap_rows) != 18:
-    raise SystemExit("PM roadmap requirement ledger should cover 18 current requirements")
+if len(roadmap_rows) != 19:
+    raise SystemExit("PM roadmap requirement ledger should cover 19 current requirements")
 roadmap_by_id = {row["requirement_id"]: row for row in roadmap_rows}
 for requirement_id in [
     "pr-split-ledger",
@@ -178,6 +178,7 @@ expected_blocked = {
     "v56-replay-artifact": "v56-replay-artifact-missing",
     "de-30b70b-symmetric-baselines": "de-30b70b-baselines-missing",
     "h10-real-label-promotion": "external-human-label-evidence-missing",
+    "v58c-blind-response-intake-artifact": "v58c-intake-artifact-missing",
     "v58-full-blind-eval": "v58-real-blind-eval-missing",
     "v60-public-release-gate": "v60-release-evidence-missing",
 }
@@ -257,8 +258,8 @@ if "experiments/test_v58c_blind_response_evidence_intake.sh" not in review_packe
     raise SystemExit("v58 review packet should carry the deferred real-response command")
 
 closure_rows = read_csv(run_dir / "pm_blocker_closure_queue_rows.csv")
-if len(closure_rows) != 5:
-    raise SystemExit("PM blocker closure queue should cover the five current blockers")
+if len(closure_rows) != 6:
+    raise SystemExit("PM blocker closure queue should cover the six current blockers")
 closure_by_blocker = {row["blocker_class"]: row for row in closure_rows}
 for blocker in expected_blocked.values():
     if blocker not in closure_by_blocker:
@@ -267,6 +268,7 @@ for blocker, command_snippet in {
     "v56-replay-artifact-missing": "V56B_ALLOW_CONTRACT_REBUILD=1",
     "de-30b70b-baselines-missing": "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR>",
     "external-human-label-evidence-missing": "V10_H10_REAL_LABEL_EVIDENCE_CSV=<LABEL_CSV>",
+    "v58c-intake-artifact-missing": "V58C_REUSE_EXISTING=0",
     "v58-real-blind-eval-missing": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR>",
     "v60-release-evidence-missing": "experiments/test_v60_architecture_challenge_release_contract.sh",
 }.items():
@@ -281,8 +283,8 @@ for blocker, command_snippet in {
         raise SystemExit(f"blocker closure must state claim boundary: {blocker}")
 
 blocker_packet_rows = read_csv(run_dir / "pm_blocker_closure_packet_rows.csv")
-if len(blocker_packet_rows) != 5:
-    raise SystemExit("PM blocker closure packet ledger should have five rows")
+if len(blocker_packet_rows) != 6:
+    raise SystemExit("PM blocker closure packet ledger should have six rows")
 if [row["blocker_class"] for row in blocker_packet_rows] != list(expected_blocked.values()):
     raise SystemExit("PM blocker closure packet order mismatch")
 for row in blocker_packet_rows:
@@ -312,14 +314,18 @@ if blocker_packet_by_id["de-30b70b-baselines-missing"]["required_artifact_rows"]
     raise SystemExit("D/E blocker packet should list four required artifact rows")
 if blocker_packet_by_id["v60-release-evidence-missing"]["required_artifact_rows"] != "4":
     raise SystemExit("v60 blocker packet should list four required artifact rows")
+if blocker_packet_by_id["v58c-intake-artifact-missing"]["required_artifact_rows"] != "3":
+    raise SystemExit("v58c blocker packet should list three required artifact rows")
 if "V58C_BLIND_RESPONSE_EVIDENCE_DIR" not in blocker_packet_by_id["v58-real-blind-eval-missing"]["local_intake_or_verification_command"]:
     raise SystemExit("v58 blocker packet should carry the real blind response intake command")
+if "V58C_REUSE_EXISTING=0" not in blocker_packet_by_id["v58c-intake-artifact-missing"]["local_intake_or_verification_command"]:
+    raise SystemExit("v58c blocker packet should carry the intake artifact rebuild command")
 
 required_artifact_rows = read_csv(run_dir / "pm_blocker_required_artifact_rows.csv")
-if len(required_artifact_rows) != 19:
-    raise SystemExit("PM blocker required artifact ledger should have 19 rows")
+if len(required_artifact_rows) != 22:
+    raise SystemExit("PM blocker required artifact ledger should have 22 rows")
 if {row["blocker_class"] for row in required_artifact_rows} != set(expected_blocked.values()):
-    raise SystemExit("PM blocker required artifact ledger should cover the five blocker classes")
+    raise SystemExit("PM blocker required artifact ledger should cover the six blocker classes")
 if any(row["fixture_allowed"] != "0" for row in required_artifact_rows):
     raise SystemExit("PM blocker required artifacts should not allow fixture evidence")
 if any(row["approval_required"] != "1" for row in required_artifact_rows):
@@ -330,6 +336,9 @@ for key in [
     ("de-30b70b-baselines-missing", "d-model-identity"),
     ("de-30b70b-baselines-missing", "e-answer-citation-resource"),
     ("external-human-label-evidence-missing", "h10-label-evidence-csv"),
+    ("v58c-intake-artifact-missing", "v58c-intake-summary"),
+    ("v58c-intake-artifact-missing", "v58c-intake-artifacts"),
+    ("v58c-intake-artifact-missing", "v58c-source-v58b-freeze"),
     ("v58-real-blind-eval-missing", "v58-blind-response-rows"),
     ("v60-release-evidence-missing", "v60-human-release-review"),
 ]:
@@ -341,6 +350,8 @@ if "H10_EVIDENCE_FIELDS" not in artifact_key[("external-human-label-evidence-mis
     raise SystemExit("h10 label evidence row should name the required H10 field contract")
 if "blind_response_rows.csv" not in artifact_key[("v58-real-blind-eval-missing", "v58-blind-response-rows")]["artifact_path_or_env"]:
     raise SystemExit("v58 response artifact row should name blind_response_rows.csv")
+if "v58c_blind_response_evidence_intake_summary.csv" not in artifact_key[("v58c-intake-artifact-missing", "v58c-intake-summary")]["artifact_path_or_env"]:
+    raise SystemExit("v58c intake summary row should name the v58c summary")
 
 execution_lock_rows = read_csv(run_dir / "pm_execution_lock_rows.csv")
 if len(execution_lock_rows) != 10:
@@ -374,8 +385,8 @@ if "release" not in lock_by_id["v60-release-gate-last"]["scope"]:
     raise SystemExit("v60 execution lock should cover the release gate")
 
 template_rows = read_csv(run_dir / "pm_external_return_template_rows.csv")
-if len(template_rows) != 19:
-    raise SystemExit("PM external return template ledger should have 19 rows")
+if len(template_rows) != 22:
+    raise SystemExit("PM external return template ledger should have 22 rows")
 if any(row["template_ready"] != "1" for row in template_rows):
     raise SystemExit("all PM external return templates should be ready")
 if any(row["fixture_allowed"] != "0" for row in template_rows):
@@ -402,6 +413,9 @@ for header in ["human_reviewed", "external_source_verified", "non_fixture_declar
 v58_template = (run_dir / template_by_key[("v58-real-blind-eval-missing", "v58-blind-response-rows")]["template_path"]).read_text(encoding="utf-8")
 if "blind_response_id" not in v58_template or "identity_key_sha256" in v58_template:
     raise SystemExit("v58 blind response template should contain response fields without identity key")
+v58c_template = (run_dir / template_by_key[("v58c-intake-artifact-missing", "v58c-intake-summary")]["template_path"]).read_text(encoding="utf-8")
+if "v58c_blind_response_evidence_intake_ready" not in v58c_template or "human_blind_review_ready" not in v58c_template:
+    raise SystemExit("v58c intake summary template should name readiness and review fields")
 v60_template = (run_dir / template_by_key[("v60-release-evidence-missing", "v60-human-release-review")]["template_path"]).read_text(encoding="utf-8")
 if "release_review_id" not in v60_template or "accepted_for_public_v1" not in v60_template:
     raise SystemExit("v60 release review template should name release review acceptance fields")
@@ -435,7 +449,7 @@ if manifest.get("recommended_pr_slice_rows") != 10 or manifest.get("real_release
     raise SystemExit("PM PR manifest readiness mismatch")
 if manifest.get("slice_ids") != expected_order:
     raise SystemExit("PM PR manifest slice order mismatch")
-if manifest.get("pm_roadmap_requirement_rows") != 18 or manifest.get("pm_foundation_ready") != 1:
+if manifest.get("pm_roadmap_requirement_rows") != 19 or manifest.get("pm_foundation_ready") != 1:
     raise SystemExit("PM PR manifest roadmap audit mismatch")
 if manifest.get("v53_foundation_freeze_certificate_rows") != 10 or manifest.get("v53_foundation_machine_freeze_ready") != 1:
     raise SystemExit("PM PR manifest v53 foundation freeze mismatch")
@@ -447,23 +461,23 @@ if manifest.get("pm_pr_review_packet_rows") != 10 or manifest.get("pm_pr_review_
     raise SystemExit("PM PR manifest review packet ledger mismatch")
 if manifest.get("pm_pr_review_packet_ready_rows") != 10 or manifest.get("pm_pr_review_packet_blocked_slice_rows") != 1:
     raise SystemExit("PM PR manifest review packet readiness mismatch")
-if manifest.get("pm_blocker_closure_queue_rows") != 5:
+if manifest.get("pm_blocker_closure_queue_rows") != 6:
     raise SystemExit("PM PR manifest blocker closure queue mismatch")
-if manifest.get("pm_blocker_closure_packet_rows") != 5 or manifest.get("pm_blocker_closure_packet_files") != 5:
+if manifest.get("pm_blocker_closure_packet_rows") != 6 or manifest.get("pm_blocker_closure_packet_files") != 6:
     raise SystemExit("PM PR manifest blocker closure packet mismatch")
-if manifest.get("pm_blocker_closure_packet_ready_rows") != 5 or manifest.get("pm_blocker_closure_packet_approval_rows") != 5:
+if manifest.get("pm_blocker_closure_packet_ready_rows") != 6 or manifest.get("pm_blocker_closure_packet_approval_rows") != 6:
     raise SystemExit("PM PR manifest blocker closure packet readiness mismatch")
-if manifest.get("pm_blocker_required_artifact_rows") != 19 or manifest.get("pm_blocker_required_artifact_fixture_allowed_rows") != 0:
+if manifest.get("pm_blocker_required_artifact_rows") != 22 or manifest.get("pm_blocker_required_artifact_fixture_allowed_rows") != 0:
     raise SystemExit("PM PR manifest blocker required artifact mismatch")
 if manifest.get("pm_execution_lock_rows") != 10 or manifest.get("pm_execution_lock_active_rows") != 10:
     raise SystemExit("PM PR manifest execution lock row mismatch")
 if manifest.get("pm_scope_drift_allowed") != 0 or manifest.get("pm_new_scaffold_default_allowed") != 0:
     raise SystemExit("PM PR manifest should disallow scope drift and default new scaffolds")
-if manifest.get("pm_external_return_template_rows") != 19 or manifest.get("pm_external_return_template_files") != 19:
+if manifest.get("pm_external_return_template_rows") != 22 or manifest.get("pm_external_return_template_files") != 22:
     raise SystemExit("PM PR manifest external return template count mismatch")
-if manifest.get("pm_external_return_template_ready_rows") != 19 or manifest.get("pm_external_return_template_fixture_allowed_rows") != 0:
+if manifest.get("pm_external_return_template_ready_rows") != 22 or manifest.get("pm_external_return_template_fixture_allowed_rows") != 0:
     raise SystemExit("PM PR manifest external return template readiness mismatch")
-if manifest.get("pm_external_return_template_approval_rows") != 19:
+if manifest.get("pm_external_return_template_approval_rows") != 22:
     raise SystemExit("PM PR manifest external return templates should require approval")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
@@ -477,7 +491,7 @@ boundary = (run_dir / "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md").read_text(encod
 for snippet in [
     "recommended_pr_slice_rows=10",
     "merge_condition_defined_rows=10",
-    "pm_roadmap_requirement_rows=18",
+    "pm_roadmap_requirement_rows=19",
     "pm_foundation_ready=1",
     "v53_foundation_freeze_certificate_rows=10",
     "v53_foundation_machine_freeze_ready=1",
@@ -486,15 +500,15 @@ for snippet in [
     "pm_pr_claim_boundary_rows=10",
     "pm_pr_review_packet_rows=10",
     "pm_pr_review_packet_files=10",
-    "pm_blocker_closure_queue_rows=5",
-    "pm_blocker_closure_packet_rows=5",
-    "pm_blocker_closure_packet_files=5",
-    "pm_blocker_required_artifact_rows=19",
+    "pm_blocker_closure_queue_rows=6",
+    "pm_blocker_closure_packet_rows=6",
+    "pm_blocker_closure_packet_files=6",
+    "pm_blocker_required_artifact_rows=22",
     "pm_execution_lock_rows=10",
     "pm_scope_drift_allowed=0",
     "pm_new_scaffold_default_allowed=0",
-    "pm_external_return_template_rows=19",
-    "pm_external_return_template_files=19",
+    "pm_external_return_template_rows=22",
+    "pm_external_return_template_files=22",
     "tests_only_merge_condition_rows=0",
     "Blocked wording",
 ]:
