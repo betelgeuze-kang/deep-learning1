@@ -135,6 +135,7 @@ stage_specs = [
             (v53ap_dir / "abgh_system_rows.csv", "source_v53ap/abgh_system_rows.csv"),
             (v53ap_dir / "abgh_answer_rows.csv", "source_v53ap/abgh_answer_rows.csv"),
             (v53ap_dir / "abgh_citation_rows.csv", "source_v53ap/abgh_citation_rows.csv"),
+            (v53ap_dir / "abgh_adapter_trace_rows.csv", "source_v53ap/abgh_adapter_trace_rows.csv"),
             (v53ap_dir / "abgh_abstain_rows.csv", "source_v53ap/abgh_abstain_rows.csv"),
             (v53ap_dir / "abgh_wrong_answer_guard_rows.csv", "source_v53ap/abgh_wrong_answer_guard_rows.csv"),
             (v53ap_dir / "abgh_resource_rows.csv", "source_v53ap/abgh_resource_rows.csv"),

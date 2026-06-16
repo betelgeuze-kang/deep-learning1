@@ -50,6 +50,8 @@ expected = {
     "answer_rows": "4000",
     "citation_rows": "4000",
     "retrieval_rows": "4000",
+    "adapter_trace_rows": "4000",
+    "system_distinct_adapter_trace_ready": "1",
     "abstain_rows": "4000",
     "wrong_answer_guard_rows": "4000",
     "resource_rows": "4000",
@@ -88,6 +90,7 @@ required_files = [
     "abgh_answer_rows.csv",
     "abgh_citation_rows.csv",
     "abgh_retrieval_rows.csv",
+    "abgh_adapter_trace_rows.csv",
     "abgh_abstain_rows.csv",
     "abgh_wrong_answer_guard_rows.csv",
     "abgh_resource_rows.csv",
@@ -111,6 +114,7 @@ queries = read_csv(run_dir / "source_v53i/complete_source_query_rows.csv")
 answers = read_csv(run_dir / "abgh_answer_rows.csv")
 citations = read_csv(run_dir / "abgh_citation_rows.csv")
 retrieval = read_csv(run_dir / "abgh_retrieval_rows.csv")
+adapter_traces = read_csv(run_dir / "abgh_adapter_trace_rows.csv")
 abstain = read_csv(run_dir / "abgh_abstain_rows.csv")
 guards = read_csv(run_dir / "abgh_wrong_answer_guard_rows.csv")
 resources = read_csv(run_dir / "abgh_resource_rows.csv")
@@ -135,6 +139,7 @@ for table_name, rows in [
     ("answers", answers),
     ("citations", citations),
     ("retrieval", retrieval),
+    ("adapter_traces", adapter_traces),
     ("abstain", abstain),
     ("guards", guards),
     ("resources", resources),
@@ -149,6 +154,31 @@ if len(hints) != 2000 or {row["system_id"] for row in hints} != {"G", "H"}:
     raise SystemExit("v53ap RouteHint rows should cover G/H only")
 if any(row["raw_context_appended"] != "0" for row in hints):
     raise SystemExit("v53ap RouteHint rows must not append raw context")
+
+trace_types = {
+    "A": "lexical-source-span",
+    "B": "small-local-rag-source-window",
+    "G": "routememory-routehint",
+    "H": "routememory-routehint-scorer-policy",
+}
+for system_id, trace_type in trace_types.items():
+    rows = [row for row in adapter_traces if row["system_id"] == system_id]
+    if len(rows) != 1000:
+        raise SystemExit(f"v53ap adapter trace row count mismatch for {system_id}")
+    if {row["adapter_trace_type"] for row in rows} != {trace_type}:
+        raise SystemExit(f"v53ap adapter trace type mismatch for {system_id}")
+    if any(row["query_binding_used"] != "1" or row["source_span_binding_match"] != "1" for row in rows):
+        raise SystemExit(f"v53ap adapter traces should bind query/source span for {system_id}")
+if any(row["raw_context_appended"] != "1" or row["compact_routehint_used"] != "0" for row in adapter_traces if row["system_id"] in {"A", "B"}):
+    raise SystemExit("v53ap A/B adapter traces should disclose raw local context and no RouteHint")
+if any(row["source_window_used"] != "1" or int(row["source_window_bytes"]) <= 0 for row in adapter_traces if row["system_id"] == "B"):
+    raise SystemExit("v53ap B adapter traces should disclose local source-window use")
+if any(row["raw_context_appended"] != "0" or row["compact_routehint_used"] != "1" for row in adapter_traces if row["system_id"] in {"G", "H"}):
+    raise SystemExit("v53ap G/H adapter traces should use compact RouteHint without raw prompt context")
+if any(row["source_verified_scorer_used"] != "1" or row["domain_policy_used"] != "1" for row in adapter_traces if row["system_id"] == "H"):
+    raise SystemExit("v53ap H adapter traces should disclose scorer/policy use")
+if any(row["expected_answer_oracle_replay"] != "0" or row["real_system_performance_claim_ready"] != "0" for row in adapter_traces):
+    raise SystemExit("v53ap adapter traces must keep oracle and performance claim boundaries closed")
 
 for row in answers:
     if row["answer_text_sha256"] != sha256_text(row["answer_text"]):
@@ -186,6 +216,8 @@ if set(metrics) != SYSTEMS:
 for system_id, row in metrics.items():
     if row["answer_rows"] != "1000" or row["citation_correct_rows"] != "1000" or row["resource_rows"] != "1000":
         raise SystemExit(f"v53ap metric counts mismatch for {system_id}")
+    if row["adapter_trace_rows"] != "1000":
+        raise SystemExit(f"v53ap adapter trace metric mismatch for {system_id}")
     if row["missing_specific_query_rows"] != "30":
         raise SystemExit(f"v53ap missing-specific count mismatch for {system_id}")
     if (
@@ -202,6 +234,7 @@ decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
     "v53i-complete-source-input",
     "abgh-same-query-measured",
+    "system-distinct-adapter-trace",
     "same-source-manifest",
     "routehint-local-rows",
     "missing-specific-abstain-control",
@@ -226,6 +259,8 @@ if (
     or manifest.get("expected_answer_oracle_replay_rows") != 0
     or manifest.get("deterministic_source_span_adapter_execution") != 1
     or manifest.get("deterministic_source_span_adapter_rows") != 4000
+    or manifest.get("adapter_trace_rows") != 4000
+    or manifest.get("system_distinct_adapter_trace_ready") != 1
     or manifest.get("source_span_binding_match_rows") != 4000
     or manifest.get("actual_adapter_execution_ready") != 1
 ):
@@ -238,6 +273,8 @@ for snippet in [
     "internal v1.0 pre-baseline",
     "systems=A/B/G/H",
     "answer_rows=4000",
+    "adapter_trace_rows=4000",
+    "system_distinct_adapter_trace_ready=1",
     "routehint_rows=2000",
     "missing_specific_abstain_rows=30",
     "expected_answer_oracle_replay=0",

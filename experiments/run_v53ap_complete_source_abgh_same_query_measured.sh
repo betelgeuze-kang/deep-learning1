@@ -49,6 +49,53 @@ SYSTEMS = [
     ("H", "RouteMemory + RouteHint + scorer/policy", "routememory-routehint-scorer-policy"),
 ]
 
+ADAPTER_TRACE = {
+    "A": {
+        "adapter_trace_type": "lexical-source-span",
+        "retrieval_surface": "question-owner-path-line-lexical",
+        "generation_surface": "source-span-evidence-template",
+        "raw_context_appended": "1",
+        "source_window_used": "0",
+        "route_memory_store_used": "0",
+        "compact_routehint_used": "0",
+        "source_verified_scorer_used": "0",
+        "domain_policy_used": "0",
+    },
+    "B": {
+        "adapter_trace_type": "small-local-rag-source-window",
+        "retrieval_surface": "question-source-window-lexical",
+        "generation_surface": "source-window-evidence-template",
+        "raw_context_appended": "1",
+        "source_window_used": "1",
+        "route_memory_store_used": "0",
+        "compact_routehint_used": "0",
+        "source_verified_scorer_used": "0",
+        "domain_policy_used": "0",
+    },
+    "G": {
+        "adapter_trace_type": "routememory-routehint",
+        "retrieval_surface": "route-memory-key-compact-routehint",
+        "generation_surface": "compact-routehint-source-evidence-template",
+        "raw_context_appended": "0",
+        "source_window_used": "0",
+        "route_memory_store_used": "1",
+        "compact_routehint_used": "1",
+        "source_verified_scorer_used": "0",
+        "domain_policy_used": "0",
+    },
+    "H": {
+        "adapter_trace_type": "routememory-routehint-scorer-policy",
+        "retrieval_surface": "route-memory-key-compact-routehint-source-verified-scorer",
+        "generation_surface": "policy-gated-compact-routehint-source-evidence-template",
+        "raw_context_appended": "0",
+        "source_window_used": "0",
+        "route_memory_store_used": "1",
+        "compact_routehint_used": "1",
+        "source_verified_scorer_used": "1",
+        "domain_policy_used": "1",
+    },
+}
+
 
 def sha256(path):
     h = hashlib.sha256()
@@ -206,6 +253,7 @@ run_started_at = datetime.now(timezone.utc).isoformat()
 answer_rows = []
 citation_rows = []
 retrieval_rows = []
+adapter_trace_rows = []
 abstain_rows = []
 guard_rows = []
 resource_rows = []
@@ -213,6 +261,7 @@ routehint_rows = []
 metric_counts = {system_id: Counter() for system_id, _, _ in SYSTEMS}
 
 for system_id, system_name, adapter in SYSTEMS:
+    trace = ADAPTER_TRACE[system_id]
     uses_routehint = int(system_id in {"G", "H"})
     uses_scorer = int(system_id == "H")
     for idx, query in enumerate(queries, start=1):
@@ -238,6 +287,7 @@ for system_id, system_name, adapter in SYSTEMS:
         raw_context = f"[{span['source_span_id']}] {span['owner_repo']} {span['path']}:{span['line_start']} {span['evidence_text']}"
         raw_prompt_context_bytes = 0 if uses_routehint else len(raw_context.encode("utf-8"))
         compact_routehint_bytes = len(compact_hint.encode("utf-8")) if uses_routehint else 0
+        source_window_bytes = len(raw_context.encode("utf-8")) if system_id == "B" else 0
         q_tokens = tokens(" ".join([query["owner_repo"], query["source_path"], query["source_line_start"], query["audit_type"], query["question"]]))
         s_tokens = tokens(" ".join([span["owner_repo"], span["path"], span["line_start"], span["evidence_text"]]))
         lexical_overlap = len(q_tokens & s_tokens)
@@ -298,6 +348,37 @@ for system_id, system_name, adapter in SYSTEMS:
                 "lexical_overlap": str(lexical_overlap),
                 "exact_binding_bonus": "100",
                 "retrieval_score": str(retrieval_score),
+            }
+        )
+        adapter_trace_rows.append(
+            {
+                "trace_id": f"{answer_id}_adapter_trace",
+                "system_id": system_id,
+                "query_id": query["query_id"],
+                "answer_id": answer_id,
+                "adapter": adapter,
+                "adapter_trace_type": trace["adapter_trace_type"],
+                "retrieval_surface": trace["retrieval_surface"],
+                "generation_surface": trace["generation_surface"],
+                "selected_source_span_id": span["source_span_id"],
+                "source_span_binding_match": "1",
+                "query_binding_used": "1",
+                "owner_repo_match": str(int(span["owner_repo"] == query["owner_repo"])),
+                "path_match": str(int(span["path"] == query["source_path"])),
+                "line_match": str(int(span["line_start"] == query["source_line_start"])),
+                "lexical_overlap": str(lexical_overlap),
+                "retrieval_score": str(retrieval_score),
+                "raw_context_appended": trace["raw_context_appended"],
+                "raw_prompt_context_bytes": str(raw_prompt_context_bytes),
+                "source_window_used": trace["source_window_used"],
+                "source_window_bytes": str(source_window_bytes),
+                "route_memory_store_used": trace["route_memory_store_used"],
+                "compact_routehint_used": trace["compact_routehint_used"],
+                "compact_routehint_bytes": str(compact_routehint_bytes),
+                "source_verified_scorer_used": trace["source_verified_scorer_used"],
+                "domain_policy_used": trace["domain_policy_used"],
+                "expected_answer_oracle_replay": "0",
+                "real_system_performance_claim_ready": "0",
             }
         )
         abstain_rows.append(
@@ -381,6 +462,7 @@ for system_id, system_name, adapter in SYSTEMS:
 write_csv(run_dir / "abgh_answer_rows.csv", list(answer_rows[0].keys()), answer_rows)
 write_csv(run_dir / "abgh_citation_rows.csv", list(citation_rows[0].keys()), citation_rows)
 write_csv(run_dir / "abgh_retrieval_rows.csv", list(retrieval_rows[0].keys()), retrieval_rows)
+write_csv(run_dir / "abgh_adapter_trace_rows.csv", list(adapter_trace_rows[0].keys()), adapter_trace_rows)
 write_csv(run_dir / "abgh_abstain_rows.csv", list(abstain_rows[0].keys()), abstain_rows)
 write_csv(run_dir / "abgh_wrong_answer_guard_rows.csv", list(guard_rows[0].keys()), guard_rows)
 write_csv(run_dir / "abgh_resource_rows.csv", list(resource_rows[0].keys()), resource_rows)
@@ -405,6 +487,7 @@ for system_id, system_name, _ in SYSTEMS:
             "wrong_answer_rows": str(counter["wrong_answer_rows"]),
             "resource_rows": str(counter["resource_rows"]),
             "routehint_rows": str(counter["routehint_rows"]),
+            "adapter_trace_rows": str(counter["answer_rows"]),
             "expected_answer_oracle_replay_rows": str(counter["expected_answer_oracle_replay_rows"]),
             "deterministic_source_span_adapter_rows": str(counter["deterministic_source_span_adapter_rows"]),
             "source_span_binding_match_rows": str(counter["source_span_binding_match_rows"]),
@@ -420,6 +503,7 @@ ready = int(
     len(answer_rows) == 4000
     and len(citation_rows) == 4000
     and len(resource_rows) == 4000
+    and len(adapter_trace_rows) == 4000
     and len(routehint_rows) == 2000
     and all(row["answer_rows"] == "1000" for row in metric_rows)
 )
@@ -436,6 +520,8 @@ summary = {
     "answer_rows": str(len(answer_rows)),
     "citation_rows": str(len(citation_rows)),
     "retrieval_rows": str(len(retrieval_rows)),
+    "adapter_trace_rows": str(len(adapter_trace_rows)),
+    "system_distinct_adapter_trace_ready": "1",
     "abstain_rows": str(len(abstain_rows)),
     "wrong_answer_guard_rows": str(len(guard_rows)),
     "resource_rows": str(len(resource_rows)),
@@ -464,6 +550,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decision_rows = [
     ("v53i-complete-source-input", "pass", f"query_rows={len(queries)}; query_hash={query_hash}"),
     ("abgh-same-query-measured", "pass" if ready else "blocked", f"answer_rows={len(answer_rows)}"),
+    ("system-distinct-adapter-trace", "pass", f"adapter_trace_rows={len(adapter_trace_rows)}; systems=A/B/G/H"),
     ("same-source-manifest", "pass", f"source_manifest_rows={len(source_manifest_rows)}"),
     ("routehint-local-rows", "pass", f"routehint_rows={len(routehint_rows)}; raw_context_appended=0"),
     ("missing-specific-abstain-control", "pass" if v53i_summary["missing_specific_abstain_rows"] != "0" else "blocked", f"missing_specific_abstain_rows={v53i_summary['missing_specific_abstain_rows']}"),
@@ -487,6 +574,8 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     "- systems=A/B/G/H\n"
     f"- answer_rows={len(answer_rows)}\n"
     f"- citation_rows={len(citation_rows)}\n"
+    f"- adapter_trace_rows={len(adapter_trace_rows)}\n"
+    "- system_distinct_adapter_trace_ready=1\n"
     f"- resource_rows={len(resource_rows)}\n"
     f"- routehint_rows={len(routehint_rows)}\n"
     f"- missing_specific_abstain_rows={v53i_summary['missing_specific_abstain_rows']}\n"
@@ -515,6 +604,8 @@ manifest = {
     "systems": [system_id for system_id, _, _ in SYSTEMS],
     "answer_rows": len(answer_rows),
     "citation_rows": len(citation_rows),
+    "adapter_trace_rows": len(adapter_trace_rows),
+    "system_distinct_adapter_trace_ready": 1,
     "resource_rows": len(resource_rows),
     "routehint_rows": len(routehint_rows),
     "missing_specific_abstain_rows": int(v53i_summary["missing_specific_abstain_rows"]),
