@@ -1267,6 +1267,7 @@ pm_pr_core_files = [
     (pr_run_dir / "source_h10_pm/h10_real_label_return_contract_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_foundation_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53t/complete_source_pm_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_query_span_binding_audit_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/source_v53i/complete_source_query_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv", "evidence"),
@@ -1412,6 +1413,8 @@ pm_pr_claim_slice_bundle_ready = int(
     and execution_lock_ready
     and external_return_template_ready
     and as_int(pr_summary, "tests_only_merge_condition_rows") == 0
+    and as_int(pr_summary, "v53_pm_acceptance_evidence_ready_rows") == 10
+    and as_int(pr_summary, "v53_pm_acceptance_evidence_tests_only_rows") == 0
     and as_int(pr_summary, "real_release_package_ready") == 0
 )
 
@@ -1433,6 +1436,9 @@ summary["pm_pr_v53_direct_pinned_manifest_ready"] = pr_summary.get("v53_foundati
 summary["pm_pr_v53_direct_repo_manifest_rows"] = pr_summary.get("v53_foundation_direct_repo_manifest_rows", "0")
 summary["pm_pr_v53_direct_file_manifest_rows"] = pr_summary.get("v53_foundation_direct_file_manifest_rows", "0")
 summary["pm_pr_v53_direct_content_snapshot_rows"] = pr_summary.get("v53_foundation_direct_content_snapshot_rows", "0")
+summary["pm_pr_v53_pm_acceptance_evidence_rows"] = pr_summary.get("v53_pm_acceptance_evidence_rows", "0")
+summary["pm_pr_v53_pm_acceptance_evidence_ready_rows"] = pr_summary.get("v53_pm_acceptance_evidence_ready_rows", "0")
+summary["pm_pr_v53_pm_acceptance_evidence_tests_only_rows"] = pr_summary.get("v53_pm_acceptance_evidence_tests_only_rows", "0")
 summary["pm_pr_review_packet_rows"] = pr_summary["pm_pr_review_packet_rows"]
 summary["pm_pr_review_packet_files"] = str(len(review_packet_files))
 summary["pm_pr_review_packet_bundle_ready"] = str(review_packet_ready)
@@ -1615,6 +1621,9 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + "\nPM PR claim-slice sidecar:\n\n"
     + f"- pm_pr_claim_slice_gate_ready={summary['pm_pr_claim_slice_gate_ready']}\n"
     + f"- pm_pr_review_packet_files={summary['pm_pr_review_packet_files']}\n"
+    + f"- pm_pr_v53_pm_acceptance_evidence_rows={summary['pm_pr_v53_pm_acceptance_evidence_rows']}\n"
+    + f"- pm_pr_v53_pm_acceptance_evidence_ready_rows={summary['pm_pr_v53_pm_acceptance_evidence_ready_rows']}\n"
+    + f"- pm_pr_v53_pm_acceptance_evidence_tests_only_rows={summary['pm_pr_v53_pm_acceptance_evidence_tests_only_rows']}\n"
     + f"- pm_blocker_closure_packet_files={summary['pm_blocker_closure_packet_files']}\n"
     + f"- pm_execution_lock_rows={summary['pm_execution_lock_rows']}\n"
     + f"- pm_scope_drift_allowed={summary['pm_scope_drift_allowed']}\n"
@@ -1633,6 +1642,9 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + f"- pm_pr_claim_slice_gate_ready={summary['pm_pr_claim_slice_gate_ready']}\n"
     + f"- pm_pr_claim_slice_bundle_ready={summary['pm_pr_claim_slice_bundle_ready']}\n"
     + f"- pm_pr_tests_only_merge_condition_rows={summary['pm_pr_tests_only_merge_condition_rows']}\n"
+    + f"- pm_pr_v53_pm_acceptance_evidence_rows={summary['pm_pr_v53_pm_acceptance_evidence_rows']}\n"
+    + f"- pm_pr_v53_pm_acceptance_evidence_ready_rows={summary['pm_pr_v53_pm_acceptance_evidence_ready_rows']}\n"
+    + f"- pm_pr_v53_pm_acceptance_evidence_tests_only_rows={summary['pm_pr_v53_pm_acceptance_evidence_tests_only_rows']}\n"
     + f"- pm_scope_drift_allowed={summary['pm_scope_drift_allowed']}\n"
     + f"- pm_new_scaffold_default_allowed={summary['pm_new_scaffold_default_allowed']}\n"
     + f"- pm_external_return_template_fixture_allowed_rows={summary['pm_external_return_template_fixture_allowed_rows']}\n"
@@ -1660,6 +1672,9 @@ manifest["pm_pr_v53_direct_pinned_manifest_ready"] = as_int(pr_summary, "v53_fou
 manifest["pm_pr_v53_direct_repo_manifest_rows"] = as_int(pr_summary, "v53_foundation_direct_repo_manifest_rows")
 manifest["pm_pr_v53_direct_file_manifest_rows"] = as_int(pr_summary, "v53_foundation_direct_file_manifest_rows")
 manifest["pm_pr_v53_direct_content_snapshot_rows"] = as_int(pr_summary, "v53_foundation_direct_content_snapshot_rows")
+manifest["pm_pr_v53_pm_acceptance_evidence_rows"] = as_int(pr_summary, "v53_pm_acceptance_evidence_rows")
+manifest["pm_pr_v53_pm_acceptance_evidence_ready_rows"] = as_int(pr_summary, "v53_pm_acceptance_evidence_ready_rows")
+manifest["pm_pr_v53_pm_acceptance_evidence_tests_only_rows"] = as_int(pr_summary, "v53_pm_acceptance_evidence_tests_only_rows")
 manifest["pm_blocker_closure_packet_files"] = len(blocker_packet_files)
 manifest["pm_execution_lock_rows"] = as_int(pr_summary, "pm_execution_lock_rows")
 manifest["pm_scope_drift_allowed"] = as_int(pr_summary, "pm_scope_drift_allowed")

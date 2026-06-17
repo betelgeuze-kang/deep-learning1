@@ -127,6 +127,7 @@ v53t_real_adapter_freeze_copied = copy_if_exists(
 v53t_run_dir = results / "v53t_complete_source_audit_readiness_gate" / "gate_001"
 v53t_direct_copied = {}
 for src_rel in [
+    "complete_source_pm_acceptance_evidence_rows.csv",
     "complete_source_query_span_binding_audit_rows.csv",
     "source_v53i/complete_source_query_rows.csv",
     "source_v53i/complete_source_span_rows.csv",
@@ -1878,6 +1879,9 @@ summary = {
     "v53_foundation_direct_repo_manifest_rows": v53t.get("foundation_direct_repo_manifest_rows", "0"),
     "v53_foundation_direct_file_manifest_rows": v53t.get("foundation_direct_file_manifest_rows", "0"),
     "v53_foundation_direct_content_snapshot_rows": v53t.get("foundation_direct_content_snapshot_rows", "0"),
+    "v53_pm_acceptance_evidence_rows": v53t.get("pm_acceptance_evidence_rows", "0"),
+    "v53_pm_acceptance_evidence_ready_rows": v53t.get("pm_acceptance_evidence_ready_rows", "0"),
+    "v53_pm_acceptance_evidence_tests_only_rows": v53t.get("pm_acceptance_evidence_tests_only_rows", "0"),
     "pm_pr_slice_file_rows": str(slice_file_row_count),
     "pm_pr_slice_file_existing_rows": str(slice_file_existing_rows),
     "pm_pr_slices_with_file_rows": str(slice_with_file_rows),
@@ -1940,6 +1944,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53_foundation_direct_repo_manifest_rows={v53t.get('foundation_direct_repo_manifest_rows', '0')}\n"
     f"- v53_foundation_direct_file_manifest_rows={v53t.get('foundation_direct_file_manifest_rows', '0')}\n"
     f"- v53_foundation_direct_content_snapshot_rows={v53t.get('foundation_direct_content_snapshot_rows', '0')}\n"
+    f"- v53_pm_acceptance_evidence_rows={v53t.get('pm_acceptance_evidence_rows', '0')}\n"
+    f"- v53_pm_acceptance_evidence_ready_rows={v53t.get('pm_acceptance_evidence_ready_rows', '0')}\n"
+    f"- v53_pm_acceptance_evidence_tests_only_rows={v53t.get('pm_acceptance_evidence_tests_only_rows', '0')}\n"
     f"- pm_pr_slice_file_rows={slice_file_row_count}\n"
     f"- pm_pr_slice_verification_rows={slice_verification_row_count}\n"
     f"- pm_pr_claim_boundary_rows={claim_boundary_row_count}\n"
@@ -1986,6 +1993,9 @@ manifest = {
     "v53_foundation_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
     "v53_foundation_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
     "v53_foundation_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
+    "v53_pm_acceptance_evidence_rows": as_int(v53t, "pm_acceptance_evidence_rows"),
+    "v53_pm_acceptance_evidence_ready_rows": as_int(v53t, "pm_acceptance_evidence_ready_rows"),
+    "v53_pm_acceptance_evidence_tests_only_rows": as_int(v53t, "pm_acceptance_evidence_tests_only_rows"),
     "pm_pr_slice_file_rows": slice_file_row_count,
     "pm_pr_slice_file_existing_rows": slice_file_existing_rows,
     "pm_pr_slice_verification_rows": slice_verification_row_count,

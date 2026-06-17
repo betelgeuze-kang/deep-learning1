@@ -54,6 +54,9 @@ expected = {
     "v53_foundation_direct_repo_manifest_rows": "10",
     "v53_foundation_direct_file_manifest_rows": "11266",
     "v53_foundation_direct_content_snapshot_rows": "11266",
+    "v53_pm_acceptance_evidence_rows": "10",
+    "v53_pm_acceptance_evidence_ready_rows": "10",
+    "v53_pm_acceptance_evidence_tests_only_rows": "0",
     "pm_pr_slice_file_rows": "41",
     "pm_pr_slice_file_existing_rows": "41",
     "pm_pr_slices_with_file_rows": "10",
@@ -691,6 +694,7 @@ required_files = [
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v59e/local_abgh_row_contract_replay_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
+    "source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
     "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v53t/complete_source_query_span_binding_audit_rows.csv",
     "source_v53t/source_v53i/complete_source_query_rows.csv",
@@ -758,6 +762,42 @@ if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverag
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
     raise SystemExit("PM PR sidecar content repo rows should preserve ready content snapshots")
 
+v53_pm_acceptance_rows = {row["requirement_id"]: row for row in read_csv(run_dir / "source_v53t/complete_source_pm_acceptance_evidence_rows.csv")}
+expected_v53_pm_acceptance_ids = {
+    "pinned-public-repo-manifest",
+    "source-span-query-freeze",
+    "negative-abstain-control-share",
+    "unsupported-claim-control",
+    "missing-specific-abstain-control",
+    "doc-code-conflict-control",
+    "answer-citation-separated-evaluator",
+    "abgh-same-query-deterministic-prebaseline",
+    "abgh-real-adapter-same-query-internal",
+    "public-comparison-boundary-closed",
+}
+if set(v53_pm_acceptance_rows) != expected_v53_pm_acceptance_ids:
+    raise SystemExit("PM PR sidecar should carry the full v53 PM acceptance evidence ledger")
+if any(row["acceptance_ready"] != "1" for row in v53_pm_acceptance_rows.values()):
+    raise SystemExit("PM PR sidecar v53 PM acceptance evidence rows should all be ready")
+if any(row["tests_only_merge_condition"] != "0" for row in v53_pm_acceptance_rows.values()):
+    raise SystemExit("PM PR sidecar v53 PM acceptance evidence should not use tests-only merge conditions")
+if any(
+    row["claim_boundary_status"] != "pass"
+    or row["replay_artifact_status"] != "pass"
+    or row["blocker_false_positive_status"] != "pass"
+    for row in v53_pm_acceptance_rows.values()
+):
+    raise SystemExit("PM PR sidecar v53 PM acceptance evidence should pass claim/replay/blocker gates")
+for requirement_id, snippet in {
+    "source-span-query-freeze": "binding_audit_pass_rows=1000",
+    "answer-citation-separated-evaluator": "separate_evaluator_rows=4000",
+    "abgh-same-query-deterministic-prebaseline": "real_system_performance_claim_ready=0",
+    "abgh-real-adapter-same-query-internal": "public_comparison_claim_ready=0",
+    "public-comparison-boundary-closed": "required_30b_baseline_ready=0",
+}.items():
+    if snippet not in v53_pm_acceptance_rows[requirement_id]["actual_value"]:
+        raise SystemExit(f"PM PR sidecar v53 PM acceptance row should expose {snippet}: {requirement_id}")
+
 real_adapter_freeze_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")}
 if len(real_adapter_freeze_rows) != 4:
     raise SystemExit("PM PR sidecar should copy four v53t real-adapter freeze rows")
@@ -802,6 +842,12 @@ if (
     or manifest.get("v53_foundation_direct_content_snapshot_rows") != 11266
 ):
     raise SystemExit("PM PR manifest direct pinned manifest evidence mismatch")
+if (
+    manifest.get("v53_pm_acceptance_evidence_rows") != 10
+    or manifest.get("v53_pm_acceptance_evidence_ready_rows") != 10
+    or manifest.get("v53_pm_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("PM PR manifest should record v53 PM acceptance evidence")
 if manifest.get("pm_pr_slice_file_rows") != 41 or manifest.get("pm_pr_slice_verification_rows") != 17:
     raise SystemExit("PM PR manifest file/verification ledger mismatch")
 if manifest.get("pm_pr_claim_boundary_rows") != 10 or manifest.get("pm_pr_claim_boundary_pass_rows") != 10:
@@ -860,6 +906,9 @@ for snippet in [
     "v53_foundation_direct_repo_manifest_rows=10",
     "v53_foundation_direct_file_manifest_rows=11266",
     "v53_foundation_direct_content_snapshot_rows=11266",
+    "v53_pm_acceptance_evidence_rows=10",
+    "v53_pm_acceptance_evidence_ready_rows=10",
+    "v53_pm_acceptance_evidence_tests_only_rows=0",
     "pm_pr_slice_file_rows=41",
     "pm_pr_slice_verification_rows=17",
     "pm_pr_claim_boundary_rows=10",

@@ -162,6 +162,7 @@ for rel in [
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
     "source_h10_pm/source_v53aq/adapter_selection_contract_rows.csv",
     "source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
@@ -364,7 +365,9 @@ requirements = [
         and as_int(v53t, "foundation_query_span_binding_audit_ready") == 1
         and as_int(v59e, "pm_pr_v53_query_span_binding_audit_ready") == 1
         and as_int(v53t, "foundation_direct_pinned_manifest_ready") == 1
-        and as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready") == 1,
+        and as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready") == 1
+        and as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_ready_rows") == 10
+        and as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_tests_only_rows") == 0,
         "v53 source-bound 10-repo/1000-query freeze is missing",
         "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
         "v53-foundation-freeze-missing",
@@ -592,6 +595,9 @@ summary = {
     "v53_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
     "v53_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
     "pm_pr_v53_direct_pinned_manifest_ready": as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready"),
+    "pm_pr_v53_pm_acceptance_evidence_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_rows"),
+    "pm_pr_v53_pm_acceptance_evidence_ready_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_ready_rows"),
+    "pm_pr_v53_pm_acceptance_evidence_tests_only_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_tests_only_rows"),
     "local_abgh_prebaseline_ready": int(as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1),
     "local_abgh_prebaseline_ledger_ready": as_int(v53aq, "same_query_internal_prebaseline_rows_ready"),
     "local_abgh_prebaseline_ledger_rows": as_int(v53aq, "same_query_internal_prebaseline_rows"),
@@ -725,6 +731,9 @@ manifest = {
     "v53_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
     "v53_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
     "pm_pr_v53_direct_pinned_manifest_ready": as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready"),
+    "pm_pr_v53_pm_acceptance_evidence_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_rows"),
+    "pm_pr_v53_pm_acceptance_evidence_ready_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_ready_rows"),
+    "pm_pr_v53_pm_acceptance_evidence_tests_only_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_tests_only_rows"),
     "v54c_recommended_output_files_ready": v54c_recommended_output_files_ready,
     "v54c_recommended_output_file_rows": len(v54c_recommended_output_rels),
     "v54c_output_contract_ready": v54c_output_contract_ready,

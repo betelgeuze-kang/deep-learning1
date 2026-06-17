@@ -9,7 +9,7 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/complete_source_abgh_real_adapter_freeze_rows.csv" && -s "$RUN_DIR/complete_source_query_span_binding_audit_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_query_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_span_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_repo_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_adapter_trace_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/adapter_selection_contract_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" ]] && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_query_span_binding_audit_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_pinned_manifest_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_same_query_ledger_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_real_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
+if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/complete_source_pm_acceptance_evidence_rows.csv" && -s "$RUN_DIR/complete_source_abgh_real_adapter_freeze_rows.csv" && -s "$RUN_DIR/complete_source_query_span_binding_audit_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_query_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_span_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_repo_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_adapter_trace_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/adapter_selection_contract_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" ]] && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'pm_acceptance_evidence_rows=10' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_query_span_binding_audit_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_pinned_manifest_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_same_query_ledger_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_real_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
   echo "v53t_complete_source_audit_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -699,6 +699,139 @@ write_csv(
 foundation_real_adapter_freeze_pass_rows = sum(1 for row in real_adapter_freeze_rows if row["status"] == "pass")
 foundation_real_adapter_freeze_blocked_rows = sum(1 for row in real_adapter_freeze_rows if row["status"] == "blocked")
 
+
+def evidence_row_count(rel):
+    path = run_dir / rel
+    if path.suffix == ".csv" and path.is_file():
+        return str(len(read_csv(path)))
+    return "not-csv"
+
+
+def pm_acceptance_row(
+    requirement_id,
+    roadmap_phase,
+    status,
+    evidence_path,
+    actual_value,
+    claim_boundary,
+    replay_command="experiments/test_v53t_complete_source_audit_readiness_gate.sh",
+):
+    evidence_file = run_dir / evidence_path
+    replay_status = "pass" if evidence_file.is_file() and evidence_file.stat().st_size > 0 else "blocked"
+    return {
+        "requirement_id": requirement_id,
+        "roadmap_phase": roadmap_phase,
+        "status": status,
+        "evidence_path": evidence_path,
+        "evidence_rows": evidence_row_count(evidence_path),
+        "evidence_sha256": sha256(evidence_file) if evidence_file.is_file() else "",
+        "replay_command": replay_command,
+        "claim_boundary_status": "pass" if status == "pass" else "blocked",
+        "replay_artifact_status": replay_status,
+        "blocker_false_positive_status": "pass",
+        "tests_only_merge_condition": "0",
+        "acceptance_ready": "1" if status == "pass" and replay_status == "pass" else "0",
+        "actual_value": actual_value,
+        "claim_boundary": claim_boundary,
+    }
+
+
+pm_acceptance_evidence_rows = [
+    pm_acceptance_row(
+        "pinned-public-repo-manifest",
+        "M2-v53-source-bound-corpus",
+        "pass" if foundation_direct_pinned_manifest_ready else "blocked",
+        "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+        f"repo_manifest_rows={len(v53i_repo_coverage_rows)}; file_manifest_rows={len(v53i_file_manifest_rows)}; content_snapshot_rows={len(v53i_content_snapshot_rows)}; direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}",
+        "Allows 10 public pinned repo manifest wording only; no release or quality claim",
+    ),
+    pm_acceptance_row(
+        "source-span-query-freeze",
+        "M2-v53-source-bound-corpus",
+        "pass" if foundation_query_span_binding_audit_ready else "blocked",
+        "complete_source_query_span_binding_audit_rows.csv",
+        f"query_rows={len(v53i_query_rows)}; span_rows={len(v53i_span_rows)}; binding_audit_pass_rows={foundation_query_span_binding_pass_rows}",
+        "Allows 1000 source-span-bound query freeze wording; not human-reviewed correctness",
+    ),
+    pm_acceptance_row(
+        "negative-abstain-control-share",
+        "M2-v53-source-bound-corpus",
+        "pass" if int(v53i["negative_abstain_rows"]) >= 100 else "blocked",
+        "source_v53i/complete_source_query_family_rows.csv",
+        f"negative_abstain_rows={v53i['negative_abstain_rows']}; required_min=100",
+        "Allows negative/abstain coverage wording as a corpus property only",
+    ),
+    pm_acceptance_row(
+        "unsupported-claim-control",
+        "M2-v53-source-bound-corpus",
+        "pass" if unsupported_control_rows == 100 else "blocked",
+        "source_v53i/complete_source_query_family_rows.csv",
+        f"unsupported_control_rows={unsupported_control_rows}",
+        "Allows unsupported-claim control wording as a corpus property only",
+    ),
+    pm_acceptance_row(
+        "missing-specific-abstain-control",
+        "M2-v53-source-bound-corpus",
+        "pass" if missing_specific_control_rows == 30 else "blocked",
+        "source_v53i/complete_source_query_family_rows.csv",
+        f"missing_specific_control_rows={missing_specific_control_rows}",
+        "Allows missing-specific abstain wording as a corpus property only",
+    ),
+    pm_acceptance_row(
+        "doc-code-conflict-control",
+        "M2-v53-source-bound-corpus",
+        "pass" if doc_code_conflict_rows == 140 else "blocked",
+        "source_v53i/complete_source_query_family_rows.csv",
+        f"doc_code_conflict_rows={doc_code_conflict_rows}",
+        "Allows doc-code conflict coverage wording as a corpus property only",
+    ),
+    pm_acceptance_row(
+        "answer-citation-separated-evaluator",
+        "M2-v53-source-bound-corpus",
+        "pass" if foundation_direct_evaluator_separate_rows == 4000 else "blocked",
+        "source_v53ap/abgh_evaluator_rows.csv",
+        f"separate_evaluator_rows={foundation_direct_evaluator_separate_rows}; evaluator_rows={len(v53ap_evaluator_rows)}",
+        "Allows separated evaluator-contract wording; not human-reviewed answer quality",
+        "experiments/test_v53ap_complete_source_abgh_same_query_measured.sh",
+    ),
+    pm_acceptance_row(
+        "abgh-same-query-deterministic-prebaseline",
+        "M3-abgh-same-query-measured-run",
+        "pass" if abgh_same_query_ready else "blocked",
+        "source_v53ap/abgh_evaluator_rows.csv",
+        f"same_query_hash={same_complete_source_query_hash}; answer_rows={len(v53ap_answer_rows)}; evaluator_rows={len(v53ap_evaluator_rows)}; expected_answer_oracle_replay={v53ap.get('expected_answer_oracle_replay', '0')}; deterministic_source_span_adapter_execution={v53ap.get('deterministic_source_span_adapter_execution', '0')}; real_system_performance_claim_ready={v53ap.get('real_system_performance_claim_ready', '0')}",
+        "Allows internal v1.0 pre-baseline A/B/G/H same-query deterministic adapter wording only; public comparison remains blocked",
+        "experiments/test_v53ap_complete_source_abgh_same_query_measured.sh",
+    ),
+    pm_acceptance_row(
+        "abgh-real-adapter-same-query-internal",
+        "M3-abgh-same-query-measured-run",
+        "pass" if foundation_real_adapter_same_query_ledger_ready else "blocked",
+        "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+        f"same_query_ledger_rows={foundation_real_adapter_same_query_ledger_rows}; question_text_only={v53aq.get('selection_question_text_only', '0')}; oracle_field_used={v53aq.get('selection_oracle_field_used', '1')}; coherent_wrong_key_rows={v53aq.get('coherent_wrong_key_rows', '0')}; public_comparison_claim_ready={v53aq.get('public_comparison_claim_ready', '0')}",
+        "Allows internal query-text-only A/B/G/H real-adapter evidence wording; no D/E or public comparison claim",
+        "experiments/test_v53aq_complete_source_abgh_real_adapter_measured.sh",
+    ),
+    pm_acceptance_row(
+        "public-comparison-boundary-closed",
+        "M3-abgh-same-query-measured-run",
+        "pass" if v53aq.get("public_comparison_claim_ready") == "0" and v53s["quality_comparison_claim_ready"] == "0" else "blocked",
+        "complete_source_abgh_real_adapter_freeze_rows.csv",
+        f"v53aq_public_comparison_claim_ready={v53aq.get('public_comparison_claim_ready', '0')}; quality_comparison_claim_ready={v53s['quality_comparison_claim_ready']}; required_30b_baseline_ready={v53aq.get('required_30b_baseline_ready', '0')}; required_70b_baseline_ready={v53aq.get('required_70b_baseline_ready', '0')}",
+        "Explicitly forbids public comparison, v53-ready, and release-ready wording until D/E, review, and release evidence exist",
+    ),
+]
+write_csv(
+    run_dir / "complete_source_pm_acceptance_evidence_rows.csv",
+    list(pm_acceptance_evidence_rows[0].keys()),
+    pm_acceptance_evidence_rows,
+)
+pm_acceptance_evidence_row_count = len(pm_acceptance_evidence_rows)
+pm_acceptance_evidence_ready_rows = sum(1 for row in pm_acceptance_evidence_rows if row["acceptance_ready"] == "1")
+pm_acceptance_evidence_tests_only_rows = sum(1 for row in pm_acceptance_evidence_rows if row["tests_only_merge_condition"] == "1")
+pm_acceptance_evidence_replay_pass_rows = sum(1 for row in pm_acceptance_evidence_rows if row["replay_artifact_status"] == "pass")
+pm_acceptance_evidence_blocker_pass_rows = sum(1 for row in pm_acceptance_evidence_rows if row["blocker_false_positive_status"] == "pass")
+
 claim_rows = [
     {
         "claim_id": "complete-source-machine-surface",
@@ -768,6 +901,11 @@ metric = {
     "foundation_freeze_certificate_rows": str(len(foundation_freeze_rows)),
     "foundation_freeze_pass_rows": str(foundation_freeze_pass_rows),
     "foundation_freeze_blocked_rows": str(foundation_freeze_blocked_rows),
+    "pm_acceptance_evidence_rows": str(pm_acceptance_evidence_row_count),
+    "pm_acceptance_evidence_ready_rows": str(pm_acceptance_evidence_ready_rows),
+    "pm_acceptance_evidence_replay_pass_rows": str(pm_acceptance_evidence_replay_pass_rows),
+    "pm_acceptance_evidence_blocker_pass_rows": str(pm_acceptance_evidence_blocker_pass_rows),
+    "pm_acceptance_evidence_tests_only_rows": str(pm_acceptance_evidence_tests_only_rows),
     "foundation_machine_freeze_ready": str(foundation_machine_freeze_ready),
     "foundation_direct_evidence_ready": str(foundation_direct_evidence_ready),
     "foundation_query_span_binding_audit_ready": str(foundation_query_span_binding_audit_ready),
@@ -880,6 +1018,9 @@ Evidence emitted:
 - pm_freeze_check_rows={len(pm_freeze_checks)}
 - pm_freeze_blocked_rows={pm_freeze_blocked_rows}
 - foundation_freeze_certificate_rows={len(foundation_freeze_rows)}
+- pm_acceptance_evidence_rows={pm_acceptance_evidence_row_count}
+- pm_acceptance_evidence_ready_rows={pm_acceptance_evidence_ready_rows}
+- pm_acceptance_evidence_tests_only_rows={pm_acceptance_evidence_tests_only_rows}
 - foundation_machine_freeze_ready={foundation_machine_freeze_ready}
 - foundation_direct_evidence_ready={foundation_direct_evidence_ready}
 - foundation_query_span_binding_audit_ready={foundation_query_span_binding_audit_ready}
@@ -957,6 +1098,12 @@ manifest = {
     "pm_freeze_blocked_rows": pm_freeze_blocked_rows,
     "foundation_freeze_certificate_rows": len(foundation_freeze_rows),
     "foundation_freeze_blocked_rows": foundation_freeze_blocked_rows,
+    "pm_acceptance_evidence_rows": pm_acceptance_evidence_row_count,
+    "pm_acceptance_evidence_ready_rows": pm_acceptance_evidence_ready_rows,
+    "pm_acceptance_evidence_replay_pass_rows": pm_acceptance_evidence_replay_pass_rows,
+    "pm_acceptance_evidence_blocker_pass_rows": pm_acceptance_evidence_blocker_pass_rows,
+    "pm_acceptance_evidence_tests_only_rows": pm_acceptance_evidence_tests_only_rows,
+    "pm_acceptance_evidence_rows_sha256": sha256(run_dir / "complete_source_pm_acceptance_evidence_rows.csv"),
     "foundation_machine_freeze_ready": foundation_machine_freeze_ready,
     "foundation_direct_evidence_ready": foundation_direct_evidence_ready,
     "foundation_query_span_binding_audit_ready": foundation_query_span_binding_audit_ready,

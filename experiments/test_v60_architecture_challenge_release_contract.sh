@@ -71,6 +71,9 @@ expected = {
     "v53_direct_file_manifest_rows": "11266",
     "v53_direct_content_snapshot_rows": "11266",
     "pm_pr_v53_direct_pinned_manifest_ready": "1",
+    "pm_pr_v53_pm_acceptance_evidence_rows": "10",
+    "pm_pr_v53_pm_acceptance_evidence_ready_rows": "10",
+    "pm_pr_v53_pm_acceptance_evidence_tests_only_rows": "0",
     "local_abgh_prebaseline_ready": "1",
     "local_abgh_prebaseline_ledger_ready": "1",
     "local_abgh_prebaseline_ledger_rows": "1000",
@@ -191,6 +194,7 @@ required_files = [
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/adapter_selection_contract_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v59e/source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
@@ -286,6 +290,24 @@ if "coherent_wrong_key_rows=287" not in v60_pm_v53t_real_adapter_rows["real-adap
     raise SystemExit("v60 should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in v60_pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v60 should preserve v53aq public comparison blocker")
+
+v60_pm_v53_acceptance_rows = {
+    row["requirement_id"]: row
+    for row in read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv")
+}
+if len(v60_pm_v53_acceptance_rows) != 10:
+    raise SystemExit("v60 should carry ten v53 PM acceptance evidence rows")
+if any(row["acceptance_ready"] != "1" or row["tests_only_merge_condition"] != "0" for row in v60_pm_v53_acceptance_rows.values()):
+    raise SystemExit("v60 v53 PM acceptance evidence should be ready and not tests-only")
+for requirement_id, snippet in {
+    "source-span-query-freeze": "binding_audit_pass_rows=1000",
+    "answer-citation-separated-evaluator": "separate_evaluator_rows=4000",
+    "abgh-same-query-deterministic-prebaseline": "real_system_performance_claim_ready=0",
+    "abgh-real-adapter-same-query-internal": "public_comparison_claim_ready=0",
+    "public-comparison-boundary-closed": "required_30b_baseline_ready=0",
+}.items():
+    if snippet not in v60_pm_v53_acceptance_rows[requirement_id]["actual_value"]:
+        raise SystemExit(f"v60 v53 PM acceptance row should expose {snippet}: {requirement_id}")
 
 repo_coverage_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
 file_manifest_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
@@ -629,6 +651,12 @@ if (
     or manifest.get("pm_pr_v53_direct_pinned_manifest_ready") != 1
 ):
     raise SystemExit("v60 manifest should record direct v53 pinned manifest evidence")
+if (
+    manifest.get("pm_pr_v53_pm_acceptance_evidence_rows") != 10
+    or manifest.get("pm_pr_v53_pm_acceptance_evidence_ready_rows") != 10
+    or manifest.get("pm_pr_v53_pm_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("v60 manifest should record v53 PM acceptance evidence")
 if "v59e_public_source_snapshot_replay_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind v59e public source snapshot replay rows")
 if "v59e_local_abgh_row_contract_replay_sha256" not in manifest:

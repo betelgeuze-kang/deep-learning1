@@ -134,6 +134,9 @@ expected = {
     "pm_pr_v53_direct_repo_manifest_rows": "10",
     "pm_pr_v53_direct_file_manifest_rows": "11266",
     "pm_pr_v53_direct_content_snapshot_rows": "11266",
+    "pm_pr_v53_pm_acceptance_evidence_rows": "10",
+    "pm_pr_v53_pm_acceptance_evidence_ready_rows": "10",
+    "pm_pr_v53_pm_acceptance_evidence_tests_only_rows": "0",
     "pm_pr_review_packet_rows": "10",
     "pm_pr_review_packet_files": "10",
     "pm_pr_review_packet_bundle_ready": "1",
@@ -286,6 +289,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
@@ -349,6 +353,24 @@ if "coherent_wrong_key_rows=287" not in pm_v53t_real_adapter_rows["real-adapter-
     raise SystemExit("v59e PM sidecar should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e PM sidecar should preserve v53aq public comparison blocker")
+
+pm_v53_acceptance_rows = {
+    row["requirement_id"]: row
+    for row in read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv")
+}
+if len(pm_v53_acceptance_rows) != 10:
+    raise SystemExit("v59e PM sidecar should carry ten v53 PM acceptance evidence rows")
+if any(row["acceptance_ready"] != "1" or row["tests_only_merge_condition"] != "0" for row in pm_v53_acceptance_rows.values()):
+    raise SystemExit("v59e PM sidecar v53 acceptance rows should be ready and not tests-only")
+for requirement_id, snippet in {
+    "source-span-query-freeze": "binding_audit_pass_rows=1000",
+    "answer-citation-separated-evaluator": "separate_evaluator_rows=4000",
+    "abgh-same-query-deterministic-prebaseline": "real_system_performance_claim_ready=0",
+    "abgh-real-adapter-same-query-internal": "public_comparison_claim_ready=0",
+    "public-comparison-boundary-closed": "required_30b_baseline_ready=0",
+}.items():
+    if snippet not in pm_v53_acceptance_rows[requirement_id]["actual_value"]:
+        raise SystemExit(f"v59e PM sidecar v53 acceptance row should expose {snippet}: {requirement_id}")
 
 repo_coverage_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
 file_manifest_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv")
@@ -638,6 +660,12 @@ if (
     or manifest.get("pm_pr_v53_direct_content_snapshot_rows") != 11266
 ):
     raise SystemExit("v59e manifest should record direct v53 pinned manifest evidence")
+if (
+    manifest.get("pm_pr_v53_pm_acceptance_evidence_rows") != 10
+    or manifest.get("pm_pr_v53_pm_acceptance_evidence_ready_rows") != 10
+    or manifest.get("pm_pr_v53_pm_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("v59e manifest should record v53 PM acceptance evidence")
 if manifest.get("pm_scope_drift_allowed") != 0:
     raise SystemExit("v59e manifest should keep PM scope drift locked")
 if manifest.get("one_command_replay_preflight_ready") != 1:
@@ -696,6 +724,9 @@ for snippet in [
     "v58_required_artifact_fixture_allowed_rows=0",
     "v58_return_template_fixture_allowed_rows=0",
     "pm_pr_claim_slice_bundle_ready=1",
+    "pm_pr_v53_pm_acceptance_evidence_rows=10",
+    "pm_pr_v53_pm_acceptance_evidence_ready_rows=10",
+    "pm_pr_v53_pm_acceptance_evidence_tests_only_rows=0",
     "pm_scope_drift_allowed=0",
     "one_command_replay_preflight_ready=1",
     "Blocked wording",

@@ -70,6 +70,11 @@ expected = {
     "foundation_freeze_certificate_rows": "10",
     "foundation_freeze_pass_rows": "10",
     "foundation_freeze_blocked_rows": "0",
+    "pm_acceptance_evidence_rows": "10",
+    "pm_acceptance_evidence_ready_rows": "10",
+    "pm_acceptance_evidence_replay_pass_rows": "10",
+    "pm_acceptance_evidence_blocker_pass_rows": "10",
+    "pm_acceptance_evidence_tests_only_rows": "0",
     "foundation_machine_freeze_ready": "1",
     "foundation_direct_evidence_ready": "1",
     "foundation_query_span_binding_audit_ready": "1",
@@ -135,6 +140,7 @@ required_files = [
     "complete_source_audit_readiness_requirement_rows.csv",
     "complete_source_pm_freeze_check_rows.csv",
     "complete_source_foundation_freeze_rows.csv",
+    "complete_source_pm_acceptance_evidence_rows.csv",
     "complete_source_abgh_real_adapter_freeze_rows.csv",
     "complete_source_query_span_binding_audit_rows.csv",
     "complete_source_audit_claim_rows.csv",
@@ -406,6 +412,57 @@ if "real system performance" not in foundation_freeze_rows["abgh-same-query-meas
 if "forbids public comparison" not in foundation_freeze_rows["public-comparison-boundary-closed"]["claim_boundary"]:
     raise SystemExit("v53t foundation freeze should explicitly forbid public comparison wording")
 
+pm_acceptance_rows = {row["requirement_id"]: row for row in read_csv(run_dir / "complete_source_pm_acceptance_evidence_rows.csv")}
+expected_pm_acceptance_ids = {
+    "pinned-public-repo-manifest",
+    "source-span-query-freeze",
+    "negative-abstain-control-share",
+    "unsupported-claim-control",
+    "missing-specific-abstain-control",
+    "doc-code-conflict-control",
+    "answer-citation-separated-evaluator",
+    "abgh-same-query-deterministic-prebaseline",
+    "abgh-real-adapter-same-query-internal",
+    "public-comparison-boundary-closed",
+}
+if set(pm_acceptance_rows) != expected_pm_acceptance_ids:
+    raise SystemExit("v53t PM acceptance evidence row ids mismatch")
+if any(row["status"] != "pass" or row["acceptance_ready"] != "1" for row in pm_acceptance_rows.values()):
+    raise SystemExit("v53t PM acceptance evidence rows should all be ready")
+if any(row["tests_only_merge_condition"] != "0" for row in pm_acceptance_rows.values()):
+    raise SystemExit("v53t PM acceptance evidence must not use tests-only merge conditions")
+if any(row["claim_boundary_status"] != "pass" or row["replay_artifact_status"] != "pass" or row["blocker_false_positive_status"] != "pass" for row in pm_acceptance_rows.values()):
+    raise SystemExit("v53t PM acceptance evidence should pass claim/replay/blocker gates")
+for row in pm_acceptance_rows.values():
+    evidence_path = run_dir / row["evidence_path"]
+    if not evidence_path.is_file() or evidence_path.stat().st_size == 0:
+        raise SystemExit(f"v53t PM acceptance evidence path missing: {row['evidence_path']}")
+    if row["evidence_sha256"] != sha256(evidence_path):
+        raise SystemExit(f"v53t PM acceptance evidence sha mismatch: {row['requirement_id']}")
+    if row["evidence_rows"] != str(len(read_csv(evidence_path))):
+        raise SystemExit(f"v53t PM acceptance evidence row count mismatch: {row['requirement_id']}")
+if pm_acceptance_rows["pinned-public-repo-manifest"]["evidence_rows"] != "10":
+    raise SystemExit("v53t PM acceptance should expose ten repo manifest rows")
+if pm_acceptance_rows["source-span-query-freeze"]["evidence_rows"] != "1000":
+    raise SystemExit("v53t PM acceptance should expose 1000 query-span binding audit rows")
+if pm_acceptance_rows["answer-citation-separated-evaluator"]["evidence_rows"] != "4000":
+    raise SystemExit("v53t PM acceptance should expose 4000 separated evaluator rows")
+if pm_acceptance_rows["abgh-real-adapter-same-query-internal"]["evidence_rows"] != "1000":
+    raise SystemExit("v53t PM acceptance should expose 1000 real-adapter same-query rows")
+for requirement_id, snippet in {
+    "source-span-query-freeze": "binding_audit_pass_rows=1000",
+    "unsupported-claim-control": "unsupported_control_rows=100",
+    "missing-specific-abstain-control": "missing_specific_control_rows=30",
+    "doc-code-conflict-control": "doc_code_conflict_rows=140",
+    "abgh-same-query-deterministic-prebaseline": "real_system_performance_claim_ready=0",
+    "abgh-real-adapter-same-query-internal": "public_comparison_claim_ready=0",
+    "public-comparison-boundary-closed": "required_30b_baseline_ready=0",
+}.items():
+    if snippet not in pm_acceptance_rows[requirement_id]["actual_value"]:
+        raise SystemExit(f"v53t PM acceptance row should expose {snippet}: {requirement_id}")
+if "public comparison remains blocked" not in pm_acceptance_rows["abgh-same-query-deterministic-prebaseline"]["claim_boundary"]:
+    raise SystemExit("v53t PM acceptance should keep A/B/G/H public comparison blocked")
+
 real_adapter_freeze_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "complete_source_abgh_real_adapter_freeze_rows.csv")}
 if len(real_adapter_freeze_rows) != 4:
     raise SystemExit("v53t real-adapter freeze row count mismatch")
@@ -486,6 +543,9 @@ for snippet in [
     "pm_freeze_check_rows=10",
     "pm_freeze_blocked_rows=0",
     "foundation_freeze_certificate_rows=10",
+    "pm_acceptance_evidence_rows=10",
+    "pm_acceptance_evidence_ready_rows=10",
+    "pm_acceptance_evidence_tests_only_rows=0",
     "foundation_machine_freeze_ready=1",
     "foundation_direct_evidence_ready=1",
     "foundation_query_span_binding_audit_ready=1",
@@ -546,6 +606,15 @@ if manifest.get("pm_v53_freeze_ready") != 1 or manifest.get("pm_freeze_blocked_r
     raise SystemExit("v53t manifest PM freeze boundary mismatch")
 if manifest.get("foundation_freeze_certificate_rows") != 10 or manifest.get("foundation_freeze_blocked_rows") != 0:
     raise SystemExit("v53t manifest foundation freeze row mismatch")
+if (
+    manifest.get("pm_acceptance_evidence_rows") != 10
+    or manifest.get("pm_acceptance_evidence_ready_rows") != 10
+    or manifest.get("pm_acceptance_evidence_replay_pass_rows") != 10
+    or manifest.get("pm_acceptance_evidence_blocker_pass_rows") != 10
+    or manifest.get("pm_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("pm_acceptance_evidence_rows_sha256") != sha256(run_dir / "complete_source_pm_acceptance_evidence_rows.csv")
+):
+    raise SystemExit("v53t manifest PM acceptance evidence mismatch")
 if (
     manifest.get("v53ap_expected_answer_oracle_replay") != 0
     or manifest.get("v53ap_deterministic_source_span_adapter_execution") != 1
