@@ -93,6 +93,9 @@ expected = {
     "command_rows": "3",
     "ready_command_rows": "2",
     "blocked_command_rows": "1",
+    "fail_closed_probe_rows": "3",
+    "fail_closed_probe_ready_rows": "3",
+    "fail_closed_probe_admitted_rows": "0",
     "release_requirement_rows": "14",
     "release_requirement_ready_rows": "6",
     "release_requirement_blocked_rows": "8",
@@ -123,7 +126,7 @@ expected = {
     "pm_required_artifact_map_approval_rows": "26",
     "pm_required_artifact_map_template_bound_rows": "26",
     "pm_required_artifact_map_default_admitted_rows": "0",
-    "metadata_only_entrypoint_file_rows": "14",
+    "metadata_only_entrypoint_file_rows": "15",
     "payload_like_entrypoint_file_rows": "0",
     "remote_mutation_approved": "0",
     "network_required_by_default": "0",
@@ -152,6 +155,7 @@ required_files = [
     "release_blocker_replay_artifact_map_rows.csv",
     "release_blocker_replay_stage_rows.csv",
     "release_blocker_replay_command_rows.csv",
+    "release_blocker_replay_fail_closed_probe_rows.csv",
     "release_blocker_replay_entrypoint_file_rows.csv",
     "V60C_RELEASE_BLOCKER_REPLAY_ENTRYPOINT_BOUNDARY.md",
     "v60c_release_blocker_replay_entrypoint_manifest.json",
@@ -164,6 +168,7 @@ required_files = [
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_ARTIFACT_MAP_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_STAGE_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_COMMAND_ROWS.csv",
+    "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_FAIL_CLOSED_PROBE_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_PM_PR_ACCEPTANCE_EVIDENCE_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_PM_V56_REPLAY_ACCEPTANCE_EVIDENCE_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_PM_DE_30B70B_ACCEPTANCE_EVIDENCE_ROWS.csv",
@@ -338,6 +343,27 @@ commands = read_csv(run_dir / "release_blocker_replay_command_rows.csv")
 if [row["ready_to_run_now"] for row in commands] != ["1", "1", "0"]:
     raise SystemExit("v60c command readiness mismatch")
 
+fail_closed_probe_rows = read_csv(run_dir / "release_blocker_replay_fail_closed_probe_rows.csv")
+entrypoint_fail_closed_probe_rows = read_csv(entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_FAIL_CLOSED_PROBE_ROWS.csv")
+if fail_closed_probe_rows != entrypoint_fail_closed_probe_rows:
+    raise SystemExit("v60c should copy fail-closed probe rows into the entrypoint package")
+expected_probe_exit = {
+    "missing-env": "1",
+    "fixture-provenance": "3",
+    "repo-internal-evidence-root": "4",
+}
+if set(row["probe_id"] for row in fail_closed_probe_rows) != set(expected_probe_exit):
+    raise SystemExit("v60c fail-closed probe ids mismatch")
+for row in fail_closed_probe_rows:
+    if row["expected_exit_code"] != expected_probe_exit[row["probe_id"]]:
+        raise SystemExit(f"v60c fail-closed expected exit mismatch: {row['probe_id']}")
+    if row["actual_exit_code"] != row["expected_exit_code"]:
+        raise SystemExit(f"v60c fail-closed actual exit mismatch: {row['probe_id']}")
+    if row["fail_closed"] != "1" or row["admitted"] != "0" or row["stderr_matched"] != "1":
+        raise SystemExit(f"v60c fail-closed probe should reject cleanly: {row['probe_id']}")
+    if row["network_required"] != "0" or row["remote_mutation"] != "0" or row["external_replay_reached"] != "0":
+        raise SystemExit(f"v60c fail-closed probe should not reach external replay: {row['probe_id']}")
+
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in ["v60-release-contract-input", "entrypoint-files", "zero-remote-mutation-default", "zero-repo-payload"]:
     if decisions.get(gate) != "pass":
@@ -351,6 +377,14 @@ if manifest.get("entrypoint_admitted_by_default") != 0:
     raise SystemExit("v60c manifest must fail closed by default")
 if manifest.get("real_release_package_ready") != 0:
     raise SystemExit("v60c manifest must keep release blocked")
+if (
+    manifest.get("fail_closed_probe_rows") != 3
+    or manifest.get("fail_closed_probe_ready_rows") != 3
+    or manifest.get("fail_closed_probe_admitted_rows") != 0
+):
+    raise SystemExit("v60c manifest fail-closed probe mismatch")
+if "fail_closed_probe_rows_sha256" not in manifest:
+    raise SystemExit("v60c manifest should hash-bind fail-closed probe rows")
 if (
     manifest.get("pm_acceptance_evidence_rows") != 10
     or manifest.get("pm_acceptance_evidence_ready_rows") != 9
@@ -394,6 +428,12 @@ if "pm_v59_one_command_acceptance_evidence_rows_sha256" not in manifest:
 entry_manifest = json.loads((entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_MANIFEST.json").read_text(encoding="utf-8"))
 if entry_manifest.get("required_env_rows") != 9:
     raise SystemExit("v60c entrypoint manifest required env mismatch")
+if (
+    entry_manifest.get("fail_closed_probe_rows") != 3
+    or entry_manifest.get("fail_closed_probe_ready_rows") != 3
+    or entry_manifest.get("fail_closed_probe_admitted_rows") != 0
+):
+    raise SystemExit("v60c entrypoint manifest fail-closed probe mismatch")
 if (
     entry_manifest.get("pm_acceptance_evidence_rows") != 10
     or entry_manifest.get("pm_acceptance_evidence_ready_rows") != 9
@@ -461,6 +501,9 @@ for snippet in [
     "v60c_release_blocker_replay_entrypoint_ready=1",
     "entrypoint_admitted_by_default=0",
     "required_env_rows=9",
+    "fail_closed_probe_rows=3",
+    "fail_closed_probe_ready_rows=3",
+    "fail_closed_probe_admitted_rows=0",
     "blocked_release_requirement_rows=8",
     "pm_acceptance_evidence_rows=10",
     "pm_acceptance_evidence_ready_rows=9",

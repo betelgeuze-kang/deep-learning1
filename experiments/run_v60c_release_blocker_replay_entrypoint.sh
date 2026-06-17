@@ -25,9 +25,12 @@ python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib
 import json
+import os
 import shlex
 import shutil
+import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -408,6 +411,97 @@ run_script.write_text(
 )
 run_script.chmod(0o755)
 
+fail_closed_probe_rows = []
+probe_base_env = {key: value for key, value in os.environ.items() if not key.startswith("V60C_")}
+
+
+def run_fail_closed_probe(probe_id, purpose, env, expected_exit_code, expected_stderr):
+    completed = subprocess.run(
+        [str(run_script)],
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    stderr_matched = expected_stderr in completed.stderr
+    fail_closed = completed.returncode == expected_exit_code and stderr_matched
+    fail_closed_probe_rows.append(
+        {
+            "probe_id": probe_id,
+            "purpose": purpose,
+            "expected_exit_code": str(expected_exit_code),
+            "actual_exit_code": str(completed.returncode),
+            "admitted": "1" if completed.returncode == 0 else "0",
+            "expected_stderr_snippet": expected_stderr,
+            "stderr_matched": "1" if stderr_matched else "0",
+            "fail_closed": "1" if fail_closed else "0",
+            "network_required": "0",
+            "remote_mutation": "0",
+            "external_replay_reached": "0" if completed.returncode != 0 else "1",
+        }
+    )
+
+
+run_fail_closed_probe(
+    "missing-env",
+    "reject default execution before any external evidence intake",
+    probe_base_env,
+    1,
+    "V60C_REAL_EVIDENCE_PROVENANCE",
+)
+with tempfile.TemporaryDirectory(prefix="v60c_probe_") as tmp:
+    tmp_root = Path(tmp)
+    for dirname in ["d30", "e70", "v56", "v58", "public_source", "review", "release"]:
+        (tmp_root / dirname).mkdir()
+    h10_file = tmp_root / "h10_labels.csv"
+    h10_file.write_text("query_id,label_id\n", encoding="utf-8")
+    common_env = {
+        "V60C_30B_EVIDENCE_DIR": str(tmp_root / "d30"),
+        "V60C_70B_EVIDENCE_DIR": str(tmp_root / "e70"),
+        "V60C_H10_REAL_LABEL_EVIDENCE_CSV": str(h10_file),
+        "V60C_V56_REPLAY_ARTIFACT_DIR": str(tmp_root / "v56"),
+        "V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR": str(tmp_root / "v58"),
+        "V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR": str(tmp_root / "public_source"),
+        "V60C_HUMAN_RELEASE_REVIEW_DIR": str(tmp_root / "review"),
+        "V60C_RELEASE_PACKAGE_DIR": str(tmp_root / "release"),
+    }
+    run_fail_closed_probe(
+        "fixture-provenance",
+        "reject non-real provenance even when evidence-shaped paths exist",
+        {**probe_base_env, **common_env, "V60C_REAL_EVIDENCE_PROVENANCE": "fixture-release-evidence"},
+        3,
+        "rejecting release blocker provenance",
+    )
+
+repo_internal_probe_dir = run_dir / "repo_internal_reject_probe"
+repo_internal_probe_dir.mkdir(parents=True, exist_ok=True)
+run_fail_closed_probe(
+    "repo-internal-evidence-root",
+    "reject repo-internal evidence roots before replay commands run",
+    {
+        **probe_base_env,
+        "V60C_REAL_EVIDENCE_PROVENANCE": "real-v60-release-blocker-evidence",
+        "V60C_30B_EVIDENCE_DIR": str(repo_internal_probe_dir),
+        "V60C_70B_EVIDENCE_DIR": str(repo_internal_probe_dir),
+        "V60C_H10_REAL_LABEL_EVIDENCE_CSV": str(repo_internal_probe_dir / "missing.csv"),
+        "V60C_V56_REPLAY_ARTIFACT_DIR": str(repo_internal_probe_dir),
+        "V60C_V58_BLIND_RESPONSE_EVIDENCE_DIR": str(repo_internal_probe_dir),
+        "V60C_PUBLIC_SOURCE_REFRESH_EVIDENCE_DIR": str(repo_internal_probe_dir),
+        "V60C_HUMAN_RELEASE_REVIEW_DIR": str(repo_internal_probe_dir),
+        "V60C_RELEASE_PACKAGE_DIR": str(repo_internal_probe_dir),
+    },
+    4,
+    "rejecting repo-internal evidence directory",
+)
+write_csv(
+    run_dir / "release_blocker_replay_fail_closed_probe_rows.csv",
+    list(fail_closed_probe_rows[0].keys()),
+    fail_closed_probe_rows,
+)
+fail_closed_probe_ready_rows = sum(1 for row in fail_closed_probe_rows if row["fail_closed"] == "1")
+fail_closed_probe_admitted_rows = sum(1 for row in fail_closed_probe_rows if row["admitted"] == "1")
+
 verify_script = entrypoint_dir / "VERIFY_RELEASE_BLOCKER_REPLAY_ENTRYPOINT.sh"
 verify_script.write_text(
     "\n".join(
@@ -420,6 +514,7 @@ verify_script.write_text(
             "test -s \"$DIR/V60C_RELEASE_BLOCKER_REPLAY_MANIFEST.json\"",
             "test -s \"$DIR/V60C_RELEASE_BLOCKER_REPLAY_STAGE_ROWS.csv\"",
             "test -s \"$DIR/V60C_RELEASE_BLOCKER_REPLAY_COMMAND_ROWS.csv\"",
+            "test -s \"$DIR/V60C_RELEASE_BLOCKER_REPLAY_FAIL_CLOSED_PROBE_ROWS.csv\"",
             "if grep -R -E '\\.(safetensors|gguf|bin|pt|pth)$' \"$DIR\" >/dev/null; then",
             "  echo 'payload-like file referenced in v60c entrypoint package' >&2",
             "  exit 1",
@@ -451,6 +546,7 @@ ready_script.chmod(0o755)
 shutil.copy2(run_dir / "release_blocker_replay_required_env_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_REQUIRED_ENV_ROWS.csv")
 shutil.copy2(run_dir / "release_blocker_replay_stage_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_STAGE_ROWS.csv")
 shutil.copy2(run_dir / "release_blocker_replay_command_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_COMMAND_ROWS.csv")
+shutil.copy2(run_dir / "release_blocker_replay_fail_closed_probe_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_FAIL_CLOSED_PROBE_ROWS.csv")
 shutil.copy2(run_dir / "release_blocker_replay_artifact_map_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_ARTIFACT_MAP_ROWS.csv")
 shutil.copy2(run_dir / "source_pm" / "pm_pr_acceptance_evidence_rows.csv", entrypoint_dir / "V60C_PM_PR_ACCEPTANCE_EVIDENCE_ROWS.csv")
 shutil.copy2(run_dir / "source_pm" / "v56_replay_acceptance_evidence_rows.csv", entrypoint_dir / "V60C_PM_V56_REPLAY_ACCEPTANCE_EVIDENCE_ROWS.csv")
@@ -487,6 +583,9 @@ entrypoint_manifest = {
     "stage_rows": len(stage_rows),
     "ready_stage_rows": sum(1 for row in stage_rows if row["status"] == "ready"),
     "blocked_stage_rows": sum(1 for row in stage_rows if row["status"] == "blocked"),
+    "fail_closed_probe_rows": len(fail_closed_probe_rows),
+    "fail_closed_probe_ready_rows": fail_closed_probe_ready_rows,
+    "fail_closed_probe_admitted_rows": fail_closed_probe_admitted_rows,
     "blocked_release_requirement_rows": len(blocked_release_requirements),
     "real_release_package_ready": 0,
     "remote_mutation_approved": 0,
@@ -551,6 +650,9 @@ summary = {
     "command_rows": str(len(command_rows)),
     "ready_command_rows": str(sum(1 for row in command_rows if row["ready_to_run_now"] == "1")),
     "blocked_command_rows": str(sum(1 for row in command_rows if row["ready_to_run_now"] == "0")),
+    "fail_closed_probe_rows": str(len(fail_closed_probe_rows)),
+    "fail_closed_probe_ready_rows": str(fail_closed_probe_ready_rows),
+    "fail_closed_probe_admitted_rows": str(fail_closed_probe_admitted_rows),
     "release_requirement_rows": v60_summary["release_requirement_rows"],
     "release_requirement_ready_rows": v60_summary["release_requirement_ready_rows"],
     "release_requirement_blocked_rows": v60_summary["release_requirement_blocked_rows"],
@@ -610,6 +712,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- required_env_rows={summary['required_env_rows']}\n"
     f"- ready_stage_rows={summary['ready_stage_rows']}\n"
     f"- blocked_stage_rows={summary['blocked_stage_rows']}\n"
+    f"- fail_closed_probe_rows={summary['fail_closed_probe_rows']}\n"
+    f"- fail_closed_probe_ready_rows={summary['fail_closed_probe_ready_rows']}\n"
+    f"- fail_closed_probe_admitted_rows={summary['fail_closed_probe_admitted_rows']}\n"
     f"- blocked_release_requirement_rows={summary['blocked_release_requirement_rows']}\n"
     f"- pm_acceptance_evidence_rows={summary['pm_acceptance_evidence_rows']}\n"
     f"- pm_acceptance_evidence_ready_rows={summary['pm_acceptance_evidence_ready_rows']}\n"
@@ -673,10 +778,14 @@ manifest = {
     "pm_v59_one_command_acceptance_evidence_approval_rows": pm_v59_one_command_acceptance_approval_rows,
     "pm_required_artifact_map_rows": len(pm_artifact_map_rows),
     "stage_rows": len(stage_rows),
+    "fail_closed_probe_rows": len(fail_closed_probe_rows),
+    "fail_closed_probe_ready_rows": fail_closed_probe_ready_rows,
+    "fail_closed_probe_admitted_rows": fail_closed_probe_admitted_rows,
     "blocked_release_requirement_rows": len(blocked_release_requirements),
     "real_release_package_ready": 0,
     "v60_summary_sha256": sha256(v60_summary_path),
     "v60_manifest_sha256": sha256(v60_dir / "v60_architecture_challenge_release_manifest.json"),
+    "fail_closed_probe_rows_sha256": sha256(run_dir / "release_blocker_replay_fail_closed_probe_rows.csv"),
     "pm_v56_replay_acceptance_evidence_rows_sha256": sha256(run_dir / "source_pm/v56_replay_acceptance_evidence_rows.csv"),
     "pm_de_30b70b_acceptance_evidence_rows_sha256": sha256(run_dir / "source_pm/de_30b70b_acceptance_evidence_rows.csv"),
     "pm_v59_one_command_acceptance_evidence_rows_sha256": sha256(run_dir / "source_pm/v59_one_command_acceptance_evidence_rows.csv"),
