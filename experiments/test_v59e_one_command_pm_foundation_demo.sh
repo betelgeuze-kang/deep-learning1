@@ -244,6 +244,7 @@ required_files = [
     "source_v54c/sha256sums.txt",
     "source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md",
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
+    "source_h10_pm/h10_real_label_return_contract_rows.csv",
     "source_h10_pm/source_v53ap/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53ap/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/adapter_selection_contract_rows.csv",
@@ -270,6 +271,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -414,6 +416,23 @@ if "coherent_wrong_key_rows=287" not in h10_v53t_real_adapter_rows["real-adapter
     raise SystemExit("v59e h10 PM source bundle should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in h10_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e h10 PM source bundle should preserve public comparison blocker")
+
+for label, path in [
+    ("h10 PM source bundle", run_dir / "source_h10_pm/h10_real_label_return_contract_rows.csv"),
+    ("PM sidecar h10 bundle", run_dir / "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv"),
+]:
+    rows = read_csv(path)
+    if len(rows) != 6:
+        raise SystemExit(f"v59e {label} should carry six h10 return contract rows")
+    if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" for row in rows):
+        raise SystemExit(f"v59e {label} should preserve no-fixture approval-required h10 return contracts")
+    if any(row["contract_ready"] != "1" or row["acceptance_status"] != "blocked" for row in rows):
+        raise SystemExit(f"v59e {label} should keep h10 return contracts ready but blocked without accepted labels")
+    by_criterion = {row["criterion"]: row for row in rows}
+    if by_criterion["source-provenance-binding"]["evidence_column"] != "source_provenance_labels":
+        raise SystemExit(f"v59e {label} should bind source provenance labels")
+    if "query_rows>=1000" not in by_criterion["external-human-label-evidence"]["external_label_dependency"]:
+        raise SystemExit(f"v59e {label} should require 1000 query rows for external/human labels")
 
 for label, path in [
     ("h10 PM source bundle", run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),

@@ -202,6 +202,7 @@ h10_pm_dir = results / "v10_h10_real_label_promotion_readiness_gate" / "gate_001
 h10_acceptance_rows_path = h10_pm_dir / "pm_h10_real_label_acceptance_rows.csv"
 h10_template_path = h10_pm_dir / "h10_real_label_evidence_template.csv"
 h10_evidence_acceptance_path = h10_pm_dir / "h10_real_label_evidence_acceptance_rows.csv"
+h10_return_contract_path = h10_pm_dir / "h10_real_label_return_contract_rows.csv"
 h10_v53aq_prebaseline_path = h10_pm_dir / "source_v53aq" / "abgh_same_query_internal_prebaseline_rows.csv"
 h10_acceptance_rows_copied = copy_if_exists(
     h10_acceptance_rows_path,
@@ -209,11 +210,17 @@ h10_acceptance_rows_copied = copy_if_exists(
 )
 copy_if_exists(h10_template_path, "source_h10_pm/h10_real_label_evidence_template.csv")
 copy_if_exists(h10_evidence_acceptance_path, "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv")
+copy_if_exists(h10_return_contract_path, "source_h10_pm/h10_real_label_return_contract_rows.csv")
 copy_if_exists(h10_v53aq_prebaseline_path, "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
 h10_acceptance_rows = read_rows(h10_acceptance_rows_path)
 h10_acceptance_by_criterion = {
     row.get("criterion", ""): row
     for row in h10_acceptance_rows
+}
+h10_return_contract_rows = read_rows(h10_return_contract_path)
+h10_return_contract_by_criterion = {
+    row.get("criterion", ""): row
+    for row in h10_return_contract_rows
 }
 v53t_foundation_freeze_rows = read_rows(v53t_foundation_freeze_path)
 v53t_query_span_binding_rows = read_rows(v53t_run_dir / "complete_source_query_span_binding_audit_rows.csv")
@@ -825,6 +832,7 @@ pm_roadmap_rows = [
         as_int(h10_pm, "v10_h10_real_label_promotion_readiness_gate_ready") == 1
         and as_int(h10_pm, "v53aq_same_query_internal_prebaseline_rows_ready") == 1
         and len(h10_acceptance_rows) == 6
+        and len(h10_return_contract_rows) == 6
         and set(h10_acceptance_by_criterion) == {
             "coherent-wrong-key-reduction",
             "chunk-exact-increase",
@@ -832,11 +840,19 @@ pm_roadmap_rows = [
             "missing-query-abstain",
             "source-provenance-binding",
             "external-human-label-evidence",
-        },
+        }
+        and set(h10_return_contract_by_criterion) == set(h10_acceptance_by_criterion)
+        and all(row.get("fixture_allowed") == "0" for row in h10_return_contract_rows)
+        and all(row.get("approval_required") == "1" for row in h10_return_contract_rows)
+        and all(row.get("contract_ready") == "1" for row in h10_return_contract_rows)
+        and all(row.get("acceptance_status") == "blocked" for row in h10_return_contract_rows),
         h10_acceptance_rows_copied or "source_summaries/v10_h10_real_label_promotion_readiness_gate_summary.csv",
         (
             f"h10_readiness_gate={h10_pm.get('v10_h10_real_label_promotion_readiness_gate_ready', '0')} "
             f"criteria_rows={len(h10_acceptance_rows)} "
+            f"return_contract_rows={len(h10_return_contract_rows)} "
+            f"return_contract_ready_rows={h10_pm.get('h10_real_label_return_contract_ready_rows', '0')} "
+            f"return_contract_pass_rows={h10_pm.get('h10_real_label_return_contract_pass_rows', '0')} "
             f"criteria={','.join(sorted(h10_acceptance_by_criterion))} "
             f"v53aq_same_query_internal_prebaseline_rows={h10_pm.get('v53aq_same_query_internal_prebaseline_rows', '0')} "
             f"v53aq_same_query_internal_prebaseline_rows_ready={h10_pm.get('v53aq_same_query_internal_prebaseline_rows_ready', '0')}"

@@ -249,6 +249,9 @@ if h10_readiness_row["evidence_path"] != "source_h10_pm/pm_h10_real_label_accept
     raise SystemExit("PM h10 readiness should bind directly to the h10 acceptance rows")
 for snippet in [
     "criteria_rows=6",
+    "return_contract_rows=6",
+    "return_contract_ready_rows=6",
+    "return_contract_pass_rows=0",
     "coherent-wrong-key-reduction",
     "chunk-exact-increase",
     "near-miss-slash",
@@ -264,6 +267,8 @@ h10_acceptance_rows = read_csv(run_dir / "source_h10_pm/pm_h10_real_label_accept
 if len(h10_acceptance_rows) != 6:
     raise SystemExit("PM h10 acceptance source rows should expose six criteria")
 h10_criteria = {row["criterion"]: row for row in h10_acceptance_rows}
+h10_return_contract_rows = read_csv(run_dir / "source_h10_pm/h10_real_label_return_contract_rows.csv")
+h10_return_contract_by_criterion = {row["criterion"]: row for row in h10_return_contract_rows}
 for criterion in [
     "coherent-wrong-key-reduction",
     "chunk-exact-increase",
@@ -274,6 +279,16 @@ for criterion in [
 ]:
     if criterion not in h10_criteria:
         raise SystemExit(f"PM h10 acceptance source missing criterion: {criterion}")
+if set(h10_return_contract_by_criterion) != set(h10_criteria):
+    raise SystemExit("PM h10 return contract should cover the same six criteria as the acceptance rows")
+if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" for row in h10_return_contract_rows):
+    raise SystemExit("PM h10 return contract should preserve no-fixture approval-required boundaries")
+if any(row["contract_ready"] != "1" or row["acceptance_status"] != "blocked" for row in h10_return_contract_rows):
+    raise SystemExit("PM h10 return contract should be ready but blocked without accepted labels")
+if h10_return_contract_by_criterion["source-provenance-binding"]["evidence_column"] != "source_provenance_labels":
+    raise SystemExit("PM h10 return contract should bind source provenance labels")
+if "query_rows>=1000" not in h10_return_contract_by_criterion["external-human-label-evidence"]["external_label_dependency"]:
+    raise SystemExit("PM h10 return contract should require 1000 query rows for external/human labels")
 if h10_criteria["external-human-label-evidence"]["real_label_status"] != "blocked":
     raise SystemExit("PM h10 acceptance source should keep external/human evidence blocked")
 if "v53ap_evaluator_rows=4000" not in h10_criteria["source-provenance-binding"]["evidence"]:
@@ -624,6 +639,7 @@ required_files = [
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_h10_pm/h10_real_label_evidence_template.csv",
     "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
+    "source_h10_pm/h10_real_label_return_contract_rows.csv",
     "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v59e/local_abgh_row_contract_replay_rows.csv",
