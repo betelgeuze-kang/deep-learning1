@@ -77,6 +77,13 @@ expected = {
     "supplied_real_label_evidence_rows": "0",
     "accepted_real_label_evidence_rows": "0",
     "fixture_or_synthetic_label_evidence_rows": "0",
+    "accepted_label_rows": "0",
+    "accepted_query_rows_declared": "0",
+    "accepted_coherent_wrong_key_labels": "0",
+    "accepted_chunk_exact_labels": "0",
+    "accepted_near_miss_labels": "0",
+    "accepted_missing_query_labels": "0",
+    "accepted_source_provenance_labels": "0",
     "h10_real_label_return_contract_rows": "6",
     "h10_real_label_return_contract_ready_rows": "6",
     "h10_real_label_return_contract_fixture_allowed_rows": "0",
@@ -224,6 +231,16 @@ for criterion, row in acceptance_evidence_rows.items():
         raise SystemExit(f"h10 acceptance evidence should bind the evidence template for {criterion}")
     if row["evidence_acceptance_path"] != "h10_real_label_evidence_acceptance_rows.csv":
         raise SystemExit(f"h10 acceptance evidence should bind evidence acceptance rows for {criterion}")
+    if row["accepted_real_label_evidence_rows"] != "0":
+        raise SystemExit(f"h10 acceptance evidence should record zero accepted real-label evidence rows for {criterion}")
+    if row["accepted_query_rows_declared"] != "0" or row["accepted_label_rows"] != "0":
+        raise SystemExit(f"h10 acceptance evidence should record zero accepted query/label rows for {criterion}")
+    if row["accepted_criterion_label_count"] != "0":
+        raise SystemExit(f"h10 acceptance evidence should record zero criterion label coverage for {criterion}")
+    if row["criterion_label_coverage_status"] != "blocked":
+        raise SystemExit(f"h10 acceptance evidence should block criterion label coverage without accepted labels for {criterion}")
+    if row["source_verified_eval_status"] != "blocked":
+        raise SystemExit(f"h10 acceptance evidence should keep source-verified eval blocked for {criterion}")
     if row["fixture_allowed"] != "0" or row["approval_required"] != "1":
         raise SystemExit(f"h10 acceptance evidence should preserve no-fixture approval-required boundary for {criterion}")
     if row["contract_ready"] != "1" or row["acceptance_ready"] != "1":
@@ -415,6 +432,17 @@ if manifest.get("h10_real_label_acceptance_evidence_approval_rows") != 6:
     raise SystemExit("manifest should require approval for all h10 acceptance evidence rows")
 if manifest.get("h10_real_label_acceptance_evidence_rows_sha256") != sha256(run_dir / "h10_real_label_acceptance_evidence_rows.csv"):
     raise SystemExit("manifest should hash-bind h10 acceptance evidence rows")
+for field in [
+    "accepted_query_rows_declared",
+    "accepted_label_rows",
+    "accepted_coherent_wrong_key_labels",
+    "accepted_chunk_exact_labels",
+    "accepted_near_miss_labels",
+    "accepted_missing_query_labels",
+    "accepted_source_provenance_labels",
+]:
+    if manifest.get(field) != 0:
+        raise SystemExit(f"manifest should keep {field}=0 without accepted labels")
 if "v53t" not in manifest.get("source_summary_sha256", {}):
     raise SystemExit("manifest should hash-bind the v53t summary")
 
@@ -445,6 +473,13 @@ for snippet in [
     "v53aq_coherent_wrong_key_rows=287",
     "v53t_real_adapter_freeze_ready=1",
     "v53t_real_adapter_freeze_rows=4",
+    "accepted_query_rows_declared=0",
+    "accepted_label_rows=0",
+    "accepted_coherent_wrong_key_labels=0",
+    "accepted_chunk_exact_labels=0",
+    "accepted_near_miss_labels=0",
+    "accepted_missing_query_labels=0",
+    "accepted_source_provenance_labels=0",
     "h10_real_label_return_contract_rows=6",
     "h10_real_label_return_contract_ready_rows=6",
     "h10_real_label_return_contract_pass_rows=0",
@@ -486,6 +521,13 @@ checks = {
     "accepted_real_label_evidence_rows": "0",
     "rejected_real_label_evidence_rows": "1",
     "fixture_or_synthetic_label_evidence_rows": "1",
+    "accepted_label_rows": "0",
+    "accepted_query_rows_declared": "0",
+    "accepted_coherent_wrong_key_labels": "0",
+    "accepted_chunk_exact_labels": "0",
+    "accepted_near_miss_labels": "0",
+    "accepted_missing_query_labels": "0",
+    "accepted_source_provenance_labels": "0",
     "h10_real_label_return_contract_pass_rows": "0",
     "h10_real_label_acceptance_evidence_ready_rows": "6",
     "h10_real_label_acceptance_evidence_promotion_ready_rows": "0",
@@ -499,6 +541,9 @@ for field, expected in checks.items():
 rows = read_csv(run_dir / "h10_real_label_evidence_acceptance_rows.csv")
 if rows[0]["acceptance_status"] != "rejected" or "non-fixture" not in rows[0]["failed_checks"]:
     raise SystemExit("fixture h10 label row should be rejected by non-fixture check")
+ledger = read_csv(run_dir / "h10_real_label_acceptance_evidence_rows.csv")
+if any(row["accepted_real_label_evidence_rows"] != "0" or row["criterion_label_coverage_status"] != "blocked" for row in ledger):
+    raise SystemExit("fixture h10 label evidence should not open criterion label coverage")
 PY
 
 {

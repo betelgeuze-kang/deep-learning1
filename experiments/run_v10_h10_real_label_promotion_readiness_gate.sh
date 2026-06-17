@@ -310,6 +310,12 @@ else:
 external_human_label_evidence_ready = int(len(accepted_label_rows) > 0)
 accepted_human_reviewed_rows = sum(1 for row in accepted_label_rows if as_int(row, "human_reviewed") == 1)
 accepted_label_row_total = sum(as_int(row, "label_rows") for row in accepted_label_rows)
+accepted_query_row_total = sum(as_int(row, "query_rows") for row in accepted_label_rows)
+accepted_coherent_wrong_key_labels = sum(as_int(row, "coherent_wrong_key_labels") for row in accepted_label_rows)
+accepted_chunk_exact_labels = sum(as_int(row, "chunk_exact_labels") for row in accepted_label_rows)
+accepted_near_miss_labels = sum(as_int(row, "near_miss_labels") for row in accepted_label_rows)
+accepted_missing_query_labels = sum(as_int(row, "missing_query_labels") for row in accepted_label_rows)
+accepted_source_provenance_labels = sum(as_int(row, "source_provenance_labels") for row in accepted_label_rows)
 fixture_or_synthetic_rows = sum(1 for row in supplied_rows if as_int(row, "fixture_or_synthetic_declared") == 1)
 v53ap_adapter_trace_rows = read_csv(v53ap_dir / "abgh_adapter_trace_rows.csv")
 v53ap_evaluator_rows = read_csv(v53ap_dir / "abgh_evaluator_rows.csv")
@@ -565,6 +571,30 @@ for criterion in [
         and contract_row["acceptance_status"] == "pass"
         and h10_real_label_promotion_ready == 1
     )
+    criterion_label_counts = {
+        "coherent-wrong-key-reduction": accepted_coherent_wrong_key_labels,
+        "chunk-exact-increase": accepted_chunk_exact_labels,
+        "near-miss-slash": accepted_near_miss_labels,
+        "missing-query-abstain": accepted_missing_query_labels,
+        "source-provenance-binding": accepted_source_provenance_labels,
+        "external-human-label-evidence": accepted_label_row_total,
+    }
+    criterion_required_counts = {
+        "coherent-wrong-key-reduction": 1,
+        "chunk-exact-increase": accepted_label_row_total,
+        "near-miss-slash": 1,
+        "missing-query-abstain": 1,
+        "source-provenance-binding": accepted_label_row_total,
+        "external-human-label-evidence": 1000,
+    }
+    criterion_label_count = criterion_label_counts[criterion]
+    criterion_required_count = criterion_required_counts[criterion]
+    criterion_label_coverage_status = "pass" if (
+        external_human_label_evidence_ready
+        and accepted_query_row_total >= 1000
+        and accepted_label_row_total >= 1000
+        and criterion_label_count >= criterion_required_count
+    ) else "blocked"
     acceptance_ready = int(
         claim_boundary_status == "pass"
         and output_artifact_replay_status == "pass"
@@ -591,6 +621,13 @@ for criterion in [
             "evidence_acceptance_path": "h10_real_label_evidence_acceptance_rows.csv",
             "required_evidence_column": contract_row["evidence_column"],
             "required_condition": contract_row["required_condition"],
+            "accepted_real_label_evidence_rows": str(len(accepted_label_rows)),
+            "accepted_query_rows_declared": str(accepted_query_row_total),
+            "accepted_label_rows": str(accepted_label_row_total),
+            "accepted_criterion_label_count": str(criterion_label_count),
+            "required_criterion_label_count": str(criterion_required_count),
+            "criterion_label_coverage_status": criterion_label_coverage_status,
+            "source_verified_eval_status": "pass" if h10_source_verified_eval_ready == 1 else "blocked",
             "fixture_allowed": contract_row["fixture_allowed"],
             "approval_required": contract_row["approval_required"],
             "contract_ready": contract_row["contract_ready"],
@@ -654,6 +691,12 @@ summary = {
     "fixture_or_synthetic_label_evidence_rows": str(fixture_or_synthetic_rows),
     "accepted_human_reviewed_rows": str(accepted_human_reviewed_rows),
     "accepted_label_rows": str(accepted_label_row_total),
+    "accepted_query_rows_declared": str(accepted_query_row_total),
+    "accepted_coherent_wrong_key_labels": str(accepted_coherent_wrong_key_labels),
+    "accepted_chunk_exact_labels": str(accepted_chunk_exact_labels),
+    "accepted_near_miss_labels": str(accepted_near_miss_labels),
+    "accepted_missing_query_labels": str(accepted_missing_query_labels),
+    "accepted_source_provenance_labels": str(accepted_source_provenance_labels),
     "h10_real_label_return_contract_rows": str(len(h10_return_contract_rows)),
     "h10_real_label_return_contract_ready_rows": str(sum(1 for row in h10_return_contract_rows if row["contract_ready"] == "1")),
     "h10_real_label_return_contract_fixture_allowed_rows": str(sum(1 for row in h10_return_contract_rows if row["fixture_allowed"] == "1")),
@@ -719,6 +762,13 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- wrong_answer_guard_ready={wrong_answer_guard_ready}\n"
     f"- same_query_abgh_ready={same_query_abgh_ready}\n"
     f"- accepted_real_label_evidence_rows={len(accepted_label_rows)}\n\n"
+    f"- accepted_query_rows_declared={accepted_query_row_total}\n"
+    f"- accepted_label_rows={accepted_label_row_total}\n"
+    f"- accepted_coherent_wrong_key_labels={accepted_coherent_wrong_key_labels}\n"
+    f"- accepted_chunk_exact_labels={accepted_chunk_exact_labels}\n"
+    f"- accepted_near_miss_labels={accepted_near_miss_labels}\n"
+    f"- accepted_missing_query_labels={accepted_missing_query_labels}\n"
+    f"- accepted_source_provenance_labels={accepted_source_provenance_labels}\n\n"
     f"- h10_real_label_return_contract_rows={len(h10_return_contract_rows)}\n"
     f"- h10_real_label_return_contract_ready_rows={sum(1 for row in h10_return_contract_rows if row['contract_ready'] == '1')}\n"
     f"- h10_real_label_return_contract_pass_rows={sum(1 for row in h10_return_contract_rows if row['acceptance_status'] == 'pass')}\n\n"
@@ -767,6 +817,13 @@ manifest = {
     "same_query_abgh_ready": same_query_abgh_ready,
     "same_query_real_adapter_ready": same_query_real_adapter_ready,
     "accepted_real_label_evidence_rows": len(accepted_label_rows),
+    "accepted_query_rows_declared": accepted_query_row_total,
+    "accepted_label_rows": accepted_label_row_total,
+    "accepted_coherent_wrong_key_labels": accepted_coherent_wrong_key_labels,
+    "accepted_chunk_exact_labels": accepted_chunk_exact_labels,
+    "accepted_near_miss_labels": accepted_near_miss_labels,
+    "accepted_missing_query_labels": accepted_missing_query_labels,
+    "accepted_source_provenance_labels": accepted_source_provenance_labels,
     "h10_real_label_return_contract_rows": len(h10_return_contract_rows),
     "h10_real_label_return_contract_ready_rows": sum(1 for row in h10_return_contract_rows if row["contract_ready"] == "1"),
     "h10_real_label_return_contract_fixture_allowed_rows": sum(1 for row in h10_return_contract_rows if row["fixture_allowed"] == "1"),
