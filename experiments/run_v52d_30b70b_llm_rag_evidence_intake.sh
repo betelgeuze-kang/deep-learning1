@@ -10,13 +10,36 @@ SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 D_EVIDENCE_DIR="${V52D_30B_LLM_RAG_EVIDENCE_DIR:-}"
 E_EVIDENCE_DIR="${V52D_70B_LLM_RAG_EVIDENCE_DIR:-}"
+V50_RUN_DIR="$RESULTS_DIR/v50_public_repo_auditor_3repo/audit_001"
+V50_SUMMARY_CSV="$RESULTS_DIR/v50_public_repo_auditor_3repo_summary.csv"
+V50_REQUIRED_FILES=(
+  "$V50_SUMMARY_CSV"
+  "$V50_RUN_DIR/public_repo_audit_case_rows.csv"
+  "$V50_RUN_DIR/public_repo_source_span_rows.csv"
+  "$V50_RUN_DIR/commercial_return/query_set.csv"
+  "$V50_RUN_DIR/commercial_return/poc_result_rows.csv"
+  "$V50_RUN_DIR/sha256_manifest.csv"
+)
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-"$ROOT_DIR/experiments/run_v50_public_repo_auditor_3repo.sh" >/dev/null
+v50_seed_ready=1
+for required_file in "${V50_REQUIRED_FILES[@]}"; do
+  if [[ ! -s "$required_file" ]]; then
+    v50_seed_ready=0
+    break
+  fi
+done
+if [[ "$v50_seed_ready" != "1" ]]; then
+  if [[ "${V52D_ALLOW_V50_REFRESH:-0}" != "1" ]]; then
+    echo "v52d requires existing v50 seed artifacts; set V52D_ALLOW_V50_REFRESH=1 to run the public-repo refresh" >&2
+    exit 2
+  fi
+  "$ROOT_DIR/experiments/run_v50_public_repo_auditor_3repo.sh" >/dev/null
+fi
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$D_EVIDENCE_DIR" "$E_EVIDENCE_DIR" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$D_EVIDENCE_DIR" "$E_EVIDENCE_DIR" "$v50_seed_ready" "${V52D_ALLOW_V50_REFRESH:-0}" <<'PY'
 import csv
 import hashlib
 import json
@@ -31,6 +54,8 @@ summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
 d_evidence_dir_arg = sys.argv[5]
 e_evidence_dir_arg = sys.argv[6]
+v50_seed_ready_arg = sys.argv[7]
+v50_refresh_allowed_arg = sys.argv[8]
 results = root / "results"
 v50_dir = results / "v50_public_repo_auditor_3repo" / "audit_001"
 v50_summary = list(csv.DictReader((results / "v50_public_repo_auditor_3repo_summary.csv").open(newline="", encoding="utf-8")))[0]
@@ -215,6 +240,9 @@ summary = {
     "route_memory_store_used": 0,
     "compact_routehint_used": 0,
     "v50_seed_query_rows": int(v50_summary.get("audit_case_rows", "0")),
+    "v50_seed_reused": 1 if v50_seed_ready_arg == "1" else 0,
+    "v50_public_refresh_allowed": int(v50_refresh_allowed_arg == "1"),
+    "v50_public_refresh_executed": 0 if v50_seed_ready_arg == "1" else int(v50_refresh_allowed_arg == "1"),
     "v52_absorb_ready": 0,
     "v52_ready": 0,
     "real_release_package_ready": 0,
@@ -222,7 +250,7 @@ summary = {
 }
 decision_rows = [
     ("intake-contract", "pass", "D/E evidence schema and templates are emitted"),
-    ("public-repo-seed", "pass", "uses v50 3-repo / 9-query seed"),
+    ("public-repo-seed", "pass", "uses existing v50 3-repo / 9-query seed without default public refresh"),
 ]
 validation_rows = []
 
@@ -396,6 +424,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
 (run_dir / "V52D_30B70B_LLM_RAG_BOUNDARY.md").write_text(
     "# v52d 30B/70B LLM+RAG Evidence Intake Boundary\n\n"
     "This is the evidence intake gate for baselines D and E, not a completed v52 baseline war.\n\n"
+    "Existing v50 public-repo seed artifacts are reused by default. A public refresh is blocked unless `V52D_ALLOW_V50_REFRESH=1` is explicitly set.\n\n"
     "A valid supplied evidence directory for each system must contain:\n\n"
     "- `model_identity.json` with the expected system ID, parameter-count class, open-weight license URI, and sha256-bound model artifact identity.\n"
     "- `llm_rag_answer_rows.csv` with one answer row for every v50 query ID.\n"
@@ -417,6 +446,9 @@ manifest = {
     "real_release_package_ready": 0,
     "blocking_reason": summary["blocking_reason"],
     "v50_summary_sha256": sha256(results / "v50_public_repo_auditor_3repo_summary.csv"),
+    "v50_seed_reused": summary["v50_seed_reused"],
+    "v50_public_refresh_allowed": summary["v50_public_refresh_allowed"],
+    "v50_public_refresh_executed": summary["v50_public_refresh_executed"],
 }
 (run_dir / "v52d_30b70b_llm_rag_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

@@ -60,6 +60,9 @@ expected = {
     "route_memory_store_used": "0",
     "compact_routehint_used": "0",
     "v50_seed_query_rows": "9",
+    "v50_seed_reused": "1",
+    "v50_public_refresh_allowed": "0",
+    "v50_public_refresh_executed": "0",
     "v52_absorb_ready": "0",
     "v52_ready": "0",
     "real_release_package_ready": "0",
@@ -158,6 +161,12 @@ if manifest.get("required_30b_baseline_ready") != 0 or manifest.get("required_70
     raise SystemExit("v52d manifest should keep D/E baselines blocked by default")
 if manifest.get("v52_absorb_ready") != 0:
     raise SystemExit("v52d manifest should not absorb no-env D/E evidence")
+if (
+    manifest.get("v50_seed_reused") != 1
+    or manifest.get("v50_public_refresh_allowed") != 0
+    or manifest.get("v50_public_refresh_executed") != 0
+):
+    raise SystemExit("v52d manifest should record default v50 seed reuse without public refresh")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -170,6 +179,7 @@ boundary = (run_dir / "V52D_30B70B_LLM_RAG_BOUNDARY.md").read_text(encoding="utf
 for snippet in [
     "baselines D and E",
     "open-weight license URI",
+    "v50 public-repo seed artifacts are reused by default",
     "llm_rag_answer_rows.csv",
     "Default/no-env execution intentionally remains blocked",
     "Do not publish D/E, 30B-150B, or v1.0 comparison claims",
