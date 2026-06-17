@@ -250,6 +250,12 @@ slice_ids = [
 
 v52 = summaries["v52"]
 v52y = summaries["v52y"]
+v52d_summary_path = results / "v52d_30b70b_llm_rag_evidence_intake_summary.csv"
+v52d = read_first(v52d_summary_path)
+v52d_summary_copied = copy_if_exists(
+    v52d_summary_path,
+    "source_v52d/v52d_30b70b_llm_rag_evidence_intake_summary.csv",
+)
 v53t = summaries["v53t"]
 v53ap = summaries["v53ap"]
 v53aq = summaries["v53aq"]
@@ -1716,6 +1722,70 @@ write_csv(
     v56_replay_acceptance_evidence_rows,
 )
 
+
+def de_artifact_system(row):
+    artifact_id = row.get("artifact_id", "")
+    if artifact_id.startswith("d-"):
+        return "D", "d_30b", "required_30b_baseline_ready"
+    if artifact_id.startswith("e-"):
+        return "E", "e_70b", "required_70b_baseline_ready"
+    return "", "", ""
+
+
+de_30b70b_acceptance_evidence_rows = []
+for artifact in [row for row in blocker_required_artifact_rows if row["blocker_class"] == "de-30b70b-baselines-missing"]:
+    system_id, prefix, ready_field = de_artifact_system(artifact)
+    evidence_dir_supplied = as_int(v52d, f"{prefix}_evidence_dir_supplied") if prefix else 0
+    supplied_evidence_ready = as_int(v52d, f"{prefix}_supplied_evidence_ready") if prefix else 0
+    baseline_ready = as_int(v52d, ready_field) if ready_field else 0
+    ready = int(
+        baseline_ready == 1
+        and supplied_evidence_ready == 1
+        and as_int(v52d, "v52_absorb_ready") == 1
+        and as_int(v52d, "v52_ready") == 0
+        and as_int(v52d, "real_release_package_ready") == 0
+    )
+    observed_signal = (
+        f"v52d_contract_ready={v52d.get('v52d_30b70b_llm_rag_intake_contract_ready', '0')} "
+        f"system_id={system_id} evidence_dir_supplied={evidence_dir_supplied} "
+        f"supplied_evidence_ready={supplied_evidence_ready} baseline_ready={baseline_ready} "
+        f"query_rows={v52d.get(f'{prefix}_query_rows', '0') if prefix else '0'} "
+        f"validation_error_rows={v52d.get(f'{prefix}_validation_error_rows', '0') if prefix else '0'} "
+        f"v52_absorb_ready={v52d.get('v52_absorb_ready', '0')} "
+        f"v52_ready={v52d.get('v52_ready', '0')} "
+        f"copied_summary={int(bool(v52d_summary_copied))}"
+    )
+    de_30b70b_acceptance_evidence_rows.append(
+        {
+            "requirement_id": "de-30b70b-symmetric-baselines",
+            "slice_id": "v52-baseline-registry-contract",
+            "blocker_class": artifact["blocker_class"],
+            "system_id": system_id,
+            "artifact_id": artifact["artifact_id"],
+            "artifact_path_or_env": artifact["artifact_path_or_env"],
+            "artifact_kind": artifact["artifact_kind"],
+            "required_shape": artifact["required_shape"],
+            "validation_command": artifact["validation_command"],
+            "acceptance_signal": artifact["acceptance_signal"],
+            "artifact_present": str(evidence_dir_supplied),
+            "claim_boundary_status": "pass",
+            "output_artifact_replay_status": "pass" if ready else "blocked",
+            "blocker_false_positive_status": "pass",
+            "approval_required": artifact["approval_required"],
+            "fixture_allowed": artifact["fixture_allowed"],
+            "tests_only_merge_condition": "0",
+            "acceptance_ready": str(ready),
+            "acceptance_status": "ready" if ready else "blocked",
+            "observed_signal": observed_signal,
+            "claim_until_closed": "D/E 30B/70B baselines missing; A/B/G/H internal pre-baseline only",
+        }
+    )
+write_csv(
+    run_dir / "de_30b70b_acceptance_evidence_rows.csv",
+    list(de_30b70b_acceptance_evidence_rows[0].keys()),
+    de_30b70b_acceptance_evidence_rows,
+)
+
 closure_by_blocker = {row["blocker_class"]: row for row in blocker_closure_rows}
 required_artifacts_by_blocker = {row["blocker_class"]: [] for row in blocker_closure_rows}
 for row in blocker_required_artifact_rows:
@@ -1952,6 +2022,20 @@ v56_replay_acceptance_evidence_fixture_allowed_rows = sum(
 v56_replay_acceptance_evidence_approval_rows = sum(
     1 for row in v56_replay_acceptance_evidence_rows if row["approval_required"] == "1"
 )
+de_30b70b_acceptance_evidence_row_count = len(de_30b70b_acceptance_evidence_rows)
+de_30b70b_acceptance_evidence_ready_rows = sum(1 for row in de_30b70b_acceptance_evidence_rows if row["acceptance_ready"] == "1")
+de_30b70b_acceptance_evidence_blocked_rows = (
+    de_30b70b_acceptance_evidence_row_count - de_30b70b_acceptance_evidence_ready_rows
+)
+de_30b70b_acceptance_evidence_tests_only_rows = sum(
+    1 for row in de_30b70b_acceptance_evidence_rows if row["tests_only_merge_condition"] == "1"
+)
+de_30b70b_acceptance_evidence_fixture_allowed_rows = sum(
+    1 for row in de_30b70b_acceptance_evidence_rows if row["fixture_allowed"] == "1"
+)
+de_30b70b_acceptance_evidence_approval_rows = sum(
+    1 for row in de_30b70b_acceptance_evidence_rows if row["approval_required"] == "1"
+)
 blocker_closure_packet_rows = len(blocker_packet_rows)
 blocker_closure_packet_files = sum(1 for row in blocker_packet_rows if (run_dir / row["packet_path"]).is_file())
 blocker_closure_packet_ready_rows = sum(1 for row in blocker_packet_rows if row["packet_ready"] == "1")
@@ -2017,6 +2101,12 @@ summary = {
     "v56_replay_acceptance_evidence_tests_only_rows": str(v56_replay_acceptance_evidence_tests_only_rows),
     "v56_replay_acceptance_evidence_fixture_allowed_rows": str(v56_replay_acceptance_evidence_fixture_allowed_rows),
     "v56_replay_acceptance_evidence_approval_rows": str(v56_replay_acceptance_evidence_approval_rows),
+    "de_30b70b_acceptance_evidence_rows": str(de_30b70b_acceptance_evidence_row_count),
+    "de_30b70b_acceptance_evidence_ready_rows": str(de_30b70b_acceptance_evidence_ready_rows),
+    "de_30b70b_acceptance_evidence_blocked_rows": str(de_30b70b_acceptance_evidence_blocked_rows),
+    "de_30b70b_acceptance_evidence_tests_only_rows": str(de_30b70b_acceptance_evidence_tests_only_rows),
+    "de_30b70b_acceptance_evidence_fixture_allowed_rows": str(de_30b70b_acceptance_evidence_fixture_allowed_rows),
+    "de_30b70b_acceptance_evidence_approval_rows": str(de_30b70b_acceptance_evidence_approval_rows),
     "pm_blocker_closure_queue_rows": str(blocker_closure_queue_rows),
     "pm_blocker_closure_deferred_rows": str(blocker_closure_deferred_rows),
     "pm_blocker_closure_approval_required_rows": str(blocker_closure_approval_required_rows),
@@ -2083,6 +2173,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v56_replay_acceptance_evidence_ready_rows={v56_replay_acceptance_evidence_ready_rows}\n"
     f"- v56_replay_acceptance_evidence_blocked_rows={v56_replay_acceptance_evidence_blocked_rows}\n"
     f"- v56_replay_acceptance_evidence_tests_only_rows={v56_replay_acceptance_evidence_tests_only_rows}\n"
+    f"- de_30b70b_acceptance_evidence_rows={de_30b70b_acceptance_evidence_row_count}\n"
+    f"- de_30b70b_acceptance_evidence_ready_rows={de_30b70b_acceptance_evidence_ready_rows}\n"
+    f"- de_30b70b_acceptance_evidence_blocked_rows={de_30b70b_acceptance_evidence_blocked_rows}\n"
+    f"- de_30b70b_acceptance_evidence_tests_only_rows={de_30b70b_acceptance_evidence_tests_only_rows}\n"
     f"- pm_blocker_closure_queue_rows={blocker_closure_queue_rows}\n"
     f"- pm_blocker_closure_packet_rows={blocker_closure_packet_rows}\n"
     f"- pm_blocker_closure_packet_files={blocker_closure_packet_files}\n"
@@ -2147,6 +2241,12 @@ manifest = {
     "v56_replay_acceptance_evidence_tests_only_rows": v56_replay_acceptance_evidence_tests_only_rows,
     "v56_replay_acceptance_evidence_fixture_allowed_rows": v56_replay_acceptance_evidence_fixture_allowed_rows,
     "v56_replay_acceptance_evidence_approval_rows": v56_replay_acceptance_evidence_approval_rows,
+    "de_30b70b_acceptance_evidence_rows": de_30b70b_acceptance_evidence_row_count,
+    "de_30b70b_acceptance_evidence_ready_rows": de_30b70b_acceptance_evidence_ready_rows,
+    "de_30b70b_acceptance_evidence_blocked_rows": de_30b70b_acceptance_evidence_blocked_rows,
+    "de_30b70b_acceptance_evidence_tests_only_rows": de_30b70b_acceptance_evidence_tests_only_rows,
+    "de_30b70b_acceptance_evidence_fixture_allowed_rows": de_30b70b_acceptance_evidence_fixture_allowed_rows,
+    "de_30b70b_acceptance_evidence_approval_rows": de_30b70b_acceptance_evidence_approval_rows,
     "pm_blocker_closure_queue_rows": blocker_closure_queue_rows,
     "pm_blocker_closure_deferred_rows": blocker_closure_deferred_rows,
     "pm_blocker_closure_packet_rows": blocker_closure_packet_rows,
@@ -2171,6 +2271,7 @@ manifest = {
     "pm_pr_review_packet_rows_sha256": sha256(run_dir / "pm_pr_review_packet_rows.csv"),
     "pm_pr_acceptance_evidence_rows_sha256": sha256(run_dir / "pm_pr_acceptance_evidence_rows.csv"),
     "v56_replay_acceptance_evidence_rows_sha256": sha256(run_dir / "v56_replay_acceptance_evidence_rows.csv"),
+    "de_30b70b_acceptance_evidence_rows_sha256": sha256(run_dir / "de_30b70b_acceptance_evidence_rows.csv"),
     "h10_real_label_acceptance_evidence_rows_sha256": sha256(run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"),
     "pm_pr_slice_file_rows_sha256": sha256(run_dir / "pm_pr_slice_file_rows.csv"),
     "pm_pr_slice_verification_rows_sha256": sha256(run_dir / "pm_pr_slice_verification_rows.csv"),

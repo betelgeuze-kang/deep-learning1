@@ -153,6 +153,12 @@ expected = {
     "pm_pr_v56_replay_acceptance_evidence_tests_only_rows": "0",
     "pm_pr_v56_replay_acceptance_evidence_fixture_allowed_rows": "0",
     "pm_pr_v56_replay_acceptance_evidence_approval_rows": "4",
+    "pm_pr_de_30b70b_acceptance_evidence_rows": "4",
+    "pm_pr_de_30b70b_acceptance_evidence_ready_rows": "0",
+    "pm_pr_de_30b70b_acceptance_evidence_blocked_rows": "4",
+    "pm_pr_de_30b70b_acceptance_evidence_tests_only_rows": "0",
+    "pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows": "0",
+    "pm_pr_de_30b70b_acceptance_evidence_approval_rows": "4",
     "pm_blocker_closure_packet_rows": "6",
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_bundle_ready": "1",
@@ -299,6 +305,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv",
+    "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_closure_packet_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
@@ -379,6 +386,31 @@ for artifact_id in ["v56-contract-summary", "v56-contract-artifacts", "v56b-scal
         raise SystemExit(f"v59e PM sidecar should forbid tests-only v56 acceptance: {artifact_id}")
 if "V56B_ALLOW_CONTRACT_REBUILD=1" not in v56_replay_artifacts["v56b-scale-artifacts"]["validation_command"]:
     raise SystemExit("v59e PM sidecar should preserve the approval-gated v56b validation command")
+de_acceptance_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv")
+if len(de_acceptance_rows) != 4:
+    raise SystemExit("v59e PM sidecar should carry four D/E 30B/70B acceptance evidence rows")
+de_artifacts = {row["artifact_id"]: row for row in de_acceptance_rows}
+for artifact_id, system_id in {
+    "d-model-identity": "D",
+    "d-answer-citation-resource": "D",
+    "e-model-identity": "E",
+    "e-answer-citation-resource": "E",
+}.items():
+    row = de_artifacts.get(artifact_id)
+    if not row:
+        raise SystemExit(f"v59e PM sidecar missing D/E artifact row: {artifact_id}")
+    if row["system_id"] != system_id:
+        raise SystemExit(f"v59e PM sidecar D/E system mismatch: {artifact_id}")
+    if row["claim_boundary_status"] != "pass" or row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"v59e PM sidecar should keep D/E claim/blocker boundaries closed: {artifact_id}")
+    if row["acceptance_ready"] != "0" or row["acceptance_status"] != "blocked":
+        raise SystemExit(f"v59e PM sidecar should keep D/E baseline evidence blocked: {artifact_id}")
+    if row["fixture_allowed"] != "0" or row["approval_required"] != "1":
+        raise SystemExit(f"v59e PM sidecar should require approval and forbid fixtures for D/E: {artifact_id}")
+    if row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"v59e PM sidecar should forbid tests-only D/E acceptance: {artifact_id}")
+if "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR>" not in de_artifacts["e-answer-citation-resource"]["validation_command"]:
+    raise SystemExit("v59e PM sidecar should preserve the approval-gated D/E validation command")
 
 pm_v53t_real_adapter_rows = {
     row["criterion_id"]: row
@@ -743,6 +775,17 @@ if (
     raise SystemExit("v59e manifest should record PM v56 replay acceptance evidence")
 if "pm_pr_v56_replay_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("v59e manifest should hash-bind PM v56 replay acceptance evidence")
+if (
+    manifest.get("pm_pr_de_30b70b_acceptance_evidence_rows") != 4
+    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_ready_rows") != 0
+    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_blocked_rows") != 4
+    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows") != 0
+    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_approval_rows") != 4
+):
+    raise SystemExit("v59e manifest should record PM D/E 30B/70B acceptance evidence")
+if "pm_pr_de_30b70b_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("v59e manifest should hash-bind PM D/E acceptance evidence")
 if (
     manifest.get("pm_pr_v53_query_span_binding_audit_ready") != 1
     or manifest.get("pm_pr_v53_query_span_binding_audit_rows") != 1000

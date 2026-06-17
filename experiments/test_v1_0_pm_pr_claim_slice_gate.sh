@@ -82,6 +82,12 @@ expected = {
     "v56_replay_acceptance_evidence_tests_only_rows": "0",
     "v56_replay_acceptance_evidence_fixture_allowed_rows": "0",
     "v56_replay_acceptance_evidence_approval_rows": "4",
+    "de_30b70b_acceptance_evidence_rows": "4",
+    "de_30b70b_acceptance_evidence_ready_rows": "0",
+    "de_30b70b_acceptance_evidence_blocked_rows": "4",
+    "de_30b70b_acceptance_evidence_tests_only_rows": "0",
+    "de_30b70b_acceptance_evidence_fixture_allowed_rows": "0",
+    "de_30b70b_acceptance_evidence_approval_rows": "4",
     "pm_blocker_closure_queue_rows": "6",
     "pm_blocker_closure_deferred_rows": "6",
     "pm_blocker_closure_approval_required_rows": "6",
@@ -507,6 +513,39 @@ if v56_replay_artifacts["v56b-scale-summary"]["artifact_path_or_env"] != "result
     raise SystemExit("v56b scale summary row should bind to the required summary path")
 if "V56B_ALLOW_CONTRACT_REBUILD=1" not in v56_replay_artifacts["v56b-scale-artifacts"]["validation_command"]:
     raise SystemExit("v56b scale artifact row should expose the approval-gated validation command")
+de_acceptance_rows = read_csv(run_dir / "de_30b70b_acceptance_evidence_rows.csv")
+if len(de_acceptance_rows) != 4:
+    raise SystemExit("D/E 30B/70B acceptance evidence should cover four required artifacts")
+de_artifacts = {row["artifact_id"]: row for row in de_acceptance_rows}
+for artifact_id, system_id in {
+    "d-model-identity": "D",
+    "d-answer-citation-resource": "D",
+    "e-model-identity": "E",
+    "e-answer-citation-resource": "E",
+}.items():
+    row = de_artifacts.get(artifact_id)
+    if not row:
+        raise SystemExit(f"D/E acceptance missing artifact row: {artifact_id}")
+    if row["requirement_id"] != "de-30b70b-symmetric-baselines":
+        raise SystemExit(f"D/E acceptance should bind to symmetric baseline requirement: {artifact_id}")
+    if row["slice_id"] != "v52-baseline-registry-contract":
+        raise SystemExit(f"D/E acceptance should bind to v52 baseline PR slice: {artifact_id}")
+    if row["system_id"] != system_id:
+        raise SystemExit(f"D/E acceptance system mismatch for {artifact_id}")
+    if row["claim_boundary_status"] != "pass" or row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"D/E claim/blocker boundaries should remain closed: {artifact_id}")
+    if row["fixture_allowed"] != "0" or row["approval_required"] != "1":
+        raise SystemExit(f"D/E evidence should require approval and forbid fixtures: {artifact_id}")
+    if row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"D/E evidence should not use tests-only acceptance: {artifact_id}")
+    if row["acceptance_ready"] != "0" or row["acceptance_status"] != "blocked":
+        raise SystemExit(f"D/E evidence should remain blocked without real D/E rows: {artifact_id}")
+    if row["output_artifact_replay_status"] != "blocked":
+        raise SystemExit(f"D/E replay status should remain blocked without supplied D/E rows: {artifact_id}")
+    if "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR>" not in row["validation_command"]:
+        raise SystemExit(f"D/E validation command should expose both evidence dirs: {artifact_id}")
+if "llm_rag_answer_rows.csv" not in de_artifacts["d-answer-citation-resource"]["artifact_path_or_env"]:
+    raise SystemExit("D/E answer-citation-resource row should name answer/citation/resource artifacts")
 for slice_id in [
     "docs/v1-roadmap",
     "v53-public-repo-source-manifest",
@@ -742,6 +781,7 @@ required_files = [
     "pm_pr_review_packet_rows.csv",
     "pm_pr_acceptance_evidence_rows.csv",
     "v56_replay_acceptance_evidence_rows.csv",
+    "de_30b70b_acceptance_evidence_rows.csv",
     "pm_blocker_closure_queue_rows.csv",
     "pm_blocker_closure_packet_rows.csv",
     "pm_blocker_required_artifact_rows.csv",
@@ -946,6 +986,17 @@ if (
     raise SystemExit("PM PR manifest should record v56 replay acceptance evidence")
 if "v56_replay_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("PM PR manifest should hash-bind v56 replay acceptance evidence")
+if (
+    manifest.get("de_30b70b_acceptance_evidence_rows") != 4
+    or manifest.get("de_30b70b_acceptance_evidence_ready_rows") != 0
+    or manifest.get("de_30b70b_acceptance_evidence_blocked_rows") != 4
+    or manifest.get("de_30b70b_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("de_30b70b_acceptance_evidence_fixture_allowed_rows") != 0
+    or manifest.get("de_30b70b_acceptance_evidence_approval_rows") != 4
+):
+    raise SystemExit("PM PR manifest should record D/E 30B/70B acceptance evidence")
+if "de_30b70b_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("PM PR manifest should hash-bind D/E 30B/70B acceptance evidence")
 if manifest.get("pm_blocker_closure_queue_rows") != 6:
     raise SystemExit("PM PR manifest blocker closure queue mismatch")
 if manifest.get("pm_blocker_closure_packet_rows") != 6 or manifest.get("pm_blocker_closure_packet_files") != 6:
@@ -1006,6 +1057,10 @@ for snippet in [
     "v56_replay_acceptance_evidence_ready_rows=0",
     "v56_replay_acceptance_evidence_blocked_rows=4",
     "v56_replay_acceptance_evidence_tests_only_rows=0",
+    "de_30b70b_acceptance_evidence_rows=4",
+    "de_30b70b_acceptance_evidence_ready_rows=0",
+    "de_30b70b_acceptance_evidence_blocked_rows=4",
+    "de_30b70b_acceptance_evidence_tests_only_rows=0",
     "pm_blocker_closure_queue_rows=6",
     "pm_blocker_closure_packet_rows=6",
     "pm_blocker_closure_packet_files=6",

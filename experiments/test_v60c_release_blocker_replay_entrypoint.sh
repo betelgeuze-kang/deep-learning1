@@ -106,12 +106,18 @@ expected = {
     "pm_v56_replay_acceptance_evidence_tests_only_rows": "0",
     "pm_v56_replay_acceptance_evidence_fixture_allowed_rows": "0",
     "pm_v56_replay_acceptance_evidence_approval_rows": "4",
+    "pm_de_30b70b_acceptance_evidence_rows": "4",
+    "pm_de_30b70b_acceptance_evidence_ready_rows": "0",
+    "pm_de_30b70b_acceptance_evidence_blocked_rows": "4",
+    "pm_de_30b70b_acceptance_evidence_tests_only_rows": "0",
+    "pm_de_30b70b_acceptance_evidence_fixture_allowed_rows": "0",
+    "pm_de_30b70b_acceptance_evidence_approval_rows": "4",
     "pm_required_artifact_map_rows": "26",
     "pm_required_artifact_map_fixture_allowed_rows": "0",
     "pm_required_artifact_map_approval_rows": "26",
     "pm_required_artifact_map_template_bound_rows": "26",
     "pm_required_artifact_map_default_admitted_rows": "0",
-    "metadata_only_entrypoint_file_rows": "12",
+    "metadata_only_entrypoint_file_rows": "13",
     "payload_like_entrypoint_file_rows": "0",
     "remote_mutation_approved": "0",
     "network_required_by_default": "0",
@@ -154,12 +160,14 @@ required_files = [
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_COMMAND_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_PM_PR_ACCEPTANCE_EVIDENCE_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_PM_V56_REPLAY_ACCEPTANCE_EVIDENCE_ROWS.csv",
+    "release_blocker_replay_entrypoint/V60C_PM_DE_30B70B_ACCEPTANCE_EVIDENCE_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_MANIFEST.json",
     "release_blocker_replay_entrypoint/README.md",
     "source_v60/v60_architecture_challenge_release_contract_summary.csv",
     "source_v60/release_requirement_rows.csv",
     "source_pm/pm_pr_acceptance_evidence_rows.csv",
     "source_pm/v56_replay_acceptance_evidence_rows.csv",
+    "source_pm/de_30b70b_acceptance_evidence_rows.csv",
     "source_pm/pm_blocker_required_artifact_rows.csv",
     "source_pm/pm_external_return_template_rows.csv",
 ]
@@ -223,6 +231,32 @@ for artifact_id in ["v56-contract-summary", "v56-contract-artifacts", "v56b-scal
         raise SystemExit(f"v60c should forbid tests-only v56 replay acceptance: {artifact_id}")
 if "V56B_ALLOW_CONTRACT_REBUILD=1" not in v56_replay_artifacts["v56b-scale-artifacts"]["validation_command"]:
     raise SystemExit("v60c should preserve the approval-gated v56b validation command")
+de_acceptance_rows = read_csv(run_dir / "source_pm/de_30b70b_acceptance_evidence_rows.csv")
+entrypoint_de_acceptance_rows = read_csv(run_dir / "release_blocker_replay_entrypoint/V60C_PM_DE_30B70B_ACCEPTANCE_EVIDENCE_ROWS.csv")
+if len(de_acceptance_rows) != 4 or de_acceptance_rows != entrypoint_de_acceptance_rows:
+    raise SystemExit("v60c should carry D/E acceptance evidence rows into source_pm and the entrypoint package")
+de_artifacts = {row["artifact_id"]: row for row in de_acceptance_rows}
+for artifact_id, system_id in {
+    "d-model-identity": "D",
+    "d-answer-citation-resource": "D",
+    "e-model-identity": "E",
+    "e-answer-citation-resource": "E",
+}.items():
+    row = de_artifacts.get(artifact_id)
+    if not row:
+        raise SystemExit(f"v60c missing D/E artifact row: {artifact_id}")
+    if row["system_id"] != system_id:
+        raise SystemExit(f"v60c D/E system mismatch: {artifact_id}")
+    if row["claim_boundary_status"] != "pass" or row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"v60c should preserve D/E claim/blocker boundaries: {artifact_id}")
+    if row["acceptance_ready"] != "0" or row["acceptance_status"] != "blocked":
+        raise SystemExit(f"v60c should keep D/E evidence blocked without real baseline rows: {artifact_id}")
+    if row["fixture_allowed"] != "0" or row["approval_required"] != "1":
+        raise SystemExit(f"v60c should require approval and forbid fixtures for D/E evidence: {artifact_id}")
+    if row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"v60c should forbid tests-only D/E acceptance: {artifact_id}")
+if "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR>" not in de_artifacts["e-model-identity"]["validation_command"]:
+    raise SystemExit("v60c should preserve the approval-gated D/E validation command")
 
 artifact_map_rows = read_csv(run_dir / "release_blocker_replay_artifact_map_rows.csv")
 if len(artifact_map_rows) != 26:
@@ -297,6 +331,17 @@ if (
     raise SystemExit("v60c manifest PM v56 replay acceptance evidence mismatch")
 if "pm_v56_replay_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("v60c manifest should hash-bind PM v56 replay acceptance evidence")
+if (
+    manifest.get("pm_de_30b70b_acceptance_evidence_rows") != 4
+    or manifest.get("pm_de_30b70b_acceptance_evidence_ready_rows") != 0
+    or manifest.get("pm_de_30b70b_acceptance_evidence_blocked_rows") != 4
+    or manifest.get("pm_de_30b70b_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("pm_de_30b70b_acceptance_evidence_fixture_allowed_rows") != 0
+    or manifest.get("pm_de_30b70b_acceptance_evidence_approval_rows") != 4
+):
+    raise SystemExit("v60c manifest PM D/E acceptance evidence mismatch")
+if "pm_de_30b70b_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("v60c manifest should hash-bind PM D/E acceptance evidence")
 
 entry_manifest = json.loads((entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_MANIFEST.json").read_text(encoding="utf-8"))
 if entry_manifest.get("required_env_rows") != 9:
@@ -316,6 +361,15 @@ if (
     or entry_manifest.get("pm_v56_replay_acceptance_evidence_approval_rows") != 4
 ):
     raise SystemExit("v60c entrypoint manifest PM v56 replay acceptance evidence mismatch")
+if (
+    entry_manifest.get("pm_de_30b70b_acceptance_evidence_rows") != 4
+    or entry_manifest.get("pm_de_30b70b_acceptance_evidence_ready_rows") != 0
+    or entry_manifest.get("pm_de_30b70b_acceptance_evidence_blocked_rows") != 4
+    or entry_manifest.get("pm_de_30b70b_acceptance_evidence_tests_only_rows") != 0
+    or entry_manifest.get("pm_de_30b70b_acceptance_evidence_fixture_allowed_rows") != 0
+    or entry_manifest.get("pm_de_30b70b_acceptance_evidence_approval_rows") != 4
+):
+    raise SystemExit("v60c entrypoint manifest PM D/E acceptance evidence mismatch")
 if entry_manifest.get("pm_required_artifact_map_rows") != 26:
     raise SystemExit("v60c entrypoint manifest PM artifact map mismatch")
 if entry_manifest.get("checkpoint_payload_bytes_committed_to_repo") != 0:
@@ -358,6 +412,10 @@ for snippet in [
     "pm_v56_replay_acceptance_evidence_ready_rows=0",
     "pm_v56_replay_acceptance_evidence_blocked_rows=4",
     "pm_v56_replay_acceptance_evidence_tests_only_rows=0",
+    "pm_de_30b70b_acceptance_evidence_rows=4",
+    "pm_de_30b70b_acceptance_evidence_ready_rows=0",
+    "pm_de_30b70b_acceptance_evidence_blocked_rows=4",
+    "pm_de_30b70b_acceptance_evidence_tests_only_rows=0",
     "pm_required_artifact_map_rows=26",
     "pm_required_artifact_map_fixture_allowed_rows=0",
     "pm_required_artifact_map_approval_rows=26",
