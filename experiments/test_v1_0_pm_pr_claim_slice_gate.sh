@@ -76,6 +76,12 @@ expected = {
     "pm_pr_acceptance_evidence_ready_rows": "9",
     "pm_pr_acceptance_evidence_blocked_rows": "1",
     "pm_pr_acceptance_evidence_tests_only_rows": "0",
+    "v56_replay_acceptance_evidence_rows": "4",
+    "v56_replay_acceptance_evidence_ready_rows": "0",
+    "v56_replay_acceptance_evidence_blocked_rows": "4",
+    "v56_replay_acceptance_evidence_tests_only_rows": "0",
+    "v56_replay_acceptance_evidence_fixture_allowed_rows": "0",
+    "v56_replay_acceptance_evidence_approval_rows": "4",
     "pm_blocker_closure_queue_rows": "6",
     "pm_blocker_closure_deferred_rows": "6",
     "pm_blocker_closure_approval_required_rows": "6",
@@ -475,6 +481,32 @@ if any(row["claim_boundary_status"] != "pass" for row in acceptance_rows):
     raise SystemExit("PM PR acceptance evidence should keep all claim boundaries passing")
 if acceptance_by_id["v56-ruler-longbench-expanded"]["acceptance_ready"] != "0":
     raise SystemExit("v56 acceptance evidence should remain blocked until replay artifact evidence closes")
+v56_replay_acceptance_rows = read_csv(run_dir / "v56_replay_acceptance_evidence_rows.csv")
+if len(v56_replay_acceptance_rows) != 4:
+    raise SystemExit("v56 replay acceptance evidence should cover four required artifacts")
+v56_replay_artifacts = {row["artifact_id"]: row for row in v56_replay_acceptance_rows}
+for artifact_id in ["v56-contract-summary", "v56-contract-artifacts", "v56b-scale-summary", "v56b-scale-artifacts"]:
+    row = v56_replay_artifacts.get(artifact_id)
+    if not row:
+        raise SystemExit(f"v56 replay acceptance missing artifact row: {artifact_id}")
+    if row["slice_id"] != "v56-ruler-longbench-expanded":
+        raise SystemExit(f"v56 replay acceptance should stay bound to v56 slice: {artifact_id}")
+    if row["claim_boundary_status"] != "pass":
+        raise SystemExit(f"v56 claim boundary should remain closed for {artifact_id}")
+    if row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"v56 blocker false-positive status should pass for {artifact_id}")
+    if row["fixture_allowed"] != "0" or row["approval_required"] != "1":
+        raise SystemExit(f"v56 replay artifact should require approval and forbid fixtures: {artifact_id}")
+    if row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"v56 replay artifact should not use tests-only acceptance: {artifact_id}")
+    if row["acceptance_ready"] != "0" or row["acceptance_status"] != "blocked":
+        raise SystemExit(f"v56 replay artifact should remain blocked without replay evidence: {artifact_id}")
+    if row["output_artifact_replay_status"] != "blocked":
+        raise SystemExit(f"v56 replay artifact status should be blocked until artifact is present: {artifact_id}")
+if v56_replay_artifacts["v56b-scale-summary"]["artifact_path_or_env"] != "results/v56b_ruler_longbench_expanded_scale_summary.csv":
+    raise SystemExit("v56b scale summary row should bind to the required summary path")
+if "V56B_ALLOW_CONTRACT_REBUILD=1" not in v56_replay_artifacts["v56b-scale-artifacts"]["validation_command"]:
+    raise SystemExit("v56b scale artifact row should expose the approval-gated validation command")
 for slice_id in [
     "docs/v1-roadmap",
     "v53-public-repo-source-manifest",
@@ -709,6 +741,7 @@ required_files = [
     "pm_pr_claim_boundary_rows.csv",
     "pm_pr_review_packet_rows.csv",
     "pm_pr_acceptance_evidence_rows.csv",
+    "v56_replay_acceptance_evidence_rows.csv",
     "pm_blocker_closure_queue_rows.csv",
     "pm_blocker_closure_packet_rows.csv",
     "pm_blocker_required_artifact_rows.csv",
@@ -902,6 +935,17 @@ if (
     raise SystemExit("PM PR manifest acceptance evidence ledger mismatch")
 if "pm_pr_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("PM PR manifest should hash-bind acceptance evidence rows")
+if (
+    manifest.get("v56_replay_acceptance_evidence_rows") != 4
+    or manifest.get("v56_replay_acceptance_evidence_ready_rows") != 0
+    or manifest.get("v56_replay_acceptance_evidence_blocked_rows") != 4
+    or manifest.get("v56_replay_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("v56_replay_acceptance_evidence_fixture_allowed_rows") != 0
+    or manifest.get("v56_replay_acceptance_evidence_approval_rows") != 4
+):
+    raise SystemExit("PM PR manifest should record v56 replay acceptance evidence")
+if "v56_replay_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("PM PR manifest should hash-bind v56 replay acceptance evidence")
 if manifest.get("pm_blocker_closure_queue_rows") != 6:
     raise SystemExit("PM PR manifest blocker closure queue mismatch")
 if manifest.get("pm_blocker_closure_packet_rows") != 6 or manifest.get("pm_blocker_closure_packet_files") != 6:
@@ -958,6 +1002,10 @@ for snippet in [
     "pm_pr_acceptance_evidence_rows=10",
     "pm_pr_acceptance_evidence_ready_rows=9",
     "pm_pr_acceptance_evidence_tests_only_rows=0",
+    "v56_replay_acceptance_evidence_rows=4",
+    "v56_replay_acceptance_evidence_ready_rows=0",
+    "v56_replay_acceptance_evidence_blocked_rows=4",
+    "v56_replay_acceptance_evidence_tests_only_rows=0",
     "pm_blocker_closure_queue_rows=6",
     "pm_blocker_closure_packet_rows=6",
     "pm_blocker_closure_packet_files=6",

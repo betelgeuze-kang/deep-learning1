@@ -256,6 +256,12 @@ v53aq = summaries["v53aq"]
 v54c = summaries["v54c"]
 h10_pm = summaries["h10_pm"]
 v56b = summaries["v56b"]
+v56_contract_summary_path = results / "v56_ruler_longbench_expanded_contract_summary.csv"
+v56_contract = read_first(v56_contract_summary_path)
+v56_contract_summary_copied = copy_if_exists(
+    v56_contract_summary_path,
+    "source_v56/v56_ruler_longbench_expanded_contract_summary.csv",
+)
 v59e = summaries["v59e"]
 v61j = summaries["v61j"]
 
@@ -1632,6 +1638,84 @@ for row in slice_rows:
     )
 write_csv(run_dir / "pm_pr_acceptance_evidence_rows.csv", list(acceptance_evidence_rows[0].keys()), acceptance_evidence_rows)
 
+
+def required_artifact_present(row):
+    artifact_path = row.get("artifact_path_or_env", "")
+    if not artifact_path.startswith("results/"):
+        return 0
+    path = root / artifact_path
+    if row.get("artifact_kind") == "artifact-directory":
+        return int(path.is_dir() and any(child.is_file() and child.stat().st_size > 0 for child in path.rglob("*")))
+    return int(path.is_file() and path.stat().st_size > 0)
+
+
+def v56_required_artifact_ready(row):
+    artifact_id = row.get("artifact_id", "")
+    present = required_artifact_present(row)
+    if artifact_id.startswith("v56-contract"):
+        return int(
+            present
+            and as_int(v56_contract, "v56_ruler_longbench_expanded_contract_ready") == 1
+            and as_int(v56_contract, "real_external_benchmark_verified") == 0
+            and as_int(v56_contract, "real_release_package_ready") == 0
+        )
+    if artifact_id.startswith("v56b-scale"):
+        return int(
+            present
+            and as_int(v56b, "v56b_ruler_longbench_expanded_scale_ready") == 1
+            and as_int(v56b, "real_external_benchmark_verified") == 0
+            and as_int(v56b, "real_release_package_ready") == 0
+        )
+    return 0
+
+
+v56_replay_acceptance_evidence_rows = []
+for artifact in [row for row in blocker_required_artifact_rows if row["blocker_class"] == "v56-replay-artifact-missing"]:
+    present = required_artifact_present(artifact)
+    ready = v56_required_artifact_ready(artifact)
+    artifact_id = artifact["artifact_id"]
+    if artifact_id.startswith("v56-contract"):
+        observed_signal = (
+            f"v56_contract_ready={v56_contract.get('v56_ruler_longbench_expanded_contract_ready', '0')} "
+            f"real_external_benchmark_verified={v56_contract.get('real_external_benchmark_verified', '0')} "
+            f"real_release_package_ready={v56_contract.get('real_release_package_ready', '0')} "
+            f"copied_summary={int(bool(v56_contract_summary_copied))}"
+        )
+    else:
+        observed_signal = (
+            f"v56b_ready={v56b.get('v56b_ruler_longbench_expanded_scale_ready', '0')} "
+            f"real_external_benchmark_verified={v56b.get('real_external_benchmark_verified', '0')} "
+            f"real_release_package_ready={v56b.get('real_release_package_ready', '0')}"
+        )
+    v56_replay_acceptance_evidence_rows.append(
+        {
+            "slice_id": "v56-ruler-longbench-expanded",
+            "blocker_class": artifact["blocker_class"],
+            "artifact_id": artifact_id,
+            "artifact_path_or_env": artifact["artifact_path_or_env"],
+            "artifact_kind": artifact["artifact_kind"],
+            "required_shape": artifact["required_shape"],
+            "validation_command": artifact["validation_command"],
+            "acceptance_signal": artifact["acceptance_signal"],
+            "artifact_present": str(present),
+            "claim_boundary_status": "pass",
+            "output_artifact_replay_status": "pass" if ready else "blocked",
+            "blocker_false_positive_status": "pass",
+            "approval_required": artifact["approval_required"],
+            "fixture_allowed": artifact["fixture_allowed"],
+            "tests_only_merge_condition": "0",
+            "acceptance_ready": str(ready),
+            "acceptance_status": "ready" if ready else "blocked",
+            "observed_signal": observed_signal,
+            "claim_until_closed": "v56 replay artifact missing; no benchmark/leaderboard claim",
+        }
+    )
+write_csv(
+    run_dir / "v56_replay_acceptance_evidence_rows.csv",
+    list(v56_replay_acceptance_evidence_rows[0].keys()),
+    v56_replay_acceptance_evidence_rows,
+)
+
 closure_by_blocker = {row["blocker_class"]: row for row in blocker_closure_rows}
 required_artifacts_by_blocker = {row["blocker_class"]: [] for row in blocker_closure_rows}
 for row in blocker_required_artifact_rows:
@@ -1854,6 +1938,20 @@ acceptance_evidence_row_count = len(acceptance_evidence_rows)
 acceptance_evidence_ready_rows = sum(1 for row in acceptance_evidence_rows if row["acceptance_ready"] == "1")
 acceptance_evidence_blocked_rows = acceptance_evidence_row_count - acceptance_evidence_ready_rows
 acceptance_evidence_tests_only_rows = sum(1 for row in acceptance_evidence_rows if row["tests_only_merge_condition"] == "1")
+v56_replay_acceptance_evidence_row_count = len(v56_replay_acceptance_evidence_rows)
+v56_replay_acceptance_evidence_ready_rows = sum(1 for row in v56_replay_acceptance_evidence_rows if row["acceptance_ready"] == "1")
+v56_replay_acceptance_evidence_blocked_rows = (
+    v56_replay_acceptance_evidence_row_count - v56_replay_acceptance_evidence_ready_rows
+)
+v56_replay_acceptance_evidence_tests_only_rows = sum(
+    1 for row in v56_replay_acceptance_evidence_rows if row["tests_only_merge_condition"] == "1"
+)
+v56_replay_acceptance_evidence_fixture_allowed_rows = sum(
+    1 for row in v56_replay_acceptance_evidence_rows if row["fixture_allowed"] == "1"
+)
+v56_replay_acceptance_evidence_approval_rows = sum(
+    1 for row in v56_replay_acceptance_evidence_rows if row["approval_required"] == "1"
+)
 blocker_closure_packet_rows = len(blocker_packet_rows)
 blocker_closure_packet_files = sum(1 for row in blocker_packet_rows if (run_dir / row["packet_path"]).is_file())
 blocker_closure_packet_ready_rows = sum(1 for row in blocker_packet_rows if row["packet_ready"] == "1")
@@ -1913,6 +2011,12 @@ summary = {
     "pm_pr_acceptance_evidence_ready_rows": str(acceptance_evidence_ready_rows),
     "pm_pr_acceptance_evidence_blocked_rows": str(acceptance_evidence_blocked_rows),
     "pm_pr_acceptance_evidence_tests_only_rows": str(acceptance_evidence_tests_only_rows),
+    "v56_replay_acceptance_evidence_rows": str(v56_replay_acceptance_evidence_row_count),
+    "v56_replay_acceptance_evidence_ready_rows": str(v56_replay_acceptance_evidence_ready_rows),
+    "v56_replay_acceptance_evidence_blocked_rows": str(v56_replay_acceptance_evidence_blocked_rows),
+    "v56_replay_acceptance_evidence_tests_only_rows": str(v56_replay_acceptance_evidence_tests_only_rows),
+    "v56_replay_acceptance_evidence_fixture_allowed_rows": str(v56_replay_acceptance_evidence_fixture_allowed_rows),
+    "v56_replay_acceptance_evidence_approval_rows": str(v56_replay_acceptance_evidence_approval_rows),
     "pm_blocker_closure_queue_rows": str(blocker_closure_queue_rows),
     "pm_blocker_closure_deferred_rows": str(blocker_closure_deferred_rows),
     "pm_blocker_closure_approval_required_rows": str(blocker_closure_approval_required_rows),
@@ -1975,6 +2079,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- pm_pr_acceptance_evidence_rows={acceptance_evidence_row_count}\n"
     f"- pm_pr_acceptance_evidence_ready_rows={acceptance_evidence_ready_rows}\n"
     f"- pm_pr_acceptance_evidence_tests_only_rows={acceptance_evidence_tests_only_rows}\n"
+    f"- v56_replay_acceptance_evidence_rows={v56_replay_acceptance_evidence_row_count}\n"
+    f"- v56_replay_acceptance_evidence_ready_rows={v56_replay_acceptance_evidence_ready_rows}\n"
+    f"- v56_replay_acceptance_evidence_blocked_rows={v56_replay_acceptance_evidence_blocked_rows}\n"
+    f"- v56_replay_acceptance_evidence_tests_only_rows={v56_replay_acceptance_evidence_tests_only_rows}\n"
     f"- pm_blocker_closure_queue_rows={blocker_closure_queue_rows}\n"
     f"- pm_blocker_closure_packet_rows={blocker_closure_packet_rows}\n"
     f"- pm_blocker_closure_packet_files={blocker_closure_packet_files}\n"
@@ -2033,6 +2141,12 @@ manifest = {
     "pm_pr_acceptance_evidence_ready_rows": acceptance_evidence_ready_rows,
     "pm_pr_acceptance_evidence_blocked_rows": acceptance_evidence_blocked_rows,
     "pm_pr_acceptance_evidence_tests_only_rows": acceptance_evidence_tests_only_rows,
+    "v56_replay_acceptance_evidence_rows": v56_replay_acceptance_evidence_row_count,
+    "v56_replay_acceptance_evidence_ready_rows": v56_replay_acceptance_evidence_ready_rows,
+    "v56_replay_acceptance_evidence_blocked_rows": v56_replay_acceptance_evidence_blocked_rows,
+    "v56_replay_acceptance_evidence_tests_only_rows": v56_replay_acceptance_evidence_tests_only_rows,
+    "v56_replay_acceptance_evidence_fixture_allowed_rows": v56_replay_acceptance_evidence_fixture_allowed_rows,
+    "v56_replay_acceptance_evidence_approval_rows": v56_replay_acceptance_evidence_approval_rows,
     "pm_blocker_closure_queue_rows": blocker_closure_queue_rows,
     "pm_blocker_closure_deferred_rows": blocker_closure_deferred_rows,
     "pm_blocker_closure_packet_rows": blocker_closure_packet_rows,
@@ -2056,6 +2170,7 @@ manifest = {
     "pm_pr_claim_boundary_rows_sha256": sha256(run_dir / "pm_pr_claim_boundary_rows.csv"),
     "pm_pr_review_packet_rows_sha256": sha256(run_dir / "pm_pr_review_packet_rows.csv"),
     "pm_pr_acceptance_evidence_rows_sha256": sha256(run_dir / "pm_pr_acceptance_evidence_rows.csv"),
+    "v56_replay_acceptance_evidence_rows_sha256": sha256(run_dir / "v56_replay_acceptance_evidence_rows.csv"),
     "h10_real_label_acceptance_evidence_rows_sha256": sha256(run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"),
     "pm_pr_slice_file_rows_sha256": sha256(run_dir / "pm_pr_slice_file_rows.csv"),
     "pm_pr_slice_verification_rows_sha256": sha256(run_dir / "pm_pr_slice_verification_rows.csv"),

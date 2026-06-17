@@ -147,6 +147,12 @@ expected = {
     "pm_pr_acceptance_evidence_rows": "10",
     "pm_pr_acceptance_evidence_ready_rows": "9",
     "pm_pr_acceptance_evidence_tests_only_rows": "0",
+    "pm_pr_v56_replay_acceptance_evidence_rows": "4",
+    "pm_pr_v56_replay_acceptance_evidence_ready_rows": "0",
+    "pm_pr_v56_replay_acceptance_evidence_blocked_rows": "4",
+    "pm_pr_v56_replay_acceptance_evidence_tests_only_rows": "0",
+    "pm_pr_v56_replay_acceptance_evidence_fixture_allowed_rows": "0",
+    "pm_pr_v56_replay_acceptance_evidence_approval_rows": "4",
     "pm_blocker_closure_packet_rows": "6",
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_bundle_ready": "1",
@@ -292,6 +298,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/pm_pr_merge_gate_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv",
+    "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_closure_packet_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
@@ -354,6 +361,24 @@ if acceptance_by_id["v53-system-a-b-g-h-measured"]["replay_artifact_path"] != "s
     raise SystemExit("v59e PM sidecar A/B/G/H acceptance should bind to local row-contract replay rows")
 if acceptance_by_id["v59-one-command-demo"]["blocker_evidence_path"] != "source_v59e/public_source_replay_policy_rows.csv":
     raise SystemExit("v59e PM sidecar v59 acceptance should bind to public source replay policy rows")
+v56_replay_acceptance_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv")
+if len(v56_replay_acceptance_rows) != 4:
+    raise SystemExit("v59e PM sidecar should carry four v56 replay acceptance evidence rows")
+v56_replay_artifacts = {row["artifact_id"]: row for row in v56_replay_acceptance_rows}
+for artifact_id in ["v56-contract-summary", "v56-contract-artifacts", "v56b-scale-summary", "v56b-scale-artifacts"]:
+    row = v56_replay_artifacts.get(artifact_id)
+    if not row:
+        raise SystemExit(f"v59e PM sidecar missing v56 replay artifact row: {artifact_id}")
+    if row["claim_boundary_status"] != "pass" or row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"v59e PM sidecar should keep v56 claim/blocker boundaries closed: {artifact_id}")
+    if row["acceptance_ready"] != "0" or row["acceptance_status"] != "blocked":
+        raise SystemExit(f"v59e PM sidecar should keep v56 artifact blocked without replay evidence: {artifact_id}")
+    if row["fixture_allowed"] != "0" or row["approval_required"] != "1":
+        raise SystemExit(f"v59e PM sidecar should require approval and forbid fixtures for v56: {artifact_id}")
+    if row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"v59e PM sidecar should forbid tests-only v56 acceptance: {artifact_id}")
+if "V56B_ALLOW_CONTRACT_REBUILD=1" not in v56_replay_artifacts["v56b-scale-artifacts"]["validation_command"]:
+    raise SystemExit("v59e PM sidecar should preserve the approval-gated v56b validation command")
 
 pm_v53t_real_adapter_rows = {
     row["criterion_id"]: row
@@ -707,6 +732,17 @@ if (
     or manifest.get("pm_pr_acceptance_evidence_tests_only_rows") != 0
 ):
     raise SystemExit("v59e manifest should record PM PR acceptance evidence rows")
+if (
+    manifest.get("pm_pr_v56_replay_acceptance_evidence_rows") != 4
+    or manifest.get("pm_pr_v56_replay_acceptance_evidence_ready_rows") != 0
+    or manifest.get("pm_pr_v56_replay_acceptance_evidence_blocked_rows") != 4
+    or manifest.get("pm_pr_v56_replay_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("pm_pr_v56_replay_acceptance_evidence_fixture_allowed_rows") != 0
+    or manifest.get("pm_pr_v56_replay_acceptance_evidence_approval_rows") != 4
+):
+    raise SystemExit("v59e manifest should record PM v56 replay acceptance evidence")
+if "pm_pr_v56_replay_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("v59e manifest should hash-bind PM v56 replay acceptance evidence")
 if (
     manifest.get("pm_pr_v53_query_span_binding_audit_ready") != 1
     or manifest.get("pm_pr_v53_query_span_binding_audit_rows") != 1000
