@@ -305,6 +305,32 @@ h10_pm_acceptance_evidence_ready = int(
     and all(row.get("tests_only_merge_condition") == "0" for row in h10_pm_acceptance_evidence_rows)
     and all(row.get("fixture_allowed") == "0" for row in h10_pm_acceptance_evidence_rows)
 )
+h10_pm_coverage_fields = [
+    "accepted_real_label_evidence_rows",
+    "accepted_query_rows_declared",
+    "accepted_label_rows",
+    "accepted_criterion_label_count",
+    "required_criterion_label_count",
+    "criterion_label_coverage_status",
+    "source_verified_eval_status",
+]
+h10_pm_acceptance_evidence_coverage_field_rows = sum(
+    1 for row in h10_pm_acceptance_evidence_rows if all(field in row for field in h10_pm_coverage_fields)
+)
+h10_pm_acceptance_evidence_zero_accepted_rows = sum(
+    1
+    for row in h10_pm_acceptance_evidence_rows
+    if as_int(row, "accepted_real_label_evidence_rows") == 0
+    and as_int(row, "accepted_query_rows_declared") == 0
+    and as_int(row, "accepted_label_rows") == 0
+    and as_int(row, "accepted_criterion_label_count") == 0
+)
+h10_pm_acceptance_evidence_coverage_blocked_rows = sum(
+    1 for row in h10_pm_acceptance_evidence_rows if row.get("criterion_label_coverage_status") == "blocked"
+)
+h10_pm_acceptance_evidence_source_verified_blocked_rows = sum(
+    1 for row in h10_pm_acceptance_evidence_rows if row.get("source_verified_eval_status") == "blocked"
+)
 h10_external_row = h10_pm_criteria.get("external-human-label-evidence", {})
 h10_source_row = h10_pm_criteria.get("source-provenance-binding", {})
 h10_pm_external_label_blocked = int(
@@ -639,6 +665,17 @@ summary = {
     "h10_pm_acceptance_evidence_ready": h10_pm_acceptance_evidence_ready,
     "h10_pm_acceptance_evidence_promotion_ready_rows": sum(1 for row in h10_pm_acceptance_evidence_rows if row.get("promotion_ready") == "1"),
     "h10_pm_acceptance_evidence_tests_only_rows": sum(1 for row in h10_pm_acceptance_evidence_rows if row.get("tests_only_merge_condition") == "1"),
+    "h10_accepted_query_rows_declared": as_int(h10, "accepted_query_rows_declared"),
+    "h10_accepted_label_rows": as_int(h10, "accepted_label_rows"),
+    "h10_accepted_coherent_wrong_key_labels": as_int(h10, "accepted_coherent_wrong_key_labels"),
+    "h10_accepted_chunk_exact_labels": as_int(h10, "accepted_chunk_exact_labels"),
+    "h10_accepted_near_miss_labels": as_int(h10, "accepted_near_miss_labels"),
+    "h10_accepted_missing_query_labels": as_int(h10, "accepted_missing_query_labels"),
+    "h10_accepted_source_provenance_labels": as_int(h10, "accepted_source_provenance_labels"),
+    "h10_pm_acceptance_evidence_coverage_field_rows": h10_pm_acceptance_evidence_coverage_field_rows,
+    "h10_pm_acceptance_evidence_zero_accepted_rows": h10_pm_acceptance_evidence_zero_accepted_rows,
+    "h10_pm_acceptance_evidence_coverage_blocked_rows": h10_pm_acceptance_evidence_coverage_blocked_rows,
+    "h10_pm_acceptance_evidence_source_verified_blocked_rows": h10_pm_acceptance_evidence_source_verified_blocked_rows,
     "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
     "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
     "h10_pm_copied_files": h10_pm_copied_files,
@@ -712,6 +749,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- v59e one-command PM foundation replay with PR split sidecar and execution lock\n\n"
     "Current blocker evidence surfaces:\n\n"
     "- h10 PM criteria rows, h10 real-label return contract rows, and h10 acceptance evidence rows are copied for coherent wrong-key, chunk exact, near-miss, missing-query abstain, source provenance binding, and external/human label blockers.\n\n"
+    f"- h10 accepted-label coverage remains closed: accepted_query_rows_declared={summary['h10_accepted_query_rows_declared']}, accepted_label_rows={summary['h10_accepted_label_rows']}, criterion_label_coverage_blocked_rows={summary['h10_pm_acceptance_evidence_coverage_blocked_rows']}, source_verified_eval_blocked_rows={summary['h10_pm_acceptance_evidence_source_verified_blocked_rows']}.\n\n"
     "- PM v59 one-command acceptance evidence preserves local A/B/G/H row-contract replay readiness while keeping public-source download/refresh approval-blocked.\n\n"
     "Still blocked:\n\n"
     "- real 30B/70B LLM+RAG comparison rows\n"
@@ -789,6 +827,17 @@ manifest = {
     "h10_pm_acceptance_evidence_ready": h10_pm_acceptance_evidence_ready,
     "h10_pm_acceptance_evidence_promotion_ready_rows": sum(1 for row in h10_pm_acceptance_evidence_rows if row.get("promotion_ready") == "1"),
     "h10_pm_acceptance_evidence_tests_only_rows": sum(1 for row in h10_pm_acceptance_evidence_rows if row.get("tests_only_merge_condition") == "1"),
+    "h10_accepted_query_rows_declared": as_int(h10, "accepted_query_rows_declared"),
+    "h10_accepted_label_rows": as_int(h10, "accepted_label_rows"),
+    "h10_accepted_coherent_wrong_key_labels": as_int(h10, "accepted_coherent_wrong_key_labels"),
+    "h10_accepted_chunk_exact_labels": as_int(h10, "accepted_chunk_exact_labels"),
+    "h10_accepted_near_miss_labels": as_int(h10, "accepted_near_miss_labels"),
+    "h10_accepted_missing_query_labels": as_int(h10, "accepted_missing_query_labels"),
+    "h10_accepted_source_provenance_labels": as_int(h10, "accepted_source_provenance_labels"),
+    "h10_pm_acceptance_evidence_coverage_field_rows": h10_pm_acceptance_evidence_coverage_field_rows,
+    "h10_pm_acceptance_evidence_zero_accepted_rows": h10_pm_acceptance_evidence_zero_accepted_rows,
+    "h10_pm_acceptance_evidence_coverage_blocked_rows": h10_pm_acceptance_evidence_coverage_blocked_rows,
+    "h10_pm_acceptance_evidence_source_verified_blocked_rows": h10_pm_acceptance_evidence_source_verified_blocked_rows,
     "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
     "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
     "h10_pm_acceptance_sha256": sha_or_empty(run_dir / "source_h10_pm" / "pm_h10_real_label_acceptance_rows.csv"),

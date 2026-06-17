@@ -98,6 +98,17 @@ expected = {
     "h10_real_label_acceptance_evidence_ready_rows": "6",
     "h10_real_label_acceptance_evidence_promotion_ready_rows": "0",
     "h10_real_label_acceptance_evidence_tests_only_rows": "0",
+    "h10_accepted_query_rows_declared": "0",
+    "h10_accepted_label_rows": "0",
+    "h10_accepted_coherent_wrong_key_labels": "0",
+    "h10_accepted_chunk_exact_labels": "0",
+    "h10_accepted_near_miss_labels": "0",
+    "h10_accepted_missing_query_labels": "0",
+    "h10_accepted_source_provenance_labels": "0",
+    "h10_real_label_acceptance_evidence_coverage_field_rows": "6",
+    "h10_real_label_acceptance_evidence_zero_accepted_rows": "6",
+    "h10_real_label_acceptance_evidence_coverage_blocked_rows": "6",
+    "h10_real_label_acceptance_evidence_source_verified_blocked_rows": "6",
     "v58_pm_blind_eval_blocker_ready": "1",
     "v58c_intake_artifact_available": "0",
     "v58c_dependency_blocker_ready": "1",
@@ -606,6 +617,28 @@ for label, path in [
         raise SystemExit(f"v59e {label} should remain contract-ready but promotion-blocked")
     if any(row["tests_only_merge_condition"] != "0" or row["fixture_allowed"] != "0" for row in rows):
         raise SystemExit(f"v59e {label} should reject tests-only and fixture h10 acceptance evidence")
+    for criterion, row in by_criterion.items():
+        for field in [
+            "accepted_real_label_evidence_rows",
+            "accepted_query_rows_declared",
+            "accepted_label_rows",
+            "accepted_criterion_label_count",
+            "required_criterion_label_count",
+            "criterion_label_coverage_status",
+            "source_verified_eval_status",
+        ]:
+            if field not in row:
+                raise SystemExit(f"v59e {label} h10 acceptance evidence missing {field} for {criterion}")
+        if row["accepted_real_label_evidence_rows"] != "0":
+            raise SystemExit(f"v59e {label} should record zero accepted real-label rows for {criterion}")
+        if row["accepted_query_rows_declared"] != "0" or row["accepted_label_rows"] != "0":
+            raise SystemExit(f"v59e {label} should record zero accepted query/label rows for {criterion}")
+        if row["accepted_criterion_label_count"] != "0":
+            raise SystemExit(f"v59e {label} should keep criterion label coverage at zero for {criterion}")
+        if row["criterion_label_coverage_status"] != "blocked":
+            raise SystemExit(f"v59e {label} should keep criterion label coverage blocked for {criterion}")
+        if row["source_verified_eval_status"] != "blocked":
+            raise SystemExit(f"v59e {label} should keep source-verified eval blocked for {criterion}")
 
 for label, path in [
     ("h10 PM source bundle", run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
@@ -740,6 +773,25 @@ if (
     or manifest.get("h10_real_label_acceptance_evidence_tests_only_rows") != 0
 ):
     raise SystemExit("v59e manifest should record h10 acceptance evidence")
+for field in [
+    "h10_accepted_query_rows_declared",
+    "h10_accepted_label_rows",
+    "h10_accepted_coherent_wrong_key_labels",
+    "h10_accepted_chunk_exact_labels",
+    "h10_accepted_near_miss_labels",
+    "h10_accepted_missing_query_labels",
+    "h10_accepted_source_provenance_labels",
+]:
+    if manifest.get(field) != 0:
+        raise SystemExit(f"v59e manifest should keep {field}=0 without accepted h10 labels")
+if manifest.get("h10_real_label_acceptance_evidence_coverage_field_rows") != 6:
+    raise SystemExit("v59e manifest should record coverage fields for all h10 acceptance evidence rows")
+if manifest.get("h10_real_label_acceptance_evidence_zero_accepted_rows") != 6:
+    raise SystemExit("v59e manifest should record all h10 acceptance evidence rows as zero-accepted")
+if manifest.get("h10_real_label_acceptance_evidence_coverage_blocked_rows") != 6:
+    raise SystemExit("v59e manifest should keep h10 criterion label coverage blocked")
+if manifest.get("h10_real_label_acceptance_evidence_source_verified_blocked_rows") != 6:
+    raise SystemExit("v59e manifest should keep h10 source-verified eval blocked")
 if "h10_real_label_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("v59e manifest should hash-bind h10 acceptance evidence rows")
 if (
@@ -890,6 +942,17 @@ for snippet in [
     "h10_real_label_acceptance_evidence_ready_rows=6",
     "h10_real_label_acceptance_evidence_promotion_ready_rows=0",
     "h10_real_label_acceptance_evidence_tests_only_rows=0",
+    "h10_accepted_query_rows_declared=0",
+    "h10_accepted_label_rows=0",
+    "h10_accepted_coherent_wrong_key_labels=0",
+    "h10_accepted_chunk_exact_labels=0",
+    "h10_accepted_near_miss_labels=0",
+    "h10_accepted_missing_query_labels=0",
+    "h10_accepted_source_provenance_labels=0",
+    "h10_real_label_acceptance_evidence_coverage_field_rows=6",
+    "h10_real_label_acceptance_evidence_zero_accepted_rows=6",
+    "h10_real_label_acceptance_evidence_coverage_blocked_rows=6",
+    "h10_real_label_acceptance_evidence_source_verified_blocked_rows=6",
     "v58c_intake_artifact_available=0",
     "v58c_dependency_blocker_ready=1",
     "v58c_blind_response_evidence_intake_ready=0",

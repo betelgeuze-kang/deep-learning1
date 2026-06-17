@@ -226,6 +226,32 @@ h10_return_contract_by_criterion = {
     for row in h10_return_contract_rows
 }
 h10_acceptance_evidence_rows = read_rows(h10_acceptance_evidence_path)
+h10_coverage_fields = [
+    "accepted_real_label_evidence_rows",
+    "accepted_query_rows_declared",
+    "accepted_label_rows",
+    "accepted_criterion_label_count",
+    "required_criterion_label_count",
+    "criterion_label_coverage_status",
+    "source_verified_eval_status",
+]
+h10_acceptance_evidence_coverage_field_rows = sum(
+    1 for row in h10_acceptance_evidence_rows if all(field in row for field in h10_coverage_fields)
+)
+h10_acceptance_evidence_label_coverage_blocked_rows = sum(
+    1 for row in h10_acceptance_evidence_rows if row.get("criterion_label_coverage_status") == "blocked"
+)
+h10_acceptance_evidence_source_verified_blocked_rows = sum(
+    1 for row in h10_acceptance_evidence_rows if row.get("source_verified_eval_status") == "blocked"
+)
+h10_acceptance_evidence_zero_accepted_rows = sum(
+    1
+    for row in h10_acceptance_evidence_rows
+    if as_int(row, "accepted_real_label_evidence_rows") == 0
+    and as_int(row, "accepted_query_rows_declared") == 0
+    and as_int(row, "accepted_label_rows") == 0
+    and as_int(row, "accepted_criterion_label_count") == 0
+)
 v53t_foundation_freeze_rows = read_rows(v53t_foundation_freeze_path)
 v53t_query_span_binding_rows = read_rows(v53t_run_dir / "complete_source_query_span_binding_audit_rows.csv")
 v53t_foundation_by_id = {
@@ -866,6 +892,7 @@ pm_roadmap_rows = [
         and {row.get("criterion", "") for row in h10_acceptance_evidence_rows} == set(h10_acceptance_by_criterion)
         and all(row.get("acceptance_ready") == "1" for row in h10_acceptance_evidence_rows)
         and all(row.get("promotion_ready") == "0" for row in h10_acceptance_evidence_rows)
+        and h10_acceptance_evidence_coverage_field_rows == len(h10_acceptance_evidence_rows)
         and all(row.get("tests_only_merge_condition") == "0" for row in h10_acceptance_evidence_rows),
         h10_acceptance_rows_copied or "source_summaries/v10_h10_real_label_promotion_readiness_gate_summary.csv",
         (
@@ -878,6 +905,10 @@ pm_roadmap_rows = [
             f"acceptance_evidence_ready_rows={h10_pm.get('h10_real_label_acceptance_evidence_ready_rows', '0')} "
             f"acceptance_evidence_promotion_ready_rows={h10_pm.get('h10_real_label_acceptance_evidence_promotion_ready_rows', '0')} "
             f"acceptance_evidence_tests_only_rows={h10_pm.get('h10_real_label_acceptance_evidence_tests_only_rows', '0')} "
+            f"accepted_query_rows_declared={h10_pm.get('accepted_query_rows_declared', '0')} "
+            f"accepted_label_rows={h10_pm.get('accepted_label_rows', '0')} "
+            f"criterion_label_coverage_blocked_rows={h10_acceptance_evidence_label_coverage_blocked_rows} "
+            f"source_verified_eval_blocked_rows={h10_acceptance_evidence_source_verified_blocked_rows} "
             f"criteria={','.join(sorted(h10_acceptance_by_criterion))} "
             f"v53aq_same_query_internal_prebaseline_rows={h10_pm.get('v53aq_same_query_internal_prebaseline_rows', '0')} "
             f"v53aq_same_query_internal_prebaseline_rows_ready={h10_pm.get('v53aq_same_query_internal_prebaseline_rows_ready', '0')}"
@@ -2192,6 +2223,17 @@ summary = {
     "h10_real_label_acceptance_evidence_ready_rows": h10_pm.get("h10_real_label_acceptance_evidence_ready_rows", "0"),
     "h10_real_label_acceptance_evidence_promotion_ready_rows": h10_pm.get("h10_real_label_acceptance_evidence_promotion_ready_rows", "0"),
     "h10_real_label_acceptance_evidence_tests_only_rows": h10_pm.get("h10_real_label_acceptance_evidence_tests_only_rows", "0"),
+    "h10_accepted_query_rows_declared": h10_pm.get("accepted_query_rows_declared", "0"),
+    "h10_accepted_label_rows": h10_pm.get("accepted_label_rows", "0"),
+    "h10_accepted_coherent_wrong_key_labels": h10_pm.get("accepted_coherent_wrong_key_labels", "0"),
+    "h10_accepted_chunk_exact_labels": h10_pm.get("accepted_chunk_exact_labels", "0"),
+    "h10_accepted_near_miss_labels": h10_pm.get("accepted_near_miss_labels", "0"),
+    "h10_accepted_missing_query_labels": h10_pm.get("accepted_missing_query_labels", "0"),
+    "h10_accepted_source_provenance_labels": h10_pm.get("accepted_source_provenance_labels", "0"),
+    "h10_real_label_acceptance_evidence_coverage_field_rows": str(h10_acceptance_evidence_coverage_field_rows),
+    "h10_real_label_acceptance_evidence_zero_accepted_rows": str(h10_acceptance_evidence_zero_accepted_rows),
+    "h10_real_label_acceptance_evidence_coverage_blocked_rows": str(h10_acceptance_evidence_label_coverage_blocked_rows),
+    "h10_real_label_acceptance_evidence_source_verified_blocked_rows": str(h10_acceptance_evidence_source_verified_blocked_rows),
     "pm_pr_slice_file_rows": str(slice_file_row_count),
     "pm_pr_slice_file_existing_rows": str(slice_file_existing_rows),
     "pm_pr_slices_with_file_rows": str(slice_with_file_rows),
@@ -2279,6 +2321,17 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- h10_real_label_acceptance_evidence_ready_rows={h10_pm.get('h10_real_label_acceptance_evidence_ready_rows', '0')}\n"
     f"- h10_real_label_acceptance_evidence_promotion_ready_rows={h10_pm.get('h10_real_label_acceptance_evidence_promotion_ready_rows', '0')}\n"
     f"- h10_real_label_acceptance_evidence_tests_only_rows={h10_pm.get('h10_real_label_acceptance_evidence_tests_only_rows', '0')}\n"
+    f"- h10_accepted_query_rows_declared={h10_pm.get('accepted_query_rows_declared', '0')}\n"
+    f"- h10_accepted_label_rows={h10_pm.get('accepted_label_rows', '0')}\n"
+    f"- h10_accepted_coherent_wrong_key_labels={h10_pm.get('accepted_coherent_wrong_key_labels', '0')}\n"
+    f"- h10_accepted_chunk_exact_labels={h10_pm.get('accepted_chunk_exact_labels', '0')}\n"
+    f"- h10_accepted_near_miss_labels={h10_pm.get('accepted_near_miss_labels', '0')}\n"
+    f"- h10_accepted_missing_query_labels={h10_pm.get('accepted_missing_query_labels', '0')}\n"
+    f"- h10_accepted_source_provenance_labels={h10_pm.get('accepted_source_provenance_labels', '0')}\n"
+    f"- h10_real_label_acceptance_evidence_coverage_field_rows={h10_acceptance_evidence_coverage_field_rows}\n"
+    f"- h10_real_label_acceptance_evidence_zero_accepted_rows={h10_acceptance_evidence_zero_accepted_rows}\n"
+    f"- h10_real_label_acceptance_evidence_coverage_blocked_rows={h10_acceptance_evidence_label_coverage_blocked_rows}\n"
+    f"- h10_real_label_acceptance_evidence_source_verified_blocked_rows={h10_acceptance_evidence_source_verified_blocked_rows}\n"
     f"- pm_pr_slice_file_rows={slice_file_row_count}\n"
     f"- pm_pr_slice_verification_rows={slice_verification_row_count}\n"
     f"- pm_pr_claim_boundary_rows={claim_boundary_row_count}\n"
@@ -2344,6 +2397,17 @@ manifest = {
     "h10_real_label_acceptance_evidence_ready_rows": as_int(h10_pm, "h10_real_label_acceptance_evidence_ready_rows"),
     "h10_real_label_acceptance_evidence_promotion_ready_rows": as_int(h10_pm, "h10_real_label_acceptance_evidence_promotion_ready_rows"),
     "h10_real_label_acceptance_evidence_tests_only_rows": as_int(h10_pm, "h10_real_label_acceptance_evidence_tests_only_rows"),
+    "h10_accepted_query_rows_declared": as_int(h10_pm, "accepted_query_rows_declared"),
+    "h10_accepted_label_rows": as_int(h10_pm, "accepted_label_rows"),
+    "h10_accepted_coherent_wrong_key_labels": as_int(h10_pm, "accepted_coherent_wrong_key_labels"),
+    "h10_accepted_chunk_exact_labels": as_int(h10_pm, "accepted_chunk_exact_labels"),
+    "h10_accepted_near_miss_labels": as_int(h10_pm, "accepted_near_miss_labels"),
+    "h10_accepted_missing_query_labels": as_int(h10_pm, "accepted_missing_query_labels"),
+    "h10_accepted_source_provenance_labels": as_int(h10_pm, "accepted_source_provenance_labels"),
+    "h10_real_label_acceptance_evidence_coverage_field_rows": h10_acceptance_evidence_coverage_field_rows,
+    "h10_real_label_acceptance_evidence_zero_accepted_rows": h10_acceptance_evidence_zero_accepted_rows,
+    "h10_real_label_acceptance_evidence_coverage_blocked_rows": h10_acceptance_evidence_label_coverage_blocked_rows,
+    "h10_real_label_acceptance_evidence_source_verified_blocked_rows": h10_acceptance_evidence_source_verified_blocked_rows,
     "pm_pr_slice_file_rows": slice_file_row_count,
     "pm_pr_slice_file_existing_rows": slice_file_existing_rows,
     "pm_pr_slice_verification_rows": slice_verification_row_count,

@@ -249,6 +249,33 @@ v53ap = first_row(results / "v53ap_complete_source_abgh_same_query_measured_summ
 v53aq = first_row(results / "v53aq_complete_source_abgh_real_adapter_measured_summary.csv")
 v54c = first_row(results / "v54c_complete_source_grounded_generation_1000_summary.csv")
 h10 = first_row(results / "v10_h10_real_label_promotion_readiness_gate_summary.csv")
+h10_acceptance_evidence_rows = read_csv(h10_dir / "h10_real_label_acceptance_evidence_rows.csv")
+h10_coverage_fields = [
+    "accepted_real_label_evidence_rows",
+    "accepted_query_rows_declared",
+    "accepted_label_rows",
+    "accepted_criterion_label_count",
+    "required_criterion_label_count",
+    "criterion_label_coverage_status",
+    "source_verified_eval_status",
+]
+h10_acceptance_evidence_coverage_field_rows = sum(
+    1 for row in h10_acceptance_evidence_rows if all(field in row for field in h10_coverage_fields)
+)
+h10_acceptance_evidence_zero_accepted_rows = sum(
+    1
+    for row in h10_acceptance_evidence_rows
+    if as_int(row, "accepted_real_label_evidence_rows") == 0
+    and as_int(row, "accepted_query_rows_declared") == 0
+    and as_int(row, "accepted_label_rows") == 0
+    and as_int(row, "accepted_criterion_label_count") == 0
+)
+h10_acceptance_evidence_coverage_blocked_rows = sum(
+    1 for row in h10_acceptance_evidence_rows if row.get("criterion_label_coverage_status") == "blocked"
+)
+h10_acceptance_evidence_source_verified_blocked_rows = sum(
+    1 for row in h10_acceptance_evidence_rows if row.get("source_verified_eval_status") == "blocked"
+)
 v58c_summary_path = results / "v58c_blind_response_evidence_intake_summary.csv"
 v58c_required_artifacts = [
     v58c_dir / "blind_response_required_field_rows.csv",
@@ -947,6 +974,17 @@ summary = {
     "h10_real_label_acceptance_evidence_ready_rows": h10.get("h10_real_label_acceptance_evidence_ready_rows", "0"),
     "h10_real_label_acceptance_evidence_promotion_ready_rows": h10.get("h10_real_label_acceptance_evidence_promotion_ready_rows", "0"),
     "h10_real_label_acceptance_evidence_tests_only_rows": h10.get("h10_real_label_acceptance_evidence_tests_only_rows", "0"),
+    "h10_accepted_query_rows_declared": h10.get("accepted_query_rows_declared", "0"),
+    "h10_accepted_label_rows": h10.get("accepted_label_rows", "0"),
+    "h10_accepted_coherent_wrong_key_labels": h10.get("accepted_coherent_wrong_key_labels", "0"),
+    "h10_accepted_chunk_exact_labels": h10.get("accepted_chunk_exact_labels", "0"),
+    "h10_accepted_near_miss_labels": h10.get("accepted_near_miss_labels", "0"),
+    "h10_accepted_missing_query_labels": h10.get("accepted_missing_query_labels", "0"),
+    "h10_accepted_source_provenance_labels": h10.get("accepted_source_provenance_labels", "0"),
+    "h10_real_label_acceptance_evidence_coverage_field_rows": str(h10_acceptance_evidence_coverage_field_rows),
+    "h10_real_label_acceptance_evidence_zero_accepted_rows": str(h10_acceptance_evidence_zero_accepted_rows),
+    "h10_real_label_acceptance_evidence_coverage_blocked_rows": str(h10_acceptance_evidence_coverage_blocked_rows),
+    "h10_real_label_acceptance_evidence_source_verified_blocked_rows": str(h10_acceptance_evidence_source_verified_blocked_rows),
     "v58_pm_blind_eval_blocker_ready": v58_blocker_summary["v58_pm_blind_eval_blocker_ready"],
     "v58c_intake_artifact_available": str(v58c_available),
     "v58c_dependency_blocker_ready": str(v58c_dependency_blocker_ready),
@@ -1016,6 +1054,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- h10_real_label_acceptance_evidence_ready_rows={summary['h10_real_label_acceptance_evidence_ready_rows']}\n"
     f"- h10_real_label_acceptance_evidence_promotion_ready_rows={summary['h10_real_label_acceptance_evidence_promotion_ready_rows']}\n"
     f"- h10_real_label_acceptance_evidence_tests_only_rows={summary['h10_real_label_acceptance_evidence_tests_only_rows']}\n"
+    f"- h10_accepted_query_rows_declared={summary['h10_accepted_query_rows_declared']}\n"
+    f"- h10_accepted_label_rows={summary['h10_accepted_label_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_coverage_blocked_rows={summary['h10_real_label_acceptance_evidence_coverage_blocked_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_source_verified_blocked_rows={summary['h10_real_label_acceptance_evidence_source_verified_blocked_rows']}\n"
     f"- v58c_intake_artifact_available={summary['v58c_intake_artifact_available']}\n"
     f"- v58c_blind_response_evidence_intake_ready={summary['v58c_blind_response_evidence_intake_ready']}\n"
     f"- v58c_required_blind_response_ready={summary['v58c_required_blind_response_ready']}\n"
@@ -1067,6 +1109,17 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- h10_real_label_acceptance_evidence_ready_rows={summary['h10_real_label_acceptance_evidence_ready_rows']}\n"
     f"- h10_real_label_acceptance_evidence_promotion_ready_rows={summary['h10_real_label_acceptance_evidence_promotion_ready_rows']}\n"
     f"- h10_real_label_acceptance_evidence_tests_only_rows={summary['h10_real_label_acceptance_evidence_tests_only_rows']}\n"
+    f"- h10_accepted_query_rows_declared={summary['h10_accepted_query_rows_declared']}\n"
+    f"- h10_accepted_label_rows={summary['h10_accepted_label_rows']}\n"
+    f"- h10_accepted_coherent_wrong_key_labels={summary['h10_accepted_coherent_wrong_key_labels']}\n"
+    f"- h10_accepted_chunk_exact_labels={summary['h10_accepted_chunk_exact_labels']}\n"
+    f"- h10_accepted_near_miss_labels={summary['h10_accepted_near_miss_labels']}\n"
+    f"- h10_accepted_missing_query_labels={summary['h10_accepted_missing_query_labels']}\n"
+    f"- h10_accepted_source_provenance_labels={summary['h10_accepted_source_provenance_labels']}\n"
+    f"- h10_real_label_acceptance_evidence_coverage_field_rows={summary['h10_real_label_acceptance_evidence_coverage_field_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_zero_accepted_rows={summary['h10_real_label_acceptance_evidence_zero_accepted_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_coverage_blocked_rows={summary['h10_real_label_acceptance_evidence_coverage_blocked_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_source_verified_blocked_rows={summary['h10_real_label_acceptance_evidence_source_verified_blocked_rows']}\n"
     f"- v58c_intake_artifact_available={summary['v58c_intake_artifact_available']}\n"
     f"- v58c_dependency_blocker_ready={summary['v58c_dependency_blocker_ready']}\n"
     f"- v58c_blind_response_evidence_intake_ready={summary['v58c_blind_response_evidence_intake_ready']}\n"
@@ -1152,6 +1205,17 @@ manifest = {
     "h10_real_label_acceptance_evidence_ready_rows": as_int(h10, "h10_real_label_acceptance_evidence_ready_rows"),
     "h10_real_label_acceptance_evidence_promotion_ready_rows": as_int(h10, "h10_real_label_acceptance_evidence_promotion_ready_rows"),
     "h10_real_label_acceptance_evidence_tests_only_rows": as_int(h10, "h10_real_label_acceptance_evidence_tests_only_rows"),
+    "h10_accepted_query_rows_declared": as_int(h10, "accepted_query_rows_declared"),
+    "h10_accepted_label_rows": as_int(h10, "accepted_label_rows"),
+    "h10_accepted_coherent_wrong_key_labels": as_int(h10, "accepted_coherent_wrong_key_labels"),
+    "h10_accepted_chunk_exact_labels": as_int(h10, "accepted_chunk_exact_labels"),
+    "h10_accepted_near_miss_labels": as_int(h10, "accepted_near_miss_labels"),
+    "h10_accepted_missing_query_labels": as_int(h10, "accepted_missing_query_labels"),
+    "h10_accepted_source_provenance_labels": as_int(h10, "accepted_source_provenance_labels"),
+    "h10_real_label_acceptance_evidence_coverage_field_rows": h10_acceptance_evidence_coverage_field_rows,
+    "h10_real_label_acceptance_evidence_zero_accepted_rows": h10_acceptance_evidence_zero_accepted_rows,
+    "h10_real_label_acceptance_evidence_coverage_blocked_rows": h10_acceptance_evidence_coverage_blocked_rows,
+    "h10_real_label_acceptance_evidence_source_verified_blocked_rows": h10_acceptance_evidence_source_verified_blocked_rows,
     "h10_real_label_acceptance_evidence_rows_sha256": sha256(run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"),
     "v58c_intake_artifact_available": v58c_available,
     "v58c_dependency_blocker_ready": v58c_dependency_blocker_ready,
