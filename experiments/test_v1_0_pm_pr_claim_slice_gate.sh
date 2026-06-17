@@ -57,6 +57,10 @@ expected = {
     "v53_pm_acceptance_evidence_rows": "10",
     "v53_pm_acceptance_evidence_ready_rows": "10",
     "v53_pm_acceptance_evidence_tests_only_rows": "0",
+    "h10_real_label_acceptance_evidence_rows": "6",
+    "h10_real_label_acceptance_evidence_ready_rows": "6",
+    "h10_real_label_acceptance_evidence_promotion_ready_rows": "0",
+    "h10_real_label_acceptance_evidence_tests_only_rows": "0",
     "pm_pr_slice_file_rows": "41",
     "pm_pr_slice_file_existing_rows": "41",
     "pm_pr_slices_with_file_rows": "10",
@@ -259,6 +263,10 @@ for snippet in [
     "return_contract_rows=6",
     "return_contract_ready_rows=6",
     "return_contract_pass_rows=0",
+    "acceptance_evidence_rows=6",
+    "acceptance_evidence_ready_rows=6",
+    "acceptance_evidence_promotion_ready_rows=0",
+    "acceptance_evidence_tests_only_rows=0",
     "coherent-wrong-key-reduction",
     "chunk-exact-increase",
     "near-miss-slash",
@@ -276,6 +284,8 @@ if len(h10_acceptance_rows) != 6:
 h10_criteria = {row["criterion"]: row for row in h10_acceptance_rows}
 h10_return_contract_rows = read_csv(run_dir / "source_h10_pm/h10_real_label_return_contract_rows.csv")
 h10_return_contract_by_criterion = {row["criterion"]: row for row in h10_return_contract_rows}
+h10_acceptance_evidence_rows = read_csv(run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv")
+h10_acceptance_evidence_by_criterion = {row["criterion"]: row for row in h10_acceptance_evidence_rows}
 for criterion in [
     "coherent-wrong-key-reduction",
     "chunk-exact-increase",
@@ -288,6 +298,23 @@ for criterion in [
         raise SystemExit(f"PM h10 acceptance source missing criterion: {criterion}")
 if set(h10_return_contract_by_criterion) != set(h10_criteria):
     raise SystemExit("PM h10 return contract should cover the same six criteria as the acceptance rows")
+if set(h10_acceptance_evidence_by_criterion) != set(h10_criteria):
+    raise SystemExit("PM h10 acceptance evidence should cover the same six criteria as the acceptance rows")
+if len(h10_acceptance_evidence_rows) != 6:
+    raise SystemExit("PM h10 acceptance evidence source rows should expose six criteria")
+for criterion, row in h10_acceptance_evidence_by_criterion.items():
+    if row["claim_boundary_status"] != "pass" or row["output_artifact_replay_status"] != "pass":
+        raise SystemExit(f"PM h10 acceptance evidence should pass claim/replay for {criterion}")
+    if row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"PM h10 acceptance evidence should pass blocker false-positive closure for {criterion}")
+    if row["acceptance_ready"] != "1" or row["promotion_ready"] != "0":
+        raise SystemExit(f"PM h10 acceptance evidence should be contract-ready but promotion-blocked for {criterion}")
+    if row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"PM h10 acceptance evidence should not be tests-only for {criterion}")
+    if row["pm_acceptance_row_path"] != "pm_h10_real_label_acceptance_rows.csv":
+        raise SystemExit(f"PM h10 acceptance evidence should bind PM acceptance rows for {criterion}")
+    if row["return_contract_path"] != "h10_real_label_return_contract_rows.csv":
+        raise SystemExit(f"PM h10 acceptance evidence should bind return contract rows for {criterion}")
 if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" for row in h10_return_contract_rows):
     raise SystemExit("PM h10 return contract should preserve no-fixture approval-required boundaries")
 if any(row["contract_ready"] != "1" or row["acceptance_status"] != "blocked" for row in h10_return_contract_rows):
@@ -690,6 +717,7 @@ required_files = [
     "source_h10_pm/h10_real_label_evidence_template.csv",
     "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_h10_pm/h10_real_label_return_contract_rows.csv",
+    "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv",
     "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v59e/local_abgh_row_contract_replay_rows.csv",
@@ -848,6 +876,15 @@ if (
     or manifest.get("v53_pm_acceptance_evidence_tests_only_rows") != 0
 ):
     raise SystemExit("PM PR manifest should record v53 PM acceptance evidence")
+if (
+    manifest.get("h10_real_label_acceptance_evidence_rows") != 6
+    or manifest.get("h10_real_label_acceptance_evidence_ready_rows") != 6
+    or manifest.get("h10_real_label_acceptance_evidence_promotion_ready_rows") != 0
+    or manifest.get("h10_real_label_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("PM PR manifest should record h10 PM acceptance evidence")
+if "h10_real_label_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("PM PR manifest should hash-bind h10 acceptance evidence rows")
 if manifest.get("pm_pr_slice_file_rows") != 41 or manifest.get("pm_pr_slice_verification_rows") != 17:
     raise SystemExit("PM PR manifest file/verification ledger mismatch")
 if manifest.get("pm_pr_claim_boundary_rows") != 10 or manifest.get("pm_pr_claim_boundary_pass_rows") != 10:
@@ -909,6 +946,10 @@ for snippet in [
     "v53_pm_acceptance_evidence_rows=10",
     "v53_pm_acceptance_evidence_ready_rows=10",
     "v53_pm_acceptance_evidence_tests_only_rows=0",
+    "h10_real_label_acceptance_evidence_rows=6",
+    "h10_real_label_acceptance_evidence_ready_rows=6",
+    "h10_real_label_acceptance_evidence_promotion_ready_rows=0",
+    "h10_real_label_acceptance_evidence_tests_only_rows=0",
     "pm_pr_slice_file_rows=41",
     "pm_pr_slice_verification_rows=17",
     "pm_pr_claim_boundary_rows=10",

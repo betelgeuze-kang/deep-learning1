@@ -94,6 +94,10 @@ expected = {
     "v54c_v53ap_resource_eval_separate_rows": "1000",
     "h10_real_label_readiness_gate_ready": "1",
     "h10_real_label_promotion_ready": "0",
+    "h10_real_label_acceptance_evidence_rows": "6",
+    "h10_real_label_acceptance_evidence_ready_rows": "6",
+    "h10_real_label_acceptance_evidence_promotion_ready_rows": "0",
+    "h10_real_label_acceptance_evidence_tests_only_rows": "0",
     "v58_pm_blind_eval_blocker_ready": "1",
     "v58c_intake_artifact_available": "0",
     "v58c_dependency_blocker_ready": "1",
@@ -258,6 +262,7 @@ required_files = [
     "source_v54c/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md",
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_h10_pm/h10_real_label_return_contract_rows.csv",
+    "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv",
     "source_h10_pm/source_v53ap/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53ap/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/adapter_selection_contract_rows.csv",
@@ -286,6 +291,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -483,6 +489,32 @@ for label, path in [
         raise SystemExit(f"v59e {label} should require 1000 query rows for external/human labels")
 
 for label, path in [
+    ("h10 PM source bundle", run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"),
+    ("PM sidecar h10 bundle", run_dir / "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"),
+]:
+    rows = read_csv(path)
+    if len(rows) != 6:
+        raise SystemExit(f"v59e {label} should carry six h10 acceptance evidence rows")
+    by_criterion = {row["criterion"]: row for row in rows}
+    if set(by_criterion) != {
+        "coherent-wrong-key-reduction",
+        "chunk-exact-increase",
+        "near-miss-slash",
+        "missing-query-abstain",
+        "source-provenance-binding",
+        "external-human-label-evidence",
+    }:
+        raise SystemExit(f"v59e {label} h10 acceptance evidence criteria mismatch")
+    if any(row["claim_boundary_status"] != "pass" or row["output_artifact_replay_status"] != "pass" for row in rows):
+        raise SystemExit(f"v59e {label} should preserve claim/replay pass status")
+    if any(row["blocker_false_positive_status"] != "pass" for row in rows):
+        raise SystemExit(f"v59e {label} should preserve blocker false-positive closure")
+    if any(row["acceptance_ready"] != "1" or row["promotion_ready"] != "0" for row in rows):
+        raise SystemExit(f"v59e {label} should remain contract-ready but promotion-blocked")
+    if any(row["tests_only_merge_condition"] != "0" or row["fixture_allowed"] != "0" for row in rows):
+        raise SystemExit(f"v59e {label} should reject tests-only and fixture h10 acceptance evidence")
+
+for label, path in [
     ("h10 PM source bundle", run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
     ("PM sidecar h10 bundle", run_dir / "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
 ]:
@@ -609,6 +641,15 @@ if (
 ):
     raise SystemExit("v59e manifest should record the v54c grounded-generation output contract")
 if (
+    manifest.get("h10_real_label_acceptance_evidence_rows") != 6
+    or manifest.get("h10_real_label_acceptance_evidence_ready_rows") != 6
+    or manifest.get("h10_real_label_acceptance_evidence_promotion_ready_rows") != 0
+    or manifest.get("h10_real_label_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("v59e manifest should record h10 acceptance evidence")
+if "h10_real_label_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("v59e manifest should hash-bind h10 acceptance evidence rows")
+if (
     manifest.get("v58c_intake_artifact_available") != 0
     or manifest.get("v58c_dependency_blocker_ready") != 1
     or manifest.get("v58c_blind_response_evidence_intake_ready") != 0
@@ -708,6 +749,10 @@ for snippet in [
     "v54c_v53ap_evaluator_provenance_ready=1",
     "v54c_v53ap_evaluator_provenance_rows=1000",
     "h10_real_label_promotion_ready=0",
+    "h10_real_label_acceptance_evidence_rows=6",
+    "h10_real_label_acceptance_evidence_ready_rows=6",
+    "h10_real_label_acceptance_evidence_promotion_ready_rows=0",
+    "h10_real_label_acceptance_evidence_tests_only_rows=0",
     "v58c_intake_artifact_available=0",
     "v58c_dependency_blocker_ready=1",
     "v58c_blind_response_evidence_intake_ready=0",

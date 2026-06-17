@@ -19,11 +19,12 @@ V59E_DIR="$RESULTS_DIR/v59e_one_command_pm_foundation_demo/pm_foundation_001"
 V59E_READY_ARTIFACT="$V59E_DIR/pm_foundation_stage_replay_rows.csv"
 V59E_V58C_DEPENDENCY_ARTIFACT="$V59E_DIR/v58c_pm_blind_response_intake_dependency_summary.csv"
 V59E_H10_RETURN_CONTRACT_ARTIFACT="$V59E_DIR/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv"
+V59E_H10_ACCEPTANCE_EVIDENCE_ARTIFACT="$V59E_DIR/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"
 
 if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" ]]; then
   "$ROOT_DIR/experiments/run_v59_one_command_challenge_demo_contract.sh" >/dev/null
 fi
-if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" || ! -s "$V59E_SUMMARY" || ! -s "$V59E_READY_ARTIFACT" || ! -s "$V59E_V58C_DEPENDENCY_ARTIFACT" || ! -s "$V59E_H10_RETURN_CONTRACT_ARTIFACT" ]]; then
+if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" || ! -s "$V59E_SUMMARY" || ! -s "$V59E_READY_ARTIFACT" || ! -s "$V59E_V58C_DEPENDENCY_ARTIFACT" || ! -s "$V59E_H10_RETURN_CONTRACT_ARTIFACT" || ! -s "$V59E_H10_ACCEPTANCE_EVIDENCE_ARTIFACT" ]]; then
   "$ROOT_DIR/experiments/run_v59e_one_command_pm_foundation_demo.sh" >/dev/null
 fi
 
@@ -160,6 +161,7 @@ for rel in [
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
@@ -231,6 +233,7 @@ h10_pm_files = [
     "h10_real_label_evidence_template.csv",
     "h10_real_label_evidence_acceptance_rows.csv",
     "h10_real_label_return_contract_rows.csv",
+    "h10_real_label_acceptance_evidence_rows.csv",
     "source_v53aq/adapter_selection_contract_rows.csv",
     "source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v53aq/abgh_evaluator_rows.csv",
@@ -284,6 +287,19 @@ h10_pm_return_contract_ready = int(
     and all(row.get("approval_required") == "1" for row in h10_pm_return_contract_rows)
     and all(row.get("contract_ready") == "1" for row in h10_pm_return_contract_rows)
     and all(row.get("acceptance_status") == "blocked" for row in h10_pm_return_contract_rows)
+)
+h10_pm_acceptance_evidence_rows = read_rows(run_dir / "source_h10_pm" / "h10_real_label_acceptance_evidence_rows.csv")
+h10_pm_acceptance_evidence_by_criterion = {row.get("criterion", ""): row for row in h10_pm_acceptance_evidence_rows}
+h10_pm_acceptance_evidence_ready = int(
+    len(h10_pm_acceptance_evidence_rows) == len(expected_h10_pm_criteria)
+    and set(h10_pm_acceptance_evidence_by_criterion) == expected_h10_pm_criteria
+    and all(row.get("claim_boundary_status") == "pass" for row in h10_pm_acceptance_evidence_rows)
+    and all(row.get("output_artifact_replay_status") == "pass" for row in h10_pm_acceptance_evidence_rows)
+    and all(row.get("blocker_false_positive_status") == "pass" for row in h10_pm_acceptance_evidence_rows)
+    and all(row.get("acceptance_ready") == "1" for row in h10_pm_acceptance_evidence_rows)
+    and all(row.get("promotion_ready") == "0" for row in h10_pm_acceptance_evidence_rows)
+    and all(row.get("tests_only_merge_condition") == "0" for row in h10_pm_acceptance_evidence_rows)
+    and all(row.get("fixture_allowed") == "0" for row in h10_pm_acceptance_evidence_rows)
 )
 h10_external_row = h10_pm_criteria.get("external-human-label-evidence", {})
 h10_source_row = h10_pm_criteria.get("source-provenance-binding", {})
@@ -434,6 +450,7 @@ requirements = [
         h10_pm_criteria_ready == 1
         and h10_pm_source_provenance_binding_ready == 1
         and h10_pm_return_contract_ready == 1
+        and h10_pm_acceptance_evidence_ready == 1
         and as_int(h10, "h10_real_label_promotion_ready") == 1
         and as_int(h10, "external_human_label_evidence_ready") == 1
         and as_int(h10, "h10_source_verified_eval_ready") == 1,
@@ -614,6 +631,10 @@ summary = {
     "h10_pm_return_contract_fixture_allowed_rows": sum(1 for row in h10_pm_return_contract_rows if row.get("fixture_allowed") == "1"),
     "h10_pm_return_contract_approval_rows": sum(1 for row in h10_pm_return_contract_rows if row.get("approval_required") == "1"),
     "h10_pm_return_contract_pass_rows": sum(1 for row in h10_pm_return_contract_rows if row.get("acceptance_status") == "pass"),
+    "h10_pm_acceptance_evidence_rows": len(h10_pm_acceptance_evidence_rows),
+    "h10_pm_acceptance_evidence_ready": h10_pm_acceptance_evidence_ready,
+    "h10_pm_acceptance_evidence_promotion_ready_rows": sum(1 for row in h10_pm_acceptance_evidence_rows if row.get("promotion_ready") == "1"),
+    "h10_pm_acceptance_evidence_tests_only_rows": sum(1 for row in h10_pm_acceptance_evidence_rows if row.get("tests_only_merge_condition") == "1"),
     "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
     "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
     "h10_pm_copied_files": h10_pm_copied_files,
@@ -674,7 +695,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- v54 complete-source 1000-row grounded generation with raw prompt stuffing blocked\n"
     "- v59e one-command PM foundation replay with PR split sidecar and execution lock\n\n"
     "Current blocker evidence surfaces:\n\n"
-    "- h10 PM criteria rows and h10 real-label return contract rows are copied for coherent wrong-key, chunk exact, near-miss, missing-query abstain, source provenance binding, and external/human label blockers.\n\n"
+    "- h10 PM criteria rows, h10 real-label return contract rows, and h10 acceptance evidence rows are copied for coherent wrong-key, chunk exact, near-miss, missing-query abstain, source provenance binding, and external/human label blockers.\n\n"
     "Still blocked:\n\n"
     "- real 30B/70B LLM+RAG comparison rows\n"
     "- h10 real external/human label promotion evidence\n"
@@ -718,10 +739,15 @@ manifest = {
     "h10_pm_return_contract_fixture_allowed_rows": sum(1 for row in h10_pm_return_contract_rows if row.get("fixture_allowed") == "1"),
     "h10_pm_return_contract_approval_rows": sum(1 for row in h10_pm_return_contract_rows if row.get("approval_required") == "1"),
     "h10_pm_return_contract_pass_rows": sum(1 for row in h10_pm_return_contract_rows if row.get("acceptance_status") == "pass"),
+    "h10_pm_acceptance_evidence_rows": len(h10_pm_acceptance_evidence_rows),
+    "h10_pm_acceptance_evidence_ready": h10_pm_acceptance_evidence_ready,
+    "h10_pm_acceptance_evidence_promotion_ready_rows": sum(1 for row in h10_pm_acceptance_evidence_rows if row.get("promotion_ready") == "1"),
+    "h10_pm_acceptance_evidence_tests_only_rows": sum(1 for row in h10_pm_acceptance_evidence_rows if row.get("tests_only_merge_condition") == "1"),
     "h10_pm_external_label_blocked": h10_pm_external_label_blocked,
     "h10_pm_source_provenance_binding_ready": h10_pm_source_provenance_binding_ready,
     "h10_pm_acceptance_sha256": sha_or_empty(run_dir / "source_h10_pm" / "pm_h10_real_label_acceptance_rows.csv"),
     "h10_pm_return_contract_sha256": sha_or_empty(run_dir / "source_h10_pm" / "h10_real_label_return_contract_rows.csv"),
+    "h10_pm_acceptance_evidence_sha256": sha_or_empty(run_dir / "source_h10_pm" / "h10_real_label_acceptance_evidence_rows.csv"),
     "v53_query_span_binding_audit_ready": as_int(v53t, "foundation_query_span_binding_audit_ready"),
     "v53_query_span_binding_audit_rows": as_int(v53t, "foundation_query_span_binding_audit_rows"),
     "v53_query_span_binding_pass_rows": as_int(v53t, "foundation_query_span_binding_pass_rows"),

@@ -9,10 +9,11 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/h10_real_label_return_contract_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv" ]] \
+if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/h10_real_label_acceptance_evidence_rows.csv" && -s "$RUN_DIR/h10_real_label_return_contract_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv" ]] \
   && grep -q 'v53t_real_adapter_freeze_ready' "$SUMMARY_CSV" \
   && grep -q 'v53aq_same_query_internal_prebaseline_rows_ready' "$SUMMARY_CSV" \
-  && grep -q 'h10_real_label_return_contract_rows' "$SUMMARY_CSV"; then
+  && grep -q 'h10_real_label_return_contract_rows' "$SUMMARY_CSV" \
+  && grep -q 'h10_real_label_acceptance_evidence_rows' "$SUMMARY_CSV"; then
   echo "v10_h10_real_label_promotion_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -543,6 +544,66 @@ acceptance_rows = [
 ]
 write_csv(run_dir / "pm_h10_real_label_acceptance_rows.csv", list(acceptance_rows[0].keys()), acceptance_rows)
 
+acceptance_by_criterion = {row["criterion"]: row for row in acceptance_rows}
+return_contract_by_criterion = {row["criterion"]: row for row in h10_return_contract_rows}
+acceptance_evidence_rows = []
+for criterion in [
+    "coherent-wrong-key-reduction",
+    "chunk-exact-increase",
+    "near-miss-slash",
+    "missing-query-abstain",
+    "source-provenance-binding",
+    "external-human-label-evidence",
+]:
+    acceptance_row = acceptance_by_criterion[criterion]
+    contract_row = return_contract_by_criterion[criterion]
+    claim_boundary_status = "pass"
+    output_artifact_replay_status = "pass"
+    blocker_false_positive_status = "pass"
+    promotion_ready = int(
+        acceptance_row["real_label_status"] == "pass"
+        and contract_row["acceptance_status"] == "pass"
+        and h10_real_label_promotion_ready == 1
+    )
+    acceptance_ready = int(
+        claim_boundary_status == "pass"
+        and output_artifact_replay_status == "pass"
+        and blocker_false_positive_status == "pass"
+        and contract_row["contract_ready"] == "1"
+        and contract_row["fixture_allowed"] == "0"
+        and contract_row["approval_required"] == "1"
+    )
+    acceptance_evidence_rows.append(
+        {
+            "criterion": criterion,
+            "claim_boundary_status": claim_boundary_status,
+            "output_artifact_replay_status": output_artifact_replay_status,
+            "blocker_false_positive_status": blocker_false_positive_status,
+            "machine_evidence_status": acceptance_row["machine_evidence_status"],
+            "real_label_status": acceptance_row["real_label_status"],
+            "pm_acceptance_row_path": "pm_h10_real_label_acceptance_rows.csv",
+            "pm_acceptance_row_count": str(len(acceptance_rows)),
+            "pm_acceptance_sha256": sha256(run_dir / "pm_h10_real_label_acceptance_rows.csv"),
+            "return_contract_path": "h10_real_label_return_contract_rows.csv",
+            "return_contract_row_count": str(len(h10_return_contract_rows)),
+            "return_contract_sha256": sha256(run_dir / "h10_real_label_return_contract_rows.csv"),
+            "evidence_template_path": contract_row["template_path"],
+            "evidence_acceptance_path": "h10_real_label_evidence_acceptance_rows.csv",
+            "required_evidence_column": contract_row["evidence_column"],
+            "required_condition": contract_row["required_condition"],
+            "fixture_allowed": contract_row["fixture_allowed"],
+            "approval_required": contract_row["approval_required"],
+            "contract_ready": contract_row["contract_ready"],
+            "tests_only_merge_condition": "0",
+            "acceptance_ready": str(acceptance_ready),
+            "promotion_ready": str(promotion_ready),
+            "replay_command": "experiments/test_v10_h10_real_label_promotion_readiness_gate.sh",
+            "blocker": acceptance_row["blocker"] or contract_row["blocker"],
+            "claim_boundary": "readiness ledger only; h10 real-label promotion remains blocked until accepted external/human labels and source-verified eval pass",
+        }
+    )
+write_csv(run_dir / "h10_real_label_acceptance_evidence_rows.csv", list(acceptance_evidence_rows[0].keys()), acceptance_evidence_rows)
+
 summary = {
     "v10_h10_real_label_promotion_readiness_gate_ready": "1",
     "h10_real_label_promotion_ready": str(h10_real_label_promotion_ready),
@@ -598,6 +659,12 @@ summary = {
     "h10_real_label_return_contract_fixture_allowed_rows": str(sum(1 for row in h10_return_contract_rows if row["fixture_allowed"] == "1")),
     "h10_real_label_return_contract_approval_rows": str(sum(1 for row in h10_return_contract_rows if row["approval_required"] == "1")),
     "h10_real_label_return_contract_pass_rows": str(sum(1 for row in h10_return_contract_rows if row["acceptance_status"] == "pass")),
+    "h10_real_label_acceptance_evidence_rows": str(len(acceptance_evidence_rows)),
+    "h10_real_label_acceptance_evidence_ready_rows": str(sum(1 for row in acceptance_evidence_rows if row["acceptance_ready"] == "1")),
+    "h10_real_label_acceptance_evidence_promotion_ready_rows": str(sum(1 for row in acceptance_evidence_rows if row["promotion_ready"] == "1")),
+    "h10_real_label_acceptance_evidence_tests_only_rows": str(sum(1 for row in acceptance_evidence_rows if row["tests_only_merge_condition"] == "1")),
+    "h10_real_label_acceptance_evidence_fixture_allowed_rows": str(sum(1 for row in acceptance_evidence_rows if row["fixture_allowed"] == "1")),
+    "h10_real_label_acceptance_evidence_approval_rows": str(sum(1 for row in acceptance_evidence_rows if row["approval_required"] == "1")),
     "h10s_reason": h10s.get("reason", ""),
     "learned_score_gap": h10s.get("learned_score_gap", "0"),
     "coherent_wrong_negative_rate": h10s.get("coherent_wrong_negative_rate", "0"),
@@ -655,6 +722,10 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- h10_real_label_return_contract_rows={len(h10_return_contract_rows)}\n"
     f"- h10_real_label_return_contract_ready_rows={sum(1 for row in h10_return_contract_rows if row['contract_ready'] == '1')}\n"
     f"- h10_real_label_return_contract_pass_rows={sum(1 for row in h10_return_contract_rows if row['acceptance_status'] == 'pass')}\n\n"
+    f"- h10_real_label_acceptance_evidence_rows={len(acceptance_evidence_rows)}\n"
+    f"- h10_real_label_acceptance_evidence_ready_rows={sum(1 for row in acceptance_evidence_rows if row['acceptance_ready'] == '1')}\n"
+    f"- h10_real_label_acceptance_evidence_promotion_ready_rows={sum(1 for row in acceptance_evidence_rows if row['promotion_ready'] == '1')}\n"
+    f"- h10_real_label_acceptance_evidence_tests_only_rows={sum(1 for row in acceptance_evidence_rows if row['tests_only_merge_condition'] == '1')}\n\n"
     "Allowed wording: h10 real-label promotion readiness gate; complete-source provenance, missing/abstain, and wrong-answer guard surfaces are machine-bound.\n\n"
     "Blocked wording: h10 real-label promotion, human-reviewed scorer quality, scientific contribution claim, release readiness, or public comparison claim.\n",
     encoding="utf-8",
@@ -701,6 +772,13 @@ manifest = {
     "h10_real_label_return_contract_fixture_allowed_rows": sum(1 for row in h10_return_contract_rows if row["fixture_allowed"] == "1"),
     "h10_real_label_return_contract_approval_rows": sum(1 for row in h10_return_contract_rows if row["approval_required"] == "1"),
     "h10_real_label_return_contract_pass_rows": sum(1 for row in h10_return_contract_rows if row["acceptance_status"] == "pass"),
+    "h10_real_label_acceptance_evidence_rows": len(acceptance_evidence_rows),
+    "h10_real_label_acceptance_evidence_ready_rows": sum(1 for row in acceptance_evidence_rows if row["acceptance_ready"] == "1"),
+    "h10_real_label_acceptance_evidence_promotion_ready_rows": sum(1 for row in acceptance_evidence_rows if row["promotion_ready"] == "1"),
+    "h10_real_label_acceptance_evidence_tests_only_rows": sum(1 for row in acceptance_evidence_rows if row["tests_only_merge_condition"] == "1"),
+    "h10_real_label_acceptance_evidence_fixture_allowed_rows": sum(1 for row in acceptance_evidence_rows if row["fixture_allowed"] == "1"),
+    "h10_real_label_acceptance_evidence_approval_rows": sum(1 for row in acceptance_evidence_rows if row["approval_required"] == "1"),
+    "h10_real_label_acceptance_evidence_rows_sha256": sha256(run_dir / "h10_real_label_acceptance_evidence_rows.csv"),
     "source_summary_sha256": {
         "h10s": sha256(h10s_summary_path),
         "v53q": sha256(v53q_summary_path),

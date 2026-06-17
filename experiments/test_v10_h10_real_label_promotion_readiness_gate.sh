@@ -82,6 +82,12 @@ expected = {
     "h10_real_label_return_contract_fixture_allowed_rows": "0",
     "h10_real_label_return_contract_approval_rows": "6",
     "h10_real_label_return_contract_pass_rows": "0",
+    "h10_real_label_acceptance_evidence_rows": "6",
+    "h10_real_label_acceptance_evidence_ready_rows": "6",
+    "h10_real_label_acceptance_evidence_promotion_ready_rows": "0",
+    "h10_real_label_acceptance_evidence_tests_only_rows": "0",
+    "h10_real_label_acceptance_evidence_fixture_allowed_rows": "0",
+    "h10_real_label_acceptance_evidence_approval_rows": "6",
     "v53q_complete_source_symmetric_scorer_policy_ready": "1",
     "v53ap_complete_source_abgh_same_query_measured_ready": "1",
     "v53aq_complete_source_abgh_real_adapter_measured_ready": "1",
@@ -97,6 +103,7 @@ required_files = [
     "h10_real_label_evidence_template.csv",
     "h10_real_label_evidence_acceptance_rows.csv",
     "h10_real_label_return_contract_rows.csv",
+    "h10_real_label_acceptance_evidence_rows.csv",
     "V10_H10_REAL_LABEL_PROMOTION_READINESS_BOUNDARY.md",
     "v10_h10_real_label_promotion_readiness_manifest.json",
     "sha256_manifest.csv",
@@ -187,6 +194,52 @@ if "source_provenance_binding_ready=1" not in return_contract_rows["source-prove
     raise SystemExit("h10 source provenance return contract should cite machine provenance readiness")
 if "query_rows>=1000" not in return_contract_rows["external-human-label-evidence"]["external_label_dependency"]:
     raise SystemExit("h10 external label return contract should require 1000 query rows")
+
+acceptance_evidence_rows = {
+    row["criterion"]: row
+    for row in read_csv(run_dir / "h10_real_label_acceptance_evidence_rows.csv")
+}
+if set(acceptance_evidence_rows) != set(criteria):
+    raise SystemExit("h10 acceptance evidence ledger should cover exactly the six PM h10 criteria")
+for criterion, row in acceptance_evidence_rows.items():
+    if row["claim_boundary_status"] != "pass":
+        raise SystemExit(f"h10 acceptance evidence should pass claim boundary for {criterion}")
+    if row["output_artifact_replay_status"] != "pass":
+        raise SystemExit(f"h10 acceptance evidence should pass artifact replay for {criterion}")
+    if row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"h10 acceptance evidence should pass blocker false-positive closure for {criterion}")
+    if row["pm_acceptance_row_path"] != "pm_h10_real_label_acceptance_rows.csv":
+        raise SystemExit(f"h10 acceptance evidence should bind PM acceptance rows for {criterion}")
+    if row["pm_acceptance_row_count"] != "6":
+        raise SystemExit(f"h10 acceptance evidence should record six PM acceptance rows for {criterion}")
+    if row["pm_acceptance_sha256"] != sha256(run_dir / "pm_h10_real_label_acceptance_rows.csv"):
+        raise SystemExit(f"h10 acceptance evidence PM acceptance sha mismatch for {criterion}")
+    if row["return_contract_path"] != "h10_real_label_return_contract_rows.csv":
+        raise SystemExit(f"h10 acceptance evidence should bind return contract rows for {criterion}")
+    if row["return_contract_row_count"] != "6":
+        raise SystemExit(f"h10 acceptance evidence should record six return contract rows for {criterion}")
+    if row["return_contract_sha256"] != sha256(run_dir / "h10_real_label_return_contract_rows.csv"):
+        raise SystemExit(f"h10 acceptance evidence return contract sha mismatch for {criterion}")
+    if row["evidence_template_path"] != "h10_real_label_evidence_template.csv":
+        raise SystemExit(f"h10 acceptance evidence should bind the evidence template for {criterion}")
+    if row["evidence_acceptance_path"] != "h10_real_label_evidence_acceptance_rows.csv":
+        raise SystemExit(f"h10 acceptance evidence should bind evidence acceptance rows for {criterion}")
+    if row["fixture_allowed"] != "0" or row["approval_required"] != "1":
+        raise SystemExit(f"h10 acceptance evidence should preserve no-fixture approval-required boundary for {criterion}")
+    if row["contract_ready"] != "1" or row["acceptance_ready"] != "1":
+        raise SystemExit(f"h10 acceptance evidence should keep the PM contract ready for {criterion}")
+    if row["promotion_ready"] != "0":
+        raise SystemExit(f"h10 acceptance evidence should keep promotion blocked without labels for {criterion}")
+    if row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"h10 acceptance evidence should reject tests-only merge condition for {criterion}")
+    if row["replay_command"] != "experiments/test_v10_h10_real_label_promotion_readiness_gate.sh":
+        raise SystemExit(f"h10 acceptance evidence should record the replay command for {criterion}")
+    if "readiness ledger only" not in row["claim_boundary"]:
+        raise SystemExit(f"h10 acceptance evidence should keep a readiness-only claim boundary for {criterion}")
+if acceptance_evidence_rows["source-provenance-binding"]["machine_evidence_status"] != "pass":
+    raise SystemExit("h10 acceptance evidence should preserve source provenance machine pass status")
+if acceptance_evidence_rows["external-human-label-evidence"]["real_label_status"] != "blocked":
+    raise SystemExit("h10 acceptance evidence should keep external/human label evidence blocked")
 
 adapter_traces = read_csv(run_dir / "source_v53ap/abgh_adapter_trace_rows.csv")
 evaluators = read_csv(run_dir / "source_v53ap/abgh_evaluator_rows.csv")
@@ -348,6 +401,20 @@ if manifest.get("h10_real_label_return_contract_approval_rows") != 6:
     raise SystemExit("manifest should require approval for all h10 real-label return contracts")
 if manifest.get("h10_real_label_return_contract_pass_rows") != 0:
     raise SystemExit("manifest should keep all h10 return contracts blocked without accepted labels")
+if manifest.get("h10_real_label_acceptance_evidence_rows") != 6:
+    raise SystemExit("manifest should record six h10 acceptance evidence rows")
+if manifest.get("h10_real_label_acceptance_evidence_ready_rows") != 6:
+    raise SystemExit("manifest should record six ready h10 acceptance evidence rows")
+if manifest.get("h10_real_label_acceptance_evidence_promotion_ready_rows") != 0:
+    raise SystemExit("manifest should keep h10 acceptance evidence promotion rows blocked")
+if manifest.get("h10_real_label_acceptance_evidence_tests_only_rows") != 0:
+    raise SystemExit("manifest should forbid tests-only h10 acceptance evidence")
+if manifest.get("h10_real_label_acceptance_evidence_fixture_allowed_rows") != 0:
+    raise SystemExit("manifest should forbid fixture h10 acceptance evidence")
+if manifest.get("h10_real_label_acceptance_evidence_approval_rows") != 6:
+    raise SystemExit("manifest should require approval for all h10 acceptance evidence rows")
+if manifest.get("h10_real_label_acceptance_evidence_rows_sha256") != sha256(run_dir / "h10_real_label_acceptance_evidence_rows.csv"):
+    raise SystemExit("manifest should hash-bind h10 acceptance evidence rows")
 if "v53t" not in manifest.get("source_summary_sha256", {}):
     raise SystemExit("manifest should hash-bind the v53t summary")
 
@@ -381,6 +448,10 @@ for snippet in [
     "h10_real_label_return_contract_rows=6",
     "h10_real_label_return_contract_ready_rows=6",
     "h10_real_label_return_contract_pass_rows=0",
+    "h10_real_label_acceptance_evidence_rows=6",
+    "h10_real_label_acceptance_evidence_ready_rows=6",
+    "h10_real_label_acceptance_evidence_promotion_ready_rows=0",
+    "h10_real_label_acceptance_evidence_tests_only_rows=0",
     "Blocked wording",
 ]:
     if snippet not in boundary:
@@ -416,6 +487,8 @@ checks = {
     "rejected_real_label_evidence_rows": "1",
     "fixture_or_synthetic_label_evidence_rows": "1",
     "h10_real_label_return_contract_pass_rows": "0",
+    "h10_real_label_acceptance_evidence_ready_rows": "6",
+    "h10_real_label_acceptance_evidence_promotion_ready_rows": "0",
     "external_human_label_evidence_ready": "0",
     "h10_real_label_promotion_ready": "0",
 }

@@ -506,6 +506,7 @@ stage_specs = [
             (h10_dir / "h10_real_label_evidence_template.csv", "source_h10_pm/h10_real_label_evidence_template.csv"),
             (h10_dir / "h10_real_label_evidence_acceptance_rows.csv", "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv"),
             (h10_dir / "h10_real_label_return_contract_rows.csv", "source_h10_pm/h10_real_label_return_contract_rows.csv"),
+            (h10_dir / "h10_real_label_acceptance_evidence_rows.csv", "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"),
             (h10_dir / "source_v53ap/abgh_adapter_trace_rows.csv", "source_h10_pm/source_v53ap/abgh_adapter_trace_rows.csv"),
             (h10_dir / "source_v53ap/abgh_evaluator_rows.csv", "source_h10_pm/source_v53ap/abgh_evaluator_rows.csv"),
             (h10_dir / "source_v53aq/adapter_selection_contract_rows.csv", "source_h10_pm/source_v53aq/adapter_selection_contract_rows.csv"),
@@ -942,6 +943,10 @@ summary = {
     "v54c_v53ap_resource_eval_separate_rows": v54c.get("v53ap_resource_eval_separate_rows", "0"),
     "h10_real_label_readiness_gate_ready": h10["v10_h10_real_label_promotion_readiness_gate_ready"],
     "h10_real_label_promotion_ready": h10["h10_real_label_promotion_ready"],
+    "h10_real_label_acceptance_evidence_rows": h10.get("h10_real_label_acceptance_evidence_rows", "0"),
+    "h10_real_label_acceptance_evidence_ready_rows": h10.get("h10_real_label_acceptance_evidence_ready_rows", "0"),
+    "h10_real_label_acceptance_evidence_promotion_ready_rows": h10.get("h10_real_label_acceptance_evidence_promotion_ready_rows", "0"),
+    "h10_real_label_acceptance_evidence_tests_only_rows": h10.get("h10_real_label_acceptance_evidence_tests_only_rows", "0"),
     "v58_pm_blind_eval_blocker_ready": v58_blocker_summary["v58_pm_blind_eval_blocker_ready"],
     "v58c_intake_artifact_available": str(v58c_available),
     "v58c_dependency_blocker_ready": str(v58c_dependency_blocker_ready),
@@ -1007,6 +1012,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
+    f"- h10_real_label_acceptance_evidence_rows={summary['h10_real_label_acceptance_evidence_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_ready_rows={summary['h10_real_label_acceptance_evidence_ready_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_promotion_ready_rows={summary['h10_real_label_acceptance_evidence_promotion_ready_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_tests_only_rows={summary['h10_real_label_acceptance_evidence_tests_only_rows']}\n"
     f"- v58c_intake_artifact_available={summary['v58c_intake_artifact_available']}\n"
     f"- v58c_blind_response_evidence_intake_ready={summary['v58c_blind_response_evidence_intake_ready']}\n"
     f"- v58c_required_blind_response_ready={summary['v58c_required_blind_response_ready']}\n"
@@ -1054,6 +1063,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
+    f"- h10_real_label_acceptance_evidence_rows={summary['h10_real_label_acceptance_evidence_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_ready_rows={summary['h10_real_label_acceptance_evidence_ready_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_promotion_ready_rows={summary['h10_real_label_acceptance_evidence_promotion_ready_rows']}\n"
+    f"- h10_real_label_acceptance_evidence_tests_only_rows={summary['h10_real_label_acceptance_evidence_tests_only_rows']}\n"
     f"- v58c_intake_artifact_available={summary['v58c_intake_artifact_available']}\n"
     f"- v58c_dependency_blocker_ready={summary['v58c_dependency_blocker_ready']}\n"
     f"- v58c_blind_response_evidence_intake_ready={summary['v58c_blind_response_evidence_intake_ready']}\n"
@@ -1135,6 +1148,11 @@ manifest = {
     "v54c_output_contract_rows": as_int(v54c, "grounded_generation_output_contract_rows"),
     "v54c_output_contract_pm_required_rows": as_int(v54c, "grounded_generation_output_contract_pm_required_rows"),
     "v54c_output_contract_raw_prompt_forbidden_rows": as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows"),
+    "h10_real_label_acceptance_evidence_rows": as_int(h10, "h10_real_label_acceptance_evidence_rows"),
+    "h10_real_label_acceptance_evidence_ready_rows": as_int(h10, "h10_real_label_acceptance_evidence_ready_rows"),
+    "h10_real_label_acceptance_evidence_promotion_ready_rows": as_int(h10, "h10_real_label_acceptance_evidence_promotion_ready_rows"),
+    "h10_real_label_acceptance_evidence_tests_only_rows": as_int(h10, "h10_real_label_acceptance_evidence_tests_only_rows"),
+    "h10_real_label_acceptance_evidence_rows_sha256": sha256(run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"),
     "v58c_intake_artifact_available": v58c_available,
     "v58c_dependency_blocker_ready": v58c_dependency_blocker_ready,
     "v58c_blind_response_evidence_intake_ready": as_int(v58c, "v58c_blind_response_evidence_intake_ready"),
@@ -1265,6 +1283,7 @@ pm_pr_core_files = [
     (pr_run_dir / "source_h10_pm/h10_real_label_evidence_template.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/h10_real_label_return_contract_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv", "evidence"),
+    (pr_run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_acceptance_evidence_rows.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_foundation_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_pm_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv", "evidence"),

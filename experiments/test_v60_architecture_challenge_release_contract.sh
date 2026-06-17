@@ -90,9 +90,13 @@ expected = {
     "h10_pm_return_contract_fixture_allowed_rows": "0",
     "h10_pm_return_contract_approval_rows": "6",
     "h10_pm_return_contract_pass_rows": "0",
+    "h10_pm_acceptance_evidence_rows": "6",
+    "h10_pm_acceptance_evidence_ready": "1",
+    "h10_pm_acceptance_evidence_promotion_ready_rows": "0",
+    "h10_pm_acceptance_evidence_tests_only_rows": "0",
     "h10_pm_external_label_blocked": "1",
     "h10_pm_source_provenance_binding_ready": "1",
-    "h10_pm_copied_files": "12",
+    "h10_pm_copied_files": "13",
     "v54c_recommended_output_files_ready": "1",
     "v54c_recommended_output_file_rows": "9",
     "v54c_output_contract_ready": "1",
@@ -192,6 +196,7 @@ required_files = [
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_acceptance_evidence_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
@@ -249,6 +254,7 @@ required_files = [
     "source_h10_pm/h10_real_label_evidence_template.csv",
     "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_h10_pm/h10_real_label_return_contract_rows.csv",
+    "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv",
     "source_h10_pm/source_v53aq/adapter_selection_contract_rows.csv",
     "source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
@@ -506,6 +512,22 @@ if h10_return_contract_by_criterion["source-provenance-binding"]["evidence_colum
     raise SystemExit("v60 h10 return contract should bind source provenance labels")
 if "query_rows>=1000" not in h10_return_contract_by_criterion["external-human-label-evidence"]["external_label_dependency"]:
     raise SystemExit("v60 h10 return contract should require 1000 query rows for external/human labels")
+h10_acceptance_evidence_rows = read_csv(run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv")
+if len(h10_acceptance_evidence_rows) != 6:
+    raise SystemExit("v60 h10 acceptance evidence should cover six PM scorer criteria")
+h10_acceptance_evidence_by_criterion = {row["criterion"]: row for row in h10_acceptance_evidence_rows}
+if set(h10_acceptance_evidence_by_criterion) != expected_h10_criteria:
+    raise SystemExit("v60 h10 acceptance evidence criteria mismatch")
+if any(row["claim_boundary_status"] != "pass" for row in h10_acceptance_evidence_rows):
+    raise SystemExit("v60 h10 acceptance evidence should preserve claim-boundary pass status")
+if any(row["output_artifact_replay_status"] != "pass" for row in h10_acceptance_evidence_rows):
+    raise SystemExit("v60 h10 acceptance evidence should preserve replay pass status")
+if any(row["blocker_false_positive_status"] != "pass" for row in h10_acceptance_evidence_rows):
+    raise SystemExit("v60 h10 acceptance evidence should preserve blocker false-positive closure")
+if any(row["acceptance_ready"] != "1" or row["promotion_ready"] != "0" for row in h10_acceptance_evidence_rows):
+    raise SystemExit("v60 h10 acceptance evidence should remain contract-ready but promotion-blocked")
+if any(row["tests_only_merge_condition"] != "0" or row["fixture_allowed"] != "0" for row in h10_acceptance_evidence_rows):
+    raise SystemExit("v60 h10 acceptance evidence should reject tests-only and fixture promotion")
 
 public_source_snapshot_rows = read_csv(run_dir / "source_v59e/public_source_snapshot_replay_rows.csv")
 if len(public_source_snapshot_rows) != 10:
@@ -675,6 +697,15 @@ if manifest.get("h10_pm_return_contract_fixture_allowed_rows") != 0 or manifest.
     raise SystemExit("v60 manifest should preserve h10 return contract fixture/approval boundaries")
 if manifest.get("h10_pm_return_contract_pass_rows") != 0:
     raise SystemExit("v60 manifest should keep h10 return contract blocked without labels")
+if (
+    manifest.get("h10_pm_acceptance_evidence_rows") != 6
+    or manifest.get("h10_pm_acceptance_evidence_ready") != 1
+    or manifest.get("h10_pm_acceptance_evidence_promotion_ready_rows") != 0
+    or manifest.get("h10_pm_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("v60 manifest should record direct h10 acceptance evidence")
+if "h10_pm_acceptance_evidence_sha256" not in manifest:
+    raise SystemExit("v60 manifest should hash-bind h10 acceptance evidence")
 if manifest.get("h10_pm_external_label_blocked") != 1 or manifest.get("h10_pm_source_provenance_binding_ready") != 1:
     raise SystemExit("v60 manifest should preserve h10 blocker/provenance boundary")
 if manifest.get("v54c_recommended_output_files_ready") != 1 or manifest.get("v54c_recommended_output_file_rows") != 9:
@@ -706,6 +737,7 @@ for snippet in [
     "real 30B/70B LLM+RAG comparison rows",
     "h10 real external/human label promotion evidence",
     "h10 PM criteria rows",
+    "h10 acceptance evidence rows",
     "v58c blind-response intake artifact",
     "v58d blind-review/adjudication return artifact",
     "approved public-source download/refresh evidence",
