@@ -65,6 +65,10 @@ expected = {
     "pm_pr_review_packet_files": "10",
     "pm_pr_review_packet_ready_rows": "10",
     "pm_pr_review_packet_blocked_slice_rows": "1",
+    "pm_pr_acceptance_evidence_rows": "10",
+    "pm_pr_acceptance_evidence_ready_rows": "9",
+    "pm_pr_acceptance_evidence_blocked_rows": "1",
+    "pm_pr_acceptance_evidence_tests_only_rows": "0",
     "pm_blocker_closure_queue_rows": "6",
     "pm_blocker_closure_deferred_rows": "6",
     "pm_blocker_closure_approval_required_rows": "6",
@@ -425,6 +429,48 @@ for snippet in ["public-source download/refresh readiness", "pinned-source snaps
     if snippet not in v59_packet_text:
         raise SystemExit(f"v59 review packet should expose public-source replay boundary: {snippet}")
 
+acceptance_rows = read_csv(run_dir / "pm_pr_acceptance_evidence_rows.csv")
+if len(acceptance_rows) != 10:
+    raise SystemExit("PM PR acceptance evidence ledger should have ten rows")
+if [row["slice_id"] for row in acceptance_rows] != expected_order:
+    raise SystemExit("PM PR acceptance evidence order mismatch")
+acceptance_by_id = {row["slice_id"]: row for row in acceptance_rows}
+if sum(row["acceptance_ready"] == "1" for row in acceptance_rows) != 9:
+    raise SystemExit("PM PR acceptance evidence should mark nine slices ready")
+if sum(row["acceptance_ready"] == "0" for row in acceptance_rows) != 1:
+    raise SystemExit("PM PR acceptance evidence should mark one slice blocked")
+if any(row["tests_only_merge_condition"] != "0" for row in acceptance_rows):
+    raise SystemExit("PM PR acceptance evidence should forbid tests-only merge conditions")
+if any(row["claim_boundary_status"] != "pass" for row in acceptance_rows):
+    raise SystemExit("PM PR acceptance evidence should keep all claim boundaries passing")
+if acceptance_by_id["v56-ruler-longbench-expanded"]["acceptance_ready"] != "0":
+    raise SystemExit("v56 acceptance evidence should remain blocked until replay artifact evidence closes")
+for slice_id in [
+    "docs/v1-roadmap",
+    "v53-public-repo-source-manifest",
+    "v53-query-instantiation-1000",
+    "v53-system-a-b-g-h-measured",
+    "v54-routehint-generation-contract",
+    "v59-one-command-demo",
+]:
+    row = acceptance_by_id[slice_id]
+    if row["acceptance_ready"] != "1" or row["replay_artifact_status"] != "pass" or row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"PM PR acceptance evidence should make {slice_id} review-ready: {row}")
+    if row["replay_artifact_present"] != "1":
+        raise SystemExit(f"PM PR acceptance evidence should point {slice_id} at a copied replay artifact")
+    if not (run_dir / row["review_packet_path"]).is_file():
+        raise SystemExit(f"PM PR acceptance evidence should point {slice_id} at a review packet")
+if acceptance_by_id["v53-query-instantiation-1000"]["replay_artifact_path"] != "source_v53t/complete_source_query_span_binding_audit_rows.csv":
+    raise SystemExit("v53 query acceptance should bind directly to the 1000-row span-binding audit")
+if acceptance_by_id["v53-system-a-b-g-h-measured"]["replay_artifact_path"] != "source_v59e/local_abgh_row_contract_replay_rows.csv":
+    raise SystemExit("A/B/G/H acceptance should bind directly to the local row-contract replay ledger")
+if "experiments/test_v53aq_complete_source_abgh_real_adapter_measured.sh" not in acceptance_by_id["v53-system-a-b-g-h-measured"]["local_smoke_commands"]:
+    raise SystemExit("A/B/G/H acceptance should expose the v53aq real-adapter smoke command")
+if acceptance_by_id["v59-one-command-demo"]["replay_artifact_path"] != "source_v59e/public_source_replay_policy_rows.csv":
+    raise SystemExit("v59 acceptance should bind directly to public source replay policy rows")
+if acceptance_by_id["v59-one-command-demo"]["blocker_evidence_path"] != "source_v59e/public_source_replay_policy_rows.csv":
+    raise SystemExit("v59 acceptance blocker evidence should keep download/refresh readiness explicit")
+
 closure_rows = read_csv(run_dir / "pm_blocker_closure_queue_rows.csv")
 if len(closure_rows) != 6:
     raise SystemExit("PM blocker closure queue should cover the six current blockers")
@@ -632,6 +678,7 @@ required_files = [
     "pm_pr_slice_verification_rows.csv",
     "pm_pr_claim_boundary_rows.csv",
     "pm_pr_review_packet_rows.csv",
+    "pm_pr_acceptance_evidence_rows.csv",
     "pm_blocker_closure_queue_rows.csv",
     "pm_blocker_closure_packet_rows.csv",
     "pm_blocker_required_artifact_rows.csv",
@@ -763,6 +810,15 @@ if manifest.get("pm_pr_review_packet_rows") != 10 or manifest.get("pm_pr_review_
     raise SystemExit("PM PR manifest review packet ledger mismatch")
 if manifest.get("pm_pr_review_packet_ready_rows") != 10 or manifest.get("pm_pr_review_packet_blocked_slice_rows") != 1:
     raise SystemExit("PM PR manifest review packet readiness mismatch")
+if (
+    manifest.get("pm_pr_acceptance_evidence_rows") != 10
+    or manifest.get("pm_pr_acceptance_evidence_ready_rows") != 9
+    or manifest.get("pm_pr_acceptance_evidence_blocked_rows") != 1
+    or manifest.get("pm_pr_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("PM PR manifest acceptance evidence ledger mismatch")
+if "pm_pr_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("PM PR manifest should hash-bind acceptance evidence rows")
 if manifest.get("pm_blocker_closure_queue_rows") != 6:
     raise SystemExit("PM PR manifest blocker closure queue mismatch")
 if manifest.get("pm_blocker_closure_packet_rows") != 6 or manifest.get("pm_blocker_closure_packet_files") != 6:
@@ -809,6 +865,9 @@ for snippet in [
     "pm_pr_claim_boundary_rows=10",
     "pm_pr_review_packet_rows=10",
     "pm_pr_review_packet_files=10",
+    "pm_pr_acceptance_evidence_rows=10",
+    "pm_pr_acceptance_evidence_ready_rows=9",
+    "pm_pr_acceptance_evidence_tests_only_rows=0",
     "pm_blocker_closure_queue_rows=6",
     "pm_blocker_closure_packet_rows=6",
     "pm_blocker_closure_packet_files=6",

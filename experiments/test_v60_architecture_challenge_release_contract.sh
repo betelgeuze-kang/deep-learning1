@@ -176,6 +176,7 @@ required_files = [
     "source_v59e/v59e_one_command_pm_foundation_demo_manifest.json",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_slice_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
@@ -252,6 +253,21 @@ for rel in required_files:
     path = run_dir / rel
     if not path.is_file() or path.stat().st_size == 0:
         raise SystemExit(f"missing v60 artifact: {rel}")
+
+acceptance_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv")
+if len(acceptance_rows) != 10:
+    raise SystemExit("v60 should carry ten PM PR acceptance evidence rows")
+acceptance_by_id = {row["slice_id"]: row for row in acceptance_rows}
+if sum(row["acceptance_ready"] == "1" for row in acceptance_rows) != 9:
+    raise SystemExit("v60 should carry nine ready PM PR acceptance evidence rows")
+if any(row["tests_only_merge_condition"] != "0" for row in acceptance_rows):
+    raise SystemExit("v60 PM PR acceptance evidence should forbid tests-only merge conditions")
+if acceptance_by_id["v53-query-instantiation-1000"]["replay_artifact_path"] != "source_v53t/complete_source_query_span_binding_audit_rows.csv":
+    raise SystemExit("v60 v53 query acceptance should bind to query-span audit rows")
+if acceptance_by_id["v53-system-a-b-g-h-measured"]["replay_artifact_path"] != "source_v59e/local_abgh_row_contract_replay_rows.csv":
+    raise SystemExit("v60 A/B/G/H acceptance should bind to local row-contract replay rows")
+if acceptance_by_id["v59-one-command-demo"]["blocker_evidence_path"] != "source_v59e/public_source_replay_policy_rows.csv":
+    raise SystemExit("v60 v59 acceptance should bind to public source replay policy rows")
 
 v60_pm_v53t_real_adapter_rows = {
     row["criterion_id"]: row

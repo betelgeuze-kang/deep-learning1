@@ -1555,6 +1555,70 @@ Deferred commands: {deferred_text}
     )
 write_csv(run_dir / "pm_pr_review_packet_rows.csv", list(review_packet_rows[0].keys()), review_packet_rows)
 
+review_packet_by_slice = {row["slice_id"]: row for row in review_packet_rows}
+acceptance_replay_path_by_slice = {
+    "docs/v1-roadmap": "source_docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md",
+    "v52-baseline-registry-contract": "source_summaries/v52_llm_rag_baseline_war_summary.csv",
+    "v53-public-repo-source-manifest": "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+    "v53-query-instantiation-1000": "source_v53t/complete_source_query_span_binding_audit_rows.csv",
+    "v53-system-a-b-g-h-measured": "source_v59e/local_abgh_row_contract_replay_rows.csv",
+    "v54-routehint-generation-contract": "source_summaries/v54c_complete_source_grounded_generation_1000_summary.csv",
+    "v56-ruler-longbench-expanded": "source_summaries/v56b_ruler_longbench_expanded_scale_summary.csv",
+    "v58-blind-eval-contract": "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
+    "v59-one-command-demo": "source_v59e/public_source_replay_policy_rows.csv",
+    "v61-ssd-moe-runtime-roadmap": "source_summaries/v61j_one_command_ssd_resident_demo_summary.csv",
+}
+acceptance_blocker_path_by_slice = {
+    "docs/v1-roadmap": "pm_pr_claim_boundary_rows.csv",
+    "v52-baseline-registry-contract": "pm_pr_merge_gate_rows.csv",
+    "v53-public-repo-source-manifest": "source_v53t/complete_source_foundation_freeze_rows.csv",
+    "v53-query-instantiation-1000": "source_v53t/complete_source_foundation_freeze_rows.csv",
+    "v53-system-a-b-g-h-measured": "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "v54-routehint-generation-contract": "source_summaries/v54c_complete_source_grounded_generation_1000_summary.csv",
+    "v56-ruler-longbench-expanded": "blocker_packets/v56-replay-artifact-missing.md",
+    "v58-blind-eval-contract": "blocker_packets/v58-real-blind-eval-missing.md",
+    "v59-one-command-demo": "source_v59e/public_source_replay_policy_rows.csv",
+    "v61-ssd-moe-runtime-roadmap": "source_summaries/v61j_one_command_ssd_resident_demo_summary.csv",
+}
+acceptance_evidence_rows = []
+for row in slice_rows:
+    slice_id = row["slice_id"]
+    claim_row = claim_by_slice[slice_id]
+    verification_rows_for_slice = verification_by_slice[slice_id]
+    local_commands = " | ".join(
+        command_row["command"]
+        for command_row in verification_rows_for_slice
+        if command_row["execution_policy"] == "local-smoke"
+    )
+    deferred_commands = " | ".join(
+        command_row["command"]
+        for command_row in verification_rows_for_slice
+        if command_row["execution_policy"] != "local-smoke"
+    )
+    replay_path = acceptance_replay_path_by_slice[slice_id]
+    blocker_path = acceptance_blocker_path_by_slice[slice_id]
+    tests_only_merge_condition = int(row["merge_condition"].strip().lower() in {"tests pass", "test pass", "tests"})
+    acceptance_evidence_rows.append(
+        {
+            "ordinal": row["ordinal"],
+            "slice_id": slice_id,
+            "claim_evidence_path": claim_row["evidence_path"],
+            "claim_boundary_status": "pass" if row["claim_boundary_ok"] == "1" else "blocked",
+            "replay_artifact_path": replay_path,
+            "replay_artifact_present": str(int((run_dir / replay_path).is_file())),
+            "replay_artifact_status": "pass" if row["replay_artifact_ok"] == "1" else "blocked",
+            "blocker_evidence_path": blocker_path,
+            "blocker_false_positive_status": "pass" if row["blocker_false_positive_closed"] == "1" else "blocked",
+            "local_smoke_commands": local_commands,
+            "deferred_commands": deferred_commands or "none",
+            "tests_only_merge_condition": str(tests_only_merge_condition),
+            "acceptance_ready": row["current_merge_ready"],
+            "acceptance_signal": row["reason"],
+            "review_packet_path": review_packet_by_slice[slice_id]["packet_path"],
+        }
+    )
+write_csv(run_dir / "pm_pr_acceptance_evidence_rows.csv", list(acceptance_evidence_rows[0].keys()), acceptance_evidence_rows)
+
 closure_by_blocker = {row["blocker_class"]: row for row in blocker_closure_rows}
 required_artifacts_by_blocker = {row["blocker_class"]: [] for row in blocker_closure_rows}
 for row in blocker_required_artifact_rows:
@@ -1773,6 +1837,10 @@ review_packet_row_count = len(review_packet_rows)
 review_packet_file_count = sum(1 for row in review_packet_rows if (run_dir / row["packet_path"]).is_file())
 review_packet_ready_rows = sum(1 for row in review_packet_rows if row["packet_ready"] == "1")
 review_packet_blocked_slice_rows = sum(1 for row in review_packet_rows if row["slice_current_merge_ready"] == "0")
+acceptance_evidence_row_count = len(acceptance_evidence_rows)
+acceptance_evidence_ready_rows = sum(1 for row in acceptance_evidence_rows if row["acceptance_ready"] == "1")
+acceptance_evidence_blocked_rows = acceptance_evidence_row_count - acceptance_evidence_ready_rows
+acceptance_evidence_tests_only_rows = sum(1 for row in acceptance_evidence_rows if row["tests_only_merge_condition"] == "1")
 blocker_closure_packet_rows = len(blocker_packet_rows)
 blocker_closure_packet_files = sum(1 for row in blocker_packet_rows if (run_dir / row["packet_path"]).is_file())
 blocker_closure_packet_ready_rows = sum(1 for row in blocker_packet_rows if row["packet_ready"] == "1")
@@ -1821,6 +1889,10 @@ summary = {
     "pm_pr_review_packet_files": str(review_packet_file_count),
     "pm_pr_review_packet_ready_rows": str(review_packet_ready_rows),
     "pm_pr_review_packet_blocked_slice_rows": str(review_packet_blocked_slice_rows),
+    "pm_pr_acceptance_evidence_rows": str(acceptance_evidence_row_count),
+    "pm_pr_acceptance_evidence_ready_rows": str(acceptance_evidence_ready_rows),
+    "pm_pr_acceptance_evidence_blocked_rows": str(acceptance_evidence_blocked_rows),
+    "pm_pr_acceptance_evidence_tests_only_rows": str(acceptance_evidence_tests_only_rows),
     "pm_blocker_closure_queue_rows": str(blocker_closure_queue_rows),
     "pm_blocker_closure_deferred_rows": str(blocker_closure_deferred_rows),
     "pm_blocker_closure_approval_required_rows": str(blocker_closure_approval_required_rows),
@@ -1873,6 +1945,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- pm_pr_claim_boundary_rows={claim_boundary_row_count}\n"
     f"- pm_pr_review_packet_rows={review_packet_row_count}\n"
     f"- pm_pr_review_packet_files={review_packet_file_count}\n"
+    f"- pm_pr_acceptance_evidence_rows={acceptance_evidence_row_count}\n"
+    f"- pm_pr_acceptance_evidence_ready_rows={acceptance_evidence_ready_rows}\n"
+    f"- pm_pr_acceptance_evidence_tests_only_rows={acceptance_evidence_tests_only_rows}\n"
     f"- pm_blocker_closure_queue_rows={blocker_closure_queue_rows}\n"
     f"- pm_blocker_closure_packet_rows={blocker_closure_packet_rows}\n"
     f"- pm_blocker_closure_packet_files={blocker_closure_packet_files}\n"
@@ -1920,6 +1995,10 @@ manifest = {
     "pm_pr_review_packet_files": review_packet_file_count,
     "pm_pr_review_packet_ready_rows": review_packet_ready_rows,
     "pm_pr_review_packet_blocked_slice_rows": review_packet_blocked_slice_rows,
+    "pm_pr_acceptance_evidence_rows": acceptance_evidence_row_count,
+    "pm_pr_acceptance_evidence_ready_rows": acceptance_evidence_ready_rows,
+    "pm_pr_acceptance_evidence_blocked_rows": acceptance_evidence_blocked_rows,
+    "pm_pr_acceptance_evidence_tests_only_rows": acceptance_evidence_tests_only_rows,
     "pm_blocker_closure_queue_rows": blocker_closure_queue_rows,
     "pm_blocker_closure_deferred_rows": blocker_closure_deferred_rows,
     "pm_blocker_closure_packet_rows": blocker_closure_packet_rows,
@@ -1942,6 +2021,7 @@ manifest = {
     "pm_roadmap_requirement_rows_sha256": sha256(run_dir / "pm_roadmap_requirement_rows.csv"),
     "pm_pr_claim_boundary_rows_sha256": sha256(run_dir / "pm_pr_claim_boundary_rows.csv"),
     "pm_pr_review_packet_rows_sha256": sha256(run_dir / "pm_pr_review_packet_rows.csv"),
+    "pm_pr_acceptance_evidence_rows_sha256": sha256(run_dir / "pm_pr_acceptance_evidence_rows.csv"),
     "pm_pr_slice_file_rows_sha256": sha256(run_dir / "pm_pr_slice_file_rows.csv"),
     "pm_pr_slice_verification_rows_sha256": sha256(run_dir / "pm_pr_slice_verification_rows.csv"),
     "pm_blocker_closure_queue_rows_sha256": sha256(run_dir / "pm_blocker_closure_queue_rows.csv"),

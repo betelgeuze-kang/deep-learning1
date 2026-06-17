@@ -134,6 +134,9 @@ expected = {
     "pm_pr_review_packet_rows": "10",
     "pm_pr_review_packet_files": "10",
     "pm_pr_review_packet_bundle_ready": "1",
+    "pm_pr_acceptance_evidence_rows": "10",
+    "pm_pr_acceptance_evidence_ready_rows": "9",
+    "pm_pr_acceptance_evidence_tests_only_rows": "0",
     "pm_blocker_closure_packet_rows": "6",
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_bundle_ready": "1",
@@ -268,6 +271,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/pm_pr_slice_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_merge_gate_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_closure_packet_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
@@ -313,6 +317,21 @@ for rel in required_files:
     path = run_dir / rel
     if not path.is_file() or path.stat().st_size == 0:
         raise SystemExit(f"missing v59e artifact: {rel}")
+
+acceptance_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv")
+if len(acceptance_rows) != 10:
+    raise SystemExit("v59e PM sidecar should carry ten PR acceptance evidence rows")
+acceptance_by_id = {row["slice_id"]: row for row in acceptance_rows}
+if sum(row["acceptance_ready"] == "1" for row in acceptance_rows) != 9:
+    raise SystemExit("v59e PM sidecar should carry nine ready PR acceptance rows")
+if any(row["tests_only_merge_condition"] != "0" for row in acceptance_rows):
+    raise SystemExit("v59e PM sidecar PR acceptance rows should forbid tests-only merge conditions")
+if acceptance_by_id["v53-query-instantiation-1000"]["replay_artifact_path"] != "source_v53t/complete_source_query_span_binding_audit_rows.csv":
+    raise SystemExit("v59e PM sidecar v53 query acceptance should bind to query-span audit rows")
+if acceptance_by_id["v53-system-a-b-g-h-measured"]["replay_artifact_path"] != "source_v59e/local_abgh_row_contract_replay_rows.csv":
+    raise SystemExit("v59e PM sidecar A/B/G/H acceptance should bind to local row-contract replay rows")
+if acceptance_by_id["v59-one-command-demo"]["blocker_evidence_path"] != "source_v59e/public_source_replay_policy_rows.csv":
+    raise SystemExit("v59e PM sidecar v59 acceptance should bind to public source replay policy rows")
 
 pm_v53t_real_adapter_rows = {
     row["criterion_id"]: row
@@ -553,6 +572,12 @@ if "v58_blind_eval_return_contract_map_rows_sha256" not in manifest:
     raise SystemExit("v59e manifest should hash-bind v58 return contract map rows")
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
+if (
+    manifest.get("pm_pr_acceptance_evidence_rows") != 10
+    or manifest.get("pm_pr_acceptance_evidence_ready_rows") != 9
+    or manifest.get("pm_pr_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("v59e manifest should record PM PR acceptance evidence rows")
 if (
     manifest.get("pm_pr_v53_query_span_binding_audit_ready") != 1
     or manifest.get("pm_pr_v53_query_span_binding_audit_rows") != 1000

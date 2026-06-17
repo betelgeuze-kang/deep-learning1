@@ -1238,6 +1238,7 @@ pm_pr_core_files = [
     (pr_run_dir / "pm_pr_slice_file_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_slice_file_rows.csv", "evidence"),
     (pr_run_dir / "pm_pr_slice_verification_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_slice_verification_rows.csv", "evidence"),
     (pr_run_dir / "pm_pr_review_packet_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv", "evidence"),
+    (pr_run_dir / "pm_pr_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv", "evidence"),
     (pr_run_dir / "pm_roadmap_requirement_rows.csv", "source_pm_pr_claim_slice_gate/pm_roadmap_requirement_rows.csv", "evidence"),
     (pr_run_dir / "pm_blocker_closure_queue_rows.csv", "source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv", "evidence"),
     (pr_run_dir / "pm_blocker_closure_packet_rows.csv", "source_pm_pr_claim_slice_gate/pm_blocker_closure_packet_rows.csv", "evidence"),
@@ -1419,6 +1420,9 @@ summary["pm_pr_v53_direct_content_snapshot_rows"] = pr_summary.get("v53_foundati
 summary["pm_pr_review_packet_rows"] = pr_summary["pm_pr_review_packet_rows"]
 summary["pm_pr_review_packet_files"] = str(len(review_packet_files))
 summary["pm_pr_review_packet_bundle_ready"] = str(review_packet_ready)
+summary["pm_pr_acceptance_evidence_rows"] = pr_summary["pm_pr_acceptance_evidence_rows"]
+summary["pm_pr_acceptance_evidence_ready_rows"] = pr_summary["pm_pr_acceptance_evidence_ready_rows"]
+summary["pm_pr_acceptance_evidence_tests_only_rows"] = pr_summary["pm_pr_acceptance_evidence_tests_only_rows"]
 summary["pm_blocker_closure_packet_rows"] = pr_summary["pm_blocker_closure_packet_rows"]
 summary["pm_blocker_closure_packet_files"] = str(len(blocker_packet_files))
 summary["pm_blocker_closure_packet_bundle_ready"] = str(blocker_packet_ready)
@@ -1630,6 +1634,9 @@ manifest["bundle_files"] = len(bundle_rows)
 manifest["pm_pr_claim_slice_gate_ready"] = as_int(pr_summary, "v1_0_pm_pr_claim_slice_gate_ready")
 manifest["pm_pr_claim_slice_bundle_ready"] = pm_pr_claim_slice_bundle_ready
 manifest["pm_pr_review_packet_files"] = len(review_packet_files)
+manifest["pm_pr_acceptance_evidence_rows"] = as_int(pr_summary, "pm_pr_acceptance_evidence_rows")
+manifest["pm_pr_acceptance_evidence_ready_rows"] = as_int(pr_summary, "pm_pr_acceptance_evidence_ready_rows")
+manifest["pm_pr_acceptance_evidence_tests_only_rows"] = as_int(pr_summary, "pm_pr_acceptance_evidence_tests_only_rows")
 manifest["pm_pr_v53_query_span_binding_audit_ready"] = as_int(pr_summary, "v53_foundation_query_span_binding_audit_ready")
 manifest["pm_pr_v53_query_span_binding_audit_rows"] = as_int(pr_summary, "v53_foundation_query_span_binding_audit_rows")
 manifest["pm_pr_v53_query_span_binding_pass_rows"] = as_int(pr_summary, "v53_foundation_query_span_binding_pass_rows")

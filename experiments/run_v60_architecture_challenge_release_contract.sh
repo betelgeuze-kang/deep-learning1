@@ -151,6 +151,7 @@ for rel in [
     "sha256_manifest.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_slice_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
