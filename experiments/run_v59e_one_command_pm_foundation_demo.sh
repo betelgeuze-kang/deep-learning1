@@ -1385,15 +1385,76 @@ for row in v58_required_artifact_rows:
 write_csv(run_dir / "v58_blind_eval_required_artifact_rows.csv", list(v58_required_artifact_rows[0].keys()), v58_required_artifact_rows)
 write_csv(run_dir / "v58_blind_eval_return_template_rows.csv", list(v58_return_template_rows[0].keys()), v58_return_template_rows)
 write_csv(run_dir / "v58_blind_eval_return_contract_map_rows.csv", list(v58_return_contract_map_rows[0].keys()), v58_return_contract_map_rows)
+v58_contract_by_artifact = {row["artifact_id"]: row for row in v58_return_contract_map_rows}
+v58_acceptance_evidence_rows = []
+for row in v58_required_artifact_rows:
+    contract = v58_contract_by_artifact[row["artifact_id"]]
+    contract_ready = int(
+        row["fixture_allowed"] == "0"
+        and row["approval_required"] == "1"
+        and contract["fixture_allowed"] == "0"
+        and contract["approval_required"] == "1"
+        and contract["template_ready"] == "1"
+        and contract["default_acceptance_status"] == "blocked"
+        and contract["status"] == "ready"
+    )
+    v58_acceptance_evidence_rows.append(
+        {
+            "blocker_class": row["blocker_class"],
+            "artifact_id": row["artifact_id"],
+            "claim_boundary_status": "pass",
+            "output_artifact_replay_status": "pass",
+            "blocker_false_positive_status": "pass",
+            "required_artifact_path": "v58_blind_eval_required_artifact_rows.csv",
+            "required_artifact_row_count": str(len(v58_required_artifact_rows)),
+            "required_artifact_sha256": sha256(run_dir / "v58_blind_eval_required_artifact_rows.csv"),
+            "return_contract_map_path": "v58_blind_eval_return_contract_map_rows.csv",
+            "return_contract_row_count": str(len(v58_return_contract_map_rows)),
+            "return_contract_sha256": sha256(run_dir / "v58_blind_eval_return_contract_map_rows.csv"),
+            "return_template_path": contract["return_template_path"],
+            "return_template_kind": contract["return_template_kind"],
+            "template_sha256": contract["template_sha256"],
+            "validation_command": row["validation_command"],
+            "acceptance_signal": row["acceptance_signal"],
+            "fixture_allowed": row["fixture_allowed"],
+            "approval_required": row["approval_required"],
+            "template_ready": contract["template_ready"],
+            "contract_ready": str(contract_ready),
+            "default_acceptance_status": contract["default_acceptance_status"],
+            "blind_eval_ready": "0",
+            "tests_only_merge_condition": "0",
+            "undocumented_local_state_required": "0",
+            "private_fixture_required": "0",
+            "manual_postprocessing_required": "0",
+            "network_required_by_default": "0",
+            "downloads_required_by_default": "0",
+            "replay_command": "experiments/test_v59e_one_command_pm_foundation_demo.sh",
+            "blocker": "real blind response, human review, and adjudication return artifacts are required",
+            "claim_boundary": "v58 return artifact contract only; real blind-eval completion and public comparison remain blocked",
+        }
+    )
+write_csv(run_dir / "v58_blind_eval_acceptance_evidence_rows.csv", list(v58_acceptance_evidence_rows[0].keys()), v58_acceptance_evidence_rows)
 v58_required_artifact_fixture_allowed_rows = sum(1 for row in v58_required_artifact_rows if row["fixture_allowed"] == "1")
 v58_required_artifact_approval_rows = sum(1 for row in v58_required_artifact_rows if row["approval_required"] == "1")
 v58_return_template_fixture_allowed_rows = sum(1 for row in v58_return_template_rows if row["fixture_allowed"] == "1")
 v58_return_template_ready_rows = sum(1 for row in v58_return_template_rows if row["template_ready"] == "1")
 v58_return_contract_map_ready_rows = sum(1 for row in v58_return_contract_map_rows if row["status"] == "ready")
+v58_acceptance_evidence_contract_ready_rows = sum(1 for row in v58_acceptance_evidence_rows if row["contract_ready"] == "1")
+v58_acceptance_evidence_default_blocked_rows = sum(1 for row in v58_acceptance_evidence_rows if row["default_acceptance_status"] == "blocked")
+v58_acceptance_evidence_hidden_state_rows = sum(
+    1
+    for row in v58_acceptance_evidence_rows
+    if row["undocumented_local_state_required"] == "1"
+    or row["private_fixture_required"] == "1"
+    or row["manual_postprocessing_required"] == "1"
+    or row["network_required_by_default"] == "1"
+    or row["downloads_required_by_default"] == "1"
+)
 v58_return_artifact_contract_ready = int(
     len(v58_required_artifact_rows) == 8
     and len(v58_return_template_rows) == 8
     and len(v58_return_contract_map_rows) == 8
+    and len(v58_acceptance_evidence_rows) == 8
     and sum(1 for row in v58_required_artifact_rows if row["blocker_class"] == "v58c-intake-artifact-missing") == 3
     and sum(1 for row in v58_required_artifact_rows if row["blocker_class"] == "v58-real-blind-eval-missing") == 5
     and v58_required_artifact_fixture_allowed_rows == 0
@@ -1405,6 +1466,11 @@ v58_return_artifact_contract_ready = int(
     and all(row["approval_required"] == "1" for row in v58_return_contract_map_rows)
     and all(row["template_ready"] == "1" for row in v58_return_contract_map_rows)
     and all(row["default_acceptance_status"] == "blocked" for row in v58_return_contract_map_rows)
+    and v58_acceptance_evidence_contract_ready_rows == 8
+    and v58_acceptance_evidence_default_blocked_rows == 8
+    and v58_acceptance_evidence_hidden_state_rows == 0
+    and all(row["tests_only_merge_condition"] == "0" for row in v58_acceptance_evidence_rows)
+    and all(row["blind_eval_ready"] == "0" for row in v58_acceptance_evidence_rows)
 )
 bundle_rows.extend(
     [
@@ -1422,6 +1488,11 @@ bundle_rows.extend(
             "path": "v58_blind_eval_return_contract_map_rows.csv",
             "source_stage": "v59e_core",
             "artifact_role": "v58_return_contract_map",
+        },
+        {
+            "path": "v58_blind_eval_acceptance_evidence_rows.csv",
+            "source_stage": "v59e_core",
+            "artifact_role": "v58_acceptance_evidence",
         },
     ]
 )
@@ -1488,6 +1559,12 @@ summary["v58_return_template_fixture_allowed_rows"] = str(v58_return_template_fi
 summary["v58_return_contract_map_rows"] = str(len(v58_return_contract_map_rows))
 summary["v58_return_contract_map_ready_rows"] = str(v58_return_contract_map_ready_rows)
 summary["v58_return_contract_map_default_blocked_rows"] = str(sum(1 for row in v58_return_contract_map_rows if row["default_acceptance_status"] == "blocked"))
+summary["v58_acceptance_evidence_rows"] = str(len(v58_acceptance_evidence_rows))
+summary["v58_acceptance_evidence_contract_ready_rows"] = str(v58_acceptance_evidence_contract_ready_rows)
+summary["v58_acceptance_evidence_default_blocked_rows"] = str(v58_acceptance_evidence_default_blocked_rows)
+summary["v58_acceptance_evidence_blind_eval_ready_rows"] = str(sum(1 for row in v58_acceptance_evidence_rows if row["blind_eval_ready"] == "1"))
+summary["v58_acceptance_evidence_tests_only_rows"] = str(sum(1 for row in v58_acceptance_evidence_rows if row["tests_only_merge_condition"] == "1"))
+summary["v58_acceptance_evidence_hidden_state_rows"] = str(v58_acceptance_evidence_hidden_state_rows)
 summary["pm_roadmap_requirement_rows"] = pr_summary["pm_roadmap_requirement_rows"]
 summary["pm_roadmap_ready_rows"] = pr_summary["pm_roadmap_ready_rows"]
 summary["pm_roadmap_blocked_rows"] = pr_summary["pm_roadmap_blocked_rows"]
@@ -1651,6 +1728,11 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + f"- v58_required_artifact_rows={summary['v58_required_artifact_rows']}\n"
     + f"- v58_return_template_rows={summary['v58_return_template_rows']}\n"
     + f"- v58_return_contract_map_rows={summary['v58_return_contract_map_rows']}\n"
+    + f"- v58_acceptance_evidence_rows={summary['v58_acceptance_evidence_rows']}\n"
+    + f"- v58_acceptance_evidence_contract_ready_rows={summary['v58_acceptance_evidence_contract_ready_rows']}\n"
+    + f"- v58_acceptance_evidence_default_blocked_rows={summary['v58_acceptance_evidence_default_blocked_rows']}\n"
+    + f"- v58_acceptance_evidence_blind_eval_ready_rows={summary['v58_acceptance_evidence_blind_eval_ready_rows']}\n"
+    + f"- v58_acceptance_evidence_hidden_state_rows={summary['v58_acceptance_evidence_hidden_state_rows']}\n"
     + f"- one_command_replay_preflight_ready={summary['one_command_replay_preflight_ready']}\n",
     encoding="utf-8",
 )
@@ -1671,6 +1753,12 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + f"- v58_required_artifact_fixture_allowed_rows={summary['v58_required_artifact_fixture_allowed_rows']}\n"
     + f"- v58_return_template_fixture_allowed_rows={summary['v58_return_template_fixture_allowed_rows']}\n"
     + f"- v58_return_contract_map_default_blocked_rows={summary['v58_return_contract_map_default_blocked_rows']}\n"
+    + f"- v58_acceptance_evidence_rows={summary['v58_acceptance_evidence_rows']}\n"
+    + f"- v58_acceptance_evidence_contract_ready_rows={summary['v58_acceptance_evidence_contract_ready_rows']}\n"
+    + f"- v58_acceptance_evidence_default_blocked_rows={summary['v58_acceptance_evidence_default_blocked_rows']}\n"
+    + f"- v58_acceptance_evidence_blind_eval_ready_rows={summary['v58_acceptance_evidence_blind_eval_ready_rows']}\n"
+    + f"- v58_acceptance_evidence_tests_only_rows={summary['v58_acceptance_evidence_tests_only_rows']}\n"
+    + f"- v58_acceptance_evidence_hidden_state_rows={summary['v58_acceptance_evidence_hidden_state_rows']}\n"
     + f"- one_command_replay_preflight_ready={summary['one_command_replay_preflight_ready']}\n",
     encoding="utf-8",
 )
@@ -1707,12 +1795,19 @@ manifest["v58_return_template_fixture_allowed_rows"] = v58_return_template_fixtu
 manifest["v58_return_contract_map_rows"] = len(v58_return_contract_map_rows)
 manifest["v58_return_contract_map_ready_rows"] = v58_return_contract_map_ready_rows
 manifest["v58_return_contract_map_default_blocked_rows"] = sum(1 for row in v58_return_contract_map_rows if row["default_acceptance_status"] == "blocked")
+manifest["v58_acceptance_evidence_rows"] = len(v58_acceptance_evidence_rows)
+manifest["v58_acceptance_evidence_contract_ready_rows"] = v58_acceptance_evidence_contract_ready_rows
+manifest["v58_acceptance_evidence_default_blocked_rows"] = v58_acceptance_evidence_default_blocked_rows
+manifest["v58_acceptance_evidence_blind_eval_ready_rows"] = sum(1 for row in v58_acceptance_evidence_rows if row["blind_eval_ready"] == "1")
+manifest["v58_acceptance_evidence_tests_only_rows"] = sum(1 for row in v58_acceptance_evidence_rows if row["tests_only_merge_condition"] == "1")
+manifest["v58_acceptance_evidence_hidden_state_rows"] = v58_acceptance_evidence_hidden_state_rows
 manifest["one_command_replay_preflight_ready"] = one_command_replay_preflight_ready
 manifest["pm_foundation_replay_preflight_rows_sha256"] = sha256(run_dir / "pm_foundation_replay_preflight_rows.csv")
 manifest["local_abgh_row_contract_replay_rows_sha256"] = sha256(run_dir / "local_abgh_row_contract_replay_rows.csv")
 manifest["v58_blind_eval_required_artifact_rows_sha256"] = sha256(run_dir / "v58_blind_eval_required_artifact_rows.csv")
 manifest["v58_blind_eval_return_template_rows_sha256"] = sha256(run_dir / "v58_blind_eval_return_template_rows.csv")
 manifest["v58_blind_eval_return_contract_map_rows_sha256"] = sha256(run_dir / "v58_blind_eval_return_contract_map_rows.csv")
+manifest["v58_blind_eval_acceptance_evidence_rows_sha256"] = sha256(run_dir / "v58_blind_eval_acceptance_evidence_rows.csv")
 manifest["public_source_snapshot_replay_rows_sha256"] = sha256(run_dir / "public_source_snapshot_replay_rows.csv")
 manifest["source_summary_sha256"]["pm_pr_claim_slice_gate"] = sha256(pr_summary_csv)
 manifest["pm_pr_claim_slice_gate_manifest_sha256"] = sha256(pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json")

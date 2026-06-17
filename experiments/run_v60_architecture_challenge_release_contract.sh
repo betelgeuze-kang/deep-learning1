@@ -210,6 +210,7 @@ for rel in [
     "v58_blind_eval_required_artifact_rows.csv",
     "v58_blind_eval_return_template_rows.csv",
     "v58_blind_eval_return_contract_map_rows.csv",
+    "v58_blind_eval_acceptance_evidence_rows.csv",
 ]:
     copy(v59e_dir / rel, f"source_v59e/{rel}")
 copy(results / "v59e_one_command_pm_foundation_demo_summary.csv", "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv")
@@ -665,6 +666,12 @@ summary = {
     "v58_return_contract_map_rows": as_int(v59e, "v58_return_contract_map_rows"),
     "v58_return_contract_map_ready_rows": as_int(v59e, "v58_return_contract_map_ready_rows"),
     "v58_return_contract_map_default_blocked_rows": as_int(v59e, "v58_return_contract_map_default_blocked_rows"),
+    "v58_acceptance_evidence_rows": as_int(v59e, "v58_acceptance_evidence_rows"),
+    "v58_acceptance_evidence_contract_ready_rows": as_int(v59e, "v58_acceptance_evidence_contract_ready_rows"),
+    "v58_acceptance_evidence_default_blocked_rows": as_int(v59e, "v58_acceptance_evidence_default_blocked_rows"),
+    "v58_acceptance_evidence_blind_eval_ready_rows": as_int(v59e, "v58_acceptance_evidence_blind_eval_ready_rows"),
+    "v58_acceptance_evidence_tests_only_rows": as_int(v59e, "v58_acceptance_evidence_tests_only_rows"),
+    "v58_acceptance_evidence_hidden_state_rows": as_int(v59e, "v58_acceptance_evidence_hidden_state_rows"),
     "blind_eval_ready": as_int(v59e, "v58_full_blind_eval_ready"),
     "one_command_pm_foundation_ready": as_int(v59e, "v59e_one_command_pm_foundation_demo_ready"),
     "one_command_real_replay_ready": 0,
@@ -702,6 +709,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- v56 expanded benchmark replay artifact\n"
     "- v58c blind-response intake artifact or explicit dependency closure\n"
     "- v58d blind-review/adjudication return artifact or explicit dependency closure\n"
+    "- v58 acceptance evidence rows with real blind-eval completion still blocked\n"
     "- v58 real blind eval responses and human review\n"
     "- full v59 public challenge replay over all real rows\n"
     "- approved public-source download/refresh evidence for the full v59 public replay\n"
@@ -731,6 +739,13 @@ manifest = {
     "v59e_v58_blind_eval_required_artifact_sha256": sha256(v59e_dir / "v58_blind_eval_required_artifact_rows.csv"),
     "v59e_v58_blind_eval_return_template_sha256": sha256(v59e_dir / "v58_blind_eval_return_template_rows.csv"),
     "v59e_v58_blind_eval_return_contract_map_sha256": sha256(v59e_dir / "v58_blind_eval_return_contract_map_rows.csv"),
+    "v59e_v58_blind_eval_acceptance_evidence_sha256": sha256(v59e_dir / "v58_blind_eval_acceptance_evidence_rows.csv"),
+    "v58_acceptance_evidence_rows": as_int(v59e, "v58_acceptance_evidence_rows"),
+    "v58_acceptance_evidence_contract_ready_rows": as_int(v59e, "v58_acceptance_evidence_contract_ready_rows"),
+    "v58_acceptance_evidence_default_blocked_rows": as_int(v59e, "v58_acceptance_evidence_default_blocked_rows"),
+    "v58_acceptance_evidence_blind_eval_ready_rows": as_int(v59e, "v58_acceptance_evidence_blind_eval_ready_rows"),
+    "v58_acceptance_evidence_tests_only_rows": as_int(v59e, "v58_acceptance_evidence_tests_only_rows"),
+    "v58_acceptance_evidence_hidden_state_rows": as_int(v59e, "v58_acceptance_evidence_hidden_state_rows"),
     "pm_pr_summary_sha256": sha256(results / "v1_0_pm_pr_claim_slice_gate_summary.csv"),
     "h10_pm_criteria_rows": len(h10_pm_acceptance_rows),
     "h10_pm_criteria_ready": h10_pm_criteria_ready,

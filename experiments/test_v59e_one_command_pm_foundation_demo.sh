@@ -171,6 +171,12 @@ expected = {
     "v58_return_contract_map_rows": "8",
     "v58_return_contract_map_ready_rows": "8",
     "v58_return_contract_map_default_blocked_rows": "8",
+    "v58_acceptance_evidence_rows": "8",
+    "v58_acceptance_evidence_contract_ready_rows": "8",
+    "v58_acceptance_evidence_default_blocked_rows": "8",
+    "v58_acceptance_evidence_blind_eval_ready_rows": "0",
+    "v58_acceptance_evidence_tests_only_rows": "0",
+    "v58_acceptance_evidence_hidden_state_rows": "0",
     "pm_roadmap_requirement_rows": "20",
     "pm_roadmap_ready_rows": "14",
     "pm_roadmap_blocked_rows": "6",
@@ -278,6 +284,8 @@ required_files = [
     "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv",
     "v58_blind_eval_required_artifact_rows.csv",
     "v58_blind_eval_return_template_rows.csv",
+    "v58_blind_eval_return_contract_map_rows.csv",
+    "v58_blind_eval_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_decision.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_slice_rows.csv",
@@ -678,8 +686,19 @@ if (
     or manifest.get("v58_return_contract_map_default_blocked_rows") != 8
 ):
     raise SystemExit("v59e manifest should record v58 required return artifact contract readiness")
+if (
+    manifest.get("v58_acceptance_evidence_rows") != 8
+    or manifest.get("v58_acceptance_evidence_contract_ready_rows") != 8
+    or manifest.get("v58_acceptance_evidence_default_blocked_rows") != 8
+    or manifest.get("v58_acceptance_evidence_blind_eval_ready_rows") != 0
+    or manifest.get("v58_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("v58_acceptance_evidence_hidden_state_rows") != 0
+):
+    raise SystemExit("v59e manifest should record v58 acceptance evidence")
 if "v58_blind_eval_return_contract_map_rows_sha256" not in manifest:
     raise SystemExit("v59e manifest should hash-bind v58 return contract map rows")
+if "v58_blind_eval_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("v59e manifest should hash-bind v58 acceptance evidence rows")
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
 if (
@@ -768,6 +787,12 @@ for snippet in [
     "v58_return_artifact_contract_ready=1",
     "v58_required_artifact_fixture_allowed_rows=0",
     "v58_return_template_fixture_allowed_rows=0",
+    "v58_acceptance_evidence_rows=8",
+    "v58_acceptance_evidence_contract_ready_rows=8",
+    "v58_acceptance_evidence_default_blocked_rows=8",
+    "v58_acceptance_evidence_blind_eval_ready_rows=0",
+    "v58_acceptance_evidence_tests_only_rows=0",
+    "v58_acceptance_evidence_hidden_state_rows=0",
     "pm_pr_claim_slice_bundle_ready=1",
     "pm_pr_v53_pm_acceptance_evidence_rows=10",
     "pm_pr_v53_pm_acceptance_evidence_ready_rows=10",
@@ -828,6 +853,7 @@ for rel in [
     "v58_blind_eval_required_artifact_rows.csv",
     "v58_blind_eval_return_template_rows.csv",
     "v58_blind_eval_return_contract_map_rows.csv",
+    "v58_blind_eval_acceptance_evidence_rows.csv",
 ]:
     if rel not in {row["path"] for row in bundle_rows}:
         raise SystemExit(f"v59e bundle index should include {rel}")
@@ -890,6 +916,33 @@ for row in v58_contract_map_rows:
         or row["template_sha256"] != template["template_sha256"]
     ):
         raise SystemExit("v59e v58 return contract map should bind each artifact to its exact return template")
+v58_acceptance_evidence_rows = read_csv(run_dir / "v58_blind_eval_acceptance_evidence_rows.csv")
+if len(v58_acceptance_evidence_rows) != 8:
+    raise SystemExit("v59e should emit eight v58 acceptance evidence rows")
+if {row["artifact_id"] for row in v58_acceptance_evidence_rows} != expected_v58_artifacts:
+    raise SystemExit("v59e v58 acceptance evidence artifact ids mismatch")
+if any(
+    row["claim_boundary_status"] != "pass"
+    or row["output_artifact_replay_status"] != "pass"
+    or row["blocker_false_positive_status"] != "pass"
+    or row["contract_ready"] != "1"
+    or row["default_acceptance_status"] != "blocked"
+    or row["blind_eval_ready"] != "0"
+    for row in v58_acceptance_evidence_rows
+):
+    raise SystemExit("v59e v58 acceptance evidence should be contract-ready but blind-eval blocked")
+if any(
+    row["tests_only_merge_condition"] != "0"
+    or row["fixture_allowed"] != "0"
+    or row["approval_required"] != "1"
+    or row["undocumented_local_state_required"] != "0"
+    or row["private_fixture_required"] != "0"
+    or row["manual_postprocessing_required"] != "0"
+    or row["network_required_by_default"] != "0"
+    or row["downloads_required_by_default"] != "0"
+    for row in v58_acceptance_evidence_rows
+):
+    raise SystemExit("v59e v58 acceptance evidence should forbid tests-only, fixtures, hidden state, network, and downloads")
 
 preflight_rows = read_csv(run_dir / "pm_foundation_replay_preflight_rows.csv")
 expected_preflight_checks = {

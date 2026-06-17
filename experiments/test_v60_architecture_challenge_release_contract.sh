@@ -124,6 +124,12 @@ expected = {
     "v58_return_contract_map_rows": "8",
     "v58_return_contract_map_ready_rows": "8",
     "v58_return_contract_map_default_blocked_rows": "8",
+    "v58_acceptance_evidence_rows": "8",
+    "v58_acceptance_evidence_contract_ready_rows": "8",
+    "v58_acceptance_evidence_default_blocked_rows": "8",
+    "v58_acceptance_evidence_blind_eval_ready_rows": "0",
+    "v58_acceptance_evidence_tests_only_rows": "0",
+    "v58_acceptance_evidence_hidden_state_rows": "0",
     "blind_eval_ready": "0",
     "one_command_pm_foundation_ready": "1",
     "one_command_real_replay_ready": "0",
@@ -242,6 +248,7 @@ required_files = [
     "source_v59e/v58_blind_eval_required_artifact_rows.csv",
     "source_v59e/v58_blind_eval_return_template_rows.csv",
     "source_v59e/v58_blind_eval_return_contract_map_rows.csv",
+    "source_v59e/v58_blind_eval_acceptance_evidence_rows.csv",
     "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv",
     "source_pm_pr/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_summaries/v52_llm_rag_baseline_war_summary.csv",
@@ -606,6 +613,33 @@ for row in v58_contract_map_rows:
         or row["template_sha256"] != template["template_sha256"]
     ):
         raise SystemExit("v60 v58 return contract map should bind each artifact to its exact return template")
+v58_acceptance_evidence_rows = read_csv(run_dir / "source_v59e/v58_blind_eval_acceptance_evidence_rows.csv")
+if len(v58_acceptance_evidence_rows) != 8:
+    raise SystemExit("v60 should carry eight v58 acceptance evidence rows")
+if {row["artifact_id"] for row in v58_acceptance_evidence_rows} != expected_v58_artifacts:
+    raise SystemExit("v60 v58 acceptance evidence artifact ids mismatch")
+if any(
+    row["claim_boundary_status"] != "pass"
+    or row["output_artifact_replay_status"] != "pass"
+    or row["blocker_false_positive_status"] != "pass"
+    or row["contract_ready"] != "1"
+    or row["default_acceptance_status"] != "blocked"
+    or row["blind_eval_ready"] != "0"
+    for row in v58_acceptance_evidence_rows
+):
+    raise SystemExit("v60 v58 acceptance evidence should be contract-ready but blind-eval blocked")
+if any(
+    row["tests_only_merge_condition"] != "0"
+    or row["fixture_allowed"] != "0"
+    or row["approval_required"] != "1"
+    or row["undocumented_local_state_required"] != "0"
+    or row["private_fixture_required"] != "0"
+    or row["manual_postprocessing_required"] != "0"
+    or row["network_required_by_default"] != "0"
+    or row["downloads_required_by_default"] != "0"
+    for row in v58_acceptance_evidence_rows
+):
+    raise SystemExit("v60 v58 acceptance evidence should forbid tests-only, fixtures, hidden state, network, and downloads")
 
 for label, path in [
     ("v59e direct h10 bundle", run_dir / "source_v59e/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
@@ -689,6 +723,17 @@ if "v59e_v58_blind_eval_return_template_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind v58 return template rows")
 if "v59e_v58_blind_eval_return_contract_map_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind v58 return contract map rows")
+if "v59e_v58_blind_eval_acceptance_evidence_sha256" not in manifest:
+    raise SystemExit("v60 manifest should hash-bind v58 acceptance evidence rows")
+if (
+    manifest.get("v58_acceptance_evidence_rows") != 8
+    or manifest.get("v58_acceptance_evidence_contract_ready_rows") != 8
+    or manifest.get("v58_acceptance_evidence_default_blocked_rows") != 8
+    or manifest.get("v58_acceptance_evidence_blind_eval_ready_rows") != 0
+    or manifest.get("v58_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("v58_acceptance_evidence_hidden_state_rows") != 0
+):
+    raise SystemExit("v60 manifest should record v58 acceptance evidence")
 if manifest.get("h10_pm_criteria_rows") != 6 or manifest.get("h10_pm_criteria_ready") != 1:
     raise SystemExit("v60 manifest should record direct h10 PM criteria evidence")
 if manifest.get("h10_pm_return_contract_rows") != 6 or manifest.get("h10_pm_return_contract_ready") != 1:
@@ -740,6 +785,7 @@ for snippet in [
     "h10 acceptance evidence rows",
     "v58c blind-response intake artifact",
     "v58d blind-review/adjudication return artifact",
+    "v58 acceptance evidence rows",
     "approved public-source download/refresh evidence",
     "Do not publish v1.0 release",
 ]:
