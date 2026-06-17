@@ -97,12 +97,15 @@ expected = {
     "release_requirement_ready_rows": "6",
     "release_requirement_blocked_rows": "8",
     "blocked_release_requirement_rows": "8",
+    "pm_acceptance_evidence_rows": "10",
+    "pm_acceptance_evidence_ready_rows": "9",
+    "pm_acceptance_evidence_tests_only_rows": "0",
     "pm_required_artifact_map_rows": "26",
     "pm_required_artifact_map_fixture_allowed_rows": "0",
     "pm_required_artifact_map_approval_rows": "26",
     "pm_required_artifact_map_template_bound_rows": "26",
     "pm_required_artifact_map_default_admitted_rows": "0",
-    "metadata_only_entrypoint_file_rows": "10",
+    "metadata_only_entrypoint_file_rows": "11",
     "payload_like_entrypoint_file_rows": "0",
     "remote_mutation_approved": "0",
     "network_required_by_default": "0",
@@ -143,10 +146,12 @@ required_files = [
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_ARTIFACT_MAP_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_STAGE_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_COMMAND_ROWS.csv",
+    "release_blocker_replay_entrypoint/V60C_PM_PR_ACCEPTANCE_EVIDENCE_ROWS.csv",
     "release_blocker_replay_entrypoint/V60C_RELEASE_BLOCKER_REPLAY_MANIFEST.json",
     "release_blocker_replay_entrypoint/README.md",
     "source_v60/v60_architecture_challenge_release_contract_summary.csv",
     "source_v60/release_requirement_rows.csv",
+    "source_pm/pm_pr_acceptance_evidence_rows.csv",
     "source_pm/pm_blocker_required_artifact_rows.csv",
     "source_pm/pm_external_return_template_rows.csv",
 ]
@@ -177,6 +182,20 @@ if [row["env_var"] for row in env_rows] != [
     "V60C_RELEASE_PACKAGE_DIR",
 ]:
     raise SystemExit("v60c required env rows mismatch")
+
+pm_acceptance_rows = read_csv(run_dir / "source_pm/pm_pr_acceptance_evidence_rows.csv")
+entrypoint_acceptance_rows = read_csv(run_dir / "release_blocker_replay_entrypoint/V60C_PM_PR_ACCEPTANCE_EVIDENCE_ROWS.csv")
+if len(pm_acceptance_rows) != 10 or pm_acceptance_rows != entrypoint_acceptance_rows:
+    raise SystemExit("v60c should carry the PM PR acceptance evidence rows into source_pm and the entrypoint package")
+pm_acceptance_by_id = {row["slice_id"]: row for row in pm_acceptance_rows}
+if sum(row["acceptance_ready"] == "1" for row in pm_acceptance_rows) != 9:
+    raise SystemExit("v60c PM acceptance evidence should preserve nine review-ready slices")
+if any(row["tests_only_merge_condition"] != "0" for row in pm_acceptance_rows):
+    raise SystemExit("v60c PM acceptance evidence should preserve tests-only merge condition closure")
+if pm_acceptance_by_id["v56-ruler-longbench-expanded"]["acceptance_ready"] != "0":
+    raise SystemExit("v60c PM acceptance evidence should keep v56 held until replay artifact evidence closes")
+if pm_acceptance_by_id["v53-system-a-b-g-h-measured"]["replay_artifact_path"] != "source_v59e/local_abgh_row_contract_replay_rows.csv":
+    raise SystemExit("v60c PM acceptance evidence should bind A/B/G/H to the local row-contract replay ledger")
 
 artifact_map_rows = read_csv(run_dir / "release_blocker_replay_artifact_map_rows.csv")
 if len(artifact_map_rows) != 26:
@@ -234,10 +253,22 @@ if manifest.get("entrypoint_admitted_by_default") != 0:
     raise SystemExit("v60c manifest must fail closed by default")
 if manifest.get("real_release_package_ready") != 0:
     raise SystemExit("v60c manifest must keep release blocked")
+if (
+    manifest.get("pm_acceptance_evidence_rows") != 10
+    or manifest.get("pm_acceptance_evidence_ready_rows") != 9
+    or manifest.get("pm_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("v60c manifest PM acceptance evidence mismatch")
 
 entry_manifest = json.loads((entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_MANIFEST.json").read_text(encoding="utf-8"))
 if entry_manifest.get("required_env_rows") != 9:
     raise SystemExit("v60c entrypoint manifest required env mismatch")
+if (
+    entry_manifest.get("pm_acceptance_evidence_rows") != 10
+    or entry_manifest.get("pm_acceptance_evidence_ready_rows") != 9
+    or entry_manifest.get("pm_acceptance_evidence_tests_only_rows") != 0
+):
+    raise SystemExit("v60c entrypoint manifest PM acceptance evidence mismatch")
 if entry_manifest.get("pm_required_artifact_map_rows") != 26:
     raise SystemExit("v60c entrypoint manifest PM artifact map mismatch")
 if entry_manifest.get("checkpoint_payload_bytes_committed_to_repo") != 0:
@@ -273,6 +304,9 @@ for snippet in [
     "entrypoint_admitted_by_default=0",
     "required_env_rows=9",
     "blocked_release_requirement_rows=8",
+    "pm_acceptance_evidence_rows=10",
+    "pm_acceptance_evidence_ready_rows=9",
+    "pm_acceptance_evidence_tests_only_rows=0",
     "pm_required_artifact_map_rows=26",
     "pm_required_artifact_map_fixture_allowed_rows=0",
     "pm_required_artifact_map_approval_rows=26",

@@ -92,6 +92,7 @@ source_files = [
     (v60_dir / "release_decision_rows.csv", "source_v60/release_decision_rows.csv"),
     (v60_dir / "V60_ARCHITECTURE_CHALLENGE_RELEASE_BOUNDARY.md", "source_v60/V60_ARCHITECTURE_CHALLENGE_RELEASE_BOUNDARY.md"),
     (v60_dir / "v60_architecture_challenge_release_manifest.json", "source_v60/v60_architecture_challenge_release_manifest.json"),
+    (v60_dir / "source_v59e" / "source_pm_pr_claim_slice_gate" / "pm_pr_acceptance_evidence_rows.csv", "source_pm/pm_pr_acceptance_evidence_rows.csv"),
     (v60_dir / "source_v59e" / "source_pm_pr_claim_slice_gate" / "pm_blocker_required_artifact_rows.csv", "source_pm/pm_blocker_required_artifact_rows.csv"),
     (v60_dir / "source_v59e" / "source_pm_pr_claim_slice_gate" / "pm_blocker_closure_queue_rows.csv", "source_pm/pm_blocker_closure_queue_rows.csv"),
     (v60_dir / "source_v59e" / "source_pm_pr_claim_slice_gate" / "pm_external_return_template_rows.csv", "source_pm/pm_external_return_template_rows.csv"),
@@ -103,6 +104,9 @@ for src, rel in source_files:
 
 release_requirements = read_csv(v60_dir / "release_requirement_rows.csv")
 blocked_release_requirements = [row for row in release_requirements if row["status"] == "blocked"]
+pm_acceptance_evidence_rows = read_csv(run_dir / "source_pm/pm_pr_acceptance_evidence_rows.csv")
+pm_acceptance_evidence_ready_rows = sum(1 for row in pm_acceptance_evidence_rows if row["acceptance_ready"] == "1")
+pm_acceptance_evidence_tests_only_rows = sum(1 for row in pm_acceptance_evidence_rows if row["tests_only_merge_condition"] == "1")
 
 required_env_rows = [
     {
@@ -409,12 +413,16 @@ shutil.copy2(run_dir / "release_blocker_replay_required_env_rows.csv", entrypoin
 shutil.copy2(run_dir / "release_blocker_replay_stage_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_STAGE_ROWS.csv")
 shutil.copy2(run_dir / "release_blocker_replay_command_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_COMMAND_ROWS.csv")
 shutil.copy2(run_dir / "release_blocker_replay_artifact_map_rows.csv", entrypoint_dir / "V60C_RELEASE_BLOCKER_REPLAY_ARTIFACT_MAP_ROWS.csv")
+shutil.copy2(run_dir / "source_pm" / "pm_pr_acceptance_evidence_rows.csv", entrypoint_dir / "V60C_PM_PR_ACCEPTANCE_EVIDENCE_ROWS.csv")
 
 entrypoint_manifest = {
     "artifact": "v60c_release_blocker_replay_entrypoint",
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
     "entrypoint_admitted_by_default": 0,
     "required_env_rows": len(required_env_rows),
+    "pm_acceptance_evidence_rows": len(pm_acceptance_evidence_rows),
+    "pm_acceptance_evidence_ready_rows": pm_acceptance_evidence_ready_rows,
+    "pm_acceptance_evidence_tests_only_rows": pm_acceptance_evidence_tests_only_rows,
     "pm_required_artifact_map_rows": len(pm_artifact_map_rows),
     "stage_rows": len(stage_rows),
     "ready_stage_rows": sum(1 for row in stage_rows if row["status"] == "ready"),
@@ -439,7 +447,8 @@ entrypoint_readme.write_text(
     "inputs are rejected before replay commands run.\n\n"
     "Current ready commands are verification-only. Release remains blocked until "
     "D/E 30B/70B evidence, h10 real labels, v56 replay artifact, v58c intake artifact, v58 blind eval, "
-    "approved public-source refresh evidence, human release review, and a real release package are accepted.\n",
+    "approved public-source refresh evidence, human release review, and a real release package are accepted. "
+    "The bundled PM PR acceptance evidence rows show which review slices are already local-reviewable and which remain held.\n",
     encoding="utf-8",
 )
 
@@ -486,6 +495,9 @@ summary = {
     "release_requirement_ready_rows": v60_summary["release_requirement_ready_rows"],
     "release_requirement_blocked_rows": v60_summary["release_requirement_blocked_rows"],
     "blocked_release_requirement_rows": str(len(blocked_release_requirements)),
+    "pm_acceptance_evidence_rows": str(len(pm_acceptance_evidence_rows)),
+    "pm_acceptance_evidence_ready_rows": str(pm_acceptance_evidence_ready_rows),
+    "pm_acceptance_evidence_tests_only_rows": str(pm_acceptance_evidence_tests_only_rows),
     "pm_required_artifact_map_rows": str(len(pm_artifact_map_rows)),
     "pm_required_artifact_map_fixture_allowed_rows": str(sum(1 for row in pm_artifact_map_rows if row["source_fixture_allowed"] == "1")),
     "pm_required_artifact_map_approval_rows": str(sum(1 for row in pm_artifact_map_rows if row["source_approval_required"] == "1")),
@@ -521,6 +533,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- ready_stage_rows={summary['ready_stage_rows']}\n"
     f"- blocked_stage_rows={summary['blocked_stage_rows']}\n"
     f"- blocked_release_requirement_rows={summary['blocked_release_requirement_rows']}\n"
+    f"- pm_acceptance_evidence_rows={summary['pm_acceptance_evidence_rows']}\n"
+    f"- pm_acceptance_evidence_ready_rows={summary['pm_acceptance_evidence_ready_rows']}\n"
+    f"- pm_acceptance_evidence_tests_only_rows={summary['pm_acceptance_evidence_tests_only_rows']}\n"
     f"- pm_required_artifact_map_rows={summary['pm_required_artifact_map_rows']}\n"
     f"- pm_required_artifact_map_fixture_allowed_rows={summary['pm_required_artifact_map_fixture_allowed_rows']}\n"
     f"- pm_required_artifact_map_approval_rows={summary['pm_required_artifact_map_approval_rows']}\n"
@@ -545,6 +560,9 @@ manifest = {
     "v60c_release_blocker_replay_entrypoint_ready": 1,
     "entrypoint_admitted_by_default": 0,
     "required_env_rows": len(required_env_rows),
+    "pm_acceptance_evidence_rows": len(pm_acceptance_evidence_rows),
+    "pm_acceptance_evidence_ready_rows": pm_acceptance_evidence_ready_rows,
+    "pm_acceptance_evidence_tests_only_rows": pm_acceptance_evidence_tests_only_rows,
     "pm_required_artifact_map_rows": len(pm_artifact_map_rows),
     "stage_rows": len(stage_rows),
     "blocked_release_requirement_rows": len(blocked_release_requirements),
