@@ -108,6 +108,7 @@ expected = {
     "foundation_direct_abgh_adapter_trace_rows": "4000",
     "foundation_direct_evaluator_separate_rows": "4000",
     "foundation_direct_same_query_rows_ready": "1",
+    "negative_abstain_rows": "160",
     "unsupported_control_rows": "100",
     "ambiguous_control_rows": "30",
     "missing_specific_control_rows": "30",
@@ -573,7 +574,9 @@ for snippet in [
     "foundation_direct_abgh_evaluator_rows=4000",
     "foundation_direct_evaluator_separate_rows=4000",
     "foundation_direct_same_query_rows_ready=1",
+    "negative_abstain_rows=160",
     "unsupported_control_rows=100",
+    "ambiguous_control_rows=30",
     "missing_specific_control_rows=30",
     "doc_code_conflict_rows=140",
     "same_complete_source_query_hash=1",
@@ -664,7 +667,14 @@ if (
     or manifest.get("foundation_direct_same_query_rows_ready") != 1
 ):
     raise SystemExit("v53t manifest direct foundation row counts mismatch")
-if manifest.get("missing_specific_control_rows") != 30 or manifest.get("abgh_same_query_ready") != 1:
+if (
+    manifest.get("negative_abstain_rows") != 160
+    or manifest.get("unsupported_control_rows") != 100
+    or manifest.get("ambiguous_control_rows") != 30
+    or manifest.get("missing_specific_control_rows") != 30
+    or manifest.get("doc_code_conflict_rows") != 140
+    or manifest.get("abgh_same_query_ready") != 1
+):
     raise SystemExit("v53t manifest PM freeze evidence mismatch")
 if manifest.get("same_complete_source_query_hash") != 1:
     raise SystemExit("v53t manifest query hash binding mismatch")

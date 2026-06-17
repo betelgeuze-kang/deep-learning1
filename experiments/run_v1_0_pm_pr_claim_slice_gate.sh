@@ -12,6 +12,7 @@ DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
+V53T_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53t_complete_source_audit_readiness_gate.sh" >/dev/null
 V53AQ_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53aq_complete_source_abgh_real_adapter_measured.sh" >/dev/null
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
@@ -346,8 +347,14 @@ slice_specs = [
         "merge_condition": "every query binds to a pinned source span; unsupported/missing/doc-code controls are explicit",
         "claim_ok": as_int(v53t, "v53_ready") == 0 and as_int(v53t, "foundation_machine_freeze_ready") == 1,
         "replay_ok": as_int(v53t, "complete_source_query_rows") == 1000 and as_int(v53t, "complete_source_span_rows") == 1000 and as_int(v53t, "foundation_freeze_certificate_rows") == 10,
-        "blocker_ok": as_int(v53t, "unsupported_control_rows") >= 1 and as_int(v53t, "missing_specific_control_rows") >= 1 and as_int(v53t, "doc_code_conflict_rows") >= 1,
-        "reason": "1000 source-span-bound rows with explicit controls are present",
+        "blocker_ok": as_int(v53t, "negative_abstain_rows") >= 100 and as_int(v53t, "unsupported_control_rows") == 100 and as_int(v53t, "missing_specific_control_rows") == 30 and as_int(v53t, "doc_code_conflict_rows") == 140,
+        "reason": (
+            "1000 source-span-bound rows with explicit controls are present; "
+            f"negative_abstain={v53t.get('negative_abstain_rows', '0')} "
+            f"unsupported={v53t.get('unsupported_control_rows', '0')} "
+            f"missing_specific={v53t.get('missing_specific_control_rows', '0')} "
+            f"doc_code_conflict={v53t.get('doc_code_conflict_rows', '0')}"
+        ),
     },
     {
         "slice_id": "v53-system-a-b-g-h-measured",
@@ -768,9 +775,19 @@ pm_roadmap_rows = [
         "M2",
         "negative-and-conflict-controls",
         "unsupported, missing-specific, and doc-code conflict controls are present",
-        as_int(v53t, "unsupported_control_rows") >= 1 and as_int(v53t, "missing_specific_control_rows") >= 1 and as_int(v53t, "doc_code_conflict_rows") >= 1,
+        as_int(v53t, "negative_abstain_rows") >= 100
+        and as_int(v53t, "unsupported_control_rows") == 100
+        and as_int(v53t, "ambiguous_control_rows") == 30
+        and as_int(v53t, "missing_specific_control_rows") == 30
+        and as_int(v53t, "doc_code_conflict_rows") == 140,
         "source_summaries/v53t_complete_source_audit_readiness_gate_summary.csv",
-        f"unsupported={v53t.get('unsupported_control_rows', '0')} missing_specific={v53t.get('missing_specific_control_rows', '0')} doc_code_conflict={v53t.get('doc_code_conflict_rows', '0')}",
+        (
+            f"negative_abstain={v53t.get('negative_abstain_rows', '0')} "
+            f"unsupported={v53t.get('unsupported_control_rows', '0')} "
+            f"ambiguous={v53t.get('ambiguous_control_rows', '0')} "
+            f"missing_specific={v53t.get('missing_specific_control_rows', '0')} "
+            f"doc_code_conflict={v53t.get('doc_code_conflict_rows', '0')}"
+        ),
         "v53-control-row-missing",
     ),
     req(
@@ -2216,6 +2233,11 @@ summary = {
     "v53_foundation_direct_repo_manifest_rows": v53t.get("foundation_direct_repo_manifest_rows", "0"),
     "v53_foundation_direct_file_manifest_rows": v53t.get("foundation_direct_file_manifest_rows", "0"),
     "v53_foundation_direct_content_snapshot_rows": v53t.get("foundation_direct_content_snapshot_rows", "0"),
+    "v53_negative_abstain_rows": v53t.get("negative_abstain_rows", "0"),
+    "v53_unsupported_control_rows": v53t.get("unsupported_control_rows", "0"),
+    "v53_ambiguous_control_rows": v53t.get("ambiguous_control_rows", "0"),
+    "v53_missing_specific_control_rows": v53t.get("missing_specific_control_rows", "0"),
+    "v53_doc_code_conflict_rows": v53t.get("doc_code_conflict_rows", "0"),
     "v53_pm_acceptance_evidence_rows": v53t.get("pm_acceptance_evidence_rows", "0"),
     "v53_pm_acceptance_evidence_ready_rows": v53t.get("pm_acceptance_evidence_ready_rows", "0"),
     "v53_pm_acceptance_evidence_tests_only_rows": v53t.get("pm_acceptance_evidence_tests_only_rows", "0"),
@@ -2314,6 +2336,11 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53_foundation_direct_repo_manifest_rows={v53t.get('foundation_direct_repo_manifest_rows', '0')}\n"
     f"- v53_foundation_direct_file_manifest_rows={v53t.get('foundation_direct_file_manifest_rows', '0')}\n"
     f"- v53_foundation_direct_content_snapshot_rows={v53t.get('foundation_direct_content_snapshot_rows', '0')}\n"
+    f"- v53_negative_abstain_rows={v53t.get('negative_abstain_rows', '0')}\n"
+    f"- v53_unsupported_control_rows={v53t.get('unsupported_control_rows', '0')}\n"
+    f"- v53_ambiguous_control_rows={v53t.get('ambiguous_control_rows', '0')}\n"
+    f"- v53_missing_specific_control_rows={v53t.get('missing_specific_control_rows', '0')}\n"
+    f"- v53_doc_code_conflict_rows={v53t.get('doc_code_conflict_rows', '0')}\n"
     f"- v53_pm_acceptance_evidence_rows={v53t.get('pm_acceptance_evidence_rows', '0')}\n"
     f"- v53_pm_acceptance_evidence_ready_rows={v53t.get('pm_acceptance_evidence_ready_rows', '0')}\n"
     f"- v53_pm_acceptance_evidence_tests_only_rows={v53t.get('pm_acceptance_evidence_tests_only_rows', '0')}\n"
@@ -2390,6 +2417,11 @@ manifest = {
     "v53_foundation_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
     "v53_foundation_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
     "v53_foundation_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
+    "v53_negative_abstain_rows": as_int(v53t, "negative_abstain_rows"),
+    "v53_unsupported_control_rows": as_int(v53t, "unsupported_control_rows"),
+    "v53_ambiguous_control_rows": as_int(v53t, "ambiguous_control_rows"),
+    "v53_missing_specific_control_rows": as_int(v53t, "missing_specific_control_rows"),
+    "v53_doc_code_conflict_rows": as_int(v53t, "doc_code_conflict_rows"),
     "v53_pm_acceptance_evidence_rows": as_int(v53t, "pm_acceptance_evidence_rows"),
     "v53_pm_acceptance_evidence_ready_rows": as_int(v53t, "pm_acceptance_evidence_ready_rows"),
     "v53_pm_acceptance_evidence_tests_only_rows": as_int(v53t, "pm_acceptance_evidence_tests_only_rows"),

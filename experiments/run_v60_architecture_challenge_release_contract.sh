@@ -24,7 +24,7 @@ V59E_H10_ACCEPTANCE_EVIDENCE_ARTIFACT="$V59E_DIR/source_pm_pr_claim_slice_gate/s
 if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" ]]; then
   "$ROOT_DIR/experiments/run_v59_one_command_challenge_demo_contract.sh" >/dev/null
 fi
-if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" || ! -s "$V59E_SUMMARY" || ! -s "$V59E_READY_ARTIFACT" || ! -s "$V59E_V58C_DEPENDENCY_ARTIFACT" || ! -s "$V59E_H10_RETURN_CONTRACT_ARTIFACT" || ! -s "$V59E_H10_ACCEPTANCE_EVIDENCE_ARTIFACT" ]]; then
+if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" || ! -s "$V59E_SUMMARY" || ! -s "$V59E_READY_ARTIFACT" || ! -s "$V59E_V58C_DEPENDENCY_ARTIFACT" || ! -s "$V59E_H10_RETURN_CONTRACT_ARTIFACT" || ! -s "$V59E_H10_ACCEPTANCE_EVIDENCE_ARTIFACT" ]] || ! grep -q 'v53_negative_abstain_rows' "$V59E_SUMMARY"; then
   "$ROOT_DIR/experiments/run_v59e_one_command_pm_foundation_demo.sh" >/dev/null
 fi
 
@@ -406,8 +406,11 @@ requirements = [
         and as_int(v53t, "complete_source_repo_count") >= 10
         and as_int(v53t, "complete_source_query_rows") >= 1000
         and as_int(v53t, "complete_source_span_rows") >= 1000
-        and as_int(v53t, "unsupported_control_rows") >= 100
-        and as_int(v53t, "doc_code_conflict_rows") > 0
+        and as_int(v53t, "negative_abstain_rows") >= 100
+        and as_int(v53t, "unsupported_control_rows") == 100
+        and as_int(v53t, "ambiguous_control_rows") == 30
+        and as_int(v53t, "missing_specific_control_rows") == 30
+        and as_int(v53t, "doc_code_conflict_rows") == 140
         and as_int(v53t, "foundation_query_span_binding_audit_ready") == 1
         and as_int(v59e, "pm_pr_v53_query_span_binding_audit_ready") == 1
         and as_int(v53t, "foundation_direct_pinned_manifest_ready") == 1
@@ -641,6 +644,11 @@ summary = {
     "v53_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
     "v53_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
     "v53_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
+    "v53_negative_abstain_rows": as_int(v53t, "negative_abstain_rows"),
+    "v53_unsupported_control_rows": as_int(v53t, "unsupported_control_rows"),
+    "v53_ambiguous_control_rows": as_int(v53t, "ambiguous_control_rows"),
+    "v53_missing_specific_control_rows": as_int(v53t, "missing_specific_control_rows"),
+    "v53_doc_code_conflict_rows": as_int(v53t, "doc_code_conflict_rows"),
     "pm_pr_v53_direct_pinned_manifest_ready": as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready"),
     "pm_pr_v53_pm_acceptance_evidence_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_rows"),
     "pm_pr_v53_pm_acceptance_evidence_ready_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_ready_rows"),
@@ -740,6 +748,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- local evidence-bound RouteMemory/RouteHint QA and audit preview.\n\n"
     "Current pass surfaces:\n\n"
     "- v53 10-repo / 1000 source-span-bound query PM freeze\n"
+    "- v53 negative/abstain, unsupported, missing-specific, and doc-code conflict control rows copied through the PM foundation bundle\n"
     "- direct v53 1000-row query-span binding audit copied through v59e PM sidecar\n"
     "- direct v53 repo/file/content manifest evidence copied through v59e PM sidecar\n"
     "- internal A/B/G/H same-query pre-baseline without public comparison claim\n"
@@ -851,6 +860,11 @@ manifest = {
     "v53_direct_repo_manifest_rows": as_int(v53t, "foundation_direct_repo_manifest_rows"),
     "v53_direct_file_manifest_rows": as_int(v53t, "foundation_direct_file_manifest_rows"),
     "v53_direct_content_snapshot_rows": as_int(v53t, "foundation_direct_content_snapshot_rows"),
+    "v53_negative_abstain_rows": as_int(v53t, "negative_abstain_rows"),
+    "v53_unsupported_control_rows": as_int(v53t, "unsupported_control_rows"),
+    "v53_ambiguous_control_rows": as_int(v53t, "ambiguous_control_rows"),
+    "v53_missing_specific_control_rows": as_int(v53t, "missing_specific_control_rows"),
+    "v53_doc_code_conflict_rows": as_int(v53t, "doc_code_conflict_rows"),
     "pm_pr_v53_direct_pinned_manifest_ready": as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready"),
     "pm_pr_v53_pm_acceptance_evidence_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_rows"),
     "pm_pr_v53_pm_acceptance_evidence_ready_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_ready_rows"),

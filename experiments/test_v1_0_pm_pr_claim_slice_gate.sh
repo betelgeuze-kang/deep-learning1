@@ -54,6 +54,11 @@ expected = {
     "v53_foundation_direct_repo_manifest_rows": "10",
     "v53_foundation_direct_file_manifest_rows": "11266",
     "v53_foundation_direct_content_snapshot_rows": "11266",
+    "v53_negative_abstain_rows": "160",
+    "v53_unsupported_control_rows": "100",
+    "v53_ambiguous_control_rows": "30",
+    "v53_missing_specific_control_rows": "30",
+    "v53_doc_code_conflict_rows": "140",
     "v53_pm_acceptance_evidence_rows": "10",
     "v53_pm_acceptance_evidence_ready_rows": "10",
     "v53_pm_acceptance_evidence_tests_only_rows": "0",
@@ -241,6 +246,16 @@ for snippet in [
 ]:
     if snippet not in source_span_row["reason"]:
         raise SystemExit(f"PM source-span query freeze should expose {snippet}")
+control_row = roadmap_by_id["negative-and-conflict-controls"]
+for snippet in [
+    "negative_abstain=160",
+    "unsupported=100",
+    "ambiguous=30",
+    "missing_specific=30",
+    "doc_code_conflict=140",
+]:
+    if snippet not in control_row["reason"]:
+        raise SystemExit(f"PM v53 control row should expose {snippet}")
 answer_citation_row = roadmap_by_id["answer-citation-separated"]
 if answer_citation_row["evidence_path"] != "source_v53t/source_v53ap/abgh_evaluator_rows.csv":
     raise SystemExit("PM answer/citation separation should bind directly to the v53t copied evaluator rows")
@@ -1001,6 +1016,14 @@ if (
 ):
     raise SystemExit("PM PR manifest direct pinned manifest evidence mismatch")
 if (
+    manifest.get("v53_negative_abstain_rows") != 160
+    or manifest.get("v53_unsupported_control_rows") != 100
+    or manifest.get("v53_ambiguous_control_rows") != 30
+    or manifest.get("v53_missing_specific_control_rows") != 30
+    or manifest.get("v53_doc_code_conflict_rows") != 140
+):
+    raise SystemExit("PM PR manifest v53 control-row evidence mismatch")
+if (
     manifest.get("v53_pm_acceptance_evidence_rows") != 10
     or manifest.get("v53_pm_acceptance_evidence_ready_rows") != 10
     or manifest.get("v53_pm_acceptance_evidence_tests_only_rows") != 0
@@ -1125,6 +1148,11 @@ for snippet in [
     "v53_foundation_direct_repo_manifest_rows=10",
     "v53_foundation_direct_file_manifest_rows=11266",
     "v53_foundation_direct_content_snapshot_rows=11266",
+    "v53_negative_abstain_rows=160",
+    "v53_unsupported_control_rows=100",
+    "v53_ambiguous_control_rows=30",
+    "v53_missing_specific_control_rows=30",
+    "v53_doc_code_conflict_rows=140",
     "v53_pm_acceptance_evidence_rows=10",
     "v53_pm_acceptance_evidence_ready_rows=10",
     "v53_pm_acceptance_evidence_tests_only_rows=0",

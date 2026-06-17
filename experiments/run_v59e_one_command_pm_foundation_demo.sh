@@ -933,6 +933,11 @@ summary = {
     "public_source_download_approval_required": "1",
     "full_public_source_download_ready": "0",
     "pm_v53_freeze_ready": v53t["pm_v53_freeze_ready"],
+    "v53_negative_abstain_rows": v53t.get("negative_abstain_rows", "0"),
+    "v53_unsupported_control_rows": v53t.get("unsupported_control_rows", "0"),
+    "v53_ambiguous_control_rows": v53t.get("ambiguous_control_rows", "0"),
+    "v53_missing_specific_control_rows": v53t.get("missing_specific_control_rows", "0"),
+    "v53_doc_code_conflict_rows": v53t.get("doc_code_conflict_rows", "0"),
     "v53ap_complete_source_abgh_same_query_measured_ready": v53ap["v53ap_complete_source_abgh_same_query_measured_ready"],
     "v53aq_complete_source_abgh_real_adapter_measured_ready": v53aq["v53aq_complete_source_abgh_real_adapter_measured_ready"],
     "local_abgh_baseline_run_ready": str(local_abgh_baseline_run_ready),
@@ -1028,6 +1033,11 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     "review split and the v56 replay-artifact blocker are visible beside this bundle. "
     "It is intentionally not the completed v59 public challenge demo.\n\n"
     f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
+    f"- v53_negative_abstain_rows={summary['v53_negative_abstain_rows']}\n"
+    f"- v53_unsupported_control_rows={summary['v53_unsupported_control_rows']}\n"
+    f"- v53_ambiguous_control_rows={summary['v53_ambiguous_control_rows']}\n"
+    f"- v53_missing_specific_control_rows={summary['v53_missing_specific_control_rows']}\n"
+    f"- v53_doc_code_conflict_rows={summary['v53_doc_code_conflict_rows']}\n"
     f"- source_snapshot_replay_used={summary['source_snapshot_replay_used']}\n"
     f"- public_source_snapshot_replay_ready={summary['public_source_snapshot_replay_ready']}\n"
     f"- public_source_snapshot_replay_rows={summary['public_source_snapshot_replay_rows']}\n"
@@ -1075,6 +1085,11 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     "This one-command bundle exists to make the PM foundation replayable. It must not be used as a v1.0 public challenge or release claim.\n\n"
     f"- v59e_one_command_pm_foundation_demo_ready={summary['v59e_one_command_pm_foundation_demo_ready']}\n"
     f"- pm_v53_freeze_ready={summary['pm_v53_freeze_ready']}\n"
+    f"- v53_negative_abstain_rows={summary['v53_negative_abstain_rows']}\n"
+    f"- v53_unsupported_control_rows={summary['v53_unsupported_control_rows']}\n"
+    f"- v53_ambiguous_control_rows={summary['v53_ambiguous_control_rows']}\n"
+    f"- v53_missing_specific_control_rows={summary['v53_missing_specific_control_rows']}\n"
+    f"- v53_doc_code_conflict_rows={summary['v53_doc_code_conflict_rows']}\n"
     f"- source_snapshot_replay_used={summary['source_snapshot_replay_used']}\n"
     f"- public_source_snapshot_replay_ready={summary['public_source_snapshot_replay_ready']}\n"
     f"- public_source_snapshot_replay_rows={summary['public_source_snapshot_replay_rows']}\n"
@@ -1155,6 +1170,11 @@ manifest = {
     "public_source_download_executed": 0,
     "public_source_download_approval_required": 1,
     "full_public_source_download_ready": 0,
+    "v53_negative_abstain_rows": as_int(v53t, "negative_abstain_rows"),
+    "v53_unsupported_control_rows": as_int(v53t, "unsupported_control_rows"),
+    "v53_ambiguous_control_rows": as_int(v53t, "ambiguous_control_rows"),
+    "v53_missing_specific_control_rows": as_int(v53t, "missing_specific_control_rows"),
+    "v53_doc_code_conflict_rows": as_int(v53t, "doc_code_conflict_rows"),
     "source_summary_sha256": {
         "v53t": sha256(results / "v53t_complete_source_audit_readiness_gate_summary.csv"),
         "v53ap": sha256(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv"),

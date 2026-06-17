@@ -57,6 +57,11 @@ expected = {
     "public_source_download_approval_required": "1",
     "full_public_source_download_ready": "0",
     "pm_v53_freeze_ready": "1",
+    "v53_negative_abstain_rows": "160",
+    "v53_unsupported_control_rows": "100",
+    "v53_ambiguous_control_rows": "30",
+    "v53_missing_specific_control_rows": "30",
+    "v53_doc_code_conflict_rows": "140",
     "v53ap_complete_source_abgh_same_query_measured_ready": "1",
     "v53aq_complete_source_abgh_real_adapter_measured_ready": "1",
     "local_abgh_baseline_run_ready": "1",
@@ -720,6 +725,14 @@ if (
 manifest = json.loads((run_dir / "v59e_one_command_pm_foundation_demo_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v59e_one_command_pm_foundation_demo_ready") != 1 or manifest.get("v59_ready") != 0:
     raise SystemExit("v59e manifest readiness mismatch")
+if (
+    manifest.get("v53_negative_abstain_rows") != 160
+    or manifest.get("v53_unsupported_control_rows") != 100
+    or manifest.get("v53_ambiguous_control_rows") != 30
+    or manifest.get("v53_missing_specific_control_rows") != 30
+    or manifest.get("v53_doc_code_conflict_rows") != 140
+):
+    raise SystemExit("v59e manifest should record v53 control-row evidence")
 if "h10-real-label-promotion" not in manifest.get("blocked_claims", []):
     raise SystemExit("v59e manifest should block h10 real-label promotion")
 if "public-abgh-comparison" not in manifest.get("blocked_claims", []):
@@ -918,6 +931,11 @@ for snippet in [
     "public_source_download_executed=0",
     "public_source_download_approval_required=1",
     "full_public_source_download_ready=0",
+    "v53_negative_abstain_rows=160",
+    "v53_unsupported_control_rows=100",
+    "v53_ambiguous_control_rows=30",
+    "v53_missing_specific_control_rows=30",
+    "v53_doc_code_conflict_rows=140",
     "local_abgh_row_contract_replay_rows=2",
     "local_abgh_row_contract_replay_pass_rows=2",
     "local_abgh_row_contract_replay_ready=1",

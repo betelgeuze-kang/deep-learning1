@@ -70,6 +70,11 @@ expected = {
     "v53_direct_repo_manifest_rows": "10",
     "v53_direct_file_manifest_rows": "11266",
     "v53_direct_content_snapshot_rows": "11266",
+    "v53_negative_abstain_rows": "160",
+    "v53_unsupported_control_rows": "100",
+    "v53_ambiguous_control_rows": "30",
+    "v53_missing_specific_control_rows": "30",
+    "v53_doc_code_conflict_rows": "140",
     "pm_pr_v53_direct_pinned_manifest_ready": "1",
     "pm_pr_v53_pm_acceptance_evidence_rows": "10",
     "pm_pr_v53_pm_acceptance_evidence_ready_rows": "10",
@@ -820,6 +825,14 @@ if (
     or manifest.get("pm_pr_v53_direct_pinned_manifest_ready") != 1
 ):
     raise SystemExit("v60 manifest should record direct v53 pinned manifest evidence")
+if (
+    manifest.get("v53_negative_abstain_rows") != 160
+    or manifest.get("v53_unsupported_control_rows") != 100
+    or manifest.get("v53_ambiguous_control_rows") != 30
+    or manifest.get("v53_missing_specific_control_rows") != 30
+    or manifest.get("v53_doc_code_conflict_rows") != 140
+):
+    raise SystemExit("v60 manifest should record direct v53 control-row evidence")
 if (
     manifest.get("pm_pr_v53_pm_acceptance_evidence_rows") != 10
     or manifest.get("pm_pr_v53_pm_acceptance_evidence_ready_rows") != 10
