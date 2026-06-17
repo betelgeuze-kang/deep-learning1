@@ -49,6 +49,9 @@ expected = {
     "pinned_commit_manifest_ready": "1",
     "abstain_policy_contract_ready": "1",
     "wrong_answer_guard_contract_ready": "1",
+    "v50_seed_reused": "1",
+    "v50_public_refresh_allowed": "0",
+    "v50_public_refresh_executed": "0",
     "real_release_package_ready": "0",
 }
 for field, value in expected.items():
@@ -58,7 +61,7 @@ if int(summary.get("source_span_bound_rows", "0")) < int(summary.get("current_se
     raise SystemExit("v53 seed source spans should cover seed query rows")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
-for gate in ["v53-public-repo-audit-contract", "v50-seed-evidence", "source-span-binding", "pinned-commit-manifest"]:
+for gate in ["v53-public-repo-audit-contract", "v50-seed-refresh-policy", "v50-seed-evidence", "source-span-binding", "pinned-commit-manifest"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v53 gate should pass: {gate}")
 for gate in ["repo-count-target", "query-count-target", "negative-control-target", "real-release-package"]:
@@ -115,6 +118,13 @@ if manifest.get("v53_public_repo_code_doc_audit_contract_ready") != 1 or manifes
     raise SystemExit("v53 manifest readiness boundary mismatch")
 if manifest.get("missing_repo_count") != 7 or manifest.get("missing_query_rows") != 991:
     raise SystemExit("v53 manifest missing-count mismatch")
+for field, value in {
+    "v50_seed_reused": 1,
+    "v50_public_refresh_allowed": 0,
+    "v50_public_refresh_executed": 0,
+}.items():
+    if manifest.get(field) != value:
+        raise SystemExit(f"v53 manifest {field} mismatch")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -128,6 +138,7 @@ for snippet in [
     "not the completed 10-30 repo / 1000-3000 query audit",
     "missing_repo_count=7",
     "missing_query_rows=991",
+    "existing v50 seed artifacts are reused by default",
     "Do not publish v53 safety/grounding superiority claims",
 ]:
     if snippet not in boundary:

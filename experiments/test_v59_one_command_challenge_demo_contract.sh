@@ -7,6 +7,24 @@ RUN_DIR="$RESULTS_DIR/v59_one_command_challenge_demo_contract/contract_001"
 SUMMARY_CSV="$RESULTS_DIR/v59_one_command_challenge_demo_contract_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v59_one_command_challenge_demo_contract_decision.csv"
 
+if { [ ! -s "$RESULTS_DIR/v56_ruler_longbench_expanded_contract_summary.csv" ] || [ ! -s "$RESULTS_DIR/v57_domain_expert_packs_contract_summary.csv" ] || [ ! -s "$RESULTS_DIR/v58_blind_eval_contract_summary.csv" ]; } && [ "${V59_REQUIRE_READY_TEST:-0}" != "1" ]; then
+  set +e
+  output="$("$ROOT_DIR/examples/v1_0_architecture_challenge_demo.sh" 2>&1 >/dev/null)"
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
+    echo "v59 should fail closed when stage artifacts are missing" >&2
+    exit 1
+  fi
+  if ! grep -q "Refusing implicit stage regeneration" <<<"$output"; then
+    echo "v59 missing-stage guard did not explain the refusal" >&2
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
+  echo "v59 one-command missing-stage guard smoke passed"
+  exit 0
+fi
+
 "$ROOT_DIR/examples/v1_0_architecture_challenge_demo.sh" >/dev/null
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
@@ -50,6 +68,9 @@ expected = {
     "network_required": "0",
     "external_model_required_for_contract": "0",
     "external_model_rows_deferred_explicitly": "1",
+    "stage_artifacts_reused": "1",
+    "stage_rebuild_allowed": "0",
+    "stage_rebuild_executed": "0",
     "missing_real_30b_70b_rows": "1",
     "missing_public_repo_query_scale": "1",
     "missing_generation_main_rows": "1",
@@ -64,7 +85,7 @@ for field, value in expected.items():
         raise SystemExit(f"v59 {field}: expected {value}, got {summary.get(field)}")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
-for gate in ["v52-v58-contracts", "one-command-entrypoint", "bundle-hash-manifest", "offline-demo-boundary"]:
+for gate in ["v52-v58-contracts", "one-command-entrypoint", "bundle-hash-manifest", "offline-demo-boundary", "stage-rebuild-policy"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v59 gate should pass: {gate}")
 for gate in [

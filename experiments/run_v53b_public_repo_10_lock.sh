@@ -8,13 +8,77 @@ RUN_ID="${V53B_RUN_ID:-lock_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+V50_RUN_DIR="$RESULTS_DIR/v50_public_repo_auditor_3repo/audit_001"
+V50_SUMMARY_CSV="$RESULTS_DIR/v50_public_repo_auditor_3repo_summary.csv"
+V53B_ALLOW_V50_REFRESH="${V53B_ALLOW_V50_REFRESH:-0}"
+V53B_ALLOW_PUBLIC_HEAD_REFRESH="${V53B_ALLOW_PUBLIC_HEAD_REFRESH:-0}"
+V50_REFRESH_EXECUTED=0
+PUBLIC_HEAD_REFRESH_EXECUTED=0
+LOCK_ROWS_SNAPSHOT=""
+
+cleanup() {
+  if [ -n "$LOCK_ROWS_SNAPSHOT" ] && [ -f "$LOCK_ROWS_SNAPSHOT" ]; then
+    rm -f "$LOCK_ROWS_SNAPSHOT"
+  fi
+}
+trap cleanup EXIT
+
+v50_required_files=(
+  "$V50_SUMMARY_CSV"
+  "$V50_RUN_DIR/public_repo_source_snapshot_rows.csv"
+  "$V50_RUN_DIR/public_repo_audit_case_rows.csv"
+  "$V50_RUN_DIR/public_repo_source_span_rows.csv"
+  "$V50_RUN_DIR/guard_negative_rows.csv"
+  "$V50_RUN_DIR/sha256_manifest.csv"
+)
+
+v50_seed_ready=1
+for required_file in "${v50_required_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    v50_seed_ready=0
+    break
+  fi
+done
+
+if [ "$v50_seed_ready" != "1" ]; then
+  if [ "$V53B_ALLOW_V50_REFRESH" != "1" ]; then
+    {
+      echo "v53b requires existing v50 public-repo seed artifacts."
+      echo "Missing seed evidence is fail-closed by default because v50 refresh performs public git fetches."
+      echo "Set V53B_ALLOW_V50_REFRESH=1 only with explicit approval to refresh pinned public sources."
+    } >&2
+    exit 2
+  fi
+  "$ROOT_DIR/experiments/run_v50_public_repo_auditor_3repo.sh" >/dev/null
+  V50_REFRESH_EXECUTED=1
+fi
+
+for required_file in "${v50_required_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    echo "v53b v50 seed artifact still missing after refresh policy check: $required_file" >&2
+    exit 3
+  fi
+done
+
+if [ "$V53B_ALLOW_PUBLIC_HEAD_REFRESH" = "1" ]; then
+  PUBLIC_HEAD_REFRESH_EXECUTED=1
+else
+  if [ ! -s "$RUN_DIR/public_repo_10_lock_rows.csv" ]; then
+    {
+      echo "v53b requires existing public_repo_10_lock_rows.csv when public HEAD refresh is disabled."
+      echo "Public HEAD resolution uses git ls-remote and is fail-closed by default."
+      echo "Set V53B_ALLOW_PUBLIC_HEAD_REFRESH=1 only with explicit approval to refresh public HEAD locks."
+    } >&2
+    exit 4
+  fi
+  LOCK_ROWS_SNAPSHOT="$(mktemp)"
+  cp "$RUN_DIR/public_repo_10_lock_rows.csv" "$LOCK_ROWS_SNAPSHOT"
+fi
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-"$ROOT_DIR/experiments/run_v50_public_repo_auditor_3repo.sh" >/dev/null
-
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$V53B_ALLOW_V50_REFRESH" "$V50_REFRESH_EXECUTED" "$V53B_ALLOW_PUBLIC_HEAD_REFRESH" "$PUBLIC_HEAD_REFRESH_EXECUTED" "${LOCK_ROWS_SNAPSHOT:-}" <<'PY'
 import csv
 import hashlib
 import json
@@ -29,6 +93,13 @@ root = Path(sys.argv[1])
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+v50_public_refresh_allowed = int(sys.argv[5] == "1")
+v50_public_refresh_executed = int(sys.argv[6] == "1")
+public_head_refresh_allowed = int(sys.argv[7] == "1")
+public_head_refresh_executed = int(sys.argv[8] == "1")
+lock_rows_snapshot = Path(sys.argv[9]) if sys.argv[9] else None
+v50_seed_reused = int(not v50_public_refresh_executed)
+public_head_lock_reused = int(not public_head_refresh_executed)
 results = root / "results"
 v50_dir = results / "v50_public_repo_auditor_3repo" / "audit_001"
 v50_summary = list(csv.DictReader((results / "v50_public_repo_auditor_3repo_summary.csv").open(newline="", encoding="utf-8")))[0]
@@ -127,28 +198,45 @@ target_repos = [
     "tiangolo/typer",
 ]
 
-lock_rows = []
-for idx, owner_repo in enumerate(target_repos, start=1):
-    resolved = resolve_head(owner_repo)
-    seed_query_rows = sum(1 for row in v50_cases if row["owner_repo"] == owner_repo)
-    lock_rows.append(
-        {
-            "repo_slot": idx,
-            "repo_id": repo_id(owner_repo),
-            "owner_repo": owner_repo,
-            "repo_url": resolved["repo_url"],
-            "requested_ref": resolved["requested_ref"],
-            "default_branch": resolved["default_branch"],
-            "head_sha": resolved["head_sha"],
-            "head_sha_ready": int(resolved["resolve_status"] == "pinned"),
-            "seed_from_v50": int(owner_repo in v50_repos),
-            "seed_query_rows": seed_query_rows,
-            "source_snapshot_ready": int(owner_repo in v50_repos),
-            "new_snapshot_required": int(owner_repo not in v50_repos),
-            "resolve_status": resolved["resolve_status"],
-            "resolve_error": resolved["resolve_error"],
-        }
-    )
+if public_head_refresh_executed:
+    lock_rows = []
+    for idx, owner_repo in enumerate(target_repos, start=1):
+        resolved = resolve_head(owner_repo)
+        seed_query_rows = sum(1 for row in v50_cases if row["owner_repo"] == owner_repo)
+        lock_rows.append(
+            {
+                "repo_slot": idx,
+                "repo_id": repo_id(owner_repo),
+                "owner_repo": owner_repo,
+                "repo_url": resolved["repo_url"],
+                "requested_ref": resolved["requested_ref"],
+                "default_branch": resolved["default_branch"],
+                "head_sha": resolved["head_sha"],
+                "head_sha_ready": int(resolved["resolve_status"] == "pinned"),
+                "seed_from_v50": int(owner_repo in v50_repos),
+                "seed_query_rows": seed_query_rows,
+                "source_snapshot_ready": int(owner_repo in v50_repos),
+                "new_snapshot_required": int(owner_repo not in v50_repos),
+                "resolve_status": resolved["resolve_status"],
+                "resolve_error": resolved["resolve_error"],
+            }
+        )
+else:
+    if lock_rows_snapshot is None or not lock_rows_snapshot.is_file():
+        raise SystemExit("v53b public HEAD lock snapshot missing while refresh is disabled")
+    lock_rows = read_csv(lock_rows_snapshot)
+    if [row.get("owner_repo") for row in lock_rows] != target_repos:
+        raise SystemExit("v53b cached public HEAD lock rows do not match the target repo order")
+    for idx, row in enumerate(lock_rows, start=1):
+        owner_repo = target_repos[idx - 1]
+        row["repo_slot"] = idx
+        row["repo_id"] = repo_id(owner_repo)
+        row["seed_from_v50"] = int(owner_repo in v50_repos)
+        row["seed_query_rows"] = sum(1 for case in v50_cases if case["owner_repo"] == owner_repo)
+        row["source_snapshot_ready"] = int(owner_repo in v50_repos)
+        row["new_snapshot_required"] = int(owner_repo not in v50_repos)
+        if row.get("resolve_status") != "pinned" or not re.fullmatch(r"[0-9a-f]{40}", row.get("head_sha", "")):
+            raise SystemExit(f"v53b cached public HEAD lock is not pinned: {owner_repo}")
 write_csv(run_dir / "public_repo_10_lock_rows.csv", list(lock_rows[0].keys()), lock_rows)
 
 query_plan_rows = []
@@ -208,12 +296,20 @@ summary = {
     "failed_head_sha_rows": len(lock_rows) - locked_repo_count,
     "v50_seed_repo_count": int(v50_summary.get("repo_count", "0")),
     "v50_seed_query_rows": int(v50_summary.get("audit_case_rows", "0")),
+    "v50_seed_reused": v50_seed_reused,
+    "v50_public_refresh_allowed": v50_public_refresh_allowed,
+    "v50_public_refresh_executed": v50_public_refresh_executed,
+    "public_head_lock_reused": public_head_lock_reused,
+    "public_head_refresh_allowed": public_head_refresh_allowed,
+    "public_head_refresh_executed": public_head_refresh_executed,
     "real_release_package_ready": 0,
 }
 write_csv(summary_csv, list(summary.keys()), [summary])
 
 decision_rows = [
     ("public-repo-10-lock", "pass" if v53b_repo_lock_ready else "blocked", f"locked_repo_count={locked_repo_count}"),
+    ("v50-seed-refresh-policy", "pass", f"seed_reused={v50_seed_reused}; public_refresh_allowed={v50_public_refresh_allowed}; public_refresh_executed={v50_public_refresh_executed}"),
+    ("public-head-refresh-policy", "pass", f"lock_reused={public_head_lock_reused}; public_head_refresh_allowed={public_head_refresh_allowed}; public_head_refresh_executed={public_head_refresh_executed}"),
     ("v50-seed-binding", "pass" if seed_repo_count == 3 and seed_query_rows == 9 else "blocked", f"seed_repo_count={seed_repo_count}; seed_query_rows={seed_query_rows}"),
     ("source-snapshot-scale", "blocked", f"source snapshots still missing for {summary['source_snapshot_missing_repo_count']} locked repos"),
     ("query-count-target", "blocked", f"need >=1000 query rows; have seed {seed_query_rows}; missing {missing_query_rows}"),
@@ -234,6 +330,14 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     f"- new_locked_repo_count={new_locked_repo_count}\n"
     f"- seed_query_rows={seed_query_rows}\n"
     f"- missing_query_rows={missing_query_rows}\n\n"
+    "Refresh policy:\n\n"
+    f"- v50_seed_reused={v50_seed_reused}\n"
+    f"- v50_public_refresh_allowed={v50_public_refresh_allowed}\n"
+    f"- v50_public_refresh_executed={v50_public_refresh_executed}\n"
+    f"- public_head_lock_reused={public_head_lock_reused}\n"
+    f"- public_head_refresh_allowed={public_head_refresh_allowed}\n"
+    f"- public_head_refresh_executed={public_head_refresh_executed}\n"
+    "- cached v50 seed artifacts and cached public HEAD lock rows are reused by default; public refresh requires explicit approval\n\n"
     "Still blocked:\n\n"
     "- source snapshots for the newly locked repositories\n"
     "- source-span-bound query generation up to at least 1000 rows\n"
@@ -253,6 +357,12 @@ manifest = {
     "new_locked_repo_count": new_locked_repo_count,
     "seed_query_rows": seed_query_rows,
     "missing_query_rows": missing_query_rows,
+    "v50_seed_reused": v50_seed_reused,
+    "v50_public_refresh_allowed": v50_public_refresh_allowed,
+    "v50_public_refresh_executed": v50_public_refresh_executed,
+    "public_head_lock_reused": public_head_lock_reused,
+    "public_head_refresh_allowed": public_head_refresh_allowed,
+    "public_head_refresh_executed": public_head_refresh_executed,
     "v50_source_summary_sha256": sha256(results / "v50_public_repo_auditor_3repo_summary.csv"),
     "real_release_package_ready": 0,
 }

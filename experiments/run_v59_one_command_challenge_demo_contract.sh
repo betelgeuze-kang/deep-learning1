@@ -8,16 +8,89 @@ RUN_ID="${V59_CONTRACT_RUN_ID:-contract_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+V59_ALLOW_STAGE_REBUILD="${V59_ALLOW_STAGE_REBUILD:-0}"
+STAGE_REBUILD_EXECUTED=0
+
+required_stage_files=(
+  "$RESULTS_DIR/v52_llm_rag_baseline_war_summary.csv"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/baseline_registry.csv"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/evaluation_contract_rows.csv"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/V52_BASELINE_WAR_BOUNDARY.md"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/v52_llm_rag_baseline_war_manifest.json"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/sha256_manifest.csv"
+  "$RESULTS_DIR/v53_public_repo_code_doc_audit_summary.csv"
+  "$RESULTS_DIR/v53_public_repo_code_doc_audit/audit_001/target_repo_rows.csv"
+  "$RESULTS_DIR/v53_public_repo_code_doc_audit/audit_001/query_scale_contract_rows.csv"
+  "$RESULTS_DIR/v53_public_repo_code_doc_audit/audit_001/V53_PUBLIC_REPO_CODE_DOC_AUDIT_BOUNDARY.md"
+  "$RESULTS_DIR/v53_public_repo_code_doc_audit/audit_001/v53_public_repo_code_doc_audit_manifest.json"
+  "$RESULTS_DIR/v53_public_repo_code_doc_audit/audit_001/sha256_manifest.csv"
+  "$RESULTS_DIR/v54_routehint_generation_1000_contract_summary.csv"
+  "$RESULTS_DIR/v54_routehint_generation_1000_contract/contract_001/domain_generation_target_rows.csv"
+  "$RESULTS_DIR/v54_routehint_generation_1000_contract/contract_001/generation_invariant_rows.csv"
+  "$RESULTS_DIR/v54_routehint_generation_1000_contract/contract_001/V54_ROUTEHINT_GENERATION_1000_BOUNDARY.md"
+  "$RESULTS_DIR/v54_routehint_generation_1000_contract/contract_001/v54_routehint_generation_1000_manifest.json"
+  "$RESULTS_DIR/v54_routehint_generation_1000_contract/contract_001/sha256_manifest.csv"
+  "$RESULTS_DIR/v55_local_scaling_law_main_contract_summary.csv"
+  "$RESULTS_DIR/v55_local_scaling_law_main_contract/contract_001/scaling_axis_target_rows.csv"
+  "$RESULTS_DIR/v55_local_scaling_law_main_contract/contract_001/scaling_fit_contract_rows.csv"
+  "$RESULTS_DIR/v55_local_scaling_law_main_contract/contract_001/V55_LOCAL_SCALING_LAW_BOUNDARY.md"
+  "$RESULTS_DIR/v55_local_scaling_law_main_contract/contract_001/v55_local_scaling_law_manifest.json"
+  "$RESULTS_DIR/v55_local_scaling_law_main_contract/contract_001/sha256_manifest.csv"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract_summary.csv"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/benchmark_family_target_rows.csv"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/expanded_benchmark_artifact_contract_rows.csv"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/V56_RULER_LONGBENCH_EXPANDED_BOUNDARY.md"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/v56_ruler_longbench_expanded_manifest.json"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/sha256_manifest.csv"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract_summary.csv"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/domain_pack_target_rows.csv"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/expert_review_contract_rows.csv"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/V57_DOMAIN_EXPERT_PACKS_BOUNDARY.md"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/v57_domain_expert_packs_manifest.json"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/sha256_manifest.csv"
+  "$RESULTS_DIR/v58_blind_eval_contract_summary.csv"
+  "$RESULTS_DIR/v58_blind_eval_contract/contract_001/blind_system_mapping_rows.csv"
+  "$RESULTS_DIR/v58_blind_eval_contract/contract_001/blind_eval_query_contract_rows.csv"
+  "$RESULTS_DIR/v58_blind_eval_contract/contract_001/V58_BLIND_EVAL_BOUNDARY.md"
+  "$RESULTS_DIR/v58_blind_eval_contract/contract_001/v58_blind_eval_manifest.json"
+  "$RESULTS_DIR/v58_blind_eval_contract/contract_001/sha256_manifest.csv"
+)
+
+missing_stage_files=()
+for required_file in "${required_stage_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    missing_stage_files+=("$required_file")
+  fi
+done
+
+if [ "${#missing_stage_files[@]}" -gt 0 ]; then
+  if [ "$V59_ALLOW_STAGE_REBUILD" != "1" ]; then
+    {
+      echo "v59 requires existing v52-v58 stage artifacts for offline one-command bundling."
+      echo "Refusing implicit stage regeneration because dependencies can reach public source/benchmark refresh paths."
+      echo "Set V59_ALLOW_STAGE_REBUILD=1 only with explicit approval to rebuild stage artifacts."
+      printf 'missing_stage_artifact=%s\n' "${missing_stage_files[@]}"
+    } >&2
+    exit 2
+  fi
+  "$ROOT_DIR/experiments/run_v53_public_repo_code_doc_audit.sh" >/dev/null
+  "$ROOT_DIR/experiments/run_v54_routehint_generation_1000_contract.sh" >/dev/null
+  "$ROOT_DIR/experiments/run_v55_local_scaling_law_main_contract.sh" >/dev/null
+  "$ROOT_DIR/experiments/run_v58_blind_eval_contract.sh" >/dev/null
+  STAGE_REBUILD_EXECUTED=1
+fi
+
+for required_file in "${required_stage_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    echo "v59 stage artifact still missing after rebuild policy check: $required_file" >&2
+    exit 3
+  fi
+done
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-"$ROOT_DIR/experiments/run_v53_public_repo_code_doc_audit.sh" >/dev/null
-"$ROOT_DIR/experiments/run_v54_routehint_generation_1000_contract.sh" >/dev/null
-"$ROOT_DIR/experiments/run_v55_local_scaling_law_main_contract.sh" >/dev/null
-"$ROOT_DIR/experiments/run_v58_blind_eval_contract.sh" >/dev/null
-
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$V59_ALLOW_STAGE_REBUILD" "$STAGE_REBUILD_EXECUTED" <<'PY'
 import csv
 import hashlib
 import json
@@ -30,6 +103,9 @@ root = Path(sys.argv[1])
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+stage_rebuild_allowed = int(sys.argv[5] == "1")
+stage_rebuild_executed = int(sys.argv[6] == "1")
+stage_artifacts_reused = int(not stage_rebuild_executed)
 results = root / "results"
 
 summary_files = {
@@ -163,6 +239,9 @@ command_rows = [
         "external_model_required": "0",
         "external_model_rows_deferred_explicitly": "1",
         "claim_boundary_required": "1",
+        "stage_artifacts_reused": str(stage_artifacts_reused),
+        "stage_rebuild_allowed": str(stage_rebuild_allowed),
+        "stage_rebuild_executed": str(stage_rebuild_executed),
     }
 ]
 write_csv(run_dir / "one_command_demo_rows.csv", list(command_rows[0].keys()), command_rows)
@@ -172,6 +251,7 @@ gate_rows = [
     ("one-command-entrypoint", "pass", "examples/v1_0_architecture_challenge_demo.sh runs the v59 bundle builder"),
     ("bundle-hash-manifest", "pass", "v59 writes sha256_manifest.csv over copied source artifacts and demo files"),
     ("offline-demo-boundary", "pass", "demo does not require external model credentials or network access"),
+    ("stage-rebuild-policy", "pass", f"stage_artifacts_reused={stage_artifacts_reused}; stage_rebuild_allowed={stage_rebuild_allowed}; stage_rebuild_executed={stage_rebuild_executed}"),
     ("30b-70b-real-rows", "blocked", "30B/70B LLM+RAG measured rows are missing"),
     ("public-repo-query-scale", "blocked", "v53 has not reached 10+ repos / 1000+ queries"),
     ("generation-scaling-benchmark-domain-blind-main-runs", "blocked", "v54-v58 remain contract scaffolds, not main evidence rows"),
@@ -223,6 +303,9 @@ summary = {
     "network_required": 0,
     "external_model_required_for_contract": 0,
     "external_model_rows_deferred_explicitly": 1,
+    "stage_artifacts_reused": stage_artifacts_reused,
+    "stage_rebuild_allowed": stage_rebuild_allowed,
+    "stage_rebuild_executed": stage_rebuild_executed,
     "missing_real_30b_70b_rows": 1,
     "missing_public_repo_query_scale": 1,
     "missing_generation_main_rows": 1,
@@ -246,6 +329,11 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- one command entrypoint exists\n"
     "- v52-v58 contract artifacts are assembled into one bundle\n"
     "- demo writes README_RESULT, gate rows, replay manifest, and sha256 manifest\n\n"
+    "Refresh policy:\n\n"
+    f"- stage_artifacts_reused={stage_artifacts_reused}\n"
+    f"- stage_rebuild_allowed={stage_rebuild_allowed}\n"
+    f"- stage_rebuild_executed={stage_rebuild_executed}\n"
+    "- cached v52-v58 stage artifacts are reused by default; rebuilding requires V59_ALLOW_STAGE_REBUILD=1 and explicit approval\n\n"
     "Still blocked:\n\n"
     "- real 30B/70B/100B+ LLM+RAG rows\n"
     "- full public repo/query scale\n"
@@ -264,6 +352,9 @@ manifest = {
     "stage_contract_rows": len(stage_rows),
     "contract_ready_stage_rows": sum(int(row["contract_ready"]) for row in stage_rows),
     "full_ready_stage_rows": sum(int(row["full_ready"]) for row in stage_rows),
+    "stage_artifacts_reused": stage_artifacts_reused,
+    "stage_rebuild_allowed": stage_rebuild_allowed,
+    "stage_rebuild_executed": stage_rebuild_executed,
     "real_release_package_ready": 0,
     "summary_sha256": {stage: sha256(path) for stage, path in summary_files.items()},
 }

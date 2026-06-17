@@ -8,13 +8,51 @@ RUN_ID="${V58_CONTRACT_RUN_ID:-contract_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+V58_ALLOW_V57_REBUILD="${V58_ALLOW_V57_REBUILD:-0}"
+V57_REBUILD_EXECUTED=0
+
+required_v57_files=(
+  "$RESULTS_DIR/v57_domain_expert_packs_contract_summary.csv"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/domain_pack_target_rows.csv"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/expert_review_contract_rows.csv"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/domain_policy_gate_rows.csv"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/V57_DOMAIN_EXPERT_PACKS_BOUNDARY.md"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/v57_domain_expert_packs_manifest.json"
+  "$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001/sha256_manifest.csv"
+)
+
+missing_v57_files=()
+for required_file in "${required_v57_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    missing_v57_files+=("$required_file")
+  fi
+done
+
+if [ "${#missing_v57_files[@]}" -gt 0 ]; then
+  if [ "$V58_ALLOW_V57_REBUILD" != "1" ]; then
+    {
+      echo "v58 requires existing v57 domain-pack contract artifacts."
+      echo "Refusing implicit v57 regeneration because the dependency chain can reach public benchmark/source refresh paths."
+      echo "Set V58_ALLOW_V57_REBUILD=1 only with explicit approval to rebuild v57 dependencies."
+      printf 'missing_v57_artifact=%s\n' "${missing_v57_files[@]}"
+    } >&2
+    exit 2
+  fi
+  "$ROOT_DIR/experiments/run_v57_domain_expert_packs_contract.sh" >/dev/null
+  V57_REBUILD_EXECUTED=1
+fi
+
+for required_file in "${required_v57_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    echo "v58 v57 artifact still missing after rebuild policy check: $required_file" >&2
+    exit 3
+  fi
+done
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-"$ROOT_DIR/experiments/run_v57_domain_expert_packs_contract.sh" >/dev/null
-
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$V58_ALLOW_V57_REBUILD" "$V57_REBUILD_EXECUTED" <<'PY'
 import csv
 import hashlib
 import json
@@ -27,6 +65,9 @@ root = Path(sys.argv[1])
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+v57_rebuild_allowed = int(sys.argv[5] == "1")
+v57_rebuild_executed = int(sys.argv[6] == "1")
+v57_dependency_reused = int(not v57_rebuild_executed)
 results = root / "results"
 
 v52_dir = results / "v52_llm_rag_baseline_war" / "baseline_001"
@@ -150,6 +191,7 @@ write_csv(
 gate_rows = [
     ("v52-baseline-contract", "pass", "A-H baseline registry and symmetric evaluator contract are present"),
     ("v57-domain-pack-contract", "pass", "domain pack and expert review contracts are present"),
+    ("v57-rebuild-policy", "pass", f"v57_dependency_reused={v57_dependency_reused}; v57_rebuild_allowed={v57_rebuild_allowed}; v57_rebuild_executed={v57_rebuild_executed}"),
     ("query-freeze-contract", "pass", "500-row blind query target and pre-output freeze contract are emitted"),
     ("blind-system-anonymization", "pass", "blind IDs are defined separately from source system IDs"),
     ("30b-blind-response-row", "blocked", "30B LLM+RAG blind response rows are missing"),
@@ -190,6 +232,9 @@ summary = {
     "optional_100b_plus_blind_response_status": "deferred-with-reason",
     "v52_baseline_war_contract_ready": int(v52_summary.get("v52_baseline_war_contract_ready", "0")),
     "v57_domain_expert_packs_contract_ready": int(v57_summary.get("v57_domain_expert_packs_contract_ready", "0")),
+    "v57_dependency_reused": v57_dependency_reused,
+    "v57_rebuild_allowed": v57_rebuild_allowed,
+    "v57_rebuild_executed": v57_rebuild_executed,
     "real_release_package_ready": 0,
 }
 write_csv(summary_csv, list(summary.keys()), [summary])
@@ -206,6 +251,11 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     f"- v52_baseline_war_contract_ready={v52_summary.get('v52_baseline_war_contract_ready')}\n"
     f"- v57_domain_expert_packs_contract_ready={v57_summary.get('v57_domain_expert_packs_contract_ready')}\n"
     f"- target_blind_eval_rows={target_blind_rows}\n\n"
+    "Refresh policy:\n\n"
+    f"- v57_dependency_reused={v57_dependency_reused}\n"
+    f"- v57_rebuild_allowed={v57_rebuild_allowed}\n"
+    f"- v57_rebuild_executed={v57_rebuild_executed}\n"
+    "- cached v57 dependency artifacts are reused by default; rebuilding requires V58_ALLOW_V57_REBUILD=1 and explicit approval\n\n"
     "Still blocked:\n\n"
     "- 30B and 70B LLM+RAG blind response rows\n"
     "- optional 100B+ hosted/API blind response rows or explicit final deferral\n"
@@ -225,6 +275,9 @@ manifest = {
     "missing_blind_eval_rows": missing_blind_rows,
     "v52_summary_sha256": sha256(results / "v52_llm_rag_baseline_war_summary.csv"),
     "v57_summary_sha256": sha256(results / "v57_domain_expert_packs_contract_summary.csv"),
+    "v57_dependency_reused": v57_dependency_reused,
+    "v57_rebuild_allowed": v57_rebuild_allowed,
+    "v57_rebuild_executed": v57_rebuild_executed,
     "required_30b_blind_response_ready": 0,
     "required_70b_blind_response_ready": 0,
     "human_blind_review_ready": 0,

@@ -8,13 +8,54 @@ RUN_ID="${V53_RUN_ID:-audit_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+V50_RUN_DIR="$RESULTS_DIR/v50_public_repo_auditor_3repo/audit_001"
+V50_SUMMARY_CSV="$RESULTS_DIR/v50_public_repo_auditor_3repo_summary.csv"
+V53_ALLOW_V50_REFRESH="${V53_ALLOW_V50_REFRESH:-0}"
+V50_REFRESH_EXECUTED=0
+
+v50_required_files=(
+  "$V50_SUMMARY_CSV"
+  "$V50_RUN_DIR/public_repo_source_snapshot_rows.csv"
+  "$V50_RUN_DIR/public_repo_audit_case_rows.csv"
+  "$V50_RUN_DIR/public_repo_source_span_rows.csv"
+  "$V50_RUN_DIR/guard_negative_rows.csv"
+  "$V50_RUN_DIR/V50_PUBLIC_REPO_AUDITOR_BOUNDARY.md"
+  "$V50_RUN_DIR/v50_public_repo_auditor_manifest.json"
+  "$V50_RUN_DIR/sha256_manifest.csv"
+)
+
+v50_seed_ready=1
+for required_file in "${v50_required_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    v50_seed_ready=0
+    break
+  fi
+done
+
+if [ "$v50_seed_ready" != "1" ]; then
+  if [ "$V53_ALLOW_V50_REFRESH" != "1" ]; then
+    {
+      echo "v53 requires existing v50 public-repo seed artifacts."
+      echo "Missing seed evidence is fail-closed by default because v50 refresh performs public git fetches."
+      echo "Set V53_ALLOW_V50_REFRESH=1 only with explicit approval to refresh pinned public sources."
+    } >&2
+    exit 2
+  fi
+  "$ROOT_DIR/experiments/run_v50_public_repo_auditor_3repo.sh" >/dev/null
+  V50_REFRESH_EXECUTED=1
+fi
+
+for required_file in "${v50_required_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    echo "v53 v50 seed artifact still missing after refresh policy check: $required_file" >&2
+    exit 3
+  fi
+done
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-"$ROOT_DIR/experiments/run_v50_public_repo_auditor_3repo.sh" >/dev/null
-
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$V53_ALLOW_V50_REFRESH" "$V50_REFRESH_EXECUTED" <<'PY'
 import csv
 import hashlib
 import json
@@ -27,6 +68,9 @@ root = Path(sys.argv[1])
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+v50_public_refresh_allowed = int(sys.argv[5] == "1")
+v50_public_refresh_executed = int(sys.argv[6] == "1")
+v50_seed_reused = int(not v50_public_refresh_executed)
 results = root / "results"
 v50_dir = results / "v50_public_repo_auditor_3repo" / "audit_001"
 v50_summary = list(csv.DictReader((results / "v50_public_repo_auditor_3repo_summary.csv").open(newline="", encoding="utf-8")))[0]
@@ -180,12 +224,16 @@ summary = {
     "pinned_commit_manifest_ready": int(v50_summary.get("repo_refs_pinned") == "1"),
     "abstain_policy_contract_ready": 1,
     "wrong_answer_guard_contract_ready": 1,
+    "v50_seed_reused": v50_seed_reused,
+    "v50_public_refresh_allowed": v50_public_refresh_allowed,
+    "v50_public_refresh_executed": v50_public_refresh_executed,
     "real_release_package_ready": 0,
 }
 write_csv(summary_csv, list(summary.keys()), [summary])
 
 decision_rows = [
     ("v53-public-repo-audit-contract", "pass", "target repo/query/artifact contract emitted"),
+    ("v50-seed-refresh-policy", "pass", f"seed_reused={v50_seed_reused}; public_refresh_allowed={v50_public_refresh_allowed}; public_refresh_executed={v50_public_refresh_executed}"),
     ("v50-seed-evidence", "pass" if repo_count == 3 and query_rows == 9 else "blocked", f"seed_repo_count={repo_count}; seed_query_rows={query_rows}"),
     ("repo-count-target", "blocked", f"need >=10 repos; have {repo_count}; missing {missing_repo_count}"),
     ("query-count-target", "blocked", f"need >=1000 query rows; have {query_rows}; missing {missing_query_rows}"),
@@ -207,6 +255,11 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     f"- audit_case_rows={query_rows}\n"
     f"- source_span_bound_rows={source_span_bound_rows}\n"
     f"- guard_negative_rows={existing_negative_rows}\n\n"
+    "Refresh policy:\n\n"
+    f"- v50_seed_reused={v50_seed_reused}\n"
+    f"- v50_public_refresh_allowed={v50_public_refresh_allowed}\n"
+    f"- v50_public_refresh_executed={v50_public_refresh_executed}\n"
+    "- existing v50 seed artifacts are reused by default; public git refresh requires V53_ALLOW_V50_REFRESH=1 and explicit approval\n\n"
     "Still blocked:\n\n"
     f"- missing_repo_count={missing_repo_count}\n"
     f"- missing_query_rows={missing_query_rows}\n"
@@ -227,6 +280,9 @@ manifest = {
     "current_seed_query_rows": query_rows,
     "missing_repo_count": missing_repo_count,
     "missing_query_rows": missing_query_rows,
+    "v50_seed_reused": v50_seed_reused,
+    "v50_public_refresh_allowed": v50_public_refresh_allowed,
+    "v50_public_refresh_executed": v50_public_refresh_executed,
     "v50_source_summary_sha256": sha256(results / "v50_public_repo_auditor_3repo_summary.csv"),
     "real_release_package_ready": 0,
 }

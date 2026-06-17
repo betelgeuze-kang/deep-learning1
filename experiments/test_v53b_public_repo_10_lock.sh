@@ -56,6 +56,12 @@ expected = {
     "failed_head_sha_rows": "0",
     "v50_seed_repo_count": "3",
     "v50_seed_query_rows": "9",
+    "v50_seed_reused": "1",
+    "v50_public_refresh_allowed": "0",
+    "v50_public_refresh_executed": "0",
+    "public_head_lock_reused": "1",
+    "public_head_refresh_allowed": "0",
+    "public_head_refresh_executed": "0",
     "real_release_package_ready": "0",
 }
 for field, value in expected.items():
@@ -63,7 +69,7 @@ for field, value in expected.items():
         raise SystemExit(f"v53b {field}: expected {value}, got {summary.get(field)}")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
-for gate in ["public-repo-10-lock", "v50-seed-binding"]:
+for gate in ["public-repo-10-lock", "v50-seed-refresh-policy", "public-head-refresh-policy", "v50-seed-binding"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v53b gate should pass: {gate}")
 for gate in [
@@ -124,6 +130,16 @@ if manifest.get("v53b_public_repo_10_lock_ready") != 1 or manifest.get("v53_read
     raise SystemExit("v53b manifest readiness boundary mismatch")
 if manifest.get("locked_repo_count") != 10 or manifest.get("missing_query_rows") != 991:
     raise SystemExit("v53b manifest count mismatch")
+for field, value in {
+    "v50_seed_reused": 1,
+    "v50_public_refresh_allowed": 0,
+    "v50_public_refresh_executed": 0,
+    "public_head_lock_reused": 1,
+    "public_head_refresh_allowed": 0,
+    "public_head_refresh_executed": 0,
+}.items():
+    if manifest.get(field) != value:
+        raise SystemExit(f"v53b manifest {field} mismatch")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -137,6 +153,7 @@ for snippet in [
     "live public-repo target lock",
     "locked_repo_count=10",
     "missing_query_rows=991",
+    "cached v50 seed artifacts and cached public HEAD lock rows are reused by default",
     "source snapshots for the newly locked repositories",
     "Do not publish v53 safety/grounding superiority claims",
 ]:

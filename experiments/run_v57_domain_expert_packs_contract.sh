@@ -8,16 +8,75 @@ RUN_ID="${V57_CONTRACT_RUN_ID:-contract_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+V57_ALLOW_DEPENDENCY_REBUILD="${V57_ALLOW_DEPENDENCY_REBUILD:-0}"
+DEPENDENCY_REBUILD_EXECUTED=0
+
+required_dependency_files=(
+  "$RESULTS_DIR/v47_offline_domain_policy_update_summary.csv"
+  "$RESULTS_DIR/v47_offline_domain_policy_update/policy_001/offline_domain_policy_rows.csv"
+  "$RESULTS_DIR/v47_offline_domain_policy_update/policy_001/offline_domain_policy.json"
+  "$RESULTS_DIR/v47_offline_domain_policy_update/policy_001/policy_source_rows.csv"
+  "$RESULTS_DIR/v47_offline_domain_policy_update/policy_001/V47_OFFLINE_DOMAIN_POLICY_BOUNDARY.md"
+  "$RESULTS_DIR/v47_offline_domain_policy_update/policy_001/v47_offline_domain_policy_manifest.json"
+  "$RESULTS_DIR/v47_offline_domain_policy_update/policy_001/sha256_manifest.csv"
+  "$RESULTS_DIR/v48_multi_domain_generator_evidence_summary.csv"
+  "$RESULTS_DIR/v48_multi_domain_generator_evidence/run_001/route_memory_evidence_rows.csv"
+  "$RESULTS_DIR/v48_multi_domain_generator_evidence/run_001/compact_route_hint_rows.csv"
+  "$RESULTS_DIR/v48_multi_domain_generator_evidence/run_001/grounded_generation_rows.csv"
+  "$RESULTS_DIR/v48_multi_domain_generator_evidence/run_001/V48_MULTI_DOMAIN_GENERATOR_BOUNDARY.md"
+  "$RESULTS_DIR/v48_multi_domain_generator_evidence/run_001/v48_multi_domain_generator_manifest.json"
+  "$RESULTS_DIR/v48_multi_domain_generator_evidence/run_001/sha256_manifest.csv"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war_summary.csv"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/baseline_registry.csv"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/evaluation_contract_rows.csv"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/score_axis_rows.csv"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/V52_BASELINE_WAR_BOUNDARY.md"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/v52_llm_rag_baseline_war_manifest.json"
+  "$RESULTS_DIR/v52_llm_rag_baseline_war/baseline_001/sha256_manifest.csv"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract_summary.csv"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/benchmark_family_target_rows.csv"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/expanded_benchmark_artifact_contract_rows.csv"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/benchmark_invariant_rows.csv"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/V56_RULER_LONGBENCH_EXPANDED_BOUNDARY.md"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/v56_ruler_longbench_expanded_manifest.json"
+  "$RESULTS_DIR/v56_ruler_longbench_expanded_contract/contract_001/sha256_manifest.csv"
+)
+
+missing_dependency_files=()
+for required_file in "${required_dependency_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    missing_dependency_files+=("$required_file")
+  fi
+done
+
+if [ "${#missing_dependency_files[@]}" -gt 0 ]; then
+  if [ "$V57_ALLOW_DEPENDENCY_REBUILD" != "1" ]; then
+    {
+      echo "v57 requires existing v47/v48/v52/v56 dependency artifacts."
+      echo "Refusing implicit dependency regeneration because the chain can reach public benchmark/source refresh paths."
+      echo "Set V57_ALLOW_DEPENDENCY_REBUILD=1 only with explicit approval to rebuild dependencies."
+      printf 'missing_dependency_artifact=%s\n' "${missing_dependency_files[@]}"
+    } >&2
+    exit 2
+  fi
+  "$ROOT_DIR/experiments/run_v47_offline_domain_policy_update.sh" >/dev/null
+  "$ROOT_DIR/experiments/run_v48_multi_domain_generator_evidence.sh" >/dev/null
+  "$ROOT_DIR/experiments/run_v52_llm_rag_baseline_war.sh" >/dev/null
+  "$ROOT_DIR/experiments/run_v56_ruler_longbench_expanded_contract.sh" >/dev/null
+  DEPENDENCY_REBUILD_EXECUTED=1
+fi
+
+for required_file in "${required_dependency_files[@]}"; do
+  if [ ! -s "$required_file" ]; then
+    echo "v57 dependency artifact still missing after rebuild policy check: $required_file" >&2
+    exit 3
+  fi
+done
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-"$ROOT_DIR/experiments/run_v47_offline_domain_policy_update.sh" >/dev/null
-"$ROOT_DIR/experiments/run_v48_multi_domain_generator_evidence.sh" >/dev/null
-"$ROOT_DIR/experiments/run_v52_llm_rag_baseline_war.sh" >/dev/null
-"$ROOT_DIR/experiments/run_v56_ruler_longbench_expanded_contract.sh" >/dev/null
-
-python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$V57_ALLOW_DEPENDENCY_REBUILD" "$DEPENDENCY_REBUILD_EXECUTED" <<'PY'
 import csv
 import hashlib
 import json
@@ -30,6 +89,9 @@ root = Path(sys.argv[1])
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
 decision_csv = Path(sys.argv[4])
+dependency_rebuild_allowed = int(sys.argv[5] == "1")
+dependency_rebuild_executed = int(sys.argv[6] == "1")
+dependency_artifacts_reused = int(not dependency_rebuild_executed)
 results = root / "results"
 
 v47_dir = results / "v47_offline_domain_policy_update" / "policy_001"
@@ -156,6 +218,7 @@ gate_rows = [
     ("multi_domain_generation_seed", "pass", "v48 multi-domain RouteHint generation rows are present"),
     ("baseline_symmetry_contract", "pass", "v52 A-H baseline/evaluation contract is present"),
     ("expanded_benchmark_seed", "pass", "v56 RULER/LongBench seed contract is present"),
+    ("dependency-rebuild-policy", "pass", f"dependency_artifacts_reused={dependency_artifacts_reused}; dependency_rebuild_allowed={dependency_rebuild_allowed}; dependency_rebuild_executed={dependency_rebuild_executed}"),
     ("domain_pack_eval_scale", "blocked", "six packs need 1000 total expert-pack eval rows"),
     ("human_expert_review", "blocked", "no human expert review return is supplied"),
     ("blind_eval_ready", "blocked", "v58 blind evaluation is not supplied"),
@@ -190,6 +253,9 @@ summary = {
     "human_expert_review_ready": 0,
     "blind_eval_ready": 0,
     "expert_replacement_claim": 0,
+    "dependency_artifacts_reused": dependency_artifacts_reused,
+    "dependency_rebuild_allowed": dependency_rebuild_allowed,
+    "dependency_rebuild_executed": dependency_rebuild_executed,
     "real_release_package_ready": 0,
 }
 write_csv(summary_csv, list(summary.keys()), [summary])
@@ -207,6 +273,11 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     f"- v48 generation_rows={v48_summary.get('generation_rows')}\n"
     f"- v52 baseline_system_rows={v52_summary.get('baseline_system_rows')}\n"
     f"- v56 benchmark_seed_rows={v56_summary.get('seed_total_rows')}\n\n"
+    "Refresh policy:\n\n"
+    f"- dependency_artifacts_reused={dependency_artifacts_reused}\n"
+    f"- dependency_rebuild_allowed={dependency_rebuild_allowed}\n"
+    f"- dependency_rebuild_executed={dependency_rebuild_executed}\n"
+    "- cached v47/v48/v52/v56 dependency artifacts are reused by default; rebuilding requires V57_ALLOW_DEPENDENCY_REBUILD=1 and explicit approval\n\n"
     "Still blocked:\n\n"
     f"- missing_eval_rows={missing_pack_rows}\n"
     "- human expert review return\n"
@@ -232,6 +303,9 @@ manifest = {
     "human_expert_review_ready": 0,
     "blind_eval_ready": 0,
     "expert_replacement_claim": 0,
+    "dependency_artifacts_reused": dependency_artifacts_reused,
+    "dependency_rebuild_allowed": dependency_rebuild_allowed,
+    "dependency_rebuild_executed": dependency_rebuild_executed,
     "real_release_package_ready": 0,
 }
 (run_dir / "v57_domain_expert_packs_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")

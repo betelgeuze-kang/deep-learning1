@@ -7,6 +7,24 @@ RUN_DIR="$RESULTS_DIR/v58_blind_eval_contract/contract_001"
 SUMMARY_CSV="$RESULTS_DIR/v58_blind_eval_contract_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v58_blind_eval_contract_decision.csv"
 
+if [ ! -s "$RESULTS_DIR/v57_domain_expert_packs_contract_summary.csv" ] && [ "${V58_REQUIRE_READY_TEST:-0}" != "1" ]; then
+  set +e
+  output="$("$ROOT_DIR/experiments/run_v58_blind_eval_contract.sh" 2>&1 >/dev/null)"
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
+    echo "v58 should fail closed when v57 artifacts are missing" >&2
+    exit 1
+  fi
+  if ! grep -q "Refusing implicit v57 regeneration" <<<"$output"; then
+    echo "v58 missing-v57 guard did not explain the refusal" >&2
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
+  echo "v58 blind eval missing-v57 guard smoke passed"
+  exit 0
+fi
+
 "$ROOT_DIR/experiments/run_v58_blind_eval_contract.sh" >/dev/null
 
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
@@ -58,6 +76,9 @@ expected = {
     "optional_100b_plus_blind_response_status": "deferred-with-reason",
     "v52_baseline_war_contract_ready": "1",
     "v57_domain_expert_packs_contract_ready": "1",
+    "v57_dependency_reused": "1",
+    "v57_rebuild_allowed": "0",
+    "v57_rebuild_executed": "0",
     "real_release_package_ready": "0",
 }
 for field, value in expected.items():
@@ -65,7 +86,7 @@ for field, value in expected.items():
         raise SystemExit(f"v58 {field}: expected {value}, got {summary.get(field)}")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
-for gate in ["v52-baseline-contract", "v57-domain-pack-contract", "query-freeze-contract", "blind-system-anonymization"]:
+for gate in ["v52-baseline-contract", "v57-domain-pack-contract", "v57-rebuild-policy", "query-freeze-contract", "blind-system-anonymization"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v58 gate should pass: {gate}")
 for gate in [

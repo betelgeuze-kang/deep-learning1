@@ -7,6 +7,24 @@ RUN_DIR="$RESULTS_DIR/v57_domain_expert_packs_contract/contract_001"
 SUMMARY_CSV="$RESULTS_DIR/v57_domain_expert_packs_contract_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v57_domain_expert_packs_contract_decision.csv"
 
+if [ ! -s "$RESULTS_DIR/v56_ruler_longbench_expanded_contract_summary.csv" ] && [ "${V57_REQUIRE_READY_TEST:-0}" != "1" ]; then
+  set +e
+  output="$("$ROOT_DIR/experiments/run_v57_domain_expert_packs_contract.sh" 2>&1 >/dev/null)"
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
+    echo "v57 should fail closed when dependency artifacts are missing" >&2
+    exit 1
+  fi
+  if ! grep -q "Refusing implicit dependency regeneration" <<<"$output"; then
+    echo "v57 missing-dependency guard did not explain the refusal" >&2
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
+  echo "v57 domain expert packs missing-dependency guard smoke passed"
+  exit 0
+fi
+
 "$ROOT_DIR/experiments/run_v57_domain_expert_packs_contract.sh" >/dev/null
 
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
@@ -57,6 +75,9 @@ expected = {
     "human_expert_review_ready": "0",
     "blind_eval_ready": "0",
     "expert_replacement_claim": "0",
+    "dependency_artifacts_reused": "1",
+    "dependency_rebuild_allowed": "0",
+    "dependency_rebuild_executed": "0",
     "real_release_package_ready": "0",
 }
 for field, value in expected.items():
@@ -64,7 +85,7 @@ for field, value in expected.items():
         raise SystemExit(f"v57 {field}: expected {value}, got {summary.get(field)}")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
-for gate in ["policy_seed", "multi_domain_generation_seed", "baseline_symmetry_contract", "expanded_benchmark_seed"]:
+for gate in ["policy_seed", "multi_domain_generation_seed", "baseline_symmetry_contract", "expanded_benchmark_seed", "dependency-rebuild-policy"]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v57 gate should pass: {gate}")
 for gate in ["domain_pack_eval_scale", "human_expert_review", "blind_eval_ready", "expert_replacement_claim", "real_release_package"]:
