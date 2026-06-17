@@ -51,6 +51,12 @@ expected = {
     "abstain_rows": "160",
     "generator_resource_rows": "1000",
     "wrong_answer_guard_rows": "1000",
+    "grounded_generation_output_contract_rows": "9",
+    "grounded_generation_output_contract_ready_rows": "9",
+    "grounded_generation_output_contract_pm_required_rows": "7",
+    "grounded_generation_output_contract_pm_required_ready_rows": "7",
+    "grounded_generation_output_contract_sha256_bound_rows": "8",
+    "grounded_generation_output_contract_raw_prompt_forbidden_rows": "9",
     "generated_from_source_span_rows": "1000",
     "v53ap_adapter_trace_provenance_ready": "1",
     "v53ap_adapter_trace_provenance_rows": "1000",
@@ -92,6 +98,7 @@ required_files = [
     "abstain_rows.csv",
     "generator_resource_rows.csv",
     "wrong_answer_guard_rows.csv",
+    "grounded_generation_output_contract_rows.csv",
     "generator_input_rows.csv",
     "compact_routehint_rows.csv",
     "V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md",
@@ -121,6 +128,7 @@ resources = read_csv(run_dir / "generator_resource_rows.csv")
 guards = read_csv(run_dir / "wrong_answer_guard_rows.csv")
 inputs = read_csv(run_dir / "generator_input_rows.csv")
 hints = read_csv(run_dir / "compact_routehint_rows.csv")
+contracts = read_csv(run_dir / "grounded_generation_output_contract_rows.csv")
 adapter_traces = read_csv(run_dir / "source_v53ap/abgh_adapter_trace_rows.csv")
 evaluator_rows = read_csv(run_dir / "source_v53ap/abgh_evaluator_rows.csv")
 
@@ -139,6 +147,49 @@ for rows, name, count in [
 
 if len({row["generation_id"] for row in answers}) != 1000:
     raise SystemExit("v54c generation ids should be unique")
+contract_counts = {
+    "answer-rows": ("answer_rows.csv", 1000),
+    "citation-rows": ("citation_rows.csv", 1000),
+    "unsupported-claim-rows": ("unsupported_claim_rows.csv", 160),
+    "abstain-rows": ("abstain_rows.csv", 160),
+    "generator-resource-rows": ("generator_resource_rows.csv", 1000),
+    "wrong-answer-guard-rows": ("wrong_answer_guard_rows.csv", 1000),
+    "generator-input-rows": ("generator_input_rows.csv", 1000),
+    "compact-routehint-rows": ("compact_routehint_rows.csv", 1000),
+}
+contract_by_id = {row["artifact_id"]: row for row in contracts}
+expected_contract_ids = set(contract_counts) | {"sha256sums"}
+if len(contracts) != 9 or set(contract_by_id) != expected_contract_ids:
+    raise SystemExit("v54c should write the full grounded-generation output contract")
+if sum(row["pm_recommended_output"] == "1" for row in contracts) != 7:
+    raise SystemExit("v54c output contract should mark seven PM recommended artifacts")
+if any(row["contract_status"] != "ready" for row in contracts):
+    raise SystemExit("v54c output contract rows should be ready")
+for artifact_id, (artifact_path, expected_count) in contract_counts.items():
+    row = contract_by_id[artifact_id]
+    path = run_dir / artifact_path
+    if row["artifact_path"] != artifact_path:
+        raise SystemExit(f"v54c contract path mismatch for {artifact_id}")
+    if row["expected_row_count"] != str(expected_count) or row["observed_row_count"] != str(expected_count):
+        raise SystemExit(f"v54c contract row count mismatch for {artifact_id}")
+    if row["artifact_sha256"] != sha256(path) or row["sha256_bound"] != "1":
+        raise SystemExit(f"v54c contract sha256 binding mismatch for {artifact_id}")
+    if row["source_span_bound"] != "1" or row["v53ap_provenance_bound"] != "1":
+        raise SystemExit(f"v54c contract provenance binding mismatch for {artifact_id}")
+    if row["raw_prompt_context_appended_allowed"] != "0" or row["raw_prompt_context_appended_rows"] != "0":
+        raise SystemExit(f"v54c contract should forbid raw prompt context for {artifact_id}")
+    if row["wrong_answer_guarded"] != "1":
+        raise SystemExit(f"v54c contract should bind wrong-answer guard for {artifact_id}")
+sha_contract = contract_by_id["sha256sums"]
+if (
+    sha_contract["artifact_path"] != "sha256sums.txt"
+    or sha_contract["expected_row_count"] != "not-csv"
+    or sha_contract["observed_row_count"] != "written-after-contract"
+    or sha_contract["sha256_bound"] != "0"
+    or sha_contract["raw_prompt_context_appended_allowed"] != "0"
+    or sha_contract["raw_prompt_context_appended_rows"] != "0"
+):
+    raise SystemExit("v54c sha256sums contract should preserve the post-contract hash-manifest boundary")
 if len(adapter_traces) != 4000 or {row["system_id"] for row in adapter_traces} != {"A", "B", "G", "H"}:
     raise SystemExit("v54c should copy v53ap A/B/G/H adapter trace provenance")
 if any(row["source_span_binding_match"] != "1" for row in adapter_traces):
@@ -248,6 +299,7 @@ for gate in [
     "v53ap-adapter-trace-provenance",
     "v53ap-evaluator-provenance",
     "recommended-output-artifacts",
+    "recommended-output-contract",
     "source-span-grounded-answer-generation",
     "generation-row-target",
     "compact-routehint-only",
@@ -267,6 +319,15 @@ if manifest.get("generation_rows") != 1000 or manifest.get("unsupported_claim_ro
     raise SystemExit("v54c manifest row count mismatch")
 if manifest.get("generated_from_source_span_rows") != 1000:
     raise SystemExit("v54c manifest should record source-span generated answers")
+if (
+    manifest.get("grounded_generation_output_contract_rows") != 9
+    or manifest.get("grounded_generation_output_contract_ready_rows") != 9
+    or manifest.get("grounded_generation_output_contract_pm_required_rows") != 7
+    or manifest.get("grounded_generation_output_contract_pm_required_ready_rows") != 7
+    or manifest.get("grounded_generation_output_contract_sha256_bound_rows") != 8
+    or manifest.get("grounded_generation_output_contract_raw_prompt_forbidden_rows") != 9
+):
+    raise SystemExit("v54c manifest should record grounded generation output contract evidence")
 if manifest.get("v53ap_adapter_trace_provenance_ready") != 1 or manifest.get("v53ap_adapter_trace_provenance_rows") != 1000:
     raise SystemExit("v54c manifest should record v53ap adapter trace provenance")
 if manifest.get("v53ap_evaluator_provenance_ready") != 1 or manifest.get("v53ap_evaluator_provenance_rows") != 1000:
@@ -301,6 +362,9 @@ for snippet in [
     "answer_rows=1000",
     "citation_rows=1000",
     "generated_from_source_span_rows=1000",
+    "grounded_generation_output_contract_rows=9",
+    "grounded_generation_output_contract_pm_required_rows=7",
+    "grounded_generation_output_contract_raw_prompt_forbidden_rows=9",
     "v53ap_adapter_trace_provenance_ready=1",
     "v53ap_adapter_trace_provenance_rows=1000",
     "v53ap_evaluator_provenance_ready=1",

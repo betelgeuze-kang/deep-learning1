@@ -84,6 +84,9 @@ expected = {
     "route_memory_artifact_ready": "1",
     "v54c_complete_source_grounded_generation_1000_ready": "1",
     "grounded_generation_outputs_ready": "1",
+    "v54c_output_contract_rows": "9",
+    "v54c_output_contract_pm_required_rows": "7",
+    "v54c_output_contract_raw_prompt_forbidden_rows": "9",
     "v54c_v53ap_evaluator_provenance_ready": "1",
     "v54c_v53ap_evaluator_provenance_rows": "1000",
     "v54c_v53ap_answer_eval_separate_rows": "1000",
@@ -243,6 +246,7 @@ required_files = [
     "source_v54c/abstain_rows.csv",
     "source_v54c/generator_resource_rows.csv",
     "source_v54c/wrong_answer_guard_rows.csv",
+    "source_v54c/grounded_generation_output_contract_rows.csv",
     "source_v54c/generator_input_rows.csv",
     "source_v54c/compact_routehint_rows.csv",
     "source_v54c/source_v53ap/abgh_adapter_trace_rows.csv",
@@ -495,6 +499,43 @@ if len(generator_inputs) != 1000:
     raise SystemExit("v59e should carry 1000 v54c generator input rows")
 if any(row["raw_prompt_context_appended"] != "0" or row["raw_prompt_context_bytes"] != "0" for row in generator_inputs):
     raise SystemExit("v59e v54c generator inputs should preserve the no raw prompt stuffing boundary")
+v54c_contracts = read_csv(run_dir / "source_v54c/grounded_generation_output_contract_rows.csv")
+v54c_contract_counts = {
+    "answer-rows": ("answer_rows.csv", 1000),
+    "citation-rows": ("citation_rows.csv", 1000),
+    "unsupported-claim-rows": ("unsupported_claim_rows.csv", 160),
+    "abstain-rows": ("abstain_rows.csv", 160),
+    "generator-resource-rows": ("generator_resource_rows.csv", 1000),
+    "wrong-answer-guard-rows": ("wrong_answer_guard_rows.csv", 1000),
+    "generator-input-rows": ("generator_input_rows.csv", 1000),
+    "compact-routehint-rows": ("compact_routehint_rows.csv", 1000),
+}
+v54c_contract_by_id = {row["artifact_id"]: row for row in v54c_contracts}
+if len(v54c_contracts) != 9 or set(v54c_contract_by_id) != set(v54c_contract_counts) | {"sha256sums"}:
+    raise SystemExit("v59e should carry the full v54c grounded-generation output contract")
+if sum(row["pm_recommended_output"] == "1" for row in v54c_contracts) != 7:
+    raise SystemExit("v59e v54c contract should preserve seven PM recommended artifacts")
+for artifact_id, (artifact_path, expected_count) in v54c_contract_counts.items():
+    row = v54c_contract_by_id[artifact_id]
+    if row["artifact_path"] != artifact_path:
+        raise SystemExit(f"v59e v54c contract path mismatch for {artifact_id}")
+    if row["expected_row_count"] != str(expected_count) or row["observed_row_count"] != str(expected_count):
+        raise SystemExit(f"v59e v54c contract row count mismatch for {artifact_id}")
+    if row["artifact_sha256"] != sha256(run_dir / "source_v54c" / artifact_path) or row["sha256_bound"] != "1":
+        raise SystemExit(f"v59e v54c contract sha256 binding mismatch for {artifact_id}")
+    if row["raw_prompt_context_appended_allowed"] != "0" or row["raw_prompt_context_appended_rows"] != "0":
+        raise SystemExit(f"v59e v54c contract should forbid raw prompt context for {artifact_id}")
+    if row["source_span_bound"] != "1" or row["v53ap_provenance_bound"] != "1" or row["wrong_answer_guarded"] != "1":
+        raise SystemExit(f"v59e v54c contract should preserve provenance and guard binding for {artifact_id}")
+sha_contract = v54c_contract_by_id["sha256sums"]
+if (
+    sha_contract["artifact_path"] != "sha256sums.txt"
+    or sha_contract["expected_row_count"] != "not-csv"
+    or sha_contract["observed_row_count"] != "written-after-contract"
+    or sha_contract["sha256_bound"] != "0"
+    or sha_contract["raw_prompt_context_appended_rows"] != "0"
+):
+    raise SystemExit("v59e v54c sha256sums contract should preserve its post-contract boundary")
 
 manifest = json.loads((run_dir / "v59e_one_command_pm_foundation_demo_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v59e_one_command_pm_foundation_demo_ready") != 1 or manifest.get("v59_ready") != 0:
@@ -539,6 +580,12 @@ if (
     or manifest.get("v53aq_coherent_wrong_key_rows") != 287
 ):
     raise SystemExit("v59e manifest should preserve the v53aq real-adapter boundary")
+if (
+    manifest.get("v54c_output_contract_rows") != 9
+    or manifest.get("v54c_output_contract_pm_required_rows") != 7
+    or manifest.get("v54c_output_contract_raw_prompt_forbidden_rows") != 9
+):
+    raise SystemExit("v59e manifest should record the v54c grounded-generation output contract")
 if (
     manifest.get("v58c_intake_artifact_available") != 0
     or manifest.get("v58c_dependency_blocker_ready") != 1
@@ -627,6 +674,9 @@ for snippet in [
     "v53aq_selection_oracle_field_used=0",
     "v53aq_answer_hash_match_rows=3713",
     "v53aq_coherent_wrong_key_rows=287",
+    "v54c_output_contract_rows=9",
+    "v54c_output_contract_pm_required_rows=7",
+    "v54c_output_contract_raw_prompt_forbidden_rows=9",
     "v54c_v53ap_evaluator_provenance_ready=1",
     "v54c_v53ap_evaluator_provenance_rows=1000",
     "h10_real_label_promotion_ready=0",

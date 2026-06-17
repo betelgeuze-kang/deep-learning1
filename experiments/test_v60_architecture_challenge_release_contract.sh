@@ -92,6 +92,10 @@ expected = {
     "h10_pm_copied_files": "12",
     "v54c_recommended_output_files_ready": "1",
     "v54c_recommended_output_file_rows": "9",
+    "v54c_output_contract_ready": "1",
+    "v54c_output_contract_rows": "9",
+    "v54c_output_contract_pm_required_rows": "7",
+    "v54c_output_contract_raw_prompt_forbidden_rows": "9",
     "routehint_generation_main_ready": "1",
     "scaling_law_main_ready": "0",
     "expanded_benchmark_ready": "0",
@@ -201,6 +205,7 @@ required_files = [
     "source_v59e/source_v54c/abstain_rows.csv",
     "source_v59e/source_v54c/generator_resource_rows.csv",
     "source_v59e/source_v54c/wrong_answer_guard_rows.csv",
+    "source_v59e/source_v54c/grounded_generation_output_contract_rows.csv",
     "source_v59e/source_v54c/generator_input_rows.csv",
     "source_v59e/source_v54c/compact_routehint_rows.csv",
     "source_v59e/source_v54c/sha256sums.txt",
@@ -360,6 +365,43 @@ if len(v54c_generator_inputs) != 1000:
     raise SystemExit("v60 should carry 1000 v54c generator input rows")
 if any(row["raw_prompt_context_appended"] != "0" or row["raw_prompt_context_bytes"] != "0" for row in v54c_generator_inputs):
     raise SystemExit("v60 v54c generator inputs should preserve no raw prompt stuffing")
+v54c_contracts = read_csv(run_dir / "source_v59e/source_v54c/grounded_generation_output_contract_rows.csv")
+v54c_contract_counts = {
+    "answer-rows": ("answer_rows.csv", 1000),
+    "citation-rows": ("citation_rows.csv", 1000),
+    "unsupported-claim-rows": ("unsupported_claim_rows.csv", 160),
+    "abstain-rows": ("abstain_rows.csv", 160),
+    "generator-resource-rows": ("generator_resource_rows.csv", 1000),
+    "wrong-answer-guard-rows": ("wrong_answer_guard_rows.csv", 1000),
+    "generator-input-rows": ("generator_input_rows.csv", 1000),
+    "compact-routehint-rows": ("compact_routehint_rows.csv", 1000),
+}
+v54c_contract_by_id = {row["artifact_id"]: row for row in v54c_contracts}
+if len(v54c_contracts) != 9 or set(v54c_contract_by_id) != set(v54c_contract_counts) | {"sha256sums"}:
+    raise SystemExit("v60 should carry the full v54c grounded-generation output contract")
+if sum(row["pm_recommended_output"] == "1" for row in v54c_contracts) != 7:
+    raise SystemExit("v60 v54c contract should preserve seven PM recommended artifacts")
+for artifact_id, (artifact_path, expected_count) in v54c_contract_counts.items():
+    row = v54c_contract_by_id[artifact_id]
+    if row["artifact_path"] != artifact_path:
+        raise SystemExit(f"v60 v54c contract path mismatch for {artifact_id}")
+    if row["expected_row_count"] != str(expected_count) or row["observed_row_count"] != str(expected_count):
+        raise SystemExit(f"v60 v54c contract row count mismatch for {artifact_id}")
+    if row["artifact_sha256"] != sha256(run_dir / "source_v59e/source_v54c" / artifact_path) or row["sha256_bound"] != "1":
+        raise SystemExit(f"v60 v54c contract sha256 binding mismatch for {artifact_id}")
+    if row["raw_prompt_context_appended_allowed"] != "0" or row["raw_prompt_context_appended_rows"] != "0":
+        raise SystemExit(f"v60 v54c contract should forbid raw prompt context for {artifact_id}")
+    if row["source_span_bound"] != "1" or row["v53ap_provenance_bound"] != "1" or row["wrong_answer_guarded"] != "1":
+        raise SystemExit(f"v60 v54c contract should preserve provenance and guard binding for {artifact_id}")
+sha_contract = v54c_contract_by_id["sha256sums"]
+if (
+    sha_contract["artifact_path"] != "sha256sums.txt"
+    or sha_contract["expected_row_count"] != "not-csv"
+    or sha_contract["observed_row_count"] != "written-after-contract"
+    or sha_contract["sha256_bound"] != "0"
+    or sha_contract["raw_prompt_context_appended_rows"] != "0"
+):
+    raise SystemExit("v60 v54c sha256sums contract should preserve its post-contract boundary")
 
 requirements = read_csv(run_dir / "release_requirement_rows.csv")
 if len(requirements) != 14:
@@ -609,6 +651,13 @@ if manifest.get("h10_pm_external_label_blocked") != 1 or manifest.get("h10_pm_so
     raise SystemExit("v60 manifest should preserve h10 blocker/provenance boundary")
 if manifest.get("v54c_recommended_output_files_ready") != 1 or manifest.get("v54c_recommended_output_file_rows") != 9:
     raise SystemExit("v60 manifest should record direct v54c recommended output file evidence")
+if (
+    manifest.get("v54c_output_contract_ready") != 1
+    or manifest.get("v54c_output_contract_rows") != 9
+    or manifest.get("v54c_output_contract_pm_required_rows") != 7
+    or manifest.get("v54c_output_contract_raw_prompt_forbidden_rows") != 9
+):
+    raise SystemExit("v60 manifest should record v54c grounded-generation output contract evidence")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:

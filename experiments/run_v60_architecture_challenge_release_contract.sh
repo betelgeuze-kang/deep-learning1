@@ -176,6 +176,7 @@ for rel in [
     "source_v54c/abstain_rows.csv",
     "source_v54c/generator_resource_rows.csv",
     "source_v54c/wrong_answer_guard_rows.csv",
+    "source_v54c/grounded_generation_output_contract_rows.csv",
     "source_v54c/generator_input_rows.csv",
     "source_v54c/compact_routehint_rows.csv",
     "source_v54c/sha256sums.txt",
@@ -324,6 +325,12 @@ v54c_recommended_output_files_ready = int(
     and as_int(v54c, "compact_routehint_rows") == 1000
     and as_int(v54c, "raw_prompt_context_appended_rows") == 0
 )
+v54c_output_contract_ready = int(
+    (run_dir / "source_v59e/source_v54c/grounded_generation_output_contract_rows.csv").is_file()
+    and as_int(v54c, "grounded_generation_output_contract_rows") == 9
+    and as_int(v54c, "grounded_generation_output_contract_pm_required_rows") == 7
+    and as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows") == 9
+)
 
 
 def req(requirement, ready, blocker, evidence_path, release_blocker_class):
@@ -383,6 +390,7 @@ requirements = [
         and as_int(v54c, "answer_rows") >= 1000
         and as_int(v54c, "citation_rows") >= 1000
         and v54c_recommended_output_files_ready == 1
+        and v54c_output_contract_ready == 1
         and as_int(v54c, "raw_prompt_context_appended_rows") == 0
         and as_int(v54c, "wrong_answer_rows") == 0,
         "1000 grounded generation rows without raw prompt stuffing are missing",
@@ -605,6 +613,10 @@ summary = {
     "h10_pm_copied_files": h10_pm_copied_files,
     "v54c_recommended_output_files_ready": v54c_recommended_output_files_ready,
     "v54c_recommended_output_file_rows": len(v54c_recommended_output_rels),
+    "v54c_output_contract_ready": v54c_output_contract_ready,
+    "v54c_output_contract_rows": as_int(v54c, "grounded_generation_output_contract_rows"),
+    "v54c_output_contract_pm_required_rows": as_int(v54c, "grounded_generation_output_contract_pm_required_rows"),
+    "v54c_output_contract_raw_prompt_forbidden_rows": as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows"),
     "routehint_generation_main_ready": int(as_int(v54c, "v54c_complete_source_grounded_generation_1000_ready") == 1),
     "scaling_law_main_ready": 0,
     "expanded_benchmark_ready": int(as_int(pm_pr, "replay_artifact_pass_rows") == as_int(pm_pr, "recommended_pr_slice_rows")),
@@ -715,6 +727,10 @@ manifest = {
     "pm_pr_v53_direct_pinned_manifest_ready": as_int(v59e, "pm_pr_v53_direct_pinned_manifest_ready"),
     "v54c_recommended_output_files_ready": v54c_recommended_output_files_ready,
     "v54c_recommended_output_file_rows": len(v54c_recommended_output_rels),
+    "v54c_output_contract_ready": v54c_output_contract_ready,
+    "v54c_output_contract_rows": as_int(v54c, "grounded_generation_output_contract_rows"),
+    "v54c_output_contract_pm_required_rows": as_int(v54c, "grounded_generation_output_contract_pm_required_rows"),
+    "v54c_output_contract_raw_prompt_forbidden_rows": as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows"),
 }
 (run_dir / "v60_architecture_challenge_release_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

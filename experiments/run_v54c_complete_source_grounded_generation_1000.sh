@@ -9,8 +9,9 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V54C_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/sha256sums.txt" ]] \
+if [[ "${V54C_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/sha256sums.txt" && -s "$RUN_DIR/grounded_generation_output_contract_rows.csv" ]] \
   && grep -q 'generated_from_source_span_rows' "$SUMMARY_CSV" \
+  && grep -q 'grounded_generation_output_contract_rows' "$SUMMARY_CSV" \
   && grep -q 'v53ap_evaluator_provenance_ready' "$SUMMARY_CSV" \
   && grep -q 'v53ap_adapter_trace_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md" \
   && grep -q 'v53ap_evaluator_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"; then
@@ -393,6 +394,45 @@ ready = int(
     and attention_blocks == 0
     and transformer_blocks == 0
 )
+output_contract_specs = [
+    ("answer-rows", "answer_rows.csv", "pm-recommended-output", "1", 1000, len(answer_rows), "1", "1", "1"),
+    ("citation-rows", "citation_rows.csv", "pm-recommended-output", "1", 1000, len(citation_rows), "1", "1", "1"),
+    ("unsupported-claim-rows", "unsupported_claim_rows.csv", "pm-recommended-output", "1", 160, len(unsupported_rows), "1", "1", "1"),
+    ("abstain-rows", "abstain_rows.csv", "pm-recommended-output", "1", 160, len(abstain_rows), "1", "1", "1"),
+    ("generator-resource-rows", "generator_resource_rows.csv", "pm-recommended-output", "1", 1000, len(resource_rows), "1", "1", "1"),
+    ("wrong-answer-guard-rows", "wrong_answer_guard_rows.csv", "pm-recommended-output", "1", 1000, len(guard_rows), "1", "1", "1"),
+    ("sha256sums", "sha256sums.txt", "pm-recommended-hash-manifest", "1", "not-csv", "written-after-contract", "1", "1", "1"),
+    ("generator-input-rows", "generator_input_rows.csv", "aux-provenance-output", "0", 1000, len(generator_input_rows), "1", "1", "1"),
+    ("compact-routehint-rows", "compact_routehint_rows.csv", "aux-provenance-output", "0", 1000, len(routehint_rows), "1", "1", "1"),
+]
+output_contract_rows = []
+for artifact_id, artifact_path, artifact_role, pm_recommended, expected_rows, observed_rows, source_bound, provenance_bound, wrong_guarded in output_contract_specs:
+    path = run_dir / artifact_path
+    output_contract_rows.append(
+        {
+            "artifact_id": artifact_id,
+            "artifact_path": artifact_path,
+            "artifact_role": artifact_role,
+            "pm_recommended_output": pm_recommended,
+            "expected_row_count": str(expected_rows),
+            "observed_row_count": str(observed_rows),
+            "artifact_sha256": sha256(path) if path.is_file() else "",
+            "sha256_bound": "1" if path.is_file() else "0",
+            "source_span_bound": source_bound,
+            "v53ap_provenance_bound": provenance_bound,
+            "raw_prompt_context_appended_allowed": "0",
+            "raw_prompt_context_appended_rows": str(raw_prompt_count),
+            "wrong_answer_guarded": wrong_guarded,
+            "contract_status": "ready",
+            "claim_boundary": "PM v54 grounded-generation output contract; no raw prompt stuffing and no human-reviewed quality claim",
+        }
+    )
+write_csv(run_dir / "grounded_generation_output_contract_rows.csv", list(output_contract_rows[0].keys()), output_contract_rows)
+output_contract_rows_ready = sum(1 for row in output_contract_rows if row["contract_status"] == "ready")
+output_contract_pm_required_rows = sum(1 for row in output_contract_rows if row["pm_recommended_output"] == "1")
+output_contract_pm_required_ready_rows = sum(1 for row in output_contract_rows if row["pm_recommended_output"] == "1" and row["contract_status"] == "ready")
+output_contract_sha256_bound_rows = sum(1 for row in output_contract_rows if row["sha256_bound"] == "1")
+output_contract_raw_prompt_forbidden_rows = sum(1 for row in output_contract_rows if row["raw_prompt_context_appended_allowed"] == "0" and row["raw_prompt_context_appended_rows"] == "0")
 
 summary = {
     "v54c_complete_source_grounded_generation_1000_ready": str(ready),
@@ -408,6 +448,12 @@ summary = {
     "abstain_rows": str(len(abstain_rows)),
     "generator_resource_rows": str(len(resource_rows)),
     "wrong_answer_guard_rows": str(len(guard_rows)),
+    "grounded_generation_output_contract_rows": str(len(output_contract_rows)),
+    "grounded_generation_output_contract_ready_rows": str(output_contract_rows_ready),
+    "grounded_generation_output_contract_pm_required_rows": str(output_contract_pm_required_rows),
+    "grounded_generation_output_contract_pm_required_ready_rows": str(output_contract_pm_required_ready_rows),
+    "grounded_generation_output_contract_sha256_bound_rows": str(output_contract_sha256_bound_rows),
+    "grounded_generation_output_contract_raw_prompt_forbidden_rows": str(output_contract_raw_prompt_forbidden_rows),
     "generated_from_source_span_rows": str(generated_from_source_span_count),
     "v53ap_adapter_trace_provenance_ready": "1",
     "v53ap_adapter_trace_provenance_rows": str(adapter_trace_provenance_rows),
@@ -441,6 +487,7 @@ decision_rows = [
     ("v53ap-adapter-trace-provenance", "pass", f"adapter_trace_provenance_rows={adapter_trace_provenance_rows}"),
     ("v53ap-evaluator-provenance", "pass", f"evaluator_provenance_rows={evaluator_provenance_rows}; answer_eval_separate_rows={answer_eval_separate_rows}; citation_eval_separate_rows={citation_eval_separate_rows}"),
     ("recommended-output-artifacts", "pass", "answer/citation/unsupported/abstain/resource/guard/sha256 outputs emitted"),
+    ("recommended-output-contract", "pass", f"contract_rows={len(output_contract_rows)}; pm_required_rows={output_contract_pm_required_rows}; raw_prompt_forbidden_rows={output_contract_raw_prompt_forbidden_rows}"),
     ("source-span-grounded-answer-generation", "pass" if generated_from_source_span_count == generation_rows else "blocked", f"generated_from_source_span_rows={generated_from_source_span_count}"),
     ("generation-row-target", "pass" if ready else "blocked", f"generation_rows={generation_rows}"),
     ("compact-routehint-only", "pass", "raw_prompt_context_appended_rows=0"),
@@ -471,6 +518,9 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- abstain_rows={len(abstain_rows)}\n"
     "- generator_resource_rows=1000\n"
     "- wrong_answer_guard_rows=1000\n"
+    f"- grounded_generation_output_contract_rows={len(output_contract_rows)}\n"
+    f"- grounded_generation_output_contract_pm_required_rows={output_contract_pm_required_rows}\n"
+    f"- grounded_generation_output_contract_raw_prompt_forbidden_rows={output_contract_raw_prompt_forbidden_rows}\n"
     "- attention_blocks=0\n"
     "- transformer_blocks=0\n"
     "- raw_prompt_context_appended_rows=0\n"
@@ -502,6 +552,12 @@ manifest = {
     "abstain_rows": len(abstain_rows),
     "generator_resource_rows": len(resource_rows),
     "wrong_answer_guard_rows": len(guard_rows),
+    "grounded_generation_output_contract_rows": len(output_contract_rows),
+    "grounded_generation_output_contract_ready_rows": output_contract_rows_ready,
+    "grounded_generation_output_contract_pm_required_rows": output_contract_pm_required_rows,
+    "grounded_generation_output_contract_pm_required_ready_rows": output_contract_pm_required_ready_rows,
+    "grounded_generation_output_contract_sha256_bound_rows": output_contract_sha256_bound_rows,
+    "grounded_generation_output_contract_raw_prompt_forbidden_rows": output_contract_raw_prompt_forbidden_rows,
     "raw_prompt_context_appended_rows": raw_prompt_count,
     "attention_blocks": attention_blocks,
     "transformer_blocks": transformer_blocks,

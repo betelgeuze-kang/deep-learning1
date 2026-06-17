@@ -485,6 +485,7 @@ stage_specs = [
             (v54c_dir / "abstain_rows.csv", "source_v54c/abstain_rows.csv"),
             (v54c_dir / "generator_resource_rows.csv", "source_v54c/generator_resource_rows.csv"),
             (v54c_dir / "wrong_answer_guard_rows.csv", "source_v54c/wrong_answer_guard_rows.csv"),
+            (v54c_dir / "grounded_generation_output_contract_rows.csv", "source_v54c/grounded_generation_output_contract_rows.csv"),
             (v54c_dir / "generator_input_rows.csv", "source_v54c/generator_input_rows.csv"),
             (v54c_dir / "compact_routehint_rows.csv", "source_v54c/compact_routehint_rows.csv"),
             (v54c_dir / "source_v53ap/abgh_adapter_trace_rows.csv", "source_v54c/source_v53ap/abgh_adapter_trace_rows.csv"),
@@ -816,6 +817,9 @@ grounded_generation_outputs_ready = int(
     and as_int(v54c, "v53ap_answer_eval_separate_rows") == 1000
     and as_int(v54c, "v53ap_citation_eval_separate_rows") == 1000
     and as_int(v54c, "v53ap_resource_eval_separate_rows") == 1000
+    and as_int(v54c, "grounded_generation_output_contract_rows") == 9
+    and as_int(v54c, "grounded_generation_output_contract_pm_required_rows") == 7
+    and as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows") == 9
     and as_int(v54c, "raw_prompt_context_appended_rows") == 0
 )
 h10_blocker_ledger_ready = int(as_int(h10, "v10_h10_real_label_promotion_readiness_gate_ready") == 1 and as_int(h10, "h10_real_label_promotion_ready") == 0)
@@ -928,6 +932,9 @@ summary = {
     "route_memory_artifact_ready": str(route_memory_artifact_ready),
     "v54c_complete_source_grounded_generation_1000_ready": v54c["v54c_complete_source_grounded_generation_1000_ready"],
     "grounded_generation_outputs_ready": str(grounded_generation_outputs_ready),
+    "v54c_output_contract_rows": v54c.get("grounded_generation_output_contract_rows", "0"),
+    "v54c_output_contract_pm_required_rows": v54c.get("grounded_generation_output_contract_pm_required_rows", "0"),
+    "v54c_output_contract_raw_prompt_forbidden_rows": v54c.get("grounded_generation_output_contract_raw_prompt_forbidden_rows", "0"),
     "v54c_v53ap_evaluator_provenance_ready": v54c.get("v53ap_evaluator_provenance_ready", "0"),
     "v54c_v53ap_evaluator_provenance_rows": v54c.get("v53ap_evaluator_provenance_rows", "0"),
     "v54c_v53ap_answer_eval_separate_rows": v54c.get("v53ap_answer_eval_separate_rows", "0"),
@@ -994,6 +1001,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53aq_selection_question_text_only={summary['v53aq_selection_question_text_only']}\n"
     f"- v53aq_selection_oracle_field_used={summary['v53aq_selection_oracle_field_used']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
+    f"- v54c_output_contract_rows={summary['v54c_output_contract_rows']}\n"
+    f"- v54c_output_contract_pm_required_rows={summary['v54c_output_contract_pm_required_rows']}\n"
+    f"- v54c_output_contract_raw_prompt_forbidden_rows={summary['v54c_output_contract_raw_prompt_forbidden_rows']}\n"
     f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
@@ -1038,6 +1048,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53aq_coherent_wrong_key_rows={summary['v53aq_coherent_wrong_key_rows']}\n"
     f"- route_memory_artifact_ready={summary['route_memory_artifact_ready']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
+    f"- v54c_output_contract_rows={summary['v54c_output_contract_rows']}\n"
+    f"- v54c_output_contract_pm_required_rows={summary['v54c_output_contract_pm_required_rows']}\n"
+    f"- v54c_output_contract_raw_prompt_forbidden_rows={summary['v54c_output_contract_raw_prompt_forbidden_rows']}\n"
     f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
@@ -1119,6 +1132,9 @@ manifest = {
     "v54c_v53ap_answer_eval_separate_rows": as_int(v54c, "v53ap_answer_eval_separate_rows"),
     "v54c_v53ap_citation_eval_separate_rows": as_int(v54c, "v53ap_citation_eval_separate_rows"),
     "v54c_v53ap_resource_eval_separate_rows": as_int(v54c, "v53ap_resource_eval_separate_rows"),
+    "v54c_output_contract_rows": as_int(v54c, "grounded_generation_output_contract_rows"),
+    "v54c_output_contract_pm_required_rows": as_int(v54c, "grounded_generation_output_contract_pm_required_rows"),
+    "v54c_output_contract_raw_prompt_forbidden_rows": as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows"),
     "v58c_intake_artifact_available": v58c_available,
     "v58c_dependency_blocker_ready": v58c_dependency_blocker_ready,
     "v58c_blind_response_evidence_intake_ready": as_int(v58c, "v58c_blind_response_evidence_intake_ready"),
