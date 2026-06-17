@@ -77,6 +77,11 @@ expected = {
     "supplied_real_label_evidence_rows": "0",
     "accepted_real_label_evidence_rows": "0",
     "fixture_or_synthetic_label_evidence_rows": "0",
+    "h10_real_label_return_contract_rows": "6",
+    "h10_real_label_return_contract_ready_rows": "6",
+    "h10_real_label_return_contract_fixture_allowed_rows": "0",
+    "h10_real_label_return_contract_approval_rows": "6",
+    "h10_real_label_return_contract_pass_rows": "0",
     "v53q_complete_source_symmetric_scorer_policy_ready": "1",
     "v53ap_complete_source_abgh_same_query_measured_ready": "1",
     "v53aq_complete_source_abgh_real_adapter_measured_ready": "1",
@@ -91,6 +96,7 @@ required_files = [
     "pm_h10_real_label_acceptance_rows.csv",
     "h10_real_label_evidence_template.csv",
     "h10_real_label_evidence_acceptance_rows.csv",
+    "h10_real_label_return_contract_rows.csv",
     "V10_H10_REAL_LABEL_PROMOTION_READINESS_BOUNDARY.md",
     "v10_h10_real_label_promotion_readiness_manifest.json",
     "sha256_manifest.csv",
@@ -151,6 +157,36 @@ if "v53t_real_adapter_freeze_rows=4" not in criteria["source-provenance-binding"
     raise SystemExit("source provenance criterion should cite v53t real-adapter freeze rows")
 if criteria["external-human-label-evidence"]["real_label_status"] != "blocked":
     raise SystemExit("external/human label evidence should remain blocked by default")
+
+return_contract_rows = {
+    row["criterion"]: row
+    for row in read_csv(run_dir / "h10_real_label_return_contract_rows.csv")
+}
+if set(return_contract_rows) != set(criteria):
+    raise SystemExit("h10 return contract should cover exactly the six PM h10 criteria")
+for criterion, row in return_contract_rows.items():
+    if row["template_path"] != "h10_real_label_evidence_template.csv":
+        raise SystemExit(f"h10 return contract should bind {criterion} to the shared evidence template")
+    if row["fixture_allowed"] != "0" or row["approval_required"] != "1" or row["contract_ready"] != "1":
+        raise SystemExit(f"h10 return contract should be no-fixture approval-required and ready for {criterion}")
+    if row["acceptance_status"] != "blocked":
+        raise SystemExit(f"h10 return contract should remain blocked by default for {criterion}")
+for criterion, evidence_column in {
+    "coherent-wrong-key-reduction": "coherent_wrong_key_labels",
+    "chunk-exact-increase": "chunk_exact_labels",
+    "near-miss-slash": "near_miss_labels",
+    "missing-query-abstain": "missing_query_labels",
+    "source-provenance-binding": "source_provenance_labels",
+    "external-human-label-evidence": "human_reviewed; external_source_verified; non_fixture_declared",
+}.items():
+    if return_contract_rows[criterion]["evidence_column"] != evidence_column:
+        raise SystemExit(f"h10 return contract evidence column mismatch for {criterion}")
+if "v53aq_wrong_key_signal_ready=1" not in return_contract_rows["coherent-wrong-key-reduction"]["machine_evidence_dependency"]:
+    raise SystemExit("h10 coherent wrong-key return contract should cite v53aq wrong-key machine dependency")
+if "source_provenance_binding_ready=1" not in return_contract_rows["source-provenance-binding"]["machine_evidence_dependency"]:
+    raise SystemExit("h10 source provenance return contract should cite machine provenance readiness")
+if "query_rows>=1000" not in return_contract_rows["external-human-label-evidence"]["external_label_dependency"]:
+    raise SystemExit("h10 external label return contract should require 1000 query rows")
 
 adapter_traces = read_csv(run_dir / "source_v53ap/abgh_adapter_trace_rows.csv")
 evaluators = read_csv(run_dir / "source_v53ap/abgh_evaluator_rows.csv")
@@ -302,6 +338,16 @@ if manifest.get("v53t_real_adapter_freeze_rows") != 4 or manifest.get("v53t_real
     raise SystemExit("manifest should record v53t real-adapter freeze row counts")
 if manifest.get("v53t_real_adapter_freeze_ready") != 1:
     raise SystemExit("manifest should record v53t real-adapter freeze readiness")
+if manifest.get("h10_real_label_return_contract_rows") != 6:
+    raise SystemExit("manifest should record six h10 real-label return contract rows")
+if manifest.get("h10_real_label_return_contract_ready_rows") != 6:
+    raise SystemExit("manifest should record six ready h10 real-label return contract rows")
+if manifest.get("h10_real_label_return_contract_fixture_allowed_rows") != 0:
+    raise SystemExit("manifest should forbid fixture h10 real-label return contracts")
+if manifest.get("h10_real_label_return_contract_approval_rows") != 6:
+    raise SystemExit("manifest should require approval for all h10 real-label return contracts")
+if manifest.get("h10_real_label_return_contract_pass_rows") != 0:
+    raise SystemExit("manifest should keep all h10 return contracts blocked without accepted labels")
 if "v53t" not in manifest.get("source_summary_sha256", {}):
     raise SystemExit("manifest should hash-bind the v53t summary")
 
@@ -332,6 +378,9 @@ for snippet in [
     "v53aq_coherent_wrong_key_rows=287",
     "v53t_real_adapter_freeze_ready=1",
     "v53t_real_adapter_freeze_rows=4",
+    "h10_real_label_return_contract_rows=6",
+    "h10_real_label_return_contract_ready_rows=6",
+    "h10_real_label_return_contract_pass_rows=0",
     "Blocked wording",
 ]:
     if snippet not in boundary:
@@ -366,6 +415,7 @@ checks = {
     "accepted_real_label_evidence_rows": "0",
     "rejected_real_label_evidence_rows": "1",
     "fixture_or_synthetic_label_evidence_rows": "1",
+    "h10_real_label_return_contract_pass_rows": "0",
     "external_human_label_evidence_ready": "0",
     "h10_real_label_promotion_ready": "0",
 }

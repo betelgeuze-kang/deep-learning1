@@ -9,9 +9,10 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv" ]] \
+if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/h10_real_label_return_contract_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv" ]] \
   && grep -q 'v53t_real_adapter_freeze_ready' "$SUMMARY_CSV" \
-  && grep -q 'v53aq_same_query_internal_prebaseline_rows_ready' "$SUMMARY_CSV"; then
+  && grep -q 'v53aq_same_query_internal_prebaseline_rows_ready' "$SUMMARY_CSV" \
+  && grep -q 'h10_real_label_return_contract_rows' "$SUMMARY_CSV"; then
   echo "v10_h10_real_label_promotion_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -184,6 +185,75 @@ copy(v54c_dir / "sha256sums.txt", "source_v54c/sha256sums.txt")
 
 template_path = run_dir / "h10_real_label_evidence_template.csv"
 write_csv(template_path, H10_EVIDENCE_FIELDS, [])
+
+h10_return_contract_rows = [
+    {
+        "criterion": "coherent-wrong-key-reduction",
+        "template_path": "h10_real_label_evidence_template.csv",
+        "evidence_column": "coherent_wrong_key_labels",
+        "required_condition": "coherent_wrong_key_labels>0 and accepted external/human label evidence",
+        "machine_evidence_dependency": "h10_diagnostic_scorer_signal_ready=1; v53aq_wrong_key_signal_ready=1",
+        "external_label_dependency": "human_reviewed=1; external_source_verified=1; non_fixture_declared=1",
+        "fixture_allowed": "0",
+        "approval_required": "1",
+        "contract_ready": "1",
+    },
+    {
+        "criterion": "chunk-exact-increase",
+        "template_path": "h10_real_label_evidence_template.csv",
+        "evidence_column": "chunk_exact_labels",
+        "required_condition": "chunk_exact_labels>=label_rows and accepted external/human label evidence",
+        "machine_evidence_dependency": "metric_improvement_ready=1; chunk_exact_delta>0",
+        "external_label_dependency": "human_reviewed=1; external_source_verified=1; non_fixture_declared=1",
+        "fixture_allowed": "0",
+        "approval_required": "1",
+        "contract_ready": "1",
+    },
+    {
+        "criterion": "near-miss-slash",
+        "template_path": "h10_real_label_evidence_template.csv",
+        "evidence_column": "near_miss_labels",
+        "required_condition": "near_miss_labels>0 and accepted external/human label evidence",
+        "machine_evidence_dependency": "near_miss_negative_rate>=0.999999",
+        "external_label_dependency": "human_reviewed=1; external_source_verified=1; non_fixture_declared=1",
+        "fixture_allowed": "0",
+        "approval_required": "1",
+        "contract_ready": "1",
+    },
+    {
+        "criterion": "missing-query-abstain",
+        "template_path": "h10_real_label_evidence_template.csv",
+        "evidence_column": "missing_query_labels",
+        "required_condition": "missing_query_labels>0 and accepted external/human label evidence",
+        "machine_evidence_dependency": "missing_query_abstain_ready=1",
+        "external_label_dependency": "human_reviewed=1; external_source_verified=1; non_fixture_declared=1",
+        "fixture_allowed": "0",
+        "approval_required": "1",
+        "contract_ready": "1",
+    },
+    {
+        "criterion": "source-provenance-binding",
+        "template_path": "h10_real_label_evidence_template.csv",
+        "evidence_column": "source_provenance_labels",
+        "required_condition": "source_provenance_labels>=label_rows and accepted external/human label evidence",
+        "machine_evidence_dependency": "source_provenance_binding_ready=1; v53ap/v53aq/v53t/v54c provenance rows copied",
+        "external_label_dependency": "label_artifact_sha256 and acceptance_summary_sha256 are sha256-bound",
+        "fixture_allowed": "0",
+        "approval_required": "1",
+        "contract_ready": "1",
+    },
+    {
+        "criterion": "external-human-label-evidence",
+        "template_path": "h10_real_label_evidence_template.csv",
+        "evidence_column": "human_reviewed; external_source_verified; non_fixture_declared",
+        "required_condition": "human_reviewed=1 and external_source_verified=1 and non_fixture_declared=1 and fixture_or_synthetic_declared=0",
+        "machine_evidence_dependency": "none; this is the external return blocker",
+        "external_label_dependency": "reviewer_conflict_checked=1; label_source_uri=https; query_rows>=1000; label_rows>=1000",
+        "fixture_allowed": "0",
+        "approval_required": "1",
+        "contract_ready": "1",
+    },
+]
 
 supplied_rows = []
 label_source_status = "missing"
@@ -408,6 +478,19 @@ h10_real_label_promotion_ready = int(
     and same_query_real_adapter_ready == 1
 )
 
+contract_acceptance_status = {
+    "coherent-wrong-key-reduction": "pass" if coherent_wrong_real_label_ready else "blocked",
+    "chunk-exact-increase": "pass" if chunk_exact_real_label_ready else "blocked",
+    "near-miss-slash": "pass" if near_miss_real_label_ready else "blocked",
+    "missing-query-abstain": "pass" if missing_abstain_real_label_ready else "blocked",
+    "source-provenance-binding": "pass" if source_provenance_binding_ready and external_human_label_evidence_ready else "blocked",
+    "external-human-label-evidence": "pass" if external_human_label_evidence_ready else "blocked",
+}
+for row in h10_return_contract_rows:
+    row["acceptance_status"] = contract_acceptance_status[row["criterion"]]
+    row["blocker"] = "" if row["acceptance_status"] == "pass" else "accepted external/human source-verified label evidence required"
+write_csv(run_dir / "h10_real_label_return_contract_rows.csv", list(h10_return_contract_rows[0].keys()), h10_return_contract_rows)
+
 acceptance_rows = [
     {
         "criterion": "coherent-wrong-key-reduction",
@@ -510,6 +593,11 @@ summary = {
     "fixture_or_synthetic_label_evidence_rows": str(fixture_or_synthetic_rows),
     "accepted_human_reviewed_rows": str(accepted_human_reviewed_rows),
     "accepted_label_rows": str(accepted_label_row_total),
+    "h10_real_label_return_contract_rows": str(len(h10_return_contract_rows)),
+    "h10_real_label_return_contract_ready_rows": str(sum(1 for row in h10_return_contract_rows if row["contract_ready"] == "1")),
+    "h10_real_label_return_contract_fixture_allowed_rows": str(sum(1 for row in h10_return_contract_rows if row["fixture_allowed"] == "1")),
+    "h10_real_label_return_contract_approval_rows": str(sum(1 for row in h10_return_contract_rows if row["approval_required"] == "1")),
+    "h10_real_label_return_contract_pass_rows": str(sum(1 for row in h10_return_contract_rows if row["acceptance_status"] == "pass")),
     "h10s_reason": h10s.get("reason", ""),
     "learned_score_gap": h10s.get("learned_score_gap", "0"),
     "coherent_wrong_negative_rate": h10s.get("coherent_wrong_negative_rate", "0"),
@@ -564,6 +652,9 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- wrong_answer_guard_ready={wrong_answer_guard_ready}\n"
     f"- same_query_abgh_ready={same_query_abgh_ready}\n"
     f"- accepted_real_label_evidence_rows={len(accepted_label_rows)}\n\n"
+    f"- h10_real_label_return_contract_rows={len(h10_return_contract_rows)}\n"
+    f"- h10_real_label_return_contract_ready_rows={sum(1 for row in h10_return_contract_rows if row['contract_ready'] == '1')}\n"
+    f"- h10_real_label_return_contract_pass_rows={sum(1 for row in h10_return_contract_rows if row['acceptance_status'] == 'pass')}\n\n"
     "Allowed wording: h10 real-label promotion readiness gate; complete-source provenance, missing/abstain, and wrong-answer guard surfaces are machine-bound.\n\n"
     "Blocked wording: h10 real-label promotion, human-reviewed scorer quality, scientific contribution claim, release readiness, or public comparison claim.\n",
     encoding="utf-8",
@@ -605,6 +696,11 @@ manifest = {
     "same_query_abgh_ready": same_query_abgh_ready,
     "same_query_real_adapter_ready": same_query_real_adapter_ready,
     "accepted_real_label_evidence_rows": len(accepted_label_rows),
+    "h10_real_label_return_contract_rows": len(h10_return_contract_rows),
+    "h10_real_label_return_contract_ready_rows": sum(1 for row in h10_return_contract_rows if row["contract_ready"] == "1"),
+    "h10_real_label_return_contract_fixture_allowed_rows": sum(1 for row in h10_return_contract_rows if row["fixture_allowed"] == "1"),
+    "h10_real_label_return_contract_approval_rows": sum(1 for row in h10_return_contract_rows if row["approval_required"] == "1"),
+    "h10_real_label_return_contract_pass_rows": sum(1 for row in h10_return_contract_rows if row["acceptance_status"] == "pass"),
     "source_summary_sha256": {
         "h10s": sha256(h10s_summary_path),
         "v53q": sha256(v53q_summary_path),
