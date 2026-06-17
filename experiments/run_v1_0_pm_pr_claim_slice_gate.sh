@@ -1786,6 +1786,104 @@ write_csv(
     de_30b70b_acceptance_evidence_rows,
 )
 
+
+def v59_artifact_ready(row):
+    artifact_id = row.get("artifact_id", "")
+    if artifact_id == "v59e-replay-preflight":
+        return int(
+            required_artifact_present(row)
+            and as_int(v59e, "one_command_replay_preflight_ready") == 1
+            and as_int(v59e, "one_command_entrypoint_ready") == 1
+            and as_int(v59e, "challenge_bundle_ready") == 1
+            and as_int(v59e, "network_required") == 0
+            and as_int(v59e, "downloads_required") == 0
+            and as_int(v59e, "full_public_source_download_ready") == 0
+        )
+    if artifact_id == "v59e-local-abgh-row-contract-replay":
+        return int(
+            required_artifact_present(row)
+            and as_int(v59e, "local_abgh_row_contract_replay_ready") == 1
+            and as_int(v59e, "local_abgh_row_contract_replay_rows") == 2
+            and as_int(v59e, "local_abgh_row_contract_replay_pass_rows") == 2
+        )
+    if artifact_id == "v59-public-source-download-refresh":
+        return int(
+            as_int(v59e, "full_public_source_download_ready") == 1
+            and as_int(v59e, "public_source_download_executed") == 1
+            and as_int(v59e, "public_source_download_approval_required") == 1
+        )
+    return 0
+
+
+v59_one_command_acceptance_evidence_rows = []
+for artifact in [
+    row
+    for row in blocker_required_artifact_rows
+    if row["blocker_class"] == "v60-release-evidence-missing"
+    and row["artifact_id"]
+    in {
+        "v59e-local-abgh-row-contract-replay",
+        "v59-public-source-download-refresh",
+    }
+]:
+    artifact_id = artifact["artifact_id"]
+    ready = v59_artifact_ready(artifact)
+    if artifact_id == "v59e-replay-preflight":
+        observed_signal = (
+            f"one_command_replay_preflight_ready={v59e.get('one_command_replay_preflight_ready', '0')} "
+            f"one_command_entrypoint_ready={v59e.get('one_command_entrypoint_ready', '0')} "
+            f"challenge_bundle_ready={v59e.get('challenge_bundle_ready', '0')} "
+            f"network_required={v59e.get('network_required', '0')} "
+            f"downloads_required={v59e.get('downloads_required', '0')} "
+            f"full_public_source_download_ready={v59e.get('full_public_source_download_ready', '0')}"
+        )
+    elif artifact_id == "v59e-local-abgh-row-contract-replay":
+        observed_signal = (
+            f"local_abgh_row_contract_replay_ready={v59e.get('local_abgh_row_contract_replay_ready', '0')} "
+            f"local_abgh_row_contract_replay_rows={v59e.get('local_abgh_row_contract_replay_rows', '0')} "
+            f"local_abgh_row_contract_replay_pass_rows={v59e.get('local_abgh_row_contract_replay_pass_rows', '0')} "
+            "public_comparison_claim_ready=0"
+        )
+    else:
+        observed_signal = (
+            f"pinned_public_sources_verified={v59e.get('pinned_public_sources_verified', '0')} "
+            f"public_source_snapshot_replay_ready={v59e.get('public_source_snapshot_replay_ready', '0')} "
+            f"public_source_snapshot_replay_rows={v59e.get('public_source_snapshot_replay_rows', '0')} "
+            f"public_source_download_executed={v59e.get('public_source_download_executed', '0')} "
+            f"public_source_download_approval_required={v59e.get('public_source_download_approval_required', '0')} "
+            f"full_public_source_download_ready={v59e.get('full_public_source_download_ready', '0')} "
+            f"policy_blocker={v59e_public_source_policy.get('blocker_status', 'missing')}"
+        )
+    v59_one_command_acceptance_evidence_rows.append(
+        {
+            "requirement_id": "v59-one-command-foundation-or-public-refresh",
+            "slice_id": "v59-one-command-demo",
+            "blocker_class": artifact["blocker_class"],
+            "artifact_id": artifact_id,
+            "artifact_path_or_env": artifact["artifact_path_or_env"],
+            "artifact_kind": artifact["artifact_kind"],
+            "required_shape": artifact["required_shape"],
+            "validation_command": artifact["validation_command"],
+            "acceptance_signal": artifact["acceptance_signal"],
+            "artifact_present": str(required_artifact_present(artifact)),
+            "claim_boundary_status": "pass",
+            "output_artifact_replay_status": "pass" if ready else "blocked",
+            "blocker_false_positive_status": "pass",
+            "approval_required": artifact["approval_required"],
+            "fixture_allowed": artifact["fixture_allowed"],
+            "tests_only_merge_condition": "0",
+            "acceptance_ready": str(ready),
+            "acceptance_status": "ready" if ready else "blocked",
+            "observed_signal": observed_signal,
+            "claim_until_closed": "v59 PM foundation replay only; full public-source download/refresh remains approval-blocked",
+        }
+    )
+write_csv(
+    run_dir / "v59_one_command_acceptance_evidence_rows.csv",
+    list(v59_one_command_acceptance_evidence_rows[0].keys()),
+    v59_one_command_acceptance_evidence_rows,
+)
+
 closure_by_blocker = {row["blocker_class"]: row for row in blocker_closure_rows}
 required_artifacts_by_blocker = {row["blocker_class"]: [] for row in blocker_closure_rows}
 for row in blocker_required_artifact_rows:
@@ -2036,6 +2134,20 @@ de_30b70b_acceptance_evidence_fixture_allowed_rows = sum(
 de_30b70b_acceptance_evidence_approval_rows = sum(
     1 for row in de_30b70b_acceptance_evidence_rows if row["approval_required"] == "1"
 )
+v59_one_command_acceptance_evidence_row_count = len(v59_one_command_acceptance_evidence_rows)
+v59_one_command_acceptance_evidence_ready_rows = sum(1 for row in v59_one_command_acceptance_evidence_rows if row["acceptance_ready"] == "1")
+v59_one_command_acceptance_evidence_blocked_rows = (
+    v59_one_command_acceptance_evidence_row_count - v59_one_command_acceptance_evidence_ready_rows
+)
+v59_one_command_acceptance_evidence_tests_only_rows = sum(
+    1 for row in v59_one_command_acceptance_evidence_rows if row["tests_only_merge_condition"] == "1"
+)
+v59_one_command_acceptance_evidence_fixture_allowed_rows = sum(
+    1 for row in v59_one_command_acceptance_evidence_rows if row["fixture_allowed"] == "1"
+)
+v59_one_command_acceptance_evidence_approval_rows = sum(
+    1 for row in v59_one_command_acceptance_evidence_rows if row["approval_required"] == "1"
+)
 blocker_closure_packet_rows = len(blocker_packet_rows)
 blocker_closure_packet_files = sum(1 for row in blocker_packet_rows if (run_dir / row["packet_path"]).is_file())
 blocker_closure_packet_ready_rows = sum(1 for row in blocker_packet_rows if row["packet_ready"] == "1")
@@ -2107,6 +2219,12 @@ summary = {
     "de_30b70b_acceptance_evidence_tests_only_rows": str(de_30b70b_acceptance_evidence_tests_only_rows),
     "de_30b70b_acceptance_evidence_fixture_allowed_rows": str(de_30b70b_acceptance_evidence_fixture_allowed_rows),
     "de_30b70b_acceptance_evidence_approval_rows": str(de_30b70b_acceptance_evidence_approval_rows),
+    "v59_one_command_acceptance_evidence_rows": str(v59_one_command_acceptance_evidence_row_count),
+    "v59_one_command_acceptance_evidence_ready_rows": str(v59_one_command_acceptance_evidence_ready_rows),
+    "v59_one_command_acceptance_evidence_blocked_rows": str(v59_one_command_acceptance_evidence_blocked_rows),
+    "v59_one_command_acceptance_evidence_tests_only_rows": str(v59_one_command_acceptance_evidence_tests_only_rows),
+    "v59_one_command_acceptance_evidence_fixture_allowed_rows": str(v59_one_command_acceptance_evidence_fixture_allowed_rows),
+    "v59_one_command_acceptance_evidence_approval_rows": str(v59_one_command_acceptance_evidence_approval_rows),
     "pm_blocker_closure_queue_rows": str(blocker_closure_queue_rows),
     "pm_blocker_closure_deferred_rows": str(blocker_closure_deferred_rows),
     "pm_blocker_closure_approval_required_rows": str(blocker_closure_approval_required_rows),
@@ -2177,6 +2295,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- de_30b70b_acceptance_evidence_ready_rows={de_30b70b_acceptance_evidence_ready_rows}\n"
     f"- de_30b70b_acceptance_evidence_blocked_rows={de_30b70b_acceptance_evidence_blocked_rows}\n"
     f"- de_30b70b_acceptance_evidence_tests_only_rows={de_30b70b_acceptance_evidence_tests_only_rows}\n"
+    f"- v59_one_command_acceptance_evidence_rows={v59_one_command_acceptance_evidence_row_count}\n"
+    f"- v59_one_command_acceptance_evidence_ready_rows={v59_one_command_acceptance_evidence_ready_rows}\n"
+    f"- v59_one_command_acceptance_evidence_blocked_rows={v59_one_command_acceptance_evidence_blocked_rows}\n"
+    f"- v59_one_command_acceptance_evidence_tests_only_rows={v59_one_command_acceptance_evidence_tests_only_rows}\n"
     f"- pm_blocker_closure_queue_rows={blocker_closure_queue_rows}\n"
     f"- pm_blocker_closure_packet_rows={blocker_closure_packet_rows}\n"
     f"- pm_blocker_closure_packet_files={blocker_closure_packet_files}\n"
@@ -2247,6 +2369,12 @@ manifest = {
     "de_30b70b_acceptance_evidence_tests_only_rows": de_30b70b_acceptance_evidence_tests_only_rows,
     "de_30b70b_acceptance_evidence_fixture_allowed_rows": de_30b70b_acceptance_evidence_fixture_allowed_rows,
     "de_30b70b_acceptance_evidence_approval_rows": de_30b70b_acceptance_evidence_approval_rows,
+    "v59_one_command_acceptance_evidence_rows": v59_one_command_acceptance_evidence_row_count,
+    "v59_one_command_acceptance_evidence_ready_rows": v59_one_command_acceptance_evidence_ready_rows,
+    "v59_one_command_acceptance_evidence_blocked_rows": v59_one_command_acceptance_evidence_blocked_rows,
+    "v59_one_command_acceptance_evidence_tests_only_rows": v59_one_command_acceptance_evidence_tests_only_rows,
+    "v59_one_command_acceptance_evidence_fixture_allowed_rows": v59_one_command_acceptance_evidence_fixture_allowed_rows,
+    "v59_one_command_acceptance_evidence_approval_rows": v59_one_command_acceptance_evidence_approval_rows,
     "pm_blocker_closure_queue_rows": blocker_closure_queue_rows,
     "pm_blocker_closure_deferred_rows": blocker_closure_deferred_rows,
     "pm_blocker_closure_packet_rows": blocker_closure_packet_rows,
@@ -2272,6 +2400,7 @@ manifest = {
     "pm_pr_acceptance_evidence_rows_sha256": sha256(run_dir / "pm_pr_acceptance_evidence_rows.csv"),
     "v56_replay_acceptance_evidence_rows_sha256": sha256(run_dir / "v56_replay_acceptance_evidence_rows.csv"),
     "de_30b70b_acceptance_evidence_rows_sha256": sha256(run_dir / "de_30b70b_acceptance_evidence_rows.csv"),
+    "v59_one_command_acceptance_evidence_rows_sha256": sha256(run_dir / "v59_one_command_acceptance_evidence_rows.csv"),
     "h10_real_label_acceptance_evidence_rows_sha256": sha256(run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"),
     "pm_pr_slice_file_rows_sha256": sha256(run_dir / "pm_pr_slice_file_rows.csv"),
     "pm_pr_slice_verification_rows_sha256": sha256(run_dir / "pm_pr_slice_verification_rows.csv"),

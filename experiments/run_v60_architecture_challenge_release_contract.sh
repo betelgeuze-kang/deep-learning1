@@ -155,6 +155,7 @@ for rel in [
     "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv",
+    "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
@@ -674,6 +675,12 @@ summary = {
     "v58_acceptance_evidence_blind_eval_ready_rows": as_int(v59e, "v58_acceptance_evidence_blind_eval_ready_rows"),
     "v58_acceptance_evidence_tests_only_rows": as_int(v59e, "v58_acceptance_evidence_tests_only_rows"),
     "v58_acceptance_evidence_hidden_state_rows": as_int(v59e, "v58_acceptance_evidence_hidden_state_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_ready_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_ready_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_blocked_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_blocked_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_tests_only_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_tests_only_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_fixture_allowed_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_fixture_allowed_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_approval_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_approval_rows"),
     "blind_eval_ready": as_int(v59e, "v58_full_blind_eval_ready"),
     "one_command_pm_foundation_ready": as_int(v59e, "v59e_one_command_pm_foundation_demo_ready"),
     "one_command_real_replay_ready": 0,
@@ -705,6 +712,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- v59e one-command PM foundation replay with PR split sidecar and execution lock\n\n"
     "Current blocker evidence surfaces:\n\n"
     "- h10 PM criteria rows, h10 real-label return contract rows, and h10 acceptance evidence rows are copied for coherent wrong-key, chunk exact, near-miss, missing-query abstain, source provenance binding, and external/human label blockers.\n\n"
+    "- PM v59 one-command acceptance evidence preserves local A/B/G/H row-contract replay readiness while keeping public-source download/refresh approval-blocked.\n\n"
     "Still blocked:\n\n"
     "- real 30B/70B LLM+RAG comparison rows\n"
     "- h10 real external/human label promotion evidence\n"
@@ -744,6 +752,7 @@ manifest = {
     "v59e_v58_blind_eval_acceptance_evidence_sha256": sha256(v59e_dir / "v58_blind_eval_acceptance_evidence_rows.csv"),
     "v59e_pm_pr_v56_replay_acceptance_evidence_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv"),
     "v59e_pm_pr_de_30b70b_acceptance_evidence_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv"),
+    "v59e_pm_pr_v59_one_command_acceptance_evidence_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv"),
     "v58_acceptance_evidence_rows": as_int(v59e, "v58_acceptance_evidence_rows"),
     "v58_acceptance_evidence_contract_ready_rows": as_int(v59e, "v58_acceptance_evidence_contract_ready_rows"),
     "v58_acceptance_evidence_default_blocked_rows": as_int(v59e, "v58_acceptance_evidence_default_blocked_rows"),
@@ -762,6 +771,12 @@ manifest = {
     "pm_pr_de_30b70b_acceptance_evidence_tests_only_rows": as_int(v59e, "pm_pr_de_30b70b_acceptance_evidence_tests_only_rows"),
     "pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows": as_int(v59e, "pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows"),
     "pm_pr_de_30b70b_acceptance_evidence_approval_rows": as_int(v59e, "pm_pr_de_30b70b_acceptance_evidence_approval_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_ready_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_ready_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_blocked_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_blocked_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_tests_only_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_tests_only_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_fixture_allowed_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_fixture_allowed_rows"),
+    "pm_pr_v59_one_command_acceptance_evidence_approval_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_approval_rows"),
     "pm_pr_summary_sha256": sha256(results / "v1_0_pm_pr_claim_slice_gate_summary.csv"),
     "h10_pm_criteria_rows": len(h10_pm_acceptance_rows),
     "h10_pm_criteria_ready": h10_pm_criteria_ready,

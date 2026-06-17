@@ -88,6 +88,12 @@ expected = {
     "de_30b70b_acceptance_evidence_tests_only_rows": "0",
     "de_30b70b_acceptance_evidence_fixture_allowed_rows": "0",
     "de_30b70b_acceptance_evidence_approval_rows": "4",
+    "v59_one_command_acceptance_evidence_rows": "2",
+    "v59_one_command_acceptance_evidence_ready_rows": "1",
+    "v59_one_command_acceptance_evidence_blocked_rows": "1",
+    "v59_one_command_acceptance_evidence_tests_only_rows": "0",
+    "v59_one_command_acceptance_evidence_fixture_allowed_rows": "0",
+    "v59_one_command_acceptance_evidence_approval_rows": "2",
     "pm_blocker_closure_queue_rows": "6",
     "pm_blocker_closure_deferred_rows": "6",
     "pm_blocker_closure_approval_required_rows": "6",
@@ -546,6 +552,35 @@ for artifact_id, system_id in {
         raise SystemExit(f"D/E validation command should expose both evidence dirs: {artifact_id}")
 if "llm_rag_answer_rows.csv" not in de_artifacts["d-answer-citation-resource"]["artifact_path_or_env"]:
     raise SystemExit("D/E answer-citation-resource row should name answer/citation/resource artifacts")
+v59_acceptance_rows = read_csv(run_dir / "v59_one_command_acceptance_evidence_rows.csv")
+if len(v59_acceptance_rows) != 2:
+    raise SystemExit("v59 one-command acceptance evidence should cover two artifacts")
+v59_artifacts = {row["artifact_id"]: row for row in v59_acceptance_rows}
+row = v59_artifacts.get("v59e-local-abgh-row-contract-replay")
+if not row:
+    raise SystemExit("v59 acceptance missing local A/B/G/H row-contract artifact")
+if row["acceptance_ready"] != "1" or row["acceptance_status"] != "ready":
+    raise SystemExit("v59 local A/B/G/H row-contract artifact should be ready")
+if row["output_artifact_replay_status"] != "pass":
+    raise SystemExit("v59 local A/B/G/H row-contract replay artifact should pass")
+refresh_row = v59_artifacts.get("v59-public-source-download-refresh")
+if not refresh_row:
+    raise SystemExit("v59 acceptance should include public-source download/refresh row")
+if refresh_row["acceptance_ready"] != "0" or refresh_row["acceptance_status"] != "blocked":
+    raise SystemExit("v59 public-source refresh should remain blocked without approval/evidence")
+if refresh_row["output_artifact_replay_status"] != "blocked":
+    raise SystemExit("v59 public-source refresh replay status should remain blocked")
+for row in v59_acceptance_rows:
+    if row["slice_id"] != "v59-one-command-demo":
+        raise SystemExit("v59 acceptance rows should bind to v59 PR slice")
+    if row["claim_boundary_status"] != "pass" or row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"v59 acceptance should keep claim/blocker boundaries closed: {row['artifact_id']}")
+    if row["fixture_allowed"] != "0" or row["approval_required"] != "1":
+        raise SystemExit(f"v59 acceptance should require approval and forbid fixtures: {row['artifact_id']}")
+    if row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"v59 acceptance should forbid tests-only readiness: {row['artifact_id']}")
+if "full_public_source_download_ready=0" not in refresh_row["observed_signal"]:
+    raise SystemExit("v59 refresh row should expose blocked full public-source download readiness")
 for slice_id in [
     "docs/v1-roadmap",
     "v53-public-repo-source-manifest",
@@ -782,6 +817,7 @@ required_files = [
     "pm_pr_acceptance_evidence_rows.csv",
     "v56_replay_acceptance_evidence_rows.csv",
     "de_30b70b_acceptance_evidence_rows.csv",
+    "v59_one_command_acceptance_evidence_rows.csv",
     "pm_blocker_closure_queue_rows.csv",
     "pm_blocker_closure_packet_rows.csv",
     "pm_blocker_required_artifact_rows.csv",
@@ -997,6 +1033,17 @@ if (
     raise SystemExit("PM PR manifest should record D/E 30B/70B acceptance evidence")
 if "de_30b70b_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("PM PR manifest should hash-bind D/E 30B/70B acceptance evidence")
+if (
+    manifest.get("v59_one_command_acceptance_evidence_rows") != 2
+    or manifest.get("v59_one_command_acceptance_evidence_ready_rows") != 1
+    or manifest.get("v59_one_command_acceptance_evidence_blocked_rows") != 1
+    or manifest.get("v59_one_command_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("v59_one_command_acceptance_evidence_fixture_allowed_rows") != 0
+    or manifest.get("v59_one_command_acceptance_evidence_approval_rows") != 2
+):
+    raise SystemExit("PM PR manifest should record v59 one-command acceptance evidence")
+if "v59_one_command_acceptance_evidence_rows_sha256" not in manifest:
+    raise SystemExit("PM PR manifest should hash-bind v59 one-command acceptance evidence")
 if manifest.get("pm_blocker_closure_queue_rows") != 6:
     raise SystemExit("PM PR manifest blocker closure queue mismatch")
 if manifest.get("pm_blocker_closure_packet_rows") != 6 or manifest.get("pm_blocker_closure_packet_files") != 6:
@@ -1061,6 +1108,10 @@ for snippet in [
     "de_30b70b_acceptance_evidence_ready_rows=0",
     "de_30b70b_acceptance_evidence_blocked_rows=4",
     "de_30b70b_acceptance_evidence_tests_only_rows=0",
+    "v59_one_command_acceptance_evidence_rows=2",
+    "v59_one_command_acceptance_evidence_ready_rows=1",
+    "v59_one_command_acceptance_evidence_blocked_rows=1",
+    "v59_one_command_acceptance_evidence_tests_only_rows=0",
     "pm_blocker_closure_queue_rows=6",
     "pm_blocker_closure_packet_rows=6",
     "pm_blocker_closure_packet_files=6",

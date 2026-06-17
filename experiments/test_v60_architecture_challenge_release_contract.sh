@@ -130,6 +130,12 @@ expected = {
     "v58_acceptance_evidence_blind_eval_ready_rows": "0",
     "v58_acceptance_evidence_tests_only_rows": "0",
     "v58_acceptance_evidence_hidden_state_rows": "0",
+    "pm_pr_v59_one_command_acceptance_evidence_rows": "2",
+    "pm_pr_v59_one_command_acceptance_evidence_ready_rows": "1",
+    "pm_pr_v59_one_command_acceptance_evidence_blocked_rows": "1",
+    "pm_pr_v59_one_command_acceptance_evidence_tests_only_rows": "0",
+    "pm_pr_v59_one_command_acceptance_evidence_fixture_allowed_rows": "0",
+    "pm_pr_v59_one_command_acceptance_evidence_approval_rows": "2",
     "blind_eval_ready": "0",
     "one_command_pm_foundation_ready": "1",
     "one_command_real_replay_ready": "0",
@@ -196,6 +202,7 @@ required_files = [
     "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
@@ -335,6 +342,34 @@ for artifact_id, system_id in {
         raise SystemExit(f"v60 should forbid tests-only D/E acceptance: {artifact_id}")
 if "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR>" not in de_artifacts["d-model-identity"]["validation_command"]:
     raise SystemExit("v60 should preserve the approval-gated D/E validation command")
+
+v59_one_command_acceptance_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv")
+if len(v59_one_command_acceptance_rows) != 2:
+    raise SystemExit("v60 should carry two PM v59 one-command acceptance evidence rows through v59e/PM sidecar")
+v59_one_command_artifacts = {row["artifact_id"]: row for row in v59_one_command_acceptance_rows}
+local_abgh_row = v59_one_command_artifacts.get("v59e-local-abgh-row-contract-replay")
+if not local_abgh_row:
+    raise SystemExit("v60 missing v59 local A/B/G/H row-contract replay acceptance row")
+if local_abgh_row["acceptance_ready"] != "1" or local_abgh_row["acceptance_status"] != "ready":
+    raise SystemExit("v60 should preserve v59 local A/B/G/H row-contract replay readiness")
+if local_abgh_row["output_artifact_replay_status"] != "pass":
+    raise SystemExit("v60 should preserve passing v59 local A/B/G/H replay status")
+refresh_row = v59_one_command_artifacts.get("v59-public-source-download-refresh")
+if not refresh_row:
+    raise SystemExit("v60 missing v59 public-source download/refresh acceptance row")
+if refresh_row["acceptance_ready"] != "0" or refresh_row["acceptance_status"] != "blocked":
+    raise SystemExit("v60 should keep v59 public-source download/refresh blocked without approval/evidence")
+if refresh_row["output_artifact_replay_status"] != "blocked":
+    raise SystemExit("v60 should preserve blocked v59 public-source replay status")
+for row in v59_one_command_acceptance_rows:
+    if row["claim_boundary_status"] != "pass" or row["blocker_false_positive_status"] != "pass":
+        raise SystemExit(f"v60 should preserve v59 claim/blocker boundaries: {row['artifact_id']}")
+    if row["fixture_allowed"] != "0" or row["approval_required"] != "1":
+        raise SystemExit(f"v60 should require approval and forbid fixtures for v59 evidence: {row['artifact_id']}")
+    if row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"v60 should forbid tests-only v59 acceptance: {row['artifact_id']}")
+if "full_public_source_download_ready=0" not in refresh_row["observed_signal"]:
+    raise SystemExit("v60 should expose blocked full public-source download readiness for v59 refresh")
 
 v60_pm_v53t_real_adapter_rows = {
     row["criterion_id"]: row
@@ -774,6 +809,8 @@ if "v59e_pm_pr_v56_replay_acceptance_evidence_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind PM v56 replay acceptance evidence rows")
 if "v59e_pm_pr_de_30b70b_acceptance_evidence_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind PM D/E 30B/70B acceptance evidence rows")
+if "v59e_pm_pr_v59_one_command_acceptance_evidence_sha256" not in manifest:
+    raise SystemExit("v60 manifest should hash-bind PM v59 one-command acceptance evidence rows")
 if (
     manifest.get("v58_acceptance_evidence_rows") != 8
     or manifest.get("v58_acceptance_evidence_contract_ready_rows") != 8
@@ -801,6 +838,15 @@ if (
     or manifest.get("pm_pr_de_30b70b_acceptance_evidence_approval_rows") != 4
 ):
     raise SystemExit("v60 manifest should record PM D/E 30B/70B acceptance evidence")
+if (
+    manifest.get("pm_pr_v59_one_command_acceptance_evidence_rows") != 2
+    or manifest.get("pm_pr_v59_one_command_acceptance_evidence_ready_rows") != 1
+    or manifest.get("pm_pr_v59_one_command_acceptance_evidence_blocked_rows") != 1
+    or manifest.get("pm_pr_v59_one_command_acceptance_evidence_tests_only_rows") != 0
+    or manifest.get("pm_pr_v59_one_command_acceptance_evidence_fixture_allowed_rows") != 0
+    or manifest.get("pm_pr_v59_one_command_acceptance_evidence_approval_rows") != 2
+):
+    raise SystemExit("v60 manifest should record PM v59 one-command acceptance evidence")
 if manifest.get("h10_pm_criteria_rows") != 6 or manifest.get("h10_pm_criteria_ready") != 1:
     raise SystemExit("v60 manifest should record direct h10 PM criteria evidence")
 if manifest.get("h10_pm_return_contract_rows") != 6 or manifest.get("h10_pm_return_contract_ready") != 1:
@@ -850,6 +896,7 @@ for snippet in [
     "h10 real external/human label promotion evidence",
     "h10 PM criteria rows",
     "h10 acceptance evidence rows",
+    "PM v59 one-command acceptance evidence preserves local A/B/G/H row-contract replay readiness",
     "v58c blind-response intake artifact",
     "v58d blind-review/adjudication return artifact",
     "v58 acceptance evidence rows",
