@@ -155,6 +155,9 @@ expected = {
     "v58_return_template_rows": "8",
     "v58_return_template_ready_rows": "8",
     "v58_return_template_fixture_allowed_rows": "0",
+    "v58_return_contract_map_rows": "8",
+    "v58_return_contract_map_ready_rows": "8",
+    "v58_return_contract_map_default_blocked_rows": "8",
     "pm_roadmap_requirement_rows": "20",
     "pm_roadmap_ready_rows": "14",
     "pm_roadmap_blocked_rows": "6",
@@ -541,8 +544,13 @@ if (
     or manifest.get("v58_return_template_rows") != 8
     or manifest.get("v58_return_template_ready_rows") != 8
     or manifest.get("v58_return_template_fixture_allowed_rows") != 0
+    or manifest.get("v58_return_contract_map_rows") != 8
+    or manifest.get("v58_return_contract_map_ready_rows") != 8
+    or manifest.get("v58_return_contract_map_default_blocked_rows") != 8
 ):
     raise SystemExit("v59e manifest should record v58 required return artifact contract readiness")
+if "v58_blind_eval_return_contract_map_rows_sha256" not in manifest:
+    raise SystemExit("v59e manifest should hash-bind v58 return contract map rows")
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
 if (
@@ -665,7 +673,11 @@ if "pm_foundation_replay_preflight_rows.csv" not in {row["path"] for row in bund
     raise SystemExit("v59e bundle index should include replay preflight rows")
 if "local_abgh_row_contract_replay_rows.csv" not in {row["path"] for row in bundle_rows}:
     raise SystemExit("v59e bundle index should include local A/B/G/H row-contract replay rows")
-for rel in ["v58_blind_eval_required_artifact_rows.csv", "v58_blind_eval_return_template_rows.csv"]:
+for rel in [
+    "v58_blind_eval_required_artifact_rows.csv",
+    "v58_blind_eval_return_template_rows.csv",
+    "v58_blind_eval_return_contract_map_rows.csv",
+]:
     if rel not in {row["path"] for row in bundle_rows}:
         raise SystemExit(f"v59e bundle index should include {rel}")
 
@@ -701,6 +713,32 @@ if {row["artifact_id"] for row in v58_template_rows} != expected_v58_artifacts:
     raise SystemExit("v59e v58 return template ids mismatch")
 if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" or row["template_ready"] != "1" for row in v58_template_rows):
     raise SystemExit("v59e v58 return templates should be ready, no-fixture, approval-required")
+
+v58_contract_map_rows = read_csv(run_dir / "v58_blind_eval_return_contract_map_rows.csv")
+if len(v58_contract_map_rows) != 8:
+    raise SystemExit("v59e should emit eight v58 return contract map rows")
+if {row["artifact_id"] for row in v58_contract_map_rows} != expected_v58_artifacts:
+    raise SystemExit("v59e v58 return contract map ids mismatch")
+if any(
+    row["fixture_allowed"] != "0"
+    or row["approval_required"] != "1"
+    or row["template_ready"] != "1"
+    or row["status"] != "ready"
+    or row["default_acceptance_status"] != "blocked"
+    for row in v58_contract_map_rows
+):
+    raise SystemExit("v59e v58 return contract map should be ready, blocked by default, no-fixture, approval-required")
+v58_template_by_key = {(row["blocker_class"], row["artifact_id"]): row for row in v58_template_rows}
+for row in v58_contract_map_rows:
+    template = v58_template_by_key.get((row["blocker_class"], row["artifact_id"]))
+    if template is None:
+        raise SystemExit("v59e v58 return contract map should resolve every template key")
+    if (
+        row["return_template_path"] != template["template_path"]
+        or row["return_template_kind"] != template["template_kind"]
+        or row["template_sha256"] != template["template_sha256"]
+    ):
+        raise SystemExit("v59e v58 return contract map should bind each artifact to its exact return template")
 
 preflight_rows = read_csv(run_dir / "pm_foundation_replay_preflight_rows.csv")
 expected_preflight_checks = {

@@ -1319,21 +1319,55 @@ v58_required_artifact_rows = [
 v58_return_template_rows = [
     row for row in pm_return_template_rows if row["blocker_class"] in v58_blocker_classes
 ]
+v58_template_by_key = {(row["blocker_class"], row["artifact_id"]): row for row in v58_return_template_rows}
+v58_return_contract_map_rows = []
+for row in v58_required_artifact_rows:
+    key = (row["blocker_class"], row["artifact_id"])
+    template = v58_template_by_key.get(key)
+    if template is None:
+        raise SystemExit(f"missing v58 return template for required artifact: {key}")
+    v58_return_contract_map_rows.append(
+        {
+            "blocker_class": row["blocker_class"],
+            "artifact_id": row["artifact_id"],
+            "artifact_path_or_env": row["artifact_path_or_env"],
+            "artifact_kind": row["artifact_kind"],
+            "required_shape": row["required_shape"],
+            "return_template_path": template["template_path"],
+            "return_template_kind": template["template_kind"],
+            "validation_command": row["validation_command"],
+            "acceptance_signal": row["acceptance_signal"],
+            "fixture_allowed": row["fixture_allowed"],
+            "approval_required": row["approval_required"],
+            "template_ready": template["template_ready"],
+            "template_sha256": template["template_sha256"],
+            "default_acceptance_status": "blocked",
+            "status": "ready",
+        }
+    )
 write_csv(run_dir / "v58_blind_eval_required_artifact_rows.csv", list(v58_required_artifact_rows[0].keys()), v58_required_artifact_rows)
 write_csv(run_dir / "v58_blind_eval_return_template_rows.csv", list(v58_return_template_rows[0].keys()), v58_return_template_rows)
+write_csv(run_dir / "v58_blind_eval_return_contract_map_rows.csv", list(v58_return_contract_map_rows[0].keys()), v58_return_contract_map_rows)
 v58_required_artifact_fixture_allowed_rows = sum(1 for row in v58_required_artifact_rows if row["fixture_allowed"] == "1")
 v58_required_artifact_approval_rows = sum(1 for row in v58_required_artifact_rows if row["approval_required"] == "1")
 v58_return_template_fixture_allowed_rows = sum(1 for row in v58_return_template_rows if row["fixture_allowed"] == "1")
 v58_return_template_ready_rows = sum(1 for row in v58_return_template_rows if row["template_ready"] == "1")
+v58_return_contract_map_ready_rows = sum(1 for row in v58_return_contract_map_rows if row["status"] == "ready")
 v58_return_artifact_contract_ready = int(
     len(v58_required_artifact_rows) == 8
     and len(v58_return_template_rows) == 8
+    and len(v58_return_contract_map_rows) == 8
     and sum(1 for row in v58_required_artifact_rows if row["blocker_class"] == "v58c-intake-artifact-missing") == 3
     and sum(1 for row in v58_required_artifact_rows if row["blocker_class"] == "v58-real-blind-eval-missing") == 5
     and v58_required_artifact_fixture_allowed_rows == 0
     and v58_required_artifact_approval_rows == 8
     and v58_return_template_fixture_allowed_rows == 0
     and v58_return_template_ready_rows == 8
+    and v58_return_contract_map_ready_rows == 8
+    and all(row["fixture_allowed"] == "0" for row in v58_return_contract_map_rows)
+    and all(row["approval_required"] == "1" for row in v58_return_contract_map_rows)
+    and all(row["template_ready"] == "1" for row in v58_return_contract_map_rows)
+    and all(row["default_acceptance_status"] == "blocked" for row in v58_return_contract_map_rows)
 )
 bundle_rows.extend(
     [
@@ -1346,6 +1380,11 @@ bundle_rows.extend(
             "path": "v58_blind_eval_return_template_rows.csv",
             "source_stage": "v59e_core",
             "artifact_role": "v58_return_templates",
+        },
+        {
+            "path": "v58_blind_eval_return_contract_map_rows.csv",
+            "source_stage": "v59e_core",
+            "artifact_role": "v58_return_contract_map",
         },
     ]
 )
@@ -1401,6 +1440,9 @@ summary["v58_required_artifact_fixture_allowed_rows"] = str(v58_required_artifac
 summary["v58_return_template_rows"] = str(len(v58_return_template_rows))
 summary["v58_return_template_ready_rows"] = str(v58_return_template_ready_rows)
 summary["v58_return_template_fixture_allowed_rows"] = str(v58_return_template_fixture_allowed_rows)
+summary["v58_return_contract_map_rows"] = str(len(v58_return_contract_map_rows))
+summary["v58_return_contract_map_ready_rows"] = str(v58_return_contract_map_ready_rows)
+summary["v58_return_contract_map_default_blocked_rows"] = str(sum(1 for row in v58_return_contract_map_rows if row["default_acceptance_status"] == "blocked"))
 summary["pm_roadmap_requirement_rows"] = pr_summary["pm_roadmap_requirement_rows"]
 summary["pm_roadmap_ready_rows"] = pr_summary["pm_roadmap_ready_rows"]
 summary["pm_roadmap_blocked_rows"] = pr_summary["pm_roadmap_blocked_rows"]
@@ -1536,7 +1578,7 @@ decision_rows.extend(
         {
             "gate": "v58-required-return-artifacts",
             "status": "pass" if v58_return_artifact_contract_ready else "blocked",
-            "reason": "v58-specific response, identity, review, adjudication, intake, and sha256 return rows are packaged with fixture rows forbidden",
+            "reason": "v58-specific response, identity, review, adjudication, intake, sha256 return rows, and required-artifact/template map are packaged with fixture rows forbidden",
         },
         {
             "gate": "one-command-replay-preflight",
@@ -1560,6 +1602,7 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + f"- v58_return_artifact_contract_ready={summary['v58_return_artifact_contract_ready']}\n"
     + f"- v58_required_artifact_rows={summary['v58_required_artifact_rows']}\n"
     + f"- v58_return_template_rows={summary['v58_return_template_rows']}\n"
+    + f"- v58_return_contract_map_rows={summary['v58_return_contract_map_rows']}\n"
     + f"- one_command_replay_preflight_ready={summary['one_command_replay_preflight_ready']}\n",
     encoding="utf-8",
 )
@@ -1576,6 +1619,7 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + f"- v58_return_artifact_contract_ready={summary['v58_return_artifact_contract_ready']}\n"
     + f"- v58_required_artifact_fixture_allowed_rows={summary['v58_required_artifact_fixture_allowed_rows']}\n"
     + f"- v58_return_template_fixture_allowed_rows={summary['v58_return_template_fixture_allowed_rows']}\n"
+    + f"- v58_return_contract_map_default_blocked_rows={summary['v58_return_contract_map_default_blocked_rows']}\n"
     + f"- one_command_replay_preflight_ready={summary['one_command_replay_preflight_ready']}\n",
     encoding="utf-8",
 )
@@ -1603,11 +1647,15 @@ manifest["v58_required_artifact_fixture_allowed_rows"] = v58_required_artifact_f
 manifest["v58_return_template_rows"] = len(v58_return_template_rows)
 manifest["v58_return_template_ready_rows"] = v58_return_template_ready_rows
 manifest["v58_return_template_fixture_allowed_rows"] = v58_return_template_fixture_allowed_rows
+manifest["v58_return_contract_map_rows"] = len(v58_return_contract_map_rows)
+manifest["v58_return_contract_map_ready_rows"] = v58_return_contract_map_ready_rows
+manifest["v58_return_contract_map_default_blocked_rows"] = sum(1 for row in v58_return_contract_map_rows if row["default_acceptance_status"] == "blocked")
 manifest["one_command_replay_preflight_ready"] = one_command_replay_preflight_ready
 manifest["pm_foundation_replay_preflight_rows_sha256"] = sha256(run_dir / "pm_foundation_replay_preflight_rows.csv")
 manifest["local_abgh_row_contract_replay_rows_sha256"] = sha256(run_dir / "local_abgh_row_contract_replay_rows.csv")
 manifest["v58_blind_eval_required_artifact_rows_sha256"] = sha256(run_dir / "v58_blind_eval_required_artifact_rows.csv")
 manifest["v58_blind_eval_return_template_rows_sha256"] = sha256(run_dir / "v58_blind_eval_return_template_rows.csv")
+manifest["v58_blind_eval_return_contract_map_rows_sha256"] = sha256(run_dir / "v58_blind_eval_return_contract_map_rows.csv")
 manifest["public_source_snapshot_replay_rows_sha256"] = sha256(run_dir / "public_source_snapshot_replay_rows.csv")
 manifest["source_summary_sha256"]["pm_pr_claim_slice_gate"] = sha256(pr_summary_csv)
 manifest["pm_pr_claim_slice_gate_manifest_sha256"] = sha256(pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json")

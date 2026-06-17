@@ -204,6 +204,7 @@ for rel in [
     "v58d_pm_blind_review_return_dependency_rows.csv",
     "v58_blind_eval_required_artifact_rows.csv",
     "v58_blind_eval_return_template_rows.csv",
+    "v58_blind_eval_return_contract_map_rows.csv",
 ]:
     copy(v59e_dir / rel, f"source_v59e/{rel}")
 copy(results / "v59e_one_command_pm_foundation_demo_summary.csv", "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv")
@@ -621,6 +622,9 @@ summary = {
     "v58_return_template_rows": as_int(v59e, "v58_return_template_rows"),
     "v58_return_template_ready_rows": as_int(v59e, "v58_return_template_ready_rows"),
     "v58_return_template_fixture_allowed_rows": as_int(v59e, "v58_return_template_fixture_allowed_rows"),
+    "v58_return_contract_map_rows": as_int(v59e, "v58_return_contract_map_rows"),
+    "v58_return_contract_map_ready_rows": as_int(v59e, "v58_return_contract_map_ready_rows"),
+    "v58_return_contract_map_default_blocked_rows": as_int(v59e, "v58_return_contract_map_default_blocked_rows"),
     "blind_eval_ready": as_int(v59e, "v58_full_blind_eval_ready"),
     "one_command_pm_foundation_ready": as_int(v59e, "v59e_one_command_pm_foundation_demo_ready"),
     "one_command_real_replay_ready": 0,
@@ -686,6 +690,7 @@ manifest = {
     "v59e_public_source_snapshot_replay_sha256": sha256(v59e_dir / "public_source_snapshot_replay_rows.csv"),
     "v59e_v58_blind_eval_required_artifact_sha256": sha256(v59e_dir / "v58_blind_eval_required_artifact_rows.csv"),
     "v59e_v58_blind_eval_return_template_sha256": sha256(v59e_dir / "v58_blind_eval_return_template_rows.csv"),
+    "v59e_v58_blind_eval_return_contract_map_sha256": sha256(v59e_dir / "v58_blind_eval_return_contract_map_rows.csv"),
     "pm_pr_summary_sha256": sha256(results / "v1_0_pm_pr_claim_slice_gate_summary.csv"),
     "h10_pm_criteria_rows": len(h10_pm_acceptance_rows),
     "h10_pm_criteria_ready": h10_pm_criteria_ready,

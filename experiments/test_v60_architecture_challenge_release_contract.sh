@@ -110,6 +110,9 @@ expected = {
     "v58_return_template_rows": "8",
     "v58_return_template_ready_rows": "8",
     "v58_return_template_fixture_allowed_rows": "0",
+    "v58_return_contract_map_rows": "8",
+    "v58_return_contract_map_ready_rows": "8",
+    "v58_return_contract_map_default_blocked_rows": "8",
     "blind_eval_ready": "0",
     "one_command_pm_foundation_ready": "1",
     "one_command_real_replay_ready": "0",
@@ -223,6 +226,7 @@ required_files = [
     "source_v59e/v58d_pm_blind_review_return_dependency_rows.csv",
     "source_v59e/v58_blind_eval_required_artifact_rows.csv",
     "source_v59e/v58_blind_eval_return_template_rows.csv",
+    "source_v59e/v58_blind_eval_return_contract_map_rows.csv",
     "source_v59e/v59e_one_command_pm_foundation_demo_summary.csv",
     "source_pm_pr/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_summaries/v52_llm_rag_baseline_war_summary.csv",
@@ -475,6 +479,32 @@ if {row["artifact_id"] for row in v58_template_rows} != expected_v58_artifacts:
 if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" or row["template_ready"] != "1" for row in v58_template_rows):
     raise SystemExit("v60 v58 return templates should be ready, no-fixture, approval-required")
 
+v58_contract_map_rows = read_csv(run_dir / "source_v59e/v58_blind_eval_return_contract_map_rows.csv")
+if len(v58_contract_map_rows) != 8:
+    raise SystemExit("v60 should carry eight v58 return contract map rows")
+if {row["artifact_id"] for row in v58_contract_map_rows} != expected_v58_artifacts:
+    raise SystemExit("v60 v58 return contract map ids mismatch")
+if any(
+    row["fixture_allowed"] != "0"
+    or row["approval_required"] != "1"
+    or row["template_ready"] != "1"
+    or row["status"] != "ready"
+    or row["default_acceptance_status"] != "blocked"
+    for row in v58_contract_map_rows
+):
+    raise SystemExit("v60 v58 return contract map should be ready, blocked by default, no-fixture, approval-required")
+v58_template_by_key = {(row["blocker_class"], row["artifact_id"]): row for row in v58_template_rows}
+for row in v58_contract_map_rows:
+    template = v58_template_by_key.get((row["blocker_class"], row["artifact_id"]))
+    if template is None:
+        raise SystemExit("v60 v58 return contract map should resolve every template key")
+    if (
+        row["return_template_path"] != template["template_path"]
+        or row["return_template_kind"] != template["template_kind"]
+        or row["template_sha256"] != template["template_sha256"]
+    ):
+        raise SystemExit("v60 v58 return contract map should bind each artifact to its exact return template")
+
 for label, path in [
     ("v59e direct h10 bundle", run_dir / "source_v59e/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
     ("v59e PM sidecar h10 bundle", run_dir / "source_v59e/source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
@@ -549,6 +579,8 @@ if "v59e_v58_blind_eval_required_artifact_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind v58 required artifact rows")
 if "v59e_v58_blind_eval_return_template_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind v58 return template rows")
+if "v59e_v58_blind_eval_return_contract_map_sha256" not in manifest:
+    raise SystemExit("v60 manifest should hash-bind v58 return contract map rows")
 if manifest.get("h10_pm_criteria_rows") != 6 or manifest.get("h10_pm_criteria_ready") != 1:
     raise SystemExit("v60 manifest should record direct h10 PM criteria evidence")
 if manifest.get("h10_pm_return_contract_rows") != 6 or manifest.get("h10_pm_return_contract_ready") != 1:
