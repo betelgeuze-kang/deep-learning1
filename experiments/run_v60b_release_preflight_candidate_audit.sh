@@ -36,6 +36,7 @@ v59b_summary_path = results / "v59b_one_command_candidate_demo_summary.csv"
 v59b_decision_path = results / "v59b_one_command_candidate_demo_decision.csv"
 v59b_summary = list(csv.DictReader(v59b_summary_path.open(newline="", encoding="utf-8")))[0]
 v59b_decisions = list(csv.DictReader(v59b_decision_path.open(newline="", encoding="utf-8")))
+v59b_dependency_blocker_ready = int(v59b_summary.get("v59b_dependency_blocker_ready", "0"))
 
 
 def sha256(path):
@@ -61,27 +62,54 @@ def copy(src, rel):
     return dst
 
 
-source_rels = [
-    "candidate_stage_replay_rows.csv",
-    "candidate_one_command_rows.csv",
-    "candidate_demo_gate_rows.csv",
-    "README_RESULT.md",
-    "V59B_ONE_COMMAND_CANDIDATE_DEMO_BOUNDARY.md",
-    "v59b_one_command_candidate_demo_manifest.json",
-    "sha256_manifest.csv",
-]
+if v59b_dependency_blocker_ready:
+    source_rels = [
+        "v59b_dependency_blocker_rows.csv",
+        "README_RESULT.md",
+        "V59B_ONE_COMMAND_CANDIDATE_DEPENDENCY_BLOCKER.md",
+        "v59b_one_command_candidate_demo_manifest.json",
+        "sha256_manifest.csv",
+    ]
+else:
+    source_rels = [
+        "candidate_stage_replay_rows.csv",
+        "candidate_one_command_rows.csv",
+        "candidate_demo_gate_rows.csv",
+        "README_RESULT.md",
+        "V59B_ONE_COMMAND_CANDIDATE_DEMO_BOUNDARY.md",
+        "v59b_one_command_candidate_demo_manifest.json",
+        "sha256_manifest.csv",
+    ]
 for relpath in source_rels:
     copy(v59b_dir / relpath, f"source_v59b/{relpath}")
 copy(v59b_summary_path, "source_v59b/v59b_one_command_candidate_demo_summary.csv")
 copy(v59b_decision_path, "source_v59b/v59b_one_command_candidate_demo_decision.csv")
 
-stage_rows = list(csv.DictReader((v59b_dir / "candidate_stage_replay_rows.csv").open(newline="", encoding="utf-8")))
+if v59b_dependency_blocker_ready:
+    stage_rows = [
+        {"stage": stage, "candidate_ready": "0", "full_ready": "0"}
+        for stage in ["v52b", "v52c", "v52d", "v52e", "v53e", "v53f", "v54b", "v55b", "v56b", "v57b", "v58b", "v58c"]
+    ]
+else:
+    stage_rows = list(csv.DictReader((v59b_dir / "candidate_stage_replay_rows.csv").open(newline="", encoding="utf-8")))
 gate_by_name = {row["gate"]: row for row in v59b_decisions}
 
 preflight_requirements = [
-    ("candidate_chain_replay", 1, "v59b candidate/intake chain replay is present"),
+    (
+        "candidate_chain_replay",
+        0 if v59b_dependency_blocker_ready else 1,
+        "v59b dependency blocker is present instead of candidate/intake replay"
+        if v59b_dependency_blocker_ready
+        else "v59b candidate/intake chain replay is present",
+    ),
     ("one_command_candidate_entrypoint", 1, "candidate entrypoint exists and is hash-bound"),
-    ("candidate_artifact_hashes", 1, "v59b candidate artifacts have sha256 coverage"),
+    (
+        "candidate_artifact_hashes",
+        1,
+        "v59b dependency blocker packet has sha256 coverage"
+        if v59b_dependency_blocker_ready
+        else "v59b candidate artifacts have sha256 coverage",
+    ),
     ("real_30b_70b_llm_rag_rows", 0, "real D/E 30B/70B LLM+RAG rows are missing"),
     ("optional_100b_plus_row_or_final_deferral", 0, "F is still optional/deferred without a final release decision"),
     ("complete_source_public_repo_audit", 0, "v53 remains canary-scope rather than complete-source audit"),
@@ -105,14 +133,25 @@ for requirement, ready, reason in preflight_requirements:
     )
 write_csv(run_dir / "release_preflight_requirement_rows.csv", list(requirement_rows[0].keys()), requirement_rows)
 
-claim_rows = [
-    ("candidate_chain_replay_ready", "allowed_limited", "The current v52b-v58b candidate/intake chain can be replayed from one command."),
-    ("v1_0_release_ready", "forbidden", "real release package and release review are missing"),
-    ("beats_30b_150b_llm_rag", "forbidden", "real D/E/F comparison and blind-review rows are missing"),
-    ("safe_grounded_code_doc_qa_superiority", "forbidden", "complete-source A-H code/doc QA comparison rows are missing"),
-    ("expert_replacement", "forbidden", "human expert pack review is missing and replacement claims are blocked"),
-    ("production_release", "forbidden", "release package is not assembled from real rows"),
-]
+if v59b_dependency_blocker_ready:
+    claim_rows = [
+        ("v59b_dependency_blocker_recorded", "allowed_limited", "The v59b one-command path has a replayable missing-dependency blocker."),
+        ("candidate_chain_replay_ready", "forbidden", "candidate replay rows are missing behind the v59b dependency blocker"),
+        ("v1_0_release_ready", "forbidden", "real release package and release review are missing"),
+        ("beats_30b_150b_llm_rag", "forbidden", "real D/E/F comparison and blind-review rows are missing"),
+        ("safe_grounded_code_doc_qa_superiority", "forbidden", "complete-source A-H code/doc QA comparison rows are missing"),
+        ("expert_replacement", "forbidden", "human expert pack review is missing and replacement claims are blocked"),
+        ("production_release", "forbidden", "release package is not assembled from real rows"),
+    ]
+else:
+    claim_rows = [
+        ("candidate_chain_replay_ready", "allowed_limited", "The current v52b-v58b candidate/intake chain can be replayed from one command."),
+        ("v1_0_release_ready", "forbidden", "real release package and release review are missing"),
+        ("beats_30b_150b_llm_rag", "forbidden", "real D/E/F comparison and blind-review rows are missing"),
+        ("safe_grounded_code_doc_qa_superiority", "forbidden", "complete-source A-H code/doc QA comparison rows are missing"),
+        ("expert_replacement", "forbidden", "human expert pack review is missing and replacement claims are blocked"),
+        ("production_release", "forbidden", "release package is not assembled from real rows"),
+    ]
 write_csv(
     run_dir / "release_preflight_claim_rows.csv",
     ["claim_id", "status", "reason"],
@@ -136,7 +175,20 @@ for row in stage_rows:
 write_csv(run_dir / "stage_release_audit_rows.csv", list(stage_audit_rows[0].keys()), stage_audit_rows)
 
 decision_rows = [
-    ("v59b-candidate-input", "pass", "v59b candidate replay bundle is present"),
+    (
+        "v59b-candidate-input",
+        "blocked" if v59b_dependency_blocker_ready else "pass",
+        "v59b dependency blocker is present instead of candidate replay rows"
+        if v59b_dependency_blocker_ready
+        else "v59b candidate replay bundle is present",
+    ),
+    (
+        "v59b-dependency-blocker-input",
+        "pass" if v59b_dependency_blocker_ready else "pass",
+        "v59b dependency blocker is hash-bound"
+        if v59b_dependency_blocker_ready
+        else "no v59b dependency blocker was needed",
+    ),
     ("candidate-preflight-audit", "pass", "release requirements, claim rows, and stage audit rows are emitted"),
     ("candidate-chain-hash-binding", "pass", "copied v59b artifacts and this audit have sha256 manifests"),
     ("v1-release-ready", "blocked", "release requirements remain blocked"),
@@ -152,6 +204,7 @@ summary = {
     "v60b_release_preflight_candidate_audit_ready": 1,
     "v60_ready": 0,
     "v59b_one_command_candidate_demo_ready": int(v59b_summary.get("v59b_one_command_candidate_demo_ready", "0")),
+    "v59b_dependency_blocker_ready": v59b_dependency_blocker_ready,
     "v59_ready": int(v59b_summary.get("v59_ready", "0")),
     "candidate_stage_rows": int(v59b_summary.get("candidate_stage_rows", "0")),
     "candidate_ready_stage_rows": int(v59b_summary.get("candidate_ready_stage_rows", "0")),
@@ -172,8 +225,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 
 (run_dir / "V60B_RELEASE_PREFLIGHT_CANDIDATE_AUDIT_BOUNDARY.md").write_text(
     "# v60b Release Preflight Candidate Audit Boundary\n\n"
-    "This audit consumes the v59b one-command candidate replay and checks release blockers. "
+    "This audit consumes the v59b one-command candidate replay or dependency blocker and checks release blockers. "
     "It is not the v1.0 Architecture Challenge Release.\n\n"
+    f"- v59b_dependency_blocker_ready={summary['v59b_dependency_blocker_ready']}\n"
     f"- candidate_stage_rows={summary['candidate_stage_rows']}\n"
     f"- candidate_ready_stage_rows={summary['candidate_ready_stage_rows']}\n"
     f"- full_ready_stage_rows={summary['full_ready_stage_rows']}\n"
@@ -181,7 +235,12 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     "- real_30b_70b_rows_ready=0\n"
     "- human_blind_review_ready=0\n"
     "- real_release_package_ready=0\n\n"
-    "Allowed limited wording: the current candidate/intake chain can be replayed from one command.\n\n"
+    + (
+        "Allowed limited wording: the v59b one-command path has a replayable missing-dependency blocker.\n\n"
+        if v59b_dependency_blocker_ready
+        else "Allowed limited wording: the current candidate/intake chain can be replayed from one command.\n\n"
+    )
+    +
     "Do not publish v1.0 release readiness, 30B-150B comparison wins, safe grounded QA superiority, expert replacement, or production-release claims from this preflight audit.\n",
     encoding="utf-8",
 )
@@ -193,6 +252,7 @@ manifest = {
     "v60_ready": 0,
     "v59b_summary_sha256": sha256(v59b_summary_path),
     "v59b_manifest_sha256": sha256(v59b_dir / "v59b_one_command_candidate_demo_manifest.json"),
+    "v59b_dependency_blocker_ready": v59b_dependency_blocker_ready,
     "release_requirement_blocked_rows": summary["release_requirement_blocked_rows"],
     "real_release_package_ready": 0,
 }
@@ -205,16 +265,28 @@ artifact_rels = [
     "release_preflight_decision_rows.csv",
     "V60B_RELEASE_PREFLIGHT_CANDIDATE_AUDIT_BOUNDARY.md",
     "v60b_release_preflight_candidate_audit_manifest.json",
-    "source_v59b/candidate_stage_replay_rows.csv",
-    "source_v59b/candidate_one_command_rows.csv",
-    "source_v59b/candidate_demo_gate_rows.csv",
     "source_v59b/README_RESULT.md",
-    "source_v59b/V59B_ONE_COMMAND_CANDIDATE_DEMO_BOUNDARY.md",
     "source_v59b/v59b_one_command_candidate_demo_manifest.json",
     "source_v59b/sha256_manifest.csv",
     "source_v59b/v59b_one_command_candidate_demo_summary.csv",
     "source_v59b/v59b_one_command_candidate_demo_decision.csv",
 ]
+if v59b_dependency_blocker_ready:
+    artifact_rels.extend(
+        [
+            "source_v59b/v59b_dependency_blocker_rows.csv",
+            "source_v59b/V59B_ONE_COMMAND_CANDIDATE_DEPENDENCY_BLOCKER.md",
+        ]
+    )
+else:
+    artifact_rels.extend(
+        [
+            "source_v59b/candidate_stage_replay_rows.csv",
+            "source_v59b/candidate_one_command_rows.csv",
+            "source_v59b/candidate_demo_gate_rows.csv",
+            "source_v59b/V59B_ONE_COMMAND_CANDIDATE_DEMO_BOUNDARY.md",
+        ]
+    )
 artifact_rows = []
 for relpath in artifact_rels:
     path = run_dir / relpath

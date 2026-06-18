@@ -8,6 +8,7 @@ RUN_ID="${V59B_RUN_ID:-candidate_001}"
 RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+V59B_ALLOW_STAGE_REBUILD="${V59B_ALLOW_STAGE_REBUILD:-0}"
 
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
@@ -21,18 +22,20 @@ run_or_reuse() {
   "$@" >/dev/null
 }
 
-run_or_reuse "$RESULTS_DIR/v52b_small_local_rag_measured_row_summary.csv" "$ROOT_DIR/experiments/run_v52b_small_local_rag_measured_row.sh"
-run_or_reuse "$RESULTS_DIR/v52c_7b14b_local_model_rag_evidence_intake_summary.csv" "$ROOT_DIR/experiments/run_v52c_7b14b_local_model_rag_evidence_intake.sh"
-run_or_reuse "$RESULTS_DIR/v52d_30b70b_llm_rag_evidence_intake_summary.csv" "$ROOT_DIR/experiments/run_v52d_30b70b_llm_rag_evidence_intake.sh"
-run_or_reuse "$RESULTS_DIR/v52e_100b_plus_hosted_llm_rag_optional_intake_summary.csv" "$ROOT_DIR/experiments/run_v52e_100b_plus_hosted_llm_rag_optional_intake.sh"
-run_or_reuse "$RESULTS_DIR/v53e_canary_query_scale_1000_summary.csv" "$ROOT_DIR/experiments/run_v53e_canary_query_scale_1000.sh"
-run_or_reuse "$RESULTS_DIR/v53f_ah_answer_citation_resource_intake_summary.csv" "$ROOT_DIR/experiments/run_v53f_ah_answer_citation_resource_intake.sh"
-run_or_reuse "$RESULTS_DIR/v54b_routehint_generation_scale_1000_summary.csv" "$ROOT_DIR/experiments/run_v54b_routehint_generation_scale_1000.sh"
-run_or_reuse "$RESULTS_DIR/v55b_local_scaling_law_main_120_summary.csv" "$ROOT_DIR/experiments/run_v55b_local_scaling_law_main_120.sh"
-run_or_reuse "$RESULTS_DIR/v56b_ruler_longbench_expanded_scale_summary.csv" "$ROOT_DIR/experiments/run_v56b_ruler_longbench_expanded_scale.sh"
-run_or_reuse "$RESULTS_DIR/v57b_domain_expert_pack_candidate_1000_summary.csv" "$ROOT_DIR/experiments/run_v57b_domain_expert_pack_candidate_1000.sh"
-run_or_reuse "$RESULTS_DIR/v58b_blind_eval_candidate_500_summary.csv" "$ROOT_DIR/experiments/run_v58b_blind_eval_candidate_500.sh"
-run_or_reuse "$RESULTS_DIR/v58c_blind_response_evidence_intake_summary.csv" "$ROOT_DIR/experiments/run_v58c_blind_response_evidence_intake.sh"
+if [[ "$V59B_ALLOW_STAGE_REBUILD" == "1" ]]; then
+  run_or_reuse "$RESULTS_DIR/v52b_small_local_rag_measured_row_summary.csv" "$ROOT_DIR/experiments/run_v52b_small_local_rag_measured_row.sh"
+  run_or_reuse "$RESULTS_DIR/v52c_7b14b_local_model_rag_evidence_intake_summary.csv" "$ROOT_DIR/experiments/run_v52c_7b14b_local_model_rag_evidence_intake.sh"
+  run_or_reuse "$RESULTS_DIR/v52d_30b70b_llm_rag_evidence_intake_summary.csv" "$ROOT_DIR/experiments/run_v52d_30b70b_llm_rag_evidence_intake.sh"
+  run_or_reuse "$RESULTS_DIR/v52e_100b_plus_hosted_llm_rag_optional_intake_summary.csv" "$ROOT_DIR/experiments/run_v52e_100b_plus_hosted_llm_rag_optional_intake.sh"
+  run_or_reuse "$RESULTS_DIR/v53e_canary_query_scale_1000_summary.csv" "$ROOT_DIR/experiments/run_v53e_canary_query_scale_1000.sh"
+  run_or_reuse "$RESULTS_DIR/v53f_ah_answer_citation_resource_intake_summary.csv" "$ROOT_DIR/experiments/run_v53f_ah_answer_citation_resource_intake.sh"
+  run_or_reuse "$RESULTS_DIR/v54b_routehint_generation_scale_1000_summary.csv" "$ROOT_DIR/experiments/run_v54b_routehint_generation_scale_1000.sh"
+  run_or_reuse "$RESULTS_DIR/v55b_local_scaling_law_main_120_summary.csv" "$ROOT_DIR/experiments/run_v55b_local_scaling_law_main_120.sh"
+  run_or_reuse "$RESULTS_DIR/v56b_ruler_longbench_expanded_scale_summary.csv" "$ROOT_DIR/experiments/run_v56b_ruler_longbench_expanded_scale.sh"
+  run_or_reuse "$RESULTS_DIR/v57b_domain_expert_pack_candidate_1000_summary.csv" "$ROOT_DIR/experiments/run_v57b_domain_expert_pack_candidate_1000.sh"
+  run_or_reuse "$RESULTS_DIR/v58b_blind_eval_candidate_500_summary.csv" "$ROOT_DIR/experiments/run_v58b_blind_eval_candidate_500.sh"
+  run_or_reuse "$RESULTS_DIR/v58c_blind_response_evidence_intake_summary.csv" "$ROOT_DIR/experiments/run_v58c_blind_response_evidence_intake.sh"
+fi
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
@@ -159,6 +162,28 @@ STAGES = [
         "claim": "blind response evidence intake",
     },
 ]
+
+sys.path.insert(0, str(root / "experiments"))
+from v59_dependency_blocker import write_dependency_blocker  # noqa: E402
+
+missing_dependency_artifacts = []
+for spec in STAGES:
+    if not spec["summary"].is_file() or spec["summary"].stat().st_size == 0:
+        missing_dependency_artifacts.append(spec["summary"])
+    for relpath in spec["artifacts"]:
+        artifact = spec["source_dir"] / relpath
+        if not artifact.is_file() or artifact.stat().st_size == 0:
+            missing_dependency_artifacts.append(artifact)
+if missing_dependency_artifacts:
+    write_dependency_blocker(
+        variant="v59b",
+        root=root,
+        run_dir=run_dir,
+        summary_csv=summary_csv,
+        decision_csv=decision_csv,
+        missing_artifacts=missing_dependency_artifacts,
+    )
+    sys.exit(0)
 
 
 def sha256(path):

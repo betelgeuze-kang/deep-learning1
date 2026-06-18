@@ -42,6 +42,108 @@ summary_rows = read_csv(summary_csv)
 if len(summary_rows) != 1:
     raise SystemExit(f"expected one v59c summary row, got {len(summary_rows)}")
 summary = summary_rows[0]
+if summary.get("v59c_dependency_blocker_ready") == "1":
+    expected_blocked = {
+        "v59c_one_command_measured_registry_demo_ready": "0",
+        "v59_ready": "0",
+        "stage_rows": "9",
+        "candidate_ready_stage_rows": "0",
+        "full_ready_stage_rows": "0",
+        "measured_registry_ready": "0",
+        "local_measured_systems": "A/B/C/G/H",
+        "query_rows": "0",
+        "answer_rows": "0",
+        "citation_rows": "0",
+        "abstain_rows": "0",
+        "wrong_answer_guard_rows": "0",
+        "resource_rows": "0",
+        "routehint_rows": "0",
+        "one_command_measured_registry_entrypoint_ready": "1",
+        "measured_registry_bundle_ready": "0",
+        "network_required": "0",
+        "external_model_required_for_local_registry": "0",
+        "real_llm_rows_required_for_full_v1": "1",
+        "required_7b14b_baseline_ready": "0",
+        "c_strict_exact_label_accuracy": "0.000000",
+        "implicit_stage_rebuild_allowed": "0",
+        "stage_rebuild_approval_required": "1",
+        "network_or_download_approval_required": "1",
+        "missing_7b14b_real_rows": "1",
+        "missing_real_30b_70b_rows": "1",
+        "missing_100b_plus_real_row_or_final_deferral": "1",
+        "missing_complete_source_audit": "1",
+        "missing_human_domain_review": "1",
+        "missing_human_blind_review": "1",
+        "real_release_package_ready": "0",
+    }
+    for field, value in expected_blocked.items():
+        if summary.get(field) != value:
+            raise SystemExit(f"v59c dependency blocker {field}: expected {value}, got {summary.get(field)}")
+    if int(summary.get("missing_dependency_artifact_rows", "0")) <= 0:
+        raise SystemExit("v59c dependency blocker should record missing artifacts")
+
+    decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+    for gate in [
+        "dependency-blocker-artifact",
+        "one-command-measured-registry-entrypoint",
+        "measured-registry-bundle-hash-manifest",
+        "local-only-claim-boundary-preserved",
+    ]:
+        if decisions.get(gate) != "pass":
+            raise SystemExit(f"v59c dependency blocker gate should pass: {gate}")
+    for gate in [
+        "measured-registry-replay",
+        "same-query-source-local-systems",
+        "7b14b-real-rows",
+        "30b-70b-real-rows",
+        "100b-plus-real-row",
+        "complete-source-audit",
+        "human-domain-and-blind-review",
+        "v59-full-one-command-demo",
+        "real-release-package",
+    ]:
+        if decisions.get(gate) != "blocked":
+            raise SystemExit(f"v59c dependency blocker should keep {gate} blocked")
+
+    required_files = [
+        "v59c_dependency_blocker_rows.csv",
+        "README_RESULT.md",
+        "V59C_ONE_COMMAND_MEASURED_REGISTRY_DEPENDENCY_BLOCKER.md",
+        "v59c_one_command_measured_registry_demo_manifest.json",
+        "sha256_manifest.csv",
+    ]
+    for rel in required_files:
+        path = run_dir / rel
+        if not path.is_file() or path.stat().st_size == 0:
+            raise SystemExit(f"missing v59c dependency blocker artifact: {rel}")
+    blocker_rows = read_csv(run_dir / "v59c_dependency_blocker_rows.csv")
+    if len(blocker_rows) != int(summary["missing_dependency_artifact_rows"]):
+        raise SystemExit("v59c dependency blocker row count mismatch")
+    for row in blocker_rows:
+        if row["implicit_rebuild_allowed"] != "0" or row["approval_required"] != "1":
+            raise SystemExit("v59c dependency blocker should refuse implicit rebuild and require approval")
+        if row["network_or_download_risk"] != "1" or row["fixture_allowed"] != "0" or row["tests_only_merge_condition"] != "0":
+            raise SystemExit("v59c dependency blocker claim boundary mismatch")
+    manifest = json.loads((run_dir / "v59c_one_command_measured_registry_demo_manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("v59c_one_command_measured_registry_demo_ready") != 0 or manifest.get("v59c_dependency_blocker_ready") != 1:
+        raise SystemExit("v59c dependency blocker manifest readiness mismatch")
+    sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+    for rel in required_files:
+        if rel == "sha256_manifest.csv":
+            continue
+        if sha_rows.get(rel) != sha256(run_dir / rel):
+            raise SystemExit(f"v59c dependency blocker sha256 mismatch: {rel}")
+    boundary = (run_dir / "V59C_ONE_COMMAND_MEASURED_REGISTRY_DEPENDENCY_BLOCKER.md").read_text(encoding="utf-8")
+    for snippet in [
+        "missing_dependency_artifact_rows=",
+        "implicit_stage_rebuild_allowed=0",
+        "stage_rebuild_approval_required=1",
+        "Blocked wording: v59c measured registry demo ready",
+    ]:
+        if snippet not in boundary:
+            raise SystemExit(f"v59c dependency blocker boundary missing {snippet}")
+    sys.exit(0)
+
 expected = {
     "v59c_one_command_measured_registry_demo_ready": "1",
     "v59_ready": "0",

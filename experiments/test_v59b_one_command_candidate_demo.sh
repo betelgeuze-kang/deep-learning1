@@ -42,6 +42,91 @@ summary_rows = read_csv(summary_csv)
 if len(summary_rows) != 1:
     raise SystemExit(f"expected one v59b summary row, got {len(summary_rows)}")
 summary = summary_rows[0]
+if summary.get("v59b_dependency_blocker_ready") == "1":
+    expected_blocked = {
+        "v59b_one_command_candidate_demo_ready": "0",
+        "v59_ready": "0",
+        "candidate_stage_rows": "12",
+        "candidate_ready_stage_rows": "0",
+        "full_ready_stage_rows": "0",
+        "one_command_candidate_entrypoint_ready": "1",
+        "candidate_bundle_ready": "0",
+        "network_required": "0",
+        "external_model_required_for_candidate": "0",
+        "real_llm_rows_required_for_full_v1": "1",
+        "implicit_stage_rebuild_allowed": "0",
+        "stage_rebuild_approval_required": "1",
+        "network_or_download_approval_required": "1",
+        "missing_real_30b_70b_rows": "1",
+        "missing_100b_plus_real_row_or_final_deferral": "1",
+        "missing_complete_source_audit": "1",
+        "missing_human_domain_review": "1",
+        "missing_human_blind_review": "1",
+        "real_release_package_ready": "0",
+    }
+    for field, value in expected_blocked.items():
+        if summary.get(field) != value:
+            raise SystemExit(f"v59b dependency blocker {field}: expected {value}, got {summary.get(field)}")
+    if int(summary.get("missing_dependency_artifact_rows", "0")) <= 0:
+        raise SystemExit("v59b dependency blocker should record missing artifacts")
+
+    decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+    for gate in ["dependency-blocker-artifact", "one-command-candidate-entrypoint", "candidate-bundle-hash-manifest", "claim-boundary-preserved"]:
+        if decisions.get(gate) != "pass":
+            raise SystemExit(f"v59b dependency blocker gate should pass: {gate}")
+    for gate in [
+        "candidate-chain-replay",
+        "30b-70b-real-rows",
+        "100b-plus-real-row",
+        "complete-source-audit",
+        "human-domain-and-blind-review",
+        "v59-full-one-command-demo",
+        "real-release-package",
+    ]:
+        if decisions.get(gate) != "blocked":
+            raise SystemExit(f"v59b dependency blocker should keep {gate} blocked")
+
+    required_files = [
+        "v59b_dependency_blocker_rows.csv",
+        "README_RESULT.md",
+        "V59B_ONE_COMMAND_CANDIDATE_DEPENDENCY_BLOCKER.md",
+        "v59b_one_command_candidate_demo_manifest.json",
+        "sha256_manifest.csv",
+    ]
+    for rel in required_files:
+        path = run_dir / rel
+        if not path.is_file() or path.stat().st_size == 0:
+            raise SystemExit(f"missing v59b dependency blocker artifact: {rel}")
+    blocker_rows = read_csv(run_dir / "v59b_dependency_blocker_rows.csv")
+    if len(blocker_rows) != int(summary["missing_dependency_artifact_rows"]):
+        raise SystemExit("v59b dependency blocker row count mismatch")
+    for row in blocker_rows:
+        if row["implicit_rebuild_allowed"] != "0" or row["approval_required"] != "1":
+            raise SystemExit("v59b dependency blocker should refuse implicit rebuild and require approval")
+        if row["network_or_download_risk"] != "1" or row["fixture_allowed"] != "0" or row["tests_only_merge_condition"] != "0":
+            raise SystemExit("v59b dependency blocker claim boundary mismatch")
+        if row["claim_boundary_status"] != "blocked-until-required-stage-artifacts-present":
+            raise SystemExit("v59b dependency blocker should keep claim boundary blocked")
+    manifest = json.loads((run_dir / "v59b_one_command_candidate_demo_manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("v59b_one_command_candidate_demo_ready") != 0 or manifest.get("v59b_dependency_blocker_ready") != 1:
+        raise SystemExit("v59b dependency blocker manifest readiness mismatch")
+    sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+    for rel in required_files:
+        if rel == "sha256_manifest.csv":
+            continue
+        if sha_rows.get(rel) != sha256(run_dir / rel):
+            raise SystemExit(f"v59b dependency blocker sha256 mismatch: {rel}")
+    boundary = (run_dir / "V59B_ONE_COMMAND_CANDIDATE_DEPENDENCY_BLOCKER.md").read_text(encoding="utf-8")
+    for snippet in [
+        "missing_dependency_artifact_rows=",
+        "implicit_stage_rebuild_allowed=0",
+        "stage_rebuild_approval_required=1",
+        "Blocked wording: v59b candidate demo ready",
+    ]:
+        if snippet not in boundary:
+            raise SystemExit(f"v59b dependency blocker boundary missing {snippet}")
+    sys.exit(0)
+
 expected = {
     "v59b_one_command_candidate_demo_ready": "1",
     "v59_ready": "0",
