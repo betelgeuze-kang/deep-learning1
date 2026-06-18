@@ -123,6 +123,19 @@ def https_uri(value):
     return (value or "").startswith("https://")
 
 
+def non_placeholder_sha(value):
+    if not sha_like(value):
+        return False
+    digest = value.split(":", 1)[1]
+    return len(set(digest)) > 1 and digest != ("0" * 64)
+
+
+def non_placeholder_text(*values):
+    text = " ".join(value or "" for value in values).lower()
+    blocked_terms = ["fixture", "synthetic", "placeholder", "dummy", "example", "test-only", "review.invalid"]
+    return bool(text.strip()) and not any(term in text for term in blocked_terms)
+
+
 h10s_summary_path = results / "v10_source_verified_learned_chunk_scorer_eval_gate_smoke_summary.csv"
 h10s_decision_path = results / "v10_source_verified_learned_chunk_scorer_eval_gate_smoke_decision.csv"
 v53q_summary_path = results / "v53q_complete_source_symmetric_scorer_policy_summary.csv"
@@ -281,6 +294,14 @@ for row in supplied_rows:
         "https-source-uri": https_uri(row.get("label_source_uri", "")),
         "artifact-sha": sha_like(row.get("label_artifact_sha256", "")),
         "acceptance-sha": sha_like(row.get("acceptance_summary_sha256", "")),
+        "non-placeholder-sha": non_placeholder_sha(row.get("label_artifact_sha256", ""))
+        and non_placeholder_sha(row.get("acceptance_summary_sha256", "")),
+        "non-placeholder-source": non_placeholder_text(
+            row.get("label_evidence_id", ""),
+            row.get("label_source", ""),
+            row.get("label_source_uri", ""),
+            row.get("reviewer_id", ""),
+        ),
         "human-reviewed": as_int(row, "human_reviewed") == 1,
         "external-source-verified": as_int(row, "external_source_verified") == 1,
         "reviewer-conflict-checked": as_int(row, "reviewer_conflict_checked") == 1,

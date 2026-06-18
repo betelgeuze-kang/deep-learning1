@@ -7,6 +7,7 @@ RUN_DIR="$RESULTS_DIR/v10_h10_real_label_promotion_readiness_gate/gate_001"
 SUMMARY_CSV="$RESULTS_DIR/v10_h10_real_label_promotion_readiness_gate_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v10_h10_real_label_promotion_readiness_gate_decision.csv"
 FIXTURE_LABEL_CSV="$RESULTS_DIR/v10_h10_real_label_fixture_evidence.csv"
+SPOOFED_LABEL_CSV="$RESULTS_DIR/v10_h10_real_label_spoofed_fixture_evidence.csv"
 MALFORMED_LABEL_CSV="$RESULTS_DIR/v10_h10_real_label_malformed_evidence.csv"
 
 "$ROOT_DIR/experiments/run_v10_h10_real_label_promotion_readiness_gate.sh" >/dev/null
@@ -544,6 +545,40 @@ if rows[0]["acceptance_status"] != "rejected" or "non-fixture" not in rows[0]["f
 ledger = read_csv(run_dir / "h10_real_label_acceptance_evidence_rows.csv")
 if any(row["accepted_real_label_evidence_rows"] != "0" or row["criterion_label_coverage_status"] != "blocked" for row in ledger):
     raise SystemExit("fixture h10 label evidence should not open criterion label coverage")
+PY
+
+{
+  echo "label_evidence_id,label_scope,label_source,label_source_uri,label_artifact_sha256,reviewer_id,reviewer_conflict_checked,human_reviewed,external_source_verified,non_fixture_declared,fixture_or_synthetic_declared,query_rows,label_rows,coherent_wrong_key_labels,chunk_exact_labels,near_miss_labels,missing_query_labels,source_provenance_labels,acceptance_summary_sha256,routing_trigger_rate,active_jump_rate"
+  echo "fixture-spoof-001,v53i-1000,fixture-human-return,https://review.invalid/h10.csv,sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,reviewer-fixture,1,1,1,1,0,1000,1000,50,1000,50,30,1000,sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,0,0"
+} >"$SPOOFED_LABEL_CSV"
+
+V10_H10_REAL_LABEL_EVIDENCE_CSV="$SPOOFED_LABEL_CSV" \
+  "$ROOT_DIR/experiments/run_v10_h10_real_label_promotion_readiness_gate.sh" >/dev/null
+
+python3 - "$RUN_DIR" "$SUMMARY_CSV" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+summary_csv = Path(sys.argv[2])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+if summary["supplied_real_label_evidence_rows"] != "1":
+    raise SystemExit("spoofed h10 fixture should be supplied")
+if summary["accepted_real_label_evidence_rows"] != "0" or summary["external_human_label_evidence_ready"] != "0":
+    raise SystemExit("spoofed h10 fixture should not open external/human label readiness")
+rows = read_csv(run_dir / "h10_real_label_evidence_acceptance_rows.csv")
+failed = rows[0]["failed_checks"].split(";")
+for check in ["non-placeholder-sha", "non-placeholder-source"]:
+    if check not in failed:
+        raise SystemExit(f"spoofed h10 fixture should fail {check}")
 PY
 
 {
