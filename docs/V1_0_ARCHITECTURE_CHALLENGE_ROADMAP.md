@@ -143,6 +143,8 @@ Acceptance gates:
 Stop rule:
 
 - Do not publish comparison language if D or E is missing, if the LLM baselines use a weaker source corpus than RouteMemory, or if citation verification is not symmetric.
+- Do not run implicit public-source refresh for D/E intake; missing v50 seed artifacts must remain a replayable dependency blocker unless `V52D_ALLOW_V50_REFRESH=1` is explicitly approved.
+- Do not accept placeholder, fixture, dummy, or test-only D/E model identity, license, or model-artifact hashes as real baseline evidence.
 
 ## v53: Public Repo 10-30 Repo, 1000-3000 Query Code/Doc Audit
 

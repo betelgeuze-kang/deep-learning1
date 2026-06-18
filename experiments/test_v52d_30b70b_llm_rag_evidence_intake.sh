@@ -6,6 +6,157 @@ RESULTS_DIR="$ROOT_DIR/results"
 RUN_DIR="$RESULTS_DIR/v52d_30b70b_llm_rag_evidence_intake/intake_001"
 SUMMARY_CSV="$RESULTS_DIR/v52d_30b70b_llm_rag_evidence_intake_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v52d_30b70b_llm_rag_evidence_intake_decision.csv"
+SPOOFED_D_DIR="$RESULTS_DIR/v52d_spoofed_30b_evidence"
+SPOOFED_E_DIR="$RESULTS_DIR/v52d_spoofed_70b_evidence"
+
+V50_RUN_DIR="$RESULTS_DIR/v50_public_repo_auditor_3repo/audit_001"
+V50_REQUIRED_FILES=(
+  "$RESULTS_DIR/v50_public_repo_auditor_3repo_summary.csv"
+  "$V50_RUN_DIR/public_repo_audit_case_rows.csv"
+  "$V50_RUN_DIR/public_repo_source_span_rows.csv"
+  "$V50_RUN_DIR/commercial_return/query_set.csv"
+  "$V50_RUN_DIR/commercial_return/poc_result_rows.csv"
+  "$V50_RUN_DIR/sha256_manifest.csv"
+)
+
+missing_v50_seed_files=()
+for required_file in "${V50_REQUIRED_FILES[@]}"; do
+  if [[ ! -s "$required_file" ]]; then
+    missing_v50_seed_files+=("$required_file")
+  fi
+done
+
+if [[ "${#missing_v50_seed_files[@]}" -gt 0 && "${V52D_REQUIRE_READY_TEST:-0}" != "1" ]]; then
+  "$ROOT_DIR/experiments/run_v52d_30b70b_llm_rag_evidence_intake.sh" >/dev/null
+
+  python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+summary_csv = Path(sys.argv[2])
+decision_csv = Path(sys.argv[3])
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "v52d_30b70b_llm_rag_intake_contract_ready": "0",
+    "v52d_v50_seed_dependency_blocker_ready": "1",
+    "required_systems": "D,E",
+    "baseline_name": "30B/70B open-weight LLM + RAG",
+    "d_30b_evidence_dir_supplied": "0",
+    "e_70b_evidence_dir_supplied": "0",
+    "d_30b_supplied_evidence_ready": "0",
+    "e_70b_supplied_evidence_ready": "0",
+    "required_30b_baseline_ready": "0",
+    "required_70b_baseline_ready": "0",
+    "d_30b_query_rows": "0",
+    "e_70b_query_rows": "0",
+    "v50_seed_query_rows": "0",
+    "v50_seed_reused": "0",
+    "v50_public_refresh_allowed": "0",
+    "v50_public_refresh_executed": "0",
+    "v50_seed_refresh_approval_required": "1",
+    "v52_absorb_ready": "0",
+    "v52_ready": "0",
+    "real_release_package_ready": "0",
+    "blocking_reason": "v50-seed-artifacts-missing;30b:evidence-dir-missing;70b:evidence-dir-missing",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v52d dependency blocker {field}: expected {value}, got {summary.get(field)}")
+if int(summary.get("missing_v50_seed_artifact_rows", "0")) <= 0:
+    raise SystemExit("v52d dependency blocker should count missing v50 seed artifacts")
+
+required_files = [
+    "llm_rag_required_field_rows.csv",
+    "llm_rag_answer_template.csv",
+    "model_identity_templates.json",
+    "llm_rag_validation_rows.csv",
+    "v52d_v50_seed_dependency_blocker_rows.csv",
+    "V52D_30B70B_LLM_RAG_BOUNDARY.md",
+    "v52d_30b70b_llm_rag_manifest.json",
+    "sha256_manifest.csv",
+]
+for rel in required_files:
+    path = run_dir / rel
+    if not path.is_file() or path.stat().st_size == 0:
+        raise SystemExit(f"missing v52d dependency blocker artifact: {rel}")
+
+blocker_rows = read_csv(run_dir / "v52d_v50_seed_dependency_blocker_rows.csv")
+if len(blocker_rows) != int(summary["missing_v50_seed_artifact_rows"]):
+    raise SystemExit("v52d dependency blocker rows should match missing artifact count")
+if any(row["implicit_refresh_allowed"] != "0" or row["approval_required"] != "1" for row in blocker_rows):
+    raise SystemExit("v52d dependency blocker rows should require approval and forbid implicit refresh")
+if any(row["fixture_allowed"] != "0" or row["tests_only_merge_condition"] != "0" for row in blocker_rows):
+    raise SystemExit("v52d dependency blocker rows should forbid fixtures and tests-only merge")
+
+schema_rows = read_csv(run_dir / "llm_rag_required_field_rows.csv")
+if len(schema_rows) < 22:
+    raise SystemExit("v52d dependency blocker should still emit D/E schema rows")
+if not any("placeholders rejected" in row["rule"] for row in schema_rows):
+    raise SystemExit("v52d schema should document placeholder rejection")
+templates = read_csv(run_dir / "llm_rag_answer_template.csv")
+if templates:
+    raise SystemExit("v52d dependency blocker must not fabricate answer template rows without v50 seed queries")
+
+validation_rows = read_csv(run_dir / "llm_rag_validation_rows.csv")
+if not any(row["system_id"] == "v50" and row["status"] == "blocked" for row in validation_rows):
+    raise SystemExit("v52d dependency blocker should include a blocked v50 validation row")
+if not any(row["system_id"] == "D" and row["status"] == "blocked" for row in validation_rows):
+    raise SystemExit("v52d dependency blocker should keep D blocked")
+if not any(row["system_id"] == "E" and row["status"] == "blocked" for row in validation_rows):
+    raise SystemExit("v52d dependency blocker should keep E blocked")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+if decisions.get("v52d-v50-seed-dependency-blocker") != "pass":
+    raise SystemExit("v52d dependency blocker gate should pass")
+for gate in ["intake-contract", "public-repo-seed", "30b-llm-rag-real-row", "70b-llm-rag-real-row", "v52-d-e-absorb-ready"]:
+    if decisions.get(gate) != "blocked":
+        raise SystemExit(f"v52d dependency blocker should keep {gate} blocked")
+
+manifest = json.loads((run_dir / "v52d_30b70b_llm_rag_manifest.json").read_text(encoding="utf-8"))
+if manifest.get("v52d_v50_seed_dependency_blocker_ready") != 1:
+    raise SystemExit("v52d dependency blocker manifest should be ready")
+if manifest.get("v52d_30b70b_llm_rag_intake_contract_ready") != 0:
+    raise SystemExit("v52d dependency blocker manifest must not claim intake contract readiness")
+boundary = (run_dir / "V52D_30B70B_LLM_RAG_BOUNDARY.md").read_text(encoding="utf-8")
+for snippet in [
+    "refuses implicit public refresh",
+    "V52D_ALLOW_V50_REFRESH=1",
+    "v52d_v50_seed_dependency_blocker_ready=1",
+    "Blocked wording: D/E baseline ready",
+]:
+    if snippet not in boundary:
+        raise SystemExit(f"v52d dependency blocker boundary missing {snippet}")
+
+sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+for rel in required_files:
+    if rel == "sha256_manifest.csv":
+        continue
+    if sha_rows.get(rel) != sha256(run_dir / rel):
+        raise SystemExit(f"v52d dependency blocker sha mismatch: {rel}")
+PY
+
+  echo "v52d 30B/70B LLM RAG missing-v50-seed guard smoke passed"
+  exit 0
+fi
 
 "$ROOT_DIR/experiments/run_v52d_30b70b_llm_rag_evidence_intake.sh" >/dev/null
 
@@ -40,6 +191,8 @@ if len(summary_rows) != 1:
 summary = summary_rows[0]
 expected = {
     "v52d_30b70b_llm_rag_intake_contract_ready": "1",
+    "v52d_v50_seed_dependency_blocker_ready": "0",
+    "missing_v50_seed_artifact_rows": "0",
     "required_systems": "D,E",
     "baseline_name": "30B/70B open-weight LLM + RAG",
     "d_30b_evidence_dir_supplied": "0",
@@ -63,6 +216,7 @@ expected = {
     "v50_seed_reused": "1",
     "v50_public_refresh_allowed": "0",
     "v50_public_refresh_executed": "0",
+    "v50_seed_refresh_approval_required": "0",
     "v52_absorb_ready": "0",
     "v52_ready": "0",
     "real_release_package_ready": "0",
@@ -157,6 +311,8 @@ if validation_rows != expected_validation:
 manifest = json.loads((run_dir / "v52d_30b70b_llm_rag_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v52d_30b70b_llm_rag_intake_contract_ready") != 1:
     raise SystemExit("v52d manifest should mark intake contract ready")
+if manifest.get("v52d_v50_seed_dependency_blocker_ready") != 0:
+    raise SystemExit("v52d ready-path manifest should not mark the v50 dependency blocker ready")
 if manifest.get("required_30b_baseline_ready") != 0 or manifest.get("required_70b_baseline_ready") != 0:
     raise SystemExit("v52d manifest should keep D/E baselines blocked by default")
 if manifest.get("v52_absorb_ready") != 0:
@@ -187,5 +343,178 @@ for snippet in [
     if snippet not in boundary:
         raise SystemExit(f"v52d boundary missing {snippet}")
 PY
+
+rm -rf "$SPOOFED_D_DIR" "$SPOOFED_E_DIR"
+mkdir -p "$SPOOFED_D_DIR" "$SPOOFED_E_DIR"
+
+python3 - "$RESULTS_DIR" "$SPOOFED_D_DIR" "$SPOOFED_E_DIR" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+results = Path(sys.argv[1])
+d_dir = Path(sys.argv[2])
+e_dir = Path(sys.argv[3])
+v50_dir = results / "v50_public_repo_auditor_3repo/audit_001"
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def write_csv(path, fieldnames, rows):
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+queries = read_csv(v50_dir / "commercial_return/query_set.csv")
+cases = read_csv(v50_dir / "public_repo_audit_case_rows.csv")
+spans = read_csv(v50_dir / "public_repo_source_span_rows.csv")
+case_by_query = {f"v50_{idx:03d}": case for idx, case in enumerate(cases, start=1)}
+span_by_case = {}
+for span in spans:
+    span_by_case.setdefault(span["case_id"], span)
+
+answer_fields = [
+    "system_id",
+    "query_id",
+    "case_id",
+    "model_id",
+    "predicted_label",
+    "raw_prompt_context_bytes",
+    "retrieved_span_rows",
+    "prompt_context_sha256",
+    "output_sha256",
+    "latency_ns",
+    "external_api_used",
+    "route_memory_store_used",
+    "compact_routehint_used",
+]
+citation_fields = ["query_id", "case_id", "kind", "path", "sha256", "line", "citation_correct"]
+resource_fields = [
+    "query_id",
+    "model_id",
+    "latency_ns",
+    "raw_prompt_context_bytes",
+    "retrieved_span_rows",
+    "external_api_used",
+]
+
+for target_dir, system_id, size_class, parameter_count in [
+    (d_dir, "D", "30b", 32.0),
+    (e_dir, "E", "70b", 70.0),
+]:
+    model_id = f"replace-with-{size_class}-fixture-model"
+    identity = {
+        "system_id": system_id,
+        "model_id": model_id,
+        "parameter_count_b": parameter_count,
+        "size_class": size_class,
+        "runner": "fixture",
+        "quantization": "fixture",
+        "model_artifact_uri": "https://review.invalid/model",
+        "model_artifact_sha256": "sha256:" + ("a" * 64),
+        "open_weight_license_uri": "https://review.invalid/license",
+        "rag_context_builder": "fixture",
+        "context_length": 4096,
+        "external_api_used": 0,
+        "external_network_used": 0,
+    }
+    (target_dir / "model_identity.json").write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    answer_rows = []
+    citation_rows = []
+    resource_rows = []
+    for query in queries:
+        case = case_by_query[query["query_id"]]
+        span = span_by_case[case["case_id"]]
+        answer_rows.append(
+            {
+                "system_id": system_id,
+                "query_id": query["query_id"],
+                "case_id": case["case_id"],
+                "model_id": model_id,
+                "predicted_label": case["expected_label"],
+                "raw_prompt_context_bytes": "128",
+                "retrieved_span_rows": "1",
+                "prompt_context_sha256": "sha256:" + ("b" * 64),
+                "output_sha256": "sha256:" + ("c" * 64),
+                "latency_ns": "1",
+                "external_api_used": "0",
+                "route_memory_store_used": "0",
+                "compact_routehint_used": "0",
+            }
+        )
+        citation_rows.append(
+            {
+                "query_id": query["query_id"],
+                "case_id": case["case_id"],
+                "kind": span["kind"],
+                "path": span["path"],
+                "sha256": span["sha256"],
+                "line": span["line"],
+                "citation_correct": "1",
+            }
+        )
+        resource_rows.append(
+            {
+                "query_id": query["query_id"],
+                "model_id": model_id,
+                "latency_ns": "1",
+                "raw_prompt_context_bytes": "128",
+                "retrieved_span_rows": "1",
+                "external_api_used": "0",
+            }
+        )
+    write_csv(target_dir / "llm_rag_answer_rows.csv", answer_fields, answer_rows)
+    write_csv(target_dir / "llm_rag_citation_rows.csv", citation_fields, citation_rows)
+    write_csv(target_dir / "llm_rag_resource_rows.csv", resource_fields, resource_rows)
+PY
+
+V52D_30B_LLM_RAG_EVIDENCE_DIR="$SPOOFED_D_DIR" \
+V52D_70B_LLM_RAG_EVIDENCE_DIR="$SPOOFED_E_DIR" \
+  "$ROOT_DIR/experiments/run_v52d_30b70b_llm_rag_evidence_intake.sh" >/dev/null
+
+python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+summary_csv = Path(sys.argv[2])
+decision_csv = Path(sys.argv[3])
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+if summary["d_30b_evidence_dir_supplied"] != "1" or summary["e_70b_evidence_dir_supplied"] != "1":
+    raise SystemExit("spoofed D/E evidence dirs should be supplied")
+for field in ["d_30b_supplied_evidence_ready", "e_70b_supplied_evidence_ready", "required_30b_baseline_ready", "required_70b_baseline_ready", "v52_absorb_ready"]:
+    if summary[field] != "0":
+        raise SystemExit(f"spoofed D/E evidence should not open {field}")
+
+validation_rows = read_csv(run_dir / "llm_rag_validation_rows.csv")
+reasons = "\n".join(row["reason"] for row in validation_rows)
+for expected in [
+    "identity-model-id-placeholder-or-missing",
+    "identity-open-weight-license-uri-invalid-or-placeholder",
+    "identity-model-artifact-sha256-invalid-or-placeholder",
+]:
+    if expected not in reasons:
+        raise SystemExit(f"spoofed D/E evidence should fail {expected}")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+if decisions["30b-llm-rag-real-row"] != "blocked" or decisions["70b-llm-rag-real-row"] != "blocked":
+    raise SystemExit("spoofed D/E evidence should keep real-row gates blocked")
+PY
+
+"$ROOT_DIR/experiments/run_v52d_30b70b_llm_rag_evidence_intake.sh" >/dev/null
 
 echo "v52d 30B/70B LLM RAG evidence intake smoke passed"
