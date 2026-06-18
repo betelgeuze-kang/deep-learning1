@@ -140,6 +140,8 @@ def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, cl
     actual_adapter_execution_ready_rows = count_value(resource_rows, "actual_adapter_execution_ready", "1")
     real_adapter_execution_ready_rows = count_value(resource_rows, "real_adapter_execution_ready", "1")
     real_system_performance_claim_ready_rows = count_value(evaluator_rows, "real_system_performance_claim_ready", "1")
+    internal_real_adapter_metric_claim_ready_rows = count_value(evaluator_rows, "internal_real_adapter_metric_claim_ready", "1")
+    public_real_system_performance_claim_ready_rows = count_value(evaluator_rows, "public_real_system_performance_claim_ready", "1")
     selection_question_text_only_rows = count_value(evaluator_rows, "selection_question_text_only", "1")
     selection_oracle_field_used_rows = count_value(evaluator_rows, "selection_oracle_field_used", "1")
     common_ready = int(
@@ -187,6 +189,8 @@ def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, cl
             and actual_adapter_execution_ready_rows == LOCAL_ABGH_TOTAL_ROWS
             and real_adapter_execution_ready_rows == LOCAL_ABGH_TOTAL_ROWS
             and real_system_performance_claim_ready_rows == LOCAL_ABGH_TOTAL_ROWS
+            and internal_real_adapter_metric_claim_ready_rows == LOCAL_ABGH_TOTAL_ROWS
+            and public_real_system_performance_claim_ready_rows == 0
             and selection_question_text_only_rows == LOCAL_ABGH_TOTAL_ROWS
             and selection_oracle_field_used_rows == 0
             and as_int(summary_row, "selection_question_text_only") == 1
@@ -194,6 +198,8 @@ def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, cl
             and as_int(summary_row, "deterministic_source_span_adapter_execution") == 0
             and as_int(summary_row, "real_adapter_execution_ready") == 1
             and as_int(summary_row, "real_system_performance_claim_ready") == 1
+            and as_int(summary_row, "internal_real_adapter_metric_claim_ready") == 1
+            and as_int(summary_row, "public_real_system_performance_claim_ready") == 0
             and prebaseline_ready == 1
             and prebaseline_rows == LOCAL_ABGH_QUERY_ROWS
         )
@@ -226,6 +232,8 @@ def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, cl
         "actual_adapter_execution_ready_rows": str(actual_adapter_execution_ready_rows),
         "real_adapter_execution_ready_rows": str(real_adapter_execution_ready_rows),
         "real_system_performance_claim_ready_rows": str(real_system_performance_claim_ready_rows),
+        "internal_real_adapter_metric_claim_ready_rows": str(internal_real_adapter_metric_claim_ready_rows),
+        "public_real_system_performance_claim_ready_rows": str(public_real_system_performance_claim_ready_rows),
         "selection_question_text_only_rows": str(selection_question_text_only_rows),
         "selection_oracle_field_used_rows": str(selection_oracle_field_used_rows),
         "same_query_internal_prebaseline_rows": str(prebaseline_rows),
@@ -796,6 +804,8 @@ local_abgh_real_adapter_ready = int(
     and as_int(v53aq, "deterministic_source_span_adapter_execution") == 0
     and as_int(v53aq, "real_adapter_execution_ready") == 1
     and as_int(v53aq, "real_system_performance_claim_ready") == 1
+    and as_int(v53aq, "internal_real_adapter_metric_claim_ready") == 1
+    and as_int(v53aq, "public_real_system_performance_claim_ready") == 0
     and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
     and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
 )
@@ -959,6 +969,8 @@ summary = {
     "v53aq_deterministic_source_span_adapter_execution": v53aq.get("deterministic_source_span_adapter_execution", "1"),
     "v53aq_real_adapter_execution_ready": v53aq.get("real_adapter_execution_ready", "0"),
     "v53aq_real_system_performance_claim_ready": v53aq.get("real_system_performance_claim_ready", "0"),
+    "v53aq_internal_real_adapter_metric_claim_ready": v53aq.get("internal_real_adapter_metric_claim_ready", "0"),
+    "v53aq_public_real_system_performance_claim_ready": v53aq.get("public_real_system_performance_claim_ready", "1"),
     "v53aq_same_query_internal_prebaseline_rows_ready": v53aq.get("same_query_internal_prebaseline_rows_ready", "0"),
     "v53aq_same_query_internal_prebaseline_rows": v53aq.get("same_query_internal_prebaseline_rows", "0"),
     "v53aq_answer_hash_match_rows": v53aq.get("answer_hash_match_rows", "0"),
@@ -1055,6 +1067,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- local_abgh_real_adapter_ready={summary['local_abgh_real_adapter_ready']}\n"
     f"- v53ap_actual_adapter_execution_ready={summary['v53ap_actual_adapter_execution_ready']}\n"
     f"- v53aq_real_adapter_execution_ready={summary['v53aq_real_adapter_execution_ready']}\n"
+    f"- v53aq_internal_real_adapter_metric_claim_ready={summary['v53aq_internal_real_adapter_metric_claim_ready']}\n"
+    f"- v53aq_public_real_system_performance_claim_ready={summary['v53aq_public_real_system_performance_claim_ready']}\n"
     f"- v53aq_selection_question_text_only={summary['v53aq_selection_question_text_only']}\n"
     f"- v53aq_selection_oracle_field_used={summary['v53aq_selection_oracle_field_used']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
@@ -1114,6 +1128,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53ap_actual_adapter_execution_ready={summary['v53ap_actual_adapter_execution_ready']}\n"
     f"- v53ap_real_system_performance_claim_ready={summary['v53ap_real_system_performance_claim_ready']}\n"
     f"- v53aq_real_adapter_execution_ready={summary['v53aq_real_adapter_execution_ready']}\n"
+    f"- v53aq_internal_real_adapter_metric_claim_ready={summary['v53aq_internal_real_adapter_metric_claim_ready']}\n"
+    f"- v53aq_public_real_system_performance_claim_ready={summary['v53aq_public_real_system_performance_claim_ready']}\n"
     f"- v53aq_selection_question_text_only={summary['v53aq_selection_question_text_only']}\n"
     f"- v53aq_selection_oracle_field_used={summary['v53aq_selection_oracle_field_used']}\n"
     f"- v53aq_answer_hash_match_rows={summary['v53aq_answer_hash_match_rows']}\n"
@@ -1219,6 +1235,8 @@ manifest = {
     "v53aq_deterministic_source_span_adapter_execution": as_int(v53aq, "deterministic_source_span_adapter_execution"),
     "v53aq_real_adapter_execution_ready": as_int(v53aq, "real_adapter_execution_ready"),
     "v53aq_real_system_performance_claim_ready": as_int(v53aq, "real_system_performance_claim_ready"),
+    "v53aq_internal_real_adapter_metric_claim_ready": as_int(v53aq, "internal_real_adapter_metric_claim_ready"),
+    "v53aq_public_real_system_performance_claim_ready": as_int(v53aq, "public_real_system_performance_claim_ready"),
     "v53aq_answer_hash_match_rows": as_int(v53aq, "answer_hash_match_rows"),
     "v53aq_coherent_wrong_key_rows": as_int(v53aq, "coherent_wrong_key_rows"),
     "v54c_v53ap_evaluator_provenance_ready": as_int(v54c, "v53ap_evaluator_provenance_ready"),

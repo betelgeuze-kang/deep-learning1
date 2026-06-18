@@ -84,6 +84,8 @@ expected = {
     "actual_adapter_execution_ready": "1",
     "real_adapter_execution_ready": "1",
     "real_system_performance_claim_ready": "1",
+    "internal_real_adapter_metric_claim_ready": "1",
+    "public_real_system_performance_claim_ready": "0",
     "external_network_used": "0",
     "external_model_used": "0",
     "internal_v1_0_pre_baseline_run": "1",
@@ -164,6 +166,8 @@ for system_id, row in system_rows.items():
             raise SystemExit(f"v53aq system row should keep {field}=0 for {system_id}")
     if row["actual_adapter_execution_ready"] != "1" or row["real_adapter_execution_ready"] != "1":
         raise SystemExit(f"v53aq real adapter should be ready for {system_id}")
+    if row["internal_real_adapter_metric_claim_ready"] != "1" or row["public_real_system_performance_claim_ready"] != "0":
+        raise SystemExit(f"v53aq system row should separate internal metrics from public performance claims for {system_id}")
 
 answers = read_csv(run_dir / "abgh_answer_rows.csv")
 citations = read_csv(run_dir / "abgh_citation_rows.csv")
@@ -221,6 +225,8 @@ for system_id, expected_values in expected_metric_rows.items():
         "deterministic_source_span_adapter_rows": "0",
         "actual_adapter_execution_ready": "1",
         "real_adapter_execution_ready": "1",
+        "internal_real_adapter_metric_claim_ready": "1",
+        "public_real_system_performance_claim_ready": "0",
         **expected_values,
     }.items():
         if row.get(field) != value:
@@ -248,6 +254,8 @@ for row in prebaseline:
         "public_comparison_claim_ready": "0",
         "required_30b_baseline_ready": "0",
         "required_70b_baseline_ready": "0",
+        "internal_real_adapter_metric_claim_ready": "1",
+        "public_real_system_performance_claim_ready": "0",
     }
     for field, value in expected_flags.items():
         if row[field] != value:
@@ -283,6 +291,8 @@ if any(
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
     or row["real_system_performance_claim_ready"] != "1"
+    or row["internal_real_adapter_metric_claim_ready"] != "1"
+    or row["public_real_system_performance_claim_ready"] != "0"
     for row in evaluators
 ):
     raise SystemExit("v53aq evaluator rows should separately bind answer/citation/resource checks for real adapters")
@@ -321,6 +331,8 @@ if any(row["raw_context_appended"] != "0" or row["compact_routehint_used"] != "1
     raise SystemExit("v53aq G/H adapter traces should use compact RouteHint without raw prompt context")
 if any(row["source_verified_scorer_used"] != "1" or row["domain_policy_used"] != "1" for row in adapter_traces if row["system_id"] == "H"):
     raise SystemExit("v53aq H adapter traces should disclose scorer/policy use")
+if any(row["internal_real_adapter_metric_claim_ready"] != "1" or row["public_real_system_performance_claim_ready"] != "0" for row in adapter_traces):
+    raise SystemExit("v53aq adapter traces should separate internal real-adapter metrics from public performance claims")
 
 if sum(row["answer_hash_match"] == "1" for row in evaluators) != int(summary["answer_hash_match_rows"]):
     raise SystemExit("v53aq answer hash match summary mismatch")
@@ -345,7 +357,7 @@ for gate in [
 ]:
     if decisions.get(gate, {}).get("status") != "pass":
         raise SystemExit(f"v53aq decision gate should pass: {gate}")
-for gate in ["public-comparison-claim", "required-30b-70b-baselines", "v53-full-audit-ready", "real-release-package"]:
+for gate in ["public-real-system-performance-claim", "public-comparison-claim", "required-30b-70b-baselines", "v53-full-audit-ready", "real-release-package"]:
     if decisions.get(gate, {}).get("status") != "blocked":
         raise SystemExit(f"v53aq decision gate should stay blocked: {gate}")
 
@@ -365,6 +377,8 @@ for field, value in {
     "actual_adapter_execution_ready": 1,
     "real_adapter_execution_ready": 1,
     "real_system_performance_claim_ready": 1,
+    "internal_real_adapter_metric_claim_ready": 1,
+    "public_real_system_performance_claim_ready": 0,
     "public_comparison_claim_ready": 0,
     "real_release_package_ready": 0,
 }.items():
@@ -389,6 +403,8 @@ for snippet in [
     "expected_answer_oracle_replay=0",
     "deterministic_source_span_adapter_execution=0",
     "real_adapter_execution_ready=1",
+    "internal_real_adapter_metric_claim_ready=1",
+    "public_real_system_performance_claim_ready=0",
     "public_comparison_claim_ready=0",
     "Blocked wording",
 ]:

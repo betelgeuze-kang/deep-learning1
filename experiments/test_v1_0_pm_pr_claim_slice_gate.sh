@@ -283,6 +283,8 @@ for snippet in [
     "selection_oracle_field_used=0",
     "deterministic_source_span_adapter_execution=0",
     "real_system_performance_claim_ready=1",
+    "internal_real_adapter_metric_claim_ready=1",
+    "public_real_system_performance_claim_ready=0",
     "same_query_internal_prebaseline_rows_ready=1",
     "same_query_internal_prebaseline_rows=1000",
     "local_abgh_row_contract_replay_ready=1",
@@ -757,6 +759,10 @@ if "local_abgh_row_contract_replay_rows.csv" not in artifact_key[("v60-release-e
     raise SystemExit("v59e local A/B/G/H row-contract artifact row should name the row-contract replay rows")
 if "local_abgh_row_contract_replay_ready=1" not in artifact_key[("v60-release-evidence-missing", "v59e-local-abgh-row-contract-replay")]["acceptance_signal"]:
     raise SystemExit("v59e local A/B/G/H row-contract artifact should close only when row-contract replay is ready")
+if "v53aq_internal_real_adapter_metric_claim_ready=1" not in artifact_key[("v60-release-evidence-missing", "v59e-local-abgh-row-contract-replay")]["acceptance_signal"]:
+    raise SystemExit("v59e local A/B/G/H row-contract artifact should preserve internal real-adapter metric readiness")
+if "v53aq_public_real_system_performance_claim_ready=0" not in artifact_key[("v60-release-evidence-missing", "v59e-local-abgh-row-contract-replay")]["acceptance_signal"]:
+    raise SystemExit("v59e local A/B/G/H row-contract artifact should keep public real-system performance claims blocked")
 if "public source download/refresh evidence bundle" not in artifact_key[("v60-release-evidence-missing", "v59-public-source-download-refresh")]["artifact_path_or_env"]:
     raise SystemExit("public-source download/refresh required artifact should be explicit")
 if "full_public_source_download_ready=1" not in artifact_key[("v60-release-evidence-missing", "v59-public-source-download-refresh")]["acceptance_signal"]:
@@ -935,6 +941,11 @@ if any(
     for row in local_abgh_contract_rows.values()
 ):
     raise SystemExit("PM PR sidecar should preserve passing local A/B/G/H row-contract replay boundaries")
+if (
+    local_abgh_contract_rows["v53aq"]["internal_real_adapter_metric_claim_ready_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["public_real_system_performance_claim_ready_rows"] != "0"
+):
+    raise SystemExit("PM PR sidecar should preserve v53aq internal metrics while blocking public real-system performance claims")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("PM PR sidecar repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):

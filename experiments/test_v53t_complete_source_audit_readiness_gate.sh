@@ -37,8 +37,10 @@ def read_csv(path):
 summary = read_csv(summary_csv)[0]
 expected = {
     "v53t_complete_source_audit_readiness_gate_ready": "1",
-    "v52y_f_optional_final_policy_ready": "1",
-    "f_optional_final_disposition": "deferred-with-reason-final",
+    "v52y_f_optional_final_policy_ready": "0",
+    "v52y_dependency_blocker_ready": "1",
+    "f_optional_final_disposition_ready": "0",
+    "f_optional_final_disposition": "blocked-by-v52y-dependency",
     "v53i_complete_source_query_instantiation_ready": "1",
     "v53ap_complete_source_abgh_same_query_measured_ready": "1",
     "v53aq_complete_source_abgh_real_adapter_measured_ready": "1",
@@ -127,6 +129,8 @@ expected = {
     "v53aq_actual_adapter_execution_ready": "1",
     "v53aq_real_adapter_execution_ready": "1",
     "v53aq_real_system_performance_claim_ready": "1",
+    "v53aq_internal_real_adapter_metric_claim_ready": "1",
+    "v53aq_public_real_system_performance_claim_ready": "0",
     "v53aq_answer_hash_match_rows": "3713",
     "v53aq_coherent_wrong_key_rows": "287",
     "v53aq_public_comparison_claim_ready": "0",
@@ -191,7 +195,6 @@ for rel in required_files:
 
 requirements = {row["requirement_id"]: row for row in read_csv(run_dir / "complete_source_audit_readiness_requirement_rows.csv")}
 for requirement_id in [
-    "f-optional-final-disposition",
     "complete-source-content-and-query-surface",
     "core-a-b-c-d-e-g-h-answer-citation-resource",
     "symmetric-scorer-policy-surface",
@@ -200,6 +203,7 @@ for requirement_id in [
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v53t requirement should pass: {requirement_id}")
 for requirement_id in [
+    "f-optional-final-disposition",
     "human-review-return-accepted",
     "adjudication-return-accepted",
     "reviewer-identity-conflict-ready",
@@ -349,6 +353,8 @@ if any(
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
     or row["real_system_performance_claim_ready"] != "1"
+    or row["internal_real_adapter_metric_claim_ready"] != "1"
+    or row["public_real_system_performance_claim_ready"] != "0"
     for row in v53aq_evaluators
 ):
     raise SystemExit("v53t v53aq evaluator rows should preserve question-only real-adapter boundaries")
@@ -367,6 +373,8 @@ for row in v53aq_prebaseline:
         "public_comparison_claim_ready": "0",
         "required_30b_baseline_ready": "0",
         "required_70b_baseline_ready": "0",
+        "internal_real_adapter_metric_claim_ready": "1",
+        "public_real_system_performance_claim_ready": "0",
     }.items():
         if row[field] != value:
             raise SystemExit(f"v53t v53aq same-query ledger {field}: expected {value}, got {row[field]}")
@@ -456,7 +464,7 @@ for requirement_id, snippet in {
     "missing-specific-abstain-control": "missing_specific_control_rows=30",
     "doc-code-conflict-control": "doc_code_conflict_rows=140",
     "abgh-same-query-deterministic-prebaseline": "real_system_performance_claim_ready=0",
-    "abgh-real-adapter-same-query-internal": "public_comparison_claim_ready=0",
+    "abgh-real-adapter-same-query-internal": "public_real_system_performance_claim_ready=0",
     "public-comparison-boundary-closed": "required_30b_baseline_ready=0",
 }.items():
     if snippet not in pm_acceptance_rows[requirement_id]["actual_value"]:
@@ -485,6 +493,12 @@ if "selection_question_text_only=1" not in real_adapter_freeze_rows["question-on
     raise SystemExit("v53t real-adapter freeze should expose question-only selection")
 if "coherent_wrong_key_rows=287" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("v53t real-adapter freeze should expose coherent wrong-key evidence")
+if "internal_real_adapter_metric_claim_ready=1" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
+    raise SystemExit("v53t real-adapter freeze should expose internal real-adapter metric readiness")
+if "public_real_system_performance_claim_ready=0" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
+    raise SystemExit("v53t real-adapter freeze should keep public real-system performance claims blocked")
+if "public_real_system_performance_claim_ready=0" not in real_adapter_freeze_rows["public-comparison-boundary-closed"]["actual_value"]:
+    raise SystemExit("v53t real-adapter public boundary should expose public performance claim blocking")
 if "public_comparison_claim_ready=0" not in real_adapter_freeze_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v53t real-adapter freeze should keep public comparison blocked")
 
@@ -506,7 +520,6 @@ for field, value in expected.items():
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
-    "v52y-f-final-policy-input",
     "v53i-complete-source-query-input",
     "v53ap-abgh-same-query-input",
     "v53aq-abgh-real-adapter-input",
@@ -517,6 +530,7 @@ for gate in [
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v53t gate should pass: {gate}")
 for gate in [
+    "v52y-f-final-policy-input",
     "v53s-review-return-input",
     "human-reviewed-audit",
     "quality-comparison-claim",
@@ -530,7 +544,10 @@ if decisions.get("pm-v53-freeze") != "pass":
 
 boundary = (run_dir / "V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "f_optional_final_disposition=deferred-with-reason-final",
+    "v52y_f_optional_final_policy_ready=0",
+    "v52y_dependency_blocker_ready=1",
+    "f_optional_final_disposition_ready=0",
+    "f_optional_final_disposition=blocked-by-v52y-dependency",
     "complete_source_repo_count=10",
     "complete_source_query_rows=1000",
     "core_answer_rows=7000",
@@ -592,6 +609,8 @@ for snippet in [
     "v53aq_deterministic_source_span_adapter_execution=0",
     "v53aq_actual_adapter_execution_ready=1",
     "v53aq_real_adapter_execution_ready=1",
+    "v53aq_internal_real_adapter_metric_claim_ready=1",
+    "v53aq_public_real_system_performance_claim_ready=0",
     "v53aq_answer_hash_match_rows=3713",
     "v53aq_coherent_wrong_key_rows=287",
     "v53aq_public_comparison_claim_ready=0",
@@ -603,6 +622,13 @@ for snippet in [
 manifest = json.loads((run_dir / "v53t_complete_source_audit_readiness_gate_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v53t_complete_source_audit_readiness_gate_ready") != 1:
     raise SystemExit("v53t manifest readiness mismatch")
+if (
+    manifest.get("v52y_f_optional_final_policy_ready") != 0
+    or manifest.get("v52y_dependency_blocker_ready") != 1
+    or manifest.get("f_optional_final_disposition_ready") != 0
+    or manifest.get("f_optional_final_disposition") != "blocked-by-v52y-dependency"
+):
+    raise SystemExit("v53t manifest should preserve the v52y dependency blocker without blocking v53 machine freeze")
 if manifest.get("machine_complete_source_surface_ready") != 1 or manifest.get("v53_ready") != 0:
     raise SystemExit("v53t manifest boundary mismatch")
 if manifest.get("pm_v53_freeze_ready") != 1 or manifest.get("pm_freeze_blocked_rows") != 0:
@@ -685,6 +711,8 @@ if (
     or manifest.get("v53aq_deterministic_source_span_adapter_execution") != 0
     or manifest.get("v53aq_actual_adapter_execution_ready") != 1
     or manifest.get("v53aq_real_adapter_execution_ready") != 1
+    or manifest.get("v53aq_internal_real_adapter_metric_claim_ready") != 1
+    or manifest.get("v53aq_public_real_system_performance_claim_ready") != 0
     or manifest.get("v53aq_answer_hash_match_rows") != 3713
     or manifest.get("v53aq_coherent_wrong_key_rows") != 287
     or manifest.get("v53aq_public_comparison_claim_ready") != 0

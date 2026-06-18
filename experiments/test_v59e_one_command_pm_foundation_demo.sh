@@ -81,6 +81,8 @@ expected = {
     "v53aq_deterministic_source_span_adapter_execution": "0",
     "v53aq_real_adapter_execution_ready": "1",
     "v53aq_real_system_performance_claim_ready": "1",
+    "v53aq_internal_real_adapter_metric_claim_ready": "1",
+    "v53aq_public_real_system_performance_claim_ready": "0",
     "v53aq_same_query_internal_prebaseline_rows_ready": "1",
     "v53aq_same_query_internal_prebaseline_rows": "1000",
     "v53aq_answer_hash_match_rows": "3713",
@@ -565,6 +567,8 @@ if (
     or local_abgh_contract_rows["v53aq"]["actual_adapter_execution_ready_rows"] != "4000"
     or local_abgh_contract_rows["v53aq"]["real_adapter_execution_ready_rows"] != "4000"
     or local_abgh_contract_rows["v53aq"]["real_system_performance_claim_ready_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["internal_real_adapter_metric_claim_ready_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["public_real_system_performance_claim_ready_rows"] != "0"
     or local_abgh_contract_rows["v53aq"]["selection_question_text_only_rows"] != "4000"
     or local_abgh_contract_rows["v53aq"]["selection_oracle_field_used_rows"] != "0"
     or local_abgh_contract_rows["v53aq"]["same_query_internal_prebaseline_rows"] != "1000"
@@ -778,6 +782,8 @@ if (
     or manifest.get("v53aq_deterministic_source_span_adapter_execution") != 0
     or manifest.get("v53aq_real_adapter_execution_ready") != 1
     or manifest.get("v53aq_real_system_performance_claim_ready") != 1
+    or manifest.get("v53aq_internal_real_adapter_metric_claim_ready") != 1
+    or manifest.get("v53aq_public_real_system_performance_claim_ready") != 0
     or manifest.get("v53aq_answer_hash_match_rows") != 3713
     or manifest.get("v53aq_coherent_wrong_key_rows") != 287
 ):
@@ -967,6 +973,8 @@ for snippet in [
     "v53ap_deterministic_source_span_adapter_rows=4000",
     "v53ap_actual_adapter_execution_ready=1",
     "v53aq_real_adapter_execution_ready=1",
+    "v53aq_internal_real_adapter_metric_claim_ready=1",
+    "v53aq_public_real_system_performance_claim_ready=0",
     "v53aq_selection_question_text_only=1",
     "v53aq_selection_oracle_field_used=0",
     "v53aq_answer_hash_match_rows=3713",

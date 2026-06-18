@@ -846,6 +846,8 @@ pm_roadmap_rows = [
         "A/B/G/H actual BM25/local-RAG/RouteMemory adapters run on v53i with query-text-only selection and no expected-answer/source-span oracle replay",
         as_int(v53aq, "v53aq_complete_source_abgh_real_adapter_measured_ready") == 1
         and as_int(v53aq, "real_system_performance_claim_ready") == 1
+        and as_int(v53aq, "internal_real_adapter_metric_claim_ready") == 1
+        and as_int(v53aq, "public_real_system_performance_claim_ready") == 0
         and as_int(v53aq, "real_adapter_execution_ready") == 1
         and as_int(v53aq, "actual_adapter_execution_ready") == 1
         and as_int(v53aq, "selection_question_text_only") == 1
@@ -866,6 +868,8 @@ pm_roadmap_rows = [
             f"expected_answer_oracle_replay={v53aq.get('expected_answer_oracle_replay', '0')} "
             f"deterministic_source_span_adapter_execution={v53aq.get('deterministic_source_span_adapter_execution', '1')} "
             f"real_system_performance_claim_ready={v53aq.get('real_system_performance_claim_ready', '0')} "
+            f"internal_real_adapter_metric_claim_ready={v53aq.get('internal_real_adapter_metric_claim_ready', '0')} "
+            f"public_real_system_performance_claim_ready={v53aq.get('public_real_system_performance_claim_ready', '1')} "
             f"same_query_internal_prebaseline_rows_ready={v53aq.get('same_query_internal_prebaseline_rows_ready', '0')} "
             f"same_query_internal_prebaseline_rows={v53aq.get('same_query_internal_prebaseline_rows', '0')} "
             f"local_abgh_row_contract_replay_ready={v59e.get('local_abgh_row_contract_replay_ready', '0')} "
@@ -1391,9 +1395,9 @@ blocker_required_artifact_rows = [
         "v59e-local-abgh-row-contract-replay",
         "results/v59e_one_command_pm_foundation_demo/pm_foundation_001/local_abgh_row_contract_replay_rows.csv",
         "csv",
-        "two passing v53ap/v53aq local A/B/G/H row-contract replay rows with 4000 answer/citation/evaluator/resource rows each and public comparison closed",
+        "two passing v53ap/v53aq local A/B/G/H row-contract replay rows with 4000 answer/citation/evaluator/resource rows each, internal metrics ready, and public performance/comparison closed",
         "experiments/test_v59e_one_command_pm_foundation_demo.sh",
-        "local_abgh_row_contract_replay_ready=1 and public_comparison_claim_ready=0 for the internal pre-baseline path",
+        "local_abgh_row_contract_replay_ready=1, v53aq_internal_real_adapter_metric_claim_ready=1, v53aq_public_real_system_performance_claim_ready=0, and public_comparison_claim_ready=0 for the internal pre-baseline path",
     ),
     required_artifact_row(
         "v60-release-evidence-missing",
@@ -1902,6 +1906,8 @@ for artifact in [
             f"local_abgh_row_contract_replay_ready={v59e.get('local_abgh_row_contract_replay_ready', '0')} "
             f"local_abgh_row_contract_replay_rows={v59e.get('local_abgh_row_contract_replay_rows', '0')} "
             f"local_abgh_row_contract_replay_pass_rows={v59e.get('local_abgh_row_contract_replay_pass_rows', '0')} "
+            f"v53aq_internal_real_adapter_metric_claim_ready={v59e.get('v53aq_internal_real_adapter_metric_claim_ready', '0')} "
+            f"v53aq_public_real_system_performance_claim_ready={v59e.get('v53aq_public_real_system_performance_claim_ready', '1')} "
             "public_comparison_claim_ready=0"
         )
     else:

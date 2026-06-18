@@ -15,6 +15,8 @@ if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/s
   && grep -q 'real_adapter_execution_ready' "$SUMMARY_CSV" \
   && grep -q 'same_query_internal_prebaseline_rows_ready' "$SUMMARY_CSV" \
   && grep -q 'same_query_internal_prebaseline_rows=1000' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
+  && grep -q 'internal_real_adapter_metric_claim_ready=1' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
+  && grep -q 'public_real_system_performance_claim_ready=0' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'selection_forbidden_fields=query_id,expected_answer,expected_answer_sha256,source_span_id,source_path,source_line_start,source_line_end' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"; then
   echo "v53aq_complete_source_abgh_real_adapter_measured_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
@@ -291,6 +293,8 @@ for system_id, system_name, adapter in SYSTEMS:
             "selection_oracle_field_used": "0",
             "actual_adapter_execution_ready": "1",
             "real_adapter_execution_ready": "1",
+            "internal_real_adapter_metric_claim_ready": "1",
+            "public_real_system_performance_claim_ready": "0",
             "external_model_used": "0",
             "external_network_used": "0",
             "status": "measured-local-real-adapter",
@@ -461,6 +465,8 @@ for system_id, system_name, adapter in SYSTEMS:
                 "expected_answer_oracle_replay": "0",
                 "deterministic_source_span_adapter_execution": "0",
                 "real_system_performance_claim_ready": "1",
+                "internal_real_adapter_metric_claim_ready": "1",
+                "public_real_system_performance_claim_ready": "0",
             }
         )
         abstain_rows.append(
@@ -514,6 +520,8 @@ for system_id, system_name, adapter in SYSTEMS:
                 "expected_answer_oracle_replay": "0",
                 "deterministic_source_span_adapter_execution": "0",
                 "real_system_performance_claim_ready": "1",
+                "internal_real_adapter_metric_claim_ready": "1",
+                "public_real_system_performance_claim_ready": "0",
             }
         )
         resource_rows.append(
@@ -638,6 +646,8 @@ for system_id, system_name, _ in SYSTEMS:
             "deterministic_source_span_adapter_rows": "0",
             "actual_adapter_execution_ready": "1",
             "real_adapter_execution_ready": "1",
+            "internal_real_adapter_metric_claim_ready": "1",
+            "public_real_system_performance_claim_ready": "0",
         }
     )
 write_csv(run_dir / "abgh_system_metric_rows.csv", list(metric_rows[0].keys()), metric_rows)
@@ -738,6 +748,8 @@ for query in queries:
         "g_coherent_wrong_key": guards_by_key[("G", query_id)]["coherent_wrong_key"],
         "h_coherent_wrong_key": guards_by_key[("H", query_id)]["coherent_wrong_key"],
         "public_comparison_claim_ready": "0",
+        "internal_real_adapter_metric_claim_ready": "1",
+        "public_real_system_performance_claim_ready": "0",
         "required_30b_baseline_ready": "0",
         "required_70b_baseline_ready": "0",
         "claim_boundary": "internal v1.0 pre-baseline A/B/G/H per-query ledger only; no public comparison or D/E replacement claim",
@@ -758,6 +770,8 @@ same_query_internal_prebaseline_rows_ready = int(
     and all(row["expected_answer_oracle_replay_any"] == "0" for row in same_query_internal_prebaseline_rows)
     and all(row["deterministic_source_span_adapter_execution_any"] == "0" for row in same_query_internal_prebaseline_rows)
     and all(row["public_comparison_claim_ready"] == "0" for row in same_query_internal_prebaseline_rows)
+    and all(row["internal_real_adapter_metric_claim_ready"] == "1" for row in same_query_internal_prebaseline_rows)
+    and all(row["public_real_system_performance_claim_ready"] == "0" for row in same_query_internal_prebaseline_rows)
 )
 ready = int(
     len(answer_rows) == 4000
@@ -817,6 +831,8 @@ summary = {
     "actual_adapter_execution_ready": "1",
     "real_adapter_execution_ready": "1",
     "real_system_performance_claim_ready": "1",
+    "internal_real_adapter_metric_claim_ready": "1",
+    "public_real_system_performance_claim_ready": "0",
     "external_network_used": "0",
     "external_model_used": "0",
     "internal_v1_0_pre_baseline_run": "1",
@@ -838,6 +854,7 @@ decision_rows = [
     ("source-span-oracle-selection-absent", "pass", "source_span_id/source_path/source_line/query_id are not adapter-selection inputs"),
     ("routehint-no-raw-context", "pass", f"routehint_rows={len(routehint_rows)}; G/H raw_prompt_context_bytes=0"),
     ("internal-real-performance-metrics", "pass", f"answer_hash_match_rows={total_answer_hash_match}; coherent_wrong_key_rows={total_coherent_wrong}"),
+    ("public-real-system-performance-claim", "blocked", "internal real-adapter metrics are present, but public performance wording remains blocked"),
     ("public-comparison-claim", "blocked", "D/E 30B/70B are absent; public comparison wording remains blocked"),
     ("required-30b-70b-baselines", "blocked", "D/E 30B/70B baselines are intentionally out of this A/B/G/H slice"),
     ("v53-full-audit-ready", "blocked", "human/reviewer return and public comparison evidence remain outside this slice"),
@@ -877,13 +894,15 @@ boundary = (
     "- actual_adapter_execution_ready=1\n"
     "- real_adapter_execution_ready=1\n"
     "- real_system_performance_claim_ready=1\n"
+    "- internal_real_adapter_metric_claim_ready=1\n"
+    "- public_real_system_performance_claim_ready=0\n"
     "- internal_v1_0_pre_baseline_run=1\n"
     "- public_comparison_claim_ready=0\n"
     "- required_30b_baseline_ready=0\n"
     "- required_70b_baseline_ready=0\n"
     "- real_release_package_ready=0\n\n"
     "Allowed wording: internal v1.0 pre-baseline A/B/G/H real local adapter run over the frozen complete-source v53i query set.\n\n"
-    "Blocked wording: public comparison, leaderboard, 30B/70B replacement, v53 completion, v1.0 release readiness, production readiness, or superiority claims.\n"
+    "Blocked wording: public system performance, public comparison, leaderboard, 30B/70B replacement, v53 completion, v1.0 release readiness, production readiness, or superiority claims.\n"
 )
 (run_dir / "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md").write_text(boundary, encoding="utf-8")
 
@@ -919,6 +938,8 @@ manifest = {
     "actual_adapter_execution_ready": 1,
     "real_adapter_execution_ready": 1,
     "real_system_performance_claim_ready": 1,
+    "internal_real_adapter_metric_claim_ready": 1,
+    "public_real_system_performance_claim_ready": 0,
     "public_comparison_claim_ready": 0,
     "real_release_package_ready": 0,
 }
