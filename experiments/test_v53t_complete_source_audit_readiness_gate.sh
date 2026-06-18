@@ -77,6 +77,13 @@ expected = {
     "pm_acceptance_evidence_replay_pass_rows": "10",
     "pm_acceptance_evidence_blocker_pass_rows": "10",
     "pm_acceptance_evidence_tests_only_rows": "0",
+    "v1_exit_criteria_rows": "6",
+    "v1_exit_criteria_ready_rows": "6",
+    "v1_exit_criteria_blocked_rows": "0",
+    "v1_exit_repo_count_within_band": "1",
+    "v1_exit_query_rows_within_band": "1",
+    "v1_exit_negative_control_share_ready": "1",
+    "v1_exit_machine_foundation_ready": "1",
     "foundation_machine_freeze_ready": "1",
     "foundation_direct_evidence_ready": "1",
     "foundation_query_span_binding_audit_ready": "1",
@@ -147,6 +154,7 @@ required_files = [
     "complete_source_foundation_freeze_rows.csv",
     "complete_source_pm_acceptance_evidence_rows.csv",
     "complete_source_abgh_real_adapter_freeze_rows.csv",
+    "complete_source_v1_exit_criteria_rows.csv",
     "complete_source_query_span_binding_audit_rows.csv",
     "complete_source_audit_claim_rows.csv",
     "complete_source_audit_readiness_metric_rows.csv",
@@ -472,6 +480,44 @@ for requirement_id, snippet in {
 if "public comparison remains blocked" not in pm_acceptance_rows["abgh-same-query-deterministic-prebaseline"]["claim_boundary"]:
     raise SystemExit("v53t PM acceptance should keep A/B/G/H public comparison blocked")
 
+v1_exit_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "complete_source_v1_exit_criteria_rows.csv")}
+expected_v1_exit_ids = {
+    "repo-count-band-10-30",
+    "query-row-band-1000-3000",
+    "negative-abstain-and-control-families",
+    "answer-citation-separate-evaluator",
+    "abgh-same-query-internal-prebaseline",
+    "claim-boundary-replay-blocker-gate",
+}
+if set(v1_exit_rows) != expected_v1_exit_ids:
+    raise SystemExit("v53t v1 exit criteria row ids mismatch")
+if any(row["status"] != "pass" for row in v1_exit_rows.values()):
+    raise SystemExit("v53t v1 exit criteria rows should all pass for the machine foundation")
+if any(row["tests_only_merge_condition"] != "0" for row in v1_exit_rows.values()):
+    raise SystemExit("v53t v1 exit criteria must not use tests-only merge conditions")
+if any(row["claim_boundary_status"] != "pass" or row["replay_artifact_status"] != "pass" or row["blocker_false_positive_status"] != "pass" for row in v1_exit_rows.values()):
+    raise SystemExit("v53t v1 exit criteria should pass claim/replay/blocker gates")
+for row in v1_exit_rows.values():
+    evidence_path = run_dir / row["evidence_path"]
+    if not evidence_path.is_file() or evidence_path.stat().st_size == 0:
+        raise SystemExit(f"v53t v1 exit evidence path missing: {row['evidence_path']}")
+    if row["evidence_sha256"] != sha256(evidence_path):
+        raise SystemExit(f"v53t v1 exit evidence sha mismatch: {row['criterion_id']}")
+    if row["evidence_rows"] != str(len(read_csv(evidence_path))):
+        raise SystemExit(f"v53t v1 exit evidence row count mismatch: {row['criterion_id']}")
+if "repo_count=10" not in v1_exit_rows["repo-count-band-10-30"]["actual_value"]:
+    raise SystemExit("v53t v1 exit repo band should expose repo_count=10")
+if "query_rows=1000" not in v1_exit_rows["query-row-band-1000-3000"]["actual_value"]:
+    raise SystemExit("v53t v1 exit query band should expose query_rows=1000")
+if "negative_abstain_rows=160" not in v1_exit_rows["negative-abstain-and-control-families"]["actual_value"]:
+    raise SystemExit("v53t v1 exit controls should expose 160 negative/abstain rows")
+if "public_comparison_claim_ready=0" not in v1_exit_rows["abgh-same-query-internal-prebaseline"]["actual_value"]:
+    raise SystemExit("v53t v1 exit A/B/G/H row should keep public comparison blocked")
+if "public_real_system_performance_claim_ready=0" not in v1_exit_rows["claim-boundary-replay-blocker-gate"]["actual_value"]:
+    raise SystemExit("v53t v1 exit claim gate should keep public real system performance blocked")
+if "forbids v53-ready" not in v1_exit_rows["claim-boundary-replay-blocker-gate"]["claim_boundary"]:
+    raise SystemExit("v53t v1 exit claim boundary should forbid v53-ready wording")
+
 real_adapter_freeze_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "complete_source_abgh_real_adapter_freeze_rows.csv")}
 if len(real_adapter_freeze_rows) != 4:
     raise SystemExit("v53t real-adapter freeze row count mismatch")
@@ -564,6 +610,13 @@ for snippet in [
     "pm_acceptance_evidence_rows=10",
     "pm_acceptance_evidence_ready_rows=10",
     "pm_acceptance_evidence_tests_only_rows=0",
+    "v1_exit_criteria_rows=6",
+    "v1_exit_criteria_ready_rows=6",
+    "v1_exit_criteria_blocked_rows=0",
+    "v1_exit_repo_count_within_band=1",
+    "v1_exit_query_rows_within_band=1",
+    "v1_exit_negative_control_share_ready=1",
+    "v1_exit_machine_foundation_ready=1",
     "foundation_machine_freeze_ready=1",
     "foundation_direct_evidence_ready=1",
     "foundation_query_span_binding_audit_ready=1",
@@ -644,6 +697,17 @@ if (
     or manifest.get("pm_acceptance_evidence_rows_sha256") != sha256(run_dir / "complete_source_pm_acceptance_evidence_rows.csv")
 ):
     raise SystemExit("v53t manifest PM acceptance evidence mismatch")
+if (
+    manifest.get("v1_exit_criteria_rows") != 6
+    or manifest.get("v1_exit_criteria_ready_rows") != 6
+    or manifest.get("v1_exit_criteria_blocked_rows") != 0
+    or manifest.get("v1_exit_repo_count_within_band") != 1
+    or manifest.get("v1_exit_query_rows_within_band") != 1
+    or manifest.get("v1_exit_negative_control_share_ready") != 1
+    or manifest.get("v1_exit_machine_foundation_ready") != 1
+    or manifest.get("v1_exit_criteria_rows_sha256") != sha256(run_dir / "complete_source_v1_exit_criteria_rows.csv")
+):
+    raise SystemExit("v53t manifest v1 exit criteria mismatch")
 if (
     manifest.get("v53ap_expected_answer_oracle_replay") != 0
     or manifest.get("v53ap_deterministic_source_span_adapter_execution") != 1

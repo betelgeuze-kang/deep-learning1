@@ -169,6 +169,7 @@ for rel in [
     "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/complete_source_v1_exit_criteria_rows.csv",
     "source_h10_pm/source_v53aq/adapter_selection_contract_rows.csv",
     "source_h10_pm/source_v53aq/abgh_adapter_trace_rows.csv",
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",

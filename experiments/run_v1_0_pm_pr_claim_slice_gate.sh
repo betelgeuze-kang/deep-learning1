@@ -130,6 +130,7 @@ v53t_run_dir = results / "v53t_complete_source_audit_readiness_gate" / "gate_001
 v53t_direct_copied = {}
 for src_rel in [
     "complete_source_pm_acceptance_evidence_rows.csv",
+    "complete_source_v1_exit_criteria_rows.csv",
     "complete_source_query_span_binding_audit_rows.csv",
     "source_v53i/complete_source_query_rows.csv",
     "source_v53i/complete_source_span_rows.csv",
@@ -2329,6 +2330,10 @@ summary = {
     "v53_pm_acceptance_evidence_rows": v53t.get("pm_acceptance_evidence_rows", "0"),
     "v53_pm_acceptance_evidence_ready_rows": v53t.get("pm_acceptance_evidence_ready_rows", "0"),
     "v53_pm_acceptance_evidence_tests_only_rows": v53t.get("pm_acceptance_evidence_tests_only_rows", "0"),
+    "v53_v1_exit_criteria_rows": v53t.get("v1_exit_criteria_rows", "0"),
+    "v53_v1_exit_criteria_ready_rows": v53t.get("v1_exit_criteria_ready_rows", "0"),
+    "v53_v1_exit_criteria_blocked_rows": v53t.get("v1_exit_criteria_blocked_rows", "0"),
+    "v53_v1_exit_machine_foundation_ready": v53t.get("v1_exit_machine_foundation_ready", "0"),
     "h10_real_label_acceptance_evidence_rows": h10_pm.get("h10_real_label_acceptance_evidence_rows", "0"),
     "h10_real_label_acceptance_evidence_ready_rows": h10_pm.get("h10_real_label_acceptance_evidence_ready_rows", "0"),
     "h10_real_label_acceptance_evidence_promotion_ready_rows": h10_pm.get("h10_real_label_acceptance_evidence_promotion_ready_rows", "0"),
@@ -2440,6 +2445,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53_pm_acceptance_evidence_rows={v53t.get('pm_acceptance_evidence_rows', '0')}\n"
     f"- v53_pm_acceptance_evidence_ready_rows={v53t.get('pm_acceptance_evidence_ready_rows', '0')}\n"
     f"- v53_pm_acceptance_evidence_tests_only_rows={v53t.get('pm_acceptance_evidence_tests_only_rows', '0')}\n"
+    f"- v53_v1_exit_criteria_rows={v53t.get('v1_exit_criteria_rows', '0')}\n"
+    f"- v53_v1_exit_criteria_ready_rows={v53t.get('v1_exit_criteria_ready_rows', '0')}\n"
+    f"- v53_v1_exit_criteria_blocked_rows={v53t.get('v1_exit_criteria_blocked_rows', '0')}\n"
+    f"- v53_v1_exit_machine_foundation_ready={v53t.get('v1_exit_machine_foundation_ready', '0')}\n"
     f"- h10_real_label_acceptance_evidence_rows={h10_pm.get('h10_real_label_acceptance_evidence_rows', '0')}\n"
     f"- h10_real_label_acceptance_evidence_ready_rows={h10_pm.get('h10_real_label_acceptance_evidence_ready_rows', '0')}\n"
     f"- h10_real_label_acceptance_evidence_promotion_ready_rows={h10_pm.get('h10_real_label_acceptance_evidence_promotion_ready_rows', '0')}\n"
@@ -2527,6 +2536,11 @@ manifest = {
     "v53_pm_acceptance_evidence_rows": as_int(v53t, "pm_acceptance_evidence_rows"),
     "v53_pm_acceptance_evidence_ready_rows": as_int(v53t, "pm_acceptance_evidence_ready_rows"),
     "v53_pm_acceptance_evidence_tests_only_rows": as_int(v53t, "pm_acceptance_evidence_tests_only_rows"),
+    "v53_v1_exit_criteria_rows": as_int(v53t, "v1_exit_criteria_rows"),
+    "v53_v1_exit_criteria_ready_rows": as_int(v53t, "v1_exit_criteria_ready_rows"),
+    "v53_v1_exit_criteria_blocked_rows": as_int(v53t, "v1_exit_criteria_blocked_rows"),
+    "v53_v1_exit_machine_foundation_ready": as_int(v53t, "v1_exit_machine_foundation_ready"),
+    "v53_v1_exit_criteria_rows_sha256": sha256(run_dir / "source_v53t/complete_source_v1_exit_criteria_rows.csv") if v53t_direct_copied.get("complete_source_v1_exit_criteria_rows.csv") else "",
     "h10_real_label_acceptance_evidence_rows": as_int(h10_pm, "h10_real_label_acceptance_evidence_rows"),
     "h10_real_label_acceptance_evidence_ready_rows": as_int(h10_pm, "h10_real_label_acceptance_evidence_ready_rows"),
     "h10_real_label_acceptance_evidence_promotion_ready_rows": as_int(h10_pm, "h10_real_label_acceptance_evidence_promotion_ready_rows"),

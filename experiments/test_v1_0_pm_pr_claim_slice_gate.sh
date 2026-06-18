@@ -65,6 +65,10 @@ expected = {
     "v53_pm_acceptance_evidence_rows": "10",
     "v53_pm_acceptance_evidence_ready_rows": "10",
     "v53_pm_acceptance_evidence_tests_only_rows": "0",
+    "v53_v1_exit_criteria_rows": "6",
+    "v53_v1_exit_criteria_ready_rows": "6",
+    "v53_v1_exit_criteria_blocked_rows": "0",
+    "v53_v1_exit_machine_foundation_ready": "1",
     "h10_real_label_acceptance_evidence_rows": "6",
     "h10_real_label_acceptance_evidence_ready_rows": "6",
     "h10_real_label_acceptance_evidence_promotion_ready_rows": "0",
@@ -928,6 +932,7 @@ required_files = [
     "source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
     "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
+    "source_v53t/complete_source_v1_exit_criteria_rows.csv",
     "source_v53t/complete_source_query_span_binding_audit_rows.csv",
     "source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_v53t/source_v53i/complete_source_span_rows.csv",
@@ -1036,6 +1041,33 @@ for requirement_id, snippet in {
     if snippet not in v53_pm_acceptance_rows[requirement_id]["actual_value"]:
         raise SystemExit(f"PM PR sidecar v53 PM acceptance row should expose {snippet}: {requirement_id}")
 
+v53_exit_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "source_v53t/complete_source_v1_exit_criteria_rows.csv")}
+expected_v53_exit_ids = {
+    "repo-count-band-10-30",
+    "query-row-band-1000-3000",
+    "negative-abstain-and-control-families",
+    "answer-citation-separate-evaluator",
+    "abgh-same-query-internal-prebaseline",
+    "claim-boundary-replay-blocker-gate",
+}
+if set(v53_exit_rows) != expected_v53_exit_ids:
+    raise SystemExit("PM PR sidecar should carry the full v53 v1 exit criteria ledger")
+if any(row["status"] != "pass" for row in v53_exit_rows.values()):
+    raise SystemExit("PM PR sidecar v53 v1 exit criteria rows should all pass for the machine foundation")
+if any(row["tests_only_merge_condition"] != "0" for row in v53_exit_rows.values()):
+    raise SystemExit("PM PR sidecar v53 v1 exit criteria should not use tests-only merge conditions")
+if any(row["claim_boundary_status"] != "pass" or row["replay_artifact_status"] != "pass" or row["blocker_false_positive_status"] != "pass" for row in v53_exit_rows.values()):
+    raise SystemExit("PM PR sidecar v53 v1 exit criteria should pass claim/replay/blocker gates")
+for criterion_id, snippet in {
+    "repo-count-band-10-30": "repo_count=10",
+    "query-row-band-1000-3000": "query_rows=1000",
+    "negative-abstain-and-control-families": "negative_abstain_rows=160",
+    "abgh-same-query-internal-prebaseline": "public_comparison_claim_ready=0",
+    "claim-boundary-replay-blocker-gate": "public_real_system_performance_claim_ready=0",
+}.items():
+    if snippet not in v53_exit_rows[criterion_id]["actual_value"]:
+        raise SystemExit(f"PM PR sidecar v53 v1 exit row should expose {snippet}: {criterion_id}")
+
 real_adapter_freeze_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")}
 if len(real_adapter_freeze_rows) != 4:
     raise SystemExit("PM PR sidecar should copy four v53t real-adapter freeze rows")
@@ -1102,6 +1134,14 @@ if (
     or manifest.get("v53_pm_acceptance_evidence_tests_only_rows") != 0
 ):
     raise SystemExit("PM PR manifest should record v53 PM acceptance evidence")
+if (
+    manifest.get("v53_v1_exit_criteria_rows") != 6
+    or manifest.get("v53_v1_exit_criteria_ready_rows") != 6
+    or manifest.get("v53_v1_exit_criteria_blocked_rows") != 0
+    or manifest.get("v53_v1_exit_machine_foundation_ready") != 1
+    or manifest.get("v53_v1_exit_criteria_rows_sha256") != sha256(run_dir / "source_v53t/complete_source_v1_exit_criteria_rows.csv")
+):
+    raise SystemExit("PM PR manifest should record v53 v1 exit criteria evidence")
 if (
     manifest.get("h10_real_label_acceptance_evidence_rows") != 6
     or manifest.get("h10_real_label_acceptance_evidence_ready_rows") != 6
@@ -1242,6 +1282,10 @@ for snippet in [
     "v53_pm_acceptance_evidence_rows=10",
     "v53_pm_acceptance_evidence_ready_rows=10",
     "v53_pm_acceptance_evidence_tests_only_rows=0",
+    "v53_v1_exit_criteria_rows=6",
+    "v53_v1_exit_criteria_ready_rows=6",
+    "v53_v1_exit_criteria_blocked_rows=0",
+    "v53_v1_exit_machine_foundation_ready=1",
     "h10_real_label_acceptance_evidence_rows=6",
     "h10_real_label_acceptance_evidence_ready_rows=6",
     "h10_real_label_acceptance_evidence_promotion_ready_rows=0",

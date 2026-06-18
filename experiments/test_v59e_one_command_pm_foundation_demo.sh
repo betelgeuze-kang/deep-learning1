@@ -352,6 +352,7 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53t/complete_source_v1_exit_criteria_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
