@@ -232,6 +232,8 @@ def build_bake_packet(system_id, prefix, model_id, param_b, target_dir, bake_sou
         "external_network_used": 0,
         "external_model_used": 1,
         "external_bake_import": 1,
+        "route_memory_store_used": 0,
+        "compact_routehint_used": 0,
         absorb_field: 1,
         "required_30b_baseline_ready": 0,
         "required_70b_baseline_ready": 0,
@@ -246,6 +248,8 @@ def build_bake_packet(system_id, prefix, model_id, param_b, target_dir, bake_sou
         ("no-external-network", "pass", f"{system_id} import uses local files and no external API"),
         (f"v52-{prefix[0]}-absorb-ready", "pass", f"{system_id} v53e measured packet can be absorbed into v52r"),
         ("ollama-open-weight-generation", "blocked", "local monolithic Ollama generation was bypassed via external bake"),
+        ({"d": "70b-real-row", "e": "30b-real-row"}[prefix], "blocked", f"per-system external bake packet for {system_id} does not close the counterpart PM/release baseline"),
+        ("v52-full-baseline-war", "blocked", f"external bake {system_id} packet alone is not the full v52 baseline war"),
         ("real-release-package", "blocked", f"external bake {system_id} packet is not a release package"),
     ]
     return summary, decision_rows, metric_rows[0]
@@ -527,8 +531,10 @@ write_csv(run_dir / "external_bake_import_rows.csv", ["system_id", "bake_dir", "
     "- e_external_bake_staged=1\n"
     "- d_v53e_absorb_ready=1\n"
     "- e_v53e_absorb_ready=1\n"
+    "- required_30b_baseline_ready=0\n"
+    "- required_70b_baseline_ready=0\n"
     "- v52_ready=0\n\n"
-    "Still blocked: full v52, v59 full replay, and release claims.\n",
+    "Still blocked: PM/release-grade 30B/70B acceptance evidence, full v52, v59 full replay, and release claims.\n",
     encoding="utf-8",
 )
 
@@ -539,6 +545,8 @@ manifest = {
     "external_bake_dir": str(bake_dir),
     "d_external_bake_staged": 1,
     "e_external_bake_staged": 1,
+    "required_30b_baseline_ready": 0,
+    "required_70b_baseline_ready": 0,
     "v52_ready": 0,
 }
 (run_dir / "v52x_de_external_measured_bake_import_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -551,8 +559,8 @@ summary = {
     "e_external_bake_staged": 1,
     "d_v53e_absorb_ready": 1,
     "e_v53e_absorb_ready": 1,
-    "required_30b_baseline_ready": 1,
-    "required_70b_baseline_ready": 1,
+    "required_30b_baseline_ready": 0,
+    "required_70b_baseline_ready": 0,
     "v52_ready": 0,
     "real_release_package_ready": 0,
 }
@@ -565,6 +573,7 @@ decision_rows = [
     ("same-frozen-query-set-as-abgh", "pass", "imported packets preserve the v53e 1000-query contract"),
     ("v52-de-absorb-ready", "pass", "imported D/E packets are ready for v52r absorb"),
     ("local-monolithic-ollama-bypassed", "pass", "local monolithic 30B/70B inference was not required on this host"),
+    ("30b-70b-release-baseline-ready", "blocked", "external bake import is an absorbable artifact, not PM/release-grade D/E acceptance evidence"),
     ("v52-full-baseline-war", "blocked", "full v52 still needs registry absorb and optional F handling"),
     ("real-release-package", "blocked", "external bake import is not a release package"),
 ]

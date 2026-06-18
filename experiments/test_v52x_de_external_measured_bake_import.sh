@@ -9,7 +9,7 @@ DECISION_CSV="$RESULTS_DIR/v52x_de_external_measured_bake_import_decision.csv"
 V52P_DIR="$RESULTS_DIR/v52p_30b_open_weight_llm_rag_v53e_1000/measured_001"
 V52Q_DIR="$RESULTS_DIR/v52q_70b_open_weight_llm_rag_v53e_1000/measured_001"
 
-V52X_REUSE_EXISTING="${V52X_REUSE_EXISTING:-1}" "$ROOT_DIR/experiments/run_v52x_de_external_measured_bake_import.sh" >/dev/null
+V52X_REUSE_EXISTING="${V52X_REUSE_EXISTING:-0}" "$ROOT_DIR/experiments/run_v52x_de_external_measured_bake_import.sh" >/dev/null
 
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$V52P_DIR" "$V52Q_DIR" <<'PY'
 import csv
@@ -36,8 +36,8 @@ expected = {
     "e_external_bake_staged": "1",
     "d_v53e_absorb_ready": "1",
     "e_v53e_absorb_ready": "1",
-    "required_30b_baseline_ready": "1",
-    "required_70b_baseline_ready": "1",
+    "required_30b_baseline_ready": "0",
+    "required_70b_baseline_ready": "0",
     "v52_ready": "0",
     "real_release_package_ready": "0",
 }
@@ -55,6 +55,8 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v52x gate should pass: {gate}")
+if decisions.get("30b-70b-release-baseline-ready") != "blocked":
+    raise SystemExit("v52x should keep PM/release D/E readiness blocked")
 
 for prefix_dir, system_id, prefix, manifest_name in [
     (v52p_dir, "D", "d", "v52p_30b_open_weight_llm_rag_v53e_1000_manifest.json"),

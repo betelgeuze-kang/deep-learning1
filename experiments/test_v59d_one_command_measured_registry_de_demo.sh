@@ -146,9 +146,9 @@ expected = {
     "wrong_answer_guard_rows": "7000",
     "resource_rows": "7000",
     "routehint_rows": "2000",
-    "required_30b_baseline_ready": "1",
-    "required_70b_baseline_ready": "1",
-    "missing_real_30b_70b_rows": "0",
+    "required_30b_baseline_ready": "0",
+    "required_70b_baseline_ready": "0",
+    "missing_real_30b_70b_rows": "1",
     "real_release_package_ready": "0",
 }
 for field, value in expected.items():
@@ -160,12 +160,12 @@ for gate in [
     "measured-registry-replay",
     "same-query-source-local-systems",
     "one-command-measured-registry-entrypoint",
-    "30b-70b-real-rows",
+    "30b-70b-artifact-absorbed",
     "7b14b-real-rows",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v59d gate should pass: {gate}")
-for gate in ["v59-full-one-command-demo", "real-release-package"]:
+for gate in ["30b-70b-real-rows", "v59-full-one-command-demo", "real-release-package"]:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v59d gate should remain blocked: {gate}")
 

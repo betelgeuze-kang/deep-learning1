@@ -73,7 +73,6 @@ float(summary["accuracy"])
 manifest = json.loads((run_dir / "v52q_70b_open_weight_llm_rag_v53e_1000_manifest.json").read_text(encoding="utf-8"))
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
-    "e-v53e-1000-open-weight-llm-rag",
     "same-frozen-query-set-as-abgh",
     "same-source-manifest-as-abgh",
     "no-external-network",
@@ -82,9 +81,13 @@ for gate in [
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v52q gate should pass: {gate}")
 if manifest.get("external_bake_import") == 1:
+    if decisions.get("e-v53e-1000-external-bake-import") != "pass":
+        raise SystemExit("v52q external bake system gate should pass")
     if decisions.get("external-bake-import") != "pass":
         raise SystemExit("v52q external bake gate should pass")
 else:
+    if decisions.get("e-v53e-1000-open-weight-llm-rag") != "pass":
+        raise SystemExit("v52q local Ollama system gate should pass")
     if decisions.get("ollama-open-weight-generation") != "pass":
         raise SystemExit("v52q ollama generation gate should pass")
 for gate in ["30b-real-row", "v52-full-baseline-war", "real-release-package"]:

@@ -261,7 +261,8 @@ gate_rows = [
     ("measured-registry-bundle-hash-manifest", "pass", "v59d writes sha256_manifest.csv over copied measured artifacts"),
     ("local-only-claim-boundary-preserved", "pass", "local measured rows do not mark full v52/v59 ready"),
     ("7b14b-real-rows", "pass", "v52l C measured packet is absorbed over the shared v53e 1000-row set"),
-    ("30b-70b-real-rows", "pass", "externally baked D/E v52p/v52q packets are absorbed into v52r"),
+    ("30b-70b-artifact-absorbed", "pass", "D/E v52p/v52q artifact packets are absorbed into v52r"),
+    ("30b-70b-real-rows", "blocked", "D/E artifacts are not PM/release-grade 30B/70B acceptance evidence"),
     ("100b-plus-real-row", "blocked", "optional F hosted/API row is missing or deferred"),
     ("complete-source-audit", "blocked", "v53 remains canary-scope, not complete-source 10+ repo audit"),
     ("human-domain-and-blind-review", "blocked", "human expert and blind-review rows are missing"),
@@ -303,7 +304,7 @@ demo.chmod(0o755)
     f"- c_strict_exact_label_accuracy={v52r['c_strict_exact_label_accuracy']}\n"
     f"- d_strict_exact_label_accuracy={v52r['d_strict_exact_label_accuracy']}\n"
     f"- e_strict_exact_label_accuracy={v52r['e_strict_exact_label_accuracy']}\n\n"
-    "Still blocked: optional 100B+ row or final deferral, complete-source audit rows, human expert review, human blind review, and release review.\n",
+    "Still blocked: PM/release-grade 30B/70B acceptance evidence, optional 100B+ row or final deferral, complete-source audit rows, human expert review, human blind review, and release review.\n",
     encoding="utf-8",
 )
 
@@ -321,10 +322,10 @@ demo.chmod(0o755)
     f"- citation_rows={v52r['citation_rows']}\n"
     f"- resource_rows={v52r['resource_rows']}\n"
     "- required_7b14b_baseline_ready=1\n"
-    "- required_30b_baseline_ready=1\n"
-    "- required_70b_baseline_ready=1\n"
+    f"- required_30b_baseline_ready={v52r['required_30b_baseline_ready']}\n"
+    f"- required_70b_baseline_ready={v52r['required_70b_baseline_ready']}\n"
     f"- c_strict_exact_label_accuracy={v52r['c_strict_exact_label_accuracy']}\n"
-    "- real_30b_70b_rows_ready=1\n"
+    f"- real_30b_70b_rows_ready={int(v52r['required_30b_baseline_ready'] == '1' and v52r['required_70b_baseline_ready'] == '1')}\n"
     "- human_domain_review_ready=0\n"
     "- human_blind_review_ready=0\n\n"
     "Do not publish 30B-150B comparison wins, one-command challenge completion, or v1.0 release claims from this local measured-registry replay.\n",
@@ -358,7 +359,7 @@ summary = {
     "external_model_required_for_local_registry": 0,
     "real_llm_rows_required_for_full_v1": 1,
     "missing_7b14b_real_rows": 0,
-    "missing_real_30b_70b_rows": 0,
+    "missing_real_30b_70b_rows": int(not (v52r["required_30b_baseline_ready"] == "1" and v52r["required_70b_baseline_ready"] == "1")),
     "missing_100b_plus_real_row_or_final_deferral": 1,
     "missing_complete_source_audit": 1,
     "missing_human_domain_review": 1,

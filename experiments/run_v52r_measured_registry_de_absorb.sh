@@ -28,7 +28,7 @@ if [[ "${V52R_REUSE_EXISTING:-1}" != "1" || ! -s "$RESULTS_DIR/v52e_100b_plus_ho
   "$ROOT_DIR/experiments/run_v52e_100b_plus_hosted_llm_rag_optional_intake.sh" >/dev/null
 fi
 if [[ "${V52R_REUSE_EXISTING:-1}" != "1" || ! -s "$RESULTS_DIR/v52p_30b_open_weight_llm_rag_v53e_1000_summary.csv" || ! -s "$RESULTS_DIR/v52q_70b_open_weight_llm_rag_v53e_1000_summary.csv" ]]; then
-  V52X_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v52x_de_external_measured_bake_import.sh" >/dev/null
+  V52X_REUSE_EXISTING="${V52R_REUSE_EXISTING:-1}" "$ROOT_DIR/experiments/run_v52x_de_external_measured_bake_import.sh" >/dev/null
 fi
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
@@ -47,6 +47,157 @@ decision_csv = Path(sys.argv[4])
 results = root / "results"
 v52i_dir = results / "v52i_abgh_same_query_measured_1000" / "measured_001"
 v52l_dir = results / "v52l_7b14b_local_model_rag_v53e_1000" / "measured_001"
+v52p_dir = results / "v52p_30b_open_weight_llm_rag_v53e_1000" / "measured_001"
+v52q_dir = results / "v52q_70b_open_weight_llm_rag_v53e_1000" / "measured_001"
+
+
+def sha256_early(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def write_csv_early(path, fieldnames, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def write_dependency_blocker(missing_paths):
+    blocker_rows = [
+        {
+            "blocker_id": f"v52r-missing-dependency-{idx:03d}",
+            "missing_path": str(path.relative_to(root)),
+            "required_for": "v52r-measured-registry-de-absorb",
+            "fixture_allowed": "0",
+            "network_or_download_approval_required": "1",
+            "status": "missing",
+        }
+        for idx, path in enumerate(missing_paths, start=1)
+    ]
+    blocker_file = run_dir / "v52r_dependency_blocker_rows.csv"
+    boundary_file = run_dir / "V52R_MEASURED_REGISTRY_DEPENDENCY_BLOCKER.md"
+    manifest_file = run_dir / "v52r_measured_registry_de_absorb_manifest.json"
+    write_csv_early(blocker_file, list(blocker_rows[0].keys()), blocker_rows)
+    boundary_file.write_text(
+        "# v52r Measured Registry Dependency Blocker\n\n"
+        "v52r cannot replay the measured registry because one or more required upstream artifacts are missing. "
+        "This packet is a fail-closed dependency blocker, not a measured registry and not release evidence.\n\n"
+        "- v52r_measured_registry_de_absorb_ready=0\n"
+        "- v52r_dependency_blocker_ready=1\n"
+        "- required_30b_baseline_ready=0\n"
+        "- required_70b_baseline_ready=0\n"
+        "- fixture_allowed=0\n"
+        "- network_or_download_approval_required=1\n\n"
+        "Do not publish 30B-150B comparison claims, measured-registry readiness, or release claims from this blocker.\n",
+        encoding="utf-8",
+    )
+    summary = {
+        "v52r_measured_registry_de_absorb_ready": "0",
+        "v52r_dependency_blocker_ready": "1",
+        "v52_ready": "0",
+        "baseline_system_rows": "8",
+        "local_measured_system_rows": "0",
+        "local_measured_systems": "",
+        "query_set_id": "",
+        "query_rows": "0",
+        "answer_rows": "0",
+        "citation_rows": "0",
+        "abstain_rows": "0",
+        "wrong_answer_guard_rows": "0",
+        "resource_rows": "0",
+        "routehint_rows": "0",
+        "same_query_set_local_systems": "0",
+        "same_source_manifest_local_systems": "0",
+        "required_7b14b_baseline_ready": "0",
+        "d_v53e_absorb_ready": "0",
+        "e_v53e_absorb_ready": "0",
+        "de_external_bake_import_rows": "0",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+        "optional_100b_plus_baseline_status": "blocked-by-v52r-dependency",
+        "missing_dependency_artifact_rows": str(len(blocker_rows)),
+        "real_release_package_ready": "0",
+    }
+    write_csv_early(summary_csv, list(summary.keys()), [summary])
+    decision_rows = [
+        ("dependency-blocker-artifact", "pass", "missing v52r upstream artifacts are recorded as replayable blockers"),
+        ("measured-registry-replay", "blocked", "v52r replay requires the missing upstream artifacts"),
+        ("same-query-source-local-systems", "blocked", "same-query registry cannot be verified without upstream source rows"),
+        ("30b-llm-rag-real-row", "blocked", "PM/release-grade D evidence remains missing"),
+        ("70b-llm-rag-real-row", "blocked", "PM/release-grade E evidence remains missing"),
+        ("real-release-package", "blocked", "dependency blocker is not a release package"),
+    ]
+    write_csv_early(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": status, "reason": reason} for gate, status, reason in decision_rows])
+    manifest = {
+        "manifest_scope": "v52r-measured-registry-dependency-blocker",
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "v52r_measured_registry_de_absorb_ready": 0,
+        "v52r_dependency_blocker_ready": 1,
+        "missing_dependency_artifact_rows": len(blocker_rows),
+        "real_release_package_ready": 0,
+    }
+    manifest_file.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    sha_rows = [
+        {"path": "v52r_dependency_blocker_rows.csv", "sha256": sha256_early(blocker_file), "bytes": blocker_file.stat().st_size},
+        {"path": "V52R_MEASURED_REGISTRY_DEPENDENCY_BLOCKER.md", "sha256": sha256_early(boundary_file), "bytes": boundary_file.stat().st_size},
+        {"path": "v52r_measured_registry_de_absorb_manifest.json", "sha256": sha256_early(manifest_file), "bytes": manifest_file.stat().st_size},
+    ]
+    write_csv_early(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], sha_rows)
+    print(f"v52r_measured_registry_de_absorb_dir: {run_dir}")
+    print(f"summary: {summary_csv}")
+    print(f"decision: {decision_csv}")
+
+
+required_dependency_paths = [
+    results / "v52i_abgh_same_query_measured_1000_summary.csv",
+    results / "v52l_7b14b_local_model_rag_v53e_1000_summary.csv",
+    results / "v52c_7b14b_local_model_rag_evidence_intake_summary.csv",
+    results / "v52d_30b70b_llm_rag_evidence_intake_summary.csv",
+    results / "v52e_100b_plus_hosted_llm_rag_optional_intake_summary.csv",
+    results / "v52p_30b_open_weight_llm_rag_v53e_1000_summary.csv",
+    results / "v52q_70b_open_weight_llm_rag_v53e_1000_summary.csv",
+]
+for relpath in [
+    "frozen_query_rows.csv",
+    "frozen_source_span_rows.csv",
+    "source_manifest_rows.csv",
+    "abgh_system_rows.csv",
+    "abgh_answer_rows.csv",
+    "abgh_citation_rows.csv",
+    "abgh_abstain_rows.csv",
+    "abgh_wrong_answer_guard_rows.csv",
+    "abgh_resource_rows.csv",
+    "routehint_rows.csv",
+    "abgh_system_metric_rows.csv",
+    "V52I_ABGH_SAME_QUERY_BOUNDARY.md",
+    "v52i_abgh_same_query_measured_1000_manifest.json",
+    "sha256_manifest.csv",
+]:
+    required_dependency_paths.append(v52i_dir / relpath)
+for relpath in [
+    "frozen_query_rows.csv", "frozen_source_span_rows.csv", "source_manifest_rows.csv", "model_identity.json",
+    "c_answer_rows.csv", "c_citation_rows.csv", "c_retrieval_rows.csv", "c_abstain_rows.csv",
+    "c_wrong_answer_guard_rows.csv", "c_resource_rows.csv", "ollama_generation_transcript_rows.csv",
+    "c_system_metric_rows.csv", "V52L_7B14B_LOCAL_MODEL_RAG_V53E_BOUNDARY.md",
+    "v52l_7b14b_local_model_rag_v53e_1000_manifest.json", "sha256_manifest.csv",
+]:
+    required_dependency_paths.append(v52l_dir / relpath)
+for base, relpaths in [
+    (v52p_dir, ["frozen_query_rows.csv", "frozen_source_span_rows.csv", "source_manifest_rows.csv", "model_identity.json", "d_answer_rows.csv", "d_citation_rows.csv", "d_retrieval_rows.csv", "d_abstain_rows.csv", "d_wrong_answer_guard_rows.csv", "d_resource_rows.csv", "ollama_generation_transcript_rows.csv", "d_system_metric_rows.csv", "V52P_30B_OPEN_WEIGHT_LLM_RAG_V53E_BOUNDARY.md", "v52p_30b_open_weight_llm_rag_v53e_1000_manifest.json", "sha256_manifest.csv"]),
+    (v52q_dir, ["frozen_query_rows.csv", "frozen_source_span_rows.csv", "source_manifest_rows.csv", "model_identity.json", "e_answer_rows.csv", "e_citation_rows.csv", "e_retrieval_rows.csv", "e_abstain_rows.csv", "e_wrong_answer_guard_rows.csv", "e_resource_rows.csv", "ollama_generation_transcript_rows.csv", "e_system_metric_rows.csv", "V52Q_70B_OPEN_WEIGHT_LLM_RAG_V53E_BOUNDARY.md", "v52q_70b_open_weight_llm_rag_v53e_1000_manifest.json", "sha256_manifest.csv"]),
+]:
+    for relpath in relpaths:
+        required_dependency_paths.append(base / relpath)
+missing_dependency_paths = [path for path in required_dependency_paths if not path.is_file() or path.stat().st_size == 0]
+if missing_dependency_paths:
+    write_dependency_blocker(missing_dependency_paths)
+    sys.exit(0)
+
 v52i_summary = list(csv.DictReader((results / "v52i_abgh_same_query_measured_1000_summary.csv").open(newline="", encoding="utf-8")))[0]
 v52l_summary = list(csv.DictReader((results / "v52l_7b14b_local_model_rag_v53e_1000_summary.csv").open(newline="", encoding="utf-8")))[0]
 v52c_summary = list(csv.DictReader((results / "v52c_7b14b_local_model_rag_evidence_intake_summary.csv").open(newline="", encoding="utf-8")))[0]
@@ -58,14 +209,20 @@ if int(v52l_summary.get("c_v53e_absorb_ready", "0")) != 1:
 if int(v52l_summary.get("same_query_set_as_v52i_abgh", "0")) != 1:
     raise SystemExit("v52r requires v52l bound to the same query set as v52i")
 
-v52p_dir = results / "v52p_30b_open_weight_llm_rag_v53e_1000" / "measured_001"
-v52q_dir = results / "v52q_70b_open_weight_llm_rag_v53e_1000" / "measured_001"
 v52p_summary = list(csv.DictReader((results / "v52p_30b_open_weight_llm_rag_v53e_1000_summary.csv").open(newline="", encoding="utf-8")))[0]
 v52q_summary = list(csv.DictReader((results / "v52q_70b_open_weight_llm_rag_v53e_1000_summary.csv").open(newline="", encoding="utf-8")))[0]
 if int(v52p_summary.get("d_v53e_absorb_ready", "0")) != 1:
     raise SystemExit("v52r requires v52p with d_v53e_absorb_ready=1")
 if int(v52q_summary.get("e_v53e_absorb_ready", "0")) != 1:
     raise SystemExit("v52r requires v52q with e_v53e_absorb_ready=1")
+
+d_v53e_absorb_ready = int(v52p_summary.get("d_v53e_absorb_ready", "0"))
+e_v53e_absorb_ready = int(v52q_summary.get("e_v53e_absorb_ready", "0"))
+required_30b_baseline_ready = int(v52p_summary.get("required_30b_baseline_ready", "0"))
+required_70b_baseline_ready = int(v52q_summary.get("required_70b_baseline_ready", "0"))
+d_external_bake_import = int(v52p_summary.get("external_bake_import", "0"))
+e_external_bake_import = int(v52q_summary.get("external_bake_import", "0"))
+de_external_bake_import_rows = d_external_bake_import + e_external_bake_import
 
 
 def sha256(path):
@@ -299,8 +456,11 @@ summary = {
     "d_strict_exact_label_accuracy": v52p_summary.get("accuracy", "0.000000"),
     "e_strict_exact_label_accuracy": v52q_summary.get("accuracy", "0.000000"),
     "v52_absorb_ready": int(v52d_summary.get("v52_absorb_ready", "0")),
-    "required_30b_baseline_ready": int(v52p_summary.get("d_v53e_absorb_ready", "0")),
-    "required_70b_baseline_ready": int(v52q_summary.get("e_v53e_absorb_ready", "0")),
+    "d_v53e_absorb_ready": d_v53e_absorb_ready,
+    "e_v53e_absorb_ready": e_v53e_absorb_ready,
+    "de_external_bake_import_rows": de_external_bake_import_rows,
+    "required_30b_baseline_ready": required_30b_baseline_ready,
+    "required_70b_baseline_ready": required_70b_baseline_ready,
     "optional_100b_plus_baseline_status": v52e_summary.get("optional_100b_plus_baseline_status", "deferred-with-reason"),
     "real_release_package_ready": 0,
 }
@@ -312,10 +472,13 @@ decision_rows = [
     ("local-answer-citation-resource-rows", "pass", "A/B/C/D/E/G/H have answer/citation/abstain/guard/resource rows"),
     ("routehint-policy-local-rows", "pass", "G/H RouteHint rows and H scorer/policy flags are present"),
     ("7b14b-local-model-rag-real-row", "pass", "C v52l measured packet is absorbed over the shared v53e 1000-row set"),
-    ("30b-llm-rag-real-row", "pass", "D v52p measured packet is absorbed over the shared v53e 1000-row set"),
-    ("70b-llm-rag-real-row", "pass", "E v52q measured packet is absorbed over the shared v53e 1000-row set"),
+    ("30b-llm-rag-artifact-absorbed", "pass", "D v52p artifact packet is absorbed over the shared v53e 1000-row set"),
+    ("70b-llm-rag-artifact-absorbed", "pass", "E v52q artifact packet is absorbed over the shared v53e 1000-row set"),
+    ("30b-llm-rag-real-row", "blocked", "D artifact is not PM/release-grade 30B baseline acceptance evidence"),
+    ("70b-llm-rag-real-row", "blocked", "E artifact is not PM/release-grade 70B baseline acceptance evidence"),
     ("100b-plus-llm-rag-real-row", "blocked", "F optional evidence is missing or deferred"),
-    ("v52-de-absorb-ready", "pass", "D and E v53e measured packets are absorbed into the v52 measured registry"),
+    ("v52-de-artifact-absorb-ready", "pass", "D and E v53e artifact packets are absorbed into the v52 measured registry"),
+    ("v52-de-release-baseline-ready", "blocked", "D/E release baselines still require non-fixture PM acceptance evidence"),
     ("v52-full-baseline-war", "blocked", "full v52 still requires optional F handling and release-scale evidence"),
     ("real-release-package", "blocked", "v52r measured registry is not a release package"),
 ]
@@ -323,7 +486,7 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
 
 (run_dir / "V52R_MEASURED_REGISTRY_DE_ABSORB_BOUNDARY.md").write_text(
     "# v52r Measured Registry D/E Absorb Boundary\n\n"
-    "This absorbs the v52i A/B/G/H local measured packet plus the v52l C/D/E measured packets into a v52 measured registry. "
+    "This absorbs the v52i A/B/G/H local measured packet, the v52l C measured packet, and the v52p/v52q D/E artifact packets into a v52 measured registry. "
     "It is not the completed 30B/70B/100B+ baseline war and does not claim C quality from strict exact-label accuracy.\n\n"
     "- local_measured_systems=A/B/C/D/E/G/H\n"
     "- query_rows=1000\n"
@@ -335,10 +498,16 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     "- retrieval_rows_c=1000\n"
     "- transcript_rows_c=1000\n"
     "- routehint_rows=2000\n"
+    f"- d_v53e_absorb_ready={d_v53e_absorb_ready}\n"
+    f"- e_v53e_absorb_ready={e_v53e_absorb_ready}\n"
+    f"- de_external_bake_import_rows={de_external_bake_import_rows}\n"
+    f"- required_30b_baseline_ready={required_30b_baseline_ready}\n"
+    f"- required_70b_baseline_ready={required_70b_baseline_ready}\n"
     f"- c_strict_exact_label_accuracy={v52l_summary.get('accuracy', '0.000000')}\n"
     f"- d_strict_exact_label_accuracy={v52p_summary.get('accuracy', '0.000000')}\n"
     f"- e_strict_exact_label_accuracy={v52q_summary.get('accuracy', '0.000000')}\n\n"
     "Still blocked:\n\n"
+    "- PM/release-grade 30B and 70B acceptance evidence\n"
     "- optional F 100B+ hosted/API evidence or final deferral\n\n"
     "Do not publish 30B-150B comparison claims, comparison wins, or LLM performance claims from this local measured registry.\n",
     encoding="utf-8",
@@ -358,9 +527,11 @@ manifest = {
     "e_strict_exact_label_accuracy": v52q_summary.get("accuracy", "0.000000"),
     "v52_absorb_ready": int(v52d_summary.get("v52_absorb_ready", "0")),
     "v52_ready": 0,
-    "required_30b_baseline_ready": 1,
-    "required_70b_baseline_ready": 1,
-    "v52_absorb_ready": 1,
+    "d_v53e_absorb_ready": d_v53e_absorb_ready,
+    "e_v53e_absorb_ready": e_v53e_absorb_ready,
+    "de_external_bake_import_rows": de_external_bake_import_rows,
+    "required_30b_baseline_ready": required_30b_baseline_ready,
+    "required_70b_baseline_ready": required_70b_baseline_ready,
     "source_v52i_summary_sha256": sha256(results / "v52i_abgh_same_query_measured_1000_summary.csv"),
     "source_v52l_summary_sha256": sha256(results / "v52l_7b14b_local_model_rag_v53e_1000_summary.csv"),
     "source_v52p_summary_sha256": sha256(results / "v52p_30b_open_weight_llm_rag_v53e_1000_summary.csv"),

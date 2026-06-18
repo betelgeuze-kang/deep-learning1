@@ -73,6 +73,83 @@ def copy(src, rel):
 
 v52r_summary = read_csv(results / "v52r_measured_registry_de_absorb_summary.csv")[0]
 v52e_summary = read_csv(results / "v52e_100b_plus_hosted_llm_rag_optional_intake_summary.csv")[0]
+if v52r_summary.get("v52r_dependency_blocker_ready") == "1":
+    for src, rel in [
+        (results / "v52r_measured_registry_de_absorb_summary.csv", "source_v52r/v52r_measured_registry_de_absorb_summary.csv"),
+        (results / "v52r_measured_registry_de_absorb_decision.csv", "source_v52r/v52r_measured_registry_de_absorb_decision.csv"),
+        (v52r_dir / "v52r_dependency_blocker_rows.csv", "source_v52r/v52r_dependency_blocker_rows.csv"),
+        (v52r_dir / "V52R_MEASURED_REGISTRY_DEPENDENCY_BLOCKER.md", "source_v52r/V52R_MEASURED_REGISTRY_DEPENDENCY_BLOCKER.md"),
+    ]:
+        if src.is_file():
+            copy(src, rel)
+    blocker_rows = [
+        {
+            "blocker_id": "v52y-v52r-dependency-blocker",
+            "source_blocker": "v52r_dependency_blocker_ready",
+            "required_for": "v52y-f-optional-final-policy",
+            "fixture_allowed": "0",
+            "status": "blocked",
+        }
+    ]
+    write_csv(run_dir / "v52y_dependency_blocker_rows.csv", list(blocker_rows[0].keys()), blocker_rows)
+    summary = {
+        "v52y_f_optional_final_policy_ready": "0",
+        "v52y_dependency_blocker_ready": "1",
+        "f_optional_final_disposition_ready": "0",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+        "required_measured_system_rows": "0",
+        "v52_ready_condition_rows": "0",
+        "v52_ready_condition_pass_rows": "0",
+        "v52_ready": "0",
+        "comparison_30b_150b_wording_status": "blocked",
+        "complete_source_v53_ready": "0",
+        "v1_0_comparison_ready": "0",
+        "real_release_package_ready": "0",
+    }
+    write_csv(summary_csv, list(summary.keys()), [summary])
+    decision_rows = [
+        ("dependency-blocker-artifact", "pass", "v52y records the upstream v52r dependency blocker"),
+        ("required-d-e-measured", "blocked", "v52r dependency blocker prevents D/E readiness"),
+        ("v52-ready", "blocked", "v52y cannot close while v52r is blocked"),
+        ("30b-150b-wording", "blocked", "comparison wording requires D/E PM/release readiness"),
+        ("real-release-package", "blocked", "dependency blocker is not a release package"),
+    ]
+    write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": g, "status": s, "reason": r} for g, s, r in decision_rows])
+    boundary = run_dir / "V52Y_F_OPTIONAL_FINAL_POLICY_DEPENDENCY_BLOCKER.md"
+    boundary.write_text(
+        "# v52y F Optional Final Policy Dependency Blocker\n\n"
+        "v52y cannot resolve the optional F policy because v52r did not replay a measured registry. "
+        "This is a fail-closed blocker and does not permit 30B-150B comparison wording.\n\n"
+        "- v52y_dependency_blocker_ready=1\n"
+        "- required_30b_baseline_ready=0\n"
+        "- required_70b_baseline_ready=0\n"
+        "- v52_ready=0\n",
+        encoding="utf-8",
+    )
+    manifest = {
+        "manifest_scope": "v52y-f-optional-final-policy-dependency-blocker",
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "v52y_f_optional_final_policy_ready": 0,
+        "v52y_dependency_blocker_ready": 1,
+        "real_release_package_ready": 0,
+        "source_v52r_summary_sha256": sha256(results / "v52r_measured_registry_de_absorb_summary.csv"),
+    }
+    manifest_file = run_dir / "v52y_f_optional_final_policy_manifest.json"
+    manifest_file.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    artifact_rels = [
+        "v52y_dependency_blocker_rows.csv",
+        "V52Y_F_OPTIONAL_FINAL_POLICY_DEPENDENCY_BLOCKER.md",
+        "v52y_f_optional_final_policy_manifest.json",
+        "source_v52r/v52r_measured_registry_de_absorb_summary.csv",
+        "source_v52r/v52r_measured_registry_de_absorb_decision.csv",
+    ]
+    sha_rows = [{"path": rel, "sha256": sha256(run_dir / rel), "bytes": (run_dir / rel).stat().st_size} for rel in artifact_rels if (run_dir / rel).is_file()]
+    write_csv(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], sha_rows)
+    print(f"v52y_f_optional_final_policy_dir: {run_dir}")
+    print(f"summary: {summary_csv}")
+    print(f"decision: {decision_csv}")
+    sys.exit(0)
 registry_rows = read_csv(v52r_dir / "measured_baseline_registry.csv")
 registry_by_id = {row["system_id"]: row for row in registry_rows}
 
@@ -133,8 +210,8 @@ write_csv(run_dir / "f_optional_final_rows.csv", list(f_rows[0].keys()), f_rows)
 
 condition_rows = [
     ("v52r_registry_absorbed", v52r_summary.get("v52r_measured_registry_de_absorb_ready") == "1", "v52r measured registry exists"),
-    ("required_30b_d_ready", v52r_summary.get("required_30b_baseline_ready") == "1", "D 30B measured packet is absorbed"),
-    ("required_70b_e_ready", v52r_summary.get("required_70b_baseline_ready") == "1", "E 70B measured packet is absorbed"),
+    ("required_30b_d_ready", v52r_summary.get("required_30b_baseline_ready") == "1", "D 30B PM/release baseline acceptance evidence is present"),
+    ("required_70b_e_ready", v52r_summary.get("required_70b_baseline_ready") == "1", "E 70B PM/release baseline acceptance evidence is present"),
     ("required_a_b_c_d_e_g_h_measured", required_measured_ready, "A/B/C/D/E/G/H are measured over the shared query set"),
     ("same_query_set_local_systems", same_query_source_ready, "A/B/C/D/E/G/H share v53e query IDs and source manifest"),
     ("f_optional_final_disposition_ready", f_final_ready, "F is either supplied and ready or explicitly final-deferred with reason"),
@@ -155,13 +232,13 @@ write_csv(run_dir / "v52_ready_condition_rows.csv", list(condition_dicts[0].keys
 claim_rows = [
     {
         "claim": "measured 30B and 70B open-weight LLM+RAG baselines are present",
-        "status": "allowed",
-        "required_disclosure": "strict exact-label metrics are recorded without quality/superiority claims",
+        "status": "allowed" if v52_ready else "blocked",
+        "required_disclosure": "requires required_30b_baseline_ready=1 and required_70b_baseline_ready=1; absorbed artifacts alone are insufficient",
     },
     {
         "claim": "30B-150B-class comparison surface",
-        "status": "allowed-with-disclosure",
-        "required_disclosure": "D/E are measured; optional F is final-deferred unless supplied evidence validates",
+        "status": "allowed-with-disclosure" if v52_ready else "blocked",
+        "required_disclosure": "requires PM/release-grade D/E readiness; optional F is final-deferred unless supplied evidence validates",
     },
     {
         "claim": "measured 100B+/150B hosted baseline result",
@@ -219,14 +296,14 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": g, "status": s, 
 
 (run_dir / "V52Y_F_OPTIONAL_FINAL_POLICY_BOUNDARY.md").write_text(
     "# v52y F Optional Final Policy Boundary\n\n"
-    "This artifact resolves F after v52r. F remains optional-preferred: it can be counted as ready only when supplied evidence validates, or it can be explicitly final-deferred with reason without blocking the required D/E baseline registry.\n\n"
+    "This artifact resolves F after v52r. F remains optional-preferred: it can be counted as ready only when supplied evidence validates, or it can be explicitly final-deferred with reason, but it cannot replace the required D/E PM/release baseline evidence.\n\n"
     f"- f_optional_final_disposition={f_final_disposition}\n"
     f"- optional_100b_plus_baseline_status={f_final_status}\n"
     f"- required_30b_baseline_ready={summary['required_30b_baseline_ready']}\n"
     f"- required_70b_baseline_ready={summary['required_70b_baseline_ready']}\n"
     f"- v52_ready={summary['v52_ready']}\n"
     "- v52_ready_scope=measured-baseline-registry-with-f-final-disposition\n\n"
-    "Allowed wording is limited: D/E are measured, and 30B-150B-class wording must disclose that F is optional and final-deferred unless supplied evidence is present. Do not claim a measured 100B+/150B baseline result, v1.0 comparison readiness, or release readiness from v52y alone.\n",
+    "Allowed wording is limited: 30B-150B-class wording stays blocked until D/E PM/release baseline readiness is present, and F remains optional/final-deferred unless supplied evidence is present. Do not claim a measured 100B+/150B baseline result, v1.0 comparison readiness, or release readiness from v52y alone.\n",
     encoding="utf-8",
 )
 

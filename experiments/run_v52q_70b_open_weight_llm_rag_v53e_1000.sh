@@ -175,8 +175,8 @@ write_csv(run_dir / "source_manifest_rows.csv", list(source_manifest_rows[0].key
 identity = {
     "system_id": "E",
     "model_id": model_id,
-    "parameter_count_b": 32.0,
-    "size_class": "30b",
+    "parameter_count_b": 70.0,
+    "size_class": "70b",
     "runner": "ollama",
     "runner_version": subprocess.check_output(["ollama", "--version"], text=True).strip(),
     "quantization": "ollama-library-llama3.1-70b-instruct-q2_K-local-artifact",
@@ -219,7 +219,7 @@ def build_prompt(query, span):
     else:
         instruction = "Answer the bounded source-fact question using only the supplied source span."
     return (
-        "You are baseline E: a 32B open-weight LLM with one RAG source span. "
+        "You are baseline E: a 70B open-weight LLM with one RAG source span. "
         "Return compact JSON only: {\"answer\":\"...\"}. "
         "Do not add citations beyond the supplied path and line. "
         f"{instruction}\n\n"
@@ -249,7 +249,7 @@ for idx, query in enumerate(query_rows, start=1):
     span = span_by_query[query["query_id"]]
     prompt = build_prompt(query, span)
     prompt_bytes = prompt.encode("utf-8")
-    start = time.monotonip_ns()
+    start = time.monotonic_ns()
     response = ollama_json(
         "/api/generate",
         {
@@ -266,7 +266,7 @@ for idx, query in enumerate(query_rows, start=1):
         },
         timeout=900,
     )
-    latency_ns = time.monotonip_ns() - start
+    latency_ns = time.monotonic_ns() - start
     raw_response = response.get("response", "")
     predicted_answer = clean_answer(raw_response)
     if not predicted_answer:
@@ -375,7 +375,7 @@ for idx, query in enumerate(query_rows, start=1):
         }
     )
     if idx % 100 == 0:
-        print(f"v52p generated {idx}/1000 rows", file=sys.stderr)
+        print(f"v52q generated {idx}/1000 rows", file=sys.stderr)
 
 write_csv(run_dir / "e_answer_rows.csv", list(answer_rows[0].keys()), answer_rows)
 write_csv(run_dir / "e_citation_rows.csv", list(citation_rows[0].keys()), citation_rows)
@@ -456,12 +456,12 @@ decision_rows = [
 ]
 write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": status, "reason": reason} for gate, status, reason in decision_rows])
 
-(run_dir / "V52Q_30B_OPEN_WEIGHT_LLM_RAG_V53E_BOUNDARY.md").write_text(
-    "# v52p 70B Open-Weight LLM + RAG v53e Boundary\n\n"
+(run_dir / "V52Q_70B_OPEN_WEIGHT_LLM_RAG_V53E_BOUNDARY.md").write_text(
+    "# v52q 70B Open-Weight LLM + RAG v53e Boundary\n\n"
     "This is a real local Ollama baseline-E measured packet over the full frozen v53e 1000-query canary set. "
-    "It is not the completed v52 baseline war and does not claim D quality from strict exact-label accuracy.\n\n"
+    "It is not the completed v52 baseline war and does not claim E quality from strict exact-label accuracy.\n\n"
     f"- model_id={model_id}\n"
-    "- system_id=D\n"
+    "- system_id=E\n"
     "- query_rows=1000\n"
     "- answer_rows=1000\n"
     "- citation_rows=1000\n"
@@ -476,7 +476,7 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
 )
 
 manifest_out = {
-    "manifest_scope": "v52p-70b-open-weight-llm-rag-v53e-1000",
+    "manifest_scope": "v52q-70b-open-weight-llm-rag-v53e-1000",
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
     "v52q_70b_open_weight_llm_rag_v53e_1000_ready": 1,
     "model_id": model_id,
@@ -507,7 +507,7 @@ artifact_rels = [
     "e_resource_rows.csv",
     "ollama_generation_transcript_rows.csv",
     "e_system_metric_rows.csv",
-    "V52Q_30B_OPEN_WEIGHT_LLM_RAG_V53E_BOUNDARY.md",
+    "V52Q_70B_OPEN_WEIGHT_LLM_RAG_V53E_BOUNDARY.md",
     "v52q_70b_open_weight_llm_rag_v53e_1000_manifest.json",
     "source_v53e/scaled_canary_query_rows.csv",
     "source_v53e/scaled_canary_source_span_rows.csv",

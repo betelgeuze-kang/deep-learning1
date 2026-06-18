@@ -249,7 +249,7 @@ for idx, query in enumerate(query_rows, start=1):
     span = span_by_query[query["query_id"]]
     prompt = build_prompt(query, span)
     prompt_bytes = prompt.encode("utf-8")
-    start = time.monotonip_ns()
+    start = time.monotonic_ns()
     response = ollama_json(
         "/api/generate",
         {
@@ -266,7 +266,7 @@ for idx, query in enumerate(query_rows, start=1):
         },
         timeout=600,
     )
-    latency_ns = time.monotonip_ns() - start
+    latency_ns = time.monotonic_ns() - start
     raw_response = response.get("response", "")
     predicted_answer = clean_answer(raw_response)
     if not predicted_answer:

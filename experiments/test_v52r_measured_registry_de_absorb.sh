@@ -7,6 +7,7 @@ RUN_DIR="$RESULTS_DIR/v52r_measured_registry_de_absorb/registry_001"
 SUMMARY_CSV="$RESULTS_DIR/v52r_measured_registry_de_absorb_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v52r_measured_registry_de_absorb_decision.csv"
 
+V52X_REUSE_EXISTING="${V52X_REUSE_EXISTING:-0}" "$ROOT_DIR/experiments/run_v52x_de_external_measured_bake_import.sh" >/dev/null
 V52R_REUSE_EXISTING="${V52R_REUSE_EXISTING:-1}" "$ROOT_DIR/experiments/run_v52r_measured_registry_de_absorb.sh" >/dev/null
 
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
@@ -38,6 +39,41 @@ summary_rows = read_csv(summary_csv)
 if len(summary_rows) != 1:
     raise SystemExit(f"expected one v52r summary row, got {len(summary_rows)}")
 summary = summary_rows[0]
+if summary.get("v52r_dependency_blocker_ready") == "1":
+    expected_blocker = {
+        "v52r_measured_registry_de_absorb_ready": "0",
+        "v52r_dependency_blocker_ready": "1",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+        "real_release_package_ready": "0",
+    }
+    for field, value in expected_blocker.items():
+        if summary.get(field) != value:
+            raise SystemExit(f"v52r dependency blocker {field}: expected {value}, got {summary.get(field)}")
+    blocker_rows = read_csv(run_dir / "v52r_dependency_blocker_rows.csv")
+    if not blocker_rows or {row["status"] for row in blocker_rows} != {"missing"}:
+        raise SystemExit("v52r dependency blocker should record missing artifacts")
+    decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+    if decisions.get("dependency-blocker-artifact") != "pass":
+        raise SystemExit("v52r dependency blocker artifact gate should pass")
+    for gate in ["measured-registry-replay", "same-query-source-local-systems", "30b-llm-rag-real-row", "70b-llm-rag-real-row", "real-release-package"]:
+        if decisions.get(gate) != "blocked":
+            raise SystemExit(f"v52r dependency blocker gate should remain blocked: {gate}")
+    for rel in [
+        "v52r_dependency_blocker_rows.csv",
+        "V52R_MEASURED_REGISTRY_DEPENDENCY_BLOCKER.md",
+        "v52r_measured_registry_de_absorb_manifest.json",
+        "sha256_manifest.csv",
+    ]:
+        path = run_dir / rel
+        if not path.is_file() or path.stat().st_size == 0:
+            raise SystemExit(f"missing v52r dependency blocker artifact: {rel}")
+    boundary = (run_dir / "V52R_MEASURED_REGISTRY_DEPENDENCY_BLOCKER.md").read_text(encoding="utf-8")
+    for snippet in ["v52r_dependency_blocker_ready=1", "required_30b_baseline_ready=0", "Do not publish 30B-150B comparison claims"]:
+        if snippet not in boundary:
+            raise SystemExit(f"v52r dependency blocker boundary missing {snippet}")
+    sys.exit(0)
+
 expected = {
     "v52r_measured_registry_de_absorb_ready": "1",
     "v52_ready": "0",
@@ -58,8 +94,11 @@ expected = {
     "same_source_manifest_local_systems": "1",
     "required_7b14b_baseline_ready": "1",
     "c_strict_exact_label_accuracy": "0.000000",
-    "required_30b_baseline_ready": "1",
-    "required_70b_baseline_ready": "1",
+    "d_v53e_absorb_ready": "1",
+    "e_v53e_absorb_ready": "1",
+    "de_external_bake_import_rows": "2",
+    "required_30b_baseline_ready": "0",
+    "required_70b_baseline_ready": "0",
     "optional_100b_plus_baseline_status": "deferred-with-reason",
     "real_release_package_ready": "0",
 }
@@ -74,14 +113,17 @@ for gate in [
     "local-answer-citation-resource-rows",
     "routehint-policy-local-rows",
     "7b14b-local-model-rag-real-row",
-    "30b-llm-rag-real-row",
-    "70b-llm-rag-real-row",
-    "v52-de-absorb-ready",
+    "30b-llm-rag-artifact-absorbed",
+    "70b-llm-rag-artifact-absorbed",
+    "v52-de-artifact-absorb-ready",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v52r gate should pass: {gate}")
 for gate in [
     "100b-plus-llm-rag-real-row",
+    "30b-llm-rag-real-row",
+    "70b-llm-rag-real-row",
+    "v52-de-release-baseline-ready",
     "v52-full-baseline-war",
     "real-release-package",
 ]:
@@ -180,9 +222,11 @@ for rel in required_files:
 
 boundary = (run_dir / "V52R_MEASURED_REGISTRY_DE_ABSORB_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "absorbs the v52i A/B/G/H local measured packet plus the v52l C/D/E measured packets",
+    "absorbs the v52i A/B/G/H local measured packet, the v52l C measured packet, and the v52p/v52q D/E artifact packets",
     "local_measured_systems=A/B/C/D/E/G/H",
     "answer_rows=7000",
+    "required_30b_baseline_ready=0",
+    "required_70b_baseline_ready=0",
     "c_strict_exact_label_accuracy=0.000000",
     "Do not publish 30B-150B comparison claims",
 ]:
