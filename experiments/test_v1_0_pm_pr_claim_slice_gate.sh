@@ -445,6 +445,22 @@ for requirement_id, blocker in expected_blocked.items():
         raise SystemExit(f"missing PM roadmap blocker row: {requirement_id}")
     if row["status"] != "blocked" or row["blocker_class"] != blocker:
         raise SystemExit(f"PM roadmap blocker mismatch for {requirement_id}: {row}")
+v60_release_row = roadmap_by_id["v60-public-release-gate"]
+if (run_dir / "source_summaries/v60_architecture_challenge_release_contract_summary.csv").is_file():
+    if v60_release_row["evidence_path"] != "source_summaries/v60_architecture_challenge_release_contract_summary.csv":
+        raise SystemExit("PM v60 release blocker should bind to copied v60 summary when present")
+    for snippet in [
+        "v60_release_contract_ready=1",
+        "v60_ready=0",
+        "real_release_package_ready=0",
+        "release_requirement_ready_rows=6",
+        "release_requirement_blocked_rows=8",
+    ]:
+        if snippet not in v60_release_row["reason"]:
+            raise SystemExit(f"PM v60 release blocker should expose actual v60 readiness field: {snippet}")
+else:
+    if "v60 release summary is absent" not in v60_release_row["reason"]:
+        raise SystemExit("PM v60 release blocker should disclose absent v60 summary when no v60 evidence exists")
 
 file_rows = read_csv(run_dir / "pm_pr_slice_file_rows.csv")
 if len(file_rows) != 41:

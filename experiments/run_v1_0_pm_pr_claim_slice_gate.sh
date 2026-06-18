@@ -98,6 +98,7 @@ summary_sources = {
     "h10_pm": results / "v10_h10_real_label_promotion_readiness_gate_summary.csv",
     "v56b": results / "v56b_ruler_longbench_expanded_scale_summary.csv",
     "v59e": results / "v59e_one_command_pm_foundation_demo_summary.csv",
+    "v60": results / "v60_architecture_challenge_release_contract_summary.csv",
     "v61j": results / "v61j_one_command_ssd_resident_demo_summary.csv",
 }
 summaries = {key: read_first(path) for key, path in summary_sources.items()}
@@ -306,6 +307,7 @@ copy_if_exists(
 )
 v56_seed_dependency_blocker_rows = read_rows(v56_seed_dependency_blocker_path)
 v59e = summaries["v59e"]
+v60 = summaries["v60"]
 v61j = summaries["v61j"]
 
 slice_specs = [
@@ -1042,9 +1044,17 @@ pm_roadmap_rows = [
         "M6",
         "v60-public-release-gate",
         "v60 public release readiness remains closed until v52-v59 plus 30B/70B, generation, blind eval, one-command, and review evidence are all complete",
-        False,
-        "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md",
-        "v60 release summary is absent in current results; release-ready claim must remain closed",
+        as_int(v60, "v60_ready") == 1 and as_int(v60, "real_release_package_ready") == 1,
+        "source_summaries/v60_architecture_challenge_release_contract_summary.csv" if v60 else "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md",
+        (
+            f"v60_release_contract_ready={v60.get('v60_release_contract_ready', '0')} "
+            f"v60_ready={v60.get('v60_ready', '0')} "
+            f"real_release_package_ready={v60.get('real_release_package_ready', '0')} "
+            f"release_requirement_ready_rows={v60.get('release_requirement_ready_rows', '0')} "
+            f"release_requirement_blocked_rows={v60.get('release_requirement_blocked_rows', '0')}"
+            if v60
+            else "v60 release summary is absent in current results; release-ready claim must remain closed"
+        ),
         "v60-release-evidence-missing",
     ),
 ]
