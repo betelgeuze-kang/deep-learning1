@@ -24,7 +24,7 @@ V59E_H10_ACCEPTANCE_EVIDENCE_ARTIFACT="$V59E_DIR/source_pm_pr_claim_slice_gate/s
 if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" ]]; then
   "$ROOT_DIR/experiments/run_v59_one_command_challenge_demo_contract.sh" >/dev/null
 fi
-if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" || ! -s "$V59E_SUMMARY" || ! -s "$V59E_READY_ARTIFACT" || ! -s "$V59E_V58C_DEPENDENCY_ARTIFACT" || ! -s "$V59E_H10_RETURN_CONTRACT_ARTIFACT" || ! -s "$V59E_H10_ACCEPTANCE_EVIDENCE_ARTIFACT" ]] || ! grep -q 'v53_negative_abstain_rows' "$V59E_SUMMARY"; then
+if [[ "${V60_REBUILD_SOURCE_CHAIN:-0}" == "1" || ! -s "$V59E_SUMMARY" || ! -s "$V59E_READY_ARTIFACT" || ! -s "$V59E_V58C_DEPENDENCY_ARTIFACT" || ! -s "$V59E_H10_RETURN_CONTRACT_ARTIFACT" || ! -s "$V59E_H10_ACCEPTANCE_EVIDENCE_ARTIFACT" ]] || ! grep -q 'v53_negative_abstain_rows' "$V59E_SUMMARY" || ! grep -q 'v54c_sha256sums_pm_recommended_csv_ready' "$V59E_SUMMARY"; then
   "$ROOT_DIR/experiments/run_v59e_one_command_pm_foundation_demo.sh" >/dev/null
 fi
 
@@ -370,6 +370,10 @@ v54c_recommended_output_files_ready = int(
     and as_int(v54c, "generator_resource_rows") == 1000
     and as_int(v54c, "wrong_answer_guard_rows") == 1000
     and as_int(v54c, "compact_routehint_rows") == 1000
+    and as_int(v54c, "sha256sums_pm_recommended_csv_rows") == 6
+    and as_int(v54c, "sha256sums_pm_recommended_csv_ready") == 1
+    and as_int(v59e, "v54c_sha256sums_pm_recommended_csv_rows") == 6
+    and as_int(v59e, "v54c_sha256sums_pm_recommended_csv_ready") == 1
     and as_int(v54c, "raw_prompt_context_appended_rows") == 0
 )
 v54c_output_contract_ready = int(
@@ -689,6 +693,8 @@ summary = {
     "h10_pm_copied_files": h10_pm_copied_files,
     "v54c_recommended_output_files_ready": v54c_recommended_output_files_ready,
     "v54c_recommended_output_file_rows": len(v54c_recommended_output_rels),
+    "v54c_sha256sums_pm_recommended_csv_rows": as_int(v54c, "sha256sums_pm_recommended_csv_rows"),
+    "v54c_sha256sums_pm_recommended_csv_ready": as_int(v54c, "sha256sums_pm_recommended_csv_ready"),
     "v54c_output_contract_ready": v54c_output_contract_ready,
     "v54c_output_contract_rows": as_int(v54c, "grounded_generation_output_contract_rows"),
     "v54c_output_contract_pm_required_rows": as_int(v54c, "grounded_generation_output_contract_pm_required_rows"),
@@ -871,6 +877,8 @@ manifest = {
     "pm_pr_v53_pm_acceptance_evidence_tests_only_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_tests_only_rows"),
     "v54c_recommended_output_files_ready": v54c_recommended_output_files_ready,
     "v54c_recommended_output_file_rows": len(v54c_recommended_output_rels),
+    "v54c_sha256sums_pm_recommended_csv_rows": as_int(v54c, "sha256sums_pm_recommended_csv_rows"),
+    "v54c_sha256sums_pm_recommended_csv_ready": as_int(v54c, "sha256sums_pm_recommended_csv_ready"),
     "v54c_output_contract_ready": v54c_output_contract_ready,
     "v54c_output_contract_rows": as_int(v54c, "grounded_generation_output_contract_rows"),
     "v54c_output_contract_pm_required_rows": as_int(v54c, "grounded_generation_output_contract_pm_required_rows"),

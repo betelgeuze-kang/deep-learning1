@@ -115,6 +115,8 @@ expected = {
     "h10_pm_copied_files": "13",
     "v54c_recommended_output_files_ready": "1",
     "v54c_recommended_output_file_rows": "9",
+    "v54c_sha256sums_pm_recommended_csv_rows": "6",
+    "v54c_sha256sums_pm_recommended_csv_ready": "1",
     "v54c_output_contract_ready": "1",
     "v54c_output_contract_rows": "9",
     "v54c_output_contract_pm_required_rows": "7",
@@ -931,7 +933,12 @@ if "h10_pm_acceptance_evidence_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind h10 acceptance evidence")
 if manifest.get("h10_pm_external_label_blocked") != 1 or manifest.get("h10_pm_source_provenance_binding_ready") != 1:
     raise SystemExit("v60 manifest should preserve h10 blocker/provenance boundary")
-if manifest.get("v54c_recommended_output_files_ready") != 1 or manifest.get("v54c_recommended_output_file_rows") != 9:
+if (
+    manifest.get("v54c_recommended_output_files_ready") != 1
+    or manifest.get("v54c_recommended_output_file_rows") != 9
+    or manifest.get("v54c_sha256sums_pm_recommended_csv_rows") != 6
+    or manifest.get("v54c_sha256sums_pm_recommended_csv_ready") != 1
+):
     raise SystemExit("v60 manifest should record direct v54c recommended output file evidence")
 if (
     manifest.get("v54c_output_contract_ready") != 1

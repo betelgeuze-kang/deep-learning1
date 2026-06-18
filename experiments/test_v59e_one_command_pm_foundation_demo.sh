@@ -92,6 +92,8 @@ expected = {
     "v54c_output_contract_rows": "9",
     "v54c_output_contract_pm_required_rows": "7",
     "v54c_output_contract_raw_prompt_forbidden_rows": "9",
+    "v54c_sha256sums_pm_recommended_csv_rows": "6",
+    "v54c_sha256sums_pm_recommended_csv_ready": "1",
     "v54c_v53ap_evaluator_provenance_ready": "1",
     "v54c_v53ap_evaluator_provenance_rows": "1000",
     "v54c_v53ap_answer_eval_separate_rows": "1000",
@@ -777,8 +779,10 @@ if (
     manifest.get("v54c_output_contract_rows") != 9
     or manifest.get("v54c_output_contract_pm_required_rows") != 7
     or manifest.get("v54c_output_contract_raw_prompt_forbidden_rows") != 9
+    or manifest.get("v54c_sha256sums_pm_recommended_csv_rows") != 6
+    or manifest.get("v54c_sha256sums_pm_recommended_csv_ready") != 1
 ):
-    raise SystemExit("v59e manifest should record the v54c grounded-generation output contract")
+    raise SystemExit("v59e manifest should record the v54c grounded-generation output contract and hash coverage")
 if (
     manifest.get("h10_real_label_acceptance_evidence_rows") != 6
     or manifest.get("h10_real_label_acceptance_evidence_ready_rows") != 6
@@ -953,6 +957,8 @@ for snippet in [
     "v54c_output_contract_rows=9",
     "v54c_output_contract_pm_required_rows=7",
     "v54c_output_contract_raw_prompt_forbidden_rows=9",
+    "v54c_sha256sums_pm_recommended_csv_rows=6",
+    "v54c_sha256sums_pm_recommended_csv_ready=1",
     "v54c_v53ap_evaluator_provenance_ready=1",
     "v54c_v53ap_evaluator_provenance_rows=1000",
     "h10_real_label_promotion_ready=0",

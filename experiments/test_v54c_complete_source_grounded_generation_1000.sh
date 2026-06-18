@@ -57,6 +57,8 @@ expected = {
     "grounded_generation_output_contract_pm_required_ready_rows": "7",
     "grounded_generation_output_contract_sha256_bound_rows": "8",
     "grounded_generation_output_contract_raw_prompt_forbidden_rows": "9",
+    "sha256sums_pm_recommended_csv_rows": "6",
+    "sha256sums_pm_recommended_csv_ready": "1",
     "generated_from_source_span_rows": "1000",
     "v53ap_adapter_trace_provenance_ready": "1",
     "v53ap_adapter_trace_provenance_rows": "1000",
@@ -328,6 +330,8 @@ if (
     or manifest.get("grounded_generation_output_contract_raw_prompt_forbidden_rows") != 9
 ):
     raise SystemExit("v54c manifest should record grounded generation output contract evidence")
+if manifest.get("sha256sums_pm_recommended_csv_rows") != 6 or manifest.get("sha256sums_pm_recommended_csv_ready") != 1:
+    raise SystemExit("v54c manifest should record sha256sums coverage for all PM recommended CSV outputs")
 if manifest.get("v53ap_adapter_trace_provenance_ready") != 1 or manifest.get("v53ap_adapter_trace_provenance_rows") != 1000:
     raise SystemExit("v54c manifest should record v53ap adapter trace provenance")
 if manifest.get("v53ap_evaluator_provenance_ready") != 1 or manifest.get("v53ap_evaluator_provenance_rows") != 1000:
@@ -351,7 +355,7 @@ for rel in required_files:
     if sha_rows.get(rel) != sha256(run_dir / rel):
         raise SystemExit(f"v54c sha256 mismatch: {rel}")
 sha_text = (run_dir / "sha256sums.txt").read_text(encoding="utf-8")
-for rel in ["answer_rows.csv", "citation_rows.csv", "generator_resource_rows.csv", "wrong_answer_guard_rows.csv"]:
+for rel in ["answer_rows.csv", "citation_rows.csv", "unsupported_claim_rows.csv", "abstain_rows.csv", "generator_resource_rows.csv", "wrong_answer_guard_rows.csv"]:
     digest = sha256(run_dir / rel).removeprefix("sha256:")
     if f"{digest}  {rel}" not in sha_text:
         raise SystemExit(f"v54c sha256sums missing {rel}")
@@ -365,6 +369,8 @@ for snippet in [
     "grounded_generation_output_contract_rows=9",
     "grounded_generation_output_contract_pm_required_rows=7",
     "grounded_generation_output_contract_raw_prompt_forbidden_rows=9",
+    "sha256sums_pm_recommended_csv_rows=6",
+    "sha256sums_pm_recommended_csv_ready=1",
     "v53ap_adapter_trace_provenance_ready=1",
     "v53ap_adapter_trace_provenance_rows=1000",
     "v53ap_evaluator_provenance_ready=1",

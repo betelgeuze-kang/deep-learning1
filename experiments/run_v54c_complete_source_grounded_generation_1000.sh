@@ -12,6 +12,7 @@ DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 if [[ "${V54C_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/sha256sums.txt" && -s "$RUN_DIR/grounded_generation_output_contract_rows.csv" ]] \
   && grep -q 'generated_from_source_span_rows' "$SUMMARY_CSV" \
   && grep -q 'grounded_generation_output_contract_rows' "$SUMMARY_CSV" \
+  && grep -q 'sha256sums_pm_recommended_csv_ready' "$SUMMARY_CSV" \
   && grep -q 'v53ap_evaluator_provenance_ready' "$SUMMARY_CSV" \
   && grep -q 'v53ap_adapter_trace_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md" \
   && grep -q 'v53ap_evaluator_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"; then
@@ -433,6 +434,27 @@ output_contract_pm_required_rows = sum(1 for row in output_contract_rows if row[
 output_contract_pm_required_ready_rows = sum(1 for row in output_contract_rows if row["pm_recommended_output"] == "1" and row["contract_status"] == "ready")
 output_contract_sha256_bound_rows = sum(1 for row in output_contract_rows if row["sha256_bound"] == "1")
 output_contract_raw_prompt_forbidden_rows = sum(1 for row in output_contract_rows if row["raw_prompt_context_appended_allowed"] == "0" and row["raw_prompt_context_appended_rows"] == "0")
+pm_recommended_csv_paths = [
+    "answer_rows.csv",
+    "citation_rows.csv",
+    "unsupported_claim_rows.csv",
+    "abstain_rows.csv",
+    "generator_resource_rows.csv",
+    "wrong_answer_guard_rows.csv",
+]
+pm_recommended_csv_hash_rows = [
+    {
+        "artifact_path": artifact_path,
+        "artifact_sha256": sha256(run_dir / artifact_path),
+        "artifact_bytes": str((run_dir / artifact_path).stat().st_size),
+    }
+    for artifact_path in pm_recommended_csv_paths
+]
+sha256sums_pm_recommended_csv_rows = len(pm_recommended_csv_hash_rows)
+sha256sums_pm_recommended_csv_ready = int(
+    sha256sums_pm_recommended_csv_rows == 6
+    and all(row["artifact_sha256"] for row in pm_recommended_csv_hash_rows)
+)
 
 summary = {
     "v54c_complete_source_grounded_generation_1000_ready": str(ready),
@@ -454,6 +476,8 @@ summary = {
     "grounded_generation_output_contract_pm_required_ready_rows": str(output_contract_pm_required_ready_rows),
     "grounded_generation_output_contract_sha256_bound_rows": str(output_contract_sha256_bound_rows),
     "grounded_generation_output_contract_raw_prompt_forbidden_rows": str(output_contract_raw_prompt_forbidden_rows),
+    "sha256sums_pm_recommended_csv_rows": str(sha256sums_pm_recommended_csv_rows),
+    "sha256sums_pm_recommended_csv_ready": str(sha256sums_pm_recommended_csv_ready),
     "generated_from_source_span_rows": str(generated_from_source_span_count),
     "v53ap_adapter_trace_provenance_ready": "1",
     "v53ap_adapter_trace_provenance_rows": str(adapter_trace_provenance_rows),
@@ -521,6 +545,8 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- grounded_generation_output_contract_rows={len(output_contract_rows)}\n"
     f"- grounded_generation_output_contract_pm_required_rows={output_contract_pm_required_rows}\n"
     f"- grounded_generation_output_contract_raw_prompt_forbidden_rows={output_contract_raw_prompt_forbidden_rows}\n"
+    f"- sha256sums_pm_recommended_csv_rows={sha256sums_pm_recommended_csv_rows}\n"
+    f"- sha256sums_pm_recommended_csv_ready={sha256sums_pm_recommended_csv_ready}\n"
     "- attention_blocks=0\n"
     "- transformer_blocks=0\n"
     "- raw_prompt_context_appended_rows=0\n"
@@ -558,6 +584,8 @@ manifest = {
     "grounded_generation_output_contract_pm_required_ready_rows": output_contract_pm_required_ready_rows,
     "grounded_generation_output_contract_sha256_bound_rows": output_contract_sha256_bound_rows,
     "grounded_generation_output_contract_raw_prompt_forbidden_rows": output_contract_raw_prompt_forbidden_rows,
+    "sha256sums_pm_recommended_csv_rows": sha256sums_pm_recommended_csv_rows,
+    "sha256sums_pm_recommended_csv_ready": sha256sums_pm_recommended_csv_ready,
     "raw_prompt_context_appended_rows": raw_prompt_count,
     "attention_blocks": attention_blocks,
     "transformer_blocks": transformer_blocks,

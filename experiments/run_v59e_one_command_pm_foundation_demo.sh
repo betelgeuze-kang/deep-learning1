@@ -848,6 +848,8 @@ grounded_generation_outputs_ready = int(
     and as_int(v54c, "grounded_generation_output_contract_rows") == 9
     and as_int(v54c, "grounded_generation_output_contract_pm_required_rows") == 7
     and as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows") == 9
+    and as_int(v54c, "sha256sums_pm_recommended_csv_rows") == 6
+    and as_int(v54c, "sha256sums_pm_recommended_csv_ready") == 1
     and as_int(v54c, "raw_prompt_context_appended_rows") == 0
 )
 h10_blocker_ledger_ready = int(as_int(h10, "v10_h10_real_label_promotion_readiness_gate_ready") == 1 and as_int(h10, "h10_real_label_promotion_ready") == 0)
@@ -968,6 +970,8 @@ summary = {
     "v54c_output_contract_rows": v54c.get("grounded_generation_output_contract_rows", "0"),
     "v54c_output_contract_pm_required_rows": v54c.get("grounded_generation_output_contract_pm_required_rows", "0"),
     "v54c_output_contract_raw_prompt_forbidden_rows": v54c.get("grounded_generation_output_contract_raw_prompt_forbidden_rows", "0"),
+    "v54c_sha256sums_pm_recommended_csv_rows": v54c.get("sha256sums_pm_recommended_csv_rows", "0"),
+    "v54c_sha256sums_pm_recommended_csv_ready": v54c.get("sha256sums_pm_recommended_csv_ready", "0"),
     "v54c_v53ap_evaluator_provenance_ready": v54c.get("v53ap_evaluator_provenance_ready", "0"),
     "v54c_v53ap_evaluator_provenance_rows": v54c.get("v53ap_evaluator_provenance_rows", "0"),
     "v54c_v53ap_answer_eval_separate_rows": v54c.get("v53ap_answer_eval_separate_rows", "0"),
@@ -1057,6 +1061,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v54c_output_contract_rows={summary['v54c_output_contract_rows']}\n"
     f"- v54c_output_contract_pm_required_rows={summary['v54c_output_contract_pm_required_rows']}\n"
     f"- v54c_output_contract_raw_prompt_forbidden_rows={summary['v54c_output_contract_raw_prompt_forbidden_rows']}\n"
+    f"- v54c_sha256sums_pm_recommended_csv_rows={summary['v54c_sha256sums_pm_recommended_csv_rows']}\n"
+    f"- v54c_sha256sums_pm_recommended_csv_ready={summary['v54c_sha256sums_pm_recommended_csv_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
@@ -1117,6 +1123,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v54c_output_contract_rows={summary['v54c_output_contract_rows']}\n"
     f"- v54c_output_contract_pm_required_rows={summary['v54c_output_contract_pm_required_rows']}\n"
     f"- v54c_output_contract_raw_prompt_forbidden_rows={summary['v54c_output_contract_raw_prompt_forbidden_rows']}\n"
+    f"- v54c_sha256sums_pm_recommended_csv_rows={summary['v54c_sha256sums_pm_recommended_csv_rows']}\n"
+    f"- v54c_sha256sums_pm_recommended_csv_ready={summary['v54c_sha256sums_pm_recommended_csv_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
@@ -1221,6 +1229,8 @@ manifest = {
     "v54c_output_contract_rows": as_int(v54c, "grounded_generation_output_contract_rows"),
     "v54c_output_contract_pm_required_rows": as_int(v54c, "grounded_generation_output_contract_pm_required_rows"),
     "v54c_output_contract_raw_prompt_forbidden_rows": as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows"),
+    "v54c_sha256sums_pm_recommended_csv_rows": as_int(v54c, "sha256sums_pm_recommended_csv_rows"),
+    "v54c_sha256sums_pm_recommended_csv_ready": as_int(v54c, "sha256sums_pm_recommended_csv_ready"),
     "h10_real_label_acceptance_evidence_rows": as_int(h10, "h10_real_label_acceptance_evidence_rows"),
     "h10_real_label_acceptance_evidence_ready_rows": as_int(h10, "h10_real_label_acceptance_evidence_ready_rows"),
     "h10_real_label_acceptance_evidence_promotion_ready_rows": as_int(h10, "h10_real_label_acceptance_evidence_promotion_ready_rows"),
