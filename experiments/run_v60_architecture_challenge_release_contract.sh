@@ -575,6 +575,7 @@ forbidden_claim_rows = [
     ("v1_0_release_ready", "v60_ready=0 and real_release_package_ready=0"),
     ("beats_30b_150b_llm_rag", "30B/70B/100B+ real rows and blind-eval rows are missing"),
     ("public_comparison_win", "D/E 30B/70B symmetric baselines and blind eval are missing"),
+    ("public_real_system_performance_claim", "A/B/G/H real-adapter metrics are internal pre-baseline evidence only; public performance wording remains blocked"),
     ("h10_scientific_contribution_claim", "external/human h10 real-label evidence is missing"),
     ("v59_public_demo_complete", "v59e is PM foundation replay only"),
     ("transformer_replacement", "architecture replacement evidence is not supplied"),
