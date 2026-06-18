@@ -83,7 +83,7 @@ expected = {
     "deterministic_source_span_adapter_rows": "0",
     "actual_adapter_execution_ready": "1",
     "real_adapter_execution_ready": "1",
-    "real_system_performance_claim_ready": "1",
+    "real_system_performance_claim_ready": "0",
     "internal_real_adapter_metric_claim_ready": "1",
     "public_real_system_performance_claim_ready": "0",
     "external_network_used": "0",
@@ -290,7 +290,7 @@ if any(
     or row["selection_oracle_field_used"] != "0"
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
-    or row["real_system_performance_claim_ready"] != "1"
+    or row["real_system_performance_claim_ready"] != "0"
     or row["internal_real_adapter_metric_claim_ready"] != "1"
     or row["public_real_system_performance_claim_ready"] != "0"
     for row in evaluators
@@ -376,7 +376,7 @@ for field, value in {
     "deterministic_source_span_adapter_execution": 0,
     "actual_adapter_execution_ready": 1,
     "real_adapter_execution_ready": 1,
-    "real_system_performance_claim_ready": 1,
+    "real_system_performance_claim_ready": 0,
     "internal_real_adapter_metric_claim_ready": 1,
     "public_real_system_performance_claim_ready": 0,
     "public_comparison_claim_ready": 0,

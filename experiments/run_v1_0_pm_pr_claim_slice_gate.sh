@@ -847,7 +847,7 @@ pm_roadmap_rows = [
         "abgh-real-system-adapter-execution",
         "A/B/G/H actual BM25/local-RAG/RouteMemory adapters run on v53i with query-text-only selection and no expected-answer/source-span oracle replay",
         as_int(v53aq, "v53aq_complete_source_abgh_real_adapter_measured_ready") == 1
-        and as_int(v53aq, "real_system_performance_claim_ready") == 1
+        and as_int(v53aq, "real_system_performance_claim_ready") == 0
         and as_int(v53aq, "internal_real_adapter_metric_claim_ready") == 1
         and as_int(v53aq, "public_real_system_performance_claim_ready") == 0
         and as_int(v53aq, "real_adapter_execution_ready") == 1

@@ -350,7 +350,7 @@ foundation_real_adapter_evaluator_rows = sum(
     and row.get("selection_oracle_field_used") == "0"
     and row.get("expected_answer_oracle_replay") == "0"
     and row.get("deterministic_source_span_adapter_execution") == "0"
-    and row.get("real_system_performance_claim_ready") == "1"
+    and row.get("real_system_performance_claim_ready") == "0"
     and row.get("internal_real_adapter_metric_claim_ready") == "1"
     and row.get("public_real_system_performance_claim_ready") == "0"
 )

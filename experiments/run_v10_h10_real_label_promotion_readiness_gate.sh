@@ -400,7 +400,9 @@ v53aq_real_adapter_provenance_ready = int(
     and all(row["resource_eval_separate"] == "1" for row in v53aq_evaluator_rows)
     and all(row["selection_question_text_only"] == "1" for row in v53aq_evaluator_rows)
     and all(row["selection_oracle_field_used"] == "0" for row in v53aq_evaluator_rows)
-    and all(row["real_system_performance_claim_ready"] == "1" for row in v53aq_evaluator_rows)
+    and all(row["real_system_performance_claim_ready"] == "0" for row in v53aq_evaluator_rows)
+    and all(row["internal_real_adapter_metric_claim_ready"] == "1" for row in v53aq_evaluator_rows)
+    and all(row["public_real_system_performance_claim_ready"] == "0" for row in v53aq_evaluator_rows)
 )
 v53aq_same_query_prebaseline_ledger_ready = int(
     as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
@@ -693,6 +695,8 @@ summary = {
     "v53aq_deterministic_source_span_adapter_execution": v53aq.get("deterministic_source_span_adapter_execution", "1"),
     "v53aq_real_adapter_execution_ready": v53aq.get("real_adapter_execution_ready", "0"),
     "v53aq_real_system_performance_claim_ready": v53aq.get("real_system_performance_claim_ready", "0"),
+    "v53aq_internal_real_adapter_metric_claim_ready": v53aq.get("internal_real_adapter_metric_claim_ready", "0"),
+    "v53aq_public_real_system_performance_claim_ready": v53aq.get("public_real_system_performance_claim_ready", "1"),
     "v53aq_answer_hash_match_rows": v53aq.get("answer_hash_match_rows", "0"),
     "v53aq_coherent_wrong_key_rows": v53aq.get("coherent_wrong_key_rows", "0"),
     "v53t_complete_source_audit_readiness_gate_ready": v53t.get("v53t_complete_source_audit_readiness_gate_ready", "0"),
@@ -826,6 +830,8 @@ manifest = {
     "v53aq_selection_oracle_field_used": as_int(v53aq, "selection_oracle_field_used"),
     "v53aq_real_adapter_execution_ready": as_int(v53aq, "real_adapter_execution_ready"),
     "v53aq_real_system_performance_claim_ready": as_int(v53aq, "real_system_performance_claim_ready"),
+    "v53aq_internal_real_adapter_metric_claim_ready": as_int(v53aq, "internal_real_adapter_metric_claim_ready"),
+    "v53aq_public_real_system_performance_claim_ready": as_int(v53aq, "public_real_system_performance_claim_ready"),
     "v53aq_answer_hash_match_rows": as_int(v53aq, "answer_hash_match_rows"),
     "v53aq_coherent_wrong_key_rows": as_int(v53aq, "coherent_wrong_key_rows"),
     "v53t_complete_source_audit_readiness_gate_ready": as_int(v53t, "v53t_complete_source_audit_readiness_gate_ready"),

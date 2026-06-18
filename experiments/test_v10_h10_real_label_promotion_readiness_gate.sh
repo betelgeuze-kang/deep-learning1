@@ -62,7 +62,9 @@ expected = {
     "v53aq_expected_answer_oracle_replay": "0",
     "v53aq_deterministic_source_span_adapter_execution": "0",
     "v53aq_real_adapter_execution_ready": "1",
-    "v53aq_real_system_performance_claim_ready": "1",
+    "v53aq_real_system_performance_claim_ready": "0",
+    "v53aq_internal_real_adapter_metric_claim_ready": "1",
+    "v53aq_public_real_system_performance_claim_ready": "0",
     "v53aq_answer_hash_match_rows": "3713",
     "v53aq_coherent_wrong_key_rows": "287",
     "v53t_complete_source_audit_readiness_gate_ready": "1",
@@ -312,7 +314,9 @@ if any(
     or row["selection_oracle_field_used"] != "0"
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
-    or row["real_system_performance_claim_ready"] != "1"
+    or row["real_system_performance_claim_ready"] != "0"
+    or row["internal_real_adapter_metric_claim_ready"] != "1"
+    or row["public_real_system_performance_claim_ready"] != "0"
     for row in v53aq_evaluators
 ):
     raise SystemExit("h10 PM gate v53aq evaluator rows should preserve real-adapter separate evaluation")

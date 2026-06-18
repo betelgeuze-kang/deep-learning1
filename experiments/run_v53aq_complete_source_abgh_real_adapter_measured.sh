@@ -464,7 +464,7 @@ for system_id, system_name, adapter in SYSTEMS:
                 "domain_policy_used": str(uses_scorer),
                 "expected_answer_oracle_replay": "0",
                 "deterministic_source_span_adapter_execution": "0",
-                "real_system_performance_claim_ready": "1",
+                "real_system_performance_claim_ready": "0",
                 "internal_real_adapter_metric_claim_ready": "1",
                 "public_real_system_performance_claim_ready": "0",
             }
@@ -519,7 +519,7 @@ for system_id, system_name, adapter in SYSTEMS:
                 "selection_oracle_field_used": "0",
                 "expected_answer_oracle_replay": "0",
                 "deterministic_source_span_adapter_execution": "0",
-                "real_system_performance_claim_ready": "1",
+                "real_system_performance_claim_ready": "0",
                 "internal_real_adapter_metric_claim_ready": "1",
                 "public_real_system_performance_claim_ready": "0",
             }
@@ -830,7 +830,7 @@ summary = {
     "deterministic_source_span_adapter_rows": "0",
     "actual_adapter_execution_ready": "1",
     "real_adapter_execution_ready": "1",
-    "real_system_performance_claim_ready": "1",
+    "real_system_performance_claim_ready": "0",
     "internal_real_adapter_metric_claim_ready": "1",
     "public_real_system_performance_claim_ready": "0",
     "external_network_used": "0",
@@ -893,7 +893,7 @@ boundary = (
     "- deterministic_source_span_adapter_execution=0\n"
     "- actual_adapter_execution_ready=1\n"
     "- real_adapter_execution_ready=1\n"
-    "- real_system_performance_claim_ready=1\n"
+    "- real_system_performance_claim_ready=0\n"
     "- internal_real_adapter_metric_claim_ready=1\n"
     "- public_real_system_performance_claim_ready=0\n"
     "- internal_v1_0_pre_baseline_run=1\n"
@@ -937,7 +937,7 @@ manifest = {
     "deterministic_source_span_adapter_execution": 0,
     "actual_adapter_execution_ready": 1,
     "real_adapter_execution_ready": 1,
-    "real_system_performance_claim_ready": 1,
+    "real_system_performance_claim_ready": 0,
     "internal_real_adapter_metric_claim_ready": 1,
     "public_real_system_performance_claim_ready": 0,
     "public_comparison_claim_ready": 0,

@@ -188,7 +188,7 @@ def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, cl
             and deterministic_source_span_adapter_execution_rows == 0
             and actual_adapter_execution_ready_rows == LOCAL_ABGH_TOTAL_ROWS
             and real_adapter_execution_ready_rows == LOCAL_ABGH_TOTAL_ROWS
-            and real_system_performance_claim_ready_rows == LOCAL_ABGH_TOTAL_ROWS
+            and real_system_performance_claim_ready_rows == 0
             and internal_real_adapter_metric_claim_ready_rows == LOCAL_ABGH_TOTAL_ROWS
             and public_real_system_performance_claim_ready_rows == 0
             and selection_question_text_only_rows == LOCAL_ABGH_TOTAL_ROWS
@@ -197,7 +197,7 @@ def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, cl
             and as_int(summary_row, "selection_oracle_field_used") == 0
             and as_int(summary_row, "deterministic_source_span_adapter_execution") == 0
             and as_int(summary_row, "real_adapter_execution_ready") == 1
-            and as_int(summary_row, "real_system_performance_claim_ready") == 1
+            and as_int(summary_row, "real_system_performance_claim_ready") == 0
             and as_int(summary_row, "internal_real_adapter_metric_claim_ready") == 1
             and as_int(summary_row, "public_real_system_performance_claim_ready") == 0
             and prebaseline_ready == 1
@@ -803,7 +803,7 @@ local_abgh_real_adapter_ready = int(
     and as_int(v53aq, "expected_answer_oracle_replay") == 0
     and as_int(v53aq, "deterministic_source_span_adapter_execution") == 0
     and as_int(v53aq, "real_adapter_execution_ready") == 1
-    and as_int(v53aq, "real_system_performance_claim_ready") == 1
+    and as_int(v53aq, "real_system_performance_claim_ready") == 0
     and as_int(v53aq, "internal_real_adapter_metric_claim_ready") == 1
     and as_int(v53aq, "public_real_system_performance_claim_ready") == 0
     and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1

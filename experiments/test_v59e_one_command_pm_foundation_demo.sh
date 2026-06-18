@@ -80,7 +80,7 @@ expected = {
     "v53aq_expected_answer_oracle_replay": "0",
     "v53aq_deterministic_source_span_adapter_execution": "0",
     "v53aq_real_adapter_execution_ready": "1",
-    "v53aq_real_system_performance_claim_ready": "1",
+    "v53aq_real_system_performance_claim_ready": "0",
     "v53aq_internal_real_adapter_metric_claim_ready": "1",
     "v53aq_public_real_system_performance_claim_ready": "0",
     "v53aq_same_query_internal_prebaseline_rows_ready": "1",
@@ -566,7 +566,7 @@ if (
     local_abgh_contract_rows["v53aq"]["deterministic_source_span_adapter_execution_rows"] != "0"
     or local_abgh_contract_rows["v53aq"]["actual_adapter_execution_ready_rows"] != "4000"
     or local_abgh_contract_rows["v53aq"]["real_adapter_execution_ready_rows"] != "4000"
-    or local_abgh_contract_rows["v53aq"]["real_system_performance_claim_ready_rows"] != "4000"
+    or local_abgh_contract_rows["v53aq"]["real_system_performance_claim_ready_rows"] != "0"
     or local_abgh_contract_rows["v53aq"]["internal_real_adapter_metric_claim_ready_rows"] != "4000"
     or local_abgh_contract_rows["v53aq"]["public_real_system_performance_claim_ready_rows"] != "0"
     or local_abgh_contract_rows["v53aq"]["selection_question_text_only_rows"] != "4000"
@@ -781,7 +781,7 @@ if (
     or manifest.get("v53aq_expected_answer_oracle_replay") != 0
     or manifest.get("v53aq_deterministic_source_span_adapter_execution") != 0
     or manifest.get("v53aq_real_adapter_execution_ready") != 1
-    or manifest.get("v53aq_real_system_performance_claim_ready") != 1
+    or manifest.get("v53aq_real_system_performance_claim_ready") != 0
     or manifest.get("v53aq_internal_real_adapter_metric_claim_ready") != 1
     or manifest.get("v53aq_public_real_system_performance_claim_ready") != 0
     or manifest.get("v53aq_answer_hash_match_rows") != 3713

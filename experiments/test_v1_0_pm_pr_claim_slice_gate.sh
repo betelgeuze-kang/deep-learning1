@@ -282,7 +282,7 @@ for snippet in [
     "selection_question_text_only=1",
     "selection_oracle_field_used=0",
     "deterministic_source_span_adapter_execution=0",
-    "real_system_performance_claim_ready=1",
+    "real_system_performance_claim_ready=0",
     "internal_real_adapter_metric_claim_ready=1",
     "public_real_system_performance_claim_ready=0",
     "same_query_internal_prebaseline_rows_ready=1",
@@ -958,7 +958,8 @@ if any(
 ):
     raise SystemExit("PM PR sidecar should preserve passing local A/B/G/H row-contract replay boundaries")
 if (
-    local_abgh_contract_rows["v53aq"]["internal_real_adapter_metric_claim_ready_rows"] != "4000"
+    local_abgh_contract_rows["v53aq"]["real_system_performance_claim_ready_rows"] != "0"
+    or local_abgh_contract_rows["v53aq"]["internal_real_adapter_metric_claim_ready_rows"] != "4000"
     or local_abgh_contract_rows["v53aq"]["public_real_system_performance_claim_ready_rows"] != "0"
 ):
     raise SystemExit("PM PR sidecar should preserve v53aq internal metrics while blocking public real-system performance claims")

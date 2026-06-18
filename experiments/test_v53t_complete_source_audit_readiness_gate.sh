@@ -128,7 +128,7 @@ expected = {
     "v53aq_deterministic_source_span_adapter_execution": "0",
     "v53aq_actual_adapter_execution_ready": "1",
     "v53aq_real_adapter_execution_ready": "1",
-    "v53aq_real_system_performance_claim_ready": "1",
+    "v53aq_real_system_performance_claim_ready": "0",
     "v53aq_internal_real_adapter_metric_claim_ready": "1",
     "v53aq_public_real_system_performance_claim_ready": "0",
     "v53aq_answer_hash_match_rows": "3713",
@@ -352,7 +352,7 @@ if any(
     or row["selection_oracle_field_used"] != "0"
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
-    or row["real_system_performance_claim_ready"] != "1"
+    or row["real_system_performance_claim_ready"] != "0"
     or row["internal_real_adapter_metric_claim_ready"] != "1"
     or row["public_real_system_performance_claim_ready"] != "0"
     for row in v53aq_evaluators
