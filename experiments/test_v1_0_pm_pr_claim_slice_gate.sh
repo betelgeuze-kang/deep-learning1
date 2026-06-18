@@ -44,6 +44,9 @@ expected = {
     "pm_roadmap_requirement_rows": "20",
     "pm_roadmap_ready_rows": "14",
     "pm_roadmap_blocked_rows": "6",
+    "pm_roadmap_milestone_rows": "6",
+    "pm_roadmap_milestone_ready_rows": "2",
+    "pm_roadmap_milestone_blocked_rows": "4",
     "pm_foundation_ready": "1",
     "v53_foundation_freeze_certificate_rows": "10",
     "v53_foundation_machine_freeze_ready": "1",
@@ -212,6 +215,34 @@ roadmap_rows = read_csv(run_dir / "pm_roadmap_requirement_rows.csv")
 if len(roadmap_rows) != 20:
     raise SystemExit("PM roadmap requirement ledger should cover 20 current requirements")
 roadmap_by_id = {row["requirement_id"]: row for row in roadmap_rows}
+milestone_rows = read_csv(run_dir / "pm_roadmap_milestone_rows.csv")
+if len(milestone_rows) != 6:
+    raise SystemExit("PM roadmap milestone ledger should cover M1-M6")
+milestone_by_id = {row["milestone"]: row for row in milestone_rows}
+expected_milestones = {
+    "M1": ("3", "2", "1", "v56-replay-artifact-missing"),
+    "M2": ("4", "4", "0", ""),
+    "M3": ("4", "3", "1", "de-30b70b-baselines-missing"),
+    "M4": ("2", "1", "1", "external-human-label-evidence-missing"),
+    "M5": ("2", "2", "0", ""),
+    "M6": ("5", "2", "3", "v58-real-blind-eval-missing;v58c-intake-artifact-missing;v60-release-evidence-missing"),
+}
+for milestone, (total_rows, ready_rows, blocked_rows, blockers) in expected_milestones.items():
+    row = milestone_by_id.get(milestone)
+    if row is None:
+        raise SystemExit(f"missing PM roadmap milestone row: {milestone}")
+    if (
+        row["requirement_rows"] != total_rows
+        or row["ready_rows"] != ready_rows
+        or row["blocked_rows"] != blocked_rows
+        or row["blocker_classes"] != blockers
+    ):
+        raise SystemExit(f"PM roadmap milestone mismatch for {milestone}: {row}")
+    expected_status = "ready" if blocked_rows == "0" else "blocked"
+    if row["status"] != expected_status:
+        raise SystemExit(f"PM roadmap milestone status mismatch for {milestone}: {row}")
+    if not row["next_action"] or not row["claim_boundary"]:
+        raise SystemExit(f"PM roadmap milestone should carry next action and claim boundary: {milestone}")
 for requirement_id in [
     "pr-split-ledger",
     "merge-condition-boundary",
@@ -871,6 +902,7 @@ required_files = [
     "pm_pr_slice_rows.csv",
     "pm_pr_merge_gate_rows.csv",
     "pm_roadmap_requirement_rows.csv",
+    "pm_roadmap_milestone_rows.csv",
     "pm_execution_lock_rows.csv",
     "pm_external_return_template_rows.csv",
     "pm_pr_slice_file_rows.csv",
@@ -1033,6 +1065,14 @@ if manifest.get("slice_ids") != expected_order:
     raise SystemExit("PM PR manifest slice order mismatch")
 if manifest.get("pm_roadmap_requirement_rows") != 20 or manifest.get("pm_foundation_ready") != 1:
     raise SystemExit("PM PR manifest roadmap audit mismatch")
+if (
+    manifest.get("pm_roadmap_milestone_rows") != 6
+    or manifest.get("pm_roadmap_milestone_ready_rows") != 2
+    or manifest.get("pm_roadmap_milestone_blocked_rows") != 4
+):
+    raise SystemExit("PM PR manifest roadmap milestone audit mismatch")
+if "pm_roadmap_milestone_rows_sha256" not in manifest:
+    raise SystemExit("PM PR manifest should hash-bind roadmap milestone rows")
 if manifest.get("v53_foundation_freeze_certificate_rows") != 10 or manifest.get("v53_foundation_machine_freeze_ready") != 1:
     raise SystemExit("PM PR manifest v53 foundation freeze mismatch")
 if (
@@ -1181,6 +1221,9 @@ for snippet in [
     "recommended_pr_slice_rows=10",
     "merge_condition_defined_rows=10",
     "pm_roadmap_requirement_rows=20",
+    "pm_roadmap_milestone_rows=6",
+    "pm_roadmap_milestone_ready_rows=2",
+    "pm_roadmap_milestone_blocked_rows=4",
     "pm_foundation_ready=1",
     "v53_foundation_freeze_certificate_rows=10",
     "v53_foundation_machine_freeze_ready=1",

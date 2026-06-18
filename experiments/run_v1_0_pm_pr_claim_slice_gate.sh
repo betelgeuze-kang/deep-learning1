@@ -2161,6 +2161,58 @@ pm_foundation_ready = int(
         }
     )
 )
+milestone_focus = {
+    "M1": "PR and claim slicing",
+    "M2": "v53 source-bound 1000-row corpus freeze",
+    "M3": "A/B/G/H same-query internal pre-baseline",
+    "M4": "h10 real-label scorer promotion",
+    "M5": "v54 grounded generation rows",
+    "M6": "v58 blind eval, v59 demo, and v60 release gates",
+}
+milestone_next_action = {
+    "M1": "keep the v56 slice blocked until replay artifacts are hash-bound",
+    "M2": "send and intake real complete-source review/adjudication before v53_ready",
+    "M3": "supply D/E 30B/70B symmetric baselines before any public comparison wording",
+    "M4": "supply accepted external/human labels and source-verified eval rows",
+    "M5": "keep grounded generation under the no-raw-prompt boundary until review",
+    "M6": "supply v58c/v58 blind-eval artifacts, full public demo evidence, and release review",
+}
+milestone_claim_boundary = {
+    "M1": "review slices are local runbooks; no merge, push, or release action is implied",
+    "M2": "machine corpus freeze only; human-reviewed quality comparison remains blocked",
+    "M3": "A/B/G/H is internal pre-baseline evidence only; no public comparison claim",
+    "M4": "h10 readiness ledger only; real-label promotion and scientific-contribution claims remain blocked",
+    "M5": "machine grounded-generation rows only; no human-reviewed quality or release claim",
+    "M6": "pre-v1.0 public artifact posture; blind eval, full demo, and release remain blocked",
+}
+pm_roadmap_milestone_rows = []
+for milestone in ["M1", "M2", "M3", "M4", "M5", "M6"]:
+    rows = [row for row in pm_roadmap_rows if row["milestone"] == milestone]
+    ready_ids = [row["requirement_id"] for row in rows if row["status"] == "ready"]
+    blocked_ids = [row["requirement_id"] for row in rows if row["status"] == "blocked"]
+    blocker_classes = sorted({row["blocker_class"] for row in rows if row["blocker_class"]})
+    evidence_paths = sorted({row["evidence_path"] for row in rows if row["evidence_path"]})
+    pm_roadmap_milestone_rows.append(
+        {
+            "milestone": milestone,
+            "focus": milestone_focus[milestone],
+            "requirement_rows": str(len(rows)),
+            "ready_rows": str(len(ready_ids)),
+            "blocked_rows": str(len(blocked_ids)),
+            "status": "ready" if not blocked_ids else "blocked",
+            "ready_requirement_ids": ";".join(ready_ids),
+            "blocked_requirement_ids": ";".join(blocked_ids),
+            "blocker_classes": ";".join(blocker_classes),
+            "evidence_paths": ";".join(evidence_paths),
+            "next_action": milestone_next_action[milestone],
+            "claim_boundary": milestone_claim_boundary[milestone],
+        }
+    )
+write_csv(run_dir / "pm_roadmap_milestone_rows.csv", list(pm_roadmap_milestone_rows[0].keys()), pm_roadmap_milestone_rows)
+
+pm_roadmap_milestone_row_count = len(pm_roadmap_milestone_rows)
+pm_roadmap_milestone_ready_rows = sum(1 for row in pm_roadmap_milestone_rows if row["status"] == "ready")
+pm_roadmap_milestone_blocked_rows = pm_roadmap_milestone_row_count - pm_roadmap_milestone_ready_rows
 slice_file_row_count = len(slice_file_rows)
 slice_file_existing_rows = sum(1 for row in slice_file_rows if row["exists"] == "1")
 slice_with_file_rows = len({row["slice_id"] for row in slice_file_rows})
@@ -2256,6 +2308,9 @@ summary = {
     "pm_roadmap_requirement_rows": str(len(pm_roadmap_rows)),
     "pm_roadmap_ready_rows": str(pm_ready_rows),
     "pm_roadmap_blocked_rows": str(pm_blocked_rows),
+    "pm_roadmap_milestone_rows": str(pm_roadmap_milestone_row_count),
+    "pm_roadmap_milestone_ready_rows": str(pm_roadmap_milestone_ready_rows),
+    "pm_roadmap_milestone_blocked_rows": str(pm_roadmap_milestone_blocked_rows),
     "pm_foundation_ready": str(pm_foundation_ready),
     "v53_foundation_freeze_certificate_rows": v53t.get("foundation_freeze_certificate_rows", "0"),
     "v53_foundation_machine_freeze_ready": v53t.get("foundation_machine_freeze_ready", "0"),
@@ -2364,6 +2419,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- pm_roadmap_requirement_rows={len(pm_roadmap_rows)}\n"
     f"- pm_roadmap_ready_rows={pm_ready_rows}\n"
     f"- pm_roadmap_blocked_rows={pm_blocked_rows}\n"
+    f"- pm_roadmap_milestone_rows={pm_roadmap_milestone_row_count}\n"
+    f"- pm_roadmap_milestone_ready_rows={pm_roadmap_milestone_ready_rows}\n"
+    f"- pm_roadmap_milestone_blocked_rows={pm_roadmap_milestone_blocked_rows}\n"
     f"- pm_foundation_ready={pm_foundation_ready}\n"
     f"- v53_foundation_freeze_certificate_rows={v53t.get('foundation_freeze_certificate_rows', '0')}\n"
     f"- v53_foundation_machine_freeze_ready={v53t.get('foundation_machine_freeze_ready', '0')}\n"
@@ -2448,6 +2506,9 @@ manifest = {
     "pm_roadmap_requirement_rows": len(pm_roadmap_rows),
     "pm_roadmap_ready_rows": pm_ready_rows,
     "pm_roadmap_blocked_rows": pm_blocked_rows,
+    "pm_roadmap_milestone_rows": pm_roadmap_milestone_row_count,
+    "pm_roadmap_milestone_ready_rows": pm_roadmap_milestone_ready_rows,
+    "pm_roadmap_milestone_blocked_rows": pm_roadmap_milestone_blocked_rows,
     "pm_foundation_ready": pm_foundation_ready,
     "v53_foundation_freeze_certificate_rows": as_int(v53t, "foundation_freeze_certificate_rows"),
     "v53_foundation_machine_freeze_ready": as_int(v53t, "foundation_machine_freeze_ready"),
@@ -2538,6 +2599,7 @@ manifest = {
     "slice_ids": slice_ids,
     "source_summary_rows_sha256": sha256(run_dir / "source_summary_rows.csv"),
     "pm_roadmap_requirement_rows_sha256": sha256(run_dir / "pm_roadmap_requirement_rows.csv"),
+    "pm_roadmap_milestone_rows_sha256": sha256(run_dir / "pm_roadmap_milestone_rows.csv"),
     "pm_pr_claim_boundary_rows_sha256": sha256(run_dir / "pm_pr_claim_boundary_rows.csv"),
     "pm_pr_review_packet_rows_sha256": sha256(run_dir / "pm_pr_review_packet_rows.csv"),
     "pm_pr_acceptance_evidence_rows_sha256": sha256(run_dir / "pm_pr_acceptance_evidence_rows.csv"),
