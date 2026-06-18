@@ -162,6 +162,35 @@ write_csv(run_dir / "answer_row_required_schema.csv", ["field", "required", "des
 write_csv(run_dir / "citation_row_required_schema.csv", ["field", "required", "description"], [dict(zip(["field", "required", "description"], row)) for row in citation_schema_rows])
 write_csv(run_dir / "resource_row_required_schema.csv", ["field", "required", "description"], [dict(zip(["field", "required", "description"], row)) for row in resource_schema_rows])
 
+answer_template_fieldnames = [
+    "answer_id",
+    "system_id",
+    "query_id",
+    "owner_repo",
+    "audit_type",
+    "expected_behavior",
+    "required_for_core_close",
+    "answer_text",
+    "answer_text_sha256",
+    "predicted_behavior",
+    "abstained",
+    "resource_row_id",
+    "status",
+]
+resource_template_fieldnames = [
+    "resource_row_id",
+    "answer_id",
+    "system_id",
+    "query_id",
+    "latency_ms",
+    "input_tokens_or_bytes",
+    "output_tokens_or_bytes",
+    "external_model_used",
+    "model_name",
+    "hardware_or_endpoint",
+    "status",
+]
+
 answer_template_rows = []
 resource_template_rows = []
 for system_id, _, requirement, _ in SYSTEMS:
@@ -200,8 +229,8 @@ for system_id, _, requirement, _ in SYSTEMS:
                 "status": "missing-supplied-resource",
             }
         )
-write_csv(run_dir / "ah_answer_row_template.csv", list(answer_template_rows[0].keys()), answer_template_rows)
-write_csv(run_dir / "ah_resource_row_template.csv", list(resource_template_rows[0].keys()), resource_template_rows)
+write_csv(run_dir / "ah_answer_row_template.csv", answer_template_fieldnames, answer_template_rows)
+write_csv(run_dir / "ah_resource_row_template.csv", resource_template_fieldnames, resource_template_rows)
 
 supplied_answer_rows = []
 supplied_citation_rows = []
@@ -308,7 +337,7 @@ for system_id, name, requirement, _ in SYSTEMS:
             "supplied_answer_rows": supplied,
             "valid_answer_rows": valid,
             "missing_valid_answer_rows": max(0, len(queries) - valid),
-            "status": "valid" if valid >= len(queries) else "missing-or-invalid",
+            "status": "valid" if len(queries) > 0 and valid >= len(queries) else "missing-or-invalid",
         }
     )
 write_csv(run_dir / "ah_supplied_validation_rows.csv", list(validation_rows[0].keys()), validation_rows)
@@ -319,9 +348,14 @@ if not validation_error_rows:
 write_csv(run_dir / "ah_validation_error_rows.csv", list(validation_error_rows[0].keys()), validation_error_rows)
 
 target_answer_rows = len(queries) * len(SYSTEMS)
-required_core_systems_ready = int(all(valid_answer_by_system.get(system_id, 0) >= len(queries) for system_id in CORE_SYSTEMS))
-optional_system_f_ready = int(valid_answer_by_system.get("F", 0) >= len(queries))
-answer_citation_resource_rows_ready = int(required_core_systems_ready and valid_citation_rows >= len(queries) * len(CORE_SYSTEMS) and valid_resource_rows >= len(queries) * len(CORE_SYSTEMS))
+required_core_systems_ready = int(len(queries) > 0 and all(valid_answer_by_system.get(system_id, 0) >= len(queries) for system_id in CORE_SYSTEMS))
+optional_system_f_ready = int(len(queries) > 0 and valid_answer_by_system.get("F", 0) >= len(queries))
+answer_citation_resource_rows_ready = int(
+    len(queries) > 0
+    and required_core_systems_ready
+    and valid_citation_rows >= len(queries) * len(CORE_SYSTEMS)
+    and valid_resource_rows >= len(queries) * len(CORE_SYSTEMS)
+)
 supplied_dir_present = int(supplied_dir is not None)
 
 summary = {
@@ -352,7 +386,7 @@ summary = {
 write_csv(summary_csv, list(summary.keys()), [summary])
 
 decision_rows = [
-    ("answer-citation-resource-intake-schema", "pass", "A-H answer/citation/resource schemas and templates are emitted"),
+    ("answer-citation-resource-intake-schema", "pass", "A-H answer/citation/resource schemas are emitted; templates require a frozen query input"),
     ("frozen-v53e-query-input", "pass" if summary["v53e_canary_query_scale_ready"] else "blocked", f"frozen_query_rows={len(queries)}"),
     ("a-h-system-target-matrix", "pass", f"target_system_count={len(SYSTEMS)}; target_answer_rows={target_answer_rows}"),
     ("supplied-a-h-answer-rows", "pass" if required_core_systems_ready else "blocked", f"valid_answer_rows={valid_answer_rows}; required_core_systems_ready={required_core_systems_ready}"),

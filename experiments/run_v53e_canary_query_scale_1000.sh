@@ -146,71 +146,114 @@ for row in seed_queries:
     seeds_by_family[row["audit_type"]].append(row)
     seeds_by_repo[row["owner_repo"]].append(row)
 
+query_fieldnames = [
+    "query_id",
+    "parent_query_id",
+    "variant_id",
+    "repo_id",
+    "owner_repo",
+    "head_sha",
+    "audit_type",
+    "question",
+    "expected_behavior",
+    "expected_answer",
+    "expected_answer_sha256",
+    "source_span_id",
+    "parent_source_span_id",
+    "source_span_required",
+    "source_path",
+    "source_line_start",
+    "source_line_end",
+    "source_file_sha256",
+    "source_snapshot_scope",
+    "negative_or_abstain",
+    "scale_scope",
+]
+span_fieldnames = [
+    "source_span_id",
+    "query_id",
+    "parent_source_span_id",
+    "parent_query_id",
+    "repo_id",
+    "owner_repo",
+    "head_sha",
+    "path",
+    "line_start",
+    "line_end",
+    "evidence_text",
+    "evidence_text_sha256",
+    "source_file_sha256",
+    "local_relpath",
+    "source_snapshot_scope",
+]
+repo_fieldnames = ["owner_repo", "scaled_query_rows", "minimum_expected_rows", "status"]
+
 query_rows = []
 span_rows = []
 query_index = 1
 family_variant_counts = Counter()
 
-for family, target in TARGET_FAMILY_ROWS.items():
-    family_seeds = seeds_by_family.get(family) or seed_queries
-    for local_idx in range(target):
-        seed = family_seeds[local_idx % len(family_seeds)]
-        source_span = seed_spans[seed["source_span_id"]]
-        query_id = f"v53e_{query_index:04d}"
-        span_id = f"{query_id}_span_001"
-        variant_id = local_idx + 1
-        family_variant_counts[family] += 1
-        expected_behavior = "abstain" if family in NEGATIVE_FAMILIES else "answer-with-citation"
-        question = abstain_question(family, seed, variant_id) if family in NEGATIVE_FAMILIES else supported_question(family, seed, variant_id)
-        expected_answer = expected_for(family, seed, source_span, variant_id)
-        query_rows.append(
-            {
-                "query_id": query_id,
-                "parent_query_id": seed["query_id"],
-                "variant_id": variant_id,
-                "repo_id": seed["repo_id"],
-                "owner_repo": seed["owner_repo"],
-                "head_sha": seed["head_sha"],
-                "audit_type": family,
-                "question": question,
-                "expected_behavior": expected_behavior,
-                "expected_answer": expected_answer,
-                "expected_answer_sha256": sha256_text(expected_answer),
-                "source_span_id": span_id,
-                "parent_source_span_id": seed["source_span_id"],
-                "source_span_required": 1,
-                "source_path": seed["source_path"],
-                "source_line_start": seed["source_line_start"],
-                "source_line_end": seed["source_line_end"],
-                "source_file_sha256": seed["source_file_sha256"],
-                "source_snapshot_scope": "canary",
-                "negative_or_abstain": int(family in NEGATIVE_FAMILIES),
-                "scale_scope": "v53e-canary-1000",
-            }
-        )
-        span_rows.append(
-            {
-                "source_span_id": span_id,
-                "query_id": query_id,
-                "parent_source_span_id": source_span["source_span_id"],
-                "parent_query_id": source_span["query_id"],
-                "repo_id": source_span["repo_id"],
-                "owner_repo": source_span["owner_repo"],
-                "head_sha": source_span["head_sha"],
-                "path": source_span["path"],
-                "line_start": source_span["line_start"],
-                "line_end": source_span["line_end"],
-                "evidence_text": source_span["evidence_text"],
-                "evidence_text_sha256": source_span["evidence_text_sha256"],
-                "source_file_sha256": source_span["source_file_sha256"],
-                "local_relpath": source_span["local_relpath"],
-                "source_snapshot_scope": "canary",
-            }
-        )
-        query_index += 1
+if seed_queries:
+    for family, target in TARGET_FAMILY_ROWS.items():
+        family_seeds = seeds_by_family.get(family) or seed_queries
+        for local_idx in range(target):
+            seed = family_seeds[local_idx % len(family_seeds)]
+            source_span = seed_spans[seed["source_span_id"]]
+            query_id = f"v53e_{query_index:04d}"
+            span_id = f"{query_id}_span_001"
+            variant_id = local_idx + 1
+            family_variant_counts[family] += 1
+            expected_behavior = "abstain" if family in NEGATIVE_FAMILIES else "answer-with-citation"
+            question = abstain_question(family, seed, variant_id) if family in NEGATIVE_FAMILIES else supported_question(family, seed, variant_id)
+            expected_answer = expected_for(family, seed, source_span, variant_id)
+            query_rows.append(
+                {
+                    "query_id": query_id,
+                    "parent_query_id": seed["query_id"],
+                    "variant_id": variant_id,
+                    "repo_id": seed["repo_id"],
+                    "owner_repo": seed["owner_repo"],
+                    "head_sha": seed["head_sha"],
+                    "audit_type": family,
+                    "question": question,
+                    "expected_behavior": expected_behavior,
+                    "expected_answer": expected_answer,
+                    "expected_answer_sha256": sha256_text(expected_answer),
+                    "source_span_id": span_id,
+                    "parent_source_span_id": seed["source_span_id"],
+                    "source_span_required": 1,
+                    "source_path": seed["source_path"],
+                    "source_line_start": seed["source_line_start"],
+                    "source_line_end": seed["source_line_end"],
+                    "source_file_sha256": seed["source_file_sha256"],
+                    "source_snapshot_scope": "canary",
+                    "negative_or_abstain": int(family in NEGATIVE_FAMILIES),
+                    "scale_scope": "v53e-canary-1000",
+                }
+            )
+            span_rows.append(
+                {
+                    "source_span_id": span_id,
+                    "query_id": query_id,
+                    "parent_source_span_id": source_span["source_span_id"],
+                    "parent_query_id": source_span["query_id"],
+                    "repo_id": source_span["repo_id"],
+                    "owner_repo": source_span["owner_repo"],
+                    "head_sha": source_span["head_sha"],
+                    "path": source_span["path"],
+                    "line_start": source_span["line_start"],
+                    "line_end": source_span["line_end"],
+                    "evidence_text": source_span["evidence_text"],
+                    "evidence_text_sha256": source_span["evidence_text_sha256"],
+                    "source_file_sha256": source_span["source_file_sha256"],
+                    "local_relpath": source_span["local_relpath"],
+                    "source_snapshot_scope": "canary",
+                }
+            )
+            query_index += 1
 
-write_csv(run_dir / "scaled_canary_query_rows.csv", list(query_rows[0].keys()), query_rows)
-write_csv(run_dir / "scaled_canary_source_span_rows.csv", list(span_rows[0].keys()), span_rows)
+write_csv(run_dir / "scaled_canary_query_rows.csv", query_fieldnames, query_rows)
+write_csv(run_dir / "scaled_canary_source_span_rows.csv", span_fieldnames, span_rows)
 
 repo_counts = Counter(row["owner_repo"] for row in query_rows)
 family_counts = Counter(row["audit_type"] for row in query_rows)
@@ -242,7 +285,7 @@ repo_rows = [
     }
     for owner_repo in sorted(repo_counts)
 ]
-write_csv(run_dir / "scaled_canary_query_repo_rows.csv", list(repo_rows[0].keys()), repo_rows)
+write_csv(run_dir / "scaled_canary_query_repo_rows.csv", repo_fieldnames, repo_rows)
 
 target_query_rows = 1000
 query_rows_count = len(query_rows)
@@ -280,7 +323,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decision_rows = [
     ("canary-query-scale", "pass" if v53e_ready else "blocked", f"query_rows={query_rows_count}; source_span_rows={source_span_rows}; repo_count={repo_count}; family_count={family_count}"),
     ("query-count-target", "pass" if query_rows_count >= target_query_rows else "blocked", f"need >=1000 query rows; have {query_rows_count}; missing {missing_query_rows}"),
-    ("source-span-binding", "pass" if source_span_rows == query_rows_count else "blocked", f"source_span_rows={source_span_rows}"),
+    ("source-span-binding", "pass" if query_rows_count > 0 and source_span_rows == query_rows_count else "blocked", f"query_rows={query_rows_count}; source_span_rows={source_span_rows}"),
     ("negative-abstain-target", "pass" if negative_rows >= 160 else "blocked", f"negative_abstain_rows={negative_rows}"),
     ("v53d-query-seed-input", "pass" if summary["v53d_canary_query_seed_ready"] else "blocked", "uses v53d canary query seeds"),
     ("full-source-snapshot-scale", "blocked", f"full snapshots still missing for {summary['full_source_snapshot_missing_repo_count']} repos"),

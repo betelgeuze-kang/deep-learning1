@@ -39,6 +39,72 @@ summary_rows = read_csv(summary_csv)
 if len(summary_rows) != 1:
     raise SystemExit(f"expected one v53c summary row, got {len(summary_rows)}")
 summary = summary_rows[0]
+if summary.get("v53c_canary_source_snapshot_ready") == "0":
+    if summary.get("v53_ready") != "0" or summary.get("locked_repo_count") != "10":
+        raise SystemExit("v53c blocked path should preserve repo-lock and v53 boundary")
+    if summary.get("canary_repo_count") != "0" or summary.get("canary_file_rows") != "0":
+        raise SystemExit("v53c blocked path should not fabricate canary source rows")
+    if int(summary.get("fetch_error_rows", "0")) <= 0:
+        raise SystemExit("v53c blocked path should record fetch errors")
+    if summary.get("missing_query_rows") != "991" or summary.get("real_release_package_ready") != "0":
+        raise SystemExit("v53c blocked path summary mismatch")
+
+    decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+    if decisions.get("repo-lock-input") != "pass":
+        raise SystemExit("v53c blocked path should keep repo-lock-input pass")
+    for gate in [
+        "canary-source-snapshot",
+        "full-source-snapshot-scale",
+        "query-count-target",
+        "answer-citation-resource-rows",
+        "v53-full-public-repo-audit",
+        "real-release-package",
+    ]:
+        if decisions.get(gate) != "blocked":
+            raise SystemExit(f"v53c blocked path should keep {gate} blocked")
+
+    required_files = [
+        "public_repo_canary_source_snapshot_rows.csv",
+        "public_repo_canary_status_rows.csv",
+        "public_repo_canary_fetch_error_rows.csv",
+        "V53C_PUBLIC_REPO_CANARY_SOURCE_SNAPSHOT_BOUNDARY.md",
+        "v53c_public_repo_canary_source_snapshot_manifest.json",
+        "sha256_manifest.csv",
+        "source_v53b/public_repo_10_lock_rows.csv",
+        "source_v53b/public_repo_10_query_plan_rows.csv",
+        "source_v53b/V53B_PUBLIC_REPO_10_LOCK_BOUNDARY.md",
+        "source_v53b/v53b_public_repo_10_lock_manifest.json",
+        "source_v53b/sha256_manifest.csv",
+        "source_v53b/v53b_public_repo_10_lock_summary.csv",
+    ]
+    for rel in required_files:
+        path = run_dir / rel
+        if not path.is_file() or path.stat().st_size == 0:
+            raise SystemExit(f"missing v53c blocked artifact: {rel}")
+    status_rows = read_csv(run_dir / "public_repo_canary_status_rows.csv")
+    if len(status_rows) != 10 or any(row["canary_source_snapshot_ready"] != "0" for row in status_rows):
+        raise SystemExit("v53c blocked path should write ten blocked repo status rows")
+    snapshot_rows = read_csv(run_dir / "public_repo_canary_source_snapshot_rows.csv")
+    if snapshot_rows:
+        raise SystemExit("v53c blocked path should not write canary snapshot rows")
+    fetch_rows = read_csv(run_dir / "public_repo_canary_fetch_error_rows.csv")
+    if len(fetch_rows) != int(summary["fetch_error_rows"]):
+        raise SystemExit("v53c blocked path fetch error count mismatch")
+    manifest = json.loads((run_dir / "v53c_public_repo_canary_source_snapshot_manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("v53c_canary_source_snapshot_ready") != 0 or manifest.get("v53_ready") != 0:
+        raise SystemExit("v53c blocked path manifest readiness mismatch")
+    sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+    for rel in required_files:
+        if rel == "sha256_manifest.csv":
+            continue
+        if sha_rows.get(rel) != sha256(run_dir / rel):
+            raise SystemExit(f"v53c blocked sha256 mismatch: {rel}")
+    boundary = (run_dir / "V53C_PUBLIC_REPO_CANARY_SOURCE_SNAPSHOT_BOUNDARY.md").read_text(encoding="utf-8")
+    for snippet in ["canary_repo_count=0", "canary_file_rows=0", "missing_query_rows=991", "Do not publish v53 safety/grounding superiority claims"]:
+        if snippet not in boundary:
+            raise SystemExit(f"v53c blocked boundary missing {snippet}")
+    sys.exit(0)
+
 expected = {
     "v53c_canary_source_snapshot_ready": "1",
     "v53_ready": "0",

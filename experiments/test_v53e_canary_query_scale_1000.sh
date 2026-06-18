@@ -55,6 +55,92 @@ summary_rows = read_csv(summary_csv)
 if len(summary_rows) != 1:
     raise SystemExit(f"expected one v53e summary row, got {len(summary_rows)}")
 summary = summary_rows[0]
+if summary.get("v53e_canary_query_scale_ready") == "0":
+    expected_blocked = {
+        "v53_ready": "0",
+        "query_rows": "0",
+        "source_span_rows": "0",
+        "supported_source_span_bound_rows": "0",
+        "negative_abstain_rows": "0",
+        "repo_count": "0",
+        "family_count": "0",
+        "target_query_rows_min": "1000",
+        "missing_query_rows": "1000",
+        "v53d_canary_query_seed_ready": "0",
+        "answer_citation_resource_rows_ready": "0",
+        "review_artifacts_ready": "0",
+        "real_release_package_ready": "0",
+    }
+    for field, value in expected_blocked.items():
+        if summary.get(field) != value:
+            raise SystemExit(f"v53e blocked {field}: expected {value}, got {summary.get(field)}")
+
+    decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+    for gate in [
+        "canary-query-scale",
+        "query-count-target",
+        "source-span-binding",
+        "negative-abstain-target",
+        "v53d-query-seed-input",
+        "full-source-snapshot-scale",
+        "answer-citation-resource-rows",
+        "human-review-artifacts",
+        "v53-full-public-repo-audit",
+        "real-release-package",
+    ]:
+        if decisions.get(gate) != "blocked":
+            raise SystemExit(f"v53e blocked path should keep {gate} blocked")
+
+    required_files = [
+        "scaled_canary_query_rows.csv",
+        "scaled_canary_source_span_rows.csv",
+        "scaled_canary_query_family_rows.csv",
+        "scaled_canary_query_repo_rows.csv",
+        "V53E_CANARY_QUERY_SCALE_1000_BOUNDARY.md",
+        "v53e_canary_query_scale_1000_manifest.json",
+        "sha256_manifest.csv",
+        "source_v53d/canary_query_rows.csv",
+        "source_v53d/canary_source_span_rows.csv",
+        "source_v53d/canary_query_family_rows.csv",
+        "source_v53d/canary_query_repo_rows.csv",
+        "source_v53d/V53D_CANARY_SOURCE_QUERY_SEED_BOUNDARY.md",
+        "source_v53d/v53d_canary_source_query_seed_manifest.json",
+        "source_v53d/sha256_manifest.csv",
+        "source_v53d/v53d_canary_source_query_seed_100_summary.csv",
+        "source_v53d/source_v53c/public_repo_canary_source_snapshot_rows.csv",
+        "source_v53d/source_v53c/public_repo_canary_status_rows.csv",
+        "source_v53d/source_v53c/public_repo_canary_fetch_error_rows.csv",
+        "source_v53d/source_v53c/V53C_PUBLIC_REPO_CANARY_SOURCE_SNAPSHOT_BOUNDARY.md",
+        "source_v53d/source_v53c/v53c_public_repo_canary_source_snapshot_manifest.json",
+        "source_v53d/source_v53c/sha256_manifest.csv",
+        "source_v53d/source_v53c/v53c_public_repo_canary_source_snapshot_summary.csv",
+    ]
+    for rel in required_files:
+        path = run_dir / rel
+        if not path.is_file() or path.stat().st_size == 0:
+            raise SystemExit(f"missing v53e blocked artifact: {rel}")
+    if read_csv(run_dir / "scaled_canary_query_rows.csv") or read_csv(run_dir / "scaled_canary_source_span_rows.csv"):
+        raise SystemExit("v53e blocked path should not fabricate scaled query/span rows")
+    if read_csv(run_dir / "scaled_canary_query_repo_rows.csv"):
+        raise SystemExit("v53e blocked path should not fabricate repo rows")
+    family_rows = read_csv(run_dir / "scaled_canary_query_family_rows.csv")
+    if len(family_rows) != 8 or any(row["scaled_query_rows"] != "0" for row in family_rows):
+        raise SystemExit("v53e blocked path should write eight zero scaled family rows")
+    manifest = json.loads((run_dir / "v53e_canary_query_scale_1000_manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("v53e_canary_query_scale_ready") != 0 or manifest.get("query_rows") != 0:
+        raise SystemExit("v53e blocked manifest readiness mismatch")
+    sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+    for rel in required_files:
+        if rel == "sha256_manifest.csv":
+            continue
+        if sha_rows.get(rel) != sha256(run_dir / rel):
+            raise SystemExit(f"v53e blocked sha256 mismatch: {rel}")
+    boundary = (run_dir / "V53E_CANARY_QUERY_SCALE_1000_BOUNDARY.md").read_text(encoding="utf-8")
+    for snippet in ["query_rows=0", "source_span_rows=0", "negative_abstain_rows=0", "missing_query_rows=1000"]:
+        if snippet not in boundary:
+            raise SystemExit(f"v53e blocked boundary missing {snippet}")
+    sys.exit(0)
+
 expected = {
     "v53e_canary_query_scale_ready": "1",
     "v53_ready": "0",

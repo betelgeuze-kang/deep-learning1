@@ -41,6 +41,100 @@ summary_rows = read_csv(summary_csv)
 if len(summary_rows) != 1:
     raise SystemExit(f"expected one v53f summary row, got {len(summary_rows)}")
 summary = summary_rows[0]
+if summary.get("v53e_canary_query_scale_ready") == "0":
+    expected_blocked = {
+        "v53f_ah_answer_citation_resource_intake_ready": "1",
+        "v53_ready": "0",
+        "frozen_query_rows": "0",
+        "target_system_count": "8",
+        "required_core_system_count": "7",
+        "optional_system_count": "1",
+        "target_answer_rows": "0",
+        "target_resource_rows": "0",
+        "minimum_target_citation_rows": "0",
+        "supplied_evidence_dir_present": "0",
+        "supplied_answer_rows": "0",
+        "supplied_citation_rows": "0",
+        "supplied_resource_rows": "0",
+        "valid_answer_rows": "0",
+        "valid_citation_rows": "0",
+        "valid_resource_rows": "0",
+        "required_core_systems_ready": "0",
+        "optional_system_f_ready": "0",
+        "answer_citation_resource_rows_ready": "0",
+        "complete_source_snapshot_ready": "0",
+        "review_artifacts_ready": "0",
+        "real_release_package_ready": "0",
+    }
+    for field, value in expected_blocked.items():
+        if summary.get(field) != value:
+            raise SystemExit(f"v53f blocked {field}: expected {value}, got {summary.get(field)}")
+
+    decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+    for gate in ["answer-citation-resource-intake-schema", "a-h-system-target-matrix"]:
+        if decisions.get(gate) != "pass":
+            raise SystemExit(f"v53f blocked path should keep schema gate pass: {gate}")
+    for gate in [
+        "frozen-v53e-query-input",
+        "supplied-a-h-answer-rows",
+        "source-citation-coverage",
+        "resource-measurement-coverage",
+        "full-source-snapshot-scale",
+        "human-review-artifacts",
+        "v53-full-public-repo-audit",
+        "real-release-package",
+    ]:
+        if decisions.get(gate) != "blocked":
+            raise SystemExit(f"v53f blocked path should keep {gate} blocked")
+
+    required_files = [
+        "ah_system_target_rows.csv",
+        "answer_row_required_schema.csv",
+        "citation_row_required_schema.csv",
+        "resource_row_required_schema.csv",
+        "ah_answer_row_template.csv",
+        "ah_resource_row_template.csv",
+        "ah_supplied_validation_rows.csv",
+        "ah_validation_error_rows.csv",
+        "V53F_AH_ANSWER_CITATION_RESOURCE_INTAKE_BOUNDARY.md",
+        "v53f_ah_answer_citation_resource_intake_manifest.json",
+        "sha256_manifest.csv",
+        "source_v53e/scaled_canary_query_rows.csv",
+        "source_v53e/scaled_canary_source_span_rows.csv",
+        "source_v53e/scaled_canary_query_family_rows.csv",
+        "source_v53e/scaled_canary_query_repo_rows.csv",
+        "source_v53e/V53E_CANARY_QUERY_SCALE_1000_BOUNDARY.md",
+        "source_v53e/v53e_canary_query_scale_1000_manifest.json",
+        "source_v53e/sha256_manifest.csv",
+        "source_v53e/v53e_canary_query_scale_1000_summary.csv",
+    ]
+    for rel in required_files:
+        path = run_dir / rel
+        if not path.is_file() or path.stat().st_size == 0:
+            raise SystemExit(f"missing v53f blocked artifact: {rel}")
+    system_rows = read_csv(run_dir / "ah_system_target_rows.csv")
+    if len(system_rows) != 8 or {row["system_id"] for row in system_rows} != SYSTEM_IDS:
+        raise SystemExit("v53f blocked path should still emit A-H target schema rows")
+    if read_csv(run_dir / "ah_answer_row_template.csv") or read_csv(run_dir / "ah_resource_row_template.csv"):
+        raise SystemExit("v53f blocked path should not fabricate answer/resource templates without frozen queries")
+    validation_rows = read_csv(run_dir / "ah_supplied_validation_rows.csv")
+    if len(validation_rows) != 8 or any(row["status"] != "missing-or-invalid" for row in validation_rows):
+        raise SystemExit("v53f blocked path should keep validation rows missing")
+    manifest = json.loads((run_dir / "v53f_ah_answer_citation_resource_intake_manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("v53f_ah_answer_citation_resource_intake_ready") != 1 or manifest.get("frozen_query_rows") != 0:
+        raise SystemExit("v53f blocked manifest readiness mismatch")
+    sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+    for rel in required_files:
+        if rel == "sha256_manifest.csv":
+            continue
+        if sha_rows.get(rel) != sha256(run_dir / rel):
+            raise SystemExit(f"v53f blocked sha256 mismatch: {rel}")
+    boundary = (run_dir / "V53F_AH_ANSWER_CITATION_RESOURCE_INTAKE_BOUNDARY.md").read_text(encoding="utf-8")
+    for snippet in ["frozen_query_rows=0", "target_answer_rows=0", "valid_answer_rows=0", "answer_citation_resource_rows_ready=0"]:
+        if snippet not in boundary:
+            raise SystemExit(f"v53f blocked boundary missing {snippet}")
+    sys.exit(0)
+
 expected = {
     "v53f_ah_answer_citation_resource_intake_ready": "1",
     "v53_ready": "0",

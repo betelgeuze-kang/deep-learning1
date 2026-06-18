@@ -233,6 +233,8 @@ copy(results / "v53f_ah_answer_citation_resource_intake_summary.csv", "source_v5
 
 lock_rows = read_csv(v53b_dir / "public_repo_10_lock_rows.csv")
 canary_rows = read_csv(v53c_dir / "public_repo_canary_source_snapshot_rows.csv")
+v53c_summary = read_csv(results / "v53c_public_repo_canary_source_snapshot_summary.csv")[0]
+v53c_canary_source_snapshot_ready = int(v53c_summary.get("v53c_canary_source_snapshot_ready", "0"))
 canary_keys = {(row["owner_repo"], row["path"]) for row in canary_rows}
 
 file_rows = []
@@ -406,16 +408,24 @@ tree_truncated_repo_count = sum(int(row["tree_truncated"]) for row in repo_rows)
 included_file_rows = len(file_rows)
 query_eligible_file_rows = sum(int(row["query_eligible"]) for row in file_rows)
 canary_overlap_file_rows = sum(int(row["canary_overlap"]) for row in file_rows)
+canary_overlap_binding_ready = int(
+    v53c_canary_source_snapshot_ready == 1
+    and len(canary_rows) >= 20
+    and canary_overlap_file_rows >= 20
+)
 planned_query_rows = sum(int(row["target_query_rows"]) for row in query_budget_rows)
 query_budget_ready_rows = sum(int(row["complete_source_query_budget_ready"]) for row in query_budget_rows)
 category_counts = Counter(row["source_category"] for row in file_rows)
-complete_source_manifest_ready = int(
+complete_source_tree_manifest_ready = int(
     repo_count >= 10
     and manifest_ready_repo_count >= 10
     and tree_truncated_repo_count == 0
     and included_file_rows >= 100
     and query_eligible_file_rows >= TARGET_QUERY_ROWS
-    and canary_overlap_file_rows >= min(20, len(canary_rows))
+)
+complete_source_manifest_ready = int(
+    complete_source_tree_manifest_ready == 1
+    and canary_overlap_binding_ready == 1
     and planned_query_rows >= TARGET_QUERY_ROWS
     and query_budget_ready_rows == len(QUERY_FAMILIES)
 )
@@ -428,6 +438,7 @@ summary = {
     "complete_tree_manifest_ready_repo_count": manifest_ready_repo_count,
     "tree_truncated_repo_count": tree_truncated_repo_count,
     "fetch_error_rows": len(fetch_error_rows),
+    "v53c_canary_source_snapshot_ready": v53c_canary_source_snapshot_ready,
     "included_file_rows": included_file_rows,
     "query_eligible_file_rows": query_eligible_file_rows,
     "source_file_rows": category_counts.get("source", 0),
@@ -435,6 +446,7 @@ summary = {
     "config_file_rows": category_counts.get("config", 0),
     "test_file_rows": category_counts.get("test", 0),
     "canary_overlap_file_rows": canary_overlap_file_rows,
+    "canary_overlap_binding_ready": canary_overlap_binding_ready,
     "target_query_rows_min": TARGET_QUERY_ROWS,
     "planned_query_rows": planned_query_rows,
     "query_budget_rows": len(query_budget_rows),
@@ -449,8 +461,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 
 decision_rows = [
     ("repo-lock-input", "pass" if len(lock_rows) >= 10 else "blocked", f"locked_repo_count={len(lock_rows)}"),
-    ("canary-overlap-binding", "pass" if canary_overlap_file_rows >= min(20, len(canary_rows)) else "blocked", f"canary_overlap_file_rows={canary_overlap_file_rows}"),
-    ("complete-source-tree-manifest", "pass" if complete_source_manifest_ready else "blocked", f"repo_count={repo_count}; included_file_rows={included_file_rows}; tree_truncated_repo_count={tree_truncated_repo_count}"),
+    ("canary-overlap-binding", "pass" if canary_overlap_binding_ready else "blocked", f"v53c_canary_source_snapshot_ready={v53c_canary_source_snapshot_ready}; canary_rows={len(canary_rows)}; canary_overlap_file_rows={canary_overlap_file_rows}"),
+    ("complete-source-tree-manifest", "pass" if complete_source_tree_manifest_ready else "blocked", f"repo_count={repo_count}; included_file_rows={included_file_rows}; tree_truncated_repo_count={tree_truncated_repo_count}"),
     ("complete-source-query-budget", "pass" if query_budget_ready_rows == len(QUERY_FAMILIES) and planned_query_rows >= TARGET_QUERY_ROWS else "blocked", f"planned_query_rows={planned_query_rows}; ready_families={query_budget_ready_rows}"),
     ("complete-source-content-materialization", "blocked", "content bytes and content sha256 rows are intentionally not materialized by v53g"),
     ("complete-source-query-instantiation", "blocked", "v53g emits a query budget, not complete-source query rows"),
@@ -470,7 +482,9 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- included_file_rows={included_file_rows}\n"
     f"- query_eligible_file_rows={query_eligible_file_rows}\n"
     f"- planned_query_rows={planned_query_rows}\n"
+    f"- v53c_canary_source_snapshot_ready={v53c_canary_source_snapshot_ready}\n"
     f"- canary_overlap_file_rows={canary_overlap_file_rows}\n"
+    f"- canary_overlap_binding_ready={canary_overlap_binding_ready}\n"
     f"- complete_source_content_snapshot_ready=0\n"
     f"- complete_source_query_rows_ready=0\n"
     f"- ah_answer_citation_resource_rows_ready=0\n\n"
@@ -493,6 +507,8 @@ manifest = {
     "included_file_rows": included_file_rows,
     "query_eligible_file_rows": query_eligible_file_rows,
     "planned_query_rows": planned_query_rows,
+    "v53c_canary_source_snapshot_ready": v53c_canary_source_snapshot_ready,
+    "canary_overlap_binding_ready": canary_overlap_binding_ready,
     "complete_source_content_snapshot_ready": 0,
     "complete_source_query_rows_ready": 0,
     "ah_answer_citation_resource_rows_ready": 0,

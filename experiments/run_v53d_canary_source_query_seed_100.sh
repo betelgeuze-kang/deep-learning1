@@ -142,6 +142,39 @@ by_repo = {}
 for row in snapshot_rows:
     by_repo.setdefault(row["owner_repo"], []).append(row)
 
+query_fieldnames = [
+    "query_id",
+    "repo_id",
+    "owner_repo",
+    "head_sha",
+    "audit_type",
+    "question",
+    "expected_answer",
+    "expected_answer_sha256",
+    "source_span_id",
+    "source_path",
+    "source_line_start",
+    "source_line_end",
+    "source_file_sha256",
+    "source_snapshot_scope",
+    "negative_or_abstain",
+]
+span_fieldnames = [
+    "source_span_id",
+    "query_id",
+    "repo_id",
+    "owner_repo",
+    "head_sha",
+    "path",
+    "line_start",
+    "line_end",
+    "evidence_text",
+    "evidence_text_sha256",
+    "source_file_sha256",
+    "local_relpath",
+]
+repo_fieldnames = ["owner_repo", "query_rows", "target_seed_rows", "status"]
+
 query_rows = []
 span_rows = []
 family_counts = {}
@@ -206,8 +239,8 @@ for owner_repo in sorted(by_repo):
         )
         query_index += 1
 
-write_csv(run_dir / "canary_query_rows.csv", list(query_rows[0].keys()), query_rows)
-write_csv(run_dir / "canary_source_span_rows.csv", list(span_rows[0].keys()), span_rows)
+write_csv(run_dir / "canary_query_rows.csv", query_fieldnames, query_rows)
+write_csv(run_dir / "canary_source_span_rows.csv", span_fieldnames, span_rows)
 
 family_rows = []
 target_family_rows = {
@@ -245,7 +278,7 @@ repo_rows = [
     }
     for owner_repo, count in sorted(repo_query_counts.items())
 ]
-write_csv(run_dir / "canary_query_repo_rows.csv", list(repo_rows[0].keys()), repo_rows)
+write_csv(run_dir / "canary_query_repo_rows.csv", repo_fieldnames, repo_rows)
 
 query_rows_count = len(query_rows)
 source_span_rows = len(span_rows)
@@ -273,7 +306,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 
 decision_rows = [
     ("canary-query-seed", "pass" if v53d_query_seed_ready else "blocked", f"query_rows={query_rows_count}; repo_count={repo_count}"),
-    ("source-span-binding", "pass" if source_span_rows == query_rows_count else "blocked", f"source_span_rows={source_span_rows}"),
+    ("source-span-binding", "pass" if query_rows_count > 0 and source_span_rows == query_rows_count else "blocked", f"query_rows={query_rows_count}; source_span_rows={source_span_rows}"),
     ("v53c-source-input", "pass" if summary["v53c_canary_source_snapshot_ready"] else "blocked", "uses v53c canary source snapshots"),
     ("query-count-target", "blocked", f"need >=1000 query rows; have {query_rows_count}; missing {missing_query_rows}"),
     ("negative-abstain-target", "blocked", "negative/abstain query families are still not seeded from canary source"),

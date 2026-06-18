@@ -40,6 +40,114 @@ if len(summary_rows) != 1:
     raise SystemExit(f"expected one v53g summary row, got {len(summary_rows)}")
 summary = summary_rows[0]
 
+if summary.get("v53g_complete_source_manifest_ready") == "0":
+    expected_blocked = {
+        "v53_ready": "0",
+        "locked_repo_count": "10",
+        "complete_manifest_repo_count": "10",
+        "complete_tree_manifest_ready_repo_count": "10",
+        "tree_truncated_repo_count": "0",
+        "v53c_canary_source_snapshot_ready": "0",
+        "canary_overlap_file_rows": "0",
+        "canary_overlap_binding_ready": "0",
+        "target_query_rows_min": "1000",
+        "planned_query_rows": "1000",
+        "query_budget_rows": "8",
+        "query_budget_ready_rows": "8",
+        "complete_source_content_snapshot_ready": "0",
+        "complete_source_query_rows_ready": "0",
+        "ah_answer_citation_resource_rows_ready": "0",
+        "review_artifacts_ready": "0",
+        "real_release_package_ready": "0",
+    }
+    for field, value in expected_blocked.items():
+        if summary.get(field) != value:
+            raise SystemExit(f"v53g blocked {field}: expected {value}, got {summary.get(field)}")
+    for field, minimum in {
+        "included_file_rows": 100,
+        "query_eligible_file_rows": 1000,
+        "source_file_rows": 1,
+        "doc_file_rows": 1,
+        "config_file_rows": 1,
+    }.items():
+        if int(summary.get(field, "0")) < minimum:
+            raise SystemExit(f"v53g blocked {field}: expected >= {minimum}, got {summary.get(field)}")
+
+    decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+    for gate in ["repo-lock-input", "complete-source-tree-manifest", "complete-source-query-budget"]:
+        if decisions.get(gate) != "pass":
+            raise SystemExit(f"v53g blocked path should keep {gate} pass")
+    for gate in [
+        "canary-overlap-binding",
+        "complete-source-content-materialization",
+        "complete-source-query-instantiation",
+        "supplied-a-h-answer-rows",
+        "human-review-artifacts",
+        "v53-full-public-repo-audit",
+        "real-release-package",
+    ]:
+        if decisions.get(gate) != "blocked":
+            raise SystemExit(f"v53g blocked path should keep {gate} blocked")
+
+    required_files = [
+        "complete_source_file_manifest_rows.csv",
+        "complete_source_repo_coverage_rows.csv",
+        "complete_source_query_budget_rows.csv",
+        "complete_source_gap_rows.csv",
+        "complete_source_fetch_error_rows.csv",
+        "V53G_COMPLETE_SOURCE_MANIFEST_BOUNDARY.md",
+        "v53g_complete_source_manifest_manifest.json",
+        "sha256_manifest.csv",
+        "source_v53b/public_repo_10_lock_rows.csv",
+        "source_v53b/public_repo_10_query_plan_rows.csv",
+        "source_v53b/V53B_PUBLIC_REPO_10_LOCK_BOUNDARY.md",
+        "source_v53b/v53b_public_repo_10_lock_manifest.json",
+        "source_v53b/sha256_manifest.csv",
+        "source_v53b/v53b_public_repo_10_lock_summary.csv",
+        "source_v53c/public_repo_canary_source_snapshot_rows.csv",
+        "source_v53c/public_repo_canary_status_rows.csv",
+        "source_v53c/public_repo_canary_fetch_error_rows.csv",
+        "source_v53c/V53C_PUBLIC_REPO_CANARY_SOURCE_SNAPSHOT_BOUNDARY.md",
+        "source_v53c/v53c_public_repo_canary_source_snapshot_manifest.json",
+        "source_v53c/sha256_manifest.csv",
+        "source_v53c/v53c_public_repo_canary_source_snapshot_summary.csv",
+        "source_v53f/ah_system_target_rows.csv",
+        "source_v53f/answer_row_required_schema.csv",
+        "source_v53f/citation_row_required_schema.csv",
+        "source_v53f/resource_row_required_schema.csv",
+        "source_v53f/ah_answer_row_template.csv",
+        "source_v53f/ah_resource_row_template.csv",
+        "source_v53f/ah_supplied_validation_rows.csv",
+        "source_v53f/ah_validation_error_rows.csv",
+        "source_v53f/V53F_AH_ANSWER_CITATION_RESOURCE_INTAKE_BOUNDARY.md",
+        "source_v53f/v53f_ah_answer_citation_resource_intake_manifest.json",
+        "source_v53f/sha256_manifest.csv",
+        "source_v53f/v53f_ah_answer_citation_resource_intake_summary.csv",
+    ]
+    for rel in required_files:
+        path = run_dir / rel
+        if not path.is_file() or path.stat().st_size == 0:
+            raise SystemExit(f"missing v53g blocked artifact: {rel}")
+    manifest = json.loads((run_dir / "v53g_complete_source_manifest_manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("v53g_complete_source_manifest_ready") != 0 or manifest.get("canary_overlap_binding_ready") != 0:
+        raise SystemExit("v53g blocked manifest readiness mismatch")
+    sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+    for rel in required_files:
+        if rel == "sha256_manifest.csv":
+            continue
+        if sha_rows.get(rel) != sha256(run_dir / rel):
+            raise SystemExit(f"v53g blocked sha256 mismatch: {rel}")
+    boundary = (run_dir / "V53G_COMPLETE_SOURCE_MANIFEST_BOUNDARY.md").read_text(encoding="utf-8")
+    for snippet in [
+        "v53c_canary_source_snapshot_ready=0",
+        "canary_overlap_file_rows=0",
+        "canary_overlap_binding_ready=0",
+        "Do not publish v53 safety/grounding superiority",
+    ]:
+        if snippet not in boundary:
+            raise SystemExit(f"v53g blocked boundary missing {snippet}")
+    sys.exit(0)
+
 expected_exact = {
     "v53g_complete_source_manifest_ready": "1",
     "v53_ready": "0",
@@ -47,6 +155,8 @@ expected_exact = {
     "complete_manifest_repo_count": "10",
     "complete_tree_manifest_ready_repo_count": "10",
     "tree_truncated_repo_count": "0",
+    "v53c_canary_source_snapshot_ready": "1",
+    "canary_overlap_binding_ready": "1",
     "target_query_rows_min": "1000",
     "planned_query_rows": "1000",
     "query_budget_rows": "8",
