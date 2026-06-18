@@ -34,6 +34,179 @@ done
 
 if [ "${#missing_contract_files[@]}" -gt 0 ] || [ "${V56B_FORCE_CONTRACT_REBUILD:-0}" = "1" ]; then
   if [ "${V56B_ALLOW_CONTRACT_REBUILD:-0}" != "1" ]; then
+    rm -rf "$RUN_DIR"
+    mkdir -p "$RUN_DIR"
+    python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "${missing_contract_files[@]}" <<'PY'
+import csv
+import hashlib
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+summary_csv = Path(sys.argv[2])
+decision_csv = Path(sys.argv[3])
+missing_paths = [Path(path) for path in sys.argv[4:]]
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def write_csv(path, fieldnames, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def dependency_stage(path):
+    text = str(path)
+    if "v56_ruler_longbench_expanded_contract" in text:
+        return "v56-expanded-benchmark-contract"
+    if "v49_ruler_niah_200_500_scale" in text:
+        return "v49-ruler-seed"
+    if "v45_longbench_v2_small_slice" in text:
+        return "v45-longbench-seed"
+    return "unknown-v56b-dependency"
+
+
+fieldnames = [
+    "missing_contract_artifact",
+    "dependency_stage",
+    "required_for",
+    "implicit_rebuild_allowed",
+    "approval_required",
+    "network_or_download_risk",
+    "fixture_allowed",
+    "tests_only_merge_condition",
+    "claim_boundary_status",
+    "validation_command",
+]
+rows = [
+    {
+        "missing_contract_artifact": str(path),
+        "dependency_stage": dependency_stage(path),
+        "required_for": "v56b-ruler-longbench-expanded-scale",
+        "implicit_rebuild_allowed": "0",
+        "approval_required": "1",
+        "network_or_download_risk": "1",
+        "fixture_allowed": "0",
+        "tests_only_merge_condition": "0",
+        "claim_boundary_status": "blocked-until-v56-contract-artifacts-present",
+        "validation_command": "V56B_ALLOW_CONTRACT_REBUILD=1 ./experiments/test_v56b_ruler_longbench_expanded_scale.sh",
+    }
+    for path in missing_paths
+]
+write_csv(run_dir / "v56b_contract_dependency_blocker_rows.csv", fieldnames, rows)
+
+summary = {
+    "v56b_ruler_longbench_expanded_scale_ready": "0",
+    "v56_ruler_longbench_expanded_ready": "0",
+    "v56b_contract_dependency_blocker_ready": "1",
+    "missing_contract_artifact_rows": str(len(rows)),
+    "implicit_contract_rebuild_allowed": "0",
+    "contract_rebuild_approval_required": "1",
+    "seed_rebuild_approval_required": "1",
+    "network_or_download_approval_required": "1",
+    "benchmark_family_rows": "0",
+    "target_total_rows": "1500",
+    "prediction_rows": "0",
+    "lineage_rows": "0",
+    "candidate_rows": "0",
+    "resource_rows": "0",
+    "ruler_rows": "0",
+    "longbench_rows": "0",
+    "missing_total_rows": "1500",
+    "official_source_hash_bound": "0",
+    "official_evaluator_hash_bound": "0",
+    "oracle_prediction_used": "0",
+    "raw_input_extractor_used": "0",
+    "route_memory_prediction_lineage_ready": "0",
+    "llm_rag_baseline_rows_ready": "0",
+    "real_external_benchmark_verified": "0",
+    "v56_contract_ready": "0",
+    "real_release_package_ready": "0",
+}
+write_csv(summary_csv, list(summary.keys()), [summary])
+
+decision_rows = [
+    {
+        "gate": "v56b-contract-dependency-blocker",
+        "status": "pass",
+        "reason": f"missing_contract_artifact_rows={len(rows)}; implicit rebuild refused",
+    },
+    {
+        "gate": "implicit-contract-rebuild",
+        "status": "blocked",
+        "reason": "V56B_ALLOW_CONTRACT_REBUILD=1 is required before v56/v49/v45 regeneration",
+    },
+    {
+        "gate": "v56b-expanded-benchmark-scale",
+        "status": "blocked",
+        "reason": "contract artifacts are missing, so v56b scale artifacts are not claimed ready",
+    },
+    {
+        "gate": "real-external-benchmark",
+        "status": "blocked",
+        "reason": "no independent external benchmark verification is present",
+    },
+    {
+        "gate": "real-release-package",
+        "status": "blocked",
+        "reason": "v56b dependency blocker is not a release package",
+    },
+]
+write_csv(decision_csv, list(decision_rows[0].keys()), decision_rows)
+
+(run_dir / "V56B_RULER_LONGBENCH_CONTRACT_DEPENDENCY_BLOCKER.md").write_text(
+    "# v56b RULER/LongBench Contract Dependency Blocker\n\n"
+    "The v56b expanded benchmark scale did not run because required v56 contract artifacts are missing. "
+    "The script refuses implicit v56/v49/v45 regeneration so that network/download, seed, benchmark-protocol, and artifact-contract changes cannot happen silently.\n\n"
+    f"- missing_contract_artifact_rows={len(rows)}\n"
+    "- implicit_contract_rebuild_allowed=0\n"
+    "- contract_rebuild_approval_required=1\n"
+    "- seed_rebuild_approval_required=1\n"
+    "- network_or_download_approval_required=1\n"
+    "- prediction_rows=0\n"
+    "- real_external_benchmark_verified=0\n"
+    "- real_release_package_ready=0\n\n"
+    "Allowed wording: v56b dependency blocker artifact for missing expanded-benchmark contract replay evidence.\n\n"
+    "Blocked wording: v56b expanded benchmark scale ready, public benchmark result, leaderboard claim, or v1.0 release readiness.\n",
+    encoding="utf-8",
+)
+
+manifest = {
+    "manifest_scope": "v56b-ruler-longbench-contract-dependency-blocker",
+    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    "v56b_ruler_longbench_expanded_scale_ready": 0,
+    "v56_ruler_longbench_expanded_ready": 0,
+    "v56b_contract_dependency_blocker_ready": 1,
+    "missing_contract_artifact_rows": len(rows),
+    "implicit_contract_rebuild_allowed": 0,
+    "contract_rebuild_approval_required": 1,
+    "seed_rebuild_approval_required": 1,
+    "network_or_download_approval_required": 1,
+    "real_external_benchmark_verified": 0,
+    "real_release_package_ready": 0,
+}
+(run_dir / "v56b_contract_dependency_blocker_manifest.json").write_text(
+    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+
+artifact_rows = []
+for path in sorted(run_dir.rglob("*")):
+    if path.is_file() and path.name != "sha256_manifest.csv":
+        artifact_rows.append({"path": str(path.relative_to(run_dir)), "sha256": sha256(path), "bytes": path.stat().st_size})
+write_csv(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], artifact_rows)
+PY
     {
       echo "v56 contract artifacts are missing or rebuild was requested; refusing implicit v56/v49/v45 regeneration."
       echo "Run the v56 contract explicitly, or set V56B_ALLOW_CONTRACT_REBUILD=1 after approving the regeneration budget."
