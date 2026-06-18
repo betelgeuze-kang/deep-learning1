@@ -13,13 +13,13 @@ EVIDENCE_DIR="${V58C_BLIND_RESPONSE_EVIDENCE_DIR:-}"
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-if [[ "${V58C_REUSE_EXISTING:-1}" != "1" || ! -s "$RESULTS_DIR/v58b_blind_eval_candidate_500_summary.csv" ]]; then
+if [[ "${V58C_REUSE_EXISTING:-1}" != "1" || ! -s "$RESULTS_DIR/v58b_blind_eval_candidate_500_summary.csv" || ! -s "$RESULTS_DIR/v58b_blind_eval_candidate_500/candidate_001/blind_query_freeze_rows.csv" ]]; then
   set +e
   v58b_output="$("$ROOT_DIR/experiments/run_v58b_blind_eval_candidate_500.sh" 2>&1 >/dev/null)"
   v58b_status=$?
   set -e
-  if [[ "$v58b_status" -ne 0 ]]; then
-    python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$v58b_status" "$v58b_output" <<'PY'
+  if [[ "$v58b_status" -ne 0 || ! -s "$RESULTS_DIR/v58b_blind_eval_candidate_500/candidate_001/blind_query_freeze_rows.csv" ]]; then
+    python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$v58b_status" "$v58b_output" <<'PY'
 import csv
 import hashlib
 import json
@@ -27,11 +27,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-run_dir = Path(sys.argv[1])
-summary_csv = Path(sys.argv[2])
-decision_csv = Path(sys.argv[3])
-dependency_status = int(sys.argv[4])
-dependency_output = sys.argv[5]
+root = Path(sys.argv[1])
+run_dir = Path(sys.argv[2])
+summary_csv = Path(sys.argv[3])
+decision_csv = Path(sys.argv[4])
+dependency_status = int(sys.argv[5])
+dependency_output = sys.argv[6]
+results = root / "results"
 
 
 def sha256(path):
@@ -55,23 +57,45 @@ for line in dependency_output.splitlines():
     if line.startswith("missing_v57_artifact="):
         missing.append(line.split("=", 1)[1])
 
-rows = [
-    {
-        "missing_dependency_artifact": path,
-        "dependency_stage": "v57-domain-expert-pack-contract",
-        "required_for": "v58c-blind-response-evidence-intake",
-        "upstream_runner": "run_v58b_blind_eval_candidate_500.sh",
-        "upstream_status": str(dependency_status),
-        "implicit_rebuild_allowed": "0",
-        "approval_required": "1",
-        "network_or_download_risk": "1",
-        "fixture_allowed": "0",
-        "tests_only_merge_condition": "0",
-        "claim_boundary_status": "blocked-until-v57-v58b-seed-artifact-present",
-        "validation_command": "V58_ALLOW_V57_REBUILD=1 V58C_REUSE_EXISTING=0 ./experiments/test_v58c_blind_response_evidence_intake.sh",
-    }
-    for path in missing
-]
+rows = []
+v58b_blocker_path = results / "v58b_blind_eval_candidate_500" / "candidate_001" / "v58b_dependency_blocker_rows.csv"
+if v58b_blocker_path.is_file() and v58b_blocker_path.stat().st_size > 0:
+    with v58b_blocker_path.open(newline="", encoding="utf-8") as handle:
+        for source_row in csv.DictReader(handle):
+            rows.append(
+                {
+                    "missing_dependency_artifact": source_row.get("missing_dependency_artifact", ""),
+                    "dependency_stage": source_row.get("dependency_stage", "v58b-blind-eval-candidate"),
+                    "required_for": "v58c-blind-response-evidence-intake",
+                    "upstream_runner": "run_v58b_blind_eval_candidate_500.sh",
+                    "upstream_status": str(dependency_status),
+                    "implicit_rebuild_allowed": "0",
+                    "approval_required": "1",
+                    "network_or_download_risk": "1",
+                    "fixture_allowed": "0",
+                    "tests_only_merge_condition": "0",
+                    "claim_boundary_status": "blocked-until-v57-v58b-seed-artifact-present",
+                    "validation_command": "V58_ALLOW_V57_REBUILD=1 V58C_REUSE_EXISTING=0 ./experiments/test_v58c_blind_response_evidence_intake.sh",
+                }
+            )
+else:
+    rows = [
+        {
+            "missing_dependency_artifact": path,
+            "dependency_stage": "v57-domain-expert-pack-contract",
+            "required_for": "v58c-blind-response-evidence-intake",
+            "upstream_runner": "run_v58b_blind_eval_candidate_500.sh",
+            "upstream_status": str(dependency_status),
+            "implicit_rebuild_allowed": "0",
+            "approval_required": "1",
+            "network_or_download_risk": "1",
+            "fixture_allowed": "0",
+            "tests_only_merge_condition": "0",
+            "claim_boundary_status": "blocked-until-v57-v58b-seed-artifact-present",
+            "validation_command": "V58_ALLOW_V57_REBUILD=1 V58C_REUSE_EXISTING=0 ./experiments/test_v58c_blind_response_evidence_intake.sh",
+        }
+        for path in missing
+    ]
 if not rows:
     rows.append(
         {

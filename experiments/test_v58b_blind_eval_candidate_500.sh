@@ -53,6 +53,105 @@ summary_rows = read_csv(summary_csv)
 if len(summary_rows) != 1:
     raise SystemExit(f"expected one v58b summary row, got {len(summary_rows)}")
 summary = summary_rows[0]
+if summary.get("v58b_dependency_blocker_ready") == "1":
+    expected_blocked = {
+        "v58b_blind_eval_candidate_ready": "0",
+        "v58_ready": "0",
+        "missing_dependency_artifact_rows": "7",
+        "missing_v57_dependency_artifact_rows": "7",
+        "implicit_dependency_rebuild_allowed": "0",
+        "dependency_rebuild_approval_required": "1",
+        "network_or_download_approval_required": "1",
+        "frozen_query_rows": "0",
+        "target_blind_eval_rows": "500",
+        "blind_system_rows": "0",
+        "blind_response_template_rows": "0",
+        "actual_blind_response_rows": "0",
+        "reviewer_packet_template_rows": "0",
+        "sealed_answer_key_rows": "0",
+        "sealed_identity_key_ready": "0",
+        "query_freeze_ready": "0",
+        "pre_output_query_selection_verified": "0",
+        "same_evidence_budget_ready": "0",
+        "reviewer_packet_anonymous": "0",
+        "human_blind_review_ready": "0",
+        "inter_rater_rows_ready": "0",
+        "required_30b_blind_response_ready": "0",
+        "required_70b_blind_response_ready": "0",
+        "optional_100b_plus_blind_response_status": "blocked-until-v58b-seed",
+        "v58_blind_eval_contract_ready": "0",
+        "v57b_domain_expert_pack_candidate_ready": "0",
+        "v58_full_blind_eval_ready": "0",
+        "real_release_package_ready": "0",
+    }
+    for field, value in expected_blocked.items():
+        if summary.get(field) != value:
+            raise SystemExit(f"v58b dependency blocker {field}: expected {value}, got {summary.get(field)}")
+
+    decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+    if decisions.get("dependency-blocker-artifact") != "pass":
+        raise SystemExit("v58b dependency blocker artifact gate should pass")
+    for gate in [
+        "v58-contract-input",
+        "v57b-candidate-input",
+        "blind-query-freeze-candidate",
+        "source-span-binding",
+        "same-evidence-budget",
+        "reviewer-packet-anonymization",
+        "sealed-identity-key",
+        "30b-blind-response-row",
+        "70b-blind-response-row",
+        "100b-plus-blind-response-row",
+        "human-blind-review",
+        "v58-full-blind-eval",
+        "real-release-package",
+    ]:
+        if decisions.get(gate) != "blocked":
+            raise SystemExit(f"v58b dependency blocker should keep {gate} blocked")
+
+    required_files = [
+        "v58b_dependency_blocker_rows.csv",
+        "v58_dependency_probe_stderr.txt",
+        "V58B_BLIND_EVAL_CANDIDATE_DEPENDENCY_BLOCKER.md",
+        "v58b_blind_eval_candidate_manifest.json",
+        "sha256_manifest.csv",
+    ]
+    for rel in required_files:
+        path = run_dir / rel
+        if not path.is_file() or path.stat().st_size == 0:
+            raise SystemExit(f"missing v58b dependency blocker artifact: {rel}")
+    blocker_rows = read_csv(run_dir / "v58b_dependency_blocker_rows.csv")
+    if len(blocker_rows) != 7:
+        raise SystemExit("v58b dependency blocker should record seven missing v57 artifacts")
+    for row in blocker_rows:
+        if row["dependency_stage"] != "v57-domain-expert-pack-contract":
+            raise SystemExit("v58b dependency blocker should point to v57 domain-pack contract")
+        if row["implicit_rebuild_allowed"] != "0" or row["approval_required"] != "1":
+            raise SystemExit("v58b dependency blocker should refuse implicit rebuild and require approval")
+        if row["network_or_download_risk"] != "1" or row["fixture_allowed"] != "0" or row["tests_only_merge_condition"] != "0":
+            raise SystemExit("v58b dependency blocker claim boundary mismatch")
+        if row["claim_boundary_status"] != "blocked-until-v57-v58-seed-artifact-present":
+            raise SystemExit("v58b dependency blocker should keep claim boundary blocked")
+    manifest = json.loads((run_dir / "v58b_blind_eval_candidate_manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("v58b_blind_eval_candidate_ready") != 0 or manifest.get("v58b_dependency_blocker_ready") != 1:
+        raise SystemExit("v58b dependency blocker manifest readiness mismatch")
+    sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+    for rel in required_files:
+        if rel == "sha256_manifest.csv":
+            continue
+        if sha_rows.get(rel) != sha256(run_dir / rel):
+            raise SystemExit(f"v58b dependency blocker sha256 mismatch: {rel}")
+    boundary = (run_dir / "V58B_BLIND_EVAL_CANDIDATE_DEPENDENCY_BLOCKER.md").read_text(encoding="utf-8")
+    for snippet in [
+        "missing_dependency_artifact_rows=7",
+        "implicit_dependency_rebuild_allowed=0",
+        "frozen_query_rows=0",
+        "Blocked wording: v58b candidate artifact ready",
+    ]:
+        if snippet not in boundary:
+            raise SystemExit(f"v58b dependency blocker boundary missing {snippet}")
+    sys.exit(0)
+
 expected = {
     "v58b_blind_eval_candidate_ready": "1",
     "v58_ready": "0",
