@@ -113,6 +113,11 @@ expected = {
     "h10_pm_external_label_blocked": "1",
     "h10_pm_source_provenance_binding_ready": "1",
     "h10_pm_copied_files": "13",
+    "pm_pr_v56_seed_dependency_blocker_ready": "1",
+    "pm_pr_v56_seed_dependency_blocker_rows": "20",
+    "pm_pr_v56_missing_seed_artifact_rows": "20",
+    "pm_pr_v56_missing_v45_seed_artifact_rows": "11",
+    "pm_pr_v56_missing_seed_network_or_download_approval_required": "1",
     "v54c_recommended_output_files_ready": "1",
     "v54c_recommended_output_file_rows": "9",
     "v54c_sha256sums_pm_recommended_csv_rows": "6",
@@ -219,6 +224,7 @@ required_files = [
     "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv",
+    "source_v59e/source_pm_pr_claim_slice_gate/source_v56/v56_seed_dependency_blocker_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv",
     "source_v59e/source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv",
@@ -855,6 +861,8 @@ if "v59e_v58_blind_eval_acceptance_evidence_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind v58 acceptance evidence rows")
 if "v59e_pm_pr_v56_replay_acceptance_evidence_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind PM v56 replay acceptance evidence rows")
+if "v59e_pm_pr_v56_seed_dependency_blocker_sha256" not in manifest:
+    raise SystemExit("v60 manifest should hash-bind PM v56 seed dependency blocker rows")
 if "v59e_pm_pr_de_30b70b_acceptance_evidence_sha256" not in manifest:
     raise SystemExit("v60 manifest should hash-bind PM D/E 30B/70B acceptance evidence rows")
 if "v59e_pm_pr_v59_one_command_acceptance_evidence_sha256" not in manifest:
@@ -877,6 +885,14 @@ if (
     or manifest.get("pm_pr_v56_replay_acceptance_evidence_approval_rows") != 4
 ):
     raise SystemExit("v60 manifest should record PM v56 replay acceptance evidence")
+if (
+    manifest.get("pm_pr_v56_seed_dependency_blocker_ready") != 1
+    or manifest.get("pm_pr_v56_seed_dependency_blocker_rows") != 20
+    or manifest.get("pm_pr_v56_missing_seed_artifact_rows") != 20
+    or manifest.get("pm_pr_v56_missing_v45_seed_artifact_rows") != 11
+    or manifest.get("pm_pr_v56_missing_seed_network_or_download_approval_required") != 1
+):
+    raise SystemExit("v60 manifest should record PM v56 seed dependency blocker evidence")
 if (
     manifest.get("pm_pr_de_30b70b_acceptance_evidence_rows") != 4
     or manifest.get("pm_pr_de_30b70b_acceptance_evidence_ready_rows") != 0

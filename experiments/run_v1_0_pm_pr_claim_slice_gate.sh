@@ -295,6 +295,16 @@ v56_contract_summary_copied = copy_if_exists(
     v56_contract_summary_path,
     "source_v56/v56_ruler_longbench_expanded_contract_summary.csv",
 )
+v56_seed_dependency_blocker_path = results / "v56_ruler_longbench_expanded_contract" / "contract_001" / "v56_seed_dependency_blocker_rows.csv"
+v56_seed_dependency_blocker_copied = copy_if_exists(
+    v56_seed_dependency_blocker_path,
+    "source_v56/v56_seed_dependency_blocker_rows.csv",
+)
+copy_if_exists(
+    results / "v56_ruler_longbench_expanded_contract" / "contract_001" / "V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md",
+    "source_v56/V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md",
+)
+v56_seed_dependency_blocker_rows = read_rows(v56_seed_dependency_blocker_path)
 v59e = summaries["v59e"]
 v61j = summaries["v61j"]
 
@@ -1731,6 +1741,8 @@ for artifact in [row for row in blocker_required_artifact_rows if row["blocker_c
     if artifact_id.startswith("v56-contract"):
         observed_signal = (
             f"v56_contract_ready={v56_contract.get('v56_ruler_longbench_expanded_contract_ready', '0')} "
+            f"seed_dependency_blocker_ready={v56_contract.get('v56_seed_dependency_blocker_ready', '0')} "
+            f"missing_seed_artifact_rows={v56_contract.get('missing_seed_artifact_rows', '0')} "
             f"real_external_benchmark_verified={v56_contract.get('real_external_benchmark_verified', '0')} "
             f"real_release_package_ready={v56_contract.get('real_release_package_ready', '0')} "
             f"copied_summary={int(bool(v56_contract_summary_copied))}"
@@ -2168,6 +2180,11 @@ v56_replay_acceptance_evidence_fixture_allowed_rows = sum(
 v56_replay_acceptance_evidence_approval_rows = sum(
     1 for row in v56_replay_acceptance_evidence_rows if row["approval_required"] == "1"
 )
+v56_seed_dependency_blocker_rows_count = len(v56_seed_dependency_blocker_rows)
+v56_seed_dependency_blocker_ready = as_int(v56_contract, "v56_seed_dependency_blocker_ready")
+v56_missing_seed_artifact_rows = as_int(v56_contract, "missing_seed_artifact_rows")
+v56_missing_v45_seed_artifact_rows = as_int(v56_contract, "missing_v45_seed_artifact_rows")
+v56_missing_seed_network_or_download_approval_required = as_int(v56_contract, "network_or_download_approval_required")
 de_30b70b_acceptance_evidence_row_count = len(de_30b70b_acceptance_evidence_rows)
 de_30b70b_acceptance_evidence_ready_rows = sum(1 for row in de_30b70b_acceptance_evidence_rows if row["acceptance_ready"] == "1")
 de_30b70b_acceptance_evidence_blocked_rows = (
@@ -2277,6 +2294,11 @@ summary = {
     "v56_replay_acceptance_evidence_tests_only_rows": str(v56_replay_acceptance_evidence_tests_only_rows),
     "v56_replay_acceptance_evidence_fixture_allowed_rows": str(v56_replay_acceptance_evidence_fixture_allowed_rows),
     "v56_replay_acceptance_evidence_approval_rows": str(v56_replay_acceptance_evidence_approval_rows),
+    "v56_seed_dependency_blocker_ready": str(v56_seed_dependency_blocker_ready),
+    "v56_seed_dependency_blocker_rows": str(v56_seed_dependency_blocker_rows_count),
+    "v56_missing_seed_artifact_rows": str(v56_missing_seed_artifact_rows),
+    "v56_missing_v45_seed_artifact_rows": str(v56_missing_v45_seed_artifact_rows),
+    "v56_missing_seed_network_or_download_approval_required": str(v56_missing_seed_network_or_download_approval_required),
     "de_30b70b_acceptance_evidence_rows": str(de_30b70b_acceptance_evidence_row_count),
     "de_30b70b_acceptance_evidence_ready_rows": str(de_30b70b_acceptance_evidence_ready_rows),
     "de_30b70b_acceptance_evidence_blocked_rows": str(de_30b70b_acceptance_evidence_blocked_rows),
@@ -2371,6 +2393,9 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v56_replay_acceptance_evidence_ready_rows={v56_replay_acceptance_evidence_ready_rows}\n"
     f"- v56_replay_acceptance_evidence_blocked_rows={v56_replay_acceptance_evidence_blocked_rows}\n"
     f"- v56_replay_acceptance_evidence_tests_only_rows={v56_replay_acceptance_evidence_tests_only_rows}\n"
+    f"- v56_seed_dependency_blocker_ready={v56_seed_dependency_blocker_ready}\n"
+    f"- v56_seed_dependency_blocker_rows={v56_seed_dependency_blocker_rows_count}\n"
+    f"- v56_missing_seed_artifact_rows={v56_missing_seed_artifact_rows}\n"
     f"- de_30b70b_acceptance_evidence_rows={de_30b70b_acceptance_evidence_row_count}\n"
     f"- de_30b70b_acceptance_evidence_ready_rows={de_30b70b_acceptance_evidence_ready_rows}\n"
     f"- de_30b70b_acceptance_evidence_blocked_rows={de_30b70b_acceptance_evidence_blocked_rows}\n"
@@ -2459,6 +2484,12 @@ manifest = {
     "v56_replay_acceptance_evidence_tests_only_rows": v56_replay_acceptance_evidence_tests_only_rows,
     "v56_replay_acceptance_evidence_fixture_allowed_rows": v56_replay_acceptance_evidence_fixture_allowed_rows,
     "v56_replay_acceptance_evidence_approval_rows": v56_replay_acceptance_evidence_approval_rows,
+    "v56_seed_dependency_blocker_ready": v56_seed_dependency_blocker_ready,
+    "v56_seed_dependency_blocker_rows": v56_seed_dependency_blocker_rows_count,
+    "v56_missing_seed_artifact_rows": v56_missing_seed_artifact_rows,
+    "v56_missing_v45_seed_artifact_rows": v56_missing_v45_seed_artifact_rows,
+    "v56_missing_seed_network_or_download_approval_required": v56_missing_seed_network_or_download_approval_required,
+    "v56_seed_dependency_blocker_rows_sha256": sha256(run_dir / "source_v56/v56_seed_dependency_blocker_rows.csv") if v56_seed_dependency_blocker_copied else "",
     "de_30b70b_acceptance_evidence_rows": de_30b70b_acceptance_evidence_row_count,
     "de_30b70b_acceptance_evidence_ready_rows": de_30b70b_acceptance_evidence_ready_rows,
     "de_30b70b_acceptance_evidence_blocked_rows": de_30b70b_acceptance_evidence_blocked_rows,

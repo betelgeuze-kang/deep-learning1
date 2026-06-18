@@ -54,6 +54,77 @@ if [ "${#missing_seed_files[@]}" -gt 0 ] && [ "${V56_REQUIRE_READY_TEST:-0}" != 
     printf '%s\n' "$output" >&2
     exit 1
   fi
+  python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+summary_csv = Path(sys.argv[2])
+decision_csv = Path(sys.argv[3])
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+if summary.get("v56_seed_dependency_blocker_ready") != "1":
+    raise SystemExit("v56 missing-seed path should emit a dependency blocker summary")
+if summary.get("v56_ruler_longbench_expanded_contract_ready") != "0":
+    raise SystemExit("v56 missing-seed path must not claim contract readiness")
+if int(summary.get("missing_seed_artifact_rows", "0")) <= 0:
+    raise SystemExit("v56 missing-seed summary should count missing artifacts")
+if summary.get("implicit_seed_rebuild_allowed") != "0" or summary.get("seed_rebuild_approval_required") != "1":
+    raise SystemExit("v56 missing-seed summary should block implicit seed rebuild")
+
+rows = read_csv(run_dir / "v56_seed_dependency_blocker_rows.csv")
+if len(rows) != int(summary["missing_seed_artifact_rows"]):
+    raise SystemExit("v56 missing-seed blocker rows should match the summary count")
+if any(row["implicit_rebuild_allowed"] != "0" or row["approval_required"] != "1" for row in rows):
+    raise SystemExit("v56 missing-seed blocker rows should require approval and forbid implicit rebuild")
+if any(row["fixture_allowed"] != "0" or row["tests_only_merge_condition"] != "0" for row in rows):
+    raise SystemExit("v56 missing-seed blocker rows should forbid fixtures and tests-only merge")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+if decisions.get("v56-seed-dependency-blocker") != "pass":
+    raise SystemExit("v56 dependency blocker gate should pass")
+if decisions.get("implicit-seed-rebuild") != "blocked" or decisions.get("v56-expanded-benchmark-contract") != "blocked":
+    raise SystemExit("v56 missing-seed path should keep rebuild and contract blocked")
+
+manifest = json.loads((run_dir / "v56_seed_dependency_blocker_manifest.json").read_text(encoding="utf-8"))
+if manifest.get("v56_seed_dependency_blocker_ready") != 1:
+    raise SystemExit("v56 dependency blocker manifest should be ready")
+boundary = (run_dir / "V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md").read_text(encoding="utf-8")
+for snippet in [
+    "refuses implicit regeneration",
+    "seed_rebuild_approval_required=1",
+    "real_external_benchmark_verified=0",
+    "Blocked wording: v56 expanded benchmark ready",
+]:
+    if snippet not in boundary:
+        raise SystemExit(f"v56 dependency blocker boundary missing {snippet}")
+
+sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+for rel in [
+    "v56_seed_dependency_blocker_rows.csv",
+    "V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md",
+    "v56_seed_dependency_blocker_manifest.json",
+]:
+    if sha_rows.get(rel) != sha256(run_dir / rel):
+        raise SystemExit(f"v56 dependency blocker sha mismatch: {rel}")
+PY
   echo "v56 RULER/LongBench missing-seed guard smoke passed"
   exit 0
 fi

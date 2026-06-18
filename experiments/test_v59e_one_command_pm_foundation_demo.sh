@@ -171,6 +171,11 @@ expected = {
     "pm_pr_v56_replay_acceptance_evidence_tests_only_rows": "0",
     "pm_pr_v56_replay_acceptance_evidence_fixture_allowed_rows": "0",
     "pm_pr_v56_replay_acceptance_evidence_approval_rows": "4",
+    "pm_pr_v56_seed_dependency_blocker_ready": "1",
+    "pm_pr_v56_seed_dependency_blocker_rows": "20",
+    "pm_pr_v56_missing_seed_artifact_rows": "20",
+    "pm_pr_v56_missing_v45_seed_artifact_rows": "11",
+    "pm_pr_v56_missing_seed_network_or_download_approval_required": "1",
     "pm_pr_de_30b70b_acceptance_evidence_rows": "4",
     "pm_pr_de_30b70b_acceptance_evidence_ready_rows": "0",
     "pm_pr_de_30b70b_acceptance_evidence_blocked_rows": "4",
@@ -329,6 +334,8 @@ required_files = [
     "source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v56/v56_seed_dependency_blocker_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v56/V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md",
     "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_closure_packet_rows.csv",
@@ -872,6 +879,16 @@ if (
     raise SystemExit("v59e manifest should record PM v56 replay acceptance evidence")
 if "pm_pr_v56_replay_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("v59e manifest should hash-bind PM v56 replay acceptance evidence")
+if (
+    manifest.get("pm_pr_v56_seed_dependency_blocker_ready") != 1
+    or manifest.get("pm_pr_v56_seed_dependency_blocker_rows") != 20
+    or manifest.get("pm_pr_v56_missing_seed_artifact_rows") != 20
+    or manifest.get("pm_pr_v56_missing_v45_seed_artifact_rows") != 11
+    or manifest.get("pm_pr_v56_missing_seed_network_or_download_approval_required") != 1
+):
+    raise SystemExit("v59e manifest should record PM v56 seed dependency blocker evidence")
+if "pm_pr_v56_seed_dependency_blocker_rows_sha256" not in manifest:
+    raise SystemExit("v59e manifest should hash-bind PM v56 seed dependency blocker rows")
 if (
     manifest.get("pm_pr_de_30b70b_acceptance_evidence_rows") != 4
     or manifest.get("pm_pr_de_30b70b_acceptance_evidence_ready_rows") != 0

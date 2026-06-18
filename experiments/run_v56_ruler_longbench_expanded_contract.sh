@@ -46,6 +46,169 @@ done
 
 if [ "${#missing_seed_files[@]}" -gt 0 ] || [ "${V56_FORCE_SEED_REBUILD:-0}" = "1" ]; then
   if [ "${V56_ALLOW_SEED_REBUILD:-0}" != "1" ]; then
+    rm -rf "$RUN_DIR"
+    mkdir -p "$RUN_DIR"
+    python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "${missing_seed_files[@]}" <<'PY'
+import csv
+import hashlib
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+summary_csv = Path(sys.argv[2])
+decision_csv = Path(sys.argv[3])
+missing_paths = [Path(path) for path in sys.argv[4:]]
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def write_csv(path, fieldnames, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def dependency_stage(path):
+    text = str(path)
+    if "v49_ruler_niah_200_500_scale" in text:
+        return "v49-ruler-seed"
+    if "v45_longbench_v2_small_slice" in text:
+        return "v45-longbench-seed"
+    return "unknown-seed"
+
+
+rows = []
+for path in missing_paths:
+    stage = dependency_stage(path)
+    rows.append(
+        {
+            "missing_seed_artifact": str(path),
+            "dependency_stage": stage,
+            "required_for": "v56-ruler-longbench-expanded-contract",
+            "implicit_rebuild_allowed": "0",
+            "approval_required": "1",
+            "network_or_download_risk": "1" if stage == "v45-longbench-seed" else "0",
+            "fixture_allowed": "0",
+            "tests_only_merge_condition": "0",
+            "claim_boundary_status": "blocked-until-seed-artifact-present",
+            "validation_command": "V56_ALLOW_SEED_REBUILD=1 ./experiments/test_v56_ruler_longbench_expanded_contract.sh",
+        }
+    )
+write_csv(
+    run_dir / "v56_seed_dependency_blocker_rows.csv",
+    list(rows[0].keys()) if rows else [
+        "missing_seed_artifact",
+        "dependency_stage",
+        "required_for",
+        "implicit_rebuild_allowed",
+        "approval_required",
+        "network_or_download_risk",
+        "fixture_allowed",
+        "tests_only_merge_condition",
+        "claim_boundary_status",
+        "validation_command",
+    ],
+    rows,
+)
+
+v49_missing = sum(1 for row in rows if row["dependency_stage"] == "v49-ruler-seed")
+v45_missing = sum(1 for row in rows if row["dependency_stage"] == "v45-longbench-seed")
+summary = {
+    "v56_ruler_longbench_expanded_contract_ready": "0",
+    "v56_ruler_longbench_expanded_ready": "0",
+    "v56_seed_dependency_blocker_ready": "1",
+    "missing_seed_artifact_rows": str(len(rows)),
+    "missing_v49_seed_artifact_rows": str(v49_missing),
+    "missing_v45_seed_artifact_rows": str(v45_missing),
+    "implicit_seed_rebuild_allowed": "0",
+    "seed_rebuild_approval_required": "1",
+    "network_or_download_approval_required": "1" if v45_missing else "0",
+    "official_source_hash_bound": "0",
+    "official_evaluator_hash_bound": "0",
+    "oracle_prediction_used": "0",
+    "raw_input_extractor_used": "0",
+    "route_memory_prediction_lineage_ready": "0",
+    "llm_rag_baseline_rows_ready": "0",
+    "real_external_benchmark_verified": "0",
+    "real_release_package_ready": "0",
+}
+write_csv(summary_csv, list(summary.keys()), [summary])
+
+decision_rows = [
+    {
+        "gate": "v56-seed-dependency-blocker",
+        "status": "pass",
+        "reason": f"missing_seed_artifact_rows={len(rows)}; implicit rebuild refused",
+    },
+    {
+        "gate": "implicit-seed-rebuild",
+        "status": "blocked",
+        "reason": "V56_ALLOW_SEED_REBUILD=1 is required before v49/v45 seed regeneration",
+    },
+    {
+        "gate": "v56-expanded-benchmark-contract",
+        "status": "blocked",
+        "reason": "seed artifacts are missing, so v56 contract artifacts are not claimed ready",
+    },
+    {
+        "gate": "real-external-benchmark",
+        "status": "blocked",
+        "reason": "no independent external benchmark verification is present",
+    },
+]
+write_csv(decision_csv, list(decision_rows[0].keys()), decision_rows)
+
+(run_dir / "V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md").write_text(
+    "# v56 RULER/LongBench Dependency Blocker\n\n"
+    "The v56 expanded benchmark contract did not run because required v49/v45 seed artifacts are missing. "
+    "The script refuses implicit regeneration so that network/download, seed, and benchmark-protocol changes cannot happen silently.\n\n"
+    f"- missing_seed_artifact_rows={len(rows)}\n"
+    f"- missing_v49_seed_artifact_rows={v49_missing}\n"
+    f"- missing_v45_seed_artifact_rows={v45_missing}\n"
+    "- implicit_seed_rebuild_allowed=0\n"
+    "- seed_rebuild_approval_required=1\n"
+    f"- network_or_download_approval_required={1 if v45_missing else 0}\n"
+    "- real_external_benchmark_verified=0\n"
+    "- real_release_package_ready=0\n\n"
+    "Allowed wording: v56 dependency blocker artifact for missing seed replay evidence.\n\n"
+    "Blocked wording: v56 expanded benchmark ready, public benchmark result, leaderboard claim, or v1.0 release readiness.\n",
+    encoding="utf-8",
+)
+
+manifest = {
+    "manifest_scope": "v56-ruler-longbench-dependency-blocker",
+    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    "v56_seed_dependency_blocker_ready": 1,
+    "missing_seed_artifact_rows": len(rows),
+    "missing_v49_seed_artifact_rows": v49_missing,
+    "missing_v45_seed_artifact_rows": v45_missing,
+    "implicit_seed_rebuild_allowed": 0,
+    "seed_rebuild_approval_required": 1,
+    "network_or_download_approval_required": 1 if v45_missing else 0,
+    "real_external_benchmark_verified": 0,
+    "real_release_package_ready": 0,
+}
+(run_dir / "v56_seed_dependency_blocker_manifest.json").write_text(
+    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+
+artifact_rows = []
+for path in sorted(run_dir.rglob("*")):
+    if path.is_file() and path.name != "sha256_manifest.csv":
+        artifact_rows.append({"path": str(path.relative_to(run_dir)), "sha256": sha256(path), "bytes": path.stat().st_size})
+write_csv(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], artifact_rows)
+PY
     {
       echo "v56 seed artifacts are missing or rebuild was requested; refusing implicit v49/v45 regeneration."
       echo "Set V56_ALLOW_SEED_REBUILD=1 to opt into the v49/v45 seed regeneration chain."

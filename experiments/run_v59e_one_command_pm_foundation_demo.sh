@@ -1368,6 +1368,8 @@ pm_pr_core_files = [
     (pr_run_dir / "pm_pr_review_packet_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_review_packet_rows.csv", "evidence"),
     (pr_run_dir / "pm_pr_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv", "evidence"),
     (pr_run_dir / "v56_replay_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv", "evidence"),
+    (pr_run_dir / "source_v56/v56_seed_dependency_blocker_rows.csv", "source_pm_pr_claim_slice_gate/source_v56/v56_seed_dependency_blocker_rows.csv", "evidence"),
+    (pr_run_dir / "source_v56/V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md", "source_pm_pr_claim_slice_gate/source_v56/V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md", "evidence"),
     (pr_run_dir / "de_30b70b_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv", "evidence"),
     (pr_run_dir / "v59_one_command_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv", "evidence"),
     (pr_run_dir / "pm_roadmap_requirement_rows.csv", "source_pm_pr_claim_slice_gate/pm_roadmap_requirement_rows.csv", "evidence"),
@@ -1638,6 +1640,11 @@ summary["pm_pr_v56_replay_acceptance_evidence_blocked_rows"] = pr_summary.get("v
 summary["pm_pr_v56_replay_acceptance_evidence_tests_only_rows"] = pr_summary.get("v56_replay_acceptance_evidence_tests_only_rows", "0")
 summary["pm_pr_v56_replay_acceptance_evidence_fixture_allowed_rows"] = pr_summary.get("v56_replay_acceptance_evidence_fixture_allowed_rows", "0")
 summary["pm_pr_v56_replay_acceptance_evidence_approval_rows"] = pr_summary.get("v56_replay_acceptance_evidence_approval_rows", "0")
+summary["pm_pr_v56_seed_dependency_blocker_ready"] = pr_summary.get("v56_seed_dependency_blocker_ready", "0")
+summary["pm_pr_v56_seed_dependency_blocker_rows"] = pr_summary.get("v56_seed_dependency_blocker_rows", "0")
+summary["pm_pr_v56_missing_seed_artifact_rows"] = pr_summary.get("v56_missing_seed_artifact_rows", "0")
+summary["pm_pr_v56_missing_v45_seed_artifact_rows"] = pr_summary.get("v56_missing_v45_seed_artifact_rows", "0")
+summary["pm_pr_v56_missing_seed_network_or_download_approval_required"] = pr_summary.get("v56_missing_seed_network_or_download_approval_required", "0")
 summary["pm_pr_de_30b70b_acceptance_evidence_rows"] = pr_summary.get("de_30b70b_acceptance_evidence_rows", "0")
 summary["pm_pr_de_30b70b_acceptance_evidence_ready_rows"] = pr_summary.get("de_30b70b_acceptance_evidence_ready_rows", "0")
 summary["pm_pr_de_30b70b_acceptance_evidence_blocked_rows"] = pr_summary.get("de_30b70b_acceptance_evidence_blocked_rows", "0")
@@ -1893,6 +1900,11 @@ manifest["pm_pr_v56_replay_acceptance_evidence_blocked_rows"] = as_int(pr_summar
 manifest["pm_pr_v56_replay_acceptance_evidence_tests_only_rows"] = as_int(pr_summary, "v56_replay_acceptance_evidence_tests_only_rows")
 manifest["pm_pr_v56_replay_acceptance_evidence_fixture_allowed_rows"] = as_int(pr_summary, "v56_replay_acceptance_evidence_fixture_allowed_rows")
 manifest["pm_pr_v56_replay_acceptance_evidence_approval_rows"] = as_int(pr_summary, "v56_replay_acceptance_evidence_approval_rows")
+manifest["pm_pr_v56_seed_dependency_blocker_ready"] = as_int(pr_summary, "v56_seed_dependency_blocker_ready")
+manifest["pm_pr_v56_seed_dependency_blocker_rows"] = as_int(pr_summary, "v56_seed_dependency_blocker_rows")
+manifest["pm_pr_v56_missing_seed_artifact_rows"] = as_int(pr_summary, "v56_missing_seed_artifact_rows")
+manifest["pm_pr_v56_missing_v45_seed_artifact_rows"] = as_int(pr_summary, "v56_missing_v45_seed_artifact_rows")
+manifest["pm_pr_v56_missing_seed_network_or_download_approval_required"] = as_int(pr_summary, "v56_missing_seed_network_or_download_approval_required")
 manifest["pm_pr_de_30b70b_acceptance_evidence_rows"] = as_int(pr_summary, "de_30b70b_acceptance_evidence_rows")
 manifest["pm_pr_de_30b70b_acceptance_evidence_ready_rows"] = as_int(pr_summary, "de_30b70b_acceptance_evidence_ready_rows")
 manifest["pm_pr_de_30b70b_acceptance_evidence_blocked_rows"] = as_int(pr_summary, "de_30b70b_acceptance_evidence_blocked_rows")
@@ -1942,6 +1954,7 @@ manifest["v58_blind_eval_return_template_rows_sha256"] = sha256(run_dir / "v58_b
 manifest["v58_blind_eval_return_contract_map_rows_sha256"] = sha256(run_dir / "v58_blind_eval_return_contract_map_rows.csv")
 manifest["v58_blind_eval_acceptance_evidence_rows_sha256"] = sha256(run_dir / "v58_blind_eval_acceptance_evidence_rows.csv")
 manifest["pm_pr_v56_replay_acceptance_evidence_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv")
+manifest["pm_pr_v56_seed_dependency_blocker_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/source_v56/v56_seed_dependency_blocker_rows.csv")
 manifest["pm_pr_de_30b70b_acceptance_evidence_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv")
 manifest["pm_pr_v59_one_command_acceptance_evidence_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv")
 manifest["public_source_snapshot_replay_rows_sha256"] = sha256(run_dir / "public_source_snapshot_replay_rows.csv")
