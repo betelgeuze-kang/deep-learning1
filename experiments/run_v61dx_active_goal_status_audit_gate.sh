@@ -135,15 +135,21 @@ v61dg = read_csv(source_paths["v61dg_summary"])[0]
 v61dh = read_csv(source_paths["v61dh_summary"])[0]
 v61dw = read_csv(source_paths["v61dw_summary"])[0]
 
+v52_ready = v52y["v52_ready"] == "1"
+v52_comparison_wording_allowed = (
+    v52_ready
+    and v52y["comparison_30b_150b_wording_status"] == "allowed-with-disclosure"
+)
+
 section_rows = [
     {
         "section_id": "v52-f-optional-and-v52-ready",
         "machine_ready": v52y["v52_ready"],
         "final_ready": v52y["v52_ready"],
-        "status": "ready",
+        "status": "ready" if v52_ready else "blocked-d-e-release-baseline",
         "evidence_source": "v52y",
-        "blocking_reason": "",
-        "next_required_artifact": "none for v52 measured-registry scope; optional F remains final-deferred",
+        "blocking_reason": "" if v52_ready else "D/E PM/release baseline readiness is not accepted",
+        "next_required_artifact": "none for v52 measured-registry scope; optional F remains final-deferred" if v52_ready else "accepted 30B and 70B PM/release baseline evidence",
     },
     {
         "section_id": "v53-complete-source-audit-surface",
@@ -168,8 +174,8 @@ write_csv(run_dir / "active_goal_objective_section_rows.csv", list(section_rows[
 
 requirement_rows = [
     ("v52-f-disposition-defined", "v52-f-optional-and-v52-ready", True, "v52y", "supplied evidence or deferred-with-reason-final", v52y["f_optional_final_disposition"], "F optional handling is explicit", ""),
-    ("v52-ready-condition-passes", "v52-f-optional-and-v52-ready", v52y["v52_ready"] == "1", "v52y", "v52_ready=1", f"v52_ready={v52y['v52_ready']}", "v52 measured-registry scope is ready", ""),
-    ("v52-30b-150b-wording-disclosure", "v52-f-optional-and-v52-ready", v52y["comparison_30b_150b_wording_status"] == "allowed-with-disclosure", "v52y", "allowed-with-disclosure", v52y["comparison_30b_150b_wording_status"], "30B-150B-class wording can be used with F disclosure", ""),
+    ("v52-ready-condition-passes", "v52-f-optional-and-v52-ready", v52_ready, "v52y", "v52_ready=1", f"v52_ready={v52y['v52_ready']}", "v52 PM/release baseline scope is ready", "D/E PM/release baseline evidence is missing"),
+    ("v52-30b-150b-wording-disclosure", "v52-f-optional-and-v52-ready", v52_comparison_wording_allowed, "v52y", "allowed-with-disclosure", v52y["comparison_30b_150b_wording_status"], "30B-150B-class wording can be used only after D/E PM/release readiness", "30B-150B-class wording is blocked until required D/E readiness"),
     ("v53-complete-source-repo-lock", "v53-complete-source-audit-surface", as_int(v53t, "complete_source_repo_count") >= 10, "v53t", ">=10 repos", v53t["complete_source_repo_count"], "complete-source target scale is present", ""),
     ("v53-complete-source-query-set", "v53-complete-source-audit-surface", as_int(v53t, "complete_source_query_rows") >= 1000, "v53t", ">=1000 queries", v53t["complete_source_query_rows"], "complete-source query set is instantiated", ""),
     ("v53-core-answer-citation-resource-surface", "v53-complete-source-audit-surface", as_int(v53t, "core_answer_rows") == 7000, "v53t", "7000 core answer rows", v53t["core_answer_rows"], "A/B/C/D/E/G/H core answer surface is present", ""),
@@ -209,7 +215,11 @@ requirement_dicts = [
 write_csv(run_dir / "active_goal_requirement_rows.csv", list(requirement_dicts[0].keys()), requirement_dicts)
 
 claim_rows = [
-    ("v52-30b-150b-comparison-wording", "allowed-with-disclosure", "D/E measured; optional F final-deferred by v52y"),
+    (
+        "v52-30b-150b-comparison-wording",
+        "allowed-with-disclosure" if v52_comparison_wording_allowed else "blocked",
+        "requires D/E PM/release readiness plus optional F final disposition",
+    ),
     ("v53-machine-complete-source-surface", "allowed-with-disclosure", "machine surface ready; human review/adjudication not accepted"),
     ("v61-full-shard-runtime-evidence", "allowed-with-boundary", "full-shard/page-hash/runtime admission ready; generation not accepted"),
     ("v61-return-bundle-operator-handoff", "allowed-with-boundary", "metadata-only handoff bundle, no returned evidence or checkpoint payload"),
@@ -364,7 +374,7 @@ write_csv(summary_csv, list(summary_row.keys()), [summary_row])
 decision_rows = [
     {"gate": "active-goal-status-audit", "status": "pass", "reason": "source summaries and objective rows emitted", "evidence_source": "v52y/v53t/v61dg/v61dh/v61dw"},
     {"gate": "v52-f-optional-final-policy", "status": "pass", "reason": f"F disposition is {v52y['f_optional_final_disposition']}", "evidence_source": "v52y"},
-    {"gate": "v52-ready-condition", "status": "pass", "reason": f"v52_ready={v52y['v52_ready']}", "evidence_source": "v52y"},
+    {"gate": "v52-ready-condition", "status": "pass" if v52_ready else "blocked", "reason": f"v52_ready={v52y['v52_ready']}", "evidence_source": "v52y"},
     {"gate": "v53-machine-complete-source-surface", "status": "pass", "reason": "10 repos, 1000 queries, 7000 core answer rows, review packet ready", "evidence_source": "v53t"},
     {"gate": "v53-review-return", "status": "blocked", "reason": f"accepted review/adjudication rows {v53t['accepted_human_review_rows']}/{v53t['expected_human_review_rows']} and {v53t['accepted_adjudication_rows']}/{v53t['expected_adjudication_rows']}", "evidence_source": "v53t"},
     {"gate": "v61-real-model-runtime-evidence", "status": "pass", "reason": "manifest, full shard, full page hash, ROCm, KV, QA, runtime admission evidence ready", "evidence_source": "v61dg"},

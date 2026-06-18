@@ -355,7 +355,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 write_csv(run_dir / f"{prefix}_summary.csv", list(summary.keys()), [summary])
 
 decision_rows = [
-    {"gate": "v52-f-optional-policy", "status": "pass", "actual_value": str(summary["v52_ready"]), "required_value": "1", "reason": "F optional final disposition is explicit"},
+    {"gate": "v52-f-optional-policy", "status": "pass" if summary["v52_ready"] else "blocked", "actual_value": str(summary["v52_ready"]), "required_value": "1", "reason": "D/E PM/release readiness is required before v52 comparison wording opens"},
     {"gate": "v53-machine-surface", "status": "pass", "actual_value": f"{summary['complete_source_repo_count']} repos/{summary['complete_source_query_rows']} queries/{summary['core_answer_rows']} answers", "required_value": "10+/1000+/7000", "reason": "complete-source machine surface exists"},
     {"gate": "v61-runtime-evidence", "status": "pass", "actual_value": str(summary["post_full_shard_runtime_evidence_ready"]), "required_value": "1", "reason": "full shard/page hash/runtime evidence is ready"},
     {"gate": "v61fy-root-pinned-handoff-receipt", "status": "pass", "actual_value": str(summary["root_pinned_replay_script_ready"]), "required_value": "1", "reason": "handoff receipt verifies root-pinned fail-closed script"},

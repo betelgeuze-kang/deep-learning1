@@ -243,7 +243,7 @@ for snippet in [
     "v61ga_post_fz_generation_unblock_runway_ready=1",
     "v61fz_post_fy_active_goal_status_refresh_ready=1",
     "v53ao_complete_source_actual_review_return_frontier_receipt_ready=1",
-    "v52_ready=1",
+    "v52_ready=0",
     "v53_machine_complete_source_surface_ready=1",
     "post_full_shard_runtime_evidence_ready=1",
     "full_checkpoint_materialization_ready=1",

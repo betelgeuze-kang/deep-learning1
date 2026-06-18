@@ -214,7 +214,7 @@ readiness_rows = [
     {"row_id": "03-f-deferred-with-reason", "status": ready(f_final_deferred_with_reason), "ready": str(f_final_deferred_with_reason), "evidence": f"f_final_deferred_with_reason={f_final_deferred_with_reason}", "blocked_reason": ""},
     {"row_id": "04-required-30b-baseline", "status": ready(required_30b_baseline_ready), "ready": str(required_30b_baseline_ready), "evidence": f"required_30b_baseline_ready={required_30b_baseline_ready}", "blocked_reason": ""},
     {"row_id": "05-required-70b-baseline", "status": ready(required_70b_baseline_ready), "ready": str(required_70b_baseline_ready), "evidence": f"required_70b_baseline_ready={required_70b_baseline_ready}", "blocked_reason": ""},
-    {"row_id": "06-30b-150b-wording", "status": ready(comparison_wording_allowed_with_disclosure), "ready": str(comparison_wording_allowed_with_disclosure), "evidence": f"comparison_30b_150b_wording_status={comparison_wording_status}", "blocked_reason": ""},
+    {"row_id": "06-30b-150b-wording", "status": ready(comparison_wording_claim_ready), "ready": str(comparison_wording_claim_ready), "evidence": f"comparison_30b_150b_wording_status={comparison_wording_status}; v52_ready={v52_ready}", "blocked_reason": "requires required D/E PM/release readiness"},
     {"row_id": "07-complete-source-surface", "status": ready(machine_complete_source_surface_ready), "ready": str(machine_complete_source_surface_ready), "evidence": f"repos={complete_source_repo_count}; queries={complete_source_query_rows}; core_answers={core_answer_rows}", "blocked_reason": ""},
     {"row_id": "08-review-packet-ready", "status": ready(review_packet_ready), "ready": str(review_packet_ready), "evidence": f"review_packet_ready={review_packet_ready}", "blocked_reason": ""},
     {"row_id": "09-human-review-return", "status": ready(complete_source_review_rows_ready), "ready": str(complete_source_review_rows_ready), "evidence": f"human={accepted_human_review_rows}/{expected_human_review_rows}; adjudication={accepted_adjudication_rows}/{expected_adjudication_rows}", "blocked_reason": "requires real human review and adjudication rows"},
@@ -235,7 +235,13 @@ write_csv(run_dir / "post_fp_v1_comparison_readiness_rows.csv", list(readiness_r
 
 claim_rows_refresh = [
     {"claim_id": "01-f-optional", "claim_status": "allowed", "wording_status": "allowed-with-disclosure", "evidence": f"F optional disposition is {f_optional_final_disposition}", "boundary": "F is deferred with reason, not supplied 100B+ evidence"},
-    {"claim_id": "02-30b-150b-comparison-wording", "claim_status": "allowed", "wording_status": comparison_wording_status, "evidence": "v52_ready=1 with D/E and F final disposition", "boundary": "wording must disclose F was deferred"},
+    {
+        "claim_id": "02-30b-150b-comparison-wording",
+        "claim_status": "allowed" if comparison_wording_claim_ready else "blocked",
+        "wording_status": comparison_wording_status,
+        "evidence": f"v52_ready={v52_ready}; required_30b_baseline_ready={required_30b_baseline_ready}; required_70b_baseline_ready={required_70b_baseline_ready}",
+        "boundary": "wording requires D/E PM/release readiness; absorbed artifacts alone are insufficient",
+    },
     {"claim_id": "03-complete-source-machine-surface", "claim_status": "allowed", "wording_status": "machine-surface-ready", "evidence": f"repos={complete_source_repo_count}; queries={complete_source_query_rows}; answer_rows={core_answer_rows}", "boundary": "not human-reviewed"},
     {"claim_id": "04-full-shard-runtime-evidence", "claim_status": "allowed", "wording_status": "post-full-shard-evidence-ready", "evidence": f"full_shard_prerequisites_closed={full_shard_prerequisites_closed}; runtime_admission={runtime_admission_accepted_rows}", "boundary": "not actual generation"},
     {"claim_id": "05-v1-comparison", "claim_status": "blocked", "wording_status": "not-ready", "evidence": f"v1_0_comparison_ready={v1_0_comparison_ready}", "boundary": "requires accepted review and generation evidence"},
@@ -339,7 +345,7 @@ refresh_manifest = {
             f"- v1_0_comparison_ready={v1_0_comparison_ready}",
             "- actual_model_generation_ready=0",
             "",
-            "The comparison wording is allowed only with the F optional disclosure. The v1.0 comparison itself remains blocked until real complete-source review/adjudication return and real generation result acceptance close.",
+            "The 30B-150B comparison wording is blocked until D/E PM/release baseline readiness is accepted. The v1.0 comparison itself remains blocked until real complete-source review/adjudication return and real generation result acceptance close.",
             "",
         ]
     ),
@@ -409,7 +415,7 @@ write_csv(run_dir / f"{prefix}_summary.csv", list(summary.keys()), [summary])
 
 decision_rows = [
     {"gate": "v52-ready", "status": pass_or_blocked(v52_ready), "actual_value": str(v52_ready), "required_value": "1", "reason": "F optional final disposition is explicit"},
-    {"gate": "30b-150b-wording", "status": pass_or_blocked(comparison_wording_allowed_with_disclosure), "actual_value": comparison_wording_status, "required_value": "allowed-with-disclosure", "reason": "wording allowed only with disclosure"},
+    {"gate": "30b-150b-wording", "status": pass_or_blocked(comparison_wording_claim_ready), "actual_value": comparison_wording_status, "required_value": "allowed-with-disclosure plus v52_ready=1", "reason": "wording allowed only after D/E readiness and disclosure"},
     {"gate": "v53-machine-complete-source-surface", "status": pass_or_blocked(machine_complete_source_surface_ready), "actual_value": str(machine_complete_source_surface_ready), "required_value": "1", "reason": "10 repos, 1000 queries, 7000 answer rows ready"},
     {"gate": "complete-source-review-return", "status": pass_or_blocked(complete_source_review_rows_ready), "actual_value": f"{accepted_human_review_rows}/{expected_human_review_rows};{accepted_adjudication_rows}/{expected_adjudication_rows}", "required_value": "7000/7000;1000/1000", "reason": "real review/adjudication rows missing"},
     {"gate": "full-shard-prerequisites", "status": pass_or_blocked(full_shard_prerequisites_closed), "actual_value": str(full_shard_prerequisites_closed), "required_value": "1", "reason": "v61fp closes full-shard/page-hash/runtime prerequisites"},

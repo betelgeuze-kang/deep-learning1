@@ -109,22 +109,28 @@ v52y = read_csv(source_paths["v52y_summary"])[0]
 v53t = read_csv(source_paths["v53t_summary"])[0]
 v61dg = read_csv(source_paths["v61dg_summary"])[0]
 
+v52_comparison_wording_status = v52y.get("comparison_30b_150b_wording_status", "blocked")
+v52_comparison_wording_allowed = (
+    v52y.get("v52_ready", "0") == "1"
+    and v52_comparison_wording_status == "allowed-with-disclosure"
+)
+
 claim_rows = [
     {
         "claim_id": "v52-measured-baseline-registry",
-        "claim_text": "measured A/B/C/D/E/G/H baseline registry with F final disposition",
-        "status": "allowed",
+        "claim_text": "local artifact-absorbed A/B/C/D/E/G/H baseline registry with F final disposition",
+        "status": "allowed-with-boundary",
         "evidence_source": "v52y",
-        "required_disclosure": "F is deferred-with-reason-final unless supplied evidence validates",
+        "required_disclosure": "D/E artifacts are absorbed locally; required D/E PM/release baseline readiness remains separate",
         "blocking_reason": "",
     },
     {
         "claim_id": "v52-30b-150b-class-comparison-surface",
         "claim_text": "30B-150B-class comparison surface",
-        "status": "allowed-with-disclosure",
+        "status": "allowed-with-disclosure" if v52_comparison_wording_allowed else "blocked",
         "evidence_source": "v52y",
-        "required_disclosure": "D/E are measured; F is optional and final-deferred in the default path",
-        "blocking_reason": "",
+        "required_disclosure": "requires required_30b_baseline_ready=1 and required_70b_baseline_ready=1; absorbed artifacts alone are insufficient",
+        "blocking_reason": "" if v52_comparison_wording_allowed else "D/E PM/release baseline readiness is not accepted",
     },
     {
         "claim_id": "v53-complete-source-machine-surface",
@@ -330,7 +336,7 @@ decision_rows = [
     {"gate": "claim-audit-ready", "status": "pass" if audit_ready else "blocked", "reason": "claim invariants are explicit"},
     {"gate": "allowed-claim-boundary", "status": "pass", "reason": f"{allowed_claim_rows} allowed/boundary claims"},
     {"gate": "blocked-claim-boundary", "status": "pass", "reason": f"{blocked_claim_rows} blocked claims remain blocked"},
-    {"gate": "v52-30b-150b-wording", "status": "pass", "reason": v52y.get("comparison_30b_150b_wording_status", "")},
+    {"gate": "v52-30b-150b-wording", "status": "pass" if v52_comparison_wording_allowed else "blocked", "reason": v52_comparison_wording_status},
     {"gate": "v53-ready", "status": "blocked", "reason": "accepted human review and adjudication are absent"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "generation execution and result acceptance are absent"},
     {"gate": "v1-comparison-ready", "status": "blocked", "reason": "requires v53/v58/v60 review and release gates"},
@@ -357,8 +363,8 @@ write_csv(decision_csv, ["gate", "status", "reason"], decision_rows)
     f"- actual_model_generation_ready={summary['actual_model_generation_ready']}\n"
     f"- v1_0_comparison_ready={summary['v1_0_comparison_ready']}\n"
     f"- real_release_package_ready={summary['real_release_package_ready']}\n\n"
-    "Allowed wording: measured baseline registry with F disclosure, complete-source machine surface, full-shard runtime evidence, ROCm page-kernel timing, KV policy, source-bound QA command pass. "
-    "Blocked wording: measured 100B+/150B hosted result, v53 ready, actual Mixtral generation, production latency, near-frontier quality, v1.0 comparison ready, release readiness, and superiority claims.\n",
+    "Allowed wording: local artifact-absorbed baseline registry with D/E readiness disclosure, complete-source machine surface, full-shard runtime evidence, ROCm page-kernel timing, KV policy, source-bound QA command pass. "
+    "Blocked wording: 30B-150B comparison surface, measured 100B+/150B hosted result, v53 ready, actual Mixtral generation, production latency, near-frontier quality, v1.0 comparison ready, release readiness, and superiority claims.\n",
     encoding="utf-8",
 )
 

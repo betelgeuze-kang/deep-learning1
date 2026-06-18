@@ -41,11 +41,11 @@ expected = {
     "v53am_complete_source_return_acceptance_replay_ready": "1",
     "v61dh_post_full_shard_claim_audit_gate_ready": "1",
     "v61fp_post_fo_full_shard_to_real_review_replay_closure_ledger_ready": "1",
-    "v52_ready": "1",
+    "v52_ready": "0",
     "f_optional_final_disposition": "deferred-with-reason-final",
     "f_final_deferred_with_reason": "1",
-    "comparison_30b_150b_wording_status": "allowed-with-disclosure",
-    "comparison_wording_claim_ready": "1",
+    "comparison_30b_150b_wording_status": "blocked",
+    "comparison_wording_claim_ready": "0",
     "v53_machine_complete_source_surface_ready": "1",
     "complete_source_repo_count": "10",
     "complete_source_query_rows": "1000",
@@ -60,8 +60,8 @@ expected = {
     "v53_ready": "0",
     "claim_audit_ready": "1",
     "claim_rows": "15",
-    "allowed_claim_rows": "7",
-    "blocked_claim_rows": "8",
+    "allowed_claim_rows": "6",
+    "blocked_claim_rows": "9",
     "claim_invariant_pass_rows": "6",
     "claim_invariant_rows": "6",
     "full_shard_prerequisites_closed": "1",
@@ -87,11 +87,11 @@ expected = {
     "checkpoint_payload_bytes_committed_to_repo": "0",
     "route_jump_rows": "0",
     "readiness_rows": "21",
-    "ready_readiness_rows": "11",
-    "blocked_readiness_rows": "10",
+    "ready_readiness_rows": "7",
+    "blocked_readiness_rows": "14",
     "comparison_claim_rows": "8",
-    "allowed_comparison_claim_rows": "4",
-    "blocked_comparison_claim_rows": "4",
+    "allowed_comparison_claim_rows": "3",
+    "blocked_comparison_claim_rows": "5",
     "next_action_rows": "6",
     "ready_next_action_rows": "2",
     "blocked_next_action_rows": "4",
@@ -147,15 +147,11 @@ if len(readiness) != 21:
     raise SystemExit("v61fq expected 21 readiness rows")
 ready_rows = [row for row in readiness if row["status"] == "ready"]
 blocked_rows = [row for row in readiness if row["status"] == "blocked"]
-if len(ready_rows) != 11 or len(blocked_rows) != 10:
+if len(ready_rows) != 7 or len(blocked_rows) != 14:
     raise SystemExit("v61fq readiness ready/blocked counts mismatch")
 for row_id in [
-    "01-v52-ready",
     "02-f-optional-final-disposition",
     "03-f-deferred-with-reason",
-    "04-required-30b-baseline",
-    "05-required-70b-baseline",
-    "06-30b-150b-wording",
     "07-complete-source-surface",
     "08-review-packet-ready",
     "12-full-shard-prerequisites",
@@ -166,6 +162,10 @@ for row_id in [
     if row["status"] != "ready":
         raise SystemExit(f"v61fq readiness row should be ready: {row_id}")
 for row_id in [
+    "01-v52-ready",
+    "04-required-30b-baseline",
+    "05-required-70b-baseline",
+    "06-30b-150b-wording",
     "09-human-review-return",
     "10-return-acceptance-replay",
     "11-v53-ready",
@@ -184,10 +184,10 @@ for row_id in [
 claims = read_csv(run_dir / "post_fp_v1_comparison_claim_boundary_rows.csv")
 if len(claims) != 8:
     raise SystemExit("v61fq expected eight claim boundary rows")
-if sum(row["claim_status"] == "allowed" for row in claims) != 4:
-    raise SystemExit("v61fq expected four allowed claim rows")
-if sum(row["claim_status"] == "blocked" for row in claims) != 4:
-    raise SystemExit("v61fq expected four blocked claim rows")
+if sum(row["claim_status"] == "allowed" for row in claims) != 3:
+    raise SystemExit("v61fq expected three allowed claim rows")
+if sum(row["claim_status"] == "blocked" for row in claims) != 5:
+    raise SystemExit("v61fq expected five blocked claim rows")
 
 actions = read_csv(run_dir / "post_fp_v1_comparison_next_action_rows.csv")
 if [row["ready_to_run_now"] for row in actions] != ["1", "1", "0", "0", "0", "0"]:
@@ -195,8 +195,6 @@ if [row["ready_to_run_now"] for row in actions] != ["1", "1", "0", "0", "0", "0"
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
-    "v52-ready",
-    "30b-150b-wording",
     "v53-machine-complete-source-surface",
     "full-shard-prerequisites",
     "zero-repo-checkpoint-payload",
@@ -204,6 +202,8 @@ for gate in [
     if decisions[gate] != "pass":
         raise SystemExit(f"v61fq decision should pass: {gate}")
 for gate in [
+    "v52-ready",
+    "30b-150b-wording",
     "complete-source-review-return",
     "real-review-return",
     "generation-execution",
@@ -218,10 +218,10 @@ for gate in [
 boundary = (run_dir / "V61FQ_POST_FP_V1_COMPARISON_READINESS_REFRESH_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     "v61fq_post_fp_v1_comparison_readiness_refresh_ready=1",
-    "v52_ready=1",
+    "v52_ready=0",
     "f_optional_final_disposition=deferred-with-reason-final",
-    "comparison_30b_150b_wording_status=allowed-with-disclosure",
-    "comparison_wording_claim_ready=1",
+    "comparison_30b_150b_wording_status=blocked",
+    "comparison_wording_claim_ready=0",
     "v53_machine_complete_source_surface_ready=1",
     "accepted_human_review_rows=0/7000",
     "accepted_adjudication_rows=0/1000",

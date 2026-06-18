@@ -103,15 +103,16 @@ metadata_bundle_ready = int(
 )
 closure_ready = int(v61ey["generation_acceptance_closure_ready"])
 actual_ready = 0
+v52_ready = v61ei["v52_ready"] == "1"
 
 section_rows = [
     {
         "section_id": "v52-f-optional-policy",
-        "status": "ready",
+        "status": "ready" if v52_ready else "blocked-d-e-release-baseline",
         "evidence_source": "v61ei",
         "ready": v61ei["v52_ready"],
         "actual_value": v61ei["f_optional_final_disposition"],
-        "next_required_artifact": "none for measured-registry wording scope",
+        "next_required_artifact": "none for measured-registry wording scope" if v52_ready else "accepted 30B and 70B PM/release baseline evidence",
     },
     {
         "section_id": "v53-complete-source-machine-surface",
@@ -177,7 +178,11 @@ requirement_rows = [
 write_csv(run_dir / "post_ey_requirement_rows.csv", list(requirement_rows[0].keys()), requirement_rows)
 
 claim_rows = [
-    ("v52-30b-150b-comparison-wording", "allowed-with-disclosure", "F optional final disposition is explicit"),
+    (
+        "v52-30b-150b-comparison-wording",
+        "allowed-with-disclosure" if v52_ready else "blocked",
+        "requires D/E PM/release readiness plus F final disposition",
+    ),
     ("v53-complete-source-machine-surface", "allowed-with-disclosure", "machine surface is ready; review return remains blocked"),
     ("v61-real-model-page-runtime-evidence", "allowed-with-boundary", "full shard/page hash/runtime evidence is ready"),
     ("v61-real-generation-return-packet", "allowed-with-boundary", "return packet/schema is ready; real artifacts are missing"),

@@ -184,7 +184,7 @@ requirement_rows = [
 write_csv(run_dir / "active_goal_completion_requirement_rows.csv", list(requirement_rows[0].keys()), requirement_rows)
 
 section_rows = [
-    {"section_id": "01-v52-f-optional-and-v52-ready", "status": "pass" if all(row["status"] == "pass" for row in requirement_rows[:3]) else "blocked", "evidence": "F optional final disposition and v52_ready are closed", "remaining_work": ""},
+    {"section_id": "01-v52-f-optional-and-v52-ready", "status": "pass" if all(row["status"] == "pass" for row in requirement_rows[:3]) else "blocked", "evidence": "F optional final disposition is explicit; D/E PM/release readiness is required for v52_ready", "remaining_work": "accepted 30B and 70B PM/release baseline evidence"},
     {"section_id": "02-v53-complete-source-audit", "status": "blocked", "evidence": f"machine_surface={machine_complete_source_surface_ready}; accepted_human_review={accepted_human_review_rows}/{expected_human_review_rows}; accepted_adjudication={accepted_adjudication_rows}/{expected_adjudication_rows}", "remaining_work": "real complete-source review/adjudication return"},
     {"section_id": "03-v61-real-model-evidence", "status": "blocked", "evidence": f"post_full_shard_runtime_evidence_ready={post_full_shard_runtime_evidence_ready}; actual_model_generation_ready=0", "remaining_work": "real review return, generation execution, and result acceptance"},
 ]
@@ -304,7 +304,7 @@ audit_manifest = {
             f"- v1_0_comparison_ready={v1_0_comparison_ready}",
             "- actual_model_generation_ready=0",
             "",
-            "The goal is not complete. v52 is closed for the measured-registry wording boundary, but v53 review/adjudication return and v61 actual generation evidence remain missing.",
+            "The goal is not complete. F optional disposition is explicit, but v52_ready and 30B-150B wording remain blocked until D/E PM/release baseline evidence is accepted; v53 review/adjudication return and v61 actual generation evidence also remain missing.",
             "",
         ]
     ),
@@ -352,14 +352,14 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 write_csv(run_dir / f"{prefix}_summary.csv", list(summary.keys()), [summary])
 
 decision_rows = [
-    {"gate": "v52-f-optional-and-ready", "status": "pass", "actual_value": f"{f_optional_final_disposition}; v52_ready={v52_ready}", "required_value": "explicit final disposition; v52_ready=1", "reason": "v52 measured-registry wording boundary is closed"},
+    {"gate": "v52-f-optional-and-ready", "status": status(f_optional_final_disposition_ready and v52_ready and comparison_wording_claim_ready), "actual_value": f"{f_optional_final_disposition}; v52_ready={v52_ready}; comparison_wording_claim_ready={comparison_wording_claim_ready}", "required_value": "explicit final disposition; D/E PM/release readiness; comparison wording ready", "reason": "v52 comparison wording remains blocked without required D/E readiness"},
     {"gate": "v53-machine-complete-source-surface", "status": "pass", "actual_value": f"repos={complete_source_repo_count}; queries={complete_source_query_rows}; answers={core_answer_rows}", "required_value": "10+ repos; 1000+ queries; 7000 answer rows", "reason": "machine complete-source surface is ready"},
     {"gate": "v53-review-return", "status": "blocked", "actual_value": f"human={accepted_human_review_rows}/{expected_human_review_rows}; adjudication={accepted_adjudication_rows}/{expected_adjudication_rows}", "required_value": "7000/7000;1000/1000", "reason": "real review/adjudication return missing"},
     {"gate": "v61-real-model-runtime-evidence", "status": "pass", "actual_value": f"manifest={real_manifest_fixture_replacement_ready}; gpu={gpu_page_dequant_matmul_measurement_ready}; kv={kv_cache_policy_ready}; v61j={v61j_source_bound_qa_command_pass}; runtime={post_full_shard_runtime_evidence_ready}", "required_value": "all ready", "reason": "v61 immediate real-model evidence targets are ready"},
     {"gate": "external-return-inputs", "status": "blocked", "actual_value": f"{present_external_input_rows}/{required_external_input_rows}", "required_value": "5/5", "reason": "external returned evidence roots missing"},
     {"gate": "actual-generation", "status": "blocked", "actual_value": "0", "required_value": "1", "reason": "actual model generation remains unproven"},
     {"gate": "v1-comparison", "status": "blocked", "actual_value": str(v1_0_comparison_ready), "required_value": "1", "reason": "review and generation evidence missing"},
-    {"gate": "active-goal-complete", "status": "blocked", "actual_value": "0", "required_value": "1", "reason": "seven requirements remain blocked"},
+    {"gate": "active-goal-complete", "status": "blocked", "actual_value": "0", "required_value": "1", "reason": f"{len(blocker_rows)} requirements remain blocked"},
     {"gate": "zero-repo-checkpoint-payload", "status": "pass", "actual_value": "0", "required_value": "0", "reason": "metadata-only audit"},
 ]
 write_csv(decision_csv, list(decision_rows[0].keys()), decision_rows)

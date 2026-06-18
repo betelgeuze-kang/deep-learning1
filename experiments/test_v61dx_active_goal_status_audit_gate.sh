@@ -47,20 +47,20 @@ expected = {
     "v61dh_post_full_shard_claim_audit_gate_ready": "1",
     "v61dw_return_bundle_operator_handoff_bundle_ready": "1",
     "objective_section_rows": "3",
-    "machine_ready_section_rows": "3",
-    "final_ready_section_rows": "1",
-    "blocked_final_section_rows": "2",
+    "machine_ready_section_rows": "2",
+    "final_ready_section_rows": "0",
+    "blocked_final_section_rows": "3",
     "objective_requirement_rows": "24",
-    "ready_objective_requirement_rows": "16",
-    "blocked_objective_requirement_rows": "8",
+    "ready_objective_requirement_rows": "14",
+    "blocked_objective_requirement_rows": "10",
     "claim_boundary_rows": "10",
-    "allowed_claim_boundary_rows": "4",
-    "blocked_claim_boundary_rows": "6",
+    "allowed_claim_boundary_rows": "3",
+    "blocked_claim_boundary_rows": "7",
     "next_action_rows": "5",
     "blocked_next_action_rows": "5",
-    "v52_ready": "1",
+    "v52_ready": "0",
     "f_optional_final_disposition": "deferred-with-reason-final",
-    "comparison_30b_150b_wording_status": "allowed-with-disclosure",
+    "comparison_30b_150b_wording_status": "blocked",
     "v53_machine_complete_source_surface_ready": "1",
     "complete_source_repo_count": "10",
     "complete_source_query_rows": "1000",
@@ -139,8 +139,8 @@ if set(sections) != {
     "v61-real-model-evidence",
 }:
     raise SystemExit("v61dx section id set mismatch")
-if sections["v52-f-optional-and-v52-ready"]["final_ready"] != "1":
-    raise SystemExit("v61dx v52 section should be final-ready for measured-registry scope")
+if sections["v52-f-optional-and-v52-ready"]["final_ready"] != "0":
+    raise SystemExit("v61dx v52 section should remain blocked until D/E PM/release readiness")
 if sections["v53-complete-source-audit-surface"]["final_ready"] != "0":
     raise SystemExit("v61dx v53 final readiness should remain blocked")
 if sections["v61-real-model-evidence"]["final_ready"] != "0":
@@ -153,8 +153,6 @@ ready_ids = {key for key, row in requirements.items() if row["status"] == "ready
 blocked_ids = {key for key, row in requirements.items() if row["status"] == "blocked"}
 for requirement_id in [
     "v52-f-disposition-defined",
-    "v52-ready-condition-passes",
-    "v52-30b-150b-wording-disclosure",
     "v53-complete-source-repo-lock",
     "v53-complete-source-query-set",
     "v53-core-answer-citation-resource-surface",
@@ -172,6 +170,8 @@ for requirement_id in [
     if requirement_id not in ready_ids:
         raise SystemExit(f"v61dx requirement should be ready: {requirement_id}")
 for requirement_id in [
+    "v52-ready-condition-passes",
+    "v52-30b-150b-wording-disclosure",
     "v53-human-review-return-accepted",
     "v53-adjudication-return-accepted",
     "v61-generation-execution-admission",
@@ -186,7 +186,6 @@ for requirement_id in [
 
 claims = {row["claim_id"]: row["status"] for row in read_csv(run_dir / "active_goal_claim_boundary_rows.csv")}
 for claim_id in [
-    "v52-30b-150b-comparison-wording",
     "v53-machine-complete-source-surface",
     "v61-full-shard-runtime-evidence",
     "v61-return-bundle-operator-handoff",
@@ -194,6 +193,7 @@ for claim_id in [
     if not claims[claim_id].startswith("allowed"):
         raise SystemExit(f"v61dx claim should be allowed/boundary: {claim_id}")
 for claim_id in [
+    "v52-30b-150b-comparison-wording",
     "v53-ready",
     "actual-mixtral-generation",
     "production-latency",
@@ -208,7 +208,6 @@ decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
     "active-goal-status-audit",
     "v52-f-optional-final-policy",
-    "v52-ready-condition",
     "v53-machine-complete-source-surface",
     "v61-real-model-runtime-evidence",
     "v61-return-handoff-bundle",
@@ -216,6 +215,7 @@ for gate in [
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61dx decision should pass: {gate}")
 for gate in [
+    "v52-ready-condition",
     "v53-review-return",
     "v61-actual-model-generation",
     "v1-comparison-ready",
@@ -226,9 +226,9 @@ for gate in [
 
 boundary = (run_dir / "V61DX_ACTIVE_GOAL_STATUS_AUDIT_GATE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "v52_ready=1",
+    "v52_ready=0",
     "F=deferred-with-reason-final",
-    "comparison_30b_150b_wording_status=allowed-with-disclosure",
+    "comparison_30b_150b_wording_status=blocked",
     "v53_machine_complete_source_surface_ready=1",
     "complete_source_query_rows=1000",
     "v61_post_full_shard_runtime_evidence_ready=1",

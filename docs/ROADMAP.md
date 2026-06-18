@@ -1495,17 +1495,19 @@ Current next boundary:
   `experiments/test_v52q_70b_open_weight_llm_rag_v53e_1000.sh`, marks
   `e_v53e_absorb_ready=1`, and keeps D, full v52, and release claims blocked.
 - `v52r` re-absorbs the v52p/v52q D/E measured packets into the v52 measured
-  registry. `experiments/test_v52r_measured_registry_de_absorb.sh` promotes
+  registry. `experiments/test_v52r_measured_registry_de_absorb.sh` absorbs
   A/B/C/D/E/G/H over the shared v53e manifest, copies v52i/v52l/v52p/v52q
-  artifacts, records 7000 answer/citation/abstain/guard/resource rows, sets
-  `required_30b_baseline_ready=1` and `required_70b_baseline_ready=1`, and
-  keeps optional F, full v52, and release claims blocked.
+  artifacts, and records 7000 answer/citation/abstain/guard/resource rows when
+  source packets exist. It keeps `required_30b_baseline_ready=0`,
+  `required_70b_baseline_ready=0`, optional F, full v52, and release claims
+  blocked because artifact absorption is not PM/release-grade D/E acceptance.
 - `v52y` resolves F optional handling after v52r.
   `experiments/test_v52y_f_optional_final_policy.sh` records F as
   `deferred-with-reason-final` by default, verifies the v53 ready-condition
-  matrix, and sets `v52_ready=1` for the measured-baseline-registry scope while
-  keeping measured 100B+/150B result wording, v53 complete-source audit, v1.0
-  comparison, and release claims blocked.
+  matrix, and keeps `v52_ready=0` plus 30B-150B comparison wording blocked
+  until required D/E PM/release baseline readiness is accepted. Measured
+  100B+/150B result wording, v53 complete-source audit, v1.0 comparison, and
+  release claims stay blocked.
 - `v52s` emits the NVMe hot/warm/cold weight shard store contract aligned with
   h11-c. `experiments/test_v52s_local_llm_weight_tier_contract.sh` marks
   `nvme_mmap_store_ready=1` while keeping tiered decode runtime blocked.
@@ -3213,10 +3215,10 @@ Current next boundary:
 - `v61dh` adds the post-full-shard claim audit gate.
   `experiments/test_v61dh_post_full_shard_claim_audit_gate.sh` consumes
   v52y/v53t/v61dg and freezes the current claim posture. It pins
-  `claim_rows=15`, `allowed_claim_rows=7`, `blocked_claim_rows=8`,
-  `claim_invariant_rows=6`, `claim_invariant_pass_rows=6`, `v52_ready=1`,
+  `claim_rows=15`, `allowed_claim_rows=6`, `blocked_claim_rows=9`,
+  `claim_invariant_rows=6`, `claim_invariant_pass_rows=6`, `v52_ready=0`,
   `f_optional_final_disposition=deferred-with-reason-final`,
-  `comparison_30b_150b_wording_status=allowed-with-disclosure`,
+  `comparison_30b_150b_wording_status=blocked`,
   `v53_machine_complete_source_surface_ready=1`,
   `accepted_human_review_rows=0/7000`, `accepted_adjudication_rows=0/1000`,
   `v61_post_full_shard_runtime_evidence_ready=1`,
@@ -3756,13 +3758,13 @@ Current next boundary:
   `experiments/test_v61fq_post_fp_v1_comparison_readiness_refresh.sh`
   consumes v52y/v53t/v53am/v61dh/v61fp and separates disclosure-bound
   comparison wording from actual v1.0 readiness. Canonical no-return records
-  `v52_ready=1`, `f_optional_final_disposition=deferred-with-reason-final`,
-  `comparison_30b_150b_wording_status=allowed-with-disclosure`,
+  `v52_ready=0`, `f_optional_final_disposition=deferred-with-reason-final`,
+  `comparison_30b_150b_wording_status=blocked`,
   `v53_machine_complete_source_surface_ready=1`, 10 complete-source repos,
   1000 queries, 7000 answer rows, accepted human review 0/7000, accepted
   adjudication 0/1000, `full_shard_prerequisites_closed=1`, 21 readiness rows
-  with 11 ready and 10 blocked, eight claim-boundary rows with four allowed and
-  four blocked, `v1_0_comparison_ready=0`, and
+  with seven ready and 14 blocked, eight claim-boundary rows with three allowed
+  and five blocked, `v1_0_comparison_ready=0`, and
   `actual_model_generation_ready=0`.
 - `v61fr` adds the post-v61fq v1.0 ready-command handoff.
   `experiments/test_v61fr_post_fq_v1_ready_command_handoff.sh` consumes
@@ -3786,9 +3788,9 @@ Current next boundary:
   `experiments/test_v61ft_active_goal_completion_audit.sh` consumes
   v52y/v53t/v61dg/v61fq/v61fs and writes a requirement/section/blocker ledger
   for the current objective without marking it complete. Canonical audit records
-  `active_goal_complete=0`, 20 requirement rows with 13 pass and seven blocked,
-  three objective sections with one pass and two blocked, seven blocker rows,
-  five next actions with two ready, `v52_ready=1`,
+  `active_goal_complete=0`, 20 requirement rows with 11 pass and nine blocked,
+  three objective sections with zero pass and three blocked, nine blocker rows,
+  five next actions with two ready, `v52_ready=0`,
   `v53_machine_complete_source_surface_ready=1`,
   `post_full_shard_runtime_evidence_ready=1`, successful ready commands 4/4,
   external inputs 0/5, `v1_0_comparison_ready=0`, and
@@ -3841,16 +3843,16 @@ Current next boundary:
 - `v61fz` adds the post-v61fy active-goal status refresh.
   `experiments/test_v61fz_post_fy_active_goal_status_refresh.sh` binds
   v61ft/v61fu/v61fx/v61fy into the latest pass/blocked ledger. Canonical
-  refresh records `active_goal_complete=0`, v52 ready, v53 complete-source
+  refresh records `active_goal_complete=0`, `v52_ready=0`, v53 complete-source
   machine surface 10 repos / 1000 queries / 7000 answer rows, post-full-shard
   runtime evidence ready, root-pinned handoff receipt ready, 18 requirements
-  with seven ready and 11 blocked, 91 missing external return artifacts,
+  with six ready and 12 blocked, 91 missing external return artifacts,
   missing review rows 7000, missing adjudication rows 1000,
   `actual_model_generation_ready=0`, and zero checkpoint payload bytes.
 - `v61ga` adds the post-v61fz generation unblock runway.
   `experiments/test_v61ga_post_fz_generation_unblock_runway.sh` binds v61fz,
   v53ao, and v61fu into a metadata-only actual-generation runway. Canonical
-  no-return records v52/v53/full-shard runtime evidence ready, v53ao ready
+  no-return records `v52_ready=0` with v53/full-shard runtime evidence ready, v53ao ready
   actions 2/2 successful with four real-return actions blocked, 18 runway
   requirements with five ready and 13 blocked, six minimum return batches all
   blocked, five replay commands with two ready and three blocked, 14 open delta

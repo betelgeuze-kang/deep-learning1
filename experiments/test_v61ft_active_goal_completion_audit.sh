@@ -41,10 +41,10 @@ expected = {
     "v61dg_post_full_shard_runtime_evidence_promotion_gate_ready": "1",
     "v61fq_post_fp_v1_comparison_readiness_refresh_ready": "1",
     "v61fs_post_fr_ready_command_execution_receipt_ready": "1",
-    "v52_ready": "1",
+    "v52_ready": "0",
     "f_optional_final_disposition_ready": "1",
     "f_optional_final_disposition": "deferred-with-reason-final",
-    "comparison_wording_claim_ready": "1",
+    "comparison_wording_claim_ready": "0",
     "v53_machine_complete_source_surface_ready": "1",
     "complete_source_repo_count": "10",
     "complete_source_query_rows": "1000",
@@ -73,12 +73,12 @@ expected = {
     "checkpoint_payload_bytes_committed_to_repo": "0",
     "route_jump_rows": "0",
     "requirement_rows": "20",
-    "pass_requirement_rows": "13",
-    "blocked_requirement_rows": "7",
+    "pass_requirement_rows": "11",
+    "blocked_requirement_rows": "9",
     "objective_section_rows": "3",
-    "pass_objective_section_rows": "1",
-    "blocked_objective_section_rows": "2",
-    "blocker_rows": "7",
+    "pass_objective_section_rows": "0",
+    "blocked_objective_section_rows": "3",
+    "blocker_rows": "9",
     "next_action_rows": "5",
     "ready_next_action_rows": "2",
     "blocked_next_action_rows": "3",
@@ -134,11 +134,13 @@ if not os.access(audit_dir / "VERIFY_ACTIVE_GOAL_COMPLETION_AUDIT.sh", os.X_OK):
 requirements = read_csv(run_dir / "active_goal_completion_requirement_rows.csv")
 if len(requirements) != 20:
     raise SystemExit("v61ft expected 20 requirement rows")
-if sum(row["status"] == "pass" for row in requirements) != 13:
-    raise SystemExit("v61ft expected 13 passing requirements")
-if sum(row["status"] == "blocked" for row in requirements) != 7:
-    raise SystemExit("v61ft expected seven blocked requirements")
+if sum(row["status"] == "pass" for row in requirements) != 11:
+    raise SystemExit("v61ft expected 11 passing requirements")
+if sum(row["status"] == "blocked" for row in requirements) != 9:
+    raise SystemExit("v61ft expected nine blocked requirements")
 for requirement_id in [
+    "02-v52-ready-condition",
+    "03-30b-150b-wording-disclosure",
     "08-human-review-return",
     "09-adjudication-return",
     "10-v53-ready",
@@ -154,10 +156,8 @@ for requirement_id in [
 sections = read_csv(run_dir / "active_goal_completion_section_rows.csv")
 if len(sections) != 3:
     raise SystemExit("v61ft expected three section rows")
-if sections[0]["status"] != "pass":
-    raise SystemExit("v61ft v52 section should pass")
-if any(row["status"] != "blocked" for row in sections[1:]):
-    raise SystemExit("v61ft v53/v61 sections should remain blocked")
+if any(row["status"] != "blocked" for row in sections):
+    raise SystemExit("v61ft v52/v53/v61 sections should remain blocked")
 
 actions = read_csv(run_dir / "active_goal_completion_next_action_rows.csv")
 if [row["ready_to_run_now"] for row in actions] != ["1", "1", "0", "0", "0"]:
@@ -165,7 +165,6 @@ if [row["ready_to_run_now"] for row in actions] != ["1", "1", "0", "0", "0"]:
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 for gate in [
-    "v52-f-optional-and-ready",
     "v53-machine-complete-source-surface",
     "v61-real-model-runtime-evidence",
     "zero-repo-checkpoint-payload",
@@ -173,6 +172,7 @@ for gate in [
     if decisions[gate] != "pass":
         raise SystemExit(f"v61ft decision should pass: {gate}")
 for gate in [
+    "v52-f-optional-and-ready",
     "v53-review-return",
     "external-return-inputs",
     "actual-generation",
@@ -187,9 +187,9 @@ for snippet in [
     "v61ft_active_goal_completion_audit_ready=1",
     "active_goal_complete=0",
     "requirement_rows=20",
-    "pass_requirement_rows=13",
-    "blocked_requirement_rows=7",
-    "v52_ready=1",
+    "pass_requirement_rows=11",
+    "blocked_requirement_rows=9",
+    "v52_ready=0",
     "v53_machine_complete_source_surface_ready=1",
     "post_full_shard_runtime_evidence_ready=1",
     "successful_ready_command_rows=4/4",

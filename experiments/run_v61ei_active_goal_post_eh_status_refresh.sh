@@ -101,14 +101,20 @@ for key, path in sources.items():
 v61dx = read_csv(sources["v61dx_summary"])[0]
 v61eh = read_csv(sources["v61eh_summary"])[0]
 
+v52_ready = v61dx["v52_ready"] == "1"
+v52_comparison_wording_allowed = (
+    v52_ready
+    and v61dx.get("comparison_30b_150b_wording_status", "blocked") == "allowed-with-disclosure"
+)
+
 section_rows = [
     {
         "section_id": "v52-f-optional-policy",
-        "status": "ready",
+        "status": "ready" if v52_ready else "blocked-d-e-release-baseline",
         "evidence_source": "v61dx",
         "ready": v61dx["v52_ready"],
         "actual_value": v61dx["f_optional_final_disposition"],
-        "next_required_artifact": "none for measured-registry wording scope",
+        "next_required_artifact": "none for measured-registry wording scope" if v52_ready else "accepted 30B and 70B PM/release baseline evidence",
     },
     {
         "section_id": "v53-complete-source-machine-surface",
@@ -164,7 +170,11 @@ requirement_dicts = [
 write_csv(run_dir / "post_eh_requirement_rows.csv", list(requirement_dicts[0].keys()), requirement_dicts)
 
 claim_rows = [
-    ("v52-30b-150b-comparison-wording", "allowed-with-disclosure", "F optional is deferred with reason final"),
+    (
+        "v52-30b-150b-comparison-wording",
+        "allowed-with-disclosure" if v52_comparison_wording_allowed else "blocked",
+        "requires D/E PM/release readiness plus F final disposition",
+    ),
     ("v53-complete-source-machine-surface", "allowed-with-disclosure", "machine surface is ready, review return is blocked"),
     ("v61-real-model-page-runtime-evidence", "allowed-with-boundary", "full shard/page hash/runtime evidence is ready"),
     ("v61-real-generation-return-packet", "allowed-with-boundary", "return packet/schema is ready, real artifacts are missing"),

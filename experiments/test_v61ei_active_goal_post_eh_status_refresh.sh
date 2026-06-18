@@ -41,15 +41,15 @@ expected = {
     "v61dx_active_goal_status_audit_gate_ready": "1",
     "v61eh_real_generation_result_return_packet_ready": "1",
     "section_rows": "4",
-    "ready_section_rows": "4",
+    "ready_section_rows": "3",
     "requirement_rows": "10",
     "ready_requirement_rows": "4",
     "blocked_requirement_rows": "6",
     "claim_boundary_rows": "8",
-    "allowed_claim_boundary_rows": "4",
-    "blocked_claim_boundary_rows": "4",
+    "allowed_claim_boundary_rows": "3",
+    "blocked_claim_boundary_rows": "5",
     "next_action_rows": "5",
-    "v52_ready": "1",
+    "v52_ready": "0",
     "f_optional_final_disposition": "deferred-with-reason-final",
     "v53_machine_complete_source_surface_ready": "1",
     "v53_ready": "0",
@@ -133,7 +133,6 @@ for requirement_id in [
 
 claims = {row["claim_id"]: row["status"] for row in read_csv(run_dir / "post_eh_claim_boundary_rows.csv")}
 for claim_id in [
-    "v52-30b-150b-comparison-wording",
     "v53-complete-source-machine-surface",
     "v61-real-model-page-runtime-evidence",
     "v61-real-generation-return-packet",
@@ -141,6 +140,7 @@ for claim_id in [
     if not claims[claim_id].startswith("allowed"):
         raise SystemExit(f"v61ei claim should be allowed/boundary: {claim_id}")
 for claim_id in [
+    "v52-30b-150b-comparison-wording",
     "actual-mixtral-generation",
     "production-latency",
     "near-frontier-quality",
@@ -180,7 +180,7 @@ for gate in [
 
 boundary = (run_dir / "V61EI_ACTIVE_GOAL_POST_EH_STATUS_REFRESH_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "v52_ready=1",
+    "v52_ready=0",
     "v53_machine_complete_source_surface_ready=1",
     "v53_ready=0",
     "real_manifest_runtime_evidence_ready=1",

@@ -43,13 +43,13 @@ expected = {
     "v61dh_post_full_shard_claim_audit_gate_ready": "1",
     "claim_audit_ready": "1",
     "claim_rows": "15",
-    "allowed_claim_rows": "7",
-    "blocked_claim_rows": "8",
+    "allowed_claim_rows": "6",
+    "blocked_claim_rows": "9",
     "claim_invariant_rows": "6",
     "claim_invariant_pass_rows": "6",
-    "v52_ready": "1",
+    "v52_ready": "0",
     "f_optional_final_disposition": "deferred-with-reason-final",
-    "comparison_30b_150b_wording_status": "allowed-with-disclosure",
+    "comparison_30b_150b_wording_status": "blocked",
     "v53_machine_complete_source_surface_ready": "1",
     "complete_source_repo_count": "10",
     "complete_source_query_rows": "1000",
@@ -107,7 +107,6 @@ allowed_ids = {row["claim_id"] for row in claim_rows if row["status"] in allowed
 blocked_ids = {row["claim_id"] for row in claim_rows if row["status"] == "blocked"}
 for claim_id in [
     "v52-measured-baseline-registry",
-    "v52-30b-150b-class-comparison-surface",
     "v53-complete-source-machine-surface",
     "v61-full-shard-runtime-evidence",
     "v61-rocm-page-kernel-timing",
@@ -125,6 +124,7 @@ for claim_id in [
     "v1-comparison-ready",
     "real-release-package",
     "route-memory-beats-30b-150b",
+    "v52-30b-150b-class-comparison-surface",
 ]:
     if claim_id not in blocked_ids:
         raise SystemExit(f"v61dh claim should stay blocked: {claim_id}")
@@ -146,12 +146,12 @@ for gate in [
     "claim-audit-ready",
     "allowed-claim-boundary",
     "blocked-claim-boundary",
-    "v52-30b-150b-wording",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v61dh decision should pass: {gate}")
 for gate in [
     "v53-ready",
+    "v52-30b-150b-wording",
     "actual-model-generation",
     "v1-comparison-ready",
     "real-release-package",
@@ -162,11 +162,11 @@ for gate in [
 boundary = (run_dir / "V61DH_POST_FULL_SHARD_CLAIM_AUDIT_GATE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
     "claim_rows=15",
-    "allowed_claim_rows=7",
-    "blocked_claim_rows=8",
+    "allowed_claim_rows=6",
+    "blocked_claim_rows=9",
     "claim_audit_ready=1",
     "f_optional_final_disposition=deferred-with-reason-final",
-    "comparison_30b_150b_wording_status=allowed-with-disclosure",
+    "comparison_30b_150b_wording_status=blocked",
     "v53_machine_complete_source_surface_ready=1",
     "accepted_human_review_rows=0/7000",
     "accepted_adjudication_rows=0/1000",
