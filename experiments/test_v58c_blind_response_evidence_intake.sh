@@ -7,7 +7,100 @@ RUN_DIR="$RESULTS_DIR/v58c_blind_response_evidence_intake/intake_001"
 SUMMARY_CSV="$RESULTS_DIR/v58c_blind_response_evidence_intake_summary.csv"
 DECISION_CSV="$RESULTS_DIR/v58c_blind_response_evidence_intake_decision.csv"
 
-V58C_REUSE_EXISTING="${V58C_REUSE_EXISTING:-1}" "$ROOT_DIR/experiments/run_v58c_blind_response_evidence_intake.sh" >/dev/null
+set +e
+output="$(V58C_REUSE_EXISTING="${V58C_REUSE_EXISTING:-1}" "$ROOT_DIR/experiments/run_v58c_blind_response_evidence_intake.sh" 2>&1 >/dev/null)"
+status=$?
+set -e
+if [ "$status" -ne 0 ]; then
+  if ! grep -q "Refusing implicit v57 regeneration" <<<"$output"; then
+    printf '%s\n' "$output" >&2
+    exit "$status"
+  fi
+  python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+summary_csv = Path(sys.argv[2])
+decision_csv = Path(sys.argv[3])
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+summary = read_csv(summary_csv)[0]
+expected = {
+    "v58c_blind_response_evidence_intake_ready": "0",
+    "v58_ready": "0",
+    "v58c_dependency_blocker_ready": "1",
+    "missing_dependency_artifact_rows": "7",
+    "missing_v57_dependency_artifact_rows": "7",
+    "implicit_dependency_rebuild_allowed": "0",
+    "dependency_rebuild_approval_required": "1",
+    "network_or_download_approval_required": "1",
+    "required_blind_response_ready": "0",
+    "v58_full_blind_eval_ready": "0",
+    "real_release_package_ready": "0",
+}
+for field, value in expected.items():
+    if summary.get(field) != value:
+        raise SystemExit(f"v58c dependency {field}: expected {value}, got {summary.get(field)}")
+
+rows = read_csv(run_dir / "v58c_dependency_blocker_rows.csv")
+if len(rows) != 7:
+    raise SystemExit("v58c dependency blocker should carry seven missing v57 artifact rows")
+if any(row["implicit_rebuild_allowed"] != "0" or row["approval_required"] != "1" for row in rows):
+    raise SystemExit("v58c dependency blocker rows should require approval and forbid implicit rebuild")
+if any(row["fixture_allowed"] != "0" or row["tests_only_merge_condition"] != "0" for row in rows):
+    raise SystemExit("v58c dependency blocker rows should forbid fixtures and tests-only merge")
+if any(row["network_or_download_risk"] != "1" for row in rows):
+    raise SystemExit("v58c dependency blocker rows should preserve network/download risk")
+
+decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
+if decisions.get("v58c-dependency-blocker") != "pass":
+    raise SystemExit("v58c dependency blocker gate should pass")
+for gate in ["implicit-v58b-v57-rebuild", "v58c-intake-contract", "v58-full-blind-eval"]:
+    if decisions.get(gate) != "blocked":
+        raise SystemExit(f"v58c dependency blocker should keep blocked: {gate}")
+
+manifest = json.loads((run_dir / "v58c_dependency_blocker_manifest.json").read_text(encoding="utf-8"))
+if manifest.get("v58c_dependency_blocker_ready") != 1:
+    raise SystemExit("v58c dependency blocker manifest should be ready")
+boundary = (run_dir / "V58C_BLIND_RESPONSE_INTAKE_DEPENDENCY_BLOCKER.md").read_text(encoding="utf-8")
+for snippet in [
+    "refuses implicit regeneration",
+    "dependency_rebuild_approval_required=1",
+    "v58_full_blind_eval_ready=0",
+    "Blocked wording: v58c intake artifact ready",
+]:
+    if snippet not in boundary:
+        raise SystemExit(f"v58c dependency blocker boundary missing {snippet}")
+
+sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
+for rel in [
+    "v58c_dependency_blocker_rows.csv",
+    "V58C_BLIND_RESPONSE_INTAKE_DEPENDENCY_BLOCKER.md",
+    "v58c_dependency_blocker_manifest.json",
+]:
+    if sha_rows.get(rel) != sha256(run_dir / rel):
+        raise SystemExit(f"v58c dependency blocker sha mismatch: {rel}")
+PY
+  echo "v58c blind response evidence intake dependency guard smoke passed"
+  exit 0
+fi
 
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv

@@ -14,7 +14,171 @@ rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
 if [[ "${V58C_REUSE_EXISTING:-1}" != "1" || ! -s "$RESULTS_DIR/v58b_blind_eval_candidate_500_summary.csv" ]]; then
-  "$ROOT_DIR/experiments/run_v58b_blind_eval_candidate_500.sh" >/dev/null
+  set +e
+  v58b_output="$("$ROOT_DIR/experiments/run_v58b_blind_eval_candidate_500.sh" 2>&1 >/dev/null)"
+  v58b_status=$?
+  set -e
+  if [[ "$v58b_status" -ne 0 ]]; then
+    python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$v58b_status" "$v58b_output" <<'PY'
+import csv
+import hashlib
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+summary_csv = Path(sys.argv[2])
+decision_csv = Path(sys.argv[3])
+dependency_status = int(sys.argv[4])
+dependency_output = sys.argv[5]
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def write_csv(path, fieldnames, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+missing = []
+for line in dependency_output.splitlines():
+    if line.startswith("missing_v57_artifact="):
+        missing.append(line.split("=", 1)[1])
+
+rows = [
+    {
+        "missing_dependency_artifact": path,
+        "dependency_stage": "v57-domain-expert-pack-contract",
+        "required_for": "v58c-blind-response-evidence-intake",
+        "upstream_runner": "run_v58b_blind_eval_candidate_500.sh",
+        "upstream_status": str(dependency_status),
+        "implicit_rebuild_allowed": "0",
+        "approval_required": "1",
+        "network_or_download_risk": "1",
+        "fixture_allowed": "0",
+        "tests_only_merge_condition": "0",
+        "claim_boundary_status": "blocked-until-v57-v58b-seed-artifact-present",
+        "validation_command": "V58_ALLOW_V57_REBUILD=1 V58C_REUSE_EXISTING=0 ./experiments/test_v58c_blind_response_evidence_intake.sh",
+    }
+    for path in missing
+]
+if not rows:
+    rows.append(
+        {
+            "missing_dependency_artifact": "<unknown-v58b-dependency>",
+            "dependency_stage": "v58b-blind-eval-candidate",
+            "required_for": "v58c-blind-response-evidence-intake",
+            "upstream_runner": "run_v58b_blind_eval_candidate_500.sh",
+            "upstream_status": str(dependency_status),
+            "implicit_rebuild_allowed": "0",
+            "approval_required": "1",
+            "network_or_download_risk": "1",
+            "fixture_allowed": "0",
+            "tests_only_merge_condition": "0",
+            "claim_boundary_status": "blocked-until-v58b-seed-artifact-present",
+            "validation_command": "V58C_REUSE_EXISTING=0 ./experiments/test_v58c_blind_response_evidence_intake.sh",
+        }
+    )
+
+write_csv(run_dir / "v58c_dependency_blocker_rows.csv", list(rows[0].keys()), rows)
+
+summary = {
+    "v58c_blind_response_evidence_intake_ready": "0",
+    "v58_ready": "0",
+    "v58c_dependency_blocker_ready": "1",
+    "missing_dependency_artifact_rows": str(len(rows)),
+    "missing_v57_dependency_artifact_rows": str(sum(1 for row in rows if row["dependency_stage"] == "v57-domain-expert-pack-contract")),
+    "implicit_dependency_rebuild_allowed": "0",
+    "dependency_rebuild_approval_required": "1",
+    "network_or_download_approval_required": "1",
+    "expected_blind_response_rows": "0",
+    "supplied_blind_response_rows": "0",
+    "required_blind_response_rows": "2000",
+    "required_blind_response_ready": "0",
+    "blind_response_absorb_ready": "0",
+    "human_blind_review_ready": "0",
+    "inter_rater_rows_ready": "0",
+    "v58_full_blind_eval_ready": "0",
+    "real_release_package_ready": "0",
+}
+write_csv(summary_csv, list(summary.keys()), [summary])
+
+decision_rows = [
+    {
+        "gate": "v58c-dependency-blocker",
+        "status": "pass",
+        "reason": f"missing_dependency_artifact_rows={len(rows)}; implicit v58/v57 rebuild refused",
+    },
+    {
+        "gate": "implicit-v58b-v57-rebuild",
+        "status": "blocked",
+        "reason": "V58_ALLOW_V57_REBUILD=1 is required before v58b/v57 seed regeneration",
+    },
+    {
+        "gate": "v58c-intake-contract",
+        "status": "blocked",
+        "reason": "v58b blind-query seed artifacts are missing, so v58c intake templates are not claimed ready",
+    },
+    {
+        "gate": "v58-full-blind-eval",
+        "status": "blocked",
+        "reason": "real blind responses and human blind review are missing",
+    },
+]
+write_csv(decision_csv, list(decision_rows[0].keys()), decision_rows)
+
+(run_dir / "V58C_BLIND_RESPONSE_INTAKE_DEPENDENCY_BLOCKER.md").write_text(
+    "# v58c Blind Response Intake Dependency Blocker\n\n"
+    "The v58c blind response intake artifact did not run because required v58b/v57 seed artifacts are missing. "
+    "The script refuses implicit regeneration so that public benchmark/source refresh, seed, and blind-eval protocol changes cannot happen silently.\n\n"
+    f"- missing_dependency_artifact_rows={len(rows)}\n"
+    f"- missing_v57_dependency_artifact_rows={summary['missing_v57_dependency_artifact_rows']}\n"
+    "- implicit_dependency_rebuild_allowed=0\n"
+    "- dependency_rebuild_approval_required=1\n"
+    "- network_or_download_approval_required=1\n"
+    "- v58_full_blind_eval_ready=0\n"
+    "- real_release_package_ready=0\n\n"
+    "Allowed wording: v58c dependency blocker artifact for missing blind-query seed replay evidence.\n\n"
+    "Blocked wording: v58c intake artifact ready, v58 blind-eval complete, public comparison result, or v1.0 release readiness.\n",
+    encoding="utf-8",
+)
+
+manifest = {
+    "manifest_scope": "v58c-blind-response-intake-dependency-blocker",
+    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    "v58c_dependency_blocker_ready": 1,
+    "missing_dependency_artifact_rows": len(rows),
+    "missing_v57_dependency_artifact_rows": int(summary["missing_v57_dependency_artifact_rows"]),
+    "implicit_dependency_rebuild_allowed": 0,
+    "dependency_rebuild_approval_required": 1,
+    "network_or_download_approval_required": 1,
+    "v58_full_blind_eval_ready": 0,
+    "real_release_package_ready": 0,
+}
+(run_dir / "v58c_dependency_blocker_manifest.json").write_text(
+    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+
+artifact_rows = []
+for path in sorted(run_dir.rglob("*")):
+    if path.is_file() and path.name != "sha256_manifest.csv":
+        artifact_rows.append({"path": str(path.relative_to(run_dir)), "sha256": sha256(path), "bytes": path.stat().st_size})
+write_csv(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], artifact_rows)
+PY
+    printf '%s\n' "$v58b_output" >&2
+    exit "$v58b_status"
+  fi
 fi
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$EVIDENCE_DIR" <<'PY'
