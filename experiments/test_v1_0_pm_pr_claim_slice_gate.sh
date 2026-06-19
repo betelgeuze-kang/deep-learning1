@@ -126,18 +126,18 @@ expected = {
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_ready_rows": "6",
     "pm_blocker_closure_packet_approval_rows": "6",
-    "pm_blocker_required_artifact_rows": "26",
-    "pm_blocker_required_artifact_approval_rows": "26",
+    "pm_blocker_required_artifact_rows": "29",
+    "pm_blocker_required_artifact_approval_rows": "29",
     "pm_blocker_required_artifact_fixture_allowed_rows": "0",
     "pm_execution_lock_rows": "10",
     "pm_execution_lock_active_rows": "10",
     "pm_scope_drift_allowed": "0",
     "pm_new_scaffold_default_allowed": "0",
-    "pm_external_return_template_rows": "26",
-    "pm_external_return_template_files": "26",
-    "pm_external_return_template_ready_rows": "26",
+    "pm_external_return_template_rows": "29",
+    "pm_external_return_template_files": "29",
+    "pm_external_return_template_ready_rows": "29",
     "pm_external_return_template_fixture_allowed_rows": "0",
-    "pm_external_return_template_approval_rows": "26",
+    "pm_external_return_template_approval_rows": "29",
     "pm_pr_normalization_rows": "7",
     "pm_pr_normalization_split_required_rows": "7",
     "pm_pr_normalization_tests_only_rows": "0",
@@ -874,16 +874,16 @@ if blocker_packet_by_id["v60-release-evidence-missing"]["required_artifact_rows"
     raise SystemExit("v60 blocker packet should list seven required artifact rows")
 if blocker_packet_by_id["v58c-intake-artifact-missing"]["required_artifact_rows"] != "3":
     raise SystemExit("v58c blocker packet should list three required artifact rows")
-if blocker_packet_by_id["v58-real-blind-eval-missing"]["required_artifact_rows"] != "5":
-    raise SystemExit("v58 blocker packet should list five required artifact rows")
+if blocker_packet_by_id["v58-real-blind-eval-missing"]["required_artifact_rows"] != "8":
+    raise SystemExit("v58 blocker packet should list eight required artifact rows")
 if "V58C_BLIND_RESPONSE_EVIDENCE_DIR" not in blocker_packet_by_id["v58-real-blind-eval-missing"]["local_intake_or_verification_command"]:
     raise SystemExit("v58 blocker packet should carry the real blind response intake command")
 if "V58C_REUSE_EXISTING=0" not in blocker_packet_by_id["v58c-intake-artifact-missing"]["local_intake_or_verification_command"]:
     raise SystemExit("v58c blocker packet should carry the intake artifact rebuild command")
 
 required_artifact_rows = read_csv(run_dir / "pm_blocker_required_artifact_rows.csv")
-if len(required_artifact_rows) != 26:
-    raise SystemExit("PM blocker required artifact ledger should have 26 rows")
+if len(required_artifact_rows) != 29:
+    raise SystemExit("PM blocker required artifact ledger should have 29 rows")
 if {row["blocker_class"] for row in required_artifact_rows} != set(expected_blocked.values()):
     raise SystemExit("PM blocker required artifact ledger should cover the six blocker classes")
 if any(row["fixture_allowed"] != "0" for row in required_artifact_rows):
@@ -965,8 +965,8 @@ if "release" not in lock_by_id["v60-release-gate-last"]["scope"]:
     raise SystemExit("v60 execution lock should cover the release gate")
 
 template_rows = read_csv(run_dir / "pm_external_return_template_rows.csv")
-if len(template_rows) != 26:
-    raise SystemExit("PM external return template ledger should have 26 rows")
+if len(template_rows) != 29:
+    raise SystemExit("PM external return template ledger should have 29 rows")
 if any(row["template_ready"] != "1" for row in template_rows):
     raise SystemExit("all PM external return templates should be ready")
 if any(row["fixture_allowed"] != "0" for row in template_rows):
@@ -1505,17 +1505,17 @@ if manifest.get("pm_blocker_closure_packet_rows") != 6 or manifest.get("pm_block
     raise SystemExit("PM PR manifest blocker closure packet mismatch")
 if manifest.get("pm_blocker_closure_packet_ready_rows") != 6 or manifest.get("pm_blocker_closure_packet_approval_rows") != 6:
     raise SystemExit("PM PR manifest blocker closure packet readiness mismatch")
-if manifest.get("pm_blocker_required_artifact_rows") != 26 or manifest.get("pm_blocker_required_artifact_fixture_allowed_rows") != 0:
+if manifest.get("pm_blocker_required_artifact_rows") != 29 or manifest.get("pm_blocker_required_artifact_fixture_allowed_rows") != 0:
     raise SystemExit("PM PR manifest blocker required artifact mismatch")
 if manifest.get("pm_execution_lock_rows") != 10 or manifest.get("pm_execution_lock_active_rows") != 10:
     raise SystemExit("PM PR manifest execution lock row mismatch")
 if manifest.get("pm_scope_drift_allowed") != 0 or manifest.get("pm_new_scaffold_default_allowed") != 0:
     raise SystemExit("PM PR manifest should disallow scope drift and default new scaffolds")
-if manifest.get("pm_external_return_template_rows") != 26 or manifest.get("pm_external_return_template_files") != 26:
+if manifest.get("pm_external_return_template_rows") != 29 or manifest.get("pm_external_return_template_files") != 29:
     raise SystemExit("PM PR manifest external return template count mismatch")
-if manifest.get("pm_external_return_template_ready_rows") != 26 or manifest.get("pm_external_return_template_fixture_allowed_rows") != 0:
+if manifest.get("pm_external_return_template_ready_rows") != 29 or manifest.get("pm_external_return_template_fixture_allowed_rows") != 0:
     raise SystemExit("PM PR manifest external return template readiness mismatch")
-if manifest.get("pm_external_return_template_approval_rows") != 26:
+if manifest.get("pm_external_return_template_approval_rows") != 29:
     raise SystemExit("PM PR manifest external return templates should require approval")
 if (
     manifest.get("pm_pr_normalization_rows") != 7
@@ -1636,12 +1636,12 @@ for snippet in [
     "pm_blocker_closure_queue_rows=6",
     "pm_blocker_closure_packet_rows=6",
     "pm_blocker_closure_packet_files=6",
-    "pm_blocker_required_artifact_rows=26",
+    "pm_blocker_required_artifact_rows=29",
     "pm_execution_lock_rows=10",
     "pm_scope_drift_allowed=0",
     "pm_new_scaffold_default_allowed=0",
-    "pm_external_return_template_rows=26",
-    "pm_external_return_template_files=26",
+    "pm_external_return_template_rows=29",
+    "pm_external_return_template_files=29",
     "pm_pr_normalization_rows=7",
     "pm_pr_normalization_split_required_rows=7",
     "pm_pr_normalization_tests_only_rows=0",

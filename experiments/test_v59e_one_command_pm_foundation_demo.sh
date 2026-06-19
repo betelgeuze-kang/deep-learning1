@@ -218,16 +218,16 @@ expected = {
     "pm_blocker_closure_packet_rows": "6",
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_bundle_ready": "1",
-    "pm_blocker_required_artifact_rows": "26",
+    "pm_blocker_required_artifact_rows": "29",
     "pm_blocker_required_artifact_fixture_allowed_rows": "0",
     "pm_execution_lock_rows": "10",
     "pm_execution_lock_active_rows": "10",
     "pm_scope_drift_allowed": "0",
     "pm_new_scaffold_default_allowed": "0",
-    "pm_external_return_template_rows": "26",
-    "pm_external_return_template_files": "26",
+    "pm_external_return_template_rows": "29",
+    "pm_external_return_template_files": "29",
     "pm_external_return_template_fixture_allowed_rows": "0",
-    "pm_external_return_template_approval_rows": "26",
+    "pm_external_return_template_approval_rows": "29",
     "pm_external_return_template_bundle_ready": "1",
     "pm_pr_normalization_rows": "7",
     "pm_pr_normalization_split_required_rows": "7",
@@ -247,18 +247,18 @@ expected = {
     "pm_pr_v58_real_execution_blocked_rows": "9",
     "pm_pr_v58_real_execution_fixture_allowed_rows": "0",
     "v58_return_artifact_contract_ready": "1",
-    "v58_required_artifact_rows": "8",
-    "v58_required_artifact_approval_rows": "8",
+    "v58_required_artifact_rows": "11",
+    "v58_required_artifact_approval_rows": "11",
     "v58_required_artifact_fixture_allowed_rows": "0",
-    "v58_return_template_rows": "8",
-    "v58_return_template_ready_rows": "8",
+    "v58_return_template_rows": "11",
+    "v58_return_template_ready_rows": "11",
     "v58_return_template_fixture_allowed_rows": "0",
-    "v58_return_contract_map_rows": "8",
-    "v58_return_contract_map_ready_rows": "8",
-    "v58_return_contract_map_default_blocked_rows": "8",
-    "v58_acceptance_evidence_rows": "8",
-    "v58_acceptance_evidence_contract_ready_rows": "8",
-    "v58_acceptance_evidence_default_blocked_rows": "8",
+    "v58_return_contract_map_rows": "11",
+    "v58_return_contract_map_ready_rows": "11",
+    "v58_return_contract_map_default_blocked_rows": "11",
+    "v58_acceptance_evidence_rows": "11",
+    "v58_acceptance_evidence_contract_ready_rows": "11",
+    "v58_acceptance_evidence_default_blocked_rows": "11",
     "v58_acceptance_evidence_blind_eval_ready_rows": "0",
     "v58_acceptance_evidence_tests_only_rows": "0",
     "v58_acceptance_evidence_hidden_state_rows": "0",
@@ -993,20 +993,20 @@ if (
     raise SystemExit("v59e manifest should preserve the v58d blind-review return blocker boundary")
 if (
     manifest.get("v58_return_artifact_contract_ready") != 1
-    or manifest.get("v58_required_artifact_rows") != 8
+    or manifest.get("v58_required_artifact_rows") != 11
     or manifest.get("v58_required_artifact_fixture_allowed_rows") != 0
-    or manifest.get("v58_return_template_rows") != 8
-    or manifest.get("v58_return_template_ready_rows") != 8
+    or manifest.get("v58_return_template_rows") != 11
+    or manifest.get("v58_return_template_ready_rows") != 11
     or manifest.get("v58_return_template_fixture_allowed_rows") != 0
-    or manifest.get("v58_return_contract_map_rows") != 8
-    or manifest.get("v58_return_contract_map_ready_rows") != 8
-    or manifest.get("v58_return_contract_map_default_blocked_rows") != 8
+    or manifest.get("v58_return_contract_map_rows") != 11
+    or manifest.get("v58_return_contract_map_ready_rows") != 11
+    or manifest.get("v58_return_contract_map_default_blocked_rows") != 11
 ):
     raise SystemExit("v59e manifest should record v58 required return artifact contract readiness")
 if (
-    manifest.get("v58_acceptance_evidence_rows") != 8
-    or manifest.get("v58_acceptance_evidence_contract_ready_rows") != 8
-    or manifest.get("v58_acceptance_evidence_default_blocked_rows") != 8
+    manifest.get("v58_acceptance_evidence_rows") != 11
+    or manifest.get("v58_acceptance_evidence_contract_ready_rows") != 11
+    or manifest.get("v58_acceptance_evidence_default_blocked_rows") != 11
     or manifest.get("v58_acceptance_evidence_blind_eval_ready_rows") != 0
     or manifest.get("v58_acceptance_evidence_tests_only_rows") != 0
     or manifest.get("v58_acceptance_evidence_hidden_state_rows") != 0
@@ -1229,9 +1229,9 @@ for snippet in [
     "v58_return_artifact_contract_ready=1",
     "v58_required_artifact_fixture_allowed_rows=0",
     "v58_return_template_fixture_allowed_rows=0",
-    "v58_acceptance_evidence_rows=8",
-    "v58_acceptance_evidence_contract_ready_rows=8",
-    "v58_acceptance_evidence_default_blocked_rows=8",
+    "v58_acceptance_evidence_rows=11",
+    "v58_acceptance_evidence_contract_ready_rows=11",
+    "v58_acceptance_evidence_default_blocked_rows=11",
     "v58_acceptance_evidence_blind_eval_ready_rows=0",
     "v58_acceptance_evidence_tests_only_rows=0",
     "v58_acceptance_evidence_hidden_state_rows=0",
@@ -1307,15 +1307,15 @@ for rel in [
         raise SystemExit(f"v59e bundle index should include {rel}")
 
 v58_required_rows = read_csv(run_dir / "v58_blind_eval_required_artifact_rows.csv")
-if len(v58_required_rows) != 8:
-    raise SystemExit("v59e should emit eight v58 required artifact rows")
+if len(v58_required_rows) != 11:
+    raise SystemExit("v59e should emit eleven v58 required artifact rows")
 v58_required_by_blocker = {}
 for row in v58_required_rows:
     v58_required_by_blocker.setdefault(row["blocker_class"], []).append(row)
 if len(v58_required_by_blocker.get("v58c-intake-artifact-missing", [])) != 3:
     raise SystemExit("v59e v58 required artifact rows should include three v58c intake artifacts")
-if len(v58_required_by_blocker.get("v58-real-blind-eval-missing", [])) != 5:
-    raise SystemExit("v59e v58 required artifact rows should include five real blind-eval artifacts")
+if len(v58_required_by_blocker.get("v58-real-blind-eval-missing", [])) != 8:
+    raise SystemExit("v59e v58 required artifact rows should include eight real blind-eval artifacts")
 if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" for row in v58_required_rows):
     raise SystemExit("v59e v58 required artifact rows should forbid fixtures and require approval")
 expected_v58_artifacts = {
@@ -1324,7 +1324,10 @@ expected_v58_artifacts = {
     "v58c-source-v58b-freeze",
     "v58-blind-response-rows",
     "v58-run-identity-rows",
+    "v58-query-split-rows",
+    "v58-resource-rows",
     "v58-human-review-rows",
+    "v58-adjudication-rows",
     "v58d-review-return-intake",
     "v58-sha256-manifest",
 }
@@ -1332,16 +1335,16 @@ if {row["artifact_id"] for row in v58_required_rows} != expected_v58_artifacts:
     raise SystemExit("v59e v58 required artifact ids mismatch")
 
 v58_template_rows = read_csv(run_dir / "v58_blind_eval_return_template_rows.csv")
-if len(v58_template_rows) != 8:
-    raise SystemExit("v59e should emit eight v58 return template rows")
+if len(v58_template_rows) != 11:
+    raise SystemExit("v59e should emit eleven v58 return template rows")
 if {row["artifact_id"] for row in v58_template_rows} != expected_v58_artifacts:
     raise SystemExit("v59e v58 return template ids mismatch")
 if any(row["fixture_allowed"] != "0" or row["approval_required"] != "1" or row["template_ready"] != "1" for row in v58_template_rows):
     raise SystemExit("v59e v58 return templates should be ready, no-fixture, approval-required")
 
 v58_contract_map_rows = read_csv(run_dir / "v58_blind_eval_return_contract_map_rows.csv")
-if len(v58_contract_map_rows) != 8:
-    raise SystemExit("v59e should emit eight v58 return contract map rows")
+if len(v58_contract_map_rows) != 11:
+    raise SystemExit("v59e should emit eleven v58 return contract map rows")
 if {row["artifact_id"] for row in v58_contract_map_rows} != expected_v58_artifacts:
     raise SystemExit("v59e v58 return contract map ids mismatch")
 if any(
@@ -1365,8 +1368,8 @@ for row in v58_contract_map_rows:
     ):
         raise SystemExit("v59e v58 return contract map should bind each artifact to its exact return template")
 v58_acceptance_evidence_rows = read_csv(run_dir / "v58_blind_eval_acceptance_evidence_rows.csv")
-if len(v58_acceptance_evidence_rows) != 8:
-    raise SystemExit("v59e should emit eight v58 acceptance evidence rows")
+if len(v58_acceptance_evidence_rows) != 11:
+    raise SystemExit("v59e should emit eleven v58 acceptance evidence rows")
 if {row["artifact_id"] for row in v58_acceptance_evidence_rows} != expected_v58_artifacts:
     raise SystemExit("v59e v58 acceptance evidence artifact ids mismatch")
 if any(
@@ -1433,7 +1436,7 @@ if pr_summary.get("pm_blocker_closure_packet_files") != "6":
     raise SystemExit("v59e one-command PR slice gate should emit six blocker packets")
 if pr_summary.get("pm_execution_lock_rows") != "10" or pr_summary.get("pm_scope_drift_allowed") != "0":
     raise SystemExit("v59e one-command PR slice gate should keep the PM execution lock active")
-if pr_summary.get("pm_external_return_template_files") != "26" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
+if pr_summary.get("pm_external_return_template_files") != "29" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
     raise SystemExit("v59e one-command PR slice gate should emit no-fixture return templates")
 if (
     pr_summary.get("pm_pr_normalization_rows") != "7"

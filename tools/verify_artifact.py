@@ -363,7 +363,10 @@ EXPECTED_V53_V1_EXIT_CRITERION_IDS = [
 EXPECTED_V58_ARTIFACT_IDS = [
     "v58-blind-response-rows",
     "v58-run-identity-rows",
+    "v58-query-split-rows",
+    "v58-resource-rows",
     "v58-human-review-rows",
+    "v58-adjudication-rows",
     "v58d-review-return-intake",
     "v58-sha256-manifest",
 ]
@@ -385,15 +388,50 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
         "retrieval_budget",
         "prompt_template_sha256",
     },
+    "v58-query-split-rows": {
+        "query_id",
+        "repo_id",
+        "split_name",
+        "unseen_repository",
+        "frozen_query_packet_sha256",
+        "source_manifest_sha256",
+    },
+    "v58-resource-rows": {
+        "blind_run_id",
+        "system_blind_id",
+        "query_id",
+        "latency_ms",
+        "peak_memory_mb",
+        "tokens_per_second",
+        "resource_sha256",
+    },
     "v58-human-review-rows": {
         "blind_run_id",
+        "system_blind_id",
         "query_id",
+        "response_sha256",
         "reviewer_id",
         "reviewer_blinded",
+        "reviewer_independent",
+        "conflict_disclosure_sha256",
         "answer_quality_score",
         "citation_score",
         "source_span_exact",
         "unsupported_abstain_score",
+    },
+    "v58-adjudication-rows": {
+        "blind_run_id",
+        "system_blind_id",
+        "query_id",
+        "response_sha256",
+        "reviewer_a_id",
+        "reviewer_b_id",
+        "disagreement_type",
+        "adjudicator_id",
+        "adjudicated_answer_quality_score",
+        "adjudicated_citation_score",
+        "adjudicated_source_span_exact",
+        "adjudicated_unsupported_abstain_score",
     },
     "v58d-review-return-intake": {
         "review_dir",
@@ -1319,11 +1357,11 @@ def verify_v58_blind_eval(
             expected_columns = EXPECTED_V58_ARTIFACT_COLUMNS.get(artifact_id)
             if expected_columns is not None and column_set != expected_columns:
                 errors.append(f"{prefix}: required_columns must be exactly {', '.join(sorted(expected_columns))}")
-            if artifact_id == "v58-human-review-rows":
+            if artifact_id in {"v58-human-review-rows", "v58-adjudication-rows"}:
                 leaked_resource_columns = column_set & V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS
                 if leaked_resource_columns:
-                    errors.append(f"{prefix}: human review rows must not include resource columns: {', '.join(sorted(leaked_resource_columns))}")
-        if artifact_id in {"v58-blind-response-rows", "v58-run-identity-rows", "v58-sha256-manifest"}:
+                    errors.append(f"{prefix}: human review/adjudication rows must not include resource columns: {', '.join(sorted(leaked_resource_columns))}")
+        if artifact_id in {"v58-blind-response-rows", "v58-run-identity-rows", "v58-query-split-rows", "v58-resource-rows", "v58-sha256-manifest"}:
             if "test_v58c_blind_response_evidence_intake.sh" not in row.get("validation_command", ""):
                 errors.append(f"{prefix}: response artifacts must validate through v58c intake")
 

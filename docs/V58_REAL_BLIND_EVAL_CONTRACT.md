@@ -45,15 +45,29 @@ Required artifact shape:
 - `v58-run-identity-rows`: `blind_run_id`, `system_id`,
   `system_blind_id`, `corpus_id`, `context_budget`, `retrieval_budget`,
   `prompt_template_sha256`
-- `v58-human-review-rows`: `blind_run_id`, `query_id`, `reviewer_id`,
-  `reviewer_blinded`, `answer_quality_score`, `citation_score`,
-  `source_span_exact`, `unsupported_abstain_score`
+- `v58-query-split-rows`: `query_id`, `repo_id`, `split_name`,
+  `unseen_repository`, `frozen_query_packet_sha256`,
+  `source_manifest_sha256`
+- `v58-resource-rows`: `blind_run_id`, `system_blind_id`, `query_id`,
+  `latency_ms`, `peak_memory_mb`, `tokens_per_second`, `resource_sha256`
+- `v58-human-review-rows`: `blind_run_id`, `system_blind_id`, `query_id`,
+  `response_sha256`, `reviewer_id`, `reviewer_blinded`,
+  `reviewer_independent`, `conflict_disclosure_sha256`,
+  `answer_quality_score`, `citation_score`, `source_span_exact`,
+  `unsupported_abstain_score`
+- `v58-adjudication-rows`: `blind_run_id`, `system_blind_id`, `query_id`,
+  `response_sha256`, `reviewer_a_id`, `reviewer_b_id`, `disagreement_type`,
+  `adjudicator_id`, `adjudicated_answer_quality_score`,
+  `adjudicated_citation_score`, `adjudicated_source_span_exact`,
+  `adjudicated_unsupported_abstain_score`
 - `v58d-review-return-intake`: `review_dir`, `accepted_blind_review_rows`,
   `accepted_adjudication_rows`, `inter_rater_rows`, `review_return_ready`
 - `v58-sha256-manifest`: `artifact_path`, `sha256`, `bytes`
 
-Human review rows intentionally exclude latency and memory fields. Resource
-measurements are accepted through response/resource artifacts and evaluated
-separately from answer quality.
+Human review and adjudication rows intentionally exclude latency and memory
+fields. Resource measurements are accepted through the dedicated
+`v58-resource-rows` artifact and evaluated separately from answer quality.
+Review rows bind to a specific blind response and system_blind_id, declare
+reviewer independence, and record a conflict disclosure hash.
 
 Fixtures, templates, or tests-only checks do not close v58.

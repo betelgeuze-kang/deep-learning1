@@ -1576,9 +1576,9 @@ execution_lock_ready = int(
     and as_int(pr_summary, "pm_new_scaffold_default_allowed") == 0
 )
 external_return_template_ready = int(
-    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 26
+    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 29
     and as_int(pr_summary, "pm_external_return_template_fixture_allowed_rows") == 0
-    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 26
+    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 29
 )
 v58_blocker_classes = {"v58c-intake-artifact-missing", "v58-real-blind-eval-missing"}
 pm_required_artifact_rows = read_csv(pr_run_dir / "pm_blocker_required_artifact_rows.csv")
@@ -1684,23 +1684,23 @@ v58_acceptance_evidence_hidden_state_rows = sum(
     or row["downloads_required_by_default"] == "1"
 )
 v58_return_artifact_contract_ready = int(
-    len(v58_required_artifact_rows) == 8
-    and len(v58_return_template_rows) == 8
-    and len(v58_return_contract_map_rows) == 8
-    and len(v58_acceptance_evidence_rows) == 8
+    len(v58_required_artifact_rows) == 11
+    and len(v58_return_template_rows) == 11
+    and len(v58_return_contract_map_rows) == 11
+    and len(v58_acceptance_evidence_rows) == 11
     and sum(1 for row in v58_required_artifact_rows if row["blocker_class"] == "v58c-intake-artifact-missing") == 3
-    and sum(1 for row in v58_required_artifact_rows if row["blocker_class"] == "v58-real-blind-eval-missing") == 5
+    and sum(1 for row in v58_required_artifact_rows if row["blocker_class"] == "v58-real-blind-eval-missing") == 8
     and v58_required_artifact_fixture_allowed_rows == 0
-    and v58_required_artifact_approval_rows == 8
+    and v58_required_artifact_approval_rows == 11
     and v58_return_template_fixture_allowed_rows == 0
-    and v58_return_template_ready_rows == 8
-    and v58_return_contract_map_ready_rows == 8
+    and v58_return_template_ready_rows == 11
+    and v58_return_contract_map_ready_rows == 11
     and all(row["fixture_allowed"] == "0" for row in v58_return_contract_map_rows)
     and all(row["approval_required"] == "1" for row in v58_return_contract_map_rows)
     and all(row["template_ready"] == "1" for row in v58_return_contract_map_rows)
     and all(row["default_acceptance_status"] == "blocked" for row in v58_return_contract_map_rows)
-    and v58_acceptance_evidence_contract_ready_rows == 8
-    and v58_acceptance_evidence_default_blocked_rows == 8
+    and v58_acceptance_evidence_contract_ready_rows == 11
+    and v58_acceptance_evidence_default_blocked_rows == 11
     and v58_acceptance_evidence_hidden_state_rows == 0
     and all(row["tests_only_merge_condition"] == "0" for row in v58_acceptance_evidence_rows)
     and all(row["blind_eval_ready"] == "0" for row in v58_acceptance_evidence_rows)
@@ -1983,7 +1983,7 @@ decision_rows.extend(
         {
             "gate": "pm-external-return-templates",
             "status": "pass" if external_return_template_ready else "blocked",
-            "reason": "26 no-fixture approval-required return templates are packaged for blocker closure",
+            "reason": "29 no-fixture approval-required return templates are packaged for blocker closure",
         },
         {
             "gate": "v58-required-return-artifacts",
