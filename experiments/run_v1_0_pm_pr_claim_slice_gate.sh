@@ -88,6 +88,12 @@ def safe_id(value):
 
 
 roadmap_text = roadmap.read_text(encoding="utf-8")
+baseline_admission_contract = json.loads((root / "baselines" / "de_30b70b_real.json").read_text(encoding="utf-8"))
+de_required_real_fields = baseline_admission_contract.get("required_real_evidence_fields", [])
+if not isinstance(de_required_real_fields, list) or not de_required_real_fields:
+    raise SystemExit("baselines/de_30b70b_real.json must define required_real_evidence_fields")
+if len(de_required_real_fields) != len(set(de_required_real_fields)):
+    raise SystemExit("baselines/de_30b70b_real.json required_real_evidence_fields must be unique")
 summary_sources = {
     "v52": results / "v52_llm_rag_baseline_war_summary.csv",
     "v52y": results / "v52y_f_optional_final_policy_summary.csv",
@@ -2144,19 +2150,6 @@ write_csv(
 )
 
 de_measured_registry_exclusion_rows = []
-de_required_real_fields = [
-    "model_repository_exact_revision",
-    "quantization",
-    "model_artifact_hash",
-    "runtime",
-    "prompt_template",
-    "context_budget",
-    "retrieval_budget",
-    "hardware",
-    "seed",
-    "answer_citation_raw_output",
-    "evaluator_version",
-]
 for system_id in ["D", "E"]:
     related_rows = [row for row in de_30b70b_acceptance_evidence_rows if row["system_id"] == system_id]
     de_measured_registry_exclusion_rows.append(

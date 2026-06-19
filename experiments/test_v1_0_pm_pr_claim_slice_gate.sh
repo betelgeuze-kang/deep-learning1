@@ -9,16 +9,17 @@ DECISION_CSV="$RESULTS_DIR/v1_0_pm_pr_claim_slice_gate_decision.csv"
 
 "$ROOT_DIR/experiments/run_v1_0_pm_pr_claim_slice_gate.sh" >/dev/null
 
-python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib
 import json
 import sys
 from pathlib import Path
 
-run_dir = Path(sys.argv[1])
-summary_csv = Path(sys.argv[2])
-decision_csv = Path(sys.argv[3])
+root = Path(sys.argv[1])
+run_dir = Path(sys.argv[2])
+summary_csv = Path(sys.argv[3])
+decision_csv = Path(sys.argv[4])
 
 
 def sha256(path):
@@ -35,6 +36,8 @@ def read_csv(path):
 
 
 summary = read_csv(summary_csv)[0]
+baseline_admission_contract = json.loads((root / "baselines" / "de_30b70b_real.json").read_text(encoding="utf-8"))
+de_required_real_fields = baseline_admission_contract["required_real_evidence_fields"]
 expected = {
     "v1_0_pm_pr_claim_slice_gate_ready": "1",
     "recommended_pr_slice_rows": "13",
@@ -747,25 +750,18 @@ for system_id, row in de_registry_rows.items():
         raise SystemExit(f"D/E fixture rows must not enter measured registry: {system_id}")
     if row["answer_citation_raw_output_rows"] != "0" or row["status"] != "blocked":
         raise SystemExit(f"D/E measured registry should remain blocked without raw outputs: {system_id}")
+    expected_field_count = str(len(de_required_real_fields))
     if (
-        row["required_real_evidence_field_count"] != "11"
-        or row["missing_real_evidence_field_count"] != "11"
+        row["required_real_evidence_field_count"] != expected_field_count
+        or row["missing_real_evidence_field_count"] != expected_field_count
         or row["all_required_real_evidence_missing"] != "1"
     ):
         raise SystemExit(f"D/E measured registry should exact-count all missing required real fields: {system_id}")
-    for field in [
-        "model_repository_exact_revision",
-        "quantization",
-        "model_artifact_hash",
-        "runtime",
-        "prompt_template",
-        "context_budget",
-        "retrieval_budget",
-        "hardware",
-        "seed",
-        "answer_citation_raw_output",
-        "evaluator_version",
-    ]:
+    if row["required_real_evidence_fields"].split(";") != de_required_real_fields:
+        raise SystemExit(f"D/E measured registry required field list should follow baseline contract: {system_id}")
+    if row["missing_real_evidence_fields"].split(";") != de_required_real_fields:
+        raise SystemExit(f"D/E measured registry missing field list should follow baseline contract: {system_id}")
+    for field in de_required_real_fields:
         if field not in row["missing_real_evidence_fields"]:
             raise SystemExit(f"D/E measured registry exclusion missing field {field} for {system_id}")
     if "fixture-d-e-schema-tests-stay-out" not in row["measured_registry_policy"]:
