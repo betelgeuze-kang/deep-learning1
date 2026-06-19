@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/v50_auditor_correctness.schema.json",
+  "title": "v50 Auditor Correctness Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "required_artifacts", "claim_boundaries"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "summary_ready_claim_present",
+        "artifact_replay_ready",
+        "auditor_correctness_merge_ready",
+        "implicit_public_refresh_allowed",
+        "network_required_to_regenerate"
+      ],
+      "properties": {
+        "summary_ready_claim_present": {"type": "boolean"},
+        "artifact_replay_ready": {"type": "boolean"},
+        "auditor_correctness_merge_ready": {"type": "boolean"},
+        "implicit_public_refresh_allowed": {"type": "boolean"},
+        "network_required_to_regenerate": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "required_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "path", "required_for_merge"],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "path": {"type": "string"},
+          "required_for_merge": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "claim_boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim_id", "allowed", "blocked"],
+        "properties": {
+          "claim_id": {"type": "string"},
+          "allowed": {"type": "string"},
+          "blocked": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

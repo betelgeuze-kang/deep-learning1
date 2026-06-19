@@ -9,9 +9,10 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/h10_real_label_acceptance_evidence_rows.csv" && -s "$RUN_DIR/h10_real_label_return_contract_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv" ]] \
+if [[ "${V10_H10_REAL_LABEL_PROMOTION_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/h10_real_label_acceptance_evidence_rows.csv" && -s "$RUN_DIR/h10_real_label_return_contract_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_internal_prebaseline_contract_rows.csv" && -s "$RUN_DIR/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv" ]] \
   && grep -q 'v53t_real_adapter_freeze_ready' "$SUMMARY_CSV" \
   && grep -q 'v53aq_same_query_internal_prebaseline_rows_ready' "$SUMMARY_CSV" \
+  && grep -q 'v53aq_internal_prebaseline_contract_ready' "$SUMMARY_CSV" \
   && grep -q 'h10_real_label_return_contract_rows' "$SUMMARY_CSV" \
   && grep -q 'h10_real_label_acceptance_evidence_rows' "$SUMMARY_CSV"; then
   echo "v10_h10_real_label_promotion_readiness_gate_dir: $RUN_DIR"
@@ -185,6 +186,7 @@ copy(v53aq_dir / "abgh_adapter_trace_rows.csv", "source_v53aq/abgh_adapter_trace
 copy(v53aq_dir / "abgh_evaluator_rows.csv", "source_v53aq/abgh_evaluator_rows.csv")
 copy(v53aq_dir / "abgh_wrong_answer_guard_rows.csv", "source_v53aq/abgh_wrong_answer_guard_rows.csv")
 copy(v53aq_dir / "abgh_same_query_internal_prebaseline_rows.csv", "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
+copy(v53aq_dir / "abgh_internal_prebaseline_contract_rows.csv", "source_v53aq/abgh_internal_prebaseline_contract_rows.csv")
 copy(v53aq_dir / "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md")
 copy(v53t_summary_path, "source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv")
 copy(v53t_dir / "complete_source_abgh_real_adapter_freeze_rows.csv", "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")
@@ -344,6 +346,7 @@ v53aq_adapter_trace_rows = read_csv(v53aq_dir / "abgh_adapter_trace_rows.csv")
 v53aq_evaluator_rows = read_csv(v53aq_dir / "abgh_evaluator_rows.csv")
 v53aq_metric_rows = read_csv(v53aq_dir / "abgh_system_metric_rows.csv")
 v53aq_prebaseline_rows = read_csv(v53aq_dir / "abgh_same_query_internal_prebaseline_rows.csv")
+v53aq_internal_contract_rows = read_csv(v53aq_dir / "abgh_internal_prebaseline_contract_rows.csv")
 v53aq_metrics_by_system = {row["system_id"]: row for row in v53aq_metric_rows}
 v53t_real_adapter_freeze_rows = read_csv(v53t_dir / "complete_source_abgh_real_adapter_freeze_rows.csv")
 v53t_freeze_by_criterion = {row["criterion_id"]: row for row in v53t_real_adapter_freeze_rows}
@@ -352,9 +355,11 @@ v53t_real_adapter_freeze_ready = int(
     as_int(v53t, "foundation_real_adapter_evidence_ready") == 1
     and len(v53t_real_adapter_freeze_rows) == 4
     and v53t_real_adapter_freeze_pass_rows == 4
-    and "coherent_wrong_key_rows=287" in v53t_freeze_by_criterion.get("real-adapter-execution-rows", {}).get("actual_value", "")
+    and "coherent_wrong_key_rows=3916" in v53t_freeze_by_criterion.get("real-adapter-execution-rows", {}).get("actual_value", "")
     and "public_comparison_claim_ready=0" in v53t_freeze_by_criterion.get("public-comparison-boundary-closed", {}).get("actual_value", "")
     and "selection_question_text_only=1" in v53t_freeze_by_criterion.get("question-only-selection-contract", {}).get("actual_value", "")
+    and "selection_sanitized_question_only=1" in v53t_freeze_by_criterion.get("question-only-selection-contract", {}).get("actual_value", "")
+    and "source_locator_in_question_removed_rows=4000" in v53t_freeze_by_criterion.get("question-only-selection-contract", {}).get("actual_value", "")
     and "selection_oracle_field_used=0" in v53t_freeze_by_criterion.get("question-only-selection-contract", {}).get("actual_value", "")
 )
 v53ap_adapter_trace_provenance_ready = int(
@@ -384,6 +389,8 @@ v53aq_real_adapter_provenance_ready = int(
     as_int(v53aq, "v53aq_complete_source_abgh_real_adapter_measured_ready") == 1
     and as_int(v53aq, "real_adapter_execution_ready") == 1
     and as_int(v53aq, "selection_question_text_only") == 1
+    and as_int(v53aq, "selection_sanitized_question_only") == 1
+    and as_int(v53aq, "source_locator_in_question_removed_rows") == 4000
     and as_int(v53aq, "selection_oracle_field_used") == 0
     and as_int(v53aq, "expected_answer_oracle_replay") == 0
     and as_int(v53aq, "deterministic_source_span_adapter_execution") == 0
@@ -391,7 +398,9 @@ v53aq_real_adapter_provenance_ready = int(
     and len(v53aq_evaluator_rows) == 4000
     and {row["system_id"] for row in v53aq_adapter_trace_rows} == {"A", "B", "G", "H"}
     and {row["system_id"] for row in v53aq_evaluator_rows} == {"A", "B", "G", "H"}
-    and all(row["selection_question_text_used"] == "1" for row in v53aq_adapter_trace_rows)
+    and all(row["selection_question_text_used"] == "0" for row in v53aq_adapter_trace_rows)
+    and all(row["selection_sanitized_question_used"] == "1" for row in v53aq_adapter_trace_rows)
+    and all(row["source_locator_in_question_removed"] == "1" for row in v53aq_adapter_trace_rows)
     and all(row["selection_oracle_field_used"] == "0" for row in v53aq_adapter_trace_rows)
     and all(row["expected_answer_oracle_replay"] == "0" for row in v53aq_adapter_trace_rows)
     and all(row["deterministic_source_span_adapter_execution"] == "0" for row in v53aq_adapter_trace_rows)
@@ -399,6 +408,8 @@ v53aq_real_adapter_provenance_ready = int(
     and all(row["citation_eval_separate"] == "1" for row in v53aq_evaluator_rows)
     and all(row["resource_eval_separate"] == "1" for row in v53aq_evaluator_rows)
     and all(row["selection_question_text_only"] == "1" for row in v53aq_evaluator_rows)
+    and all(row["selection_sanitized_question_only"] == "1" for row in v53aq_evaluator_rows)
+    and all(row["source_locator_in_question_removed"] == "1" for row in v53aq_evaluator_rows)
     and all(row["selection_oracle_field_used"] == "0" for row in v53aq_evaluator_rows)
     and all(row["real_system_performance_claim_ready"] == "0" for row in v53aq_evaluator_rows)
     and all(row["internal_real_adapter_metric_claim_ready"] == "1" for row in v53aq_evaluator_rows)
@@ -418,6 +429,8 @@ v53aq_same_query_prebaseline_ledger_ready = int(
     and all(row["same_evaluator_contract"] == "1" for row in v53aq_prebaseline_rows)
     and all(row["same_resource_bound"] == "1" for row in v53aq_prebaseline_rows)
     and all(row["selection_question_text_only_all"] == "1" for row in v53aq_prebaseline_rows)
+    and all(row["selection_sanitized_question_only_all"] == "1" for row in v53aq_prebaseline_rows)
+    and all(row["source_locator_in_question_removed_all"] == "1" for row in v53aq_prebaseline_rows)
     and all(row["selection_oracle_field_used_any"] == "0" for row in v53aq_prebaseline_rows)
     and all(row["expected_answer_oracle_replay_any"] == "0" for row in v53aq_prebaseline_rows)
     and all(row["deterministic_source_span_adapter_execution_any"] == "0" for row in v53aq_prebaseline_rows)
@@ -426,13 +439,34 @@ v53aq_same_query_prebaseline_ledger_ready = int(
     and all(row["required_30b_baseline_ready"] == "0" for row in v53aq_prebaseline_rows)
     and all(row["required_70b_baseline_ready"] == "0" for row in v53aq_prebaseline_rows)
 )
+v53aq_internal_prebaseline_contract_ready = int(
+    as_int(v53aq, "internal_prebaseline_contract_ready") == 1
+    and as_int(v53aq, "internal_prebaseline_contract_rows") == 4
+    and as_int(v53aq, "internal_prebaseline_contract_ready_rows") == 4
+    and len(v53aq_internal_contract_rows) == 4
+    and {row.get("system_id", "") for row in v53aq_internal_contract_rows} == {"A", "B", "G", "H"}
+    and all(row.get("same_query_set") == "1" for row in v53aq_internal_contract_rows)
+    and all(row.get("same_evaluator_contract") == "1" for row in v53aq_internal_contract_rows)
+    and all(row.get("same_resource_contract") == "1" for row in v53aq_internal_contract_rows)
+    and all(row.get("selection_question_text_only") == "1" for row in v53aq_internal_contract_rows)
+    and all(row.get("selection_sanitized_question_only") == "1" for row in v53aq_internal_contract_rows)
+    and all(row.get("source_locator_in_question_removed_rows") == "1000" for row in v53aq_internal_contract_rows)
+    and all(row.get("selection_oracle_field_used") == "0" for row in v53aq_internal_contract_rows)
+    and all(row.get("expected_answer_oracle_replay_rows") == "0" for row in v53aq_internal_contract_rows)
+    and all(row.get("deterministic_source_span_adapter_rows") == "0" for row in v53aq_internal_contract_rows)
+    and all(row.get("internal_real_adapter_metric_claim_ready") == "1" for row in v53aq_internal_contract_rows)
+    and all(row.get("public_real_system_performance_claim_ready") == "0" for row in v53aq_internal_contract_rows)
+    and all(row.get("public_comparison_claim_ready") == "0" for row in v53aq_internal_contract_rows)
+    and all(row.get("required_30b_baseline_ready") == "0" for row in v53aq_internal_contract_rows)
+    and all(row.get("required_70b_baseline_ready") == "0" for row in v53aq_internal_contract_rows)
+)
 v53aq_wrong_key_signal_ready = int(
     v53aq_real_adapter_provenance_ready == 1
     and v53t_real_adapter_freeze_ready == 1
     and as_int(v53aq, "coherent_wrong_key_rows") > 0
     and as_int(v53aq, "wrong_answer_rows") == as_int(v53aq, "coherent_wrong_key_rows")
     and as_int(v53aq_metrics_by_system.get("A", {}), "coherent_wrong_key_rows") > 0
-    and as_int(v53aq_metrics_by_system.get("H", {}), "coherent_wrong_key_rows") == 0
+    and as_int(v53aq_metrics_by_system.get("H", {}), "coherent_wrong_key_rows") > 0
     and any(row["system_id"] == "H" for row in v53aq_adapter_trace_rows)
     and all(
         row["source_verified_scorer_used"] == "1" and row["domain_policy_used"] == "1"
@@ -454,6 +488,7 @@ source_provenance_binding_ready = int(
     and v53ap_evaluator_provenance_ready == 1
     and v53aq_real_adapter_provenance_ready == 1
     and v53aq_same_query_prebaseline_ledger_ready == 1
+    and v53aq_internal_prebaseline_contract_ready == 1
     and v53t_real_adapter_freeze_ready == 1
     and as_int(v54c, "citation_correct_rows") == as_int(v54c, "generation_rows")
 )
@@ -483,6 +518,7 @@ same_query_real_adapter_ready = int(
     and as_int(v53aq, "same_resource_contract_all_local_systems") == 1
     and v53aq_real_adapter_provenance_ready == 1
     and v53aq_same_query_prebaseline_ledger_ready == 1
+    and v53aq_internal_prebaseline_contract_ready == 1
     and v53aq.get("systems") == "A/B/G/H"
 )
 
@@ -560,7 +596,7 @@ acceptance_rows = [
         "criterion": "source-provenance-binding",
         "machine_evidence_status": "pass" if source_provenance_binding_ready else "blocked",
         "real_label_status": "pass" if source_provenance_binding_ready and external_human_label_evidence_ready else "blocked",
-        "evidence": f"v53q_scorer_rows={v53q.get('symmetric_scorer_rows')}; v53ap_adapter_trace_rows={len(v53ap_adapter_trace_rows)}; v53ap_evaluator_rows={len(v53ap_evaluator_rows)}; v53aq_adapter_trace_rows={len(v53aq_adapter_trace_rows)}; v53aq_evaluator_rows={len(v53aq_evaluator_rows)}; v53aq_same_query_internal_prebaseline_rows={len(v53aq_prebaseline_rows)}; v53aq_same_query_internal_prebaseline_rows_ready={v53aq_same_query_prebaseline_ledger_ready}; v53t_real_adapter_freeze_rows={len(v53t_real_adapter_freeze_rows)}; v54c_citation_correct={v54c.get('citation_correct_rows')}",
+        "evidence": f"v53q_scorer_rows={v53q.get('symmetric_scorer_rows')}; v53ap_adapter_trace_rows={len(v53ap_adapter_trace_rows)}; v53ap_evaluator_rows={len(v53ap_evaluator_rows)}; v53aq_adapter_trace_rows={len(v53aq_adapter_trace_rows)}; v53aq_evaluator_rows={len(v53aq_evaluator_rows)}; v53aq_same_query_internal_prebaseline_rows={len(v53aq_prebaseline_rows)}; v53aq_same_query_internal_prebaseline_rows_ready={v53aq_same_query_prebaseline_ledger_ready}; v53aq_internal_prebaseline_contract_rows={len(v53aq_internal_contract_rows)}; v53aq_internal_prebaseline_contract_ready={v53aq_internal_prebaseline_contract_ready}; v53t_real_adapter_freeze_rows={len(v53t_real_adapter_freeze_rows)}; v54c_citation_correct={v54c.get('citation_correct_rows')}",
         "blocker": "accepted external/human label evidence must bind provenance rows" if not external_human_label_evidence_ready else "",
     },
     {
@@ -689,7 +725,11 @@ summary = {
     "v53aq_evaluator_rows": str(len(v53aq_evaluator_rows)),
     "v53aq_same_query_internal_prebaseline_rows": str(len(v53aq_prebaseline_rows)),
     "v53aq_same_query_internal_prebaseline_rows_ready": str(v53aq_same_query_prebaseline_ledger_ready),
+    "v53aq_internal_prebaseline_contract_rows": str(len(v53aq_internal_contract_rows)),
+    "v53aq_internal_prebaseline_contract_ready": str(v53aq_internal_prebaseline_contract_ready),
     "v53aq_selection_question_text_only": v53aq.get("selection_question_text_only", "0"),
+    "v53aq_selection_sanitized_question_only": v53aq.get("selection_sanitized_question_only", "0"),
+    "v53aq_source_locator_in_question_removed_rows": v53aq.get("source_locator_in_question_removed_rows", "0"),
     "v53aq_selection_oracle_field_used": v53aq.get("selection_oracle_field_used", "1"),
     "v53aq_expected_answer_oracle_replay": v53aq.get("expected_answer_oracle_replay", "0"),
     "v53aq_deterministic_source_span_adapter_execution": v53aq.get("deterministic_source_span_adapter_execution", "1"),
@@ -750,7 +790,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decision_rows = [
     ("v53-complete-source-symmetric-scorer-policy", "pass" if source_provenance_binding_ready else "blocked", "source provenance and symmetric scorer rows are bound"),
     ("v53ap-abgh-same-query-prebaseline", "pass" if same_query_abgh_ready else "blocked", "A/B/G/H share v53i complete-source query/source/evaluator/resource set and adapter trace provenance"),
-    ("v53aq-abgh-real-adapter-evidence", "pass" if same_query_real_adapter_ready and v53aq_wrong_key_signal_ready else "blocked", "A/B/G/H query-text-only real-adapter rows expose wrong-key and provenance evidence"),
+    ("v53aq-abgh-real-adapter-evidence", "pass" if same_query_real_adapter_ready and v53aq_wrong_key_signal_ready else "blocked", "A/B/G/H sanitized-question-only real-adapter rows expose wrong-key and provenance evidence"),
     ("v53t-real-adapter-freeze", "pass" if v53t_real_adapter_freeze_ready else "blocked", "v53t foundation freeze certificate binds v53aq real-adapter wrong-key evidence and public-comparison blocker"),
     ("v54c-grounded-generation-guard", "pass" if wrong_answer_guard_ready and missing_query_abstain_ready else "blocked", "wrong-answer and missing/abstain guards are present"),
     ("h10-diagnostic-scorer-signal", "pass" if h10_diagnostic_scorer_signal_ready else "blocked", "local h10 diagnostic scorer separates correct/coherent-wrong rows"),
@@ -778,7 +818,11 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     f"- v53aq_evaluator_rows={len(v53aq_evaluator_rows)}\n"
     f"- v53aq_same_query_internal_prebaseline_rows={len(v53aq_prebaseline_rows)}\n"
     f"- v53aq_same_query_internal_prebaseline_rows_ready={v53aq_same_query_prebaseline_ledger_ready}\n"
+    f"- v53aq_internal_prebaseline_contract_rows={len(v53aq_internal_contract_rows)}\n"
+    f"- v53aq_internal_prebaseline_contract_ready={v53aq_internal_prebaseline_contract_ready}\n"
     f"- v53aq_selection_question_text_only={v53aq.get('selection_question_text_only', '0')}\n"
+    f"- v53aq_selection_sanitized_question_only={v53aq.get('selection_sanitized_question_only', '0')}\n"
+    f"- v53aq_source_locator_in_question_removed_rows={v53aq.get('source_locator_in_question_removed_rows', '0')}\n"
     f"- v53aq_selection_oracle_field_used={v53aq.get('selection_oracle_field_used', '1')}\n"
     f"- v53aq_coherent_wrong_key_rows={v53aq.get('coherent_wrong_key_rows', '0')}\n"
     f"- v53t_real_adapter_freeze_ready={v53t_real_adapter_freeze_ready}\n"
@@ -826,7 +870,11 @@ manifest = {
     "v53aq_evaluator_rows": len(v53aq_evaluator_rows),
     "v53aq_same_query_internal_prebaseline_rows": len(v53aq_prebaseline_rows),
     "v53aq_same_query_internal_prebaseline_rows_ready": v53aq_same_query_prebaseline_ledger_ready,
+    "v53aq_internal_prebaseline_contract_rows": len(v53aq_internal_contract_rows),
+    "v53aq_internal_prebaseline_contract_ready": v53aq_internal_prebaseline_contract_ready,
     "v53aq_selection_question_text_only": as_int(v53aq, "selection_question_text_only"),
+    "v53aq_selection_sanitized_question_only": as_int(v53aq, "selection_sanitized_question_only"),
+    "v53aq_source_locator_in_question_removed_rows": as_int(v53aq, "source_locator_in_question_removed_rows"),
     "v53aq_selection_oracle_field_used": as_int(v53aq, "selection_oracle_field_used"),
     "v53aq_real_adapter_execution_ready": as_int(v53aq, "real_adapter_execution_ready"),
     "v53aq_real_system_performance_claim_ready": as_int(v53aq, "real_system_performance_claim_ready"),
@@ -869,6 +917,7 @@ manifest = {
         "v53ap": sha256(v53ap_summary_path),
         "v53aq": sha256(v53aq_summary_path),
         "v53aq_same_query_internal_prebaseline": sha256(v53aq_dir / "abgh_same_query_internal_prebaseline_rows.csv"),
+        "v53aq_internal_prebaseline_contract": sha256(v53aq_dir / "abgh_internal_prebaseline_contract_rows.csv"),
         "v53t": sha256(v53t_summary_path),
         "v54c": sha256(v54c_summary_path),
     },

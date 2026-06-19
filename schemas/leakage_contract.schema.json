@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/leakage_contract.schema.json",
+  "title": "Retrieval And Model-Visible Leakage Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "forbidden_surfaces", "stage_contracts"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": ["allowed_surface", "direct_query_source_binding_forbidden"],
+      "properties": {
+        "allowed_surface": {"type": "string"},
+        "direct_query_source_binding_forbidden": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "forbidden_surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["guard_id", "forbidden_surface", "field_names", "evaluator_only_or_absent"],
+        "properties": {
+          "guard_id": {"type": "string"},
+          "forbidden_surface": {"type": "string"},
+          "field_names": {"type": "array", "items": {"type": "string"}},
+          "evaluator_only_or_absent": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "stage_contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["stage_id", "summary_path", "allowed_model_visible_fields", "must_equal"],
+        "properties": {
+          "stage_id": {"type": "string"},
+          "summary_path": {"type": "string"},
+          "allowed_model_visible_fields": {"type": "array", "items": {"type": "string"}},
+          "must_equal": {
+            "type": "object",
+            "additionalProperties": {"type": "string"}
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

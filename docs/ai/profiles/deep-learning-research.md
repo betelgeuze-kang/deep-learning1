@@ -60,17 +60,27 @@ Default verification must not perform network fetches, checkpoint downloads, mod
 
 ## Worker Prompt Checklist
 
-Every delegated worker slice should specify:
+Every delegated worker slice should stay short and specify only:
 
 ```text
-Task:
-Files in scope:
-Files out of scope:
-Allowed runtime:
-Dataset/checkpoint/network policy:
-Acceptance criteria:
-Verification allowed:
-Forbidden changes:
+Goal:
+Scope:
+File candidates:
+Verification criteria:
+Forbidden changes / invariants:
 ```
 
-If runtime is not specified, assume local lightweight checks only.
+If runtime, dataset/checkpoint/network policy, or forbidden changes are not specified, assume local lightweight checks only; no downloads, long GPU/ROCm jobs, checkpoint materialization, remote writes, or invariant changes.
+
+Worker output should be limited to:
+
+```text
+Changed files:
+Test results:
+Failing test names:
+Core diff summary:
+Blockers:
+Specific files/diffs needing Codex review:
+```
+
+Codex should not read full worker logs by default. Review the diff, relevant changed files, failing-test output if present, and any evidence-boundary or research-claim changes before acceptance.

@@ -42,6 +42,7 @@ v58c_summary_path = results / "v58c_blind_response_evidence_intake_summary.csv"
 
 REQUIRED_SYSTEMS = {"D", "E", "G", "H"}
 OPTIONAL_SYSTEMS = {"F"}
+PM_ACTUAL_REQUIRED_SYSTEMS = ["A", "B", "C", "D", "E", "G", "H"]
 DECISIONS = {"correct", "incorrect", "abstain-correct", "abstain-incorrect", "unsupported-claim", "invalid-citation"}
 FORBIDDEN_REVIEW_FIELDS = {"source_system_id", "source_system_name", "model_or_architecture_id", "run_identity"}
 
@@ -169,6 +170,10 @@ schema_rows = [
     ("blind_review_return_rows.csv", "answer_correctness", "0 or 1"),
     ("blind_review_return_rows.csv", "citation_correctness", "0 or 1"),
     ("blind_review_return_rows.csv", "abstain_correctness", "0 or 1"),
+    ("blind_review_return_rows.csv", "source_span_exactness", "0 or 1; evaluates cited source span exactly, not just answer text"),
+    ("blind_review_return_rows.csv", "unsupported_abstention_correctness", "0 or 1; evaluates unsupported/missing-query abstention separately"),
+    ("blind_review_return_rows.csv", "unseen_repository_split_id", "non-empty split id proving the row belongs to the unseen repository split"),
+    ("blind_review_return_rows.csv", "latency_memory_excluded_from_quality_score", "must be 1; latency/memory are evaluated outside answer quality"),
     ("blind_review_return_rows.csv", "policy_score", "0 or 1"),
     ("blind_review_return_rows.csv", "review_decision", "normalized blind decision label"),
     ("blind_review_return_rows.csv", "review_sha256", "sha256:<64 hex> over the reviewer return artifact row"),
@@ -200,6 +205,10 @@ review_template_fields = [
     "answer_correctness",
     "citation_correctness",
     "abstain_correctness",
+    "source_span_exactness",
+    "unsupported_abstention_correctness",
+    "unseen_repository_split_id",
+    "latency_memory_excluded_from_quality_score",
     "policy_score",
     "review_decision",
     "review_sha256",
@@ -221,6 +230,10 @@ for row in response_templates:
                 "answer_correctness": "",
                 "citation_correctness": "",
                 "abstain_correctness": "",
+                "source_span_exactness": "",
+                "unsupported_abstention_correctness": "",
+                "unseen_repository_split_id": "",
+                "latency_memory_excluded_from_quality_score": "",
                 "policy_score": "",
                 "review_decision": "",
                 "review_sha256": "",
@@ -319,9 +332,20 @@ for row in review_rows:
         errors.append("reviewer-not-blinded")
     if row.get("conflict_disclosed", "") not in {"0", "1"}:
         errors.append("conflict-disclosed-not-binary")
-    for field in ["answer_correctness", "citation_correctness", "abstain_correctness", "policy_score"]:
+    for field in [
+        "answer_correctness",
+        "citation_correctness",
+        "abstain_correctness",
+        "source_span_exactness",
+        "unsupported_abstention_correctness",
+        "policy_score",
+    ]:
         if row.get(field, "") not in {"0", "1"}:
             errors.append(f"{field}-not-binary")
+    if not row.get("unseen_repository_split_id", ""):
+        errors.append("unseen-repository-split-id-missing")
+    if row.get("latency_memory_excluded_from_quality_score", "") != "1":
+        errors.append("latency-memory-not-separated-from-quality")
     if row.get("review_decision", "") not in DECISIONS:
         errors.append("review-decision-invalid")
     if not row.get("reviewer_id", ""):
@@ -367,6 +391,122 @@ for row in adjudication_rows:
 for response_id in required_response_ids:
     if response_id not in adjudication_by_response:
         errors.append("required-adjudication-missing")
+
+template_counts = Counter(row.get("source_system_id", "") for row in response_templates)
+review_counts = Counter()
+review_exact_span_counts = Counter()
+review_unsupported_abstention_counts = Counter()
+review_unseen_split_counts = Counter()
+review_latency_memory_separate_counts = Counter()
+reviewers_by_system_response = defaultdict(lambda: defaultdict(set))
+for row in review_rows:
+    template = template_by_response.get(row.get("blind_response_id", ""))
+    if not template:
+        continue
+    system_id = template.get("source_system_id", "")
+    response_id = row.get("blind_response_id", "")
+    review_counts[system_id] += 1
+    reviewers_by_system_response[system_id][response_id].add(row.get("reviewer_id", ""))
+    if row.get("source_span_exactness", "") in {"0", "1"}:
+        review_exact_span_counts[system_id] += 1
+    if row.get("unsupported_abstention_correctness", "") in {"0", "1"}:
+        review_unsupported_abstention_counts[system_id] += 1
+    if row.get("unseen_repository_split_id", ""):
+        review_unseen_split_counts[system_id] += 1
+    if row.get("latency_memory_excluded_from_quality_score", "") == "1":
+        review_latency_memory_separate_counts[system_id] += 1
+adjudication_counts = Counter()
+for row in adjudication_rows:
+    template = template_by_response.get(row.get("blind_response_id", ""))
+    if template:
+        adjudication_counts[template.get("source_system_id", "")] += 1
+
+pm_review_matrix_rows = []
+for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
+    expected_response_rows = 500
+    expected_review_rows = expected_response_rows * 2
+    expected_adjudication_rows = expected_response_rows
+    response_template_rows = template_counts.get(system_id, 0)
+    supplied_review_rows = review_counts.get(system_id, 0)
+    two_reviewer_response_rows = sum(
+        1
+        for reviewers in reviewers_by_system_response.get(system_id, {}).values()
+        if len({reviewer for reviewer in reviewers if reviewer}) >= 2
+    )
+    supplied_adjudication_rows = adjudication_counts.get(system_id, 0)
+    source_span_exactness_rows = review_exact_span_counts.get(system_id, 0)
+    unsupported_abstention_rows = review_unsupported_abstention_counts.get(system_id, 0)
+    unseen_split_rows = review_unseen_split_counts.get(system_id, 0)
+    latency_memory_separate_rows = review_latency_memory_separate_counts.get(system_id, 0)
+    template_available = int(response_template_rows == expected_response_rows)
+    ready = int(
+        template_available == 1
+        and supplied_review_rows == expected_review_rows
+        and two_reviewer_response_rows == expected_response_rows
+        and supplied_adjudication_rows == expected_adjudication_rows
+        and source_span_exactness_rows == expected_review_rows
+        and unsupported_abstention_rows == expected_review_rows
+        and unseen_split_rows == expected_review_rows
+        and latency_memory_separate_rows == expected_review_rows
+        and not errors
+    )
+    if not v58c_available:
+        blocker = "v58c-response-intake-missing"
+    elif response_template_rows != expected_response_rows:
+        blocker = "missing-pm-required-response-template-rows"
+    elif supplied_review_rows != expected_review_rows:
+        blocker = "missing-two-independent-reviewer-rows"
+    elif two_reviewer_response_rows != expected_response_rows:
+        blocker = "missing-distinct-reviewers-per-response"
+    elif supplied_adjudication_rows != expected_adjudication_rows:
+        blocker = "missing-disagreement-adjudication-rows"
+    elif source_span_exactness_rows != expected_review_rows:
+        blocker = "missing-source-span-exactness-review-rows"
+    elif unsupported_abstention_rows != expected_review_rows:
+        blocker = "missing-unsupported-abstention-review-rows"
+    elif unseen_split_rows != expected_review_rows:
+        blocker = "missing-unseen-repository-split-evidence"
+    elif latency_memory_separate_rows != expected_review_rows:
+        blocker = "latency-memory-not-separated-from-answer-quality"
+    elif errors:
+        blocker = "validation-errors"
+    else:
+        blocker = ""
+    pm_review_matrix_rows.append(
+        {
+            "source_system_id": system_id,
+            "required_for_pm_v58_real_execution": "1",
+            "blind_identity_required": "1",
+            "same_corpus_required": "1",
+            "same_context_budget_required": "1",
+            "two_independent_reviewers_required": "1",
+            "disagreement_adjudication_required": "1",
+            "unseen_repository_split_required": "1",
+            "source_span_exactness_required": "1",
+            "unsupported_abstention_required": "1",
+            "latency_memory_quality_separate_required": "1",
+            "expected_blind_response_rows": str(expected_response_rows),
+            "response_template_rows": str(response_template_rows),
+            "expected_independent_review_rows": str(expected_review_rows),
+            "supplied_review_rows": str(supplied_review_rows),
+            "two_reviewer_response_rows": str(two_reviewer_response_rows),
+            "expected_adjudication_rows": str(expected_adjudication_rows),
+            "supplied_adjudication_rows": str(supplied_adjudication_rows),
+            "source_span_exactness_review_rows": str(source_span_exactness_rows),
+            "unsupported_abstention_review_rows": str(unsupported_abstention_rows),
+            "unseen_split_review_rows": str(unseen_split_rows),
+            "latency_memory_separate_review_rows": str(latency_memory_separate_rows),
+            "actual_blind_review_ready": str(ready),
+            "fixture_allowed": "0",
+            "tests_only_merge_condition": "0",
+            "status": "ready" if ready else "blocked",
+            "blocker": blocker,
+        }
+    )
+write_csv(run_dir / "pm_blind_review_actual_execution_matrix_rows.csv", list(pm_review_matrix_rows[0].keys()), pm_review_matrix_rows)
+pm_review_actual_ready = int(all(row["actual_blind_review_ready"] == "1" for row in pm_review_matrix_rows))
+pm_review_missing_system_rows = sum(1 for row in pm_review_matrix_rows if row["actual_blind_review_ready"] != "1")
+pm_review_template_gap_rows = sum(1 for row in pm_review_matrix_rows if row["response_template_rows"] != row["expected_blind_response_rows"])
 
 if errors:
     for error, count in sorted(Counter(errors).items()):
@@ -452,6 +592,17 @@ summary = {
     "optional_blind_response_rows": str(len(optional_response_ids)),
     "expected_required_review_rows": str(len(required_response_ids) * 2),
     "expected_required_adjudication_rows": str(len(required_response_ids)),
+    "pm_review_required_system_rows": str(len(pm_review_matrix_rows)),
+    "pm_review_required_blind_response_rows": "3500",
+    "pm_review_required_independent_review_rows": "7000",
+    "pm_review_required_adjudication_rows": "3500",
+    "pm_review_actual_ready": str(pm_review_actual_ready),
+    "pm_review_missing_system_rows": str(pm_review_missing_system_rows),
+    "pm_review_template_gap_rows": str(pm_review_template_gap_rows),
+    "pm_review_unseen_split_ready": str(pm_review_actual_ready),
+    "pm_review_source_span_exactness_ready": str(pm_review_actual_ready),
+    "pm_review_unsupported_abstention_ready": str(pm_review_actual_ready),
+    "pm_review_latency_memory_separate_ready": str(pm_review_actual_ready),
     "review_dir_supplied": str(int(bool(review_dir_arg))),
     "supplied_review_rows": str(len(review_rows)),
     "supplied_adjudication_rows": str(len(adjudication_rows)),
@@ -475,6 +626,11 @@ decision_rows = [
     ("human-blind-review-return", "pass" if review_coverage_ready else "blocked", "two blinded reviewer rows per required response validate" if review_coverage_ready else "human blind review rows are missing or invalid"),
     ("adjudication-return", "pass" if adjudication_ready else "blocked", "adjudication rows validate" if adjudication_ready else "adjudication rows are missing or invalid"),
     ("inter-rater-rows", "pass" if inter_rater_rows_ready else "blocked", "inter-rater/adjudication rows validate" if inter_rater_rows_ready else "inter-rater/adjudication evidence missing"),
+    ("pm-required-a-b-c-d-e-g-h-review-rows", "pass" if pm_review_actual_ready else "blocked", "PM-required A/B/C/D/E/G/H blind review matrix validates" if pm_review_actual_ready else "PM-required A/B/C/D/E/G/H blind review matrix is incomplete"),
+    ("pm-unseen-repository-split", "pass" if pm_review_actual_ready else "blocked", "unseen repository split evidence validates" if pm_review_actual_ready else "unseen repository split evidence is missing"),
+    ("pm-source-span-exactness", "pass" if pm_review_actual_ready else "blocked", "source span exactness review rows validate" if pm_review_actual_ready else "source span exactness review rows are missing"),
+    ("pm-unsupported-abstention", "pass" if pm_review_actual_ready else "blocked", "unsupported abstention review rows validate" if pm_review_actual_ready else "unsupported abstention review rows are missing"),
+    ("pm-latency-memory-quality-separation", "pass" if pm_review_actual_ready else "blocked", "latency/memory are separated from answer quality" if pm_review_actual_ready else "latency/memory separation from answer quality is not proven"),
     ("routehint-advantage-rows", "pass" if routehint_advantage_rows_ready else "blocked", "blind score rows can be aggregated after review" if routehint_advantage_rows_ready else "blind score rows are not available"),
     ("failure-case-report", "pass" if failure_case_report_ready else "blocked", "failure case report rows are emitted after review" if failure_case_report_ready else "failure case report requires human blind review"),
     ("v58-full-blind-eval", "pass" if v58_full_blind_eval_ready else "blocked", "v58 blind eval is complete" if v58_full_blind_eval_ready else "response, review, adjudication, and score evidence are incomplete"),
@@ -492,12 +648,19 @@ write_csv(run_dir / "blind_review_intake_gate_rows.csv", ["gate", "status", "rea
     f"- required_blind_response_rows={len(required_response_ids)}\n"
     f"- expected_required_review_rows={len(required_response_ids) * 2}\n"
     f"- expected_required_adjudication_rows={len(required_response_ids)}\n"
+    f"- pm_review_required_system_rows={len(pm_review_matrix_rows)}\n"
+    "- pm_review_required_blind_response_rows=3500\n"
+    "- pm_review_required_independent_review_rows=7000\n"
+    "- pm_review_required_adjudication_rows=3500\n"
+    f"- pm_review_actual_ready={pm_review_actual_ready}\n"
+    f"- pm_review_template_gap_rows={pm_review_template_gap_rows}\n"
     f"- v58c_required_blind_response_ready={v58c.get('required_blind_response_ready', '0')}\n"
     f"- human_blind_review_ready={human_blind_review_ready}\n"
     f"- inter_rater_rows_ready={inter_rater_rows_ready}\n"
     f"- v58_full_blind_eval_ready={v58_full_blind_eval_ready}\n\n"
     "Reviewer return rows must not contain source system identity fields. "
-    "System identity is unsealed only after scoring/adjudication rows validate.\n\n"
+    "System identity is unsealed only after scoring/adjudication rows validate. "
+    "PM v58 readiness additionally requires A/B/C/D/E/G/H actual response rows, two independent blinded reviewers per response, adjudication rows, unseen repository split evidence, source-span exactness review, unsupported-abstention review, and latency/memory separation from answer quality.\n\n"
     "Do not publish blind-eval wins, RouteHint advantage, or 30B-150B comparison claims from this intake boundary alone.\n",
     encoding="utf-8",
 )
@@ -513,6 +676,17 @@ manifest = {
     "required_blind_response_rows": len(required_response_ids),
     "expected_required_review_rows": len(required_response_ids) * 2,
     "expected_required_adjudication_rows": len(required_response_ids),
+    "pm_review_required_system_rows": len(pm_review_matrix_rows),
+    "pm_review_required_blind_response_rows": 3500,
+    "pm_review_required_independent_review_rows": 7000,
+    "pm_review_required_adjudication_rows": 3500,
+    "pm_review_actual_ready": pm_review_actual_ready,
+    "pm_review_missing_system_rows": pm_review_missing_system_rows,
+    "pm_review_template_gap_rows": pm_review_template_gap_rows,
+    "pm_review_unseen_split_ready": pm_review_actual_ready,
+    "pm_review_source_span_exactness_ready": pm_review_actual_ready,
+    "pm_review_unsupported_abstention_ready": pm_review_actual_ready,
+    "pm_review_latency_memory_separate_ready": pm_review_actual_ready,
     "required_blind_review_ready": review_coverage_ready,
     "required_adjudication_ready": adjudication_ready,
     "human_blind_review_ready": human_blind_review_ready,
@@ -530,6 +704,7 @@ artifact_rels = [
     "blind_review_required_field_rows.csv",
     "blind_review_return_template_rows.csv",
     "blind_adjudication_return_template_rows.csv",
+    "pm_blind_review_actual_execution_matrix_rows.csv",
     "blind_review_validation_rows.csv",
     "blind_review_intake_gate_rows.csv",
     "blind_eval_score_rows.csv",

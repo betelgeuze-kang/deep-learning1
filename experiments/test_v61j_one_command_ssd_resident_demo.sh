@@ -42,6 +42,15 @@ expected = {
     "ssd_resident_active_sparse_path_proven": "1",
     "ram_resident_full_model_fallback_rows": "0",
     "logical_100b_moe_contract_ready": "1",
+    "logical_100b_contract_fixture_ready": "1",
+    "real_100b_inference_ready": "0",
+    "contract_ready": "1",
+    "fixture_execution_ready": "1",
+    "real_model_execution_ready": "0",
+    "heldout_metric_ready": "0",
+    "human_review_ready": "0",
+    "independent_reproduction_ready": "0",
+    "release_ready": "0",
     "real_100b_open_weight_materialized": "0",
     "near_frontier_claim_ready": "0",
     "real_release_package_ready": "0",
@@ -56,6 +65,7 @@ required = [
     run_dir / "ssd_vram_budget_report.csv",
     run_dir / "routehint_schedule_trace.csv",
     run_dir / "quality_fallback_report.csv",
+    run_dir / "source_v61i" / "moe_readiness_semantic_rows.csv",
     run_dir / "V61J_ONE_COMMAND_SSD_RESIDENT_DEMO_BOUNDARY.md",
     run_dir / "sha256_manifest.csv",
     results / "v61h_dense_stress_harness_summary.csv",
@@ -85,10 +95,36 @@ if v61h.get("dense_hundreds_b_local_speed_claim") != "blocked":
 v61i = read_csv(results / "v61i_100b_moe_active_sparse_run_summary.csv")[0]
 if v61i.get("total_parameters_100b_plus") != "1" or v61i.get("real_100b_open_weight_materialized") != "0":
     raise SystemExit("v61i should close logical 100B+ contract while blocking real checkpoint materialization")
+if v61i.get("logical_100b_contract_fixture_ready") != "1" or v61i.get("real_100b_inference_ready") != "0":
+    raise SystemExit("v61i should expose typed logical fixture readiness and block real 100B inference")
+for field, value in {
+    "contract_ready": "1",
+    "fixture_execution_ready": "1",
+    "real_model_execution_ready": "0",
+    "heldout_metric_ready": "0",
+    "human_review_ready": "0",
+    "independent_reproduction_ready": "0",
+    "release_ready": "0",
+}.items():
+    if v61i.get(field) != value:
+        raise SystemExit(f"v61i typed readiness {field}: expected {value}, got {v61i.get(field)}")
+
+readiness_rows = read_csv(run_dir / "source_v61i" / "moe_readiness_semantic_rows.csv")
+if len(readiness_rows) != 1:
+    raise SystemExit("v61j should copy one v61i readiness semantic row")
+readiness = readiness_rows[0]
+if readiness.get("deprecated_or_ambiguous_ready_flag") != "v61i_100b_moe_active_sparse_run_ready":
+    raise SystemExit("v61i readiness row should name the deprecated ambiguous ready flag")
+if readiness.get("logical_100b_contract_fixture_ready") != "1" or readiness.get("real_100b_inference_ready") != "0":
+    raise SystemExit("v61i readiness row should separate logical fixture from real inference")
 
 manifest = json.loads((run_dir / "v61j_one_command_ssd_resident_demo_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("ssd_resident_active_sparse_path_proven") != 1 or manifest.get("ram_resident_full_model_fallback_rows") != 0:
     raise SystemExit("v61j manifest readiness mismatch")
+if manifest.get("logical_100b_contract_fixture_ready") != 1 or manifest.get("real_100b_inference_ready") != 0:
+    raise SystemExit("v61j manifest should preserve typed 100B readiness")
+if manifest.get("real_model_execution_ready") != 0 or manifest.get("release_ready") != 0:
+    raise SystemExit("v61j manifest should block real model execution and release readiness")
 PY
 
 echo "v61j one-command SSD-resident demo smoke passed"

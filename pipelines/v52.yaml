@@ -1,0 +1,32 @@
+{
+  "schema_version": "pipeline.v1",
+  "pipeline_id": "v52-baseline-registry-contract",
+  "description": "Adapter inventory for the v52 baseline registry and D/E intake guard surface.",
+  "claim_boundary": "Contract and intake guard evidence only; 30B/70B measured baselines remain blocked unless supplied as real pinned artifacts.",
+  "stages": [
+    {
+      "stage_id": "v52-baseline-war",
+      "requires": [],
+      "adapter": "shell",
+      "command": ["./experiments/test_v52_llm_rag_baseline_war.sh"],
+      "inputs": ["experiments/run_v52_llm_rag_baseline_war.sh"],
+      "outputs": ["results/v52_llm_rag_baseline_war_summary.csv"],
+      "ready_fields": ["v52_baseline_war_contract_ready"],
+      "blocked_fields": ["required_30b_baseline_ready", "required_70b_baseline_ready"],
+      "typed_readiness": {
+        "contract_ready": "v52_baseline_war_contract_ready",
+        "fixture_execution_ready": "",
+        "real_model_execution_ready": "0",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": ["natural_language_question", "searchable_corpus"],
+      "model_visible_input_checks": ["source_locator_fields_evaluator_only"],
+      "evaluator_only_fields": ["expected_answer", "source_span_id", "source_path", "source_line", "source_file_sha256"],
+      "evidence_boundary": "Registry contract and blocker surface only.",
+      "claim_boundary": "No public quality comparison or D/E replacement claim."
+    }
+  ]
+}

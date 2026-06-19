@@ -1,0 +1,41 @@
+{
+  "schema_version": "baseline_admission.v1",
+  "policy": {
+    "fixture_schema_test_allowed": true,
+    "fixture_rows_in_measured_registry": false,
+    "public_comparison_requires_all_systems": ["A", "B", "C", "D", "E", "G", "H"]
+  },
+  "required_real_evidence_fields": [
+    "model_repository_exact_revision",
+    "quantization",
+    "model_artifact_hash",
+    "runtime",
+    "prompt_template",
+    "context_budget",
+    "retrieval_budget",
+    "hardware",
+    "seed",
+    "answer_citation_raw_output",
+    "evaluator_version"
+  ],
+  "systems": [
+    {
+      "system_id": "D",
+      "baseline_class": "30b-open-weight-llm-rag",
+      "parameter_count_b_min": 25,
+      "parameter_count_b_max": 40,
+      "evidence_env": "V52D_30B_LLM_RAG_EVIDENCE_DIR",
+      "measured_registry_admission_ready": false,
+      "acceptance_test": "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR> V52D_70B_LLM_RAG_EVIDENCE_DIR=<E_DIR> ./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh"
+    },
+    {
+      "system_id": "E",
+      "baseline_class": "70b-open-weight-llm-rag",
+      "parameter_count_b_min": 65,
+      "parameter_count_b_max": 80,
+      "evidence_env": "V52D_70B_LLM_RAG_EVIDENCE_DIR",
+      "measured_registry_admission_ready": false,
+      "acceptance_test": "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR> V52D_70B_LLM_RAG_EVIDENCE_DIR=<E_DIR> ./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh"
+    }
+  ]
+}

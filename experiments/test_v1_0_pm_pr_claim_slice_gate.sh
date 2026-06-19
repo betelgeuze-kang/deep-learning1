@@ -105,6 +105,14 @@ expected = {
     "de_30b70b_acceptance_evidence_tests_only_rows": "0",
     "de_30b70b_acceptance_evidence_fixture_allowed_rows": "0",
     "de_30b70b_acceptance_evidence_approval_rows": "4",
+    "de_measured_registry_exclusion_rows": "2",
+    "de_measured_registry_fixture_registry_rows": "0",
+    "de_measured_registry_admission_ready_rows": "0",
+    "de_measured_registry_blocked_rows": "2",
+    "v58_real_execution_readiness_rows": "9",
+    "v58_real_execution_ready_rows": "0",
+    "v58_real_execution_blocked_rows": "9",
+    "v58_real_execution_fixture_allowed_rows": "0",
     "v59_one_command_acceptance_evidence_rows": "2",
     "v59_one_command_acceptance_evidence_ready_rows": "1",
     "v59_one_command_acceptance_evidence_blocked_rows": "1",
@@ -130,6 +138,23 @@ expected = {
     "pm_external_return_template_ready_rows": "26",
     "pm_external_return_template_fixture_allowed_rows": "0",
     "pm_external_return_template_approval_rows": "26",
+    "pm_pr_normalization_rows": "7",
+    "pm_pr_normalization_split_required_rows": "7",
+    "pm_pr_normalization_tests_only_rows": "0",
+    "pm_pr_title_body_rows": "1",
+    "pm_pr_title_body_rewrite_ready": "1",
+    "pm_pr_title_body_split_required_rows": "1",
+    "pm_ready_semantic_rows": "7",
+    "pm_ready_semantic_typed_rows": "7",
+    "pm_ready_semantic_contract_ready_rows": "6",
+    "pm_ready_semantic_fixture_execution_ready_rows": "2",
+    "pm_ready_semantic_real_model_ready_rows": "0",
+    "pm_ready_semantic_release_ready_rows": "0",
+    "pm_ready_semantic_logical_100b_contract_fixture_ready": "1",
+    "pm_ready_semantic_real_100b_inference_ready": "0",
+    "pm_retrieval_leakage_guard_rows": "7",
+    "pm_retrieval_leakage_guard_pass_rows": "7",
+    "pm_retrieval_leakage_guard_blocked_rows": "0",
     "draft_pr_2_split_required": "1",
     "tests_only_merge_condition_rows": "0",
     "full_v1_release_ready": "0",
@@ -315,6 +340,8 @@ for snippet in [
     "real_adapter_execution_ready=1",
     "actual_adapter_execution_ready=1",
     "selection_question_text_only=1",
+    "selection_sanitized_question_only=1",
+    "source_locator_in_question_removed_rows=4000",
     "selection_oracle_field_used=0",
     "deterministic_source_span_adapter_execution=0",
     "real_system_performance_claim_ready=0",
@@ -322,11 +349,14 @@ for snippet in [
     "public_real_system_performance_claim_ready=0",
     "same_query_internal_prebaseline_rows_ready=1",
     "same_query_internal_prebaseline_rows=1000",
+    "internal_prebaseline_contract_rows=4",
+    "internal_prebaseline_contract_ready_rows=4",
+    "internal_prebaseline_contract_ready=1",
     "local_abgh_row_contract_replay_ready=1",
     "local_abgh_row_contract_replay_rows=2",
     "local_abgh_row_contract_replay_pass_rows=2",
-    "answer_hash_match_rows=3713",
-    "coherent_wrong_key_rows=287",
+    "answer_hash_match_rows=84",
+    "coherent_wrong_key_rows=3916",
 ]:
     if snippet not in abgh_real_row["reason"]:
         raise SystemExit(f"PM A/B/G/H real adapter row should expose {snippet}")
@@ -350,6 +380,8 @@ for snippet in [
     "external-human-label-evidence",
     "v53aq_same_query_internal_prebaseline_rows=1000",
     "v53aq_same_query_internal_prebaseline_rows_ready=1",
+    "v53aq_internal_prebaseline_contract_rows=4",
+    "v53aq_internal_prebaseline_contract_ready=1",
 ]:
     if snippet not in h10_readiness_row["reason"]:
         raise SystemExit(f"PM h10 readiness row should expose {snippet}")
@@ -427,6 +459,10 @@ if "v53aq_same_query_internal_prebaseline_rows=1000" not in h10_criteria["source
     raise SystemExit("PM h10 acceptance source should cite v53aq same-query prebaseline rows")
 if "v53aq_same_query_internal_prebaseline_rows_ready=1" not in h10_criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("PM h10 acceptance source should cite v53aq same-query prebaseline readiness")
+if "v53aq_internal_prebaseline_contract_rows=4" not in h10_criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("PM h10 acceptance source should cite v53aq internal prebaseline contract rows")
+if "v53aq_internal_prebaseline_contract_ready=1" not in h10_criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("PM h10 acceptance source should cite v53aq internal prebaseline contract readiness")
 h10_v53aq_prebaseline_rows = read_csv(run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
 if len(h10_v53aq_prebaseline_rows) != 1000:
     raise SystemExit("PM h10 source bundle should carry 1000 v53aq same-query prebaseline rows")
@@ -435,6 +471,8 @@ if any(
     or row["same_evaluator_contract"] != "1"
     or row["same_resource_bound"] != "1"
     or row["selection_question_text_only_all"] != "1"
+    or row["selection_sanitized_question_only_all"] != "1"
+    or row["source_locator_in_question_removed_all"] != "1"
     or row["selection_oracle_field_used_any"] != "0"
     or row["expected_answer_oracle_replay_any"] != "0"
     or row["deterministic_source_span_adapter_execution_any"] != "0"
@@ -443,6 +481,33 @@ if any(
     for row in h10_v53aq_prebaseline_rows
 ):
     raise SystemExit("PM h10 source bundle should preserve v53aq same-query/no-oracle/no-public-claim boundary")
+h10_v53aq_contract_rows = {
+    row["system_id"]: row
+    for row in read_csv(run_dir / "source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv")
+}
+if set(h10_v53aq_contract_rows) != {"A", "B", "G", "H"}:
+    raise SystemExit("PM h10 source bundle should carry four v53aq internal prebaseline contract rows")
+for system_id, row in h10_v53aq_contract_rows.items():
+    expected = {
+        "same_query_set": "1",
+        "same_evaluator_contract": "1",
+        "same_resource_contract": "1",
+        "selection_question_text_only": "1",
+        "selection_sanitized_question_only": "1",
+        "source_locator_in_question_removed_rows": "1000",
+        "selection_oracle_field_used": "0",
+        "expected_answer_oracle_replay_rows": "0",
+        "deterministic_source_span_adapter_rows": "0",
+        "internal_real_adapter_metric_claim_ready": "1",
+        "public_real_system_performance_claim_ready": "0",
+        "public_comparison_claim_ready": "0",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+        "contract_ready": "1",
+    }
+    for field, value in expected.items():
+        if row.get(field) != value:
+            raise SystemExit(f"PM h10 source bundle v53aq contract {system_id}.{field}: expected {value}, got {row.get(field)}")
 v54_slice = by_id["v54-routehint-generation-contract"]
 for snippet in ["answer=1000", "citation=1000", "unsupported=160", "abstain=160", "resource=1000", "guard=1000"]:
     if snippet not in v54_slice["reason"]:
@@ -646,6 +711,55 @@ for artifact_id, system_id in {
         raise SystemExit(f"D/E validation command should expose both evidence dirs: {artifact_id}")
 if "llm_rag_answer_rows.csv" not in de_artifacts["d-answer-citation-resource"]["artifact_path_or_env"]:
     raise SystemExit("D/E answer-citation-resource row should name answer/citation/resource artifacts")
+de_registry_rows = {row["system_id"]: row for row in read_csv(run_dir / "de_measured_registry_exclusion_rows.csv")}
+if set(de_registry_rows) != {"D", "E"}:
+    raise SystemExit("D/E measured registry exclusion should cover D and E")
+for system_id, row in de_registry_rows.items():
+    if row["fixture_schema_test_allowed"] != "1":
+        raise SystemExit(f"D/E fixture schema tests should remain allowed outside measured registry: {system_id}")
+    if row["fixture_rows_in_measured_registry"] != "0" or row["measured_registry_admission_ready"] != "0":
+        raise SystemExit(f"D/E fixture rows must not enter measured registry: {system_id}")
+    if row["answer_citation_raw_output_rows"] != "0" or row["status"] != "blocked":
+        raise SystemExit(f"D/E measured registry should remain blocked without raw outputs: {system_id}")
+    for field in [
+        "model_repository_exact_revision",
+        "quantization",
+        "model_artifact_hash",
+        "runtime",
+        "prompt_template",
+        "context_budget",
+        "retrieval_budget",
+        "hardware",
+        "seed",
+        "answer_citation_raw_output",
+        "evaluator_version",
+    ]:
+        if field not in row["missing_real_evidence_fields"]:
+            raise SystemExit(f"D/E measured registry exclusion missing field {field} for {system_id}")
+    if "fixture-d-e-schema-tests-stay-out" not in row["measured_registry_policy"]:
+        raise SystemExit(f"D/E measured registry policy should exclude fixture schema tests: {system_id}")
+v58_real_rows = {row["requirement_id"]: row for row in read_csv(run_dir / "v58_real_execution_readiness_rows.csv")}
+expected_v58_real_ids = {
+    "ab-cdegh-real-responses",
+    "same-corpus-context-budget",
+    "blind-identity",
+    "two-independent-reviewers",
+    "disagreement-adjudication",
+    "unseen-repository-split",
+    "source-span-exactness",
+    "unsupported-abstention",
+    "latency-memory-separate",
+}
+if set(v58_real_rows) != expected_v58_real_ids:
+    raise SystemExit("v58 real execution readiness should cover the P1 blind-eval requirements")
+if any(row["real_execution_ready"] != "0" or row["status"] != "blocked" for row in v58_real_rows.values()):
+    raise SystemExit("v58 real execution readiness should stay blocked without real response/review evidence")
+if any(row["fixture_allowed"] != "0" or row["tests_only_merge_condition"] != "0" for row in v58_real_rows.values()):
+    raise SystemExit("v58 real execution readiness should forbid fixture/tests-only closure")
+if "A/B/C/D/E/G/H" not in v58_real_rows["ab-cdegh-real-responses"]["required_evidence"]:
+    raise SystemExit("v58 real execution readiness should require A/B/C/D/E/G/H actual responses")
+if "latency and memory" not in v58_real_rows["latency-memory-separate"]["required_evidence"]:
+    raise SystemExit("v58 real execution readiness should separate latency/memory from answer quality")
 v59_acceptance_rows = read_csv(run_dir / "v59_one_command_acceptance_evidence_rows.csv")
 if len(v59_acceptance_rows) != 2:
     raise SystemExit("v59 one-command acceptance evidence should cover two artifacts")
@@ -916,10 +1030,16 @@ required_files = [
     "pm_pr_acceptance_evidence_rows.csv",
     "v56_replay_acceptance_evidence_rows.csv",
     "de_30b70b_acceptance_evidence_rows.csv",
+    "de_measured_registry_exclusion_rows.csv",
+    "v58_real_execution_readiness_rows.csv",
     "v59_one_command_acceptance_evidence_rows.csv",
     "pm_blocker_closure_queue_rows.csv",
     "pm_blocker_closure_packet_rows.csv",
     "pm_blocker_required_artifact_rows.csv",
+    "pm_pr_normalization_rows.csv",
+    "pm_pr_title_body_rows.csv",
+    "pm_ready_semantic_rows.csv",
+    "pm_retrieval_leakage_guard_rows.csv",
     "source_summary_rows.csv",
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_h10_pm/h10_real_label_evidence_template.csv",
@@ -927,6 +1047,7 @@ required_files = [
     "source_h10_pm/h10_real_label_return_contract_rows.csv",
     "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv",
     "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_v59e/public_source_replay_policy_rows.csv",
     "source_v59e/local_abgh_row_contract_replay_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -948,7 +1069,9 @@ required_files = [
     "source_v53t/source_v53ap/abgh_resource_rows.csv",
     "source_v53t/source_v53ap/abgh_adapter_trace_rows.csv",
     "source_v53t/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_v53t/source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md",
     "v1_0_pm_pr_claim_slice_gate_manifest.json",
     "sha256_manifest.csv",
@@ -1004,6 +1127,119 @@ if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverag
     raise SystemExit("PM PR sidecar repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
     raise SystemExit("PM PR sidecar content repo rows should preserve ready content snapshots")
+
+normalization_rows = {row["slice_id"]: row for row in read_csv(run_dir / "pm_pr_normalization_rows.csv")}
+expected_normalization = {
+    "v50-auditor-correctness",
+    "v52-7b-actual-adapter-and-de-intake-guard",
+    "v53-v54-query-evaluation-pipeline",
+    "v58-blind-eval-protocol",
+    "v61-checkpoint-runtime-core",
+    "operator-review-return-workflow",
+    "docs-readme-cleanup",
+}
+if set(normalization_rows) != expected_normalization:
+    raise SystemExit("PM PR normalization rows should define the #13 seven-way PR split")
+for row in normalization_rows.values():
+    if row["tests_only_merge_condition"] != "0" or row["pr2_merge_as_is_recommended"] != "0":
+        raise SystemExit("PM PR normalization should reject tests-only/as-is merge")
+    for snippet in ["claim boundary", "output artifact replayable", "blocker false-positive"]:
+        if snippet not in row["merge_condition"]:
+            raise SystemExit(f"PM PR normalization merge condition missing {snippet}")
+if "real tensor page" not in normalization_rows["v61-checkpoint-runtime-core"]["claim_boundary"]:
+    raise SystemExit("PM PR normalization should keep v61 real-runtime evidence boundary explicit")
+
+title_body_rows = read_csv(run_dir / "pm_pr_title_body_rows.csv")
+if len(title_body_rows) != 1:
+    raise SystemExit("PM PR title/body rewrite should have one draft PR #2 row")
+title_body = title_body_rows[0]
+if (
+    title_body["pr_id"] != "draft-pr-2"
+    or title_body["split_required"] != "1"
+    or title_body["pr2_merge_as_is_recommended"] != "0"
+    or title_body["release_ready"] != "0"
+    or title_body["public_comparison_claim_ready"] != "0"
+    or title_body["title_body_rewrite_ready"] != "1"
+):
+    raise SystemExit("PM PR title/body row should require split and block release/public comparison")
+if "pre-v1.0 research artifact" not in title_body["current_v61_status"]:
+    raise SystemExit("PM PR title/body row should state current v61 pre-v1.0 status")
+for slice_id in expected_normalization:
+    if slice_id not in title_body["recommended_body_scope"]:
+        raise SystemExit(f"PM PR title/body row missing split scope {slice_id}")
+
+ready_rows = {row["replacement_flag"]: row for row in read_csv(run_dir / "pm_ready_semantic_rows.csv")}
+expected_ready_flags = {
+    "pm_foundation_contract_fixture_ready",
+    "v53_v54_query_eval_contract_ready",
+    "v58_blind_eval_protocol_contract_ready",
+    "h10_real_label_contract_ready",
+    "logical_100b_contract_fixture_ready",
+    "real_100b_inference_ready",
+    "v60_release_contract_ready",
+}
+if set(ready_rows) != expected_ready_flags:
+    raise SystemExit("PM ready semantic rows should replace ambiguous ready flags with typed flags")
+typed_fields = [
+    "contract_ready",
+    "fixture_execution_ready",
+    "real_model_execution_ready",
+    "heldout_metric_ready",
+    "human_review_ready",
+    "independent_reproduction_ready",
+    "release_ready",
+]
+for row in ready_rows.values():
+    if not all(field in row for field in typed_fields):
+        raise SystemExit("PM ready semantic rows should carry all typed readiness fields")
+    if (
+        row["real_model_execution_ready"] != "0"
+        or row["heldout_metric_ready"] != "0"
+        or row["human_review_ready"] != "0"
+        or row["independent_reproduction_ready"] != "0"
+        or row["release_ready"] != "0"
+    ):
+        raise SystemExit("PM ready semantic rows should keep real/human/release readiness closed")
+if (
+    ready_rows["logical_100b_contract_fixture_ready"]["contract_ready"] != "1"
+    or ready_rows["logical_100b_contract_fixture_ready"]["fixture_execution_ready"] != "1"
+    or ready_rows["logical_100b_contract_fixture_ready"]["real_model_execution_ready"] != "0"
+):
+    raise SystemExit("PM ready semantic rows should type logical 100B as contract/fixture only")
+if ready_rows["real_100b_inference_ready"]["real_model_execution_ready"] != "0":
+    raise SystemExit("PM ready semantic rows should keep real 100B inference blocked")
+
+leakage_rows = {row["guard_id"]: row for row in read_csv(run_dir / "pm_retrieval_leakage_guard_rows.csv")}
+expected_leakage = {
+    "source-span-id",
+    "source-path",
+    "source-line",
+    "source-file-hash",
+    "query-source-direct-binding",
+    "expected-behavior",
+    "expected-label",
+}
+if set(leakage_rows) != expected_leakage:
+    raise SystemExit("PM retrieval leakage guard rows should cover source, answer, and label leakage")
+for row in leakage_rows.values():
+    if (
+        row["status"] != "pass"
+        or row["adapter_selection_blocked"] != "1"
+        or row["allowed_adapter_surface"] != "natural_language_question_plus_searchable_corpus"
+        or row["selection_allowed_fields"] != "question"
+        or row["direct_query_source_binding_forbidden"] != "1"
+    ):
+        raise SystemExit("PM retrieval leakage guard should block oracle metadata from adapter selection")
+for guard_id, field_snippet in {
+    "source-span-id": "source_span_id",
+    "source-path": "source_path",
+    "source-line": "source_line_start;source_line_end",
+    "query-source-direct-binding": "query_id",
+    "expected-behavior": "expected_answer;expected_answer_sha256",
+    "expected-label": "negative_or_abstain;audit_type",
+}.items():
+    if field_snippet not in leakage_rows[guard_id]["field_names"]:
+        raise SystemExit(f"PM retrieval leakage guard missing forbidden field {field_snippet}")
 
 v53_pm_acceptance_rows = {row["requirement_id"]: row for row in read_csv(run_dir / "source_v53t/complete_source_pm_acceptance_evidence_rows.csv")}
 expected_v53_pm_acceptance_ids = {
@@ -1081,14 +1317,30 @@ for criterion_id in [
         raise SystemExit(f"PM PR sidecar v53t real-adapter freeze row should pass: {criterion_id}")
 if "selection_question_text_only=1" not in real_adapter_freeze_rows["question-only-selection-contract"]["actual_value"]:
     raise SystemExit("PM PR sidecar should expose v53aq question-only selection in v53t freeze evidence")
+if "selection_sanitized_question_only=1" not in real_adapter_freeze_rows["question-only-selection-contract"]["actual_value"]:
+    raise SystemExit("PM PR sidecar should expose v53aq sanitized-question selection in v53t freeze evidence")
+if "source_locator_in_question_removed_rows=4000" not in real_adapter_freeze_rows["question-only-selection-contract"]["actual_value"]:
+    raise SystemExit("PM PR sidecar should expose v53aq source-locator removal in v53t freeze evidence")
 if "same_query_ledger_ready=1" not in real_adapter_freeze_rows["v53aq-same-query-surface"]["actual_value"]:
     raise SystemExit("PM PR sidecar should expose v53aq same-query ledger readiness in v53t freeze evidence")
 if real_adapter_freeze_rows["v53aq-same-query-surface"]["evidence_path"] != "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv":
     raise SystemExit("PM PR sidecar v53t real-adapter freeze should point at the same-query ledger")
-if "coherent_wrong_key_rows=287" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=3916" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("PM PR sidecar should expose v53aq coherent wrong-key evidence in v53t freeze evidence")
 if "public_comparison_claim_ready=0" not in real_adapter_freeze_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("PM PR sidecar should keep v53aq public comparison blocked in v53t freeze evidence")
+v53t_internal_contract_rows = read_csv(run_dir / "source_v53t/source_v53aq/abgh_internal_prebaseline_contract_rows.csv")
+if len(v53t_internal_contract_rows) != 4:
+    raise SystemExit("PM PR sidecar should carry four v53t internal prebaseline contract rows")
+if {row["system_id"] for row in v53t_internal_contract_rows} != {"A", "B", "G", "H"}:
+    raise SystemExit("PM PR sidecar should carry A/B/G/H internal prebaseline contract rows")
+if any(row["contract_ready"] != "1" for row in v53t_internal_contract_rows):
+    raise SystemExit("PM PR sidecar v53t internal prebaseline contract rows should all be ready")
+direct_internal_contract_rows = read_csv(run_dir / "source_v53aq/abgh_internal_prebaseline_contract_rows.csv")
+if len(direct_internal_contract_rows) != 4:
+    raise SystemExit("PM PR sidecar should also copy the direct v53aq internal prebaseline contract rows")
+if {row["system_id"] for row in direct_internal_contract_rows} != {"A", "B", "G", "H"}:
+    raise SystemExit("PM PR sidecar direct v53aq internal prebaseline contract rows should cover A/B/G/H")
 
 manifest = json.loads((run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("recommended_pr_slice_rows") != 10 or manifest.get("real_release_package_ready") != 0:
@@ -1220,6 +1472,23 @@ if (
 if "de_30b70b_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("PM PR manifest should hash-bind D/E 30B/70B acceptance evidence")
 if (
+    manifest.get("de_measured_registry_exclusion_rows") != 2
+    or manifest.get("de_measured_registry_fixture_registry_rows") != 0
+    or manifest.get("de_measured_registry_admission_ready_rows") != 0
+    or manifest.get("de_measured_registry_blocked_rows") != 2
+):
+    raise SystemExit("PM PR manifest should record D/E measured registry fixture exclusion")
+if (
+    manifest.get("v58_real_execution_readiness_rows") != 9
+    or manifest.get("v58_real_execution_ready_rows") != 0
+    or manifest.get("v58_real_execution_blocked_rows") != 9
+    or manifest.get("v58_real_execution_fixture_allowed_rows") != 0
+):
+    raise SystemExit("PM PR manifest should record v58 real execution readiness blockers")
+for field in ["de_measured_registry_exclusion_rows_sha256", "v58_real_execution_readiness_rows_sha256"]:
+    if field not in manifest:
+        raise SystemExit(f"PM PR manifest should hash-bind {field}")
+if (
     manifest.get("v59_one_command_acceptance_evidence_rows") != 2
     or manifest.get("v59_one_command_acceptance_evidence_ready_rows") != 1
     or manifest.get("v59_one_command_acceptance_evidence_blocked_rows") != 1
@@ -1248,6 +1517,40 @@ if manifest.get("pm_external_return_template_ready_rows") != 26 or manifest.get(
     raise SystemExit("PM PR manifest external return template readiness mismatch")
 if manifest.get("pm_external_return_template_approval_rows") != 26:
     raise SystemExit("PM PR manifest external return templates should require approval")
+if (
+    manifest.get("pm_pr_normalization_rows") != 7
+    or manifest.get("pm_pr_normalization_split_required_rows") != 7
+    or manifest.get("pm_pr_normalization_tests_only_rows") != 0
+    or manifest.get("pm_pr_title_body_rows") != 1
+    or manifest.get("pm_pr_title_body_rewrite_ready") != 1
+    or manifest.get("pm_pr_title_body_split_required_rows") != 1
+):
+    raise SystemExit("PM PR manifest should record #13 PR normalization/title-body rewrite rows")
+if (
+    manifest.get("pm_ready_semantic_rows") != 7
+    or manifest.get("pm_ready_semantic_typed_rows") != 7
+    or manifest.get("pm_ready_semantic_contract_ready_rows") != 6
+    or manifest.get("pm_ready_semantic_fixture_execution_ready_rows") != 2
+    or manifest.get("pm_ready_semantic_real_model_ready_rows") != 0
+    or manifest.get("pm_ready_semantic_release_ready_rows") != 0
+    or manifest.get("pm_ready_semantic_logical_100b_contract_fixture_ready") != 1
+    or manifest.get("pm_ready_semantic_real_100b_inference_ready") != 0
+):
+    raise SystemExit("PM PR manifest should type-separate ready semantics")
+if (
+    manifest.get("pm_retrieval_leakage_guard_rows") != 7
+    or manifest.get("pm_retrieval_leakage_guard_pass_rows") != 7
+    or manifest.get("pm_retrieval_leakage_guard_blocked_rows") != 0
+):
+    raise SystemExit("PM PR manifest should record retrieval leakage guard status")
+for field in [
+    "pm_pr_normalization_rows_sha256",
+    "pm_pr_title_body_rows_sha256",
+    "pm_ready_semantic_rows_sha256",
+    "pm_retrieval_leakage_guard_rows_sha256",
+]:
+    if field not in manifest:
+        raise SystemExit(f"PM PR manifest should hash-bind {field}")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -1320,6 +1623,12 @@ for snippet in [
     "de_30b70b_acceptance_evidence_ready_rows=0",
     "de_30b70b_acceptance_evidence_blocked_rows=4",
     "de_30b70b_acceptance_evidence_tests_only_rows=0",
+    "de_measured_registry_exclusion_rows=2",
+    "de_measured_registry_fixture_registry_rows=0",
+    "de_measured_registry_admission_ready_rows=0",
+    "v58_real_execution_readiness_rows=9",
+    "v58_real_execution_ready_rows=0",
+    "v58_real_execution_blocked_rows=9",
     "v59_one_command_acceptance_evidence_rows=2",
     "v59_one_command_acceptance_evidence_ready_rows=1",
     "v59_one_command_acceptance_evidence_blocked_rows=1",
@@ -1333,6 +1642,19 @@ for snippet in [
     "pm_new_scaffold_default_allowed=0",
     "pm_external_return_template_rows=26",
     "pm_external_return_template_files=26",
+    "pm_pr_normalization_rows=7",
+    "pm_pr_normalization_split_required_rows=7",
+    "pm_pr_normalization_tests_only_rows=0",
+    "pm_pr_title_body_rows=1",
+    "pm_pr_title_body_rewrite_ready=1",
+    "pm_ready_semantic_rows=7",
+    "pm_ready_semantic_real_model_ready_rows=0",
+    "pm_ready_semantic_release_ready_rows=0",
+    "pm_ready_semantic_logical_100b_contract_fixture_ready=1",
+    "pm_ready_semantic_real_100b_inference_ready=0",
+    "pm_retrieval_leakage_guard_rows=7",
+    "pm_retrieval_leakage_guard_pass_rows=7",
+    "pm_retrieval_leakage_guard_blocked_rows=0",
     "tests_only_merge_condition_rows=0",
     "Blocked wording",
 ]:

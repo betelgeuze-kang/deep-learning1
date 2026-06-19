@@ -31,19 +31,21 @@ Operating model:
 5. Use OpenCode Minimax M3 for large-context implementation slices, broad document/result/log sweeps, multi-file C++/script edits, and repeated low-cost implementation passes.
 6. Use Cursor auto for selected code, currently open files, notebooks, or IDE-attached edits.
 7. Use one worker slice at a time. Codex must inspect the diff before another delegation.
-8. When delegating to OpenCode, create a prompt under `docs/ai/dispatch/`, using `docs/ai/prompts/opencode_worker_slice.md`, then run:
+8. Delegate only broad exploration, large mechanical edits, repeated test-fix cycles, multi-file refactors, or long docs/results/log sweeps. Do not delegate simple docs, small tests, clear localized fixes, or changes expected under roughly 100-200 LOC.
+9. Worker TASK prompts should stay short: goal, scope, file candidates, verification criteria, and forbidden changes or invariants.
+10. When delegating to OpenCode, create a prompt under `docs/ai/dispatch/`, using `docs/ai/prompts/opencode_worker_slice.md`, then run:
 
    ```bash
    ./scripts/ai-worker-opencode.sh docs/ai/dispatch/<task-id>.md
    ```
 
-9. When delegating to Cursor, create a prompt under `docs/ai/dispatch/`, using `docs/ai/prompts/cursor_worker_slice.md`, then run:
+11. When delegating to Cursor, create a prompt under `docs/ai/dispatch/`, using `docs/ai/prompts/cursor_worker_slice.md`, then run:
 
    ```bash
    ./scripts/ai-worker-cursor.sh docs/ai/dispatch/<task-id>.md
    ```
 
-10. After worker output, inspect the diff, run `./scripts/ai-verify.sh`, and decide the next step.
+12. After worker output, avoid full log review by default. Inspect `git diff --stat`, core changed-file diffs, failing-test output if present, and any research claim or evidence-boundary changes. Run `./scripts/ai-verify.sh` before acceptance.
 
 Research constraints:
 

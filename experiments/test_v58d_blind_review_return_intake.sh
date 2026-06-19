@@ -51,6 +51,17 @@ expected = {
     "optional_blind_response_rows": "0",
     "expected_required_review_rows": "0",
     "expected_required_adjudication_rows": "0",
+    "pm_review_required_system_rows": "7",
+    "pm_review_required_blind_response_rows": "3500",
+    "pm_review_required_independent_review_rows": "7000",
+    "pm_review_required_adjudication_rows": "3500",
+    "pm_review_actual_ready": "0",
+    "pm_review_missing_system_rows": "7",
+    "pm_review_template_gap_rows": "7",
+    "pm_review_unseen_split_ready": "0",
+    "pm_review_source_span_exactness_ready": "0",
+    "pm_review_unsupported_abstention_ready": "0",
+    "pm_review_latency_memory_separate_ready": "0",
     "review_dir_supplied": "0",
     "supplied_review_rows": "0",
     "supplied_adjudication_rows": "0",
@@ -79,6 +90,11 @@ for gate in [
     "human-blind-review-return",
     "adjudication-return",
     "inter-rater-rows",
+    "pm-required-a-b-c-d-e-g-h-review-rows",
+    "pm-unseen-repository-split",
+    "pm-source-span-exactness",
+    "pm-unsupported-abstention",
+    "pm-latency-memory-quality-separation",
     "routehint-advantage-rows",
     "failure-case-report",
     "v58-full-blind-eval",
@@ -91,6 +107,7 @@ required_files = [
     "blind_review_required_field_rows.csv",
     "blind_review_return_template_rows.csv",
     "blind_adjudication_return_template_rows.csv",
+    "pm_blind_review_actual_execution_matrix_rows.csv",
     "blind_review_validation_rows.csv",
     "blind_review_intake_gate_rows.csv",
     "blind_eval_score_rows.csv",
@@ -106,7 +123,17 @@ for rel in required_files:
         raise SystemExit(f"missing v58d artifact: {rel}")
 
 schema_rows = read_csv(run_dir / "blind_review_required_field_rows.csv")
-for field in ["blind_response_id", "reviewer_blinded", "review_decision", "adjudicated_decision", "inter_rater_agree"]:
+for field in [
+    "blind_response_id",
+    "reviewer_blinded",
+    "review_decision",
+    "source_span_exactness",
+    "unsupported_abstention_correctness",
+    "unseen_repository_split_id",
+    "latency_memory_excluded_from_quality_score",
+    "adjudicated_decision",
+    "inter_rater_agree",
+]:
     if not any(row["field"] == field for row in schema_rows):
         raise SystemExit(f"v58d schema missing {field}")
 
@@ -114,6 +141,14 @@ review_templates = read_csv(run_dir / "blind_review_return_template_rows.csv")
 if len(review_templates) != 0:
     raise SystemExit("v58d default path should not fabricate review templates without v58c")
 review_header = (run_dir / "blind_review_return_template_rows.csv").read_text(encoding="utf-8").splitlines()[0].split(",")
+for required in [
+    "source_span_exactness",
+    "unsupported_abstention_correctness",
+    "unseen_repository_split_id",
+    "latency_memory_excluded_from_quality_score",
+]:
+    if required not in review_header:
+        raise SystemExit(f"v58d review template schema missing {required}")
 for forbidden in ["source_system_id", "source_system_name", "model_or_architecture_id"]:
     if forbidden in review_header:
         raise SystemExit(f"v58d review template schema should not reveal {forbidden}")
@@ -125,6 +160,51 @@ adjudication_header = (run_dir / "blind_adjudication_return_template_rows.csv").
 for forbidden in ["source_system_id", "source_system_name", "model_or_architecture_id"]:
     if forbidden in adjudication_header:
         raise SystemExit(f"v58d adjudication template schema should not reveal {forbidden}")
+
+pm_matrix = read_csv(run_dir / "pm_blind_review_actual_execution_matrix_rows.csv")
+if len(pm_matrix) != 7:
+    raise SystemExit("v58d PM review matrix should cover seven systems")
+pm_by_system = {row["source_system_id"]: row for row in pm_matrix}
+if set(pm_by_system) != {"A", "B", "C", "D", "E", "G", "H"}:
+    raise SystemExit("v58d PM review matrix should cover A/B/C/D/E/G/H")
+for system_id, row in pm_by_system.items():
+    for flag in [
+        "required_for_pm_v58_real_execution",
+        "blind_identity_required",
+        "same_corpus_required",
+        "same_context_budget_required",
+        "two_independent_reviewers_required",
+        "disagreement_adjudication_required",
+        "unseen_repository_split_required",
+        "source_span_exactness_required",
+        "unsupported_abstention_required",
+        "latency_memory_quality_separate_required",
+    ]:
+        if row[flag] != "1":
+            raise SystemExit(f"v58d PM review matrix should require {flag} for {system_id}")
+    if row["expected_blind_response_rows"] != "500":
+        raise SystemExit(f"v58d PM review matrix should require 500 responses for {system_id}")
+    if row["expected_independent_review_rows"] != "1000":
+        raise SystemExit(f"v58d PM review matrix should require 1000 review rows for {system_id}")
+    if row["expected_adjudication_rows"] != "500":
+        raise SystemExit(f"v58d PM review matrix should require 500 adjudication rows for {system_id}")
+    for zero_field in [
+        "response_template_rows",
+        "supplied_review_rows",
+        "two_reviewer_response_rows",
+        "supplied_adjudication_rows",
+        "source_span_exactness_review_rows",
+        "unsupported_abstention_review_rows",
+        "unseen_split_review_rows",
+        "latency_memory_separate_review_rows",
+        "actual_blind_review_ready",
+    ]:
+        if row[zero_field] != "0":
+            raise SystemExit(f"v58d PM review matrix default {zero_field} should be 0 for {system_id}")
+    if row["fixture_allowed"] != "0" or row["tests_only_merge_condition"] != "0":
+        raise SystemExit(f"v58d PM review matrix should forbid fixture/tests-only for {system_id}")
+    if row["status"] != "blocked" or row["blocker"] != "v58c-response-intake-missing":
+        raise SystemExit(f"v58d PM review matrix should block on v58c dependency for {system_id}")
 
 validation = read_csv(run_dir / "blind_review_validation_rows.csv")
 if {"check": "review-dir", "status": "blocked", "reason": "V58D_BLIND_REVIEW_RETURN_DIR not supplied"} not in validation:
@@ -150,6 +230,18 @@ if manifest.get("v58c_artifact_available") != 0 or manifest.get("v58d_dependency
     raise SystemExit("v58d manifest should record explicit v58c dependency blocking")
 if manifest.get("expected_required_review_rows") != 0 or manifest.get("expected_required_adjudication_rows") != 0:
     raise SystemExit("v58d manifest should not invent required row counts without v58c")
+if manifest.get("pm_review_required_system_rows") != 7 or manifest.get("pm_review_required_independent_review_rows") != 7000:
+    raise SystemExit("v58d manifest should record PM review requirements")
+if manifest.get("pm_review_actual_ready") != 0 or manifest.get("pm_review_template_gap_rows") != 7:
+    raise SystemExit("v58d manifest should keep PM review readiness blocked")
+for field in [
+    "pm_review_unseen_split_ready",
+    "pm_review_source_span_exactness_ready",
+    "pm_review_unsupported_abstention_ready",
+    "pm_review_latency_memory_separate_ready",
+]:
+    if manifest.get(field) != 0:
+        raise SystemExit(f"v58d manifest should keep {field} blocked")
 if manifest.get("human_blind_review_ready") != 0 or manifest.get("routehint_advantage_rows_ready") != 0:
     raise SystemExit("v58d manifest should keep human review and advantage rows blocked by default")
 
@@ -166,7 +258,17 @@ for snippet in [
     "v58c_artifact_available=0",
     "expected_required_review_rows=0",
     "expected_required_adjudication_rows=0",
+    "pm_review_required_system_rows=7",
+    "pm_review_required_blind_response_rows=3500",
+    "pm_review_required_independent_review_rows=7000",
+    "pm_review_required_adjudication_rows=3500",
+    "pm_review_actual_ready=0",
+    "pm_review_template_gap_rows=7",
     "Reviewer return rows must not contain source system identity fields",
+    "unseen repository split evidence",
+    "source-span exactness review",
+    "unsupported-abstention review",
+    "latency/memory separation from answer quality",
     "Do not publish blind-eval wins",
 ]:
     if snippet not in boundary:

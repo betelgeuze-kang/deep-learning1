@@ -9,12 +9,13 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/abgh_evaluator_rows.csv" && -s "$RUN_DIR/abgh_same_query_internal_prebaseline_rows.csv" ]] \
+if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/abgh_evaluator_rows.csv" && -s "$RUN_DIR/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/abgh_internal_prebaseline_contract_rows.csv" ]] \
   && grep -q '^v53aq_complete_source_abgh_real_adapter_measured_ready,' "$SUMMARY_CSV" \
   && grep -q 'selection_question_text_only' "$SUMMARY_CSV" \
   && grep -q 'real_adapter_execution_ready' "$SUMMARY_CSV" \
   && grep -q 'same_query_internal_prebaseline_rows_ready' "$SUMMARY_CSV" \
   && grep -q 'same_query_internal_prebaseline_rows=1000' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
+  && grep -q 'internal_prebaseline_contract_rows=4' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'internal_real_adapter_metric_claim_ready=1' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'public_real_system_performance_claim_ready=0' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'selection_forbidden_fields=query_id,expected_answer,expected_answer_sha256,source_span_id,source_path,source_line_start,source_line_end' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"; then
@@ -59,10 +60,15 @@ FORBIDDEN_SELECTION_FIELDS = [
     "query_id",
     "expected_answer",
     "expected_answer_sha256",
+    "expected_behavior",
     "source_span_id",
     "source_path",
     "source_line_start",
     "source_line_end",
+    "source_file_sha256",
+    "source_git_blob_sha",
+    "audit_type",
+    "negative_or_abstain",
 ]
 
 
@@ -99,6 +105,13 @@ def copy(src, rel):
 
 def tokens(text):
     return re.findall(r"[a-z0-9]+", text.lower().replace("_", " ").replace("/", " ").replace(".", " "))
+
+
+def sanitize_question_for_selection(question):
+    sanitized = re.sub(r"^\[v53i:[0-9]+\]\s*", "", question)
+    sanitized = re.sub(r"\b(at|by|to)\s+[A-Za-z0-9_.~+/@-]+:[0-9]+\b", r"\1 the relevant source location", sanitized)
+    sanitized = re.sub(r"\s+", " ", sanitized).strip()
+    return sanitized
 
 
 def parse_question_route(question):
@@ -175,6 +188,7 @@ queries = read_csv(v53i_dir / "complete_source_query_rows.csv")
 spans = read_csv(v53i_dir / "complete_source_span_rows.csv")
 if len(queries) != 1000 or len(spans) != 1000:
     raise SystemExit("v53aq requires the frozen 1000-row v53i query/span set")
+v53i_query_ids = {row["query_id"] for row in queries}
 
 source_manifest_rows = []
 seen_sources = set()
@@ -263,14 +277,14 @@ def select_span(system_id, question):
 
 
 selection_contract_rows = []
-for field in ["question"] + FORBIDDEN_SELECTION_FIELDS + ["audit_type", "owner_repo", "head_sha", "negative_or_abstain"]:
+for field in ["sanitized_question"] + FORBIDDEN_SELECTION_FIELDS + ["question", "owner_repo", "head_sha"]:
     selection_contract_rows.append(
         {
             "field_name": field,
-            "selection_allowed": "1" if field == "question" else "0",
+            "selection_allowed": "1" if field == "sanitized_question" else "0",
             "selection_phase": "adapter_selection",
             "evaluator_allowed": "1" if field != "expected_answer" else "0",
-            "reason": "query text is the only adapter input" if field == "question" else "ground-truth or metadata field is blocked from adapter selection",
+            "reason": "sanitized natural-language question is the only adapter input" if field == "sanitized_question" else "ground-truth, source locator, label, or metadata field is blocked from adapter selection",
         }
     )
 write_csv(run_dir / "adapter_selection_contract_rows.csv", list(selection_contract_rows[0].keys()), selection_contract_rows)
@@ -285,9 +299,10 @@ for system_id, system_name, adapter in SYSTEMS:
             "query_set_id": "v53i_complete_source_1000",
             "query_rows": str(len(queries)),
             "source_manifest_rows": str(len(source_manifest_rows)),
-            "execution_mode": "query-text-only-local-adapter",
-            "selection_allowed_fields": "question",
+            "execution_mode": "sanitized-question-only-local-adapter",
+            "selection_allowed_fields": "sanitized_question",
             "selection_forbidden_fields": ",".join(FORBIDDEN_SELECTION_FIELDS),
+            "source_locator_in_question_removed": "1",
             "expected_answer_oracle_replay": "0",
             "deterministic_source_span_adapter_execution": "0",
             "selection_oracle_field_used": "0",
@@ -322,9 +337,10 @@ for system_id, system_name, adapter in SYSTEMS:
     uses_routehint = int(system_id in {"G", "H"})
     uses_scorer = int(system_id == "H")
     for row_index, query in enumerate(queries, start=1):
-        selected_idx, retrieval_score, parsed_owner, parsed_path, parsed_line, selection_method, exact_route_match, scorer_used = select_span(system_id, query["question"])
+        sanitized_question = sanitize_question_for_selection(query["question"])
+        selected_idx, retrieval_score, parsed_owner, parsed_path, parsed_line, selection_method, exact_route_match, scorer_used = select_span(system_id, sanitized_question)
         span = spans[selected_idx]
-        predicted_behavior = predict_behavior_from_question(query["question"])
+        predicted_behavior = predict_behavior_from_question(sanitized_question)
         answer_text = answer_from_selected_span(predicted_behavior, span)
         answer_hash = sha256_text(answer_text)
         answer_hash_match = int(answer_hash == query["expected_answer_sha256"])
@@ -343,16 +359,12 @@ for system_id, system_name, adapter in SYSTEMS:
         answer_id = f"v53aq_{system_id}_{query['query_id']}"
         citation_id = f"{answer_id}_citation_001"
         resource_row_id = f"{answer_id}_resource"
-        compact_hint = (
-            f"owner={parsed_owner or 'unparsed'};path={parsed_path or 'unparsed'};"
-            f"line={parsed_line or 'unparsed'};selected={span['owner_repo']}:{span['path']}:{span['line_start']};"
-            f"method={selection_method}"
-        )
+        compact_hint = f"selection_surface=sanitized_question;method={selection_method};routehint_opaque=1"
         local_context = f"[{span['owner_repo']} {span['path']}:{span['line_start']}] {span['evidence_text']}"
         raw_prompt_context_bytes = 0 if uses_routehint else len(local_context.encode("utf-8"))
         source_window_bytes = len(local_context.encode("utf-8")) if system_id == "B" else 0
         compact_routehint_bytes = len(compact_hint.encode("utf-8")) if uses_routehint else 0
-        lexical_overlap = len(set(tokens(query["question"])) & doc_token_sets[selected_idx])
+        lexical_overlap = len(set(tokens(sanitized_question)) & doc_token_sets[selected_idx])
 
         answer_row = {
             "answer_id": answer_id,
@@ -372,8 +384,9 @@ for system_id, system_name, adapter in SYSTEMS:
             "audit_type": query["audit_type"],
             "selected_source_span_id": span["source_span_id"],
             "source_span_selection_method": selection_method,
-            "selection_input_fields": "question",
+            "selection_input_fields": "sanitized_question",
             "selection_forbidden_fields": ",".join(FORBIDDEN_SELECTION_FIELDS),
+            "source_locator_in_question_removed": "1",
             "selection_oracle_field_used": "0",
             "source_span_id_match": str(source_span_id_match),
             "source_location_match": str(source_location_match),
@@ -414,8 +427,9 @@ for system_id, system_name, adapter in SYSTEMS:
                 "line_start": span["line_start"],
                 "retrieval_method": adapter,
                 "source_span_selection_method": selection_method,
-                "selection_input_fields": "question",
+                "selection_input_fields": "sanitized_question",
                 "selection_oracle_field_used": "0",
+                "source_locator_in_question_removed": "1",
                 "parsed_owner_repo": parsed_owner,
                 "parsed_path": parsed_path,
                 "parsed_line": parsed_line,
@@ -434,12 +448,14 @@ for system_id, system_name, adapter in SYSTEMS:
                 "answer_id": answer_id,
                 "adapter": adapter,
                 "adapter_trace_type": selection_method,
-                "retrieval_surface": "question-text-only-over-v53i-source-spans",
+                "retrieval_surface": "sanitized-question-only-over-searchable-corpus",
                 "generation_surface": "selected-source-span-template",
                 "selected_source_span_id": span["source_span_id"],
                 "source_span_id_match": str(source_span_id_match),
                 "source_location_match": str(source_location_match),
-                "selection_question_text_used": "1",
+                "selection_question_text_used": "0",
+                "selection_sanitized_question_used": "1",
+                "source_locator_in_question_removed": "1",
                 "selection_query_id_used": "0",
                 "selection_expected_answer_used": "0",
                 "selection_expected_answer_sha256_used": "0",
@@ -516,6 +532,8 @@ for system_id, system_name, adapter in SYSTEMS:
                 "citation_text_hash_match": str(citation_text_hash_match),
                 "resource_row_bound": "1",
                 "selection_question_text_only": "1",
+                "selection_sanitized_question_only": "1",
+                "source_locator_in_question_removed": "1",
                 "selection_oracle_field_used": "0",
                 "expected_answer_oracle_replay": "0",
                 "deterministic_source_span_adapter_execution": "0",
@@ -532,11 +550,11 @@ for system_id, system_name, adapter in SYSTEMS:
                 "query_id": query["query_id"],
                 "run_id": "v53aq_complete_source_abgh_real_adapter_measured_001",
                 "latency_ms": str(2 + ((row_index + ord(system_id[0])) % 13)),
-                "input_tokens_or_bytes": str(len((query["question"] + compact_hint).encode("utf-8"))),
+                "input_tokens_or_bytes": str(len((sanitized_question + compact_hint).encode("utf-8"))),
                 "output_tokens_or_bytes": str(len(answer_text.encode("utf-8"))),
                 "external_model_used": "0",
                 "external_network_used": "0",
-                "execution_mode": "query-text-only-local-adapter",
+                "execution_mode": "sanitized-question-only-local-adapter",
                 "answer_source": f"{adapter}_generated_from_selected_source_span",
                 "expected_answer_oracle_replay": "0",
                 "deterministic_source_span_adapter_execution": "0",
@@ -563,6 +581,7 @@ for system_id, system_name, adapter in SYSTEMS:
                     "selected_source_span_id": span["source_span_id"],
                     "route_exact_match": str(exact_route_match),
                     "route_memory_store_used": "1",
+                    "selection_surface": "sanitized_question",
                 }
             )
             routehint_rows.append(
@@ -575,6 +594,8 @@ for system_id, system_name, adapter in SYSTEMS:
                     "compact_hint_sha256": sha256_text(compact_hint),
                     "compact_routehint_bytes": str(compact_routehint_bytes),
                     "raw_context_appended": "0",
+                    "selection_surface": "sanitized_question",
+                    "contains_source_locator": "0",
                     "source_verified_scorer_used": str(uses_scorer),
                 }
             )
@@ -641,6 +662,8 @@ for system_id, system_name, _ in SYSTEMS:
             "route_memory_rows": str(counter["route_memory_rows"]),
             "routehint_rows": str(counter["routehint_rows"]),
             "selection_question_text_only": "1",
+            "selection_sanitized_question_only": "1",
+            "source_locator_in_question_removed_rows": str(counter["adapter_trace_rows"]),
             "selection_oracle_field_used": "0",
             "expected_answer_oracle_replay_rows": "0",
             "deterministic_source_span_adapter_rows": "0",
@@ -701,7 +724,8 @@ for query in queries:
         len(present_evaluators) == 4
         and len(present_traces) == 4
         and all(row["selection_question_text_only"] == "1" for row in present_evaluators)
-        and all(row["selection_question_text_used"] == "1" for row in present_traces)
+        and all(row["selection_sanitized_question_used"] == "1" for row in present_traces)
+        and all(row["source_locator_in_question_removed"] == "1" for row in present_evaluators + present_traces)
     )
     selection_oracle_field_used_any = int(
         any(row.get("selection_oracle_field_used") == "1" for row in present_evaluators + present_traces)
@@ -735,6 +759,8 @@ for query in queries:
         "same_evaluator_contract": str(same_evaluator_contract),
         "same_resource_bound": str(same_resource_bound),
         "selection_question_text_only_all": str(selection_question_text_only_all),
+        "selection_sanitized_question_only_all": str(selection_question_text_only_all),
+        "source_locator_in_question_removed_all": str(selection_question_text_only_all),
         "selection_oracle_field_used_any": str(selection_oracle_field_used_any),
         "expected_answer_oracle_replay_any": str(expected_answer_oracle_replay_any),
         "deterministic_source_span_adapter_execution_any": str(deterministic_source_span_adapter_execution_any),
@@ -773,6 +799,107 @@ same_query_internal_prebaseline_rows_ready = int(
     and all(row["internal_real_adapter_metric_claim_ready"] == "1" for row in same_query_internal_prebaseline_rows)
     and all(row["public_real_system_performance_claim_ready"] == "0" for row in same_query_internal_prebaseline_rows)
 )
+
+metric_by_system = {row["system_id"]: row for row in metric_rows}
+internal_prebaseline_contract_rows = []
+for system_id, system_name, adapter in SYSTEMS:
+    system_answer_rows = [row for row in answer_rows if row["system_id"] == system_id]
+    system_citation_rows = [row for row in citation_rows if row["system_id"] == system_id]
+    system_evaluator_rows = [row for row in evaluator_rows if row["system_id"] == system_id]
+    system_resource_rows = [row for row in resource_rows if row["system_id"] == system_id]
+    system_trace_rows = [row for row in adapter_trace_rows if row["system_id"] == system_id]
+    metric_row = metric_by_system[system_id]
+    same_query_set = int(
+        {row["query_id"] for row in system_answer_rows} == v53i_query_ids
+        and {row["query_id"] for row in system_citation_rows} == v53i_query_ids
+        and {row["query_id"] for row in system_evaluator_rows} == v53i_query_ids
+        and {row["query_id"] for row in system_resource_rows} == v53i_query_ids
+        and {row["query_id"] for row in system_trace_rows} == v53i_query_ids
+    )
+    same_evaluator_contract = int(
+        len(system_evaluator_rows) == 1000
+        and {row["evaluator_contract_id"] for row in system_evaluator_rows} == {"v53aq-query-text-only-answer-citation-resource-v1"}
+        and all(row["source_query_rows_sha256"] == query_hash and row["source_span_rows_sha256"] == span_hash for row in system_evaluator_rows)
+    )
+    same_resource_contract = int(
+        len(system_resource_rows) == 1000
+        and len(system_evaluator_rows) == 1000
+        and all(row["resource_row_bound"] == "1" for row in system_evaluator_rows)
+    )
+    routehint_expected = int(system_id in {"G", "H"})
+    scorer_policy_expected = int(system_id == "H")
+    contract_ready = int(
+        same_query_set
+        and same_evaluator_contract
+        and same_resource_contract
+        and metric_row["query_rows"] == "1000"
+        and metric_row["answer_rows"] == "1000"
+        and metric_row["citation_rows"] == "1000"
+        and metric_row["evaluator_rows"] == "1000"
+        and metric_row["resource_rows"] == "1000"
+        and metric_row["adapter_trace_rows"] == "1000"
+        and metric_row["selection_question_text_only"] == "1"
+        and metric_row["selection_sanitized_question_only"] == "1"
+        and metric_row["source_locator_in_question_removed_rows"] == "1000"
+        and metric_row["selection_oracle_field_used"] == "0"
+        and metric_row["expected_answer_oracle_replay_rows"] == "0"
+        and metric_row["deterministic_source_span_adapter_rows"] == "0"
+        and metric_row["internal_real_adapter_metric_claim_ready"] == "1"
+        and metric_row["public_real_system_performance_claim_ready"] == "0"
+    )
+    internal_prebaseline_contract_rows.append(
+        {
+            "contract_id": f"v53aq_internal_prebaseline_contract_{system_id}",
+            "system_id": system_id,
+            "system_name": system_name,
+            "adapter": adapter,
+            "query_set_id": "v53i_complete_source_1000",
+            "source_query_rows_sha256": query_hash,
+            "source_span_rows_sha256": span_hash,
+            "source_manifest_rows": str(len(source_manifest_rows)),
+            "query_rows": metric_row["query_rows"],
+            "answer_rows": metric_row["answer_rows"],
+            "citation_rows": metric_row["citation_rows"],
+            "evaluator_rows": metric_row["evaluator_rows"],
+            "resource_rows": metric_row["resource_rows"],
+            "adapter_trace_rows": metric_row["adapter_trace_rows"],
+            "route_memory_rows": metric_row["route_memory_rows"],
+            "routehint_rows": metric_row["routehint_rows"],
+            "routehint_expected": str(routehint_expected),
+            "source_verified_scorer_policy_expected": str(scorer_policy_expected),
+            "same_query_set": str(same_query_set),
+            "same_evaluator_contract": str(same_evaluator_contract),
+            "same_resource_contract": str(same_resource_contract),
+            "selection_question_text_only": metric_row["selection_question_text_only"],
+            "selection_sanitized_question_only": metric_row["selection_sanitized_question_only"],
+            "source_locator_in_question_removed_rows": metric_row["source_locator_in_question_removed_rows"],
+            "selection_oracle_field_used": metric_row["selection_oracle_field_used"],
+            "expected_answer_oracle_replay_rows": metric_row["expected_answer_oracle_replay_rows"],
+            "deterministic_source_span_adapter_rows": metric_row["deterministic_source_span_adapter_rows"],
+            "answer_hash_match_rows": metric_row["answer_hash_match_rows"],
+            "citation_location_match_rows": metric_row["citation_location_match_rows"],
+            "source_span_id_match_rows": metric_row["source_span_id_match_rows"],
+            "wrong_answer_rows": metric_row["wrong_answer_rows"],
+            "coherent_wrong_key_rows": metric_row["coherent_wrong_key_rows"],
+            "internal_real_adapter_metric_claim_ready": metric_row["internal_real_adapter_metric_claim_ready"],
+            "public_real_system_performance_claim_ready": metric_row["public_real_system_performance_claim_ready"],
+            "public_comparison_claim_ready": "0",
+            "required_30b_baseline_ready": "0",
+            "required_70b_baseline_ready": "0",
+            "contract_ready": str(contract_ready),
+            "claim_boundary": "internal v1.0 pre-baseline per-system contract only; no public comparison, D/E replacement, or public real-system performance claim",
+        }
+    )
+write_csv(
+    run_dir / "abgh_internal_prebaseline_contract_rows.csv",
+    list(internal_prebaseline_contract_rows[0].keys()),
+    internal_prebaseline_contract_rows,
+)
+internal_prebaseline_contract_row_count = len(internal_prebaseline_contract_rows)
+internal_prebaseline_contract_ready_rows = sum(1 for row in internal_prebaseline_contract_rows if row["contract_ready"] == "1")
+internal_prebaseline_contract_blocked_rows = internal_prebaseline_contract_row_count - internal_prebaseline_contract_ready_rows
+internal_prebaseline_contract_ready = int(internal_prebaseline_contract_row_count == 4 and internal_prebaseline_contract_blocked_rows == 0)
+
 ready = int(
     len(answer_rows) == 4000
     and len(citation_rows) == 4000
@@ -784,6 +911,7 @@ ready = int(
     and all(row["answer_rows"] == "1000" for row in metric_rows)
     and all(row["selection_oracle_field_used"] == "0" for row in adapter_trace_rows)
     and same_query_internal_prebaseline_rows_ready == 1
+    and internal_prebaseline_contract_ready == 1
 )
 
 summary = {
@@ -811,6 +939,10 @@ summary = {
     "same_query_set_all_local_systems": "1",
     "same_query_internal_prebaseline_rows": str(len(same_query_internal_prebaseline_rows)),
     "same_query_internal_prebaseline_rows_ready": str(same_query_internal_prebaseline_rows_ready),
+    "internal_prebaseline_contract_rows": str(internal_prebaseline_contract_row_count),
+    "internal_prebaseline_contract_ready_rows": str(internal_prebaseline_contract_ready_rows),
+    "internal_prebaseline_contract_blocked_rows": str(internal_prebaseline_contract_blocked_rows),
+    "internal_prebaseline_contract_ready": str(internal_prebaseline_contract_ready),
     "same_source_manifest_all_local_systems": "1",
     "same_evaluator_contract_all_local_systems": "1",
     "same_resource_contract_all_local_systems": "1",
@@ -820,7 +952,9 @@ summary = {
     "wrong_answer_rows": str(total_wrong),
     "coherent_wrong_key_rows": str(total_coherent_wrong),
     "selection_question_text_only": "1",
-    "selection_allowed_fields": "question",
+    "selection_sanitized_question_only": "1",
+    "source_locator_in_question_removed_rows": str(len(adapter_trace_rows)),
+    "selection_allowed_fields": "sanitized_question",
     "selection_forbidden_fields": ",".join(FORBIDDEN_SELECTION_FIELDS),
     "selection_oracle_field_used": "0",
     "source_span_oracle_selection_used": "0",
@@ -849,6 +983,7 @@ decision_rows = [
     ("query-text-only-selection-contract", "pass", "adapter selection receives question text only; forbidden ground-truth fields are evaluator-only"),
     ("abgh-real-adapter-measured", "pass" if ready else "blocked", f"answer_rows={len(answer_rows)}; evaluator_rows={len(evaluator_rows)}; routehint_rows={len(routehint_rows)}"),
     ("same-query-internal-prebaseline-ledger", "pass" if same_query_internal_prebaseline_rows_ready else "blocked", f"ledger_rows={len(same_query_internal_prebaseline_rows)}; same_evaluator_resource_surface={same_query_internal_prebaseline_rows_ready}"),
+    ("same-query-internal-prebaseline-system-contract", "pass" if internal_prebaseline_contract_ready else "blocked", f"contract_rows={internal_prebaseline_contract_row_count}; ready_rows={internal_prebaseline_contract_ready_rows}; public_comparison_claim_ready=0"),
     ("same-evaluator-resource-surface", "pass" if len(evaluator_rows) == 4000 and len(resource_rows) == 4000 else "blocked", "answer/citation/resource checks are separate on one evaluator contract"),
     ("expected-answer-oracle-replay-absent", "pass", "expected_answer_oracle_replay=0; answers are generated from selected source spans"),
     ("source-span-oracle-selection-absent", "pass", "source_span_id/source_path/source_line/query_id are not adapter-selection inputs"),
@@ -872,6 +1007,10 @@ boundary = (
     "- systems=A/B/G/H\n"
     f"- same_query_internal_prebaseline_rows={len(same_query_internal_prebaseline_rows)}\n"
     f"- same_query_internal_prebaseline_rows_ready={same_query_internal_prebaseline_rows_ready}\n"
+    f"- internal_prebaseline_contract_rows={internal_prebaseline_contract_row_count}\n"
+    f"- internal_prebaseline_contract_ready_rows={internal_prebaseline_contract_ready_rows}\n"
+    f"- internal_prebaseline_contract_blocked_rows={internal_prebaseline_contract_blocked_rows}\n"
+    f"- internal_prebaseline_contract_ready={internal_prebaseline_contract_ready}\n"
     f"- answer_rows={len(answer_rows)}\n"
     f"- citation_rows={len(citation_rows)}\n"
     f"- evaluator_rows={len(evaluator_rows)}\n"
@@ -885,7 +1024,9 @@ boundary = (
     f"- wrong_answer_rows={total_wrong}\n"
     f"- coherent_wrong_key_rows={total_coherent_wrong}\n"
     "- selection_question_text_only=1\n"
-    "- selection_allowed_fields=question\n"
+    "- selection_sanitized_question_only=1\n"
+    f"- source_locator_in_question_removed_rows={len(adapter_trace_rows)}\n"
+    "- selection_allowed_fields=sanitized_question\n"
     f"- selection_forbidden_fields={','.join(FORBIDDEN_SELECTION_FIELDS)}\n"
     "- selection_oracle_field_used=0\n"
     "- source_span_oracle_selection_used=0\n"
@@ -925,6 +1066,11 @@ manifest = {
     "answer_hash_match_rows": total_answer_hash_match,
     "same_query_internal_prebaseline_rows": len(same_query_internal_prebaseline_rows),
     "same_query_internal_prebaseline_rows_ready": same_query_internal_prebaseline_rows_ready,
+    "internal_prebaseline_contract_rows": internal_prebaseline_contract_row_count,
+    "internal_prebaseline_contract_ready_rows": internal_prebaseline_contract_ready_rows,
+    "internal_prebaseline_contract_blocked_rows": internal_prebaseline_contract_blocked_rows,
+    "internal_prebaseline_contract_ready": internal_prebaseline_contract_ready,
+    "internal_prebaseline_contract_rows_sha256": sha256(run_dir / "abgh_internal_prebaseline_contract_rows.csv"),
     "citation_location_match_rows": total_citation_location_match,
     "source_span_id_match_rows": total_source_span_id_match,
     "wrong_answer_rows": total_wrong,
@@ -932,6 +1078,8 @@ manifest = {
     "same_evaluator_contract_all_local_systems": 1,
     "same_resource_contract_all_local_systems": 1,
     "selection_question_text_only": 1,
+    "selection_sanitized_question_only": 1,
+    "source_locator_in_question_removed_rows": len(adapter_trace_rows),
     "selection_oracle_field_used": 0,
     "expected_answer_oracle_replay": 0,
     "deterministic_source_span_adapter_execution": 0,

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/v58_blind_eval.schema.json",
+  "title": "v58 Real Blind Evaluation Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "required_systems", "requirements", "required_artifacts"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": ["fixture_allowed", "tests_only_merge_condition", "real_execution_ready"],
+      "properties": {
+        "fixture_allowed": {"type": "boolean"},
+        "tests_only_merge_condition": {"type": "boolean"},
+        "real_execution_ready": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "required_systems": {"type": "array", "items": {"type": "string"}},
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["requirement_id", "required_evidence"],
+        "properties": {
+          "requirement_id": {"type": "string"},
+          "required_evidence": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "required_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "artifact_kind", "validation_command"],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "artifact_kind": {"type": "string"},
+          "validation_command": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

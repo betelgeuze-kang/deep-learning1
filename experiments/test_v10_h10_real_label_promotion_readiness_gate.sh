@@ -57,6 +57,8 @@ expected = {
     "v53aq_evaluator_rows": "4000",
     "v53aq_same_query_internal_prebaseline_rows": "1000",
     "v53aq_same_query_internal_prebaseline_rows_ready": "1",
+    "v53aq_internal_prebaseline_contract_rows": "4",
+    "v53aq_internal_prebaseline_contract_ready": "1",
     "v53aq_selection_question_text_only": "1",
     "v53aq_selection_oracle_field_used": "0",
     "v53aq_expected_answer_oracle_replay": "0",
@@ -65,8 +67,10 @@ expected = {
     "v53aq_real_system_performance_claim_ready": "0",
     "v53aq_internal_real_adapter_metric_claim_ready": "1",
     "v53aq_public_real_system_performance_claim_ready": "0",
-    "v53aq_answer_hash_match_rows": "3713",
-    "v53aq_coherent_wrong_key_rows": "287",
+    "v53aq_answer_hash_match_rows": "84",
+    "v53aq_coherent_wrong_key_rows": "3916",
+    "v53aq_selection_sanitized_question_only": "1",
+    "v53aq_source_locator_in_question_removed_rows": "4000",
     "v53t_complete_source_audit_readiness_gate_ready": "1",
     "v53t_foundation_real_adapter_evidence_ready": "1",
     "v53t_real_adapter_freeze_rows": "4",
@@ -127,6 +131,7 @@ required_files = [
     "source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v53aq/abgh_evaluator_rows.csv",
     "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_v53aq/abgh_wrong_answer_guard_rows.csv",
     "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
@@ -152,9 +157,9 @@ for criterion in [
         raise SystemExit(f"missing PM h10 criterion: {criterion}")
 if criteria["source-provenance-binding"]["machine_evidence_status"] != "pass":
     raise SystemExit("source provenance should be machine-bound")
-if "v53aq_coherent_wrong_key_rows=287" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
+if "v53aq_coherent_wrong_key_rows=3916" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
     raise SystemExit("coherent wrong-key criterion should cite v53aq wrong-key evidence")
-if "v53aq_H_coherent_wrong_key_rows=0" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
+if "v53aq_H_coherent_wrong_key_rows=979" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
     raise SystemExit("coherent wrong-key criterion should cite v53aq H wrong-key evidence")
 if "v53t_real_adapter_freeze_ready=1" not in criteria["coherent-wrong-key-reduction"]["evidence"]:
     raise SystemExit("coherent wrong-key criterion should cite v53t real-adapter freeze readiness")
@@ -170,6 +175,10 @@ if "v53aq_same_query_internal_prebaseline_rows=1000" not in criteria["source-pro
     raise SystemExit("source provenance criterion should cite v53aq same-query prebaseline rows")
 if "v53aq_same_query_internal_prebaseline_rows_ready=1" not in criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("source provenance criterion should cite v53aq same-query prebaseline readiness")
+if "v53aq_internal_prebaseline_contract_rows=4" not in criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("source provenance criterion should cite v53aq internal prebaseline contract rows")
+if "v53aq_internal_prebaseline_contract_ready=1" not in criteria["source-provenance-binding"]["evidence"]:
+    raise SystemExit("source provenance criterion should cite v53aq internal prebaseline contract readiness")
 if "v53t_real_adapter_freeze_rows=4" not in criteria["source-provenance-binding"]["evidence"]:
     raise SystemExit("source provenance criterion should cite v53t real-adapter freeze rows")
 if criteria["external-human-label-evidence"]["real_label_status"] != "blocked":
@@ -293,13 +302,15 @@ if len(v53aq_adapter_traces) != 4000:
 if {row["system_id"] for row in v53aq_adapter_traces} != {"A", "B", "G", "H"}:
     raise SystemExit("h10 PM gate v53aq adapter traces should cover A/B/G/H")
 if any(
-    row["selection_question_text_used"] != "1"
+    row["selection_question_text_used"] != "0"
+    or row["selection_sanitized_question_used"] != "1"
+    or row["source_locator_in_question_removed"] != "1"
     or row["selection_oracle_field_used"] != "0"
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
     for row in v53aq_adapter_traces
 ):
-    raise SystemExit("h10 PM gate v53aq adapter traces should preserve query-text-only non-oracle selection")
+    raise SystemExit("h10 PM gate v53aq adapter traces should preserve sanitized-question-only non-oracle selection")
 if len(v53aq_evaluators) != 4000:
     raise SystemExit("h10 PM gate should copy 4000 v53aq evaluator rows")
 if {row["system_id"] for row in v53aq_evaluators} != {"A", "B", "G", "H"}:
@@ -311,6 +322,8 @@ if any(
     or row["citation_eval_separate"] != "1"
     or row["resource_eval_separate"] != "1"
     or row["selection_question_text_only"] != "1"
+    or row["selection_sanitized_question_only"] != "1"
+    or row["source_locator_in_question_removed"] != "1"
     or row["selection_oracle_field_used"] != "0"
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
@@ -337,6 +350,8 @@ for row in v53aq_prebaseline_rows:
         "same_evaluator_contract": "1",
         "same_resource_bound": "1",
         "selection_question_text_only_all": "1",
+        "selection_sanitized_question_only_all": "1",
+        "source_locator_in_question_removed_all": "1",
         "selection_oracle_field_used_any": "0",
         "expected_answer_oracle_replay_any": "0",
         "deterministic_source_span_adapter_execution_any": "0",
@@ -349,6 +364,43 @@ for row in v53aq_prebaseline_rows:
         if row[field] != value:
             raise SystemExit(f"h10 PM gate v53aq same-query ledger should preserve {field}={value}")
 
+v53aq_contract_rows = {
+    row["system_id"]: row
+    for row in read_csv(run_dir / "source_v53aq/abgh_internal_prebaseline_contract_rows.csv")
+}
+if set(v53aq_contract_rows) != {"A", "B", "G", "H"}:
+    raise SystemExit("h10 PM gate should copy four v53aq internal prebaseline contract rows")
+for system_id, row in v53aq_contract_rows.items():
+    expected = {
+        "query_set_id": "v53i_complete_source_1000",
+        "query_rows": "1000",
+        "answer_rows": "1000",
+        "citation_rows": "1000",
+        "evaluator_rows": "1000",
+        "resource_rows": "1000",
+        "adapter_trace_rows": "1000",
+        "same_query_set": "1",
+        "same_evaluator_contract": "1",
+        "same_resource_contract": "1",
+        "selection_question_text_only": "1",
+        "selection_sanitized_question_only": "1",
+        "source_locator_in_question_removed_rows": "1000",
+        "selection_oracle_field_used": "0",
+        "expected_answer_oracle_replay_rows": "0",
+        "deterministic_source_span_adapter_rows": "0",
+        "internal_real_adapter_metric_claim_ready": "1",
+        "public_real_system_performance_claim_ready": "0",
+        "public_comparison_claim_ready": "0",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+        "contract_ready": "1",
+    }
+    for field, value in expected.items():
+        if row.get(field) != value:
+            raise SystemExit(f"h10 PM gate v53aq contract {system_id}.{field}: expected {value}, got {row.get(field)}")
+    if "no public comparison" not in row["claim_boundary"]:
+        raise SystemExit(f"h10 PM gate v53aq contract should keep public comparison blocked for {system_id}")
+
 v53t_real_adapter_rows = {
     row["criterion_id"]: row
     for row in read_csv(run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv")
@@ -357,7 +409,7 @@ if len(v53t_real_adapter_rows) != 4:
     raise SystemExit("h10 PM gate should copy four v53t real-adapter freeze rows")
 if any(row["status"] != "pass" for row in v53t_real_adapter_rows.values()):
     raise SystemExit("h10 PM gate v53t real-adapter freeze rows should all pass")
-if "coherent_wrong_key_rows=287" not in v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=3916" not in v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("h10 PM gate v53t real-adapter freeze should preserve coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("h10 PM gate v53t real-adapter freeze should preserve public comparison blocker")
@@ -403,8 +455,17 @@ if manifest.get("v53aq_same_query_internal_prebaseline_rows") != 1000:
     raise SystemExit("manifest should record v53aq same-query prebaseline row count")
 if manifest.get("v53aq_same_query_internal_prebaseline_rows_ready") != 1:
     raise SystemExit("manifest should record v53aq same-query prebaseline readiness")
-if manifest.get("v53aq_selection_question_text_only") != 1 or manifest.get("v53aq_selection_oracle_field_used") != 0:
-    raise SystemExit("manifest should record v53aq query-text-only selection boundary")
+if manifest.get("v53aq_internal_prebaseline_contract_rows") != 4:
+    raise SystemExit("manifest should record v53aq internal prebaseline contract rows")
+if manifest.get("v53aq_internal_prebaseline_contract_ready") != 1:
+    raise SystemExit("manifest should record v53aq internal prebaseline contract readiness")
+if (
+    manifest.get("v53aq_selection_question_text_only") != 1
+    or manifest.get("v53aq_selection_sanitized_question_only") != 1
+    or manifest.get("v53aq_source_locator_in_question_removed_rows") != 4000
+    or manifest.get("v53aq_selection_oracle_field_used") != 0
+):
+    raise SystemExit("manifest should record v53aq sanitized-question-only selection boundary")
 if manifest.get("v53t_complete_source_audit_readiness_gate_ready") != 1:
     raise SystemExit("manifest should record v53t audit-readiness gate readiness")
 if manifest.get("v53t_foundation_real_adapter_evidence_ready") != 1:
@@ -473,9 +534,13 @@ for snippet in [
     "v53aq_evaluator_rows=4000",
     "v53aq_same_query_internal_prebaseline_rows=1000",
     "v53aq_same_query_internal_prebaseline_rows_ready=1",
+    "v53aq_internal_prebaseline_contract_rows=4",
+    "v53aq_internal_prebaseline_contract_ready=1",
     "v53aq_selection_question_text_only=1",
+    "v53aq_selection_sanitized_question_only=1",
+    "v53aq_source_locator_in_question_removed_rows=4000",
     "v53aq_selection_oracle_field_used=0",
-    "v53aq_coherent_wrong_key_rows=287",
+    "v53aq_coherent_wrong_key_rows=3916",
     "v53t_real_adapter_freeze_ready=1",
     "v53t_real_adapter_freeze_rows=4",
     "accepted_query_rows_declared=0",

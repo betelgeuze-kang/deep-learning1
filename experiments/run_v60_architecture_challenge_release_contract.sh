@@ -156,17 +156,24 @@ for rel in [
     "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v56/v56_seed_dependency_blocker_rows.csv",
     "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv",
+    "source_pm_pr_claim_slice_gate/de_measured_registry_exclusion_rows.csv",
+    "source_pm_pr_claim_slice_gate/v58_real_execution_readiness_rows.csv",
     "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_pr_normalization_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_pr_title_body_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_ready_semantic_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_retrieval_leakage_guard_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_v1_exit_criteria_rows.csv",
@@ -175,6 +182,7 @@ for rel in [
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
     "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -205,6 +213,7 @@ for rel in [
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_resource_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53ap/abgh_adapter_trace_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v59e/local_abgh_row_contract_replay_rows.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_summary.csv",
     "source_pm_pr_claim_slice_gate/v1_0_pm_pr_claim_slice_gate_manifest.json",
@@ -245,6 +254,7 @@ h10_pm_files = [
     "source_v53aq/abgh_evaluator_rows.csv",
     "source_v53aq/abgh_system_metric_rows.csv",
     "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -377,6 +387,8 @@ v54c_recommended_output_files_ready = int(
     and as_int(v59e, "v54c_sha256sums_pm_recommended_csv_rows") == 6
     and as_int(v59e, "v54c_sha256sums_pm_recommended_csv_ready") == 1
     and as_int(v54c, "raw_prompt_context_appended_rows") == 0
+    and as_int(v54c, "model_visible_leakage_guard_ready") == 1
+    and as_int(v54c, "real_model_generation_ready") == 0
 )
 v54c_output_contract_ready = int(
     (run_dir / "source_v59e/source_v54c/grounded_generation_output_contract_rows.csv").is_file()
@@ -434,6 +446,8 @@ requirements = [
         and as_int(v53ap, "internal_v1_0_pre_baseline_run") == 1
         and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
         and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
+        and as_int(v53aq, "internal_prebaseline_contract_ready") == 1
+        and as_int(v53aq, "internal_prebaseline_contract_rows") == 4
         and as_int(v53ap, "public_comparison_claim_ready") == 0
         and as_int(v59e, "local_abgh_row_contract_replay_ready") == 1
         and as_int(v59e, "local_abgh_row_contract_replay_rows") == 2
@@ -660,9 +674,24 @@ summary = {
     "pm_pr_v53_pm_acceptance_evidence_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_rows"),
     "pm_pr_v53_pm_acceptance_evidence_ready_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_ready_rows"),
     "pm_pr_v53_pm_acceptance_evidence_tests_only_rows": as_int(v59e, "pm_pr_v53_pm_acceptance_evidence_tests_only_rows"),
+    "pm_pr_normalization_rows": as_int(v59e, "pm_pr_normalization_rows"),
+    "pm_pr_normalization_split_required_rows": as_int(v59e, "pm_pr_normalization_split_required_rows"),
+    "pm_pr_normalization_tests_only_rows": as_int(v59e, "pm_pr_normalization_tests_only_rows"),
+    "pm_pr_title_body_rows": as_int(v59e, "pm_pr_title_body_rows"),
+    "pm_pr_title_body_rewrite_ready": as_int(v59e, "pm_pr_title_body_rewrite_ready"),
+    "pm_ready_semantic_rows": as_int(v59e, "pm_ready_semantic_rows"),
+    "pm_ready_semantic_real_model_ready_rows": as_int(v59e, "pm_ready_semantic_real_model_ready_rows"),
+    "pm_ready_semantic_release_ready_rows": as_int(v59e, "pm_ready_semantic_release_ready_rows"),
+    "pm_ready_semantic_logical_100b_contract_fixture_ready": as_int(v59e, "pm_ready_semantic_logical_100b_contract_fixture_ready"),
+    "pm_ready_semantic_real_100b_inference_ready": as_int(v59e, "pm_ready_semantic_real_100b_inference_ready"),
+    "pm_retrieval_leakage_guard_rows": as_int(v59e, "pm_retrieval_leakage_guard_rows"),
+    "pm_retrieval_leakage_guard_pass_rows": as_int(v59e, "pm_retrieval_leakage_guard_pass_rows"),
+    "pm_retrieval_leakage_guard_blocked_rows": as_int(v59e, "pm_retrieval_leakage_guard_blocked_rows"),
     "local_abgh_prebaseline_ready": int(as_int(v53ap, "v53ap_complete_source_abgh_same_query_measured_ready") == 1),
     "local_abgh_prebaseline_ledger_ready": as_int(v53aq, "same_query_internal_prebaseline_rows_ready"),
     "local_abgh_prebaseline_ledger_rows": as_int(v53aq, "same_query_internal_prebaseline_rows"),
+    "local_abgh_internal_contract_ready": as_int(v53aq, "internal_prebaseline_contract_ready"),
+    "local_abgh_internal_contract_rows": as_int(v53aq, "internal_prebaseline_contract_rows"),
     "local_abgh_row_contract_replay_ready": as_int(v59e, "local_abgh_row_contract_replay_ready"),
     "local_abgh_row_contract_replay_rows": as_int(v59e, "local_abgh_row_contract_replay_rows"),
     "local_abgh_row_contract_replay_pass_rows": as_int(v59e, "local_abgh_row_contract_replay_pass_rows"),
@@ -702,6 +731,11 @@ summary = {
     "v54c_output_contract_rows": as_int(v54c, "grounded_generation_output_contract_rows"),
     "v54c_output_contract_pm_required_rows": as_int(v54c, "grounded_generation_output_contract_pm_required_rows"),
     "v54c_output_contract_raw_prompt_forbidden_rows": as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows"),
+    "v54c_model_visible_leakage_guard_ready": as_int(v54c, "model_visible_leakage_guard_ready"),
+    "v54c_model_visible_forbidden_field_used_rows": as_int(v54c, "model_visible_forbidden_field_used_rows"),
+    "v54c_model_visible_source_locator_rows": as_int(v54c, "model_visible_source_locator_rows"),
+    "v54c_deterministic_source_span_generation_fixture_ready": as_int(v54c, "deterministic_source_span_generation_fixture_ready"),
+    "v54c_real_model_generation_ready": as_int(v54c, "real_model_generation_ready"),
     "routehint_generation_main_ready": int(as_int(v54c, "v54c_complete_source_grounded_generation_1000_ready") == 1),
     "scaling_law_main_ready": 0,
     "expanded_benchmark_ready": int(as_int(pm_pr, "replay_artifact_pass_rows") == as_int(pm_pr, "recommended_pr_slice_rows")),
@@ -714,6 +748,17 @@ summary = {
     "v58d_dependency_blocker_ready": as_int(v59e, "v58d_dependency_blocker_ready"),
     "v58d_human_blind_review_ready": as_int(v59e, "v58d_human_blind_review_ready"),
     "v58d_inter_rater_rows_ready": as_int(v59e, "v58d_inter_rater_rows_ready"),
+    "v58d_pm_review_required_system_rows": as_int(v59e, "v58d_pm_review_required_system_rows"),
+    "v58d_pm_review_required_blind_response_rows": as_int(v59e, "v58d_pm_review_required_blind_response_rows"),
+    "v58d_pm_review_required_independent_review_rows": as_int(v59e, "v58d_pm_review_required_independent_review_rows"),
+    "v58d_pm_review_required_adjudication_rows": as_int(v59e, "v58d_pm_review_required_adjudication_rows"),
+    "v58d_pm_review_actual_ready": as_int(v59e, "v58d_pm_review_actual_ready"),
+    "v58d_pm_review_missing_system_rows": as_int(v59e, "v58d_pm_review_missing_system_rows"),
+    "v58d_pm_review_template_gap_rows": as_int(v59e, "v58d_pm_review_template_gap_rows"),
+    "v58d_pm_review_unseen_split_ready": as_int(v59e, "v58d_pm_review_unseen_split_ready"),
+    "v58d_pm_review_source_span_exactness_ready": as_int(v59e, "v58d_pm_review_source_span_exactness_ready"),
+    "v58d_pm_review_unsupported_abstention_ready": as_int(v59e, "v58d_pm_review_unsupported_abstention_ready"),
+    "v58d_pm_review_latency_memory_separate_ready": as_int(v59e, "v58d_pm_review_latency_memory_separate_ready"),
     "v58_return_artifact_contract_ready": as_int(v59e, "v58_return_artifact_contract_ready"),
     "v58_required_artifact_rows": as_int(v59e, "v58_required_artifact_rows"),
     "v58_required_artifact_fixture_allowed_rows": as_int(v59e, "v58_required_artifact_fixture_allowed_rows"),
@@ -729,6 +774,14 @@ summary = {
     "v58_acceptance_evidence_blind_eval_ready_rows": as_int(v59e, "v58_acceptance_evidence_blind_eval_ready_rows"),
     "v58_acceptance_evidence_tests_only_rows": as_int(v59e, "v58_acceptance_evidence_tests_only_rows"),
     "v58_acceptance_evidence_hidden_state_rows": as_int(v59e, "v58_acceptance_evidence_hidden_state_rows"),
+    "pm_pr_de_measured_registry_exclusion_rows": as_int(v59e, "pm_pr_de_measured_registry_exclusion_rows"),
+    "pm_pr_de_measured_registry_fixture_registry_rows": as_int(v59e, "pm_pr_de_measured_registry_fixture_registry_rows"),
+    "pm_pr_de_measured_registry_admission_ready_rows": as_int(v59e, "pm_pr_de_measured_registry_admission_ready_rows"),
+    "pm_pr_de_measured_registry_blocked_rows": as_int(v59e, "pm_pr_de_measured_registry_blocked_rows"),
+    "pm_pr_v58_real_execution_readiness_rows": as_int(v59e, "pm_pr_v58_real_execution_readiness_rows"),
+    "pm_pr_v58_real_execution_ready_rows": as_int(v59e, "pm_pr_v58_real_execution_ready_rows"),
+    "pm_pr_v58_real_execution_blocked_rows": as_int(v59e, "pm_pr_v58_real_execution_blocked_rows"),
+    "pm_pr_v58_real_execution_fixture_allowed_rows": as_int(v59e, "pm_pr_v58_real_execution_fixture_allowed_rows"),
     "pm_pr_v56_seed_dependency_blocker_ready": as_int(v59e, "pm_pr_v56_seed_dependency_blocker_ready"),
     "pm_pr_v56_seed_dependency_blocker_rows": as_int(v59e, "pm_pr_v56_seed_dependency_blocker_rows"),
     "pm_pr_v56_missing_seed_artifact_rows": as_int(v59e, "pm_pr_v56_missing_seed_artifact_rows"),
@@ -774,6 +827,8 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "- h10 PM criteria rows, h10 real-label return contract rows, and h10 acceptance evidence rows are copied for coherent wrong-key, chunk exact, near-miss, missing-query abstain, source provenance binding, and external/human label blockers.\n\n"
     f"- h10 accepted-label coverage remains closed: accepted_query_rows_declared={summary['h10_accepted_query_rows_declared']}, accepted_label_rows={summary['h10_accepted_label_rows']}, criterion_label_coverage_blocked_rows={summary['h10_pm_acceptance_evidence_coverage_blocked_rows']}, source_verified_eval_blocked_rows={summary['h10_pm_acceptance_evidence_source_verified_blocked_rows']}.\n\n"
     "- PM v59 one-command acceptance evidence preserves local A/B/G/H row-contract replay readiness while keeping public-source download/refresh approval-blocked.\n\n"
+    "- D/E fixture/schema rows are explicitly excluded from measured registry admission until real 30B/70B model/runtime/raw-output evidence exists.\n\n"
+    "- v58 real execution remains blocked on actual A/B/C/D/E/G/H blind responses, reviewer/adjudication evidence, unseen split evidence, source-span exactness, unsupported abstention, and separate latency/memory reporting.\n\n"
     "Still blocked:\n\n"
     "- real 30B/70B LLM+RAG comparison rows\n"
     "- h10 real external/human label promotion evidence\n"
@@ -814,7 +869,13 @@ manifest = {
     "v59e_pm_pr_v56_replay_acceptance_evidence_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv"),
     "v59e_pm_pr_v56_seed_dependency_blocker_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/source_v56/v56_seed_dependency_blocker_rows.csv"),
     "v59e_pm_pr_de_30b70b_acceptance_evidence_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv"),
+    "v59e_pm_pr_de_measured_registry_exclusion_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/de_measured_registry_exclusion_rows.csv"),
+    "v59e_pm_pr_v58_real_execution_readiness_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/v58_real_execution_readiness_rows.csv"),
     "v59e_pm_pr_v59_one_command_acceptance_evidence_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv"),
+    "v59e_pm_pr_normalization_rows_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/pm_pr_normalization_rows.csv"),
+    "v59e_pm_pr_title_body_rows_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/pm_pr_title_body_rows.csv"),
+    "v59e_pm_ready_semantic_rows_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/pm_ready_semantic_rows.csv"),
+    "v59e_pm_retrieval_leakage_guard_rows_sha256": sha256(v59e_dir / "source_pm_pr_claim_slice_gate/pm_retrieval_leakage_guard_rows.csv"),
     "v58_acceptance_evidence_rows": as_int(v59e, "v58_acceptance_evidence_rows"),
     "v58_acceptance_evidence_contract_ready_rows": as_int(v59e, "v58_acceptance_evidence_contract_ready_rows"),
     "v58_acceptance_evidence_default_blocked_rows": as_int(v59e, "v58_acceptance_evidence_default_blocked_rows"),
@@ -832,12 +893,33 @@ manifest = {
     "pm_pr_v56_missing_seed_artifact_rows": as_int(v59e, "pm_pr_v56_missing_seed_artifact_rows"),
     "pm_pr_v56_missing_v45_seed_artifact_rows": as_int(v59e, "pm_pr_v56_missing_v45_seed_artifact_rows"),
     "pm_pr_v56_missing_seed_network_or_download_approval_required": as_int(v59e, "pm_pr_v56_missing_seed_network_or_download_approval_required"),
+    "pm_pr_normalization_rows": as_int(v59e, "pm_pr_normalization_rows"),
+    "pm_pr_normalization_split_required_rows": as_int(v59e, "pm_pr_normalization_split_required_rows"),
+    "pm_pr_normalization_tests_only_rows": as_int(v59e, "pm_pr_normalization_tests_only_rows"),
+    "pm_pr_title_body_rows": as_int(v59e, "pm_pr_title_body_rows"),
+    "pm_pr_title_body_rewrite_ready": as_int(v59e, "pm_pr_title_body_rewrite_ready"),
+    "pm_ready_semantic_rows": as_int(v59e, "pm_ready_semantic_rows"),
+    "pm_ready_semantic_real_model_ready_rows": as_int(v59e, "pm_ready_semantic_real_model_ready_rows"),
+    "pm_ready_semantic_release_ready_rows": as_int(v59e, "pm_ready_semantic_release_ready_rows"),
+    "pm_ready_semantic_logical_100b_contract_fixture_ready": as_int(v59e, "pm_ready_semantic_logical_100b_contract_fixture_ready"),
+    "pm_ready_semantic_real_100b_inference_ready": as_int(v59e, "pm_ready_semantic_real_100b_inference_ready"),
+    "pm_retrieval_leakage_guard_rows": as_int(v59e, "pm_retrieval_leakage_guard_rows"),
+    "pm_retrieval_leakage_guard_pass_rows": as_int(v59e, "pm_retrieval_leakage_guard_pass_rows"),
+    "pm_retrieval_leakage_guard_blocked_rows": as_int(v59e, "pm_retrieval_leakage_guard_blocked_rows"),
     "pm_pr_de_30b70b_acceptance_evidence_rows": as_int(v59e, "pm_pr_de_30b70b_acceptance_evidence_rows"),
     "pm_pr_de_30b70b_acceptance_evidence_ready_rows": as_int(v59e, "pm_pr_de_30b70b_acceptance_evidence_ready_rows"),
     "pm_pr_de_30b70b_acceptance_evidence_blocked_rows": as_int(v59e, "pm_pr_de_30b70b_acceptance_evidence_blocked_rows"),
     "pm_pr_de_30b70b_acceptance_evidence_tests_only_rows": as_int(v59e, "pm_pr_de_30b70b_acceptance_evidence_tests_only_rows"),
     "pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows": as_int(v59e, "pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows"),
     "pm_pr_de_30b70b_acceptance_evidence_approval_rows": as_int(v59e, "pm_pr_de_30b70b_acceptance_evidence_approval_rows"),
+    "pm_pr_de_measured_registry_exclusion_rows": as_int(v59e, "pm_pr_de_measured_registry_exclusion_rows"),
+    "pm_pr_de_measured_registry_fixture_registry_rows": as_int(v59e, "pm_pr_de_measured_registry_fixture_registry_rows"),
+    "pm_pr_de_measured_registry_admission_ready_rows": as_int(v59e, "pm_pr_de_measured_registry_admission_ready_rows"),
+    "pm_pr_de_measured_registry_blocked_rows": as_int(v59e, "pm_pr_de_measured_registry_blocked_rows"),
+    "pm_pr_v58_real_execution_readiness_rows": as_int(v59e, "pm_pr_v58_real_execution_readiness_rows"),
+    "pm_pr_v58_real_execution_ready_rows": as_int(v59e, "pm_pr_v58_real_execution_ready_rows"),
+    "pm_pr_v58_real_execution_blocked_rows": as_int(v59e, "pm_pr_v58_real_execution_blocked_rows"),
+    "pm_pr_v58_real_execution_fixture_allowed_rows": as_int(v59e, "pm_pr_v58_real_execution_fixture_allowed_rows"),
     "pm_pr_v59_one_command_acceptance_evidence_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_rows"),
     "pm_pr_v59_one_command_acceptance_evidence_ready_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_ready_rows"),
     "pm_pr_v59_one_command_acceptance_evidence_blocked_rows": as_int(v59e, "pm_pr_v59_one_command_acceptance_evidence_blocked_rows"),
@@ -897,6 +979,11 @@ manifest = {
     "v54c_output_contract_rows": as_int(v54c, "grounded_generation_output_contract_rows"),
     "v54c_output_contract_pm_required_rows": as_int(v54c, "grounded_generation_output_contract_pm_required_rows"),
     "v54c_output_contract_raw_prompt_forbidden_rows": as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows"),
+    "v54c_model_visible_leakage_guard_ready": as_int(v54c, "model_visible_leakage_guard_ready"),
+    "v54c_model_visible_forbidden_field_used_rows": as_int(v54c, "model_visible_forbidden_field_used_rows"),
+    "v54c_model_visible_source_locator_rows": as_int(v54c, "model_visible_source_locator_rows"),
+    "v54c_deterministic_source_span_generation_fixture_ready": as_int(v54c, "deterministic_source_span_generation_fixture_ready"),
+    "v54c_real_model_generation_ready": as_int(v54c, "real_model_generation_ready"),
 }
 (run_dir / "v60_architecture_challenge_release_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

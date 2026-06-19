@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/pr_split.schema.json",
+  "title": "Draft PR Split Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "draft_pr",
+    "split_required",
+    "recommended_title",
+    "recommended_body",
+    "merge_gate_policy",
+    "slices"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "draft_pr": {"type": "string"},
+    "split_required": {"type": "boolean"},
+    "recommended_title": {"type": "string"},
+    "recommended_body": {"type": "array", "items": {"type": "string"}},
+    "merge_gate_policy": {
+      "type": "object",
+      "required": ["forbid_tests_only", "required_gates"],
+      "properties": {
+        "forbid_tests_only": {"type": "boolean"},
+        "required_gates": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "slices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "slice_id",
+          "scope",
+          "required_artifacts",
+          "merge_gates",
+          "claim_boundary",
+          "verification_commands",
+          "current_status"
+        ],
+        "properties": {
+          "slice_id": {"type": "string"},
+          "scope": {"type": "string"},
+          "required_artifacts": {"type": "array", "items": {"type": "string"}},
+          "merge_gates": {"type": "array", "items": {"type": "string"}},
+          "claim_boundary": {
+            "type": "object",
+            "required": ["allowed", "blocked", "evidence_path"],
+            "properties": {
+              "allowed": {"type": "string"},
+              "blocked": {"type": "string"},
+              "evidence_path": {"type": "string"}
+            },
+            "additionalProperties": false
+          },
+          "verification_commands": {"type": "array", "items": {"type": "string"}},
+          "current_status": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

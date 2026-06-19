@@ -1,0 +1,56 @@
+{
+  "schema_version": "pipeline.v1",
+  "pipeline_id": "v58-blind-eval-protocol",
+  "description": "Adapter inventory for blind response intake and review/adjudication return requirements.",
+  "claim_boundary": "Protocol and required artifact surface only until A/B/C/D/E/G/H real blind responses and reviewer returns are supplied.",
+  "stages": [
+    {
+      "stage_id": "v58c-blind-response-intake",
+      "requires": [],
+      "adapter": "shell",
+      "command": ["./experiments/test_v58c_blind_response_evidence_intake.sh"],
+      "inputs": ["results/v58b_blind_eval_candidate_packet"],
+      "outputs": ["results/v58c_blind_response_evidence_intake_summary.csv"],
+      "ready_fields": ["v58c_blind_response_evidence_intake_ready", "pm_actual_required_system_rows"],
+      "blocked_fields": ["pm_actual_required_blind_response_ready"],
+      "typed_readiness": {
+        "contract_ready": "v58c_blind_response_evidence_intake_ready",
+        "fixture_execution_ready": "0",
+        "real_model_execution_ready": "pm_actual_required_blind_response_ready",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": ["blind_question", "shared_context_budget"],
+      "model_visible_input_checks": ["blind_identity=hidden", "same_context_budget=required"],
+      "evaluator_only_fields": ["system_identity", "source_span_id", "source_path", "label", "reviewer_identity"],
+      "evidence_boundary": "Artifact intake contract until real blind responses are supplied.",
+      "claim_boundary": "No blind-eval result claim until response and review artifacts are supplied."
+    },
+    {
+      "stage_id": "v58d-blind-review-return",
+      "requires": ["v58c-blind-response-intake"],
+      "adapter": "shell",
+      "command": ["./experiments/test_v58d_blind_review_return_intake.sh"],
+      "inputs": ["results/v58c_blind_response_evidence_intake_summary.csv"],
+      "outputs": ["results/v58d_blind_review_return_intake_summary.csv"],
+      "ready_fields": ["v58d_blind_review_return_intake_ready", "v58d_pm_review_contract_ready"],
+      "blocked_fields": ["v58d_human_blind_review_ready", "v58d_pm_review_actual_ready"],
+      "typed_readiness": {
+        "contract_ready": "v58d_pm_review_contract_ready",
+        "fixture_execution_ready": "0",
+        "real_model_execution_ready": "0",
+        "heldout_metric_ready": "v58d_pm_review_actual_ready",
+        "human_review_ready": "v58d_human_blind_review_ready",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": [],
+      "model_visible_input_checks": [],
+      "evaluator_only_fields": ["blind_identity_map", "reviewer_identity", "adjudication_label", "source_span_exactness"],
+      "evidence_boundary": "Review/adjudication return contract until independent reviewer artifacts are accepted.",
+      "claim_boundary": "Review protocol only until independent reviewer returns and adjudication are accepted."
+    }
+  ]
+}

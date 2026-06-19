@@ -75,6 +75,12 @@ expected = {
     "attention_blocks": "0",
     "transformer_blocks": "0",
     "raw_prompt_context_appended_rows": "0",
+    "model_visible_leakage_guard_ready": "1",
+    "model_visible_input_fields": "sanitized_question,opaque_routehint",
+    "model_visible_forbidden_field_used_rows": "0",
+    "model_visible_source_locator_rows": "0",
+    "deterministic_source_span_generation_fixture_ready": "1",
+    "real_model_generation_ready": "0",
     "compact_routehint_rows": "1000",
     "wrong_answer_rows": "0",
     "citation_correct_rows": "1000",
@@ -180,6 +186,12 @@ for artifact_id, (artifact_path, expected_count) in contract_counts.items():
         raise SystemExit(f"v54c contract provenance binding mismatch for {artifact_id}")
     if row["raw_prompt_context_appended_allowed"] != "0" or row["raw_prompt_context_appended_rows"] != "0":
         raise SystemExit(f"v54c contract should forbid raw prompt context for {artifact_id}")
+    if (
+        row["model_visible_forbidden_field_used_rows"] != "0"
+        or row["model_visible_source_locator_rows"] != "0"
+        or row["model_visible_leakage_guard_ready"] != "1"
+    ):
+        raise SystemExit(f"v54c contract should forbid model-visible source/label leakage for {artifact_id}")
     if row["wrong_answer_guarded"] != "1":
         raise SystemExit(f"v54c contract should bind wrong-answer guard for {artifact_id}")
 sha_contract = contract_by_id["sha256sums"]
@@ -190,6 +202,9 @@ if (
     or sha_contract["sha256_bound"] != "0"
     or sha_contract["raw_prompt_context_appended_allowed"] != "0"
     or sha_contract["raw_prompt_context_appended_rows"] != "0"
+    or sha_contract["model_visible_forbidden_field_used_rows"] != "0"
+    or sha_contract["model_visible_source_locator_rows"] != "0"
+    or sha_contract["model_visible_leakage_guard_ready"] != "1"
 ):
     raise SystemExit("v54c sha256sums contract should preserve the post-contract hash-manifest boundary")
 if len(adapter_traces) != 4000 or {row["system_id"] for row in adapter_traces} != {"A", "B", "G", "H"}:
@@ -232,9 +247,28 @@ for row in answers:
         raise SystemExit("v54c answer should be correct, cited, and wrong-answer clean")
 
 for row in inputs:
+    query_id = row["query_id_evaluator_only"]
+    if row["model_visible_input_fields"] != "sanitized_question,opaque_routehint":
+        raise SystemExit("v54c generator input should expose only sanitized question and opaque RouteHint to the model")
+    for field in [
+        "model_visible_query_id_used",
+        "model_visible_source_span_id_used",
+        "model_visible_source_path_used",
+        "model_visible_source_line_used",
+        "model_visible_source_file_hash_used",
+        "model_visible_expected_behavior_used",
+        "model_visible_expected_label_used",
+        "compact_routehint_contains_source_locator",
+    ]:
+        if row[field] != "0":
+            raise SystemExit(f"v54c generator input should keep {field}=0")
+    if "query_id" in row or "source_span_id" in row:
+        raise SystemExit("v54c generator input should not expose query_id/source_span_id as model-visible column names")
+    if row["source_span_id_evaluator_only"] != spans[queries[query_id]["source_span_id"]]["source_span_id"]:
+        raise SystemExit("v54c generator input should keep source span IDs evaluator/provenance-only")
     if row["source_v53ap_adapter_trace_provenance"] != "1" or row["source_v53ap_adapter_trace_type"] != "routememory-routehint-scorer-policy":
         raise SystemExit("v54c generator input should bind v53ap H adapter trace provenance")
-    if row["source_v53ap_evaluator_row_id"] != h_evaluators[row["query_id"]]["evaluator_row_id"]:
+    if row["source_v53ap_evaluator_row_id"] != h_evaluators[query_id]["evaluator_row_id"]:
         raise SystemExit("v54c generator input should bind the v53ap H evaluator row")
     if row["source_v53ap_evaluator_contract_id"] != "v53ap-source-bound-answer-citation-resource-v1":
         raise SystemExit("v54c generator input should preserve the v53ap evaluator contract")
@@ -248,12 +282,30 @@ for row in inputs:
         raise SystemExit("v54c generator should be non-attention")
     if row["raw_prompt_context_appended"] != "0" or row["raw_prompt_context_bytes"] != "0" or row["retrieved_text_in_prompt"] != "0":
         raise SystemExit("v54c generator should not stuff raw prompt context")
+    if row["deterministic_source_span_generation_fixture"] != "1" or row["real_model_generation_ready"] != "0":
+        raise SystemExit("v54c generator input should disclose fixture generation and block real-model generation claims")
 for row in hints:
+    query_id = row["query_id_evaluator_only"]
     if row["raw_context_appended"] != "0":
         raise SystemExit("v54c compact RouteHint should not append raw context")
+    if "query_id" in row or "source_span_id" in row:
+        raise SystemExit("v54c compact RouteHint should not expose query_id/source_span_id as model-visible column names")
+    if row["model_visible_input_fields"] != "sanitized_question,opaque_routehint" or row["contains_source_locator"] != "0":
+        raise SystemExit("v54c compact RouteHint should stay opaque and source-locator-free")
+    for field in [
+        "model_visible_query_id_used",
+        "model_visible_source_span_id_used",
+        "model_visible_source_path_used",
+        "model_visible_source_line_used",
+        "model_visible_source_file_hash_used",
+        "model_visible_expected_behavior_used",
+        "model_visible_expected_label_used",
+    ]:
+        if row[field] != "0":
+            raise SystemExit(f"v54c compact RouteHint should keep {field}=0")
     if row["source_v53ap_adapter_system_id"] != "H" or not row["source_v53ap_adapter_trace_id"].startswith("v53ap_H_"):
         raise SystemExit("v54c compact RouteHint should bind v53ap H adapter trace provenance")
-    if row["source_v53ap_evaluator_row_id"] != h_evaluators[row["query_id"]]["evaluator_row_id"]:
+    if row["source_v53ap_evaluator_row_id"] != h_evaluators[query_id]["evaluator_row_id"]:
         raise SystemExit("v54c compact RouteHint should bind v53ap H evaluator provenance")
     if row["source_v53ap_evaluator_contract_id"] != "v53ap-source-bound-answer-citation-resource-v1":
         raise SystemExit("v54c compact RouteHint should preserve v53ap evaluator contract")
@@ -343,7 +395,15 @@ if (
     or manifest.get("v53ap_evaluator_resource_row_bound_rows") != 1000
 ):
     raise SystemExit("v54c manifest should preserve separate evaluator/resource binding rows")
-if manifest.get("raw_prompt_context_appended_rows") != 0 or manifest.get("wrong_answer_rows") != 0:
+if (
+    manifest.get("raw_prompt_context_appended_rows") != 0
+    or manifest.get("model_visible_leakage_guard_ready") != 1
+    or manifest.get("model_visible_forbidden_field_used_rows") != 0
+    or manifest.get("model_visible_source_locator_rows") != 0
+    or manifest.get("deterministic_source_span_generation_fixture_ready") != 1
+    or manifest.get("real_model_generation_ready") != 0
+    or manifest.get("wrong_answer_rows") != 0
+):
     raise SystemExit("v54c manifest invariant mismatch")
 if manifest.get("real_release_package_ready") != 0:
     raise SystemExit("v54c should keep release blocked")
@@ -381,6 +441,12 @@ for snippet in [
     "generator_resource_rows=1000",
     "wrong_answer_guard_rows=1000",
     "raw_prompt_context_appended_rows=0",
+    "model_visible_leakage_guard_ready=1",
+    "model_visible_input_fields=sanitized_question,opaque_routehint",
+    "model_visible_forbidden_field_used_rows=0",
+    "model_visible_source_locator_rows=0",
+    "deterministic_source_span_generation_fixture_ready=1",
+    "real_model_generation_ready=0",
     "wrong_answer_rows=0",
     "Blocked wording",
 ]:

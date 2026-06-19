@@ -1,0 +1,80 @@
+{
+  "schema_version": "leakage_contract.v1",
+  "policy": {
+    "allowed_surface": "natural_language_question_plus_searchable_corpus",
+    "direct_query_source_binding_forbidden": true
+  },
+  "forbidden_surfaces": [
+    {
+      "guard_id": "source-span-id",
+      "forbidden_surface": "source span ID",
+      "field_names": ["source_span_id"],
+      "evaluator_only_or_absent": true
+    },
+    {
+      "guard_id": "source-path",
+      "forbidden_surface": "source path",
+      "field_names": ["source_path", "path"],
+      "evaluator_only_or_absent": true
+    },
+    {
+      "guard_id": "source-line",
+      "forbidden_surface": "source line",
+      "field_names": ["source_line_start", "source_line_end", "line_start", "line_end"],
+      "evaluator_only_or_absent": true
+    },
+    {
+      "guard_id": "source-file-hash",
+      "forbidden_surface": "source file hash",
+      "field_names": ["source_file_hash", "source_file_sha256", "source_git_blob_sha"],
+      "evaluator_only_or_absent": true
+    },
+    {
+      "guard_id": "query-source-direct-binding",
+      "forbidden_surface": "query ID and direct source row binding",
+      "field_names": ["query_id"],
+      "evaluator_only_or_absent": true
+    },
+    {
+      "guard_id": "expected-behavior",
+      "forbidden_surface": "expected behavior",
+      "field_names": ["expected_behavior", "expected_answer", "expected_answer_sha256"],
+      "evaluator_only_or_absent": true
+    },
+    {
+      "guard_id": "expected-label",
+      "forbidden_surface": "expected label",
+      "field_names": ["negative_or_abstain", "audit_type", "expected_label"],
+      "evaluator_only_or_absent": true
+    }
+  ],
+  "stage_contracts": [
+    {
+      "stage_id": "v53aq-sanitized-abgh-real-adapter",
+      "summary_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+      "allowed_model_visible_fields": ["sanitized_question"],
+      "must_equal": {
+        "selection_question_text_only": "1",
+        "selection_sanitized_question_only": "1",
+        "selection_allowed_fields": "sanitized_question",
+        "selection_oracle_field_used": "0",
+        "source_span_oracle_selection_used": "0",
+        "expected_answer_oracle_replay": "0",
+        "deterministic_source_span_adapter_execution": "0"
+      }
+    },
+    {
+      "stage_id": "v54c-grounded-generation-guard",
+      "summary_path": "results/v54c_complete_source_grounded_generation_1000_summary.csv",
+      "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
+      "must_equal": {
+        "model_visible_leakage_guard_ready": "1",
+        "model_visible_input_fields": "sanitized_question,opaque_routehint",
+        "model_visible_forbidden_field_used_rows": "0",
+        "model_visible_source_locator_rows": "0",
+        "raw_prompt_context_appended_rows": "0",
+        "real_model_generation_ready": "0"
+      }
+    }
+  ]
+}

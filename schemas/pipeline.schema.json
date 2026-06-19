@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/pipeline.schema.json",
+  "title": "Discrete Local Energy Pipeline",
+  "type": "object",
+  "required": ["schema_version", "pipeline_id", "claim_boundary", "stages"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "pipeline_id": {"type": "string"},
+    "description": {"type": "string"},
+    "claim_boundary": {"type": "string"},
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["stage_id", "adapter", "command", "outputs", "ready_fields", "claim_boundary"],
+        "properties": {
+          "stage_id": {"type": "string"},
+          "requires": {"type": "array", "items": {"type": "string"}},
+          "adapter": {"type": "string", "enum": ["shell"]},
+          "command": {"type": "array", "items": {"type": "string"}},
+          "cwd": {"type": "string"},
+          "runtime_overrides": {"type": "array", "items": {"type": "string"}},
+          "inputs": {"type": "array", "items": {"type": "string"}},
+          "outputs": {"type": "array", "items": {"type": "string"}},
+          "ready_fields": {"type": "array", "items": {"type": "string"}},
+          "blocked_fields": {"type": "array", "items": {"type": "string"}},
+          "typed_readiness": {
+            "type": "object",
+            "properties": {
+              "contract_ready": {"type": "string"},
+              "fixture_execution_ready": {"type": "string"},
+              "real_model_execution_ready": {"type": "string"},
+              "heldout_metric_ready": {"type": "string"},
+              "human_review_ready": {"type": "string"},
+              "independent_reproduction_ready": {"type": "string"},
+              "release_ready": {"type": "string"}
+            },
+            "additionalProperties": false
+          },
+          "model_visible_inputs": {"type": "array", "items": {"type": "string"}},
+          "model_visible_input_checks": {"type": "array", "items": {"type": "string"}},
+          "evaluator_only_fields": {"type": "array", "items": {"type": "string"}},
+          "evidence_boundary": {"type": "string"},
+          "claim_boundary": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

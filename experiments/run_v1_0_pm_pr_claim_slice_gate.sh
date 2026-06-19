@@ -146,6 +146,7 @@ for src_rel in [
     "source_v53ap/abgh_resource_rows.csv",
     "source_v53ap/abgh_adapter_trace_rows.csv",
     "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
 ]:
     v53t_direct_copied[src_rel] = copy_if_exists(v53t_run_dir / src_rel, f"source_v53t/{src_rel}")
 v53aq_run_dir = results / "v53aq_complete_source_abgh_real_adapter_measured" / "measured_001"
@@ -161,12 +162,17 @@ for src_rel in [
     "abgh_adapter_trace_rows.csv",
     "abgh_wrong_answer_guard_rows.csv",
     "abgh_same_query_internal_prebaseline_rows.csv",
+    "abgh_internal_prebaseline_contract_rows.csv",
     "route_memory_rows.csv",
     "routehint_rows.csv",
     "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "sha256_manifest.csv",
 ]:
     v53aq_direct_copied[src_rel] = copy_if_exists(v53aq_run_dir / src_rel, f"source_v53aq/{src_rel}")
+v53aq_selection_contract_rows = read_rows(v53aq_run_dir / "adapter_selection_contract_rows.csv")
+v53aq_selection_contract_by_field = {
+    row.get("field_name", ""): row for row in v53aq_selection_contract_rows
+}
 v59e_public_source_policy_path = results / "v59e_one_command_pm_foundation_demo" / "pm_foundation_001" / "public_source_replay_policy_rows.csv"
 v59e_public_source_policy_copied = copy_if_exists(
     v59e_public_source_policy_path,
@@ -209,6 +215,7 @@ h10_evidence_acceptance_path = h10_pm_dir / "h10_real_label_evidence_acceptance_
 h10_return_contract_path = h10_pm_dir / "h10_real_label_return_contract_rows.csv"
 h10_acceptance_evidence_path = h10_pm_dir / "h10_real_label_acceptance_evidence_rows.csv"
 h10_v53aq_prebaseline_path = h10_pm_dir / "source_v53aq" / "abgh_same_query_internal_prebaseline_rows.csv"
+h10_v53aq_contract_path = h10_pm_dir / "source_v53aq" / "abgh_internal_prebaseline_contract_rows.csv"
 h10_acceptance_rows_copied = copy_if_exists(
     h10_acceptance_rows_path,
     "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
@@ -218,6 +225,7 @@ copy_if_exists(h10_evidence_acceptance_path, "source_h10_pm/h10_real_label_evide
 copy_if_exists(h10_return_contract_path, "source_h10_pm/h10_real_label_return_contract_rows.csv")
 copy_if_exists(h10_acceptance_evidence_path, "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv")
 copy_if_exists(h10_v53aq_prebaseline_path, "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv")
+copy_if_exists(h10_v53aq_contract_path, "source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv")
 h10_acceptance_rows = read_rows(h10_acceptance_rows_path)
 h10_acceptance_by_criterion = {
     row.get("criterion", ""): row
@@ -229,6 +237,7 @@ h10_return_contract_by_criterion = {
     for row in h10_return_contract_rows
 }
 h10_acceptance_evidence_rows = read_rows(h10_acceptance_evidence_path)
+h10_v53aq_contract_rows = read_rows(h10_v53aq_contract_path)
 h10_coverage_fields = [
     "accepted_real_label_evidence_rows",
     "accepted_query_rows_declared",
@@ -846,7 +855,7 @@ pm_roadmap_rows = [
     req(
         "M3",
         "abgh-real-system-adapter-execution",
-        "A/B/G/H actual BM25/local-RAG/RouteMemory adapters run on v53i with query-text-only selection and no expected-answer/source-span oracle replay",
+        "A/B/G/H actual BM25/local-RAG/RouteMemory adapters run on v53i with sanitized-question-only selection and no expected-answer/source-span oracle replay",
         as_int(v53aq, "v53aq_complete_source_abgh_real_adapter_measured_ready") == 1
         and as_int(v53aq, "real_system_performance_claim_ready") == 0
         and as_int(v53aq, "internal_real_adapter_metric_claim_ready") == 1
@@ -854,19 +863,27 @@ pm_roadmap_rows = [
         and as_int(v53aq, "real_adapter_execution_ready") == 1
         and as_int(v53aq, "actual_adapter_execution_ready") == 1
         and as_int(v53aq, "selection_question_text_only") == 1
+        and as_int(v53aq, "selection_sanitized_question_only") == 1
+        and as_int(v53aq, "source_locator_in_question_removed_rows") == 4000
         and as_int(v53aq, "selection_oracle_field_used") == 0
         and as_int(v53aq, "expected_answer_oracle_replay") == 0
         and as_int(v53aq, "deterministic_source_span_adapter_execution") == 0
         and as_int(v53aq, "evaluator_rows") == 4000
         and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
         and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
+        and as_int(v53aq, "internal_prebaseline_contract_ready") == 1
+        and as_int(v53aq, "internal_prebaseline_contract_rows") == 4
+        and as_int(v53aq, "internal_prebaseline_contract_ready_rows") == 4
         and bool(v53aq_direct_copied.get("abgh_same_query_internal_prebaseline_rows.csv"))
+        and bool(v53aq_direct_copied.get("abgh_internal_prebaseline_contract_rows.csv"))
         and v59e_local_abgh_row_contract_ready == 1,
         v59e_local_abgh_row_contract_copied or v53aq_direct_copied.get("abgh_same_query_internal_prebaseline_rows.csv") or "source_summaries/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
         (
             f"real_adapter_execution_ready={v53aq.get('real_adapter_execution_ready', '0')} "
             f"actual_adapter_execution_ready={v53aq.get('actual_adapter_execution_ready', '0')} "
             f"selection_question_text_only={v53aq.get('selection_question_text_only', '0')} "
+            f"selection_sanitized_question_only={v53aq.get('selection_sanitized_question_only', '0')} "
+            f"source_locator_in_question_removed_rows={v53aq.get('source_locator_in_question_removed_rows', '0')} "
             f"selection_oracle_field_used={v53aq.get('selection_oracle_field_used', '1')} "
             f"expected_answer_oracle_replay={v53aq.get('expected_answer_oracle_replay', '0')} "
             f"deterministic_source_span_adapter_execution={v53aq.get('deterministic_source_span_adapter_execution', '1')} "
@@ -875,6 +892,9 @@ pm_roadmap_rows = [
             f"public_real_system_performance_claim_ready={v53aq.get('public_real_system_performance_claim_ready', '1')} "
             f"same_query_internal_prebaseline_rows_ready={v53aq.get('same_query_internal_prebaseline_rows_ready', '0')} "
             f"same_query_internal_prebaseline_rows={v53aq.get('same_query_internal_prebaseline_rows', '0')} "
+            f"internal_prebaseline_contract_rows={v53aq.get('internal_prebaseline_contract_rows', '0')} "
+            f"internal_prebaseline_contract_ready_rows={v53aq.get('internal_prebaseline_contract_ready_rows', '0')} "
+            f"internal_prebaseline_contract_ready={v53aq.get('internal_prebaseline_contract_ready', '0')} "
             f"local_abgh_row_contract_replay_ready={v59e.get('local_abgh_row_contract_replay_ready', '0')} "
             f"local_abgh_row_contract_replay_rows={v59e.get('local_abgh_row_contract_replay_rows', '0')} "
             f"local_abgh_row_contract_replay_pass_rows={v59e.get('local_abgh_row_contract_replay_pass_rows', '0')} "
@@ -887,9 +907,16 @@ pm_roadmap_rows = [
         "M3",
         "internal-pre-baseline-boundary",
         "A/B/G/H run is internal-only and makes no public comparison claim without D/E",
-        as_int(v53ap, "internal_v1_0_pre_baseline_run") == 1 and as_int(v53ap, "public_comparison_claim_ready") == 0 and as_int(v53ap, "required_30b_baseline_ready") == 0 and as_int(v53ap, "required_70b_baseline_ready") == 0,
+        as_int(v53ap, "internal_v1_0_pre_baseline_run") == 1
+        and as_int(v53ap, "public_comparison_claim_ready") == 0
+        and as_int(v53ap, "required_30b_baseline_ready") == 0
+        and as_int(v53ap, "required_70b_baseline_ready") == 0
+        and as_int(v53aq, "internal_prebaseline_contract_ready") == 1
+        and as_int(v53aq, "public_comparison_claim_ready") == 0
+        and as_int(v53aq, "required_30b_baseline_ready") == 0
+        and as_int(v53aq, "required_70b_baseline_ready") == 0,
         "source_summaries/v53ap_complete_source_abgh_same_query_measured_summary.csv",
-        "D/E required baselines remain blocked and public comparison claim remains closed",
+        f"D/E required baselines remain blocked and public comparison claim remains closed; v53aq_internal_prebaseline_contract_ready={v53aq.get('internal_prebaseline_contract_ready', '0')} v53aq_internal_prebaseline_contract_rows={v53aq.get('internal_prebaseline_contract_rows', '0')}",
         "public-comparison-claim-open",
     ),
     req(
@@ -907,6 +934,8 @@ pm_roadmap_rows = [
         "h10 scorer promotion criteria are represented as real-label readiness rows",
         as_int(h10_pm, "v10_h10_real_label_promotion_readiness_gate_ready") == 1
         and as_int(h10_pm, "v53aq_same_query_internal_prebaseline_rows_ready") == 1
+        and as_int(h10_pm, "v53aq_internal_prebaseline_contract_ready") == 1
+        and len(h10_v53aq_contract_rows) == 4
         and len(h10_acceptance_rows) == 6
         and len(h10_return_contract_rows) == 6
         and set(h10_acceptance_by_criterion) == {
@@ -945,7 +974,9 @@ pm_roadmap_rows = [
             f"source_verified_eval_blocked_rows={h10_acceptance_evidence_source_verified_blocked_rows} "
             f"criteria={','.join(sorted(h10_acceptance_by_criterion))} "
             f"v53aq_same_query_internal_prebaseline_rows={h10_pm.get('v53aq_same_query_internal_prebaseline_rows', '0')} "
-            f"v53aq_same_query_internal_prebaseline_rows_ready={h10_pm.get('v53aq_same_query_internal_prebaseline_rows_ready', '0')}"
+            f"v53aq_same_query_internal_prebaseline_rows_ready={h10_pm.get('v53aq_same_query_internal_prebaseline_rows_ready', '0')} "
+            f"v53aq_internal_prebaseline_contract_rows={h10_pm.get('v53aq_internal_prebaseline_contract_rows', '0')} "
+            f"v53aq_internal_prebaseline_contract_ready={h10_pm.get('v53aq_internal_prebaseline_contract_ready', '0')}"
         ),
         "h10-readiness-ledger-missing",
     ),
@@ -1861,6 +1892,131 @@ write_csv(
     de_30b70b_acceptance_evidence_rows,
 )
 
+de_measured_registry_exclusion_rows = []
+de_required_real_fields = [
+    "model_repository_exact_revision",
+    "quantization",
+    "model_artifact_hash",
+    "runtime",
+    "prompt_template",
+    "context_budget",
+    "retrieval_budget",
+    "hardware",
+    "seed",
+    "answer_citation_raw_output",
+    "evaluator_version",
+]
+for system_id in ["D", "E"]:
+    related_rows = [row for row in de_30b70b_acceptance_evidence_rows if row["system_id"] == system_id]
+    de_measured_registry_exclusion_rows.append(
+        {
+            "system_id": system_id,
+            "baseline_class": "30b-open-weight-llm-rag" if system_id == "D" else "70b-open-weight-llm-rag",
+            "fixture_schema_test_allowed": "1",
+            "fixture_rows_in_measured_registry": "0",
+            "measured_registry_admission_ready": "0",
+            "required_real_evidence_fields": ";".join(de_required_real_fields),
+            "missing_real_evidence_fields": ";".join(de_required_real_fields),
+            "raw_answer_citation_output_required": "1",
+            "answer_citation_raw_output_rows": "0",
+            "resource_row_required": "1",
+            "evaluator_version_required": "1",
+            "same_query_set_required": "1",
+            "acceptance_evidence_rows": str(len(related_rows)),
+            "acceptance_ready_rows": str(sum(1 for row in related_rows if row["acceptance_ready"] == "1")),
+            "fixture_allowed": "0",
+            "tests_only_merge_condition": "0",
+            "measured_registry_policy": "real-d-e-only; fixture-d-e-schema-tests-stay-out",
+            "evidence_path": "de_30b70b_acceptance_evidence_rows.csv",
+            "status": "blocked",
+            "claim_boundary": "D/E fixture or schema evidence cannot enter measured registry or public comparison rows",
+        }
+    )
+write_csv(
+    run_dir / "de_measured_registry_exclusion_rows.csv",
+    list(de_measured_registry_exclusion_rows[0].keys()),
+    de_measured_registry_exclusion_rows,
+)
+
+v58_real_execution_requirements = [
+    (
+        "ab-cdegh-real-responses",
+        "A/B/C/D/E/G/H actual response rows over the same frozen query set",
+        "v58c currently covers D/E/G/H response intake; A/B/C real blind-response rows and all supplied real responses are still missing",
+        "source_summaries/v58c_blind_response_evidence_intake_summary.csv",
+    ),
+    (
+        "same-corpus-context-budget",
+        "same corpus, same source snapshot, same context budget, and same retrieval budget for every system",
+        "same-query/source budget contract must be bound to supplied real response metadata before v58 can close",
+        "source_v53t/complete_source_foundation_freeze_rows.csv",
+    ),
+    (
+        "blind-identity",
+        "blind identities preserved until scoring and adjudication finish",
+        "identity remains sealed in templates; supplied real response/review rows are absent",
+        "pm_blocker_required_artifact_rows.csv",
+    ),
+    (
+        "two-independent-reviewers",
+        "at least two independent blinded reviewers per required response",
+        "review return rows are absent by default",
+        "source_summaries/v58d_blind_review_return_intake_summary.csv",
+    ),
+    (
+        "disagreement-adjudication",
+        "disagreement and adjudication rows for every required response",
+        "adjudication rows are absent by default",
+        "source_summaries/v58d_blind_review_return_intake_summary.csv",
+    ),
+    (
+        "unseen-repository-split",
+        "unseen repository split remains explicit and bound to the frozen blind query packet",
+        "split evidence must be carried with the real response packet before full v58 readiness",
+        "source_docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md",
+    ),
+    (
+        "source-span-exactness",
+        "source span exactness scored separately from answer text",
+        "source span exactness requires adjudicated review/score rows",
+        "pm_blocker_required_artifact_rows.csv",
+    ),
+    (
+        "unsupported-abstention",
+        "unsupported/missing rows must permit and score abstention",
+        "unsupported abstention scoring requires supplied blind responses and adjudicated labels",
+        "pm_blocker_required_artifact_rows.csv",
+    ),
+    (
+        "latency-memory-separate",
+        "latency and memory are recorded but evaluated separately from answer quality",
+        "resource fields are required in response intake but no real rows are supplied yet",
+        "source_summaries/v58c_blind_response_evidence_intake_summary.csv",
+    ),
+]
+v58_real_execution_readiness_rows = []
+for requirement_id, required_evidence, current_gap, evidence_path in v58_real_execution_requirements:
+    v58_real_execution_readiness_rows.append(
+        {
+            "requirement_id": requirement_id,
+            "required_for_v58_real_execution": "1",
+            "required_evidence": required_evidence,
+            "current_gap": current_gap,
+            "evidence_path": evidence_path,
+            "contract_ready": "1",
+            "real_execution_ready": "0",
+            "fixture_allowed": "0",
+            "tests_only_merge_condition": "0",
+            "status": "blocked",
+            "claim_boundary": "v58 real execution remains blocked until non-fixture response, review, adjudication, score, and resource evidence validate",
+        }
+    )
+write_csv(
+    run_dir / "v58_real_execution_readiness_rows.csv",
+    list(v58_real_execution_readiness_rows[0].keys()),
+    v58_real_execution_readiness_rows,
+)
+
 
 def v59_artifact_ready(row):
     artifact_id = row.get("artifact_id", "")
@@ -2211,6 +2367,306 @@ for milestone in ["M1", "M2", "M3", "M4", "M5", "M6"]:
     )
 write_csv(run_dir / "pm_roadmap_milestone_rows.csv", list(pm_roadmap_milestone_rows[0].keys()), pm_roadmap_milestone_rows)
 
+def normalization_row(slice_id, scope, output_artifact, claim_boundary, blocker_policy, evidence_path):
+    return {
+        "slice_id": slice_id,
+        "scope": scope,
+        "output_artifact": output_artifact,
+        "merge_condition": "claim boundary accurate; output artifact replayable; blocker false-positive closed",
+        "tests_only_merge_condition": "0",
+        "claim_boundary": claim_boundary,
+        "blocker_policy": blocker_policy,
+        "evidence_path": evidence_path,
+        "current_status": "split-required",
+        "pr2_merge_as_is_recommended": "0",
+    }
+
+
+pm_pr_normalization_rows = [
+    normalization_row(
+        "v50-auditor-correctness",
+        "v50 auditor correctness fixes and source/citation correctness guard",
+        "v50 auditor correctness rows and smoke evidence",
+        "Auditor correctness only; no v1.0 quality or benchmark claim",
+        "False-positive closure requires replayable auditor evidence, not tests-only status",
+        "source_summaries/v52_llm_rag_baseline_war_summary.csv",
+    ),
+    normalization_row(
+        "v52-7b-actual-adapter-and-de-intake-guard",
+        "v52 7B actual adapter plus D/E intake guard boundaries",
+        "C/7B actual adapter rows and D/E no-fixture intake guard rows",
+        "7B/C evidence is not a D/E substitute; fixture D/E remains schema-only",
+        "D/E measured registry remains blocked until real model identity and raw outputs validate",
+        "de_30b70b_acceptance_evidence_rows.csv",
+    ),
+    normalization_row(
+        "v53-v54-query-evaluation-pipeline",
+        "v53 source-bound query/evaluator pipeline and v54 grounded generation rows",
+        "v53 query-span/evaluator rows, v53aq no-leakage rows, and v54 generation outputs",
+        "Internal source-bound QA/generation pipeline only; public comparison remains blocked",
+        "Replay requires source-bound rows, separated evaluator rows, and no raw prompt stuffing",
+        "pm_roadmap_requirement_rows.csv",
+    ),
+    normalization_row(
+        "v58-blind-eval-protocol",
+        "v58 real blind-eval protocol, response intake, reviewer/adjudication workflow",
+        "v58 required artifact rows, return templates, and blind-eval blocker ledger",
+        "Protocol/contract only until real blind responses and independent review returns exist",
+        "Full blind eval requires unseen split, blind identities, two reviewers, disagreement/adjudication",
+        "pm_blocker_required_artifact_rows.csv",
+    ),
+    normalization_row(
+        "v61-checkpoint-runtime-core",
+        "v61 checkpoint/runtime core through real tensor page and one-token parity milestones",
+        "v61 runtime roadmap rows and one-token parity blocker packet",
+        "SSD-resident runtime remains R&D until real tensor page, dequant, matvec, FFN, MoE, and logits parity exist",
+        "Gate-only v61 scaffold cannot claim real model runtime or token generation",
+        "source_summaries/v61j_one_command_ssd_resident_demo_summary.csv",
+    ),
+    normalization_row(
+        "operator-review-return-workflow",
+        "operator/review-return workflow for human labels, blind review, and release review",
+        "operator return templates, h10/v58 review-return rows, and approval-required blocker packets",
+        "Workflow readiness only; no human-review, independent reproduction, or release claim",
+        "Human/reviewer return blockers stay open until non-fixture returns are supplied",
+        "pm_external_return_template_rows.csv",
+    ),
+    normalization_row(
+        "docs-readme-cleanup",
+        "docs and README claim-boundary cleanup for current v61/pre-v1.0 state",
+        "README and docs claim-boundary rows plus PR title/body rewrite row",
+        "Documentation must say pre-v1.0 research artifact, not release or transformer replacement",
+        "Docs merge requires stale-title/body replacement and explicit blocked claims",
+        "pm_pr_title_body_rows.csv",
+    ),
+]
+write_csv(run_dir / "pm_pr_normalization_rows.csv", list(pm_pr_normalization_rows[0].keys()), pm_pr_normalization_rows)
+
+pm_pr_title_body_rows = [
+    {
+        "pr_id": "draft-pr-2",
+        "recommended_title": "Split v1.0 PM foundation, blind-eval, and v61 runtime evidence boundaries",
+        "recommended_body_scope": ";".join(row["slice_id"] for row in pm_pr_normalization_rows),
+        "current_v61_status": "pre-v1.0 research artifact; v61 checkpoint/runtime core still needs real tensor page through one-token parity evidence",
+        "pr2_merge_as_is_recommended": "0",
+        "split_required": "1",
+        "release_ready": "0",
+        "public_comparison_claim_ready": "0",
+        "title_body_rewrite_ready": "1",
+    }
+]
+write_csv(run_dir / "pm_pr_title_body_rows.csv", list(pm_pr_title_body_rows[0].keys()), pm_pr_title_body_rows)
+
+def ready_semantic_row(scope_id, contract_ready, fixture_execution_ready, real_model_execution_ready, heldout_metric_ready, human_review_ready, independent_reproduction_ready, release_ready, evidence_path, misleading_ready_flag, replacement_flag):
+    return {
+        "scope_id": scope_id,
+        "contract_ready": str(int(contract_ready)),
+        "fixture_execution_ready": str(int(fixture_execution_ready)),
+        "real_model_execution_ready": str(int(real_model_execution_ready)),
+        "heldout_metric_ready": str(int(heldout_metric_ready)),
+        "human_review_ready": str(int(human_review_ready)),
+        "independent_reproduction_ready": str(int(independent_reproduction_ready)),
+        "release_ready": str(int(release_ready)),
+        "misleading_ready_flag": misleading_ready_flag,
+        "replacement_flag": replacement_flag,
+        "ready_wording_policy": "typed-ready-only",
+        "evidence_path": evidence_path,
+    }
+
+
+pm_ready_semantic_rows = [
+    ready_semantic_row(
+        "pm-foundation-bundle",
+        True,
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
+        "v59_ready",
+        "pm_foundation_contract_fixture_ready",
+    ),
+    ready_semantic_row(
+        "v53-v54-query-evaluation-pipeline",
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        "pm_roadmap_requirement_rows.csv",
+        "v53_ready",
+        "v53_v54_query_eval_contract_ready",
+    ),
+    ready_semantic_row(
+        "v58-blind-eval",
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        "pm_blocker_required_artifact_rows.csv",
+        "v58_ready",
+        "v58_blind_eval_protocol_contract_ready",
+    ),
+    ready_semantic_row(
+        "h10-scorer-real-label-promotion",
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        "source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
+        "h10_real_label_promotion_ready",
+        "h10_real_label_contract_ready",
+    ),
+    ready_semantic_row(
+        "v61-ssd-moe-runtime",
+        True,
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        "source_summaries/v61j_one_command_ssd_resident_demo_summary.csv",
+        "100b_moe_run_ready",
+        "logical_100b_contract_fixture_ready",
+    ),
+    ready_semantic_row(
+        "v61-real-100b-inference",
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        "source_summaries/v61j_one_command_ssd_resident_demo_summary.csv",
+        "100b_moe_run_ready",
+        "real_100b_inference_ready",
+    ),
+    ready_semantic_row(
+        "v60-release",
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        "source_summaries/v60_architecture_challenge_release_contract_summary.csv",
+        "v60_ready",
+        "v60_release_contract_ready",
+    ),
+]
+write_csv(run_dir / "pm_ready_semantic_rows.csv", list(pm_ready_semantic_rows[0].keys()), pm_ready_semantic_rows)
+
+def selection_blocked(field_name):
+    row = v53aq_selection_contract_by_field.get(field_name, {})
+    return int(row.get("selection_allowed", "0") == "0")
+
+
+def leakage_guard_row(guard_id, forbidden_surface, field_names, evaluator_only_required=True):
+    names = field_names.split(";")
+    contract_rows = [v53aq_selection_contract_by_field.get(name, {}) for name in names]
+    selection_blocked_value = int(all(row.get("selection_allowed", "0") == "0" for row in contract_rows))
+    if not contract_rows or any(not row for row in contract_rows):
+        selection_blocked_value = 1
+    evaluator_only_value = int(
+        all(row.get("evaluator_allowed", "1") == "1" for row in contract_rows if row)
+        if evaluator_only_required
+        else 1
+    )
+    return {
+        "guard_id": guard_id,
+        "forbidden_surface": forbidden_surface,
+        "field_names": field_names,
+        "adapter_selection_blocked": str(selection_blocked_value),
+        "evaluator_only_or_absent": str(evaluator_only_value),
+        "allowed_adapter_surface": "natural_language_question_plus_searchable_corpus",
+        "selection_allowed_fields": "question",
+        "direct_query_source_binding_forbidden": str(selection_blocked("query_id")),
+        "evidence_path": "source_v53aq/adapter_selection_contract_rows.csv",
+        "status": "pass" if selection_blocked_value and evaluator_only_value else "blocked",
+    }
+
+
+pm_retrieval_leakage_guard_rows = [
+    leakage_guard_row("source-span-id", "source span ID", "source_span_id"),
+    leakage_guard_row("source-path", "source path", "source_path"),
+    leakage_guard_row("source-line", "source line", "source_line_start;source_line_end"),
+    leakage_guard_row("source-file-hash", "source file hash", "source_file_hash"),
+    leakage_guard_row("query-source-direct-binding", "query ID and direct source row binding", "query_id"),
+    leakage_guard_row("expected-behavior", "expected behavior", "expected_answer;expected_answer_sha256", evaluator_only_required=False),
+    leakage_guard_row("expected-label", "expected label", "negative_or_abstain;audit_type"),
+]
+write_csv(run_dir / "pm_retrieval_leakage_guard_rows.csv", list(pm_retrieval_leakage_guard_rows[0].keys()), pm_retrieval_leakage_guard_rows)
+
+pm_pr_normalization_row_count = len(pm_pr_normalization_rows)
+pm_pr_normalization_split_required_rows = sum(
+    1 for row in pm_pr_normalization_rows if row["pr2_merge_as_is_recommended"] == "0"
+)
+pm_pr_normalization_tests_only_rows = sum(
+    1 for row in pm_pr_normalization_rows if row["tests_only_merge_condition"] == "1"
+)
+pm_pr_title_body_row_count = len(pm_pr_title_body_rows)
+pm_pr_title_body_rewrite_ready = int(
+    all(row["title_body_rewrite_ready"] == "1" for row in pm_pr_title_body_rows)
+)
+pm_pr_title_body_split_required_rows = sum(1 for row in pm_pr_title_body_rows if row["split_required"] == "1")
+pm_ready_semantic_row_count = len(pm_ready_semantic_rows)
+ready_semantic_fields = [
+    "contract_ready",
+    "fixture_execution_ready",
+    "real_model_execution_ready",
+    "heldout_metric_ready",
+    "human_review_ready",
+    "independent_reproduction_ready",
+    "release_ready",
+]
+pm_ready_semantic_typed_rows = sum(
+    1 for row in pm_ready_semantic_rows if all(field in row for field in ready_semantic_fields)
+)
+pm_ready_semantic_contract_ready_rows = sum(1 for row in pm_ready_semantic_rows if row["contract_ready"] == "1")
+pm_ready_semantic_fixture_execution_ready_rows = sum(
+    1 for row in pm_ready_semantic_rows if row["fixture_execution_ready"] == "1"
+)
+pm_ready_semantic_real_model_ready_rows = sum(
+    1 for row in pm_ready_semantic_rows if row["real_model_execution_ready"] == "1"
+)
+pm_ready_semantic_release_ready_rows = sum(1 for row in pm_ready_semantic_rows if row["release_ready"] == "1")
+pm_ready_semantic_logical_100b_contract_fixture_ready = int(
+    any(
+        row["replacement_flag"] == "logical_100b_contract_fixture_ready"
+        and row["contract_ready"] == "1"
+        and row["fixture_execution_ready"] == "1"
+        and row["real_model_execution_ready"] == "0"
+        for row in pm_ready_semantic_rows
+    )
+)
+pm_ready_semantic_real_100b_inference_ready = int(
+    any(
+        row["replacement_flag"] == "real_100b_inference_ready"
+        and row["real_model_execution_ready"] == "1"
+        for row in pm_ready_semantic_rows
+    )
+)
+pm_retrieval_leakage_guard_row_count = len(pm_retrieval_leakage_guard_rows)
+pm_retrieval_leakage_guard_pass_rows = sum(
+    1 for row in pm_retrieval_leakage_guard_rows if row["status"] == "pass"
+)
+pm_retrieval_leakage_guard_blocked_rows = (
+    pm_retrieval_leakage_guard_row_count - pm_retrieval_leakage_guard_pass_rows
+)
+
 pm_roadmap_milestone_row_count = len(pm_roadmap_milestone_rows)
 pm_roadmap_milestone_ready_rows = sum(1 for row in pm_roadmap_milestone_rows if row["status"] == "ready")
 pm_roadmap_milestone_blocked_rows = pm_roadmap_milestone_row_count - pm_roadmap_milestone_ready_rows
@@ -2267,6 +2723,22 @@ de_30b70b_acceptance_evidence_fixture_allowed_rows = sum(
 )
 de_30b70b_acceptance_evidence_approval_rows = sum(
     1 for row in de_30b70b_acceptance_evidence_rows if row["approval_required"] == "1"
+)
+de_measured_registry_exclusion_row_count = len(de_measured_registry_exclusion_rows)
+de_measured_registry_fixture_registry_rows = sum(
+    1 for row in de_measured_registry_exclusion_rows if row["fixture_rows_in_measured_registry"] != "0"
+)
+de_measured_registry_admission_ready_rows = sum(
+    1 for row in de_measured_registry_exclusion_rows if row["measured_registry_admission_ready"] == "1"
+)
+de_measured_registry_blocked_rows = sum(1 for row in de_measured_registry_exclusion_rows if row["status"] == "blocked")
+v58_real_execution_readiness_row_count = len(v58_real_execution_readiness_rows)
+v58_real_execution_ready_rows = sum(
+    1 for row in v58_real_execution_readiness_rows if row["real_execution_ready"] == "1"
+)
+v58_real_execution_blocked_rows = sum(1 for row in v58_real_execution_readiness_rows if row["status"] == "blocked")
+v58_real_execution_fixture_allowed_rows = sum(
+    1 for row in v58_real_execution_readiness_rows if row["fixture_allowed"] == "1"
 )
 v59_one_command_acceptance_evidence_row_count = len(v59_one_command_acceptance_evidence_rows)
 v59_one_command_acceptance_evidence_ready_rows = sum(1 for row in v59_one_command_acceptance_evidence_rows if row["acceptance_ready"] == "1")
@@ -2381,6 +2853,14 @@ summary = {
     "de_30b70b_acceptance_evidence_tests_only_rows": str(de_30b70b_acceptance_evidence_tests_only_rows),
     "de_30b70b_acceptance_evidence_fixture_allowed_rows": str(de_30b70b_acceptance_evidence_fixture_allowed_rows),
     "de_30b70b_acceptance_evidence_approval_rows": str(de_30b70b_acceptance_evidence_approval_rows),
+    "de_measured_registry_exclusion_rows": str(de_measured_registry_exclusion_row_count),
+    "de_measured_registry_fixture_registry_rows": str(de_measured_registry_fixture_registry_rows),
+    "de_measured_registry_admission_ready_rows": str(de_measured_registry_admission_ready_rows),
+    "de_measured_registry_blocked_rows": str(de_measured_registry_blocked_rows),
+    "v58_real_execution_readiness_rows": str(v58_real_execution_readiness_row_count),
+    "v58_real_execution_ready_rows": str(v58_real_execution_ready_rows),
+    "v58_real_execution_blocked_rows": str(v58_real_execution_blocked_rows),
+    "v58_real_execution_fixture_allowed_rows": str(v58_real_execution_fixture_allowed_rows),
     "v59_one_command_acceptance_evidence_rows": str(v59_one_command_acceptance_evidence_row_count),
     "v59_one_command_acceptance_evidence_ready_rows": str(v59_one_command_acceptance_evidence_ready_rows),
     "v59_one_command_acceptance_evidence_blocked_rows": str(v59_one_command_acceptance_evidence_blocked_rows),
@@ -2406,6 +2886,23 @@ summary = {
     "pm_external_return_template_ready_rows": str(external_return_template_ready_rows),
     "pm_external_return_template_fixture_allowed_rows": str(external_return_template_fixture_allowed_rows),
     "pm_external_return_template_approval_rows": str(external_return_template_approval_rows),
+    "pm_pr_normalization_rows": str(pm_pr_normalization_row_count),
+    "pm_pr_normalization_split_required_rows": str(pm_pr_normalization_split_required_rows),
+    "pm_pr_normalization_tests_only_rows": str(pm_pr_normalization_tests_only_rows),
+    "pm_pr_title_body_rows": str(pm_pr_title_body_row_count),
+    "pm_pr_title_body_rewrite_ready": str(pm_pr_title_body_rewrite_ready),
+    "pm_pr_title_body_split_required_rows": str(pm_pr_title_body_split_required_rows),
+    "pm_ready_semantic_rows": str(pm_ready_semantic_row_count),
+    "pm_ready_semantic_typed_rows": str(pm_ready_semantic_typed_rows),
+    "pm_ready_semantic_contract_ready_rows": str(pm_ready_semantic_contract_ready_rows),
+    "pm_ready_semantic_fixture_execution_ready_rows": str(pm_ready_semantic_fixture_execution_ready_rows),
+    "pm_ready_semantic_real_model_ready_rows": str(pm_ready_semantic_real_model_ready_rows),
+    "pm_ready_semantic_release_ready_rows": str(pm_ready_semantic_release_ready_rows),
+    "pm_ready_semantic_logical_100b_contract_fixture_ready": str(pm_ready_semantic_logical_100b_contract_fixture_ready),
+    "pm_ready_semantic_real_100b_inference_ready": str(pm_ready_semantic_real_100b_inference_ready),
+    "pm_retrieval_leakage_guard_rows": str(pm_retrieval_leakage_guard_row_count),
+    "pm_retrieval_leakage_guard_pass_rows": str(pm_retrieval_leakage_guard_pass_rows),
+    "pm_retrieval_leakage_guard_blocked_rows": str(pm_retrieval_leakage_guard_blocked_rows),
     "draft_pr_2_split_required": "1",
     "tests_only_merge_condition_rows": "0",
     "full_v1_release_ready": "0",
@@ -2483,6 +2980,12 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- de_30b70b_acceptance_evidence_ready_rows={de_30b70b_acceptance_evidence_ready_rows}\n"
     f"- de_30b70b_acceptance_evidence_blocked_rows={de_30b70b_acceptance_evidence_blocked_rows}\n"
     f"- de_30b70b_acceptance_evidence_tests_only_rows={de_30b70b_acceptance_evidence_tests_only_rows}\n"
+    f"- de_measured_registry_exclusion_rows={de_measured_registry_exclusion_row_count}\n"
+    f"- de_measured_registry_fixture_registry_rows={de_measured_registry_fixture_registry_rows}\n"
+    f"- de_measured_registry_admission_ready_rows={de_measured_registry_admission_ready_rows}\n"
+    f"- v58_real_execution_readiness_rows={v58_real_execution_readiness_row_count}\n"
+    f"- v58_real_execution_ready_rows={v58_real_execution_ready_rows}\n"
+    f"- v58_real_execution_blocked_rows={v58_real_execution_blocked_rows}\n"
     f"- v59_one_command_acceptance_evidence_rows={v59_one_command_acceptance_evidence_row_count}\n"
     f"- v59_one_command_acceptance_evidence_ready_rows={v59_one_command_acceptance_evidence_ready_rows}\n"
     f"- v59_one_command_acceptance_evidence_blocked_rows={v59_one_command_acceptance_evidence_blocked_rows}\n"
@@ -2496,6 +2999,19 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- pm_new_scaffold_default_allowed={new_scaffold_default_allowed}\n"
     f"- pm_external_return_template_rows={external_return_template_row_count}\n"
     f"- pm_external_return_template_files={external_return_template_files}\n"
+    f"- pm_pr_normalization_rows={pm_pr_normalization_row_count}\n"
+    f"- pm_pr_normalization_split_required_rows={pm_pr_normalization_split_required_rows}\n"
+    f"- pm_pr_normalization_tests_only_rows={pm_pr_normalization_tests_only_rows}\n"
+    f"- pm_pr_title_body_rows={pm_pr_title_body_row_count}\n"
+    f"- pm_pr_title_body_rewrite_ready={pm_pr_title_body_rewrite_ready}\n"
+    f"- pm_ready_semantic_rows={pm_ready_semantic_row_count}\n"
+    f"- pm_ready_semantic_real_model_ready_rows={pm_ready_semantic_real_model_ready_rows}\n"
+    f"- pm_ready_semantic_release_ready_rows={pm_ready_semantic_release_ready_rows}\n"
+    f"- pm_ready_semantic_logical_100b_contract_fixture_ready={pm_ready_semantic_logical_100b_contract_fixture_ready}\n"
+    f"- pm_ready_semantic_real_100b_inference_ready={pm_ready_semantic_real_100b_inference_ready}\n"
+    f"- pm_retrieval_leakage_guard_rows={pm_retrieval_leakage_guard_row_count}\n"
+    f"- pm_retrieval_leakage_guard_pass_rows={pm_retrieval_leakage_guard_pass_rows}\n"
+    f"- pm_retrieval_leakage_guard_blocked_rows={pm_retrieval_leakage_guard_blocked_rows}\n"
     "- tests_only_merge_condition_rows=0\n"
     "- draft_pr_2_split_required=1\n"
     "- real_release_package_ready=0\n\n"
@@ -2587,6 +3103,14 @@ manifest = {
     "de_30b70b_acceptance_evidence_tests_only_rows": de_30b70b_acceptance_evidence_tests_only_rows,
     "de_30b70b_acceptance_evidence_fixture_allowed_rows": de_30b70b_acceptance_evidence_fixture_allowed_rows,
     "de_30b70b_acceptance_evidence_approval_rows": de_30b70b_acceptance_evidence_approval_rows,
+    "de_measured_registry_exclusion_rows": de_measured_registry_exclusion_row_count,
+    "de_measured_registry_fixture_registry_rows": de_measured_registry_fixture_registry_rows,
+    "de_measured_registry_admission_ready_rows": de_measured_registry_admission_ready_rows,
+    "de_measured_registry_blocked_rows": de_measured_registry_blocked_rows,
+    "v58_real_execution_readiness_rows": v58_real_execution_readiness_row_count,
+    "v58_real_execution_ready_rows": v58_real_execution_ready_rows,
+    "v58_real_execution_blocked_rows": v58_real_execution_blocked_rows,
+    "v58_real_execution_fixture_allowed_rows": v58_real_execution_fixture_allowed_rows,
     "v59_one_command_acceptance_evidence_rows": v59_one_command_acceptance_evidence_row_count,
     "v59_one_command_acceptance_evidence_ready_rows": v59_one_command_acceptance_evidence_ready_rows,
     "v59_one_command_acceptance_evidence_blocked_rows": v59_one_command_acceptance_evidence_blocked_rows,
@@ -2610,6 +3134,23 @@ manifest = {
     "pm_external_return_template_ready_rows": external_return_template_ready_rows,
     "pm_external_return_template_fixture_allowed_rows": external_return_template_fixture_allowed_rows,
     "pm_external_return_template_approval_rows": external_return_template_approval_rows,
+    "pm_pr_normalization_rows": pm_pr_normalization_row_count,
+    "pm_pr_normalization_split_required_rows": pm_pr_normalization_split_required_rows,
+    "pm_pr_normalization_tests_only_rows": pm_pr_normalization_tests_only_rows,
+    "pm_pr_title_body_rows": pm_pr_title_body_row_count,
+    "pm_pr_title_body_rewrite_ready": pm_pr_title_body_rewrite_ready,
+    "pm_pr_title_body_split_required_rows": pm_pr_title_body_split_required_rows,
+    "pm_ready_semantic_rows": pm_ready_semantic_row_count,
+    "pm_ready_semantic_typed_rows": pm_ready_semantic_typed_rows,
+    "pm_ready_semantic_contract_ready_rows": pm_ready_semantic_contract_ready_rows,
+    "pm_ready_semantic_fixture_execution_ready_rows": pm_ready_semantic_fixture_execution_ready_rows,
+    "pm_ready_semantic_real_model_ready_rows": pm_ready_semantic_real_model_ready_rows,
+    "pm_ready_semantic_release_ready_rows": pm_ready_semantic_release_ready_rows,
+    "pm_ready_semantic_logical_100b_contract_fixture_ready": pm_ready_semantic_logical_100b_contract_fixture_ready,
+    "pm_ready_semantic_real_100b_inference_ready": pm_ready_semantic_real_100b_inference_ready,
+    "pm_retrieval_leakage_guard_rows": pm_retrieval_leakage_guard_row_count,
+    "pm_retrieval_leakage_guard_pass_rows": pm_retrieval_leakage_guard_pass_rows,
+    "pm_retrieval_leakage_guard_blocked_rows": pm_retrieval_leakage_guard_blocked_rows,
     "slice_ids": slice_ids,
     "source_summary_rows_sha256": sha256(run_dir / "source_summary_rows.csv"),
     "pm_roadmap_requirement_rows_sha256": sha256(run_dir / "pm_roadmap_requirement_rows.csv"),
@@ -2619,6 +3160,8 @@ manifest = {
     "pm_pr_acceptance_evidence_rows_sha256": sha256(run_dir / "pm_pr_acceptance_evidence_rows.csv"),
     "v56_replay_acceptance_evidence_rows_sha256": sha256(run_dir / "v56_replay_acceptance_evidence_rows.csv"),
     "de_30b70b_acceptance_evidence_rows_sha256": sha256(run_dir / "de_30b70b_acceptance_evidence_rows.csv"),
+    "de_measured_registry_exclusion_rows_sha256": sha256(run_dir / "de_measured_registry_exclusion_rows.csv"),
+    "v58_real_execution_readiness_rows_sha256": sha256(run_dir / "v58_real_execution_readiness_rows.csv"),
     "v59_one_command_acceptance_evidence_rows_sha256": sha256(run_dir / "v59_one_command_acceptance_evidence_rows.csv"),
     "h10_real_label_acceptance_evidence_rows_sha256": sha256(run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv"),
     "pm_pr_slice_file_rows_sha256": sha256(run_dir / "pm_pr_slice_file_rows.csv"),
@@ -2628,6 +3171,10 @@ manifest = {
     "pm_blocker_required_artifact_rows_sha256": sha256(run_dir / "pm_blocker_required_artifact_rows.csv"),
     "pm_execution_lock_rows_sha256": sha256(run_dir / "pm_execution_lock_rows.csv"),
     "pm_external_return_template_rows_sha256": sha256(run_dir / "pm_external_return_template_rows.csv"),
+    "pm_pr_normalization_rows_sha256": sha256(run_dir / "pm_pr_normalization_rows.csv"),
+    "pm_pr_title_body_rows_sha256": sha256(run_dir / "pm_pr_title_body_rows.csv"),
+    "pm_ready_semantic_rows_sha256": sha256(run_dir / "pm_ready_semantic_rows.csv"),
+    "pm_retrieval_leakage_guard_rows_sha256": sha256(run_dir / "pm_retrieval_leakage_guard_rows.csv"),
     "real_release_package_ready": 0,
 }
 (run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json").write_text(

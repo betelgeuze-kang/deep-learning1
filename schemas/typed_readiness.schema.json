@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/typed_readiness.schema.json",
+  "title": "Typed Readiness Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "rows"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": ["forbid_ambiguous_ready_claims", "typed_fields"],
+      "properties": {
+        "forbid_ambiguous_ready_claims": {"type": "boolean"},
+        "typed_fields": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "scope_id",
+          "contract_ready",
+          "fixture_execution_ready",
+          "real_model_execution_ready",
+          "heldout_metric_ready",
+          "human_review_ready",
+          "independent_reproduction_ready",
+          "release_ready",
+          "misleading_ready_flag",
+          "replacement_flag",
+          "ready_wording_policy",
+          "evidence_path"
+        ],
+        "properties": {
+          "scope_id": {"type": "string"},
+          "contract_ready": {"type": "boolean"},
+          "fixture_execution_ready": {"type": "boolean"},
+          "real_model_execution_ready": {"type": "boolean"},
+          "heldout_metric_ready": {"type": "boolean"},
+          "human_review_ready": {"type": "boolean"},
+          "independent_reproduction_ready": {"type": "boolean"},
+          "release_ready": {"type": "boolean"},
+          "misleading_ready_flag": {"type": "string"},
+          "replacement_flag": {"type": "string"},
+          "ready_wording_policy": {"type": "string"},
+          "evidence_path": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

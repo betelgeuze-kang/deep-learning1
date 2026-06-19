@@ -1,0 +1,74 @@
+{
+  "schema_version": "v58_blind_eval.v1",
+  "policy": {
+    "fixture_allowed": false,
+    "tests_only_merge_condition": false,
+    "real_execution_ready": false
+  },
+  "required_systems": ["A", "B", "C", "D", "E", "G", "H"],
+  "requirements": [
+    {
+      "requirement_id": "ab-cdegh-real-responses",
+      "required_evidence": "A/B/C/D/E/G/H actual response rows over the same frozen query set"
+    },
+    {
+      "requirement_id": "same-corpus-context-budget",
+      "required_evidence": "same corpus, same source snapshot, same context budget, and same retrieval budget for every system"
+    },
+    {
+      "requirement_id": "blind-identity",
+      "required_evidence": "blind identities preserved until scoring and adjudication finish"
+    },
+    {
+      "requirement_id": "two-independent-reviewers",
+      "required_evidence": "at least two independent blinded reviewers per required response"
+    },
+    {
+      "requirement_id": "disagreement-adjudication",
+      "required_evidence": "disagreement and adjudication rows for every required response"
+    },
+    {
+      "requirement_id": "unseen-repository-split",
+      "required_evidence": "unseen repository split remains explicit and bound to the frozen blind query packet"
+    },
+    {
+      "requirement_id": "source-span-exactness",
+      "required_evidence": "source span exactness scored separately from answer text"
+    },
+    {
+      "requirement_id": "unsupported-abstention",
+      "required_evidence": "unsupported/missing rows must permit and score abstention"
+    },
+    {
+      "requirement_id": "latency-memory-separate",
+      "required_evidence": "latency and memory are recorded but evaluated separately from answer quality"
+    }
+  ],
+  "required_artifacts": [
+    {
+      "artifact_id": "v58-blind-response-rows",
+      "artifact_kind": "csv",
+      "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh"
+    },
+    {
+      "artifact_id": "v58-run-identity-rows",
+      "artifact_kind": "csv",
+      "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh"
+    },
+    {
+      "artifact_id": "v58-human-review-rows",
+      "artifact_kind": "review-return",
+      "validation_command": "defer to v58 review acceptance gate once response rows validate"
+    },
+    {
+      "artifact_id": "v58d-review-return-intake",
+      "artifact_kind": "artifact-directory",
+      "validation_command": "./experiments/test_v58d_blind_review_return_intake.sh"
+    },
+    {
+      "artifact_id": "v58-sha256-manifest",
+      "artifact_kind": "csv",
+      "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh"
+    }
+  ]
+}

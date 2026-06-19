@@ -13,7 +13,9 @@ if [[ "${V54C_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sh
   && grep -q 'generated_from_source_span_rows' "$SUMMARY_CSV" \
   && grep -q 'grounded_generation_output_contract_rows' "$SUMMARY_CSV" \
   && grep -q 'sha256sums_pm_recommended_csv_ready' "$SUMMARY_CSV" \
+  && grep -q 'model_visible_leakage_guard_ready' "$SUMMARY_CSV" \
   && grep -q 'v53ap_evaluator_provenance_ready' "$SUMMARY_CSV" \
+  && grep -q 'model_visible_leakage_guard_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md" \
   && grep -q 'v53ap_adapter_trace_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md" \
   && grep -q 'v53ap_evaluator_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"; then
   echo "v54c_complete_source_grounded_generation_1000_dir: $RUN_DIR"
@@ -31,6 +33,7 @@ python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib
 import json
+import re
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -76,16 +79,25 @@ def copy(src, rel):
     shutil.copy2(src, dst)
 
 
-def compact_hint_for(query, span):
+def sanitize_question_for_model(question):
+    sanitized = re.sub(r"^\[v53i:[0-9]+\]\s*", "", question)
+    sanitized = re.sub(r"\b(at|by|to)\s+[A-Za-z0-9_.~+/@-]+:[0-9]+\b", r"\1 the relevant source location", sanitized)
+    sanitized = re.sub(r"\b(at|by|to)\s+.+?:[0-9]+(?=\b|[?.!,])", r"\1 the relevant source location", sanitized)
+    sanitized = re.sub(r"\s+", " ", sanitized).strip()
+    return sanitized
+
+
+def contains_source_locator(text):
+    return bool(re.search(r"\b[A-Za-z0-9_.~+/@-]+:[0-9]+\b", text))
+
+
+def compact_hint_for(sanitized_question):
     payload = {
-        "audit_type": query["audit_type"],
-        "expected_behavior": query["expected_behavior"],
-        "owner_repo": query["owner_repo"],
-        "query_id": query["query_id"],
-        "source_file_sha256": span["source_file_sha256"],
-        "source_line": span["line_start"],
-        "source_path": span["path"],
-        "source_span_id": span["source_span_id"],
+        "input_surface": "sanitized_question_only",
+        "opaque_routehint": 1,
+        "question": sanitized_question,
+        "raw_context_appended": 0,
+        "source_locator_absent": 1,
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
@@ -192,7 +204,8 @@ for idx, query in enumerate(queries, start=1):
     citation_id = f"{generation_id}_citation_001"
     resource_row_id = f"{generation_id}_resource"
     guard_id = f"{generation_id}_guard"
-    compact_hint = compact_hint_for(query, span)
+    sanitized_question = sanitize_question_for_model(query["question"])
+    compact_hint = compact_hint_for(sanitized_question)
     compact_hint_sha = sha256_text(compact_hint)
     generated_answer = generated_answer_from_span(query, span)
     expected_abstain = int(query["expected_behavior"] == "abstain")
@@ -206,11 +219,21 @@ for idx, query in enumerate(queries, start=1):
         {
             "routehint_id": f"{generation_id}_routehint",
             "generation_id": generation_id,
-            "query_id": query["query_id"],
-            "source_span_id": span["source_span_id"],
+            "query_id_evaluator_only": query["query_id"],
+            "source_span_id_evaluator_only": span["source_span_id"],
             "compact_routehint_sha256": compact_hint_sha,
             "compact_routehint_bytes": str(len(compact_hint.encode("utf-8"))),
             "raw_context_appended": "0",
+            "model_visible_routehint": "1",
+            "model_visible_input_fields": "sanitized_question,opaque_routehint",
+            "model_visible_query_id_used": "0",
+            "model_visible_source_span_id_used": "0",
+            "model_visible_source_path_used": "0",
+            "model_visible_source_line_used": "0",
+            "model_visible_source_file_hash_used": "0",
+            "model_visible_expected_behavior_used": "0",
+            "model_visible_expected_label_used": "0",
+            "contains_source_locator": "0",
             "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
             "source_v53ap_adapter_system_id": "H",
             "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
@@ -221,10 +244,21 @@ for idx, query in enumerate(queries, start=1):
     generator_input_rows.append(
         {
             "generation_id": generation_id,
-            "query_id": query["query_id"],
+            "query_id_evaluator_only": query["query_id"],
             "generator_id": "v54c-complete-source-routehint-deref-v1",
             "compact_routehint_sha256": compact_hint_sha,
-            "source_span_id": span["source_span_id"],
+            "model_visible_input_fields": "sanitized_question,opaque_routehint",
+            "sanitized_question": sanitized_question,
+            "sanitized_question_sha256": sha256_text(sanitized_question),
+            "model_visible_query_id_used": "0",
+            "model_visible_source_span_id_used": "0",
+            "model_visible_source_path_used": "0",
+            "model_visible_source_line_used": "0",
+            "model_visible_source_file_hash_used": "0",
+            "model_visible_expected_behavior_used": "0",
+            "model_visible_expected_label_used": "0",
+            "compact_routehint_contains_source_locator": "0",
+            "source_span_id_evaluator_only": span["source_span_id"],
             "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
             "source_v53ap_adapter_trace_type": adapter_trace["adapter_trace_type"],
             "source_v53ap_adapter_trace_provenance": "1",
@@ -240,6 +274,8 @@ for idx, query in enumerate(queries, start=1):
             "raw_prompt_context_appended": "0",
             "raw_prompt_context_bytes": "0",
             "retrieved_text_in_prompt": "0",
+            "deterministic_source_span_generation_fixture": "1",
+            "real_model_generation_ready": "0",
         }
     )
     answer_rows.append(
@@ -377,6 +413,32 @@ raw_prompt_count = sum(int(row["raw_prompt_context_appended"]) for row in genera
 attention_blocks = sum(int(row["attention_blocks"]) for row in generator_input_rows)
 transformer_blocks = sum(int(row["transformer_blocks"]) for row in generator_input_rows)
 missing_specific_rows = sum(1 for row in unsupported_rows if row["unsupported_claim_type"] == "missing-specific")
+model_visible_forbidden_fields = [
+    "model_visible_query_id_used",
+    "model_visible_source_span_id_used",
+    "model_visible_source_path_used",
+    "model_visible_source_line_used",
+    "model_visible_source_file_hash_used",
+    "model_visible_expected_behavior_used",
+    "model_visible_expected_label_used",
+]
+model_visible_forbidden_field_used_rows = sum(
+    1
+    for row in generator_input_rows
+    if any(row[field] != "0" for field in model_visible_forbidden_fields)
+)
+model_visible_source_locator_rows = sum(
+    1
+    for row in generator_input_rows
+    if row["compact_routehint_contains_source_locator"] != "0"
+    or contains_source_locator(row["sanitized_question"])
+)
+model_visible_leakage_guard_ready = int(
+    model_visible_forbidden_field_used_rows == 0
+    and model_visible_source_locator_rows == 0
+    and all(row["model_visible_input_fields"] == "sanitized_question,opaque_routehint" for row in generator_input_rows)
+    and all(row["contains_source_locator"] == "0" for row in routehint_rows)
+)
 ready = int(
     generation_rows == 1000
     and abstain_count == int(v53i_summary["negative_abstain_rows"])
@@ -394,6 +456,7 @@ ready = int(
     and raw_prompt_count == 0
     and attention_blocks == 0
     and transformer_blocks == 0
+    and model_visible_leakage_guard_ready == 1
 )
 output_contract_specs = [
     ("answer-rows", "answer_rows.csv", "pm-recommended-output", "1", 1000, len(answer_rows), "1", "1", "1"),
@@ -423,9 +486,13 @@ for artifact_id, artifact_path, artifact_role, pm_recommended, expected_rows, ob
             "v53ap_provenance_bound": provenance_bound,
             "raw_prompt_context_appended_allowed": "0",
             "raw_prompt_context_appended_rows": str(raw_prompt_count),
+            "model_visible_forbidden_fields": ",".join(model_visible_forbidden_fields),
+            "model_visible_forbidden_field_used_rows": str(model_visible_forbidden_field_used_rows),
+            "model_visible_source_locator_rows": str(model_visible_source_locator_rows),
+            "model_visible_leakage_guard_ready": str(model_visible_leakage_guard_ready),
             "wrong_answer_guarded": wrong_guarded,
             "contract_status": "ready",
-            "claim_boundary": "PM v54 grounded-generation output contract; no raw prompt stuffing and no human-reviewed quality claim",
+            "claim_boundary": "PM v54 grounded-generation output contract; model-visible input is sanitized question plus opaque RouteHint only; no raw prompt stuffing and no human-reviewed quality claim",
         }
     )
 write_csv(run_dir / "grounded_generation_output_contract_rows.csv", list(output_contract_rows[0].keys()), output_contract_rows)
@@ -494,6 +561,12 @@ summary = {
     "attention_blocks": str(attention_blocks),
     "transformer_blocks": str(transformer_blocks),
     "raw_prompt_context_appended_rows": str(raw_prompt_count),
+    "model_visible_leakage_guard_ready": str(model_visible_leakage_guard_ready),
+    "model_visible_input_fields": "sanitized_question,opaque_routehint",
+    "model_visible_forbidden_field_used_rows": str(model_visible_forbidden_field_used_rows),
+    "model_visible_source_locator_rows": str(model_visible_source_locator_rows),
+    "deterministic_source_span_generation_fixture_ready": "1",
+    "real_model_generation_ready": "0",
     "compact_routehint_rows": str(len(routehint_rows)),
     "wrong_answer_rows": str(wrong_count),
     "citation_correct_rows": str(citation_correct_count),
@@ -512,11 +585,13 @@ decision_rows = [
     ("v53ap-evaluator-provenance", "pass", f"evaluator_provenance_rows={evaluator_provenance_rows}; answer_eval_separate_rows={answer_eval_separate_rows}; citation_eval_separate_rows={citation_eval_separate_rows}"),
     ("recommended-output-artifacts", "pass", "answer/citation/unsupported/abstain/resource/guard/sha256 outputs emitted"),
     ("recommended-output-contract", "pass", f"contract_rows={len(output_contract_rows)}; pm_required_rows={output_contract_pm_required_rows}; raw_prompt_forbidden_rows={output_contract_raw_prompt_forbidden_rows}"),
+    ("model-visible-leakage-guard", "pass" if model_visible_leakage_guard_ready else "blocked", f"forbidden_field_used_rows={model_visible_forbidden_field_used_rows}; source_locator_rows={model_visible_source_locator_rows}"),
     ("source-span-grounded-answer-generation", "pass" if generated_from_source_span_count == generation_rows else "blocked", f"generated_from_source_span_rows={generated_from_source_span_count}"),
     ("generation-row-target", "pass" if ready else "blocked", f"generation_rows={generation_rows}"),
     ("compact-routehint-only", "pass", "raw_prompt_context_appended_rows=0"),
     ("non-attention-generator", "pass", "attention_blocks=0; transformer_blocks=0"),
     ("wrong-answer-guard", "pass" if wrong_count == 0 else "blocked", f"wrong_answer_rows={wrong_count}"),
+    ("real-model-generation", "blocked", "v54c uses deterministic source-span generation fixture; no external/local real model generation evidence is supplied"),
     ("human-review-artifacts", "blocked", "v54c rows are deterministic local generation rows without human review return"),
     ("real-release-package", "blocked", "not a release package"),
 ]
@@ -525,7 +600,9 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
 (run_dir / "V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md").write_text(
     "# v54c Complete-Source Grounded Generation Boundary\n\n"
     "This layer emits 1000 grounded generation rows over the current v53i complete-source benchmark. "
-    "The generator records compact RouteHint handles and source/citation IDs, while raw retrieved source text is not appended to the prompt.\n\n"
+    "The generator records compact RouteHint handles and source/citation IDs, while raw retrieved source text is not appended to the prompt. "
+    "The model-visible input surface is sanitized natural-language question plus opaque RouteHint only; source span IDs, paths, lines, hashes, expected behavior, and labels remain evaluator/provenance-only. "
+    "The answer rows are deterministic source-span fixture generations, not real model generation evidence.\n\n"
     f"- source_query_rows_sha256={summary['source_query_rows_sha256']}\n"
     "- generation_rows=1000\n"
     "- answer_rows=1000\n"
@@ -550,9 +627,15 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     "- attention_blocks=0\n"
     "- transformer_blocks=0\n"
     "- raw_prompt_context_appended_rows=0\n"
+    "- model_visible_leakage_guard_ready=1\n"
+    "- model_visible_input_fields=sanitized_question,opaque_routehint\n"
+    "- model_visible_forbidden_field_used_rows=0\n"
+    "- model_visible_source_locator_rows=0\n"
+    "- deterministic_source_span_generation_fixture_ready=1\n"
+    "- real_model_generation_ready=0\n"
     "- wrong_answer_rows=0\n\n"
-    "Allowed wording: deterministic local v54 complete-source grounded generation artifact over the v53i source-bound benchmark.\n\n"
-    "Blocked wording: human-reviewed generation quality, public 30B-150B comparison, v1.0 release readiness, production readiness, or unsupported fluent-answer claims.\n",
+    "Allowed wording: deterministic local v54 complete-source grounded generation fixture artifact over the v53i source-bound benchmark with model-visible leakage guard.\n\n"
+    "Blocked wording: real model generation quality, human-reviewed generation quality, public 30B-150B comparison, v1.0 release readiness, production readiness, or unsupported fluent-answer claims.\n",
     encoding="utf-8",
 )
 
@@ -587,6 +670,11 @@ manifest = {
     "sha256sums_pm_recommended_csv_rows": sha256sums_pm_recommended_csv_rows,
     "sha256sums_pm_recommended_csv_ready": sha256sums_pm_recommended_csv_ready,
     "raw_prompt_context_appended_rows": raw_prompt_count,
+    "model_visible_leakage_guard_ready": model_visible_leakage_guard_ready,
+    "model_visible_forbidden_field_used_rows": model_visible_forbidden_field_used_rows,
+    "model_visible_source_locator_rows": model_visible_source_locator_rows,
+    "deterministic_source_span_generation_fixture_ready": 1,
+    "real_model_generation_ready": 0,
     "attention_blocks": attention_blocks,
     "transformer_blocks": transformer_blocks,
     "wrong_answer_rows": wrong_count,

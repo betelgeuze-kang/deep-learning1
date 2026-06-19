@@ -2000,10 +2000,15 @@ Current next boundary:
   and runs bounded numeric dot-tile probes over the sampled real-checkpoint
   BF16 tensor slices. It records 128 tensor tile probe rows, 120 MoE tile rows,
   8 embedding tile rows, 524288 BF16 tile values, 128/128 finite
-  baseline/q8/q4 dot rows, q8/q4 mean absolute dot errors of
-  0.00113809798/0.0244754219, `q8_quant_probe_ready=1`, and
-  `q4_quant_probe_ready=1`, while keeping full checkpoint materialization,
-  full page-hash coverage, real Mixtral generation, near-frontier quality,
+  baseline/q8/q4 dot rows, 128/128 PyTorch CPU matvec parity rows, q8/q4 mean
+  absolute dot errors of 0.00113809798/0.0244754219,
+  `torch_matvec_parity_ready=1`, `q8_quant_probe_ready=1`, and
+  `q4_quant_probe_ready=1`. It also adds an optional local safetensors-root
+  expert FFN parity executor with typed fixture/real readiness; the official
+  run keeps `expert_ffn_parity_real_model_execution_ready=0` until a real local
+  Mixtral checkpoint root is supplied, while keeping full checkpoint
+  materialization, full page-hash coverage, real expert FFN parity, MoE block
+  parity, logits parity, real Mixtral generation, near-frontier quality,
   production latency, and release claims blocked.
 - `v61ac` adds sampled hotset token-budget replay.
   `experiments/test_v61ac_hotset_token_budget_replay.sh` consumes

@@ -180,9 +180,13 @@ def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, cl
         )
         prebaseline_rows = 0
         prebaseline_ready = 0
+        internal_contract_rows = 0
+        internal_contract_ready = 0
     else:
         prebaseline_rows = as_int(summary_row, "same_query_internal_prebaseline_rows")
         prebaseline_ready = as_int(summary_row, "same_query_internal_prebaseline_rows_ready")
+        internal_contract_rows = as_int(summary_row, "internal_prebaseline_contract_rows")
+        internal_contract_ready = as_int(summary_row, "internal_prebaseline_contract_ready")
         stage_ready = int(
             common_ready
             and deterministic_source_span_adapter_execution_rows == 0
@@ -202,6 +206,8 @@ def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, cl
             and as_int(summary_row, "public_real_system_performance_claim_ready") == 0
             and prebaseline_ready == 1
             and prebaseline_rows == LOCAL_ABGH_QUERY_ROWS
+            and internal_contract_ready == 1
+            and internal_contract_rows == len(LOCAL_ABGH_SYSTEMS)
         )
     return {
         "contract_id": f"{stage}-local-abgh-row-contract-replay",
@@ -238,6 +244,8 @@ def build_local_abgh_row_contract(stage, stage_dir, summary_row, ready_field, cl
         "selection_oracle_field_used_rows": str(selection_oracle_field_used_rows),
         "same_query_internal_prebaseline_rows": str(prebaseline_rows),
         "same_query_internal_prebaseline_ready": str(prebaseline_ready),
+        "internal_prebaseline_contract_rows": str(internal_contract_rows),
+        "internal_prebaseline_contract_ready": str(internal_contract_ready),
         "public_comparison_claim_ready": str(as_int(summary_row, "public_comparison_claim_ready")),
         "status": "pass" if stage_ready else "blocked",
         "claim_boundary": claim_boundary,
@@ -316,6 +324,7 @@ v58d_required_artifacts = [
     v58d_dir / "blind_review_required_field_rows.csv",
     v58d_dir / "blind_review_return_template_rows.csv",
     v58d_dir / "blind_adjudication_return_template_rows.csv",
+    v58d_dir / "pm_blind_review_actual_execution_matrix_rows.csv",
     v58d_dir / "blind_review_validation_rows.csv",
     v58d_dir / "blind_review_intake_gate_rows.csv",
     v58d_dir / "blind_eval_score_rows.csv",
@@ -336,6 +345,17 @@ else:
     v58d = {
         "v58d_blind_review_return_intake_ready": "0",
         "expected_required_review_rows": "0",
+        "pm_review_required_system_rows": "7",
+        "pm_review_required_blind_response_rows": "3500",
+        "pm_review_required_independent_review_rows": "7000",
+        "pm_review_required_adjudication_rows": "3500",
+        "pm_review_actual_ready": "0",
+        "pm_review_missing_system_rows": "7",
+        "pm_review_template_gap_rows": "7",
+        "pm_review_unseen_split_ready": "0",
+        "pm_review_source_span_exactness_ready": "0",
+        "pm_review_unsupported_abstention_ready": "0",
+        "pm_review_latency_memory_separate_ready": "0",
         "required_blind_review_ready": "0",
         "required_adjudication_ready": "0",
         "human_blind_review_ready": "0",
@@ -397,6 +417,17 @@ v58d_dependency_blocker_summary = {
     "v58d_blind_review_return_intake_ready": v58d["v58d_blind_review_return_intake_ready"],
     "v58_full_blind_eval_ready": "0",
     "expected_required_review_rows": v58d["expected_required_review_rows"],
+    "pm_review_required_system_rows": v58d["pm_review_required_system_rows"],
+    "pm_review_required_blind_response_rows": v58d["pm_review_required_blind_response_rows"],
+    "pm_review_required_independent_review_rows": v58d["pm_review_required_independent_review_rows"],
+    "pm_review_required_adjudication_rows": v58d["pm_review_required_adjudication_rows"],
+    "pm_review_actual_ready": v58d["pm_review_actual_ready"],
+    "pm_review_missing_system_rows": v58d["pm_review_missing_system_rows"],
+    "pm_review_template_gap_rows": v58d["pm_review_template_gap_rows"],
+    "pm_review_unseen_split_ready": v58d["pm_review_unseen_split_ready"],
+    "pm_review_source_span_exactness_ready": v58d["pm_review_source_span_exactness_ready"],
+    "pm_review_unsupported_abstention_ready": v58d["pm_review_unsupported_abstention_ready"],
+    "pm_review_latency_memory_separate_ready": v58d["pm_review_latency_memory_separate_ready"],
     "required_blind_review_ready": v58d["required_blind_review_ready"],
     "required_adjudication_ready": v58d["required_adjudication_ready"],
     "human_blind_review_ready": v58d["human_blind_review_ready"],
@@ -425,6 +456,11 @@ write_csv(
             "gate": "adjudication-return-ready",
             "status": "pass" if v58d.get("required_adjudication_ready") == "1" else "blocked",
             "reason": "adjudication rows validate" if v58d.get("required_adjudication_ready") == "1" else "blind adjudication/inter-rater rows are not supplied",
+        },
+        {
+            "gate": "pm-required-a-b-c-d-e-g-h-review-rows",
+            "status": "pass" if v58d.get("pm_review_actual_ready") == "1" else "blocked",
+            "reason": "PM-required A/B/C/D/E/G/H review matrix validates" if v58d.get("pm_review_actual_ready") == "1" else "PM-required A/B/C/D/E/G/H review/adjudication/unseen-split evidence is incomplete",
         },
     ],
 )
@@ -501,6 +537,7 @@ stage_specs = [
             (v53aq_dir / "abgh_wrong_answer_guard_rows.csv", "source_v53aq/abgh_wrong_answer_guard_rows.csv"),
             (v53aq_dir / "abgh_resource_rows.csv", "source_v53aq/abgh_resource_rows.csv"),
             (v53aq_dir / "abgh_same_query_internal_prebaseline_rows.csv", "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
+            (v53aq_dir / "abgh_internal_prebaseline_contract_rows.csv", "source_v53aq/abgh_internal_prebaseline_contract_rows.csv"),
             (v53aq_dir / "route_memory_rows.csv", "source_v53aq/route_memory_rows.csv"),
             (v53aq_dir / "routehint_rows.csv", "source_v53aq/routehint_rows.csv"),
             (v53aq_dir / "V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"),
@@ -549,6 +586,7 @@ stage_specs = [
             (h10_dir / "source_v53aq/abgh_evaluator_rows.csv", "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv"),
             (h10_dir / "source_v53aq/abgh_system_metric_rows.csv", "source_h10_pm/source_v53aq/abgh_system_metric_rows.csv"),
             (h10_dir / "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv"),
+            (h10_dir / "source_v53aq/abgh_internal_prebaseline_contract_rows.csv", "source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv"),
             (h10_dir / "source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv", "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv"),
             (h10_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv", "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv"),
             (h10_dir / "source_v53t/complete_source_foundation_freeze_rows.csv", "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv"),
@@ -608,6 +646,7 @@ if v58d_available:
                 (v58d_dir / "blind_review_required_field_rows.csv", "source_v58d/blind_review_required_field_rows.csv"),
                 (v58d_dir / "blind_review_return_template_rows.csv", "source_v58d/blind_review_return_template_rows.csv"),
                 (v58d_dir / "blind_adjudication_return_template_rows.csv", "source_v58d/blind_adjudication_return_template_rows.csv"),
+                (v58d_dir / "pm_blind_review_actual_execution_matrix_rows.csv", "source_v58d/pm_blind_review_actual_execution_matrix_rows.csv"),
                 (v58d_dir / "blind_review_validation_rows.csv", "source_v58d/blind_review_validation_rows.csv"),
                 (v58d_dir / "blind_review_intake_gate_rows.csv", "source_v58d/blind_review_intake_gate_rows.csv"),
                 (v58d_dir / "blind_eval_score_rows.csv", "source_v58d/blind_eval_score_rows.csv"),
@@ -808,6 +847,8 @@ local_abgh_real_adapter_ready = int(
     and as_int(v53aq, "public_real_system_performance_claim_ready") == 0
     and as_int(v53aq, "same_query_internal_prebaseline_rows_ready") == 1
     and as_int(v53aq, "same_query_internal_prebaseline_rows") == 1000
+    and as_int(v53aq, "internal_prebaseline_contract_ready") == 1
+    and as_int(v53aq, "internal_prebaseline_contract_rows") == 4
 )
 local_abgh_row_contract_replay_rows = [
     build_local_abgh_row_contract(
@@ -822,7 +863,7 @@ local_abgh_row_contract_replay_rows = [
         v53aq_dir,
         v53aq,
         "v53aq_complete_source_abgh_real_adapter_measured_ready",
-        "internal v1.0 pre-baseline A/B/G/H query-text-only real-adapter row contract; public comparison remains blocked until D/E 30B/70B and blind eval evidence exist",
+        "internal v1.0 pre-baseline A/B/G/H sanitized-question-only real-adapter row contract; public comparison remains blocked until D/E 30B/70B and blind eval evidence exist",
     ),
 ]
 write_csv(
@@ -964,6 +1005,8 @@ summary = {
     "v53ap_actual_adapter_execution_ready": v53ap.get("actual_adapter_execution_ready", "0"),
     "v53ap_real_system_performance_claim_ready": v53ap.get("real_system_performance_claim_ready", "0"),
     "v53aq_selection_question_text_only": v53aq.get("selection_question_text_only", "0"),
+    "v53aq_selection_sanitized_question_only": v53aq.get("selection_sanitized_question_only", "0"),
+    "v53aq_source_locator_in_question_removed_rows": v53aq.get("source_locator_in_question_removed_rows", "0"),
     "v53aq_selection_oracle_field_used": v53aq.get("selection_oracle_field_used", "1"),
     "v53aq_expected_answer_oracle_replay": v53aq.get("expected_answer_oracle_replay", "0"),
     "v53aq_deterministic_source_span_adapter_execution": v53aq.get("deterministic_source_span_adapter_execution", "1"),
@@ -973,6 +1016,9 @@ summary = {
     "v53aq_public_real_system_performance_claim_ready": v53aq.get("public_real_system_performance_claim_ready", "1"),
     "v53aq_same_query_internal_prebaseline_rows_ready": v53aq.get("same_query_internal_prebaseline_rows_ready", "0"),
     "v53aq_same_query_internal_prebaseline_rows": v53aq.get("same_query_internal_prebaseline_rows", "0"),
+    "v53aq_internal_prebaseline_contract_ready": v53aq.get("internal_prebaseline_contract_ready", "0"),
+    "v53aq_internal_prebaseline_contract_rows": v53aq.get("internal_prebaseline_contract_rows", "0"),
+    "v53aq_internal_prebaseline_contract_ready_rows": v53aq.get("internal_prebaseline_contract_ready_rows", "0"),
     "v53aq_answer_hash_match_rows": v53aq.get("answer_hash_match_rows", "0"),
     "v53aq_coherent_wrong_key_rows": v53aq.get("coherent_wrong_key_rows", "0"),
     "same_query_abgh_ready": v53ap["same_query_set_all_local_systems"],
@@ -984,6 +1030,11 @@ summary = {
     "v54c_output_contract_raw_prompt_forbidden_rows": v54c.get("grounded_generation_output_contract_raw_prompt_forbidden_rows", "0"),
     "v54c_sha256sums_pm_recommended_csv_rows": v54c.get("sha256sums_pm_recommended_csv_rows", "0"),
     "v54c_sha256sums_pm_recommended_csv_ready": v54c.get("sha256sums_pm_recommended_csv_ready", "0"),
+    "v54c_model_visible_leakage_guard_ready": v54c.get("model_visible_leakage_guard_ready", "0"),
+    "v54c_model_visible_forbidden_field_used_rows": v54c.get("model_visible_forbidden_field_used_rows", "0"),
+    "v54c_model_visible_source_locator_rows": v54c.get("model_visible_source_locator_rows", "0"),
+    "v54c_deterministic_source_span_generation_fixture_ready": v54c.get("deterministic_source_span_generation_fixture_ready", "0"),
+    "v54c_real_model_generation_ready": v54c.get("real_model_generation_ready", "1"),
     "v54c_v53ap_evaluator_provenance_ready": v54c.get("v53ap_evaluator_provenance_ready", "0"),
     "v54c_v53ap_evaluator_provenance_rows": v54c.get("v53ap_evaluator_provenance_rows", "0"),
     "v54c_v53ap_answer_eval_separate_rows": v54c.get("v53ap_answer_eval_separate_rows", "0"),
@@ -1018,6 +1069,17 @@ summary = {
     "v58d_dependency_blocker_ready": str(v58d_dependency_blocker_ready),
     "v58d_blind_review_return_intake_ready": v58d["v58d_blind_review_return_intake_ready"],
     "v58d_expected_required_review_rows": v58d["expected_required_review_rows"],
+    "v58d_pm_review_required_system_rows": v58d["pm_review_required_system_rows"],
+    "v58d_pm_review_required_blind_response_rows": v58d["pm_review_required_blind_response_rows"],
+    "v58d_pm_review_required_independent_review_rows": v58d["pm_review_required_independent_review_rows"],
+    "v58d_pm_review_required_adjudication_rows": v58d["pm_review_required_adjudication_rows"],
+    "v58d_pm_review_actual_ready": v58d["pm_review_actual_ready"],
+    "v58d_pm_review_missing_system_rows": v58d["pm_review_missing_system_rows"],
+    "v58d_pm_review_template_gap_rows": v58d["pm_review_template_gap_rows"],
+    "v58d_pm_review_unseen_split_ready": v58d["pm_review_unseen_split_ready"],
+    "v58d_pm_review_source_span_exactness_ready": v58d["pm_review_source_span_exactness_ready"],
+    "v58d_pm_review_unsupported_abstention_ready": v58d["pm_review_unsupported_abstention_ready"],
+    "v58d_pm_review_latency_memory_separate_ready": v58d["pm_review_latency_memory_separate_ready"],
     "v58d_required_blind_review_ready": v58d["required_blind_review_ready"],
     "v58d_required_adjudication_ready": v58d["required_adjudication_ready"],
     "v58d_human_blind_review_ready": v58d["human_blind_review_ready"],
@@ -1070,6 +1132,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53aq_internal_real_adapter_metric_claim_ready={summary['v53aq_internal_real_adapter_metric_claim_ready']}\n"
     f"- v53aq_public_real_system_performance_claim_ready={summary['v53aq_public_real_system_performance_claim_ready']}\n"
     f"- v53aq_selection_question_text_only={summary['v53aq_selection_question_text_only']}\n"
+    f"- v53aq_selection_sanitized_question_only={summary['v53aq_selection_sanitized_question_only']}\n"
+    f"- v53aq_source_locator_in_question_removed_rows={summary['v53aq_source_locator_in_question_removed_rows']}\n"
     f"- v53aq_selection_oracle_field_used={summary['v53aq_selection_oracle_field_used']}\n"
     f"- grounded_generation_outputs_ready={summary['grounded_generation_outputs_ready']}\n"
     f"- v54c_output_contract_rows={summary['v54c_output_contract_rows']}\n"
@@ -1077,6 +1141,11 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v54c_output_contract_raw_prompt_forbidden_rows={summary['v54c_output_contract_raw_prompt_forbidden_rows']}\n"
     f"- v54c_sha256sums_pm_recommended_csv_rows={summary['v54c_sha256sums_pm_recommended_csv_rows']}\n"
     f"- v54c_sha256sums_pm_recommended_csv_ready={summary['v54c_sha256sums_pm_recommended_csv_ready']}\n"
+    f"- v54c_model_visible_leakage_guard_ready={summary['v54c_model_visible_leakage_guard_ready']}\n"
+    f"- v54c_model_visible_forbidden_field_used_rows={summary['v54c_model_visible_forbidden_field_used_rows']}\n"
+    f"- v54c_model_visible_source_locator_rows={summary['v54c_model_visible_source_locator_rows']}\n"
+    f"- v54c_deterministic_source_span_generation_fixture_ready={summary['v54c_deterministic_source_span_generation_fixture_ready']}\n"
+    f"- v54c_real_model_generation_ready={summary['v54c_real_model_generation_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
@@ -1093,6 +1162,10 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v58c_required_blind_response_ready={summary['v58c_required_blind_response_ready']}\n"
     f"- v58d_review_artifact_available={summary['v58d_review_artifact_available']}\n"
     f"- v58d_blind_review_return_intake_ready={summary['v58d_blind_review_return_intake_ready']}\n"
+    f"- v58d_pm_review_required_system_rows={summary['v58d_pm_review_required_system_rows']}\n"
+    f"- v58d_pm_review_required_independent_review_rows={summary['v58d_pm_review_required_independent_review_rows']}\n"
+    f"- v58d_pm_review_required_adjudication_rows={summary['v58d_pm_review_required_adjudication_rows']}\n"
+    f"- v58d_pm_review_actual_ready={summary['v58d_pm_review_actual_ready']}\n"
     f"- v58d_human_blind_review_ready={summary['v58d_human_blind_review_ready']}\n"
     f"- v58_full_blind_eval_ready={summary['v58_full_blind_eval_ready']}\n"
     f"- full_v1_public_demo_ready={summary['full_v1_public_demo_ready']}\n\n"
@@ -1131,6 +1204,8 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v53aq_internal_real_adapter_metric_claim_ready={summary['v53aq_internal_real_adapter_metric_claim_ready']}\n"
     f"- v53aq_public_real_system_performance_claim_ready={summary['v53aq_public_real_system_performance_claim_ready']}\n"
     f"- v53aq_selection_question_text_only={summary['v53aq_selection_question_text_only']}\n"
+    f"- v53aq_selection_sanitized_question_only={summary['v53aq_selection_sanitized_question_only']}\n"
+    f"- v53aq_source_locator_in_question_removed_rows={summary['v53aq_source_locator_in_question_removed_rows']}\n"
     f"- v53aq_selection_oracle_field_used={summary['v53aq_selection_oracle_field_used']}\n"
     f"- v53aq_answer_hash_match_rows={summary['v53aq_answer_hash_match_rows']}\n"
     f"- v53aq_coherent_wrong_key_rows={summary['v53aq_coherent_wrong_key_rows']}\n"
@@ -1141,6 +1216,11 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v54c_output_contract_raw_prompt_forbidden_rows={summary['v54c_output_contract_raw_prompt_forbidden_rows']}\n"
     f"- v54c_sha256sums_pm_recommended_csv_rows={summary['v54c_sha256sums_pm_recommended_csv_rows']}\n"
     f"- v54c_sha256sums_pm_recommended_csv_ready={summary['v54c_sha256sums_pm_recommended_csv_ready']}\n"
+    f"- v54c_model_visible_leakage_guard_ready={summary['v54c_model_visible_leakage_guard_ready']}\n"
+    f"- v54c_model_visible_forbidden_field_used_rows={summary['v54c_model_visible_forbidden_field_used_rows']}\n"
+    f"- v54c_model_visible_source_locator_rows={summary['v54c_model_visible_source_locator_rows']}\n"
+    f"- v54c_deterministic_source_span_generation_fixture_ready={summary['v54c_deterministic_source_span_generation_fixture_ready']}\n"
+    f"- v54c_real_model_generation_ready={summary['v54c_real_model_generation_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_ready={summary['v54c_v53ap_evaluator_provenance_ready']}\n"
     f"- v54c_v53ap_evaluator_provenance_rows={summary['v54c_v53ap_evaluator_provenance_rows']}\n"
     f"- h10_real_label_promotion_ready={summary['h10_real_label_promotion_ready']}\n"
@@ -1169,6 +1249,15 @@ write_csv(summary_csv, list(summary.keys()), [summary])
     f"- v58d_dependency_blocker_ready={summary['v58d_dependency_blocker_ready']}\n"
     f"- v58d_blind_review_return_intake_ready={summary['v58d_blind_review_return_intake_ready']}\n"
     f"- v58d_expected_required_review_rows={summary['v58d_expected_required_review_rows']}\n"
+    f"- v58d_pm_review_required_system_rows={summary['v58d_pm_review_required_system_rows']}\n"
+    f"- v58d_pm_review_required_blind_response_rows={summary['v58d_pm_review_required_blind_response_rows']}\n"
+    f"- v58d_pm_review_required_independent_review_rows={summary['v58d_pm_review_required_independent_review_rows']}\n"
+    f"- v58d_pm_review_required_adjudication_rows={summary['v58d_pm_review_required_adjudication_rows']}\n"
+    f"- v58d_pm_review_actual_ready={summary['v58d_pm_review_actual_ready']}\n"
+    f"- v58d_pm_review_unseen_split_ready={summary['v58d_pm_review_unseen_split_ready']}\n"
+    f"- v58d_pm_review_source_span_exactness_ready={summary['v58d_pm_review_source_span_exactness_ready']}\n"
+    f"- v58d_pm_review_unsupported_abstention_ready={summary['v58d_pm_review_unsupported_abstention_ready']}\n"
+    f"- v58d_pm_review_latency_memory_separate_ready={summary['v58d_pm_review_latency_memory_separate_ready']}\n"
     f"- v58d_human_blind_review_ready={summary['v58d_human_blind_review_ready']}\n"
     f"- v58_full_blind_eval_ready={summary['v58_full_blind_eval_ready']}\n"
     f"- undocumented_local_state_required={summary['undocumented_local_state_required']}\n"
@@ -1230,6 +1319,8 @@ manifest = {
     "v53ap_real_system_performance_claim_ready": as_int(v53ap, "real_system_performance_claim_ready"),
     "v53aq_complete_source_abgh_real_adapter_measured_ready": as_int(v53aq, "v53aq_complete_source_abgh_real_adapter_measured_ready"),
     "v53aq_selection_question_text_only": as_int(v53aq, "selection_question_text_only"),
+    "v53aq_selection_sanitized_question_only": as_int(v53aq, "selection_sanitized_question_only"),
+    "v53aq_source_locator_in_question_removed_rows": as_int(v53aq, "source_locator_in_question_removed_rows"),
     "v53aq_selection_oracle_field_used": as_int(v53aq, "selection_oracle_field_used"),
     "v53aq_expected_answer_oracle_replay": as_int(v53aq, "expected_answer_oracle_replay"),
     "v53aq_deterministic_source_span_adapter_execution": as_int(v53aq, "deterministic_source_span_adapter_execution"),
@@ -1249,6 +1340,11 @@ manifest = {
     "v54c_output_contract_raw_prompt_forbidden_rows": as_int(v54c, "grounded_generation_output_contract_raw_prompt_forbidden_rows"),
     "v54c_sha256sums_pm_recommended_csv_rows": as_int(v54c, "sha256sums_pm_recommended_csv_rows"),
     "v54c_sha256sums_pm_recommended_csv_ready": as_int(v54c, "sha256sums_pm_recommended_csv_ready"),
+    "v54c_model_visible_leakage_guard_ready": as_int(v54c, "model_visible_leakage_guard_ready"),
+    "v54c_model_visible_forbidden_field_used_rows": as_int(v54c, "model_visible_forbidden_field_used_rows"),
+    "v54c_model_visible_source_locator_rows": as_int(v54c, "model_visible_source_locator_rows"),
+    "v54c_deterministic_source_span_generation_fixture_ready": as_int(v54c, "deterministic_source_span_generation_fixture_ready"),
+    "v54c_real_model_generation_ready": as_int(v54c, "real_model_generation_ready"),
     "h10_real_label_acceptance_evidence_rows": as_int(h10, "h10_real_label_acceptance_evidence_rows"),
     "h10_real_label_acceptance_evidence_ready_rows": as_int(h10, "h10_real_label_acceptance_evidence_ready_rows"),
     "h10_real_label_acceptance_evidence_promotion_ready_rows": as_int(h10, "h10_real_label_acceptance_evidence_promotion_ready_rows"),
@@ -1275,6 +1371,17 @@ manifest = {
     "v58d_dependency_blocker_ready": v58d_dependency_blocker_ready,
     "v58d_blind_review_return_intake_ready": as_int(v58d, "v58d_blind_review_return_intake_ready"),
     "v58d_expected_required_review_rows": as_int(v58d, "expected_required_review_rows"),
+    "v58d_pm_review_required_system_rows": as_int(v58d, "pm_review_required_system_rows"),
+    "v58d_pm_review_required_blind_response_rows": as_int(v58d, "pm_review_required_blind_response_rows"),
+    "v58d_pm_review_required_independent_review_rows": as_int(v58d, "pm_review_required_independent_review_rows"),
+    "v58d_pm_review_required_adjudication_rows": as_int(v58d, "pm_review_required_adjudication_rows"),
+    "v58d_pm_review_actual_ready": as_int(v58d, "pm_review_actual_ready"),
+    "v58d_pm_review_missing_system_rows": as_int(v58d, "pm_review_missing_system_rows"),
+    "v58d_pm_review_template_gap_rows": as_int(v58d, "pm_review_template_gap_rows"),
+    "v58d_pm_review_unseen_split_ready": as_int(v58d, "pm_review_unseen_split_ready"),
+    "v58d_pm_review_source_span_exactness_ready": as_int(v58d, "pm_review_source_span_exactness_ready"),
+    "v58d_pm_review_unsupported_abstention_ready": as_int(v58d, "pm_review_unsupported_abstention_ready"),
+    "v58d_pm_review_latency_memory_separate_ready": as_int(v58d, "pm_review_latency_memory_separate_ready"),
     "v58d_required_blind_review_ready": as_int(v58d, "required_blind_review_ready"),
     "v58d_required_adjudication_ready": as_int(v58d, "required_adjudication_ready"),
     "v58d_human_blind_review_ready": as_int(v58d, "human_blind_review_ready"),
@@ -1389,6 +1496,8 @@ pm_pr_core_files = [
     (pr_run_dir / "source_v56/v56_seed_dependency_blocker_rows.csv", "source_pm_pr_claim_slice_gate/source_v56/v56_seed_dependency_blocker_rows.csv", "evidence"),
     (pr_run_dir / "source_v56/V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md", "source_pm_pr_claim_slice_gate/source_v56/V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md", "evidence"),
     (pr_run_dir / "de_30b70b_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv", "evidence"),
+    (pr_run_dir / "de_measured_registry_exclusion_rows.csv", "source_pm_pr_claim_slice_gate/de_measured_registry_exclusion_rows.csv", "evidence"),
+    (pr_run_dir / "v58_real_execution_readiness_rows.csv", "source_pm_pr_claim_slice_gate/v58_real_execution_readiness_rows.csv", "evidence"),
     (pr_run_dir / "v59_one_command_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv", "evidence"),
     (pr_run_dir / "pm_roadmap_requirement_rows.csv", "source_pm_pr_claim_slice_gate/pm_roadmap_requirement_rows.csv", "evidence"),
     (pr_run_dir / "pm_blocker_closure_queue_rows.csv", "source_pm_pr_claim_slice_gate/pm_blocker_closure_queue_rows.csv", "evidence"),
@@ -1396,12 +1505,17 @@ pm_pr_core_files = [
     (pr_run_dir / "pm_blocker_required_artifact_rows.csv", "source_pm_pr_claim_slice_gate/pm_blocker_required_artifact_rows.csv", "evidence"),
     (pr_run_dir / "pm_execution_lock_rows.csv", "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv", "evidence"),
     (pr_run_dir / "pm_external_return_template_rows.csv", "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv", "evidence"),
+    (pr_run_dir / "pm_pr_normalization_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_normalization_rows.csv", "evidence"),
+    (pr_run_dir / "pm_pr_title_body_rows.csv", "source_pm_pr_claim_slice_gate/pm_pr_title_body_rows.csv", "evidence"),
+    (pr_run_dir / "pm_ready_semantic_rows.csv", "source_pm_pr_claim_slice_gate/pm_ready_semantic_rows.csv", "evidence"),
+    (pr_run_dir / "pm_retrieval_leakage_guard_rows.csv", "source_pm_pr_claim_slice_gate/pm_retrieval_leakage_guard_rows.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/pm_h10_real_label_acceptance_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/pm_h10_real_label_acceptance_rows.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/h10_real_label_evidence_template.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/h10_real_label_return_contract_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/h10_real_label_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_acceptance_evidence_rows.csv", "evidence"),
     (pr_run_dir / "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "evidence"),
+    (pr_run_dir / "source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv", "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_foundation_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_pm_acceptance_evidence_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv", "evidence"),
     (pr_run_dir / "source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv", "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv", "evidence"),
@@ -1425,6 +1539,7 @@ pm_pr_core_files = [
     (pr_run_dir / "source_v53aq/abgh_evaluator_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/abgh_evaluator_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/abgh_adapter_trace_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/abgh_adapter_trace_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv", "evidence"),
+    (pr_run_dir / "source_v53aq/abgh_internal_prebaseline_contract_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/abgh_internal_prebaseline_contract_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/routehint_rows.csv", "source_pm_pr_claim_slice_gate/source_v53aq/routehint_rows.csv", "evidence"),
     (pr_run_dir / "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "source_pm_pr_claim_slice_gate/source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md", "boundary"),
     (pr_run_dir / "source_v59e/local_abgh_row_contract_replay_rows.csv", "source_pm_pr_claim_slice_gate/source_v59e/local_abgh_row_contract_replay_rows.csv", "evidence"),
@@ -1623,6 +1738,17 @@ pm_pr_claim_slice_bundle_ready = int(
     and as_int(pr_summary, "tests_only_merge_condition_rows") == 0
     and as_int(pr_summary, "v53_pm_acceptance_evidence_ready_rows") == 10
     and as_int(pr_summary, "v53_pm_acceptance_evidence_tests_only_rows") == 0
+    and as_int(pr_summary, "pm_pr_normalization_rows") == 7
+    and as_int(pr_summary, "pm_pr_normalization_tests_only_rows") == 0
+    and as_int(pr_summary, "pm_pr_title_body_rewrite_ready") == 1
+    and as_int(pr_summary, "pm_ready_semantic_real_model_ready_rows") == 0
+    and as_int(pr_summary, "pm_ready_semantic_release_ready_rows") == 0
+    and as_int(pr_summary, "pm_retrieval_leakage_guard_pass_rows") == 7
+    and as_int(pr_summary, "pm_retrieval_leakage_guard_blocked_rows") == 0
+    and as_int(pr_summary, "de_measured_registry_fixture_registry_rows") == 0
+    and as_int(pr_summary, "de_measured_registry_admission_ready_rows") == 0
+    and as_int(pr_summary, "v58_real_execution_ready_rows") == 0
+    and as_int(pr_summary, "v58_real_execution_fixture_allowed_rows") == 0
     and as_int(pr_summary, "real_release_package_ready") == 0
 )
 
@@ -1670,6 +1796,10 @@ summary["pm_pr_de_30b70b_acceptance_evidence_blocked_rows"] = pr_summary.get("de
 summary["pm_pr_de_30b70b_acceptance_evidence_tests_only_rows"] = pr_summary.get("de_30b70b_acceptance_evidence_tests_only_rows", "0")
 summary["pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows"] = pr_summary.get("de_30b70b_acceptance_evidence_fixture_allowed_rows", "0")
 summary["pm_pr_de_30b70b_acceptance_evidence_approval_rows"] = pr_summary.get("de_30b70b_acceptance_evidence_approval_rows", "0")
+summary["pm_pr_de_measured_registry_exclusion_rows"] = pr_summary.get("de_measured_registry_exclusion_rows", "0")
+summary["pm_pr_de_measured_registry_fixture_registry_rows"] = pr_summary.get("de_measured_registry_fixture_registry_rows", "0")
+summary["pm_pr_de_measured_registry_admission_ready_rows"] = pr_summary.get("de_measured_registry_admission_ready_rows", "0")
+summary["pm_pr_de_measured_registry_blocked_rows"] = pr_summary.get("de_measured_registry_blocked_rows", "0")
 summary["pm_pr_v59_one_command_acceptance_evidence_rows"] = pr_summary.get("v59_one_command_acceptance_evidence_rows", "0")
 summary["pm_pr_v59_one_command_acceptance_evidence_ready_rows"] = pr_summary.get("v59_one_command_acceptance_evidence_ready_rows", "0")
 summary["pm_pr_v59_one_command_acceptance_evidence_blocked_rows"] = pr_summary.get("v59_one_command_acceptance_evidence_blocked_rows", "0")
@@ -1690,6 +1820,23 @@ summary["pm_external_return_template_files"] = str(len(return_template_files))
 summary["pm_external_return_template_fixture_allowed_rows"] = pr_summary["pm_external_return_template_fixture_allowed_rows"]
 summary["pm_external_return_template_approval_rows"] = pr_summary["pm_external_return_template_approval_rows"]
 summary["pm_external_return_template_bundle_ready"] = str(external_return_template_ready)
+summary["pm_pr_normalization_rows"] = pr_summary.get("pm_pr_normalization_rows", "0")
+summary["pm_pr_normalization_split_required_rows"] = pr_summary.get("pm_pr_normalization_split_required_rows", "0")
+summary["pm_pr_normalization_tests_only_rows"] = pr_summary.get("pm_pr_normalization_tests_only_rows", "0")
+summary["pm_pr_title_body_rows"] = pr_summary.get("pm_pr_title_body_rows", "0")
+summary["pm_pr_title_body_rewrite_ready"] = pr_summary.get("pm_pr_title_body_rewrite_ready", "0")
+summary["pm_ready_semantic_rows"] = pr_summary.get("pm_ready_semantic_rows", "0")
+summary["pm_ready_semantic_real_model_ready_rows"] = pr_summary.get("pm_ready_semantic_real_model_ready_rows", "0")
+summary["pm_ready_semantic_release_ready_rows"] = pr_summary.get("pm_ready_semantic_release_ready_rows", "0")
+summary["pm_ready_semantic_logical_100b_contract_fixture_ready"] = pr_summary.get("pm_ready_semantic_logical_100b_contract_fixture_ready", "0")
+summary["pm_ready_semantic_real_100b_inference_ready"] = pr_summary.get("pm_ready_semantic_real_100b_inference_ready", "0")
+summary["pm_retrieval_leakage_guard_rows"] = pr_summary.get("pm_retrieval_leakage_guard_rows", "0")
+summary["pm_retrieval_leakage_guard_pass_rows"] = pr_summary.get("pm_retrieval_leakage_guard_pass_rows", "0")
+summary["pm_retrieval_leakage_guard_blocked_rows"] = pr_summary.get("pm_retrieval_leakage_guard_blocked_rows", "0")
+summary["pm_pr_v58_real_execution_readiness_rows"] = pr_summary.get("v58_real_execution_readiness_rows", "0")
+summary["pm_pr_v58_real_execution_ready_rows"] = pr_summary.get("v58_real_execution_ready_rows", "0")
+summary["pm_pr_v58_real_execution_blocked_rows"] = pr_summary.get("v58_real_execution_blocked_rows", "0")
+summary["pm_pr_v58_real_execution_fixture_allowed_rows"] = pr_summary.get("v58_real_execution_fixture_allowed_rows", "0")
 summary["v58_return_artifact_contract_ready"] = str(v58_return_artifact_contract_ready)
 summary["v58_required_artifact_rows"] = str(len(v58_required_artifact_rows))
 summary["v58_required_artifact_approval_rows"] = str(v58_required_artifact_approval_rows)
@@ -1861,6 +2008,12 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + f"- pm_pr_v53_pm_acceptance_evidence_rows={summary['pm_pr_v53_pm_acceptance_evidence_rows']}\n"
     + f"- pm_pr_v53_pm_acceptance_evidence_ready_rows={summary['pm_pr_v53_pm_acceptance_evidence_ready_rows']}\n"
     + f"- pm_pr_v53_pm_acceptance_evidence_tests_only_rows={summary['pm_pr_v53_pm_acceptance_evidence_tests_only_rows']}\n"
+    + f"- pm_pr_normalization_rows={summary['pm_pr_normalization_rows']}\n"
+    + f"- pm_pr_title_body_rewrite_ready={summary['pm_pr_title_body_rewrite_ready']}\n"
+    + f"- pm_ready_semantic_real_model_ready_rows={summary['pm_ready_semantic_real_model_ready_rows']}\n"
+    + f"- pm_retrieval_leakage_guard_pass_rows={summary['pm_retrieval_leakage_guard_pass_rows']}\n"
+    + f"- pm_pr_de_measured_registry_admission_ready_rows={summary['pm_pr_de_measured_registry_admission_ready_rows']}\n"
+    + f"- pm_pr_v58_real_execution_ready_rows={summary['pm_pr_v58_real_execution_ready_rows']}\n"
     + f"- pm_blocker_closure_packet_files={summary['pm_blocker_closure_packet_files']}\n"
     + f"- pm_execution_lock_rows={summary['pm_execution_lock_rows']}\n"
     + f"- pm_scope_drift_allowed={summary['pm_scope_drift_allowed']}\n"
@@ -1887,6 +2040,12 @@ write_csv(run_dir / "pm_foundation_demo_gate_rows.csv", ["gate", "status", "reas
     + f"- pm_pr_v53_pm_acceptance_evidence_rows={summary['pm_pr_v53_pm_acceptance_evidence_rows']}\n"
     + f"- pm_pr_v53_pm_acceptance_evidence_ready_rows={summary['pm_pr_v53_pm_acceptance_evidence_ready_rows']}\n"
     + f"- pm_pr_v53_pm_acceptance_evidence_tests_only_rows={summary['pm_pr_v53_pm_acceptance_evidence_tests_only_rows']}\n"
+    + f"- pm_pr_normalization_rows={summary['pm_pr_normalization_rows']}\n"
+    + f"- pm_pr_title_body_rewrite_ready={summary['pm_pr_title_body_rewrite_ready']}\n"
+    + f"- pm_ready_semantic_real_model_ready_rows={summary['pm_ready_semantic_real_model_ready_rows']}\n"
+    + f"- pm_retrieval_leakage_guard_pass_rows={summary['pm_retrieval_leakage_guard_pass_rows']}\n"
+    + f"- pm_pr_de_measured_registry_admission_ready_rows={summary['pm_pr_de_measured_registry_admission_ready_rows']}\n"
+    + f"- pm_pr_v58_real_execution_ready_rows={summary['pm_pr_v58_real_execution_ready_rows']}\n"
     + f"- pm_scope_drift_allowed={summary['pm_scope_drift_allowed']}\n"
     + f"- pm_new_scaffold_default_allowed={summary['pm_new_scaffold_default_allowed']}\n"
     + f"- pm_external_return_template_fixture_allowed_rows={summary['pm_external_return_template_fixture_allowed_rows']}\n"
@@ -1930,6 +2089,10 @@ manifest["pm_pr_de_30b70b_acceptance_evidence_blocked_rows"] = as_int(pr_summary
 manifest["pm_pr_de_30b70b_acceptance_evidence_tests_only_rows"] = as_int(pr_summary, "de_30b70b_acceptance_evidence_tests_only_rows")
 manifest["pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows"] = as_int(pr_summary, "de_30b70b_acceptance_evidence_fixture_allowed_rows")
 manifest["pm_pr_de_30b70b_acceptance_evidence_approval_rows"] = as_int(pr_summary, "de_30b70b_acceptance_evidence_approval_rows")
+manifest["pm_pr_de_measured_registry_exclusion_rows"] = as_int(pr_summary, "de_measured_registry_exclusion_rows")
+manifest["pm_pr_de_measured_registry_fixture_registry_rows"] = as_int(pr_summary, "de_measured_registry_fixture_registry_rows")
+manifest["pm_pr_de_measured_registry_admission_ready_rows"] = as_int(pr_summary, "de_measured_registry_admission_ready_rows")
+manifest["pm_pr_de_measured_registry_blocked_rows"] = as_int(pr_summary, "de_measured_registry_blocked_rows")
 manifest["pm_pr_v59_one_command_acceptance_evidence_rows"] = as_int(pr_summary, "v59_one_command_acceptance_evidence_rows")
 manifest["pm_pr_v59_one_command_acceptance_evidence_ready_rows"] = as_int(pr_summary, "v59_one_command_acceptance_evidence_ready_rows")
 manifest["pm_pr_v59_one_command_acceptance_evidence_blocked_rows"] = as_int(pr_summary, "v59_one_command_acceptance_evidence_blocked_rows")
@@ -1946,6 +2109,23 @@ manifest["pm_pr_v53_direct_content_snapshot_rows"] = as_int(pr_summary, "v53_fou
 manifest["pm_pr_v53_pm_acceptance_evidence_rows"] = as_int(pr_summary, "v53_pm_acceptance_evidence_rows")
 manifest["pm_pr_v53_pm_acceptance_evidence_ready_rows"] = as_int(pr_summary, "v53_pm_acceptance_evidence_ready_rows")
 manifest["pm_pr_v53_pm_acceptance_evidence_tests_only_rows"] = as_int(pr_summary, "v53_pm_acceptance_evidence_tests_only_rows")
+manifest["pm_pr_normalization_rows"] = as_int(pr_summary, "pm_pr_normalization_rows")
+manifest["pm_pr_normalization_split_required_rows"] = as_int(pr_summary, "pm_pr_normalization_split_required_rows")
+manifest["pm_pr_normalization_tests_only_rows"] = as_int(pr_summary, "pm_pr_normalization_tests_only_rows")
+manifest["pm_pr_title_body_rows"] = as_int(pr_summary, "pm_pr_title_body_rows")
+manifest["pm_pr_title_body_rewrite_ready"] = as_int(pr_summary, "pm_pr_title_body_rewrite_ready")
+manifest["pm_ready_semantic_rows"] = as_int(pr_summary, "pm_ready_semantic_rows")
+manifest["pm_ready_semantic_real_model_ready_rows"] = as_int(pr_summary, "pm_ready_semantic_real_model_ready_rows")
+manifest["pm_ready_semantic_release_ready_rows"] = as_int(pr_summary, "pm_ready_semantic_release_ready_rows")
+manifest["pm_ready_semantic_logical_100b_contract_fixture_ready"] = as_int(pr_summary, "pm_ready_semantic_logical_100b_contract_fixture_ready")
+manifest["pm_ready_semantic_real_100b_inference_ready"] = as_int(pr_summary, "pm_ready_semantic_real_100b_inference_ready")
+manifest["pm_retrieval_leakage_guard_rows"] = as_int(pr_summary, "pm_retrieval_leakage_guard_rows")
+manifest["pm_retrieval_leakage_guard_pass_rows"] = as_int(pr_summary, "pm_retrieval_leakage_guard_pass_rows")
+manifest["pm_retrieval_leakage_guard_blocked_rows"] = as_int(pr_summary, "pm_retrieval_leakage_guard_blocked_rows")
+manifest["pm_pr_v58_real_execution_readiness_rows"] = as_int(pr_summary, "v58_real_execution_readiness_rows")
+manifest["pm_pr_v58_real_execution_ready_rows"] = as_int(pr_summary, "v58_real_execution_ready_rows")
+manifest["pm_pr_v58_real_execution_blocked_rows"] = as_int(pr_summary, "v58_real_execution_blocked_rows")
+manifest["pm_pr_v58_real_execution_fixture_allowed_rows"] = as_int(pr_summary, "v58_real_execution_fixture_allowed_rows")
 manifest["pm_blocker_closure_packet_files"] = len(blocker_packet_files)
 manifest["pm_execution_lock_rows"] = as_int(pr_summary, "pm_execution_lock_rows")
 manifest["pm_scope_drift_allowed"] = as_int(pr_summary, "pm_scope_drift_allowed")
@@ -1975,7 +2155,13 @@ manifest["v58_blind_eval_acceptance_evidence_rows_sha256"] = sha256(run_dir / "v
 manifest["pm_pr_v56_replay_acceptance_evidence_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv")
 manifest["pm_pr_v56_seed_dependency_blocker_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/source_v56/v56_seed_dependency_blocker_rows.csv")
 manifest["pm_pr_de_30b70b_acceptance_evidence_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv")
+manifest["pm_pr_de_measured_registry_exclusion_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/de_measured_registry_exclusion_rows.csv")
+manifest["pm_pr_v58_real_execution_readiness_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/v58_real_execution_readiness_rows.csv")
 manifest["pm_pr_v59_one_command_acceptance_evidence_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv")
+manifest["pm_pr_normalization_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/pm_pr_normalization_rows.csv")
+manifest["pm_pr_title_body_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/pm_pr_title_body_rows.csv")
+manifest["pm_ready_semantic_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/pm_ready_semantic_rows.csv")
+manifest["pm_retrieval_leakage_guard_rows_sha256"] = sha256(run_dir / "source_pm_pr_claim_slice_gate/pm_retrieval_leakage_guard_rows.csv")
 manifest["public_source_snapshot_replay_rows_sha256"] = sha256(run_dir / "public_source_snapshot_replay_rows.csv")
 manifest["source_summary_sha256"]["pm_pr_claim_slice_gate"] = sha256(pr_summary_csv)
 manifest["pm_pr_claim_slice_gate_manifest_sha256"] = sha256(pr_run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json")

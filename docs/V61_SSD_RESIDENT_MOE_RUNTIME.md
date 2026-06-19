@@ -789,13 +789,15 @@ Pass condition:
 ### v61ab Hotset Tensor Tile Quant Probe
 
 Run bounded numeric dot-tile probes over the sampled real-checkpoint BF16 tensor
-slices and compare q8/q4 dequantized dot probes, without executing model
-generation.
+slices, compare PyTorch CPU matvec reference parity, and compare q8/q4
+dequantized dot probes, without executing model generation.
 
 Outputs:
 
 - `hotset_tensor_tile_probe_rows.csv`
 - `hotset_tensor_tile_sample_trace_rows.csv`
+- `hotset_tensor_tile_torch_parity_rows.csv`
+- `expert_ffn_forward_parity_rows.csv`
 - `hotset_tensor_tile_quant_metric_rows.csv`
 - `runtime_gap_rows.csv`
 - `V61AB_HOTSET_TENSOR_TILE_QUANT_BOUNDARY.md`
@@ -806,12 +808,16 @@ Pass condition:
 - 128 bounded tensor tile probes run over 524288 BF16 values
 - the probes cover 120 MoE tile rows and 8 embedding tile rows
 - 128/128 baseline dot rows are finite
+- 128/128 PyTorch CPU matvec parity rows pass over real-checkpoint BF16 tiles
 - 128/128 q8 and q4 dequantized dot rows are finite
+- optional local safetensors-root expert FFN parity execution is typed:
+  fixture execution can pass in smoke, but official real model execution remains
+  blocked until a real local Mixtral checkpoint root is supplied
 - q8/q4 quantized dot error metrics are recorded without committing checkpoint
   payload bytes to the repository
-- full checkpoint materialization, full safetensors page-hash coverage, real
-  generation, near-frontier, production-latency, and release claims remain
-  blocked
+- full checkpoint materialization, full safetensors page-hash coverage, expert
+  FFN parity, MoE block parity, logits parity, real generation, near-frontier,
+  production-latency, and release claims remain blocked
 
 ### v61ac Hotset Token Budget Replay
 
@@ -2906,7 +2912,16 @@ It emits:
 Verified current summary:
 
 - `v61j_one_command_ssd_resident_demo_ready=1`
-- all v61a-v61j primary ready flags are `1`
+- all v61a-v61j contract/fixture ready flags are `1`
+- `logical_100b_contract_fixture_ready=1`
+- `real_100b_inference_ready=0`
+- `contract_ready=1`
+- `fixture_execution_ready=1`
+- `real_model_execution_ready=0`
+- `heldout_metric_ready=0`
+- `human_review_ready=0`
+- `independent_reproduction_ready=0`
+- `release_ready=0`
 - `ssd_resident_active_sparse_path_proven=1`
 - `ssd_resident_runtime_seed_ready=1`
 - `no_ram_weight_residency_ready=1`
@@ -2923,7 +2938,7 @@ Verified current summary:
 - `near_frontier_claim_ready=0`
 - `real_release_package_ready=0`
 
-This closes the local SSD-resident active-sparse runtime prototype and one-command artifact chain. It does not materialize a real 100B open-weight checkpoint, does not prove GPU speedup, does not prove near-frontier local inference, and is not a release package.
+This closes the local SSD-resident active-sparse runtime prototype and one-command artifact chain as a logical contract fixture. It does not materialize a real 100B open-weight checkpoint, does not run real 100B inference, does not prove GPU speedup, does not prove near-frontier local inference, and is not a release package.
 
 ## Current Real-Model Manifest
 
@@ -4726,7 +4741,7 @@ without weakening the boundary:
 12. Closed as v61y sampled hotset verifier: materialize the 16 sampled hotset pages outside the repository and verify local/readback hashes while keeping full checkpoint materialization and real generation blocked.
 13. Closed as v61z sampled hotset direct-I/O replay: read the 16 local sampled hotset pages with O_DIRECT, verify hashes, and record latency/throughput while keeping full checkpoint materialization and real generation blocked.
 14. Closed as v61aa sampled hotset tensor-slice verifier: interpret the 16 local pages as BF16 tensor segments, record finite sampled stats, and keep real generation blocked.
-15. Closed as v61ab sampled hotset tensor-tile quant probe: run bounded BF16/q8/q4 dot-tile probes over the sampled tensor slices, record finite numeric rows, and keep real generation blocked.
+15. Closed as v61ab sampled hotset tensor-tile quant probe: run bounded BF16/q8/q4 dot-tile probes over the sampled tensor slices, add PyTorch CPU matvec parity rows, add an optional local safetensors-root expert FFN parity executor with typed fixture/real readiness, record finite numeric rows, and keep real expert FFN/MoE/logits parity plus real generation blocked until real local checkpoint evidence is supplied.
 16. Closed as v61ac sampled hotset token-budget replay: bind v61x source-bound rows to v61z direct-I/O latency and v61ab tile probes, record bounded per-token budgets, and keep real generation blocked.
 17. Closed as v61ad KV + weight token-budget replay: bind v61ac token rows to v61m KV context profiles, record combined VRAM-hot/NVMe-cold budget rows, and keep full-KV-in-VRAM and real generation blocked.
 18. Closed as v61ae real generation admission gate: bind v61ad/v53r/v61r/v61t/v61w into 1000 complete-source generation candidates, admit 0 rows, and keep source-review/materialization/full-page-hash blockers explicit, with `V61AE_WAREHOUSE_ROOT` refreshing target-bound source evidence.

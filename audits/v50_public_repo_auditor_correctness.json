@@ -1,0 +1,69 @@
+{
+  "schema_version": "v50_auditor_correctness.v1",
+  "policy": {
+    "summary_ready_claim_present": true,
+    "artifact_replay_ready": false,
+    "auditor_correctness_merge_ready": false,
+    "implicit_public_refresh_allowed": false,
+    "network_required_to_regenerate": true
+  },
+  "required_artifacts": [
+    {
+      "artifact_id": "source-snapshot-rows",
+      "path": "results/v50_public_repo_auditor_3repo/audit_001/public_repo_source_snapshot_rows.csv",
+      "required_for_merge": true
+    },
+    {
+      "artifact_id": "audit-case-rows",
+      "path": "results/v50_public_repo_auditor_3repo/audit_001/public_repo_audit_case_rows.csv",
+      "required_for_merge": true
+    },
+    {
+      "artifact_id": "source-span-rows",
+      "path": "results/v50_public_repo_auditor_3repo/audit_001/public_repo_source_span_rows.csv",
+      "required_for_merge": true
+    },
+    {
+      "artifact_id": "guard-negative-rows",
+      "path": "results/v50_public_repo_auditor_3repo/audit_001/guard_negative_rows.csv",
+      "required_for_merge": true
+    },
+    {
+      "artifact_id": "commercial-return-query-set",
+      "path": "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/query_set.csv",
+      "required_for_merge": true
+    },
+    {
+      "artifact_id": "commercial-return-poc-results",
+      "path": "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/poc_result_rows.csv",
+      "required_for_merge": true
+    },
+    {
+      "artifact_id": "commercial-return-audit-trail",
+      "path": "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/audit_trail.csv",
+      "required_for_merge": true
+    },
+    {
+      "artifact_id": "sha256-manifest",
+      "path": "results/v50_public_repo_auditor_3repo/audit_001/sha256_manifest.csv",
+      "required_for_merge": true
+    }
+  ],
+  "claim_boundaries": [
+    {
+      "claim_id": "summary-ready-is-not-replay",
+      "allowed": "The v50 summary/decision files currently record a ready claim.",
+      "blocked": "Mergeable auditor correctness is blocked until row artifacts and sha256 manifest are replayable."
+    },
+    {
+      "claim_id": "no-implicit-public-refresh",
+      "allowed": "Existing local artifacts may be verified without network.",
+      "blocked": "Regenerating missing v50 artifacts requires explicit approval because the runner fetches public GitHub repositories."
+    },
+    {
+      "claim_id": "auditor-correctness-boundary",
+      "allowed": "v50 can be described as a public-repo auditor correctness contract with required evidence listed.",
+      "blocked": "Do not claim v50 auditor correctness merge readiness, human review completion, or release readiness while artifact_replay_ready=false."
+    }
+  ]
+}

@@ -87,6 +87,7 @@ for prefix in [
 copy_if_exists(results / "v61f_predictive_prefetch" / "prefetch_001" / "prefetch_plan_rows.csv", "source_routehint/prefetch_plan_rows.csv")
 copy_if_exists(results / "v61f_predictive_prefetch" / "prefetch_001" / "prefetch_execution_rows.csv", "source_routehint/prefetch_execution_rows.csv")
 copy_if_exists(results / "v61i_100b_moe_active_sparse_run" / "moe_001" / "moe_quality_rows.csv", "source_v61i/moe_quality_rows.csv")
+copy_if_exists(results / "v61i_100b_moe_active_sparse_run" / "moe_001" / "moe_readiness_semantic_rows.csv", "source_v61i/moe_readiness_semantic_rows.csv")
 copy_if_exists(entrypoint, "one_command_entrypoint.sh")
 
 v61e = source_summaries["v61e_expert_router"]
@@ -174,6 +175,15 @@ summary = {
     "ssd_resident_active_sparse_path_proven": "1",
     "ram_resident_full_model_fallback_rows": "0",
     "logical_100b_moe_contract_ready": v61i["logical_100b_moe_contract_ready"],
+    "logical_100b_contract_fixture_ready": v61i["logical_100b_contract_fixture_ready"],
+    "real_100b_inference_ready": v61i["real_100b_inference_ready"],
+    "contract_ready": v61i["contract_ready"],
+    "fixture_execution_ready": v61i["fixture_execution_ready"],
+    "real_model_execution_ready": v61i["real_model_execution_ready"],
+    "heldout_metric_ready": v61i["heldout_metric_ready"],
+    "human_review_ready": v61i["human_review_ready"],
+    "independent_reproduction_ready": v61i["independent_reproduction_ready"],
+    "release_ready": v61i["release_ready"],
     "real_100b_open_weight_materialized": "0",
     "near_frontier_claim_ready": "0",
     "real_release_package_ready": "0",
@@ -203,6 +213,15 @@ manifest = {
     "v61j_one_command_ssd_resident_demo_ready": 1,
     "ssd_resident_active_sparse_path_proven": 1,
     "ram_resident_full_model_fallback_rows": 0,
+    "logical_100b_contract_fixture_ready": int(v61i["logical_100b_contract_fixture_ready"]),
+    "real_100b_inference_ready": int(v61i["real_100b_inference_ready"]),
+    "contract_ready": int(v61i["contract_ready"]),
+    "fixture_execution_ready": int(v61i["fixture_execution_ready"]),
+    "real_model_execution_ready": int(v61i["real_model_execution_ready"]),
+    "heldout_metric_ready": int(v61i["heldout_metric_ready"]),
+    "human_review_ready": int(v61i["human_review_ready"]),
+    "independent_reproduction_ready": int(v61i["independent_reproduction_ready"]),
+    "release_ready": int(v61i["release_ready"]),
     "near_frontier_claim_ready": 0,
     "real_release_package_ready": 0,
     "route_jump_rows": 0,
@@ -213,6 +232,15 @@ manifest = {
     "This artifact bundles the measured v61a-v61i chain behind one reproducible local command. It proves the SSD-resident active-sparse path over the prepared v61 page store and does not silently fall back to RAM-resident full-model inference.\n\n"
     "- one_command_entrypoint=./examples/v61_ssd_resident_moe_demo.sh\n"
     "- ssd_resident_active_sparse_path_proven=1\n"
+    "- logical_100b_contract_fixture_ready=1\n"
+    "- real_100b_inference_ready=0\n"
+    "- contract_ready=1\n"
+    "- fixture_execution_ready=1\n"
+    "- real_model_execution_ready=0\n"
+    "- heldout_metric_ready=0\n"
+    "- human_review_ready=0\n"
+    "- independent_reproduction_ready=0\n"
+    "- release_ready=0\n"
     "- ram_resident_full_model_fallback_rows=0\n"
     "- real_100b_open_weight_materialized=0\n"
     "- near_frontier_claim_ready=0\n"
@@ -241,6 +269,8 @@ artifact_rels = [
 ]
 if (run_dir / "one_command_entrypoint.sh").is_file():
     artifact_rels.append("one_command_entrypoint.sh")
+if (run_dir / "source_v61i" / "moe_readiness_semantic_rows.csv").is_file():
+    artifact_rels.append("source_v61i/moe_readiness_semantic_rows.csv")
 sha_rows = [{"path": rel, "sha256": sha256(run_dir / rel), "bytes": (run_dir / rel).stat().st_size} for rel in artifact_rels]
 write_csv(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], sha_rows)
 

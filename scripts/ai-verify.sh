@@ -10,6 +10,57 @@ bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh script
 
 echo "==> json"
 python3 -m json.tool opencode.json >/dev/null
+if [ -f schemas/pipeline.schema.json ]; then
+  python3 -m json.tool schemas/pipeline.schema.json >/dev/null
+fi
+if [ -f schemas/pr_split.schema.json ]; then
+  python3 -m json.tool schemas/pr_split.schema.json >/dev/null
+fi
+if [ -f schemas/typed_readiness.schema.json ]; then
+  python3 -m json.tool schemas/typed_readiness.schema.json >/dev/null
+fi
+if [ -f schemas/leakage_contract.schema.json ]; then
+  python3 -m json.tool schemas/leakage_contract.schema.json >/dev/null
+fi
+if [ -f schemas/baseline_admission.schema.json ]; then
+  python3 -m json.tool schemas/baseline_admission.schema.json >/dev/null
+fi
+if [ -f schemas/v50_auditor_correctness.schema.json ]; then
+  python3 -m json.tool schemas/v50_auditor_correctness.schema.json >/dev/null
+fi
+if [ -f schemas/v53_source_benchmark.schema.json ]; then
+  python3 -m json.tool schemas/v53_source_benchmark.schema.json >/dev/null
+fi
+if [ -f schemas/v58_blind_eval.schema.json ]; then
+  python3 -m json.tool schemas/v58_blind_eval.schema.json >/dev/null
+fi
+if [ -f schemas/v61_one_token_path.schema.json ]; then
+  python3 -m json.tool schemas/v61_one_token_path.schema.json >/dev/null
+fi
+if [ -f pr_slices/pr2.json ]; then
+  python3 -m json.tool pr_slices/pr2.json >/dev/null
+fi
+if [ -f readiness/typed_ready.json ]; then
+  python3 -m json.tool readiness/typed_ready.json >/dev/null
+fi
+if [ -f leakage/retrieval_model_visible.json ]; then
+  python3 -m json.tool leakage/retrieval_model_visible.json >/dev/null
+fi
+if [ -f baselines/de_30b70b_real.json ]; then
+  python3 -m json.tool baselines/de_30b70b_real.json >/dev/null
+fi
+if [ -f audits/v50_public_repo_auditor_correctness.json ]; then
+  python3 -m json.tool audits/v50_public_repo_auditor_correctness.json >/dev/null
+fi
+if [ -f benchmarks/v53_source_bound_freeze.json ]; then
+  python3 -m json.tool benchmarks/v53_source_bound_freeze.json >/dev/null
+fi
+if [ -f v58/blind_eval_real.json ]; then
+  python3 -m json.tool v58/blind_eval_real.json >/dev/null
+fi
+if [ -f v61/one_token_path.json ]; then
+  python3 -m json.tool v61/one_token_path.json >/dev/null
+fi
 
 echo "==> python syntax"
 python_files="$(find . \
@@ -65,5 +116,95 @@ test -f docs/ai/prompts/opencode_worker_slice.md
 test -f docs/ai/prompts/cursor_worker_slice.md
 test -x scripts/ai-worker-cursor.sh
 test -x scripts/ai-worker-opencode.sh
+
+if [ -x tools/verify_artifact.py ]; then
+  if [ -f pr_slices/pr2.json ]; then
+    tools/verify_artifact.py pr-split pr_slices/pr2.json >/dev/null
+  fi
+  if [ -f readiness/typed_ready.json ]; then
+    if [ -f results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv ]; then
+      tools/verify_artifact.py typed-readiness readiness/typed_ready.json \
+        --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv >/dev/null
+    else
+      tools/verify_artifact.py typed-readiness readiness/typed_ready.json >/dev/null
+    fi
+  fi
+  if [ -f leakage/retrieval_model_visible.json ]; then
+    if [ -f results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_retrieval_leakage_guard_rows.csv ]; then
+      tools/verify_artifact.py leakage leakage/retrieval_model_visible.json \
+        --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_retrieval_leakage_guard_rows.csv >/dev/null
+    else
+      tools/verify_artifact.py leakage leakage/retrieval_model_visible.json >/dev/null
+    fi
+  fi
+  if [ -f baselines/de_30b70b_real.json ]; then
+    if [ -f results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv ] &&
+       [ -f results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv ]; then
+      tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json \
+        --measured-registry-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv \
+        --acceptance-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv >/dev/null
+    else
+      tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json >/dev/null
+    fi
+  fi
+  if [ -f audits/v50_public_repo_auditor_correctness.json ]; then
+    if [ -f results/v50_public_repo_auditor_3repo_summary.csv ] &&
+       [ -f results/v50_public_repo_auditor_3repo_decision.csv ]; then
+      tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json \
+        --summary results/v50_public_repo_auditor_3repo_summary.csv \
+        --decision results/v50_public_repo_auditor_3repo_decision.csv >/dev/null
+    else
+      tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json >/dev/null
+    fi
+  fi
+  if [ -f benchmarks/v53_source_bound_freeze.json ]; then
+    if [ -f results/v53i_complete_source_query_instantiation_summary.csv ] &&
+       [ -f results/v53t_complete_source_audit_readiness_gate_summary.csv ] &&
+       [ -f results/v53ap_complete_source_abgh_same_query_measured_summary.csv ] &&
+       [ -f results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv ] &&
+       [ -f results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv ]; then
+      tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json \
+        --v53i-summary results/v53i_complete_source_query_instantiation_summary.csv \
+        --v53t-summary results/v53t_complete_source_audit_readiness_gate_summary.csv \
+        --v53ap-summary results/v53ap_complete_source_abgh_same_query_measured_summary.csv \
+        --v53aq-summary results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv \
+        --v1-exit-ledger results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv >/dev/null
+    else
+      tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json >/dev/null
+    fi
+  fi
+  if [ -f v58/blind_eval_real.json ]; then
+    if [ -f results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv ] &&
+       [ -f results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_required_artifact_rows.csv ] &&
+       [ -f results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_return_template_rows.csv ]; then
+      tools/verify_artifact.py v58-blind-eval v58/blind_eval_real.json \
+        --readiness-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv \
+        --artifact-ledger results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_required_artifact_rows.csv \
+        --template-ledger results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_return_template_rows.csv >/dev/null
+    else
+      tools/verify_artifact.py v58-blind-eval v58/blind_eval_real.json >/dev/null
+    fi
+  fi
+  if [ -f v61/one_token_path.json ]; then
+    if [ -f results/v61aa_hotset_tensor_slice_verifier_summary.csv ] &&
+       [ -f results/v61ab_hotset_tensor_tile_quant_probe_summary.csv ]; then
+      tools/verify_artifact.py v61-one-token v61/one_token_path.json \
+        --v61aa-summary results/v61aa_hotset_tensor_slice_verifier_summary.csv \
+        --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv >/dev/null
+    else
+      tools/verify_artifact.py v61-one-token v61/one_token_path.json >/dev/null
+    fi
+  fi
+  pipeline_files=""
+  for pipeline_file in pipelines/v52.yaml pipelines/v53.yaml pipelines/v58.yaml pipelines/v61.yaml; do
+    if [ -f "$pipeline_file" ]; then
+      pipeline_files="$pipeline_files $pipeline_file"
+    fi
+  done
+  if [ -n "$pipeline_files" ]; then
+    # shellcheck disable=SC2086
+    tools/verify_artifact.py pipeline $pipeline_files >/dev/null
+  fi
+fi
 
 echo "verify ok"

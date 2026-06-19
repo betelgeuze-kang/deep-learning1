@@ -24,10 +24,7 @@ V53I_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53i_complete_source_query_inst
 V52Y_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v52y_f_optional_final_policy.sh" >/dev/null
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$SUPPLIED_DIR" <<'PY'
-import csv
-import hashlib
 import json
-import shutil
 import sys
 from collections import Counter
 from datetime import datetime, timezone
@@ -56,36 +53,14 @@ SYSTEMS = [
 CORE_SYSTEMS = {system_id for system_id, _, requirement, _ in SYSTEMS if requirement == "required-core"}
 ALL_SYSTEMS = {system_id for system_id, _, _, _ in SYSTEMS}
 
+sys.path.insert(0, str(root))
+from tools.pipeline_lib import copy_into, read_csv, sha256_file, sha256_text, write_csv  # noqa: E402
 
-def sha256(path):
-    h = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            h.update(chunk)
-    return "sha256:" + h.hexdigest()
-
-
-def sha256_text(text):
-    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def write_csv(path, fieldnames, rows):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
-        writer.writeheader()
-        writer.writerows(rows)
-
-
-def read_csv(path):
-    with path.open(newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
+sha256 = sha256_file
 
 
 def copy(src, rel):
-    dst = run_dir / rel
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dst)
+    copy_into(src, run_dir / rel)
 
 
 def safe_int(value, default=0):

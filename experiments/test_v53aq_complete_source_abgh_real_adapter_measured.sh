@@ -20,7 +20,7 @@ run_dir = Path(sys.argv[1])
 summary_csv = Path(sys.argv[2])
 decision_csv = Path(sys.argv[3])
 SYSTEMS = {"A", "B", "G", "H"}
-FORBIDDEN_SELECTION_FIELDS = "query_id,expected_answer,expected_answer_sha256,source_span_id,source_path,source_line_start,source_line_end"
+FORBIDDEN_SELECTION_FIELDS = "query_id,expected_answer,expected_answer_sha256,expected_behavior,source_span_id,source_path,source_line_start,source_line_end,source_file_sha256,source_git_blob_sha,audit_type,negative_or_abstain"
 
 
 def sha256(path):
@@ -64,16 +64,22 @@ expected = {
     "same_query_set_all_local_systems": "1",
     "same_query_internal_prebaseline_rows": "1000",
     "same_query_internal_prebaseline_rows_ready": "1",
+    "internal_prebaseline_contract_rows": "4",
+    "internal_prebaseline_contract_ready_rows": "4",
+    "internal_prebaseline_contract_blocked_rows": "0",
+    "internal_prebaseline_contract_ready": "1",
     "same_source_manifest_all_local_systems": "1",
     "same_evaluator_contract_all_local_systems": "1",
     "same_resource_contract_all_local_systems": "1",
-    "answer_hash_match_rows": "3713",
-    "citation_location_match_rows": "3713",
-    "source_span_id_match_rows": "1858",
-    "wrong_answer_rows": "287",
-    "coherent_wrong_key_rows": "287",
+    "answer_hash_match_rows": "84",
+    "citation_location_match_rows": "84",
+    "source_span_id_match_rows": "28",
+    "wrong_answer_rows": "3916",
+    "coherent_wrong_key_rows": "3916",
     "selection_question_text_only": "1",
-    "selection_allowed_fields": "question",
+    "selection_sanitized_question_only": "1",
+    "source_locator_in_question_removed_rows": "4000",
+    "selection_allowed_fields": "sanitized_question",
     "selection_forbidden_fields": FORBIDDEN_SELECTION_FIELDS,
     "selection_oracle_field_used": "0",
     "source_span_oracle_selection_used": "0",
@@ -117,6 +123,7 @@ required_files = [
     "abgh_wrong_answer_guard_rows.csv",
     "abgh_resource_rows.csv",
     "abgh_same_query_internal_prebaseline_rows.csv",
+    "abgh_internal_prebaseline_contract_rows.csv",
     "route_memory_rows.csv",
     "routehint_rows.csv",
     "abgh_system_metric_rows.csv",
@@ -140,8 +147,10 @@ if len(query_ids) != 1000:
     raise SystemExit("v53aq should bind 1000 unique v53i queries")
 
 selection_contract = {row["field_name"]: row for row in read_csv(run_dir / "adapter_selection_contract_rows.csv")}
-if selection_contract.get("question", {}).get("selection_allowed") != "1":
-    raise SystemExit("v53aq adapter selection must allow question text")
+if selection_contract.get("sanitized_question", {}).get("selection_allowed") != "1":
+    raise SystemExit("v53aq adapter selection must allow sanitized question text")
+if selection_contract.get("question", {}).get("selection_allowed") != "0":
+    raise SystemExit("v53aq adapter selection must forbid raw question text with source locators")
 for field in FORBIDDEN_SELECTION_FIELDS.split(","):
     row = selection_contract.get(field)
     if not row or row["selection_allowed"] != "0":
@@ -151,10 +160,12 @@ system_rows = {row["system_id"]: row for row in read_csv(run_dir / "abgh_system_
 if set(system_rows) != SYSTEMS:
     raise SystemExit("v53aq should cover A/B/G/H systems")
 for system_id, row in system_rows.items():
-    if row["execution_mode"] != "query-text-only-local-adapter":
+    if row["execution_mode"] != "sanitized-question-only-local-adapter":
         raise SystemExit(f"v53aq execution mode mismatch for {system_id}")
-    if row["selection_allowed_fields"] != "question" or row["selection_forbidden_fields"] != FORBIDDEN_SELECTION_FIELDS:
+    if row["selection_allowed_fields"] != "sanitized_question" or row["selection_forbidden_fields"] != FORBIDDEN_SELECTION_FIELDS:
         raise SystemExit(f"v53aq selection contract mismatch for {system_id}")
+    if row["source_locator_in_question_removed"] != "1":
+        raise SystemExit(f"v53aq should remove source locators from selection input for {system_id}")
     for field in [
         "expected_answer_oracle_replay",
         "deterministic_source_span_adapter_execution",
@@ -180,6 +191,7 @@ resources = read_csv(run_dir / "abgh_resource_rows.csv")
 route_memory = read_csv(run_dir / "route_memory_rows.csv")
 hints = read_csv(run_dir / "routehint_rows.csv")
 prebaseline = read_csv(run_dir / "abgh_same_query_internal_prebaseline_rows.csv")
+contract_rows = {row["system_id"]: row for row in read_csv(run_dir / "abgh_internal_prebaseline_contract_rows.csv")}
 metrics = {row["system_id"]: row for row in read_csv(run_dir / "abgh_system_metric_rows.csv")}
 
 for table_name, rows in [
@@ -199,10 +211,10 @@ for table_name, rows in [
             raise SystemExit(f"v53aq {table_name} should cover every query for {system_id}")
 
 expected_metric_rows = {
-    "A": {"answer_hash_match_rows": "713", "citation_location_match_rows": "713", "source_span_id_match_rows": "367", "wrong_answer_rows": "287", "coherent_wrong_key_rows": "287", "routehint_rows": "0"},
-    "B": {"answer_hash_match_rows": "1000", "citation_location_match_rows": "1000", "source_span_id_match_rows": "497", "wrong_answer_rows": "0", "coherent_wrong_key_rows": "0", "routehint_rows": "0"},
-    "G": {"answer_hash_match_rows": "1000", "citation_location_match_rows": "1000", "source_span_id_match_rows": "497", "wrong_answer_rows": "0", "coherent_wrong_key_rows": "0", "routehint_rows": "1000"},
-    "H": {"answer_hash_match_rows": "1000", "citation_location_match_rows": "1000", "source_span_id_match_rows": "497", "wrong_answer_rows": "0", "coherent_wrong_key_rows": "0", "routehint_rows": "1000"},
+    "A": {"answer_hash_match_rows": "21", "citation_location_match_rows": "21", "source_span_id_match_rows": "7", "wrong_answer_rows": "979", "coherent_wrong_key_rows": "979", "routehint_rows": "0"},
+    "B": {"answer_hash_match_rows": "21", "citation_location_match_rows": "21", "source_span_id_match_rows": "7", "wrong_answer_rows": "979", "coherent_wrong_key_rows": "979", "routehint_rows": "0"},
+    "G": {"answer_hash_match_rows": "21", "citation_location_match_rows": "21", "source_span_id_match_rows": "7", "wrong_answer_rows": "979", "coherent_wrong_key_rows": "979", "routehint_rows": "1000"},
+    "H": {"answer_hash_match_rows": "21", "citation_location_match_rows": "21", "source_span_id_match_rows": "7", "wrong_answer_rows": "979", "coherent_wrong_key_rows": "979", "routehint_rows": "1000"},
 }
 for system_id, expected_values in expected_metric_rows.items():
     row = metrics.get(system_id)
@@ -220,6 +232,8 @@ for system_id, expected_values in expected_metric_rows.items():
         "evaluator_rows": "1000",
         "adapter_trace_rows": "1000",
         "selection_question_text_only": "1",
+        "selection_sanitized_question_only": "1",
+        "source_locator_in_question_removed_rows": "1000",
         "selection_oracle_field_used": "0",
         "expected_answer_oracle_replay_rows": "0",
         "deterministic_source_span_adapter_rows": "0",
@@ -232,12 +246,57 @@ for system_id, expected_values in expected_metric_rows.items():
         if row.get(field) != value:
             raise SystemExit(f"v53aq metric {system_id}.{field}: expected {value}, got {row.get(field)}")
 
+if set(contract_rows) != SYSTEMS:
+    raise SystemExit("v53aq internal pre-baseline contract should cover A/B/G/H")
+for system_id, expected_values in expected_metric_rows.items():
+    row = contract_rows[system_id]
+    for field, value in {
+        "query_set_id": "v53i_complete_source_1000",
+        "source_query_rows_sha256": summary["source_query_rows_sha256"],
+        "source_span_rows_sha256": summary["source_span_rows_sha256"],
+        "source_manifest_rows": "497",
+        "query_rows": "1000",
+        "answer_rows": "1000",
+        "citation_rows": "1000",
+        "evaluator_rows": "1000",
+        "resource_rows": "1000",
+        "adapter_trace_rows": "1000",
+        "same_query_set": "1",
+        "same_evaluator_contract": "1",
+        "same_resource_contract": "1",
+        "selection_question_text_only": "1",
+        "selection_sanitized_question_only": "1",
+        "source_locator_in_question_removed_rows": "1000",
+        "selection_oracle_field_used": "0",
+        "expected_answer_oracle_replay_rows": "0",
+        "deterministic_source_span_adapter_rows": "0",
+        "internal_real_adapter_metric_claim_ready": "1",
+        "public_real_system_performance_claim_ready": "0",
+        "public_comparison_claim_ready": "0",
+        "required_30b_baseline_ready": "0",
+        "required_70b_baseline_ready": "0",
+        "contract_ready": "1",
+        **expected_values,
+    }.items():
+        if row.get(field) != value:
+            raise SystemExit(f"v53aq contract {system_id}.{field}: expected {value}, got {row.get(field)}")
+    expected_routehint = "1" if system_id in {"G", "H"} else "0"
+    expected_scorer_policy = "1" if system_id == "H" else "0"
+    if row["routehint_expected"] != expected_routehint:
+        raise SystemExit(f"v53aq contract routehint expectation mismatch for {system_id}")
+    if row["source_verified_scorer_policy_expected"] != expected_scorer_policy:
+        raise SystemExit(f"v53aq contract scorer/policy expectation mismatch for {system_id}")
+    if "no public comparison" not in row["claim_boundary"]:
+        raise SystemExit(f"v53aq contract should keep public comparison blocked for {system_id}")
+
 if len(hints) != 2000 or {row["system_id"] for row in hints} != {"G", "H"}:
     raise SystemExit("v53aq RouteHint rows should cover G/H only")
 if len(route_memory) != 2000 or {row["system_id"] for row in route_memory} != {"G", "H"}:
     raise SystemExit("v53aq RouteMemory rows should cover G/H only")
 if any(row["raw_context_appended"] != "0" for row in hints):
     raise SystemExit("v53aq RouteHint rows must not append raw context")
+if any(row["selection_surface"] != "sanitized_question" or row["contains_source_locator"] != "0" or "selected=" in row["compact_hint"] for row in hints):
+    raise SystemExit("v53aq RouteHint rows must stay opaque and source-locator-free")
 
 if len(prebaseline) != 1000 or {row["query_id"] for row in prebaseline} != query_ids:
     raise SystemExit("v53aq internal pre-baseline ledger should cover every query exactly once")
@@ -247,6 +306,8 @@ for row in prebaseline:
         "same_evaluator_contract": "1",
         "same_resource_bound": "1",
         "selection_question_text_only_all": "1",
+        "selection_sanitized_question_only_all": "1",
+        "source_locator_in_question_removed_all": "1",
         "selection_oracle_field_used_any": "0",
         "expected_answer_oracle_replay_any": "0",
         "deterministic_source_span_adapter_execution_any": "0",
@@ -274,10 +335,9 @@ for row in prebaseline:
     }.items():
         if row[field] != value:
             raise SystemExit(f"v53aq internal pre-baseline ledger {field}: expected {value}, got {row[field]}")
-if sum(row["a_coherent_wrong_key"] == "1" for row in prebaseline) != 287:
-    raise SystemExit("v53aq internal pre-baseline ledger should preserve A coherent wrong-key count")
-if any(row["b_coherent_wrong_key"] != "0" or row["g_coherent_wrong_key"] != "0" or row["h_coherent_wrong_key"] != "0" for row in prebaseline):
-    raise SystemExit("v53aq internal pre-baseline ledger should keep B/G/H coherent wrong-key rows at zero")
+for prefix in ["a", "b", "g", "h"]:
+    if sum(row[f"{prefix}_coherent_wrong_key"] == "1" for row in prebaseline) != 979:
+        raise SystemExit(f"v53aq internal pre-baseline ledger should preserve {prefix.upper()} coherent wrong-key count")
 
 if {row["evaluator_contract_id"] for row in evaluators} != {"v53aq-query-text-only-answer-citation-resource-v1"}:
     raise SystemExit("v53aq evaluator rows should share one evaluator contract")
@@ -287,6 +347,8 @@ if any(
     or row["resource_eval_separate"] != "1"
     or row["resource_row_bound"] != "1"
     or row["selection_question_text_only"] != "1"
+    or row["selection_sanitized_question_only"] != "1"
+    or row["source_locator_in_question_removed"] != "1"
     or row["selection_oracle_field_used"] != "0"
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
@@ -304,8 +366,10 @@ if {row["source_span_rows_sha256"] for row in evaluators} != {summary["source_sp
 for row in answers:
     if row["answer_text_sha256"] != sha256_text(row["answer_text"]):
         raise SystemExit("v53aq answer hash mismatch")
-    if row["selection_input_fields"] != "question" or row["selection_forbidden_fields"] != FORBIDDEN_SELECTION_FIELDS:
-        raise SystemExit("v53aq answer rows should disclose question-only selection")
+    if row["selection_input_fields"] != "sanitized_question" or row["selection_forbidden_fields"] != FORBIDDEN_SELECTION_FIELDS:
+        raise SystemExit("v53aq answer rows should disclose sanitized-question-only selection")
+    if row["source_locator_in_question_removed"] != "1":
+        raise SystemExit("v53aq answer rows should disclose source locator removal")
     if row["selection_oracle_field_used"] != "0":
         raise SystemExit("v53aq answer rows must not use oracle fields in selection")
     if row["system_id"] in {"G", "H"} and row["raw_prompt_context_bytes"] != "0":
@@ -325,8 +389,10 @@ for row in adapter_traces:
     ]:
         if row[field] != "0":
             raise SystemExit(f"v53aq adapter trace should keep {field}=0")
-    if row["selection_question_text_used"] != "1":
-        raise SystemExit("v53aq adapter trace should use question text")
+    if row["selection_question_text_used"] != "0":
+        raise SystemExit("v53aq adapter trace should not use raw question text")
+    if row["selection_sanitized_question_used"] != "1" or row["source_locator_in_question_removed"] != "1":
+        raise SystemExit("v53aq adapter trace should use sanitized question text with source locators removed")
 if any(row["raw_context_appended"] != "0" or row["compact_routehint_used"] != "1" for row in adapter_traces if row["system_id"] in {"G", "H"}):
     raise SystemExit("v53aq G/H adapter traces should use compact RouteHint without raw prompt context")
 if any(row["source_verified_scorer_used"] != "1" or row["domain_policy_used"] != "1" for row in adapter_traces if row["system_id"] == "H"):
@@ -369,8 +435,14 @@ for field, value in {
     "evaluator_rows": 4000,
     "same_query_internal_prebaseline_rows": 1000,
     "same_query_internal_prebaseline_rows_ready": 1,
+    "internal_prebaseline_contract_rows": 4,
+    "internal_prebaseline_contract_ready_rows": 4,
+    "internal_prebaseline_contract_blocked_rows": 0,
+    "internal_prebaseline_contract_ready": 1,
     "routehint_rows": 2000,
     "selection_question_text_only": 1,
+    "selection_sanitized_question_only": 1,
+    "source_locator_in_question_removed_rows": 4000,
     "selection_oracle_field_used": 0,
     "expected_answer_oracle_replay": 0,
     "deterministic_source_span_adapter_execution": 0,
@@ -384,6 +456,8 @@ for field, value in {
 }.items():
     if manifest.get(field) != value:
         raise SystemExit(f"v53aq manifest {field}: expected {value}, got {manifest.get(field)}")
+if manifest.get("internal_prebaseline_contract_rows_sha256") != sha256(run_dir / "abgh_internal_prebaseline_contract_rows.csv"):
+    raise SystemExit("v53aq manifest should hash-bind internal prebaseline contract rows")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -397,7 +471,13 @@ for snippet in [
     "selection_question_text_only=1",
     "same_query_internal_prebaseline_rows=1000",
     "same_query_internal_prebaseline_rows_ready=1",
-    "selection_allowed_fields=question",
+    "internal_prebaseline_contract_rows=4",
+    "internal_prebaseline_contract_ready_rows=4",
+    "internal_prebaseline_contract_blocked_rows=0",
+    "internal_prebaseline_contract_ready=1",
+    "selection_sanitized_question_only=1",
+    "source_locator_in_question_removed_rows=4000",
+    "selection_allowed_fields=sanitized_question",
     f"selection_forbidden_fields={FORBIDDEN_SELECTION_FIELDS}",
     "selection_oracle_field_used=0",
     "expected_answer_oracle_replay=0",

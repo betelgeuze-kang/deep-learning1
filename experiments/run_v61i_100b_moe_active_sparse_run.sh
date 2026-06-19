@@ -165,16 +165,42 @@ quality_rows = [
         "fallback_policy": "block-near-frontier-and-release-claims-until-real-open-weight-review",
     }
 ]
+readiness_rows = [
+    {
+        "readiness_scope": "logical-100b-moe-contract-fixture",
+        "contract_ready": "1",
+        "fixture_execution_ready": "1",
+        "real_model_execution_ready": "0",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "0",
+        "logical_100b_contract_fixture_ready": "1",
+        "real_100b_inference_ready": "0",
+        "deprecated_or_ambiguous_ready_flag": "v61i_100b_moe_active_sparse_run_ready",
+        "claim_boundary": "logical contract fixture only; no real 100B inference or near-frontier quality claim",
+    }
+]
 
 write_csv(run_dir / "moe_model_identity_rows.csv", list(model_rows[0].keys()), model_rows)
 write_csv(run_dir / "moe_expert_page_rows.csv", list(expert_page_rows[0].keys()), expert_page_rows)
 write_csv(run_dir / "moe_active_parameter_rows.csv", list(active_rows[0].keys()), active_rows)
 write_csv(run_dir / "moe_decode_metric_rows.csv", list(decode_rows[0].keys()), decode_rows)
 write_csv(run_dir / "moe_quality_rows.csv", list(quality_rows[0].keys()), quality_rows)
+write_csv(run_dir / "moe_readiness_semantic_rows.csv", list(readiness_rows[0].keys()), readiness_rows)
 
 summary = {
     "v61i_100b_moe_active_sparse_run_ready": "1",
     "logical_100b_moe_contract_ready": "1",
+    "logical_100b_contract_fixture_ready": "1",
+    "real_100b_inference_ready": "0",
+    "contract_ready": "1",
+    "fixture_execution_ready": "1",
+    "real_model_execution_ready": "0",
+    "heldout_metric_ready": "0",
+    "human_review_ready": "0",
+    "independent_reproduction_ready": "0",
+    "release_ready": "0",
     "total_parameters": str(logical_total_parameters),
     "total_parameters_100b_plus": "1" if logical_total_parameters >= 100_000_000_000 else "0",
     "logical_active_parameters_per_token": str(logical_active_parameters),
@@ -196,6 +222,16 @@ manifest = {
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
     "logical_scale_mode": "contract-fixture",
     "v61i_100b_moe_active_sparse_run_ready": 1,
+    "logical_100b_moe_contract_ready": 1,
+    "logical_100b_contract_fixture_ready": 1,
+    "real_100b_inference_ready": 0,
+    "contract_ready": 1,
+    "fixture_execution_ready": 1,
+    "real_model_execution_ready": 0,
+    "heldout_metric_ready": 0,
+    "human_review_ready": 0,
+    "independent_reproduction_ready": 0,
+    "release_ready": 0,
     "logical_total_parameters": logical_total_parameters,
     "logical_active_parameters_per_token": logical_active_parameters,
     "real_100b_open_weight_materialized": 0,
@@ -207,6 +243,15 @@ manifest = {
     "# v61i 100B+ MoE Active-Sparse Run Boundary\n\n"
     "This artifact closes the logical 100B+ active-sparse runtime contract over the measured v61 SSD page pipeline. It does not materialize a real 100B open-weight checkpoint and does not claim near-frontier quality.\n\n"
     f"- total_parameters={logical_total_parameters}\n"
+    "- logical_100b_contract_fixture_ready=1\n"
+    "- real_100b_inference_ready=0\n"
+    "- contract_ready=1\n"
+    "- fixture_execution_ready=1\n"
+    "- real_model_execution_ready=0\n"
+    "- heldout_metric_ready=0\n"
+    "- human_review_ready=0\n"
+    "- independent_reproduction_ready=0\n"
+    "- release_ready=0\n"
     f"- logical_active_parameters_per_token={logical_active_parameters}\n"
     f"- ssd_read_bytes_per_token_max={summary['ssd_read_bytes_per_token_max']}\n"
     "- active_sparse_decode_speed_measured=1\n"
@@ -234,6 +279,7 @@ artifact_rels = [
     "moe_active_parameter_rows.csv",
     "moe_decode_metric_rows.csv",
     "moe_quality_rows.csv",
+    "moe_readiness_semantic_rows.csv",
     "v61i_100b_moe_active_sparse_run_manifest.json",
     "V61I_100B_MOE_ACTIVE_SPARSE_RUN_BOUNDARY.md",
 ]

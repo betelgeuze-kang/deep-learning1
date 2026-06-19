@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/v61_one_token_path.schema.json",
+  "title": "v61 One Token Runtime Path Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "milestones"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "ssd_resident_real_model_runtime_claim_ready",
+        "real_model_execution_ready",
+        "release_ready",
+        "required_before_ssd_resident_runtime_claim"
+      ],
+      "properties": {
+        "ssd_resident_real_model_runtime_claim_ready": {"type": "boolean"},
+        "real_model_execution_ready": {"type": "boolean"},
+        "release_ready": {"type": "boolean"},
+        "required_before_ssd_resident_runtime_claim": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "milestones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "order",
+          "milestone_id",
+          "required_evidence",
+          "current_status",
+          "evidence_path",
+          "claim_boundary"
+        ],
+        "properties": {
+          "order": {"type": "integer"},
+          "milestone_id": {"type": "string"},
+          "required_evidence": {"type": "string"},
+          "current_status": {"type": "string"},
+          "evidence_path": {"type": "string"},
+          "claim_boundary": {"type": "string"},
+          "summary_checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["summary_id", "field", "expected"],
+              "properties": {
+                "summary_id": {"type": "string"},
+                "field": {"type": "string"},
+                "expected": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "blocked_by": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

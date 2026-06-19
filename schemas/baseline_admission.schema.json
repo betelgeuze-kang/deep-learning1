@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/baseline_admission.schema.json",
+  "title": "Real Baseline Admission Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "policy",
+    "required_real_evidence_fields",
+    "systems"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "fixture_schema_test_allowed",
+        "fixture_rows_in_measured_registry",
+        "public_comparison_requires_all_systems"
+      ],
+      "properties": {
+        "fixture_schema_test_allowed": {"type": "boolean"},
+        "fixture_rows_in_measured_registry": {"type": "boolean"},
+        "public_comparison_requires_all_systems": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "required_real_evidence_fields": {"type": "array", "items": {"type": "string"}},
+    "systems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "system_id",
+          "baseline_class",
+          "parameter_count_b_min",
+          "parameter_count_b_max",
+          "evidence_env",
+          "measured_registry_admission_ready",
+          "acceptance_test"
+        ],
+        "properties": {
+          "system_id": {"type": "string"},
+          "baseline_class": {"type": "string"},
+          "parameter_count_b_min": {"type": "number"},
+          "parameter_count_b_max": {"type": "number"},
+          "evidence_env": {"type": "string"},
+          "measured_registry_admission_ready": {"type": "boolean"},
+          "acceptance_test": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

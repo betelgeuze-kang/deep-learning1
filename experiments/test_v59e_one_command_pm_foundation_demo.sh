@@ -76,6 +76,8 @@ expected = {
     "v53ap_actual_adapter_execution_ready": "1",
     "v53ap_real_system_performance_claim_ready": "0",
     "v53aq_selection_question_text_only": "1",
+    "v53aq_selection_sanitized_question_only": "1",
+    "v53aq_source_locator_in_question_removed_rows": "4000",
     "v53aq_selection_oracle_field_used": "0",
     "v53aq_expected_answer_oracle_replay": "0",
     "v53aq_deterministic_source_span_adapter_execution": "0",
@@ -85,8 +87,11 @@ expected = {
     "v53aq_public_real_system_performance_claim_ready": "0",
     "v53aq_same_query_internal_prebaseline_rows_ready": "1",
     "v53aq_same_query_internal_prebaseline_rows": "1000",
-    "v53aq_answer_hash_match_rows": "3713",
-    "v53aq_coherent_wrong_key_rows": "287",
+    "v53aq_internal_prebaseline_contract_ready": "1",
+    "v53aq_internal_prebaseline_contract_rows": "4",
+    "v53aq_internal_prebaseline_contract_ready_rows": "4",
+    "v53aq_answer_hash_match_rows": "84",
+    "v53aq_coherent_wrong_key_rows": "3916",
     "same_query_abgh_ready": "1",
     "route_memory_artifact_ready": "1",
     "v54c_complete_source_grounded_generation_1000_ready": "1",
@@ -96,6 +101,11 @@ expected = {
     "v54c_output_contract_raw_prompt_forbidden_rows": "9",
     "v54c_sha256sums_pm_recommended_csv_rows": "6",
     "v54c_sha256sums_pm_recommended_csv_ready": "1",
+    "v54c_model_visible_leakage_guard_ready": "1",
+    "v54c_model_visible_forbidden_field_used_rows": "0",
+    "v54c_model_visible_source_locator_rows": "0",
+    "v54c_deterministic_source_span_generation_fixture_ready": "1",
+    "v54c_real_model_generation_ready": "0",
     "v54c_v53ap_evaluator_provenance_ready": "1",
     "v54c_v53ap_evaluator_provenance_rows": "1000",
     "v54c_v53ap_answer_eval_separate_rows": "1000",
@@ -130,6 +140,17 @@ expected = {
     "v58d_dependency_blocker_ready": "1",
     "v58d_blind_review_return_intake_ready": "0",
     "v58d_expected_required_review_rows": "0",
+    "v58d_pm_review_required_system_rows": "7",
+    "v58d_pm_review_required_blind_response_rows": "3500",
+    "v58d_pm_review_required_independent_review_rows": "7000",
+    "v58d_pm_review_required_adjudication_rows": "3500",
+    "v58d_pm_review_actual_ready": "0",
+    "v58d_pm_review_missing_system_rows": "7",
+    "v58d_pm_review_template_gap_rows": "7",
+    "v58d_pm_review_unseen_split_ready": "0",
+    "v58d_pm_review_source_span_exactness_ready": "0",
+    "v58d_pm_review_unsupported_abstention_ready": "0",
+    "v58d_pm_review_latency_memory_separate_ready": "0",
     "v58d_required_blind_review_ready": "0",
     "v58d_required_adjudication_ready": "0",
     "v58d_human_blind_review_ready": "0",
@@ -184,6 +205,10 @@ expected = {
     "pm_pr_de_30b70b_acceptance_evidence_tests_only_rows": "0",
     "pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows": "0",
     "pm_pr_de_30b70b_acceptance_evidence_approval_rows": "4",
+    "pm_pr_de_measured_registry_exclusion_rows": "2",
+    "pm_pr_de_measured_registry_fixture_registry_rows": "0",
+    "pm_pr_de_measured_registry_admission_ready_rows": "0",
+    "pm_pr_de_measured_registry_blocked_rows": "2",
     "pm_pr_v59_one_command_acceptance_evidence_rows": "2",
     "pm_pr_v59_one_command_acceptance_evidence_ready_rows": "1",
     "pm_pr_v59_one_command_acceptance_evidence_blocked_rows": "1",
@@ -204,6 +229,23 @@ expected = {
     "pm_external_return_template_fixture_allowed_rows": "0",
     "pm_external_return_template_approval_rows": "26",
     "pm_external_return_template_bundle_ready": "1",
+    "pm_pr_normalization_rows": "7",
+    "pm_pr_normalization_split_required_rows": "7",
+    "pm_pr_normalization_tests_only_rows": "0",
+    "pm_pr_title_body_rows": "1",
+    "pm_pr_title_body_rewrite_ready": "1",
+    "pm_ready_semantic_rows": "7",
+    "pm_ready_semantic_real_model_ready_rows": "0",
+    "pm_ready_semantic_release_ready_rows": "0",
+    "pm_ready_semantic_logical_100b_contract_fixture_ready": "1",
+    "pm_ready_semantic_real_100b_inference_ready": "0",
+    "pm_retrieval_leakage_guard_rows": "7",
+    "pm_retrieval_leakage_guard_pass_rows": "7",
+    "pm_retrieval_leakage_guard_blocked_rows": "0",
+    "pm_pr_v58_real_execution_readiness_rows": "9",
+    "pm_pr_v58_real_execution_ready_rows": "0",
+    "pm_pr_v58_real_execution_blocked_rows": "9",
+    "pm_pr_v58_real_execution_fixture_allowed_rows": "0",
     "v58_return_artifact_contract_ready": "1",
     "v58_required_artifact_rows": "8",
     "v58_required_artifact_approval_rows": "8",
@@ -294,6 +336,7 @@ required_files = [
     "source_v53aq/abgh_evaluator_rows.csv",
     "source_v53aq/abgh_adapter_trace_rows.csv",
     "source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_v53aq/routehint_rows.csv",
     "source_v53aq/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md",
     "source_v54c/answer_rows.csv",
@@ -319,6 +362,7 @@ required_files = [
     "source_h10_pm/source_v53aq/abgh_evaluator_rows.csv",
     "source_h10_pm/source_v53aq/abgh_system_metric_rows.csv",
     "source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -339,22 +383,30 @@ required_files = [
     "source_pm_pr_claim_slice_gate/source_v56/v56_seed_dependency_blocker_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v56/V56_RULER_LONGBENCH_DEPENDENCY_BLOCKER.md",
     "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv",
+    "source_pm_pr_claim_slice_gate/de_measured_registry_exclusion_rows.csv",
+    "source_pm_pr_claim_slice_gate/v58_real_execution_readiness_rows.csv",
     "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_blocker_closure_packet_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_execution_lock_rows.csv",
     "source_pm_pr_claim_slice_gate/pm_external_return_template_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_pr_normalization_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_pr_title_body_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_ready_semantic_rows.csv",
+    "source_pm_pr_claim_slice_gate/pm_retrieval_leakage_guard_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/pm_h10_real_label_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_template.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_evidence_acceptance_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_return_contract_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/h10_real_label_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_foundation_freeze_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_pm_acceptance_evidence_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_v1_exit_criteria_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/complete_source_query_span_binding_audit_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv",
+    "source_pm_pr_claim_slice_gate/source_v53aq/abgh_internal_prebaseline_contract_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_query_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/complete_source_span_rows.csv",
     "source_pm_pr_claim_slice_gate/source_v53t/source_v53i/source_v53h/complete_source_content_repo_rows.csv",
@@ -403,6 +455,31 @@ if acceptance_by_id["v53-system-a-b-g-h-measured"]["replay_artifact_path"] != "s
     raise SystemExit("v59e PM sidecar A/B/G/H acceptance should bind to local row-contract replay rows")
 if acceptance_by_id["v59-one-command-demo"]["blocker_evidence_path"] != "source_v59e/public_source_replay_policy_rows.csv":
     raise SystemExit("v59e PM sidecar v59 acceptance should bind to public source replay policy rows")
+normalization_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/pm_pr_normalization_rows.csv")
+if len(normalization_rows) != 7:
+    raise SystemExit("v59e PM sidecar should carry seven #13 PR normalization rows")
+if any(row["tests_only_merge_condition"] != "0" or row["pr2_merge_as_is_recommended"] != "0" for row in normalization_rows):
+    raise SystemExit("v59e PM sidecar normalization rows should reject tests-only/as-is merge")
+title_body_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/pm_pr_title_body_rows.csv")
+if len(title_body_rows) != 1 or title_body_rows[0]["split_required"] != "1" or title_body_rows[0]["release_ready"] != "0":
+    raise SystemExit("v59e PM sidecar should carry PR #2 title/body split requirement")
+ready_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/pm_ready_semantic_rows.csv")
+if len(ready_rows) != 7:
+    raise SystemExit("v59e PM sidecar should carry typed ready semantic rows")
+if any(row["real_model_execution_ready"] != "0" or row["release_ready"] != "0" for row in ready_rows):
+    raise SystemExit("v59e PM sidecar ready semantics should keep real model and release readiness closed")
+leakage_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/pm_retrieval_leakage_guard_rows.csv")
+if len(leakage_rows) != 7:
+    raise SystemExit("v59e PM sidecar should carry retrieval leakage guard rows")
+if any(row["status"] != "pass" or row["adapter_selection_blocked"] != "1" for row in leakage_rows):
+    raise SystemExit("v59e PM sidecar should keep oracle metadata blocked from adapter selection")
+v58_real_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/v58_real_execution_readiness_rows.csv")
+if len(v58_real_rows) != 9:
+    raise SystemExit("v59e PM sidecar should carry nine v58 real execution readiness rows")
+if any(row["real_execution_ready"] != "0" or row["fixture_allowed"] != "0" for row in v58_real_rows):
+    raise SystemExit("v59e PM sidecar should keep v58 real execution blocked and non-fixture-only")
+if not any(row["requirement_id"] == "ab-cdegh-real-responses" and "A/B/C/D/E/G/H" in row["required_evidence"] for row in v58_real_rows):
+    raise SystemExit("v59e PM sidecar should require A/B/C/D/E/G/H actual blind responses")
 v56_replay_acceptance_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv")
 if len(v56_replay_acceptance_rows) != 4:
     raise SystemExit("v59e PM sidecar should carry four v56 replay acceptance evidence rows")
@@ -446,6 +523,13 @@ for artifact_id, system_id in {
         raise SystemExit(f"v59e PM sidecar should forbid tests-only D/E acceptance: {artifact_id}")
 if "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR>" not in de_artifacts["e-answer-citation-resource"]["validation_command"]:
     raise SystemExit("v59e PM sidecar should preserve the approval-gated D/E validation command")
+de_registry_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/de_measured_registry_exclusion_rows.csv")
+if len(de_registry_rows) != 2:
+    raise SystemExit("v59e PM sidecar should carry two D/E measured registry exclusion rows")
+if any(row["fixture_rows_in_measured_registry"] != "0" or row["measured_registry_admission_ready"] != "0" for row in de_registry_rows):
+    raise SystemExit("v59e PM sidecar should keep fixture D/E rows out of measured registry")
+if any("answer_citation_raw_output" not in row["missing_real_evidence_fields"] for row in de_registry_rows):
+    raise SystemExit("v59e PM sidecar D/E measured registry exclusion should require raw answer/citation outputs")
 v59_acceptance_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/v59_one_command_acceptance_evidence_rows.csv")
 if len(v59_acceptance_rows) != 2:
     raise SystemExit("v59e PM sidecar should carry two v59 one-command acceptance rows")
@@ -476,7 +560,7 @@ if len(pm_v53t_real_adapter_rows) != 4:
     raise SystemExit("v59e PM sidecar should carry four v53t real-adapter freeze rows")
 if pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["status"] != "pass":
     raise SystemExit("v59e PM sidecar should carry passing v53t real-adapter execution evidence")
-if "coherent_wrong_key_rows=287" not in pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=3916" not in pm_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("v59e PM sidecar should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in pm_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e PM sidecar should preserve v53aq public comparison blocker")
@@ -574,8 +658,10 @@ if (
     or local_abgh_contract_rows["v53aq"]["selection_oracle_field_used_rows"] != "0"
     or local_abgh_contract_rows["v53aq"]["same_query_internal_prebaseline_rows"] != "1000"
     or local_abgh_contract_rows["v53aq"]["same_query_internal_prebaseline_ready"] != "1"
+    or local_abgh_contract_rows["v53aq"]["internal_prebaseline_contract_rows"] != "4"
+    or local_abgh_contract_rows["v53aq"]["internal_prebaseline_contract_ready"] != "1"
 ):
-    raise SystemExit("v59e v53aq row-contract replay should preserve query-text-only real-adapter and 1000-row prebaseline boundary")
+    raise SystemExit("v59e v53aq row-contract replay should preserve sanitized-question-only real-adapter and 1000-row prebaseline boundary")
 if any(row["complete_source_tree_manifest_ready"] != "1" for row in repo_coverage_rows):
     raise SystemExit("v59e PM sidecar repo coverage rows should preserve ready tree manifests")
 if any(row["content_snapshot_ready"] != "1" for row in content_repo_rows):
@@ -589,7 +675,7 @@ if len(h10_v53t_real_adapter_rows) != 4:
     raise SystemExit("v59e h10 PM source bundle should carry four v53t real-adapter freeze rows")
 if h10_v53t_real_adapter_rows["real-adapter-execution-rows"]["status"] != "pass":
     raise SystemExit("v59e h10 PM source bundle should carry passing v53t real-adapter execution evidence")
-if "coherent_wrong_key_rows=287" not in h10_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=3916" not in h10_v53t_real_adapter_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("v59e h10 PM source bundle should preserve v53aq coherent wrong-key evidence")
 if "public_comparison_claim_ready=0" not in h10_v53t_real_adapter_rows["public-comparison-boundary-closed"]["actual_value"]:
     raise SystemExit("v59e h10 PM source bundle should preserve public comparison blocker")
@@ -680,6 +766,34 @@ for label, path in [
     ):
         raise SystemExit(f"v59e {label} should preserve v53aq same-query/no-oracle/no-public-claim boundary")
 
+for label, path in [
+    ("direct source bundle", run_dir / "source_v53aq/abgh_internal_prebaseline_contract_rows.csv"),
+    ("h10 PM source bundle", run_dir / "source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv"),
+    ("PM sidecar h10 bundle", run_dir / "source_pm_pr_claim_slice_gate/source_h10_pm/source_v53aq/abgh_internal_prebaseline_contract_rows.csv"),
+    ("PM sidecar direct bundle", run_dir / "source_pm_pr_claim_slice_gate/source_v53aq/abgh_internal_prebaseline_contract_rows.csv"),
+]:
+    rows = {row["system_id"]: row for row in read_csv(path)}
+    if set(rows) != {"A", "B", "G", "H"}:
+        raise SystemExit(f"v59e {label} should carry four v53aq internal prebaseline contract rows")
+    for system_id, row in rows.items():
+        for field, value in {
+            "same_query_set": "1",
+            "same_evaluator_contract": "1",
+            "same_resource_contract": "1",
+            "selection_question_text_only": "1",
+            "selection_oracle_field_used": "0",
+            "expected_answer_oracle_replay_rows": "0",
+            "deterministic_source_span_adapter_rows": "0",
+            "internal_real_adapter_metric_claim_ready": "1",
+            "public_real_system_performance_claim_ready": "0",
+            "public_comparison_claim_ready": "0",
+            "required_30b_baseline_ready": "0",
+            "required_70b_baseline_ready": "0",
+            "contract_ready": "1",
+        }.items():
+            if row.get(field) != value:
+                raise SystemExit(f"v59e {label} contract {system_id}.{field}: expected {value}, got {row.get(field)}")
+
 v54c_expected_counts = {
     "answer_rows.csv": 1000,
     "citation_rows.csv": 1000,
@@ -698,6 +812,21 @@ if len(generator_inputs) != 1000:
     raise SystemExit("v59e should carry 1000 v54c generator input rows")
 if any(row["raw_prompt_context_appended"] != "0" or row["raw_prompt_context_bytes"] != "0" for row in generator_inputs):
     raise SystemExit("v59e v54c generator inputs should preserve the no raw prompt stuffing boundary")
+if any(
+    row["model_visible_input_fields"] != "sanitized_question,opaque_routehint"
+    or row["model_visible_query_id_used"] != "0"
+    or row["model_visible_source_span_id_used"] != "0"
+    or row["model_visible_source_path_used"] != "0"
+    or row["model_visible_source_line_used"] != "0"
+    or row["model_visible_source_file_hash_used"] != "0"
+    or row["model_visible_expected_behavior_used"] != "0"
+    or row["model_visible_expected_label_used"] != "0"
+    or row["compact_routehint_contains_source_locator"] != "0"
+    or row["deterministic_source_span_generation_fixture"] != "1"
+    or row["real_model_generation_ready"] != "0"
+    for row in generator_inputs
+):
+    raise SystemExit("v59e v54c generator inputs should preserve sanitized model-visible leakage guard")
 v54c_contracts = read_csv(run_dir / "source_v54c/grounded_generation_output_contract_rows.csv")
 v54c_contract_counts = {
     "answer-rows": ("answer_rows.csv", 1000),
@@ -724,6 +853,8 @@ for artifact_id, (artifact_path, expected_count) in v54c_contract_counts.items()
         raise SystemExit(f"v59e v54c contract sha256 binding mismatch for {artifact_id}")
     if row["raw_prompt_context_appended_allowed"] != "0" or row["raw_prompt_context_appended_rows"] != "0":
         raise SystemExit(f"v59e v54c contract should forbid raw prompt context for {artifact_id}")
+    if row["model_visible_leakage_guard_ready"] != "1" or row["model_visible_forbidden_field_used_rows"] != "0" or row["model_visible_source_locator_rows"] != "0":
+        raise SystemExit(f"v59e v54c contract should preserve model-visible leakage guard for {artifact_id}")
     if row["source_span_bound"] != "1" or row["v53ap_provenance_bound"] != "1" or row["wrong_answer_guarded"] != "1":
         raise SystemExit(f"v59e v54c contract should preserve provenance and guard binding for {artifact_id}")
 sha_contract = v54c_contract_by_id["sha256sums"]
@@ -733,6 +864,9 @@ if (
     or sha_contract["observed_row_count"] != "written-after-contract"
     or sha_contract["sha256_bound"] != "0"
     or sha_contract["raw_prompt_context_appended_rows"] != "0"
+    or sha_contract["model_visible_leakage_guard_ready"] != "1"
+    or sha_contract["model_visible_forbidden_field_used_rows"] != "0"
+    or sha_contract["model_visible_source_locator_rows"] != "0"
 ):
     raise SystemExit("v59e v54c sha256sums contract should preserve its post-contract boundary")
 
@@ -778,6 +912,8 @@ if (
     manifest.get("local_abgh_real_adapter_ready") != 1
     or manifest.get("v53aq_complete_source_abgh_real_adapter_measured_ready") != 1
     or manifest.get("v53aq_selection_question_text_only") != 1
+    or manifest.get("v53aq_selection_sanitized_question_only") != 1
+    or manifest.get("v53aq_source_locator_in_question_removed_rows") != 4000
     or manifest.get("v53aq_selection_oracle_field_used") != 0
     or manifest.get("v53aq_expected_answer_oracle_replay") != 0
     or manifest.get("v53aq_deterministic_source_span_adapter_execution") != 0
@@ -785,8 +921,8 @@ if (
     or manifest.get("v53aq_real_system_performance_claim_ready") != 0
     or manifest.get("v53aq_internal_real_adapter_metric_claim_ready") != 1
     or manifest.get("v53aq_public_real_system_performance_claim_ready") != 0
-    or manifest.get("v53aq_answer_hash_match_rows") != 3713
-    or manifest.get("v53aq_coherent_wrong_key_rows") != 287
+    or manifest.get("v53aq_answer_hash_match_rows") != 84
+    or manifest.get("v53aq_coherent_wrong_key_rows") != 3916
 ):
     raise SystemExit("v59e manifest should preserve the v53aq real-adapter boundary")
 if (
@@ -795,6 +931,11 @@ if (
     or manifest.get("v54c_output_contract_raw_prompt_forbidden_rows") != 9
     or manifest.get("v54c_sha256sums_pm_recommended_csv_rows") != 6
     or manifest.get("v54c_sha256sums_pm_recommended_csv_ready") != 1
+    or manifest.get("v54c_model_visible_leakage_guard_ready") != 1
+    or manifest.get("v54c_model_visible_forbidden_field_used_rows") != 0
+    or manifest.get("v54c_model_visible_source_locator_rows") != 0
+    or manifest.get("v54c_deterministic_source_span_generation_fixture_ready") != 1
+    or manifest.get("v54c_real_model_generation_ready") != 0
 ):
     raise SystemExit("v59e manifest should record the v54c grounded-generation output contract and hash coverage")
 if (
@@ -839,6 +980,14 @@ if (
     or manifest.get("v58d_dependency_blocker_ready") != 1
     or manifest.get("v58d_blind_review_return_intake_ready") != 0
     or manifest.get("v58d_expected_required_review_rows") != 0
+    or manifest.get("v58d_pm_review_required_system_rows") != 7
+    or manifest.get("v58d_pm_review_required_independent_review_rows") != 7000
+    or manifest.get("v58d_pm_review_required_adjudication_rows") != 3500
+    or manifest.get("v58d_pm_review_actual_ready") != 0
+    or manifest.get("v58d_pm_review_unseen_split_ready") != 0
+    or manifest.get("v58d_pm_review_source_span_exactness_ready") != 0
+    or manifest.get("v58d_pm_review_unsupported_abstention_ready") != 0
+    or manifest.get("v58d_pm_review_latency_memory_separate_ready") != 0
     or manifest.get("v58d_human_blind_review_ready") != 0
 ):
     raise SystemExit("v59e manifest should preserve the v58d blind-review return blocker boundary")
@@ -908,6 +1057,13 @@ if (
 if "pm_pr_de_30b70b_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("v59e manifest should hash-bind PM D/E acceptance evidence")
 if (
+    manifest.get("pm_pr_de_measured_registry_exclusion_rows") != 2
+    or manifest.get("pm_pr_de_measured_registry_fixture_registry_rows") != 0
+    or manifest.get("pm_pr_de_measured_registry_admission_ready_rows") != 0
+    or manifest.get("pm_pr_de_measured_registry_blocked_rows") != 2
+):
+    raise SystemExit("v59e manifest should record D/E measured registry fixture exclusion")
+if (
     manifest.get("pm_pr_v59_one_command_acceptance_evidence_rows") != 2
     or manifest.get("pm_pr_v59_one_command_acceptance_evidence_ready_rows") != 1
     or manifest.get("pm_pr_v59_one_command_acceptance_evidence_blocked_rows") != 1
@@ -937,6 +1093,45 @@ if (
     or manifest.get("pm_pr_v53_pm_acceptance_evidence_tests_only_rows") != 0
 ):
     raise SystemExit("v59e manifest should record v53 PM acceptance evidence")
+if (
+    manifest.get("pm_pr_normalization_rows") != 7
+    or manifest.get("pm_pr_normalization_split_required_rows") != 7
+    or manifest.get("pm_pr_normalization_tests_only_rows") != 0
+    or manifest.get("pm_pr_title_body_rows") != 1
+    or manifest.get("pm_pr_title_body_rewrite_ready") != 1
+):
+    raise SystemExit("v59e manifest should record PM PR normalization and title/body rewrite rows")
+if (
+    manifest.get("pm_ready_semantic_rows") != 7
+    or manifest.get("pm_ready_semantic_real_model_ready_rows") != 0
+    or manifest.get("pm_ready_semantic_release_ready_rows") != 0
+    or manifest.get("pm_ready_semantic_logical_100b_contract_fixture_ready") != 1
+    or manifest.get("pm_ready_semantic_real_100b_inference_ready") != 0
+):
+    raise SystemExit("v59e manifest should preserve typed ready semantics")
+if (
+    manifest.get("pm_retrieval_leakage_guard_rows") != 7
+    or manifest.get("pm_retrieval_leakage_guard_pass_rows") != 7
+    or manifest.get("pm_retrieval_leakage_guard_blocked_rows") != 0
+):
+    raise SystemExit("v59e manifest should preserve retrieval leakage guards")
+if (
+    manifest.get("pm_pr_v58_real_execution_readiness_rows") != 9
+    or manifest.get("pm_pr_v58_real_execution_ready_rows") != 0
+    or manifest.get("pm_pr_v58_real_execution_blocked_rows") != 9
+    or manifest.get("pm_pr_v58_real_execution_fixture_allowed_rows") != 0
+):
+    raise SystemExit("v59e manifest should preserve v58 real execution blockers")
+for field in [
+    "pm_pr_de_measured_registry_exclusion_rows_sha256",
+    "pm_pr_v58_real_execution_readiness_rows_sha256",
+    "pm_pr_normalization_rows_sha256",
+    "pm_pr_title_body_rows_sha256",
+    "pm_ready_semantic_rows_sha256",
+    "pm_retrieval_leakage_guard_rows_sha256",
+]:
+    if field not in manifest:
+        raise SystemExit(f"v59e manifest should hash-bind {field}")
 if manifest.get("pm_scope_drift_allowed") != 0:
     raise SystemExit("v59e manifest should keep PM scope drift locked")
 if manifest.get("one_command_replay_preflight_ready") != 1:
@@ -977,14 +1172,21 @@ for snippet in [
     "v53aq_internal_real_adapter_metric_claim_ready=1",
     "v53aq_public_real_system_performance_claim_ready=0",
     "v53aq_selection_question_text_only=1",
+    "v53aq_selection_sanitized_question_only=1",
+    "v53aq_source_locator_in_question_removed_rows=4000",
     "v53aq_selection_oracle_field_used=0",
-    "v53aq_answer_hash_match_rows=3713",
-    "v53aq_coherent_wrong_key_rows=287",
+    "v53aq_answer_hash_match_rows=84",
+    "v53aq_coherent_wrong_key_rows=3916",
     "v54c_output_contract_rows=9",
     "v54c_output_contract_pm_required_rows=7",
     "v54c_output_contract_raw_prompt_forbidden_rows=9",
     "v54c_sha256sums_pm_recommended_csv_rows=6",
     "v54c_sha256sums_pm_recommended_csv_ready=1",
+    "v54c_model_visible_leakage_guard_ready=1",
+    "v54c_model_visible_forbidden_field_used_rows=0",
+    "v54c_model_visible_source_locator_rows=0",
+    "v54c_deterministic_source_span_generation_fixture_ready=1",
+    "v54c_real_model_generation_ready=0",
     "v54c_v53ap_evaluator_provenance_ready=1",
     "v54c_v53ap_evaluator_provenance_rows=1000",
     "h10_real_label_promotion_ready=0",
@@ -1013,6 +1215,15 @@ for snippet in [
     "v58d_dependency_blocker_ready=1",
     "v58d_blind_review_return_intake_ready=0",
     "v58d_expected_required_review_rows=0",
+    "v58d_pm_review_required_system_rows=7",
+    "v58d_pm_review_required_blind_response_rows=3500",
+    "v58d_pm_review_required_independent_review_rows=7000",
+    "v58d_pm_review_required_adjudication_rows=3500",
+    "v58d_pm_review_actual_ready=0",
+    "v58d_pm_review_unseen_split_ready=0",
+    "v58d_pm_review_source_span_exactness_ready=0",
+    "v58d_pm_review_unsupported_abstention_ready=0",
+    "v58d_pm_review_latency_memory_separate_ready=0",
     "v58d_human_blind_review_ready=0",
     "v58_full_blind_eval_ready=0",
     "v58_return_artifact_contract_ready=1",
@@ -1028,6 +1239,12 @@ for snippet in [
     "pm_pr_v53_pm_acceptance_evidence_rows=10",
     "pm_pr_v53_pm_acceptance_evidence_ready_rows=10",
     "pm_pr_v53_pm_acceptance_evidence_tests_only_rows=0",
+    "pm_pr_normalization_rows=7",
+    "pm_pr_title_body_rewrite_ready=1",
+    "pm_ready_semantic_real_model_ready_rows=0",
+    "pm_retrieval_leakage_guard_pass_rows=7",
+    "pm_pr_de_measured_registry_admission_ready_rows=0",
+    "pm_pr_v58_real_execution_ready_rows=0",
     "pm_scope_drift_allowed=0",
     "one_command_replay_preflight_ready=1",
     "Blocked wording",
@@ -1218,6 +1435,18 @@ if pr_summary.get("pm_execution_lock_rows") != "10" or pr_summary.get("pm_scope_
     raise SystemExit("v59e one-command PR slice gate should keep the PM execution lock active")
 if pr_summary.get("pm_external_return_template_files") != "26" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
     raise SystemExit("v59e one-command PR slice gate should emit no-fixture return templates")
+if (
+    pr_summary.get("pm_pr_normalization_rows") != "7"
+    or pr_summary.get("pm_pr_normalization_tests_only_rows") != "0"
+    or pr_summary.get("pm_pr_title_body_rewrite_ready") != "1"
+    or pr_summary.get("pm_ready_semantic_real_model_ready_rows") != "0"
+    or pr_summary.get("pm_ready_semantic_release_ready_rows") != "0"
+    or pr_summary.get("pm_retrieval_leakage_guard_pass_rows") != "7"
+    or pr_summary.get("pm_retrieval_leakage_guard_blocked_rows") != "0"
+    or pr_summary.get("de_measured_registry_admission_ready_rows") != "0"
+    or pr_summary.get("v58_real_execution_ready_rows") != "0"
+):
+    raise SystemExit("v59e one-command PR slice gate should expose #13 normalization, typed-ready, and leakage guards")
 
 pr_slice_rows = read_csv(pr_slice_run_dir / "pm_pr_slice_rows.csv")
 if len(pr_slice_rows) != 10:

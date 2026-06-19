@@ -33,6 +33,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
+import torch
+
 root = Path(sys.argv[1]).resolve()
 run_dir = Path(sys.argv[2])
 summary_csv = Path(sys.argv[3])
@@ -42,10 +45,15 @@ results = root / "results"
 model_id = "mistralai/Mixtral-8x22B-v0.1"
 tiles_per_slice = int(os.environ.get("V61AB_TILES_PER_SLICE", "8"))
 tile_elements_target = int(os.environ.get("V61AB_TILE_BF16_VALUES", "4096"))
+expert_ffn_root_raw = os.environ.get("V61AB_EXPERT_FFN_CHECKPOINT_ROOT", "").strip()
+expert_ffn_layer = int(os.environ.get("V61AB_EXPERT_FFN_LAYER", "0"))
+expert_ffn_expert = int(os.environ.get("V61AB_EXPERT_FFN_EXPERT", "0"))
+expert_ffn_real_model_evidence = int(os.environ.get("V61AB_EXPERT_FFN_REAL_MODEL_EVIDENCE", "0") == "1")
 if tiles_per_slice <= 0:
     raise SystemExit("V61AB_TILES_PER_SLICE must be positive")
 if tile_elements_target <= 0:
     raise SystemExit("V61AB_TILE_BF16_VALUES must be positive")
+torch.set_num_threads(1)
 
 
 def sha256(path):
@@ -119,6 +127,173 @@ def fmt(value):
     return str(value)
 
 
+def bf16_bytes_to_torch_float32(data, shape):
+    raw = np.frombuffer(data, dtype="<u2")
+    fp32 = (raw.astype(np.uint32) << 16).view(np.float32)
+    expected = math.prod(shape)
+    if fp32.size != expected:
+        raise RuntimeError(f"BF16 tensor element mismatch: {fp32.size} != {expected}")
+    return torch.from_numpy(fp32.copy()).reshape(shape).to(torch.float32)
+
+
+def tensor_bytes_to_torch(data, dtype, shape):
+    if dtype == "BF16":
+        return bf16_bytes_to_torch_float32(data, shape)
+    if dtype == "F32":
+        fp32 = np.frombuffer(data, dtype="<f4").copy()
+        expected = math.prod(shape)
+        if fp32.size != expected:
+            raise RuntimeError(f"F32 tensor element mismatch: {fp32.size} != {expected}")
+        return torch.from_numpy(fp32).reshape(shape).to(torch.float32)
+    raise RuntimeError(f"unsupported expert FFN dtype: {dtype}")
+
+
+def read_safetensors_tensor(checkpoint_root, index_json, tensor_name):
+    weight_map = index_json.get("weight_map", {})
+    shard_name = weight_map.get(tensor_name)
+    if not shard_name:
+        raise RuntimeError(f"tensor missing from weight_map: {tensor_name}")
+    shard_path = checkpoint_root / shard_name
+    with shard_path.open("rb") as handle:
+        header_len_bytes = handle.read(8)
+        if len(header_len_bytes) != 8:
+            raise RuntimeError(f"short safetensors header length: {shard_name}")
+        header_len = struct.unpack("<Q", header_len_bytes)[0]
+        header = json.loads(handle.read(header_len).decode("utf-8"))
+        spec = header.get(tensor_name)
+        if spec is None:
+            raise RuntimeError(f"tensor missing from shard header: {tensor_name}")
+        offsets = spec["data_offsets"]
+        data_base = 8 + header_len
+        handle.seek(data_base + int(offsets[0]))
+        data = handle.read(int(offsets[1]) - int(offsets[0]))
+    return {
+        "tensor": tensor_bytes_to_torch(data, spec["dtype"], list(spec["shape"])),
+        "shard_name": shard_name,
+        "dtype": spec["dtype"],
+        "shape": "x".join(str(x) for x in spec["shape"]),
+        "payload_bytes": len(data),
+        "payload_sha256": sha256_bytes(data),
+    }
+
+
+def expert_ffn_parity_rows():
+    tensor_prefix = f"model.layers.{expert_ffn_layer}.block_sparse_moe.experts.{expert_ffn_expert}"
+    tensor_names = {
+        "w1": f"{tensor_prefix}.w1.weight",
+        "w2": f"{tensor_prefix}.w2.weight",
+        "w3": f"{tensor_prefix}.w3.weight",
+    }
+    base_row = {
+        "layer_index": str(expert_ffn_layer),
+        "expert_index": str(expert_ffn_expert),
+        "w1_tensor_name": tensor_names["w1"],
+        "w2_tensor_name": tensor_names["w2"],
+        "w3_tensor_name": tensor_names["w3"],
+        "contract_ready": "1",
+        "fixture_execution_ready": "0",
+        "real_model_execution_ready": "0",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "0",
+        "local_checkpoint_root_supplied": "1" if expert_ffn_root_raw else "0",
+        "checkpoint_payload_bytes_committed_to_repo": "0",
+        "actual_model_generation_ready": "0",
+        "route_jump_rows": "0",
+    }
+    if not expert_ffn_root_raw:
+        row = dict(base_row)
+        row.update({
+            "status": "blocked",
+            "reason": "V61AB_EXPERT_FFN_CHECKPOINT_ROOT not supplied",
+            "w1_shape": "",
+            "w2_shape": "",
+            "w3_shape": "",
+            "w1_payload_sha256": "",
+            "w2_payload_sha256": "",
+            "w3_payload_sha256": "",
+            "input_hidden_size": "0",
+            "intermediate_size": "0",
+            "output_hidden_size": "0",
+            "candidate_output_sha256": "",
+            "torch_reference_output_sha256": "",
+            "max_abs_delta": "",
+            "tolerance": "1e-06",
+            "expert_ffn_parity_pass": "0",
+        })
+        return [row]
+    checkpoint_root = Path(expert_ffn_root_raw).expanduser().resolve()
+    index_path = checkpoint_root / "model.safetensors.index.json"
+    row = dict(base_row)
+    try:
+        index_json = json.loads(index_path.read_text(encoding="utf-8"))
+        w1 = read_safetensors_tensor(checkpoint_root, index_json, tensor_names["w1"])
+        w2 = read_safetensors_tensor(checkpoint_root, index_json, tensor_names["w2"])
+        w3 = read_safetensors_tensor(checkpoint_root, index_json, tensor_names["w3"])
+        w1_t = w1["tensor"]
+        w2_t = w2["tensor"]
+        w3_t = w3["tensor"]
+        if w1_t.ndim != 2 or w2_t.ndim != 2 or w3_t.ndim != 2:
+            raise RuntimeError("expert FFN tensors must be rank-2")
+        if w1_t.shape != w3_t.shape:
+            raise RuntimeError(f"w1/w3 shape mismatch: {tuple(w1_t.shape)} != {tuple(w3_t.shape)}")
+        if w2_t.shape[1] != w1_t.shape[0] or w2_t.shape[0] != w1_t.shape[1]:
+            raise RuntimeError(f"w2 shape incompatible with w1/w3: w1={tuple(w1_t.shape)} w2={tuple(w2_t.shape)}")
+        hidden = int(w1_t.shape[1])
+        inter = int(w1_t.shape[0])
+        x = torch.linspace(-0.5, 0.5, hidden, dtype=torch.float32)
+        gate = torch.nn.functional.silu(torch.matmul(w1_t, x))
+        up = torch.matmul(w3_t, x)
+        candidate = torch.matmul(w2_t, gate * up)
+        reference = torch.nn.functional.linear((gate * up).reshape(1, inter), w2_t).reshape(hidden)
+        delta = torch.max(torch.abs(candidate - reference)).item()
+        tolerance = 1e-6
+        candidate_bytes = candidate.detach().cpu().numpy().astype("<f4").tobytes()
+        reference_bytes = reference.detach().cpu().numpy().astype("<f4").tobytes()
+        parity_pass = int(math.isfinite(delta) and delta <= tolerance)
+        row.update({
+            "status": "pass" if parity_pass else "blocked",
+            "reason": "expert FFN tensors loaded from local safetensors root and candidate output matches torch reference" if parity_pass else "expert FFN parity delta exceeds tolerance",
+            "fixture_execution_ready": "0" if expert_ffn_real_model_evidence else str(parity_pass),
+            "real_model_execution_ready": str(parity_pass if expert_ffn_real_model_evidence else 0),
+            "w1_shape": w1["shape"],
+            "w2_shape": w2["shape"],
+            "w3_shape": w3["shape"],
+            "w1_payload_sha256": w1["payload_sha256"],
+            "w2_payload_sha256": w2["payload_sha256"],
+            "w3_payload_sha256": w3["payload_sha256"],
+            "input_hidden_size": str(hidden),
+            "intermediate_size": str(inter),
+            "output_hidden_size": str(int(candidate.numel())),
+            "candidate_output_sha256": sha256_bytes(candidate_bytes),
+            "torch_reference_output_sha256": sha256_bytes(reference_bytes),
+            "max_abs_delta": fmt(delta),
+            "tolerance": fmt(tolerance),
+            "expert_ffn_parity_pass": str(parity_pass),
+        })
+    except Exception as exc:
+        row.update({
+            "status": "blocked",
+            "reason": str(exc),
+            "w1_shape": "",
+            "w2_shape": "",
+            "w3_shape": "",
+            "w1_payload_sha256": "",
+            "w2_payload_sha256": "",
+            "w3_payload_sha256": "",
+            "input_hidden_size": "0",
+            "intermediate_size": "0",
+            "output_hidden_size": "0",
+            "candidate_output_sha256": "",
+            "torch_reference_output_sha256": "",
+            "max_abs_delta": "",
+            "tolerance": "1e-06",
+            "expert_ffn_parity_pass": "0",
+        })
+    return [row]
+
+
 v61aa_dir = results / "v61aa_hotset_tensor_slice_verifier" / "verify_001"
 v61aa_summary = read_csv(results / "v61aa_hotset_tensor_slice_verifier_summary.csv")[0]
 if v61aa_summary.get("v61aa_hotset_tensor_slice_verifier_ready") != "1":
@@ -142,6 +317,7 @@ if len(slice_rows) != 16:
 
 tile_rows = []
 sample_rows = []
+torch_parity_rows = []
 tile_ordinal = 0
 total_tile_values = 0
 finite_baseline_rows = 0
@@ -149,6 +325,7 @@ finite_q8_rows = 0
 finite_q4_rows = 0
 finite_q8_error_rows = 0
 finite_q4_error_rows = 0
+torch_matvec_parity_pass_rows = 0
 moe_tile_rows = 0
 embedding_tile_rows = 0
 q8_abs_errors = []
@@ -189,6 +366,12 @@ for slice_row in slice_rows:
         baseline_dot = math.fsum(v * a for v, a in zip(values, activations))
         q8_dot = math.fsum(v * a for v, a in zip(q8_values, activations))
         q4_dot = math.fsum(v * a for v, a in zip(q4_values, activations))
+        torch_values = torch.tensor(values, dtype=torch.float64, device="cpu").reshape(1, tile_elements)
+        torch_activations = torch.tensor(activations, dtype=torch.float64, device="cpu").reshape(tile_elements, 1)
+        torch_dot = float(torch.matmul(torch_values, torch_activations).item())
+        torch_abs_delta = abs(torch_dot - baseline_dot)
+        torch_tolerance = 1e-9
+        torch_parity_pass = int(math.isfinite(torch_dot) and torch_abs_delta <= torch_tolerance)
         q8_abs_error = abs(q8_dot - baseline_dot)
         q4_abs_error = abs(q4_dot - baseline_dot)
         denom = max(1.0, abs(baseline_dot))
@@ -207,6 +390,7 @@ for slice_row in slice_rows:
         finite_q4_rows += int(q4_finite)
         finite_q8_error_rows += int(q8_error_finite)
         finite_q4_error_rows += int(q4_error_finite)
+        torch_matvec_parity_pass_rows += torch_parity_pass
         total_tile_values += tile_elements
         q8_abs_errors.append(q8_abs_error)
         q4_abs_errors.append(q4_abs_error)
@@ -262,6 +446,35 @@ for slice_row in slice_rows:
                 "route_jump_rows": "0",
             }
         )
+        torch_parity_rows.append(
+            {
+                "tile_id": tile_id,
+                "tensor_slice_id": slice_row["tensor_slice_id"],
+                "binding_id": slice_row["binding_id"],
+                "remote_sample_id": slice_row["remote_sample_id"],
+                "model_id": model_id,
+                "shard_name": slice_row["shard_name"],
+                "tensor_name": slice_row["tensor_name"],
+                "tensor_role": slice_row["tensor_role"],
+                "layer_index": slice_row["layer_index"],
+                "expert_index": slice_row["expert_index"],
+                "dtype_source": "BF16",
+                "torch_reference_backend": "torch-cpu-float64-matmul",
+                "tile_bf16_values": str(tile_elements),
+                "tile_sha256": sha256_bytes(tile_bytes),
+                "tensor_segment_sha256": slice_row["tensor_segment_sha256"],
+                "remote_page_sha256": slice_row["remote_page_sha256"],
+                "python_baseline_dot_fp64": fmt(baseline_dot),
+                "torch_matvec_dot_fp64": fmt(torch_dot),
+                "torch_abs_delta": fmt(torch_abs_delta),
+                "torch_tolerance": fmt(torch_tolerance),
+                "torch_matvec_parity_pass": str(torch_parity_pass),
+                "real_checkpoint_page_bound": "1",
+                "checkpoint_payload_bytes_committed_to_repo": "0",
+                "actual_model_generation_ready": "0",
+                "route_jump_rows": "0",
+            }
+        )
         for sample_offset in [0, tile_elements // 2, tile_elements - 1]:
             sample_rows.append(
                 {
@@ -281,6 +494,8 @@ for slice_row in slice_rows:
 tile_count = len(tile_rows)
 q8_mean_abs_error = math.fsum(q8_abs_errors) / tile_count if tile_count else 0.0
 q4_mean_abs_error = math.fsum(q4_abs_errors) / tile_count if tile_count else 0.0
+expert_ffn_rows = expert_ffn_parity_rows()
+expert_ffn_row = expert_ffn_rows[0]
 numeric_ready = int(
     tile_count == len(slice_rows) * tiles_per_slice
     and total_tile_values == tile_count * tile_elements_target
@@ -289,6 +504,7 @@ numeric_ready = int(
     and finite_q4_rows == tile_count
     and finite_q8_error_rows == tile_count
     and finite_q4_error_rows == tile_count
+    and torch_matvec_parity_pass_rows == tile_count
 )
 
 metric_rows = [
@@ -304,6 +520,8 @@ metric_rows = [
         "finite_q4_dot_rows": str(finite_q4_rows),
         "finite_q8_error_rows": str(finite_q8_error_rows),
         "finite_q4_error_rows": str(finite_q4_error_rows),
+        "torch_matvec_parity_rows": str(len(torch_parity_rows)),
+        "torch_matvec_parity_pass_rows": str(torch_matvec_parity_pass_rows),
         "q8_abs_error_mean": fmt(q8_mean_abs_error),
         "q4_abs_error_mean": fmt(q4_mean_abs_error),
         "q8_abs_error_max": fmt(max(q8_abs_errors) if q8_abs_errors else 0.0),
@@ -311,6 +529,11 @@ metric_rows = [
         "hotset_numeric_tile_probe_ready": str(numeric_ready),
         "q8_quant_probe_ready": str(numeric_ready),
         "q4_quant_probe_ready": str(numeric_ready),
+        "torch_matvec_parity_ready": str(numeric_ready),
+        "expert_ffn_parity_contract_ready": expert_ffn_row["contract_ready"],
+        "expert_ffn_parity_fixture_execution_ready": expert_ffn_row["fixture_execution_ready"],
+        "expert_ffn_parity_real_model_execution_ready": expert_ffn_row["real_model_execution_ready"],
+        "expert_ffn_parity_release_ready": expert_ffn_row["release_ready"],
         "checkpoint_payload_bytes_committed_to_repo": "0",
         "full_checkpoint_materialization_ready": "0",
         "full_safetensors_page_hash_binding_ready": "0",
@@ -325,7 +548,9 @@ metric_rows = [
 runtime_gap_rows = [
     {"gap": "v61aa-bf16-tensor-slice-input", "status": "ready", "evidence": "16 sampled real checkpoint tensor slices are hash-bound and finite"},
     {"gap": "hotset-bf16-dot-tile-probe", "status": "ready" if numeric_ready else "blocked", "evidence": f"{finite_baseline_rows}/{tile_count} baseline dot tiles are finite"},
+    {"gap": "torch-matvec-parity", "status": "ready" if torch_matvec_parity_pass_rows == tile_count else "blocked", "evidence": f"{torch_matvec_parity_pass_rows}/{tile_count} real-checkpoint BF16 tiles match torch CPU matvec reference"},
     {"gap": "hotset-q8-q4-quant-probe", "status": "ready" if numeric_ready else "blocked", "evidence": f"{finite_q8_error_rows}/{tile_count} q8 and {finite_q4_error_rows}/{tile_count} q4 quantized dot errors are finite"},
+    {"gap": "expert-ffn-forward-parity", "status": "ready" if expert_ffn_row["real_model_execution_ready"] == "1" else "blocked", "evidence": expert_ffn_row["reason"]},
     {"gap": "full-checkpoint-materialization", "status": "blocked", "evidence": "only sampled hotset pages are materialized"},
     {"gap": "full-safetensors-page-hash-binding", "status": "blocked", "evidence": "full checkpoint page-hash coverage remains incomplete"},
     {"gap": "actual-model-generation", "status": "blocked", "evidence": "numeric tiles do not execute Mixtral generation"},
@@ -337,7 +562,9 @@ runtime_gap_rows = [
 decision_rows = [
     {"gate": "v61aa-bf16-tensor-slice-input", "status": "pass", "reason": "v61aa supplies hash-bound BF16 tensor slice rows"},
     {"gate": "hotset-bf16-dot-tile-probe", "status": "pass" if numeric_ready else "blocked", "reason": f"{finite_baseline_rows}/{tile_count} baseline dot tiles are finite"},
+    {"gate": "torch-matvec-parity", "status": "pass" if torch_matvec_parity_pass_rows == tile_count else "blocked", "reason": f"{torch_matvec_parity_pass_rows}/{tile_count} real-checkpoint BF16 tiles match torch CPU matvec reference"},
     {"gate": "hotset-q8-q4-quant-probe", "status": "pass" if numeric_ready else "blocked", "reason": "bounded q8/q4 dequantized dot errors are finite"},
+    {"gate": "expert-ffn-forward-parity", "status": "pass" if expert_ffn_row["real_model_execution_ready"] == "1" else "blocked", "reason": expert_ffn_row["reason"]},
     {"gate": "manifest-only-no-repo-payload", "status": "pass", "reason": "derived rows only; checkpoint payload bytes remain outside the repository"},
     {"gate": "full-checkpoint-materialization", "status": "blocked", "reason": "only bounded sampled hotset pages are materialized"},
     {"gate": "full-safetensors-page-hash-binding", "status": "blocked", "reason": "full page-hash coverage remains incomplete"},
@@ -349,6 +576,8 @@ decision_rows = [
 
 write_csv(run_dir / "hotset_tensor_tile_probe_rows.csv", list(tile_rows[0].keys()), tile_rows)
 write_csv(run_dir / "hotset_tensor_tile_sample_trace_rows.csv", list(sample_rows[0].keys()), sample_rows)
+write_csv(run_dir / "hotset_tensor_tile_torch_parity_rows.csv", list(torch_parity_rows[0].keys()), torch_parity_rows)
+write_csv(run_dir / "expert_ffn_forward_parity_rows.csv", list(expert_ffn_rows[0].keys()), expert_ffn_rows)
 write_csv(run_dir / "hotset_tensor_tile_quant_metric_rows.csv", list(metric_rows[0].keys()), metric_rows)
 write_csv(run_dir / "runtime_gap_rows.csv", ["gap", "status", "evidence"], runtime_gap_rows)
 
@@ -367,6 +596,8 @@ summary = {
     "finite_q4_dot_rows": str(finite_q4_rows),
     "finite_q8_error_rows": str(finite_q8_error_rows),
     "finite_q4_error_rows": str(finite_q4_error_rows),
+    "torch_matvec_parity_rows": str(len(torch_parity_rows)),
+    "torch_matvec_parity_pass_rows": str(torch_matvec_parity_pass_rows),
     "q8_abs_error_mean": fmt(q8_mean_abs_error),
     "q4_abs_error_mean": fmt(q4_mean_abs_error),
     "q8_abs_error_max": fmt(max(q8_abs_errors) if q8_abs_errors else 0.0),
@@ -374,6 +605,13 @@ summary = {
     "hotset_numeric_tile_probe_ready": str(numeric_ready),
     "q8_quant_probe_ready": str(numeric_ready),
     "q4_quant_probe_ready": str(numeric_ready),
+    "torch_matvec_parity_ready": str(numeric_ready),
+    "expert_ffn_parity_rows": str(len(expert_ffn_rows)),
+    "expert_ffn_parity_contract_ready": expert_ffn_row["contract_ready"],
+    "expert_ffn_parity_fixture_execution_ready": expert_ffn_row["fixture_execution_ready"],
+    "expert_ffn_parity_real_model_execution_ready": expert_ffn_row["real_model_execution_ready"],
+    "expert_ffn_parity_release_ready": expert_ffn_row["release_ready"],
+    "expert_ffn_parity_status": expert_ffn_row["status"],
     "checkpoint_payload_bytes_committed_to_repo": "0",
     "full_checkpoint_materialization_ready": "0",
     "full_safetensors_page_hash_binding_ready": "0",
@@ -397,6 +635,14 @@ manifest = {
     "finite_baseline_dot_rows": finite_baseline_rows,
     "finite_q8_dot_rows": finite_q8_rows,
     "finite_q4_dot_rows": finite_q4_rows,
+    "torch_matvec_parity_rows": len(torch_parity_rows),
+    "torch_matvec_parity_pass_rows": torch_matvec_parity_pass_rows,
+    "torch_matvec_parity_ready": numeric_ready,
+    "expert_ffn_parity_rows": len(expert_ffn_rows),
+    "expert_ffn_parity_contract_ready": int(expert_ffn_row["contract_ready"]),
+    "expert_ffn_parity_fixture_execution_ready": int(expert_ffn_row["fixture_execution_ready"]),
+    "expert_ffn_parity_real_model_execution_ready": int(expert_ffn_row["real_model_execution_ready"]),
+    "expert_ffn_parity_release_ready": int(expert_ffn_row["release_ready"]),
     "q8_abs_error_mean": q8_mean_abs_error,
     "q4_abs_error_mean": q4_mean_abs_error,
     "checkpoint_payload_bytes_committed_to_repo": 0,
@@ -429,6 +675,13 @@ Evidence emitted:
 - finite_q4_dot_rows={finite_q4_rows}
 - finite_q8_error_rows={finite_q8_error_rows}
 - finite_q4_error_rows={finite_q4_error_rows}
+- torch_matvec_parity_rows={len(torch_parity_rows)}
+- torch_matvec_parity_pass_rows={torch_matvec_parity_pass_rows}
+- torch_matvec_parity_ready={numeric_ready}
+- expert_ffn_parity_rows={len(expert_ffn_rows)}
+- expert_ffn_parity_contract_ready={expert_ffn_row["contract_ready"]}
+- expert_ffn_parity_fixture_execution_ready={expert_ffn_row["fixture_execution_ready"]}
+- expert_ffn_parity_real_model_execution_ready={expert_ffn_row["real_model_execution_ready"]}
 - q8_quant_probe_ready={numeric_ready}
 - q4_quant_probe_ready={numeric_ready}
 - checkpoint_payload_bytes_committed_to_repo=0
