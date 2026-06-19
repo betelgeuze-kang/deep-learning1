@@ -55,4 +55,8 @@ D/E 30B/70B fixture rows remain schema-test evidence only until model revision,
 quantization, hashes, runtime, prompt/context/retrieval budgets, hardware, seed,
 raw answer/citation outputs, and evaluator version are accepted.
 
+v53 source-bound benchmark checks are exact: repo counts, 1000 query/span rows,
+negative controls, evaluator separation, A/B/G/H same-query evidence,
+sanitized-question-only adapter selection, and v1 exit criteria must all replay.
+
 The source-controlled split contract is `pr_slices/pr2.json`.

@@ -55,7 +55,11 @@ D/E baseline wording must follow `baselines/de_30b70b_real.json`; fixture or
 schema-test D/E rows cannot enter measured registry or public comparison rows.
 v53 benchmark wording must follow `benchmarks/v53_source_bound_freeze.json`;
 the 1000-row machine-foundation freeze does not imply human-reviewed quality,
-D/E baseline completion, public comparison, or release readiness.
+D/E baseline completion, public comparison, or release readiness. The v53
+verifier pins exact summary checks for repo counts, 1000 query/span rows,
+negative controls, answer/citation/resource evaluator separation, A/B/G/H
+same-query evidence, sanitized-question-only adapter selection, and the v1 exit
+ledger.
 v54 grounded-generation wording must follow `v54/grounded_generation_contract.json`;
 the recommended answer, citation, unsupported-claim, abstain, resource, guard,
 and sha256 outputs are replay artifacts, while raw prompt stuffing, real model

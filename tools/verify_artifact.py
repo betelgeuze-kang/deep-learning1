@@ -171,6 +171,7 @@ REQUIRED_V53_REQUIREMENT_KEYS = {
     "current_status",
     "evidence_path",
     "claim_boundary",
+    "summary_checks",
 }
 REQUIRED_V58_BLIND_EVAL_KEYS = {
     "schema_version",
@@ -471,6 +472,59 @@ EXPECTED_V53_REQUIREMENT_IDS = [
     "abgh-same-query-internal-prebaseline",
     "sanitized-question-only-adapter-selection",
 ]
+EXPECTED_V53_SUMMARY_CHECKS = {
+    "pinned-public-repo-manifest": [
+        ("v53i", "repo_count", "10"),
+        ("v53t", "foundation_direct_pinned_manifest_ready", "1"),
+        ("v53t", "foundation_direct_repo_manifest_rows", "10"),
+        ("v53t", "foundation_direct_file_manifest_rows", "11266"),
+        ("v53t", "foundation_direct_content_snapshot_rows", "11266"),
+    ],
+    "source-span-bound-1000-query-surface": [
+        ("v53i", "complete_source_query_rows", "1000"),
+        ("v53i", "complete_source_span_rows", "1000"),
+        ("v53i", "missing_query_rows", "0"),
+        ("v53t", "foundation_query_span_binding_audit_ready", "1"),
+        ("v53t", "foundation_query_span_binding_pass_rows", "1000"),
+        ("v53t", "foundation_query_span_binding_blocked_rows", "0"),
+    ],
+    "negative-unsupported-missing-doc-code-controls": [
+        ("v53i", "negative_abstain_rows", "160"),
+        ("v53i", "unsupported_control_rows", "100"),
+        ("v53i", "missing_specific_abstain_rows", "30"),
+        ("v53i", "doc_code_conflict_rows", "140"),
+        ("v53t", "v1_exit_negative_control_share_ready", "1"),
+    ],
+    "answer-citation-resource-separate-evaluator": [
+        ("v53ap", "same_evaluator_contract_all_local_systems", "1"),
+        ("v53ap", "same_resource_contract_all_local_systems", "1"),
+        ("v53aq", "same_evaluator_contract_all_local_systems", "1"),
+        ("v53aq", "same_resource_contract_all_local_systems", "1"),
+        ("v53t", "foundation_direct_evaluator_separate_rows", "4000"),
+    ],
+    "abgh-same-query-internal-prebaseline": [
+        ("v53ap", "same_query_set_all_local_systems", "1"),
+        ("v53aq", "same_query_set_all_local_systems", "1"),
+        ("v53t", "v53aq_same_complete_source_query_hash", "1"),
+        ("v53aq", "public_comparison_claim_ready", "0"),
+        ("v53aq", "required_30b_baseline_ready", "0"),
+        ("v53aq", "required_70b_baseline_ready", "0"),
+    ],
+    "sanitized-question-only-adapter-selection": [
+        ("v53aq", "selection_question_text_only", "1"),
+        ("v53aq", "selection_sanitized_question_only", "1"),
+        ("v53aq", "source_locator_in_question_removed_rows", "4000"),
+        ("v53aq", "selection_oracle_field_used", "0"),
+        ("v53aq", "source_span_oracle_selection_used", "0"),
+        ("v53aq", "expected_answer_oracle_replay", "0"),
+    ],
+}
+DEFAULT_V53_SUMMARY_PATHS = {
+    "v53i": Path("results/v53i_complete_source_query_instantiation_summary.csv"),
+    "v53t": Path("results/v53t_complete_source_audit_readiness_gate_summary.csv"),
+    "v53ap": Path("results/v53ap_complete_source_abgh_same_query_measured_summary.csv"),
+    "v53aq": Path("results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv"),
+}
 EXPECTED_V54_ARTIFACT_IDS = [
     "answer-rows",
     "citation-rows",
@@ -2007,6 +2061,11 @@ def verify_v53_source_benchmark(
         summaries["v53ap"] = read_first_csv(v53ap_summary)
     if v53aq_summary is not None:
         summaries["v53aq"] = read_first_csv(v53aq_summary)
+    for summary_id, summary_path in DEFAULT_V53_SUMMARY_PATHS.items():
+        if summary_id in summaries:
+            continue
+        if summary_path.is_file() and summary_path.stat().st_size > 0:
+            summaries[summary_id] = read_first_csv(summary_path)
 
     for index, row in enumerate(requirements, start=1):
         prefix = f"{path}: requirement[{index}]"
@@ -2018,13 +2077,23 @@ def verify_v53_source_benchmark(
         if not row.get("required_evidence") or not row.get("evidence_path") or not row.get("claim_boundary"):
             errors.append(f"{prefix}: required_evidence, evidence_path, and claim_boundary must be non-empty")
         checks = row.get("summary_checks", [])
-        if checks and not isinstance(checks, list):
-            errors.append(f"{prefix}: summary_checks must be a list when present")
+        if not isinstance(checks, list) or not checks:
+            errors.append(f"{prefix}: summary_checks must be a non-empty list")
             continue
+        requirement_id = row.get("requirement_id", "")
+        actual_checks = [
+            (check.get("summary_id", ""), check.get("field", ""), check.get("expected", ""))
+            for check in checks
+        ]
+        expected_checks = EXPECTED_V53_SUMMARY_CHECKS.get(requirement_id)
+        if expected_checks is not None and actual_checks != expected_checks:
+            errors.append(f"{prefix}: summary_checks must exactly match the v53 source benchmark contract")
         for check in checks:
             summary_id = check.get("summary_id", "")
             summary = summaries.get(summary_id)
             if summary is None:
+                expected_path = DEFAULT_V53_SUMMARY_PATHS.get(summary_id)
+                errors.append(f"{prefix}: missing summary evidence for {summary_id} at {expected_path}")
                 continue
             field = check.get("field", "")
             expected = check.get("expected", "")
