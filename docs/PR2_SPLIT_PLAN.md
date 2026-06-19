@@ -41,7 +41,8 @@ must not imply real model execution, human review, heldout metrics, independent
 reproduction, or release readiness.
 v50 auditor wording must follow `audits/v50_public_repo_auditor_correctness.json`;
 summary `ready=1` is not mergeable auditor correctness while replay artifacts
-are missing, and implicit public refresh is forbidden.
+are missing. The v50 artifact schema, row-count floor, replay commands, and
+sha256 manifest binding are explicit, but implicit public refresh is forbidden.
 v52 baseline wording must follow `baselines/v52_adapter_guard.json`;
 System C's 7B-14B local response packet is not a quality claim, and D/E
 measured registry admission remains blocked until real pinned evidence validates.
@@ -87,6 +88,10 @@ Split it into claim-bounded PRs so each reviewer can replay the artifacts
 without accepting unrelated scaffold. Merge gates are claim boundary accuracy,
 replayable output artifacts, and false-positive blocker closure; tests are
 necessary smoke evidence but are not sufficient merge conditions.
+
+v50 artifact schema is now explicit, but auditor correctness remains blocked
+until the required row artifacts and sha256 manifest are present and
+replay-checkable without implicit public refresh.
 
 Current v61 state: checkpoint identity, page-hash, runtime-admission, and
 operator-bundle scaffolds are documented, but actual generation, one-token

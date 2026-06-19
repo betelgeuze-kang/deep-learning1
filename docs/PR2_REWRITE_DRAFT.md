@@ -16,6 +16,11 @@ without accepting unrelated scaffold. Merge gates are claim boundary accuracy,
 replayable output artifacts, and false-positive blocker closure. Tests are
 necessary smoke evidence but are not sufficient merge conditions.
 
+v50 artifact schema is now explicit, but auditor correctness remains blocked
+until the required source snapshot, audit case, source span, guard negative,
+commercial return, and sha256 manifest rows are present and replay-checkable
+without implicit public refresh.
+
 Required review slices:
 
 1. `docs/v1-roadmap`

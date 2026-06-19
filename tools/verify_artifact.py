@@ -208,6 +208,8 @@ REQUIRED_PR_MERGE_GATES = {
 }
 REQUIRED_PR2_REWRITE_TERMS = {
     "not mergeable as one unit",
+    "v50 artifact schema",
+    "sha256 manifest",
     "typed readiness",
     "retrieval leakage",
     "D/E",
