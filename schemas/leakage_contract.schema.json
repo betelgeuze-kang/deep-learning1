@@ -13,8 +13,12 @@
         "allowed_surface": {"type": "string"},
         "allowed_model_visible_fields": {
           "type": "array",
-          "items": {"type": "string"},
-          "minItems": 1
+          "items": {
+            "type": "string",
+            "enum": ["sanitized_question", "opaque_routehint"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
         },
         "direct_query_source_binding_forbidden": {"type": "boolean"}
       },
@@ -26,9 +30,73 @@
         "type": "object",
         "required": ["guard_id", "forbidden_surface", "field_names", "evaluator_only_or_absent"],
         "properties": {
-          "guard_id": {"type": "string"},
+          "guard_id": {
+            "type": "string",
+            "enum": [
+              "source-span-id",
+              "source-path",
+              "source-line",
+              "source-file-hash",
+              "query-source-direct-binding",
+              "expected-behavior",
+              "expected-label"
+            ]
+          },
           "forbidden_surface": {"type": "string"},
-          "field_names": {"type": "array", "items": {"type": "string"}},
+          "field_names": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "audit_type",
+                "blob_sha256",
+                "case_id",
+                "content_sha256",
+                "end_line",
+                "expected_answer",
+                "expected_answer_sha256",
+                "expected_behavior",
+                "expected_citation",
+                "expected_label",
+                "expected_output",
+                "file_path",
+                "file_sha256",
+                "git_blob_sha",
+                "gold_answer",
+                "gold_citation",
+                "gold_label",
+                "line",
+                "line_end",
+                "line_start",
+                "negative_or_abstain",
+                "path",
+                "query_id",
+                "query_source_id",
+                "repo_path",
+                "source_binding_id",
+                "source_case_id",
+                "source_file_hash",
+                "source_file_path",
+                "source_file_sha256",
+                "source_git_blob_sha",
+                "source_line",
+                "source_line_end",
+                "source_line_start",
+                "source_path",
+                "source_query_id",
+                "source_row_id",
+                "source_sha256",
+                "source_span_id",
+                "source_span_row_id",
+                "span_id",
+                "span_row_id",
+                "start_line",
+                "target_label"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
           "evaluator_only_or_absent": {"type": "boolean"}
         },
         "additionalProperties": false
@@ -46,7 +114,15 @@
             "enum": ["model_or_retriever", "fixture_or_evaluator_replay", "source_bound_non_model_adapter"]
           },
           "summary_path": {"type": "string"},
-          "allowed_model_visible_fields": {"type": "array", "items": {"type": "string"}},
+          "allowed_model_visible_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["sanitized_question", "opaque_routehint", "none"]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
           "forbidden_field_summary": {"type": "string"},
           "must_equal": {
             "type": "object",
