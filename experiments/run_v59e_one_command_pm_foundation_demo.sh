@@ -299,17 +299,24 @@ v58c_required_artifacts = [
     v58c_dir / "run_identity_template_rows.csv",
     v58c_dir / "blind_response_validation_rows.csv",
     v58c_dir / "blind_response_intake_gate_rows.csv",
+    v58c_dir / "blind_response_actual_execution_matrix_rows.csv",
     v58c_dir / "V58C_BLIND_RESPONSE_EVIDENCE_INTAKE_BOUNDARY.md",
     v58c_dir / "v58c_blind_response_evidence_intake_manifest.json",
     v58c_dir / "sha256_manifest.csv",
 ]
+v58c_existing_summary = first_row(v58c_summary_path) if v58c_summary_path.is_file() else {}
+v58c_artifact_files_present = all(path.is_file() and path.stat().st_size > 0 for path in v58c_required_artifacts)
 v58c_available = int(
     os.environ.get("V59E_USE_EXISTING_V58C", "0") == "1"
-    and v58c_summary_path.is_file()
-    and all(path.is_file() and path.stat().st_size > 0 for path in v58c_required_artifacts)
+    and v58c_artifact_files_present
+    and as_int(v58c_existing_summary, "v58c_blind_response_evidence_intake_ready") == 1
+    and as_int(v58c_existing_summary, "expected_blind_response_rows") == 4000
+    and as_int(v58c_existing_summary, "required_blind_response_ready") == 0
+    and as_int(v58c_existing_summary, "human_blind_review_ready") == 0
+    and as_int(v58c_existing_summary, "v58_full_blind_eval_ready") == 0
 )
 if v58c_available:
-    v58c = first_row(v58c_summary_path)
+    v58c = v58c_existing_summary
 else:
     v58c = {
         "v58c_blind_response_evidence_intake_ready": "0",
@@ -610,6 +617,7 @@ if v58c_available:
                 (v58c_dir / "run_identity_template_rows.csv", "source_v58c/run_identity_template_rows.csv"),
                 (v58c_dir / "blind_response_validation_rows.csv", "source_v58c/blind_response_validation_rows.csv"),
                 (v58c_dir / "blind_response_intake_gate_rows.csv", "source_v58c/blind_response_intake_gate_rows.csv"),
+                (v58c_dir / "blind_response_actual_execution_matrix_rows.csv", "source_v58c/blind_response_actual_execution_matrix_rows.csv"),
                 (v58c_dir / "V58C_BLIND_RESPONSE_EVIDENCE_INTAKE_BOUNDARY.md", "source_v58c/V58C_BLIND_RESPONSE_EVIDENCE_INTAKE_BOUNDARY.md"),
                 (v58c_dir / "v58c_blind_response_evidence_intake_manifest.json", "source_v58c/v58c_blind_response_evidence_intake_manifest.json"),
                 (v58c_dir / "sha256_manifest.csv", "source_v58c/sha256_manifest.csv"),

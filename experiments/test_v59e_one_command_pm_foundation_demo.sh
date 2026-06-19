@@ -15,6 +15,7 @@ python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$PR_SLICE_RUN_DIR" "$PR_SLI
 import csv
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -39,6 +40,17 @@ def read_csv(path):
 
 
 summary = read_csv(summary_csv)[0]
+use_existing_v58c = os.environ.get("V59E_USE_EXISTING_V58C", "0") == "1"
+v58c_stage_name = "v58c" if use_existing_v58c else "v58c_dependency"
+v58c_expected = {
+    "v58c_intake_artifact_available": "1" if use_existing_v58c else "0",
+    "v58c_dependency_blocker_ready": "0" if use_existing_v58c else "1",
+    "v58c_blind_response_evidence_intake_ready": "1" if use_existing_v58c else "0",
+    "v58c_expected_blind_response_rows": "4000" if use_existing_v58c else "0",
+    "v58c_required_blind_response_ready": "0",
+    "v58c_blind_response_absorb_ready": "0",
+    "v58c_human_blind_review_ready": "0",
+}
 expected = {
     "v59e_one_command_pm_foundation_demo_ready": "1",
     "v59_ready": "0",
@@ -129,13 +141,7 @@ expected = {
     "h10_real_label_acceptance_evidence_coverage_blocked_rows": "6",
     "h10_real_label_acceptance_evidence_source_verified_blocked_rows": "6",
     "v58_pm_blind_eval_blocker_ready": "1",
-    "v58c_intake_artifact_available": "0",
-    "v58c_dependency_blocker_ready": "1",
-    "v58c_blind_response_evidence_intake_ready": "0",
-    "v58c_expected_blind_response_rows": "0",
-    "v58c_required_blind_response_ready": "0",
-    "v58c_blind_response_absorb_ready": "0",
-    "v58c_human_blind_review_ready": "0",
+    **v58c_expected,
     "v58d_review_artifact_available": "0",
     "v58d_dependency_blocker_ready": "1",
     "v58d_blind_review_return_intake_ready": "0",
@@ -273,7 +279,7 @@ if int(summary["bundle_files"]) < 35:
     raise SystemExit("v59e should copy a substantial PM foundation bundle")
 
 stage_rows = read_csv(run_dir / "pm_foundation_stage_replay_rows.csv")
-if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v53aq", "v54c", "h10_pm", "v58c_dependency", "v58d_dependency", "v58_blocker"]:
+if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v53aq", "v54c", "h10_pm", v58c_stage_name, "v58d_dependency", "v58_blocker"]:
     raise SystemExit("v59e stage order mismatch")
 if any(row["ready"] != "1" for row in stage_rows):
     raise SystemExit("v59e all PM stages should be replay-ready")
@@ -293,6 +299,7 @@ for gate in [
     "evaluator-check",
     "grounded-generation-outputs",
     "h10-real-label-readiness-ledger",
+    *(["v58-blind-response-intake"] if use_existing_v58c else []),
     "v58c-intake-dependency-blocker",
     "v58d-review-return-dependency-blocker",
     "v58-blind-eval-blocker-ledger",
@@ -308,7 +315,10 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v59e gate should pass: {gate}")
-for gate in ["public-source-download-execution", "v58-blind-response-intake", "v58-blind-review-intake", "real-blind-eval", "full-v59-public-demo", "real-release-package"]:
+blocked_gates = ["public-source-download-execution", "v58-blind-review-intake", "real-blind-eval", "full-v59-public-demo", "real-release-package"]
+if not use_existing_v58c:
+    blocked_gates.append("v58-blind-response-intake")
+for gate in blocked_gates:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v59e gate should remain blocked: {gate}")
 
@@ -366,7 +376,6 @@ required_files = [
     "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
-    "source_v58c_dependency/v58c_pm_blind_response_intake_dependency_rows.csv",
     "source_v58d_dependency/v58d_pm_blind_review_return_dependency_rows.csv",
     "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv",
     "v58_blind_eval_required_artifact_rows.csv",
@@ -436,6 +445,26 @@ required_files = [
     "source_pm_pr_claim_slice_gate/return_templates/v60-release-evidence-missing/v59-public-source-download-refresh.csv",
     "source_pm_pr_claim_slice_gate/return_templates/external-human-label-evidence-missing/h10-label-evidence-csv.csv",
 ]
+if use_existing_v58c:
+    required_files.extend(
+        [
+            "source_v58c/blind_response_required_field_rows.csv",
+            "source_v58c/blind_response_row_template.csv",
+            "source_v58c/run_identity_template_rows.csv",
+            "source_v58c/blind_response_validation_rows.csv",
+            "source_v58c/blind_response_intake_gate_rows.csv",
+            "source_v58c/blind_response_actual_execution_matrix_rows.csv",
+            "source_v58c/V58C_BLIND_RESPONSE_EVIDENCE_INTAKE_BOUNDARY.md",
+            "source_v58c/v58c_blind_response_evidence_intake_manifest.json",
+            "source_v58c/sha256_manifest.csv",
+            "source_v58c/source_v58b/blind_query_freeze_rows.csv",
+            "source_v58c/source_v58b/sealed_identity_key_rows.csv",
+            "source_v58c/source_v58b/blind_response_template_rows.csv",
+            "source_v58c/source_v58b/sha256_manifest.csv",
+        ]
+    )
+else:
+    required_files.append("source_v58c_dependency/v58c_pm_blind_response_intake_dependency_rows.csv")
 for rel in required_files:
     path = run_dir / rel
     if not path.is_file() or path.stat().st_size == 0:
@@ -978,14 +1007,14 @@ if manifest.get("h10_real_label_acceptance_evidence_source_verified_blocked_rows
 if "h10_real_label_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("v59e manifest should hash-bind h10 acceptance evidence rows")
 if (
-    manifest.get("v58c_intake_artifact_available") != 0
-    or manifest.get("v58c_dependency_blocker_ready") != 1
-    or manifest.get("v58c_blind_response_evidence_intake_ready") != 0
-    or manifest.get("v58c_expected_blind_response_rows") != 0
+    manifest.get("v58c_intake_artifact_available") != (1 if use_existing_v58c else 0)
+    or manifest.get("v58c_dependency_blocker_ready") != (0 if use_existing_v58c else 1)
+    or manifest.get("v58c_blind_response_evidence_intake_ready") != (1 if use_existing_v58c else 0)
+    or manifest.get("v58c_expected_blind_response_rows") != (4000 if use_existing_v58c else 0)
     or manifest.get("v58c_required_blind_response_ready") != 0
     or manifest.get("v58c_human_blind_review_ready") != 0
 ):
-    raise SystemExit("v59e manifest should preserve the v58c blind-response intake blocker boundary")
+    raise SystemExit("v59e manifest should preserve the v58c blind-response intake boundary")
 if (
     manifest.get("v58d_review_artifact_available") != 0
     or manifest.get("v58d_dependency_blocker_ready") != 1
@@ -1216,10 +1245,10 @@ for snippet in [
     "h10_real_label_acceptance_evidence_zero_accepted_rows=6",
     "h10_real_label_acceptance_evidence_coverage_blocked_rows=6",
     "h10_real_label_acceptance_evidence_source_verified_blocked_rows=6",
-    "v58c_intake_artifact_available=0",
-    "v58c_dependency_blocker_ready=1",
-    "v58c_blind_response_evidence_intake_ready=0",
-    "v58c_expected_blind_response_rows=0",
+    f"v58c_intake_artifact_available={1 if use_existing_v58c else 0}",
+    f"v58c_dependency_blocker_ready={0 if use_existing_v58c else 1}",
+    f"v58c_blind_response_evidence_intake_ready={1 if use_existing_v58c else 0}",
+    f"v58c_expected_blind_response_rows={4000 if use_existing_v58c else 0}",
     "v58c_required_blind_response_ready=0",
     "v58c_human_blind_review_ready=0",
     "v58d_review_artifact_available=0",
