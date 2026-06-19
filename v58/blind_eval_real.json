@@ -33,7 +33,7 @@
     },
     {
       "requirement_id": "two-independent-reviewers",
-      "required_evidence": "at least two independent blinded reviewers per required response"
+      "required_evidence": "at least two independent blinded reviewers from distinct reviewer pools per required response"
     },
     {
       "requirement_id": "disagreement-adjudication",
@@ -91,7 +91,7 @@
       "artifact_id": "v58-human-review-rows",
       "artifact_kind": "review-return",
       "validation_command": "V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh",
-      "required_columns": ["blind_response_id", "blind_eval_id", "blind_system_id", "reviewer_id", "reviewer_blinded", "reviewer_independent", "conflict_disclosed", "answer_correctness", "citation_correctness", "abstain_correctness", "source_span_exactness", "unsupported_abstention_correctness", "unseen_repository_split_id", "latency_memory_excluded_from_quality_score", "policy_score", "review_decision", "review_sha256"],
+      "required_columns": ["blind_response_id", "blind_eval_id", "blind_system_id", "reviewer_id", "reviewer_pool_id", "reviewer_blinded", "reviewer_independent", "conflict_disclosed", "answer_correctness", "citation_correctness", "abstain_correctness", "source_span_exactness", "unsupported_abstention_correctness", "unseen_repository_split_id", "latency_memory_excluded_from_quality_score", "policy_score", "review_decision", "review_sha256"],
       "min_rows": 7000
     },
     {

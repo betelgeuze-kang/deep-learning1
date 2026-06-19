@@ -67,8 +67,9 @@ and `all_required_real_evidence_missing=1` for both D and E.
 v58 remains a protocol/intake surface, not a completed blind eval. Response and
 resource rows must carry `latency_memory_excluded_from_quality_score=1`, while
 A/B/C/D/E/G/H real responses require 500 rows per system rather than a single
-3500-row total. Two blinded reviewers, adjudication, unseen split, source-span
-exactness, and unsupported abstention are still required.
+3500-row total. Two blinded reviewers from distinct reviewer pools,
+adjudication, unseen split, source-span exactness, and unsupported abstention are
+still required.
 
 v53 source-bound benchmark checks are exact: repo counts, 1000 query/span rows,
 negative controls, evaluator separation, A/B/G/H same-query evidence,

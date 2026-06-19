@@ -165,6 +165,7 @@ schema_rows = [
     ("blind_review_return_rows.csv", "blind_eval_id", "must match the frozen blind eval id for the response"),
     ("blind_review_return_rows.csv", "blind_system_id", "blind system id only; source identity fields are forbidden"),
     ("blind_review_return_rows.csv", "reviewer_id", "stable reviewer id; two distinct reviewers are required per required response"),
+    ("blind_review_return_rows.csv", "reviewer_pool_id", "stable reviewer pool id; the two required reviewers must come from distinct pools"),
     ("blind_review_return_rows.csv", "reviewer_blinded", "must be 1"),
     ("blind_review_return_rows.csv", "reviewer_independent", "must be 1; reviewer independence is declared separately from distinct reviewer ids"),
     ("blind_review_return_rows.csv", "conflict_disclosed", "0 or 1"),
@@ -201,6 +202,7 @@ review_template_fields = [
     "blind_system_id",
     "reviewer_slot",
     "reviewer_id",
+    "reviewer_pool_id",
     "reviewer_blinded",
     "reviewer_independent",
     "conflict_disclosed",
@@ -227,6 +229,7 @@ for row in response_templates:
                 "blind_system_id": row["blind_system_id"],
                 "reviewer_slot": reviewer_slot,
                 "reviewer_id": "",
+                "reviewer_pool_id": "",
                 "reviewer_blinded": "",
                 "reviewer_independent": "",
                 "conflict_disclosed": "",
@@ -355,6 +358,8 @@ for row in review_rows:
         errors.append("review-decision-invalid")
     if not row.get("reviewer_id", ""):
         errors.append("reviewer-id-missing")
+    if not row.get("reviewer_pool_id", ""):
+        errors.append("reviewer-pool-id-missing")
     if not is_sha256(row.get("review_sha256", "")):
         errors.append("review-sha256-invalid")
     reviews_by_response[response_id].append(row)
@@ -362,10 +367,13 @@ for row in review_rows:
 for response_id in required_response_ids:
     rows = reviews_by_response.get(response_id, [])
     reviewer_ids = {row.get("reviewer_id", "") for row in rows}
+    reviewer_pool_ids = {row.get("reviewer_pool_id", "") for row in rows}
     if len(rows) != 2:
         errors.append("required-review-count-not-two")
     if len(reviewer_ids) != 2:
         errors.append("required-reviewer-not-distinct")
+    if len(reviewer_pool_ids) != 2:
+        errors.append("required-reviewer-pool-not-distinct")
 
 adjudication_by_response = {}
 for row in adjudication_rows:
@@ -405,6 +413,7 @@ review_unsupported_abstention_counts = Counter()
 review_unseen_split_counts = Counter()
 review_latency_memory_separate_counts = Counter()
 reviewers_by_system_response = defaultdict(lambda: defaultdict(set))
+reviewer_pools_by_system_response = defaultdict(lambda: defaultdict(set))
 for row in review_rows:
     template = template_by_response.get(row.get("blind_response_id", ""))
     if not template:
@@ -415,6 +424,7 @@ for row in review_rows:
     if row.get("reviewer_independent", "") == "1":
         review_independent_counts[system_id] += 1
     reviewers_by_system_response[system_id][response_id].add(row.get("reviewer_id", ""))
+    reviewer_pools_by_system_response[system_id][response_id].add(row.get("reviewer_pool_id", ""))
     if row.get("source_span_exactness", "") in {"0", "1"}:
         review_exact_span_counts[system_id] += 1
     if row.get("unsupported_abstention_correctness", "") in {"0", "1"}:
@@ -442,6 +452,11 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
         for reviewers in reviewers_by_system_response.get(system_id, {}).values()
         if len({reviewer for reviewer in reviewers if reviewer}) >= 2
     )
+    distinct_reviewer_pool_response_rows = sum(
+        1
+        for reviewer_pools in reviewer_pools_by_system_response.get(system_id, {}).values()
+        if len({reviewer_pool for reviewer_pool in reviewer_pools if reviewer_pool}) >= 2
+    )
     supplied_adjudication_rows = adjudication_counts.get(system_id, 0)
     source_span_exactness_rows = review_exact_span_counts.get(system_id, 0)
     unsupported_abstention_rows = review_unsupported_abstention_counts.get(system_id, 0)
@@ -453,6 +468,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
         and supplied_review_rows == expected_review_rows
         and independent_review_rows == expected_review_rows
         and two_reviewer_response_rows == expected_response_rows
+        and distinct_reviewer_pool_response_rows == expected_response_rows
         and supplied_adjudication_rows == expected_adjudication_rows
         and source_span_exactness_rows == expected_review_rows
         and unsupported_abstention_rows == expected_review_rows
@@ -470,6 +486,8 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
         blocker = "missing-reviewer-independent-declarations"
     elif two_reviewer_response_rows != expected_response_rows:
         blocker = "missing-distinct-reviewers-per-response"
+    elif distinct_reviewer_pool_response_rows != expected_response_rows:
+        blocker = "missing-distinct-reviewer-pools-per-response"
     elif supplied_adjudication_rows != expected_adjudication_rows:
         blocker = "missing-disagreement-adjudication-rows"
     elif source_span_exactness_rows != expected_review_rows:
@@ -492,6 +510,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
             "same_corpus_required": "1",
             "same_context_budget_required": "1",
             "two_independent_reviewers_required": "1",
+            "distinct_reviewer_pools_required": "1",
             "disagreement_adjudication_required": "1",
             "unseen_repository_split_required": "1",
             "source_span_exactness_required": "1",
@@ -503,6 +522,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
             "supplied_review_rows": str(supplied_review_rows),
             "independent_review_rows": str(independent_review_rows),
             "two_reviewer_response_rows": str(two_reviewer_response_rows),
+            "distinct_reviewer_pool_response_rows": str(distinct_reviewer_pool_response_rows),
             "expected_adjudication_rows": str(expected_adjudication_rows),
             "supplied_adjudication_rows": str(supplied_adjudication_rows),
             "source_span_exactness_review_rows": str(source_span_exactness_rows),
@@ -674,7 +694,7 @@ write_csv(run_dir / "blind_review_intake_gate_rows.csv", ["gate", "status", "rea
     f"- v58_full_blind_eval_ready={v58_full_blind_eval_ready}\n\n"
     "Reviewer return rows must not contain source system identity fields. "
     "System identity is unsealed only after scoring/adjudication rows validate. "
-    "PM v58 readiness additionally requires A/B/C/D/E/G/H actual response rows, two independent blinded reviewers per response, adjudication rows, unseen repository split evidence, source-span exactness review, unsupported-abstention review, and latency/memory separation from answer quality.\n\n"
+    "PM v58 readiness additionally requires A/B/C/D/E/G/H actual response rows, two independent blinded reviewers from distinct reviewer pools per response, adjudication rows, unseen repository split evidence, source-span exactness review, unsupported-abstention review, and latency/memory separation from answer quality.\n\n"
     "Do not publish blind-eval wins, RouteHint advantage, or 30B-150B comparison claims from this intake boundary alone.\n",
     encoding="utf-8",
 )

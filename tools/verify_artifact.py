@@ -1127,6 +1127,7 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
         "blind_eval_id",
         "blind_system_id",
         "reviewer_id",
+        "reviewer_pool_id",
         "reviewer_blinded",
         "reviewer_independent",
         "conflict_disclosed",

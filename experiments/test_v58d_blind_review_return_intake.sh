@@ -125,6 +125,7 @@ for rel in required_files:
 schema_rows = read_csv(run_dir / "blind_review_required_field_rows.csv")
 for field in [
     "blind_response_id",
+    "reviewer_pool_id",
     "reviewer_blinded",
     "reviewer_independent",
     "review_decision",
@@ -144,6 +145,7 @@ if len(review_templates) != 0:
 review_header = (run_dir / "blind_review_return_template_rows.csv").read_text(encoding="utf-8").splitlines()[0].split(",")
 for required in [
     "reviewer_independent",
+    "reviewer_pool_id",
     "source_span_exactness",
     "unsupported_abstention_correctness",
     "unseen_repository_split_id",
@@ -176,6 +178,7 @@ for system_id, row in pm_by_system.items():
         "same_corpus_required",
         "same_context_budget_required",
         "two_independent_reviewers_required",
+        "distinct_reviewer_pools_required",
         "disagreement_adjudication_required",
         "unseen_repository_split_required",
         "source_span_exactness_required",
@@ -195,6 +198,7 @@ for system_id, row in pm_by_system.items():
         "supplied_review_rows",
         "independent_review_rows",
         "two_reviewer_response_rows",
+        "distinct_reviewer_pool_response_rows",
         "supplied_adjudication_rows",
         "source_span_exactness_review_rows",
         "unsupported_abstention_review_rows",
@@ -268,6 +272,7 @@ for snippet in [
     "pm_review_actual_ready=0",
     "pm_review_template_gap_rows=7",
     "Reviewer return rows must not contain source system identity fields",
+    "distinct reviewer pools",
     "unseen repository split evidence",
     "source-span exactness review",
     "unsupported-abstention review",
