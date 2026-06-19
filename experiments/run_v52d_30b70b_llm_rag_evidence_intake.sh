@@ -326,6 +326,10 @@ def sha256(path):
     return "sha256:" + h.hexdigest()
 
 
+def sha256_text(text):
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def write_csv(path, fieldnames, rows):
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
@@ -610,8 +614,11 @@ def validate_system(spec):
             row_errors.append("answer-raw-answer-placeholder-or-missing")
         if not is_nonplaceholder_text(row.get("raw_citation", "")):
             row_errors.append("answer-raw-citation-placeholder-or-missing")
-        if not is_sha256(row.get("raw_output_sha256", "")):
+        raw_output_sha256 = row.get("raw_output_sha256", "")
+        if not is_sha256(raw_output_sha256):
             row_errors.append("answer-raw-output-sha256-invalid")
+        elif raw_output_sha256 != sha256_text(row.get("raw_answer", "") + "\n" + row.get("raw_citation", "")):
+            row_errors.append("answer-raw-output-sha256-mismatch")
         if not is_sha256(row.get("generation_transcript_sha256", "")):
             row_errors.append("answer-generation-transcript-sha256-invalid")
         if row.get("predicted_label") == (case or {}).get("expected_label"):

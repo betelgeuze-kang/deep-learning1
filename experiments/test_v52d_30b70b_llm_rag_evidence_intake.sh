@@ -442,6 +442,9 @@ for target_dir, system_id, size_class, parameter_count in [
         raw_answer = f"fixture answer for {query['query_id']}"
         raw_citation = f"fixture citation for {span['path']}:{span['line']}"
         raw_output = raw_answer + "\n" + raw_citation
+        supplied_raw_answer = raw_answer
+        if system_id == "D" and query["query_id"] == queries[0]["query_id"]:
+            supplied_raw_answer = raw_answer + " tampered after hash"
         answer_rows.append(
             {
                 "system_id": system_id,
@@ -449,7 +452,7 @@ for target_dir, system_id, size_class, parameter_count in [
                 "case_id": case["case_id"],
                 "model_id": model_id,
                 "predicted_label": case["expected_label"],
-                "raw_answer": raw_answer,
+                "raw_answer": supplied_raw_answer,
                 "raw_citation": raw_citation,
                 "raw_output_sha256": "sha256:" + hashlib.sha256(raw_output.encode("utf-8")).hexdigest(),
                 "generation_transcript_sha256": "sha256:" + hashlib.sha256(("transcript:" + raw_output).encode("utf-8")).hexdigest(),
@@ -521,6 +524,7 @@ for expected in [
     "identity-model-id-placeholder-or-missing",
     "identity-open-weight-license-uri-invalid-or-placeholder",
     "identity-model-artifact-sha256-invalid-or-placeholder",
+    "answer-raw-output-sha256-mismatch",
 ]:
     if expected not in reasons:
         raise SystemExit(f"spoofed D/E evidence should fail {expected}")
