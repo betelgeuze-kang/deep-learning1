@@ -40,9 +40,9 @@ v58c_dir = results / "v58c_blind_response_evidence_intake" / "intake_001"
 v58b_dir = results / "v58b_blind_eval_candidate_500" / "candidate_001"
 v58c_summary_path = results / "v58c_blind_response_evidence_intake_summary.csv"
 
-REQUIRED_SYSTEMS = {"D", "E", "G", "H"}
-OPTIONAL_SYSTEMS = {"F"}
 PM_ACTUAL_REQUIRED_SYSTEMS = ["A", "B", "C", "D", "E", "G", "H"]
+REQUIRED_SYSTEMS = set(PM_ACTUAL_REQUIRED_SYSTEMS)
+OPTIONAL_SYSTEMS = {"F"}
 DECISIONS = {"correct", "incorrect", "abstain-correct", "abstain-incorrect", "unsupported-claim", "invalid-citation"}
 FORBIDDEN_REVIEW_FIELDS = {"source_system_id", "source_system_name", "model_or_architecture_id", "run_identity"}
 
@@ -571,6 +571,7 @@ failure_case_report_ready = int(human_blind_review_ready)
 v58_full_blind_eval_ready = int(
     as_int(v58c, "required_blind_response_ready") == 1
     and human_blind_review_ready
+    and pm_review_actual_ready
     and routehint_advantage_rows_ready
     and failure_case_report_ready
 )
@@ -622,7 +623,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decision_rows = [
     ("review-return-intake-contract", "pass", "blind review/adjudication schemas and templates are emitted"),
     ("v58c-response-intake-input", "pass" if v58c_available and v58c.get("v58c_blind_response_evidence_intake_ready") == "1" else "blocked", "v58c response intake contract is present" if v58c_available else "v58c artifact not explicitly included; seed rebuild blocked"),
-    ("required-blind-response-ready", "pass" if v58c.get("required_blind_response_ready") == "1" else "blocked", "required D/E/G/H blind responses validate" if v58c.get("required_blind_response_ready") == "1" else "required D/E/G/H blind responses are missing"),
+    ("required-blind-response-ready", "pass" if v58c.get("required_blind_response_ready") == "1" else "blocked", "PM-required A/B/C/D/E/G/H blind responses validate" if v58c.get("required_blind_response_ready") == "1" else "PM-required A/B/C/D/E/G/H blind responses are missing"),
     ("human-blind-review-return", "pass" if review_coverage_ready else "blocked", "two blinded reviewer rows per required response validate" if review_coverage_ready else "human blind review rows are missing or invalid"),
     ("adjudication-return", "pass" if adjudication_ready else "blocked", "adjudication rows validate" if adjudication_ready else "adjudication rows are missing or invalid"),
     ("inter-rater-rows", "pass" if inter_rater_rows_ready else "blocked", "inter-rater/adjudication rows validate" if inter_rater_rows_ready else "inter-rater/adjudication evidence missing"),
@@ -633,7 +634,7 @@ decision_rows = [
     ("pm-latency-memory-quality-separation", "pass" if pm_review_actual_ready else "blocked", "latency/memory are separated from answer quality" if pm_review_actual_ready else "latency/memory separation from answer quality is not proven"),
     ("routehint-advantage-rows", "pass" if routehint_advantage_rows_ready else "blocked", "blind score rows can be aggregated after review" if routehint_advantage_rows_ready else "blind score rows are not available"),
     ("failure-case-report", "pass" if failure_case_report_ready else "blocked", "failure case report rows are emitted after review" if failure_case_report_ready else "failure case report requires human blind review"),
-    ("v58-full-blind-eval", "pass" if v58_full_blind_eval_ready else "blocked", "v58 blind eval is complete" if v58_full_blind_eval_ready else "response, review, adjudication, and score evidence are incomplete"),
+    ("v58-full-blind-eval", "pass" if v58_full_blind_eval_ready else "blocked", "v58 blind eval is complete" if v58_full_blind_eval_ready else "PM-required response, review, adjudication, and score evidence are incomplete"),
     ("real-release-package", "blocked", "v58d intake is not a release package"),
 ]
 write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": status, "reason": reason} for gate, status, reason in decision_rows])

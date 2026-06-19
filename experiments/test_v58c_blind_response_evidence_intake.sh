@@ -262,7 +262,7 @@ expected = {
     "evidence_dir_supplied": "0",
     "expected_blind_response_rows": "2500",
     "supplied_blind_response_rows": "0",
-    "required_blind_response_rows": "2000",
+    "required_blind_response_rows": "3500",
     "pm_actual_required_system_rows": "7",
     "pm_actual_required_blind_response_rows": "3500",
     "pm_actual_required_blind_response_ready": "0",

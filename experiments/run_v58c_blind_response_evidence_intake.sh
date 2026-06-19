@@ -156,7 +156,7 @@ summary = {
     "network_or_download_approval_required": "1",
     "expected_blind_response_rows": "0",
     "supplied_blind_response_rows": "0",
-    "required_blind_response_rows": "2000",
+    "required_blind_response_rows": "3500",
     "pm_actual_required_system_rows": "7",
     "pm_actual_required_blind_response_rows": "3500",
     "pm_actual_required_blind_response_ready": "0",
@@ -272,10 +272,10 @@ results = root / "results"
 v58b_dir = results / "v58b_blind_eval_candidate_500" / "candidate_001"
 v58b_summary = list(csv.DictReader((results / "v58b_blind_eval_candidate_500_summary.csv").open(newline="", encoding="utf-8")))[0]
 
-REQUIRED_SYSTEMS = {"D", "E", "G", "H"}
+PM_ACTUAL_REQUIRED_SYSTEMS = ["A", "B", "C", "D", "E", "G", "H"]
+REQUIRED_SYSTEMS = set(PM_ACTUAL_REQUIRED_SYSTEMS)
 OPTIONAL_SYSTEMS = {"F"}
 ALL_SYSTEMS = REQUIRED_SYSTEMS | OPTIONAL_SYSTEMS
-PM_ACTUAL_REQUIRED_SYSTEMS = ["A", "B", "C", "D", "E", "G", "H"]
 
 
 def sha256(path):
@@ -348,10 +348,10 @@ schema_rows = [
     ("blind_response_rows.csv", "model_run_id", "stable run id bound to model/system metadata"),
     ("blind_response_rows.csv", "credential_redacted", "must be 1 for hosted/API rows and allowed for all rows"),
     ("blind_response_rows.csv", "resource_trace_sha256", "sha256:<64 hex> or empty if copied trace not supplied"),
-    ("run_identity_rows.csv", "blind_system_id", "must cover D/E/G/H and optional F if supplied"),
-    ("run_identity_rows.csv", "source_system_id", "D/E/F/G/H mapping; reviewer packets remain blind"),
+    ("run_identity_rows.csv", "blind_system_id", "must cover A/B/C/D/E/G/H and optional F if supplied"),
+    ("run_identity_rows.csv", "source_system_id", "A/B/C/D/E/F/G/H mapping; reviewer packets remain blind"),
     ("run_identity_rows.csv", "model_or_architecture_id", "stable model/architecture identifier"),
-    ("run_identity_rows.csv", "external_api_used", "0 for D/E/G/H, 0 or 1 for F"),
+    ("run_identity_rows.csv", "external_api_used", "0 for A/B/C/D/E/G/H, 0 or 1 for F"),
 ]
 write_csv(
     run_dir / "blind_response_required_field_rows.csv",
@@ -490,7 +490,6 @@ system_ready = {
 }
 required_ready = all(system_ready[system_id] for system_id in REQUIRED_SYSTEMS)
 optional_f_ready = system_ready["F"]
-evidence_ready = int(required_ready and len(supplied_rows) >= 2000 and not errors)
 actual_matrix_rows = []
 for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
     expected_rows = 500
@@ -533,6 +532,7 @@ write_csv(run_dir / "blind_response_actual_execution_matrix_rows.csv", list(actu
 pm_actual_ready = int(all(row["actual_response_ready"] == "1" for row in actual_matrix_rows))
 pm_actual_missing_system_rows = sum(1 for row in actual_matrix_rows if row["actual_response_ready"] != "1")
 pm_actual_template_gap_rows = sum(1 for row in actual_matrix_rows if row["template_available"] != "1")
+evidence_ready = int(required_ready and pm_actual_ready and len(supplied_rows) >= 3500 and not errors)
 
 summary = {
     "v58c_blind_response_evidence_intake_ready": 1,
@@ -540,13 +540,13 @@ summary = {
     "evidence_dir_supplied": int(bool(evidence_dir_arg)),
     "expected_blind_response_rows": len(templates),
     "supplied_blind_response_rows": len(supplied_rows),
-    "required_blind_response_rows": 2000,
+    "required_blind_response_rows": 3500,
     "pm_actual_required_system_rows": len(actual_matrix_rows),
     "pm_actual_required_blind_response_rows": 3500,
     "pm_actual_required_blind_response_ready": pm_actual_ready,
     "pm_actual_missing_system_rows": pm_actual_missing_system_rows,
     "pm_actual_template_gap_rows": pm_actual_template_gap_rows,
-    "required_blind_response_ready": int(required_ready),
+    "required_blind_response_ready": int(evidence_ready),
     "d_30b_blind_response_ready": system_ready["D"],
     "e_70b_blind_response_ready": system_ready["E"],
     "g_routehint_blind_response_ready": system_ready["G"],
@@ -579,7 +579,7 @@ decision_rows = [
     ("pm-required-c-blind-response-row", "pass" if next(row for row in actual_matrix_rows if row["source_system_id"] == "C")["actual_response_ready"] == "1" else "blocked", "C rows ready" if next(row for row in actual_matrix_rows if row["source_system_id"] == "C")["actual_response_ready"] == "1" else "PM-required C blind responses missing or not template-bound"),
     ("pm-required-all-a-b-c-d-e-g-h-response-rows", "pass" if pm_actual_ready else "blocked", "A/B/C/D/E/G/H rows ready" if pm_actual_ready else "PM-required A/B/C/D/E/G/H actual blind response matrix is incomplete"),
     ("100b-plus-blind-response-row", "pass" if optional_f_ready else "blocked", "F rows ready" if optional_f_ready else "100B+ hosted/API blind responses missing or deferred"),
-    ("blind-response-absorb-ready", "pass" if evidence_ready else "blocked", "required blind responses validate" if evidence_ready else "required blind response rows are not supplied/valid"),
+    ("blind-response-absorb-ready", "pass" if evidence_ready else "blocked", "PM-required A/B/C/D/E/G/H blind responses validate" if evidence_ready else "PM-required A/B/C/D/E/G/H blind response rows are not supplied/valid"),
     ("human-blind-review", "blocked", "human blind review rows are not supplied"),
     ("v58-full-blind-eval", "blocked", "response rows alone do not include human blind review/adjudication"),
     ("real-release-package", "blocked", "v58c intake is not a release package"),
@@ -597,11 +597,11 @@ write_csv(run_dir / "blind_response_intake_gate_rows.csv", ["gate", "status", "r
     f"- pm_actual_required_blind_response_ready={pm_actual_ready}\n"
     f"- pm_actual_template_gap_rows={pm_actual_template_gap_rows}\n"
     f"- supplied_blind_response_rows={len(supplied_rows)}\n"
-    f"- required_blind_response_ready={int(required_ready)}\n"
+    f"- required_blind_response_ready={int(evidence_ready)}\n"
     "- human_blind_review_ready=0\n"
     "- inter_rater_rows_ready=0\n\n"
     "Still blocked by default:\n\n"
-    "- real D/E/G/H blind response rows\n"
+    "- real A/B/C/D/E/G/H blind response rows\n"
     "- PM-required A/B/C blind response template and actual response rows\n"
     "- optional F response rows or final deferral\n"
     "- human blind review and adjudication\n\n"
@@ -616,7 +616,7 @@ manifest = {
     "v58_ready": 0,
     "expected_blind_response_rows": len(templates),
     "supplied_blind_response_rows": len(supplied_rows),
-    "required_blind_response_ready": int(required_ready),
+    "required_blind_response_ready": int(evidence_ready),
     "pm_actual_required_system_rows": len(actual_matrix_rows),
     "pm_actual_required_blind_response_rows": 3500,
     "pm_actual_required_blind_response_ready": pm_actual_ready,
