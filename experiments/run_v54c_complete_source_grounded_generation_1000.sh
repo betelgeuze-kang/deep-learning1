@@ -14,6 +14,7 @@ if [[ "${V54C_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sh
   && grep -q 'grounded_generation_output_contract_rows' "$SUMMARY_CSV" \
   && grep -q 'sha256sums_pm_recommended_csv_ready' "$SUMMARY_CSV" \
   && grep -q 'model_visible_leakage_guard_ready' "$SUMMARY_CSV" \
+  && grep -q 'compact_routehint_forbidden_alias_rows' "$SUMMARY_CSV" \
   && grep -q 'v53ap_evaluator_provenance_ready' "$SUMMARY_CSV" \
   && grep -q 'model_visible_leakage_guard_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md" \
   && grep -q 'v53ap_adapter_trace_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md" \
@@ -91,6 +92,16 @@ def contains_source_locator(text):
     return bool(re.search(r"\b[A-Za-z0-9_.~+/@-]+:[0-9]+\b", text))
 
 
+COMPACT_ROUTEHINT_ALLOWED_KEYS = {
+    "input_surface",
+    "opaque_routehint",
+    "question",
+    "raw_context_appended",
+    "source_locator_absent",
+}
+COMPACT_ROUTEHINT_ALLOWED_KEY_SET = ",".join(sorted(COMPACT_ROUTEHINT_ALLOWED_KEYS))
+
+
 def compact_hint_for(sanitized_question):
     payload = {
         "input_surface": "sanitized_question_only",
@@ -99,7 +110,25 @@ def compact_hint_for(sanitized_question):
         "raw_context_appended": 0,
         "source_locator_absent": 1,
     }
+    if set(payload) != COMPACT_ROUTEHINT_ALLOWED_KEYS:
+        raise SystemExit("v54c compact RouteHint payload key set drifted")
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def compact_hint_is_model_visible_safe(compact_hint, sanitized_question):
+    try:
+        payload = json.loads(compact_hint)
+    except json.JSONDecodeError:
+        return False
+    return (
+        set(payload) == COMPACT_ROUTEHINT_ALLOWED_KEYS
+        and payload.get("input_surface") == "sanitized_question_only"
+        and payload.get("opaque_routehint") == 1
+        and payload.get("question") == sanitized_question
+        and payload.get("raw_context_appended") == 0
+        and payload.get("source_locator_absent") == 1
+        and not contains_source_locator(compact_hint)
+    )
 
 
 def generated_answer_from_span(query, span):
@@ -206,6 +235,9 @@ for idx, query in enumerate(queries, start=1):
     guard_id = f"{generation_id}_guard"
     sanitized_question = sanitize_question_for_model(query["question"])
     compact_hint = compact_hint_for(sanitized_question)
+    compact_hint_safe = compact_hint_is_model_visible_safe(compact_hint, sanitized_question)
+    if not compact_hint_safe:
+        raise SystemExit(f"v54c compact RouteHint leaked forbidden model-visible payload fields for {query['query_id']}")
     compact_hint_sha = sha256_text(compact_hint)
     generated_answer = generated_answer_from_span(query, span)
     expected_abstain = int(query["expected_behavior"] == "abstain")
@@ -223,6 +255,8 @@ for idx, query in enumerate(queries, start=1):
             "source_span_id_evaluator_only": span["source_span_id"],
             "compact_routehint_sha256": compact_hint_sha,
             "compact_routehint_bytes": str(len(compact_hint.encode("utf-8"))),
+            "compact_routehint_allowed_key_set": COMPACT_ROUTEHINT_ALLOWED_KEY_SET,
+            "compact_routehint_forbidden_alias_used": "0" if compact_hint_safe else "1",
             "raw_context_appended": "0",
             "model_visible_routehint": "1",
             "model_visible_input_fields": "sanitized_question,opaque_routehint",
@@ -247,6 +281,8 @@ for idx, query in enumerate(queries, start=1):
             "query_id_evaluator_only": query["query_id"],
             "generator_id": "v54c-complete-source-routehint-deref-v1",
             "compact_routehint_sha256": compact_hint_sha,
+            "compact_routehint_allowed_key_set": COMPACT_ROUTEHINT_ALLOWED_KEY_SET,
+            "compact_routehint_forbidden_alias_used": "0" if compact_hint_safe else "1",
             "model_visible_input_fields": "sanitized_question,opaque_routehint",
             "sanitized_question": sanitized_question,
             "sanitized_question_sha256": sha256_text(sanitized_question),
@@ -433,9 +469,16 @@ model_visible_source_locator_rows = sum(
     if row["compact_routehint_contains_source_locator"] != "0"
     or contains_source_locator(row["sanitized_question"])
 )
+compact_routehint_forbidden_alias_rows = sum(
+    1
+    for row in routehint_rows
+    if row["compact_routehint_allowed_key_set"] != COMPACT_ROUTEHINT_ALLOWED_KEY_SET
+    or row["compact_routehint_forbidden_alias_used"] != "0"
+)
 model_visible_leakage_guard_ready = int(
     model_visible_forbidden_field_used_rows == 0
     and model_visible_source_locator_rows == 0
+    and compact_routehint_forbidden_alias_rows == 0
     and all(row["model_visible_input_fields"] == "sanitized_question,opaque_routehint" for row in generator_input_rows)
     and all(row["contains_source_locator"] == "0" for row in routehint_rows)
 )
@@ -565,6 +608,7 @@ summary = {
     "model_visible_input_fields": "sanitized_question,opaque_routehint",
     "model_visible_forbidden_field_used_rows": str(model_visible_forbidden_field_used_rows),
     "model_visible_source_locator_rows": str(model_visible_source_locator_rows),
+    "compact_routehint_forbidden_alias_rows": str(compact_routehint_forbidden_alias_rows),
     "deterministic_source_span_generation_fixture_ready": "1",
     "real_model_generation_ready": "0",
     "compact_routehint_rows": str(len(routehint_rows)),
@@ -585,7 +629,7 @@ decision_rows = [
     ("v53ap-evaluator-provenance", "pass", f"evaluator_provenance_rows={evaluator_provenance_rows}; answer_eval_separate_rows={answer_eval_separate_rows}; citation_eval_separate_rows={citation_eval_separate_rows}"),
     ("recommended-output-artifacts", "pass", "answer/citation/unsupported/abstain/resource/guard/sha256 outputs emitted"),
     ("recommended-output-contract", "pass", f"contract_rows={len(output_contract_rows)}; pm_required_rows={output_contract_pm_required_rows}; raw_prompt_forbidden_rows={output_contract_raw_prompt_forbidden_rows}"),
-    ("model-visible-leakage-guard", "pass" if model_visible_leakage_guard_ready else "blocked", f"forbidden_field_used_rows={model_visible_forbidden_field_used_rows}; source_locator_rows={model_visible_source_locator_rows}"),
+    ("model-visible-leakage-guard", "pass" if model_visible_leakage_guard_ready else "blocked", f"forbidden_field_used_rows={model_visible_forbidden_field_used_rows}; source_locator_rows={model_visible_source_locator_rows}; compact_routehint_forbidden_alias_rows={compact_routehint_forbidden_alias_rows}"),
     ("source-span-grounded-answer-generation", "pass" if generated_from_source_span_count == generation_rows else "blocked", f"generated_from_source_span_rows={generated_from_source_span_count}"),
     ("generation-row-target", "pass" if ready else "blocked", f"generation_rows={generation_rows}"),
     ("compact-routehint-only", "pass", "raw_prompt_context_appended_rows=0"),
@@ -631,6 +675,7 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     "- model_visible_input_fields=sanitized_question,opaque_routehint\n"
     "- model_visible_forbidden_field_used_rows=0\n"
     "- model_visible_source_locator_rows=0\n"
+    "- compact_routehint_forbidden_alias_rows=0\n"
     "- deterministic_source_span_generation_fixture_ready=1\n"
     "- real_model_generation_ready=0\n"
     "- wrong_answer_rows=0\n\n"
@@ -673,6 +718,7 @@ manifest = {
     "model_visible_leakage_guard_ready": model_visible_leakage_guard_ready,
     "model_visible_forbidden_field_used_rows": model_visible_forbidden_field_used_rows,
     "model_visible_source_locator_rows": model_visible_source_locator_rows,
+    "compact_routehint_forbidden_alias_rows": compact_routehint_forbidden_alias_rows,
     "deterministic_source_span_generation_fixture_ready": 1,
     "real_model_generation_ready": 0,
     "attention_blocks": attention_blocks,

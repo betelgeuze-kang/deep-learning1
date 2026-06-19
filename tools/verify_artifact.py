@@ -854,7 +854,8 @@ EXPECTED_V54_ARTIFACT_COLUMNS = {
     ],
     "generator-input-rows": [
         "generation_id", "query_id_evaluator_only", "generator_id",
-        "compact_routehint_sha256", "model_visible_input_fields",
+        "compact_routehint_sha256", "compact_routehint_allowed_key_set",
+        "compact_routehint_forbidden_alias_used", "model_visible_input_fields",
         "sanitized_question", "sanitized_question_sha256",
         "model_visible_query_id_used", "model_visible_source_span_id_used",
         "model_visible_source_path_used", "model_visible_source_line_used",
@@ -881,7 +882,8 @@ EXPECTED_V54_ARTIFACT_COLUMNS = {
     "compact-routehint-rows": [
         "routehint_id", "generation_id", "query_id_evaluator_only",
         "source_span_id_evaluator_only", "compact_routehint_sha256",
-        "compact_routehint_bytes", "raw_context_appended",
+        "compact_routehint_bytes", "compact_routehint_allowed_key_set",
+        "compact_routehint_forbidden_alias_used", "raw_context_appended",
         "model_visible_routehint", "model_visible_input_fields",
         "model_visible_query_id_used", "model_visible_source_span_id_used",
         "model_visible_source_path_used", "model_visible_source_line_used",
@@ -2736,6 +2738,12 @@ def verify_v54_grounded_generation(
 
     for artifact_id in ["generator-input-rows", "compact-routehint-rows"]:
         require_all(artifact_id, "model_visible_input_fields", "sanitized_question,opaque_routehint")
+        require_all(
+            artifact_id,
+            "compact_routehint_allowed_key_set",
+            "input_surface,opaque_routehint,question,raw_context_appended,source_locator_absent",
+        )
+        require_all(artifact_id, "compact_routehint_forbidden_alias_used", "0")
         for field in [
             "model_visible_query_id_used",
             "model_visible_source_span_id_used",

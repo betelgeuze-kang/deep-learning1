@@ -39,6 +39,7 @@ def read_csv(path):
 
 
 summary = read_csv(summary_csv)[0]
+compact_routehint_allowed_key_set = "input_surface,opaque_routehint,question,raw_context_appended,source_locator_absent"
 expected = {
     "v54c_complete_source_grounded_generation_1000_ready": "1",
     "v54_generation_1000_ready": "1",
@@ -79,6 +80,7 @@ expected = {
     "model_visible_input_fields": "sanitized_question,opaque_routehint",
     "model_visible_forbidden_field_used_rows": "0",
     "model_visible_source_locator_rows": "0",
+    "compact_routehint_forbidden_alias_rows": "0",
     "deterministic_source_span_generation_fixture_ready": "1",
     "real_model_generation_ready": "0",
     "compact_routehint_rows": "1000",
@@ -259,9 +261,12 @@ for row in inputs:
         "model_visible_expected_behavior_used",
         "model_visible_expected_label_used",
         "compact_routehint_contains_source_locator",
+        "compact_routehint_forbidden_alias_used",
     ]:
         if row[field] != "0":
             raise SystemExit(f"v54c generator input should keep {field}=0")
+    if row["compact_routehint_allowed_key_set"] != compact_routehint_allowed_key_set:
+        raise SystemExit("v54c generator input should bind the compact RouteHint allowed key set")
     if "query_id" in row or "source_span_id" in row:
         raise SystemExit("v54c generator input should not expose query_id/source_span_id as model-visible column names")
     if row["source_span_id_evaluator_only"] != spans[queries[query_id]["source_span_id"]]["source_span_id"]:
@@ -292,6 +297,8 @@ for row in hints:
         raise SystemExit("v54c compact RouteHint should not expose query_id/source_span_id as model-visible column names")
     if row["model_visible_input_fields"] != "sanitized_question,opaque_routehint" or row["contains_source_locator"] != "0":
         raise SystemExit("v54c compact RouteHint should stay opaque and source-locator-free")
+    if row["compact_routehint_allowed_key_set"] != compact_routehint_allowed_key_set:
+        raise SystemExit("v54c compact RouteHint should bind the fixed model-visible payload key set")
     for field in [
         "model_visible_query_id_used",
         "model_visible_source_span_id_used",
@@ -300,6 +307,7 @@ for row in hints:
         "model_visible_source_file_hash_used",
         "model_visible_expected_behavior_used",
         "model_visible_expected_label_used",
+        "compact_routehint_forbidden_alias_used",
     ]:
         if row[field] != "0":
             raise SystemExit(f"v54c compact RouteHint should keep {field}=0")
@@ -400,6 +408,7 @@ if (
     or manifest.get("model_visible_leakage_guard_ready") != 1
     or manifest.get("model_visible_forbidden_field_used_rows") != 0
     or manifest.get("model_visible_source_locator_rows") != 0
+    or manifest.get("compact_routehint_forbidden_alias_rows") != 0
     or manifest.get("deterministic_source_span_generation_fixture_ready") != 1
     or manifest.get("real_model_generation_ready") != 0
     or manifest.get("wrong_answer_rows") != 0
@@ -445,6 +454,7 @@ for snippet in [
     "model_visible_input_fields=sanitized_question,opaque_routehint",
     "model_visible_forbidden_field_used_rows=0",
     "model_visible_source_locator_rows=0",
+    "compact_routehint_forbidden_alias_rows=0",
     "deterministic_source_span_generation_fixture_ready=1",
     "real_model_generation_ready=0",
     "wrong_answer_rows=0",
