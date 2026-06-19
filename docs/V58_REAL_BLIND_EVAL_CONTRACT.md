@@ -38,31 +38,45 @@ Required real-execution evidence:
 - unsupported/missing abstention scoring
 - latency and memory evaluated separately from answer quality
 
+The source-controlled policy also pins these fail-closed gates:
+
+- `required_real_response_systems=A/B/C/D/E/G/H`
+- `required_independent_reviewers_per_response=2`
+- `blind_identity_required_until_adjudication=true`
+- `adjudication_required_for_disagreement=true`
+- `unseen_repository_split_required=true`
+- `source_span_exactness_separate_score=true`
+- `unsupported_abstention_separate_score=true`
+- `latency_memory_quality_separated=true`
+
 Required artifact shape:
 
 - `v58-blind-response-rows`: `blind_run_id`, `system_blind_id`,
-  `query_id`, `answer_text`, `citation_text`, `response_sha256`
+  `query_id`, `answer_text`, `citation_text`, `response_sha256`;
+  minimum 3500 rows
 - `v58-run-identity-rows`: `blind_run_id`, `system_id`,
   `system_blind_id`, `corpus_id`, `context_budget`, `retrieval_budget`,
-  `prompt_template_sha256`
+  `prompt_template_sha256`; minimum 7 rows
 - `v58-query-split-rows`: `query_id`, `repo_id`, `split_name`,
   `unseen_repository`, `frozen_query_packet_sha256`,
-  `source_manifest_sha256`
+  `source_manifest_sha256`; minimum 500 rows
 - `v58-resource-rows`: `blind_run_id`, `system_blind_id`, `query_id`,
-  `latency_ms`, `peak_memory_mb`, `tokens_per_second`, `resource_sha256`
+  `latency_ms`, `peak_memory_mb`, `tokens_per_second`, `resource_sha256`;
+  minimum 3500 rows
 - `v58-human-review-rows`: `blind_run_id`, `system_blind_id`, `query_id`,
   `response_sha256`, `reviewer_id`, `reviewer_blinded`,
   `reviewer_independent`, `conflict_disclosure_sha256`,
   `answer_quality_score`, `citation_score`, `source_span_exact`,
-  `unsupported_abstain_score`
+  `unsupported_abstain_score`; minimum 7000 rows
 - `v58-adjudication-rows`: `blind_run_id`, `system_blind_id`, `query_id`,
   `response_sha256`, `reviewer_a_id`, `reviewer_b_id`, `disagreement_type`,
   `adjudicator_id`, `adjudicated_answer_quality_score`,
   `adjudicated_citation_score`, `adjudicated_source_span_exact`,
-  `adjudicated_unsupported_abstain_score`
+  `adjudicated_unsupported_abstain_score`; minimum 3500 rows
 - `v58d-review-return-intake`: `review_dir`, `accepted_blind_review_rows`,
-  `accepted_adjudication_rows`, `inter_rater_rows`, `review_return_ready`
-- `v58-sha256-manifest`: `artifact_path`, `sha256`, `bytes`
+  `accepted_adjudication_rows`, `inter_rater_rows`, `review_return_ready`;
+  minimum 1 row
+- `v58-sha256-manifest`: `artifact_path`, `sha256`, `bytes`; minimum 10 rows
 
 Human review and adjudication rows intentionally exclude latency and memory
 fields. Resource measurements are accepted through the dedicated

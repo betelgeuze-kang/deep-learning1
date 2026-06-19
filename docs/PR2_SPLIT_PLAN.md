@@ -61,8 +61,11 @@ the recommended answer, citation, unsupported-claim, abstain, resource, guard,
 and sha256 outputs are replay artifacts, while raw prompt stuffing, real model
 generation, human-reviewed quality, public comparison, and release claims remain
 blocked.
-v58 blind-eval wording must follow `v58/blind_eval_real.json`; templates and
-intake contracts do not imply real blind-eval completion.
+v58 blind-eval wording must follow `v58/blind_eval_real.json`; A/B/C/D/E/G/H
+real responses, two independent blinded reviewers, adjudication, unseen split,
+source-span exactness, unsupported abstention, and latency/memory separation are
+required, while templates and intake contracts do not imply real blind-eval
+completion.
 Operator/review-return wording must follow
 `operations/review_return_workflow.json`; review templates, operator work
 orders, dry-run bundles, and fixture mechanics do not imply accepted human

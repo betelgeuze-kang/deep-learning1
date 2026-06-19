@@ -187,6 +187,8 @@ REQUIRED_V58_ARTIFACT_KEYS = {
     "artifact_id",
     "artifact_kind",
     "validation_command",
+    "required_columns",
+    "min_rows",
 }
 REQUIRED_REVIEW_RETURN_WORKFLOW_KEYS = {
     "schema_version",
@@ -807,6 +809,16 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
         "review_return_ready",
     },
     "v58-sha256-manifest": {"artifact_path", "sha256", "bytes"},
+}
+EXPECTED_V58_ARTIFACT_MIN_ROWS = {
+    "v58-blind-response-rows": 3500,
+    "v58-run-identity-rows": 7,
+    "v58-query-split-rows": 500,
+    "v58-resource-rows": 3500,
+    "v58-human-review-rows": 7000,
+    "v58-adjudication-rows": 3500,
+    "v58d-review-return-intake": 1,
+    "v58-sha256-manifest": 10,
 }
 V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS = {"latency_ms", "memory_mb", "peak_memory_mb", "tokens_per_second"}
 EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS = [
@@ -1992,6 +2004,20 @@ def verify_v58_blind_eval(
         errors.append(f"{path}: policy.tests_only_merge_condition must be false")
     if policy.get("real_execution_ready") is not False:
         errors.append(f"{path}: policy.real_execution_ready must be false until real blind evidence is supplied")
+    if policy.get("required_real_response_systems") != ["A", "B", "C", "D", "E", "G", "H"]:
+        errors.append(f"{path}: policy.required_real_response_systems must be A/B/C/D/E/G/H in order")
+    if policy.get("required_independent_reviewers_per_response") != 2:
+        errors.append(f"{path}: policy.required_independent_reviewers_per_response must be 2")
+    for field in [
+        "blind_identity_required_until_adjudication",
+        "adjudication_required_for_disagreement",
+        "unseen_repository_split_required",
+        "source_span_exactness_separate_score",
+        "unsupported_abstention_separate_score",
+        "latency_memory_quality_separated",
+    ]:
+        if policy.get(field) is not True:
+            errors.append(f"{path}: policy.{field} must be true")
     if set(data.get("required_systems", [])) != {"A", "B", "C", "D", "E", "G", "H"}:
         errors.append(f"{path}: required_systems must be A/B/C/D/E/G/H")
 
@@ -2023,6 +2049,12 @@ def verify_v58_blind_eval(
         if not row.get("artifact_kind") or not row.get("validation_command"):
             errors.append(f"{prefix}: artifact_kind and validation_command must be non-empty")
         artifact_id = row.get("artifact_id", "")
+        min_rows = row.get("min_rows")
+        expected_min_rows = EXPECTED_V58_ARTIFACT_MIN_ROWS.get(artifact_id)
+        if not isinstance(min_rows, int) or min_rows < 1:
+            errors.append(f"{prefix}: min_rows must be a positive integer")
+        elif expected_min_rows is not None and min_rows != expected_min_rows:
+            errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
         required_columns = row.get("required_columns", [])
         if not isinstance(required_columns, list) or not required_columns:
             errors.append(f"{prefix}: required_columns must be a non-empty list")

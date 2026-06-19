@@ -8,11 +8,31 @@
     "schema_version": {"type": "string"},
     "policy": {
       "type": "object",
-      "required": ["fixture_allowed", "tests_only_merge_condition", "real_execution_ready"],
+      "required": [
+        "fixture_allowed",
+        "tests_only_merge_condition",
+        "real_execution_ready",
+        "required_real_response_systems",
+        "required_independent_reviewers_per_response",
+        "blind_identity_required_until_adjudication",
+        "adjudication_required_for_disagreement",
+        "unseen_repository_split_required",
+        "source_span_exactness_separate_score",
+        "unsupported_abstention_separate_score",
+        "latency_memory_quality_separated"
+      ],
       "properties": {
         "fixture_allowed": {"type": "boolean"},
         "tests_only_merge_condition": {"type": "boolean"},
-        "real_execution_ready": {"type": "boolean"}
+        "real_execution_ready": {"type": "boolean"},
+        "required_real_response_systems": {"type": "array", "items": {"type": "string"}},
+        "required_independent_reviewers_per_response": {"type": "integer", "minimum": 2},
+        "blind_identity_required_until_adjudication": {"type": "boolean"},
+        "adjudication_required_for_disagreement": {"type": "boolean"},
+        "unseen_repository_split_required": {"type": "boolean"},
+        "source_span_exactness_separate_score": {"type": "boolean"},
+        "unsupported_abstention_separate_score": {"type": "boolean"},
+        "latency_memory_quality_separated": {"type": "boolean"}
       },
       "additionalProperties": false
     },
@@ -33,12 +53,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["artifact_id", "artifact_kind", "validation_command", "required_columns"],
+        "required": ["artifact_id", "artifact_kind", "validation_command", "required_columns", "min_rows"],
         "properties": {
           "artifact_id": {"type": "string"},
           "artifact_kind": {"type": "string"},
           "validation_command": {"type": "string"},
-          "required_columns": {"type": "array", "items": {"type": "string"}}
+          "required_columns": {"type": "array", "items": {"type": "string"}},
+          "min_rows": {"type": "integer", "minimum": 1}
         },
         "additionalProperties": false
       }

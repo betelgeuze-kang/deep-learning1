@@ -3,7 +3,15 @@
   "policy": {
     "fixture_allowed": false,
     "tests_only_merge_condition": false,
-    "real_execution_ready": false
+    "real_execution_ready": false,
+    "required_real_response_systems": ["A", "B", "C", "D", "E", "G", "H"],
+    "required_independent_reviewers_per_response": 2,
+    "blind_identity_required_until_adjudication": true,
+    "adjudication_required_for_disagreement": true,
+    "unseen_repository_split_required": true,
+    "source_span_exactness_separate_score": true,
+    "unsupported_abstention_separate_score": true,
+    "latency_memory_quality_separated": true
   },
   "required_systems": ["A", "B", "C", "D", "E", "G", "H"],
   "requirements": [
@@ -49,49 +57,57 @@
       "artifact_id": "v58-blind-response-rows",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["blind_run_id", "system_blind_id", "query_id", "answer_text", "citation_text", "response_sha256"]
+      "required_columns": ["blind_run_id", "system_blind_id", "query_id", "answer_text", "citation_text", "response_sha256"],
+      "min_rows": 3500
     },
     {
       "artifact_id": "v58-run-identity-rows",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["blind_run_id", "system_id", "system_blind_id", "corpus_id", "context_budget", "retrieval_budget", "prompt_template_sha256"]
+      "required_columns": ["blind_run_id", "system_id", "system_blind_id", "corpus_id", "context_budget", "retrieval_budget", "prompt_template_sha256"],
+      "min_rows": 7
     },
     {
       "artifact_id": "v58-query-split-rows",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["query_id", "repo_id", "split_name", "unseen_repository", "frozen_query_packet_sha256", "source_manifest_sha256"]
+      "required_columns": ["query_id", "repo_id", "split_name", "unseen_repository", "frozen_query_packet_sha256", "source_manifest_sha256"],
+      "min_rows": 500
     },
     {
       "artifact_id": "v58-resource-rows",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["blind_run_id", "system_blind_id", "query_id", "latency_ms", "peak_memory_mb", "tokens_per_second", "resource_sha256"]
+      "required_columns": ["blind_run_id", "system_blind_id", "query_id", "latency_ms", "peak_memory_mb", "tokens_per_second", "resource_sha256"],
+      "min_rows": 3500
     },
     {
       "artifact_id": "v58-human-review-rows",
       "artifact_kind": "review-return",
       "validation_command": "defer to v58 review acceptance gate once response rows validate",
-      "required_columns": ["blind_run_id", "system_blind_id", "query_id", "response_sha256", "reviewer_id", "reviewer_blinded", "reviewer_independent", "conflict_disclosure_sha256", "answer_quality_score", "citation_score", "source_span_exact", "unsupported_abstain_score"]
+      "required_columns": ["blind_run_id", "system_blind_id", "query_id", "response_sha256", "reviewer_id", "reviewer_blinded", "reviewer_independent", "conflict_disclosure_sha256", "answer_quality_score", "citation_score", "source_span_exact", "unsupported_abstain_score"],
+      "min_rows": 7000
     },
     {
       "artifact_id": "v58-adjudication-rows",
       "artifact_kind": "review-return",
       "validation_command": "defer to v58 adjudication acceptance gate once review rows validate",
-      "required_columns": ["blind_run_id", "system_blind_id", "query_id", "response_sha256", "reviewer_a_id", "reviewer_b_id", "disagreement_type", "adjudicator_id", "adjudicated_answer_quality_score", "adjudicated_citation_score", "adjudicated_source_span_exact", "adjudicated_unsupported_abstain_score"]
+      "required_columns": ["blind_run_id", "system_blind_id", "query_id", "response_sha256", "reviewer_a_id", "reviewer_b_id", "disagreement_type", "adjudicator_id", "adjudicated_answer_quality_score", "adjudicated_citation_score", "adjudicated_source_span_exact", "adjudicated_unsupported_abstain_score"],
+      "min_rows": 3500
     },
     {
       "artifact_id": "v58d-review-return-intake",
       "artifact_kind": "artifact-directory",
       "validation_command": "./experiments/test_v58d_blind_review_return_intake.sh",
-      "required_columns": ["review_dir", "accepted_blind_review_rows", "accepted_adjudication_rows", "inter_rater_rows", "review_return_ready"]
+      "required_columns": ["review_dir", "accepted_blind_review_rows", "accepted_adjudication_rows", "inter_rater_rows", "review_return_ready"],
+      "min_rows": 1
     },
     {
       "artifact_id": "v58-sha256-manifest",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["artifact_path", "sha256", "bytes"]
+      "required_columns": ["artifact_path", "sha256", "bytes"],
+      "min_rows": 10
     }
   ]
 }
