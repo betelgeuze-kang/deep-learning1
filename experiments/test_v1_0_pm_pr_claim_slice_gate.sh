@@ -986,6 +986,35 @@ for row in template_rows:
 d_model_template = (run_dir / template_by_key[("de-30b70b-baselines-missing", "d-model-identity")]["template_path"]).read_text(encoding="utf-8")
 if '"system_id": "D"' not in d_model_template or '"external_api_used": 0' not in d_model_template:
     raise SystemExit("D model identity template should pin system_id D and external_api_used=0")
+for field in [
+    "baseline_class",
+    "model_repository",
+    "model_revision",
+    "parameter_count_b_range",
+    "quantization",
+    "open_weight_license_uri",
+    "model_artifact_sha256",
+    "runtime_version",
+    "hardware",
+    "non_fixture_declared",
+]:
+    if field not in d_model_template:
+        raise SystemExit(f"D model identity template missing field: {field}")
+d_answer_template = (run_dir / template_by_key[("de-30b70b-baselines-missing", "d-answer-citation-resource")]["template_path"]).read_text(encoding="utf-8")
+for header in [
+    "same_query_set_id",
+    "prompt_template_sha256",
+    "context_budget",
+    "retrieval_budget",
+    "seed",
+    "generation_transcript_sha256",
+    "evaluator_artifact_sha256",
+    "fixture_rows",
+    "measured_registry_candidate",
+    "non_fixture_declared",
+]:
+    if header not in d_answer_template:
+        raise SystemExit(f"D answer/citation/resource template missing header: {header}")
 h10_template = (run_dir / template_by_key[("external-human-label-evidence-missing", "h10-label-evidence-csv")]["template_path"]).read_text(encoding="utf-8")
 for header in ["human_reviewed", "external_source_verified", "non_fixture_declared", "acceptance_summary_sha256"]:
     if header not in h10_template:

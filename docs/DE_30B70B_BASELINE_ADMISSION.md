@@ -38,18 +38,25 @@ Required real evidence fields:
 
 Required artifact shape:
 
-- `model-identity`: `system_id`, `model_repository`, `model_revision`,
-  `quantization`, `model_artifact_sha256`, `runtime`, `hardware`
+- `model-identity`: `system_id`, `baseline_class`, `model_repository`,
+  `model_revision`, `parameter_count_b`, `quantization`,
+  `model_artifact_sha256`, `open_weight_license_uri`, `runtime`,
+  `runtime_version`, `hardware`, `external_api_used`,
+  `non_fixture_declared`
 - `answer-citation-raw-output`: `system_id`, `query_id`,
-  `prompt_template_sha256`, `context_budget`, `retrieval_budget`, `seed`,
-  `raw_answer`, `raw_citation`, `raw_output_sha256`
+  `same_query_set_id`, `prompt_template_sha256`, `context_budget`,
+  `retrieval_budget`, `seed`, `raw_answer`, `raw_citation`,
+  `raw_output_sha256`, `generation_transcript_sha256`,
+  `non_fixture_declared`
 - `resource-evaluator-manifest`: `system_id`, `query_id`, `latency_ms`,
-  `peak_memory_mb`, `evaluator_version`, `same_query_set_id`,
-  `same_source_manifest_sha256`
+  `peak_memory_mb`, `evaluator_version`, `evaluator_artifact_sha256`,
+  `same_query_set_id`, `same_source_manifest_sha256`, `answer_rows_sha256`,
+  `citation_rows_sha256`, `fixture_rows`, `measured_registry_candidate`
 
 Raw answer/citation output must be preserved separately from evaluator scores.
-Resource rows and evaluator version must be present before measured-registry
-admission; fixtures remain schema tests only.
+Resource rows, evaluator identity, non-fixture declaration, and raw generation
+transcript hashes must be present before measured-registry admission; fixtures
+remain schema tests only.
 
 Until those fields are present for both D and E, A/B/G/H rows remain internal
 v1.0 pre-baseline evidence only.
