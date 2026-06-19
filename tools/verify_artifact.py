@@ -2757,6 +2757,7 @@ def verify_v61_one_token_path(
             summary_id = check.get("summary_id", "")
             summary = summaries.get(summary_id)
             if summary is None:
+                errors.append(f"{prefix}: missing summary evidence for {summary_id} at {row.get('evidence_path')}")
                 continue
             field = check.get("field", "")
             expected = check.get("expected", "")

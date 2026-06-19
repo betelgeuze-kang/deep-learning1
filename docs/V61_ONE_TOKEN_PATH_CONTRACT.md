@@ -4,19 +4,16 @@ v61 is not an SSD-resident real model runtime until the one-token path closes
 through logits parity. The source-controlled contract is
 `v61/one_token_path.json`.
 
-Verify the contract with:
-
-```bash
-tools/verify_artifact.py v61-one-token v61/one_token_path.json
-```
-
-When the current v61 summaries exist, compare the contract against them:
+Verify the contract against the current v61 summaries:
 
 ```bash
 tools/verify_artifact.py v61-one-token v61/one_token_path.json \
   --v61aa-summary results/v61aa_hotset_tensor_slice_verifier_summary.csv \
   --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv
 ```
+
+The verifier intentionally fails if summary evidence is omitted while milestones
+are marked `pass` or carry summary checks.
 
 Current accepted evidence:
 
