@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -905,6 +906,23 @@ EXPECTED_V58_ARTIFACT_MIN_ROWS = {
     "v58-sha256-manifest": 10,
 }
 V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS = {"latency_ms", "memory_mb", "peak_memory_mb", "tokens_per_second"}
+V58_REVIEW_FORBIDDEN_IDENTITY_COLUMNS = {
+    "system_id",
+    "source_system_id",
+    "source_system_name",
+    "model_or_architecture_id",
+    "run_identity",
+}
+EXPECTED_V58_VALIDATION_COMMANDS = {
+    "v58-blind-response-rows": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
+    "v58-run-identity-rows": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
+    "v58-query-split-rows": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
+    "v58-resource-rows": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
+    "v58-human-review-rows": "V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh",
+    "v58-adjudication-rows": "V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh",
+    "v58d-review-return-intake": "./experiments/test_v58d_blind_review_return_intake.sh",
+    "v58-sha256-manifest": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
+}
 EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS = [
     "v53-review-return-intake-blocked",
     "v58-blind-review-return-blocked",
@@ -1497,6 +1515,13 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
 
 def split_semicolon(value: str) -> set[str]:
     return {part.strip() for part in value.split(";") if part.strip()}
+
+
+def validation_command_script(command: str) -> Path | None:
+    for token in command.split():
+        if token.endswith(".sh"):
+            return Path(token)
+    return None
 
 
 def verify_baseline_admission(
@@ -2196,8 +2221,15 @@ def verify_v58_blind_eval(
         errors.append(f"{path}: policy.fixture_allowed must be false")
     if policy.get("tests_only_merge_condition") is not False:
         errors.append(f"{path}: policy.tests_only_merge_condition must be false")
-    if policy.get("real_execution_ready") is not False:
-        errors.append(f"{path}: policy.real_execution_ready must be false until real blind evidence is supplied")
+    for field in [
+        "real_execution_ready",
+        "human_blind_review_ready",
+        "inter_rater_rows_ready",
+        "v58_full_blind_eval_ready",
+        "release_ready",
+    ]:
+        if policy.get(field) is not False:
+            errors.append(f"{path}: policy.{field} must be false until real blind evidence is supplied")
     if policy.get("required_real_response_systems") != ["A", "B", "C", "D", "E", "G", "H"]:
         errors.append(f"{path}: policy.required_real_response_systems must be A/B/C/D/E/G/H in order")
     if policy.get("required_independent_reviewers_per_response") != 2:
@@ -2243,6 +2275,17 @@ def verify_v58_blind_eval(
         if not row.get("artifact_kind") or not row.get("validation_command"):
             errors.append(f"{prefix}: artifact_kind and validation_command must be non-empty")
         artifact_id = row.get("artifact_id", "")
+        validation_command = row.get("validation_command", "")
+        expected_validation_command = EXPECTED_V58_VALIDATION_COMMANDS.get(artifact_id)
+        if expected_validation_command is not None and validation_command != expected_validation_command:
+            errors.append(f"{prefix}: validation_command must be {expected_validation_command}")
+        script_path = validation_command_script(validation_command)
+        if script_path is None:
+            errors.append(f"{prefix}: validation_command must reference a runnable test script")
+        elif not script_path.exists():
+            errors.append(f"{prefix}: validation_command script is missing: {script_path}")
+        elif not os.access(script_path, os.X_OK):
+            errors.append(f"{prefix}: validation_command script is not executable: {script_path}")
         min_rows = row.get("min_rows")
         expected_min_rows = EXPECTED_V58_ARTIFACT_MIN_ROWS.get(artifact_id)
         if not isinstance(min_rows, int) or min_rows < 1:
@@ -2261,9 +2304,9 @@ def verify_v58_blind_eval(
                 leaked_resource_columns = column_set & V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS
                 if leaked_resource_columns:
                     errors.append(f"{prefix}: human review/adjudication rows must not include resource columns: {', '.join(sorted(leaked_resource_columns))}")
-        if artifact_id in {"v58-blind-response-rows", "v58-run-identity-rows", "v58-query-split-rows", "v58-resource-rows", "v58-sha256-manifest"}:
-            if "test_v58c_blind_response_evidence_intake.sh" not in row.get("validation_command", ""):
-                errors.append(f"{prefix}: response artifacts must validate through v58c intake")
+                leaked_identity_columns = column_set & V58_REVIEW_FORBIDDEN_IDENTITY_COLUMNS
+                if leaked_identity_columns:
+                    errors.append(f"{prefix}: human review/adjudication rows must not reveal system identity columns: {', '.join(sorted(leaked_identity_columns))}")
 
     if readiness_ledger is not None:
         ledger_rows = read_csv_rows(readiness_ledger)

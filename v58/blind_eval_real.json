@@ -4,6 +4,10 @@
     "fixture_allowed": false,
     "tests_only_merge_condition": false,
     "real_execution_ready": false,
+    "human_blind_review_ready": false,
+    "inter_rater_rows_ready": false,
+    "v58_full_blind_eval_ready": false,
+    "release_ready": false,
     "required_real_response_systems": ["A", "B", "C", "D", "E", "G", "H"],
     "required_independent_reviewers_per_response": 2,
     "blind_identity_required_until_adjudication": true,
@@ -84,14 +88,14 @@
     {
       "artifact_id": "v58-human-review-rows",
       "artifact_kind": "review-return",
-      "validation_command": "defer to v58 review acceptance gate once response rows validate",
+      "validation_command": "V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh",
       "required_columns": ["blind_run_id", "system_blind_id", "query_id", "response_sha256", "reviewer_id", "reviewer_blinded", "reviewer_independent", "conflict_disclosure_sha256", "answer_quality_score", "citation_score", "source_span_exact", "unsupported_abstain_score"],
       "min_rows": 7000
     },
     {
       "artifact_id": "v58-adjudication-rows",
       "artifact_kind": "review-return",
-      "validation_command": "defer to v58 adjudication acceptance gate once review rows validate",
+      "validation_command": "V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh",
       "required_columns": ["blind_run_id", "system_blind_id", "query_id", "response_sha256", "reviewer_a_id", "reviewer_b_id", "disagreement_type", "adjudicator_id", "adjudicated_answer_quality_score", "adjudicated_citation_score", "adjudicated_source_span_exact", "adjudicated_unsupported_abstain_score"],
       "min_rows": 3500
     },

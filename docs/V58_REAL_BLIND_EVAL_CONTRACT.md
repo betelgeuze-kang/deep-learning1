@@ -40,6 +40,11 @@ Required real-execution evidence:
 
 The source-controlled policy also pins these fail-closed gates:
 
+- `real_execution_ready=false`
+- `human_blind_review_ready=false`
+- `inter_rater_rows_ready=false`
+- `v58_full_blind_eval_ready=false`
+- `release_ready=false`
 - `required_real_response_systems=A/B/C/D/E/G/H`
 - `required_independent_reviewers_per_response=2`
 - `blind_identity_required_until_adjudication=true`
@@ -83,5 +88,8 @@ fields. Resource measurements are accepted through the dedicated
 `v58-resource-rows` artifact and evaluated separately from answer quality.
 Review rows bind to a specific blind response and system_blind_id, declare
 reviewer independence, and record a conflict disclosure hash.
+Human review and adjudication artifacts validate through
+`V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh`;
+they are not accepted through a deferred or tests-only note.
 
 Fixtures, templates, or tests-only checks do not close v58.
