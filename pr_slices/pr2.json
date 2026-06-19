@@ -116,14 +116,14 @@
     {
       "slice_id": "v56-ruler-longbench-expanded",
       "scope": "Source/evaluator-bound benchmark expansion replay contract.",
-      "required_artifacts": ["results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_blocker_required_artifact_rows.csv"],
+      "required_artifacts": ["v56/replay_contract.json", "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_blocker_required_artifact_rows.csv", "results/v1_0_pm_pr_claim_slice_gate/gate_001/v56_replay_acceptance_evidence_rows.csv", "results/v1_0_pm_pr_claim_slice_gate/gate_001/source_v56/v56_seed_dependency_blocker_rows.csv"],
       "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
       "claim_boundary": {
         "allowed": "v56 runner and fail-closed guard define replay requirements for source/evaluator-bound benchmark expansion.",
         "blocked": "Expanded benchmark readiness, leaderboard claim, or external benchmark verification without replay artifact.",
         "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_blocker_required_artifact_rows.csv"
       },
-      "verification_commands": ["./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
+      "verification_commands": ["tools/verify_artifact.py v56-replay v56/replay_contract.json --summary results/v56_ruler_longbench_expanded_contract_summary.csv --blocker-ledger results/v56_ruler_longbench_expanded_contract/contract_001/v56_seed_dependency_blocker_rows.csv --artifact-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/v56_replay_acceptance_evidence_rows.csv", "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
       "current_status": "blocked-missing-replay-artifact"
     },
     {

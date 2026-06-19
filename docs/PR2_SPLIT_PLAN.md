@@ -75,6 +75,10 @@ the recommended answer, citation, unsupported-claim, abstain, resource, guard,
 and sha256 outputs are replay artifacts, while raw prompt stuffing, real model
 generation, human-reviewed quality, public comparison, and release claims remain
 blocked.
+v56 expanded benchmark wording must follow `v56/replay_contract.json`; the
+contract keeps four replay artifacts blocked, records 20 missing seed artifacts
+(9 v49 and 11 v45), forbids implicit seed rebuild, and requires explicit
+approval before any v49/v45 regeneration or download/network path.
 v58 blind-eval wording must follow `v58/blind_eval_real.json`; A/B/C/D/E/G/H
 real responses require 500 rows per system, not just 3500 total rows. Two
 independent blinded reviewers from distinct reviewer pools, independent
