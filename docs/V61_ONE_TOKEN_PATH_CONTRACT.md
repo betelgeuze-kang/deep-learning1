@@ -85,6 +85,21 @@ The contract requires these artifact shapes:
   final hidden hash, LM-head tensor/payload hash, vocab/logit counts,
   candidate/reference logits hashes, typed readiness fields, top-1 agreement,
   tolerance, max delta, and `logits_parity_pass`
+- `sixteen-token-decode-rows`
+  (`results/v61_sixteen_token_decode/sixteen_token_decode_rows.csv`):
+  checkpoint/revision and tokenizer revision, upstream logits-parity artifact
+  hash, prompt input hash, candidate/reference token IDs and text hashes,
+  typed readiness fields, token mismatch count, and `decode_parity_pass`
+- `cold-warm-cache-measurement-rows`
+  (`results/v61_cold_warm_cache_measurement/cold_warm_cache_measurement_rows.csv`):
+  cold and warm `cache_state` rows, upstream decode artifact hash, runtime
+  settings hash, decoded token count, wall time, first-token latency,
+  steady-state TPS, SSD bytes read, cache hit/miss counts, typed readiness
+  fields, and `cache_measurement_pass`
+- `ssd-bytes-miss-tps-rows`
+  (`results/v61_ssd_runtime_metrics/ssd_bytes_miss_tps_rows.csv`):
+  cold/warm measurement hashes, bytes/token, miss/token, TPS for cold and warm
+  runs, typed readiness fields, and `ssd_runtime_metrics_pass`
 
 `torch_matvec_parity_ready=1` is not a real runtime claim. The phrase
 `SSD-resident real model runtime` remains blocked until milestones 1-6 are all
