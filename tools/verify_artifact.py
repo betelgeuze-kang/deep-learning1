@@ -2221,6 +2221,7 @@ def verify_v54_grounded_generation(
     if len(artifact_ids) != len(set(artifact_ids)):
         errors.append(f"{path}: duplicate required_artifacts are forbidden")
 
+    artifact_rows_by_id: dict[str, list[dict[str, str]]] = {}
     for index, row in enumerate(artifacts, start=1):
         prefix = f"{path}: required_artifact[{index}]"
         missing_artifact = REQUIRED_V54_ARTIFACT_KEYS - set(row)
@@ -2266,13 +2267,45 @@ def verify_v54_grounded_generation(
                 fieldnames = reader.fieldnames or []
                 if required_columns and fieldnames != required_columns:
                     errors.append(f"{artifact_path}: header must match required_columns for {artifact_id}")
-                row_count = sum(1 for _ in reader)
+                artifact_rows = list(reader)
+                artifact_rows_by_id[artifact_id] = artifact_rows
+                row_count = len(artifact_rows)
             if isinstance(min_rows, int) and row_count < min_rows:
                 errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
         elif artifact_kind == "text":
             line_count = len([line for line in artifact_path.read_text(encoding="utf-8").splitlines() if line.strip()])
             if isinstance(min_rows, int) and line_count < min_rows:
                 errors.append(f"{artifact_path}: expected at least {min_rows} non-empty lines, got {line_count}")
+
+    def require_all(artifact_id: str, field: str, expected: str) -> None:
+        rows = artifact_rows_by_id.get(artifact_id, [])
+        bad_rows = sum(1 for artifact_row in rows if artifact_row.get(field) != expected)
+        if bad_rows:
+            errors.append(f"{path}: {artifact_id}.{field} expected {expected} for all rows; bad_rows={bad_rows}")
+
+    for artifact_id in ["generator-input-rows", "compact-routehint-rows"]:
+        require_all(artifact_id, "model_visible_input_fields", "sanitized_question,opaque_routehint")
+        for field in [
+            "model_visible_query_id_used",
+            "model_visible_source_span_id_used",
+            "model_visible_source_path_used",
+            "model_visible_source_line_used",
+            "model_visible_source_file_hash_used",
+            "model_visible_expected_behavior_used",
+            "model_visible_expected_label_used",
+        ]:
+            require_all(artifact_id, field, "0")
+    for field in ["compact_routehint_contains_source_locator", "raw_prompt_context_appended", "raw_prompt_context_bytes", "retrieved_text_in_prompt", "attention_blocks", "transformer_blocks", "real_model_generation_ready"]:
+        require_all("generator-input-rows", field, "0")
+    require_all("generator-input-rows", "deterministic_source_span_generation_fixture", "1")
+    for field in ["contains_source_locator", "raw_context_appended"]:
+        require_all("compact-routehint-rows", field, "0")
+    for field in ["external_model_used", "external_network_used", "attention_blocks", "transformer_blocks", "raw_prompt_context_bytes"]:
+        require_all("generator-resource-rows", field, "0")
+    require_all("generator-resource-rows", "generated_from_source_span", "1")
+    require_all("answer-rows", "wrong_answer", "0")
+    require_all("wrong-answer-guard-rows", "wrong_answer", "0")
+    require_all("wrong-answer-guard-rows", "guard_status", "pass")
 
     if summary_path is not None:
         summary = read_first_csv(summary_path)
