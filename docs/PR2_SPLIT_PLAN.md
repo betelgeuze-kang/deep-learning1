@@ -59,6 +59,11 @@ admission remains blocked until real pinned evidence validates.
 Retriever and model-visible input wording must follow
 `leakage/retrieval_model_visible.json`; source locators, direct query/source
 bindings, expected behavior, and expected labels are evaluator-only.
+The v53/v54 leakage slices must compare that source-controlled contract with
+the replayed PM ledger via `tools/verify_artifact.py leakage
+leakage/retrieval_model_visible.json --pm-ledger
+results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_retrieval_leakage_guard_rows.csv`,
+so model-visible leakage guards cannot pass from schema checks alone.
 D/E baseline wording must follow `baselines/de_30b70b_real.json`; fixture or
 schema-test D/E rows cannot enter measured registry or public comparison rows.
 The v52 slice must include the measured-registry exclusion ledger and acceptance
