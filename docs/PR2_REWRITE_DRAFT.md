@@ -37,10 +37,11 @@ Required review slices:
 12. `operator-review-return-workflow`
 13. `docs-readme-pr2-cleanup`
 
-Current v61 state: checkpoint identity, page-hash, runtime-admission, and
-operator-bundle scaffolds are documented, but actual generation, one-token
-logits parity, production latency, near-frontier quality, and release claims
-remain blocked.
+Current v61 state: `mixtral-ssd-tensor-page-read-rows`, tensor dtype/quant
+rows, and `torch-matvec-parity-rows` are replay-bound, but real expert FFN
+forward parity, MoE block forward parity, one-token logits parity, actual
+generation, production latency, near-frontier quality, and release claims remain
+blocked until a replay artifact contains `real_model_execution_ready=1`.
 
 Typed readiness is mandatory. Bare `ready=1` does not imply
 `real_model_execution_ready`, `heldout_metric_ready`, `human_review_ready`,

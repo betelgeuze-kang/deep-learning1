@@ -76,9 +76,12 @@ Operator/review-return wording must follow
 `operations/review_return_workflow.json`; review templates, operator work
 orders, dry-run bundles, and fixture mechanics do not imply accepted human
 review, adjudication, real generation, or release readiness.
-v61 runtime wording must follow `v61/one_token_path.json`; tensor-page,
-dtype/quant, and matvec parity evidence do not imply an SSD-resident real model
-runtime until one-token logits parity is accepted.
+v61 runtime wording must follow `v61/one_token_path.json`;
+`mixtral-ssd-tensor-page-read-rows`, tensor dtype/quant rows, and
+`torch-matvec-parity-rows` are replay-bound, but real expert FFN forward parity,
+MoE block forward parity, one-token logits parity, actual generation,
+production latency, near-frontier quality, and release claims remain blocked
+until a replay artifact contains `real_model_execution_ready=1`.
 README and PR-body wording must follow the `docs-readme-pr2-cleanup` slice:
 reviewers should be pointed to declarative pipeline/contracts instead of a giant
 v61 entrypoint dump, and scaffold/runtime-admission evidence must not be promoted
@@ -109,10 +112,11 @@ v50 artifact schema is now explicit, but auditor correctness remains blocked
 until the required row artifacts and sha256 manifest are present and
 replay-checkable without implicit public refresh.
 
-Current v61 state: checkpoint identity, page-hash, runtime-admission, and
-operator-bundle scaffolds are documented, but actual generation, one-token
-logits parity, production latency, near-frontier quality, and release claims
-remain blocked.
+Current v61 state: `mixtral-ssd-tensor-page-read-rows`, tensor dtype/quant
+rows, and `torch-matvec-parity-rows` are replay-bound, but real expert FFN
+forward parity, MoE block forward parity, one-token logits parity, actual
+generation, production latency, near-frontier quality, and release claims remain
+blocked until a replay artifact contains `real_model_execution_ready=1`.
 
 Typed readiness, retrieval leakage, and D/E 30B/70B real-baseline admission
 remain separate blocker surfaces.

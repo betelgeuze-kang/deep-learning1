@@ -7,7 +7,7 @@
     "This draft PR is not mergeable as one unit. It mixes v50 auditor correctness, v52 baseline intake, v53/v54 query and generation contracts, v58 blind-eval protocol, v59 one-command replay, v61 checkpoint/runtime scaffolding, operator/review-return workflow, and README/documentation cleanup.",
     "Split it into claim-bounded PRs so each reviewer can replay the artifacts without accepting unrelated scaffold. Merge gates are claim boundary accuracy, replayable output artifacts, and false-positive blocker closure; tests are necessary smoke evidence but are not sufficient merge conditions.",
     "v50 artifact schema is now explicit, but auditor correctness remains blocked until the required row artifacts and sha256 manifest are present and replay-checkable without implicit public refresh.",
-    "Current v61 state: checkpoint identity, page-hash, runtime-admission, and operator-bundle scaffolds are documented, but actual generation, one-token logits parity, production latency, near-frontier quality, and release claims remain blocked.",
+    "Current v61 state: mixtral-ssd-tensor-page-read-rows, tensor dtype/quant rows, and torch-matvec-parity-rows are replay-bound, but real expert FFN forward parity, MoE block forward parity, one-token logits parity, actual generation, production latency, near-frontier quality, and release claims remain blocked until a replay artifact contains real_model_execution_ready=1.",
     "Ready wording must use typed readiness. Bare ready=1 does not imply real_model_execution_ready, heldout_metric_ready, human_review_ready, independent_reproduction_ready, or release_ready.",
     "retrieval leakage remains forbidden: model/retriever input is natural-language question plus searchable corpus only; source spans, paths, lines, hashes, query/source direct bindings, expected behavior, and expected labels are evaluator-only.",
     "D/E 30B/70B fixture rows remain schema-test evidence only until model revision, quantization, hashes, runtime, prompt/context/retrieval budgets, hardware, seed, raw answer/citation outputs, and evaluator version are accepted."
@@ -161,7 +161,7 @@
         "blocked": "SSD-resident real model runtime, dense local speed, near-frontier quality, production latency, or release-ready runtime claim until one-token logits parity exists.",
         "evidence_path": "v61/one_token_path.json"
       },
-      "verification_commands": ["tools/verify_artifact.py v61-one-token v61/one_token_path.json", "./experiments/test_v61j_one_command_ssd_resident_demo.sh", "./experiments/test_v61aa_hotset_tensor_slice_verifier.sh", "./experiments/test_v61ab_hotset_tensor_tile_quant_probe.sh"],
+      "verification_commands": ["tools/verify_artifact.py v61-one-token v61/one_token_path.json --v61aa-summary results/v61aa_hotset_tensor_slice_verifier_summary.csv --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv", "./experiments/test_v61j_one_command_ssd_resident_demo.sh", "./experiments/test_v61aa_hotset_tensor_slice_verifier.sh", "./experiments/test_v61ab_hotset_tensor_tile_quant_probe.sh"],
       "current_status": "ready-for-rd-review"
     },
     {

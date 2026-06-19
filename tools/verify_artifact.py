@@ -263,9 +263,21 @@ REQUIRED_PR2_REWRITE_TERMS = {
     "retrieval leakage",
     "D/E",
     "operator/review-return",
+    "mixtral-ssd-tensor-page-read-rows",
+    "torch-matvec-parity-rows",
+    "real expert FFN forward parity",
+    "MoE block forward parity",
     "one-token logits parity",
+    "real_model_execution_ready=1",
     "actual generation",
     "release claims remain blocked",
+}
+REQUIRED_PR2_V61_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py v61-one-token v61/one_token_path.json",
+    "--v61aa-summary",
+    "--v61ab-summary",
+    "results/v61aa_hotset_tensor_slice_verifier_summary.csv",
+    "results/v61ab_hotset_tensor_tile_quant_probe_summary.csv",
 }
 TESTS_ONLY_MERGE_CONDITIONS = {"tests pass", "test pass", "tests", "test", "ci green"}
 TYPED_READINESS_KEYS = {
@@ -1437,6 +1449,14 @@ def verify_pr_split(path: Path) -> list[str]:
             errors.append(f"{prefix}: verification_commands must be a non-empty list")
         if any(command.strip().lower() in TESTS_ONLY_MERGE_CONDITIONS for command in row.get("verification_commands", [])):
             errors.append(f"{prefix}: tests-only verification command is forbidden")
+        if slice_id == "v61-ssd-moe-runtime-roadmap":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [term for term in REQUIRED_PR2_V61_VERIFICATION_TERMS if term not in command_text]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: v61 verification commands missing replay summary terms: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
         boundary = row.get("claim_boundary", {})
         for field in ["allowed", "blocked", "evidence_path"]:
             if not boundary.get(field):
