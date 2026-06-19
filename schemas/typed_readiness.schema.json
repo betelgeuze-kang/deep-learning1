@@ -74,6 +74,7 @@
           "misleading_ready_flag",
           "replacement_flag",
           "ready_wording_policy",
+          "pm_ledger_required",
           "evidence_path"
         ],
         "properties": {
@@ -129,7 +130,7 @@
             ]
           },
           "ready_wording_policy": {"const": "typed-ready-only"},
-          "pm_ledger_required": {"type": "boolean"},
+          "pm_ledger_required": {"const": true},
           "evidence_path": {"type": "string"}
         },
         "additionalProperties": false

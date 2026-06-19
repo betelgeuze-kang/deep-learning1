@@ -49,6 +49,7 @@ REQUIRED_TYPED_READINESS_ROW_KEYS = {
     "misleading_ready_flag",
     "replacement_flag",
     "ready_wording_policy",
+    "pm_ledger_required",
     "evidence_path",
 }
 REQUIRED_LEAKAGE_KEYS = {
@@ -1968,8 +1969,8 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
             errors.append(f"{prefix}: replacement_flag cannot be an ambiguous ready flag")
         if row.get("ready_wording_policy") != "typed-ready-only":
             errors.append(f"{prefix}: ready_wording_policy must be typed-ready-only")
-        if "pm_ledger_required" in row and not isinstance(row.get("pm_ledger_required"), bool):
-            errors.append(f"{prefix}: pm_ledger_required must be boolean when present")
+        if row.get("pm_ledger_required") is not True:
+            errors.append(f"{prefix}: pm_ledger_required must be true")
         if not row.get("evidence_path"):
             errors.append(f"{prefix}: evidence_path must be non-empty")
         if row.get("real_model_execution_ready") is True:
@@ -2002,6 +2003,8 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
                 errors.append(f"{pm_ledger}: misleading_ready_flag mismatch for {replacement}")
             if ledger.get("ready_wording_policy") != row["ready_wording_policy"]:
                 errors.append(f"{pm_ledger}: ready_wording_policy mismatch for {replacement}")
+            if ledger.get("pm_ledger_required") != "1":
+                errors.append(f"{pm_ledger}: {replacement}.pm_ledger_required must be 1")
             for field in TYPED_READINESS_KEYS:
                 if ledger.get(field) != bool_to_csv(row[field]):
                     errors.append(f"{pm_ledger}: {replacement}.{field} expected {bool_to_csv(row[field])}, got {ledger.get(field)}")

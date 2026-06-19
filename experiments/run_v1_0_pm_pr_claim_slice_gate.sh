@@ -2601,6 +2601,7 @@ def ready_semantic_row(scope_id, contract_ready, fixture_execution_ready, real_m
         "misleading_ready_flag": misleading_ready_flag,
         "replacement_flag": replacement_flag,
         "ready_wording_policy": "typed-ready-only",
+        "pm_ledger_required": "1",
         "evidence_path": evidence_path,
     }
 

@@ -1247,6 +1247,8 @@ typed_fields = [
 for row in ready_rows.values():
     if not all(field in row for field in typed_fields):
         raise SystemExit("PM ready semantic rows should carry all typed readiness fields")
+    if row["pm_ledger_required"] != "1":
+        raise SystemExit("PM ready semantic rows should forbid source-only typed readiness exceptions")
     if (
         row["real_model_execution_ready"] != "0"
         or row["heldout_metric_ready"] != "0"
