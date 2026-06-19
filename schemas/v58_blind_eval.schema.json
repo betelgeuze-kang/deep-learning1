@@ -67,7 +67,21 @@
           "artifact_kind": {"type": "string"},
           "validation_command": {"type": "string"},
           "required_columns": {"type": "array", "items": {"type": "string"}},
-          "min_rows": {"type": "integer", "minimum": 1}
+          "min_rows": {"type": "integer", "minimum": 1},
+          "per_system_min_rows": {
+            "type": "object",
+            "required": ["A", "B", "C", "D", "E", "G", "H"],
+            "properties": {
+              "A": {"const": 500},
+              "B": {"const": 500},
+              "C": {"const": 500},
+              "D": {"const": 500},
+              "E": {"const": 500},
+              "G": {"const": 500},
+              "H": {"const": 500}
+            },
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       }

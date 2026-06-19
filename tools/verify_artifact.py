@@ -200,6 +200,9 @@ REQUIRED_V58_ARTIFACT_KEYS = {
     "required_columns",
     "min_rows",
 }
+OPTIONAL_V58_ARTIFACT_KEYS = {
+    "per_system_min_rows",
+}
 REQUIRED_REVIEW_RETURN_WORKFLOW_KEYS = {
     "schema_version",
     "policy",
@@ -1169,6 +1172,10 @@ EXPECTED_V58_ARTIFACT_MIN_ROWS = {
     "v58-adjudication-rows": 3500,
     "v58d-review-return-intake": 1,
     "v58-sha256-manifest": 10,
+}
+EXPECTED_V58_PER_SYSTEM_MIN_ROWS = {
+    "v58-blind-response-rows": {"A": 500, "B": 500, "C": 500, "D": 500, "E": 500, "G": 500, "H": 500},
+    "v58-resource-rows": {"A": 500, "B": 500, "C": 500, "D": 500, "E": 500, "G": 500, "H": 500},
 }
 V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS = {
     "latency_ms",
@@ -3012,6 +3019,9 @@ def verify_v58_blind_eval(
         missing_row = REQUIRED_V58_ARTIFACT_KEYS - set(row)
         if missing_row:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
+        extra_row = set(row) - REQUIRED_V58_ARTIFACT_KEYS - OPTIONAL_V58_ARTIFACT_KEYS
+        if extra_row:
+            errors.append(f"{prefix}: unknown keys: {', '.join(sorted(extra_row))}")
         if not row.get("artifact_kind") or not row.get("validation_command"):
             errors.append(f"{prefix}: artifact_kind and validation_command must be non-empty")
         artifact_id = row.get("artifact_id", "")
@@ -3032,6 +3042,15 @@ def verify_v58_blind_eval(
             errors.append(f"{prefix}: min_rows must be a positive integer")
         elif expected_min_rows is not None and min_rows != expected_min_rows:
             errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+        expected_per_system = EXPECTED_V58_PER_SYSTEM_MIN_ROWS.get(artifact_id)
+        per_system_min_rows = row.get("per_system_min_rows")
+        if expected_per_system is None:
+            if per_system_min_rows is not None:
+                errors.append(f"{prefix}: per_system_min_rows is only expected for response/resource rows")
+        elif per_system_min_rows != expected_per_system:
+            errors.append(f"{prefix}: per_system_min_rows must require 500 rows for each A/B/C/D/E/G/H system")
+        elif isinstance(min_rows, int) and sum(per_system_min_rows.values()) != min_rows:
+            errors.append(f"{prefix}: per_system_min_rows must sum to min_rows")
         required_columns = row.get("required_columns", [])
         if not isinstance(required_columns, list) or not required_columns:
             errors.append(f"{prefix}: required_columns must be a non-empty list")
