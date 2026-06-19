@@ -384,8 +384,8 @@ if any(row["real_model_execution_ready"] != "0" or row["release_ready"] != "0" f
 leakage_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/pm_retrieval_leakage_guard_rows.csv")
 if len(leakage_rows) != 7:
     raise SystemExit("v60 should carry retrieval leakage guard rows")
-if any(row["status"] != "pass" or row["adapter_selection_blocked"] != "1" for row in leakage_rows):
-    raise SystemExit("v60 retrieval leakage rows should keep oracle metadata blocked from adapter selection")
+if any(row["status"] != "pass" or row["adapter_selection_blocked"] != "1" or row["pm_ledger_required"] != "1" for row in leakage_rows):
+    raise SystemExit("v60 retrieval leakage rows should keep oracle metadata blocked from adapter selection with PM ledger binding")
 v56_replay_acceptance_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/v56_replay_acceptance_evidence_rows.csv")
 if len(v56_replay_acceptance_rows) != 4:
     raise SystemExit("v60 should carry four v56 replay acceptance evidence rows through v59e/PM sidecar")

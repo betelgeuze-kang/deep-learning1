@@ -68,6 +68,7 @@ REQUIRED_LEAKAGE_SURFACE_KEYS = {
     "forbidden_surface",
     "field_names",
     "evaluator_only_or_absent",
+    "pm_ledger_required",
 }
 REQUIRED_LEAKAGE_STAGE_KEYS = {
     "stage_id",
@@ -2064,6 +2065,8 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
             errors.append(f"{prefix}: unknown keys: {', '.join(sorted(extra_row))}")
         if row.get("evaluator_only_or_absent") is not True:
             errors.append(f"{prefix}: evaluator_only_or_absent must be true")
+        if row.get("pm_ledger_required") is not True:
+            errors.append(f"{prefix}: pm_ledger_required must be true")
         fields = row.get("field_names", [])
         if not isinstance(fields, list) or not fields:
             errors.append(f"{prefix}: field_names must be a non-empty list")
@@ -2193,6 +2196,8 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
                 errors.append(f"{pm_ledger}: {guard_id}.adapter_selection_blocked must be 1")
             if ledger.get("evaluator_only_or_absent") != "1":
                 errors.append(f"{pm_ledger}: {guard_id}.evaluator_only_or_absent must be 1")
+            if ledger.get("pm_ledger_required") != "1":
+                errors.append(f"{pm_ledger}: {guard_id}.pm_ledger_required must be 1")
             if ledger.get("allowed_adapter_surface") != policy["allowed_surface"]:
                 errors.append(f"{pm_ledger}: {guard_id}.allowed_adapter_surface mismatch")
             if ledger.get("selection_allowed_fields") != "sanitized_question":

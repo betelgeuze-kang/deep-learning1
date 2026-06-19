@@ -31,7 +31,7 @@
       "maxItems": 7,
       "items": {
         "type": "object",
-        "required": ["guard_id", "forbidden_surface", "field_names", "evaluator_only_or_absent"],
+        "required": ["guard_id", "forbidden_surface", "field_names", "evaluator_only_or_absent", "pm_ledger_required"],
         "properties": {
           "guard_id": {
             "type": "string",
@@ -102,7 +102,8 @@
             "minItems": 1,
             "uniqueItems": true
           },
-          "evaluator_only_or_absent": {"const": true}
+          "evaluator_only_or_absent": {"const": true},
+          "pm_ledger_required": {"const": true}
         },
         "additionalProperties": false
       }

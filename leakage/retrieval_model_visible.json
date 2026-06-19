@@ -10,43 +10,50 @@
       "guard_id": "source-span-id",
       "forbidden_surface": "source span ID",
       "field_names": ["source_span_id", "span_id", "source_span_row_id", "span_row_id"],
-      "evaluator_only_or_absent": true
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
     },
     {
       "guard_id": "source-path",
       "forbidden_surface": "source path",
       "field_names": ["source_path", "source_file_path", "file_path", "repo_path", "path", "parsed_path"],
-      "evaluator_only_or_absent": true
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
     },
     {
       "guard_id": "source-line",
       "forbidden_surface": "source line",
       "field_names": ["source_line", "source_line_start", "source_line_end", "line", "start_line", "end_line", "line_start", "line_end", "parsed_line"],
-      "evaluator_only_or_absent": true
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
     },
     {
       "guard_id": "source-file-hash",
       "forbidden_surface": "source file hash",
       "field_names": ["source_file_hash", "source_file_sha256", "source_sha256", "file_sha256", "content_sha256", "sha256", "blob_sha256", "git_blob_sha", "source_git_blob_sha"],
-      "evaluator_only_or_absent": true
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
     },
     {
       "guard_id": "query-source-direct-binding",
       "forbidden_surface": "query ID and direct source row binding",
       "field_names": ["query_id", "case_id", "source_row_id", "source_case_id", "source_query_id", "query_source_id", "source_binding_id"],
-      "evaluator_only_or_absent": true
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
     },
     {
       "guard_id": "expected-behavior",
       "forbidden_surface": "expected behavior",
       "field_names": ["expected_behavior", "expected_answer", "expected_answer_sha256", "expected_citation", "expected_output", "gold_answer", "gold_citation"],
-      "evaluator_only_or_absent": true
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
     },
     {
       "guard_id": "expected-label",
       "forbidden_surface": "expected label",
       "field_names": ["negative_or_abstain", "audit_type", "expected_label", "gold_label", "target_label"],
-      "evaluator_only_or_absent": true
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
     }
   ],
   "stage_contracts": [

@@ -17,6 +17,9 @@ The only model/retriever-visible field names allowed by policy are:
 
 Each model/retriever stage must use a subset of that policy allowlist. Non-model
 source-bound replay surfaces must declare `allowed_model_visible_fields=["none"]`.
+Every forbidden surface must also set `pm_ledger_required=true`; generated PM
+evidence must carry the matching `pm_ledger_required=1` row so a source-only
+contract cannot silently replace the review ledger.
 
 Forbidden model/retriever inputs:
 

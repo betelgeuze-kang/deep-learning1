@@ -531,8 +531,8 @@ if any(row["real_model_execution_ready"] != "0" or row["release_ready"] != "0" f
 leakage_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/pm_retrieval_leakage_guard_rows.csv")
 if len(leakage_rows) != 7:
     raise SystemExit("v59e PM sidecar should carry retrieval leakage guard rows")
-if any(row["status"] != "pass" or row["adapter_selection_blocked"] != "1" for row in leakage_rows):
-    raise SystemExit("v59e PM sidecar should keep oracle metadata blocked from adapter selection")
+if any(row["status"] != "pass" or row["adapter_selection_blocked"] != "1" or row["pm_ledger_required"] != "1" for row in leakage_rows):
+    raise SystemExit("v59e PM sidecar should keep oracle metadata blocked from adapter selection with PM ledger binding")
 leakage_by_guard = {row["guard_id"]: row for row in leakage_rows}
 if set(leakage_by_guard["source-path"]["field_names"].split(";")) != {"source_path", "source_file_path", "file_path", "repo_path", "path", "parsed_path"}:
     raise SystemExit("v59e PM sidecar should preserve source path alias leakage coverage")

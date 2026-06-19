@@ -2762,6 +2762,7 @@ def leakage_guard_row(guard_id, forbidden_surface, field_names, evaluator_only_r
         "field_names": field_names,
         "adapter_selection_blocked": str(selection_blocked_value),
         "evaluator_only_or_absent": str(evaluator_only_value),
+        "pm_ledger_required": "1",
         "allowed_adapter_surface": "natural_language_question_plus_searchable_corpus",
         "selection_allowed_fields": "sanitized_question",
         "direct_query_source_binding_forbidden": str(selection_blocked("query_id")),
