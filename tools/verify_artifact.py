@@ -312,6 +312,140 @@ AMBIGUOUS_READY_FLAGS = {
     "review_return_ready",
     "pr2_ready",
 }
+EXPECTED_TYPED_READINESS_ORDER = [
+    "pm_foundation_contract_fixture_ready",
+    "v53_v54_query_eval_contract_ready",
+    "v58_blind_eval_protocol_contract_ready",
+    "h10_real_label_contract_ready",
+    "logical_100b_contract_fixture_ready",
+    "real_100b_inference_ready",
+    "v61i_logical_100b_contract_fixture_ready",
+    "v60_release_contract_ready",
+    "operator_review_return_workflow_contract_ready",
+    "pr2_docs_claim_boundary_contract_ready",
+]
+EXPECTED_TYPED_READINESS_CONTRACTS = {
+    "pm_foundation_contract_fixture_ready": {
+        "scope_id": "pm-foundation-bundle",
+        "misleading_ready_flag": "v59_ready",
+        "evidence_path": "results/v59e_one_command_pm_foundation_demo_summary.csv",
+        "contract_ready": True,
+        "fixture_execution_ready": True,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "v53_v54_query_eval_contract_ready": {
+        "scope_id": "v53-v54-query-evaluation-pipeline",
+        "misleading_ready_flag": "v53_ready",
+        "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_roadmap_requirement_rows.csv",
+        "contract_ready": True,
+        "fixture_execution_ready": False,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "v58_blind_eval_protocol_contract_ready": {
+        "scope_id": "v58-blind-eval",
+        "misleading_ready_flag": "v58_ready",
+        "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_blocker_required_artifact_rows.csv",
+        "contract_ready": True,
+        "fixture_execution_ready": False,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "h10_real_label_contract_ready": {
+        "scope_id": "h10-scorer-real-label-promotion",
+        "misleading_ready_flag": "h10_real_label_promotion_ready",
+        "evidence_path": "results/v10_h10_real_label_promotion_readiness_gate/gate_001/pm_h10_real_label_acceptance_rows.csv",
+        "contract_ready": True,
+        "fixture_execution_ready": False,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "logical_100b_contract_fixture_ready": {
+        "scope_id": "v61-ssd-moe-runtime",
+        "misleading_ready_flag": "100b_moe_run_ready",
+        "evidence_path": "results/v61j_one_command_ssd_resident_demo_summary.csv",
+        "contract_ready": True,
+        "fixture_execution_ready": True,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "real_100b_inference_ready": {
+        "scope_id": "v61-real-100b-inference",
+        "misleading_ready_flag": "100b_moe_run_ready",
+        "evidence_path": "results/v61j_one_command_ssd_resident_demo_summary.csv",
+        "contract_ready": False,
+        "fixture_execution_ready": False,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "v61i_logical_100b_contract_fixture_ready": {
+        "scope_id": "v61i-logical-100b-fixture",
+        "misleading_ready_flag": "v61i_100b_moe_active_sparse_run_ready",
+        "evidence_path": "results/v61j_one_command_ssd_resident_demo_summary.csv",
+        "contract_ready": True,
+        "fixture_execution_ready": True,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "v60_release_contract_ready": {
+        "scope_id": "v60-release",
+        "misleading_ready_flag": "v60_ready",
+        "evidence_path": "results/v60_architecture_challenge_release_contract_summary.csv",
+        "contract_ready": True,
+        "fixture_execution_ready": False,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "operator_review_return_workflow_contract_ready": {
+        "scope_id": "operator-review-return-workflow",
+        "misleading_ready_flag": "review_return_ready",
+        "evidence_path": "operations/review_return_workflow.json",
+        "contract_ready": True,
+        "fixture_execution_ready": False,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "pr2_docs_claim_boundary_contract_ready": {
+        "scope_id": "docs-readme-pr2-cleanup",
+        "misleading_ready_flag": "pr2_ready",
+        "evidence_path": "docs/PR2_REWRITE_DRAFT.md",
+        "contract_ready": True,
+        "fixture_execution_ready": False,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+}
 EXPECTED_LEAKAGE_GUARD_IDS = [
     "source-span-id",
     "source-path",
@@ -1763,9 +1897,19 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
     if len(scope_ids) != len(set(scope_ids)):
         errors.append(f"{path}: duplicate scope_id values are forbidden")
     replacements = [row.get("replacement_flag", "") for row in rows]
+    if replacements != EXPECTED_TYPED_READINESS_ORDER:
+        errors.append(f"{path}: readiness row order must match the PM typed readiness contract")
     if len(replacements) != len(set(replacements)):
         errors.append(f"{path}: duplicate replacement_flag values are forbidden")
     replacement_set = set(replacements)
+    expected_replacements = set(EXPECTED_TYPED_READINESS_ORDER)
+    if replacement_set != expected_replacements:
+        missing_replacements = expected_replacements - replacement_set
+        extra_replacements = replacement_set - expected_replacements
+        if missing_replacements:
+            errors.append(f"{path}: missing replacement flags: {', '.join(sorted(missing_replacements))}")
+        if extra_replacements:
+            errors.append(f"{path}: unexpected replacement flags: {', '.join(sorted(extra_replacements))}")
     misleading_set = {row.get("misleading_ready_flag", "") for row in rows}
     if misleading_set != AMBIGUOUS_READY_FLAGS:
         errors.append(f"{path}: rows must cover exactly the ambiguous ready flags: {', '.join(sorted(AMBIGUOUS_READY_FLAGS))}")
@@ -1788,6 +1932,13 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
         replacement = row.get("replacement_flag", "")
         if not misleading or not replacement:
             errors.append(f"{prefix}: misleading_ready_flag and replacement_flag must be non-empty")
+        expected_row = EXPECTED_TYPED_READINESS_CONTRACTS.get(replacement)
+        if expected_row is None:
+            errors.append(f"{prefix}: unexpected replacement_flag={replacement}")
+            expected_row = {}
+        for field, expected in expected_row.items():
+            if row.get(field) != expected:
+                errors.append(f"{prefix}: {field} expected {expected}, got {row.get(field)}")
         if misleading not in AMBIGUOUS_READY_FLAGS:
             errors.append(f"{prefix}: misleading_ready_flag must be declared in policy.ambiguous_ready_flags")
         if misleading == replacement:
@@ -2020,6 +2171,8 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
                 errors.append(f"{pm_ledger}: {guard_id}.evaluator_only_or_absent must be 1")
             if ledger.get("allowed_adapter_surface") != policy["allowed_surface"]:
                 errors.append(f"{pm_ledger}: {guard_id}.allowed_adapter_surface mismatch")
+            if ledger.get("selection_allowed_fields") != "sanitized_question":
+                errors.append(f"{pm_ledger}: {guard_id}.selection_allowed_fields must be sanitized_question")
             if ledger.get("direct_query_source_binding_forbidden") != "1":
                 errors.append(f"{pm_ledger}: {guard_id}.direct_query_source_binding_forbidden must be 1")
     return errors

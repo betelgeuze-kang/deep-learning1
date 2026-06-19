@@ -1274,7 +1274,7 @@ for row in leakage_rows.values():
         row["status"] != "pass"
         or row["adapter_selection_blocked"] != "1"
         or row["allowed_adapter_surface"] != "natural_language_question_plus_searchable_corpus"
-        or row["selection_allowed_fields"] != "question"
+        or row["selection_allowed_fields"] != "sanitized_question"
         or row["direct_query_source_binding_forbidden"] != "1"
     ):
         raise SystemExit("PM retrieval leakage guard should block oracle metadata from adapter selection")
