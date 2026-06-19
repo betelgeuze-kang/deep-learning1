@@ -56,6 +56,11 @@ schema-test D/E rows cannot enter measured registry or public comparison rows.
 v53 benchmark wording must follow `benchmarks/v53_source_bound_freeze.json`;
 the 1000-row machine-foundation freeze does not imply human-reviewed quality,
 D/E baseline completion, public comparison, or release readiness.
+v54 grounded-generation wording must follow `v54/grounded_generation_contract.json`;
+the recommended answer, citation, unsupported-claim, abstain, resource, guard,
+and sha256 outputs are replay artifacts, while raw prompt stuffing, real model
+generation, human-reviewed quality, public comparison, and release claims remain
+blocked.
 v58 blind-eval wording must follow `v58/blind_eval_real.json`; templates and
 intake contracts do not imply real blind-eval completion.
 Operator/review-return wording must follow

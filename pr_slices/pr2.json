@@ -102,14 +102,14 @@
     {
       "slice_id": "v54-routehint-generation-contract",
       "scope": "Grounded RouteHint generation contract and no raw prompt stuffing guard.",
-      "required_artifacts": ["leakage/retrieval_model_visible.json", "results/v54c_complete_source_grounded_generation_1000_summary.csv"],
+      "required_artifacts": ["v54/grounded_generation_contract.json", "leakage/retrieval_model_visible.json", "results/v54c_complete_source_grounded_generation_1000_summary.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/answer_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/citation_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/unsupported_claim_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/abstain_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/generator_resource_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/wrong_answer_guard_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/sha256sums.txt"],
       "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
       "claim_boundary": {
         "allowed": "v54c emits 1000 grounded generation rows with answer/citation/abstain/resource/guard outputs and zero raw prompt stuffing.",
         "blocked": "Human-reviewed generation quality, mainline raw prompt stuffing, or release-ready generation.",
         "evidence_path": "results/v54c_complete_source_grounded_generation_1000_summary.csv"
       },
-      "verification_commands": ["tools/verify_artifact.py leakage leakage/retrieval_model_visible.json", "./experiments/test_v54c_complete_source_grounded_generation_1000.sh"],
+      "verification_commands": ["tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json --summary results/v54c_complete_source_grounded_generation_1000_summary.csv", "tools/verify_artifact.py leakage leakage/retrieval_model_visible.json", "./experiments/test_v54c_complete_source_grounded_generation_1000.sh"],
       "current_status": "ready-for-review"
     },
     {

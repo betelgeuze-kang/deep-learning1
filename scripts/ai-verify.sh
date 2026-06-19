@@ -201,6 +201,14 @@ if [ -x tools/verify_artifact.py ]; then
       tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json >/dev/null
     fi
   fi
+  if [ -f v54/grounded_generation_contract.json ]; then
+    if [ -f results/v54c_complete_source_grounded_generation_1000_summary.csv ]; then
+      tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json \
+        --summary results/v54c_complete_source_grounded_generation_1000_summary.csv >/dev/null
+    else
+      tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json >/dev/null
+    fi
+  fi
   if [ -f v58/blind_eval_real.json ]; then
     if [ -f results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv ] &&
        [ -f results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_required_artifact_rows.csv ] &&

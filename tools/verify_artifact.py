@@ -150,6 +150,21 @@ REQUIRED_V53_SOURCE_BENCHMARK_KEYS = {
     "policy",
     "requirements",
 }
+REQUIRED_V54_GROUNDED_GENERATION_KEYS = {
+    "schema_version",
+    "policy",
+    "required_artifacts",
+}
+REQUIRED_V54_ARTIFACT_KEYS = {
+    "artifact_id",
+    "artifact_kind",
+    "path",
+    "required_columns",
+    "min_rows",
+    "pm_recommended_output",
+    "raw_prompt_context_forbidden",
+    "model_visible_leakage_forbidden",
+}
 REQUIRED_V53_REQUIREMENT_KEYS = {
     "requirement_id",
     "required_evidence",
@@ -448,6 +463,123 @@ EXPECTED_V53_REQUIREMENT_IDS = [
     "abgh-same-query-internal-prebaseline",
     "sanitized-question-only-adapter-selection",
 ]
+EXPECTED_V54_ARTIFACT_IDS = [
+    "answer-rows",
+    "citation-rows",
+    "unsupported-claim-rows",
+    "abstain-rows",
+    "generator-resource-rows",
+    "wrong-answer-guard-rows",
+    "generator-input-rows",
+    "compact-routehint-rows",
+    "sha256-manifest",
+    "sha256sums",
+]
+EXPECTED_V54_ARTIFACT_COLUMNS = {
+    "answer-rows": [
+        "answer_id", "generation_id", "query_id", "owner_repo", "audit_type",
+        "expected_behavior", "generated_answer", "generated_answer_sha256",
+        "expected_answer_sha256", "answer_source", "generated_from_source_span",
+        "abstained", "source_span_id", "source_v53ap_adapter_trace_id",
+        "source_v53ap_evaluator_row_id", "citation_id", "answer_correct",
+        "citation_correct", "wrong_answer",
+    ],
+    "citation-rows": [
+        "citation_id", "generation_id", "answer_id", "query_id", "owner_repo",
+        "path", "line_start", "line_end", "source_span_id",
+        "source_file_sha256", "citation_text_sha256", "citation_correct",
+        "source_v53ap_evaluator_row_id",
+    ],
+    "unsupported-claim-rows": [
+        "generation_id", "query_id", "audit_type", "unsupported_claim_type",
+        "source_span_id", "expected_output",
+    ],
+    "abstain-rows": [
+        "generation_id", "query_id", "audit_type", "source_span_id",
+        "abstain_expected", "abstained", "abstain_correct",
+    ],
+    "generator-resource-rows": [
+        "generator_resource_row_id", "generation_id", "query_id",
+        "generator_id", "latency_ms", "compact_routehint_bytes",
+        "output_bytes", "external_model_used", "external_network_used",
+        "answer_source", "generated_from_source_span",
+        "source_v53ap_adapter_trace_id",
+        "source_v53ap_adapter_trace_provenance",
+        "source_v53ap_evaluator_row_id",
+        "source_v53ap_evaluator_contract_id",
+        "source_v53ap_evaluator_provenance",
+        "source_v53ap_answer_eval_separate",
+        "source_v53ap_citation_eval_separate",
+        "source_v53ap_resource_eval_separate",
+        "source_v53ap_evaluator_resource_row_bound",
+        "attention_blocks", "transformer_blocks", "raw_prompt_context_bytes",
+        "run_started_at_utc",
+    ],
+    "wrong-answer-guard-rows": [
+        "wrong_answer_guard_id", "generation_id", "query_id",
+        "expected_answer_sha256", "generated_answer_sha256",
+        "answer_correct", "citation_correct", "abstain_correct",
+        "source_v53ap_evaluator_row_id", "source_v53ap_answer_eval_separate",
+        "source_v53ap_citation_eval_separate",
+        "source_v53ap_resource_eval_separate",
+        "source_v53ap_evaluator_resource_row_bound", "wrong_answer",
+        "guard_status",
+    ],
+    "generator-input-rows": [
+        "generation_id", "query_id_evaluator_only", "generator_id",
+        "compact_routehint_sha256", "model_visible_input_fields",
+        "sanitized_question", "sanitized_question_sha256",
+        "model_visible_query_id_used", "model_visible_source_span_id_used",
+        "model_visible_source_path_used", "model_visible_source_line_used",
+        "model_visible_source_file_hash_used",
+        "model_visible_expected_behavior_used",
+        "model_visible_expected_label_used",
+        "compact_routehint_contains_source_locator",
+        "source_span_id_evaluator_only", "source_v53ap_adapter_trace_id",
+        "source_v53ap_adapter_trace_type",
+        "source_v53ap_adapter_trace_provenance",
+        "source_v53ap_evaluator_row_id",
+        "source_v53ap_evaluator_contract_id",
+        "source_v53ap_evaluator_provenance",
+        "source_v53ap_answer_eval_separate",
+        "source_v53ap_citation_eval_separate",
+        "source_v53ap_resource_eval_separate",
+        "source_v53ap_evaluator_resource_row_bound",
+        "attention_blocks", "transformer_blocks",
+        "raw_prompt_context_appended", "raw_prompt_context_bytes",
+        "retrieved_text_in_prompt",
+        "deterministic_source_span_generation_fixture",
+        "real_model_generation_ready",
+    ],
+    "compact-routehint-rows": [
+        "routehint_id", "generation_id", "query_id_evaluator_only",
+        "source_span_id_evaluator_only", "compact_routehint_sha256",
+        "compact_routehint_bytes", "raw_context_appended",
+        "model_visible_routehint", "model_visible_input_fields",
+        "model_visible_query_id_used", "model_visible_source_span_id_used",
+        "model_visible_source_path_used", "model_visible_source_line_used",
+        "model_visible_source_file_hash_used",
+        "model_visible_expected_behavior_used",
+        "model_visible_expected_label_used", "contains_source_locator",
+        "source_v53ap_adapter_trace_id", "source_v53ap_adapter_system_id",
+        "source_v53ap_evaluator_row_id",
+        "source_v53ap_evaluator_contract_id", "citation_handle",
+    ],
+    "sha256-manifest": ["path", "sha256", "bytes"],
+    "sha256sums": [],
+}
+EXPECTED_V54_MIN_ROWS = {
+    "answer-rows": 1000,
+    "citation-rows": 1000,
+    "unsupported-claim-rows": 160,
+    "abstain-rows": 160,
+    "generator-resource-rows": 1000,
+    "wrong-answer-guard-rows": 1000,
+    "generator-input-rows": 1000,
+    "compact-routehint-rows": 1000,
+    "sha256-manifest": 10,
+    "sha256sums": 1,
+}
 EXPECTED_V50_ARTIFACT_IDS = [
     "source-snapshot-rows",
     "audit-case-rows",
@@ -1620,6 +1752,129 @@ def verify_v50_auditor_correctness(
     return errors
 
 
+def verify_v54_grounded_generation(
+    path: Path,
+    summary_path: Path | None = None,
+) -> list[str]:
+    errors: list[str] = []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    missing = REQUIRED_V54_GROUNDED_GENERATION_KEYS - set(data)
+    if missing:
+        errors.append(f"{path}: missing v54 grounded generation keys: {', '.join(sorted(missing))}")
+        return errors
+    if data["schema_version"] != "v54_grounded_generation.v1":
+        errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
+    policy = data["policy"]
+    if policy.get("generation_contract_ready") is not True:
+        errors.append(f"{path}: generation_contract_ready must be true")
+    for field in [
+        "real_model_generation_ready",
+        "human_review_ready",
+        "public_comparison_claim_ready",
+        "release_ready",
+    ]:
+        if policy.get(field) is not False:
+            errors.append(f"{path}: {field} must be false")
+    if policy.get("raw_prompt_context_allowed") is not False:
+        errors.append(f"{path}: raw_prompt_context_allowed must be false")
+    if policy.get("allowed_model_visible_fields") != ["sanitized_question", "opaque_routehint"]:
+        errors.append(f"{path}: allowed_model_visible_fields must be sanitized_question, opaque_routehint")
+
+    artifacts = data["required_artifacts"]
+    if not isinstance(artifacts, list) or not artifacts:
+        errors.append(f"{path}: required_artifacts must be a non-empty list")
+        return errors
+    artifact_ids = [row.get("artifact_id", "") for row in artifacts]
+    if artifact_ids != EXPECTED_V54_ARTIFACT_IDS:
+        errors.append(f"{path}: required_artifacts order must match the v54 grounded generation contract")
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{path}: duplicate required_artifacts are forbidden")
+
+    for index, row in enumerate(artifacts, start=1):
+        prefix = f"{path}: required_artifact[{index}]"
+        missing_artifact = REQUIRED_V54_ARTIFACT_KEYS - set(row)
+        if missing_artifact:
+            errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_artifact))}")
+        artifact_id = row.get("artifact_id", "")
+        artifact_kind = row.get("artifact_kind", "")
+        if artifact_kind not in {"csv", "text"}:
+            errors.append(f"{prefix}: artifact_kind must be csv or text")
+        required_columns = row.get("required_columns", [])
+        expected_columns = EXPECTED_V54_ARTIFACT_COLUMNS.get(artifact_id)
+        if not isinstance(required_columns, list):
+            errors.append(f"{prefix}: required_columns must be a list")
+        elif expected_columns is not None and required_columns != expected_columns:
+            errors.append(f"{prefix}: required_columns must exactly match the v54 artifact header")
+        min_rows = row.get("min_rows")
+        expected_min_rows = EXPECTED_V54_MIN_ROWS.get(artifact_id)
+        if not isinstance(min_rows, int) or min_rows < 1:
+            errors.append(f"{prefix}: min_rows must be a positive integer")
+        elif expected_min_rows is not None and min_rows != expected_min_rows:
+            errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+        if row.get("pm_recommended_output") is not True and artifact_id in {
+            "answer-rows",
+            "citation-rows",
+            "unsupported-claim-rows",
+            "abstain-rows",
+            "generator-resource-rows",
+            "wrong-answer-guard-rows",
+            "sha256sums",
+        }:
+            errors.append(f"{prefix}: PM recommended v54 outputs must set pm_recommended_output=true")
+        if row.get("raw_prompt_context_forbidden") is not True:
+            errors.append(f"{prefix}: raw_prompt_context_forbidden must be true")
+        if row.get("model_visible_leakage_forbidden") is not True:
+            errors.append(f"{prefix}: model_visible_leakage_forbidden must be true")
+        artifact_path = Path(row.get("path", ""))
+        if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
+            errors.append(f"{prefix}: missing or empty artifact path {artifact_path}")
+            continue
+        if artifact_kind == "csv":
+            with artifact_path.open(newline="", encoding="utf-8") as handle:
+                reader = csv.DictReader(handle)
+                fieldnames = reader.fieldnames or []
+                if required_columns and fieldnames != required_columns:
+                    errors.append(f"{artifact_path}: header must match required_columns for {artifact_id}")
+                row_count = sum(1 for _ in reader)
+            if isinstance(min_rows, int) and row_count < min_rows:
+                errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
+        elif artifact_kind == "text":
+            line_count = len([line for line in artifact_path.read_text(encoding="utf-8").splitlines() if line.strip()])
+            if isinstance(min_rows, int) and line_count < min_rows:
+                errors.append(f"{artifact_path}: expected at least {min_rows} non-empty lines, got {line_count}")
+
+    if summary_path is not None:
+        summary = read_first_csv(summary_path)
+        expected_summary = {
+            "v54c_complete_source_grounded_generation_1000_ready": "1",
+            "generation_rows": "1000",
+            "answer_rows": "1000",
+            "citation_rows": "1000",
+            "unsupported_claim_rows": "160",
+            "abstain_rows": "160",
+            "generator_resource_rows": "1000",
+            "wrong_answer_guard_rows": "1000",
+            "grounded_generation_output_contract_pm_required_rows": "7",
+            "grounded_generation_output_contract_pm_required_ready_rows": "7",
+            "sha256sums_pm_recommended_csv_ready": "1",
+            "v53ap_answer_eval_separate_rows": "1000",
+            "v53ap_citation_eval_separate_rows": "1000",
+            "v53ap_resource_eval_separate_rows": "1000",
+            "raw_prompt_context_appended_rows": "0",
+            "model_visible_leakage_guard_ready": "1",
+            "model_visible_forbidden_field_used_rows": "0",
+            "model_visible_source_locator_rows": "0",
+            "deterministic_source_span_generation_fixture_ready": "1",
+            "real_model_generation_ready": "0",
+            "human_review_ready": "0",
+            "real_release_package_ready": "0",
+        }
+        for field, expected in expected_summary.items():
+            if summary.get(field) != expected:
+                errors.append(f"{summary_path}: {field} expected {expected}, got {summary.get(field)}")
+    return errors
+
+
 def verify_v53_source_benchmark(
     path: Path,
     v53i_summary: Path | None = None,
@@ -2067,6 +2322,9 @@ def main() -> int:
     p_v53.add_argument("--v53ap-summary", type=Path, default=None)
     p_v53.add_argument("--v53aq-summary", type=Path, default=None)
     p_v53.add_argument("--v1-exit-ledger", type=Path, default=None)
+    p_v54 = sub.add_parser("v54-grounded-generation")
+    p_v54.add_argument("paths", nargs="+", type=Path)
+    p_v54.add_argument("--summary", type=Path, default=None)
     p_v58 = sub.add_parser("v58-blind-eval")
     p_v58.add_argument("paths", nargs="+", type=Path)
     p_v58.add_argument("--readiness-ledger", type=Path, default=None)
@@ -2130,6 +2388,9 @@ def main() -> int:
                     args.v1_exit_ledger,
                 )
             )
+    elif args.cmd == "v54-grounded-generation":
+        for path in args.paths:
+            errors.extend(verify_v54_grounded_generation(path, args.summary))
     elif args.cmd == "v58-blind-eval":
         for path in args.paths:
             errors.extend(verify_v58_blind_eval(path, args.readiness_ledger, args.artifact_ledger, args.template_ledger))
