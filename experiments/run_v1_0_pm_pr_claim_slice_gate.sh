@@ -275,6 +275,7 @@ write_csv(run_dir / "source_summary_rows.csv", list(copied_summary_rows[0].keys(
 
 slice_ids = [
     "docs/v1-roadmap",
+    "v50-auditor-correctness",
     "v52-baseline-registry-contract",
     "v53-public-repo-source-manifest",
     "v53-query-instantiation-1000",
@@ -284,7 +285,11 @@ slice_ids = [
     "v58-blind-eval-contract",
     "v59-one-command-demo",
     "v61-ssd-moe-runtime-roadmap",
+    "operator-review-return-workflow",
+    "docs-readme-pr2-cleanup",
 ]
+expected_slice_count = len(slice_ids)
+expected_gate_count = expected_slice_count * 3
 
 v52 = summaries["v52"]
 v52y = summaries["v52y"]
@@ -332,9 +337,19 @@ slice_specs = [
         "reason": "roadmap has claim boundary and recommended PR slices",
     },
     {
+        "slice_id": "v50-auditor-correctness",
+        "scope": "v50 public-repo auditor correctness replay contract",
+        "required_artifacts": "v50 auditor contract, summary/decision rows, row artifacts, and sha256 manifest",
+        "merge_condition": "auditor correctness is claim-bounded and replay artifacts are required before merge readiness",
+        "claim_ok": (root / "audits" / "v50_public_repo_auditor_correctness.json").is_file(),
+        "replay_ok": False,
+        "blocker_ok": True,
+        "reason": "v50 schema/contract is explicit, but auditor correctness remains blocked until row artifacts and sha256 manifest replay",
+    },
+    {
         "slice_id": "v52-baseline-registry-contract",
-        "scope": "A-H baseline registry/schema contract",
-        "required_artifacts": "v52 baseline-war summary plus v52y measured-registry policy summary",
+        "scope": "A-H baseline registry/schema contract plus C/7B adapter and D/E intake guard",
+        "required_artifacts": "v52 baseline-war summary, C/7B actual response packet, D/E intake guard, and v52y measured-registry policy summary",
         "merge_condition": "replayable output schema and symmetric verifier contract exist; D/E/F blockers do not become release readiness",
         "claim_ok": as_int(v52, "release_ready_claim") == 0 and as_int(v52, "real_release_package_ready") == 0,
         "replay_ok": as_int(v52, "v52_baseline_war_contract_ready") == 1 and as_int(v52, "symmetric_citation_contract_ready") == 1,
@@ -460,6 +475,26 @@ slice_specs = [
         "blocker_ok": as_int(v61j, "real_100b_open_weight_materialized") == 0 and as_int(v61j, "ram_resident_full_model_fallback_rows") == 0,
         "reason": "v61 stays an R&D option with no near-frontier or release wording",
     },
+    {
+        "slice_id": "operator-review-return-workflow",
+        "scope": "operator/review-return workflow contracts across v53, v58, and v61",
+        "required_artifacts": "operations review-return workflow contract and review-return intake summaries",
+        "merge_condition": "operator templates and return contracts are replayable while human-review and adjudication claims stay blocked",
+        "claim_ok": (root / "operations" / "review_return_workflow.json").is_file(),
+        "replay_ok": (root / "docs" / "REVIEW_RETURN_WORKFLOW_CONTRACT.md").is_file(),
+        "blocker_ok": True,
+        "reason": "workflow contracts are present, but accepted human review, adjudication, real generation, and release remain blocked",
+    },
+    {
+        "slice_id": "docs-readme-pr2-cleanup",
+        "scope": "README cleanup, PR #2 title/body rewrite, and pipeline migration guidance",
+        "required_artifacts": "README, PR2 split plan, PR2 rewrite draft, pipeline migration plan, typed readiness, and split contract",
+        "merge_condition": "reviewer-facing docs point at declarative contracts and do not promote scaffold into real model/release claims",
+        "claim_ok": (root / "docs" / "PR2_REWRITE_DRAFT.md").is_file() and (root / "docs" / "PR2_SPLIT_PLAN.md").is_file(),
+        "replay_ok": (root / "pr_slices" / "pr2.json").is_file() and (root / "readiness" / "typed_ready.json").is_file(),
+        "blocker_ok": True,
+        "reason": "reviewer-facing PR/README cleanup artifacts are present and bound to typed readiness and split contract",
+    },
 ]
 
 if [spec["slice_id"] for spec in slice_specs] != slice_ids:
@@ -479,12 +514,16 @@ for ordinal, spec in enumerate(slice_specs, start=1):
     current_status = status(current_ready)
     if spec["slice_id"] == "v61-ssd-moe-runtime-roadmap" and current_ready:
         current_status = "ready-for-rd-review"
+    elif spec["slice_id"] == "v50-auditor-correctness" and not current_ready:
+        current_status = "blocked-artifact-replay-missing"
     elif spec["slice_id"] in {"v56-ruler-longbench-expanded"} and not current_ready:
         current_status = "blocked-missing-replay-artifact"
     elif spec["slice_id"] in {"v58-blind-eval-contract"} and current_ready:
         current_status = "ready-for-contract-review-real-eval-blocked"
     elif spec["slice_id"] in {"v59-one-command-demo"} and current_ready:
         current_status = "pm-foundation-ready-full-demo-blocked"
+    elif spec["slice_id"] in {"operator-review-return-workflow"} and current_ready:
+        current_status = "ready-for-workflow-review-real-return-blocked"
 
     slice_rows.append(
         {
@@ -538,9 +577,15 @@ claim_boundary_rows = [
         "source_docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md",
     ),
     claim_boundary_row(
+        "v50-auditor-correctness",
+        "v50 artifact schema and auditor-correctness replay contract are explicit",
+        "auditor correctness merge readiness while source snapshot, audit case, span, guard, commercial return, and sha256 manifest rows are missing",
+        "audits/v50_public_repo_auditor_correctness.json",
+    ),
+    claim_boundary_row(
         "v52-baseline-registry-contract",
-        "A-H baseline registry and symmetric citation/evaluator contract exist with D/E/F blockers explicit",
-        "30B/70B/100B+ comparison readiness or release readiness",
+        "A-H baseline registry, C/7B response packet boundary, and symmetric citation/evaluator contract exist with D/E/F blockers explicit",
+        "30B/70B/100B+ comparison readiness, C quality claim, D/E measured-registry admission, or release readiness",
         "source_summaries/v52_llm_rag_baseline_war_summary.csv",
     ),
     claim_boundary_row(
@@ -591,6 +636,18 @@ claim_boundary_rows = [
         "dense local speed, near-frontier quality, production latency, or release-ready runtime claim",
         "source_summaries/v61j_one_command_ssd_resident_demo_summary.csv",
     ),
+    claim_boundary_row(
+        "operator-review-return-workflow",
+        "operator templates, review-return intake contracts, dry-run bundles, and no-replay scaffolds define the required return surface",
+        "accepted human review, adjudication, operator input files, real generation, production latency, near-frontier quality, or release readiness",
+        "operations/review_return_workflow.json",
+    ),
+    claim_boundary_row(
+        "docs-readme-pr2-cleanup",
+        "README and PR text point reviewers to declarative pipeline/contracts instead of giant v61 entrypoint dumps",
+        "scaffold, fixture, dry-run, operator, or runtime-admission evidence promoted into real model generation, production, comparison, or release claims",
+        "pr_slices/pr2.json",
+    ),
 ]
 write_csv(run_dir / "pm_pr_claim_boundary_rows.csv", list(claim_boundary_rows[0].keys()), claim_boundary_rows)
 
@@ -610,6 +667,9 @@ slice_file_rows = [
     file_row("docs/v1-roadmap", "docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md", "roadmap", "include"),
     file_row("docs/v1-roadmap", "docs/EXPERIMENTS.md", "experiment-index", "include-if-docs-touched"),
     file_row("docs/v1-roadmap", "README.md", "top-level-status", "include-if-docs-touched"),
+    file_row("v50-auditor-correctness", "audits/v50_public_repo_auditor_correctness.json", "auditor-contract", "include"),
+    file_row("v50-auditor-correctness", "docs/V50_AUDITOR_CORRECTNESS_CONTRACT.md", "claim-boundary", "include"),
+    file_row("v50-auditor-correctness", "tools/verify_artifact.py", "auditor-verifier", "include-if-verifier-touched"),
     file_row("v52-baseline-registry-contract", "experiments/run_v52_llm_rag_baseline_war.sh", "runner", "include"),
     file_row("v52-baseline-registry-contract", "experiments/test_v52_llm_rag_baseline_war.sh", "smoke", "include"),
     file_row("v52-baseline-registry-contract", "experiments/run_v52y_f_optional_final_policy.sh", "runner", "include"),
@@ -648,6 +708,17 @@ slice_file_rows = [
     file_row("v59-one-command-demo", "experiments/test_v1_0_pm_pr_claim_slice_gate.sh", "pr-slice-smoke", "include"),
     file_row("v61-ssd-moe-runtime-roadmap", "experiments/run_v61j_one_command_ssd_resident_demo.sh", "runner", "include"),
     file_row("v61-ssd-moe-runtime-roadmap", "experiments/test_v61j_one_command_ssd_resident_demo.sh", "smoke", "include"),
+    file_row("operator-review-return-workflow", "operations/review_return_workflow.json", "workflow-contract", "include"),
+    file_row("operator-review-return-workflow", "docs/REVIEW_RETURN_WORKFLOW_CONTRACT.md", "claim-boundary", "include"),
+    file_row("operator-review-return-workflow", "experiments/test_v58d_blind_review_return_intake.sh", "blind-review-return-smoke", "reference"),
+    file_row("operator-review-return-workflow", "tools/verify_artifact.py", "workflow-verifier", "include-if-verifier-touched"),
+    file_row("docs-readme-pr2-cleanup", "README.md", "english-readme", "include"),
+    file_row("docs-readme-pr2-cleanup", "README.ko.md", "korean-readme", "include"),
+    file_row("docs-readme-pr2-cleanup", "docs/PR2_SPLIT_PLAN.md", "split-plan", "include"),
+    file_row("docs-readme-pr2-cleanup", "docs/PR2_REWRITE_DRAFT.md", "rewrite-draft", "include"),
+    file_row("docs-readme-pr2-cleanup", "docs/PIPELINE_MIGRATION.md", "migration-plan", "include"),
+    file_row("docs-readme-pr2-cleanup", "readiness/typed_ready.json", "typed-readiness-contract", "include"),
+    file_row("docs-readme-pr2-cleanup", "pr_slices/pr2.json", "split-contract", "include"),
 ]
 write_csv(run_dir / "pm_pr_slice_file_rows.csv", list(slice_file_rows[0].keys()), slice_file_rows)
 
@@ -663,6 +734,7 @@ def command_row(slice_id, command, purpose, execution_policy):
 
 slice_verification_rows = [
     command_row("docs/v1-roadmap", "experiments/test_v1_0_pm_pr_claim_slice_gate.sh", "roadmap claim-boundary and PR split ledger", "local-smoke"),
+    command_row("v50-auditor-correctness", "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv", "v50 auditor correctness replay contract", "defer-until-v50-row-artifacts"),
     command_row("v52-baseline-registry-contract", "experiments/test_v52_llm_rag_baseline_war.sh", "baseline registry contract", "local-smoke"),
     command_row("v52-baseline-registry-contract", "experiments/test_v52y_f_optional_final_policy.sh", "F optional final policy and baseline blockers", "local-smoke"),
     command_row("v53-public-repo-source-manifest", "experiments/test_v53g_complete_source_manifest.sh", "complete-source git tree manifest", "local-smoke"),
@@ -679,6 +751,9 @@ slice_verification_rows = [
     command_row("v59-one-command-demo", "experiments/test_v59e_one_command_pm_foundation_demo.sh", "PM foundation one-command replay", "local-smoke"),
     command_row("v59-one-command-demo", "experiments/test_v1_0_pm_pr_claim_slice_gate.sh", "PR split and roadmap requirement audit refreshed by one command", "local-smoke"),
     command_row("v61-ssd-moe-runtime-roadmap", "experiments/test_v61j_one_command_ssd_resident_demo.sh", "SSD-resident R&D roadmap demo without release claim", "local-smoke"),
+    command_row("operator-review-return-workflow", "tools/verify_artifact.py review-return-workflow operations/review_return_workflow.json --v53s-summary results/v53s_complete_source_review_return_intake_summary.csv --v58d-summary results/v58d_blind_review_return_intake_summary.csv --v61af-summary results/v61af_checkpoint_warehouse_operator_bundle_summary.csv --v61hv-summary results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv", "operator/review-return workflow contract", "local-smoke"),
+    command_row("docs-readme-pr2-cleanup", "tools/verify_artifact.py pr-split pr_slices/pr2.json", "PR #2 split contract and rewrite terms", "local-smoke"),
+    command_row("docs-readme-pr2-cleanup", "tools/verify_artifact.py typed-readiness readiness/typed_ready.json", "typed readiness wording guard", "local-smoke"),
 ]
 write_csv(run_dir / "pm_pr_slice_verification_rows.csv", list(slice_verification_rows[0].keys()), slice_verification_rows)
 
@@ -703,7 +778,13 @@ claim_pass_rows = sum(1 for row in slice_rows if row["claim_boundary_ok"] == "1"
 replay_pass_rows = sum(1 for row in slice_rows if row["replay_artifact_ok"] == "1")
 blocker_pass_rows = sum(1 for row in slice_rows if row["blocker_false_positive_closed"] == "1")
 blocked_rows = len(slice_rows) - ready_rows
-plan_ready = int(len(slice_rows) == 10 and len(gate_rows) == 30 and merge_condition_defined_rows == 10 and claim_pass_rows >= 9 and blocker_pass_rows == 10)
+plan_ready = int(
+    len(slice_rows) == expected_slice_count
+    and len(gate_rows) == expected_gate_count
+    and merge_condition_defined_rows == expected_slice_count
+    and claim_pass_rows >= expected_slice_count - 1
+    and blocker_pass_rows == expected_slice_count
+)
 
 
 def req(milestone, requirement_id, requirement, ok, evidence_path, reason, blocker_class=""):
@@ -722,8 +803,8 @@ pm_roadmap_rows = [
     req(
         "M1",
         "pr-split-ledger",
-        "draft PR #2 is represented as ten review slices",
-        plan_ready and len(slice_rows) == 10,
+        "draft PR #2 is represented as thirteen review slices",
+        plan_ready and len(slice_rows) == expected_slice_count,
         "pm_pr_slice_rows.csv",
         f"slice_rows={len(slice_rows)} merge_gate_rows={len(gate_rows)}",
     ),
@@ -731,7 +812,10 @@ pm_roadmap_rows = [
         "M1",
         "merge-condition-boundary",
         "merge gates use claim boundary, replay artifacts, and false-positive blocker closure instead of tests-only readiness",
-        merge_condition_defined_rows == 10 and len(gate_rows) == 30 and summary_sources and blocker_pass_rows == 10,
+        merge_condition_defined_rows == expected_slice_count
+        and len(gate_rows) == expected_gate_count
+        and summary_sources
+        and blocker_pass_rows == expected_slice_count,
         "pm_pr_merge_gate_rows.csv",
         f"merge_condition_defined_rows={merge_condition_defined_rows} tests_only_merge_condition_rows=0",
     ),
@@ -1725,6 +1809,7 @@ write_csv(run_dir / "pm_pr_review_packet_rows.csv", list(review_packet_rows[0].k
 review_packet_by_slice = {row["slice_id"]: row for row in review_packet_rows}
 acceptance_replay_path_by_slice = {
     "docs/v1-roadmap": "source_docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md",
+    "v50-auditor-correctness": "audits/v50_public_repo_auditor_correctness.json",
     "v52-baseline-registry-contract": "source_summaries/v52_llm_rag_baseline_war_summary.csv",
     "v53-public-repo-source-manifest": "source_v53t/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
     "v53-query-instantiation-1000": "source_v53t/complete_source_query_span_binding_audit_rows.csv",
@@ -1734,9 +1819,12 @@ acceptance_replay_path_by_slice = {
     "v58-blind-eval-contract": "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
     "v59-one-command-demo": "source_v59e/public_source_replay_policy_rows.csv",
     "v61-ssd-moe-runtime-roadmap": "source_summaries/v61j_one_command_ssd_resident_demo_summary.csv",
+    "operator-review-return-workflow": "operations/review_return_workflow.json",
+    "docs-readme-pr2-cleanup": "pr_slices/pr2.json",
 }
 acceptance_blocker_path_by_slice = {
     "docs/v1-roadmap": "pm_pr_claim_boundary_rows.csv",
+    "v50-auditor-correctness": "blocker_packets/v50-auditor-replay-artifacts-missing.md",
     "v52-baseline-registry-contract": "pm_pr_merge_gate_rows.csv",
     "v53-public-repo-source-manifest": "source_v53t/complete_source_foundation_freeze_rows.csv",
     "v53-query-instantiation-1000": "source_v53t/complete_source_foundation_freeze_rows.csv",
@@ -1746,6 +1834,8 @@ acceptance_blocker_path_by_slice = {
     "v58-blind-eval-contract": "blocker_packets/v58-real-blind-eval-missing.md",
     "v59-one-command-demo": "source_v59e/public_source_replay_policy_rows.csv",
     "v61-ssd-moe-runtime-roadmap": "source_summaries/v61j_one_command_ssd_resident_demo_summary.csv",
+    "operator-review-return-workflow": "pm_external_return_template_rows.csv",
+    "docs-readme-pr2-cleanup": "pm_pr_title_body_rows.csv",
 }
 acceptance_evidence_rows = []
 for row in slice_rows:

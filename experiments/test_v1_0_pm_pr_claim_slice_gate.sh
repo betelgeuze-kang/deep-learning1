@@ -37,10 +37,10 @@ def read_csv(path):
 summary = read_csv(summary_csv)[0]
 expected = {
     "v1_0_pm_pr_claim_slice_gate_ready": "1",
-    "recommended_pr_slice_rows": "10",
-    "merge_condition_defined_rows": "10",
-    "merge_gate_rows": "30",
-    "blocker_false_positive_pass_rows": "10",
+    "recommended_pr_slice_rows": "13",
+    "merge_condition_defined_rows": "13",
+    "merge_gate_rows": "39",
+    "blocker_false_positive_pass_rows": "13",
     "pm_roadmap_requirement_rows": "20",
     "pm_roadmap_ready_rows": "14",
     "pm_roadmap_blocked_rows": "6",
@@ -73,20 +73,20 @@ expected = {
     "h10_real_label_acceptance_evidence_ready_rows": "6",
     "h10_real_label_acceptance_evidence_promotion_ready_rows": "0",
     "h10_real_label_acceptance_evidence_tests_only_rows": "0",
-    "pm_pr_slice_file_rows": "41",
-    "pm_pr_slice_file_existing_rows": "41",
-    "pm_pr_slices_with_file_rows": "10",
-    "pm_pr_slice_verification_rows": "17",
-    "pm_pr_slices_with_verification_rows": "10",
-    "pm_pr_claim_boundary_rows": "10",
-    "pm_pr_claim_boundary_pass_rows": "10",
-    "pm_pr_review_packet_rows": "10",
-    "pm_pr_review_packet_files": "10",
-    "pm_pr_review_packet_ready_rows": "10",
-    "pm_pr_review_packet_blocked_slice_rows": "1",
-    "pm_pr_acceptance_evidence_rows": "10",
-    "pm_pr_acceptance_evidence_ready_rows": "9",
-    "pm_pr_acceptance_evidence_blocked_rows": "1",
+    "pm_pr_slice_file_rows": "55",
+    "pm_pr_slice_file_existing_rows": "55",
+    "pm_pr_slices_with_file_rows": "13",
+    "pm_pr_slice_verification_rows": "21",
+    "pm_pr_slices_with_verification_rows": "13",
+    "pm_pr_claim_boundary_rows": "13",
+    "pm_pr_claim_boundary_pass_rows": "13",
+    "pm_pr_review_packet_rows": "13",
+    "pm_pr_review_packet_files": "13",
+    "pm_pr_review_packet_ready_rows": "13",
+    "pm_pr_review_packet_blocked_slice_rows": "2",
+    "pm_pr_acceptance_evidence_rows": "13",
+    "pm_pr_acceptance_evidence_ready_rows": "11",
+    "pm_pr_acceptance_evidence_blocked_rows": "2",
     "pm_pr_acceptance_evidence_tests_only_rows": "0",
     "v56_replay_acceptance_evidence_rows": "4",
     "v56_replay_acceptance_evidence_ready_rows": "0",
@@ -171,6 +171,7 @@ if int(summary["claim_boundary_pass_rows"]) < 9:
 slice_rows = read_csv(run_dir / "pm_pr_slice_rows.csv")
 expected_order = [
     "docs/v1-roadmap",
+    "v50-auditor-correctness",
     "v52-baseline-registry-contract",
     "v53-public-repo-source-manifest",
     "v53-query-instantiation-1000",
@@ -180,6 +181,8 @@ expected_order = [
     "v58-blind-eval-contract",
     "v59-one-command-demo",
     "v61-ssd-moe-runtime-roadmap",
+    "operator-review-return-workflow",
+    "docs-readme-pr2-cleanup",
 ]
 if [row["slice_id"] for row in slice_rows] != expected_order:
     raise SystemExit("PM PR slice order mismatch")
@@ -191,8 +194,8 @@ if any(row["merge_condition"].strip().lower() in {"tests pass", "test pass", "te
     raise SystemExit("tests-only merge conditions are forbidden")
 
 claim_boundary_rows = read_csv(run_dir / "pm_pr_claim_boundary_rows.csv")
-if len(claim_boundary_rows) != 10:
-    raise SystemExit("PM PR claim boundary ledger should have ten rows")
+if len(claim_boundary_rows) != 13:
+    raise SystemExit("PM PR claim boundary ledger should have thirteen rows")
 if [row["slice_id"] for row in claim_boundary_rows] != expected_order:
     raise SystemExit("PM PR claim boundary order mismatch")
 if any(row["claim_boundary_status"] != "pass" for row in claim_boundary_rows):
@@ -200,10 +203,13 @@ if any(row["claim_boundary_status"] != "pass" for row in claim_boundary_rows):
 claim_by_id = {row["slice_id"]: row for row in claim_boundary_rows}
 for slice_id, forbidden in {
     "docs/v1-roadmap": "Transformer replacement",
+    "v50-auditor-correctness": "auditor correctness merge readiness",
     "v53-system-a-b-g-h-measured": "public comparison claim",
     "v56-ruler-longbench-expanded": "leaderboard claim",
     "v59-one-command-demo": "full v59 public challenge demo",
     "v61-ssd-moe-runtime-roadmap": "near-frontier quality",
+    "operator-review-return-workflow": "accepted human review",
+    "docs-readme-pr2-cleanup": "real model generation",
 }.items():
     if forbidden not in claim_by_id[slice_id]["blocked_claim"]:
         raise SystemExit(f"claim boundary should block {forbidden} for {slice_id}")
@@ -220,13 +226,17 @@ for snippet in ["repo_manifest_rows=10", "file_manifest_rows=11266", "content_sn
         raise SystemExit(f"v53 source-manifest slice should expose direct manifest count: {snippet}")
 if by_id["v53-system-a-b-g-h-measured"]["current_status"] != "ready-for-review":
     raise SystemExit("A/B/G/H slice should be ready for internal pre-baseline review")
+if by_id["v50-auditor-correctness"]["current_status"] != "blocked-artifact-replay-missing":
+    raise SystemExit("v50 auditor slice should stay blocked until replay artifacts exist")
 if by_id["v59-one-command-demo"]["current_status"] != "pm-foundation-ready-full-demo-blocked":
     raise SystemExit("v59 slice should expose PM foundation readiness while blocking full demo")
 if by_id["v61-ssd-moe-runtime-roadmap"]["current_status"] != "ready-for-rd-review":
     raise SystemExit("v61 slice should stay R&D-scoped")
+if by_id["operator-review-return-workflow"]["current_status"] != "ready-for-workflow-review-real-return-blocked":
+    raise SystemExit("operator/review-return slice should expose workflow readiness while blocking real returns")
 
 gate_rows = read_csv(run_dir / "pm_pr_merge_gate_rows.csv")
-if len(gate_rows) != 30:
+if len(gate_rows) != 39:
     raise SystemExit("expected three gate rows per PR slice")
 for slice_id in expected_order:
     gates = {row["gate"]: row["status"] for row in gate_rows if row["slice_id"] == slice_id}
@@ -563,31 +573,34 @@ else:
         raise SystemExit("PM v60 release blocker should disclose absent v60 summary when no v60 evidence exists")
 
 file_rows = read_csv(run_dir / "pm_pr_slice_file_rows.csv")
-if len(file_rows) != 41:
-    raise SystemExit("PM PR file ledger should have 41 rows")
-if len({row["slice_id"] for row in file_rows}) != 10:
-    raise SystemExit("PM PR file ledger should cover all ten slices")
+if len(file_rows) != 55:
+    raise SystemExit("PM PR file ledger should have 55 rows")
+if len({row["slice_id"] for row in file_rows}) != 13:
+    raise SystemExit("PM PR file ledger should cover all thirteen slices")
 if any(row["exists"] != "1" for row in file_rows):
     missing = [row for row in file_rows if row["exists"] != "1"]
     raise SystemExit(f"PM PR file ledger should only reference existing files: {missing}")
 file_key = {(row["slice_id"], row["file_path"]): row for row in file_rows}
 for key in [
     ("docs/v1-roadmap", "docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md"),
+    ("v50-auditor-correctness", "audits/v50_public_repo_auditor_correctness.json"),
     ("v53-query-instantiation-1000", "experiments/run_v53i_complete_source_query_instantiation.sh"),
     ("v53-system-a-b-g-h-measured", "experiments/run_v53ap_complete_source_abgh_same_query_measured.sh"),
     ("v53-system-a-b-g-h-measured", "experiments/run_v53aq_complete_source_abgh_real_adapter_measured.sh"),
     ("v54-routehint-generation-contract", "experiments/run_v54c_complete_source_grounded_generation_1000.sh"),
     ("v56-ruler-longbench-expanded", "experiments/run_v56b_ruler_longbench_expanded_scale.sh"),
     ("v59-one-command-demo", "examples/v1_0_architecture_challenge_pm_foundation_demo.sh"),
+    ("operator-review-return-workflow", "operations/review_return_workflow.json"),
+    ("docs-readme-pr2-cleanup", "docs/PR2_REWRITE_DRAFT.md"),
 ]:
     if key not in file_key:
         raise SystemExit(f"PM PR file ledger missing {key}")
 
 verification_rows = read_csv(run_dir / "pm_pr_slice_verification_rows.csv")
-if len(verification_rows) != 17:
-    raise SystemExit("PM PR verification ledger should have 17 rows")
-if len({row["slice_id"] for row in verification_rows}) != 10:
-    raise SystemExit("PM PR verification ledger should cover all ten slices")
+if len(verification_rows) != 21:
+    raise SystemExit("PM PR verification ledger should have 21 rows")
+if len({row["slice_id"] for row in verification_rows}) != 13:
+    raise SystemExit("PM PR verification ledger should cover all thirteen slices")
 verification_key = {(row["slice_id"], row["command"]): row for row in verification_rows}
 for key in [
     ("v53-system-a-b-g-h-measured", "experiments/test_v53ap_complete_source_abgh_same_query_measured.sh"),
@@ -595,6 +608,7 @@ for key in [
     ("v54-routehint-generation-contract", "experiments/test_v54c_complete_source_grounded_generation_1000.sh"),
     ("v56-ruler-longbench-expanded", "experiments/test_v56b_ruler_longbench_expanded_scale.sh"),
     ("v59-one-command-demo", "experiments/test_v59e_one_command_pm_foundation_demo.sh"),
+    ("docs-readme-pr2-cleanup", "tools/verify_artifact.py pr-split pr_slices/pr2.json"),
 ]:
     if key not in verification_key:
         raise SystemExit(f"PM PR verification ledger missing {key}")
@@ -602,8 +616,8 @@ if verification_key[("v58-blind-eval-contract", "experiments/test_v58c_blind_res
     raise SystemExit("v58 real response intake should be marked deferred until real evidence exists")
 
 review_packet_rows = read_csv(run_dir / "pm_pr_review_packet_rows.csv")
-if len(review_packet_rows) != 10:
-    raise SystemExit("PM PR review packet ledger should have ten rows")
+if len(review_packet_rows) != 13:
+    raise SystemExit("PM PR review packet ledger should have thirteen rows")
 if [row["slice_id"] for row in review_packet_rows] != expected_order:
     raise SystemExit("PM PR review packet order mismatch")
 for row in review_packet_rows:
@@ -637,21 +651,23 @@ for snippet in ["public-source download/refresh readiness", "pinned-source snaps
         raise SystemExit(f"v59 review packet should expose public-source replay boundary: {snippet}")
 
 acceptance_rows = read_csv(run_dir / "pm_pr_acceptance_evidence_rows.csv")
-if len(acceptance_rows) != 10:
-    raise SystemExit("PM PR acceptance evidence ledger should have ten rows")
+if len(acceptance_rows) != 13:
+    raise SystemExit("PM PR acceptance evidence ledger should have thirteen rows")
 if [row["slice_id"] for row in acceptance_rows] != expected_order:
     raise SystemExit("PM PR acceptance evidence order mismatch")
 acceptance_by_id = {row["slice_id"]: row for row in acceptance_rows}
-if sum(row["acceptance_ready"] == "1" for row in acceptance_rows) != 9:
-    raise SystemExit("PM PR acceptance evidence should mark nine slices ready")
-if sum(row["acceptance_ready"] == "0" for row in acceptance_rows) != 1:
-    raise SystemExit("PM PR acceptance evidence should mark one slice blocked")
+if sum(row["acceptance_ready"] == "1" for row in acceptance_rows) != 11:
+    raise SystemExit("PM PR acceptance evidence should mark eleven slices ready")
+if sum(row["acceptance_ready"] == "0" for row in acceptance_rows) != 2:
+    raise SystemExit("PM PR acceptance evidence should mark two slices blocked")
 if any(row["tests_only_merge_condition"] != "0" for row in acceptance_rows):
     raise SystemExit("PM PR acceptance evidence should forbid tests-only merge conditions")
 if any(row["claim_boundary_status"] != "pass" for row in acceptance_rows):
     raise SystemExit("PM PR acceptance evidence should keep all claim boundaries passing")
 if acceptance_by_id["v56-ruler-longbench-expanded"]["acceptance_ready"] != "0":
     raise SystemExit("v56 acceptance evidence should remain blocked until replay artifact evidence closes")
+if acceptance_by_id["v50-auditor-correctness"]["acceptance_ready"] != "0":
+    raise SystemExit("v50 acceptance evidence should remain blocked until auditor replay artifacts close")
 v56_replay_acceptance_rows = read_csv(run_dir / "v56_replay_acceptance_evidence_rows.csv")
 if len(v56_replay_acceptance_rows) != 4:
     raise SystemExit("v56 replay acceptance evidence should cover four required artifacts")
@@ -1377,7 +1393,7 @@ if {row["system_id"] for row in direct_internal_contract_rows} != {"A", "B", "G"
     raise SystemExit("PM PR sidecar direct v53aq internal prebaseline contract rows should cover A/B/G/H")
 
 manifest = json.loads((run_dir / "v1_0_pm_pr_claim_slice_gate_manifest.json").read_text(encoding="utf-8"))
-if manifest.get("recommended_pr_slice_rows") != 10 or manifest.get("real_release_package_ready") != 0:
+if manifest.get("recommended_pr_slice_rows") != 13 or manifest.get("real_release_package_ready") != 0:
     raise SystemExit("PM PR manifest readiness mismatch")
 if manifest.get("slice_ids") != expected_order:
     raise SystemExit("PM PR manifest slice order mismatch")
@@ -1456,18 +1472,18 @@ if manifest.get("h10_real_label_acceptance_evidence_source_verified_blocked_rows
     raise SystemExit("PM PR manifest should keep h10 source-verified eval blocked")
 if "h10_real_label_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("PM PR manifest should hash-bind h10 acceptance evidence rows")
-if manifest.get("pm_pr_slice_file_rows") != 41 or manifest.get("pm_pr_slice_verification_rows") != 17:
+if manifest.get("pm_pr_slice_file_rows") != 55 or manifest.get("pm_pr_slice_verification_rows") != 21:
     raise SystemExit("PM PR manifest file/verification ledger mismatch")
-if manifest.get("pm_pr_claim_boundary_rows") != 10 or manifest.get("pm_pr_claim_boundary_pass_rows") != 10:
+if manifest.get("pm_pr_claim_boundary_rows") != 13 or manifest.get("pm_pr_claim_boundary_pass_rows") != 13:
     raise SystemExit("PM PR manifest claim boundary ledger mismatch")
-if manifest.get("pm_pr_review_packet_rows") != 10 or manifest.get("pm_pr_review_packet_files") != 10:
+if manifest.get("pm_pr_review_packet_rows") != 13 or manifest.get("pm_pr_review_packet_files") != 13:
     raise SystemExit("PM PR manifest review packet ledger mismatch")
-if manifest.get("pm_pr_review_packet_ready_rows") != 10 or manifest.get("pm_pr_review_packet_blocked_slice_rows") != 1:
+if manifest.get("pm_pr_review_packet_ready_rows") != 13 or manifest.get("pm_pr_review_packet_blocked_slice_rows") != 2:
     raise SystemExit("PM PR manifest review packet readiness mismatch")
 if (
-    manifest.get("pm_pr_acceptance_evidence_rows") != 10
-    or manifest.get("pm_pr_acceptance_evidence_ready_rows") != 9
-    or manifest.get("pm_pr_acceptance_evidence_blocked_rows") != 1
+    manifest.get("pm_pr_acceptance_evidence_rows") != 13
+    or manifest.get("pm_pr_acceptance_evidence_ready_rows") != 11
+    or manifest.get("pm_pr_acceptance_evidence_blocked_rows") != 2
     or manifest.get("pm_pr_acceptance_evidence_tests_only_rows") != 0
 ):
     raise SystemExit("PM PR manifest acceptance evidence ledger mismatch")
@@ -1595,8 +1611,8 @@ for rel in required_files:
 
 boundary = (run_dir / "V1_0_PM_PR_CLAIM_SLICE_GATE_BOUNDARY.md").read_text(encoding="utf-8")
 for snippet in [
-    "recommended_pr_slice_rows=10",
-    "merge_condition_defined_rows=10",
+    "recommended_pr_slice_rows=13",
+    "merge_condition_defined_rows=13",
     "pm_roadmap_requirement_rows=20",
     "pm_roadmap_milestone_rows=6",
     "pm_roadmap_milestone_ready_rows=2",
@@ -1638,13 +1654,13 @@ for snippet in [
     "h10_real_label_acceptance_evidence_zero_accepted_rows=6",
     "h10_real_label_acceptance_evidence_coverage_blocked_rows=6",
     "h10_real_label_acceptance_evidence_source_verified_blocked_rows=6",
-    "pm_pr_slice_file_rows=41",
-    "pm_pr_slice_verification_rows=17",
-    "pm_pr_claim_boundary_rows=10",
-    "pm_pr_review_packet_rows=10",
-    "pm_pr_review_packet_files=10",
-    "pm_pr_acceptance_evidence_rows=10",
-    "pm_pr_acceptance_evidence_ready_rows=9",
+    "pm_pr_slice_file_rows=55",
+    "pm_pr_slice_verification_rows=21",
+    "pm_pr_claim_boundary_rows=13",
+    "pm_pr_review_packet_rows=13",
+    "pm_pr_review_packet_files=13",
+    "pm_pr_acceptance_evidence_rows=13",
+    "pm_pr_acceptance_evidence_ready_rows=11",
     "pm_pr_acceptance_evidence_tests_only_rows=0",
     "v56_replay_acceptance_evidence_rows=4",
     "v56_replay_acceptance_evidence_ready_rows=0",
