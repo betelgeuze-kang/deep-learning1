@@ -1339,6 +1339,19 @@ V61_REAL_MODEL_EXECUTION_PASS_MILESTONES = {
     "real-moe-block-forward-parity",
     "one-token-logits-parity",
 }
+V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS = {
+    "actual_model_generation_ready",
+    "full_checkpoint_materialization_ready",
+    "full_safetensors_page_hash_binding_ready",
+    "heldout_metric_ready",
+    "human_review_ready",
+    "independent_reproduction_ready",
+    "near_frontier_claim_ready",
+    "production_latency_claim_ready",
+    "real_model_execution_ready",
+    "real_release_package_ready",
+    "release_ready",
+}
 
 
 def sha256(path: Path) -> str:
@@ -2896,8 +2909,13 @@ def verify_v61_one_token_path(
         ]
         if linked_milestone in V61_REAL_MODEL_EXECUTION_PASS_MILESTONES and linked_status == "pass" and not real_model_pass_rows:
             errors.append(f"{artifact_path}: pass milestone {linked_milestone} requires a real_model_execution_ready=1 {pass_field}=1 row")
-        if linked_status == "blocked" and real_model_pass_rows:
-            errors.append(f"{artifact_path}: blocked milestone {linked_milestone} cannot contain real_model_execution_ready=1 {pass_field}=1 rows")
+        if linked_status == "blocked" and real_pass_rows:
+            errors.append(f"{artifact_path}: blocked milestone {linked_milestone} cannot contain {pass_field}=1 rows")
+        if linked_status == "blocked" and linked_milestone in V61_REQUIRED_BEFORE_RUNTIME_CLAIM:
+            for row_index, artifact_row in enumerate(rows, start=1):
+                for field in sorted(V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS & set(fieldnames)):
+                    if artifact_row.get(field) == "1":
+                        errors.append(f"{artifact_path}: row {row_index} blocked milestone {linked_milestone} forbids {field}=1")
     return errors
 
 

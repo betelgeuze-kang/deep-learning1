@@ -39,7 +39,10 @@ summary prose. The verifier now treats each required artifact as a typed gate:
 - `pass_field` must contain at least one `1` row with
   `real_model_execution_ready=1` before the linked milestone can move to
   `pass`.
-- blocked linked milestones must not contain a real-model pass row.
+- blocked linked milestones must not contain any `pass_field=1` row, and must
+  not contain `real_model_execution_ready=1`, release, generation, human-review,
+  independent-reproduction, near-frontier, or production-latency readiness
+  signals.
 
 The contract requires these artifact shapes:
 
