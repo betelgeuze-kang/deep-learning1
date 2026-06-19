@@ -45,7 +45,9 @@ blocked until a replay artifact contains `real_model_execution_ready=1`. The
 v61 runtime policy currently has `required_before_ssd_resident_runtime_claim_count=6`,
 `passed_before_ssd_resident_runtime_claim_count=3`, and
 `blocked_before_ssd_resident_runtime_claim_count=3`: real expert FFN, MoE block,
-and one-token logits parity.
+and one-token logits parity. It also has `present_required_artifact_count=5`
+and `missing_required_artifact_count=5`, so the missing MoE block, one-token
+logits, decode, cache, and SSD metric rows stay explicit.
 
 Typed readiness is mandatory. Bare `ready=1` does not imply
 `real_model_execution_ready`, `heldout_metric_ready`, `human_review_ready`,

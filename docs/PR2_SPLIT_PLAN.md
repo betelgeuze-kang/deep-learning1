@@ -100,7 +100,10 @@ claim policy must keep `required_before_ssd_resident_runtime_claim_count=6`,
 `passed_before_ssd_resident_runtime_claim_count=3`, and
 `blocked_before_ssd_resident_runtime_claim_count=3`, with
 `blocked_before_ssd_resident_runtime_claim` listing real expert FFN, MoE block,
-and one-token logits parity.
+and one-token logits parity. It must also keep
+`present_required_artifact_count=5` and `missing_required_artifact_count=5` so
+the gap between scaffolded contracts and missing one-token/decode/runtime rows is
+machine-visible.
 README and PR-body wording must follow the `docs-readme-pr2-cleanup` slice:
 reviewers should be pointed to declarative pipeline/contracts instead of a giant
 v61 entrypoint dump, and scaffold/runtime-admission evidence must not be promoted

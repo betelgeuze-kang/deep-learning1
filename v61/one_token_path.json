@@ -15,6 +15,16 @@
     "required_before_ssd_resident_runtime_claim_count": 6,
     "passed_before_ssd_resident_runtime_claim_count": 3,
     "blocked_before_ssd_resident_runtime_claim_count": 3,
+    "required_artifact_count": 10,
+    "present_required_artifact_count": 5,
+    "missing_required_artifact_count": 5,
+    "missing_required_artifact_ids": [
+      "moe-block-forward-parity-rows",
+      "one-token-logits-parity-rows",
+      "sixteen-token-decode-rows",
+      "cold-warm-cache-measurement-rows",
+      "ssd-bytes-miss-tps-rows"
+    ],
     "blocked_before_ssd_resident_runtime_claim": [
       "real-expert-ffn-forward-parity",
       "real-moe-block-forward-parity",

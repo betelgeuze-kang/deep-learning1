@@ -233,6 +233,20 @@ REQUIRED_V61_ONE_TOKEN_KEYS = {
     "milestones",
     "required_artifacts",
 }
+REQUIRED_V61_POLICY_KEYS = {
+    "ssd_resident_real_model_runtime_claim_ready",
+    "real_model_execution_ready",
+    "release_ready",
+    "required_before_ssd_resident_runtime_claim",
+    "required_before_ssd_resident_runtime_claim_count",
+    "passed_before_ssd_resident_runtime_claim_count",
+    "blocked_before_ssd_resident_runtime_claim_count",
+    "required_artifact_count",
+    "present_required_artifact_count",
+    "missing_required_artifact_count",
+    "missing_required_artifact_ids",
+    "blocked_before_ssd_resident_runtime_claim",
+}
 REQUIRED_V61_MILESTONE_KEYS = {
     "order",
     "milestone_id",
@@ -3320,6 +3334,9 @@ def verify_v61_one_token_path(
     if data["schema_version"] != "v61_one_token_path.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
+    missing_policy = REQUIRED_V61_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
     if policy.get("ssd_resident_real_model_runtime_claim_ready") is not False:
         errors.append(f"{path}: SSD-resident real model runtime claim must stay false until milestones 1-6 pass")
     if policy.get("real_model_execution_ready") is not False:
@@ -3413,6 +3430,7 @@ def verify_v61_one_token_path(
         errors.append(f"{path}: milestones 1-6 pass list no longer matches policy")
     if runtime_gate_blocked != V61_BLOCKED_BEFORE_RUNTIME_CLAIM:
         errors.append(f"{path}: milestones 1-6 blocked list no longer matches policy")
+    missing_required_artifacts: list[str] = []
     for index, row in enumerate(artifacts, start=1):
         prefix = f"{path}: required_artifact[{index}]"
         missing_artifact = REQUIRED_V61_ARTIFACT_KEYS - set(row)
@@ -3449,6 +3467,8 @@ def verify_v61_one_token_path(
 
         artifact_path = Path(row.get("path", ""))
         artifact_exists = artifact_path.is_file() and artifact_path.stat().st_size > 0
+        if not artifact_exists:
+            missing_required_artifacts.append(artifact_id)
         linked_status = milestone_status.get(linked_milestone, "")
         if linked_status == "pass" and summary_evidence_supplied and not artifact_exists:
             errors.append(f"{prefix}: pass milestone requires non-empty artifact path {artifact_path}")
@@ -3492,6 +3512,24 @@ def verify_v61_one_token_path(
                 for field in sorted(V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS & set(fieldnames)):
                     if artifact_row.get(field) == "1":
                         errors.append(f"{artifact_path}: row {row_index} blocked milestone {linked_milestone} forbids {field}=1")
+    present_required_artifacts = len(artifacts) - len(missing_required_artifacts)
+    if policy.get("required_artifact_count") != len(artifacts):
+        errors.append(f"{path}: policy.required_artifact_count expected {len(artifacts)}, got {policy.get('required_artifact_count')}")
+    if policy.get("present_required_artifact_count") != present_required_artifacts:
+        errors.append(
+            f"{path}: policy.present_required_artifact_count expected {present_required_artifacts}, "
+            f"got {policy.get('present_required_artifact_count')}"
+        )
+    if policy.get("missing_required_artifact_count") != len(missing_required_artifacts):
+        errors.append(
+            f"{path}: policy.missing_required_artifact_count expected {len(missing_required_artifacts)}, "
+            f"got {policy.get('missing_required_artifact_count')}"
+        )
+    if policy.get("missing_required_artifact_ids") != missing_required_artifacts:
+        errors.append(
+            f"{path}: policy.missing_required_artifact_ids expected {missing_required_artifacts}, "
+            f"got {policy.get('missing_required_artifact_ids')}"
+        )
     return errors
 
 
