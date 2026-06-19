@@ -61,14 +61,14 @@
       "artifact_id": "v58-blind-response-rows",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["blind_response_id", "blind_eval_id", "system_blind_id", "response_text", "citation_source_span_id", "abstained", "output_sha256", "latency_ns", "memory_peak_bytes", "cost_usd", "model_run_id", "credential_redacted", "resource_trace_sha256"],
+      "required_columns": ["blind_response_id", "blind_eval_id", "blind_system_id", "response_text", "citation_source_span_id", "abstained", "output_sha256", "latency_ns", "memory_peak_bytes", "cost_usd", "model_run_id", "credential_redacted", "resource_trace_sha256"],
       "min_rows": 3500
     },
     {
       "artifact_id": "v58-run-identity-rows",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["system_blind_id", "source_system_id", "model_or_architecture_id", "corpus_id", "context_budget", "retrieval_budget", "prompt_template_sha256", "source_manifest_sha256", "external_api_used"],
+      "required_columns": ["blind_system_id", "source_system_id", "model_or_architecture_id", "corpus_id", "context_budget", "retrieval_budget", "prompt_template_sha256", "source_manifest_sha256", "external_api_used"],
       "min_rows": 7
     },
     {
@@ -82,21 +82,21 @@
       "artifact_id": "v58-resource-rows",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["blind_response_id", "blind_eval_id", "system_blind_id", "latency_ns", "memory_peak_bytes", "resource_trace_sha256"],
+      "required_columns": ["blind_response_id", "blind_eval_id", "blind_system_id", "latency_ns", "memory_peak_bytes", "resource_trace_sha256"],
       "min_rows": 3500
     },
     {
       "artifact_id": "v58-human-review-rows",
       "artifact_kind": "review-return",
       "validation_command": "V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh",
-      "required_columns": ["blind_response_id", "blind_eval_id", "system_blind_id", "reviewer_id", "reviewer_blinded", "reviewer_independent", "conflict_disclosed", "answer_correctness", "citation_correctness", "abstain_correctness", "source_span_exactness", "unsupported_abstention_correctness", "unseen_repository_split_id", "latency_memory_excluded_from_quality_score", "policy_score", "review_decision", "review_sha256"],
+      "required_columns": ["blind_response_id", "blind_eval_id", "blind_system_id", "reviewer_id", "reviewer_blinded", "reviewer_independent", "conflict_disclosed", "answer_correctness", "citation_correctness", "abstain_correctness", "source_span_exactness", "unsupported_abstention_correctness", "unseen_repository_split_id", "latency_memory_excluded_from_quality_score", "policy_score", "review_decision", "review_sha256"],
       "min_rows": 7000
     },
     {
       "artifact_id": "v58-adjudication-rows",
       "artifact_kind": "review-return",
       "validation_command": "V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh",
-      "required_columns": ["blind_response_id", "blind_eval_id", "system_blind_id", "reviewer_a_id", "reviewer_b_id", "reviewer_a_decision", "reviewer_b_decision", "adjudicated_decision", "inter_rater_agree", "adjudicator_id", "adjudication_sha256"],
+      "required_columns": ["blind_response_id", "blind_eval_id", "blind_system_id", "reviewer_a_id", "reviewer_b_id", "reviewer_a_decision", "reviewer_b_decision", "adjudicated_decision", "inter_rater_agree", "adjudicator_id", "adjudication_sha256"],
       "min_rows": 3500
     },
     {

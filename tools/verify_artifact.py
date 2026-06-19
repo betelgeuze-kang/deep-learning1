@@ -1067,7 +1067,7 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
     "v58-blind-response-rows": {
         "blind_response_id",
         "blind_eval_id",
-        "system_blind_id",
+        "blind_system_id",
         "response_text",
         "citation_source_span_id",
         "abstained",
@@ -1080,7 +1080,7 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
         "resource_trace_sha256",
     },
     "v58-run-identity-rows": {
-        "system_blind_id",
+        "blind_system_id",
         "source_system_id",
         "model_or_architecture_id",
         "corpus_id",
@@ -1101,7 +1101,7 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
     "v58-resource-rows": {
         "blind_response_id",
         "blind_eval_id",
-        "system_blind_id",
+        "blind_system_id",
         "latency_ns",
         "memory_peak_bytes",
         "resource_trace_sha256",
@@ -1109,7 +1109,7 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
     "v58-human-review-rows": {
         "blind_response_id",
         "blind_eval_id",
-        "system_blind_id",
+        "blind_system_id",
         "reviewer_id",
         "reviewer_blinded",
         "reviewer_independent",
@@ -1128,7 +1128,7 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
     "v58-adjudication-rows": {
         "blind_response_id",
         "blind_eval_id",
-        "system_blind_id",
+        "blind_system_id",
         "reviewer_a_id",
         "reviewer_b_id",
         "reviewer_a_decision",

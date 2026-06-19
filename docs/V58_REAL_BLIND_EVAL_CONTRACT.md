@@ -57,11 +57,11 @@ The source-controlled policy also pins these fail-closed gates:
 Required artifact shape:
 
 - `v58-blind-response-rows`: `blind_response_id`, `blind_eval_id`,
-  `system_blind_id`, `response_text`, `citation_source_span_id`, `abstained`,
+  `blind_system_id`, `response_text`, `citation_source_span_id`, `abstained`,
   `output_sha256`, `latency_ns`, `memory_peak_bytes`, `cost_usd`,
   `model_run_id`, `credential_redacted`, `resource_trace_sha256`;
   minimum 3500 rows
-- `v58-run-identity-rows`: `system_blind_id`, `source_system_id`,
+- `v58-run-identity-rows`: `blind_system_id`, `source_system_id`,
   `model_or_architecture_id`, `corpus_id`, `context_budget`,
   `retrieval_budget`, `prompt_template_sha256`, `source_manifest_sha256`,
   `external_api_used`; minimum 7 rows
@@ -69,18 +69,18 @@ Required artifact shape:
   `unseen_repository`, `frozen_query_packet_sha256`,
   `source_manifest_sha256`; minimum 500 rows
 - `v58-resource-rows`: `blind_response_id`, `blind_eval_id`,
-  `system_blind_id`, `latency_ns`, `memory_peak_bytes`,
+  `blind_system_id`, `latency_ns`, `memory_peak_bytes`,
   `resource_trace_sha256`;
   minimum 3500 rows
 - `v58-human-review-rows`: `blind_response_id`, `blind_eval_id`,
-  `system_blind_id`, `reviewer_id`, `reviewer_blinded`,
+  `blind_system_id`, `reviewer_id`, `reviewer_blinded`,
   `reviewer_independent`, `conflict_disclosed`, `answer_correctness`,
   `citation_correctness`, `abstain_correctness`, `source_span_exactness`,
   `unsupported_abstention_correctness`, `unseen_repository_split_id`,
   `latency_memory_excluded_from_quality_score`, `policy_score`,
   `review_decision`, `review_sha256`; minimum 7000 rows
 - `v58-adjudication-rows`: `blind_response_id`, `blind_eval_id`,
-  `system_blind_id`, `reviewer_a_id`, `reviewer_b_id`,
+  `blind_system_id`, `reviewer_a_id`, `reviewer_b_id`,
   `reviewer_a_decision`, `reviewer_b_decision`, `adjudicated_decision`,
   `inter_rater_agree`, `adjudicator_id`, `adjudication_sha256`;
   minimum 3500 rows
@@ -92,10 +92,20 @@ Required artifact shape:
 Human review and adjudication rows intentionally exclude latency and memory
 fields. Resource measurements are accepted through the dedicated
 `v58-resource-rows` artifact and evaluated separately from answer quality.
-Review rows bind to a specific blind response and system_blind_id, declare
+Review rows bind to a specific blind response and blind_system_id, declare
 reviewer independence, and record a conflict disclosure hash.
 Human review and adjudication artifacts validate through
 `V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh`;
 they are not accepted through a deferred or tests-only note.
+
+Known current blockers:
+
+- The v58 contract requires A/B/C/D/E/G/H, but the current v58b template
+  surface still covers D/E/F/G/H. A/B/C real blind-response templates must be
+  added before the seven-system v58 run can close.
+- v58c intake success is not a completed blind evaluation. Synthetic or
+  locally fabricated intake rows must not be promoted to real blind evidence;
+  the accepted v58 result requires non-fixture response evidence plus v58d
+  human review/adjudication return.
 
 Fixtures, templates, or tests-only checks do not close v58.
