@@ -40,10 +40,14 @@ summary prose. The contract requires these artifact shapes:
   payload hashes and shapes, typed readiness fields, candidate/reference output
   hashes, tolerance, max delta, and `expert_ffn_parity_pass`
 - `moe-block-forward-parity-rows`: token input hash, router logits hash,
-  selected experts/weights, expert and block output hashes, reference output
-  hash, tolerance, max delta, and `moe_block_parity_pass`
+  router tensor/payload hash, selected experts/weights with selected expert
+  payload hashes, upstream expert-FFN artifact hash, typed readiness fields,
+  expert and block output hashes, reference output hash, tolerance, max delta,
+  and `moe_block_parity_pass`
 - `one-token-logits-parity-rows`: checkpoint/revision identity, tokenizer input
-  hash, route path hash, candidate/reference logits hashes, top-1 agreement,
+  hash, tokenizer revision, route path hash, upstream MoE-block artifact hash,
+  final hidden hash, LM-head tensor/payload hash, vocab/logit counts,
+  candidate/reference logits hashes, typed readiness fields, top-1 agreement,
   tolerance, max delta, and `logits_parity_pass`
 
 `torch_matvec_parity_ready=1` is not a real runtime claim. The phrase
