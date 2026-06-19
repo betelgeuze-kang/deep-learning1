@@ -20,7 +20,17 @@
         "release_ready": {"type": "boolean"},
         "required_before_ssd_resident_runtime_claim": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string",
+            "enum": [
+              "actual-mixtral-ssd-tensor-page-read",
+              "actual-tensor-dtype-quant-dequant",
+              "torch-matvec-parity",
+              "real-expert-ffn-forward-parity",
+              "real-moe-block-forward-parity",
+              "one-token-logits-parity"
+            ]
+          }
         }
       },
       "additionalProperties": false
@@ -39,9 +49,22 @@
         ],
         "properties": {
           "order": {"type": "integer"},
-          "milestone_id": {"type": "string"},
+          "milestone_id": {
+            "type": "string",
+            "enum": [
+              "actual-mixtral-ssd-tensor-page-read",
+              "actual-tensor-dtype-quant-dequant",
+              "torch-matvec-parity",
+              "real-expert-ffn-forward-parity",
+              "real-moe-block-forward-parity",
+              "one-token-logits-parity",
+              "sixteen-token-decode",
+              "cold-warm-cache-measurement",
+              "ssd-bytes-miss-tps-recording"
+            ]
+          },
           "required_evidence": {"type": "string"},
-          "current_status": {"type": "string"},
+          "current_status": {"type": "string", "enum": ["pass", "blocked"]},
           "evidence_path": {"type": "string"},
           "claim_boundary": {"type": "string"},
           "summary_checks": {
@@ -69,10 +92,24 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["artifact_id", "artifact_kind", "required_columns"],
+        "required": [
+          "artifact_id",
+          "artifact_kind",
+          "path",
+          "linked_milestone_id",
+          "required_for_runtime_claim",
+          "min_rows",
+          "pass_field",
+          "required_columns"
+        ],
         "properties": {
           "artifact_id": {"type": "string"},
           "artifact_kind": {"type": "string"},
+          "path": {"type": "string"},
+          "linked_milestone_id": {"type": "string"},
+          "required_for_runtime_claim": {"type": "boolean"},
+          "min_rows": {"type": "integer", "minimum": 1},
+          "pass_field": {"type": "string"},
           "required_columns": {"type": "array", "items": {"type": "string"}}
         },
         "additionalProperties": false

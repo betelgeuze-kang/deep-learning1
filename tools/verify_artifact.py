@@ -219,6 +219,11 @@ REQUIRED_V61_MILESTONE_KEYS = {
 REQUIRED_V61_ARTIFACT_KEYS = {
     "artifact_id",
     "artifact_kind",
+    "path",
+    "linked_milestone_id",
+    "required_for_runtime_claim",
+    "min_rows",
+    "pass_field",
     "required_columns",
 }
 EXPECTED_PR2_SLICE_ORDER = [
@@ -851,7 +856,7 @@ EXPECTED_V61_CURRENT_STATUS = {
     "ssd-bytes-miss-tps-recording": "blocked",
 }
 EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
-    "expert-ffn-forward-parity-rows": {
+    "expert-ffn-forward-parity-rows": [
         "layer_index",
         "expert_index",
         "w1_tensor_name",
@@ -884,8 +889,8 @@ EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
         "max_abs_delta",
         "tolerance",
         "expert_ffn_parity_pass",
-    },
-    "moe-block-forward-parity-rows": {
+    ],
+    "moe-block-forward-parity-rows": [
         "checkpoint_id",
         "model_revision",
         "layer_index",
@@ -917,8 +922,8 @@ EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
         "max_abs_delta",
         "tolerance",
         "moe_block_parity_pass",
-    },
-    "one-token-logits-parity-rows": {
+    ],
+    "one-token-logits-parity-rows": [
         "checkpoint_id",
         "model_revision",
         "tokenizer_revision",
@@ -950,7 +955,27 @@ EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
         "top1_token_id",
         "reference_top1_token_id",
         "logits_parity_pass",
-    },
+    ],
+}
+EXPECTED_V61_REQUIRED_ARTIFACT_PATHS = {
+    "expert-ffn-forward-parity-rows": "results/v61ab_hotset_tensor_tile_quant_probe/probe_001/expert_ffn_forward_parity_rows.csv",
+    "moe-block-forward-parity-rows": "results/v61_moe_block_forward_parity/moe_block_forward_parity_rows.csv",
+    "one-token-logits-parity-rows": "results/v61_one_token_logits_parity/one_token_logits_parity_rows.csv",
+}
+EXPECTED_V61_ARTIFACT_MILESTONES = {
+    "expert-ffn-forward-parity-rows": "real-expert-ffn-forward-parity",
+    "moe-block-forward-parity-rows": "real-moe-block-forward-parity",
+    "one-token-logits-parity-rows": "one-token-logits-parity",
+}
+EXPECTED_V61_ARTIFACT_PASS_FIELDS = {
+    "expert-ffn-forward-parity-rows": "expert_ffn_parity_pass",
+    "moe-block-forward-parity-rows": "moe_block_parity_pass",
+    "one-token-logits-parity-rows": "logits_parity_pass",
+}
+EXPECTED_V61_ARTIFACT_MIN_ROWS = {
+    "expert-ffn-forward-parity-rows": 1,
+    "moe-block-forward-parity-rows": 1,
+    "one-token-logits-parity-rows": 1,
 }
 
 
@@ -2282,6 +2307,7 @@ def verify_v61_one_token_path(
         errors.append(f"{path}: required_artifacts order must be expert FFN, MoE block, one-token logits")
     if len(artifact_ids) != len(set(artifact_ids)):
         errors.append(f"{path}: duplicate required_artifacts are forbidden")
+    milestone_status = {row.get("milestone_id", ""): row.get("current_status", "") for row in milestones}
     for index, row in enumerate(artifacts, start=1):
         prefix = f"{path}: required_artifact[{index}]"
         missing_artifact = REQUIRED_V61_ARTIFACT_KEYS - set(row)
@@ -2294,8 +2320,56 @@ def verify_v61_one_token_path(
         expected_columns = EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS.get(artifact_id)
         if not isinstance(required_columns, list) or not required_columns:
             errors.append(f"{prefix}: required_columns must be a non-empty list")
-        elif expected_columns is not None and set(required_columns) != expected_columns:
-            errors.append(f"{prefix}: required_columns must be exactly {', '.join(sorted(expected_columns))}")
+        elif expected_columns is not None and required_columns != expected_columns:
+            errors.append(f"{prefix}: required_columns must exactly match the v61 artifact header order")
+        expected_path = EXPECTED_V61_REQUIRED_ARTIFACT_PATHS.get(artifact_id)
+        if expected_path is not None and row.get("path") != expected_path:
+            errors.append(f"{prefix}: path expected {expected_path}, got {row.get('path')}")
+        linked_milestone = row.get("linked_milestone_id", "")
+        expected_milestone = EXPECTED_V61_ARTIFACT_MILESTONES.get(artifact_id)
+        if expected_milestone is not None and linked_milestone != expected_milestone:
+            errors.append(f"{prefix}: linked_milestone_id expected {expected_milestone}, got {linked_milestone}")
+        if row.get("required_for_runtime_claim") is not True:
+            errors.append(f"{prefix}: required_for_runtime_claim must be true")
+        expected_pass_field = EXPECTED_V61_ARTIFACT_PASS_FIELDS.get(artifact_id)
+        pass_field = row.get("pass_field", "")
+        if expected_pass_field is not None and pass_field != expected_pass_field:
+            errors.append(f"{prefix}: pass_field expected {expected_pass_field}, got {pass_field}")
+        min_rows = row.get("min_rows")
+        expected_min_rows = EXPECTED_V61_ARTIFACT_MIN_ROWS.get(artifact_id)
+        if not isinstance(min_rows, int) or min_rows < 1:
+            errors.append(f"{prefix}: min_rows must be a positive integer")
+        elif expected_min_rows is not None and min_rows != expected_min_rows:
+            errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+
+        artifact_path = Path(row.get("path", ""))
+        artifact_exists = artifact_path.is_file() and artifact_path.stat().st_size > 0
+        linked_status = milestone_status.get(linked_milestone, "")
+        if linked_status == "pass" and not artifact_exists:
+            errors.append(f"{prefix}: pass milestone requires non-empty artifact path {artifact_path}")
+            continue
+        if not artifact_exists:
+            continue
+        with artifact_path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            fieldnames = reader.fieldnames or []
+            if required_columns and fieldnames != required_columns:
+                errors.append(f"{artifact_path}: header must match required_columns for {artifact_id}")
+            rows = list(reader)
+        if isinstance(min_rows, int) and len(rows) < min_rows:
+            errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {len(rows)}")
+        if pass_field and pass_field not in fieldnames:
+            errors.append(f"{artifact_path}: missing pass field {pass_field}")
+            continue
+        real_pass_rows = [
+            artifact_row
+            for artifact_row in rows
+            if artifact_row.get(pass_field) == "1" and artifact_row.get("real_model_execution_ready") == "1"
+        ]
+        if linked_status == "pass" and not real_pass_rows:
+            errors.append(f"{artifact_path}: pass milestone {linked_milestone} requires a real_model_execution_ready=1 {pass_field}=1 row")
+        if linked_status == "blocked" and real_pass_rows:
+            errors.append(f"{artifact_path}: blocked milestone {linked_milestone} cannot contain real_model_execution_ready=1 {pass_field}=1 rows")
     return errors
 
 

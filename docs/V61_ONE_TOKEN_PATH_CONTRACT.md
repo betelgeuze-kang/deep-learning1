@@ -34,17 +34,33 @@ Current blockers:
 - SSD bytes/token, miss/token, and TPS recording
 
 The next real-runtime evidence must be emitted as replayable CSV rows, not
-summary prose. The contract requires these artifact shapes:
+summary prose. The verifier now treats each required artifact as a typed gate:
 
-- `expert-ffn-forward-parity-rows`: real layer/expert tensor names, W1/W2/W3
+- `path` names the replayable CSV artifact.
+- `min_rows` must be satisfied whenever the artifact exists; pass milestones
+  require the artifact to exist.
+- `pass_field` must contain at least one `1` row with
+  `real_model_execution_ready=1` before the linked milestone can move to
+  `pass`.
+- blocked linked milestones must not contain a real-model pass row.
+
+The contract requires these artifact shapes:
+
+- `expert-ffn-forward-parity-rows`
+  (`results/v61ab_hotset_tensor_tile_quant_probe/probe_001/expert_ffn_forward_parity_rows.csv`):
+  real layer/expert tensor names, W1/W2/W3
   payload hashes and shapes, typed readiness fields, candidate/reference output
   hashes, tolerance, max delta, and `expert_ffn_parity_pass`
-- `moe-block-forward-parity-rows`: token input hash, router logits hash,
+- `moe-block-forward-parity-rows`
+  (`results/v61_moe_block_forward_parity/moe_block_forward_parity_rows.csv`):
+  token input hash, router logits hash,
   router tensor/payload hash, selected experts/weights with selected expert
   payload hashes, upstream expert-FFN artifact hash, typed readiness fields,
   expert and block output hashes, reference output hash, tolerance, max delta,
   and `moe_block_parity_pass`
-- `one-token-logits-parity-rows`: checkpoint/revision identity, tokenizer input
+- `one-token-logits-parity-rows`
+  (`results/v61_one_token_logits_parity/one_token_logits_parity_rows.csv`):
+  checkpoint/revision identity, tokenizer input
   hash, tokenizer revision, route path hash, upstream MoE-block artifact hash,
   final hidden hash, LM-head tensor/payload hash, vocab/logit counts,
   candidate/reference logits hashes, typed readiness fields, top-1 agreement,
