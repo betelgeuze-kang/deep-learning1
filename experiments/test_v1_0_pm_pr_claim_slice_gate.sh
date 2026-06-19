@@ -144,10 +144,10 @@ expected = {
     "pm_pr_title_body_rows": "1",
     "pm_pr_title_body_rewrite_ready": "1",
     "pm_pr_title_body_split_required_rows": "1",
-    "pm_ready_semantic_rows": "7",
-    "pm_ready_semantic_typed_rows": "7",
-    "pm_ready_semantic_contract_ready_rows": "6",
-    "pm_ready_semantic_fixture_execution_ready_rows": "2",
+    "pm_ready_semantic_rows": "8",
+    "pm_ready_semantic_typed_rows": "8",
+    "pm_ready_semantic_contract_ready_rows": "7",
+    "pm_ready_semantic_fixture_execution_ready_rows": "3",
     "pm_ready_semantic_real_model_ready_rows": "0",
     "pm_ready_semantic_release_ready_rows": "0",
     "pm_ready_semantic_logical_100b_contract_fixture_ready": "1",
@@ -1205,6 +1205,7 @@ expected_ready_flags = {
     "h10_real_label_contract_ready",
     "logical_100b_contract_fixture_ready",
     "real_100b_inference_ready",
+    "v61i_logical_100b_contract_fixture_ready",
     "v60_release_contract_ready",
 }
 if set(ready_rows) != expected_ready_flags:
@@ -1556,10 +1557,10 @@ if (
 ):
     raise SystemExit("PM PR manifest should record #13 PR normalization/title-body rewrite rows")
 if (
-    manifest.get("pm_ready_semantic_rows") != 7
-    or manifest.get("pm_ready_semantic_typed_rows") != 7
-    or manifest.get("pm_ready_semantic_contract_ready_rows") != 6
-    or manifest.get("pm_ready_semantic_fixture_execution_ready_rows") != 2
+    manifest.get("pm_ready_semantic_rows") != 8
+    or manifest.get("pm_ready_semantic_typed_rows") != 8
+    or manifest.get("pm_ready_semantic_contract_ready_rows") != 7
+    or manifest.get("pm_ready_semantic_fixture_execution_ready_rows") != 3
     or manifest.get("pm_ready_semantic_real_model_ready_rows") != 0
     or manifest.get("pm_ready_semantic_release_ready_rows") != 0
     or manifest.get("pm_ready_semantic_logical_100b_contract_fixture_ready") != 1
@@ -1676,7 +1677,7 @@ for snippet in [
     "pm_pr_normalization_tests_only_rows=0",
     "pm_pr_title_body_rows=1",
     "pm_pr_title_body_rewrite_ready=1",
-    "pm_ready_semantic_rows=7",
+    "pm_ready_semantic_rows=8",
     "pm_ready_semantic_real_model_ready_rows=0",
     "pm_ready_semantic_release_ready_rows=0",
     "pm_ready_semantic_logical_100b_contract_fixture_ready=1",

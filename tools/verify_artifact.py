@@ -283,6 +283,7 @@ AMBIGUOUS_READY_FLAGS = {
     "v58_ready",
     "v59_ready",
     "v60_ready",
+    "v61i_100b_moe_active_sparse_run_ready",
     "h10_real_label_promotion_ready",
     "review_return_ready",
     "pr2_ready",
@@ -1303,6 +1304,8 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
         errors.append(f"{path}: rows must cover exactly the ambiguous ready flags: {', '.join(sorted(AMBIGUOUS_READY_FLAGS))}")
     if "logical_100b_contract_fixture_ready" not in replacement_set:
         errors.append(f"{path}: logical_100b_contract_fixture_ready replacement row is required")
+    if "v61i_logical_100b_contract_fixture_ready" not in replacement_set:
+        errors.append(f"{path}: v61i_logical_100b_contract_fixture_ready replacement row is required")
     if "real_100b_inference_ready" not in replacement_set:
         errors.append(f"{path}: real_100b_inference_ready replacement row is required")
 
@@ -1334,11 +1337,11 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
             errors.append(f"{prefix}: current contract must not mark real_model_execution_ready=true")
         if row.get("release_ready") is True:
             errors.append(f"{prefix}: current contract must not mark release_ready=true")
-        if replacement == "logical_100b_contract_fixture_ready":
+        if replacement in {"logical_100b_contract_fixture_ready", "v61i_logical_100b_contract_fixture_ready"}:
             if row.get("contract_ready") is not True or row.get("fixture_execution_ready") is not True:
-                errors.append(f"{prefix}: logical 100B row must be contract+fixture ready")
+                errors.append(f"{prefix}: logical 100B rows must be contract+fixture ready")
             if row.get("real_model_execution_ready") is not False:
-                errors.append(f"{prefix}: logical 100B row must keep real_model_execution_ready=false")
+                errors.append(f"{prefix}: logical 100B rows must keep real_model_execution_ready=false")
         if replacement == "real_100b_inference_ready":
             if any(row.get(field) is True for field in TYPED_READINESS_KEYS):
                 errors.append(f"{prefix}: real_100b_inference_ready row must stay all-false until real inference exists")

@@ -34,6 +34,7 @@ and every row's `misleading_ready_flag` must be in the list:
 - `v58_ready`
 - `v59_ready`
 - `v60_ready`
+- `v61i_100b_moe_active_sparse_run_ready`
 
 Adding a new bare `*_ready` claim boundary requires adding it to
 `policy.ambiguous_ready_flags` and adding a row that spells out all seven typed
@@ -50,10 +51,12 @@ tools/verify_artifact.py typed-readiness readiness/typed_ready.json \
 For v61, the required wording is:
 
 - `logical_100b_contract_fixture_ready=1`
+- `v61i_logical_100b_contract_fixture_ready=1`
 - `real_100b_inference_ready=0`
 
-Do not use `100b_moe_run_ready=1` as a real inference, quality, release, or
-near-frontier claim.
+Do not use `100b_moe_run_ready=1` or
+`v61i_100b_moe_active_sparse_run_ready=1` as a real inference, quality,
+release, or near-frontier claim.
 
 Rows may set `pm_ledger_required=false` when the typed-readiness boundary is a
 source-controlled PR or documentation contract that is not emitted by the

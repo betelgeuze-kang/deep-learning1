@@ -19,7 +19,8 @@
       "v53_ready",
       "v58_ready",
       "v59_ready",
-      "v60_ready"
+      "v60_ready",
+      "v61i_100b_moe_active_sparse_run_ready"
     ]
   },
   "rows": [
@@ -104,6 +105,20 @@
       "release_ready": false,
       "misleading_ready_flag": "100b_moe_run_ready",
       "replacement_flag": "real_100b_inference_ready",
+      "ready_wording_policy": "typed-ready-only",
+      "evidence_path": "results/v61j_one_command_ssd_resident_demo_summary.csv"
+    },
+    {
+      "scope_id": "v61i-logical-100b-fixture",
+      "contract_ready": true,
+      "fixture_execution_ready": true,
+      "real_model_execution_ready": false,
+      "heldout_metric_ready": false,
+      "human_review_ready": false,
+      "independent_reproduction_ready": false,
+      "release_ready": false,
+      "misleading_ready_flag": "v61i_100b_moe_active_sparse_run_ready",
+      "replacement_flag": "v61i_logical_100b_contract_fixture_ready",
       "ready_wording_policy": "typed-ready-only",
       "evidence_path": "results/v61j_one_command_ssd_resident_demo_summary.csv"
     },
