@@ -186,7 +186,9 @@ schema_rows = [
     ("blind_adjudication_return_rows.csv", "reviewer_b_decision", "normalized blind decision label"),
     ("blind_adjudication_return_rows.csv", "adjudicated_decision", "normalized final blind decision label"),
     ("blind_adjudication_return_rows.csv", "inter_rater_agree", "0 or 1"),
-    ("blind_adjudication_return_rows.csv", "adjudicator_id", "stable adjudicator id"),
+    ("blind_adjudication_return_rows.csv", "adjudicator_id", "stable adjudicator id; must differ from both reviewers"),
+    ("blind_adjudication_return_rows.csv", "adjudicator_pool_id", "stable adjudicator pool id; must differ from both reviewer pools"),
+    ("blind_adjudication_return_rows.csv", "adjudicator_independent", "must be 1"),
     ("blind_adjudication_return_rows.csv", "adjudication_sha256", "sha256:<64 hex> over the adjudication row"),
 ]
 write_csv(
@@ -259,6 +261,8 @@ adjudication_template_fields = [
     "adjudicated_decision",
     "inter_rater_agree",
     "adjudicator_id",
+    "adjudicator_pool_id",
+    "adjudicator_independent",
     "adjudication_sha256",
     "required_for_v58",
 ]
@@ -276,6 +280,8 @@ for row in response_templates:
             "adjudicated_decision": "",
             "inter_rater_agree": "",
             "adjudicator_id": "",
+            "adjudicator_pool_id": "",
+            "adjudicator_independent": "",
             "adjudication_sha256": "",
             "required_for_v58": 1 if row["blind_response_id"] in required_response_ids else 0,
         }
@@ -398,6 +404,16 @@ for row in adjudication_rows:
         errors.append("inter-rater-agree-not-binary")
     if not row.get("adjudicator_id", ""):
         errors.append("adjudicator-id-missing")
+    if not row.get("adjudicator_pool_id", ""):
+        errors.append("adjudicator-pool-id-missing")
+    if row.get("adjudicator_independent", "") != "1":
+        errors.append("adjudicator-not-independent")
+    reviewer_ids = {review.get("reviewer_id", "") for review in reviews_by_response.get(response_id, [])}
+    reviewer_pool_ids = {review.get("reviewer_pool_id", "") for review in reviews_by_response.get(response_id, [])}
+    if row.get("adjudicator_id", "") in reviewer_ids:
+        errors.append("adjudicator-matches-reviewer")
+    if row.get("adjudicator_pool_id", "") in reviewer_pool_ids:
+        errors.append("adjudicator-pool-matches-reviewer-pool")
     if not is_sha256(row.get("adjudication_sha256", "")):
         errors.append("adjudication-sha256-invalid")
 
@@ -434,10 +450,19 @@ for row in review_rows:
     if row.get("latency_memory_excluded_from_quality_score", "") == "1":
         review_latency_memory_separate_counts[system_id] += 1
 adjudication_counts = Counter()
+independent_adjudication_counts = Counter()
 for row in adjudication_rows:
     template = template_by_response.get(row.get("blind_response_id", ""))
     if template:
         adjudication_counts[template.get("source_system_id", "")] += 1
+        reviewer_ids = {review.get("reviewer_id", "") for review in reviews_by_response.get(row.get("blind_response_id", ""), [])}
+        reviewer_pool_ids = {review.get("reviewer_pool_id", "") for review in reviews_by_response.get(row.get("blind_response_id", ""), [])}
+        if (
+            row.get("adjudicator_independent", "") == "1"
+            and row.get("adjudicator_id", "") not in reviewer_ids
+            and row.get("adjudicator_pool_id", "") not in reviewer_pool_ids
+        ):
+            independent_adjudication_counts[template.get("source_system_id", "")] += 1
 
 pm_review_matrix_rows = []
 for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
@@ -458,6 +483,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
         if len({reviewer_pool for reviewer_pool in reviewer_pools if reviewer_pool}) >= 2
     )
     supplied_adjudication_rows = adjudication_counts.get(system_id, 0)
+    independent_adjudication_rows = independent_adjudication_counts.get(system_id, 0)
     source_span_exactness_rows = review_exact_span_counts.get(system_id, 0)
     unsupported_abstention_rows = review_unsupported_abstention_counts.get(system_id, 0)
     unseen_split_rows = review_unseen_split_counts.get(system_id, 0)
@@ -470,6 +496,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
         and two_reviewer_response_rows == expected_response_rows
         and distinct_reviewer_pool_response_rows == expected_response_rows
         and supplied_adjudication_rows == expected_adjudication_rows
+        and independent_adjudication_rows == expected_adjudication_rows
         and source_span_exactness_rows == expected_review_rows
         and unsupported_abstention_rows == expected_review_rows
         and unseen_split_rows == expected_review_rows
@@ -490,6 +517,8 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
         blocker = "missing-distinct-reviewer-pools-per-response"
     elif supplied_adjudication_rows != expected_adjudication_rows:
         blocker = "missing-disagreement-adjudication-rows"
+    elif independent_adjudication_rows != expected_adjudication_rows:
+        blocker = "missing-independent-adjudicator-rows"
     elif source_span_exactness_rows != expected_review_rows:
         blocker = "missing-source-span-exactness-review-rows"
     elif unsupported_abstention_rows != expected_review_rows:
@@ -512,6 +541,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
             "two_independent_reviewers_required": "1",
             "distinct_reviewer_pools_required": "1",
             "disagreement_adjudication_required": "1",
+            "independent_adjudicator_required": "1",
             "unseen_repository_split_required": "1",
             "source_span_exactness_required": "1",
             "unsupported_abstention_required": "1",
@@ -525,6 +555,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
             "distinct_reviewer_pool_response_rows": str(distinct_reviewer_pool_response_rows),
             "expected_adjudication_rows": str(expected_adjudication_rows),
             "supplied_adjudication_rows": str(supplied_adjudication_rows),
+            "independent_adjudication_rows": str(independent_adjudication_rows),
             "source_span_exactness_review_rows": str(source_span_exactness_rows),
             "unsupported_abstention_review_rows": str(unsupported_abstention_rows),
             "unseen_split_review_rows": str(unseen_split_rows),
@@ -694,7 +725,7 @@ write_csv(run_dir / "blind_review_intake_gate_rows.csv", ["gate", "status", "rea
     f"- v58_full_blind_eval_ready={v58_full_blind_eval_ready}\n\n"
     "Reviewer return rows must not contain source system identity fields. "
     "System identity is unsealed only after scoring/adjudication rows validate. "
-    "PM v58 readiness additionally requires A/B/C/D/E/G/H actual response rows, two independent blinded reviewers from distinct reviewer pools per response, adjudication rows, unseen repository split evidence, source-span exactness review, unsupported-abstention review, and latency/memory separation from answer quality.\n\n"
+    "PM v58 readiness additionally requires A/B/C/D/E/G/H actual response rows, two independent blinded reviewers from distinct reviewer pools per response, independent adjudication rows, unseen repository split evidence, source-span exactness review, unsupported-abstention review, and latency/memory separation from answer quality.\n\n"
     "Do not publish blind-eval wins, RouteHint advantage, or 30B-150B comparison claims from this intake boundary alone.\n",
     encoding="utf-8",
 )

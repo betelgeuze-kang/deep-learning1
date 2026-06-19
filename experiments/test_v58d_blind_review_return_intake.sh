@@ -134,6 +134,8 @@ for field in [
     "unseen_repository_split_id",
     "latency_memory_excluded_from_quality_score",
     "adjudicated_decision",
+    "adjudicator_pool_id",
+    "adjudicator_independent",
     "inter_rater_agree",
 ]:
     if not any(row["field"] == field for row in schema_rows):
@@ -164,6 +166,9 @@ adjudication_header = (run_dir / "blind_adjudication_return_template_rows.csv").
 for forbidden in ["source_system_id", "source_system_name", "model_or_architecture_id"]:
     if forbidden in adjudication_header:
         raise SystemExit(f"v58d adjudication template schema should not reveal {forbidden}")
+for required in ["adjudicator_id", "adjudicator_pool_id", "adjudicator_independent"]:
+    if required not in adjudication_header:
+        raise SystemExit(f"v58d adjudication template schema missing {required}")
 
 pm_matrix = read_csv(run_dir / "pm_blind_review_actual_execution_matrix_rows.csv")
 if len(pm_matrix) != 7:
@@ -180,6 +185,7 @@ for system_id, row in pm_by_system.items():
         "two_independent_reviewers_required",
         "distinct_reviewer_pools_required",
         "disagreement_adjudication_required",
+        "independent_adjudicator_required",
         "unseen_repository_split_required",
         "source_span_exactness_required",
         "unsupported_abstention_required",
@@ -200,6 +206,7 @@ for system_id, row in pm_by_system.items():
         "two_reviewer_response_rows",
         "distinct_reviewer_pool_response_rows",
         "supplied_adjudication_rows",
+        "independent_adjudication_rows",
         "source_span_exactness_review_rows",
         "unsupported_abstention_review_rows",
         "unseen_split_review_rows",
@@ -273,6 +280,7 @@ for snippet in [
     "pm_review_template_gap_rows=7",
     "Reviewer return rows must not contain source system identity fields",
     "distinct reviewer pools",
+    "independent adjudication rows",
     "unseen repository split evidence",
     "source-span exactness review",
     "unsupported-abstention review",

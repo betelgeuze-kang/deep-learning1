@@ -1153,6 +1153,8 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
         "adjudicated_decision",
         "inter_rater_agree",
         "adjudicator_id",
+        "adjudicator_pool_id",
+        "adjudicator_independent",
         "adjudication_sha256",
     },
     "v58d-review-return-intake": {
