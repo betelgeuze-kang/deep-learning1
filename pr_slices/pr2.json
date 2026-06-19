@@ -187,7 +187,7 @@
         "blocked": "Any README/PR wording that promotes scaffold, fixture, dry-run, operator, or runtime-admission evidence into real model generation, production, comparison, or release claims.",
         "evidence_path": "pr_slices/pr2.json"
       },
-      "verification_commands": ["tools/verify_artifact.py pr-split pr_slices/pr2.json", "tools/verify_artifact.py typed-readiness readiness/typed_ready.json", "bash -c '! rg -n \"test_v61hv|test_v61ea|test_v61j_one_command|Current v61 prototype smoke|현재 v61 prototype smoke\" README.md README.ko.md'"],
+      "verification_commands": ["tools/verify_artifact.py pr-split pr_slices/pr2.json", "tools/verify_artifact.py typed-readiness readiness/typed_ready.json", "bash -c '! rg -n \"test_v61hv|test_v61ea|test_v61j_one_command|Current v61 prototype smoke|현재 v61 prototype smoke\" README.md README.ko.md'", "bash -c '! rg -n \"^(The )?v61[a-z]{1,3}\\\\b\" README.md README.ko.md'"],
       "current_status": "ready-for-review"
     }
   ]
