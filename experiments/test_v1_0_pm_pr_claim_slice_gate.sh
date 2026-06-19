@@ -1071,6 +1071,19 @@ for header in ["human_reviewed", "external_source_verified", "non_fixture_declar
 v58_template = (run_dir / template_by_key[("v58-real-blind-eval-missing", "v58-blind-response-rows")]["template_path"]).read_text(encoding="utf-8")
 if "blind_response_id" not in v58_template or "identity_key_sha256" in v58_template:
     raise SystemExit("v58 blind response template should contain response fields without identity key")
+if "latency_memory_excluded_from_quality_score" not in v58_template:
+    raise SystemExit("v58 blind response template should require latency/memory exclusion from quality score")
+v58_resource_template = (run_dir / template_by_key[("v58-real-blind-eval-missing", "v58-resource-rows")]["template_path"]).read_text(encoding="utf-8")
+if "latency_memory_excluded_from_quality_score" not in v58_resource_template:
+    raise SystemExit("v58 resource template should require latency/memory exclusion from quality score")
+v58_human_review_template = (run_dir / template_by_key[("v58-real-blind-eval-missing", "v58-human-review-rows")]["template_path"]).read_text(encoding="utf-8")
+for header in ["reviewer_pool_id", "latency_memory_excluded_from_quality_score", "source_span_exactness", "unsupported_abstention_correctness"]:
+    if header not in v58_human_review_template:
+        raise SystemExit(f"v58 human review template missing header: {header}")
+v58_adjudication_template = (run_dir / template_by_key[("v58-real-blind-eval-missing", "v58-adjudication-rows")]["template_path"]).read_text(encoding="utf-8")
+for header in ["adjudicator_pool_id", "adjudicator_independent", "inter_rater_agree"]:
+    if header not in v58_adjudication_template:
+        raise SystemExit(f"v58 adjudication template missing header: {header}")
 v58c_template = (run_dir / template_by_key[("v58c-intake-artifact-missing", "v58c-intake-summary")]["template_path"]).read_text(encoding="utf-8")
 if "v58c_blind_response_evidence_intake_ready" not in v58c_template or "human_blind_review_ready" not in v58c_template:
     raise SystemExit("v58c intake summary template should name readiness and review fields")
