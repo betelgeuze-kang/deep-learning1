@@ -279,6 +279,18 @@ REQUIRED_PR2_V61_VERIFICATION_TERMS = {
     "results/v61aa_hotset_tensor_slice_verifier_summary.csv",
     "results/v61ab_hotset_tensor_tile_quant_probe_summary.csv",
 }
+REQUIRED_PR2_SPLIT_PLAN_TERMS = {
+    "tools/verify_artifact.py pr-split pr_slices/pr2.json",
+    "PR2_REWRITE_DRAFT.md",
+    "Tests are useful smoke evidence, but tests-only merge conditions are forbidden",
+    "readiness/typed_ready.json",
+    "leakage/retrieval_model_visible.json",
+    "baselines/de_30b70b_real.json",
+    "v58/blind_eval_real.json",
+    "operations/review_return_workflow.json",
+    "v61/one_token_path.json",
+    "docs-readme-pr2-cleanup",
+}
 TESTS_ONLY_MERGE_CONDITIONS = {"tests pass", "test pass", "tests", "test", "ci green"}
 TYPED_READINESS_KEYS = {
     "contract_ready",
@@ -1448,6 +1460,41 @@ def verify_pr_split(path: Path) -> list[str]:
         missing_terms = [term for term in REQUIRED_PR2_REWRITE_TERMS if term not in body_text]
         if missing_terms:
             errors.append(f"{path}: recommended_body missing PR #2 rewrite terms: {', '.join(sorted(missing_terms))}")
+        repo_root = path.parent.parent if path.parent.name == "pr_slices" else Path(".")
+        rewrite_draft = repo_root / "docs" / "PR2_REWRITE_DRAFT.md"
+        split_plan = repo_root / "docs" / "PR2_SPLIT_PLAN.md"
+        if not rewrite_draft.is_file():
+            errors.append(f"{path}: docs/PR2_REWRITE_DRAFT.md is required for PR #2 title/body rewrite")
+        else:
+            draft_text = rewrite_draft.read_text(encoding="utf-8")
+            draft_text_lower = " ".join(draft_text.split()).lower()
+            if data["recommended_title"] not in draft_text:
+                errors.append(f"{rewrite_draft}: missing recommended_title from {path}")
+            missing_draft_terms = [
+                term
+                for term in REQUIRED_PR2_REWRITE_TERMS
+                if " ".join(term.split()).lower() not in draft_text_lower
+            ]
+            if missing_draft_terms:
+                errors.append(
+                    f"{rewrite_draft}: missing PR #2 rewrite terms: "
+                    f"{', '.join(sorted(missing_draft_terms))}"
+                )
+        if not split_plan.is_file():
+            errors.append(f"{path}: docs/PR2_SPLIT_PLAN.md is required for PR #2 split review plan")
+        else:
+            plan_text = split_plan.read_text(encoding="utf-8")
+            plan_text_normalized = " ".join(plan_text.split())
+            missing_plan_terms = [
+                term
+                for term in REQUIRED_PR2_SPLIT_PLAN_TERMS
+                if " ".join(term.split()) not in plan_text_normalized
+            ]
+            if missing_plan_terms:
+                errors.append(
+                    f"{split_plan}: missing PR #2 split plan terms: "
+                    f"{', '.join(sorted(missing_plan_terms))}"
+                )
     policy = data["merge_gate_policy"]
     if policy.get("forbid_tests_only") is not True:
         errors.append(f"{path}: merge_gate_policy.forbid_tests_only must be true")
@@ -1462,6 +1509,19 @@ def verify_pr_split(path: Path) -> list[str]:
         errors.append(f"{path}: duplicate slice_id values are forbidden")
     if data["draft_pr"] == "PR #2" and slice_ids != EXPECTED_PR2_SLICE_ORDER:
         errors.append(f"{path}: PR #2 slice order must match the PM contract")
+    if data["draft_pr"] == "PR #2":
+        for doc_path in [
+            repo_root / "docs" / "PR2_REWRITE_DRAFT.md",
+            repo_root / "docs" / "PR2_SPLIT_PLAN.md",
+        ]:
+            if not doc_path.is_file():
+                continue
+            doc_text = doc_path.read_text(encoding="utf-8")
+            missing_doc_slices = [
+                slice_id for slice_id in EXPECTED_PR2_SLICE_ORDER if slice_id not in doc_text
+            ]
+            if missing_doc_slices:
+                errors.append(f"{doc_path}: missing PR #2 slice ids: {', '.join(missing_doc_slices)}")
     for index, row in enumerate(slices, start=1):
         prefix = f"{path}: slice[{index}]"
         missing_slice = REQUIRED_PR_SLICE_KEYS - set(row)
