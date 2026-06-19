@@ -85,6 +85,10 @@ for spec in system_specs:
             {"system_id": spec["system_id"], "artifact": "model_identity.json", "field": "external_api_used", "required": 1, "rule": "must be 0 for open-weight D/E rows"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "query_id", "required": 1, "rule": "must cover every v50 query id exactly once"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "predicted_label", "required": 1, "rule": "scored against v50 expected_label"},
+            {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "raw_answer", "required": 1, "rule": "non-placeholder raw model answer text"},
+            {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "raw_citation", "required": 1, "rule": "non-placeholder raw model citation text"},
+            {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "raw_output_sha256", "required": 1, "rule": "sha256:<64 hex> over raw answer/citation output"},
+            {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "generation_transcript_sha256", "required": 1, "rule": "sha256:<64 hex> over raw generation transcript"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "raw_prompt_context_bytes", "required": 1, "rule": "positive integer"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_citation_rows.csv", "field": "case_id/kind/path/sha256/line", "required": 1, "rule": "must bind to v50 source spans"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_resource_rows.csv", "field": "latency_ns", "required": 1, "rule": "positive measured runtime"},
@@ -100,6 +104,10 @@ template_fields = [
     "model_id",
     "expected_label",
     "predicted_label",
+    "raw_answer",
+    "raw_citation",
+    "raw_output_sha256",
+    "generation_transcript_sha256",
     "answer",
     "raw_prompt_context_bytes",
     "retrieved_span_rows",
@@ -440,6 +448,10 @@ for spec in system_specs:
             {"system_id": spec["system_id"], "artifact": "model_identity.json", "field": "external_api_used", "required": 1, "rule": "must be 0 for open-weight D/E rows"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "query_id", "required": 1, "rule": "must cover every v50 query id exactly once"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "predicted_label", "required": 1, "rule": "scored against v50 expected_label"},
+            {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "raw_answer", "required": 1, "rule": "non-placeholder raw model answer text"},
+            {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "raw_citation", "required": 1, "rule": "non-placeholder raw model citation text"},
+            {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "raw_output_sha256", "required": 1, "rule": "sha256:<64 hex> over raw answer/citation output"},
+            {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "generation_transcript_sha256", "required": 1, "rule": "sha256:<64 hex> over raw generation transcript"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_answer_rows.csv", "field": "raw_prompt_context_bytes", "required": 1, "rule": "positive integer"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_citation_rows.csv", "field": "case_id/kind/path/sha256/line", "required": 1, "rule": "must bind to v50 source spans"},
             {"system_id": spec["system_id"], "artifact": "llm_rag_resource_rows.csv", "field": "latency_ns", "required": 1, "rule": "positive measured runtime"},
@@ -456,6 +468,10 @@ for spec in system_specs:
                 "model_id": f"replace-with-{spec['size_class']}-open-weight-model-id",
                 "expected_label": case["expected_label"],
                 "predicted_label": "",
+                "raw_answer": "",
+                "raw_citation": "",
+                "raw_output_sha256": "",
+                "generation_transcript_sha256": "",
                 "answer": "",
                 "raw_prompt_context_bytes": "",
                 "retrieved_span_rows": "",
@@ -590,6 +606,14 @@ def validate_system(spec):
             row_errors.append("answer-case-id-mismatch")
         if not row.get("predicted_label"):
             row_errors.append("answer-predicted-label-missing")
+        if not is_nonplaceholder_text(row.get("raw_answer", "")):
+            row_errors.append("answer-raw-answer-placeholder-or-missing")
+        if not is_nonplaceholder_text(row.get("raw_citation", "")):
+            row_errors.append("answer-raw-citation-placeholder-or-missing")
+        if not is_sha256(row.get("raw_output_sha256", "")):
+            row_errors.append("answer-raw-output-sha256-invalid")
+        if not is_sha256(row.get("generation_transcript_sha256", "")):
+            row_errors.append("answer-generation-transcript-sha256-invalid")
         if row.get("predicted_label") == (case or {}).get("expected_label"):
             correct_rows += 1
         if int_value(row, "raw_prompt_context_bytes", row_errors, minimum=1) > 0:
@@ -701,7 +725,7 @@ with decision_csv.open("w", newline="", encoding="utf-8") as handle:
     "Existing v50 public-repo seed artifacts are reused by default. A public refresh is blocked unless `V52D_ALLOW_V50_REFRESH=1` is explicitly set.\n\n"
     "A valid supplied evidence directory for each system must contain:\n\n"
     "- `model_identity.json` with the expected system ID, parameter-count class, open-weight license URI, and sha256-bound model artifact identity.\n"
-    "- `llm_rag_answer_rows.csv` with one answer row for every v50 query ID.\n"
+    "- `llm_rag_answer_rows.csv` with one answer row for every v50 query ID plus raw answer/citation output hashes and generation transcript hashes.\n"
     "- `llm_rag_citation_rows.csv` with source-span-bound citations against the v50 source span registry.\n"
     "- `llm_rag_resource_rows.csv` with measured runtime/resource rows and `external_api_used=0`.\n\n"
     "Default/no-env execution intentionally remains blocked. Do not publish D/E, 30B-150B, or v1.0 comparison claims from this contract alone.\n",

@@ -269,6 +269,9 @@ for system_id, size_rule in [("D", "float in [25.0, 40.0]"), ("E", "float in [65
         raise SystemExit(f"v52d schema should require parameter range for {system_id}")
     if not any(row["system_id"] == system_id and row["field"] == "external_api_used" for row in schema_rows):
         raise SystemExit(f"v52d schema should require external_api_used=0 for {system_id}")
+    for raw_field in ["raw_answer", "raw_citation", "raw_output_sha256", "generation_transcript_sha256"]:
+        if not any(row["system_id"] == system_id and row["field"] == raw_field for row in schema_rows):
+            raise SystemExit(f"v52d schema should require {raw_field} for {system_id}")
 
 templates = read_csv(run_dir / "llm_rag_answer_template.csv")
 if len(templates) != 18:
@@ -349,6 +352,7 @@ mkdir -p "$SPOOFED_D_DIR" "$SPOOFED_E_DIR"
 
 python3 - "$RESULTS_DIR" "$SPOOFED_D_DIR" "$SPOOFED_E_DIR" <<'PY'
 import csv
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -385,6 +389,10 @@ answer_fields = [
     "case_id",
     "model_id",
     "predicted_label",
+    "raw_answer",
+    "raw_citation",
+    "raw_output_sha256",
+    "generation_transcript_sha256",
     "raw_prompt_context_bytes",
     "retrieved_span_rows",
     "prompt_context_sha256",
@@ -431,6 +439,9 @@ for target_dir, system_id, size_class, parameter_count in [
     for query in queries:
         case = case_by_query[query["query_id"]]
         span = span_by_case[case["case_id"]]
+        raw_answer = f"fixture answer for {query['query_id']}"
+        raw_citation = f"fixture citation for {span['path']}:{span['line']}"
+        raw_output = raw_answer + "\n" + raw_citation
         answer_rows.append(
             {
                 "system_id": system_id,
@@ -438,6 +449,10 @@ for target_dir, system_id, size_class, parameter_count in [
                 "case_id": case["case_id"],
                 "model_id": model_id,
                 "predicted_label": case["expected_label"],
+                "raw_answer": raw_answer,
+                "raw_citation": raw_citation,
+                "raw_output_sha256": "sha256:" + hashlib.sha256(raw_output.encode("utf-8")).hexdigest(),
+                "generation_transcript_sha256": "sha256:" + hashlib.sha256(("transcript:" + raw_output).encode("utf-8")).hexdigest(),
                 "raw_prompt_context_bytes": "128",
                 "retrieved_span_rows": "1",
                 "prompt_context_sha256": "sha256:" + ("b" * 64),
