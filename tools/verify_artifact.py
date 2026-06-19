@@ -101,7 +101,16 @@ REQUIRED_BASELINE_ARTIFACT_KEYS = {
 REQUIRED_V52_ADAPTER_GUARD_KEYS = {
     "schema_version",
     "policy",
+    "required_artifacts",
     "requirements",
+}
+REQUIRED_V52_ARTIFACT_KEYS = {
+    "artifact_id",
+    "artifact_kind",
+    "path",
+    "required_columns",
+    "min_rows",
+    "required_for_c_packet",
 }
 REQUIRED_V52_REQUIREMENT_KEYS = {
     "requirement_id",
@@ -344,6 +353,81 @@ EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS = {
         "fixture_rows",
         "measured_registry_candidate",
     },
+}
+EXPECTED_V52_C_ARTIFACT_IDS = [
+    "c-answer-rows",
+    "c-citation-rows",
+    "c-resource-rows",
+    "c-generation-transcript-rows",
+    "c-sha256-manifest",
+]
+EXPECTED_V52_C_ARTIFACT_COLUMNS = {
+    "c-answer-rows": [
+        "answer_id",
+        "system_id",
+        "query_id",
+        "repo_id",
+        "owner_repo",
+        "audit_type",
+        "expected_answer_sha256",
+        "predicted_answer",
+        "predicted_answer_sha256",
+        "correct",
+        "abstained",
+        "retrieved_source_span_id",
+        "raw_prompt_context_bytes",
+        "compact_routehint_bytes",
+        "context_or_hint_sha256",
+        "latency_ns",
+    ],
+    "c-citation-rows": [
+        "citation_id",
+        "answer_id",
+        "system_id",
+        "query_id",
+        "source_span_id",
+        "repo_id",
+        "owner_repo",
+        "path",
+        "line_start",
+        "line_end",
+        "source_file_sha256",
+        "evidence_text_sha256",
+        "citation_correct",
+    ],
+    "c-resource-rows": [
+        "system_id",
+        "query_id",
+        "latency_ns",
+        "raw_prompt_context_bytes",
+        "compact_routehint_bytes",
+        "retrieved_span_rows",
+        "external_network_used",
+        "external_model_used",
+        "route_memory_store_used",
+        "compact_routehint_used",
+        "source_verified_scorer_used",
+        "domain_policy_used",
+    ],
+    "c-generation-transcript-rows": [
+        "query_id",
+        "prompt_sha256",
+        "response_sha256",
+        "predicted_answer_sha256",
+        "raw_response",
+    ],
+    "c-sha256-manifest": [
+        "path",
+        "sha256",
+        "bytes",
+    ],
+}
+EXPECTED_V52_C_MIN_ROWS = {
+    "c-answer-rows": 1000,
+    "c-citation-rows": 1000,
+    "c-resource-rows": 1000,
+    "c-generation-transcript-rows": 1000,
+    "c-sha256-manifest": 14,
 }
 EXPECTED_V58_REQUIREMENT_IDS = [
     "ab-cdegh-real-responses",
@@ -1279,6 +1363,50 @@ def verify_v52_adapter_guard(
     ]:
         if policy.get(field) is not False:
             errors.append(f"{path}: {field} must be false")
+
+    artifacts = data["required_artifacts"]
+    if not isinstance(artifacts, list) or not artifacts:
+        errors.append(f"{path}: required_artifacts must be a non-empty list")
+        return errors
+    artifact_ids = [row.get("artifact_id", "") for row in artifacts]
+    if artifact_ids != EXPECTED_V52_C_ARTIFACT_IDS:
+        errors.append(f"{path}: required_artifacts order must match the v52 C packet contract")
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{path}: duplicate required_artifacts are forbidden")
+    for index, row in enumerate(artifacts, start=1):
+        prefix = f"{path}: required_artifact[{index}]"
+        missing_artifact = REQUIRED_V52_ARTIFACT_KEYS - set(row)
+        if missing_artifact:
+            errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_artifact))}")
+        artifact_id = row.get("artifact_id", "")
+        if row.get("artifact_kind") != "csv":
+            errors.append(f"{prefix}: artifact_kind must be csv")
+        if row.get("required_for_c_packet") is not True:
+            errors.append(f"{prefix}: required_for_c_packet must be true")
+        required_columns = row.get("required_columns", [])
+        expected_columns = EXPECTED_V52_C_ARTIFACT_COLUMNS.get(artifact_id)
+        if not isinstance(required_columns, list) or not required_columns:
+            errors.append(f"{prefix}: required_columns must be a non-empty list")
+        elif expected_columns is not None and required_columns != expected_columns:
+            errors.append(f"{prefix}: required_columns must exactly match the v52 C packet header")
+        min_rows = row.get("min_rows")
+        expected_min_rows = EXPECTED_V52_C_MIN_ROWS.get(artifact_id)
+        if not isinstance(min_rows, int) or min_rows < 1:
+            errors.append(f"{prefix}: min_rows must be a positive integer")
+        elif expected_min_rows is not None and min_rows != expected_min_rows:
+            errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+        artifact_path = Path(row.get("path", ""))
+        if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
+            errors.append(f"{prefix}: missing or empty artifact path {artifact_path}")
+            continue
+        with artifact_path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            fieldnames = reader.fieldnames or []
+            if required_columns and fieldnames != required_columns:
+                errors.append(f"{artifact_path}: header must match required_columns for {artifact_id}")
+            row_count = sum(1 for _ in reader)
+        if isinstance(min_rows, int) and row_count < min_rows:
+            errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
 
     requirements = data["requirements"]
     if not isinstance(requirements, list) or not requirements:

@@ -7,6 +7,102 @@
     "public_comparison_claim_ready": false,
     "release_ready": false
   },
+  "required_artifacts": [
+    {
+      "artifact_id": "c-answer-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_answer_rows.csv",
+      "required_columns": [
+        "answer_id",
+        "system_id",
+        "query_id",
+        "repo_id",
+        "owner_repo",
+        "audit_type",
+        "expected_answer_sha256",
+        "predicted_answer",
+        "predicted_answer_sha256",
+        "correct",
+        "abstained",
+        "retrieved_source_span_id",
+        "raw_prompt_context_bytes",
+        "compact_routehint_bytes",
+        "context_or_hint_sha256",
+        "latency_ns"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-citation-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_citation_rows.csv",
+      "required_columns": [
+        "citation_id",
+        "answer_id",
+        "system_id",
+        "query_id",
+        "source_span_id",
+        "repo_id",
+        "owner_repo",
+        "path",
+        "line_start",
+        "line_end",
+        "source_file_sha256",
+        "evidence_text_sha256",
+        "citation_correct"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-resource-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_resource_rows.csv",
+      "required_columns": [
+        "system_id",
+        "query_id",
+        "latency_ns",
+        "raw_prompt_context_bytes",
+        "compact_routehint_bytes",
+        "retrieved_span_rows",
+        "external_network_used",
+        "external_model_used",
+        "route_memory_store_used",
+        "compact_routehint_used",
+        "source_verified_scorer_used",
+        "domain_policy_used"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-generation-transcript-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/ollama_generation_transcript_rows.csv",
+      "required_columns": [
+        "query_id",
+        "prompt_sha256",
+        "response_sha256",
+        "predicted_answer_sha256",
+        "raw_response"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-sha256-manifest",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/sha256_manifest.csv",
+      "required_columns": [
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "min_rows": 14,
+      "required_for_c_packet": true
+    }
+  ],
   "requirements": [
     {
       "requirement_id": "c-7b14b-v53e-actual-adapter-packet",

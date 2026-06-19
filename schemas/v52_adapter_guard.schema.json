@@ -3,7 +3,7 @@
   "$id": "https://local.discrete-local-energy/schemas/v52_adapter_guard.schema.json",
   "title": "v52 Adapter And D/E Guard Contract",
   "type": "object",
-  "required": ["schema_version", "policy", "requirements"],
+  "required": ["schema_version", "policy", "required_artifacts", "requirements"],
   "properties": {
     "schema_version": {"type": "string"},
     "policy": {
@@ -23,6 +23,33 @@
         "release_ready": {"type": "boolean"}
       },
       "additionalProperties": false
+    },
+    "required_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "artifact_kind",
+          "path",
+          "required_columns",
+          "min_rows",
+          "required_for_c_packet"
+        ],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "artifact_kind": {"type": "string"},
+          "path": {"type": "string"},
+          "required_columns": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1
+          },
+          "min_rows": {"type": "integer", "minimum": 1},
+          "required_for_c_packet": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
     },
     "requirements": {
       "type": "array",
