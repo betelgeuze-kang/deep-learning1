@@ -2651,13 +2651,13 @@ def leakage_guard_row(guard_id, forbidden_surface, field_names, evaluator_only_r
 
 
 pm_retrieval_leakage_guard_rows = [
-    leakage_guard_row("source-span-id", "source span ID", "source_span_id"),
-    leakage_guard_row("source-path", "source path", "source_path"),
-    leakage_guard_row("source-line", "source line", "source_line_start;source_line_end"),
-    leakage_guard_row("source-file-hash", "source file hash", "source_file_hash"),
-    leakage_guard_row("query-source-direct-binding", "query ID and direct source row binding", "query_id"),
-    leakage_guard_row("expected-behavior", "expected behavior", "expected_answer;expected_answer_sha256", evaluator_only_required=False),
-    leakage_guard_row("expected-label", "expected label", "negative_or_abstain;audit_type"),
+    leakage_guard_row("source-span-id", "source span ID", "source_span_id;span_id"),
+    leakage_guard_row("source-path", "source path", "source_path;source_file_path;path"),
+    leakage_guard_row("source-line", "source line", "source_line_start;source_line_end;line_start;line_end"),
+    leakage_guard_row("source-file-hash", "source file hash", "source_file_hash;source_file_sha256;source_git_blob_sha"),
+    leakage_guard_row("query-source-direct-binding", "query ID and direct source row binding", "query_id;source_row_id;source_query_id;query_source_id;source_binding_id"),
+    leakage_guard_row("expected-behavior", "expected behavior", "expected_behavior;expected_answer;expected_answer_sha256;expected_output;gold_answer", evaluator_only_required=False),
+    leakage_guard_row("expected-label", "expected label", "negative_or_abstain;audit_type;expected_label"),
 ]
 write_csv(run_dir / "pm_retrieval_leakage_guard_rows.csv", list(pm_retrieval_leakage_guard_rows[0].keys()), pm_retrieval_leakage_guard_rows)
 

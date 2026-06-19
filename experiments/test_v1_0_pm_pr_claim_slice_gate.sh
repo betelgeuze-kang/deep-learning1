@@ -1260,16 +1260,18 @@ for row in leakage_rows.values():
         or row["direct_query_source_binding_forbidden"] != "1"
     ):
         raise SystemExit("PM retrieval leakage guard should block oracle metadata from adapter selection")
-for guard_id, field_snippet in {
-    "source-span-id": "source_span_id",
-    "source-path": "source_path",
-    "source-line": "source_line_start;source_line_end",
-    "query-source-direct-binding": "query_id",
-    "expected-behavior": "expected_answer;expected_answer_sha256",
-    "expected-label": "negative_or_abstain;audit_type",
+for guard_id, expected_fields in {
+    "source-span-id": {"source_span_id", "span_id"},
+    "source-path": {"source_path", "source_file_path", "path"},
+    "source-line": {"source_line_start", "source_line_end", "line_start", "line_end"},
+    "source-file-hash": {"source_file_hash", "source_file_sha256", "source_git_blob_sha"},
+    "query-source-direct-binding": {"query_id", "source_row_id", "source_query_id", "query_source_id", "source_binding_id"},
+    "expected-behavior": {"expected_behavior", "expected_answer", "expected_answer_sha256", "expected_output", "gold_answer"},
+    "expected-label": {"negative_or_abstain", "audit_type", "expected_label"},
 }.items():
-    if field_snippet not in leakage_rows[guard_id]["field_names"]:
-        raise SystemExit(f"PM retrieval leakage guard missing forbidden field {field_snippet}")
+    observed_fields = set(part for part in leakage_rows[guard_id]["field_names"].split(";") if part)
+    if observed_fields != expected_fields:
+        raise SystemExit(f"PM retrieval leakage guard {guard_id} should list all forbidden aliases")
 
 v53_pm_acceptance_rows = {row["requirement_id"]: row for row in read_csv(run_dir / "source_v53t/complete_source_pm_acceptance_evidence_rows.csv")}
 expected_v53_pm_acceptance_ids = {

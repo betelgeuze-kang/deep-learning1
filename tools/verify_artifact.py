@@ -1497,12 +1497,19 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
     if pm_ledger is not None:
         ledger_rows = read_csv_rows(pm_ledger)
         by_guard = {row.get("guard_id", ""): row for row in ledger_rows}
+        extra_guards = set(by_guard) - set(guard_ids)
+        if extra_guards:
+            errors.append(f"{pm_ledger}: unexpected guard_id values: {', '.join(sorted(extra_guards))}")
         for surface in surfaces:
             guard_id = surface["guard_id"]
             ledger = by_guard.get(guard_id)
             if ledger is None:
                 errors.append(f"{pm_ledger}: missing guard_id={guard_id}")
                 continue
+            ledger_fields = split_semicolon(ledger.get("field_names", "").replace(",", ";"))
+            surface_fields = set(str(field) for field in surface.get("field_names", []))
+            if ledger_fields != surface_fields:
+                errors.append(f"{pm_ledger}: {guard_id}.field_names must match contract aliases: {', '.join(sorted(surface_fields))}")
             if ledger.get("status") != "pass":
                 errors.append(f"{pm_ledger}: {guard_id}.status expected pass, got {ledger.get('status')}")
             if ledger.get("adapter_selection_blocked") != "1":
