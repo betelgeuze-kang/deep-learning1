@@ -9,7 +9,9 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V61J_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V61J_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]] \
+  && grep -q 'v61i_logical_100b_contract_fixture_ready' "$SUMMARY_CSV" \
+  && ! grep -q 'v61i_100b_moe_active_sparse_run_ready' "$SUMMARY_CSV"; then
   echo "v61j_one_command_ssd_resident_demo_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -19,7 +21,8 @@ fi
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-if [[ ! -s "$RESULTS_DIR/v61i_100b_moe_active_sparse_run_summary.csv" ]]; then
+if [[ ! -s "$RESULTS_DIR/v61i_100b_moe_active_sparse_run_summary.csv" ]] \
+  || ! grep -q 'v61i_logical_100b_contract_fixture_ready' "$RESULTS_DIR/v61i_100b_moe_active_sparse_run_summary.csv"; then
   "$ROOT_DIR/experiments/run_v61i_100b_moe_active_sparse_run.sh" >/dev/null
 fi
 
@@ -198,7 +201,7 @@ summary_ready_fields = {
     "v61f_predictive_prefetch": ["v61f_predictive_prefetch_ready"],
     "v61g_mixed_quant_planner": ["v61g_mixed_quant_planner_ready"],
     "v61h_dense_stress_harness": ["v61h_dense_stress_harness_ready"],
-    "v61i_100b_moe_active_sparse_run": ["v61i_100b_moe_active_sparse_run_ready"],
+    "v61i_100b_moe_active_sparse_run": ["v61i_logical_100b_contract_fixture_ready"],
 }
 for prefix, fields in summary_ready_fields.items():
     row = source_summaries[prefix]

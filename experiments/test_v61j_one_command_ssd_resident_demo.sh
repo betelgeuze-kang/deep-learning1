@@ -36,7 +36,7 @@ expected = {
     "v61f_predictive_prefetch_ready": "1",
     "v61g_mixed_quant_planner_ready": "1",
     "v61h_dense_stress_harness_ready": "1",
-    "v61i_100b_moe_active_sparse_run_ready": "1",
+    "v61i_logical_100b_contract_fixture_ready": "1",
     "v61j_one_command_ssd_resident_demo_ready": "1",
     "one_command_entrypoint_ready": "1",
     "ssd_resident_active_sparse_path_proven": "1",
@@ -95,6 +95,8 @@ if v61h.get("dense_hundreds_b_local_speed_claim") != "blocked":
 v61i = read_csv(results / "v61i_100b_moe_active_sparse_run_summary.csv")[0]
 if v61i.get("total_parameters_100b_plus") != "1" or v61i.get("real_100b_open_weight_materialized") != "0":
     raise SystemExit("v61i should close logical 100B+ contract while blocking real checkpoint materialization")
+if v61i.get("v61i_100b_moe_active_sparse_run_ready") != "0" or v61i.get("v61i_logical_100b_contract_fixture_ready") != "1":
+    raise SystemExit("v61i should keep the deprecated ambiguous ready flag closed and expose the typed fixture replacement")
 if v61i.get("logical_100b_contract_fixture_ready") != "1" or v61i.get("real_100b_inference_ready") != "0":
     raise SystemExit("v61i should expose typed logical fixture readiness and block real 100B inference")
 for field, value in {
@@ -113,8 +115,8 @@ readiness_rows = read_csv(run_dir / "source_v61i" / "moe_readiness_semantic_rows
 if len(readiness_rows) != 1:
     raise SystemExit("v61j should copy one v61i readiness semantic row")
 readiness = readiness_rows[0]
-if readiness.get("deprecated_or_ambiguous_ready_flag") != "v61i_100b_moe_active_sparse_run_ready":
-    raise SystemExit("v61i readiness row should name the deprecated ambiguous ready flag")
+if readiness.get("deprecated_or_ambiguous_ready_flag") != "v61i_100b_moe_active_sparse_run_ready=0":
+    raise SystemExit("v61i readiness row should keep the deprecated ambiguous ready flag closed")
 if readiness.get("logical_100b_contract_fixture_ready") != "1" or readiness.get("real_100b_inference_ready") != "0":
     raise SystemExit("v61i readiness row should separate logical fixture from real inference")
 

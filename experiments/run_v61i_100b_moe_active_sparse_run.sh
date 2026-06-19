@@ -12,7 +12,9 @@ V61A_DIR="${V61A_STORE_DIR:-$RESULTS_DIR/v61a_ssd_weight_page_store/store_001}"
 V61E_DIR="${V61E_ROUTER_DIR:-$RESULTS_DIR/v61e_expert_router/router_001}"
 V61G_DIR="${V61G_QUANT_DIR:-$RESULTS_DIR/v61g_mixed_quant_planner/quant_001}"
 
-if [[ "${V61I_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]]; then
+if [[ "${V61I_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" ]] \
+  && grep -q 'v61i_logical_100b_contract_fixture_ready' "$SUMMARY_CSV" \
+  && grep -q 'v61i_100b_moe_active_sparse_run_ready,logical_100b_moe_contract_ready,v61i_logical_100b_contract_fixture_ready' "$SUMMARY_CSV"; then
   echo "v61i_100b_moe_active_sparse_run_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -177,7 +179,7 @@ readiness_rows = [
         "release_ready": "0",
         "logical_100b_contract_fixture_ready": "1",
         "real_100b_inference_ready": "0",
-        "deprecated_or_ambiguous_ready_flag": "v61i_100b_moe_active_sparse_run_ready",
+        "deprecated_or_ambiguous_ready_flag": "v61i_100b_moe_active_sparse_run_ready=0",
         "claim_boundary": "logical contract fixture only; no real 100B inference or near-frontier quality claim",
     }
 ]
@@ -190,8 +192,9 @@ write_csv(run_dir / "moe_quality_rows.csv", list(quality_rows[0].keys()), qualit
 write_csv(run_dir / "moe_readiness_semantic_rows.csv", list(readiness_rows[0].keys()), readiness_rows)
 
 summary = {
-    "v61i_100b_moe_active_sparse_run_ready": "1",
+    "v61i_100b_moe_active_sparse_run_ready": "0",
     "logical_100b_moe_contract_ready": "1",
+    "v61i_logical_100b_contract_fixture_ready": "1",
     "logical_100b_contract_fixture_ready": "1",
     "real_100b_inference_ready": "0",
     "contract_ready": "1",
@@ -221,8 +224,9 @@ manifest = {
     "manifest_scope": "v61i-100b-moe-active-sparse-run",
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
     "logical_scale_mode": "contract-fixture",
-    "v61i_100b_moe_active_sparse_run_ready": 1,
+    "v61i_100b_moe_active_sparse_run_ready": 0,
     "logical_100b_moe_contract_ready": 1,
+    "v61i_logical_100b_contract_fixture_ready": 1,
     "logical_100b_contract_fixture_ready": 1,
     "real_100b_inference_ready": 0,
     "contract_ready": 1,
