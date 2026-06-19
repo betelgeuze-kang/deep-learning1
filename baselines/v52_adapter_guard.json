@@ -77,6 +77,53 @@
       "required_for_c_packet": true
     },
     {
+      "artifact_id": "c-retrieval-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_retrieval_rows.csv",
+      "required_columns": [
+        "system_id",
+        "query_id",
+        "rank",
+        "score",
+        "source_span_id",
+        "owner_repo",
+        "path",
+        "line_start"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-abstain-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_abstain_rows.csv",
+      "required_columns": [
+        "system_id",
+        "query_id",
+        "negative_or_abstain",
+        "abstained",
+        "abstain_correct"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-wrong-answer-guard-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_wrong_answer_guard_rows.csv",
+      "required_columns": [
+        "system_id",
+        "query_id",
+        "expected_answer_sha256",
+        "predicted_answer_sha256",
+        "wrong_answer",
+        "guard_triggered",
+        "guard_status"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
       "artifact_id": "c-generation-transcript-rows",
       "artifact_kind": "csv",
       "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/ollama_generation_transcript_rows.csv",

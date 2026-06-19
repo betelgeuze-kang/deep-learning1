@@ -45,9 +45,9 @@ are missing. The v50 artifact schema, row-count floor, replay commands, and
 sha256 manifest binding are explicit, but implicit public refresh is forbidden.
 v52 baseline wording must follow `baselines/v52_adapter_guard.json`;
 System C's 7B-14B local response packet now declares required answer, citation,
-resource, transcript, and sha256 manifest row artifacts, but it is not a
-quality claim. D/E measured registry admission remains blocked until real
-pinned evidence validates.
+resource, retrieval, abstain, wrong-answer guard, transcript, and sha256
+manifest row artifacts, but it is not a quality claim. D/E measured registry
+admission remains blocked until real pinned evidence validates.
 Retriever and model-visible input wording must follow
 `leakage/retrieval_model_visible.json`; source locators, direct query/source
 bindings, expected behavior, and expected labels are evaluator-only.
