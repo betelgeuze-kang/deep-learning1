@@ -69,7 +69,8 @@ resource rows must carry `latency_memory_excluded_from_quality_score=1`, while
 A/B/C/D/E/G/H real responses require 500 rows per system rather than a single
 3500-row total. Two blinded reviewers from distinct reviewer pools,
 independent adjudication, unseen split, source-span exactness, and unsupported
-abstention are still required.
+abstention are still required. Blind response text must not reveal model/run
+identity tokens.
 
 v53 source-bound benchmark checks are exact: repo counts, 1000 query/span rows,
 negative controls, evaluator separation, A/B/G/H same-query evidence,

@@ -76,7 +76,8 @@ real responses require 500 rows per system, not just 3500 total rows. Two
 independent blinded reviewers from distinct reviewer pools, independent
 adjudication, unseen split, source-span exactness, unsupported abstention, and
 latency/memory separation are required, while templates and intake contracts do
-not imply real blind-eval completion.
+not imply real blind-eval completion. Blind response text must not reveal
+model/run identity tokens.
 Response/resource intake rows must carry
 `latency_memory_excluded_from_quality_score=1` so latency and memory cannot be
 folded into answer quality.

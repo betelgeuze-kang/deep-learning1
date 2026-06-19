@@ -11,6 +11,7 @@
     "required_real_response_systems": ["A", "B", "C", "D", "E", "G", "H"],
     "required_independent_reviewers_per_response": 2,
     "blind_identity_required_until_adjudication": true,
+    "response_text_identity_leakage_forbidden": true,
     "adjudication_required_for_disagreement": true,
     "unseen_repository_split_required": true,
     "source_span_exactness_separate_score": true,
@@ -29,7 +30,7 @@
     },
     {
       "requirement_id": "blind-identity",
-      "required_evidence": "blind identities preserved until scoring and adjudication finish"
+      "required_evidence": "blind identities preserved until scoring and adjudication finish, including no model/run identity tokens in response text"
     },
     {
       "requirement_id": "two-independent-reviewers",

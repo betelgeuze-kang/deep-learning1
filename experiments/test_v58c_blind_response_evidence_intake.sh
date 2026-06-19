@@ -267,6 +267,7 @@ expected = {
     "supplied_resource_rows": "0",
     "resource_rows_ready": "0",
     "same_corpus_context_budget_ready": "0",
+    "response_text_identity_leakage_guard_ready": "1",
     "latency_memory_quality_separate_ready": "0",
     "required_blind_response_rows": "3500",
     "pm_actual_required_system_rows": "7",
@@ -425,8 +426,10 @@ for snippet in [
     "query_split_ready=0",
     "resource_rows_ready=0",
     "same_corpus_context_budget_ready=0",
+    "response_text_identity_leakage_guard_ready=1",
     "latency_memory_quality_separate_ready=0",
     "human_blind_review_ready=0",
+    "response text must not reveal model/run identity tokens",
     "Do not publish blind-eval wins",
 ]:
     if snippet not in boundary:

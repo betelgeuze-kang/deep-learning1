@@ -2986,6 +2986,7 @@ def verify_v58_blind_eval(
         errors.append(f"{path}: policy.required_independent_reviewers_per_response must be 2")
     for field in [
         "blind_identity_required_until_adjudication",
+        "response_text_identity_leakage_forbidden",
         "adjudication_required_for_disagreement",
         "unseen_repository_split_required",
         "source_span_exactness_separate_score",

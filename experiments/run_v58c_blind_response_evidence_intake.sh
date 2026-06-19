@@ -290,6 +290,15 @@ def sha256_text(text):
     return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def normalized_identity_tokens(*values):
+    tokens = set()
+    for value in values:
+        token = str(value or "").strip()
+        if token and len(token) >= 3:
+            tokens.add(token.lower())
+    return tokens
+
+
 def write_csv(path, fieldnames, rows):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -539,6 +548,18 @@ if identity_supplied_rows:
         if len(values) != 1:
             errors.append(f"same-{field}-mismatch")
 
+if supplied_rows and identity_supplied_rows:
+    identity_by_blind = {row.get("blind_system_id", ""): row for row in identity_supplied_rows}
+    for row in supplied_rows:
+        response_text = row.get("response_text", "").lower()
+        identity = identity_by_blind.get(row.get("blind_system_id", ""), {})
+        leaked_tokens = normalized_identity_tokens(
+            row.get("model_run_id", ""),
+            identity.get("model_or_architecture_id", ""),
+        )
+        if response_text and any(token in response_text for token in leaked_tokens):
+            errors.append("response-text-identity-leakage")
+
 if query_split_rows:
     query_ids = [row.get("query_id", row.get("blind_eval_id", "")) for row in query_split_rows]
     query_id_set = set(query_ids)
@@ -652,6 +673,7 @@ pm_actual_template_gap_rows = sum(1 for row in actual_matrix_rows if row["templa
 query_split_ready = int(len(query_split_rows) == 500 and not any(error.startswith(("query-split", "missing-query-split", "extra-query-split", "duplicate-query-split")) for error in errors))
 resource_rows_ready = int(len(resource_rows) == len(supplied_rows) and bool(supplied_rows) and not any(error.startswith(("resource", "missing-resource", "extra-resource", "duplicate-resource")) for error in errors))
 same_corpus_context_budget_ready = int(bool(identity_supplied_rows) and not any(error.startswith(("same-", "corpus-id", "context_budget", "retrieval_budget", "prompt_template_sha256", "source_manifest_sha256")) for error in errors))
+response_text_identity_leakage_guard_ready = int(not any(error == "response-text-identity-leakage" for error in errors))
 latency_memory_quality_separate_ready = int(
     bool(supplied_rows)
     and bool(resource_rows)
@@ -671,6 +693,7 @@ evidence_ready = int(
     and query_split_ready
     and resource_rows_ready
     and same_corpus_context_budget_ready
+    and response_text_identity_leakage_guard_ready
     and latency_memory_quality_separate_ready
     and not errors
 )
@@ -686,6 +709,7 @@ summary = {
     "supplied_resource_rows": len(resource_rows),
     "resource_rows_ready": resource_rows_ready,
     "same_corpus_context_budget_ready": same_corpus_context_budget_ready,
+    "response_text_identity_leakage_guard_ready": response_text_identity_leakage_guard_ready,
     "latency_memory_quality_separate_ready": latency_memory_quality_separate_ready,
     "required_blind_response_rows": 3500,
     "pm_actual_required_system_rows": len(actual_matrix_rows),
@@ -726,6 +750,7 @@ decision_rows = [
     ("pm-required-c-blind-response-row", "pass" if next(row for row in actual_matrix_rows if row["source_system_id"] == "C")["actual_response_ready"] == "1" else "blocked", "C rows ready" if next(row for row in actual_matrix_rows if row["source_system_id"] == "C")["actual_response_ready"] == "1" else "PM-required C blind responses missing or not template-bound"),
     ("pm-required-all-a-b-c-d-e-g-h-response-rows", "pass" if pm_actual_ready else "blocked", "A/B/C/D/E/G/H rows ready" if pm_actual_ready else "PM-required A/B/C/D/E/G/H actual blind response matrix is incomplete"),
     ("100b-plus-blind-response-row", "pass" if optional_f_ready else "blocked", "F rows ready" if optional_f_ready else "100B+ hosted/API blind responses missing or deferred"),
+    ("response-text-identity-leakage", "pass" if response_text_identity_leakage_guard_ready else "blocked", "response text does not reveal model/run identity" if response_text_identity_leakage_guard_ready else "response text reveals model/run identity"),
     ("blind-response-absorb-ready", "pass" if evidence_ready else "blocked", "PM-required A/B/C/D/E/G/H blind responses validate" if evidence_ready else "PM-required A/B/C/D/E/G/H blind response rows are not supplied/valid"),
     ("human-blind-review", "blocked", "human blind review rows are not supplied"),
     ("v58-full-blind-eval", "blocked", "response rows alone do not include human blind review/adjudication"),
@@ -749,6 +774,7 @@ write_csv(run_dir / "blind_response_intake_gate_rows.csv", ["gate", "status", "r
     f"- supplied_resource_rows={len(resource_rows)}\n"
     f"- resource_rows_ready={resource_rows_ready}\n"
     f"- same_corpus_context_budget_ready={same_corpus_context_budget_ready}\n"
+    f"- response_text_identity_leakage_guard_ready={response_text_identity_leakage_guard_ready}\n"
     f"- latency_memory_quality_separate_ready={latency_memory_quality_separate_ready}\n"
     f"- required_blind_response_ready={int(evidence_ready)}\n"
     "- human_blind_review_ready=0\n"
@@ -759,6 +785,7 @@ write_csv(run_dir / "blind_response_intake_gate_rows.csv", ["gate", "status", "r
     "- query split, resource side-table, and same corpus/context/retrieval budget evidence\n"
     "- optional F response rows or final deferral\n"
     "- human blind review and adjudication\n\n"
+    "Blind identities stay sealed until review/adjudication; response text must not reveal model/run identity tokens.\n\n"
     "Do not publish blind-eval wins or 30B-150B comparison claims from response intake alone.\n",
     encoding="utf-8",
 )
@@ -775,6 +802,7 @@ manifest = {
     "supplied_resource_rows": len(resource_rows),
     "resource_rows_ready": resource_rows_ready,
     "same_corpus_context_budget_ready": same_corpus_context_budget_ready,
+    "response_text_identity_leakage_guard_ready": response_text_identity_leakage_guard_ready,
     "latency_memory_quality_separate_ready": latency_memory_quality_separate_ready,
     "required_blind_response_ready": int(evidence_ready),
     "pm_actual_required_system_rows": len(actual_matrix_rows),
