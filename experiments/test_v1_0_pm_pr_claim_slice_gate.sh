@@ -73,10 +73,10 @@ expected = {
     "h10_real_label_acceptance_evidence_ready_rows": "6",
     "h10_real_label_acceptance_evidence_promotion_ready_rows": "0",
     "h10_real_label_acceptance_evidence_tests_only_rows": "0",
-    "pm_pr_slice_file_rows": "55",
-    "pm_pr_slice_file_existing_rows": "55",
+    "pm_pr_slice_file_rows": "56",
+    "pm_pr_slice_file_existing_rows": "56",
     "pm_pr_slices_with_file_rows": "13",
-    "pm_pr_slice_verification_rows": "21",
+    "pm_pr_slice_verification_rows": "22",
     "pm_pr_slices_with_verification_rows": "13",
     "pm_pr_claim_boundary_rows": "13",
     "pm_pr_claim_boundary_pass_rows": "13",
@@ -574,8 +574,8 @@ else:
         raise SystemExit("PM v60 release blocker should disclose absent v60 summary when no v60 evidence exists")
 
 file_rows = read_csv(run_dir / "pm_pr_slice_file_rows.csv")
-if len(file_rows) != 55:
-    raise SystemExit("PM PR file ledger should have 55 rows")
+if len(file_rows) != 56:
+    raise SystemExit("PM PR file ledger should have 56 rows")
 if len({row["slice_id"] for row in file_rows}) != 13:
     raise SystemExit("PM PR file ledger should cover all thirteen slices")
 if any(row["exists"] != "1" for row in file_rows):
@@ -591,6 +591,7 @@ for key in [
     ("v54-routehint-generation-contract", "experiments/run_v54c_complete_source_grounded_generation_1000.sh"),
     ("v56-ruler-longbench-expanded", "experiments/run_v56b_ruler_longbench_expanded_scale.sh"),
     ("v59-one-command-demo", "examples/v1_0_architecture_challenge_pm_foundation_demo.sh"),
+    ("v61-ssd-moe-runtime-roadmap", "v61/one_token_path.json"),
     ("operator-review-return-workflow", "operations/review_return_workflow.json"),
     ("docs-readme-pr2-cleanup", "docs/PR2_REWRITE_DRAFT.md"),
 ]:
@@ -598,8 +599,8 @@ for key in [
         raise SystemExit(f"PM PR file ledger missing {key}")
 
 verification_rows = read_csv(run_dir / "pm_pr_slice_verification_rows.csv")
-if len(verification_rows) != 21:
-    raise SystemExit("PM PR verification ledger should have 21 rows")
+if len(verification_rows) != 22:
+    raise SystemExit("PM PR verification ledger should have 22 rows")
 if len({row["slice_id"] for row in verification_rows}) != 13:
     raise SystemExit("PM PR verification ledger should cover all thirteen slices")
 verification_key = {(row["slice_id"], row["command"]): row for row in verification_rows}
@@ -609,12 +610,15 @@ for key in [
     ("v54-routehint-generation-contract", "experiments/test_v54c_complete_source_grounded_generation_1000.sh"),
     ("v56-ruler-longbench-expanded", "experiments/test_v56b_ruler_longbench_expanded_scale.sh"),
     ("v59-one-command-demo", "experiments/test_v59e_one_command_pm_foundation_demo.sh"),
+    ("v61-ssd-moe-runtime-roadmap", "tools/verify_artifact.py v61-one-token v61/one_token_path.json --v61aa-summary results/v61aa_hotset_tensor_slice_verifier_summary.csv --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv"),
     ("docs-readme-pr2-cleanup", "tools/verify_artifact.py pr-split pr_slices/pr2.json"),
 ]:
     if key not in verification_key:
         raise SystemExit(f"PM PR verification ledger missing {key}")
 if verification_key[("v58-blind-eval-contract", "experiments/test_v58c_blind_response_evidence_intake.sh")]["execution_policy"] != "defer-until-real-response-evidence":
     raise SystemExit("v58 real response intake should be marked deferred until real evidence exists")
+if "milestones 1-6" not in verification_key[("v61-ssd-moe-runtime-roadmap", "tools/verify_artifact.py v61-one-token v61/one_token_path.json --v61aa-summary results/v61aa_hotset_tensor_slice_verifier_summary.csv --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv")]["purpose"]:
+    raise SystemExit("v61 verification row should bind the one-token milestones 1-6 runtime claim blocker")
 
 review_packet_rows = read_csv(run_dir / "pm_pr_review_packet_rows.csv")
 if len(review_packet_rows) != 13:
@@ -1521,7 +1525,7 @@ if manifest.get("h10_real_label_acceptance_evidence_source_verified_blocked_rows
     raise SystemExit("PM PR manifest should keep h10 source-verified eval blocked")
 if "h10_real_label_acceptance_evidence_rows_sha256" not in manifest:
     raise SystemExit("PM PR manifest should hash-bind h10 acceptance evidence rows")
-if manifest.get("pm_pr_slice_file_rows") != 55 or manifest.get("pm_pr_slice_verification_rows") != 21:
+if manifest.get("pm_pr_slice_file_rows") != 56 or manifest.get("pm_pr_slice_verification_rows") != 22:
     raise SystemExit("PM PR manifest file/verification ledger mismatch")
 if manifest.get("pm_pr_claim_boundary_rows") != 13 or manifest.get("pm_pr_claim_boundary_pass_rows") != 13:
     raise SystemExit("PM PR manifest claim boundary ledger mismatch")
@@ -1704,8 +1708,8 @@ for snippet in [
     "h10_real_label_acceptance_evidence_zero_accepted_rows=6",
     "h10_real_label_acceptance_evidence_coverage_blocked_rows=6",
     "h10_real_label_acceptance_evidence_source_verified_blocked_rows=6",
-    "pm_pr_slice_file_rows=55",
-    "pm_pr_slice_verification_rows=21",
+    "pm_pr_slice_file_rows=56",
+    "pm_pr_slice_verification_rows=22",
     "pm_pr_claim_boundary_rows=13",
     "pm_pr_review_packet_rows=13",
     "pm_pr_review_packet_files=13",
