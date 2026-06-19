@@ -10,6 +10,14 @@ Allowed system surface:
 natural language question + searchable corpus
 ```
 
+The only model/retriever-visible field names allowed by policy are:
+
+- `sanitized_question`
+- `opaque_routehint`
+
+Each model/retriever stage must use a subset of that policy allowlist. Non-model
+source-bound replay surfaces must declare `allowed_model_visible_fields=["none"]`.
+
 Forbidden model/retriever inputs:
 
 - source span ID
@@ -38,6 +46,10 @@ Current stage expectations:
 - v53ap source-span replay is a source-bound non-model adapter surface; it has
   no model/retriever-visible input surface and cannot support public comparison
   or performance claims.
+  It may report `actual_adapter_execution_ready=1` for deterministic
+  source-bound replay, but must keep `allowed_model_visible_fields=["none"]`,
+  `real_system_performance_claim_ready=0`, and
+  `public_comparison_claim_ready=0`.
 - v53aq adapter selection sees only `sanitized_question`, and its
   `selection_forbidden_fields` summary must cover every forbidden alias in this
   contract.

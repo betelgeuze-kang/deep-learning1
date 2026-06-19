@@ -8,9 +8,14 @@
     "schema_version": {"type": "string"},
     "policy": {
       "type": "object",
-      "required": ["allowed_surface", "direct_query_source_binding_forbidden"],
+      "required": ["allowed_surface", "allowed_model_visible_fields", "direct_query_source_binding_forbidden"],
       "properties": {
         "allowed_surface": {"type": "string"},
+        "allowed_model_visible_fields": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        },
         "direct_query_source_binding_forbidden": {"type": "boolean"}
       },
       "additionalProperties": false
@@ -33,10 +38,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["stage_id", "summary_path", "allowed_model_visible_fields", "must_equal"],
+        "required": ["stage_id", "surface_kind", "summary_path", "allowed_model_visible_fields", "must_equal"],
         "properties": {
           "stage_id": {"type": "string"},
-          "surface_kind": {"type": "string"},
+          "surface_kind": {
+            "type": "string",
+            "enum": ["model_or_retriever", "fixture_or_evaluator_replay", "source_bound_non_model_adapter"]
+          },
           "summary_path": {"type": "string"},
           "allowed_model_visible_fields": {"type": "array", "items": {"type": "string"}},
           "forbidden_field_summary": {"type": "string"},

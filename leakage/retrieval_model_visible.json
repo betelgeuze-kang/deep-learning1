@@ -2,6 +2,7 @@
   "schema_version": "leakage_contract.v1",
   "policy": {
     "allowed_surface": "natural_language_question_plus_searchable_corpus",
+    "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
     "direct_query_source_binding_forbidden": true
   },
   "forbidden_surfaces": [

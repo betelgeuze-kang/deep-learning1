@@ -56,6 +56,11 @@ REQUIRED_LEAKAGE_KEYS = {
     "forbidden_surfaces",
     "stage_contracts",
 }
+REQUIRED_LEAKAGE_POLICY_KEYS = {
+    "allowed_surface",
+    "allowed_model_visible_fields",
+    "direct_query_source_binding_forbidden",
+}
 REQUIRED_LEAKAGE_SURFACE_KEYS = {
     "guard_id",
     "forbidden_surface",
@@ -64,9 +69,13 @@ REQUIRED_LEAKAGE_SURFACE_KEYS = {
 }
 REQUIRED_LEAKAGE_STAGE_KEYS = {
     "stage_id",
+    "surface_kind",
     "summary_path",
     "allowed_model_visible_fields",
     "must_equal",
+}
+OPTIONAL_LEAKAGE_STAGE_KEYS = {
+    "forbidden_field_summary",
 }
 REQUIRED_BASELINE_ADMISSION_KEYS = {
     "schema_version",
@@ -273,6 +282,10 @@ FORBIDDEN_MODEL_VISIBLE_FIELDS = {
     "negative_or_abstain",
     "audit_type",
     "expected_label",
+}
+ALLOWED_MODEL_VISIBLE_FIELDS = {
+    "sanitized_question",
+    "opaque_routehint",
 }
 REQUIRED_DE_REAL_EVIDENCE_FIELDS = {
     "model_repository_exact_revision",
@@ -970,11 +983,22 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
     if missing:
         errors.append(f"{path}: missing leakage keys: {', '.join(sorted(missing))}")
         return errors
+    extra = set(data) - REQUIRED_LEAKAGE_KEYS
+    if extra:
+        errors.append(f"{path}: unknown leakage keys: {', '.join(sorted(extra))}")
     if data["schema_version"] != "leakage_contract.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
+    missing_policy = REQUIRED_LEAKAGE_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
+    extra_policy = set(policy) - REQUIRED_LEAKAGE_POLICY_KEYS
+    if extra_policy:
+        errors.append(f"{path}: policy unknown keys: {', '.join(sorted(extra_policy))}")
     if policy.get("allowed_surface") != "natural_language_question_plus_searchable_corpus":
         errors.append(f"{path}: allowed_surface must be natural_language_question_plus_searchable_corpus")
+    if set(policy.get("allowed_model_visible_fields", [])) != ALLOWED_MODEL_VISIBLE_FIELDS:
+        errors.append(f"{path}: policy.allowed_model_visible_fields must be exactly {', '.join(sorted(ALLOWED_MODEL_VISIBLE_FIELDS))}")
     if policy.get("direct_query_source_binding_forbidden") is not True:
         errors.append(f"{path}: direct_query_source_binding_forbidden must be true")
 
@@ -993,15 +1017,22 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
         missing_row = REQUIRED_LEAKAGE_SURFACE_KEYS - set(row)
         if missing_row:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
+        extra_row = set(row) - REQUIRED_LEAKAGE_SURFACE_KEYS
+        if extra_row:
+            errors.append(f"{prefix}: unknown keys: {', '.join(sorted(extra_row))}")
         if row.get("evaluator_only_or_absent") is not True:
             errors.append(f"{prefix}: evaluator_only_or_absent must be true")
         fields = row.get("field_names", [])
         if not isinstance(fields, list) or not fields:
             errors.append(f"{prefix}: field_names must be a non-empty list")
         declared_forbidden_fields.update(str(field) for field in fields)
-    if not FORBIDDEN_MODEL_VISIBLE_FIELDS.issubset(declared_forbidden_fields):
+    if declared_forbidden_fields != FORBIDDEN_MODEL_VISIBLE_FIELDS:
         missing_fields = FORBIDDEN_MODEL_VISIBLE_FIELDS - declared_forbidden_fields
-        errors.append(f"{path}: missing forbidden field coverage: {', '.join(sorted(missing_fields))}")
+        extra_fields = declared_forbidden_fields - FORBIDDEN_MODEL_VISIBLE_FIELDS
+        if missing_fields:
+            errors.append(f"{path}: missing forbidden field coverage: {', '.join(sorted(missing_fields))}")
+        if extra_fields:
+            errors.append(f"{path}: forbidden field coverage has undeclared verifier aliases: {', '.join(sorted(extra_fields))}")
 
     stages = data["stage_contracts"]
     if not isinstance(stages, list) or not stages:
@@ -1015,6 +1046,9 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
         missing_stage = REQUIRED_LEAKAGE_STAGE_KEYS - set(stage)
         if missing_stage:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_stage))}")
+        extra_stage = set(stage) - REQUIRED_LEAKAGE_STAGE_KEYS - OPTIONAL_LEAKAGE_STAGE_KEYS
+        if extra_stage:
+            errors.append(f"{prefix}: unknown keys: {', '.join(sorted(extra_stage))}")
         surface_kind = stage.get("surface_kind", "model_or_retriever")
         if surface_kind not in {"model_or_retriever", "fixture_or_evaluator_replay", "source_bound_non_model_adapter"}:
             errors.append(f"{prefix}: unsupported surface_kind={surface_kind}")
@@ -1024,6 +1058,11 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
         leaked = set(allowed) & FORBIDDEN_MODEL_VISIBLE_FIELDS
         if leaked:
             errors.append(f"{prefix}: allowed_model_visible_fields contains forbidden field(s): {', '.join(sorted(leaked))}")
+        unknown_allowed = set(allowed) - ALLOWED_MODEL_VISIBLE_FIELDS - {"none"}
+        if unknown_allowed:
+            errors.append(f"{prefix}: allowed_model_visible_fields outside policy allowlist: {', '.join(sorted(unknown_allowed))}")
+        if surface_kind == "model_or_retriever" and not set(allowed).issubset(ALLOWED_MODEL_VISIBLE_FIELDS):
+            errors.append(f"{prefix}: model_or_retriever stages must use only policy.allowed_model_visible_fields")
         if surface_kind in {"fixture_or_evaluator_replay", "source_bound_non_model_adapter"} and allowed != ["none"]:
             errors.append(f"{prefix}: non-model-visible stages must use allowed_model_visible_fields=['none']")
         must_equal = stage.get("must_equal", {})
