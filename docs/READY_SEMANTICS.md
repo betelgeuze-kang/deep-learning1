@@ -22,6 +22,23 @@ The source-controlled contract is `readiness/typed_ready.json`. Verify it with:
 tools/verify_artifact.py typed-readiness readiness/typed_ready.json
 ```
 
+`readiness/typed_ready.json` also owns the complete ambiguous-ready denylist.
+Every misleading flag in that list must have at least one typed replacement row,
+and every row's `misleading_ready_flag` must be in the list:
+
+- `100b_moe_run_ready`
+- `h10_real_label_promotion_ready`
+- `pr2_ready`
+- `review_return_ready`
+- `v53_ready`
+- `v58_ready`
+- `v59_ready`
+- `v60_ready`
+
+Adding a new bare `*_ready` claim boundary requires adding it to
+`policy.ambiguous_ready_flags` and adding a row that spells out all seven typed
+readiness fields.
+
 When the PM ledger exists, compare the source-controlled contract against the
 generated rows with:
 

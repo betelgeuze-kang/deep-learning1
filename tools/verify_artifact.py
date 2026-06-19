@@ -235,6 +235,8 @@ AMBIGUOUS_READY_FLAGS = {
     "v59_ready",
     "v60_ready",
     "h10_real_label_promotion_ready",
+    "review_return_ready",
+    "pr2_ready",
 }
 EXPECTED_LEAKAGE_GUARD_IDS = [
     "source-span-id",
@@ -873,6 +875,8 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
         errors.append(f"{path}: policy.forbid_ambiguous_ready_claims must be true")
     if set(policy.get("typed_fields", [])) != TYPED_READINESS_KEYS:
         errors.append(f"{path}: policy.typed_fields must be exactly {', '.join(sorted(TYPED_READINESS_KEYS))}")
+    if set(policy.get("ambiguous_ready_flags", [])) != AMBIGUOUS_READY_FLAGS:
+        errors.append(f"{path}: policy.ambiguous_ready_flags must be exactly {', '.join(sorted(AMBIGUOUS_READY_FLAGS))}")
     rows = data["rows"]
     if not isinstance(rows, list) or not rows:
         errors.append(f"{path}: rows must be a non-empty list")
@@ -884,6 +888,9 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
     if len(replacements) != len(set(replacements)):
         errors.append(f"{path}: duplicate replacement_flag values are forbidden")
     replacement_set = set(replacements)
+    misleading_set = {row.get("misleading_ready_flag", "") for row in rows}
+    if misleading_set != AMBIGUOUS_READY_FLAGS:
+        errors.append(f"{path}: rows must cover exactly the ambiguous ready flags: {', '.join(sorted(AMBIGUOUS_READY_FLAGS))}")
     if "logical_100b_contract_fixture_ready" not in replacement_set:
         errors.append(f"{path}: logical_100b_contract_fixture_ready replacement row is required")
     if "real_100b_inference_ready" not in replacement_set:
@@ -901,6 +908,8 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
         replacement = row.get("replacement_flag", "")
         if not misleading or not replacement:
             errors.append(f"{prefix}: misleading_ready_flag and replacement_flag must be non-empty")
+        if misleading not in AMBIGUOUS_READY_FLAGS:
+            errors.append(f"{prefix}: misleading_ready_flag must be declared in policy.ambiguous_ready_flags")
         if misleading == replacement:
             errors.append(f"{prefix}: replacement_flag must differ from misleading_ready_flag")
         if replacement in AMBIGUOUS_READY_FLAGS:
