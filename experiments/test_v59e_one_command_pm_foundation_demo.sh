@@ -474,9 +474,13 @@ if len(leakage_rows) != 7:
 if any(row["status"] != "pass" or row["adapter_selection_blocked"] != "1" for row in leakage_rows):
     raise SystemExit("v59e PM sidecar should keep oracle metadata blocked from adapter selection")
 leakage_by_guard = {row["guard_id"]: row for row in leakage_rows}
-if set(leakage_by_guard["source-path"]["field_names"].split(";")) != {"source_path", "source_file_path", "path"}:
+if set(leakage_by_guard["source-path"]["field_names"].split(";")) != {"source_path", "source_file_path", "file_path", "repo_path", "path"}:
     raise SystemExit("v59e PM sidecar should preserve source path alias leakage coverage")
-if set(leakage_by_guard["expected-behavior"]["field_names"].split(";")) != {"expected_behavior", "expected_answer", "expected_answer_sha256", "expected_output", "gold_answer"}:
+if set(leakage_by_guard["source-file-hash"]["field_names"].split(";")) != {"source_file_hash", "source_file_sha256", "source_sha256", "file_sha256", "content_sha256", "sha256", "blob_sha256", "git_blob_sha", "source_git_blob_sha"}:
+    raise SystemExit("v59e PM sidecar should preserve source hash alias leakage coverage")
+if set(leakage_by_guard["query-source-direct-binding"]["field_names"].split(";")) != {"query_id", "case_id", "source_row_id", "source_case_id", "source_query_id", "query_source_id", "source_binding_id"}:
+    raise SystemExit("v59e PM sidecar should preserve direct binding alias leakage coverage")
+if set(leakage_by_guard["expected-behavior"]["field_names"].split(";")) != {"expected_behavior", "expected_answer", "expected_answer_sha256", "expected_citation", "expected_output", "gold_answer", "gold_citation"}:
     raise SystemExit("v59e PM sidecar should preserve expected-behavior alias leakage coverage")
 v58_real_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/v58_real_execution_readiness_rows.csv")
 if len(v58_real_rows) != 9:

@@ -20,7 +20,7 @@ run_dir = Path(sys.argv[1])
 summary_csv = Path(sys.argv[2])
 decision_csv = Path(sys.argv[3])
 SYSTEMS = {"A", "B", "G", "H"}
-FORBIDDEN_SELECTION_FIELDS = "query_id,source_row_id,source_query_id,query_source_id,source_binding_id,expected_answer,expected_answer_sha256,expected_behavior,expected_output,gold_answer,source_span_id,span_id,source_path,source_file_path,path,source_line_start,source_line_end,line_start,line_end,source_file_hash,source_file_sha256,source_git_blob_sha,audit_type,expected_label,negative_or_abstain"
+FORBIDDEN_SELECTION_FIELDS = "query_id,case_id,source_row_id,source_case_id,source_query_id,query_source_id,source_binding_id,expected_answer,expected_answer_sha256,expected_citation,expected_behavior,expected_output,gold_answer,gold_citation,source_span_id,span_id,source_span_row_id,span_row_id,source_path,source_file_path,file_path,repo_path,path,source_line,source_line_start,source_line_end,line,start_line,end_line,line_start,line_end,source_file_hash,source_file_sha256,source_sha256,file_sha256,content_sha256,sha256,blob_sha256,git_blob_sha,source_git_blob_sha,audit_type,expected_label,gold_label,target_label,negative_or_abstain"
 
 
 def sha256(path):

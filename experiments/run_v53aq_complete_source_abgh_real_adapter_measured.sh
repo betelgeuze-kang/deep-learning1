@@ -18,7 +18,8 @@ if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/s
   && grep -q 'internal_prebaseline_contract_rows=4' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'internal_real_adapter_metric_claim_ready=1' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'public_real_system_performance_claim_ready=0' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
-  && grep -q 'selection_forbidden_fields=query_id,expected_answer,expected_answer_sha256,source_span_id,source_path,source_line_start,source_line_end' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"; then
+  && grep -q 'selection_forbidden_fields=query_id,case_id,source_row_id' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
+  && grep -q 'source_sha256,file_sha256,content_sha256,sha256' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"; then
   echo "v53aq_complete_source_abgh_real_adapter_measured_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -58,29 +59,49 @@ SYSTEMS = [
 
 FORBIDDEN_SELECTION_FIELDS = [
     "query_id",
+    "case_id",
     "source_row_id",
+    "source_case_id",
     "source_query_id",
     "query_source_id",
     "source_binding_id",
     "expected_answer",
     "expected_answer_sha256",
+    "expected_citation",
     "expected_behavior",
     "expected_output",
     "gold_answer",
+    "gold_citation",
     "source_span_id",
     "span_id",
+    "source_span_row_id",
+    "span_row_id",
     "source_path",
     "source_file_path",
+    "file_path",
+    "repo_path",
     "path",
+    "source_line",
     "source_line_start",
     "source_line_end",
+    "line",
+    "start_line",
+    "end_line",
     "line_start",
     "line_end",
     "source_file_hash",
     "source_file_sha256",
+    "source_sha256",
+    "file_sha256",
+    "content_sha256",
+    "sha256",
+    "blob_sha256",
+    "git_blob_sha",
     "source_git_blob_sha",
     "audit_type",
     "expected_label",
+    "gold_label",
+    "target_label",
     "negative_or_abstain",
 ]
 

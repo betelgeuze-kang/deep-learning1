@@ -57,5 +57,9 @@ Current stage expectations:
 - evaluator-only fields stay available for scoring, not for retrieval or generation.
 
 Common aliases for direct source binding are forbidden as well, including
-`span_id`, `source_file_path`, `source_row_id`, `source_query_id`,
-`query_source_id`, `source_binding_id`, `expected_output`, and `gold_answer`.
+`span_id`, `source_span_row_id`, `source_file_path`, `file_path`, `repo_path`,
+bare `line`, `start_line`, `end_line`, bare `sha256`, `source_sha256`,
+`file_sha256`, `case_id`, `source_case_id`, `source_row_id`,
+`source_query_id`, `query_source_id`, `source_binding_id`,
+`expected_citation`, `expected_output`, `gold_answer`, `gold_citation`,
+`gold_label`, and `target_label`.
