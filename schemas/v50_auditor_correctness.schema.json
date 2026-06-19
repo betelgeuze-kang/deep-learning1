@@ -3,7 +3,7 @@
   "$id": "https://local.discrete-local-energy/schemas/v50_auditor_correctness.schema.json",
   "title": "v50 Auditor Correctness Contract",
   "type": "object",
-  "required": ["schema_version", "policy", "required_artifacts", "claim_boundaries"],
+  "required": ["schema_version", "policy", "replay_commands", "required_artifacts", "claim_boundaries"],
   "properties": {
     "schema_version": {"type": "string"},
     "policy": {
@@ -24,14 +24,40 @@
       },
       "additionalProperties": false
     },
+    "replay_commands": {
+      "type": "object",
+      "required": ["runner", "smoke_test", "artifact_verifier"],
+      "properties": {
+        "runner": {"type": "string"},
+        "smoke_test": {"type": "string"},
+        "artifact_verifier": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
     "required_artifacts": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["artifact_id", "path", "required_for_merge"],
+        "required": [
+          "artifact_id",
+          "artifact_kind",
+          "path",
+          "required_columns",
+          "min_rows",
+          "sha256_manifest_required",
+          "required_for_merge"
+        ],
         "properties": {
           "artifact_id": {"type": "string"},
+          "artifact_kind": {"type": "string"},
           "path": {"type": "string"},
+          "required_columns": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1
+          },
+          "min_rows": {"type": "integer", "minimum": 1},
+          "sha256_manifest_required": {"type": "boolean"},
           "required_for_merge": {"type": "boolean"}
         },
         "additionalProperties": false

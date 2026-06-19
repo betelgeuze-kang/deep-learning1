@@ -104,13 +104,23 @@ REQUIRED_V52_REQUIREMENT_KEYS = {
 REQUIRED_V50_AUDITOR_KEYS = {
     "schema_version",
     "policy",
+    "replay_commands",
     "required_artifacts",
     "claim_boundaries",
 }
 REQUIRED_V50_ARTIFACT_KEYS = {
     "artifact_id",
+    "artifact_kind",
     "path",
+    "required_columns",
+    "min_rows",
+    "sha256_manifest_required",
     "required_for_merge",
+}
+REQUIRED_V50_REPLAY_COMMAND_KEYS = {
+    "runner",
+    "smoke_test",
+    "artifact_verifier",
 }
 REQUIRED_V50_BOUNDARY_KEYS = {
     "claim_id",
@@ -347,6 +357,115 @@ EXPECTED_V50_ARTIFACT_IDS = [
     "commercial-return-audit-trail",
     "sha256-manifest",
 ]
+EXPECTED_V50_ARTIFACT_COLUMNS = {
+    "source-snapshot-rows": [
+        "repo_id",
+        "owner_repo",
+        "repo_url",
+        "requested_ref",
+        "head_sha",
+        "ref_pinned",
+        "file_path",
+        "artifact_path",
+        "sha256",
+        "bytes",
+        "line_count",
+        "public_repo_snapshot",
+    ],
+    "audit-case-rows": [
+        "case_id",
+        "repo_id",
+        "owner_repo",
+        "repo_url",
+        "head_sha",
+        "audit_type",
+        "detector_method",
+        "primary_observed",
+        "secondary_observed",
+        "expected_label",
+        "predicted_label",
+        "correct",
+        "finding",
+        "primary_path",
+        "primary_sha256",
+        "primary_line",
+        "secondary_path",
+        "secondary_sha256",
+        "secondary_line",
+        "source_spans_ready",
+        "not_upstream_defect_claim",
+    ],
+    "source-span-rows": [
+        "case_id",
+        "repo_id",
+        "kind",
+        "path",
+        "sha256",
+        "line",
+        "text",
+    ],
+    "guard-negative-rows": [
+        "negative_case_id",
+        "guard",
+        "expected_block",
+        "blocked",
+        "wrong_answer_guard_pass",
+        "citation_accuracy_pass",
+        "abstain_behavior_pass",
+        "reason",
+    ],
+    "commercial-return-query-set": [
+        "query_id",
+        "question",
+        "expected_behavior",
+        "source_path",
+        "source_sha256",
+        "source_line",
+    ],
+    "commercial-return-poc-results": [
+        "query_id",
+        "answer",
+        "citation_path",
+        "citation_sha256",
+        "citation_line",
+        "citation_text",
+        "secondary_citation_path",
+        "secondary_citation_sha256",
+        "secondary_citation_line",
+        "secondary_citation_text",
+        "wrong_answer_guard_pass",
+        "citation_accuracy_pass",
+        "abstain_behavior_pass",
+        "query_to_evidence_latency_ready",
+        "latency_ms",
+        "route_memory_lineage_bound",
+        "mmap_or_exact_span_bound",
+        "audit_trail_bound",
+    ],
+    "commercial-return-audit-trail": [
+        "event_id",
+        "query_id",
+        "event",
+        "repo_id",
+        "verifier_decision",
+        "status",
+    ],
+    "sha256-manifest": [
+        "path",
+        "sha256",
+        "bytes",
+    ],
+}
+EXPECTED_V50_MIN_ROWS = {
+    "source-snapshot-rows": 9,
+    "audit-case-rows": 9,
+    "source-span-rows": 18,
+    "guard-negative-rows": 3,
+    "commercial-return-query-set": 9,
+    "commercial-return-poc-results": 9,
+    "commercial-return-audit-trail": 9,
+    "sha256-manifest": 7,
+}
 EXPECTED_V50_DECISION_GATES = [
     "v50-public-repo-auditor-3repo",
     "public-repo-count",
@@ -1183,6 +1302,20 @@ def verify_v50_auditor_correctness(
     if policy.get("network_required_to_regenerate") is not True:
         errors.append(f"{path}: network_required_to_regenerate must be true for the current v50 runner")
 
+    replay = data["replay_commands"]
+    missing_replay = REQUIRED_V50_REPLAY_COMMAND_KEYS - set(replay)
+    if missing_replay:
+        errors.append(f"{path}: replay_commands missing keys: {', '.join(sorted(missing_replay))}")
+    else:
+        for field in ["runner", "smoke_test"]:
+            command_path = Path(replay[field])
+            if not command_path.is_file():
+                errors.append(f"{path}: replay_commands.{field} missing file: {command_path}")
+            elif (command_path.stat().st_mode & 0o111) == 0:
+                errors.append(f"{path}: replay_commands.{field} must be executable: {command_path}")
+        if not replay["artifact_verifier"].startswith("tools/verify_artifact.py v50-auditor-correctness "):
+            errors.append(f"{path}: replay_commands.artifact_verifier must call v50-auditor-correctness")
+
     artifacts = data["required_artifacts"]
     if not isinstance(artifacts, list) or not artifacts:
         errors.append(f"{path}: required_artifacts must be a non-empty list")
@@ -1193,18 +1326,68 @@ def verify_v50_auditor_correctness(
     if len(artifact_ids) != len(set(artifact_ids)):
         errors.append(f"{path}: duplicate artifact_id values are forbidden")
     missing_required_artifacts = []
+    sha_manifest_path: Path | None = None
     for index, row in enumerate(artifacts, start=1):
         prefix = f"{path}: required_artifact[{index}]"
         missing_row = REQUIRED_V50_ARTIFACT_KEYS - set(row)
         if missing_row:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
+        artifact_id = row.get("artifact_id", "")
+        if row.get("artifact_kind") != "csv":
+            errors.append(f"{prefix}: artifact_kind must be csv")
+        expected_columns = EXPECTED_V50_ARTIFACT_COLUMNS.get(artifact_id)
+        required_columns = row.get("required_columns", [])
+        if not isinstance(required_columns, list) or not required_columns:
+            errors.append(f"{prefix}: required_columns must be a non-empty list")
+        elif expected_columns is not None and required_columns != expected_columns:
+            errors.append(f"{prefix}: required_columns must exactly match the v50 runner header")
+        min_rows = row.get("min_rows")
+        expected_min_rows = EXPECTED_V50_MIN_ROWS.get(artifact_id)
+        if not isinstance(min_rows, int) or min_rows < 1:
+            errors.append(f"{prefix}: min_rows must be a positive integer")
+        elif expected_min_rows is not None and min_rows != expected_min_rows:
+            errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+        if not isinstance(row.get("sha256_manifest_required"), bool):
+            errors.append(f"{prefix}: sha256_manifest_required must be boolean")
         if row.get("required_for_merge") is not True:
             errors.append(f"{prefix}: required_for_merge must be true")
         artifact_path = Path(row.get("path", ""))
         if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
             missing_required_artifacts.append(row.get("artifact_id", ""))
+        else:
+            if artifact_id == "sha256-manifest":
+                sha_manifest_path = artifact_path
+            with artifact_path.open(newline="", encoding="utf-8") as handle:
+                reader = csv.DictReader(handle)
+                fieldnames = reader.fieldnames or []
+                if required_columns and fieldnames != required_columns:
+                    errors.append(f"{artifact_path}: header must match required_columns for {artifact_id}")
+                row_count = sum(1 for _ in reader)
+            if isinstance(min_rows, int) and row_count < min_rows:
+                errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
     if not missing_required_artifacts:
         errors.append(f"{path}: contract says artifact_replay_ready=false, but all required artifacts are present; update the contract")
+    if sha_manifest_path is not None:
+        manifest_rows = read_csv_rows(sha_manifest_path)
+        by_manifest_path = {row.get("path", ""): row for row in manifest_rows}
+        artifact_base = sha_manifest_path.parent
+        for row in artifacts:
+            if row.get("artifact_id") == "sha256-manifest" or row.get("sha256_manifest_required") is not True:
+                continue
+            artifact_path = Path(row.get("path", ""))
+            try:
+                manifest_key = str(artifact_path.relative_to(artifact_base))
+            except ValueError:
+                manifest_key = artifact_path.name
+            manifest_row = by_manifest_path.get(manifest_key)
+            if manifest_row is None:
+                errors.append(f"{sha_manifest_path}: missing required artifact path {manifest_key}")
+                continue
+            digest = manifest_row.get("sha256", "")
+            if not digest.startswith("sha256:") or len(digest) != 71:
+                errors.append(f"{sha_manifest_path}: invalid sha256 digest for {manifest_key}")
+            if artifact_path.is_file() and sha256(artifact_path) != digest:
+                errors.append(f"{sha_manifest_path}: sha mismatch for {manifest_key}")
 
     boundaries = data["claim_boundaries"]
     if not isinstance(boundaries, list) or not boundaries:

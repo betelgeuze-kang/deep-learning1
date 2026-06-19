@@ -7,45 +7,171 @@
     "implicit_public_refresh_allowed": false,
     "network_required_to_regenerate": true
   },
+  "replay_commands": {
+    "runner": "experiments/run_v50_public_repo_auditor_3repo.sh",
+    "smoke_test": "experiments/test_v50_public_repo_auditor_3repo.sh",
+    "artifact_verifier": "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv"
+  },
   "required_artifacts": [
     {
       "artifact_id": "source-snapshot-rows",
+      "artifact_kind": "csv",
       "path": "results/v50_public_repo_auditor_3repo/audit_001/public_repo_source_snapshot_rows.csv",
+      "required_columns": [
+        "repo_id",
+        "owner_repo",
+        "repo_url",
+        "requested_ref",
+        "head_sha",
+        "ref_pinned",
+        "file_path",
+        "artifact_path",
+        "sha256",
+        "bytes",
+        "line_count",
+        "public_repo_snapshot"
+      ],
+      "min_rows": 9,
+      "sha256_manifest_required": true,
       "required_for_merge": true
     },
     {
       "artifact_id": "audit-case-rows",
+      "artifact_kind": "csv",
       "path": "results/v50_public_repo_auditor_3repo/audit_001/public_repo_audit_case_rows.csv",
+      "required_columns": [
+        "case_id",
+        "repo_id",
+        "owner_repo",
+        "repo_url",
+        "head_sha",
+        "audit_type",
+        "detector_method",
+        "primary_observed",
+        "secondary_observed",
+        "expected_label",
+        "predicted_label",
+        "correct",
+        "finding",
+        "primary_path",
+        "primary_sha256",
+        "primary_line",
+        "secondary_path",
+        "secondary_sha256",
+        "secondary_line",
+        "source_spans_ready",
+        "not_upstream_defect_claim"
+      ],
+      "min_rows": 9,
+      "sha256_manifest_required": true,
       "required_for_merge": true
     },
     {
       "artifact_id": "source-span-rows",
+      "artifact_kind": "csv",
       "path": "results/v50_public_repo_auditor_3repo/audit_001/public_repo_source_span_rows.csv",
+      "required_columns": [
+        "case_id",
+        "repo_id",
+        "kind",
+        "path",
+        "sha256",
+        "line",
+        "text"
+      ],
+      "min_rows": 18,
+      "sha256_manifest_required": true,
       "required_for_merge": true
     },
     {
       "artifact_id": "guard-negative-rows",
+      "artifact_kind": "csv",
       "path": "results/v50_public_repo_auditor_3repo/audit_001/guard_negative_rows.csv",
+      "required_columns": [
+        "negative_case_id",
+        "guard",
+        "expected_block",
+        "blocked",
+        "wrong_answer_guard_pass",
+        "citation_accuracy_pass",
+        "abstain_behavior_pass",
+        "reason"
+      ],
+      "min_rows": 3,
+      "sha256_manifest_required": true,
       "required_for_merge": true
     },
     {
       "artifact_id": "commercial-return-query-set",
+      "artifact_kind": "csv",
       "path": "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/query_set.csv",
+      "required_columns": [
+        "query_id",
+        "question",
+        "expected_behavior",
+        "source_path",
+        "source_sha256",
+        "source_line"
+      ],
+      "min_rows": 9,
+      "sha256_manifest_required": true,
       "required_for_merge": true
     },
     {
       "artifact_id": "commercial-return-poc-results",
+      "artifact_kind": "csv",
       "path": "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/poc_result_rows.csv",
+      "required_columns": [
+        "query_id",
+        "answer",
+        "citation_path",
+        "citation_sha256",
+        "citation_line",
+        "citation_text",
+        "secondary_citation_path",
+        "secondary_citation_sha256",
+        "secondary_citation_line",
+        "secondary_citation_text",
+        "wrong_answer_guard_pass",
+        "citation_accuracy_pass",
+        "abstain_behavior_pass",
+        "query_to_evidence_latency_ready",
+        "latency_ms",
+        "route_memory_lineage_bound",
+        "mmap_or_exact_span_bound",
+        "audit_trail_bound"
+      ],
+      "min_rows": 9,
+      "sha256_manifest_required": true,
       "required_for_merge": true
     },
     {
       "artifact_id": "commercial-return-audit-trail",
+      "artifact_kind": "csv",
       "path": "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/audit_trail.csv",
+      "required_columns": [
+        "event_id",
+        "query_id",
+        "event",
+        "repo_id",
+        "verifier_decision",
+        "status"
+      ],
+      "min_rows": 9,
+      "sha256_manifest_required": true,
       "required_for_merge": true
     },
     {
       "artifact_id": "sha256-manifest",
+      "artifact_kind": "csv",
       "path": "results/v50_public_repo_auditor_3repo/audit_001/sha256_manifest.csv",
+      "required_columns": [
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "min_rows": 7,
+      "sha256_manifest_required": false,
       "required_for_merge": true
     }
   ],
