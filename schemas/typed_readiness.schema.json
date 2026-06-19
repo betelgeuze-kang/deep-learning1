@@ -8,10 +8,47 @@
     "schema_version": {"type": "string"},
     "policy": {
       "type": "object",
-      "required": ["forbid_ambiguous_ready_claims", "typed_fields"],
+      "required": [
+        "forbid_ambiguous_ready_claims",
+        "typed_fields",
+        "ambiguous_ready_flags"
+      ],
       "properties": {
         "forbid_ambiguous_ready_claims": {"type": "boolean"},
-        "typed_fields": {"type": "array", "items": {"type": "string"}}
+        "typed_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "contract_ready",
+              "fixture_execution_ready",
+              "real_model_execution_ready",
+              "heldout_metric_ready",
+              "human_review_ready",
+              "independent_reproduction_ready",
+              "release_ready"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "ambiguous_ready_flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "100b_moe_run_ready",
+              "h10_real_label_promotion_ready",
+              "pr2_ready",
+              "review_return_ready",
+              "v53_ready",
+              "v58_ready",
+              "v59_ready",
+              "v60_ready",
+              "v61i_100b_moe_active_sparse_run_ready"
+            ]
+          },
+          "uniqueItems": true
+        }
       },
       "additionalProperties": false
     },
