@@ -13,8 +13,12 @@ Verify the contract with:
 tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json
 ```
 
-When the PM sidecar exists, compare it against the measured-registry exclusion
-ledger:
+The verifier also loads the required PM ledgers declared by the contract from
+their default paths, so the short command still checks that fixture D/E rows
+remain out of measured registry and that real D/E acceptance artifacts remain
+blocked until present.
+
+To make the checked sidecars explicit, run:
 
 ```bash
 tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json \

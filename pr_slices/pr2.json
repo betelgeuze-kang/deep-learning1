@@ -50,14 +50,14 @@
     {
       "slice_id": "v52-baseline-registry-contract",
       "scope": "A-H baseline registry/schema contract, C 7B-14B actual adapter packet, and D/E/F intake blockers.",
-      "required_artifacts": ["baselines/v52_adapter_guard.json", "baselines/de_30b70b_real.json", "results/v52_llm_rag_baseline_war_summary.csv", "results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_answer_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_citation_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_resource_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/ollama_generation_transcript_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/sha256_manifest.csv", "results/v52d_30b70b_llm_rag_evidence_intake_summary.csv", "results/v52y_f_optional_final_policy_summary.csv"],
+      "required_artifacts": ["baselines/v52_adapter_guard.json", "baselines/de_30b70b_real.json", "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv", "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv", "results/v52_llm_rag_baseline_war_summary.csv", "results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_answer_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_citation_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_resource_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/ollama_generation_transcript_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/sha256_manifest.csv", "results/v52d_30b70b_llm_rag_evidence_intake_summary.csv", "results/v52y_f_optional_final_policy_summary.csv"],
       "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
       "claim_boundary": {
         "allowed": "A-H baseline registry exists; C has a local 7B-14B response packet; D/E/F blockers are explicit.",
         "blocked": "C quality claim, D/E measured registry admission, 30B/70B/100B+ comparison readiness, or release readiness.",
         "evidence_path": "baselines/v52_adapter_guard.json"
       },
-      "verification_commands": ["tools/verify_artifact.py v52-adapter-guard baselines/v52_adapter_guard.json", "tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json", "./experiments/test_v52_llm_rag_baseline_war.sh", "./experiments/test_v52l_7b14b_local_model_rag_v53e_1000.sh", "./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh", "./experiments/test_v52y_f_optional_final_policy.sh"],
+      "verification_commands": ["tools/verify_artifact.py v52-adapter-guard baselines/v52_adapter_guard.json", "tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json --measured-registry-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv --acceptance-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv", "./experiments/test_v52_llm_rag_baseline_war.sh", "./experiments/test_v52l_7b14b_local_model_rag_v53e_1000.sh", "./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh", "./experiments/test_v52y_f_optional_final_policy.sh"],
       "current_status": "ready-for-review"
     },
     {

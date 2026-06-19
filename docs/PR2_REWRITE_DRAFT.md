@@ -53,7 +53,9 @@ evaluator-only.
 
 D/E 30B/70B fixture rows remain schema-test evidence only until model revision,
 quantization, hashes, runtime, prompt/context/retrieval budgets, hardware, seed,
-raw answer/citation outputs, and evaluator version are accepted.
+raw answer/citation outputs, and evaluator version are accepted. The D/E
+measured-registry exclusion ledger and acceptance blocker ledger are required
+replay artifacts for the v52 slice.
 
 v53 source-bound benchmark checks are exact: repo counts, 1000 query/span rows,
 negative controls, evaluator separation, A/B/G/H same-query evidence,

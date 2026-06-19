@@ -7,6 +7,7 @@
     "schema_version",
     "policy",
     "required_real_evidence_fields",
+    "required_pm_ledgers",
     "systems",
     "required_artifacts"
   ],
@@ -27,6 +28,19 @@
       "additionalProperties": false
     },
     "required_real_evidence_fields": {"type": "array", "items": {"type": "string"}},
+    "required_pm_ledgers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ledger_id", "path", "required_for"],
+        "properties": {
+          "ledger_id": {"type": "string"},
+          "path": {"type": "string"},
+          "required_for": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
     "systems": {
       "type": "array",
       "items": {

@@ -81,8 +81,14 @@ REQUIRED_BASELINE_ADMISSION_KEYS = {
     "schema_version",
     "policy",
     "required_real_evidence_fields",
+    "required_pm_ledgers",
     "systems",
     "required_artifacts",
+}
+REQUIRED_BASELINE_LEDGER_KEYS = {
+    "ledger_id",
+    "path",
+    "required_for",
 }
 REQUIRED_BASELINE_SYSTEM_KEYS = {
     "system_id",
@@ -333,6 +339,24 @@ REQUIRED_DE_REAL_EVIDENCE_FIELDS = {
     "answer_citation_raw_output",
     "evaluator_version",
 }
+DEFAULT_DE_MEASURED_REGISTRY_LEDGER = Path(
+    "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv"
+)
+DEFAULT_DE_ACCEPTANCE_LEDGER = Path(
+    "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv"
+)
+EXPECTED_DE_PM_LEDGERS = [
+    {
+        "ledger_id": "de-measured-registry-exclusion",
+        "path": str(DEFAULT_DE_MEASURED_REGISTRY_LEDGER),
+        "required_for": "fixture_d_e_rows_stay_out_of_measured_registry",
+    },
+    {
+        "ledger_id": "de-acceptance-evidence-blockers",
+        "path": str(DEFAULT_DE_ACCEPTANCE_LEDGER),
+        "required_for": "real_d_e_acceptance_artifacts_remain_blocked_until_present",
+    },
+]
 EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS = {
     "model-identity": {
         "system_id",
@@ -1498,6 +1522,28 @@ def verify_baseline_admission(
     fields = set(data["required_real_evidence_fields"])
     if fields != REQUIRED_DE_REAL_EVIDENCE_FIELDS:
         errors.append(f"{path}: required_real_evidence_fields must be exactly {', '.join(sorted(REQUIRED_DE_REAL_EVIDENCE_FIELDS))}")
+    ledgers = data.get("required_pm_ledgers", [])
+    if not isinstance(ledgers, list) or len(ledgers) != len(EXPECTED_DE_PM_LEDGERS):
+        errors.append(f"{path}: required_pm_ledgers must list measured-registry and acceptance ledgers")
+    else:
+        normalized_ledgers = []
+        for index, row in enumerate(ledgers, start=1):
+            missing_ledger = REQUIRED_BASELINE_LEDGER_KEYS - set(row)
+            if missing_ledger:
+                errors.append(f"{path}: required_pm_ledger[{index}] missing keys: {', '.join(sorted(missing_ledger))}")
+            normalized_ledgers.append(
+                {
+                    "ledger_id": row.get("ledger_id", ""),
+                    "path": row.get("path", ""),
+                    "required_for": row.get("required_for", ""),
+                }
+            )
+        if normalized_ledgers != EXPECTED_DE_PM_LEDGERS:
+            errors.append(f"{path}: required_pm_ledgers must pin the D/E measured-registry and acceptance blocker ledgers")
+    if measured_registry_ledger is None:
+        measured_registry_ledger = DEFAULT_DE_MEASURED_REGISTRY_LEDGER
+    if acceptance_ledger is None:
+        acceptance_ledger = DEFAULT_DE_ACCEPTANCE_LEDGER
     systems = data["systems"]
     if not isinstance(systems, list) or len(systems) != 2:
         errors.append(f"{path}: systems must contain D and E")
@@ -1545,65 +1591,71 @@ def verify_baseline_admission(
             errors.append(f"{prefix}: required_columns must be exactly {', '.join(sorted(expected_columns))}")
 
     if measured_registry_ledger is not None:
-        ledger_rows = read_csv_rows(measured_registry_ledger)
-        ledger_by_system = {row.get("system_id", ""): row for row in ledger_rows}
-        for system_id in ["D", "E"]:
-            row = ledger_by_system.get(system_id)
-            if row is None:
-                errors.append(f"{measured_registry_ledger}: missing system_id={system_id}")
-                continue
-            if row.get("fixture_schema_test_allowed") != "1":
-                errors.append(f"{measured_registry_ledger}: {system_id}.fixture_schema_test_allowed must be 1")
-            if row.get("fixture_rows_in_measured_registry") != "0":
-                errors.append(f"{measured_registry_ledger}: {system_id}.fixture_rows_in_measured_registry must be 0")
-            if row.get("measured_registry_admission_ready") != "0":
-                errors.append(f"{measured_registry_ledger}: {system_id}.measured_registry_admission_ready must be 0")
-            if row.get("fixture_allowed") != "0":
-                errors.append(f"{measured_registry_ledger}: {system_id}.fixture_allowed must be 0")
-            if row.get("tests_only_merge_condition") != "0":
-                errors.append(f"{measured_registry_ledger}: {system_id}.tests_only_merge_condition must be 0")
-            ledger_fields = split_semicolon(row.get("required_real_evidence_fields", ""))
-            missing_fields = split_semicolon(row.get("missing_real_evidence_fields", ""))
-            if ledger_fields != REQUIRED_DE_REAL_EVIDENCE_FIELDS:
-                errors.append(f"{measured_registry_ledger}: {system_id}.required_real_evidence_fields mismatch")
-            if missing_fields != REQUIRED_DE_REAL_EVIDENCE_FIELDS:
-                errors.append(f"{measured_registry_ledger}: {system_id}.missing_real_evidence_fields must list every required field while blocked")
-            if row.get("raw_answer_citation_output_required") != "1":
-                errors.append(f"{measured_registry_ledger}: {system_id}.raw_answer_citation_output_required must be 1")
-            if row.get("answer_citation_raw_output_rows") != "0":
-                errors.append(f"{measured_registry_ledger}: {system_id}.answer_citation_raw_output_rows must be 0 while blocked")
-            if row.get("resource_row_required") != "1" or row.get("evaluator_version_required") != "1" or row.get("same_query_set_required") != "1":
-                errors.append(f"{measured_registry_ledger}: {system_id}.resource/evaluator/same-query requirements must be 1")
-            if row.get("status") != "blocked":
-                errors.append(f"{measured_registry_ledger}: {system_id}.status must be blocked")
+        if not measured_registry_ledger.exists():
+            errors.append(f"{measured_registry_ledger}: required D/E measured-registry exclusion ledger is missing")
+        else:
+            ledger_rows = read_csv_rows(measured_registry_ledger)
+            ledger_by_system = {row.get("system_id", ""): row for row in ledger_rows}
+            for system_id in ["D", "E"]:
+                row = ledger_by_system.get(system_id)
+                if row is None:
+                    errors.append(f"{measured_registry_ledger}: missing system_id={system_id}")
+                    continue
+                if row.get("fixture_schema_test_allowed") != "1":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.fixture_schema_test_allowed must be 1")
+                if row.get("fixture_rows_in_measured_registry") != "0":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.fixture_rows_in_measured_registry must be 0")
+                if row.get("measured_registry_admission_ready") != "0":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.measured_registry_admission_ready must be 0")
+                if row.get("fixture_allowed") != "0":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.fixture_allowed must be 0")
+                if row.get("tests_only_merge_condition") != "0":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.tests_only_merge_condition must be 0")
+                ledger_fields = split_semicolon(row.get("required_real_evidence_fields", ""))
+                missing_fields = split_semicolon(row.get("missing_real_evidence_fields", ""))
+                if ledger_fields != REQUIRED_DE_REAL_EVIDENCE_FIELDS:
+                    errors.append(f"{measured_registry_ledger}: {system_id}.required_real_evidence_fields mismatch")
+                if missing_fields != REQUIRED_DE_REAL_EVIDENCE_FIELDS:
+                    errors.append(f"{measured_registry_ledger}: {system_id}.missing_real_evidence_fields must list every required field while blocked")
+                if row.get("raw_answer_citation_output_required") != "1":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.raw_answer_citation_output_required must be 1")
+                if row.get("answer_citation_raw_output_rows") != "0":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.answer_citation_raw_output_rows must be 0 while blocked")
+                if row.get("resource_row_required") != "1" or row.get("evaluator_version_required") != "1" or row.get("same_query_set_required") != "1":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.resource/evaluator/same-query requirements must be 1")
+                if row.get("status") != "blocked":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.status must be blocked")
 
     if acceptance_ledger is not None:
-        acceptance_rows = read_csv_rows(acceptance_ledger)
-        by_system = {"D": [], "E": []}
-        for row in acceptance_rows:
-            system_id = row.get("system_id", "")
-            if system_id in by_system:
-                by_system[system_id].append(row)
-        for system_id, rows in by_system.items():
-            if len(rows) != 2:
-                errors.append(f"{acceptance_ledger}: expected two acceptance rows for {system_id}")
-            artifact_ids = {row.get("artifact_id", "") for row in rows}
-            expected_artifacts = {f"{system_id.lower()}-model-identity", f"{system_id.lower()}-answer-citation-resource"}
-            if artifact_ids != expected_artifacts:
-                errors.append(f"{acceptance_ledger}: {system_id} artifact ids mismatch")
-            for row in rows:
-                if row.get("artifact_present") != "0":
-                    errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} artifact_present must be 0")
-                if row.get("claim_boundary_status") != "pass":
-                    errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} claim_boundary_status must pass")
-                if row.get("output_artifact_replay_status") != "blocked":
-                    errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} output_artifact_replay_status must be blocked")
-                if row.get("blocker_false_positive_status") != "pass":
-                    errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} blocker_false_positive_status must pass")
-                if row.get("approval_required") != "1" or row.get("fixture_allowed") != "0" or row.get("tests_only_merge_condition") != "0":
-                    errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} approval/fixture/tests-only policy mismatch")
-                if row.get("acceptance_ready") != "0" or row.get("acceptance_status") != "blocked":
-                    errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} must remain blocked")
+        if not acceptance_ledger.exists():
+            errors.append(f"{acceptance_ledger}: required D/E acceptance blocker ledger is missing")
+        else:
+            acceptance_rows = read_csv_rows(acceptance_ledger)
+            by_system = {"D": [], "E": []}
+            for row in acceptance_rows:
+                system_id = row.get("system_id", "")
+                if system_id in by_system:
+                    by_system[system_id].append(row)
+            for system_id, rows in by_system.items():
+                if len(rows) != 2:
+                    errors.append(f"{acceptance_ledger}: expected two acceptance rows for {system_id}")
+                artifact_ids = {row.get("artifact_id", "") for row in rows}
+                expected_artifacts = {f"{system_id.lower()}-model-identity", f"{system_id.lower()}-answer-citation-resource"}
+                if artifact_ids != expected_artifacts:
+                    errors.append(f"{acceptance_ledger}: {system_id} artifact ids mismatch")
+                for row in rows:
+                    if row.get("artifact_present") != "0":
+                        errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} artifact_present must be 0")
+                    if row.get("claim_boundary_status") != "pass":
+                        errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} claim_boundary_status must pass")
+                    if row.get("output_artifact_replay_status") != "blocked":
+                        errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} output_artifact_replay_status must be blocked")
+                    if row.get("blocker_false_positive_status") != "pass":
+                        errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} blocker_false_positive_status must pass")
+                    if row.get("approval_required") != "1" or row.get("fixture_allowed") != "0" or row.get("tests_only_merge_condition") != "0":
+                        errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} approval/fixture/tests-only policy mismatch")
+                    if row.get("acceptance_ready") != "0" or row.get("acceptance_status") != "blocked":
+                        errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} must remain blocked")
     return errors
 
 

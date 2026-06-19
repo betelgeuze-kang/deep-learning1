@@ -18,6 +18,18 @@
     "answer_citation_raw_output",
     "evaluator_version"
   ],
+  "required_pm_ledgers": [
+    {
+      "ledger_id": "de-measured-registry-exclusion",
+      "path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv",
+      "required_for": "fixture_d_e_rows_stay_out_of_measured_registry"
+    },
+    {
+      "ledger_id": "de-acceptance-evidence-blockers",
+      "path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv",
+      "required_for": "real_d_e_acceptance_artifacts_remain_blocked_until_present"
+    }
+  ],
   "systems": [
     {
       "system_id": "D",

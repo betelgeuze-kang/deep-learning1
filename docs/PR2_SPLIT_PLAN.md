@@ -53,6 +53,8 @@ Retriever and model-visible input wording must follow
 bindings, expected behavior, and expected labels are evaluator-only.
 D/E baseline wording must follow `baselines/de_30b70b_real.json`; fixture or
 schema-test D/E rows cannot enter measured registry or public comparison rows.
+The v52 slice must include the measured-registry exclusion ledger and acceptance
+blocker ledger as replay artifacts, not optional sidecars.
 v53 benchmark wording must follow `benchmarks/v53_source_bound_freeze.json`;
 the 1000-row machine-foundation freeze does not imply human-reviewed quality,
 D/E baseline completion, public comparison, or release readiness. The v53
