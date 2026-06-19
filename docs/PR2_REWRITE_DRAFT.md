@@ -62,7 +62,9 @@ raw answer/citation outputs, and evaluator version are accepted. The D/E
 measured-registry exclusion ledger and acceptance blocker ledger are required
 replay artifacts for the v52 slice; the exclusion ledger must show
 `required_real_evidence_field_count=11`, `missing_real_evidence_field_count=11`,
-and `all_required_real_evidence_missing=1` for both D and E.
+and `all_required_real_evidence_missing=1` for both D and E. The acceptance
+blocker ledger must keep model identity, raw answer/citation output, and
+resource/evaluator manifests as separate blocker rows for both systems.
 
 v58 remains a protocol/intake surface, not a completed blind eval. Response and
 resource rows must carry `latency_memory_excluded_from_quality_score=1`, while

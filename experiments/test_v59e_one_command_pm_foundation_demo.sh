@@ -215,12 +215,12 @@ expected = {
     "pm_pr_v56_missing_seed_artifact_rows": "20",
     "pm_pr_v56_missing_v45_seed_artifact_rows": "11",
     "pm_pr_v56_missing_seed_network_or_download_approval_required": "1",
-    "pm_pr_de_30b70b_acceptance_evidence_rows": "4",
+    "pm_pr_de_30b70b_acceptance_evidence_rows": "6",
     "pm_pr_de_30b70b_acceptance_evidence_ready_rows": "0",
-    "pm_pr_de_30b70b_acceptance_evidence_blocked_rows": "4",
+    "pm_pr_de_30b70b_acceptance_evidence_blocked_rows": "6",
     "pm_pr_de_30b70b_acceptance_evidence_tests_only_rows": "0",
     "pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows": "0",
-    "pm_pr_de_30b70b_acceptance_evidence_approval_rows": "4",
+    "pm_pr_de_30b70b_acceptance_evidence_approval_rows": "6",
     "pm_pr_de_measured_registry_exclusion_rows": "2",
     "pm_pr_de_measured_registry_fixture_registry_rows": "0",
     "pm_pr_de_measured_registry_admission_ready_rows": "0",
@@ -234,16 +234,16 @@ expected = {
     "pm_blocker_closure_packet_rows": "6",
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_bundle_ready": "1",
-    "pm_blocker_required_artifact_rows": "29",
+    "pm_blocker_required_artifact_rows": "31",
     "pm_blocker_required_artifact_fixture_allowed_rows": "0",
     "pm_execution_lock_rows": "10",
     "pm_execution_lock_active_rows": "10",
     "pm_scope_drift_allowed": "0",
     "pm_new_scaffold_default_allowed": "0",
-    "pm_external_return_template_rows": "29",
-    "pm_external_return_template_files": "29",
+    "pm_external_return_template_rows": "31",
+    "pm_external_return_template_files": "31",
     "pm_external_return_template_fixture_allowed_rows": "0",
-    "pm_external_return_template_approval_rows": "29",
+    "pm_external_return_template_approval_rows": "31",
     "pm_external_return_template_bundle_ready": "1",
     "pm_pr_normalization_rows": "7",
     "pm_pr_normalization_split_required_rows": "7",
@@ -570,14 +570,16 @@ for artifact_id in ["v56-contract-summary", "v56-contract-artifacts", "v56b-scal
 if "V56B_ALLOW_CONTRACT_REBUILD=1" not in v56_replay_artifacts["v56b-scale-artifacts"]["validation_command"]:
     raise SystemExit("v59e PM sidecar should preserve the approval-gated v56b validation command")
 de_acceptance_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv")
-if len(de_acceptance_rows) != 4:
-    raise SystemExit("v59e PM sidecar should carry four D/E 30B/70B acceptance evidence rows")
+if len(de_acceptance_rows) != 6:
+    raise SystemExit("v59e PM sidecar should carry six D/E 30B/70B acceptance evidence rows")
 de_artifacts = {row["artifact_id"]: row for row in de_acceptance_rows}
 for artifact_id, system_id in {
     "d-model-identity": "D",
-    "d-answer-citation-resource": "D",
+    "d-answer-citation-raw-output": "D",
+    "d-resource-evaluator-manifest": "D",
     "e-model-identity": "E",
-    "e-answer-citation-resource": "E",
+    "e-answer-citation-raw-output": "E",
+    "e-resource-evaluator-manifest": "E",
 }.items():
     row = de_artifacts.get(artifact_id)
     if not row:
@@ -592,7 +594,7 @@ for artifact_id, system_id in {
         raise SystemExit(f"v59e PM sidecar should require approval and forbid fixtures for D/E: {artifact_id}")
     if row["tests_only_merge_condition"] != "0":
         raise SystemExit(f"v59e PM sidecar should forbid tests-only D/E acceptance: {artifact_id}")
-if "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR>" not in de_artifacts["e-answer-citation-resource"]["validation_command"]:
+if "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR>" not in de_artifacts["e-resource-evaluator-manifest"]["validation_command"]:
     raise SystemExit("v59e PM sidecar should preserve the approval-gated D/E validation command")
 de_registry_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/de_measured_registry_exclusion_rows.csv")
 if len(de_registry_rows) != 2:
@@ -1122,12 +1124,12 @@ if (
 if "pm_pr_v56_seed_dependency_blocker_rows_sha256" not in manifest:
     raise SystemExit("v59e manifest should hash-bind PM v56 seed dependency blocker rows")
 if (
-    manifest.get("pm_pr_de_30b70b_acceptance_evidence_rows") != 4
+    manifest.get("pm_pr_de_30b70b_acceptance_evidence_rows") != 6
     or manifest.get("pm_pr_de_30b70b_acceptance_evidence_ready_rows") != 0
-    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_blocked_rows") != 4
+    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_blocked_rows") != 6
     or manifest.get("pm_pr_de_30b70b_acceptance_evidence_tests_only_rows") != 0
     or manifest.get("pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows") != 0
-    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_approval_rows") != 4
+    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_approval_rows") != 6
 ):
     raise SystemExit("v59e manifest should record PM D/E 30B/70B acceptance evidence")
 if "pm_pr_de_30b70b_acceptance_evidence_rows_sha256" not in manifest:
@@ -1513,7 +1515,7 @@ if pr_summary.get("pm_blocker_closure_packet_files") != "6":
     raise SystemExit("v59e one-command PR slice gate should emit six blocker packets")
 if pr_summary.get("pm_execution_lock_rows") != "10" or pr_summary.get("pm_scope_drift_allowed") != "0":
     raise SystemExit("v59e one-command PR slice gate should keep the PM execution lock active")
-if pr_summary.get("pm_external_return_template_files") != "29" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
+if pr_summary.get("pm_external_return_template_files") != "31" or pr_summary.get("pm_external_return_template_fixture_allowed_rows") != "0":
     raise SystemExit("v59e one-command PR slice gate should emit no-fixture return templates")
 if (
     pr_summary.get("pm_pr_normalization_rows") != "7"

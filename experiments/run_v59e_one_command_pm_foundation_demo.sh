@@ -1590,9 +1590,9 @@ execution_lock_ready = int(
     and as_int(pr_summary, "pm_new_scaffold_default_allowed") == 0
 )
 external_return_template_ready = int(
-    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 29
+    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 31
     and as_int(pr_summary, "pm_external_return_template_fixture_allowed_rows") == 0
-    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 29
+    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 31
 )
 v58_blocker_classes = {"v58c-intake-artifact-missing", "v58-real-blind-eval-missing"}
 pm_required_artifact_rows = read_csv(pr_run_dir / "pm_blocker_required_artifact_rows.csv")

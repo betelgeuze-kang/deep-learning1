@@ -58,7 +58,9 @@ blocker ledger as replay artifacts, not optional sidecars. The exclusion ledger
 must exact-count `required_real_evidence_field_count=11`,
 `missing_real_evidence_field_count=11`, and
 `all_required_real_evidence_missing=1` for both D and E before admission remains
-blocked.
+blocked. The acceptance blocker ledger must keep model identity, raw
+answer/citation output, and resource/evaluator manifests as separate blocker
+rows for both D and E.
 v53 benchmark wording must follow `benchmarks/v53_source_bound_freeze.json`;
 the 1000-row machine-foundation freeze does not imply human-reviewed quality,
 D/E baseline completion, public comparison, or release readiness. The v53

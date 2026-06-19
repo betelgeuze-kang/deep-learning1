@@ -99,12 +99,12 @@ expected = {
     "v56_missing_seed_artifact_rows": "20",
     "v56_missing_v45_seed_artifact_rows": "11",
     "v56_missing_seed_network_or_download_approval_required": "1",
-    "de_30b70b_acceptance_evidence_rows": "4",
+    "de_30b70b_acceptance_evidence_rows": "6",
     "de_30b70b_acceptance_evidence_ready_rows": "0",
-    "de_30b70b_acceptance_evidence_blocked_rows": "4",
+    "de_30b70b_acceptance_evidence_blocked_rows": "6",
     "de_30b70b_acceptance_evidence_tests_only_rows": "0",
     "de_30b70b_acceptance_evidence_fixture_allowed_rows": "0",
-    "de_30b70b_acceptance_evidence_approval_rows": "4",
+    "de_30b70b_acceptance_evidence_approval_rows": "6",
     "de_measured_registry_exclusion_rows": "2",
     "de_measured_registry_required_field_complete_rows": "2",
     "de_measured_registry_fixture_registry_rows": "0",
@@ -127,18 +127,18 @@ expected = {
     "pm_blocker_closure_packet_files": "6",
     "pm_blocker_closure_packet_ready_rows": "6",
     "pm_blocker_closure_packet_approval_rows": "6",
-    "pm_blocker_required_artifact_rows": "29",
-    "pm_blocker_required_artifact_approval_rows": "29",
+    "pm_blocker_required_artifact_rows": "31",
+    "pm_blocker_required_artifact_approval_rows": "31",
     "pm_blocker_required_artifact_fixture_allowed_rows": "0",
     "pm_execution_lock_rows": "10",
     "pm_execution_lock_active_rows": "10",
     "pm_scope_drift_allowed": "0",
     "pm_new_scaffold_default_allowed": "0",
-    "pm_external_return_template_rows": "29",
-    "pm_external_return_template_files": "29",
-    "pm_external_return_template_ready_rows": "29",
+    "pm_external_return_template_rows": "31",
+    "pm_external_return_template_files": "31",
+    "pm_external_return_template_ready_rows": "31",
     "pm_external_return_template_fixture_allowed_rows": "0",
-    "pm_external_return_template_approval_rows": "29",
+    "pm_external_return_template_approval_rows": "31",
     "pm_pr_normalization_rows": "7",
     "pm_pr_normalization_split_required_rows": "7",
     "pm_pr_normalization_tests_only_rows": "0",
@@ -696,14 +696,16 @@ if v56_replay_artifacts["v56b-scale-summary"]["artifact_path_or_env"] != "result
 if "V56B_ALLOW_CONTRACT_REBUILD=1" not in v56_replay_artifacts["v56b-scale-artifacts"]["validation_command"]:
     raise SystemExit("v56b scale artifact row should expose the approval-gated validation command")
 de_acceptance_rows = read_csv(run_dir / "de_30b70b_acceptance_evidence_rows.csv")
-if len(de_acceptance_rows) != 4:
-    raise SystemExit("D/E 30B/70B acceptance evidence should cover four required artifacts")
+if len(de_acceptance_rows) != 6:
+    raise SystemExit("D/E 30B/70B acceptance evidence should cover six required artifacts")
 de_artifacts = {row["artifact_id"]: row for row in de_acceptance_rows}
 for artifact_id, system_id in {
     "d-model-identity": "D",
-    "d-answer-citation-resource": "D",
+    "d-answer-citation-raw-output": "D",
+    "d-resource-evaluator-manifest": "D",
     "e-model-identity": "E",
-    "e-answer-citation-resource": "E",
+    "e-answer-citation-raw-output": "E",
+    "e-resource-evaluator-manifest": "E",
 }.items():
     row = de_artifacts.get(artifact_id)
     if not row:
@@ -726,8 +728,10 @@ for artifact_id, system_id in {
         raise SystemExit(f"D/E replay status should remain blocked without supplied D/E rows: {artifact_id}")
     if "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR>" not in row["validation_command"]:
         raise SystemExit(f"D/E validation command should expose both evidence dirs: {artifact_id}")
-if "llm_rag_answer_rows.csv" not in de_artifacts["d-answer-citation-resource"]["artifact_path_or_env"]:
-    raise SystemExit("D/E answer-citation-resource row should name answer/citation/resource artifacts")
+if "llm_rag_answer_rows.csv" not in de_artifacts["d-answer-citation-raw-output"]["artifact_path_or_env"]:
+    raise SystemExit("D/E answer-citation raw output row should name answer/citation artifacts")
+if "llm_rag_resource_rows.csv" not in de_artifacts["d-resource-evaluator-manifest"]["artifact_path_or_env"]:
+    raise SystemExit("D/E resource/evaluator row should name resource artifacts")
 de_registry_rows = {row["system_id"]: row for row in read_csv(run_dir / "de_measured_registry_exclusion_rows.csv")}
 if set(de_registry_rows) != {"D", "E"}:
     raise SystemExit("D/E measured registry exclusion should cover D and E")
@@ -891,8 +895,8 @@ for row in blocker_packet_rows:
     if row["packet_sha256"] != sha256(packet_path):
         raise SystemExit(f"PM blocker closure packet sha mismatch: {row['packet_path']}")
 blocker_packet_by_id = {row["blocker_class"]: row for row in blocker_packet_rows}
-if blocker_packet_by_id["de-30b70b-baselines-missing"]["required_artifact_rows"] != "4":
-    raise SystemExit("D/E blocker packet should list four required artifact rows")
+if blocker_packet_by_id["de-30b70b-baselines-missing"]["required_artifact_rows"] != "6":
+    raise SystemExit("D/E blocker packet should list six required artifact rows")
 if blocker_packet_by_id["v60-release-evidence-missing"]["required_artifact_rows"] != "7":
     raise SystemExit("v60 blocker packet should list seven required artifact rows")
 if blocker_packet_by_id["v58c-intake-artifact-missing"]["required_artifact_rows"] != "3":
@@ -905,8 +909,8 @@ if "V58C_REUSE_EXISTING=0" not in blocker_packet_by_id["v58c-intake-artifact-mis
     raise SystemExit("v58c blocker packet should carry the intake artifact rebuild command")
 
 required_artifact_rows = read_csv(run_dir / "pm_blocker_required_artifact_rows.csv")
-if len(required_artifact_rows) != 29:
-    raise SystemExit("PM blocker required artifact ledger should have 29 rows")
+if len(required_artifact_rows) != 31:
+    raise SystemExit("PM blocker required artifact ledger should have 31 rows")
 if {row["blocker_class"] for row in required_artifact_rows} != set(expected_blocked.values()):
     raise SystemExit("PM blocker required artifact ledger should cover the six blocker classes")
 if any(row["fixture_allowed"] != "0" for row in required_artifact_rows):
@@ -917,7 +921,10 @@ artifact_key = {(row["blocker_class"], row["artifact_id"]): row for row in requi
 for key in [
     ("v56-replay-artifact-missing", "v56b-scale-artifacts"),
     ("de-30b70b-baselines-missing", "d-model-identity"),
-    ("de-30b70b-baselines-missing", "e-answer-citation-resource"),
+    ("de-30b70b-baselines-missing", "d-answer-citation-raw-output"),
+    ("de-30b70b-baselines-missing", "d-resource-evaluator-manifest"),
+    ("de-30b70b-baselines-missing", "e-answer-citation-raw-output"),
+    ("de-30b70b-baselines-missing", "e-resource-evaluator-manifest"),
     ("external-human-label-evidence-missing", "h10-label-evidence-csv"),
     ("v58c-intake-artifact-missing", "v58c-intake-summary"),
     ("v58c-intake-artifact-missing", "v58c-intake-artifacts"),
@@ -931,8 +938,10 @@ for key in [
 ]:
     if key not in artifact_key:
         raise SystemExit(f"missing required artifact row: {key}")
-if "llm_rag_answer_rows.csv" not in artifact_key[("de-30b70b-baselines-missing", "d-answer-citation-resource")]["artifact_path_or_env"]:
-    raise SystemExit("D evidence artifact row should name answer/citation/resource files")
+if "llm_rag_answer_rows.csv" not in artifact_key[("de-30b70b-baselines-missing", "d-answer-citation-raw-output")]["artifact_path_or_env"]:
+    raise SystemExit("D answer/citation artifact row should name raw answer/citation files")
+if "llm_rag_resource_rows.csv" not in artifact_key[("de-30b70b-baselines-missing", "d-resource-evaluator-manifest")]["artifact_path_or_env"]:
+    raise SystemExit("D resource/evaluator artifact row should name resource and manifest files")
 if "H10_EVIDENCE_FIELDS" not in artifact_key[("external-human-label-evidence-missing", "h10-label-evidence-csv")]["required_shape"]:
     raise SystemExit("h10 label evidence row should name the required H10 field contract")
 if "blind_response_rows.csv" not in artifact_key[("v58-real-blind-eval-missing", "v58-blind-response-rows")]["artifact_path_or_env"]:
@@ -988,8 +997,8 @@ if "release" not in lock_by_id["v60-release-gate-last"]["scope"]:
     raise SystemExit("v60 execution lock should cover the release gate")
 
 template_rows = read_csv(run_dir / "pm_external_return_template_rows.csv")
-if len(template_rows) != 29:
-    raise SystemExit("PM external return template ledger should have 29 rows")
+if len(template_rows) != 31:
+    raise SystemExit("PM external return template ledger should have 31 rows")
 if any(row["template_ready"] != "1" for row in template_rows):
     raise SystemExit("all PM external return templates should be ready")
 if any(row["fixture_allowed"] != "0" for row in template_rows):
@@ -1023,7 +1032,7 @@ for field in [
 ]:
     if field not in d_model_template:
         raise SystemExit(f"D model identity template missing field: {field}")
-d_answer_template = (run_dir / template_by_key[("de-30b70b-baselines-missing", "d-answer-citation-resource")]["template_path"]).read_text(encoding="utf-8")
+d_answer_template = (run_dir / template_by_key[("de-30b70b-baselines-missing", "d-answer-citation-raw-output")]["template_path"]).read_text(encoding="utf-8")
 for header in [
     "same_query_set_id",
     "prompt_template_sha256",
@@ -1031,13 +1040,30 @@ for header in [
     "retrieval_budget",
     "seed",
     "generation_transcript_sha256",
-    "evaluator_artifact_sha256",
+    "answer_rows_sha256",
+    "citation_rows_sha256",
     "fixture_rows",
     "measured_registry_candidate",
     "non_fixture_declared",
 ]:
     if header not in d_answer_template:
-        raise SystemExit(f"D answer/citation/resource template missing header: {header}")
+        raise SystemExit(f"D answer/citation raw-output template missing header: {header}")
+d_resource_template = (run_dir / template_by_key[("de-30b70b-baselines-missing", "d-resource-evaluator-manifest")]["template_path"]).read_text(encoding="utf-8")
+for header in [
+    "resource_row_path",
+    "latency_ns",
+    "raw_prompt_context_bytes",
+    "retrieved_span_rows",
+    "peak_memory_mb",
+    "evaluator_version",
+    "evaluator_artifact_sha256",
+    "resource_rows_sha256",
+    "fixture_rows",
+    "measured_registry_candidate",
+    "non_fixture_declared",
+]:
+    if header not in d_resource_template:
+        raise SystemExit(f"D resource/evaluator manifest template missing header: {header}")
 h10_template = (run_dir / template_by_key[("external-human-label-evidence-missing", "h10-label-evidence-csv")]["template_path"]).read_text(encoding="utf-8")
 for header in ["human_reviewed", "external_source_verified", "non_fixture_declared", "acceptance_summary_sha256"]:
     if header not in h10_template:
@@ -1521,12 +1547,12 @@ if (
 if "v56_seed_dependency_blocker_rows_sha256" not in manifest:
     raise SystemExit("PM PR manifest should hash-bind v56 seed dependency blocker rows")
 if (
-    manifest.get("de_30b70b_acceptance_evidence_rows") != 4
+    manifest.get("de_30b70b_acceptance_evidence_rows") != 6
     or manifest.get("de_30b70b_acceptance_evidence_ready_rows") != 0
-    or manifest.get("de_30b70b_acceptance_evidence_blocked_rows") != 4
+    or manifest.get("de_30b70b_acceptance_evidence_blocked_rows") != 6
     or manifest.get("de_30b70b_acceptance_evidence_tests_only_rows") != 0
     or manifest.get("de_30b70b_acceptance_evidence_fixture_allowed_rows") != 0
-    or manifest.get("de_30b70b_acceptance_evidence_approval_rows") != 4
+    or manifest.get("de_30b70b_acceptance_evidence_approval_rows") != 6
 ):
     raise SystemExit("PM PR manifest should record D/E 30B/70B acceptance evidence")
 if "de_30b70b_acceptance_evidence_rows_sha256" not in manifest:
@@ -1566,17 +1592,17 @@ if manifest.get("pm_blocker_closure_packet_rows") != 6 or manifest.get("pm_block
     raise SystemExit("PM PR manifest blocker closure packet mismatch")
 if manifest.get("pm_blocker_closure_packet_ready_rows") != 6 or manifest.get("pm_blocker_closure_packet_approval_rows") != 6:
     raise SystemExit("PM PR manifest blocker closure packet readiness mismatch")
-if manifest.get("pm_blocker_required_artifact_rows") != 29 or manifest.get("pm_blocker_required_artifact_fixture_allowed_rows") != 0:
+if manifest.get("pm_blocker_required_artifact_rows") != 31 or manifest.get("pm_blocker_required_artifact_fixture_allowed_rows") != 0:
     raise SystemExit("PM PR manifest blocker required artifact mismatch")
 if manifest.get("pm_execution_lock_rows") != 10 or manifest.get("pm_execution_lock_active_rows") != 10:
     raise SystemExit("PM PR manifest execution lock row mismatch")
 if manifest.get("pm_scope_drift_allowed") != 0 or manifest.get("pm_new_scaffold_default_allowed") != 0:
     raise SystemExit("PM PR manifest should disallow scope drift and default new scaffolds")
-if manifest.get("pm_external_return_template_rows") != 29 or manifest.get("pm_external_return_template_files") != 29:
+if manifest.get("pm_external_return_template_rows") != 31 or manifest.get("pm_external_return_template_files") != 31:
     raise SystemExit("PM PR manifest external return template count mismatch")
-if manifest.get("pm_external_return_template_ready_rows") != 29 or manifest.get("pm_external_return_template_fixture_allowed_rows") != 0:
+if manifest.get("pm_external_return_template_ready_rows") != 31 or manifest.get("pm_external_return_template_fixture_allowed_rows") != 0:
     raise SystemExit("PM PR manifest external return template readiness mismatch")
-if manifest.get("pm_external_return_template_approval_rows") != 29:
+if manifest.get("pm_external_return_template_approval_rows") != 31:
     raise SystemExit("PM PR manifest external return templates should require approval")
 if (
     manifest.get("pm_pr_normalization_rows") != 7
@@ -1680,9 +1706,9 @@ for snippet in [
     "v56_seed_dependency_blocker_ready=1",
     "v56_seed_dependency_blocker_rows=20",
     "v56_missing_seed_artifact_rows=20",
-    "de_30b70b_acceptance_evidence_rows=4",
+    "de_30b70b_acceptance_evidence_rows=6",
     "de_30b70b_acceptance_evidence_ready_rows=0",
-    "de_30b70b_acceptance_evidence_blocked_rows=4",
+    "de_30b70b_acceptance_evidence_blocked_rows=6",
     "de_30b70b_acceptance_evidence_tests_only_rows=0",
     "de_measured_registry_exclusion_rows=2",
     "de_measured_registry_fixture_registry_rows=0",
@@ -1697,12 +1723,12 @@ for snippet in [
     "pm_blocker_closure_queue_rows=6",
     "pm_blocker_closure_packet_rows=6",
     "pm_blocker_closure_packet_files=6",
-    "pm_blocker_required_artifact_rows=29",
+    "pm_blocker_required_artifact_rows=31",
     "pm_execution_lock_rows=10",
     "pm_scope_drift_allowed=0",
     "pm_new_scaffold_default_allowed=0",
-    "pm_external_return_template_rows=29",
-    "pm_external_return_template_files=29",
+    "pm_external_return_template_rows=31",
+    "pm_external_return_template_files=31",
     "pm_pr_normalization_rows=7",
     "pm_pr_normalization_split_required_rows=7",
     "pm_pr_normalization_tests_only_rows=0",

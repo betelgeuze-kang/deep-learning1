@@ -56,7 +56,7 @@ expected = {
     "full_public_source_download_ready": "0",
     "pm_pr_claim_slice_bundle_ready": "1",
     "pm_scope_drift_allowed": "0",
-    "pm_external_return_template_rows": "29",
+    "pm_external_return_template_rows": "31",
     "one_command_replay_preflight_ready": "1",
     "v59_ready": "0",
     "required_30b_70b_baselines_ready": "0",
@@ -405,14 +405,16 @@ for artifact_id in ["v56-contract-summary", "v56-contract-artifacts", "v56b-scal
 if "V56B_ALLOW_CONTRACT_REBUILD=1" not in v56_replay_artifacts["v56b-scale-artifacts"]["validation_command"]:
     raise SystemExit("v60 should preserve the approval-gated v56b validation command")
 de_acceptance_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/de_30b70b_acceptance_evidence_rows.csv")
-if len(de_acceptance_rows) != 4:
-    raise SystemExit("v60 should carry four D/E 30B/70B acceptance evidence rows through v59e/PM sidecar")
+if len(de_acceptance_rows) != 6:
+    raise SystemExit("v60 should carry six D/E 30B/70B acceptance evidence rows through v59e/PM sidecar")
 de_artifacts = {row["artifact_id"]: row for row in de_acceptance_rows}
 for artifact_id, system_id in {
     "d-model-identity": "D",
-    "d-answer-citation-resource": "D",
+    "d-answer-citation-raw-output": "D",
+    "d-resource-evaluator-manifest": "D",
     "e-model-identity": "E",
-    "e-answer-citation-resource": "E",
+    "e-answer-citation-raw-output": "E",
+    "e-resource-evaluator-manifest": "E",
 }.items():
     row = de_artifacts.get(artifact_id)
     if not row:
@@ -1100,12 +1102,12 @@ if (
 ):
     raise SystemExit("v60 manifest should record PM v56 seed dependency blocker evidence")
 if (
-    manifest.get("pm_pr_de_30b70b_acceptance_evidence_rows") != 4
+    manifest.get("pm_pr_de_30b70b_acceptance_evidence_rows") != 6
     or manifest.get("pm_pr_de_30b70b_acceptance_evidence_ready_rows") != 0
-    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_blocked_rows") != 4
+    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_blocked_rows") != 6
     or manifest.get("pm_pr_de_30b70b_acceptance_evidence_tests_only_rows") != 0
     or manifest.get("pm_pr_de_30b70b_acceptance_evidence_fixture_allowed_rows") != 0
-    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_approval_rows") != 4
+    or manifest.get("pm_pr_de_30b70b_acceptance_evidence_approval_rows") != 6
 ):
     raise SystemExit("v60 manifest should record PM D/E 30B/70B acceptance evidence")
 if (

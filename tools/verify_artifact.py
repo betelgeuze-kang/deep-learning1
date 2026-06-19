@@ -2373,10 +2373,14 @@ def verify_baseline_admission(
                 if system_id in by_system:
                     by_system[system_id].append(row)
             for system_id, rows in by_system.items():
-                if len(rows) != 2:
-                    errors.append(f"{acceptance_ledger}: expected two acceptance rows for {system_id}")
+                if len(rows) != 3:
+                    errors.append(f"{acceptance_ledger}: expected three acceptance rows for {system_id}")
                 artifact_ids = {row.get("artifact_id", "") for row in rows}
-                expected_artifacts = {f"{system_id.lower()}-model-identity", f"{system_id.lower()}-answer-citation-resource"}
+                expected_artifacts = {
+                    f"{system_id.lower()}-model-identity",
+                    f"{system_id.lower()}-answer-citation-raw-output",
+                    f"{system_id.lower()}-resource-evaluator-manifest",
+                }
                 if artifact_ids != expected_artifacts:
                     errors.append(f"{acceptance_ledger}: {system_id} artifact ids mismatch")
                 for row in rows:
