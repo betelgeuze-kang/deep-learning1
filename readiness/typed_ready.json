@@ -110,6 +110,36 @@
       "replacement_flag": "v60_release_contract_ready",
       "ready_wording_policy": "typed-ready-only",
       "evidence_path": "results/v60_architecture_challenge_release_contract_summary.csv"
+    },
+    {
+      "scope_id": "operator-review-return-workflow",
+      "contract_ready": true,
+      "fixture_execution_ready": false,
+      "real_model_execution_ready": false,
+      "heldout_metric_ready": false,
+      "human_review_ready": false,
+      "independent_reproduction_ready": false,
+      "release_ready": false,
+      "misleading_ready_flag": "review_return_ready",
+      "replacement_flag": "operator_review_return_workflow_contract_ready",
+      "ready_wording_policy": "typed-ready-only",
+      "pm_ledger_required": false,
+      "evidence_path": "operations/review_return_workflow.json"
+    },
+    {
+      "scope_id": "docs-readme-pr2-cleanup",
+      "contract_ready": true,
+      "fixture_execution_ready": false,
+      "real_model_execution_ready": false,
+      "heldout_metric_ready": false,
+      "human_review_ready": false,
+      "independent_reproduction_ready": false,
+      "release_ready": false,
+      "misleading_ready_flag": "pr2_ready",
+      "replacement_flag": "pr2_docs_claim_boundary_contract_ready",
+      "ready_wording_policy": "typed-ready-only",
+      "pm_ledger_required": false,
+      "evidence_path": "docs/PR2_REWRITE_DRAFT.md"
     }
   ]
 }

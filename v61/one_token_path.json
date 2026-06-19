@@ -114,5 +114,84 @@
       "claim_boundary": "runtime metric claims are blocked until cold/warm decode measurement exists",
       "blocked_by": ["cold/warm cache measurement is still blocked"]
     }
+  ],
+  "required_artifacts": [
+    {
+      "artifact_id": "expert-ffn-forward-parity-rows",
+      "artifact_kind": "csv",
+      "required_columns": [
+        "layer_index",
+        "expert_index",
+        "w1_tensor_name",
+        "w2_tensor_name",
+        "w3_tensor_name",
+        "contract_ready",
+        "fixture_execution_ready",
+        "real_model_execution_ready",
+        "heldout_metric_ready",
+        "human_review_ready",
+        "independent_reproduction_ready",
+        "release_ready",
+        "local_checkpoint_root_supplied",
+        "checkpoint_payload_bytes_committed_to_repo",
+        "actual_model_generation_ready",
+        "route_jump_rows",
+        "status",
+        "reason",
+        "w1_shape",
+        "w2_shape",
+        "w3_shape",
+        "w1_payload_sha256",
+        "w2_payload_sha256",
+        "w3_payload_sha256",
+        "input_hidden_size",
+        "intermediate_size",
+        "output_hidden_size",
+        "candidate_output_sha256",
+        "torch_reference_output_sha256",
+        "max_abs_delta",
+        "tolerance",
+        "expert_ffn_parity_pass"
+      ]
+    },
+    {
+      "artifact_id": "moe-block-forward-parity-rows",
+      "artifact_kind": "csv",
+      "required_columns": [
+        "layer_index",
+        "token_id",
+        "input_hidden_sha256",
+        "router_logits_sha256",
+        "selected_expert_ids",
+        "selected_expert_weights",
+        "expert_output_sha256",
+        "moe_block_output_sha256",
+        "torch_reference_output_sha256",
+        "max_abs_delta",
+        "tolerance",
+        "moe_block_parity_pass",
+        "real_model_execution_ready",
+        "checkpoint_payload_bytes_committed_to_repo"
+      ]
+    },
+    {
+      "artifact_id": "one-token-logits-parity-rows",
+      "artifact_kind": "csv",
+      "required_columns": [
+        "checkpoint_id",
+        "model_revision",
+        "tokenizer_input_sha256",
+        "route_path_sha256",
+        "candidate_logits_sha256",
+        "torch_reference_logits_sha256",
+        "max_abs_delta",
+        "tolerance",
+        "top1_token_id",
+        "reference_top1_token_id",
+        "logits_parity_pass",
+        "real_model_execution_ready",
+        "checkpoint_payload_bytes_committed_to_repo"
+      ]
+    }
   ]
 }

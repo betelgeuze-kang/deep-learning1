@@ -36,5 +36,20 @@ Required real evidence fields:
 - raw answer/citation output
 - evaluator version
 
+Required artifact shape:
+
+- `model-identity`: `system_id`, `model_repository`, `model_revision`,
+  `quantization`, `model_artifact_sha256`, `runtime`, `hardware`
+- `answer-citation-raw-output`: `system_id`, `query_id`,
+  `prompt_template_sha256`, `context_budget`, `retrieval_budget`, `seed`,
+  `raw_answer`, `raw_citation`, `raw_output_sha256`
+- `resource-evaluator-manifest`: `system_id`, `query_id`, `latency_ms`,
+  `peak_memory_mb`, `evaluator_version`, `same_query_set_id`,
+  `same_source_manifest_sha256`
+
+Raw answer/citation output must be preserved separately from evaluator scores.
+Resource rows and evaluator version must be present before measured-registry
+admission; fixtures remain schema tests only.
+
 Until those fields are present for both D and E, A/B/G/H rows remain internal
 v1.0 pre-baseline evidence only.

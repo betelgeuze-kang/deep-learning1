@@ -33,11 +33,12 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["artifact_id", "artifact_kind", "validation_command"],
+        "required": ["artifact_id", "artifact_kind", "validation_command", "required_columns"],
         "properties": {
           "artifact_id": {"type": "string"},
           "artifact_kind": {"type": "string"},
-          "validation_command": {"type": "string"}
+          "validation_command": {"type": "string"},
+          "required_columns": {"type": "array", "items": {"type": "string"}}
         },
         "additionalProperties": false
       }

@@ -8,13 +8,13 @@
     {
       "guard_id": "source-span-id",
       "forbidden_surface": "source span ID",
-      "field_names": ["source_span_id"],
+      "field_names": ["source_span_id", "span_id"],
       "evaluator_only_or_absent": true
     },
     {
       "guard_id": "source-path",
       "forbidden_surface": "source path",
-      "field_names": ["source_path", "path"],
+      "field_names": ["source_path", "source_file_path", "path"],
       "evaluator_only_or_absent": true
     },
     {
@@ -32,13 +32,13 @@
     {
       "guard_id": "query-source-direct-binding",
       "forbidden_surface": "query ID and direct source row binding",
-      "field_names": ["query_id"],
+      "field_names": ["query_id", "source_row_id", "source_query_id", "query_source_id", "source_binding_id"],
       "evaluator_only_or_absent": true
     },
     {
       "guard_id": "expected-behavior",
       "forbidden_surface": "expected behavior",
-      "field_names": ["expected_behavior", "expected_answer", "expected_answer_sha256"],
+      "field_names": ["expected_behavior", "expected_answer", "expected_answer_sha256", "expected_output", "gold_answer"],
       "evaluator_only_or_absent": true
     },
     {
@@ -51,6 +51,7 @@
   "stage_contracts": [
     {
       "stage_id": "v53aq-sanitized-abgh-real-adapter",
+      "surface_kind": "model_or_retriever",
       "summary_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
       "allowed_model_visible_fields": ["sanitized_question"],
       "must_equal": {
@@ -65,6 +66,7 @@
     },
     {
       "stage_id": "v54c-grounded-generation-guard",
+      "surface_kind": "model_or_retriever",
       "summary_path": "results/v54c_complete_source_grounded_generation_1000_summary.csv",
       "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
       "must_equal": {
@@ -74,6 +76,19 @@
         "model_visible_source_locator_rows": "0",
         "raw_prompt_context_appended_rows": "0",
         "real_model_generation_ready": "0"
+      }
+    },
+    {
+      "stage_id": "v53ap-source-span-fixture-replay-boundary",
+      "surface_kind": "source_bound_non_model_adapter",
+      "summary_path": "results/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+      "allowed_model_visible_fields": ["none"],
+      "must_equal": {
+        "expected_answer_oracle_replay": "0",
+        "deterministic_source_span_adapter_execution": "1",
+        "actual_adapter_execution_ready": "1",
+        "real_system_performance_claim_ready": "0",
+        "public_comparison_claim_ready": "0"
       }
     }
   ]

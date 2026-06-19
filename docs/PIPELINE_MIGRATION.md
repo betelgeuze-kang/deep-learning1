@@ -43,6 +43,7 @@ The seed pipelines are intentionally adapter-based. They are a stable inventory 
 - `pipelines/v61.yaml` declares the v61aa tensor-slice verifier before v61ab tile parity, so the v61 runtime path no longer has an implicit missing stage edge.
 - `tools/verify_artifact.py pipeline ...` now rejects unknown, self-referential, or forward `requires` edges.
 - `pr_slices/pr2.json` and `docs/PR2_SPLIT_PLAN.md` pin the draft PR #2 split contract, title/body rewrite, required claim-boundary slices, and tests-only merge-condition ban.
+- `docs/PR2_REWRITE_DRAFT.md`, `README.md`, and `README.ko.md` keep reviewer-facing text pointed at the declarative v61 pipeline/contracts instead of a giant v61 entrypoint list.
 - `audits/v50_public_repo_auditor_correctness.json` and `docs/V50_AUDITOR_CORRECTNESS_CONTRACT.md` pin the v50 auditor-correctness blocker: summary `ready=1` is not mergeable unless row artifacts and sha256 manifest are replayable, and implicit public refresh is forbidden.
 - `readiness/typed_ready.json` and `docs/READY_SEMANTICS.md` pin typed readiness semantics and forbid ambiguous `ready=1` wording from implying real model, review, metric, or release readiness.
 - `leakage/retrieval_model_visible.json` and `docs/RETRIEVAL_LEAKAGE_GUARD.md` pin retriever/model-visible leakage rules so source locators, query-source bindings, expected behavior, and expected labels stay evaluator-only.

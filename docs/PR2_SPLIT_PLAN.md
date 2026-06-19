@@ -23,6 +23,8 @@ tools/verify_artifact.py pr-split pr_slices/pr2.json
 9. `v58-blind-eval-contract`
 10. `v59-one-command-demo`
 11. `v61-ssd-moe-runtime-roadmap`
+12. `operator-review-return-workflow`
+13. `docs-readme-pr2-cleanup`
 
 ## Merge Policy
 
@@ -60,21 +62,39 @@ review, adjudication, real generation, or release readiness.
 v61 runtime wording must follow `v61/one_token_path.json`; tensor-page,
 dtype/quant, and matvec parity evidence do not imply an SSD-resident real model
 runtime until one-token logits parity is accepted.
+README and PR-body wording must follow the `docs-readme-pr2-cleanup` slice:
+reviewers should be pointed to declarative pipeline/contracts instead of a giant
+v61 entrypoint dump, and scaffold/runtime-admission evidence must not be promoted
+into actual generation, production, comparison, or release claims.
 
 ## Title And Body
 
 Recommended title:
 
 ```text
-Split v1.0 research artifact into claim-bounded review slices
+Split PR #2 into v1.0 claim-boundary slices
 ```
 
 Recommended body summary:
 
 ```text
-This draft PR is not mergeable as one unit. Split by claim boundary so each
-reviewer can replay the artifacts without accepting unrelated scaffold. Merge
-gates are claim boundary accuracy, replayable output artifacts, and
-false-positive blocker closure. Tests are necessary smoke evidence but are not
-sufficient merge conditions.
+This draft PR is not mergeable as one unit. It mixes v50 auditor correctness,
+v52 baseline intake, v53/v54 query and generation contracts, v58 blind-eval
+protocol, v59 one-command replay, v61 checkpoint/runtime scaffolding,
+operator/review-return workflow, and README/documentation cleanup.
+
+Split it into claim-bounded PRs so each reviewer can replay the artifacts
+without accepting unrelated scaffold. Merge gates are claim boundary accuracy,
+replayable output artifacts, and false-positive blocker closure; tests are
+necessary smoke evidence but are not sufficient merge conditions.
+
+Current v61 state: checkpoint identity, page-hash, runtime-admission, and
+operator-bundle scaffolds are documented, but actual generation, one-token
+logits parity, production latency, near-frontier quality, and release claims
+remain blocked.
+
+Typed readiness, retrieval leakage, and D/E 30B/70B real-baseline admission
+remain separate blocker surfaces.
 ```
+
+Full draft: [PR2_REWRITE_DRAFT.md](PR2_REWRITE_DRAFT.md).

@@ -38,4 +38,22 @@ Required real-execution evidence:
 - unsupported/missing abstention scoring
 - latency and memory evaluated separately from answer quality
 
+Required artifact shape:
+
+- `v58-blind-response-rows`: `blind_run_id`, `system_blind_id`,
+  `query_id`, `answer_text`, `citation_text`, `response_sha256`
+- `v58-run-identity-rows`: `blind_run_id`, `system_id`,
+  `system_blind_id`, `corpus_id`, `context_budget`, `retrieval_budget`,
+  `prompt_template_sha256`
+- `v58-human-review-rows`: `blind_run_id`, `query_id`, `reviewer_id`,
+  `reviewer_blinded`, `answer_quality_score`, `citation_score`,
+  `source_span_exact`, `unsupported_abstain_score`
+- `v58d-review-return-intake`: `review_dir`, `accepted_blind_review_rows`,
+  `accepted_adjudication_rows`, `inter_rater_rows`, `review_return_ready`
+- `v58-sha256-manifest`: `artifact_path`, `sha256`, `bytes`
+
+Human review rows intentionally exclude latency and memory fields. Resource
+measurements are accepted through response/resource artifacts and evaluated
+separately from answer quality.
+
 Fixtures, templates, or tests-only checks do not close v58.

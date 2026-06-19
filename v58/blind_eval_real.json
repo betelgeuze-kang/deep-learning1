@@ -48,27 +48,32 @@
     {
       "artifact_id": "v58-blind-response-rows",
       "artifact_kind": "csv",
-      "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh"
+      "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
+      "required_columns": ["blind_run_id", "system_blind_id", "query_id", "answer_text", "citation_text", "response_sha256"]
     },
     {
       "artifact_id": "v58-run-identity-rows",
       "artifact_kind": "csv",
-      "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh"
+      "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
+      "required_columns": ["blind_run_id", "system_id", "system_blind_id", "corpus_id", "context_budget", "retrieval_budget", "prompt_template_sha256"]
     },
     {
       "artifact_id": "v58-human-review-rows",
       "artifact_kind": "review-return",
-      "validation_command": "defer to v58 review acceptance gate once response rows validate"
+      "validation_command": "defer to v58 review acceptance gate once response rows validate",
+      "required_columns": ["blind_run_id", "query_id", "reviewer_id", "reviewer_blinded", "answer_quality_score", "citation_score", "source_span_exact", "unsupported_abstain_score"]
     },
     {
       "artifact_id": "v58d-review-return-intake",
       "artifact_kind": "artifact-directory",
-      "validation_command": "./experiments/test_v58d_blind_review_return_intake.sh"
+      "validation_command": "./experiments/test_v58d_blind_review_return_intake.sh",
+      "required_columns": ["review_dir", "accepted_blind_review_rows", "accepted_adjudication_rows", "inter_rater_rows", "review_return_ready"]
     },
     {
       "artifact_id": "v58-sha256-manifest",
       "artifact_kind": "csv",
-      "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh"
+      "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
+      "required_columns": ["artifact_path", "sha256", "bytes"]
     }
   ]
 }

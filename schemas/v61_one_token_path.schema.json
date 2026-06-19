@@ -3,7 +3,7 @@
   "$id": "https://local.discrete-local-energy/schemas/v61_one_token_path.schema.json",
   "title": "v61 One Token Runtime Path Contract",
   "type": "object",
-  "required": ["schema_version", "policy", "milestones"],
+  "required": ["schema_version", "policy", "milestones", "required_artifacts"],
   "properties": {
     "schema_version": {"type": "string"},
     "policy": {
@@ -61,6 +61,19 @@
             "type": "array",
             "items": {"type": "string"}
           }
+        },
+        "additionalProperties": false
+      }
+    },
+    "required_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "artifact_kind", "required_columns"],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "artifact_kind": {"type": "string"},
+          "required_columns": {"type": "array", "items": {"type": "string"}}
         },
         "additionalProperties": false
       }

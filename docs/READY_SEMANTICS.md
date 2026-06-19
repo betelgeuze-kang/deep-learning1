@@ -37,3 +37,14 @@ For v61, the required wording is:
 
 Do not use `100b_moe_run_ready=1` as a real inference, quality, release, or
 near-frontier claim.
+
+Rows may set `pm_ledger_required=false` when the typed-readiness boundary is a
+source-controlled PR or documentation contract that is not emitted by the
+current PM ledger. Those rows are still enforced by
+`tools/verify_artifact.py typed-readiness`; they are skipped only for
+generated-ledger row matching.
+
+The current source-only rows are:
+
+- `operator_review_return_workflow_contract_ready`
+- `pr2_docs_claim_boundary_contract_ready`

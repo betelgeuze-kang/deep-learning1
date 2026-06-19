@@ -7,7 +7,8 @@
     "schema_version",
     "policy",
     "required_real_evidence_fields",
-    "systems"
+    "systems",
+    "required_artifacts"
   ],
   "properties": {
     "schema_version": {"type": "string"},
@@ -47,6 +48,19 @@
           "evidence_env": {"type": "string"},
           "measured_registry_admission_ready": {"type": "boolean"},
           "acceptance_test": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "required_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "artifact_kind", "required_columns"],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "artifact_kind": {"type": "string"},
+          "required_columns": {"type": "array", "items": {"type": "string"}}
         },
         "additionalProperties": false
       }

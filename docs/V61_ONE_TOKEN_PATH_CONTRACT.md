@@ -33,6 +33,19 @@ Current blockers:
 - cold/warm cache measurement
 - SSD bytes/token, miss/token, and TPS recording
 
+The next real-runtime evidence must be emitted as replayable CSV rows, not
+summary prose. The contract requires these artifact shapes:
+
+- `expert-ffn-forward-parity-rows`: real layer/expert tensor names, W1/W2/W3
+  payload hashes and shapes, typed readiness fields, candidate/reference output
+  hashes, tolerance, max delta, and `expert_ffn_parity_pass`
+- `moe-block-forward-parity-rows`: token input hash, router logits hash,
+  selected experts/weights, expert and block output hashes, reference output
+  hash, tolerance, max delta, and `moe_block_parity_pass`
+- `one-token-logits-parity-rows`: checkpoint/revision identity, tokenizer input
+  hash, route path hash, candidate/reference logits hashes, top-1 agreement,
+  tolerance, max delta, and `logits_parity_pass`
+
 `torch_matvec_parity_ready=1` is not a real runtime claim. The phrase
 `SSD-resident real model runtime` remains blocked until milestones 1-6 are all
 accepted with replayable artifacts.

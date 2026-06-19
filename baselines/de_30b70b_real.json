@@ -37,5 +37,22 @@
       "measured_registry_admission_ready": false,
       "acceptance_test": "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR> V52D_70B_LLM_RAG_EVIDENCE_DIR=<E_DIR> ./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh"
     }
+  ],
+  "required_artifacts": [
+    {
+      "artifact_id": "model-identity",
+      "artifact_kind": "csv",
+      "required_columns": ["system_id", "model_repository", "model_revision", "quantization", "model_artifact_sha256", "runtime", "hardware"]
+    },
+    {
+      "artifact_id": "answer-citation-raw-output",
+      "artifact_kind": "csv",
+      "required_columns": ["system_id", "query_id", "prompt_template_sha256", "context_budget", "retrieval_budget", "seed", "raw_answer", "raw_citation", "raw_output_sha256"]
+    },
+    {
+      "artifact_id": "resource-evaluator-manifest",
+      "artifact_kind": "csv",
+      "required_columns": ["system_id", "query_id", "latency_ms", "peak_memory_mb", "evaluator_version", "same_query_set_id", "same_source_manifest_sha256"]
+    }
   ]
 }

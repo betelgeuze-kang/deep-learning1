@@ -36,6 +36,7 @@
         "required": ["stage_id", "summary_path", "allowed_model_visible_fields", "must_equal"],
         "properties": {
           "stage_id": {"type": "string"},
+          "surface_kind": {"type": "string"},
           "summary_path": {"type": "string"},
           "allowed_model_visible_fields": {"type": "array", "items": {"type": "string"}},
           "must_equal": {

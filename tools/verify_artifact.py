@@ -73,6 +73,7 @@ REQUIRED_BASELINE_ADMISSION_KEYS = {
     "policy",
     "required_real_evidence_fields",
     "systems",
+    "required_artifacts",
 }
 REQUIRED_BASELINE_SYSTEM_KEYS = {
     "system_id",
@@ -82,6 +83,11 @@ REQUIRED_BASELINE_SYSTEM_KEYS = {
     "evidence_env",
     "measured_registry_admission_ready",
     "acceptance_test",
+}
+REQUIRED_BASELINE_ARTIFACT_KEYS = {
+    "artifact_id",
+    "artifact_kind",
+    "required_columns",
 }
 REQUIRED_V52_ADAPTER_GUARD_KEYS = {
     "schema_version",
@@ -155,6 +161,7 @@ REQUIRED_V61_ONE_TOKEN_KEYS = {
     "schema_version",
     "policy",
     "milestones",
+    "required_artifacts",
 }
 REQUIRED_V61_MILESTONE_KEYS = {
     "order",
@@ -163,6 +170,11 @@ REQUIRED_V61_MILESTONE_KEYS = {
     "current_status",
     "evidence_path",
     "claim_boundary",
+}
+REQUIRED_V61_ARTIFACT_KEYS = {
+    "artifact_id",
+    "artifact_kind",
+    "required_columns",
 }
 EXPECTED_PR2_SLICE_ORDER = [
     "docs/v1-roadmap",
@@ -176,11 +188,23 @@ EXPECTED_PR2_SLICE_ORDER = [
     "v58-blind-eval-contract",
     "v59-one-command-demo",
     "v61-ssd-moe-runtime-roadmap",
+    "operator-review-return-workflow",
+    "docs-readme-pr2-cleanup",
 ]
 REQUIRED_PR_MERGE_GATES = {
     "claim-boundary",
     "replay-artifact",
     "blocker-false-positive",
+}
+REQUIRED_PR2_REWRITE_TERMS = {
+    "not mergeable as one unit",
+    "typed readiness",
+    "retrieval leakage",
+    "D/E",
+    "operator/review-return",
+    "one-token logits parity",
+    "actual generation",
+    "release claims remain blocked",
 }
 TESTS_ONLY_MERGE_CONDITIONS = {"tests pass", "test pass", "tests", "test", "ci green"}
 TYPED_READINESS_KEYS = {
@@ -211,7 +235,9 @@ EXPECTED_LEAKAGE_GUARD_IDS = [
 ]
 FORBIDDEN_MODEL_VISIBLE_FIELDS = {
     "source_span_id",
+    "span_id",
     "source_path",
+    "source_file_path",
     "path",
     "source_line_start",
     "source_line_end",
@@ -221,9 +247,15 @@ FORBIDDEN_MODEL_VISIBLE_FIELDS = {
     "source_file_sha256",
     "source_git_blob_sha",
     "query_id",
+    "source_row_id",
+    "source_query_id",
+    "query_source_id",
+    "source_binding_id",
     "expected_behavior",
     "expected_answer",
     "expected_answer_sha256",
+    "expected_output",
+    "gold_answer",
     "negative_or_abstain",
     "audit_type",
     "expected_label",
@@ -240,6 +272,37 @@ REQUIRED_DE_REAL_EVIDENCE_FIELDS = {
     "seed",
     "answer_citation_raw_output",
     "evaluator_version",
+}
+EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS = {
+    "model-identity": {
+        "system_id",
+        "model_repository",
+        "model_revision",
+        "quantization",
+        "model_artifact_sha256",
+        "runtime",
+        "hardware",
+    },
+    "answer-citation-raw-output": {
+        "system_id",
+        "query_id",
+        "prompt_template_sha256",
+        "context_budget",
+        "retrieval_budget",
+        "seed",
+        "raw_answer",
+        "raw_citation",
+        "raw_output_sha256",
+    },
+    "resource-evaluator-manifest": {
+        "system_id",
+        "query_id",
+        "latency_ms",
+        "peak_memory_mb",
+        "evaluator_version",
+        "same_query_set_id",
+        "same_source_manifest_sha256",
+    },
 }
 EXPECTED_V58_REQUIREMENT_IDS = [
     "ab-cdegh-real-responses",
@@ -304,6 +367,44 @@ EXPECTED_V58_ARTIFACT_IDS = [
     "v58d-review-return-intake",
     "v58-sha256-manifest",
 ]
+EXPECTED_V58_ARTIFACT_COLUMNS = {
+    "v58-blind-response-rows": {
+        "blind_run_id",
+        "system_blind_id",
+        "query_id",
+        "answer_text",
+        "citation_text",
+        "response_sha256",
+    },
+    "v58-run-identity-rows": {
+        "blind_run_id",
+        "system_id",
+        "system_blind_id",
+        "corpus_id",
+        "context_budget",
+        "retrieval_budget",
+        "prompt_template_sha256",
+    },
+    "v58-human-review-rows": {
+        "blind_run_id",
+        "query_id",
+        "reviewer_id",
+        "reviewer_blinded",
+        "answer_quality_score",
+        "citation_score",
+        "source_span_exact",
+        "unsupported_abstain_score",
+    },
+    "v58d-review-return-intake": {
+        "review_dir",
+        "accepted_blind_review_rows",
+        "accepted_adjudication_rows",
+        "inter_rater_rows",
+        "review_return_ready",
+    },
+    "v58-sha256-manifest": {"artifact_path", "sha256", "bytes"},
+}
+V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS = {"latency_ms", "memory_mb", "peak_memory_mb", "tokens_per_second"}
 EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS = [
     "v53-review-return-intake-blocked",
     "v58-blind-review-return-blocked",
@@ -332,6 +433,73 @@ EXPECTED_V61_CURRENT_STATUS = {
     "sixteen-token-decode": "blocked",
     "cold-warm-cache-measurement": "blocked",
     "ssd-bytes-miss-tps-recording": "blocked",
+}
+EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
+    "expert-ffn-forward-parity-rows": {
+        "layer_index",
+        "expert_index",
+        "w1_tensor_name",
+        "w2_tensor_name",
+        "w3_tensor_name",
+        "contract_ready",
+        "fixture_execution_ready",
+        "real_model_execution_ready",
+        "heldout_metric_ready",
+        "human_review_ready",
+        "independent_reproduction_ready",
+        "release_ready",
+        "local_checkpoint_root_supplied",
+        "checkpoint_payload_bytes_committed_to_repo",
+        "actual_model_generation_ready",
+        "route_jump_rows",
+        "status",
+        "reason",
+        "w1_shape",
+        "w2_shape",
+        "w3_shape",
+        "w1_payload_sha256",
+        "w2_payload_sha256",
+        "w3_payload_sha256",
+        "input_hidden_size",
+        "intermediate_size",
+        "output_hidden_size",
+        "candidate_output_sha256",
+        "torch_reference_output_sha256",
+        "max_abs_delta",
+        "tolerance",
+        "expert_ffn_parity_pass",
+    },
+    "moe-block-forward-parity-rows": {
+        "layer_index",
+        "token_id",
+        "input_hidden_sha256",
+        "router_logits_sha256",
+        "selected_expert_ids",
+        "selected_expert_weights",
+        "expert_output_sha256",
+        "moe_block_output_sha256",
+        "torch_reference_output_sha256",
+        "max_abs_delta",
+        "tolerance",
+        "moe_block_parity_pass",
+        "real_model_execution_ready",
+        "checkpoint_payload_bytes_committed_to_repo",
+    },
+    "one-token-logits-parity-rows": {
+        "checkpoint_id",
+        "model_revision",
+        "tokenizer_input_sha256",
+        "route_path_sha256",
+        "candidate_logits_sha256",
+        "torch_reference_logits_sha256",
+        "max_abs_delta",
+        "tolerance",
+        "top1_token_id",
+        "reference_top1_token_id",
+        "logits_parity_pass",
+        "real_model_execution_ready",
+        "checkpoint_payload_bytes_committed_to_repo",
+    },
 }
 
 
@@ -424,6 +592,11 @@ def verify_pr_split(path: Path) -> list[str]:
         errors.append(f"{path}: recommended_title must describe the split")
     if not isinstance(data["recommended_body"], list) or not data["recommended_body"]:
         errors.append(f"{path}: recommended_body must be a non-empty list")
+    if data["draft_pr"] == "PR #2":
+        body_text = "\n".join(str(row) for row in data["recommended_body"])
+        missing_terms = [term for term in REQUIRED_PR2_REWRITE_TERMS if term not in body_text]
+        if missing_terms:
+            errors.append(f"{path}: recommended_body missing PR #2 rewrite terms: {', '.join(sorted(missing_terms))}")
     policy = data["merge_gate_policy"]
     if policy.get("forbid_tests_only") is not True:
         errors.append(f"{path}: merge_gate_policy.forbid_tests_only must be true")
@@ -526,6 +699,8 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
             errors.append(f"{prefix}: replacement_flag cannot be an ambiguous ready flag")
         if row.get("ready_wording_policy") != "typed-ready-only":
             errors.append(f"{prefix}: ready_wording_policy must be typed-ready-only")
+        if "pm_ledger_required" in row and not isinstance(row.get("pm_ledger_required"), bool):
+            errors.append(f"{prefix}: pm_ledger_required must be boolean when present")
         if not row.get("evidence_path"):
             errors.append(f"{prefix}: evidence_path must be non-empty")
         if row.get("real_model_execution_ready") is True:
@@ -545,6 +720,8 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
         ledger_rows = read_csv_rows(pm_ledger)
         by_replacement = {row.get("replacement_flag", ""): row for row in ledger_rows}
         for row in rows:
+            if row.get("pm_ledger_required") is False:
+                continue
             replacement = row["replacement_flag"]
             ledger = by_replacement.get(replacement)
             if ledger is None:
@@ -621,18 +798,33 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
         missing_stage = REQUIRED_LEAKAGE_STAGE_KEYS - set(stage)
         if missing_stage:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_stage))}")
+        surface_kind = stage.get("surface_kind", "model_or_retriever")
+        if surface_kind not in {"model_or_retriever", "fixture_or_evaluator_replay", "source_bound_non_model_adapter"}:
+            errors.append(f"{prefix}: unsupported surface_kind={surface_kind}")
         allowed = stage.get("allowed_model_visible_fields", [])
         if not isinstance(allowed, list) or not allowed:
             errors.append(f"{prefix}: allowed_model_visible_fields must be non-empty")
         leaked = set(allowed) & FORBIDDEN_MODEL_VISIBLE_FIELDS
         if leaked:
             errors.append(f"{prefix}: allowed_model_visible_fields contains forbidden field(s): {', '.join(sorted(leaked))}")
+        if surface_kind in {"fixture_or_evaluator_replay", "source_bound_non_model_adapter"} and allowed != ["none"]:
+            errors.append(f"{prefix}: non-model-visible stages must use allowed_model_visible_fields=['none']")
         must_equal = stage.get("must_equal", {})
         if not isinstance(must_equal, dict) or not must_equal:
             errors.append(f"{prefix}: must_equal must be a non-empty object")
         summary_path = Path(stage.get("summary_path", ""))
         summary = read_first_csv(summary_path)
         if summary:
+            if surface_kind == "fixture_or_evaluator_replay":
+                if summary.get("actual_adapter_execution_ready") not in {"", None, "0"}:
+                    errors.append(f"{summary_path}: {stage.get('stage_id', '')}.actual_adapter_execution_ready must be 0 for fixture/evaluator replay")
+                if summary.get("real_system_performance_claim_ready") not in {"", None, "0"}:
+                    errors.append(f"{summary_path}: {stage.get('stage_id', '')}.real_system_performance_claim_ready must be 0 for fixture/evaluator replay")
+            if surface_kind == "source_bound_non_model_adapter":
+                if summary.get("real_system_performance_claim_ready") not in {"", None, "0"}:
+                    errors.append(f"{summary_path}: {stage.get('stage_id', '')}.real_system_performance_claim_ready must be 0 for source-bound non-model adapters")
+                if summary.get("public_comparison_claim_ready") not in {"", None, "0"}:
+                    errors.append(f"{summary_path}: {stage.get('stage_id', '')}.public_comparison_claim_ready must be 0 for source-bound non-model adapters")
             for field, expected in must_equal.items():
                 if summary.get(field) != expected:
                     errors.append(f"{summary_path}: {stage.get('stage_id', '')}.{field} expected {expected}, got {summary.get(field)}")
@@ -710,6 +902,27 @@ def verify_baseline_admission(
             errors.append(f"{prefix}: evidence_env must name the V52D evidence directory variable")
         if "test_v52d_30b70b_llm_rag_evidence_intake.sh" not in row.get("acceptance_test", ""):
             errors.append(f"{prefix}: acceptance_test must use the v52d evidence intake")
+
+    artifacts = data["required_artifacts"]
+    artifact_ids = [row.get("artifact_id", "") for row in artifacts]
+    if artifact_ids != list(EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS):
+        errors.append(f"{path}: required_artifacts order must be model-identity, answer-citation-raw-output, resource-evaluator-manifest")
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{path}: duplicate required_artifacts are forbidden")
+    for index, row in enumerate(artifacts, start=1):
+        prefix = f"{path}: required_artifact[{index}]"
+        missing_artifact = REQUIRED_BASELINE_ARTIFACT_KEYS - set(row)
+        if missing_artifact:
+            errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_artifact))}")
+        if row.get("artifact_kind") != "csv":
+            errors.append(f"{prefix}: artifact_kind must be csv")
+        artifact_id = row.get("artifact_id", "")
+        expected_columns = EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS.get(artifact_id)
+        required_columns = row.get("required_columns", [])
+        if not isinstance(required_columns, list) or not required_columns:
+            errors.append(f"{prefix}: required_columns must be a non-empty list")
+        elif expected_columns is not None and set(required_columns) != expected_columns:
+            errors.append(f"{prefix}: required_columns must be exactly {', '.join(sorted(expected_columns))}")
 
     if measured_registry_ledger is not None:
         ledger_rows = read_csv_rows(measured_registry_ledger)
@@ -1097,7 +1310,20 @@ def verify_v58_blind_eval(
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
         if not row.get("artifact_kind") or not row.get("validation_command"):
             errors.append(f"{prefix}: artifact_kind and validation_command must be non-empty")
-        if row.get("artifact_id") in {"v58-blind-response-rows", "v58-run-identity-rows", "v58-sha256-manifest"}:
+        artifact_id = row.get("artifact_id", "")
+        required_columns = row.get("required_columns", [])
+        if not isinstance(required_columns, list) or not required_columns:
+            errors.append(f"{prefix}: required_columns must be a non-empty list")
+        else:
+            column_set = set(required_columns)
+            expected_columns = EXPECTED_V58_ARTIFACT_COLUMNS.get(artifact_id)
+            if expected_columns is not None and column_set != expected_columns:
+                errors.append(f"{prefix}: required_columns must be exactly {', '.join(sorted(expected_columns))}")
+            if artifact_id == "v58-human-review-rows":
+                leaked_resource_columns = column_set & V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS
+                if leaked_resource_columns:
+                    errors.append(f"{prefix}: human review rows must not include resource columns: {', '.join(sorted(leaked_resource_columns))}")
+        if artifact_id in {"v58-blind-response-rows", "v58-run-identity-rows", "v58-sha256-manifest"}:
             if "test_v58c_blind_response_evidence_intake.sh" not in row.get("validation_command", ""):
                 errors.append(f"{prefix}: response artifacts must validate through v58c intake")
 
@@ -1305,6 +1531,27 @@ def verify_v61_one_token_path(
             expected = check.get("expected", "")
             if summary.get(field) != expected:
                 errors.append(f"{prefix}: {summary_id}.{field} expected {expected}, got {summary.get(field)}")
+
+    artifacts = data["required_artifacts"]
+    artifact_ids = [row.get("artifact_id", "") for row in artifacts]
+    if artifact_ids != list(EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS):
+        errors.append(f"{path}: required_artifacts order must be expert FFN, MoE block, one-token logits")
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{path}: duplicate required_artifacts are forbidden")
+    for index, row in enumerate(artifacts, start=1):
+        prefix = f"{path}: required_artifact[{index}]"
+        missing_artifact = REQUIRED_V61_ARTIFACT_KEYS - set(row)
+        if missing_artifact:
+            errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_artifact))}")
+        if row.get("artifact_kind") != "csv":
+            errors.append(f"{prefix}: artifact_kind must be csv")
+        artifact_id = row.get("artifact_id", "")
+        required_columns = row.get("required_columns", [])
+        expected_columns = EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS.get(artifact_id)
+        if not isinstance(required_columns, list) or not required_columns:
+            errors.append(f"{prefix}: required_columns must be a non-empty list")
+        elif expected_columns is not None and set(required_columns) != expected_columns:
+            errors.append(f"{prefix}: required_columns must be exactly {', '.join(sorted(expected_columns))}")
     return errors
 
 

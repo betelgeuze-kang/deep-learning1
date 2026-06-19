@@ -45,6 +45,7 @@
           "misleading_ready_flag": {"type": "string"},
           "replacement_flag": {"type": "string"},
           "ready_wording_policy": {"type": "string"},
+          "pm_ledger_required": {"type": "boolean"},
           "evidence_path": {"type": "string"}
         },
         "additionalProperties": false
