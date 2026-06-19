@@ -56,28 +56,34 @@ The source-controlled policy also pins these fail-closed gates:
 
 Required artifact shape:
 
-- `v58-blind-response-rows`: `blind_run_id`, `system_blind_id`,
-  `query_id`, `answer_text`, `citation_text`, `response_sha256`;
+- `v58-blind-response-rows`: `blind_response_id`, `blind_eval_id`,
+  `system_blind_id`, `response_text`, `citation_source_span_id`, `abstained`,
+  `output_sha256`, `latency_ns`, `memory_peak_bytes`, `cost_usd`,
+  `model_run_id`, `credential_redacted`, `resource_trace_sha256`;
   minimum 3500 rows
-- `v58-run-identity-rows`: `blind_run_id`, `system_id`,
-  `system_blind_id`, `corpus_id`, `context_budget`, `retrieval_budget`,
-  `prompt_template_sha256`; minimum 7 rows
+- `v58-run-identity-rows`: `system_blind_id`, `source_system_id`,
+  `model_or_architecture_id`, `corpus_id`, `context_budget`,
+  `retrieval_budget`, `prompt_template_sha256`, `source_manifest_sha256`,
+  `external_api_used`; minimum 7 rows
 - `v58-query-split-rows`: `query_id`, `repo_id`, `split_name`,
   `unseen_repository`, `frozen_query_packet_sha256`,
   `source_manifest_sha256`; minimum 500 rows
-- `v58-resource-rows`: `blind_run_id`, `system_blind_id`, `query_id`,
-  `latency_ms`, `peak_memory_mb`, `tokens_per_second`, `resource_sha256`;
+- `v58-resource-rows`: `blind_response_id`, `blind_eval_id`,
+  `system_blind_id`, `latency_ns`, `memory_peak_bytes`,
+  `resource_trace_sha256`;
   minimum 3500 rows
-- `v58-human-review-rows`: `blind_run_id`, `system_blind_id`, `query_id`,
-  `response_sha256`, `reviewer_id`, `reviewer_blinded`,
-  `reviewer_independent`, `conflict_disclosure_sha256`,
-  `answer_quality_score`, `citation_score`, `source_span_exact`,
-  `unsupported_abstain_score`; minimum 7000 rows
-- `v58-adjudication-rows`: `blind_run_id`, `system_blind_id`, `query_id`,
-  `response_sha256`, `reviewer_a_id`, `reviewer_b_id`, `disagreement_type`,
-  `adjudicator_id`, `adjudicated_answer_quality_score`,
-  `adjudicated_citation_score`, `adjudicated_source_span_exact`,
-  `adjudicated_unsupported_abstain_score`; minimum 3500 rows
+- `v58-human-review-rows`: `blind_response_id`, `blind_eval_id`,
+  `system_blind_id`, `reviewer_id`, `reviewer_blinded`,
+  `reviewer_independent`, `conflict_disclosed`, `answer_correctness`,
+  `citation_correctness`, `abstain_correctness`, `source_span_exactness`,
+  `unsupported_abstention_correctness`, `unseen_repository_split_id`,
+  `latency_memory_excluded_from_quality_score`, `policy_score`,
+  `review_decision`, `review_sha256`; minimum 7000 rows
+- `v58-adjudication-rows`: `blind_response_id`, `blind_eval_id`,
+  `system_blind_id`, `reviewer_a_id`, `reviewer_b_id`,
+  `reviewer_a_decision`, `reviewer_b_decision`, `adjudicated_decision`,
+  `inter_rater_agree`, `adjudicator_id`, `adjudication_sha256`;
+  minimum 3500 rows
 - `v58d-review-return-intake`: `review_dir`, `accepted_blind_review_rows`,
   `accepted_adjudication_rows`, `inter_rater_rows`, `review_return_ready`;
   minimum 1 row
