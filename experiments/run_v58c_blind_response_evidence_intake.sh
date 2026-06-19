@@ -351,7 +351,24 @@ schema_rows = [
     ("run_identity_rows.csv", "blind_system_id", "must cover A/B/C/D/E/G/H and optional F if supplied"),
     ("run_identity_rows.csv", "source_system_id", "A/B/C/D/E/F/G/H mapping; reviewer packets remain blind"),
     ("run_identity_rows.csv", "model_or_architecture_id", "stable model/architecture identifier"),
+    ("run_identity_rows.csv", "corpus_id", "same frozen corpus id for every required system"),
+    ("run_identity_rows.csv", "context_budget", "same context budget for every required system"),
+    ("run_identity_rows.csv", "retrieval_budget", "same retrieval budget for every required system"),
+    ("run_identity_rows.csv", "prompt_template_sha256", "sha256:<64 hex> over the prompt template"),
+    ("run_identity_rows.csv", "source_manifest_sha256", "sha256:<64 hex> over the source manifest"),
     ("run_identity_rows.csv", "external_api_used", "0 for A/B/C/D/E/G/H, 0 or 1 for F"),
+    ("query_split_rows.csv", "query_id", "must match a frozen blind_eval_id"),
+    ("query_split_rows.csv", "repo_id", "non-empty repository id"),
+    ("query_split_rows.csv", "split_name", "non-empty split name"),
+    ("query_split_rows.csv", "unseen_repository", "must be 1 for the v58 blind split"),
+    ("query_split_rows.csv", "frozen_query_packet_sha256", "sha256:<64 hex> over the frozen query packet"),
+    ("query_split_rows.csv", "source_manifest_sha256", "sha256:<64 hex> over the source manifest"),
+    ("resource_rows.csv", "blind_response_id", "must match a supplied blind response id"),
+    ("resource_rows.csv", "blind_eval_id", "must match the response blind_eval_id"),
+    ("resource_rows.csv", "blind_system_id", "must match the response blind_system_id"),
+    ("resource_rows.csv", "latency_ns", "positive integer measured runtime kept outside answer quality"),
+    ("resource_rows.csv", "memory_peak_bytes", "non-negative integer kept outside answer quality"),
+    ("resource_rows.csv", "resource_trace_sha256", "sha256:<64 hex> over the resource trace"),
 ]
 write_csv(
     run_dir / "blind_response_required_field_rows.csv",
@@ -388,6 +405,11 @@ for row in identity_rows:
             "blind_system_id": row["blind_system_id"],
             "source_system_id": row["source_system_id"],
             "model_or_architecture_id": "",
+            "corpus_id": "",
+            "context_budget": "",
+            "retrieval_budget": "",
+            "prompt_template_sha256": "",
+            "source_manifest_sha256": "",
             "model_size_class": "30b" if row["source_system_id"] == "D" else "70b" if row["source_system_id"] == "E" else "100b-plus" if row["source_system_id"] == "F" else "routememory-routehint",
             "external_api_used": "",
             "credential_redacted": 1,
@@ -399,13 +421,22 @@ write_csv(run_dir / "run_identity_template_rows.csv", list(identity_template_row
 validation_rows = []
 supplied_rows = []
 identity_supplied_rows = []
+query_split_rows = []
+resource_rows = []
 evidence_dir = Path(evidence_dir_arg) if evidence_dir_arg else None
 if not evidence_dir or not evidence_dir.is_dir():
     validation_rows.append({"check": "evidence-dir", "status": "blocked", "reason": "V58C_BLIND_RESPONSE_EVIDENCE_DIR not supplied"})
 else:
     response_path = evidence_dir / "blind_response_rows.csv"
     identity_path = evidence_dir / "run_identity_rows.csv"
-    for name, path in [("blind-response-file", response_path), ("run-identity-file", identity_path)]:
+    query_split_path = evidence_dir / "query_split_rows.csv"
+    resource_path = evidence_dir / "resource_rows.csv"
+    for name, path in [
+        ("blind-response-file", response_path),
+        ("run-identity-file", identity_path),
+        ("query-split-file", query_split_path),
+        ("resource-file", resource_path),
+    ]:
         if path.is_file() and path.stat().st_size > 0:
             copy(path, f"supplied_evidence/{path.name}")
             validation_rows.append({"check": name, "status": "pass", "reason": "present"})
@@ -415,8 +446,13 @@ else:
         supplied_rows = read_csv(response_path)
     if identity_path.is_file() and identity_path.stat().st_size > 0:
         identity_supplied_rows = read_csv(identity_path)
+    if query_split_path.is_file() and query_split_path.stat().st_size > 0:
+        query_split_rows = read_csv(query_split_path)
+    if resource_path.is_file() and resource_path.stat().st_size > 0:
+        resource_rows = read_csv(resource_path)
 
 errors = []
+expected_eval_ids = {row["blind_eval_id"] for row in query_rows}
 if supplied_rows:
     supplied_ids = [row.get("blind_response_id", "") for row in supplied_rows]
     supplied_id_set = set(supplied_ids)
@@ -460,6 +496,10 @@ if supplied_rows:
             errors.append("cost-usd-not-float")
         if row.get("resource_trace_sha256") and not is_sha256(row.get("resource_trace_sha256")):
             errors.append("resource-trace-sha256-invalid")
+    if not query_split_rows:
+        errors.append("query-split-rows-missing")
+    if not resource_rows:
+        errors.append("resource-rows-missing")
 
 if identity_supplied_rows:
     identity_systems = {row.get("source_system_id", "") for row in identity_supplied_rows}
@@ -473,8 +513,78 @@ if identity_supplied_rows:
             errors.append("external-api-used-for-required-local-system")
         if source_system_id == "F" and row.get("credential_redacted", "") != "1":
             errors.append("hosted-credential-not-redacted")
+        if not row.get("corpus_id", ""):
+            errors.append("corpus-id-missing")
+        for field in ["context_budget", "retrieval_budget"]:
+            try:
+                value = int(row.get(field, ""))
+            except ValueError:
+                errors.append(f"{field}-not-integer")
+                continue
+            if value <= 0:
+                errors.append(f"{field}-invalid")
+        for field in ["prompt_template_sha256", "source_manifest_sha256"]:
+            if not is_sha256(row.get(field, "")):
+                errors.append(f"{field}-invalid")
         if row.get("run_metadata_sha256") and not is_sha256(row.get("run_metadata_sha256")):
             errors.append("run-metadata-sha256-invalid")
+    required_identity_rows = [row for row in identity_supplied_rows if row.get("source_system_id", "") in REQUIRED_SYSTEMS]
+    for field in ["corpus_id", "context_budget", "retrieval_budget", "prompt_template_sha256", "source_manifest_sha256"]:
+        values = {row.get(field, "") for row in required_identity_rows}
+        if len(values) != 1:
+            errors.append(f"same-{field}-mismatch")
+
+if query_split_rows:
+    query_ids = [row.get("query_id", row.get("blind_eval_id", "")) for row in query_split_rows]
+    query_id_set = set(query_ids)
+    if len(query_split_rows) != 500:
+        errors.append("query-split-row-count-not-500")
+    if len(query_ids) != len(query_id_set):
+        errors.append("duplicate-query-split-id")
+    if expected_eval_ids - query_id_set:
+        errors.append(f"missing-query-split-ids={len(expected_eval_ids - query_id_set)}")
+    if query_id_set - expected_eval_ids:
+        errors.append(f"extra-query-split-ids={len(query_id_set - expected_eval_ids)}")
+    for row in query_split_rows:
+        if not row.get("repo_id", ""):
+            errors.append("query-split-repo-id-missing")
+        if not row.get("split_name", ""):
+            errors.append("query-split-name-missing")
+        if row.get("unseen_repository", "") != "1":
+            errors.append("query-split-unseen-repository-not-1")
+        for field in ["frozen_query_packet_sha256", "source_manifest_sha256"]:
+            if not is_sha256(row.get(field, "")):
+                errors.append(f"query-split-{field}-invalid")
+
+if resource_rows:
+    response_by_id = {row.get("blind_response_id", ""): row for row in supplied_rows}
+    resource_ids = [row.get("blind_response_id", "") for row in resource_rows]
+    resource_id_set = set(resource_ids)
+    supplied_id_set = set(response_by_id)
+    if len(resource_ids) != len(resource_id_set):
+        errors.append("duplicate-resource-response-id")
+    if supplied_id_set - resource_id_set:
+        errors.append(f"missing-resource-response-ids={len(supplied_id_set - resource_id_set)}")
+    if resource_id_set - supplied_id_set:
+        errors.append(f"extra-resource-response-ids={len(resource_id_set - supplied_id_set)}")
+    for row in resource_rows:
+        response = response_by_id.get(row.get("blind_response_id", ""))
+        if response is None:
+            continue
+        if row.get("blind_eval_id", "") != response.get("blind_eval_id", ""):
+            errors.append("resource-blind-eval-id-mismatch")
+        if row.get("blind_system_id", "") != response.get("blind_system_id", ""):
+            errors.append("resource-blind-system-id-mismatch")
+        for field in ["latency_ns", "memory_peak_bytes"]:
+            try:
+                value = int(row.get(field, ""))
+            except ValueError:
+                errors.append(f"resource-{field}-not-integer")
+                continue
+            if value < 0 or (field == "latency_ns" and value == 0):
+                errors.append(f"resource-{field}-invalid")
+        if not is_sha256(row.get("resource_trace_sha256", "")):
+            errors.append("resource-trace-sha256-invalid")
 
 if errors:
     counts = Counter(errors)
@@ -532,7 +642,18 @@ write_csv(run_dir / "blind_response_actual_execution_matrix_rows.csv", list(actu
 pm_actual_ready = int(all(row["actual_response_ready"] == "1" for row in actual_matrix_rows))
 pm_actual_missing_system_rows = sum(1 for row in actual_matrix_rows if row["actual_response_ready"] != "1")
 pm_actual_template_gap_rows = sum(1 for row in actual_matrix_rows if row["template_available"] != "1")
-evidence_ready = int(required_ready and pm_actual_ready and len(supplied_rows) >= 3500 and not errors)
+query_split_ready = int(len(query_split_rows) == 500 and not any(error.startswith(("query-split", "missing-query-split", "extra-query-split", "duplicate-query-split")) for error in errors))
+resource_rows_ready = int(len(resource_rows) == len(supplied_rows) and bool(supplied_rows) and not any(error.startswith(("resource", "missing-resource", "extra-resource", "duplicate-resource")) for error in errors))
+same_corpus_context_budget_ready = int(bool(identity_supplied_rows) and not any(error.startswith(("same-", "corpus-id", "context_budget", "retrieval_budget", "prompt_template_sha256", "source_manifest_sha256")) for error in errors))
+evidence_ready = int(
+    required_ready
+    and pm_actual_ready
+    and len(supplied_rows) >= 3500
+    and query_split_ready
+    and resource_rows_ready
+    and same_corpus_context_budget_ready
+    and not errors
+)
 
 summary = {
     "v58c_blind_response_evidence_intake_ready": 1,
@@ -540,6 +661,11 @@ summary = {
     "evidence_dir_supplied": int(bool(evidence_dir_arg)),
     "expected_blind_response_rows": len(templates),
     "supplied_blind_response_rows": len(supplied_rows),
+    "supplied_query_split_rows": len(query_split_rows),
+    "query_split_ready": query_split_ready,
+    "supplied_resource_rows": len(resource_rows),
+    "resource_rows_ready": resource_rows_ready,
+    "same_corpus_context_budget_ready": same_corpus_context_budget_ready,
     "required_blind_response_rows": 3500,
     "pm_actual_required_system_rows": len(actual_matrix_rows),
     "pm_actual_required_blind_response_rows": 3500,
@@ -597,12 +723,18 @@ write_csv(run_dir / "blind_response_intake_gate_rows.csv", ["gate", "status", "r
     f"- pm_actual_required_blind_response_ready={pm_actual_ready}\n"
     f"- pm_actual_template_gap_rows={pm_actual_template_gap_rows}\n"
     f"- supplied_blind_response_rows={len(supplied_rows)}\n"
+    f"- supplied_query_split_rows={len(query_split_rows)}\n"
+    f"- query_split_ready={query_split_ready}\n"
+    f"- supplied_resource_rows={len(resource_rows)}\n"
+    f"- resource_rows_ready={resource_rows_ready}\n"
+    f"- same_corpus_context_budget_ready={same_corpus_context_budget_ready}\n"
     f"- required_blind_response_ready={int(evidence_ready)}\n"
     "- human_blind_review_ready=0\n"
     "- inter_rater_rows_ready=0\n\n"
     "Still blocked by default:\n\n"
     "- real A/B/C/D/E/G/H blind response rows\n"
     "- PM-required A/B/C blind response template and actual response rows\n"
+    "- query split, resource side-table, and same corpus/context/retrieval budget evidence\n"
     "- optional F response rows or final deferral\n"
     "- human blind review and adjudication\n\n"
     "Do not publish blind-eval wins or 30B-150B comparison claims from response intake alone.\n",
@@ -616,6 +748,11 @@ manifest = {
     "v58_ready": 0,
     "expected_blind_response_rows": len(templates),
     "supplied_blind_response_rows": len(supplied_rows),
+    "supplied_query_split_rows": len(query_split_rows),
+    "query_split_ready": query_split_ready,
+    "supplied_resource_rows": len(resource_rows),
+    "resource_rows_ready": resource_rows_ready,
+    "same_corpus_context_budget_ready": same_corpus_context_budget_ready,
     "required_blind_response_ready": int(evidence_ready),
     "pm_actual_required_system_rows": len(actual_matrix_rows),
     "pm_actual_required_blind_response_rows": 3500,
@@ -653,6 +790,10 @@ if supplied_rows:
     artifact_rels.append("supplied_evidence/blind_response_rows.csv")
 if identity_supplied_rows:
     artifact_rels.append("supplied_evidence/run_identity_rows.csv")
+if query_split_rows:
+    artifact_rels.append("supplied_evidence/query_split_rows.csv")
+if resource_rows:
+    artifact_rels.append("supplied_evidence/resource_rows.csv")
 artifact_rows = []
 for relpath in artifact_rels:
     path = run_dir / relpath
