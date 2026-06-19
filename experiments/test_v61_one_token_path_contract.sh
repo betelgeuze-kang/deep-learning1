@@ -5,10 +5,38 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RESULTS_DIR="$ROOT_DIR/results"
 MOE_ROWS="$RESULTS_DIR/v61_moe_block_forward_parity/moe_block_forward_parity_rows.csv"
 BAD_OUTPUT="$(mktemp)"
+BAD_POLICY_JSON="$(mktemp)"
 cd "$ROOT_DIR"
-trap 'rm -f "$BAD_OUTPUT"' EXIT
+trap 'rm -f "$BAD_OUTPUT" "$BAD_POLICY_JSON"' EXIT
 
 "$ROOT_DIR/experiments/test_v61ab_hotset_tensor_tile_quant_probe.sh" >/dev/null
+
+python3 - "$ROOT_DIR/v61/one_token_path.json" "$BAD_POLICY_JSON" <<'PY'
+import json
+import sys
+
+source = sys.argv[1]
+target = sys.argv[2]
+with open(source, encoding="utf-8") as handle:
+    data = json.load(handle)
+data["policy"]["blocked_before_ssd_resident_runtime_claim_count"] = 2
+with open(target, "w", encoding="utf-8") as handle:
+    json.dump(data, handle, indent=2)
+    handle.write("\n")
+PY
+
+if "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$BAD_POLICY_JSON" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv" >"$BAD_OUTPUT" 2>&1; then
+  echo "v61 one-token verifier accepted a bad runtime-claim blocked milestone count" >&2
+  cat "$BAD_OUTPUT" >&2
+  exit 1
+fi
+if ! grep -q "blocked_before_ssd_resident_runtime_claim_count" "$BAD_OUTPUT"; then
+  echo "v61 one-token verifier failed, but not for the runtime-claim blocked count guard" >&2
+  cat "$BAD_OUTPUT" >&2
+  exit 1
+fi
 
 if [ -e "$MOE_ROWS" ]; then
   echo "refusing to overwrite existing v61 MoE block artifact: $MOE_ROWS" >&2
@@ -17,7 +45,7 @@ fi
 mkdir -p "$(dirname "$MOE_ROWS")"
 cleanup() {
   rm -f "$MOE_ROWS"
-  rm -f "$BAD_OUTPUT"
+  rm -f "$BAD_OUTPUT" "$BAD_POLICY_JSON"
   rmdir "$(dirname "$MOE_ROWS")" 2>/dev/null || true
 }
 trap cleanup EXIT

@@ -1262,6 +1262,16 @@ EXPECTED_V61_CURRENT_STATUS = {
     "cold-warm-cache-measurement": "blocked",
     "ssd-bytes-miss-tps-recording": "blocked",
 }
+V61_BLOCKED_BEFORE_RUNTIME_CLAIM = [
+    milestone_id
+    for milestone_id in V61_REQUIRED_BEFORE_RUNTIME_CLAIM
+    if EXPECTED_V61_CURRENT_STATUS[milestone_id] == "blocked"
+]
+V61_PASSED_BEFORE_RUNTIME_CLAIM = [
+    milestone_id
+    for milestone_id in V61_REQUIRED_BEFORE_RUNTIME_CLAIM
+    if EXPECTED_V61_CURRENT_STATUS[milestone_id] == "pass"
+]
 EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
     "mixtral-ssd-tensor-page-read-rows": [
         "binding_id",
@@ -3212,6 +3222,14 @@ def verify_v61_one_token_path(
         errors.append(f"{path}: release_ready must stay false")
     if policy.get("required_before_ssd_resident_runtime_claim") != V61_REQUIRED_BEFORE_RUNTIME_CLAIM:
         errors.append(f"{path}: required_before_ssd_resident_runtime_claim must be milestones 1-6")
+    if policy.get("required_before_ssd_resident_runtime_claim_count") != len(V61_REQUIRED_BEFORE_RUNTIME_CLAIM):
+        errors.append(f"{path}: required_before_ssd_resident_runtime_claim_count must be {len(V61_REQUIRED_BEFORE_RUNTIME_CLAIM)}")
+    if policy.get("passed_before_ssd_resident_runtime_claim_count") != len(V61_PASSED_BEFORE_RUNTIME_CLAIM):
+        errors.append(f"{path}: passed_before_ssd_resident_runtime_claim_count must be {len(V61_PASSED_BEFORE_RUNTIME_CLAIM)}")
+    if policy.get("blocked_before_ssd_resident_runtime_claim_count") != len(V61_BLOCKED_BEFORE_RUNTIME_CLAIM):
+        errors.append(f"{path}: blocked_before_ssd_resident_runtime_claim_count must be {len(V61_BLOCKED_BEFORE_RUNTIME_CLAIM)}")
+    if policy.get("blocked_before_ssd_resident_runtime_claim") != V61_BLOCKED_BEFORE_RUNTIME_CLAIM:
+        errors.append(f"{path}: blocked_before_ssd_resident_runtime_claim must list the still-blocked milestones before runtime claim")
 
     milestones = data["milestones"]
     if not isinstance(milestones, list) or not milestones:
@@ -3271,6 +3289,24 @@ def verify_v61_one_token_path(
     if len(artifact_ids) != len(set(artifact_ids)):
         errors.append(f"{path}: duplicate required_artifacts are forbidden")
     milestone_status = {row.get("milestone_id", ""): row.get("current_status", "") for row in milestones}
+    runtime_gate_status = {
+        milestone_id: milestone_status.get(milestone_id, "")
+        for milestone_id in V61_REQUIRED_BEFORE_RUNTIME_CLAIM
+    }
+    runtime_gate_passed = [
+        milestone_id
+        for milestone_id, status in runtime_gate_status.items()
+        if status == "pass"
+    ]
+    runtime_gate_blocked = [
+        milestone_id
+        for milestone_id, status in runtime_gate_status.items()
+        if status == "blocked"
+    ]
+    if runtime_gate_passed != V61_PASSED_BEFORE_RUNTIME_CLAIM:
+        errors.append(f"{path}: milestones 1-6 pass list no longer matches policy")
+    if runtime_gate_blocked != V61_BLOCKED_BEFORE_RUNTIME_CLAIM:
+        errors.append(f"{path}: milestones 1-6 blocked list no longer matches policy")
     for index, row in enumerate(artifacts, start=1):
         prefix = f"{path}: required_artifact[{index}]"
         missing_artifact = REQUIRED_V61_ARTIFACT_KEYS - set(row)

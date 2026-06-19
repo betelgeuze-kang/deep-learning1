@@ -11,6 +11,14 @@
       "real-expert-ffn-forward-parity",
       "real-moe-block-forward-parity",
       "one-token-logits-parity"
+    ],
+    "required_before_ssd_resident_runtime_claim_count": 6,
+    "passed_before_ssd_resident_runtime_claim_count": 3,
+    "blocked_before_ssd_resident_runtime_claim_count": 3,
+    "blocked_before_ssd_resident_runtime_claim": [
+      "real-expert-ffn-forward-parity",
+      "real-moe-block-forward-parity",
+      "one-token-logits-parity"
     ]
   },
   "milestones": [
