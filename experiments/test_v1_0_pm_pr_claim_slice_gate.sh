@@ -144,9 +144,9 @@ expected = {
     "pm_pr_title_body_rows": "1",
     "pm_pr_title_body_rewrite_ready": "1",
     "pm_pr_title_body_split_required_rows": "1",
-    "pm_ready_semantic_rows": "8",
-    "pm_ready_semantic_typed_rows": "8",
-    "pm_ready_semantic_contract_ready_rows": "7",
+    "pm_ready_semantic_rows": "10",
+    "pm_ready_semantic_typed_rows": "10",
+    "pm_ready_semantic_contract_ready_rows": "9",
     "pm_ready_semantic_fixture_execution_ready_rows": "3",
     "pm_ready_semantic_real_model_ready_rows": "0",
     "pm_ready_semantic_release_ready_rows": "0",
@@ -1207,6 +1207,8 @@ expected_ready_flags = {
     "real_100b_inference_ready",
     "v61i_logical_100b_contract_fixture_ready",
     "v60_release_contract_ready",
+    "operator_review_return_workflow_contract_ready",
+    "pr2_docs_claim_boundary_contract_ready",
 }
 if set(ready_rows) != expected_ready_flags:
     raise SystemExit("PM ready semantic rows should replace ambiguous ready flags with typed flags")
@@ -1559,9 +1561,9 @@ if (
 ):
     raise SystemExit("PM PR manifest should record #13 PR normalization/title-body rewrite rows")
 if (
-    manifest.get("pm_ready_semantic_rows") != 8
-    or manifest.get("pm_ready_semantic_typed_rows") != 8
-    or manifest.get("pm_ready_semantic_contract_ready_rows") != 7
+    manifest.get("pm_ready_semantic_rows") != 10
+    or manifest.get("pm_ready_semantic_typed_rows") != 10
+    or manifest.get("pm_ready_semantic_contract_ready_rows") != 9
     or manifest.get("pm_ready_semantic_fixture_execution_ready_rows") != 3
     or manifest.get("pm_ready_semantic_real_model_ready_rows") != 0
     or manifest.get("pm_ready_semantic_release_ready_rows") != 0
@@ -1679,7 +1681,7 @@ for snippet in [
     "pm_pr_normalization_tests_only_rows=0",
     "pm_pr_title_body_rows=1",
     "pm_pr_title_body_rewrite_ready=1",
-    "pm_ready_semantic_rows=8",
+    "pm_ready_semantic_rows=10",
     "pm_ready_semantic_real_model_ready_rows=0",
     "pm_ready_semantic_release_ready_rows=0",
     "pm_ready_semantic_logical_100b_contract_fixture_ready=1",

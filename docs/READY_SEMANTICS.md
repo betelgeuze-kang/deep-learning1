@@ -58,13 +58,7 @@ Do not use `100b_moe_run_ready=1` or
 `v61i_100b_moe_active_sparse_run_ready=1` as a real inference, quality,
 release, or near-frontier claim.
 
-Rows may set `pm_ledger_required=false` when the typed-readiness boundary is a
-source-controlled PR or documentation contract that is not emitted by the
-current PM ledger. Those rows are still enforced by
-`tools/verify_artifact.py typed-readiness`; they are skipped only for
-generated-ledger row matching.
-
-The current source-only rows are:
-
-- `operator_review_return_workflow_contract_ready`
-- `pr2_docs_claim_boundary_contract_ready`
+All source-controlled typed readiness rows must also appear in the PM ledger
+when `--pm-ledger` is supplied. Source-only skip exceptions are not allowed for
+PR #2 normalization, because those exceptions let ambiguous `ready=1` wording
+drift away from the replayed claim-boundary artifact.

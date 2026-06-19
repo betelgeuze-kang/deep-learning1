@@ -84,7 +84,7 @@ expected = {
     "pm_pr_normalization_tests_only_rows": "0",
     "pm_pr_title_body_rows": "1",
     "pm_pr_title_body_rewrite_ready": "1",
-    "pm_ready_semantic_rows": "7",
+    "pm_ready_semantic_rows": "10",
     "pm_ready_semantic_real_model_ready_rows": "0",
     "pm_ready_semantic_release_ready_rows": "0",
     "pm_ready_semantic_logical_100b_contract_fixture_ready": "1",
@@ -377,7 +377,7 @@ title_body_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/
 if len(title_body_rows) != 1 or title_body_rows[0]["split_required"] != "1" or title_body_rows[0]["release_ready"] != "0":
     raise SystemExit("v60 should carry PR #2 title/body split requirement")
 ready_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/pm_ready_semantic_rows.csv")
-if len(ready_rows) != 7:
+if len(ready_rows) != 10:
     raise SystemExit("v60 should carry typed ready semantic rows")
 if any(row["real_model_execution_ready"] != "0" or row["release_ready"] != "0" for row in ready_rows):
     raise SystemExit("v60 ready semantic rows should keep real model and release readiness closed")
@@ -1140,7 +1140,7 @@ if (
 ):
     raise SystemExit("v60 manifest should record PM PR normalization and title/body rewrite rows")
 if (
-    manifest.get("pm_ready_semantic_rows") != 7
+    manifest.get("pm_ready_semantic_rows") != 10
     or manifest.get("pm_ready_semantic_real_model_ready_rows") != 0
     or manifest.get("pm_ready_semantic_release_ready_rows") != 0
     or manifest.get("pm_ready_semantic_logical_100b_contract_fixture_ready") != 1

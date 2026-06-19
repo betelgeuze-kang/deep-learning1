@@ -2617,6 +2617,32 @@ pm_ready_semantic_rows = [
         "v60_ready",
         "v60_release_contract_ready",
     ),
+    ready_semantic_row(
+        "operator-review-return-workflow",
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        "pm_external_return_template_rows.csv",
+        "review_return_ready",
+        "operator_review_return_workflow_contract_ready",
+    ),
+    ready_semantic_row(
+        "docs-readme-pr2-cleanup",
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        "pm_pr_title_body_rows.csv",
+        "pr2_ready",
+        "pr2_docs_claim_boundary_contract_ready",
+    ),
 ]
 write_csv(run_dir / "pm_ready_semantic_rows.csv", list(pm_ready_semantic_rows[0].keys()), pm_ready_semantic_rows)
 

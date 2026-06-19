@@ -148,7 +148,6 @@
       "misleading_ready_flag": "review_return_ready",
       "replacement_flag": "operator_review_return_workflow_contract_ready",
       "ready_wording_policy": "typed-ready-only",
-      "pm_ledger_required": false,
       "evidence_path": "operations/review_return_workflow.json"
     },
     {
@@ -163,7 +162,6 @@
       "misleading_ready_flag": "pr2_ready",
       "replacement_flag": "pr2_docs_claim_boundary_contract_ready",
       "ready_wording_policy": "typed-ready-only",
-      "pm_ledger_required": false,
       "evidence_path": "docs/PR2_REWRITE_DRAFT.md"
     }
   ]
