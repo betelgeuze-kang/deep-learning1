@@ -46,10 +46,12 @@ The seed pipelines are intentionally adapter-based. They are a stable inventory 
 - `audits/v50_public_repo_auditor_correctness.json` and `docs/V50_AUDITOR_CORRECTNESS_CONTRACT.md` pin the v50 auditor-correctness blocker: summary `ready=1` is not mergeable unless row artifacts and sha256 manifest are replayable, and implicit public refresh is forbidden.
 - `readiness/typed_ready.json` and `docs/READY_SEMANTICS.md` pin typed readiness semantics and forbid ambiguous `ready=1` wording from implying real model, review, metric, or release readiness.
 - `leakage/retrieval_model_visible.json` and `docs/RETRIEVAL_LEAKAGE_GUARD.md` pin retriever/model-visible leakage rules so source locators, query-source bindings, expected behavior, and expected labels stay evaluator-only.
+- `baselines/v52_adapter_guard.json` and `docs/V52_ADAPTER_GUARD_CONTRACT.md` pin the v52 C/7B actual response-packet boundary and D/E measured-registry blockers.
 - `baselines/de_30b70b_real.json` and `docs/DE_30B70B_BASELINE_ADMISSION.md` pin D/E real-baseline admission rules and keep fixture/schema D/E rows out of measured registry/public comparison claims.
 - `benchmarks/v53_source_bound_freeze.json` and `docs/V53_SOURCE_BENCHMARK_FREEZE_CONTRACT.md` pin the v53 1000-row source-bound benchmark freeze and separate machine foundation readiness from human review, D/E baselines, public comparison, and release readiness.
 - `v58/blind_eval_real.json` and `docs/V58_REAL_BLIND_EVAL_CONTRACT.md` pin real blind-eval requirements and keep v58 blocked until non-fixture responses, review, adjudication, score, and resource evidence are accepted.
 - `v61/one_token_path.json` and `docs/V61_ONE_TOKEN_PATH_CONTRACT.md` pin the v61 one-token runtime milestone order and prevent tensor/tile parity from being promoted into an SSD-resident real model runtime claim.
+- `operations/review_return_workflow.json` and `docs/REVIEW_RETURN_WORKFLOW_CONTRACT.md` pin review-return/operator workflow boundaries so templates, dry-run operator bundles, fixtures, and no-replay scaffolds cannot imply human review, adjudication, generation acceptance, or release readiness.
 
 ## Exit Criteria For Replacing Shell Workflow
 

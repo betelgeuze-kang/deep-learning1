@@ -40,6 +40,9 @@ reproduction, or release readiness.
 v50 auditor wording must follow `audits/v50_public_repo_auditor_correctness.json`;
 summary `ready=1` is not mergeable auditor correctness while replay artifacts
 are missing, and implicit public refresh is forbidden.
+v52 baseline wording must follow `baselines/v52_adapter_guard.json`;
+System C's 7B-14B local response packet is not a quality claim, and D/E
+measured registry admission remains blocked until real pinned evidence validates.
 Retriever and model-visible input wording must follow
 `leakage/retrieval_model_visible.json`; source locators, direct query/source
 bindings, expected behavior, and expected labels are evaluator-only.
@@ -50,6 +53,10 @@ the 1000-row machine-foundation freeze does not imply human-reviewed quality,
 D/E baseline completion, public comparison, or release readiness.
 v58 blind-eval wording must follow `v58/blind_eval_real.json`; templates and
 intake contracts do not imply real blind-eval completion.
+Operator/review-return wording must follow
+`operations/review_return_workflow.json`; review templates, operator work
+orders, dry-run bundles, and fixture mechanics do not imply accepted human
+review, adjudication, real generation, or release readiness.
 v61 runtime wording must follow `v61/one_token_path.json`; tensor-page,
 dtype/quant, and matvec parity evidence do not imply an SSD-resident real model
 runtime until one-token logits parity is accepted.

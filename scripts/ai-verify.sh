@@ -25,6 +25,9 @@ fi
 if [ -f schemas/baseline_admission.schema.json ]; then
   python3 -m json.tool schemas/baseline_admission.schema.json >/dev/null
 fi
+if [ -f schemas/v52_adapter_guard.schema.json ]; then
+  python3 -m json.tool schemas/v52_adapter_guard.schema.json >/dev/null
+fi
 if [ -f schemas/v50_auditor_correctness.schema.json ]; then
   python3 -m json.tool schemas/v50_auditor_correctness.schema.json >/dev/null
 fi
@@ -33,6 +36,9 @@ if [ -f schemas/v53_source_benchmark.schema.json ]; then
 fi
 if [ -f schemas/v58_blind_eval.schema.json ]; then
   python3 -m json.tool schemas/v58_blind_eval.schema.json >/dev/null
+fi
+if [ -f schemas/review_return_workflow.schema.json ]; then
+  python3 -m json.tool schemas/review_return_workflow.schema.json >/dev/null
 fi
 if [ -f schemas/v61_one_token_path.schema.json ]; then
   python3 -m json.tool schemas/v61_one_token_path.schema.json >/dev/null
@@ -49,6 +55,9 @@ fi
 if [ -f baselines/de_30b70b_real.json ]; then
   python3 -m json.tool baselines/de_30b70b_real.json >/dev/null
 fi
+if [ -f baselines/v52_adapter_guard.json ]; then
+  python3 -m json.tool baselines/v52_adapter_guard.json >/dev/null
+fi
 if [ -f audits/v50_public_repo_auditor_correctness.json ]; then
   python3 -m json.tool audits/v50_public_repo_auditor_correctness.json >/dev/null
 fi
@@ -57,6 +66,9 @@ if [ -f benchmarks/v53_source_bound_freeze.json ]; then
 fi
 if [ -f v58/blind_eval_real.json ]; then
   python3 -m json.tool v58/blind_eval_real.json >/dev/null
+fi
+if [ -f operations/review_return_workflow.json ]; then
+  python3 -m json.tool operations/review_return_workflow.json >/dev/null
 fi
 if [ -f v61/one_token_path.json ]; then
   python3 -m json.tool v61/one_token_path.json >/dev/null
@@ -147,6 +159,22 @@ if [ -x tools/verify_artifact.py ]; then
       tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json >/dev/null
     fi
   fi
+  if [ -f baselines/v52_adapter_guard.json ]; then
+    if [ -f results/v52c_7b14b_local_model_rag_evidence_intake_summary.csv ] &&
+       [ -f results/v52d_30b70b_llm_rag_evidence_intake_summary.csv ] &&
+       [ -f results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv ] &&
+       [ -f results/v52r_measured_registry_de_absorb_summary.csv ] &&
+       [ -f results/v52y_f_optional_final_policy_summary.csv ]; then
+      tools/verify_artifact.py v52-adapter-guard baselines/v52_adapter_guard.json \
+        --v52c-summary results/v52c_7b14b_local_model_rag_evidence_intake_summary.csv \
+        --v52d-summary results/v52d_30b70b_llm_rag_evidence_intake_summary.csv \
+        --v52l-summary results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv \
+        --v52r-summary results/v52r_measured_registry_de_absorb_summary.csv \
+        --v52y-summary results/v52y_f_optional_final_policy_summary.csv >/dev/null
+    else
+      tools/verify_artifact.py v52-adapter-guard baselines/v52_adapter_guard.json >/dev/null
+    fi
+  fi
   if [ -f audits/v50_public_repo_auditor_correctness.json ]; then
     if [ -f results/v50_public_repo_auditor_3repo_summary.csv ] &&
        [ -f results/v50_public_repo_auditor_3repo_decision.csv ]; then
@@ -183,6 +211,20 @@ if [ -x tools/verify_artifact.py ]; then
         --template-ledger results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_return_template_rows.csv >/dev/null
     else
       tools/verify_artifact.py v58-blind-eval v58/blind_eval_real.json >/dev/null
+    fi
+  fi
+  if [ -f operations/review_return_workflow.json ]; then
+    if [ -f results/v53s_complete_source_review_return_intake_summary.csv ] &&
+       [ -f results/v58d_blind_review_return_intake_summary.csv ] &&
+       [ -f results/v61af_checkpoint_warehouse_operator_bundle_summary.csv ] &&
+       [ -f results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv ]; then
+      tools/verify_artifact.py review-return-workflow operations/review_return_workflow.json \
+        --v53s-summary results/v53s_complete_source_review_return_intake_summary.csv \
+        --v58d-summary results/v58d_blind_review_return_intake_summary.csv \
+        --v61af-summary results/v61af_checkpoint_warehouse_operator_bundle_summary.csv \
+        --v61hv-summary results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv >/dev/null
+    else
+      tools/verify_artifact.py review-return-workflow operations/review_return_workflow.json >/dev/null
     fi
   fi
   if [ -f v61/one_token_path.json ]; then

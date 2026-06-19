@@ -46,15 +46,15 @@
     },
     {
       "slice_id": "v52-baseline-registry-contract",
-      "scope": "A-H baseline registry/schema contract and D/E/F intake blockers.",
-      "required_artifacts": ["results/v52_llm_rag_baseline_war_summary.csv", "results/v52y_f_optional_final_policy_summary.csv"],
+      "scope": "A-H baseline registry/schema contract, C 7B-14B actual adapter packet, and D/E/F intake blockers.",
+      "required_artifacts": ["baselines/v52_adapter_guard.json", "results/v52_llm_rag_baseline_war_summary.csv", "results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv", "results/v52d_30b70b_llm_rag_evidence_intake_summary.csv", "results/v52y_f_optional_final_policy_summary.csv"],
       "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
       "claim_boundary": {
-        "allowed": "A-H baseline registry and symmetric citation/evaluator contract exist with D/E/F blockers explicit.",
-        "blocked": "30B/70B/100B+ comparison readiness or release readiness.",
-        "evidence_path": "results/v52_llm_rag_baseline_war_summary.csv"
+        "allowed": "A-H baseline registry exists; C has a local 7B-14B response packet; D/E/F blockers are explicit.",
+        "blocked": "C quality claim, D/E measured registry admission, 30B/70B/100B+ comparison readiness, or release readiness.",
+        "evidence_path": "baselines/v52_adapter_guard.json"
       },
-      "verification_commands": ["./experiments/test_v52_llm_rag_baseline_war.sh", "./experiments/test_v52y_f_optional_final_policy.sh"],
+      "verification_commands": ["tools/verify_artifact.py v52-adapter-guard baselines/v52_adapter_guard.json", "./experiments/test_v52_llm_rag_baseline_war.sh", "./experiments/test_v52l_7b14b_local_model_rag_v53e_1000.sh", "./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh", "./experiments/test_v52y_f_optional_final_policy.sh"],
       "current_status": "ready-for-review"
     },
     {
@@ -125,14 +125,14 @@
     {
       "slice_id": "v58-blind-eval-contract",
       "scope": "Blind evaluation contract, real response requirements, and human review blockers.",
-      "required_artifacts": ["results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv"],
+      "required_artifacts": ["v58/blind_eval_real.json", "operations/review_return_workflow.json", "results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv"],
       "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
       "claim_boundary": {
         "allowed": "v58 blocker ledger and intake contract define blind-response/review requirements.",
         "blocked": "Blind eval completion, model superiority, or human-reviewed blind result without real response/review rows.",
         "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv"
       },
-      "verification_commands": ["./experiments/test_v58c_blind_response_evidence_intake.sh", "./experiments/test_v58d_blind_review_return_intake.sh", "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
+      "verification_commands": ["tools/verify_artifact.py review-return-workflow operations/review_return_workflow.json", "./experiments/test_v58c_blind_response_evidence_intake.sh", "./experiments/test_v58d_blind_review_return_intake.sh", "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
       "current_status": "ready-for-contract-review-real-eval-blocked"
     },
     {

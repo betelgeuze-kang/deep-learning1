@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/v52_adapter_guard.schema.json",
+  "title": "v52 Adapter And D/E Guard Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "requirements"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "c_7b14b_actual_adapter_packet_ready",
+        "c_quality_claim_ready",
+        "de_measured_registry_admission_ready",
+        "public_comparison_claim_ready",
+        "release_ready"
+      ],
+      "properties": {
+        "c_7b14b_actual_adapter_packet_ready": {"type": "boolean"},
+        "c_quality_claim_ready": {"type": "boolean"},
+        "de_measured_registry_admission_ready": {"type": "boolean"},
+        "public_comparison_claim_ready": {"type": "boolean"},
+        "release_ready": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["requirement_id", "required_evidence", "current_status", "evidence_path", "claim_boundary"],
+        "properties": {
+          "requirement_id": {"type": "string"},
+          "required_evidence": {"type": "string"},
+          "current_status": {"type": "string"},
+          "evidence_path": {"type": "string"},
+          "claim_boundary": {"type": "string"},
+          "summary_checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["summary_id", "field", "expected"],
+              "properties": {
+                "summary_id": {"type": "string"},
+                "field": {"type": "string"},
+                "expected": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

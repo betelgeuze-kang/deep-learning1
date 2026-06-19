@@ -83,6 +83,18 @@ REQUIRED_BASELINE_SYSTEM_KEYS = {
     "measured_registry_admission_ready",
     "acceptance_test",
 }
+REQUIRED_V52_ADAPTER_GUARD_KEYS = {
+    "schema_version",
+    "policy",
+    "requirements",
+}
+REQUIRED_V52_REQUIREMENT_KEYS = {
+    "requirement_id",
+    "required_evidence",
+    "current_status",
+    "evidence_path",
+    "claim_boundary",
+}
 REQUIRED_V50_AUDITOR_KEYS = {
     "schema_version",
     "policy",
@@ -126,6 +138,18 @@ REQUIRED_V58_ARTIFACT_KEYS = {
     "artifact_id",
     "artifact_kind",
     "validation_command",
+}
+REQUIRED_REVIEW_RETURN_WORKFLOW_KEYS = {
+    "schema_version",
+    "policy",
+    "requirements",
+}
+REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS = {
+    "requirement_id",
+    "required_evidence",
+    "current_status",
+    "evidence_path",
+    "claim_boundary",
 }
 REQUIRED_V61_ONE_TOKEN_KEYS = {
     "schema_version",
@@ -258,6 +282,13 @@ EXPECTED_V50_DECISION_GATES = [
     "guard-negative-controls",
     "v18-intake",
 ]
+EXPECTED_V52_REQUIREMENT_IDS = [
+    "c-7b14b-v53e-actual-adapter-packet",
+    "c-7b14b-quality-boundary",
+    "c-7b14b-intake-default-blocked",
+    "de-30b70b-intake-fail-closed",
+    "de-measured-registry-blocked",
+]
 EXPECTED_V53_V1_EXIT_CRITERION_IDS = [
     "repo-count-band-10-30",
     "query-row-band-1000-3000",
@@ -272,6 +303,12 @@ EXPECTED_V58_ARTIFACT_IDS = [
     "v58-human-review-rows",
     "v58d-review-return-intake",
     "v58-sha256-manifest",
+]
+EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS = [
+    "v53-review-return-intake-blocked",
+    "v58-blind-review-return-blocked",
+    "v61-operator-bundle-logistics-only",
+    "v61-first-slice-operator-input-blocked",
 ]
 EXPECTED_V61_MILESTONE_IDS = [
     "actual-mixtral-ssd-tensor-page-read",
@@ -737,6 +774,81 @@ def verify_baseline_admission(
     return errors
 
 
+def verify_v52_adapter_guard(
+    path: Path,
+    v52c_summary: Path | None = None,
+    v52d_summary: Path | None = None,
+    v52l_summary: Path | None = None,
+    v52r_summary: Path | None = None,
+    v52y_summary: Path | None = None,
+) -> list[str]:
+    errors: list[str] = []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    missing = REQUIRED_V52_ADAPTER_GUARD_KEYS - set(data)
+    if missing:
+        errors.append(f"{path}: missing v52 adapter guard keys: {', '.join(sorted(missing))}")
+        return errors
+    if data["schema_version"] != "v52_adapter_guard.v1":
+        errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
+    policy = data["policy"]
+    if policy.get("c_7b14b_actual_adapter_packet_ready") is not True:
+        errors.append(f"{path}: c_7b14b_actual_adapter_packet_ready must be true")
+    for field in [
+        "c_quality_claim_ready",
+        "de_measured_registry_admission_ready",
+        "public_comparison_claim_ready",
+        "release_ready",
+    ]:
+        if policy.get(field) is not False:
+            errors.append(f"{path}: {field} must be false")
+
+    requirements = data["requirements"]
+    if not isinstance(requirements, list) or not requirements:
+        errors.append(f"{path}: requirements must be a non-empty list")
+        return errors
+    requirement_ids = [row.get("requirement_id", "") for row in requirements]
+    if requirement_ids != EXPECTED_V52_REQUIREMENT_IDS:
+        errors.append(f"{path}: requirement order must match the v52 adapter guard contract")
+    if len(requirement_ids) != len(set(requirement_ids)):
+        errors.append(f"{path}: duplicate requirement_id values are forbidden")
+
+    summaries: dict[str, dict[str, str]] = {}
+    if v52c_summary is not None:
+        summaries["v52c"] = read_first_csv(v52c_summary)
+    if v52d_summary is not None:
+        summaries["v52d"] = read_first_csv(v52d_summary)
+    if v52l_summary is not None:
+        summaries["v52l"] = read_first_csv(v52l_summary)
+    if v52r_summary is not None:
+        summaries["v52r"] = read_first_csv(v52r_summary)
+    if v52y_summary is not None:
+        summaries["v52y"] = read_first_csv(v52y_summary)
+
+    for index, row in enumerate(requirements, start=1):
+        prefix = f"{path}: requirement[{index}]"
+        missing_row = REQUIRED_V52_REQUIREMENT_KEYS - set(row)
+        if missing_row:
+            errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
+        if row.get("current_status") != "pass":
+            errors.append(f"{prefix}: current_status must be pass")
+        if not row.get("required_evidence") or not row.get("evidence_path") or not row.get("claim_boundary"):
+            errors.append(f"{prefix}: required_evidence, evidence_path, and claim_boundary must be non-empty")
+        checks = row.get("summary_checks", [])
+        if checks and not isinstance(checks, list):
+            errors.append(f"{prefix}: summary_checks must be a list when present")
+            continue
+        for check in checks:
+            summary_id = check.get("summary_id", "")
+            summary = summaries.get(summary_id)
+            if summary is None:
+                continue
+            field = check.get("field", "")
+            expected = check.get("expected", "")
+            if summary.get(field) != expected:
+                errors.append(f"{prefix}: {summary_id}.{field} expected {expected}, got {summary.get(field)}")
+    return errors
+
+
 def verify_v50_auditor_correctness(
     path: Path,
     summary_path: Path | None = None,
@@ -1048,6 +1160,80 @@ def verify_v58_blind_eval(
     return errors
 
 
+def verify_review_return_workflow(
+    path: Path,
+    v53s_summary: Path | None = None,
+    v58d_summary: Path | None = None,
+    v61af_summary: Path | None = None,
+    v61hv_summary: Path | None = None,
+) -> list[str]:
+    errors: list[str] = []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    missing = REQUIRED_REVIEW_RETURN_WORKFLOW_KEYS - set(data)
+    if missing:
+        errors.append(f"{path}: missing review-return workflow keys: {', '.join(sorted(missing))}")
+        return errors
+    if data["schema_version"] != "review_return_workflow.v1":
+        errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
+    policy = data["policy"]
+    if policy.get("workflow_contract_ready") is not True:
+        errors.append(f"{path}: workflow_contract_ready must be true")
+    for field in [
+        "human_review_ready",
+        "adjudication_ready",
+        "operator_input_files_ready",
+        "actual_generation_ready",
+        "release_ready",
+        "fixture_can_close_real_return",
+    ]:
+        if policy.get(field) is not False:
+            errors.append(f"{path}: {field} must be false")
+
+    requirements = data["requirements"]
+    if not isinstance(requirements, list) or not requirements:
+        errors.append(f"{path}: requirements must be a non-empty list")
+        return errors
+    requirement_ids = [row.get("requirement_id", "") for row in requirements]
+    if requirement_ids != EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS:
+        errors.append(f"{path}: requirement order must match the review-return workflow contract")
+    if len(requirement_ids) != len(set(requirement_ids)):
+        errors.append(f"{path}: duplicate requirement_id values are forbidden")
+
+    summaries: dict[str, dict[str, str]] = {}
+    if v53s_summary is not None:
+        summaries["v53s"] = read_first_csv(v53s_summary)
+    if v58d_summary is not None:
+        summaries["v58d"] = read_first_csv(v58d_summary)
+    if v61af_summary is not None:
+        summaries["v61af"] = read_first_csv(v61af_summary)
+    if v61hv_summary is not None:
+        summaries["v61hv"] = read_first_csv(v61hv_summary)
+
+    for index, row in enumerate(requirements, start=1):
+        prefix = f"{path}: requirement[{index}]"
+        missing_row = REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS - set(row)
+        if missing_row:
+            errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
+        if row.get("current_status") != "pass":
+            errors.append(f"{prefix}: current_status must be pass")
+        if not row.get("required_evidence") or not row.get("evidence_path") or not row.get("claim_boundary"):
+            errors.append(f"{prefix}: required_evidence, evidence_path, and claim_boundary must be non-empty")
+        checks = row.get("summary_checks", [])
+        if checks and not isinstance(checks, list):
+            errors.append(f"{prefix}: summary_checks must be a list when present")
+            continue
+        for check in checks:
+            summary_id = check.get("summary_id", "")
+            summary = summaries.get(summary_id)
+            if summary is None:
+                continue
+            field = check.get("field", "")
+            expected = check.get("expected", "")
+            if summary.get(field) != expected:
+                errors.append(f"{prefix}: {summary_id}.{field} expected {expected}, got {summary.get(field)}")
+    return errors
+
+
 def verify_v61_one_token_path(
     path: Path,
     v61aa_summary: Path | None = None,
@@ -1159,6 +1345,13 @@ def main() -> int:
     p_baseline.add_argument("paths", nargs="+", type=Path)
     p_baseline.add_argument("--measured-registry-ledger", type=Path, default=None)
     p_baseline.add_argument("--acceptance-ledger", type=Path, default=None)
+    p_v52 = sub.add_parser("v52-adapter-guard")
+    p_v52.add_argument("paths", nargs="+", type=Path)
+    p_v52.add_argument("--v52c-summary", type=Path, default=None)
+    p_v52.add_argument("--v52d-summary", type=Path, default=None)
+    p_v52.add_argument("--v52l-summary", type=Path, default=None)
+    p_v52.add_argument("--v52r-summary", type=Path, default=None)
+    p_v52.add_argument("--v52y-summary", type=Path, default=None)
     p_v50 = sub.add_parser("v50-auditor-correctness")
     p_v50.add_argument("paths", nargs="+", type=Path)
     p_v50.add_argument("--summary", type=Path, default=None)
@@ -1175,6 +1368,12 @@ def main() -> int:
     p_v58.add_argument("--readiness-ledger", type=Path, default=None)
     p_v58.add_argument("--artifact-ledger", type=Path, default=None)
     p_v58.add_argument("--template-ledger", type=Path, default=None)
+    p_review = sub.add_parser("review-return-workflow")
+    p_review.add_argument("paths", nargs="+", type=Path)
+    p_review.add_argument("--v53s-summary", type=Path, default=None)
+    p_review.add_argument("--v58d-summary", type=Path, default=None)
+    p_review.add_argument("--v61af-summary", type=Path, default=None)
+    p_review.add_argument("--v61hv-summary", type=Path, default=None)
     p_v61 = sub.add_parser("v61-one-token")
     p_v61.add_argument("paths", nargs="+", type=Path)
     p_v61.add_argument("--v61aa-summary", type=Path, default=None)
@@ -1200,6 +1399,18 @@ def main() -> int:
     elif args.cmd == "baseline-admission":
         for path in args.paths:
             errors.extend(verify_baseline_admission(path, args.measured_registry_ledger, args.acceptance_ledger))
+    elif args.cmd == "v52-adapter-guard":
+        for path in args.paths:
+            errors.extend(
+                verify_v52_adapter_guard(
+                    path,
+                    args.v52c_summary,
+                    args.v52d_summary,
+                    args.v52l_summary,
+                    args.v52r_summary,
+                    args.v52y_summary,
+                )
+            )
     elif args.cmd == "v50-auditor-correctness":
         for path in args.paths:
             errors.extend(verify_v50_auditor_correctness(path, args.summary, args.decision))
@@ -1218,6 +1429,17 @@ def main() -> int:
     elif args.cmd == "v58-blind-eval":
         for path in args.paths:
             errors.extend(verify_v58_blind_eval(path, args.readiness_ledger, args.artifact_ledger, args.template_ledger))
+    elif args.cmd == "review-return-workflow":
+        for path in args.paths:
+            errors.extend(
+                verify_review_return_workflow(
+                    path,
+                    args.v53s_summary,
+                    args.v58d_summary,
+                    args.v61af_summary,
+                    args.v61hv_summary,
+                )
+            )
     elif args.cmd == "v61-one-token":
         for path in args.paths:
             errors.extend(verify_v61_one_token_path(path, args.v61aa_summary, args.v61ab_summary))

@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/review_return_workflow.schema.json",
+  "title": "Operator Review-Return Workflow Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "requirements"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "workflow_contract_ready",
+        "human_review_ready",
+        "adjudication_ready",
+        "operator_input_files_ready",
+        "actual_generation_ready",
+        "release_ready",
+        "fixture_can_close_real_return"
+      ],
+      "properties": {
+        "workflow_contract_ready": {"type": "boolean"},
+        "human_review_ready": {"type": "boolean"},
+        "adjudication_ready": {"type": "boolean"},
+        "operator_input_files_ready": {"type": "boolean"},
+        "actual_generation_ready": {"type": "boolean"},
+        "release_ready": {"type": "boolean"},
+        "fixture_can_close_real_return": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["requirement_id", "required_evidence", "current_status", "evidence_path", "claim_boundary"],
+        "properties": {
+          "requirement_id": {"type": "string"},
+          "required_evidence": {"type": "string"},
+          "current_status": {"type": "string"},
+          "evidence_path": {"type": "string"},
+          "claim_boundary": {"type": "string"},
+          "summary_checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["summary_id", "field", "expected"],
+              "properties": {
+                "summary_id": {"type": "string"},
+                "field": {"type": "string"},
+                "expected": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
