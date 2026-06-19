@@ -46,6 +46,26 @@ summary prose. The verifier now treats each required artifact as a typed gate:
 
 The contract requires these artifact shapes:
 
+- `mixtral-ssd-tensor-page-read-rows`
+  (`results/v61aa_hotset_tensor_slice_verifier/verify_001/source_v61v/remote_sample_tensor_binding_rows.csv`):
+  remote page hash, shard/tensor identity, dtype, tensor segment/page offsets,
+  expert/embedding page flags, `remote_hash_bound`,
+  `checkpoint_payload_bytes_committed_to_repo`, and `route_jump_rows`
+- `tensor-dtype-stat-rows`
+  (`results/v61aa_hotset_tensor_slice_verifier/verify_001/hotset_tensor_slice_stat_rows.csv`):
+  bound local/remote page hashes, BF16 sample counts, finite/nan/inf counts,
+  tensor statistics, `bf16_tensor_slice_stats_ready`,
+  `actual_model_generation_ready`, and payload/route guards
+- `tensor-quant-dequant-metric-rows`
+  (`results/v61ab_hotset_tensor_tile_quant_probe/probe_001/hotset_tensor_tile_quant_metric_rows.csv`):
+  q8/q4 finite row counts, q8/q4 error summaries,
+  `q8_quant_probe_ready`, `q4_quant_probe_ready`,
+  `torch_matvec_parity_ready`, and real-generation/release guards
+- `torch-matvec-parity-rows`
+  (`results/v61ab_hotset_tensor_tile_quant_probe/probe_001/hotset_tensor_tile_torch_parity_rows.csv`):
+  tile and tensor hashes, PyTorch reference backend, candidate/reference dot
+  values, tolerance, delta, `torch_matvec_parity_pass`,
+  real checkpoint page binding, and payload/generation/route guards
 - `expert-ffn-forward-parity-rows`
   (`results/v61ab_hotset_tensor_tile_quant_probe/probe_001/expert_ffn_forward_parity_rows.csv`):
   real layer/expert tensor names, W1/W2/W3

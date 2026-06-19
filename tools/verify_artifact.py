@@ -1001,6 +1001,135 @@ EXPECTED_V61_CURRENT_STATUS = {
     "ssd-bytes-miss-tps-recording": "blocked",
 }
 EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
+    "mixtral-ssd-tensor-page-read-rows": [
+        "binding_id",
+        "remote_sample_id",
+        "source_page_id",
+        "remote_page_sha256",
+        "model_id",
+        "shard_name",
+        "shard_page_index",
+        "tensor_name",
+        "tensor_role",
+        "layer_index",
+        "expert_index",
+        "dtype",
+        "tensor_segment_bytes",
+        "page_offset_start",
+        "page_offset_end",
+        "tensor_offset_start_in_tensor",
+        "tensor_offset_end_in_tensor",
+        "moe_expert_page",
+        "embedding_page",
+        "remote_hash_bound",
+        "checkpoint_payload_bytes_persisted",
+        "checkpoint_payload_bytes_committed_to_repo",
+        "route_jump_rows",
+    ],
+    "tensor-dtype-stat-rows": [
+        "tensor_slice_id",
+        "binding_id",
+        "remote_sample_id",
+        "model_id",
+        "shard_name",
+        "shard_page_index",
+        "tensor_name",
+        "tensor_role",
+        "layer_index",
+        "expert_index",
+        "dtype",
+        "local_page_path",
+        "page_offset_start",
+        "page_offset_end",
+        "tensor_segment_bytes",
+        "tensor_segment_elements",
+        "tensor_segment_sha256",
+        "local_page_sha256",
+        "remote_page_sha256",
+        "segment_hash_bound_to_remote_page",
+        "direct_read_hash_match",
+        "sampled_bf16_values",
+        "sampled_finite_values",
+        "sampled_nan_values",
+        "sampled_inf_values",
+        "sampled_zero_values",
+        "sampled_nonzero_values",
+        "sampled_min_fp32",
+        "sampled_max_fp32",
+        "sampled_mean_fp32",
+        "sampled_mean_abs_fp32",
+        "sampled_rms_fp32",
+        "first_sample_bf16_hex",
+        "last_sample_bf16_hex",
+        "moe_expert_page",
+        "embedding_page",
+        "bf16_tensor_slice_stats_ready",
+        "checkpoint_payload_bytes_committed_to_repo",
+        "actual_model_generation_ready",
+        "route_jump_rows",
+    ],
+    "tensor-quant-dequant-metric-rows": [
+        "metric_id",
+        "tensor_tile_probe_rows",
+        "moe_tensor_tile_probe_rows",
+        "embedding_tensor_tile_probe_rows",
+        "tile_bf16_value_rows",
+        "tile_sample_trace_rows",
+        "finite_baseline_dot_rows",
+        "finite_q8_dot_rows",
+        "finite_q4_dot_rows",
+        "finite_q8_error_rows",
+        "finite_q4_error_rows",
+        "torch_matvec_parity_rows",
+        "torch_matvec_parity_pass_rows",
+        "q8_abs_error_mean",
+        "q4_abs_error_mean",
+        "q8_abs_error_max",
+        "q4_abs_error_max",
+        "hotset_numeric_tile_probe_ready",
+        "q8_quant_probe_ready",
+        "q4_quant_probe_ready",
+        "torch_matvec_parity_ready",
+        "expert_ffn_parity_contract_ready",
+        "expert_ffn_parity_fixture_execution_ready",
+        "expert_ffn_parity_real_model_execution_ready",
+        "expert_ffn_parity_release_ready",
+        "checkpoint_payload_bytes_committed_to_repo",
+        "full_checkpoint_materialization_ready",
+        "full_safetensors_page_hash_binding_ready",
+        "actual_model_generation_ready",
+        "near_frontier_claim_ready",
+        "production_latency_claim_ready",
+        "real_release_package_ready",
+        "route_jump_rows",
+    ],
+    "torch-matvec-parity-rows": [
+        "tile_id",
+        "tensor_slice_id",
+        "binding_id",
+        "remote_sample_id",
+        "model_id",
+        "shard_name",
+        "tensor_name",
+        "tensor_role",
+        "layer_index",
+        "expert_index",
+        "dtype_source",
+        "torch_reference_backend",
+        "tile_bf16_values",
+        "tile_sha256",
+        "tensor_segment_sha256",
+        "remote_page_sha256",
+        "python_baseline_dot_fp64",
+        "torch_matvec_dot_fp64",
+        "torch_abs_delta",
+        "torch_tolerance",
+        "torch_matvec_parity_pass",
+        "real_checkpoint_page_bound",
+        "checkpoint_payload_bytes_committed_to_repo",
+        "actual_model_generation_ready",
+        "route_jump_rows",
+    ],
     "expert-ffn-forward-parity-rows": [
         "layer_index",
         "expert_index",
@@ -1103,24 +1232,80 @@ EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
     ],
 }
 EXPECTED_V61_REQUIRED_ARTIFACT_PATHS = {
+    "mixtral-ssd-tensor-page-read-rows": "results/v61aa_hotset_tensor_slice_verifier/verify_001/source_v61v/remote_sample_tensor_binding_rows.csv",
+    "tensor-dtype-stat-rows": "results/v61aa_hotset_tensor_slice_verifier/verify_001/hotset_tensor_slice_stat_rows.csv",
+    "tensor-quant-dequant-metric-rows": "results/v61ab_hotset_tensor_tile_quant_probe/probe_001/hotset_tensor_tile_quant_metric_rows.csv",
+    "torch-matvec-parity-rows": "results/v61ab_hotset_tensor_tile_quant_probe/probe_001/hotset_tensor_tile_torch_parity_rows.csv",
     "expert-ffn-forward-parity-rows": "results/v61ab_hotset_tensor_tile_quant_probe/probe_001/expert_ffn_forward_parity_rows.csv",
     "moe-block-forward-parity-rows": "results/v61_moe_block_forward_parity/moe_block_forward_parity_rows.csv",
     "one-token-logits-parity-rows": "results/v61_one_token_logits_parity/one_token_logits_parity_rows.csv",
 }
 EXPECTED_V61_ARTIFACT_MILESTONES = {
+    "mixtral-ssd-tensor-page-read-rows": "actual-mixtral-ssd-tensor-page-read",
+    "tensor-dtype-stat-rows": "actual-tensor-dtype-quant-dequant",
+    "tensor-quant-dequant-metric-rows": "actual-tensor-dtype-quant-dequant",
+    "torch-matvec-parity-rows": "torch-matvec-parity",
     "expert-ffn-forward-parity-rows": "real-expert-ffn-forward-parity",
     "moe-block-forward-parity-rows": "real-moe-block-forward-parity",
     "one-token-logits-parity-rows": "one-token-logits-parity",
 }
 EXPECTED_V61_ARTIFACT_PASS_FIELDS = {
+    "mixtral-ssd-tensor-page-read-rows": "remote_hash_bound",
+    "tensor-dtype-stat-rows": "bf16_tensor_slice_stats_ready",
+    "tensor-quant-dequant-metric-rows": "hotset_numeric_tile_probe_ready",
+    "torch-matvec-parity-rows": "torch_matvec_parity_pass",
     "expert-ffn-forward-parity-rows": "expert_ffn_parity_pass",
     "moe-block-forward-parity-rows": "moe_block_parity_pass",
     "one-token-logits-parity-rows": "logits_parity_pass",
 }
 EXPECTED_V61_ARTIFACT_MIN_ROWS = {
+    "mixtral-ssd-tensor-page-read-rows": 16,
+    "tensor-dtype-stat-rows": 16,
+    "tensor-quant-dequant-metric-rows": 1,
+    "torch-matvec-parity-rows": 128,
     "expert-ffn-forward-parity-rows": 1,
     "moe-block-forward-parity-rows": 1,
     "one-token-logits-parity-rows": 1,
+}
+EXPECTED_V61_ARTIFACT_VALUE_CHECKS = {
+    "mixtral-ssd-tensor-page-read-rows": {
+        "remote_hash_bound": "1",
+        "checkpoint_payload_bytes_committed_to_repo": "0",
+        "route_jump_rows": "0",
+    },
+    "tensor-dtype-stat-rows": {
+        "segment_hash_bound_to_remote_page": "1",
+        "direct_read_hash_match": "1",
+        "sampled_nan_values": "0",
+        "sampled_inf_values": "0",
+        "bf16_tensor_slice_stats_ready": "1",
+        "checkpoint_payload_bytes_committed_to_repo": "0",
+        "actual_model_generation_ready": "0",
+        "route_jump_rows": "0",
+    },
+    "tensor-quant-dequant-metric-rows": {
+        "hotset_numeric_tile_probe_ready": "1",
+        "q8_quant_probe_ready": "1",
+        "q4_quant_probe_ready": "1",
+        "torch_matvec_parity_ready": "1",
+        "expert_ffn_parity_real_model_execution_ready": "0",
+        "checkpoint_payload_bytes_committed_to_repo": "0",
+        "actual_model_generation_ready": "0",
+        "real_release_package_ready": "0",
+        "route_jump_rows": "0",
+    },
+    "torch-matvec-parity-rows": {
+        "torch_matvec_parity_pass": "1",
+        "real_checkpoint_page_bound": "1",
+        "checkpoint_payload_bytes_committed_to_repo": "0",
+        "actual_model_generation_ready": "0",
+        "route_jump_rows": "0",
+    },
+}
+V61_REAL_MODEL_EXECUTION_PASS_MILESTONES = {
+    "real-expert-ffn-forward-parity",
+    "real-moe-block-forward-parity",
+    "one-token-logits-parity",
 }
 
 
@@ -2523,6 +2708,7 @@ def verify_v61_one_token_path(
         summaries["v61aa"] = read_first_csv(v61aa_summary)
     if v61ab_summary is not None:
         summaries["v61ab"] = read_first_csv(v61ab_summary)
+    summary_evidence_supplied = bool(summaries)
 
     for index, row in enumerate(milestones, start=1):
         prefix = f"{path}: milestone[{index}]"
@@ -2560,7 +2746,7 @@ def verify_v61_one_token_path(
     artifacts = data["required_artifacts"]
     artifact_ids = [row.get("artifact_id", "") for row in artifacts]
     if artifact_ids != list(EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS):
-        errors.append(f"{path}: required_artifacts order must be expert FFN, MoE block, one-token logits")
+        errors.append(f"{path}: required_artifacts order must match the v61 one-token replay artifact contract")
     if len(artifact_ids) != len(set(artifact_ids)):
         errors.append(f"{path}: duplicate required_artifacts are forbidden")
     milestone_status = {row.get("milestone_id", ""): row.get("current_status", "") for row in milestones}
@@ -2601,7 +2787,7 @@ def verify_v61_one_token_path(
         artifact_path = Path(row.get("path", ""))
         artifact_exists = artifact_path.is_file() and artifact_path.stat().st_size > 0
         linked_status = milestone_status.get(linked_milestone, "")
-        if linked_status == "pass" and not artifact_exists:
+        if linked_status == "pass" and summary_evidence_supplied and not artifact_exists:
             errors.append(f"{prefix}: pass milestone requires non-empty artifact path {artifact_path}")
             continue
         if not artifact_exists:
@@ -2617,14 +2803,26 @@ def verify_v61_one_token_path(
         if pass_field and pass_field not in fieldnames:
             errors.append(f"{artifact_path}: missing pass field {pass_field}")
             continue
+        value_checks = EXPECTED_V61_ARTIFACT_VALUE_CHECKS.get(artifact_id, {})
+        for row_index, artifact_row in enumerate(rows, start=1):
+            for field, expected in value_checks.items():
+                if artifact_row.get(field) != expected:
+                    errors.append(f"{artifact_path}: row {row_index} {field} expected {expected}, got {artifact_row.get(field)}")
         real_pass_rows = [
             artifact_row
             for artifact_row in rows
-            if artifact_row.get(pass_field) == "1" and artifact_row.get("real_model_execution_ready") == "1"
+            if artifact_row.get(pass_field) == "1"
         ]
         if linked_status == "pass" and not real_pass_rows:
+            errors.append(f"{artifact_path}: pass milestone {linked_milestone} requires a {pass_field}=1 row")
+        real_model_pass_rows = [
+            artifact_row
+            for artifact_row in real_pass_rows
+            if artifact_row.get("real_model_execution_ready") == "1"
+        ]
+        if linked_milestone in V61_REAL_MODEL_EXECUTION_PASS_MILESTONES and linked_status == "pass" and not real_model_pass_rows:
             errors.append(f"{artifact_path}: pass milestone {linked_milestone} requires a real_model_execution_ready=1 {pass_field}=1 row")
-        if linked_status == "blocked" and real_pass_rows:
+        if linked_status == "blocked" and real_model_pass_rows:
             errors.append(f"{artifact_path}: blocked milestone {linked_milestone} cannot contain real_model_execution_ready=1 {pass_field}=1 rows")
     return errors
 
