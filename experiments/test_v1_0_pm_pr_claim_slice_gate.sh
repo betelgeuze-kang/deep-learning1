@@ -1280,8 +1280,8 @@ for row in leakage_rows.values():
         raise SystemExit("PM retrieval leakage guard should block oracle metadata from adapter selection")
 for guard_id, expected_fields in {
     "source-span-id": {"source_span_id", "span_id", "source_span_row_id", "span_row_id"},
-    "source-path": {"source_path", "source_file_path", "file_path", "repo_path", "path"},
-    "source-line": {"source_line", "source_line_start", "source_line_end", "line", "start_line", "end_line", "line_start", "line_end"},
+    "source-path": {"source_path", "source_file_path", "file_path", "repo_path", "path", "parsed_path"},
+    "source-line": {"source_line", "source_line_start", "source_line_end", "line", "start_line", "end_line", "line_start", "line_end", "parsed_line"},
     "source-file-hash": {"source_file_hash", "source_file_sha256", "source_sha256", "file_sha256", "content_sha256", "sha256", "blob_sha256", "git_blob_sha", "source_git_blob_sha"},
     "query-source-direct-binding": {"query_id", "case_id", "source_row_id", "source_case_id", "source_query_id", "query_source_id", "source_binding_id"},
     "expected-behavior": {"expected_behavior", "expected_answer", "expected_answer_sha256", "expected_citation", "expected_output", "gold_answer", "gold_citation"},

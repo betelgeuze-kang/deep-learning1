@@ -20,7 +20,7 @@ run_dir = Path(sys.argv[1])
 summary_csv = Path(sys.argv[2])
 decision_csv = Path(sys.argv[3])
 SYSTEMS = {"A", "B", "G", "H"}
-FORBIDDEN_SELECTION_FIELDS = "query_id,case_id,source_row_id,source_case_id,source_query_id,query_source_id,source_binding_id,expected_answer,expected_answer_sha256,expected_citation,expected_behavior,expected_output,gold_answer,gold_citation,source_span_id,span_id,source_span_row_id,span_row_id,source_path,source_file_path,file_path,repo_path,path,source_line,source_line_start,source_line_end,line,start_line,end_line,line_start,line_end,source_file_hash,source_file_sha256,source_sha256,file_sha256,content_sha256,sha256,blob_sha256,git_blob_sha,source_git_blob_sha,audit_type,expected_label,gold_label,target_label,negative_or_abstain"
+FORBIDDEN_SELECTION_FIELDS = "query_id,case_id,source_row_id,source_case_id,source_query_id,query_source_id,source_binding_id,expected_answer,expected_answer_sha256,expected_citation,expected_behavior,expected_output,gold_answer,gold_citation,source_span_id,span_id,source_span_row_id,span_row_id,source_path,source_file_path,file_path,repo_path,path,parsed_path,source_line,source_line_start,source_line_end,line,start_line,end_line,line_start,line_end,parsed_line,source_file_hash,source_file_sha256,source_sha256,file_sha256,content_sha256,sha256,blob_sha256,git_blob_sha,source_git_blob_sha,audit_type,expected_label,gold_label,target_label,negative_or_abstain"
 
 
 def sha256(path):
@@ -372,8 +372,8 @@ for row in answers:
         raise SystemExit("v53aq answer rows should disclose source locator removal")
     if row["selection_oracle_field_used"] != "0":
         raise SystemExit("v53aq answer rows must not use oracle fields in selection")
-    if row["system_id"] in {"G", "H"} and row["raw_prompt_context_bytes"] != "0":
-        raise SystemExit("v53aq G/H should not use raw prompt context bytes")
+    if row["raw_prompt_context_bytes"] != "0":
+        raise SystemExit("v53aq answers should not use raw prompt context bytes")
 
 for row in adapter_traces:
     for field in [
@@ -393,8 +393,12 @@ for row in adapter_traces:
         raise SystemExit("v53aq adapter trace should not use raw question text")
     if row["selection_sanitized_question_used"] != "1" or row["source_locator_in_question_removed"] != "1":
         raise SystemExit("v53aq adapter trace should use sanitized question text with source locators removed")
-if any(row["raw_context_appended"] != "0" or row["compact_routehint_used"] != "1" for row in adapter_traces if row["system_id"] in {"G", "H"}):
-    raise SystemExit("v53aq G/H adapter traces should use compact RouteHint without raw prompt context")
+if any(row["raw_context_appended"] != "0" or row["raw_prompt_context_bytes"] != "0" for row in adapter_traces):
+    raise SystemExit("v53aq adapter traces should not append raw prompt context")
+if any(row["source_window_used"] != "0" or row["source_window_bytes"] != "0" for row in adapter_traces):
+    raise SystemExit("v53aq adapter traces should not expose source windows as model-visible input")
+if any(row["compact_routehint_used"] != "1" for row in adapter_traces if row["system_id"] in {"G", "H"}):
+    raise SystemExit("v53aq G/H adapter traces should use compact RouteHint")
 if any(row["source_verified_scorer_used"] != "1" or row["domain_policy_used"] != "1" for row in adapter_traces if row["system_id"] == "H"):
     raise SystemExit("v53aq H adapter traces should disclose scorer/policy use")
 if any(row["internal_real_adapter_metric_claim_ready"] != "1" or row["public_real_system_performance_claim_ready"] != "0" for row in adapter_traces):

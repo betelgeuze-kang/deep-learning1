@@ -331,6 +331,7 @@ FORBIDDEN_MODEL_VISIBLE_FIELDS = {
     "file_path",
     "repo_path",
     "path",
+    "parsed_path",
     "source_line",
     "source_line_start",
     "source_line_end",
@@ -339,6 +340,7 @@ FORBIDDEN_MODEL_VISIBLE_FIELDS = {
     "end_line",
     "line_start",
     "line_end",
+    "parsed_line",
     "source_file_hash",
     "source_file_sha256",
     "source_sha256",
@@ -371,6 +373,54 @@ FORBIDDEN_MODEL_VISIBLE_FIELDS = {
 ALLOWED_MODEL_VISIBLE_FIELDS = {
     "sanitized_question",
     "opaque_routehint",
+}
+EXPECTED_LEAKAGE_STAGE_ORDER = [
+    "v53aq-sanitized-abgh-real-adapter",
+    "v54c-grounded-generation-guard",
+    "v53ap-source-span-fixture-replay-boundary",
+]
+EXPECTED_LEAKAGE_STAGE_CONTRACTS = {
+    "v53aq-sanitized-abgh-real-adapter": {
+        "surface_kind": "model_or_retriever",
+        "summary_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+        "allowed_model_visible_fields": ["sanitized_question"],
+        "forbidden_field_summary": "selection_forbidden_fields",
+        "must_equal": {
+            "selection_question_text_only": "1",
+            "selection_sanitized_question_only": "1",
+            "source_locator_in_question_removed_rows": "4000",
+            "selection_allowed_fields": "sanitized_question",
+            "selection_oracle_field_used": "0",
+            "source_span_oracle_selection_used": "0",
+            "expected_answer_oracle_replay": "0",
+            "deterministic_source_span_adapter_execution": "0",
+        },
+    },
+    "v54c-grounded-generation-guard": {
+        "surface_kind": "model_or_retriever",
+        "summary_path": "results/v54c_complete_source_grounded_generation_1000_summary.csv",
+        "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
+        "must_equal": {
+            "model_visible_leakage_guard_ready": "1",
+            "model_visible_input_fields": "sanitized_question,opaque_routehint",
+            "model_visible_forbidden_field_used_rows": "0",
+            "model_visible_source_locator_rows": "0",
+            "raw_prompt_context_appended_rows": "0",
+            "real_model_generation_ready": "0",
+        },
+    },
+    "v53ap-source-span-fixture-replay-boundary": {
+        "surface_kind": "source_bound_non_model_adapter",
+        "summary_path": "results/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+        "allowed_model_visible_fields": ["none"],
+        "must_equal": {
+            "expected_answer_oracle_replay": "0",
+            "deterministic_source_span_adapter_execution": "1",
+            "actual_adapter_execution_ready": "1",
+            "real_system_performance_claim_ready": "0",
+            "public_comparison_claim_ready": "0",
+        },
+    },
 }
 REQUIRED_DE_REAL_EVIDENCE_FIELDS = {
     "model_repository_exact_revision",
@@ -1856,6 +1906,8 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
         errors.append(f"{path}: stage_contracts must be a non-empty list")
         return errors
     stage_ids = [stage.get("stage_id", "") for stage in stages]
+    if stage_ids != EXPECTED_LEAKAGE_STAGE_ORDER:
+        errors.append(f"{path}: stage_contract order must match the PM leakage stage contract")
     if len(stage_ids) != len(set(stage_ids)):
         errors.append(f"{path}: duplicate stage_id values are forbidden")
     for index, stage in enumerate(stages, start=1):
@@ -1866,12 +1918,26 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
         extra_stage = set(stage) - REQUIRED_LEAKAGE_STAGE_KEYS - OPTIONAL_LEAKAGE_STAGE_KEYS
         if extra_stage:
             errors.append(f"{prefix}: unknown keys: {', '.join(sorted(extra_stage))}")
+        stage_id = stage.get("stage_id", "")
+        expected_stage = EXPECTED_LEAKAGE_STAGE_CONTRACTS.get(stage_id)
+        if expected_stage is None:
+            errors.append(f"{prefix}: unexpected stage_id={stage_id}")
+            expected_stage = {}
         surface_kind = stage.get("surface_kind", "model_or_retriever")
         if surface_kind not in {"model_or_retriever", "fixture_or_evaluator_replay", "source_bound_non_model_adapter"}:
             errors.append(f"{prefix}: unsupported surface_kind={surface_kind}")
+        if expected_stage.get("surface_kind") and surface_kind != expected_stage["surface_kind"]:
+            errors.append(f"{prefix}: surface_kind expected {expected_stage['surface_kind']}, got {surface_kind}")
+        if expected_stage.get("summary_path") and stage.get("summary_path") != expected_stage["summary_path"]:
+            errors.append(f"{prefix}: summary_path expected {expected_stage['summary_path']}, got {stage.get('summary_path')}")
         allowed = stage.get("allowed_model_visible_fields", [])
         if not isinstance(allowed, list) or not allowed:
             errors.append(f"{prefix}: allowed_model_visible_fields must be non-empty")
+        expected_allowed = expected_stage.get("allowed_model_visible_fields")
+        if expected_allowed and allowed != expected_allowed:
+            errors.append(
+                f"{prefix}: allowed_model_visible_fields expected {','.join(expected_allowed)}, got {','.join(str(item) for item in allowed)}"
+            )
         leaked = set(allowed) & FORBIDDEN_MODEL_VISIBLE_FIELDS
         if leaked:
             errors.append(f"{prefix}: allowed_model_visible_fields contains forbidden field(s): {', '.join(sorted(leaked))}")
@@ -1885,6 +1951,25 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
         must_equal = stage.get("must_equal", {})
         if not isinstance(must_equal, dict) or not must_equal:
             errors.append(f"{prefix}: must_equal must be a non-empty object")
+        expected_must_equal = expected_stage.get("must_equal")
+        if expected_must_equal and must_equal != expected_must_equal:
+            missing_must_equal = set(expected_must_equal) - set(must_equal)
+            extra_must_equal = set(must_equal) - set(expected_must_equal)
+            if missing_must_equal:
+                errors.append(f"{prefix}: must_equal missing required fields: {', '.join(sorted(missing_must_equal))}")
+            if extra_must_equal:
+                errors.append(f"{prefix}: must_equal has unexpected fields: {', '.join(sorted(extra_must_equal))}")
+            for field, expected in expected_must_equal.items():
+                if field in must_equal and must_equal[field] != expected:
+                    errors.append(f"{prefix}: must_equal.{field} expected {expected}, got {must_equal[field]}")
+        expected_forbidden_summary = expected_stage.get("forbidden_field_summary")
+        if expected_forbidden_summary:
+            if stage.get("forbidden_field_summary") != expected_forbidden_summary:
+                errors.append(
+                    f"{prefix}: forbidden_field_summary expected {expected_forbidden_summary}, got {stage.get('forbidden_field_summary')}"
+                )
+        elif stage.get("forbidden_field_summary"):
+            errors.append(f"{prefix}: forbidden_field_summary is not expected for this stage")
         summary_path = Path(stage.get("summary_path", ""))
         summary = read_first_csv(summary_path)
         if summary:

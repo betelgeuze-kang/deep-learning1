@@ -15,13 +15,13 @@
     {
       "guard_id": "source-path",
       "forbidden_surface": "source path",
-      "field_names": ["source_path", "source_file_path", "file_path", "repo_path", "path"],
+      "field_names": ["source_path", "source_file_path", "file_path", "repo_path", "path", "parsed_path"],
       "evaluator_only_or_absent": true
     },
     {
       "guard_id": "source-line",
       "forbidden_surface": "source line",
-      "field_names": ["source_line", "source_line_start", "source_line_end", "line", "start_line", "end_line", "line_start", "line_end"],
+      "field_names": ["source_line", "source_line_start", "source_line_end", "line", "start_line", "end_line", "line_start", "line_end", "parsed_line"],
       "evaluator_only_or_absent": true
     },
     {
@@ -59,6 +59,7 @@
       "must_equal": {
         "selection_question_text_only": "1",
         "selection_sanitized_question_only": "1",
+        "source_locator_in_question_removed_rows": "4000",
         "selection_allowed_fields": "sanitized_question",
         "selection_oracle_field_used": "0",
         "source_span_oracle_selection_used": "0",

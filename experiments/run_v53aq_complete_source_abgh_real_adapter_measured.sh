@@ -19,6 +19,7 @@ if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/s
   && grep -q 'internal_real_adapter_metric_claim_ready=1' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'public_real_system_performance_claim_ready=0' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'selection_forbidden_fields=query_id,case_id,source_row_id' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
+  && grep -q 'parsed_path,parsed_line' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'source_sha256,file_sha256,content_sha256,sha256' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"; then
   echo "v53aq_complete_source_abgh_real_adapter_measured_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
@@ -81,6 +82,7 @@ FORBIDDEN_SELECTION_FIELDS = [
     "file_path",
     "repo_path",
     "path",
+    "parsed_path",
     "source_line",
     "source_line_start",
     "source_line_end",
@@ -89,6 +91,7 @@ FORBIDDEN_SELECTION_FIELDS = [
     "end_line",
     "line_start",
     "line_end",
+    "parsed_line",
     "source_file_hash",
     "source_file_sha256",
     "source_sha256",
@@ -394,9 +397,8 @@ for system_id, system_name, adapter in SYSTEMS:
         citation_id = f"{answer_id}_citation_001"
         resource_row_id = f"{answer_id}_resource"
         compact_hint = f"selection_surface=sanitized_question;method={selection_method};routehint_opaque=1"
-        local_context = f"[{span['owner_repo']} {span['path']}:{span['line_start']}] {span['evidence_text']}"
-        raw_prompt_context_bytes = 0 if uses_routehint else len(local_context.encode("utf-8"))
-        source_window_bytes = len(local_context.encode("utf-8")) if system_id == "B" else 0
+        raw_prompt_context_bytes = 0
+        source_window_bytes = 0
         compact_routehint_bytes = len(compact_hint.encode("utf-8")) if uses_routehint else 0
         lexical_overlap = len(set(tokens(sanitized_question)) & doc_token_sets[selected_idx])
 
@@ -503,9 +505,9 @@ for system_id, system_name, adapter in SYSTEMS:
                 "route_exact_match": str(exact_route_match),
                 "lexical_overlap": str(lexical_overlap),
                 "retrieval_score": f"{retrieval_score:.6f}",
-                "raw_context_appended": "0" if uses_routehint else "1",
+                "raw_context_appended": "0",
                 "raw_prompt_context_bytes": str(raw_prompt_context_bytes),
-                "source_window_used": "1" if system_id == "B" else "0",
+                "source_window_used": "0",
                 "source_window_bytes": str(source_window_bytes),
                 "route_memory_store_used": str(uses_routehint),
                 "compact_routehint_used": str(uses_routehint),
@@ -1021,7 +1023,7 @@ decision_rows = [
     ("same-evaluator-resource-surface", "pass" if len(evaluator_rows) == 4000 and len(resource_rows) == 4000 else "blocked", "answer/citation/resource checks are separate on one evaluator contract"),
     ("expected-answer-oracle-replay-absent", "pass", "expected_answer_oracle_replay=0; answers are generated from selected source spans"),
     ("source-span-oracle-selection-absent", "pass", "source_span_id/source_path/source_line/query_id are not adapter-selection inputs"),
-    ("routehint-no-raw-context", "pass", f"routehint_rows={len(routehint_rows)}; G/H raw_prompt_context_bytes=0"),
+    ("routehint-no-raw-context", "pass", f"routehint_rows={len(routehint_rows)}; all raw_prompt_context_bytes=0"),
     ("internal-real-performance-metrics", "pass", f"answer_hash_match_rows={total_answer_hash_match}; coherent_wrong_key_rows={total_coherent_wrong}"),
     ("public-real-system-performance-claim", "blocked", "internal real-adapter metrics are present, but public performance wording remains blocked"),
     ("public-comparison-claim", "blocked", "D/E 30B/70B are absent; public comparison wording remains blocked"),
