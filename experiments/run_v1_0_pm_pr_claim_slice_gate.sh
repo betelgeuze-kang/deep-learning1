@@ -1118,7 +1118,7 @@ pm_roadmap_rows = [
         "v58c-blind-response-intake-artifact",
         "v58c blind-response intake artifact exists without implicit v58/v57/v56 seed rebuild",
         as_int(v59e, "v58c_blind_response_evidence_intake_ready") == 1
-        and as_int(v59e, "v58c_expected_blind_response_rows") == 2500
+        and as_int(v59e, "v58c_expected_blind_response_rows") == 4000
         and as_int(v59e, "v58c_required_blind_response_ready") == 0
         and as_int(v59e, "v58c_human_blind_review_ready") == 0,
         "source_summaries/v59e_one_command_pm_foundation_demo_summary.csv",
@@ -2070,7 +2070,7 @@ v58_real_execution_requirements = [
     (
         "ab-cdegh-real-responses",
         "A/B/C/D/E/G/H actual response rows over the same frozen query set",
-        "v58c currently covers D/E/G/H response intake; A/B/C real blind-response rows and all supplied real responses are still missing",
+        "v58b/v58c now cover A/B/C/D/E/G/H response templates; all supplied real responses are still missing",
         "source_summaries/v58c_blind_response_evidence_intake_summary.csv",
     ),
     (

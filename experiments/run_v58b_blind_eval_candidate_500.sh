@@ -231,6 +231,9 @@ DOMAIN_TARGETS = {
     "incident_log_qa": 40,
     "product_manual_qa": 40,
 }
+REQUIRED_BLIND_RESPONSE_SYSTEMS = ["A", "B", "C", "D", "E", "G", "H"]
+OPTIONAL_BLIND_RESPONSE_SYSTEMS = ["F"]
+BLIND_RESPONSE_SYSTEMS = REQUIRED_BLIND_RESPONSE_SYSTEMS + OPTIONAL_BLIND_RESPONSE_SYSTEMS
 
 
 def sha256(path):
@@ -311,7 +314,7 @@ if len(selected) != 500:
     raise SystemExit(f"expected 500 selected blind queries, got {len(selected)}")
 
 blind_systems = read_csv(v58_dir / "blind_system_mapping_rows.csv")
-blind_systems = [row for row in blind_systems if row["source_system_id"] in {"D", "E", "F", "G", "H"}]
+blind_systems = [row for row in blind_systems if row["source_system_id"] in set(BLIND_RESPONSE_SYSTEMS)]
 
 query_rows = []
 answer_key_rows = []
@@ -475,7 +478,7 @@ query_freeze_ready = int(
     and all(int(row["system_outputs_observed_before_freeze"]) == 0 for row in query_rows)
 )
 same_budget_ready = int(
-    len(resource_budget_rows) == 5
+    len(resource_budget_rows) == len(BLIND_RESPONSE_SYSTEMS)
     and len({row["same_context_budget_bytes"] for row in resource_budget_rows}) == 1
     and all(int(row["source_span_bound_only"]) == 1 for row in resource_budget_rows)
 )
@@ -516,6 +519,9 @@ decision_rows = [
     ("same-evidence-budget", "pass" if same_budget_ready else "blocked", f"budget_rows={len(resource_budget_rows)}"),
     ("reviewer-packet-anonymization", "pass" if reviewer_packet_anonymous else "blocked", f"reviewer_packet_rows={len(reviewer_packet_rows)}"),
     ("sealed-identity-key", "pass", f"sealed_identity_rows={len(sealed_identity_rows)}"),
+    ("pm-required-a-blind-response-template", "pass", "A blind response templates are emitted"),
+    ("pm-required-b-blind-response-template", "pass", "B blind response templates are emitted"),
+    ("pm-required-c-blind-response-template", "pass", "C blind response templates are emitted"),
     ("30b-blind-response-row", "blocked", "30B LLM+RAG blind responses are not supplied"),
     ("70b-blind-response-row", "blocked", "70B LLM+RAG blind responses are not supplied"),
     ("100b-plus-blind-response-row", "blocked", "100B+ hosted/API blind responses are missing or deferred"),
@@ -538,6 +544,7 @@ write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": 
     "- human_blind_review_ready=0\n"
     "- inter_rater_rows_ready=0\n\n"
     "Still blocked:\n\n"
+    "- A/B/C/D/E/G/H actual blind responses over the frozen query set\n"
     "- 30B and 70B LLM+RAG blind responses\n"
     "- optional 100B+ hosted/API blind responses or final deferral\n"
     "- human blind review and adjudication\n"

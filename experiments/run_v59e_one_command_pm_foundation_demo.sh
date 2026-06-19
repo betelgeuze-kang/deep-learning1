@@ -908,7 +908,7 @@ blind_response_intake_ready = int(
     v58c_available
     and
     as_int(v58c, "v58c_blind_response_evidence_intake_ready") == 1
-    and as_int(v58c, "expected_blind_response_rows") == 2500
+    and as_int(v58c, "expected_blind_response_rows") == 4000
     and as_int(v58c, "required_blind_response_ready") == 0
     and as_int(v58c, "human_blind_review_ready") == 0
 )
@@ -1562,8 +1562,8 @@ for path in return_template_files:
     copy_bundle_file(path, f"source_pm_pr_claim_slice_gate/return_templates/{rel_path}", "return_template")
 
 review_packet_ready = int(
-    as_int(pr_summary, "pm_pr_review_packet_rows") == 10
-    and as_int(pr_summary, "pm_pr_review_packet_files") == len(review_packet_files) == 10
+    as_int(pr_summary, "pm_pr_review_packet_rows") == 13
+    and as_int(pr_summary, "pm_pr_review_packet_files") == len(review_packet_files) == 13
 )
 blocker_packet_ready = int(
     as_int(pr_summary, "pm_blocker_closure_packet_rows") == 6

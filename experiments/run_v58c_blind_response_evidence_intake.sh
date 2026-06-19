@@ -608,7 +608,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
     identity_rows_for_system = identity_counts.get(system_id, 0)
     template_available = int(template_rows_for_system == expected_rows)
     ready = int(template_available == 1 and supplied_rows_for_system == expected_rows and identity_rows_for_system >= 1 and not errors)
-    if system_id in {"A", "B", "C"}:
+    if template_available != 1:
         blocker = "missing-v58b-blind-template-for-pm-required-system"
     elif supplied_rows_for_system != expected_rows:
         blocker = "missing-actual-blind-response-rows"
@@ -733,7 +733,7 @@ write_csv(run_dir / "blind_response_intake_gate_rows.csv", ["gate", "status", "r
     "- inter_rater_rows_ready=0\n\n"
     "Still blocked by default:\n\n"
     "- real A/B/C/D/E/G/H blind response rows\n"
-    "- PM-required A/B/C blind response template and actual response rows\n"
+    "- PM-required A/B/C actual response rows\n"
     "- query split, resource side-table, and same corpus/context/retrieval budget evidence\n"
     "- optional F response rows or final deferral\n"
     "- human blind review and adjudication\n\n"

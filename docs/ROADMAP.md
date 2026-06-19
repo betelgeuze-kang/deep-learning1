@@ -1782,15 +1782,15 @@ Current next boundary:
   `human_blind_review_ready=0`.
 - `v58b` adds the blind-eval candidate freeze.
   `experiments/test_v58b_blind_eval_candidate_500.sh` emits 500 frozen
-  source-span-bound blind queries, 2500 D/E/F/G/H response templates, 2500
+  source-span-bound blind queries, 4000 A/B/C/D/E/F/G/H response templates, 4000
   anonymous reviewer-packet templates, sealed answer/identity keys,
   same-evidence-budget rows, adjudication templates, and hash manifests. It
   marks the pre-output freeze and review-intake surface ready while keeping real
   blind responses, human blind review, inter-rater rows, and release claims
   blocked.
 - `v58c` adds the blind response evidence-intake gate.
-  `experiments/test_v58c_blind_response_evidence_intake.sh` emits the D/E/F/G/H
-  blind response schema, 2500-row response template, run-identity template,
+  `experiments/test_v58c_blind_response_evidence_intake.sh` emits the A/B/C/D/E/F/G/H
+  blind response schema, 4000-row response template, run-identity template,
   validation rows, gate rows, and hash manifest over the v58b frozen query set.
   It keeps required response readiness, human blind review, inter-rater rows,
   full v58, and release claims blocked until real supplied response rows

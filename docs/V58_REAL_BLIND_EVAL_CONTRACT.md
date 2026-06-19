@@ -100,9 +100,10 @@ they are not accepted through a deferred or tests-only note.
 
 Known current blockers:
 
-- The v58 contract requires A/B/C/D/E/G/H, but the current v58b template
-  surface still covers D/E/F/G/H. A/B/C real blind-response templates must be
-  added before the seven-system v58 run can close.
+- The v58b/v58c template surface covers A/B/C/D/E/G/H plus optional F.
+  Actual A/B/C/D/E/G/H blind-response rows, same-corpus/context metadata,
+  and non-fixture evidence are still required before the seven-system v58 run
+  can close.
 - v58c intake success is not a completed blind evaluation. Synthetic or
   locally fabricated intake rows must not be promoted to real blind evidence;
   the accepted v58 result requires non-fixture response evidence plus v58d

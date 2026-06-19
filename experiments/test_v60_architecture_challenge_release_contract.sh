@@ -355,11 +355,11 @@ for rel in required_files:
         raise SystemExit(f"missing v60 artifact: {rel}")
 
 acceptance_rows = read_csv(run_dir / "source_v59e/source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv")
-if len(acceptance_rows) != 10:
-    raise SystemExit("v60 should carry ten PM PR acceptance evidence rows")
+if len(acceptance_rows) != 13:
+    raise SystemExit("v60 should carry thirteen PM PR acceptance evidence rows")
 acceptance_by_id = {row["slice_id"]: row for row in acceptance_rows}
-if sum(row["acceptance_ready"] == "1" for row in acceptance_rows) != 9:
-    raise SystemExit("v60 should carry nine ready PM PR acceptance evidence rows")
+if sum(row["acceptance_ready"] == "1" for row in acceptance_rows) != 11:
+    raise SystemExit("v60 should carry eleven ready PM PR acceptance evidence rows")
 if any(row["tests_only_merge_condition"] != "0" for row in acceptance_rows):
     raise SystemExit("v60 PM PR acceptance evidence should forbid tests-only merge conditions")
 if acceptance_by_id["v53-query-instantiation-1000"]["replay_artifact_path"] != "source_v53t/complete_source_query_span_binding_audit_rows.csv":

@@ -260,7 +260,7 @@ expected = {
     "v58c_blind_response_evidence_intake_ready": "1",
     "v58_ready": "0",
     "evidence_dir_supplied": "0",
-    "expected_blind_response_rows": "2500",
+    "expected_blind_response_rows": "4000",
     "supplied_blind_response_rows": "0",
     "supplied_query_split_rows": "0",
     "query_split_ready": "0",
@@ -272,7 +272,7 @@ expected = {
     "pm_actual_required_blind_response_rows": "3500",
     "pm_actual_required_blind_response_ready": "0",
     "pm_actual_missing_system_rows": "7",
-    "pm_actual_template_gap_rows": "3",
+    "pm_actual_template_gap_rows": "0",
     "required_blind_response_ready": "0",
     "d_30b_blind_response_ready": "0",
     "e_70b_blind_response_ready": "0",
@@ -348,18 +348,18 @@ for field in ["blind_response_id", "response_text", "citation_source_span_id", "
         raise SystemExit(f"v58c schema missing {field}")
 
 templates = read_csv(run_dir / "blind_response_row_template.csv")
-if len(templates) != 2500:
-    raise SystemExit("v58c should emit 2500 blind response template rows")
-if {row["source_system_id"] for row in templates} != {"D", "E", "F", "G", "H"}:
-    raise SystemExit("v58c templates should cover D/E/F/G/H")
+if len(templates) != 4000:
+    raise SystemExit("v58c should emit 4000 blind response template rows")
+if {row["source_system_id"] for row in templates} != {"A", "B", "C", "D", "E", "F", "G", "H"}:
+    raise SystemExit("v58c templates should cover A/B/C/D/E/F/G/H")
 if any(row["response_text"] or row["output_sha256"] for row in templates):
     raise SystemExit("v58c templates should not include fake responses")
 
 identity_templates = read_csv(run_dir / "run_identity_template_rows.csv")
-if len(identity_templates) != 5:
-    raise SystemExit("v58c should emit five run identity template rows")
-if {row["source_system_id"] for row in identity_templates} != {"D", "E", "F", "G", "H"}:
-    raise SystemExit("v58c run identity templates should cover D/E/F/G/H")
+if len(identity_templates) != 8:
+    raise SystemExit("v58c should emit eight run identity template rows")
+if {row["source_system_id"] for row in identity_templates} != {"A", "B", "C", "D", "E", "F", "G", "H"}:
+    raise SystemExit("v58c run identity templates should cover A/B/C/D/E/F/G/H")
 
 actual_matrix_rows = read_csv(run_dir / "blind_response_actual_execution_matrix_rows.csv")
 if len(actual_matrix_rows) != 7:
@@ -381,10 +381,10 @@ for system_id, row in matrix_by_system.items():
     if row["fixture_allowed"] != "0" or row["tests_only_merge_condition"] != "0":
         raise SystemExit(f"v58c PM matrix should forbid fixtures/tests-only for {system_id}")
 for system_id in ["A", "B", "C"]:
-    if matrix_by_system[system_id]["v58b_template_rows"] != "0":
-        raise SystemExit(f"v58c PM matrix should expose missing template rows for {system_id}")
-    if matrix_by_system[system_id]["blocker"] != "missing-v58b-blind-template-for-pm-required-system":
-        raise SystemExit(f"v58c PM matrix should expose A/B/C template blocker for {system_id}")
+    if matrix_by_system[system_id]["v58b_template_rows"] != "500":
+        raise SystemExit(f"v58c PM matrix should carry 500 template rows for {system_id}")
+    if matrix_by_system[system_id]["blocker"] != "missing-actual-blind-response-rows":
+        raise SystemExit(f"v58c PM matrix should expose A/B/C actual response blocker for {system_id}")
 for system_id in ["D", "E", "G", "H"]:
     if matrix_by_system[system_id]["v58b_template_rows"] != "500":
         raise SystemExit(f"v58c PM matrix should carry 500 template rows for {system_id}")
@@ -400,8 +400,8 @@ if manifest.get("required_blind_response_ready") != 0 or manifest.get("human_bli
     raise SystemExit("v58c manifest should keep response/review blocked by default")
 if manifest.get("pm_actual_required_system_rows") != 7 or manifest.get("pm_actual_required_blind_response_rows") != 3500:
     raise SystemExit("v58c manifest should record PM A/B/C/D/E/G/H actual response requirement")
-if manifest.get("pm_actual_required_blind_response_ready") != 0 or manifest.get("pm_actual_template_gap_rows") != 3:
-    raise SystemExit("v58c manifest should keep PM actual response readiness blocked with A/B/C template gaps")
+if manifest.get("pm_actual_required_blind_response_ready") != 0 or manifest.get("pm_actual_template_gap_rows") != 0:
+    raise SystemExit("v58c manifest should keep PM actual response readiness blocked without template gaps")
 
 sha_rows = {row["path"]: row["sha256"] for row in read_csv(run_dir / "sha256_manifest.csv")}
 for rel in required_files:
@@ -414,11 +414,11 @@ boundary = (run_dir / "V58C_BLIND_RESPONSE_EVIDENCE_INTAKE_BOUNDARY.md").read_te
 for snippet in [
     "response evidence intake for the v58 blind evaluation",
     "It is not a completed blind evaluation",
-    "expected_blind_response_rows=2500",
+    "expected_blind_response_rows=4000",
     "pm_actual_required_system_rows=7",
     "pm_actual_required_blind_response_rows=3500",
     "pm_actual_required_blind_response_ready=0",
-    "pm_actual_template_gap_rows=3",
+    "pm_actual_template_gap_rows=0",
     "query_split_ready=0",
     "resource_rows_ready=0",
     "same_corpus_context_budget_ready=0",

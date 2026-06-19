@@ -167,10 +167,10 @@ expected = {
     "real_release_package_ready": "0",
     "pm_pr_claim_slice_gate_ready": "1",
     "pm_pr_claim_slice_bundle_ready": "1",
-    "pm_pr_recommended_slice_rows": "10",
-    "pm_pr_merge_gate_rows": "30",
-    "pm_pr_current_merge_ready_rows": "9",
-    "pm_pr_current_blocked_rows": "1",
+    "pm_pr_recommended_slice_rows": "13",
+    "pm_pr_merge_gate_rows": "39",
+    "pm_pr_current_merge_ready_rows": "11",
+    "pm_pr_current_blocked_rows": "2",
     "pm_pr_tests_only_merge_condition_rows": "0",
     "pm_pr_v53_query_span_binding_audit_ready": "1",
     "pm_pr_v53_query_span_binding_audit_rows": "1000",
@@ -182,11 +182,11 @@ expected = {
     "pm_pr_v53_pm_acceptance_evidence_rows": "10",
     "pm_pr_v53_pm_acceptance_evidence_ready_rows": "10",
     "pm_pr_v53_pm_acceptance_evidence_tests_only_rows": "0",
-    "pm_pr_review_packet_rows": "10",
-    "pm_pr_review_packet_files": "10",
+    "pm_pr_review_packet_rows": "13",
+    "pm_pr_review_packet_files": "13",
     "pm_pr_review_packet_bundle_ready": "1",
-    "pm_pr_acceptance_evidence_rows": "10",
-    "pm_pr_acceptance_evidence_ready_rows": "9",
+    "pm_pr_acceptance_evidence_rows": "13",
+    "pm_pr_acceptance_evidence_ready_rows": "11",
     "pm_pr_acceptance_evidence_tests_only_rows": "0",
     "pm_pr_v56_replay_acceptance_evidence_rows": "4",
     "pm_pr_v56_replay_acceptance_evidence_ready_rows": "0",
@@ -442,11 +442,11 @@ for rel in required_files:
         raise SystemExit(f"missing v59e artifact: {rel}")
 
 acceptance_rows = read_csv(run_dir / "source_pm_pr_claim_slice_gate/pm_pr_acceptance_evidence_rows.csv")
-if len(acceptance_rows) != 10:
-    raise SystemExit("v59e PM sidecar should carry ten PR acceptance evidence rows")
+if len(acceptance_rows) != 13:
+    raise SystemExit("v59e PM sidecar should carry thirteen PR acceptance evidence rows")
 acceptance_by_id = {row["slice_id"]: row for row in acceptance_rows}
-if sum(row["acceptance_ready"] == "1" for row in acceptance_rows) != 9:
-    raise SystemExit("v59e PM sidecar should carry nine ready PR acceptance rows")
+if sum(row["acceptance_ready"] == "1" for row in acceptance_rows) != 11:
+    raise SystemExit("v59e PM sidecar should carry eleven ready PR acceptance rows")
 if any(row["tests_only_merge_condition"] != "0" for row in acceptance_rows):
     raise SystemExit("v59e PM sidecar PR acceptance rows should forbid tests-only merge conditions")
 if acceptance_by_id["v53-query-instantiation-1000"]["replay_artifact_path"] != "source_v53t/complete_source_query_span_binding_audit_rows.csv":
@@ -474,8 +474,10 @@ if len(leakage_rows) != 7:
 if any(row["status"] != "pass" or row["adapter_selection_blocked"] != "1" for row in leakage_rows):
     raise SystemExit("v59e PM sidecar should keep oracle metadata blocked from adapter selection")
 leakage_by_guard = {row["guard_id"]: row for row in leakage_rows}
-if set(leakage_by_guard["source-path"]["field_names"].split(";")) != {"source_path", "source_file_path", "file_path", "repo_path", "path"}:
+if set(leakage_by_guard["source-path"]["field_names"].split(";")) != {"source_path", "source_file_path", "file_path", "repo_path", "path", "parsed_path"}:
     raise SystemExit("v59e PM sidecar should preserve source path alias leakage coverage")
+if set(leakage_by_guard["source-line"]["field_names"].split(";")) != {"source_line", "source_line_start", "source_line_end", "line", "start_line", "end_line", "line_start", "line_end", "parsed_line"}:
+    raise SystemExit("v59e PM sidecar should preserve source line alias leakage coverage")
 if set(leakage_by_guard["source-file-hash"]["field_names"].split(";")) != {"source_file_hash", "source_file_sha256", "source_sha256", "file_sha256", "content_sha256", "sha256", "blob_sha256", "git_blob_sha", "source_git_blob_sha"}:
     raise SystemExit("v59e PM sidecar should preserve source hash alias leakage coverage")
 if set(leakage_by_guard["query-source-direct-binding"]["field_names"].split(";")) != {"query_id", "case_id", "source_row_id", "source_case_id", "source_query_id", "query_source_id", "source_binding_id"}:
@@ -1028,8 +1030,8 @@ if "v58_blind_eval_acceptance_evidence_rows_sha256" not in manifest:
 if manifest.get("pm_pr_claim_slice_bundle_ready") != 1:
     raise SystemExit("v59e manifest should include the PM PR sidecar bundle")
 if (
-    manifest.get("pm_pr_acceptance_evidence_rows") != 10
-    or manifest.get("pm_pr_acceptance_evidence_ready_rows") != 9
+    manifest.get("pm_pr_acceptance_evidence_rows") != 13
+    or manifest.get("pm_pr_acceptance_evidence_ready_rows") != 11
     or manifest.get("pm_pr_acceptance_evidence_tests_only_rows") != 0
 ):
     raise SystemExit("v59e manifest should record PM PR acceptance evidence rows")
@@ -1433,14 +1435,14 @@ if not any(row["check"] == "no-manual-postprocessing" and "written by the comman
 pr_summary = read_csv(pr_slice_summary_csv)[0]
 if pr_summary.get("v1_0_pm_pr_claim_slice_gate_ready") != "1":
     raise SystemExit("v59e one-command should refresh the PM PR claim slice gate")
-if pr_summary.get("recommended_pr_slice_rows") != "10" or pr_summary.get("merge_gate_rows") != "30":
-    raise SystemExit("v59e one-command PR slice gate should expose ten slices and 30 merge gates")
+if pr_summary.get("recommended_pr_slice_rows") != "13" or pr_summary.get("merge_gate_rows") != "39":
+    raise SystemExit("v59e one-command PR slice gate should expose thirteen slices and 39 merge gates")
 if pr_summary.get("tests_only_merge_condition_rows") != "0":
     raise SystemExit("v59e one-command PR slice gate must keep tests-only merge conditions forbidden")
 if pr_summary.get("real_release_package_ready") != "0":
     raise SystemExit("v59e one-command PR slice gate must keep release blocked")
-if pr_summary.get("pm_pr_review_packet_files") != "10":
-    raise SystemExit("v59e one-command PR slice gate should emit ten review packets")
+if pr_summary.get("pm_pr_review_packet_files") != "13":
+    raise SystemExit("v59e one-command PR slice gate should emit thirteen review packets")
 if pr_summary.get("pm_blocker_closure_packet_files") != "6":
     raise SystemExit("v59e one-command PR slice gate should emit six blocker packets")
 if pr_summary.get("pm_execution_lock_rows") != "10" or pr_summary.get("pm_scope_drift_allowed") != "0":
@@ -1461,8 +1463,8 @@ if (
     raise SystemExit("v59e one-command PR slice gate should expose #13 normalization, typed-ready, and leakage guards")
 
 pr_slice_rows = read_csv(pr_slice_run_dir / "pm_pr_slice_rows.csv")
-if len(pr_slice_rows) != 10:
-    raise SystemExit("v59e one-command should emit ten PM PR slice rows")
+if len(pr_slice_rows) != 13:
+    raise SystemExit("v59e one-command should emit thirteen PM PR slice rows")
 v56_rows = [row for row in pr_slice_rows if row["slice_id"] == "v56-ruler-longbench-expanded"]
 if len(v56_rows) != 1:
     raise SystemExit("v59e one-command PR slice gate should include v56")

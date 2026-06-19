@@ -157,10 +157,10 @@ expected = {
     "v58_ready": "0",
     "frozen_query_rows": "500",
     "target_blind_eval_rows": "500",
-    "blind_system_rows": "5",
-    "blind_response_template_rows": "2500",
+    "blind_system_rows": "8",
+    "blind_response_template_rows": "4000",
     "actual_blind_response_rows": "0",
-    "reviewer_packet_template_rows": "2500",
+    "reviewer_packet_template_rows": "4000",
     "sealed_answer_key_rows": "500",
     "sealed_identity_key_ready": "1",
     "query_freeze_ready": "1",
@@ -187,6 +187,9 @@ for gate in [
     "same-evidence-budget",
     "reviewer-packet-anonymization",
     "sealed-identity-key",
+    "pm-required-a-blind-response-template",
+    "pm-required-b-blind-response-template",
+    "pm-required-c-blind-response-template",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v58b gate should pass: {gate}")
@@ -248,8 +251,8 @@ budget_rows = read_csv(run_dir / "blind_evidence_budget_rows.csv")
 identity_rows = read_csv(run_dir / "sealed_identity_key_rows.csv")
 if len(query_rows) != 500 or len(answer_key_rows) != 500:
     raise SystemExit("v58b should freeze 500 queries and 500 sealed answer keys")
-if len(response_rows) != 2500 or len(reviewer_rows) != 2500 or len(adjudication_rows) != 2500:
-    raise SystemExit("v58b should write 2500 response/reviewer/adjudication templates")
+if len(response_rows) != 4000 or len(reviewer_rows) != 4000 or len(adjudication_rows) != 4000:
+    raise SystemExit("v58b should write 4000 response/reviewer/adjudication templates")
 counts = Counter(row["domain_pack"] for row in query_rows)
 if counts != DOMAIN_TARGETS:
     raise SystemExit(f"v58b domain distribution mismatch: {counts}")
@@ -272,11 +275,11 @@ if any(row["sealed_from_reviewer_packet"] != "1" for row in answer_key_rows):
     raise SystemExit("v58b answer keys should be sealed from reviewer packet")
 
 systems = {row["blind_system_id"]: row["source_system_id"] for row in identity_rows}
-if set(systems.values()) != {"D", "E", "F", "G", "H"}:
-    raise SystemExit(f"v58b sealed identity should map D-H, got {systems}")
+if set(systems.values()) != {"A", "B", "C", "D", "E", "F", "G", "H"}:
+    raise SystemExit(f"v58b sealed identity should map A-H, got {systems}")
 if any(row["sealed_until_scoring_complete"] != "1" or row["identity_hidden_from_reviewer"] != "1" for row in identity_rows):
     raise SystemExit("v58b sealed identity key should be sealed and hidden")
-if len(budget_rows) != 5:
+if len(budget_rows) != 8:
     raise SystemExit("v58b should define one budget per blind system")
 if len({row["same_context_budget_bytes"] for row in budget_rows}) != 1:
     raise SystemExit("v58b budgets should use the same context byte cap")
@@ -289,8 +292,8 @@ if any(row["identity_hidden_from_reviewer"] != "1" or row["review_decision"] != 
     raise SystemExit("v58b reviewer packet should remain anonymous and pending")
 if any(row["supplied_response_ready"] != "0" for row in response_rows):
     raise SystemExit("v58b response templates should not claim supplied responses")
-if set(row["source_system_id"] for row in response_rows) != {"D", "E", "F", "G", "H"}:
-    raise SystemExit("v58b response templates should cover D-H")
+if set(row["source_system_id"] for row in response_rows) != {"A", "B", "C", "D", "E", "F", "G", "H"}:
+    raise SystemExit("v58b response templates should cover A-H")
 
 manifest = json.loads((run_dir / "v58b_blind_eval_candidate_manifest.json").read_text(encoding="utf-8"))
 if manifest.get("v58b_blind_eval_candidate_ready") != 1 or manifest.get("v58_ready") != 0:

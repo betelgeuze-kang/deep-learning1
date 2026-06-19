@@ -521,7 +521,7 @@ requirements = [
     req(
         "v58c_blind_response_intake_artifact",
         as_int(v59e, "v58c_blind_response_evidence_intake_ready") == 1
-        and as_int(v59e, "v58c_expected_blind_response_rows") == 2500
+        and as_int(v59e, "v58c_expected_blind_response_rows") == 4000
         and as_int(v59e, "v58c_required_blind_response_ready") == 0
         and as_int(v59e, "v58c_human_blind_review_ready") == 0,
         "v58c blind-response intake artifact is absent; implicit v58/v57/v56 seed rebuild remains blocked",
