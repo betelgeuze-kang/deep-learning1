@@ -54,6 +54,7 @@
       "surface_kind": "model_or_retriever",
       "summary_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
       "allowed_model_visible_fields": ["sanitized_question"],
+      "forbidden_field_summary": "selection_forbidden_fields",
       "must_equal": {
         "selection_question_text_only": "1",
         "selection_sanitized_question_only": "1",

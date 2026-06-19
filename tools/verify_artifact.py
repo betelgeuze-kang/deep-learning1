@@ -912,6 +912,15 @@ def verify_leakage(path: Path, pm_ledger: Path | None = None) -> list[str]:
                     errors.append(f"{summary_path}: {stage.get('stage_id', '')}.real_system_performance_claim_ready must be 0 for source-bound non-model adapters")
                 if summary.get("public_comparison_claim_ready") not in {"", None, "0"}:
                     errors.append(f"{summary_path}: {stage.get('stage_id', '')}.public_comparison_claim_ready must be 0 for source-bound non-model adapters")
+            forbidden_field_summary = stage.get("forbidden_field_summary", "")
+            if forbidden_field_summary:
+                summary_forbidden_fields = set(split_semicolon(summary.get(forbidden_field_summary, "").replace(",", ";")))
+                missing_summary_fields = FORBIDDEN_MODEL_VISIBLE_FIELDS - summary_forbidden_fields
+                if missing_summary_fields:
+                    errors.append(
+                        f"{summary_path}: {stage.get('stage_id', '')}.{forbidden_field_summary} missing forbidden alias coverage: "
+                        f"{', '.join(sorted(missing_summary_fields))}"
+                    )
             for field, expected in must_equal.items():
                 if summary.get(field) != expected:
                     errors.append(f"{summary_path}: {stage.get('stage_id', '')}.{field} expected {expected}, got {summary.get(field)}")

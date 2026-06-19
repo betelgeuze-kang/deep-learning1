@@ -39,6 +39,7 @@
           "surface_kind": {"type": "string"},
           "summary_path": {"type": "string"},
           "allowed_model_visible_fields": {"type": "array", "items": {"type": "string"}},
+          "forbidden_field_summary": {"type": "string"},
           "must_equal": {
             "type": "object",
             "additionalProperties": {"type": "string"}

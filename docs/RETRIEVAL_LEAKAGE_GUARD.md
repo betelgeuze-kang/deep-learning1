@@ -38,7 +38,9 @@ Current stage expectations:
 - v53ap source-span replay is a source-bound non-model adapter surface; it has
   no model/retriever-visible input surface and cannot support public comparison
   or performance claims.
-- v53aq adapter selection sees only `sanitized_question`.
+- v53aq adapter selection sees only `sanitized_question`, and its
+  `selection_forbidden_fields` summary must cover every forbidden alias in this
+  contract.
 - v54c model-visible generation input sees only `sanitized_question,opaque_routehint`.
 - evaluator-only fields stay available for scoring, not for retrieval or generation.
 
