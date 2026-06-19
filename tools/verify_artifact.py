@@ -269,6 +269,10 @@ REQUIRED_PR2_REWRITE_TERMS = {
     "MoE block forward parity",
     "one-token logits parity",
     "real_model_execution_ready=1",
+    "blocked_before_ssd_resident_runtime_claim_count=3",
+    "required_real_evidence_field_count=11",
+    "missing_real_evidence_field_count=11",
+    "latency_memory_excluded_from_quality_score=1",
     "actual generation",
     "release claims remain blocked",
 }
@@ -289,6 +293,9 @@ REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "v58/blind_eval_real.json",
     "operations/review_return_workflow.json",
     "v61/one_token_path.json",
+    "blocked_before_ssd_resident_runtime_claim_count=3",
+    "required_real_evidence_field_count=11",
+    "latency_memory_excluded_from_quality_score=1",
     "docs-readme-pr2-cleanup",
 }
 TESTS_ONLY_MERGE_CONDITIONS = {"tests pass", "test pass", "tests", "test", "ci green"}

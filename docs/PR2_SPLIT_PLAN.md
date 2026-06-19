@@ -54,7 +54,11 @@ bindings, expected behavior, and expected labels are evaluator-only.
 D/E baseline wording must follow `baselines/de_30b70b_real.json`; fixture or
 schema-test D/E rows cannot enter measured registry or public comparison rows.
 The v52 slice must include the measured-registry exclusion ledger and acceptance
-blocker ledger as replay artifacts, not optional sidecars.
+blocker ledger as replay artifacts, not optional sidecars. The exclusion ledger
+must exact-count `required_real_evidence_field_count=11`,
+`missing_real_evidence_field_count=11`, and
+`all_required_real_evidence_missing=1` for both D and E before admission remains
+blocked.
 v53 benchmark wording must follow `benchmarks/v53_source_bound_freeze.json`;
 the 1000-row machine-foundation freeze does not imply human-reviewed quality,
 D/E baseline completion, public comparison, or release readiness. The v53
@@ -71,7 +75,9 @@ v58 blind-eval wording must follow `v58/blind_eval_real.json`; A/B/C/D/E/G/H
 real responses, two independent blinded reviewers, adjudication, unseen split,
 source-span exactness, unsupported abstention, and latency/memory separation are
 required, while templates and intake contracts do not imply real blind-eval
-completion.
+completion. Response/resource intake rows must carry
+`latency_memory_excluded_from_quality_score=1` so latency and memory cannot be
+folded into answer quality.
 Operator/review-return wording must follow
 `operations/review_return_workflow.json`; review templates, operator work
 orders, dry-run bundles, and fixture mechanics do not imply accepted human
@@ -81,7 +87,12 @@ v61 runtime wording must follow `v61/one_token_path.json`;
 `torch-matvec-parity-rows` are replay-bound, but real expert FFN forward parity,
 MoE block forward parity, one-token logits parity, actual generation,
 production latency, near-frontier quality, and release claims remain blocked
-until a replay artifact contains `real_model_execution_ready=1`.
+until a replay artifact contains `real_model_execution_ready=1`. The runtime
+claim policy must keep `required_before_ssd_resident_runtime_claim_count=6`,
+`passed_before_ssd_resident_runtime_claim_count=3`, and
+`blocked_before_ssd_resident_runtime_claim_count=3`, with
+`blocked_before_ssd_resident_runtime_claim` listing real expert FFN, MoE block,
+and one-token logits parity.
 README and PR-body wording must follow the `docs-readme-pr2-cleanup` slice:
 reviewers should be pointed to declarative pipeline/contracts instead of a giant
 v61 entrypoint dump, and scaffold/runtime-admission evidence must not be promoted
@@ -116,7 +127,9 @@ Current v61 state: `mixtral-ssd-tensor-page-read-rows`, tensor dtype/quant
 rows, and `torch-matvec-parity-rows` are replay-bound, but real expert FFN
 forward parity, MoE block forward parity, one-token logits parity, actual
 generation, production latency, near-frontier quality, and release claims remain
-blocked until a replay artifact contains `real_model_execution_ready=1`.
+blocked until a replay artifact contains `real_model_execution_ready=1`. The
+v61 runtime policy currently has 6 pre-runtime-claim milestones, 3 passed, and
+3 blocked: real expert FFN, MoE block, and one-token logits parity.
 
 Typed readiness, retrieval leakage, and D/E 30B/70B real-baseline admission
 remain separate blocker surfaces.
