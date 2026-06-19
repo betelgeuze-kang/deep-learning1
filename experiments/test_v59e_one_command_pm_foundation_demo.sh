@@ -41,7 +41,9 @@ def read_csv(path):
 
 summary = read_csv(summary_csv)[0]
 use_existing_v58c = os.environ.get("V59E_USE_EXISTING_V58C", "0") == "1"
+use_existing_v58d = os.environ.get("V59E_USE_EXISTING_V58D", "0") == "1"
 v58c_stage_name = "v58c" if use_existing_v58c else "v58c_dependency"
+v58d_stage_name = "v58d" if use_existing_v58d else "v58d_dependency"
 v58c_expected = {
     "v58c_intake_artifact_available": "1" if use_existing_v58c else "0",
     "v58c_dependency_blocker_ready": "0" if use_existing_v58c else "1",
@@ -51,6 +53,29 @@ v58c_expected = {
     "v58c_blind_response_absorb_ready": "0",
     "v58c_human_blind_review_ready": "0",
 }
+v58d_expected = {
+    "v58d_review_artifact_available": "1" if use_existing_v58d else "0",
+    "v58d_dependency_blocker_ready": "0" if use_existing_v58d else "1",
+    "v58d_blind_review_return_intake_ready": "1" if use_existing_v58d else "0",
+    "v58d_pm_review_required_system_rows": "7",
+    "v58d_pm_review_required_blind_response_rows": "3500",
+    "v58d_pm_review_required_independent_review_rows": "7000",
+    "v58d_pm_review_required_adjudication_rows": "3500",
+    "v58d_pm_review_actual_ready": "0",
+    "v58d_pm_review_unseen_split_ready": "0",
+    "v58d_pm_review_source_span_exactness_ready": "0",
+    "v58d_pm_review_unsupported_abstention_ready": "0",
+    "v58d_pm_review_latency_memory_separate_ready": "0",
+    "v58d_human_blind_review_ready": "0",
+}
+if not use_existing_v58d:
+    v58d_expected.update(
+        {
+            "v58d_expected_required_review_rows": "0",
+            "v58d_pm_review_missing_system_rows": "7",
+            "v58d_pm_review_template_gap_rows": "7",
+        }
+    )
 expected = {
     "v59e_one_command_pm_foundation_demo_ready": "1",
     "v59_ready": "0",
@@ -142,24 +167,9 @@ expected = {
     "h10_real_label_acceptance_evidence_source_verified_blocked_rows": "6",
     "v58_pm_blind_eval_blocker_ready": "1",
     **v58c_expected,
-    "v58d_review_artifact_available": "0",
-    "v58d_dependency_blocker_ready": "1",
-    "v58d_blind_review_return_intake_ready": "0",
-    "v58d_expected_required_review_rows": "0",
-    "v58d_pm_review_required_system_rows": "7",
-    "v58d_pm_review_required_blind_response_rows": "3500",
-    "v58d_pm_review_required_independent_review_rows": "7000",
-    "v58d_pm_review_required_adjudication_rows": "3500",
-    "v58d_pm_review_actual_ready": "0",
-    "v58d_pm_review_missing_system_rows": "7",
-    "v58d_pm_review_template_gap_rows": "7",
-    "v58d_pm_review_unseen_split_ready": "0",
-    "v58d_pm_review_source_span_exactness_ready": "0",
-    "v58d_pm_review_unsupported_abstention_ready": "0",
-    "v58d_pm_review_latency_memory_separate_ready": "0",
+    **v58d_expected,
     "v58d_required_blind_review_ready": "0",
     "v58d_required_adjudication_ready": "0",
-    "v58d_human_blind_review_ready": "0",
     "v58d_inter_rater_rows_ready": "0",
     "v58_full_blind_eval_ready": "0",
     "answer_citation_separate_eval": "1",
@@ -279,7 +289,7 @@ if int(summary["bundle_files"]) < 35:
     raise SystemExit("v59e should copy a substantial PM foundation bundle")
 
 stage_rows = read_csv(run_dir / "pm_foundation_stage_replay_rows.csv")
-if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v53aq", "v54c", "h10_pm", v58c_stage_name, "v58d_dependency", "v58_blocker"]:
+if [row["stage"] for row in stage_rows] != ["v53t", "v53ap", "v53aq", "v54c", "h10_pm", v58c_stage_name, v58d_stage_name, "v58_blocker"]:
     raise SystemExit("v59e stage order mismatch")
 if any(row["ready"] != "1" for row in stage_rows):
     raise SystemExit("v59e all PM stages should be replay-ready")
@@ -301,6 +311,7 @@ for gate in [
     "h10-real-label-readiness-ledger",
     *(["v58-blind-response-intake"] if use_existing_v58c else []),
     "v58c-intake-dependency-blocker",
+    *(["v58-blind-review-intake"] if use_existing_v58d else []),
     "v58d-review-return-dependency-blocker",
     "v58-blind-eval-blocker-ledger",
     "no-hidden-local-state",
@@ -315,9 +326,11 @@ for gate in [
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v59e gate should pass: {gate}")
-blocked_gates = ["public-source-download-execution", "v58-blind-review-intake", "real-blind-eval", "full-v59-public-demo", "real-release-package"]
+blocked_gates = ["public-source-download-execution", "real-blind-eval", "full-v59-public-demo", "real-release-package"]
 if not use_existing_v58c:
     blocked_gates.append("v58-blind-response-intake")
+if not use_existing_v58d:
+    blocked_gates.append("v58-blind-review-intake")
 for gate in blocked_gates:
     if decisions.get(gate) != "blocked":
         raise SystemExit(f"v59e gate should remain blocked: {gate}")
@@ -376,7 +389,6 @@ required_files = [
     "source_h10_pm/source_v53t/v53t_complete_source_audit_readiness_gate_summary.csv",
     "source_h10_pm/source_v53t/complete_source_abgh_real_adapter_freeze_rows.csv",
     "source_h10_pm/source_v53t/complete_source_foundation_freeze_rows.csv",
-    "source_v58d_dependency/v58d_pm_blind_review_return_dependency_rows.csv",
     "source_v58_blocker/v58_pm_blind_eval_blocker_rows.csv",
     "v58_blind_eval_required_artifact_rows.csv",
     "v58_blind_eval_return_template_rows.csv",
@@ -465,6 +477,25 @@ if use_existing_v58c:
     )
 else:
     required_files.append("source_v58c_dependency/v58c_pm_blind_response_intake_dependency_rows.csv")
+if use_existing_v58d:
+    required_files.extend(
+        [
+            "source_v58d/blind_review_required_field_rows.csv",
+            "source_v58d/blind_review_return_template_rows.csv",
+            "source_v58d/blind_adjudication_return_template_rows.csv",
+            "source_v58d/pm_blind_review_actual_execution_matrix_rows.csv",
+            "source_v58d/blind_review_validation_rows.csv",
+            "source_v58d/blind_review_intake_gate_rows.csv",
+            "source_v58d/blind_eval_score_rows.csv",
+            "source_v58d/blind_failure_case_report_rows.csv",
+            "source_v58d/v58d_blind_review_dependency_rows.csv",
+            "source_v58d/V58D_BLIND_REVIEW_RETURN_INTAKE_BOUNDARY.md",
+            "source_v58d/v58d_blind_review_return_intake_manifest.json",
+            "source_v58d/sha256_manifest.csv",
+        ]
+    )
+else:
+    required_files.append("source_v58d_dependency/v58d_pm_blind_review_return_dependency_rows.csv")
 for rel in required_files:
     path = run_dir / rel
     if not path.is_file() or path.stat().st_size == 0:
@@ -1016,10 +1047,9 @@ if (
 ):
     raise SystemExit("v59e manifest should preserve the v58c blind-response intake boundary")
 if (
-    manifest.get("v58d_review_artifact_available") != 0
-    or manifest.get("v58d_dependency_blocker_ready") != 1
-    or manifest.get("v58d_blind_review_return_intake_ready") != 0
-    or manifest.get("v58d_expected_required_review_rows") != 0
+    manifest.get("v58d_review_artifact_available") != (1 if use_existing_v58d else 0)
+    or manifest.get("v58d_dependency_blocker_ready") != (0 if use_existing_v58d else 1)
+    or manifest.get("v58d_blind_review_return_intake_ready") != (1 if use_existing_v58d else 0)
     or manifest.get("v58d_pm_review_required_system_rows") != 7
     or manifest.get("v58d_pm_review_required_independent_review_rows") != 7000
     or manifest.get("v58d_pm_review_required_adjudication_rows") != 3500
@@ -1030,7 +1060,13 @@ if (
     or manifest.get("v58d_pm_review_latency_memory_separate_ready") != 0
     or manifest.get("v58d_human_blind_review_ready") != 0
 ):
-    raise SystemExit("v59e manifest should preserve the v58d blind-review return blocker boundary")
+    raise SystemExit("v59e manifest should preserve the v58d blind-review return boundary")
+if use_existing_v58d:
+    if manifest.get("v58d_expected_required_review_rows") not in {0, 7000}:
+        raise SystemExit("v59e manifest should preserve a valid v58d expected review-row count")
+else:
+    if manifest.get("v58d_expected_required_review_rows") != 0:
+        raise SystemExit("v59e manifest should preserve the v58d dependency blocker review-row boundary")
 if (
     manifest.get("v58_return_artifact_contract_ready") != 1
     or manifest.get("v58_required_artifact_rows") != 11
@@ -1251,10 +1287,9 @@ for snippet in [
     f"v58c_expected_blind_response_rows={4000 if use_existing_v58c else 0}",
     "v58c_required_blind_response_ready=0",
     "v58c_human_blind_review_ready=0",
-    "v58d_review_artifact_available=0",
-    "v58d_dependency_blocker_ready=1",
-    "v58d_blind_review_return_intake_ready=0",
-    "v58d_expected_required_review_rows=0",
+    f"v58d_review_artifact_available={1 if use_existing_v58d else 0}",
+    f"v58d_dependency_blocker_ready={0 if use_existing_v58d else 1}",
+    f"v58d_blind_review_return_intake_ready={1 if use_existing_v58d else 0}",
     "v58d_pm_review_required_system_rows=7",
     "v58d_pm_review_required_blind_response_rows=3500",
     "v58d_pm_review_required_independent_review_rows=7000",
@@ -1291,6 +1326,8 @@ for snippet in [
 ]:
     if snippet not in boundary:
         raise SystemExit(f"v59e boundary missing: {snippet}")
+if not use_existing_v58d and "v58d_expected_required_review_rows=0" not in boundary:
+    raise SystemExit("v59e boundary should preserve default v58d dependency review-row boundary")
 
 policy_rows = read_csv(run_dir / "public_source_replay_policy_rows.csv")
 if len(policy_rows) != 1:

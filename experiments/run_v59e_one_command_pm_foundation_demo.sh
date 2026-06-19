@@ -341,13 +341,19 @@ v58d_required_artifacts = [
     v58d_dir / "v58d_blind_review_return_intake_manifest.json",
     v58d_dir / "sha256_manifest.csv",
 ]
+v58d_existing_summary = first_row(v58d_summary_path) if v58d_summary_path.is_file() else {}
+v58d_artifact_files_present = all(path.is_file() and path.stat().st_size > 0 for path in v58d_required_artifacts)
 v58d_available = int(
     os.environ.get("V59E_USE_EXISTING_V58D", "0") == "1"
-    and v58d_summary_path.is_file()
-    and all(path.is_file() and path.stat().st_size > 0 for path in v58d_required_artifacts)
+    and v58d_artifact_files_present
+    and as_int(v58d_existing_summary, "v58d_blind_review_return_intake_ready") == 1
+    and as_int(v58d_existing_summary, "human_blind_review_ready") == 0
+    and as_int(v58d_existing_summary, "inter_rater_rows_ready") == 0
+    and as_int(v58d_existing_summary, "v58_full_blind_eval_ready") == 0
+    and as_int(v58d_existing_summary, "real_release_package_ready") == 0
 )
 if v58d_available:
-    v58d = first_row(v58d_summary_path)
+    v58d = v58d_existing_summary
 else:
     v58d = {
         "v58d_blind_review_return_intake_ready": "0",
