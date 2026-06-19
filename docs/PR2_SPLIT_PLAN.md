@@ -42,7 +42,9 @@ reproduction, or release readiness.
 v50 auditor wording must follow `audits/v50_public_repo_auditor_correctness.json`;
 summary `ready=1` is not mergeable auditor correctness while replay artifacts
 are missing. The v50 artifact schema, row-count floor, replay commands, and
-sha256 manifest binding are explicit, but implicit public refresh is forbidden.
+sha256 manifest binding are explicit, with `present_required_artifact_count=0`
+and `missing_required_artifact_count=8`, but implicit public refresh is
+forbidden.
 v52 baseline wording must follow `baselines/v52_adapter_guard.json`;
 System C's 7B-14B local response packet now declares required answer, citation,
 resource, retrieval, abstain, wrong-answer guard, transcript, and sha256

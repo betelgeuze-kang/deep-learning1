@@ -15,7 +15,8 @@ Current state:
 
 - the summary and decision files contain a `ready=1` v50 claim
 - required row artifacts under `results/v50_public_repo_auditor_3repo/audit_001/`
-  are not replayable in the current worktree
+  are not replayable in the current worktree:
+  `present_required_artifact_count=0` and `missing_required_artifact_count=8`
 - implicit regeneration is not allowed because the v50 runner performs public
   GitHub fetches
 

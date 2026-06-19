@@ -4,6 +4,19 @@
     "summary_ready_claim_present": true,
     "artifact_replay_ready": false,
     "auditor_correctness_merge_ready": false,
+    "required_artifact_count": 8,
+    "present_required_artifact_count": 0,
+    "missing_required_artifact_count": 8,
+    "missing_required_artifact_ids": [
+      "source-snapshot-rows",
+      "audit-case-rows",
+      "source-span-rows",
+      "guard-negative-rows",
+      "commercial-return-query-set",
+      "commercial-return-poc-results",
+      "commercial-return-audit-trail",
+      "sha256-manifest"
+    ],
     "implicit_public_refresh_allowed": false,
     "network_required_to_regenerate": true
   },

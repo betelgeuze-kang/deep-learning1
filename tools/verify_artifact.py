@@ -135,6 +135,17 @@ REQUIRED_V50_AUDITOR_KEYS = {
     "required_artifacts",
     "claim_boundaries",
 }
+REQUIRED_V50_POLICY_KEYS = {
+    "summary_ready_claim_present",
+    "artifact_replay_ready",
+    "auditor_correctness_merge_ready",
+    "required_artifact_count",
+    "present_required_artifact_count",
+    "missing_required_artifact_count",
+    "missing_required_artifact_ids",
+    "implicit_public_refresh_allowed",
+    "network_required_to_regenerate",
+}
 REQUIRED_V50_ARTIFACT_KEYS = {
     "artifact_id",
     "artifact_kind",
@@ -2564,6 +2575,9 @@ def verify_v50_auditor_correctness(
     if data["schema_version"] != "v50_auditor_correctness.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
+    missing_policy = REQUIRED_V50_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
     if policy.get("summary_ready_claim_present") is not True:
         errors.append(f"{path}: summary_ready_claim_present must be true while the v50 summary has ready=1")
     if policy.get("artifact_replay_ready") is not False:
@@ -2638,6 +2652,24 @@ def verify_v50_auditor_correctness(
                 row_count = sum(1 for _ in reader)
             if isinstance(min_rows, int) and row_count < min_rows:
                 errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
+    present_required_artifacts = len(artifacts) - len(missing_required_artifacts)
+    if policy.get("required_artifact_count") != len(artifacts):
+        errors.append(f"{path}: policy.required_artifact_count expected {len(artifacts)}, got {policy.get('required_artifact_count')}")
+    if policy.get("present_required_artifact_count") != present_required_artifacts:
+        errors.append(
+            f"{path}: policy.present_required_artifact_count expected {present_required_artifacts}, "
+            f"got {policy.get('present_required_artifact_count')}"
+        )
+    if policy.get("missing_required_artifact_count") != len(missing_required_artifacts):
+        errors.append(
+            f"{path}: policy.missing_required_artifact_count expected {len(missing_required_artifacts)}, "
+            f"got {policy.get('missing_required_artifact_count')}"
+        )
+    if policy.get("missing_required_artifact_ids") != missing_required_artifacts:
+        errors.append(
+            f"{path}: policy.missing_required_artifact_ids expected {missing_required_artifacts}, "
+            f"got {policy.get('missing_required_artifact_ids')}"
+        )
     if not missing_required_artifacts:
         errors.append(f"{path}: contract says artifact_replay_ready=false, but all required artifacts are present; update the contract")
     if sha_manifest_path is not None:
