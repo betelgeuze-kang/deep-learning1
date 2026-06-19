@@ -42,20 +42,21 @@ Required real evidence fields:
 
 Required artifact shape:
 
-- `model-identity`: `system_id`, `baseline_class`, `model_repository`,
+- `model-identity`: `system_id`, `model_id`, `model_repository`,
   `model_revision`, `parameter_count_b`, `quantization`,
   `model_artifact_sha256`, `open_weight_license_uri`, `runtime`,
   `runtime_version`, `hardware`, `external_api_used`,
   `non_fixture_declared`
 - `answer-citation-raw-output`: `system_id`, `query_id`,
-  `same_query_set_id`, `prompt_template_sha256`, `context_budget`,
-  `retrieval_budget`, `seed`, `raw_answer`, `raw_citation`,
-  `raw_output_sha256`, `generation_transcript_sha256`,
-  `non_fixture_declared`
-- `resource-evaluator-manifest`: `system_id`, `query_id`, `latency_ms`,
-  `peak_memory_mb`, `evaluator_version`, `evaluator_artifact_sha256`,
-  `same_query_set_id`, `same_source_manifest_sha256`, `answer_rows_sha256`,
-  `citation_rows_sha256`, `fixture_rows`, `measured_registry_candidate`
+  `case_id`, `model_id`, `predicted_label`, `prompt_template_sha256`,
+  `context_budget`, `retrieval_budget`, `seed`, `raw_answer`,
+  `raw_citation`, `raw_output_sha256`, `generation_transcript_sha256`,
+  `raw_prompt_context_bytes`, `retrieved_span_rows`,
+  `prompt_context_sha256`, `output_sha256`, `latency_ns`,
+  `external_api_used`, `route_memory_store_used`, `compact_routehint_used`
+- `resource-evaluator-manifest`: `query_id`, `model_id`, `latency_ns`,
+  `raw_prompt_context_bytes`, `retrieved_span_rows`, `peak_memory_mb`,
+  `evaluator_version`, `evaluator_artifact_sha256`, `external_api_used`
 
 Raw answer/citation output must be preserved separately from evaluator scores.
 Resource rows, evaluator identity, non-fixture declaration, and raw generation

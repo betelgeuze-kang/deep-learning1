@@ -406,7 +406,7 @@ EXPECTED_DE_PM_LEDGERS = [
 EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS = {
     "model-identity": {
         "system_id",
-        "baseline_class",
+        "model_id",
         "model_repository",
         "model_revision",
         "parameter_count_b",
@@ -422,7 +422,9 @@ EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS = {
     "answer-citation-raw-output": {
         "system_id",
         "query_id",
-        "same_query_set_id",
+        "case_id",
+        "model_id",
+        "predicted_label",
         "prompt_template_sha256",
         "context_budget",
         "retrieval_budget",
@@ -431,22 +433,31 @@ EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS = {
         "raw_citation",
         "raw_output_sha256",
         "generation_transcript_sha256",
-        "non_fixture_declared",
+        "raw_prompt_context_bytes",
+        "retrieved_span_rows",
+        "prompt_context_sha256",
+        "output_sha256",
+        "latency_ns",
+        "external_api_used",
+        "route_memory_store_used",
+        "compact_routehint_used",
     },
     "resource-evaluator-manifest": {
-        "system_id",
         "query_id",
-        "latency_ms",
+        "model_id",
+        "latency_ns",
+        "raw_prompt_context_bytes",
+        "retrieved_span_rows",
         "peak_memory_mb",
         "evaluator_version",
         "evaluator_artifact_sha256",
-        "same_query_set_id",
-        "same_source_manifest_sha256",
-        "answer_rows_sha256",
-        "citation_rows_sha256",
-        "fixture_rows",
-        "measured_registry_candidate",
+        "external_api_used",
     },
+}
+EXPECTED_DE_REQUIRED_ARTIFACT_KINDS = {
+    "model-identity": "json",
+    "answer-citation-raw-output": "csv",
+    "resource-evaluator-manifest": "csv",
 }
 EXPECTED_V52_C_ARTIFACT_IDS = [
     "c-answer-rows",
@@ -1932,8 +1943,9 @@ def verify_baseline_admission(
         missing_artifact = REQUIRED_BASELINE_ARTIFACT_KEYS - set(row)
         if missing_artifact:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_artifact))}")
-        if row.get("artifact_kind") != "csv":
-            errors.append(f"{prefix}: artifact_kind must be csv")
+        expected_kind = EXPECTED_DE_REQUIRED_ARTIFACT_KINDS.get(row.get("artifact_id", ""))
+        if expected_kind is not None and row.get("artifact_kind") != expected_kind:
+            errors.append(f"{prefix}: artifact_kind must be {expected_kind}")
         artifact_id = row.get("artifact_id", "")
         expected_columns = EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS.get(artifact_id)
         required_columns = row.get("required_columns", [])
