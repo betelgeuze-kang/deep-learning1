@@ -166,6 +166,7 @@ schema_rows = [
     ("blind_review_return_rows.csv", "blind_system_id", "blind system id only; source identity fields are forbidden"),
     ("blind_review_return_rows.csv", "reviewer_id", "stable reviewer id; two distinct reviewers are required per required response"),
     ("blind_review_return_rows.csv", "reviewer_blinded", "must be 1"),
+    ("blind_review_return_rows.csv", "reviewer_independent", "must be 1; reviewer independence is declared separately from distinct reviewer ids"),
     ("blind_review_return_rows.csv", "conflict_disclosed", "0 or 1"),
     ("blind_review_return_rows.csv", "answer_correctness", "0 or 1"),
     ("blind_review_return_rows.csv", "citation_correctness", "0 or 1"),
@@ -201,6 +202,7 @@ review_template_fields = [
     "reviewer_slot",
     "reviewer_id",
     "reviewer_blinded",
+    "reviewer_independent",
     "conflict_disclosed",
     "answer_correctness",
     "citation_correctness",
@@ -226,6 +228,7 @@ for row in response_templates:
                 "reviewer_slot": reviewer_slot,
                 "reviewer_id": "",
                 "reviewer_blinded": "",
+                "reviewer_independent": "",
                 "conflict_disclosed": "",
                 "answer_correctness": "",
                 "citation_correctness": "",
@@ -330,6 +333,8 @@ for row in review_rows:
         errors.append("review-blind-system-id-mismatch")
     if row.get("reviewer_blinded", "") != "1":
         errors.append("reviewer-not-blinded")
+    if row.get("reviewer_independent", "") != "1":
+        errors.append("reviewer-not-independent")
     if row.get("conflict_disclosed", "") not in {"0", "1"}:
         errors.append("conflict-disclosed-not-binary")
     for field in [
@@ -394,6 +399,7 @@ for response_id in required_response_ids:
 
 template_counts = Counter(row.get("source_system_id", "") for row in response_templates)
 review_counts = Counter()
+review_independent_counts = Counter()
 review_exact_span_counts = Counter()
 review_unsupported_abstention_counts = Counter()
 review_unseen_split_counts = Counter()
@@ -406,6 +412,8 @@ for row in review_rows:
     system_id = template.get("source_system_id", "")
     response_id = row.get("blind_response_id", "")
     review_counts[system_id] += 1
+    if row.get("reviewer_independent", "") == "1":
+        review_independent_counts[system_id] += 1
     reviewers_by_system_response[system_id][response_id].add(row.get("reviewer_id", ""))
     if row.get("source_span_exactness", "") in {"0", "1"}:
         review_exact_span_counts[system_id] += 1
@@ -428,6 +436,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
     expected_adjudication_rows = expected_response_rows
     response_template_rows = template_counts.get(system_id, 0)
     supplied_review_rows = review_counts.get(system_id, 0)
+    independent_review_rows = review_independent_counts.get(system_id, 0)
     two_reviewer_response_rows = sum(
         1
         for reviewers in reviewers_by_system_response.get(system_id, {}).values()
@@ -442,6 +451,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
     ready = int(
         template_available == 1
         and supplied_review_rows == expected_review_rows
+        and independent_review_rows == expected_review_rows
         and two_reviewer_response_rows == expected_response_rows
         and supplied_adjudication_rows == expected_adjudication_rows
         and source_span_exactness_rows == expected_review_rows
@@ -456,6 +466,8 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
         blocker = "missing-pm-required-response-template-rows"
     elif supplied_review_rows != expected_review_rows:
         blocker = "missing-two-independent-reviewer-rows"
+    elif independent_review_rows != expected_review_rows:
+        blocker = "missing-reviewer-independent-declarations"
     elif two_reviewer_response_rows != expected_response_rows:
         blocker = "missing-distinct-reviewers-per-response"
     elif supplied_adjudication_rows != expected_adjudication_rows:
@@ -489,6 +501,7 @@ for system_id in PM_ACTUAL_REQUIRED_SYSTEMS:
             "response_template_rows": str(response_template_rows),
             "expected_independent_review_rows": str(expected_review_rows),
             "supplied_review_rows": str(supplied_review_rows),
+            "independent_review_rows": str(independent_review_rows),
             "two_reviewer_response_rows": str(two_reviewer_response_rows),
             "expected_adjudication_rows": str(expected_adjudication_rows),
             "supplied_adjudication_rows": str(supplied_adjudication_rows),

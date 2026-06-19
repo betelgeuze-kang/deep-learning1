@@ -126,6 +126,7 @@ schema_rows = read_csv(run_dir / "blind_review_required_field_rows.csv")
 for field in [
     "blind_response_id",
     "reviewer_blinded",
+    "reviewer_independent",
     "review_decision",
     "source_span_exactness",
     "unsupported_abstention_correctness",
@@ -142,6 +143,7 @@ if len(review_templates) != 0:
     raise SystemExit("v58d default path should not fabricate review templates without v58c")
 review_header = (run_dir / "blind_review_return_template_rows.csv").read_text(encoding="utf-8").splitlines()[0].split(",")
 for required in [
+    "reviewer_independent",
     "source_span_exactness",
     "unsupported_abstention_correctness",
     "unseen_repository_split_id",
@@ -191,6 +193,7 @@ for system_id, row in pm_by_system.items():
     for zero_field in [
         "response_template_rows",
         "supplied_review_rows",
+        "independent_review_rows",
         "two_reviewer_response_rows",
         "supplied_adjudication_rows",
         "source_span_exactness_review_rows",
