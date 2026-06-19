@@ -39,6 +39,12 @@ Each slice must keep allowed claims, blocked claims, and evidence paths explicit
 Ready wording must follow `readiness/typed_ready.json`; bare `ready=1` fields
 must not imply real model execution, human review, heldout metrics, independent
 reproduction, or release readiness.
+The docs/readme cleanup slice must compare that source-controlled contract with
+the replayed PM ledger via `tools/verify_artifact.py typed-readiness
+readiness/typed_ready.json --pm-ledger
+results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv`, so
+typed-ready documentation and generated claim-boundary artifacts cannot drift
+independently.
 v50 auditor wording must follow `audits/v50_public_repo_auditor_correctness.json`;
 summary `ready=1` is not mergeable auditor correctness while replay artifacts
 are missing. The v50 artifact schema, row-count floor, replay commands, and

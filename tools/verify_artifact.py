@@ -347,8 +347,14 @@ REQUIRED_PR2_V61_VERIFICATION_TERMS = {
     "results/v61aa_hotset_tensor_slice_verifier_summary.csv",
     "results/v61ab_hotset_tensor_tile_quant_probe_summary.csv",
 }
+REQUIRED_PR2_DOCS_CLEANUP_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py typed-readiness readiness/typed_ready.json",
+    "--pm-ledger",
+    "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
+}
 REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "tools/verify_artifact.py pr-split pr_slices/pr2.json",
+    "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
     "PR2_REWRITE_DRAFT.md",
     "Tests are useful smoke evidence, but tests-only merge conditions are forbidden",
     "readiness/typed_ready.json",
@@ -2009,6 +2015,16 @@ def verify_pr_split(path: Path) -> list[str]:
             if missing_terms:
                 errors.append(
                     f"{prefix}: v61 verification commands missing replay summary terms: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
+        if slice_id == "docs-readme-pr2-cleanup":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_DOCS_CLEANUP_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: docs cleanup verification commands must compare typed readiness to the PM ledger: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
         boundary = row.get("claim_boundary", {})
