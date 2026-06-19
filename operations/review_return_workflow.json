@@ -6,8 +6,15 @@
     "adjudication_ready": false,
     "operator_input_files_ready": false,
     "actual_generation_ready": false,
+    "production_latency_claim_ready": false,
+    "near_frontier_claim_ready": false,
+    "quality_comparison_claim_ready": false,
+    "public_comparison_claim_ready": false,
     "release_ready": false,
-    "fixture_can_close_real_return": false
+    "fixture_can_close_real_return": false,
+    "accepted_human_review_rows": 0,
+    "accepted_adjudication_rows": 0,
+    "accepted_operator_return_rows": 0
   },
   "requirements": [
     {

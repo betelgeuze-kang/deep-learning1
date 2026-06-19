@@ -174,7 +174,7 @@
         "blocked": "Accepted human review, adjudication, operator input files, real generation, production latency, near-frontier quality, or release readiness.",
         "evidence_path": "operations/review_return_workflow.json"
       },
-      "verification_commands": ["tools/verify_artifact.py review-return-workflow operations/review_return_workflow.json"],
+      "verification_commands": ["tools/verify_artifact.py review-return-workflow operations/review_return_workflow.json --v53s-summary results/v53s_complete_source_review_return_intake_summary.csv --v58d-summary results/v58d_blind_review_return_intake_summary.csv --v61af-summary results/v61af_checkpoint_warehouse_operator_bundle_summary.csv --v61hv-summary results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv"],
       "current_status": "ready-for-workflow-review-real-return-blocked"
     },
     {

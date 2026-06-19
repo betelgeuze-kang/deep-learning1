@@ -201,6 +201,7 @@ REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS = {
     "current_status",
     "evidence_path",
     "claim_boundary",
+    "summary_checks",
 }
 REQUIRED_V61_ONE_TOKEN_KEYS = {
     "schema_version",
@@ -832,6 +833,53 @@ EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS = [
     "v61-operator-bundle-logistics-only",
     "v61-first-slice-operator-input-blocked",
 ]
+EXPECTED_REVIEW_RETURN_SUMMARY_CHECKS = {
+    "v53-review-return-intake-blocked": [
+        ("v53s", "v53s_complete_source_review_return_intake_ready", "1"),
+        ("v53s", "review_return_input_supplied", "0"),
+        ("v53s", "expected_human_review_rows", "7000"),
+        ("v53s", "accepted_human_review_rows", "0"),
+        ("v53s", "expected_adjudication_rows", "1000"),
+        ("v53s", "accepted_adjudication_rows", "0"),
+        ("v53s", "human_review_completed", "0"),
+        ("v53s", "adjudication_completed", "0"),
+        ("v53s", "review_return_ready", "0"),
+    ],
+    "v58-blind-review-return-blocked": [
+        ("v58d", "v58d_blind_review_return_intake_ready", "1"),
+        ("v58d", "v58d_dependency_blocker_ready", "1"),
+        ("v58d", "review_dir_supplied", "0"),
+        ("v58d", "required_blind_review_ready", "0"),
+        ("v58d", "required_adjudication_ready", "0"),
+        ("v58d", "human_blind_review_ready", "0"),
+        ("v58d", "inter_rater_rows_ready", "0"),
+        ("v58d", "v58_full_blind_eval_ready", "0"),
+        ("v58d", "real_release_package_ready", "0"),
+    ],
+    "v61-operator-bundle-logistics-only": [
+        ("v61af", "v61af_checkpoint_warehouse_operator_bundle_ready", "1"),
+        ("v61af", "operator_command_rows", "62"),
+        ("v61af", "download_dry_run_default", "1"),
+        ("v61af", "full_hash_dry_run_default", "1"),
+        ("v61af", "materialization_admission_ready", "0"),
+        ("v61af", "local_checkpoint_materialization_ready", "0"),
+        ("v61af", "generation_admitted_rows", "0"),
+        ("v61af", "actual_model_generation_ready", "0"),
+        ("v61af", "real_release_package_ready", "0"),
+    ],
+    "v61-first-slice-operator-input-blocked": [
+        ("v61hv", "v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_ready", "1"),
+        ("v61hv", "replacements_to_readiness_ready", "1"),
+        ("v61hv", "form_values_supplied", "0"),
+        ("v61hv", "operator_input_files_ready", "0"),
+        ("v61hv", "ack_values_supplied", "0"),
+        ("v61hv", "dual_output_roots_ready", "0"),
+        ("v61hv", "row_acceptance_ready", "0"),
+        ("v61hv", "generation_acceptance_closure_ready", "0"),
+        ("v61hv", "actual_model_generation_ready", "0"),
+        ("v61hv", "real_release_package_ready", "0"),
+    ],
+}
 EXPECTED_V61_MILESTONE_IDS = [
     "actual-mixtral-ssd-tensor-page-read",
     "actual-tensor-dtype-quant-dequant",
@@ -2178,11 +2226,22 @@ def verify_review_return_workflow(
         "adjudication_ready",
         "operator_input_files_ready",
         "actual_generation_ready",
+        "production_latency_claim_ready",
+        "near_frontier_claim_ready",
+        "quality_comparison_claim_ready",
+        "public_comparison_claim_ready",
         "release_ready",
         "fixture_can_close_real_return",
     ]:
         if policy.get(field) is not False:
             errors.append(f"{path}: {field} must be false")
+    for field in [
+        "accepted_human_review_rows",
+        "accepted_adjudication_rows",
+        "accepted_operator_return_rows",
+    ]:
+        if policy.get(field) != 0:
+            errors.append(f"{path}: {field} must be 0")
 
     requirements = data["requirements"]
     if not isinstance(requirements, list) or not requirements:
@@ -2204,6 +2263,20 @@ def verify_review_return_workflow(
     if v61hv_summary is not None:
         summaries["v61hv"] = read_first_csv(v61hv_summary)
 
+    for row in requirements:
+        checks = row.get("summary_checks", [])
+        if not isinstance(checks, list) or not checks:
+            continue
+        summary_ids = {check.get("summary_id", "") for check in checks if isinstance(check, dict)}
+        if len(summary_ids) != 1:
+            continue
+        summary_id = next(iter(summary_ids))
+        if not summary_id or summary_id in summaries:
+            continue
+        evidence_path = Path(row.get("evidence_path", ""))
+        if evidence_path.is_file() and evidence_path.stat().st_size > 0:
+            summaries[summary_id] = read_first_csv(evidence_path)
+
     for index, row in enumerate(requirements, start=1):
         prefix = f"{path}: requirement[{index}]"
         missing_row = REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS - set(row)
@@ -2214,13 +2287,22 @@ def verify_review_return_workflow(
         if not row.get("required_evidence") or not row.get("evidence_path") or not row.get("claim_boundary"):
             errors.append(f"{prefix}: required_evidence, evidence_path, and claim_boundary must be non-empty")
         checks = row.get("summary_checks", [])
-        if checks and not isinstance(checks, list):
-            errors.append(f"{prefix}: summary_checks must be a list when present")
+        if not isinstance(checks, list) or not checks:
+            errors.append(f"{prefix}: summary_checks must be a non-empty list")
             continue
+        requirement_id = row.get("requirement_id", "")
+        actual_checks = [
+            (check.get("summary_id", ""), check.get("field", ""), check.get("expected", ""))
+            for check in checks
+        ]
+        expected_checks = EXPECTED_REVIEW_RETURN_SUMMARY_CHECKS.get(requirement_id)
+        if expected_checks is not None and actual_checks != expected_checks:
+            errors.append(f"{prefix}: summary_checks must exactly match the review-return blocker contract")
         for check in checks:
             summary_id = check.get("summary_id", "")
             summary = summaries.get(summary_id)
             if summary is None:
+                errors.append(f"{prefix}: missing summary evidence for {summary_id} at {row.get('evidence_path')}")
                 continue
             field = check.get("field", "")
             expected = check.get("expected", "")

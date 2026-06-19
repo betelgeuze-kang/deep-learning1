@@ -14,6 +14,17 @@ tools/verify_artifact.py review-return-workflow operations/review_return_workflo
   --v61hv-summary results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv
 ```
 
+Each `current_status=pass` requirement must have a non-empty `summary_checks`
+list and replayable summary evidence. When explicit summary paths are not
+passed, the verifier attempts to load the requirement `evidence_path`; if the
+summary evidence is missing, the check fails instead of silently accepting a
+summary-only claim.
+
+The verifier pins the exact blocker summary checks for each requirement. A
+contract edit cannot promote accepted human review, adjudication, operator
+returns, generation, production latency, near-frontier quality, public
+comparison, or release readiness by changing an expected `0` to `1`.
+
 Allowed wording:
 
 - review-return intake contracts and templates exist
