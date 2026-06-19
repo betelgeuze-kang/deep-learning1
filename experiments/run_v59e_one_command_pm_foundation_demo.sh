@@ -1580,8 +1580,8 @@ review_packet_ready = int(
     and as_int(pr_summary, "pm_pr_review_packet_files") == len(review_packet_files) == 13
 )
 blocker_packet_ready = int(
-    as_int(pr_summary, "pm_blocker_closure_packet_rows") == 6
-    and as_int(pr_summary, "pm_blocker_closure_packet_files") == len(blocker_packet_files) == 6
+    as_int(pr_summary, "pm_blocker_closure_packet_rows") == 7
+    and as_int(pr_summary, "pm_blocker_closure_packet_files") == len(blocker_packet_files) == 7
 )
 execution_lock_ready = int(
     as_int(pr_summary, "pm_execution_lock_rows") == 10
@@ -1590,9 +1590,9 @@ execution_lock_ready = int(
     and as_int(pr_summary, "pm_new_scaffold_default_allowed") == 0
 )
 external_return_template_ready = int(
-    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 31
+    as_int(pr_summary, "pm_external_return_template_rows") == len(return_template_files) == 39
     and as_int(pr_summary, "pm_external_return_template_fixture_allowed_rows") == 0
-    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 31
+    and as_int(pr_summary, "pm_external_return_template_approval_rows") == 39
 )
 v58_blocker_classes = {"v58c-intake-artifact-missing", "v58-real-blind-eval-missing"}
 pm_required_artifact_rows = read_csv(pr_run_dir / "pm_blocker_required_artifact_rows.csv")

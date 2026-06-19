@@ -823,6 +823,15 @@ pm_roadmap_rows = [
     ),
     req(
         "M1",
+        "v50-auditor-replay-artifacts",
+        "v50 auditor correctness PR slice has replayable row artifacts and sha256 manifest",
+        False,
+        "audits/v50_public_repo_auditor_correctness.json",
+        "artifact_replay_ready=0 implicit_public_refresh_allowed=0 network_required_to_regenerate=1",
+        "v50-auditor-replay-artifacts-missing",
+    ),
+    req(
+        "M1",
         "v56-replay-artifact",
         "v56 RULER/LongBench PR slice has replayable expanded benchmark artifact rows",
         as_int(v56b, "v56b_ruler_longbench_expanded_scale_ready") == 1,
@@ -1205,6 +1214,17 @@ def closure_row(
 
 blocker_closure_rows = [
     closure_row(
+        "v50-auditor-replay-artifacts-missing",
+        "M1",
+        "v50-auditor-replay-artifacts",
+        "v50 public-repo auditor row artifacts and sha256 manifest: source snapshots, audit cases, source spans, guard negatives, commercial return query/results/audit trail, and manifest rows",
+        "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv",
+        "public-refresh-or-restored-artifact-approval-required",
+        "defer-until-v50-row-artifacts-restored-or-public-refresh-approved",
+        "artifact_replay_ready=1 and auditor_correctness_merge_ready=1 only after all required row artifacts and sha256 manifest validate",
+        "v50 summary ready claim only; no auditor correctness merge readiness",
+    ),
+    closure_row(
         "v56-replay-artifact-missing",
         "M1/M6",
         "v56-replay-artifact",
@@ -1272,12 +1292,13 @@ blocker_closure_rows = [
     ),
 ]
 blocker_order = {
-    "v56-replay-artifact-missing": 0,
-    "de-30b70b-baselines-missing": 1,
-    "external-human-label-evidence-missing": 2,
-    "v58c-intake-artifact-missing": 3,
-    "v58-real-blind-eval-missing": 4,
-    "v60-release-evidence-missing": 5,
+    "v50-auditor-replay-artifacts-missing": 0,
+    "v56-replay-artifact-missing": 1,
+    "de-30b70b-baselines-missing": 2,
+    "external-human-label-evidence-missing": 3,
+    "v58c-intake-artifact-missing": 4,
+    "v58-real-blind-eval-missing": 5,
+    "v60-release-evidence-missing": 6,
 }
 blocker_closure_rows = sorted(
     blocker_closure_rows,
@@ -1311,6 +1332,78 @@ def required_artifact_row(
 
 
 blocker_required_artifact_rows = [
+    required_artifact_row(
+        "v50-auditor-replay-artifacts-missing",
+        "v50-source-snapshot-rows",
+        "results/v50_public_repo_auditor_3repo/audit_001/public_repo_source_snapshot_rows.csv",
+        "csv",
+        "repo/file source snapshot rows with pinned refs, artifact paths, sha256, bytes, line counts, and public_repo_snapshot=1",
+        "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv",
+        "source-snapshot-rows validate and are hash-bound by sha256 manifest",
+    ),
+    required_artifact_row(
+        "v50-auditor-replay-artifacts-missing",
+        "v50-audit-case-rows",
+        "results/v50_public_repo_auditor_3repo/audit_001/public_repo_audit_case_rows.csv",
+        "csv",
+        "audit case rows with observed primary/secondary evidence, expected/predicted labels, correctness, source paths, sha256s, lines, and not_upstream_defect_claim",
+        "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv",
+        "audit-case rows validate and are hash-bound by sha256 manifest",
+    ),
+    required_artifact_row(
+        "v50-auditor-replay-artifacts-missing",
+        "v50-source-span-rows",
+        "results/v50_public_repo_auditor_3repo/audit_001/public_repo_source_span_rows.csv",
+        "csv",
+        "case-bound source span rows with repo id, kind, path, sha256, line, and text",
+        "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv",
+        "source-span rows validate and are hash-bound by sha256 manifest",
+    ),
+    required_artifact_row(
+        "v50-auditor-replay-artifacts-missing",
+        "v50-guard-negative-rows",
+        "results/v50_public_repo_auditor_3repo/audit_001/guard_negative_rows.csv",
+        "csv",
+        "negative guard rows proving wrong-answer guard, citation accuracy, and abstain behavior pass/fail boundaries",
+        "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv",
+        "guard-negative rows validate and are hash-bound by sha256 manifest",
+    ),
+    required_artifact_row(
+        "v50-auditor-replay-artifacts-missing",
+        "v50-commercial-return-query-set",
+        "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/query_set.csv",
+        "csv",
+        "commercial return query set with expected behavior and source path/sha256/line provenance",
+        "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv",
+        "commercial return query_set validates and is hash-bound by sha256 manifest",
+    ),
+    required_artifact_row(
+        "v50-auditor-replay-artifacts-missing",
+        "v50-commercial-return-poc-results",
+        "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/poc_result_rows.csv",
+        "csv",
+        "commercial return POC result rows with answer, citations, secondary citations, guard passes, latency, lineage, mmap/exact-span, and audit trail binding",
+        "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv",
+        "commercial return POC result rows validate and are hash-bound by sha256 manifest",
+    ),
+    required_artifact_row(
+        "v50-auditor-replay-artifacts-missing",
+        "v50-commercial-return-audit-trail",
+        "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/audit_trail.csv",
+        "csv",
+        "commercial return audit trail rows with event id, query id, event, repo id, verifier decision, and status",
+        "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv",
+        "commercial return audit trail validates and is hash-bound by sha256 manifest",
+    ),
+    required_artifact_row(
+        "v50-auditor-replay-artifacts-missing",
+        "v50-sha256-manifest",
+        "results/v50_public_repo_auditor_3repo/audit_001/sha256_manifest.csv",
+        "csv",
+        "sha256 manifest listing every required v50 row artifact path, sha256 digest, and byte count",
+        "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv",
+        "sha256 manifest validates and binds every required v50 row artifact",
+    ),
     required_artifact_row(
         "v56-replay-artifact-missing",
         "v56-contract-summary",
@@ -1671,6 +1764,14 @@ def return_template_for_artifact(row):
         )
 
     headers = {
+        "v50-source-snapshot-rows": "repo_id,owner_repo,repo_url,requested_ref,head_sha,ref_pinned,file_path,artifact_path,sha256,bytes,line_count,public_repo_snapshot,non_fixture_declared,approval_reference",
+        "v50-audit-case-rows": "case_id,repo_id,owner_repo,repo_url,head_sha,audit_type,detector_method,primary_observed,secondary_observed,expected_label,predicted_label,correct,finding,primary_path,primary_sha256,primary_line,secondary_path,secondary_sha256,secondary_line,source_spans_ready,not_upstream_defect_claim,non_fixture_declared,approval_reference",
+        "v50-source-span-rows": "case_id,repo_id,kind,path,sha256,line,text,non_fixture_declared,approval_reference",
+        "v50-guard-negative-rows": "negative_case_id,guard,expected_block,blocked,wrong_answer_guard_pass,citation_accuracy_pass,abstain_behavior_pass,reason,non_fixture_declared,approval_reference",
+        "v50-commercial-return-query-set": "query_id,question,expected_behavior,source_path,source_sha256,source_line,non_fixture_declared,approval_reference",
+        "v50-commercial-return-poc-results": "query_id,answer,citation_path,citation_sha256,citation_line,citation_text,secondary_citation_path,secondary_citation_sha256,secondary_citation_line,secondary_citation_text,wrong_answer_guard_pass,citation_accuracy_pass,abstain_behavior_pass,query_to_evidence_latency_ready,latency_ms,route_memory_lineage_bound,mmap_or_exact_span_bound,audit_trail_bound,non_fixture_declared,approval_reference",
+        "v50-commercial-return-audit-trail": "event_id,query_id,event,repo_id,verifier_decision,status,non_fixture_declared,approval_reference",
+        "v50-sha256-manifest": "path,sha256,bytes,non_fixture_declared,approval_reference",
         "v56-contract-summary": "summary_path,v56_ruler_longbench_expanded_contract_ready,real_external_benchmark_verified,sha256_manifest_path,non_fixture_declared,approval_reference",
         "v56-contract-artifacts": "artifact_path,artifact_kind,source_authority_uri,evaluator_sha256,artifact_sha256,bytes,non_fixture_declared,approval_reference",
         "v56b-scale-summary": "summary_path,v56b_ruler_longbench_expanded_scale_ready,real_external_benchmark_verified,sha256_manifest_path,non_fixture_declared,approval_reference",
