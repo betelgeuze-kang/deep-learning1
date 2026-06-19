@@ -348,6 +348,7 @@ schema_rows = [
     ("blind_response_rows.csv", "model_run_id", "stable run id bound to model/system metadata"),
     ("blind_response_rows.csv", "credential_redacted", "must be 1 for hosted/API rows and allowed for all rows"),
     ("blind_response_rows.csv", "resource_trace_sha256", "sha256:<64 hex> or empty if copied trace not supplied"),
+    ("blind_response_rows.csv", "latency_memory_excluded_from_quality_score", "must be 1; latency and memory must not contribute to answer quality"),
     ("run_identity_rows.csv", "blind_system_id", "must cover A/B/C/D/E/G/H and optional F if supplied"),
     ("run_identity_rows.csv", "source_system_id", "A/B/C/D/E/F/G/H mapping; reviewer packets remain blind"),
     ("run_identity_rows.csv", "model_or_architecture_id", "stable model/architecture identifier"),
@@ -369,6 +370,7 @@ schema_rows = [
     ("resource_rows.csv", "latency_ns", "positive integer measured runtime kept outside answer quality"),
     ("resource_rows.csv", "memory_peak_bytes", "non-negative integer kept outside answer quality"),
     ("resource_rows.csv", "resource_trace_sha256", "sha256:<64 hex> over the resource trace"),
+    ("resource_rows.csv", "latency_memory_excluded_from_quality_score", "must be 1; resource measurements are separate from answer quality"),
 ]
 write_csv(
     run_dir / "blind_response_required_field_rows.csv",
@@ -394,6 +396,7 @@ for row in templates:
             "model_run_id": "",
             "credential_redacted": "",
             "resource_trace_sha256": "",
+            "latency_memory_excluded_from_quality_score": "1",
         }
     )
 write_csv(run_dir / "blind_response_row_template.csv", list(template_rows[0].keys()), template_rows)
@@ -496,6 +499,8 @@ if supplied_rows:
             errors.append("cost-usd-not-float")
         if row.get("resource_trace_sha256") and not is_sha256(row.get("resource_trace_sha256")):
             errors.append("resource-trace-sha256-invalid")
+        if row.get("latency_memory_excluded_from_quality_score", "") != "1":
+            errors.append("response-latency-memory-quality-not-separated")
     if not query_split_rows:
         errors.append("query-split-rows-missing")
     if not resource_rows:
@@ -585,6 +590,8 @@ if resource_rows:
                 errors.append(f"resource-{field}-invalid")
         if not is_sha256(row.get("resource_trace_sha256", "")):
             errors.append("resource-trace-sha256-invalid")
+        if row.get("latency_memory_excluded_from_quality_score", "") != "1":
+            errors.append("resource-latency-memory-quality-not-separated")
 
 if errors:
     counts = Counter(errors)
@@ -645,6 +652,18 @@ pm_actual_template_gap_rows = sum(1 for row in actual_matrix_rows if row["templa
 query_split_ready = int(len(query_split_rows) == 500 and not any(error.startswith(("query-split", "missing-query-split", "extra-query-split", "duplicate-query-split")) for error in errors))
 resource_rows_ready = int(len(resource_rows) == len(supplied_rows) and bool(supplied_rows) and not any(error.startswith(("resource", "missing-resource", "extra-resource", "duplicate-resource")) for error in errors))
 same_corpus_context_budget_ready = int(bool(identity_supplied_rows) and not any(error.startswith(("same-", "corpus-id", "context_budget", "retrieval_budget", "prompt_template_sha256", "source_manifest_sha256")) for error in errors))
+latency_memory_quality_separate_ready = int(
+    bool(supplied_rows)
+    and bool(resource_rows)
+    and not any(
+        error
+        in {
+            "response-latency-memory-quality-not-separated",
+            "resource-latency-memory-quality-not-separated",
+        }
+        for error in errors
+    )
+)
 evidence_ready = int(
     required_ready
     and pm_actual_ready
@@ -652,6 +671,7 @@ evidence_ready = int(
     and query_split_ready
     and resource_rows_ready
     and same_corpus_context_budget_ready
+    and latency_memory_quality_separate_ready
     and not errors
 )
 
@@ -666,6 +686,7 @@ summary = {
     "supplied_resource_rows": len(resource_rows),
     "resource_rows_ready": resource_rows_ready,
     "same_corpus_context_budget_ready": same_corpus_context_budget_ready,
+    "latency_memory_quality_separate_ready": latency_memory_quality_separate_ready,
     "required_blind_response_rows": 3500,
     "pm_actual_required_system_rows": len(actual_matrix_rows),
     "pm_actual_required_blind_response_rows": 3500,
@@ -728,6 +749,7 @@ write_csv(run_dir / "blind_response_intake_gate_rows.csv", ["gate", "status", "r
     f"- supplied_resource_rows={len(resource_rows)}\n"
     f"- resource_rows_ready={resource_rows_ready}\n"
     f"- same_corpus_context_budget_ready={same_corpus_context_budget_ready}\n"
+    f"- latency_memory_quality_separate_ready={latency_memory_quality_separate_ready}\n"
     f"- required_blind_response_ready={int(evidence_ready)}\n"
     "- human_blind_review_ready=0\n"
     "- inter_rater_rows_ready=0\n\n"
@@ -753,6 +775,7 @@ manifest = {
     "supplied_resource_rows": len(resource_rows),
     "resource_rows_ready": resource_rows_ready,
     "same_corpus_context_budget_ready": same_corpus_context_budget_ready,
+    "latency_memory_quality_separate_ready": latency_memory_quality_separate_ready,
     "required_blind_response_ready": int(evidence_ready),
     "pm_actual_required_system_rows": len(actual_matrix_rows),
     "pm_actual_required_blind_response_rows": 3500,

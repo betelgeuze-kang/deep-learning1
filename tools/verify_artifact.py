@@ -1080,6 +1080,7 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
         "model_run_id",
         "credential_redacted",
         "resource_trace_sha256",
+        "latency_memory_excluded_from_quality_score",
     },
     "v58-run-identity-rows": {
         "blind_system_id",
@@ -1107,6 +1108,7 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
         "latency_ns",
         "memory_peak_bytes",
         "resource_trace_sha256",
+        "latency_memory_excluded_from_quality_score",
     },
     "v58-human-review-rows": {
         "blind_response_id",

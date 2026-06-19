@@ -267,6 +267,7 @@ expected = {
     "supplied_resource_rows": "0",
     "resource_rows_ready": "0",
     "same_corpus_context_budget_ready": "0",
+    "latency_memory_quality_separate_ready": "0",
     "required_blind_response_rows": "3500",
     "pm_actual_required_system_rows": "7",
     "pm_actual_required_blind_response_rows": "3500",
@@ -343,7 +344,7 @@ for rel in required_files:
 schema_rows = read_csv(run_dir / "blind_response_required_field_rows.csv")
 if len(schema_rows) < 17:
     raise SystemExit("v58c should emit blind response and run identity schema rows")
-for field in ["blind_response_id", "response_text", "citation_source_span_id", "output_sha256", "latency_ns", "model_run_id"]:
+for field in ["blind_response_id", "response_text", "citation_source_span_id", "output_sha256", "latency_ns", "model_run_id", "latency_memory_excluded_from_quality_score"]:
     if not any(row["field"] == field for row in schema_rows):
         raise SystemExit(f"v58c schema missing {field}")
 
@@ -354,6 +355,8 @@ if {row["source_system_id"] for row in templates} != {"A", "B", "C", "D", "E", "
     raise SystemExit("v58c templates should cover A/B/C/D/E/F/G/H")
 if any(row["response_text"] or row["output_sha256"] for row in templates):
     raise SystemExit("v58c templates should not include fake responses")
+if any(row["latency_memory_excluded_from_quality_score"] != "1" for row in templates):
+    raise SystemExit("v58c templates should mark latency/memory excluded from answer quality")
 
 identity_templates = read_csv(run_dir / "run_identity_template_rows.csv")
 if len(identity_templates) != 8:
@@ -422,6 +425,7 @@ for snippet in [
     "query_split_ready=0",
     "resource_rows_ready=0",
     "same_corpus_context_budget_ready=0",
+    "latency_memory_quality_separate_ready=0",
     "human_blind_review_ready=0",
     "Do not publish blind-eval wins",
 ]:
