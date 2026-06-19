@@ -106,6 +106,7 @@ expected = {
     "de_30b70b_acceptance_evidence_fixture_allowed_rows": "0",
     "de_30b70b_acceptance_evidence_approval_rows": "4",
     "de_measured_registry_exclusion_rows": "2",
+    "de_measured_registry_required_field_complete_rows": "2",
     "de_measured_registry_fixture_registry_rows": "0",
     "de_measured_registry_admission_ready_rows": "0",
     "de_measured_registry_blocked_rows": "2",
@@ -737,6 +738,12 @@ for system_id, row in de_registry_rows.items():
         raise SystemExit(f"D/E fixture rows must not enter measured registry: {system_id}")
     if row["answer_citation_raw_output_rows"] != "0" or row["status"] != "blocked":
         raise SystemExit(f"D/E measured registry should remain blocked without raw outputs: {system_id}")
+    if (
+        row["required_real_evidence_field_count"] != "11"
+        or row["missing_real_evidence_field_count"] != "11"
+        or row["all_required_real_evidence_missing"] != "1"
+    ):
+        raise SystemExit(f"D/E measured registry should exact-count all missing required real fields: {system_id}")
     for field in [
         "model_repository_exact_revision",
         "quantization",
@@ -1526,6 +1533,7 @@ if (
     or manifest.get("de_measured_registry_fixture_registry_rows") != 0
     or manifest.get("de_measured_registry_admission_ready_rows") != 0
     or manifest.get("de_measured_registry_blocked_rows") != 2
+    or manifest.get("de_measured_registry_required_field_complete_rows") != 2
 ):
     raise SystemExit("PM PR manifest should record D/E measured registry fixture exclusion")
 if (

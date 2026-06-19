@@ -2312,6 +2312,12 @@ def verify_baseline_admission(
                     errors.append(f"{measured_registry_ledger}: {system_id}.required_real_evidence_fields mismatch")
                 if missing_fields != REQUIRED_DE_REAL_EVIDENCE_FIELDS:
                     errors.append(f"{measured_registry_ledger}: {system_id}.missing_real_evidence_fields must list every required field while blocked")
+                if row.get("required_real_evidence_field_count") != str(len(REQUIRED_DE_REAL_EVIDENCE_FIELDS)):
+                    errors.append(f"{measured_registry_ledger}: {system_id}.required_real_evidence_field_count must be {len(REQUIRED_DE_REAL_EVIDENCE_FIELDS)}")
+                if row.get("missing_real_evidence_field_count") != str(len(REQUIRED_DE_REAL_EVIDENCE_FIELDS)):
+                    errors.append(f"{measured_registry_ledger}: {system_id}.missing_real_evidence_field_count must be {len(REQUIRED_DE_REAL_EVIDENCE_FIELDS)} while blocked")
+                if row.get("all_required_real_evidence_missing") != "1":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.all_required_real_evidence_missing must be 1 while blocked")
                 if row.get("raw_answer_citation_output_required") != "1":
                     errors.append(f"{measured_registry_ledger}: {system_id}.raw_answer_citation_output_required must be 1")
                 if row.get("answer_citation_raw_output_rows") != "0":

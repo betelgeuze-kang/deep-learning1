@@ -2045,6 +2045,9 @@ for system_id in ["D", "E"]:
             "measured_registry_admission_ready": "0",
             "required_real_evidence_fields": ";".join(de_required_real_fields),
             "missing_real_evidence_fields": ";".join(de_required_real_fields),
+            "required_real_evidence_field_count": str(len(de_required_real_fields)),
+            "missing_real_evidence_field_count": str(len(de_required_real_fields)),
+            "all_required_real_evidence_missing": "1",
             "raw_answer_citation_output_required": "1",
             "answer_citation_raw_output_rows": "0",
             "resource_row_required": "1",
@@ -2899,6 +2902,13 @@ de_measured_registry_admission_ready_rows = sum(
     1 for row in de_measured_registry_exclusion_rows if row["measured_registry_admission_ready"] == "1"
 )
 de_measured_registry_blocked_rows = sum(1 for row in de_measured_registry_exclusion_rows if row["status"] == "blocked")
+de_measured_registry_required_field_complete_rows = sum(
+    1
+    for row in de_measured_registry_exclusion_rows
+    if row["required_real_evidence_field_count"] == "11"
+    and row["missing_real_evidence_field_count"] == "11"
+    and row["all_required_real_evidence_missing"] == "1"
+)
 v58_real_execution_readiness_row_count = len(v58_real_execution_readiness_rows)
 v58_real_execution_ready_rows = sum(
     1 for row in v58_real_execution_readiness_rows if row["real_execution_ready"] == "1"
@@ -3024,6 +3034,7 @@ summary = {
     "de_measured_registry_fixture_registry_rows": str(de_measured_registry_fixture_registry_rows),
     "de_measured_registry_admission_ready_rows": str(de_measured_registry_admission_ready_rows),
     "de_measured_registry_blocked_rows": str(de_measured_registry_blocked_rows),
+    "de_measured_registry_required_field_complete_rows": str(de_measured_registry_required_field_complete_rows),
     "v58_real_execution_readiness_rows": str(v58_real_execution_readiness_row_count),
     "v58_real_execution_ready_rows": str(v58_real_execution_ready_rows),
     "v58_real_execution_blocked_rows": str(v58_real_execution_blocked_rows),
@@ -3274,6 +3285,7 @@ manifest = {
     "de_measured_registry_fixture_registry_rows": de_measured_registry_fixture_registry_rows,
     "de_measured_registry_admission_ready_rows": de_measured_registry_admission_ready_rows,
     "de_measured_registry_blocked_rows": de_measured_registry_blocked_rows,
+    "de_measured_registry_required_field_complete_rows": de_measured_registry_required_field_complete_rows,
     "v58_real_execution_readiness_rows": v58_real_execution_readiness_row_count,
     "v58_real_execution_ready_rows": v58_real_execution_ready_rows,
     "v58_real_execution_blocked_rows": v58_real_execution_blocked_rows,
