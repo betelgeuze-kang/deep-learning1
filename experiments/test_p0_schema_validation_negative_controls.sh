@@ -54,6 +54,40 @@ if module.REQUIRED_V61_MILESTONE_KEYS != expected_milestone:
     raise SystemExit("REQUIRED_V61_MILESTONE_KEYS must be derived from schema milestones.items.required")
 if module.REQUIRED_V61_ARTIFACT_KEYS != expected_artifact:
     raise SystemExit("REQUIRED_V61_ARTIFACT_KEYS must be derived from schema required_artifacts.items.required")
+
+checks = {
+    "REQUIRED_STAGE_KEYS": ("pipeline.schema.json", ("properties", "stages", "items")),
+    "REQUIRED_PR_SLICE_KEYS": ("pr_split.schema.json", ("properties", "slices", "items")),
+    "REQUIRED_TYPED_READINESS_ROW_KEYS": ("typed_readiness.schema.json", ("properties", "rows", "items")),
+    "REQUIRED_LEAKAGE_POLICY_KEYS": ("leakage_contract.schema.json", ("properties", "policy")),
+    "REQUIRED_LEAKAGE_SURFACE_KEYS": ("leakage_contract.schema.json", ("properties", "forbidden_surfaces", "items")),
+    "REQUIRED_LEAKAGE_STAGE_KEYS": ("leakage_contract.schema.json", ("properties", "stage_contracts", "items")),
+    "REQUIRED_BASELINE_LEDGER_KEYS": ("baseline_admission.schema.json", ("properties", "required_pm_ledgers", "items")),
+    "REQUIRED_BASELINE_SYSTEM_KEYS": ("baseline_admission.schema.json", ("properties", "systems", "items")),
+    "REQUIRED_BASELINE_ARTIFACT_KEYS": ("baseline_admission.schema.json", ("properties", "required_artifacts", "items")),
+    "REQUIRED_V52_ARTIFACT_KEYS": ("v52_adapter_guard.schema.json", ("properties", "required_artifacts", "items")),
+    "REQUIRED_V52_REQUIREMENT_KEYS": ("v52_adapter_guard.schema.json", ("properties", "requirements", "items")),
+    "REQUIRED_V50_POLICY_KEYS": ("v50_auditor_correctness.schema.json", ("properties", "policy")),
+    "REQUIRED_V50_ARTIFACT_KEYS": ("v50_auditor_correctness.schema.json", ("properties", "required_artifacts", "items")),
+    "REQUIRED_V50_REPLAY_COMMAND_KEYS": ("v50_auditor_correctness.schema.json", ("properties", "replay_commands")),
+    "REQUIRED_V50_BOUNDARY_KEYS": ("v50_auditor_correctness.schema.json", ("properties", "claim_boundaries", "items")),
+    "REQUIRED_V56_REPLAY_POLICY_KEYS": ("v56_replay.schema.json", ("properties", "policy")),
+    "REQUIRED_V56_REPLAY_ARTIFACT_KEYS": ("v56_replay.schema.json", ("properties", "replay_artifacts", "items")),
+    "REQUIRED_V56_SEED_DEPENDENCY_KEYS": ("v56_replay.schema.json", ("properties", "seed_dependency")),
+    "REQUIRED_V54_ARTIFACT_KEYS": ("v54_grounded_generation.schema.json", ("properties", "required_artifacts", "items")),
+    "REQUIRED_V53_REQUIREMENT_KEYS": ("v53_source_benchmark.schema.json", ("properties", "requirements", "items")),
+    "REQUIRED_V58_REQUIREMENT_KEYS": ("v58_blind_eval.schema.json", ("properties", "requirements", "items")),
+    "REQUIRED_V58_ARTIFACT_KEYS": ("v58_blind_eval.schema.json", ("properties", "required_artifacts", "items")),
+    "REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS": ("review_return_workflow.schema.json", ("properties", "requirements", "items")),
+}
+for constant_name, (schema_name, path_parts) in checks.items():
+    schema_node = json.loads((root / "schemas" / schema_name).read_text(encoding="utf-8"))
+    for path_part in path_parts:
+        schema_node = schema_node[path_part]
+    expected = set(schema_node["required"])
+    actual = getattr(module, constant_name)
+    if actual != expected:
+        raise SystemExit(f"{constant_name} must be derived from schema {'.'.join(path_parts)}.required")
 PY
 
 cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_missing_policy.json"
