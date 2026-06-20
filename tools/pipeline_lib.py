@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Iterator
 
+EVIDENCE_FAMILIES = frozenset({"fixture", "synthetic", "real_benchmark"})
+
 
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
@@ -80,11 +82,30 @@ def write_summary_csv(run_dir: Path, summary: dict[str, object]) -> Path:
 
 
 def run_packet_dir(results_root: Path, stage_id: str, run_id: str) -> Path:
-    if not stage_id or "/" in stage_id or "\\" in stage_id:
+    if not stage_id or stage_id == ".." or "/" in stage_id or "\\" in stage_id:
         raise ValueError("stage_id must be a non-empty path segment")
-    if not run_id or "/" in run_id or "\\" in run_id:
+    if not run_id or run_id == ".." or "/" in run_id or "\\" in run_id:
         raise ValueError("run_id must be a non-empty path segment")
     return results_root / stage_id / run_id
+
+
+def evidence_packet_dir(results_root: Path, evidence_family: str, stage_id: str, run_id: str) -> Path:
+    if evidence_family not in EVIDENCE_FAMILIES:
+        raise ValueError(f"evidence_family must be one of {', '.join(sorted(EVIDENCE_FAMILIES))}")
+    return run_packet_dir(results_root / evidence_family, stage_id, run_id)
+
+
+def metric_namespace(evidence_family: str, metric_name: str) -> str:
+    if evidence_family not in EVIDENCE_FAMILIES:
+        raise ValueError(f"evidence_family must be one of {', '.join(sorted(EVIDENCE_FAMILIES))}")
+    if not metric_name or metric_name == ".." or "/" in metric_name or "\\" in metric_name:
+        raise ValueError("metric_name must be a non-empty namespace segment")
+    prefix = f"{evidence_family}."
+    if metric_name.startswith(prefix):
+        return metric_name
+    if "." in metric_name:
+        raise ValueError("metric_name must not carry a different evidence-family prefix")
+    return prefix + metric_name
 
 
 @contextmanager

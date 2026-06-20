@@ -55,6 +55,9 @@ fi
 if [ -f experiments/test_p1_content_addressed_cache_contract.sh ]; then
   bash -n experiments/test_p1_content_addressed_cache_contract.sh
 fi
+if [ -f experiments/test_p1_fixture_real_namespace_contract.sh ]; then
+  bash -n experiments/test_p1_fixture_real_namespace_contract.sh
+fi
 if [ -f experiments/test_v61_one_token_path_contract.sh ]; then
   bash -n experiments/test_v61_one_token_path_contract.sh
 fi
@@ -217,6 +220,9 @@ if [ -x experiments/test_p1_atomic_run_dir_contract.sh ]; then
 fi
 if [ -x experiments/test_p1_content_addressed_cache_contract.sh ]; then
   ./experiments/test_p1_content_addressed_cache_contract.sh >/dev/null
+fi
+if [ -x experiments/test_p1_fixture_real_namespace_contract.sh ]; then
+  ./experiments/test_p1_fixture_real_namespace_contract.sh >/dev/null
 fi
 if [ -x experiments/test_v61_one_token_path_contract.sh ]; then
   ./experiments/test_v61_one_token_path_contract.sh >/dev/null
