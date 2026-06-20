@@ -72,7 +72,7 @@
         "blocked": "Human-reviewed quality comparison, public benchmark claim, or v53 final readiness.",
         "evidence_path": "results/v53t_complete_source_audit_readiness_gate/gate_001/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv"
       },
-      "verification_commands": ["./experiments/test_v53t_complete_source_audit_readiness_gate.sh"],
+      "verification_commands": ["tools/verify_artifact.py v53-public-source-manifest results/v53t_complete_source_audit_readiness_gate_summary.csv --repo-ledger results/v53t_complete_source_audit_readiness_gate/gate_001/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv", "./experiments/test_v53t_complete_source_audit_readiness_gate.sh"],
       "current_status": "ready-for-review"
     },
     {

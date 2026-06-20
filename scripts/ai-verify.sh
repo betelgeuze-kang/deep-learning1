@@ -321,6 +321,14 @@ if [ -x tools/verify_artifact.py ]; then
       tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json >/dev/null
     fi
   fi
+  if [ -f results/v53t_complete_source_audit_readiness_gate_summary.csv ]; then
+    if [ -f results/v53t_complete_source_audit_readiness_gate/gate_001/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv ]; then
+      tools/verify_artifact.py v53-public-source-manifest results/v53t_complete_source_audit_readiness_gate_summary.csv \
+        --repo-ledger results/v53t_complete_source_audit_readiness_gate/gate_001/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv >/dev/null
+    else
+      tools/verify_artifact.py v53-public-source-manifest results/v53t_complete_source_audit_readiness_gate_summary.csv >/dev/null
+    fi
+  fi
   if [ -f v54/grounded_generation_contract.json ]; then
     if [ -f results/v54c_complete_source_grounded_generation_1000_summary.csv ]; then
       tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json \

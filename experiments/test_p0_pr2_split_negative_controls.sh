@@ -78,6 +78,12 @@ elif mutation == "leakage-ledger-drop":
         command.replace("--pm-ledger", "--missing-pm-ledger")
         for command in row["verification_commands"]
     ]
+elif mutation == "v53-public-repo-ledger-drop":
+    row = slice_by_id("v53-public-repo-source-manifest")
+    row["verification_commands"] = [
+        command.replace("--repo-ledger", "--missing-repo-ledger")
+        for command in row["verification_commands"]
+    ]
 elif mutation == "v53-v1-exit-ledger-drop":
     row = slice_by_id("v53-query-instantiation-1000")
     row["verification_commands"] = [
@@ -256,6 +262,139 @@ PY
   printf '%s %s\n' "$summary_path" "$bad_path"
 }
 
+write_v53_public_fixture() {
+  local summary_path="$TMP_DIR/v53_public_summary.csv"
+  local repo_path="$TMP_DIR/v53_public_repo_rows.csv"
+  python3 - "$summary_path" "$repo_path" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+summary_path, repo_path = map(Path, sys.argv[1:3])
+summary = {
+    "pm_v53_freeze_ready": "1",
+    "complete_source_repo_count": "10",
+    "foundation_direct_pinned_manifest_ready": "1",
+    "foundation_direct_repo_manifest_ready": "1",
+    "foundation_direct_content_snapshot_ready": "1",
+    "foundation_direct_repo_manifest_rows": "10",
+    "foundation_direct_file_manifest_rows": "11266",
+    "foundation_direct_content_repo_rows": "10",
+    "foundation_direct_content_snapshot_rows": "11266",
+    "foundation_direct_query_rows": "1000",
+    "foundation_direct_span_rows": "1000",
+    "machine_complete_source_surface_ready": "1",
+    "review_return_ready": "0",
+    "human_review_completed": "0",
+    "quality_comparison_claim_ready": "0",
+    "v53_ready": "0",
+    "v1_0_comparison_ready": "0",
+    "real_release_package_ready": "0",
+}
+with summary_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(summary), lineterminator="\n")
+    writer.writeheader()
+    writer.writerow(summary)
+repos = [
+    "pypa/sampleproject",
+    "psf/requests",
+    "pallets/click",
+    "pallets/flask",
+    "fastapi/fastapi",
+    "django/django",
+    "pytest-dev/pytest",
+    "pypa/pip",
+    "python/cpython",
+    "tiangolo/typer",
+]
+fieldnames = [
+    "repo_slot",
+    "repo_id",
+    "owner_repo",
+    "head_sha",
+    "tree_blob_rows",
+    "included_file_rows",
+    "query_eligible_file_rows",
+    "tree_truncated",
+    "complete_source_tree_manifest_ready",
+]
+with repo_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    for index, owner_repo in enumerate(repos, start=1):
+        writer.writerow(
+            {
+                "repo_slot": str(index),
+                "repo_id": owner_repo.replace("/", "_").replace("-", "_"),
+                "owner_repo": owner_repo,
+                "head_sha": f"{index:040x}",
+                "tree_blob_rows": "10",
+                "included_file_rows": "8",
+                "query_eligible_file_rows": "8",
+                "tree_truncated": "0",
+                "complete_source_tree_manifest_ready": "1",
+            }
+        )
+PY
+  printf '%s %s\n' "$summary_path" "$repo_path"
+}
+
+bad_v53_public_summary() {
+  local name="$1"
+  local field="$2"
+  local value="$3"
+  local paths
+  paths="$(write_v53_public_fixture)"
+  local summary_path="${paths%% *}"
+  local repo_path="${paths##* }"
+  local bad_path="$TMP_DIR/$name.csv"
+  python3 - "$summary_path" "$bad_path" "$field" "$value" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+source, target, field, value = sys.argv[1:5]
+with Path(source).open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0][field] = value
+with Path(target).open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+  printf '%s %s\n' "$bad_path" "$repo_path"
+}
+
+bad_v53_public_repo() {
+  local name="$1"
+  local field="$2"
+  local value="$3"
+  local paths
+  paths="$(write_v53_public_fixture)"
+  local summary_path="${paths%% *}"
+  local repo_path="${paths##* }"
+  local bad_path="$TMP_DIR/$name.csv"
+  python3 - "$repo_path" "$bad_path" "$field" "$value" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+source, target, field, value = sys.argv[1:5]
+with Path(source).open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0][field] = value
+with Path(target).open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+  printf '%s %s\n' "$summary_path" "$bad_path"
+}
+
 bad_path="$(bad_pr2_json pr2_split_not_required_bad split-not-required)"
 expect_fail_with \
   "split_required must be true" \
@@ -300,6 +439,25 @@ bad_path="$(bad_pr2_json pr2_leakage_ledger_drop_bad leakage-ledger-drop)"
 expect_fail_with \
   "leakage verification commands must compare the retrieval/model-visible contract to the PM ledger" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_pr2_json pr2_v53_public_repo_ledger_drop_bad v53-public-repo-ledger-drop)"
+expect_fail_with \
+  "v53 public source manifest verification commands must compare summary to the pinned repo ledger" \
+  "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+paths="$(bad_v53_public_summary v53_public_ready_bad v53_ready 1)"
+summary_path="${paths%% *}"
+repo_path="${paths##* }"
+expect_fail_with \
+  "v53_ready expected 0" \
+  "$ROOT_DIR/tools/verify_artifact.py" v53-public-source-manifest "$summary_path" --repo-ledger "$repo_path"
+
+paths="$(bad_v53_public_repo v53_public_tree_truncated_bad tree_truncated 1)"
+summary_path="${paths%% *}"
+repo_path="${paths##* }"
+expect_fail_with \
+  "tree_truncated must be 0" \
+  "$ROOT_DIR/tools/verify_artifact.py" v53-public-source-manifest "$summary_path" --repo-ledger "$repo_path"
 
 bad_path="$(bad_pr2_json pr2_v53_v1_exit_ledger_drop_bad v53-v1-exit-ledger-drop)"
 expect_fail_with \

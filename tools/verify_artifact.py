@@ -413,6 +413,11 @@ REQUIRED_PR2_V53_SOURCE_BENCHMARK_VERIFICATION_TERMS = {
     "--v1-exit-ledger",
     "results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv",
 }
+REQUIRED_PR2_V53_PUBLIC_SOURCE_MANIFEST_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py v53-public-source-manifest results/v53t_complete_source_audit_readiness_gate_summary.csv",
+    "--repo-ledger",
+    "results/v53t_complete_source_audit_readiness_gate/gate_001/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
+}
 REQUIRED_PR2_V54_GROUNDED_GENERATION_VERIFICATION_TERMS = {
     "tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json",
     "--summary",
@@ -463,6 +468,38 @@ EXPECTED_V59_PM_FOUNDATION_GATE_STATUS = {
     "real-release-package": "blocked",
     "one-command-replay-preflight": "pass",
 }
+EXPECTED_V53_PUBLIC_SOURCE_MANIFEST_SUMMARY = {
+    "pm_v53_freeze_ready": "1",
+    "complete_source_repo_count": "10",
+    "foundation_direct_pinned_manifest_ready": "1",
+    "foundation_direct_repo_manifest_ready": "1",
+    "foundation_direct_content_snapshot_ready": "1",
+    "foundation_direct_repo_manifest_rows": "10",
+    "foundation_direct_file_manifest_rows": "11266",
+    "foundation_direct_content_repo_rows": "10",
+    "foundation_direct_content_snapshot_rows": "11266",
+    "foundation_direct_query_rows": "1000",
+    "foundation_direct_span_rows": "1000",
+    "machine_complete_source_surface_ready": "1",
+    "review_return_ready": "0",
+    "human_review_completed": "0",
+    "quality_comparison_claim_ready": "0",
+    "v53_ready": "0",
+    "v1_0_comparison_ready": "0",
+    "real_release_package_ready": "0",
+}
+EXPECTED_V53_PUBLIC_REPOS = [
+    "pypa/sampleproject",
+    "psf/requests",
+    "pallets/click",
+    "pallets/flask",
+    "fastapi/fastapi",
+    "django/django",
+    "pytest-dev/pytest",
+    "pypa/pip",
+    "python/cpython",
+    "tiangolo/typer",
+]
 REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "tools/verify_artifact.py pr-split pr_slices/pr2.json",
     "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
@@ -2209,6 +2246,16 @@ def verify_pr_split(path: Path) -> list[str]:
                     f"{prefix}: v53 verification commands must compare the source-bound benchmark to query, audit, A/B/G/H, and v1 exit ledgers: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
+        if slice_id == "v53-public-repo-source-manifest":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_V53_PUBLIC_SOURCE_MANIFEST_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: v53 public source manifest verification commands must compare summary to the pinned repo ledger: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
         if slice_id == "v54-routehint-generation-contract":
             command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
             missing_terms = [
@@ -3433,6 +3480,47 @@ def verify_v59_pm_foundation_demo(path: Path, gate_ledger: Path | None = None) -
     return errors
 
 
+def verify_v53_public_source_manifest(path: Path, repo_ledger: Path | None = None) -> list[str]:
+    errors: list[str] = []
+    summary = read_first_csv(path)
+    for field, expected in EXPECTED_V53_PUBLIC_SOURCE_MANIFEST_SUMMARY.items():
+        if summary.get(field) != expected:
+            errors.append(f"{path}: {field} expected {expected}, got {summary.get(field)}")
+
+    if repo_ledger is not None:
+        rows = read_csv_rows(repo_ledger)
+        if len(rows) != len(EXPECTED_V53_PUBLIC_REPOS):
+            errors.append(
+                f"{repo_ledger}: expected {len(EXPECTED_V53_PUBLIC_REPOS)} repo rows, got {len(rows)}"
+            )
+        owner_repos = [row.get("owner_repo", "") for row in rows]
+        if owner_repos != EXPECTED_V53_PUBLIC_REPOS:
+            errors.append(f"{repo_ledger}: owner_repo order must match the pinned v53 public source manifest")
+        seen_slots: set[str] = set()
+        for row_index, row in enumerate(rows, start=2):
+            prefix = f"{repo_ledger}:{row_index}"
+            slot = row.get("repo_slot", "")
+            if slot in seen_slots:
+                errors.append(f"{prefix}: duplicate repo_slot={slot}")
+            seen_slots.add(slot)
+            sha = row.get("head_sha", "")
+            if len(sha) != 40 or any(char not in "0123456789abcdef" for char in sha):
+                errors.append(f"{prefix}: head_sha must be a pinned 40-character lowercase hex commit")
+            for field in ["tree_blob_rows", "included_file_rows", "query_eligible_file_rows"]:
+                try:
+                    value = int(row.get(field, ""))
+                except ValueError:
+                    errors.append(f"{prefix}: {field} must be an integer")
+                    continue
+                if value <= 0:
+                    errors.append(f"{prefix}: {field} must be positive")
+            if row.get("tree_truncated") != "0":
+                errors.append(f"{prefix}: tree_truncated must be 0")
+            if row.get("complete_source_tree_manifest_ready") != "1":
+                errors.append(f"{prefix}: complete_source_tree_manifest_ready must be 1")
+    return errors
+
+
 def verify_v53_source_benchmark(
     path: Path,
     v53i_summary: Path | None = None,
@@ -4103,6 +4191,9 @@ def main() -> int:
     p_v53.add_argument("--v53ap-summary", type=Path, default=None)
     p_v53.add_argument("--v53aq-summary", type=Path, default=None)
     p_v53.add_argument("--v1-exit-ledger", type=Path, default=None)
+    p_v53_public = sub.add_parser("v53-public-source-manifest")
+    p_v53_public.add_argument("paths", nargs="+", type=Path)
+    p_v53_public.add_argument("--repo-ledger", type=Path, default=None)
     p_v54 = sub.add_parser("v54-grounded-generation")
     p_v54.add_argument("paths", nargs="+", type=Path)
     p_v54.add_argument("--summary", type=Path, default=None)
@@ -4175,6 +4266,9 @@ def main() -> int:
                     args.v1_exit_ledger,
                 )
             )
+    elif args.cmd == "v53-public-source-manifest":
+        for path in args.paths:
+            errors.extend(verify_v53_public_source_manifest(path, args.repo_ledger))
     elif args.cmd == "v54-grounded-generation":
         for path in args.paths:
             errors.extend(verify_v54_grounded_generation(path, args.summary))
