@@ -409,6 +409,60 @@ expect_fail_with \
   --artifact-ledger "$V58_ARTIFACT_LEDGER" \
   --template-ledger "$V58_TEMPLATE_LEDGER"
 
+cp "$ROOT_DIR/v58/blind_eval_real.json" "$TMP_DIR/v58_response_identity_leakage_bad.json"
+python3 - "$TMP_DIR/v58_response_identity_leakage_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["policy"]["response_text_identity_leakage_forbidden"] = False
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "policy.response_text_identity_leakage_forbidden must be true" \
+  "$ROOT_DIR/tools/verify_artifact.py" v58-blind-eval "$TMP_DIR/v58_response_identity_leakage_bad.json" \
+  --readiness-ledger "$V58_READY_LEDGER" \
+  --artifact-ledger "$V58_ARTIFACT_LEDGER" \
+  --template-ledger "$V58_TEMPLATE_LEDGER"
+
+cp "$ROOT_DIR/v58/blind_eval_real.json" "$TMP_DIR/v58_adjudication_required_bad.json"
+python3 - "$TMP_DIR/v58_adjudication_required_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["policy"]["adjudication_required_for_disagreement"] = False
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "policy.adjudication_required_for_disagreement must be true" \
+  "$ROOT_DIR/tools/verify_artifact.py" v58-blind-eval "$TMP_DIR/v58_adjudication_required_bad.json" \
+  --readiness-ledger "$V58_READY_LEDGER" \
+  --artifact-ledger "$V58_ARTIFACT_LEDGER" \
+  --template-ledger "$V58_TEMPLATE_LEDGER"
+
+cp "$ROOT_DIR/v58/blind_eval_real.json" "$TMP_DIR/v58_required_systems_bad.json"
+python3 - "$TMP_DIR/v58_required_systems_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["required_systems"].remove("H")
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "required_systems must be A/B/C/D/E/G/H" \
+  "$ROOT_DIR/tools/verify_artifact.py" v58-blind-eval "$TMP_DIR/v58_required_systems_bad.json" \
+  --readiness-ledger "$V58_READY_LEDGER" \
+  --artifact-ledger "$V58_ARTIFACT_LEDGER" \
+  --template-ledger "$V58_TEMPLATE_LEDGER"
+
 cp "$ROOT_DIR/v58/blind_eval_real.json" "$TMP_DIR/v58_unseen_split_policy_bad.json"
 python3 - "$TMP_DIR/v58_unseen_split_policy_bad.json" <<'PY'
 import json
