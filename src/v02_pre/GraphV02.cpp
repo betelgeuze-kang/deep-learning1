@@ -16,6 +16,7 @@
 
 #include "backend/RouteQualityBackend.hpp"
 #include "v02_pre/CreditCoreV02.hpp"
+#include "v02_pre/DatasetSpanCoreV02.hpp"
 #include "v02_pre/EnergyCoreV02.hpp"
 #include "v02_pre/EvaluatorCoreV02.hpp"
 #include "v02_pre/KeySignatureCoreV02.hpp"
@@ -41,38 +42,6 @@ bool valid_retry_source_name(const std::string& source) {
            source == "key-shape" ||
            source == "joint-code-key" ||
            source == "noisy-route-code";
-}
-
-int span_offset_for_query(
-    const ByteDataset::Window& window,
-    const ByteDataset::KVQuery& query,
-    int route_span_hints) {
-    if (route_span_hints == 0 || !query.hit || query.value_pos < 0) {
-        return 0;
-    }
-    for (const auto& record : window.kv_records) {
-        if (record.key != query.key || record.marker_pos >= query.query_pos ||
-            record.value_pos < 0 || record.value_len <= 0) {
-            continue;
-        }
-        const int span_end = record.value_pos + record.value_len;
-        if (query.value_pos >= record.value_pos && query.value_pos < span_end) {
-            return query.value_pos - record.value_pos;
-        }
-    }
-    return 0;
-}
-
-int record_value_pos_at_span_offset(
-    const ByteDataset::KVRecord& record,
-    int span_offset,
-    int n) {
-    if (span_offset < 0 || record.value_pos < 0 || record.value_len <= 0 ||
-        span_offset >= record.value_len) {
-        return -1;
-    }
-    const int value_pos = record.value_pos + span_offset;
-    return value_pos >= 0 && value_pos < n ? value_pos : -1;
 }
 
 double span_prefix_score_for_record(
@@ -3190,7 +3159,10 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                                    const ByteDataset::KVQuery& query) {
             std::vector<int> positions;
             const int span_offset =
-                span_offset_for_query(window, query, params_.route_span_hints);
+                DatasetSpanCoreV02::span_offset_for_query(
+                    window,
+                    query,
+                    params_.route_span_hints);
             if (source == "off") {
                 return positions;
             }
@@ -3228,7 +3200,7 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                 const int limit =
                     std::min(params_.K_route, static_cast<int>(scored_records.size()));
                 for (int rank = 0; rank < limit; ++rank) {
-                    const int value_pos = record_value_pos_at_span_offset(
+                    const int value_pos = DatasetSpanCoreV02::record_value_pos_at_span_offset(
                         *scored_records[static_cast<std::size_t>(rank)],
                         span_offset,
                         params_.N);
@@ -3256,7 +3228,7 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                     const int limit =
                         std::min(params_.K_route, static_cast<int>(joint_records.size()));
                     for (int rank = 0; rank < limit; ++rank) {
-                        const int value_pos = record_value_pos_at_span_offset(
+                        const int value_pos = DatasetSpanCoreV02::record_value_pos_at_span_offset(
                             *joint_records[static_cast<std::size_t>(rank)],
                             span_offset,
                             params_.N);
@@ -3273,7 +3245,10 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                     std::vector<const ByteDataset::KVRecord*> wrong_records;
                     for (const auto& record : window.kv_records) {
                         const int value_pos =
-                            record_value_pos_at_span_offset(record, span_offset, params_.N);
+                            DatasetSpanCoreV02::record_value_pos_at_span_offset(
+                                record,
+                                span_offset,
+                                params_.N);
                         if (record.marker_pos < 0 || record.value_pos < 0 ||
                             record.marker_pos >= query.query_pos ||
                             value_pos < 0 ||
@@ -3293,10 +3268,11 @@ void GraphV02::apply_route_fallback_source(const ByteDataset::Window& window) {
                             const auto* record =
                                 wrong_records[(start + static_cast<std::size_t>(offset)) %
                                               wrong_records.size()];
-                            const int value_pos = record_value_pos_at_span_offset(
-                                *record,
-                                span_offset,
-                                params_.N);
+                            const int value_pos =
+                                DatasetSpanCoreV02::record_value_pos_at_span_offset(
+                                    *record,
+                                    span_offset,
+                                    params_.N);
                             if (value_pos >= 0) {
                                 positions.push_back(value_pos);
                             }
@@ -3622,13 +3598,19 @@ void GraphV02::apply_route_noisy_source(const ByteDataset::Window& window) {
 
         int noisy_pos = -1;
         const int span_offset =
-            span_offset_for_query(window, query, params_.route_span_hints);
+            DatasetSpanCoreV02::span_offset_for_query(
+                window,
+                query,
+                params_.route_span_hints);
         const auto bucket_found = buckets.find(route_code_hash_for_key(query.key));
         if (bucket_found != buckets.end()) {
             std::vector<const ByteDataset::KVRecord*> records;
             for (const auto* record : bucket_found->second) {
                 const int candidate_pos =
-                    record_value_pos_at_span_offset(*record, span_offset, params_.N);
+                    DatasetSpanCoreV02::record_value_pos_at_span_offset(
+                        *record,
+                        span_offset,
+                        params_.N);
                 if (record->marker_pos < query.query_pos &&
                     candidate_pos >= 0 &&
                     candidate_pos != query.value_pos &&
@@ -3644,7 +3626,7 @@ void GraphV02::apply_route_noisy_source(const ByteDataset::Window& window) {
                     return lhs->marker_pos > rhs->marker_pos;
                 });
             if (!records.empty()) {
-                noisy_pos = record_value_pos_at_span_offset(
+                noisy_pos = DatasetSpanCoreV02::record_value_pos_at_span_offset(
                     *records.front(),
                     span_offset,
                     params_.N);
@@ -3836,11 +3818,17 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
         }
 
         const int span_offset =
-            span_offset_for_query(window, query, params_.route_span_hints);
+            DatasetSpanCoreV02::span_offset_for_query(
+                window,
+                query,
+                params_.route_span_hints);
         std::vector<const ByteDataset::KVRecord*> candidates;
         for (const auto* record : bucket_found->second) {
             if (record->marker_pos < query.query_pos &&
-                record_value_pos_at_span_offset(*record, span_offset, params_.N) >= 0) {
+                DatasetSpanCoreV02::record_value_pos_at_span_offset(
+                    *record,
+                    span_offset,
+                    params_.N) >= 0) {
                 candidates.push_back(record);
             }
         }
@@ -3983,7 +3971,10 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
                 const auto span_chunk_credit_score =
                     [this, &query, span_offset](const ByteDataset::KVRecord& record) {
                         const int candidate_pos =
-                            record_value_pos_at_span_offset(record, span_offset, params_.N);
+                            DatasetSpanCoreV02::record_value_pos_at_span_offset(
+                                record,
+                                span_offset,
+                                params_.N);
                         if (candidate_pos < 0) {
                             return 0.0;
                         }
@@ -4104,7 +4095,10 @@ void GraphV02::rebuild_learned_code_key_route_hints(const ByteDataset::Window& w
         for (int rank = 1; rank <= candidate_limit; ++rank) {
             const auto* entry = candidates[static_cast<std::size_t>(rank - 1)];
             const int candidate_pos =
-                record_value_pos_at_span_offset(*entry, span_offset, params_.N);
+                DatasetSpanCoreV02::record_value_pos_at_span_offset(
+                    *entry,
+                    span_offset,
+                    params_.N);
             if (candidate_pos < 0) {
                 continue;
             }

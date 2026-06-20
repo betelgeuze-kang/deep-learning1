@@ -122,6 +122,12 @@ add_executable(
 )
 target_link_libraries(v02_key_signature_core_contract PRIVATE dm_common)
 
+add_executable(
+  v02_dataset_span_core_contract
+  src/tools/v02_dataset_span_core_contract.cpp
+)
+target_link_libraries(v02_dataset_span_core_contract PRIVATE dm_common)
+
 foreach(target dmv01 dmv02)
   target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
 endforeach()
@@ -134,3 +140,4 @@ target_compile_options(v02_route_core_contract PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_options(v02_credit_core_contract PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_options(v02_evaluator_core_contract PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_options(v02_key_signature_core_contract PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(v02_dataset_span_core_contract PRIVATE -Wall -Wextra -Wpedantic)
