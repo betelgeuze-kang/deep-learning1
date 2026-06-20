@@ -261,6 +261,10 @@ if module.DEFAULT_V53_SUMMARY_PATHS != v53_default_summary_paths:
     raise SystemExit("DEFAULT_V53_SUMMARY_PATHS must be derived from schema x-contract.default_summary_paths")
 if module.EXPECTED_V53_V1_EXIT_CRITERION_IDS != v53_contract["expected_v1_exit_criterion_ids"]:
     raise SystemExit("EXPECTED_V53_V1_EXIT_CRITERION_IDS must be derived from schema x-contract.expected_v1_exit_criterion_ids")
+if module.EXPECTED_V53_PUBLIC_SOURCE_MANIFEST_SUMMARY != v53_contract["expected_public_source_manifest_summary"]:
+    raise SystemExit("EXPECTED_V53_PUBLIC_SOURCE_MANIFEST_SUMMARY must be derived from schema x-contract.expected_public_source_manifest_summary")
+if module.EXPECTED_V53_PUBLIC_REPOS != v53_contract["expected_public_repos"]:
+    raise SystemExit("EXPECTED_V53_PUBLIC_REPOS must be derived from schema x-contract.expected_public_repos")
 
 v54_schema = json.loads((root / "schemas" / "v54_grounded_generation.schema.json").read_text(encoding="utf-8"))
 v54_contract = v54_schema["x-contract"]
@@ -670,6 +674,39 @@ expect_fail_with \
   "x-contract.expected_v1_exit_criterion_ids values must be unique" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/v53_schema_v1_exit_contract_duplicate.schema.json" "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json"
+
+cp "$ROOT_DIR/schemas/v53_source_benchmark.schema.json" "$TMP_DIR/v53_schema_public_repo_duplicate.schema.json"
+python3 - "$TMP_DIR/v53_schema_public_repo_duplicate.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+repos = data["x-contract"]["expected_public_repos"]
+repos[-1] = repos[0]
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "x-contract.expected_public_repos must be a non-empty unique owner/repo list" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v53_schema_public_repo_duplicate.schema.json" "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json"
+
+cp "$ROOT_DIR/schemas/v53_source_benchmark.schema.json" "$TMP_DIR/v53_schema_public_repo_count_drift.schema.json"
+python3 - "$TMP_DIR/v53_schema_public_repo_count_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_public_source_manifest_summary"]["complete_source_repo_count"] = "9"
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "x-contract.expected_public_source_manifest_summary repo count must match expected_public_repos" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v53_schema_public_repo_count_drift.schema.json" "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json"
 
 cp "$ROOT_DIR/schemas/v54_grounded_generation.schema.json" "$TMP_DIR/v54_schema_policy_contract_drift.schema.json"
 python3 - "$TMP_DIR/v54_schema_policy_contract_drift.schema.json" <<'PY'

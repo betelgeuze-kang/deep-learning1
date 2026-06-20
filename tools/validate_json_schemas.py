@@ -815,6 +815,8 @@ def validate_v53_source_benchmark_contract_metadata(
     expected_summary_checks = contract.get("expected_summary_checks")
     default_summary_paths = contract.get("default_summary_paths")
     expected_v1_exit = contract.get("expected_v1_exit_criterion_ids")
+    expected_public_summary = contract.get("expected_public_source_manifest_summary")
+    expected_public_repos = contract.get("expected_public_repos")
     if not isinstance(expected_policy, dict) or not expected_policy:
         errors.append(f"{schema_path}: x-contract.expected_policy_static must be a non-empty object")
     if not isinstance(expected_requirements, list) or not expected_requirements:
@@ -825,6 +827,25 @@ def validate_v53_source_benchmark_contract_metadata(
         errors.append(f"{schema_path}: x-contract.default_summary_paths must be a non-empty object")
     if not isinstance(expected_v1_exit, list) or not expected_v1_exit:
         errors.append(f"{schema_path}: x-contract.expected_v1_exit_criterion_ids must be a non-empty list")
+    if (
+        not isinstance(expected_public_summary, dict)
+        or not expected_public_summary
+        or any(
+            not isinstance(field, str)
+            or not field
+            or not isinstance(expected, str)
+            or not expected
+            for field, expected in expected_public_summary.items()
+        )
+    ):
+        errors.append(f"{schema_path}: x-contract.expected_public_source_manifest_summary must be a non-empty string map")
+    if (
+        not isinstance(expected_public_repos, list)
+        or not expected_public_repos
+        or any(not isinstance(repo, str) or "/" not in repo for repo in expected_public_repos)
+        or len(expected_public_repos) != len(set(expected_public_repos))
+    ):
+        errors.append(f"{schema_path}: x-contract.expected_public_repos must be a non-empty unique owner/repo list")
     if errors:
         return errors
 
@@ -872,6 +893,9 @@ def validate_v53_source_benchmark_contract_metadata(
         errors.append(f"{schema_path}: x-contract.expected_v1_exit_criterion_ids values must be non-empty strings")
     if len(expected_v1_exit) != len(set(expected_v1_exit)):
         errors.append(f"{schema_path}: x-contract.expected_v1_exit_criterion_ids values must be unique")
+    repo_count = expected_public_summary.get("complete_source_repo_count")
+    if repo_count is not None and repo_count != str(len(expected_public_repos)):
+        errors.append(f"{schema_path}: x-contract.expected_public_source_manifest_summary repo count must match expected_public_repos")
 
     for row in requirements:
         if not isinstance(row, dict):

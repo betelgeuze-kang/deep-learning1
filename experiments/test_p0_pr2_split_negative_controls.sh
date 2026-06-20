@@ -416,6 +416,31 @@ PY
   printf '%s %s\n' "$summary_path" "$bad_path"
 }
 
+bad_v53_public_repo_order() {
+  local paths
+  paths="$(write_v53_public_fixture)"
+  local summary_path="${paths%% *}"
+  local repo_path="${paths##* }"
+  local bad_path="$TMP_DIR/v53_public_repo_order_bad.csv"
+  python3 - "$repo_path" "$bad_path" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+source, target = sys.argv[1:3]
+with Path(source).open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["owner_repo"], rows[1]["owner_repo"] = rows[1]["owner_repo"], rows[0]["owner_repo"]
+with Path(target).open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+  printf '%s %s\n' "$summary_path" "$bad_path"
+}
+
 bad_path="$(bad_pr2_json pr2_split_not_required_bad split-not-required)"
 expect_fail_with \
   "split_required must be true" \
@@ -488,6 +513,13 @@ summary_path="${paths%% *}"
 repo_path="${paths##* }"
 expect_fail_with \
   "tree_truncated must be 0" \
+  "$ROOT_DIR/tools/verify_artifact.py" v53-public-source-manifest "$summary_path" --repo-ledger "$repo_path"
+
+paths="$(bad_v53_public_repo_order)"
+summary_path="${paths%% *}"
+repo_path="${paths##* }"
+expect_fail_with \
+  "owner_repo order must match the pinned v53 public source manifest" \
   "$ROOT_DIR/tools/verify_artifact.py" v53-public-source-manifest "$summary_path" --repo-ledger "$repo_path"
 
 bad_path="$(bad_pr2_json pr2_v53_v1_exit_ledger_drop_bad v53-v1-exit-ledger-drop)"

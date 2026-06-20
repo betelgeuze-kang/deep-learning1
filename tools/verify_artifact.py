@@ -225,37 +225,16 @@ EXPECTED_V59_PM_FOUNDATION_GATE_STATUS = {
     "real-release-package": "blocked",
     "one-command-replay-preflight": "pass",
 }
-EXPECTED_V53_PUBLIC_SOURCE_MANIFEST_SUMMARY = {
-    "pm_v53_freeze_ready": "1",
-    "complete_source_repo_count": "10",
-    "foundation_direct_pinned_manifest_ready": "1",
-    "foundation_direct_repo_manifest_ready": "1",
-    "foundation_direct_content_snapshot_ready": "1",
-    "foundation_direct_repo_manifest_rows": "10",
-    "foundation_direct_file_manifest_rows": "11266",
-    "foundation_direct_content_repo_rows": "10",
-    "foundation_direct_content_snapshot_rows": "11266",
-    "foundation_direct_query_rows": "1000",
-    "foundation_direct_span_rows": "1000",
-    "machine_complete_source_surface_ready": "1",
-    "review_return_ready": "0",
-    "human_review_completed": "0",
-    "quality_comparison_claim_ready": "0",
-    "v53_ready": "0",
-    "v1_0_comparison_ready": "0",
-    "real_release_package_ready": "0",
-}
+EXPECTED_V53_PUBLIC_SOURCE_MANIFEST_SUMMARY = schema_contract_dict(
+    "v53_source_benchmark.schema.json",
+    "expected_public_source_manifest_summary",
+)
 EXPECTED_V53_PUBLIC_REPOS = [
-    "pypa/sampleproject",
-    "psf/requests",
-    "pallets/click",
-    "pallets/flask",
-    "fastapi/fastapi",
-    "django/django",
-    "pytest-dev/pytest",
-    "pypa/pip",
-    "python/cpython",
-    "tiangolo/typer",
+    str(repo)
+    for repo in schema_contract_list(
+        "v53_source_benchmark.schema.json",
+        "expected_public_repos",
+    )
 ]
 REQUIRED_V1_ROADMAP_TERMS = {
     "# v1.0 Architecture Challenge Roadmap",
