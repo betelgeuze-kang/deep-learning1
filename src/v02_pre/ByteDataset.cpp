@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <unordered_map>
 
+#include "v02_pre/KeySignatureCoreV02.hpp"
+
 namespace dle {
 
 namespace {
@@ -22,50 +24,6 @@ std::uint32_t stable_key_hash(const std::string& key, int hash_bits) {
     }
     const auto mask = (1u << static_cast<unsigned>(hash_bits)) - 1u;
     return hash & mask;
-}
-
-int digit_count(const std::string& key) {
-    int count = 0;
-    for (const unsigned char byte : key) {
-        if (std::isdigit(byte)) {
-            ++count;
-        }
-    }
-    return count;
-}
-
-int common_prefix_count(const std::string& lhs, const std::string& rhs) {
-    const auto limit = std::min(lhs.size(), rhs.size());
-    std::size_t count = 0;
-    while (count < limit && lhs[count] == rhs[count]) {
-        ++count;
-    }
-    return static_cast<int>(count);
-}
-
-int common_suffix_count(const std::string& lhs, const std::string& rhs) {
-    const auto limit = std::min(lhs.size(), rhs.size());
-    std::size_t count = 0;
-    while (count < limit &&
-           lhs[lhs.size() - 1U - count] == rhs[rhs.size() - 1U - count]) {
-        ++count;
-    }
-    return static_cast<int>(count);
-}
-
-double key_shape_score(const std::string& query_key, const std::string& record_key) {
-    const auto max_len = static_cast<double>(
-        std::max<std::size_t>(1U, std::max(query_key.size(), record_key.size())));
-    double score = 0.0;
-    if (query_key.size() == record_key.size()) {
-        score += 4.0;
-    }
-    if (digit_count(query_key) == digit_count(record_key)) {
-        score += 1.0;
-    }
-    score += static_cast<double>(common_prefix_count(query_key, record_key)) / max_len;
-    score += static_cast<double>(common_suffix_count(query_key, record_key)) / max_len;
-    return score;
 }
 
 }  // namespace
@@ -347,8 +305,10 @@ void ByteDataset::build_route_hints() {
                         return lhs->value_pos > rhs->value_pos;
                     };
                     if (params_.route_candidate_score == "key-shape") {
-                        const double lhs_score = key_shape_score(key, lhs->key);
-                        const double rhs_score = key_shape_score(key, rhs->key);
+                        const double lhs_score =
+                            KeySignatureCoreV02::key_shape_score(key, lhs->key);
+                        const double rhs_score =
+                            KeySignatureCoreV02::key_shape_score(key, rhs->key);
                         if (lhs_score != rhs_score) {
                             return lhs_score > rhs_score;
                         }
