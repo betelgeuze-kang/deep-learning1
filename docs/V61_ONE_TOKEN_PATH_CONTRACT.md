@@ -40,7 +40,8 @@ summary prose. The verifier now treats each required artifact as a typed gate:
   `real_model_execution_ready=1` before the linked milestone can move to
   `pass`.
 - blocked linked milestones must not contain any `pass_field=1` row, and must
-  not contain `real_model_execution_ready=1`, release, generation, human-review,
+  not contain `local_checkpoint_root_supplied=1`,
+  `real_model_execution_ready=1`, release, generation, human-review,
   independent-reproduction, near-frontier, or production-latency readiness
   signals.
 

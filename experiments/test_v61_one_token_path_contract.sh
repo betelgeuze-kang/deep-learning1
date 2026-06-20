@@ -307,6 +307,19 @@ expect_fail_with \
 
 rm -f "$MOE_ROWS"
 
+cat >"$MOE_ROWS" <<'CSV'
+checkpoint_id,model_revision,layer_index,token_id,contract_ready,fixture_execution_ready,real_model_execution_ready,heldout_metric_ready,human_review_ready,independent_reproduction_ready,release_ready,local_checkpoint_root_supplied,checkpoint_payload_bytes_committed_to_repo,actual_model_generation_ready,route_jump_rows,status,reason,expert_ffn_artifact_sha256,input_hidden_sha256,router_tensor_name,router_payload_sha256,router_logits_sha256,selected_expert_ids,selected_expert_weights,selected_expert_payload_sha256s,expert_output_sha256,moe_block_output_sha256,torch_reference_output_sha256,max_abs_delta,tolerance,moe_block_parity_pass
+fixture-checkpoint,fixture-revision,0,1,1,0,0,0,0,0,0,1,0,0,0,blocked,malicious blocked artifact claims local checkpoint root,sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,model.layers.0.block_sparse_moe.gate.weight,sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,0,1.0,sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,sha256:1111111111111111111111111111111111111111111111111111111111111111,sha256:2222222222222222222222222222222222222222222222222222222222222222,0,1e-06,0
+CSV
+
+expect_fail_with \
+  "forbids local_checkpoint_root_supplied=1" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$MOE_ROWS"
+
 if [ -e "$LOGITS_ROWS" ]; then
   echo "refusing to overwrite existing v61 one-token logits artifact: $LOGITS_ROWS" >&2
   exit 1

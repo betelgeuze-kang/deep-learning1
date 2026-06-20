@@ -2024,6 +2024,7 @@ V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS = {
     "heldout_metric_ready",
     "human_review_ready",
     "independent_reproduction_ready",
+    "local_checkpoint_root_supplied",
     "near_frontier_claim_ready",
     "production_latency_claim_ready",
     "real_model_execution_ready",
