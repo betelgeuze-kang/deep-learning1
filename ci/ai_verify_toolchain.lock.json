@@ -1,0 +1,29 @@
+{
+  "schema_version": "ai_verify_toolchain_lock.v1",
+  "github_actions_runner": "ubuntu-24.04",
+  "container_image_digest": "",
+  "python": {
+    "source": "github-actions-runner",
+    "version_command": "python3 --version"
+  },
+  "numpy": {
+    "source": "not-required-by-ai-verify",
+    "version_command": ""
+  },
+  "torch": {
+    "source": "not-required-by-ai-verify",
+    "version_command": ""
+  },
+  "rocm": {
+    "source": "disabled-in-ai-verify",
+    "required_env": "DLE_VERIFY_ENABLE_HIP=OFF"
+  },
+  "compiler": {
+    "source": "github-actions-runner",
+    "version_command": "g++ --version"
+  },
+  "cmake": {
+    "source": "github-actions-runner",
+    "version_command": "cmake --version"
+  }
+}

@@ -44,6 +44,10 @@ check_ai_verify_workflow() {
     echo "ai-verify workflow must support workflow_dispatch" >&2
     return 1
   }
+  grep -F "runs-on: ubuntu-24.04" "$path" >/dev/null || {
+    echo "ai-verify workflow must pin the runner to ubuntu-24.04" >&2
+    return 1
+  }
   grep -F "name: ai-verify.sh" "$path" >/dev/null || {
     echo "ai-verify workflow job name must be ai-verify.sh" >&2
     return 1
@@ -54,6 +58,39 @@ check_ai_verify_workflow() {
   }
   grep -F "DLE_VERIFY_ENABLE_HIP: \"OFF\"" "$path" >/dev/null || {
     echo "ai-verify workflow must keep HIP disabled by default" >&2
+    return 1
+  }
+}
+
+check_toolchain_lock() {
+  local path="$1"
+  python3 -m json.tool "$path" >/dev/null || return 1
+  grep -F '"schema_version": "ai_verify_toolchain_lock.v1"' "$path" >/dev/null || {
+    echo "ai-verify toolchain lock schema_version must be ai_verify_toolchain_lock.v1" >&2
+    return 1
+  }
+  grep -F '"github_actions_runner": "ubuntu-24.04"' "$path" >/dev/null || {
+    echo "ai-verify toolchain lock must pin github_actions_runner=ubuntu-24.04" >&2
+    return 1
+  }
+  grep -F '"container_image_digest": ""' "$path" >/dev/null || {
+    echo "ai-verify toolchain lock must keep container_image_digest explicit" >&2
+    return 1
+  }
+  grep -F '"required_env": "DLE_VERIFY_ENABLE_HIP=OFF"' "$path" >/dev/null || {
+    echo "ai-verify toolchain lock must keep ROCm/HIP disabled" >&2
+    return 1
+  }
+  grep -F '"version_command": "python3 --version"' "$path" >/dev/null || {
+    echo "ai-verify toolchain lock must record python3 version command" >&2
+    return 1
+  }
+  grep -F '"version_command": "g++ --version"' "$path" >/dev/null || {
+    echo "ai-verify toolchain lock must record compiler version command" >&2
+    return 1
+  }
+  grep -F '"version_command": "cmake --version"' "$path" >/dev/null || {
+    echo "ai-verify toolchain lock must record cmake version command" >&2
     return 1
   }
 }
@@ -91,6 +128,7 @@ check_third_party_workflow() {
 }
 
 check_ai_verify_workflow "$ROOT_DIR/.github/workflows/ai-verify.yml"
+check_toolchain_lock "$ROOT_DIR/ci/ai_verify_toolchain.lock.json"
 check_third_party_workflow "$ROOT_DIR/.github/workflows/third-party-rerun.yml"
 
 cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/ai_verify_no_wrapper.yml"
@@ -121,6 +159,20 @@ expect_fail_with \
   "ai-verify workflow must keep HIP disabled by default" \
   check_ai_verify_workflow "$TMP_DIR/ai_verify_hip_bad.yml"
 
+cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/ai_verify_runner_bad.yml"
+python3 - "$TMP_DIR/ai_verify_runner_bad.yml" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace("runs-on: ubuntu-24.04", "runs-on: ubuntu-latest")
+path.write_text(text, encoding="utf-8")
+PY
+expect_fail_with \
+  "ai-verify workflow must pin the runner to ubuntu-24.04" \
+  check_ai_verify_workflow "$TMP_DIR/ai_verify_runner_bad.yml"
+
 cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/ai_verify_push_branch_limited_bad.yml"
 python3 - "$TMP_DIR/ai_verify_push_branch_limited_bad.yml" <<'PY'
 import sys
@@ -134,6 +186,81 @@ PY
 expect_fail_with \
   "ai-verify workflow push trigger must not be branch-limited" \
   check_ai_verify_workflow "$TMP_DIR/ai_verify_push_branch_limited_bad.yml"
+
+cp "$ROOT_DIR/ci/ai_verify_toolchain.lock.json" "$TMP_DIR/toolchain_runner_bad.json"
+python3 - "$TMP_DIR/toolchain_runner_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["github_actions_runner"] = "ubuntu-latest"
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "ai-verify toolchain lock must pin github_actions_runner=ubuntu-24.04" \
+  check_toolchain_lock "$TMP_DIR/toolchain_runner_bad.json"
+
+cp "$ROOT_DIR/ci/ai_verify_toolchain.lock.json" "$TMP_DIR/toolchain_schema_bad.json"
+python3 - "$TMP_DIR/toolchain_schema_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["schema_version"] = "ai_verify_toolchain_lock.v0"
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "ai-verify toolchain lock schema_version must be ai_verify_toolchain_lock.v1" \
+  check_toolchain_lock "$TMP_DIR/toolchain_schema_bad.json"
+
+cp "$ROOT_DIR/ci/ai_verify_toolchain.lock.json" "$TMP_DIR/toolchain_digest_bad.json"
+python3 - "$TMP_DIR/toolchain_digest_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["container_image_digest"] = "sha256:" + "a" * 64
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "ai-verify toolchain lock must keep container_image_digest explicit" \
+  check_toolchain_lock "$TMP_DIR/toolchain_digest_bad.json"
+
+cp "$ROOT_DIR/ci/ai_verify_toolchain.lock.json" "$TMP_DIR/toolchain_rocm_bad.json"
+python3 - "$TMP_DIR/toolchain_rocm_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["rocm"]["required_env"] = "DLE_VERIFY_ENABLE_HIP=ON"
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "ai-verify toolchain lock must keep ROCm/HIP disabled" \
+  check_toolchain_lock "$TMP_DIR/toolchain_rocm_bad.json"
+
+cp "$ROOT_DIR/ci/ai_verify_toolchain.lock.json" "$TMP_DIR/toolchain_python_command_bad.json"
+python3 - "$TMP_DIR/toolchain_python_command_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["python"]["version_command"] = "python --version"
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "ai-verify toolchain lock must record python3 version command" \
+  check_toolchain_lock "$TMP_DIR/toolchain_python_command_bad.json"
 
 cp "$ROOT_DIR/.github/workflows/third-party-rerun.yml" "$TMP_DIR/third_party_pr_bad.yml"
 python3 - "$TMP_DIR/third_party_pr_bad.yml" <<'PY'

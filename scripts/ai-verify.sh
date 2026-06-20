@@ -121,6 +121,16 @@ test -x scripts/ai-worker-cursor.sh
 test -x scripts/ai-worker-opencode.sh
 
 echo "==> CI workflow contract"
+if [ -f ci/ai_verify_toolchain.lock.json ]; then
+  python3 -m json.tool ci/ai_verify_toolchain.lock.json >/dev/null
+  grep -F '"schema_version": "ai_verify_toolchain_lock.v1"' ci/ai_verify_toolchain.lock.json >/dev/null
+  grep -F '"github_actions_runner": "ubuntu-24.04"' ci/ai_verify_toolchain.lock.json >/dev/null
+  grep -F '"container_image_digest": ""' ci/ai_verify_toolchain.lock.json >/dev/null
+  grep -F '"required_env": "DLE_VERIFY_ENABLE_HIP=OFF"' ci/ai_verify_toolchain.lock.json >/dev/null
+  grep -F '"version_command": "python3 --version"' ci/ai_verify_toolchain.lock.json >/dev/null
+  grep -F '"version_command": "g++ --version"' ci/ai_verify_toolchain.lock.json >/dev/null
+  grep -F '"version_command": "cmake --version"' ci/ai_verify_toolchain.lock.json >/dev/null
+fi
 if [ -f .github/workflows/ai-verify.yml ]; then
   grep -F "pull_request:" .github/workflows/ai-verify.yml >/dev/null
   grep -F "push:" .github/workflows/ai-verify.yml >/dev/null
@@ -129,6 +139,7 @@ if [ -f .github/workflows/ai-verify.yml ]; then
     exit 1
   fi
   grep -F "workflow_dispatch:" .github/workflows/ai-verify.yml >/dev/null
+  grep -F "runs-on: ubuntu-24.04" .github/workflows/ai-verify.yml >/dev/null
   grep -F "name: ai-verify.sh" .github/workflows/ai-verify.yml >/dev/null
   grep -F "run: ./scripts/ai-verify.sh" .github/workflows/ai-verify.yml >/dev/null
   grep -F "DLE_VERIFY_ENABLE_HIP: \"OFF\"" .github/workflows/ai-verify.yml >/dev/null
