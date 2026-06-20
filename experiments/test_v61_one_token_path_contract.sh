@@ -121,6 +121,15 @@ elif mutation == "logits-topk-column-drop":
                 if column != "top_k_token_ranking_match"
             ]
             break
+elif mutation == "logits-activation-column-drop":
+    for row in data["required_artifacts"]:
+        if row["artifact_id"] == "one-token-logits-parity-rows":
+            row["required_columns"] = [
+                column
+                for column in row["required_columns"]
+                if column != "layer_activation_trace_sha256"
+            ]
+            break
 elif mutation == "expert-column-drop":
     for row in data["required_artifacts"]:
         if row["artifact_id"] == "expert-ffn-forward-parity-rows":
@@ -261,6 +270,13 @@ expect_fail_with \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 
+bad_path="$(bad_json logits_activation_column_drop_bad logits-activation-column-drop)"
+expect_fail_with \
+  "required_columns must exactly match the v61 artifact header order" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$bad_path" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
 bad_path="$(bad_json expert_pass_field_bad expert-pass-field)"
 expect_fail_with \
   "pass_field expected expert_ffn_parity_pass, got expert_ffn_ready" \
@@ -374,8 +390,8 @@ if [ -e "$LOGITS_ROWS" ]; then
 fi
 mkdir -p "$(dirname "$LOGITS_ROWS")"
 cat >"$LOGITS_ROWS" <<'CSV'
-checkpoint_id,model_revision,tokenizer_revision,contract_ready,fixture_execution_ready,real_model_execution_ready,heldout_metric_ready,human_review_ready,independent_reproduction_ready,release_ready,local_checkpoint_root_supplied,checkpoint_payload_bytes_committed_to_repo,actual_model_generation_ready,route_jump_rows,status,reason,moe_block_artifact_sha256,tokenizer_input_sha256,route_path_sha256,final_hidden_sha256,lm_head_tensor_name,lm_head_payload_sha256,vocab_size,logit_count,candidate_logits_sha256,torch_reference_logits_sha256,max_abs_delta,mean_abs_delta,tolerance,top1_token_id,reference_top1_token_id,top_k_token_count,candidate_top_k_token_ids,reference_top_k_token_ids,top_k_token_ranking_match,logits_parity_pass
-fixture-checkpoint,fixture-revision,fixture-tokenizer,1,0,0,0,0,0,0,1,0,0,0,blocked,malicious blocked logits artifact claims parity,sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,model.embed_tokens.weight,sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,32000,32000,sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,sha256:1111111111111111111111111111111111111111111111111111111111111111,0,0,1e-06,1,1,5,1|2|3|4|5,1|2|3|4|5,1,1
+checkpoint_id,model_revision,tokenizer_revision,contract_ready,fixture_execution_ready,real_model_execution_ready,heldout_metric_ready,human_review_ready,independent_reproduction_ready,release_ready,local_checkpoint_root_supplied,checkpoint_payload_bytes_committed_to_repo,actual_model_generation_ready,route_jump_rows,status,reason,moe_block_artifact_sha256,tokenizer_input_sha256,token_id,router_top_k,layer_activation_trace_sha256,layer_activation_trace_rows,route_path_sha256,final_hidden_sha256,lm_head_tensor_name,lm_head_payload_sha256,vocab_size,logit_count,candidate_logits_sha256,torch_reference_logits_sha256,max_abs_delta,mean_abs_delta,tolerance,top1_token_id,reference_top1_token_id,top_k_token_count,candidate_top_k_token_ids,reference_top_k_token_ids,top_k_token_ranking_match,logits_parity_pass
+fixture-checkpoint,fixture-revision,fixture-tokenizer,1,0,0,0,0,0,0,1,0,0,0,blocked,malicious blocked logits artifact claims parity,sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,1,2,sha256:abababababababababababababababababababababababababababababababab,32,sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,model.embed_tokens.weight,sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,32000,32000,sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,sha256:1111111111111111111111111111111111111111111111111111111111111111,0,0,1e-06,1,1,5,1|2|3|4|5,1|2|3|4|5,1,1
 CSV
 
 expect_fail_with \
@@ -421,6 +437,10 @@ values.update({
     "reason": "malicious blocked logits artifact claims parity",
     "moe_block_artifact_sha256": "sha256:" + "a" * 64,
     "tokenizer_input_sha256": "sha256:" + "b" * 64,
+    "token_id": "1",
+    "router_top_k": "2",
+    "layer_activation_trace_sha256": "sha256:" + "a0" * 32,
+    "layer_activation_trace_rows": "32",
     "route_path_sha256": "sha256:" + "c" * 64,
     "final_hidden_sha256": "sha256:" + "d" * 64,
     "lm_head_tensor_name": "lm_head.weight",
@@ -444,6 +464,8 @@ if mode == "topk_bad":
     values["top_k_token_ranking_match"] = "0"
 elif mode == "mean_bad":
     values["mean_abs_delta"] = "0.01"
+elif mode == "activation_bad":
+    values["layer_activation_trace_sha256"] = ""
 else:
     raise SystemExit(f"unknown mode: {mode}")
 path = Path(rows_path)
@@ -467,6 +489,15 @@ rm -f "$LOGITS_ROWS"
 write_bad_logits_row mean_bad
 expect_fail_with \
   "logits_parity_pass=1 requires max_abs_delta and mean_abs_delta <= tolerance" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row activation_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires layer_activation_trace_sha256" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"

@@ -3778,6 +3778,19 @@ def verify_v61_one_token_path(
                     errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires top1_token_id to match reference_top1_token_id")
                 if artifact_row.get("top_k_token_ranking_match") != "1":
                     errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires top_k_token_ranking_match=1")
+                if not artifact_row.get("token_id"):
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires token_id")
+                for field in ["router_top_k", "layer_activation_trace_rows", "top_k_token_count"]:
+                    try:
+                        parsed = int(artifact_row.get(field, ""))
+                    except ValueError:
+                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires positive integer {field}")
+                        continue
+                    if parsed <= 0:
+                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires positive integer {field}")
+                activation_trace = artifact_row.get("layer_activation_trace_sha256", "")
+                if not activation_trace.startswith("sha256:") or len(activation_trace) != 71:
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires layer_activation_trace_sha256")
                 if not math.isfinite(max_abs_delta_value) or not math.isfinite(mean_abs_delta_value) or not math.isfinite(tolerance_value):
                     errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires finite max_abs_delta, mean_abs_delta, and tolerance")
                 elif max_abs_delta_value > tolerance_value or mean_abs_delta_value > tolerance_value:

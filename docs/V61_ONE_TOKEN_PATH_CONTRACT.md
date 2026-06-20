@@ -86,7 +86,8 @@ The contract requires these artifact shapes:
 - `one-token-logits-parity-rows`
   (`results/v61_one_token_logits_parity/one_token_logits_parity_rows.csv`):
   checkpoint/revision identity, tokenizer input
-  hash, tokenizer revision, route path hash, upstream MoE-block artifact hash,
+  hash, tokenizer revision, exact token ID, router top-k, layer activation
+  trace hash/row count, route path hash, upstream MoE-block artifact hash,
   final hidden hash, LM-head tensor/payload hash, vocab/logit counts,
   candidate/reference logits hashes, typed readiness fields, top-1 agreement,
   max and mean absolute logit error, tolerance, top-k token ranking agreement,
