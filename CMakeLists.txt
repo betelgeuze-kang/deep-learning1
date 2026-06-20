@@ -90,6 +90,14 @@ add_executable(
 )
 target_link_libraries(v02_config_view_contract PRIVATE dm_common)
 
+add_executable(
+  v02_energy_core_contract
+  src/tools/v02_energy_core_contract.cpp
+  src/v02_pre/FieldTable.cpp
+  src/v02_pre/CouplingTable.cpp
+)
+target_link_libraries(v02_energy_core_contract PRIVATE dm_common)
+
 foreach(target dmv01 dmv02)
   target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
 endforeach()
@@ -97,3 +105,4 @@ target_compile_options(dm_backend PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_options(hip_candidate_weight_parity PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_options(expert_ffn_forward_parity PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_options(v02_config_view_contract PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(v02_energy_core_contract PRIVATE -Wall -Wextra -Wpedantic)

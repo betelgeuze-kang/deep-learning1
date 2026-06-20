@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "backend/RouteQualityBackend.hpp"
+#include "v02_pre/EnergyCoreV02.hpp"
 
 namespace dle {
 
@@ -1988,23 +1989,27 @@ double GraphV02::local_energy_without_route(
     std::uint8_t high,
     std::uint8_t low) const {
     const NodeV02& node = nodes_[static_cast<std::size_t>(index)];
-    double energy = -params_.lambda_u *
-                    static_cast<double>(field_.score(0, node.input_byte, high));
-    energy += -params_.lambda_u *
-              static_cast<double>(field_.score(1, node.input_byte, low));
+    double energy = EnergyCoreV02::pair_energy(
+        params_.lambda_u,
+        params_.lambda_b,
+        field_,
+        coupling_,
+        node.input_byte,
+        high,
+        low);
 
     std::array<int, 8> effective_neighbors{};
     const int neighbor_count = fill_effective_neighbors(index, effective_neighbors);
     for (int n = 0; n < neighbor_count; ++n) {
         const NodeV02& neighbor =
             nodes_[static_cast<std::size_t>(effective_neighbors[static_cast<std::size_t>(n)])];
-        energy += params_.lambda_v *
-                  static_cast<double>((high != neighbor.state[0] ? 1.0f : 0.0f) +
-                                      (low != neighbor.state[1] ? 1.0f : 0.0f));
+        energy += EnergyCoreV02::neighbor_disagreement_energy(
+            params_.lambda_v,
+            high,
+            low,
+            neighbor.state);
     }
 
-    energy += -params_.lambda_b *
-              static_cast<double>(coupling_.score(node.input_byte, high, low));
     return energy;
 }
 
@@ -4646,28 +4651,26 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
     std::array<int, 8> effective_neighbors{};
     const int neighbor_count = fill_effective_neighbors(index, effective_neighbors);
 
-    float delta = -params_.lambda_u *
-                  (field_.score(0, node.input_byte, new_high) -
-                   field_.score(0, node.input_byte, node.state[0]));
-    delta += -params_.lambda_u *
-             (field_.score(1, node.input_byte, new_low) -
-              field_.score(1, node.input_byte, node.state[1]));
+    float delta = EnergyCoreV02::pair_delta(
+        params_.lambda_u,
+        params_.lambda_b,
+        field_,
+        coupling_,
+        node.input_byte,
+        node.state,
+        new_high,
+        new_low);
 
     for (int n = 0; n < neighbor_count; ++n) {
         const NodeV02& neighbor =
             nodes_[static_cast<std::size_t>(effective_neighbors[static_cast<std::size_t>(n)])];
-        const float new_disagreement =
-            (new_high != neighbor.state[0] ? 1.0f : 0.0f) +
-            (new_low != neighbor.state[1] ? 1.0f : 0.0f);
-        const float old_disagreement =
-            (node.state[0] != neighbor.state[0] ? 1.0f : 0.0f) +
-            (node.state[1] != neighbor.state[1] ? 1.0f : 0.0f);
-        delta += params_.lambda_v * (new_disagreement - old_disagreement);
+        delta += EnergyCoreV02::neighbor_disagreement_delta(
+            params_.lambda_v,
+            node.state,
+            new_high,
+            new_low,
+            neighbor.state);
     }
-
-    delta += -params_.lambda_b *
-             (coupling_.score(node.input_byte, new_high, new_low) -
-              coupling_.score(node.input_byte, node.state[0], node.state[1]));
 
     const auto& vote_positions =
         route_hint_candidate_value_positions_[static_cast<std::size_t>(index)];
@@ -4828,7 +4831,12 @@ int GraphV02::disagreement(int index) const {
 
 float GraphV02::local_temperature(int index) const {
     const NodeV02& node = nodes_[static_cast<std::size_t>(index)];
-    return params_.T0 + params_.alpha_T * std::abs(node.reservoir) / (node.tick + params_.eps_T);
+    return EnergyCoreV02::local_temperature(
+        params_.T0,
+        params_.alpha_T,
+        params_.eps_T,
+        node.reservoir,
+        node.tick);
 }
 
 void GraphV02::try_update_node(
@@ -7188,11 +7196,14 @@ double GraphV02::pair_energy(
     std::uint8_t input_byte,
     std::uint8_t high_state,
     std::uint8_t low_state) const {
-    return -static_cast<double>(params_.lambda_u) *
-               static_cast<double>(field_.score(0, input_byte, high_state) +
-                                   field_.score(1, input_byte, low_state)) -
-           static_cast<double>(params_.lambda_b) *
-               static_cast<double>(coupling_.score(input_byte, high_state, low_state));
+    return EnergyCoreV02::pair_energy(
+        params_.lambda_u,
+        params_.lambda_b,
+        field_,
+        coupling_,
+        input_byte,
+        high_state,
+        low_state);
 }
 
 double GraphV02::route_confidence_margin(std::uint8_t input_byte) const {
@@ -7270,13 +7281,14 @@ double GraphV02::total_energy() const {
     double total = 0.0;
     for (int i = 0; i < params_.N; ++i) {
         const NodeV02& node = nodes_[static_cast<std::size_t>(i)];
-        for (int channel = 0; channel < params_.channels; ++channel) {
-            total += -static_cast<double>(params_.lambda_u) *
-                     static_cast<double>(
-                         field_.score(channel, node.input_byte, node.state[static_cast<std::size_t>(channel)]));
-        }
-        total += -static_cast<double>(params_.lambda_b) *
-                 static_cast<double>(coupling_.score(node.input_byte, node.state[0], node.state[1]));
+        total += EnergyCoreV02::pair_energy(
+            params_.lambda_u,
+            params_.lambda_b,
+            field_,
+            coupling_,
+            node.input_byte,
+            node.state[0],
+            node.state[1]);
         total += 0.5 * static_cast<double>(params_.lambda_v) *
                  static_cast<double>(disagreement(i));
     }
