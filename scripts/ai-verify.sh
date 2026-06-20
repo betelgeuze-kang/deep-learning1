@@ -124,6 +124,10 @@ echo "==> CI workflow contract"
 if [ -f .github/workflows/ai-verify.yml ]; then
   grep -F "pull_request:" .github/workflows/ai-verify.yml >/dev/null
   grep -F "push:" .github/workflows/ai-verify.yml >/dev/null
+  if grep -A10 -F "push:" .github/workflows/ai-verify.yml | grep -F "branches:" >/dev/null; then
+    echo "ai-verify workflow push trigger must not be branch-limited" >&2
+    exit 1
+  fi
   grep -F "workflow_dispatch:" .github/workflows/ai-verify.yml >/dev/null
   grep -F "name: ai-verify.sh" .github/workflows/ai-verify.yml >/dev/null
   grep -F "run: ./scripts/ai-verify.sh" .github/workflows/ai-verify.yml >/dev/null

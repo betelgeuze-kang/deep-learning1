@@ -36,6 +36,10 @@ check_ai_verify_workflow() {
     echo "ai-verify workflow must run on push" >&2
     return 1
   }
+  if grep -A10 -F "push:" "$path" | grep -F "branches:" >/dev/null; then
+    echo "ai-verify workflow push trigger must not be branch-limited" >&2
+    return 1
+  fi
   grep -F "workflow_dispatch:" "$path" >/dev/null || {
     echo "ai-verify workflow must support workflow_dispatch" >&2
     return 1
@@ -116,6 +120,20 @@ PY
 expect_fail_with \
   "ai-verify workflow must keep HIP disabled by default" \
   check_ai_verify_workflow "$TMP_DIR/ai_verify_hip_bad.yml"
+
+cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/ai_verify_push_branch_limited_bad.yml"
+python3 - "$TMP_DIR/ai_verify_push_branch_limited_bad.yml" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace("  push:\n  workflow_dispatch:", "  push:\n    branches:\n      - main\n  workflow_dispatch:")
+path.write_text(text, encoding="utf-8")
+PY
+expect_fail_with \
+  "ai-verify workflow push trigger must not be branch-limited" \
+  check_ai_verify_workflow "$TMP_DIR/ai_verify_push_branch_limited_bad.yml"
 
 cp "$ROOT_DIR/.github/workflows/third-party-rerun.yml" "$TMP_DIR/third_party_pr_bad.yml"
 python3 - "$TMP_DIR/third_party_pr_bad.yml" <<'PY'
