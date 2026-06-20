@@ -11,11 +11,13 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "backend/RouteQualityBackend.hpp"
 #include "v02_pre/CreditCoreV02.hpp"
 #include "v02_pre/EnergyCoreV02.hpp"
+#include "v02_pre/EvaluatorCoreV02.hpp"
 #include "v02_pre/RouteCoreV02.hpp"
 
 namespace dle {
@@ -327,13 +329,7 @@ double byte_signature_shape_score(
 }
 
 double nearest_rank_quantile(std::vector<double> values, double quantile) {
-    if (values.empty()) {
-        return 0.0;
-    }
-    std::sort(values.begin(), values.end());
-    const auto rank =
-        static_cast<std::size_t>(std::ceil(quantile * static_cast<double>(values.size())));
-    return values[std::min(rank > 0 ? rank - 1 : 0, values.size() - 1)];
+    return EvaluatorCoreV02::nearest_rank_quantile(std::move(values), quantile);
 }
 
 bool route_quality_source_ranking_apply_active(const V02PreParams& params) {
@@ -6299,19 +6295,23 @@ EpochMetricsV02 GraphV02::collect_metrics(
     EpochMetricsV02 metrics;
     metrics.epoch = epoch;
     metrics.H = total_energy();
-    metrics.byte_acc = byte_hits / static_cast<double>(params_.N);
-    metrics.field_byte_acc = field_byte_hits / static_cast<double>(params_.N);
-    metrics.oracle1_acc = oracle_hits / static_cast<double>(params_.N);
-    metrics.ch0_acc = ch0_hits / static_cast<double>(params_.N);
-    metrics.ch1_acc = ch1_hits / static_cast<double>(params_.N);
-    metrics.field_ch0_acc = field_ch0_hits / static_cast<double>(params_.N);
-    metrics.field_ch1_acc = field_ch1_hits / static_cast<double>(params_.N);
-    metrics.field_margin = margin_sum / static_cast<double>(params_.channels * params_.N);
-    metrics.joint_byte_acc = joint_byte_hits / static_cast<double>(params_.N);
-    metrics.pair_margin = pair_margin_sum / static_cast<double>(params_.N);
-    metrics.mean_disagreement = disagreement_sum / static_cast<double>(params_.N);
-    metrics.mean_tick = tick_sum / static_cast<double>(params_.N);
-    metrics.mean_abs_reservoir = abs_reservoir_sum / static_cast<double>(params_.N);
+    const double node_count = static_cast<double>(params_.N);
+    metrics.byte_acc = EvaluatorCoreV02::ratio_or_zero(byte_hits, node_count);
+    metrics.field_byte_acc = EvaluatorCoreV02::ratio_or_zero(field_byte_hits, node_count);
+    metrics.oracle1_acc = EvaluatorCoreV02::ratio_or_zero(oracle_hits, node_count);
+    metrics.ch0_acc = EvaluatorCoreV02::ratio_or_zero(ch0_hits, node_count);
+    metrics.ch1_acc = EvaluatorCoreV02::ratio_or_zero(ch1_hits, node_count);
+    metrics.field_ch0_acc = EvaluatorCoreV02::ratio_or_zero(field_ch0_hits, node_count);
+    metrics.field_ch1_acc = EvaluatorCoreV02::ratio_or_zero(field_ch1_hits, node_count);
+    metrics.field_margin =
+        EvaluatorCoreV02::ratio_or_zero(margin_sum, params_.channels * node_count);
+    metrics.joint_byte_acc = EvaluatorCoreV02::ratio_or_zero(joint_byte_hits, node_count);
+    metrics.pair_margin = EvaluatorCoreV02::ratio_or_zero(pair_margin_sum, node_count);
+    metrics.mean_disagreement =
+        EvaluatorCoreV02::ratio_or_zero(disagreement_sum, node_count);
+    metrics.mean_tick = EvaluatorCoreV02::ratio_or_zero(tick_sum, node_count);
+    metrics.mean_abs_reservoir =
+        EvaluatorCoreV02::ratio_or_zero(abs_reservoir_sum, node_count);
     metrics.changed = changed;
     metrics.downhill_accepts = downhill;
     metrics.uphill_accepts = uphill;
@@ -7067,30 +7067,34 @@ EpochMetricsV02 GraphV02::collect_metrics(
     metrics.kv_query_count = static_cast<double>(kv_query_count_);
     if (kv_record_count_ > 0) {
         metrics.kv_duplicate_key_rate =
-            static_cast<double>(kv_duplicate_key_count_) / static_cast<double>(kv_record_count_);
+            EvaluatorCoreV02::ratio_or_zero(kv_duplicate_key_count_, kv_record_count_);
     }
     if (kv_query_count_ > 0) {
         metrics.kv_query_hit_rate =
-            static_cast<double>(kv_query_hit_count_) / static_cast<double>(kv_query_count_);
+            EvaluatorCoreV02::ratio_or_zero(kv_query_hit_count_, kv_query_count_);
         metrics.kv_missing_key_rate =
-            static_cast<double>(kv_missing_key_count_) / static_cast<double>(kv_query_count_);
+            EvaluatorCoreV02::ratio_or_zero(kv_missing_key_count_, kv_query_count_);
     }
     metrics.route_candidate_query_count =
         static_cast<double>(route_candidate_query_count_);
     if (route_candidate_query_count_ > 0) {
         metrics.route_candidate_recall_rate =
-            static_cast<double>(route_candidate_hit_count_) /
-            static_cast<double>(route_candidate_query_count_);
+            EvaluatorCoreV02::ratio_or_zero(
+                route_candidate_hit_count_,
+                route_candidate_query_count_);
         metrics.route_candidate_top1_rate =
-            static_cast<double>(route_candidate_top1_hit_count_) /
-            static_cast<double>(route_candidate_query_count_);
+            EvaluatorCoreV02::ratio_or_zero(
+                route_candidate_top1_hit_count_,
+                route_candidate_query_count_);
         metrics.route_bucket_load_mean =
-            static_cast<double>(route_bucket_load_sum_) /
-            static_cast<double>(route_candidate_query_count_);
+            EvaluatorCoreV02::ratio_or_zero(
+                route_bucket_load_sum_,
+                route_candidate_query_count_);
         metrics.route_bucket_load_max = static_cast<double>(route_bucket_load_max_);
         metrics.route_bucket_collision_rate =
-            static_cast<double>(route_bucket_collision_count_) /
-            static_cast<double>(route_candidate_query_count_);
+            EvaluatorCoreV02::ratio_or_zero(
+                route_bucket_collision_count_,
+                route_candidate_query_count_);
     }
     if (route_candidate_hit_count_ > 0) {
         metrics.route_candidate_rank_mean =
@@ -7169,8 +7173,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
     if (active_jump_node_sum > 0.0) {
         metrics.mean_active_jump_neighbors = active_jump_sum / active_jump_node_sum;
     }
-    metrics.routing_trigger_rate = routing_trigger_sum / static_cast<double>(params_.N);
-    metrics.active_jump_rate = active_jump_node_sum / static_cast<double>(params_.N);
+    metrics.routing_trigger_rate = EvaluatorCoreV02::ratio_or_zero(routing_trigger_sum, node_count);
+    metrics.active_jump_rate = EvaluatorCoreV02::ratio_or_zero(active_jump_node_sum, node_count);
     if (jump_distance_count > 0.0) {
         metrics.mean_jump_distance = jump_distance_sum / jump_distance_count;
     }
