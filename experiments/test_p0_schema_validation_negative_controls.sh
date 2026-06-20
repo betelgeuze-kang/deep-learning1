@@ -135,6 +135,43 @@ expected_leakage_stages = {
 if module.EXPECTED_LEAKAGE_STAGE_CONTRACTS != expected_leakage_stages:
     raise SystemExit("EXPECTED_LEAKAGE_STAGE_CONTRACTS must be derived from schema x-contract.expected_stage_contracts")
 
+baseline_schema = json.loads((root / "schemas" / "baseline_admission.schema.json").read_text(encoding="utf-8"))
+baseline_contract = baseline_schema["x-contract"]
+baseline_expected_artifact_columns = {
+    row["artifact_id"]: set(row["required_columns"])
+    for row in baseline_contract["expected_required_artifacts"]
+}
+baseline_expected_artifact_kinds = {
+    row["artifact_id"]: row["artifact_kind"]
+    for row in baseline_contract["expected_required_artifacts"]
+}
+baseline_expected_systems = {
+    row["system_id"]: row
+    for row in baseline_contract["expected_systems"]
+}
+baseline_expected_pm_ledgers_by_id = {
+    row["ledger_id"]: row
+    for row in baseline_contract["expected_pm_ledgers"]
+}
+if module.EXPECTED_DE_POLICY_STATIC != baseline_contract["expected_policy_static"]:
+    raise SystemExit("EXPECTED_DE_POLICY_STATIC must be derived from schema x-contract.expected_policy_static")
+if module.REQUIRED_DE_REAL_EVIDENCE_FIELDS != set(baseline_contract["expected_required_real_evidence_fields"]):
+    raise SystemExit("REQUIRED_DE_REAL_EVIDENCE_FIELDS must be derived from schema x-contract.expected_required_real_evidence_fields")
+if module.EXPECTED_DE_PM_LEDGERS != baseline_contract["expected_pm_ledgers"]:
+    raise SystemExit("EXPECTED_DE_PM_LEDGERS must be derived from schema x-contract.expected_pm_ledgers")
+if module.EXPECTED_DE_PM_LEDGERS_BY_ID != baseline_expected_pm_ledgers_by_id:
+    raise SystemExit("EXPECTED_DE_PM_LEDGERS_BY_ID must be derived from schema x-contract.expected_pm_ledgers")
+if module.EXPECTED_DE_SYSTEMS != baseline_expected_systems:
+    raise SystemExit("EXPECTED_DE_SYSTEMS must be derived from schema x-contract.expected_systems")
+if module.EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS != baseline_expected_artifact_columns:
+    raise SystemExit("EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS must be derived from schema x-contract.expected_required_artifacts")
+if module.EXPECTED_DE_REQUIRED_ARTIFACT_KINDS != baseline_expected_artifact_kinds:
+    raise SystemExit("EXPECTED_DE_REQUIRED_ARTIFACT_KINDS must be derived from schema x-contract.expected_required_artifacts")
+if module.DEFAULT_DE_MEASURED_REGISTRY_LEDGER != Path(baseline_expected_pm_ledgers_by_id["de-measured-registry-exclusion"]["path"]):
+    raise SystemExit("DEFAULT_DE_MEASURED_REGISTRY_LEDGER must be derived from schema x-contract.expected_pm_ledgers")
+if module.DEFAULT_DE_ACCEPTANCE_LEDGER != Path(baseline_expected_pm_ledgers_by_id["de-acceptance-evidence-blockers"]["path"]):
+    raise SystemExit("DEFAULT_DE_ACCEPTANCE_LEDGER must be derived from schema x-contract.expected_pm_ledgers")
+
 v50_schema = json.loads((root / "schemas" / "v50_auditor_correctness.schema.json").read_text(encoding="utf-8"))
 v50_contract = v50_schema["x-contract"]
 if module.EXPECTED_V50_POLICY_STATIC != v50_contract["expected_policy_static"]:
@@ -285,6 +322,57 @@ expect_fail_with \
   "instance stage_contract[2] must match x-contract.expected_stage_contracts" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/leakage_schema_stage_contract_drift.schema.json" "$ROOT_DIR/leakage/retrieval_model_visible.json"
+
+cp "$ROOT_DIR/schemas/baseline_admission.schema.json" "$TMP_DIR/baseline_schema_policy_contract_drift.schema.json"
+python3 - "$TMP_DIR/baseline_schema_policy_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_policy_static"]["fixture_rows_in_measured_registry"] = True
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance policy must match x-contract.expected_policy_static" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/baseline_schema_policy_contract_drift.schema.json" "$ROOT_DIR/baselines/de_30b70b_real.json"
+
+cp "$ROOT_DIR/schemas/baseline_admission.schema.json" "$TMP_DIR/baseline_schema_artifact_contract_drift.schema.json"
+python3 - "$TMP_DIR/baseline_schema_artifact_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["x-contract"]["expected_required_artifacts"]:
+    if row["artifact_id"] == "answer-citation-raw-output":
+        row["required_columns"].remove("prompt_template_sha256")
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance required_artifacts must match x-contract.expected_required_artifacts" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/baseline_schema_artifact_contract_drift.schema.json" "$ROOT_DIR/baselines/de_30b70b_real.json"
+
+cp "$ROOT_DIR/baselines/de_30b70b_real.json" "$TMP_DIR/baseline_instance_system_drift.json"
+python3 - "$TMP_DIR/baseline_instance_system_drift.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["systems"][0]["parameter_count_b_min"] = 24
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance systems must match x-contract.expected_systems" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/baseline_admission.schema.json" "$TMP_DIR/baseline_instance_system_drift.json"
 
 cp "$ROOT_DIR/schemas/v50_auditor_correctness.schema.json" "$TMP_DIR/v50_schema_policy_contract_drift.schema.json"
 python3 - "$TMP_DIR/v50_schema_policy_contract_drift.schema.json" <<'PY'

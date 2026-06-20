@@ -407,92 +407,61 @@ FORBIDDEN_MODEL_VISIBLE_FIELDS = set(schema_enum_at("leakage_contract.schema.jso
 ALLOWED_MODEL_VISIBLE_FIELDS = set(schema_enum_at("leakage_contract.schema.json", "properties", "policy", "properties", "allowed_model_visible_fields", "items"))
 EXPECTED_LEAKAGE_STAGE_ORDER = schema_enum_at("leakage_contract.schema.json", "properties", "stage_contracts", "items", "properties", "stage_id")
 EXPECTED_LEAKAGE_STAGE_CONTRACTS = schema_expected_stage_contracts_by_id("leakage_contract.schema.json")
+EXPECTED_DE_POLICY_STATIC = schema_contract_dict(
+    "baseline_admission.schema.json",
+    "expected_policy_static",
+)
 REQUIRED_DE_REAL_EVIDENCE_FIELDS = {
-    "model_repository_exact_revision",
-    "quantization",
-    "model_artifact_hash",
-    "runtime",
-    "prompt_template",
-    "context_budget",
-    "retrieval_budget",
-    "hardware",
-    "seed",
-    "answer_citation_raw_output",
-    "evaluator_version",
+    str(field)
+    for field in schema_contract_list(
+        "baseline_admission.schema.json",
+        "expected_required_real_evidence_fields",
+    )
+}
+EXPECTED_DE_PM_LEDGERS = [
+    dict(row)
+    for row in schema_contract_list(
+        "baseline_admission.schema.json",
+        "expected_pm_ledgers",
+    )
+    if isinstance(row, dict)
+]
+EXPECTED_DE_PM_LEDGERS_BY_ID = {
+    str(row.get("ledger_id", "")): row
+    for row in EXPECTED_DE_PM_LEDGERS
 }
 DEFAULT_DE_MEASURED_REGISTRY_LEDGER = Path(
-    "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv"
+    str(EXPECTED_DE_PM_LEDGERS_BY_ID["de-measured-registry-exclusion"]["path"])
 )
 DEFAULT_DE_ACCEPTANCE_LEDGER = Path(
-    "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv"
+    str(EXPECTED_DE_PM_LEDGERS_BY_ID["de-acceptance-evidence-blockers"]["path"])
 )
-EXPECTED_DE_PM_LEDGERS = [
-    {
-        "ledger_id": "de-measured-registry-exclusion",
-        "path": str(DEFAULT_DE_MEASURED_REGISTRY_LEDGER),
-        "required_for": "fixture_d_e_rows_stay_out_of_measured_registry",
-    },
-    {
-        "ledger_id": "de-acceptance-evidence-blockers",
-        "path": str(DEFAULT_DE_ACCEPTANCE_LEDGER),
-        "required_for": "real_d_e_acceptance_artifacts_remain_blocked_until_present",
-    },
+EXPECTED_DE_SYSTEMS = {
+    str(row.get("system_id", "")): row
+    for row in schema_contract_list(
+        "baseline_admission.schema.json",
+        "expected_systems",
+    )
+    if isinstance(row, dict)
+}
+EXPECTED_DE_ARTIFACTS = [
+    dict(row)
+    for row in schema_contract_list(
+        "baseline_admission.schema.json",
+        "expected_required_artifacts",
+    )
+    if isinstance(row, dict)
 ]
 EXPECTED_DE_REQUIRED_ARTIFACT_COLUMNS = {
-    "model-identity": {
-        "system_id",
-        "model_id",
-        "model_repository",
-        "model_revision",
-        "parameter_count_b",
-        "quantization",
-        "model_artifact_sha256",
-        "open_weight_license_uri",
-        "runtime",
-        "runtime_version",
-        "hardware",
-        "external_api_used",
-        "non_fixture_declared",
-    },
-    "answer-citation-raw-output": {
-        "system_id",
-        "query_id",
-        "case_id",
-        "model_id",
-        "predicted_label",
-        "prompt_template_sha256",
-        "context_budget",
-        "retrieval_budget",
-        "seed",
-        "raw_answer",
-        "raw_citation",
-        "raw_output_sha256",
-        "generation_transcript_sha256",
-        "raw_prompt_context_bytes",
-        "retrieved_span_rows",
-        "prompt_context_sha256",
-        "output_sha256",
-        "latency_ns",
-        "external_api_used",
-        "route_memory_store_used",
-        "compact_routehint_used",
-    },
-    "resource-evaluator-manifest": {
-        "query_id",
-        "model_id",
-        "latency_ns",
-        "raw_prompt_context_bytes",
-        "retrieved_span_rows",
-        "peak_memory_mb",
-        "evaluator_version",
-        "evaluator_artifact_sha256",
-        "external_api_used",
-    },
+    str(row.get("artifact_id", "")): {
+        str(column)
+        for column in row.get("required_columns", [])
+    }
+    for row in EXPECTED_DE_ARTIFACTS
 }
 EXPECTED_DE_REQUIRED_ARTIFACT_KINDS = {
-    "model-identity": "json",
-    "answer-citation-raw-output": "csv",
-    "resource-evaluator-manifest": "csv",
+    str(row.get("artifact_id", "")): str(row.get("artifact_kind", ""))
+    for row in EXPECTED_DE_ARTIFACTS
 }
 EXPECTED_V52_C_ARTIFACT_IDS = [
     "c-answer-rows",
@@ -1537,12 +1506,19 @@ def verify_baseline_admission(
     if data["schema_version"] != "baseline_admission.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
-    if policy.get("fixture_schema_test_allowed") is not True:
-        errors.append(f"{path}: fixture_schema_test_allowed must be true")
-    if policy.get("fixture_rows_in_measured_registry") is not False:
-        errors.append(f"{path}: fixture_rows_in_measured_registry must be false")
-    if set(policy.get("public_comparison_requires_all_systems", [])) != {"A", "B", "C", "D", "E", "G", "H"}:
-        errors.append(f"{path}: public_comparison_requires_all_systems must be A/B/C/D/E/G/H")
+    policy_messages = {
+        "fixture_schema_test_allowed": "fixture_schema_test_allowed must be true",
+        "fixture_rows_in_measured_registry": "fixture_rows_in_measured_registry must be false",
+        "public_comparison_requires_all_systems": "public_comparison_requires_all_systems must be A/B/C/D/E/G/H",
+    }
+    for field, expected in EXPECTED_DE_POLICY_STATIC.items():
+        observed = policy.get(field)
+        if isinstance(expected, list):
+            matches = set(observed or []) == set(expected)
+        else:
+            matches = observed == expected
+        if not matches:
+            errors.append(f"{path}: {policy_messages.get(field, f'{field} mismatch')}")
     fields = set(data["required_real_evidence_fields"])
     if fields != REQUIRED_DE_REAL_EVIDENCE_FIELDS:
         errors.append(f"{path}: required_real_evidence_fields must be exactly {', '.join(sorted(REQUIRED_DE_REAL_EVIDENCE_FIELDS))}")
@@ -1569,34 +1545,30 @@ def verify_baseline_admission(
     if acceptance_ledger is None:
         acceptance_ledger = DEFAULT_DE_ACCEPTANCE_LEDGER
     systems = data["systems"]
-    if not isinstance(systems, list) or len(systems) != 2:
+    if not isinstance(systems, list) or len(systems) != len(EXPECTED_DE_SYSTEMS):
         errors.append(f"{path}: systems must contain D and E")
         return errors
     by_system = {row.get("system_id", ""): row for row in systems}
-    if set(by_system) != {"D", "E"}:
+    if set(by_system) != set(EXPECTED_DE_SYSTEMS):
         errors.append(f"{path}: systems must be exactly D and E")
-    expected_ranges = {"D": (25, 40, "30b-open-weight-llm-rag"), "E": (65, 80, "70b-open-weight-llm-rag")}
-    expected_envs = {"D": "V52D_30B_LLM_RAG_EVIDENCE_DIR", "E": "V52D_70B_LLM_RAG_EVIDENCE_DIR"}
-    expected_acceptance_test = (
-        "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR> "
-        "V52D_70B_LLM_RAG_EVIDENCE_DIR=<E_DIR> "
-        "./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh"
-    )
     for system_id, row in by_system.items():
         prefix = f"{path}: system[{system_id}]"
         missing_system = REQUIRED_BASELINE_SYSTEM_KEYS - set(row)
         if missing_system:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_system))}")
-        min_b, max_b, baseline_class = expected_ranges.get(system_id, (0, 0, ""))
-        if row.get("baseline_class") != baseline_class:
+        expected_system = EXPECTED_DE_SYSTEMS.get(system_id, {})
+        if row.get("baseline_class") != expected_system.get("baseline_class"):
             errors.append(f"{prefix}: baseline_class mismatch")
-        if row.get("parameter_count_b_min") != min_b or row.get("parameter_count_b_max") != max_b:
+        if (
+            row.get("parameter_count_b_min") != expected_system.get("parameter_count_b_min")
+            or row.get("parameter_count_b_max") != expected_system.get("parameter_count_b_max")
+        ):
             errors.append(f"{prefix}: parameter count range mismatch")
-        if row.get("measured_registry_admission_ready") is not False:
+        if row.get("measured_registry_admission_ready") != expected_system.get("measured_registry_admission_ready"):
             errors.append(f"{prefix}: measured_registry_admission_ready must be false until real evidence is supplied")
-        if row.get("evidence_env") != expected_envs.get(system_id):
-            errors.append(f"{prefix}: evidence_env must be {expected_envs.get(system_id)}")
-        if row.get("acceptance_test") != expected_acceptance_test:
+        if row.get("evidence_env") != expected_system.get("evidence_env"):
+            errors.append(f"{prefix}: evidence_env must be {expected_system.get('evidence_env')}")
+        if row.get("acceptance_test") != expected_system.get("acceptance_test"):
             errors.append(f"{prefix}: acceptance_test must pin both D/E evidence envs and the v52d evidence intake")
 
     artifacts = data["required_artifacts"]

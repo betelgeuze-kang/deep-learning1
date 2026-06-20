@@ -3,6 +3,75 @@
   "$id": "https://local.discrete-local-energy/schemas/baseline_admission.schema.json",
   "title": "Real Baseline Admission Contract",
   "type": "object",
+  "x-contract": {
+    "expected_policy_static": {
+      "fixture_schema_test_allowed": true,
+      "fixture_rows_in_measured_registry": false,
+      "public_comparison_requires_all_systems": ["A", "B", "C", "D", "E", "G", "H"]
+    },
+    "expected_required_real_evidence_fields": [
+      "model_repository_exact_revision",
+      "quantization",
+      "model_artifact_hash",
+      "runtime",
+      "prompt_template",
+      "context_budget",
+      "retrieval_budget",
+      "hardware",
+      "seed",
+      "answer_citation_raw_output",
+      "evaluator_version"
+    ],
+    "expected_pm_ledgers": [
+      {
+        "ledger_id": "de-measured-registry-exclusion",
+        "path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv",
+        "required_for": "fixture_d_e_rows_stay_out_of_measured_registry"
+      },
+      {
+        "ledger_id": "de-acceptance-evidence-blockers",
+        "path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv",
+        "required_for": "real_d_e_acceptance_artifacts_remain_blocked_until_present"
+      }
+    ],
+    "expected_systems": [
+      {
+        "system_id": "D",
+        "baseline_class": "30b-open-weight-llm-rag",
+        "parameter_count_b_min": 25,
+        "parameter_count_b_max": 40,
+        "evidence_env": "V52D_30B_LLM_RAG_EVIDENCE_DIR",
+        "measured_registry_admission_ready": false,
+        "acceptance_test": "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR> V52D_70B_LLM_RAG_EVIDENCE_DIR=<E_DIR> ./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh"
+      },
+      {
+        "system_id": "E",
+        "baseline_class": "70b-open-weight-llm-rag",
+        "parameter_count_b_min": 65,
+        "parameter_count_b_max": 80,
+        "evidence_env": "V52D_70B_LLM_RAG_EVIDENCE_DIR",
+        "measured_registry_admission_ready": false,
+        "acceptance_test": "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR> V52D_70B_LLM_RAG_EVIDENCE_DIR=<E_DIR> ./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh"
+      }
+    ],
+    "expected_required_artifacts": [
+      {
+        "artifact_id": "model-identity",
+        "artifact_kind": "json",
+        "required_columns": ["system_id", "model_id", "model_repository", "model_revision", "parameter_count_b", "quantization", "model_artifact_sha256", "open_weight_license_uri", "runtime", "runtime_version", "hardware", "external_api_used", "non_fixture_declared"]
+      },
+      {
+        "artifact_id": "answer-citation-raw-output",
+        "artifact_kind": "csv",
+        "required_columns": ["system_id", "query_id", "case_id", "model_id", "predicted_label", "prompt_template_sha256", "context_budget", "retrieval_budget", "seed", "raw_answer", "raw_citation", "raw_output_sha256", "generation_transcript_sha256", "raw_prompt_context_bytes", "retrieved_span_rows", "prompt_context_sha256", "output_sha256", "latency_ns", "external_api_used", "route_memory_store_used", "compact_routehint_used"]
+      },
+      {
+        "artifact_id": "resource-evaluator-manifest",
+        "artifact_kind": "csv",
+        "required_columns": ["query_id", "model_id", "latency_ns", "raw_prompt_context_bytes", "retrieved_span_rows", "peak_memory_mb", "evaluator_version", "evaluator_artifact_sha256", "external_api_used"]
+      }
+    ]
+  },
   "required": [
     "schema_version",
     "policy",

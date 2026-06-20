@@ -395,6 +395,77 @@ def _v50_static_artifact_projection(row: dict[str, object]) -> dict[str, object]
     }
 
 
+def validate_baseline_admission_contract_metadata(
+    schema_path: Path,
+    schema: object,
+    instance: object,
+) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        return errors
+    if instance.get("schema_version") != "baseline_admission.v1":
+        return errors
+
+    contract = schema.get("x-contract")
+    if not isinstance(contract, dict):
+        errors.append(f"{schema_path}: x-contract must be an object for baseline_admission.v1")
+        return errors
+
+    expected_policy = contract.get("expected_policy_static")
+    expected_fields = contract.get("expected_required_real_evidence_fields")
+    expected_ledgers = contract.get("expected_pm_ledgers")
+    expected_systems = contract.get("expected_systems")
+    expected_artifacts = contract.get("expected_required_artifacts")
+    if not isinstance(expected_policy, dict) or not expected_policy:
+        errors.append(f"{schema_path}: x-contract.expected_policy_static must be a non-empty object")
+    if not isinstance(expected_fields, list) or not expected_fields:
+        errors.append(f"{schema_path}: x-contract.expected_required_real_evidence_fields must be a non-empty list")
+    if not isinstance(expected_ledgers, list) or not expected_ledgers:
+        errors.append(f"{schema_path}: x-contract.expected_pm_ledgers must be a non-empty list")
+    if not isinstance(expected_systems, list) or not expected_systems:
+        errors.append(f"{schema_path}: x-contract.expected_systems must be a non-empty list")
+    if not isinstance(expected_artifacts, list) or not expected_artifacts:
+        errors.append(f"{schema_path}: x-contract.expected_required_artifacts must be a non-empty list")
+    if errors:
+        return errors
+
+    if instance.get("policy") != expected_policy:
+        errors.append(f"{schema_path}: instance policy must match x-contract.expected_policy_static")
+    if instance.get("required_real_evidence_fields") != expected_fields:
+        errors.append(f"{schema_path}: instance required_real_evidence_fields must match x-contract.expected_required_real_evidence_fields")
+    if instance.get("required_pm_ledgers") != expected_ledgers:
+        errors.append(f"{schema_path}: instance required_pm_ledgers must match x-contract.expected_pm_ledgers")
+    if instance.get("systems") != expected_systems:
+        errors.append(f"{schema_path}: instance systems must match x-contract.expected_systems")
+    if instance.get("required_artifacts") != expected_artifacts:
+        errors.append(f"{schema_path}: instance required_artifacts must match x-contract.expected_required_artifacts")
+
+    if len(expected_fields) != len(set(expected_fields)) or any(not isinstance(field, str) or not field for field in expected_fields):
+        errors.append(f"{schema_path}: x-contract.expected_required_real_evidence_fields values must be unique non-empty strings")
+    ledger_ids = [
+        row.get("ledger_id", "")
+        for row in expected_ledgers
+        if isinstance(row, dict)
+    ]
+    if len(ledger_ids) != len(set(ledger_ids)):
+        errors.append(f"{schema_path}: x-contract.expected_pm_ledgers ledger_id values must be unique")
+    system_ids = [
+        row.get("system_id", "")
+        for row in expected_systems
+        if isinstance(row, dict)
+    ]
+    if len(system_ids) != len(set(system_ids)):
+        errors.append(f"{schema_path}: x-contract.expected_systems system_id values must be unique")
+    artifact_ids = [
+        row.get("artifact_id", "")
+        for row in expected_artifacts
+        if isinstance(row, dict)
+    ]
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{schema_path}: x-contract.expected_required_artifacts artifact_id values must be unique")
+    return errors
+
+
 def validate_v50_auditor_contract_metadata(
     schema_path: Path,
     schema: object,
@@ -914,6 +985,7 @@ def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
     errors.extend(validate_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_typed_readiness_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_leakage_contract_metadata(schema_path, schema, instance))
+    errors.extend(validate_baseline_admission_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_v50_auditor_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_v53_source_benchmark_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_review_return_workflow_contract_metadata(schema_path, schema, instance))
