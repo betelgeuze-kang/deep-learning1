@@ -7,6 +7,9 @@ cd "$PROJECT_ROOT"
 
 echo "==> ai wrapper shell syntax"
 bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh
+if [ -f tools/check_tracked_results_policy.sh ]; then
+  bash -n tools/check_tracked_results_policy.sh
+fi
 if [ -f experiments/run_v50_public_repo_auditor_3repo.sh ]; then
   bash -n experiments/run_v50_public_repo_auditor_3repo.sh
 fi
@@ -58,6 +61,9 @@ fi
 if [ -f experiments/test_p1_fixture_real_namespace_contract.sh ]; then
   bash -n experiments/test_p1_fixture_real_namespace_contract.sh
 fi
+if [ -f experiments/test_p1_results_storage_negative_controls.sh ]; then
+  bash -n experiments/test_p1_results_storage_negative_controls.sh
+fi
 if [ -f experiments/test_v61_one_token_path_contract.sh ]; then
   bash -n experiments/test_v61_one_token_path_contract.sh
 fi
@@ -100,6 +106,11 @@ EOF
 else
   echo "no python files detected outside ignored generated dirs"
 fi
+
+echo "==> tracked results storage policy"
+test -f ci/tracked_results_allowlist.txt
+test -x tools/check_tracked_results_policy.sh
+tools/check_tracked_results_policy.sh ci/tracked_results_allowlist.txt >/dev/null
 
 echo "==> cmake configure/build smoke"
 if [ -f CMakeLists.txt ]; then
@@ -223,6 +234,9 @@ if [ -x experiments/test_p1_content_addressed_cache_contract.sh ]; then
 fi
 if [ -x experiments/test_p1_fixture_real_namespace_contract.sh ]; then
   ./experiments/test_p1_fixture_real_namespace_contract.sh >/dev/null
+fi
+if [ -x experiments/test_p1_results_storage_negative_controls.sh ]; then
+  ./experiments/test_p1_results_storage_negative_controls.sh >/dev/null
 fi
 if [ -x experiments/test_v61_one_token_path_contract.sh ]; then
   ./experiments/test_v61_one_token_path_contract.sh >/dev/null
