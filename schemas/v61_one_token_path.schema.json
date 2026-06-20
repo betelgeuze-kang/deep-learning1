@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/v61_one_token_path.schema.json",
+  "title": "v61 One Token Runtime Path Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "milestones", "required_artifacts"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "ssd_resident_real_model_runtime_claim_ready",
+        "real_model_execution_ready",
+        "release_ready",
+        "required_before_ssd_resident_runtime_claim"
+      ],
+      "properties": {
+        "ssd_resident_real_model_runtime_claim_ready": {"type": "boolean"},
+        "real_model_execution_ready": {"type": "boolean"},
+        "release_ready": {"type": "boolean"},
+        "required_before_ssd_resident_runtime_claim": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "actual-mixtral-ssd-tensor-page-read",
+              "actual-tensor-dtype-quant-dequant",
+              "torch-matvec-parity",
+              "real-expert-ffn-forward-parity",
+              "real-moe-block-forward-parity",
+              "one-token-logits-parity"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "milestones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "order",
+          "milestone_id",
+          "required_evidence",
+          "current_status",
+          "evidence_path",
+          "claim_boundary"
+        ],
+        "properties": {
+          "order": {"type": "integer"},
+          "milestone_id": {
+            "type": "string",
+            "enum": [
+              "actual-mixtral-ssd-tensor-page-read",
+              "actual-tensor-dtype-quant-dequant",
+              "torch-matvec-parity",
+              "real-expert-ffn-forward-parity",
+              "real-moe-block-forward-parity",
+              "one-token-logits-parity",
+              "sixteen-token-decode",
+              "cold-warm-cache-measurement",
+              "ssd-bytes-miss-tps-recording"
+            ]
+          },
+          "required_evidence": {"type": "string"},
+          "current_status": {"type": "string", "enum": ["pass", "blocked"]},
+          "evidence_path": {"type": "string"},
+          "claim_boundary": {"type": "string"},
+          "summary_checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["summary_id", "field", "expected"],
+              "properties": {
+                "summary_id": {"type": "string"},
+                "field": {"type": "string"},
+                "expected": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "blocked_by": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "required_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "artifact_kind",
+          "path",
+          "linked_milestone_id",
+          "required_for_runtime_claim",
+          "min_rows",
+          "pass_field",
+          "required_columns"
+        ],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "artifact_kind": {"type": "string"},
+          "path": {"type": "string"},
+          "linked_milestone_id": {"type": "string"},
+          "required_for_runtime_claim": {"type": "boolean"},
+          "min_rows": {"type": "integer", "minimum": 1},
+          "pass_field": {"type": "string"},
+          "required_columns": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
