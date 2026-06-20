@@ -83,5 +83,79 @@
       "additionalProperties": false
     }
   },
+  "x-contract": {
+    "expected_policy": {
+      "replay_artifact_ready": false,
+      "v56_contract_ready": false,
+      "v56b_scale_ready": false,
+      "real_external_benchmark_verified": false,
+      "real_release_package_ready": false,
+      "required_replay_artifact_count": 4,
+      "ready_replay_artifact_count": 0,
+      "blocked_replay_artifact_count": 4
+    },
+    "expected_replay_artifacts": [
+      {
+        "artifact_id": "v56-contract-summary",
+        "artifact_path_or_env": "results/v56_ruler_longbench_expanded_contract_summary.csv",
+        "artifact_kind": "summary-csv",
+        "validation_command": "experiments/test_v56_ruler_longbench_expanded_contract.sh",
+        "claim_boundary": "v56 contract summary is blocked until seed artifacts are replayable; no benchmark or leaderboard claim"
+      },
+      {
+        "artifact_id": "v56-contract-artifacts",
+        "artifact_path_or_env": "results/v56_ruler_longbench_expanded_contract/contract_001/",
+        "artifact_kind": "artifact-directory",
+        "validation_command": "experiments/test_v56_ruler_longbench_expanded_contract.sh",
+        "claim_boundary": "contract directory currently contains a dependency blocker, not expanded benchmark readiness"
+      },
+      {
+        "artifact_id": "v56b-scale-summary",
+        "artifact_path_or_env": "results/v56b_ruler_longbench_expanded_scale_summary.csv",
+        "artifact_kind": "summary-csv",
+        "validation_command": "V56B_ALLOW_CONTRACT_REBUILD=1 experiments/test_v56b_ruler_longbench_expanded_scale.sh",
+        "claim_boundary": "v56b scale summary remains blocked without explicit contract rebuild approval"
+      },
+      {
+        "artifact_id": "v56b-scale-artifacts",
+        "artifact_path_or_env": "results/v56b_ruler_longbench_expanded_scale/scale_001/",
+        "artifact_kind": "artifact-directory",
+        "validation_command": "V56B_ALLOW_CONTRACT_REBUILD=1 experiments/test_v56b_ruler_longbench_expanded_scale.sh",
+        "claim_boundary": "scale artifacts remain blocked; no public comparison or external benchmark claim"
+      }
+    ],
+    "expected_seed_dependency": {
+      "blocker_ready": true,
+      "required_seed_artifact_count": 20,
+      "missing_seed_artifact_count": 20,
+      "missing_v49_seed_artifact_count": 9,
+      "missing_v45_seed_artifact_count": 11,
+      "implicit_seed_rebuild_allowed": false,
+      "seed_rebuild_approval_required": true,
+      "network_or_download_approval_required": true,
+      "missing_seed_artifact_paths": [
+        "results/v49_ruler_niah_200_500_scale_summary.csv",
+        "results/v49_ruler_niah_200_500_scale/scale_001/V49_RULER_NIAH_200_500_BOUNDARY.md",
+        "results/v49_ruler_niah_200_500_scale/scale_001/scale_rows.csv",
+        "results/v49_ruler_niah_200_500_scale/scale_001/v49_ruler_niah_200_500_scale_manifest.json",
+        "results/v49_ruler_niah_200_500_scale/scale_001/sha256_manifest.csv",
+        "results/v49_ruler_niah_200_500_scale/scale_001/evidence/expanded_result_rows_200.csv",
+        "results/v49_ruler_niah_200_500_scale/scale_001/evidence/expanded_result_rows_500.csv",
+        "results/v49_ruler_niah_200_500_scale/scale_001/evidence/candidate_result_rows_200.csv",
+        "results/v49_ruler_niah_200_500_scale/scale_001/evidence/candidate_result_rows_500.csv",
+        "results/v45_longbench_v2_small_slice/slice_001/V45_LONGBENCH_V2_SMALL_SLICE_BOUNDARY.md",
+        "results/v45_longbench_v2_small_slice/slice_001/v45_longbench_v2_small_slice_manifest.json",
+        "results/v45_longbench_v2_small_slice/slice_001/sha256_manifest.csv",
+        "results/v45_longbench_v2_small_slice/slice_001/official_return/raw_predictions.jsonl",
+        "results/v45_longbench_v2_small_slice/slice_001/official_return/prediction_lineage.jsonl",
+        "results/v45_longbench_v2_small_slice/slice_001/official_return/metrics.json",
+        "results/v45_longbench_v2_small_slice/slice_001/official_return/provenance_manifest.json",
+        "results/v45_longbench_v2_small_slice/slice_001/official_return/official_source_snapshot.json",
+        "results/v45_longbench_v2_small_slice/slice_001/official_return/official_evaluator_status.json",
+        "results/v45_longbench_v2_small_slice/slice_001/official_return/candidate_result_rows.csv",
+        "results/v45_longbench_v2_small_slice/slice_001/official_source_snapshot/download_rows.csv"
+      ]
+    }
+  },
   "additionalProperties": false
 }

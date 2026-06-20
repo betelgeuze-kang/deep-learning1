@@ -92,6 +92,16 @@ def schema_expected_stage_contracts_by_id(schema_name: str) -> dict[str, dict[st
     return expected
 
 
+def schema_contract_dict(schema_name: str, key: str) -> dict[str, object]:
+    value = schema_contract(schema_name).get(key, {})
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def schema_contract_list(schema_name: str, key: str) -> list[object]:
+    value = schema_contract(schema_name).get(key, [])
+    return list(value) if isinstance(value, list) else []
+
+
 REQUIRED_PIPELINE_KEYS = schema_required("pipeline.schema.json")
 REQUIRED_STAGE_KEYS = schema_required_at("pipeline.schema.json", "properties", "stages", "items")
 REQUIRED_PR_SPLIT_KEYS = schema_required("pr_split.schema.json")
@@ -895,39 +905,28 @@ EXPECTED_V50_DECISION_GATES = [
     "guard-negative-controls",
     "v18-intake",
 ]
+EXPECTED_V56_POLICY = schema_contract_dict("v56_replay.schema.json", "expected_policy")
+EXPECTED_V56_REPLAY_ARTIFACTS = schema_contract_list(
+    "v56_replay.schema.json",
+    "expected_replay_artifacts",
+)
 EXPECTED_V56_REPLAY_ARTIFACT_IDS = [
-    "v56-contract-summary",
-    "v56-contract-artifacts",
-    "v56b-scale-summary",
-    "v56b-scale-artifacts",
+    str(row.get("artifact_id", ""))
+    for row in EXPECTED_V56_REPLAY_ARTIFACTS
+    if isinstance(row, dict)
 ]
 EXPECTED_V56_REPLAY_ARTIFACT_KINDS = {
-    "v56-contract-summary": "summary-csv",
-    "v56-contract-artifacts": "artifact-directory",
-    "v56b-scale-summary": "summary-csv",
-    "v56b-scale-artifacts": "artifact-directory",
+    str(row.get("artifact_id", "")): str(row.get("artifact_kind", ""))
+    for row in EXPECTED_V56_REPLAY_ARTIFACTS
+    if isinstance(row, dict)
 }
+EXPECTED_V56_SEED_DEPENDENCY = schema_contract_dict(
+    "v56_replay.schema.json",
+    "expected_seed_dependency",
+)
 EXPECTED_V56_MISSING_SEED_PATHS = [
-    "results/v49_ruler_niah_200_500_scale_summary.csv",
-    "results/v49_ruler_niah_200_500_scale/scale_001/V49_RULER_NIAH_200_500_BOUNDARY.md",
-    "results/v49_ruler_niah_200_500_scale/scale_001/scale_rows.csv",
-    "results/v49_ruler_niah_200_500_scale/scale_001/v49_ruler_niah_200_500_scale_manifest.json",
-    "results/v49_ruler_niah_200_500_scale/scale_001/sha256_manifest.csv",
-    "results/v49_ruler_niah_200_500_scale/scale_001/evidence/expanded_result_rows_200.csv",
-    "results/v49_ruler_niah_200_500_scale/scale_001/evidence/expanded_result_rows_500.csv",
-    "results/v49_ruler_niah_200_500_scale/scale_001/evidence/candidate_result_rows_200.csv",
-    "results/v49_ruler_niah_200_500_scale/scale_001/evidence/candidate_result_rows_500.csv",
-    "results/v45_longbench_v2_small_slice/slice_001/V45_LONGBENCH_V2_SMALL_SLICE_BOUNDARY.md",
-    "results/v45_longbench_v2_small_slice/slice_001/v45_longbench_v2_small_slice_manifest.json",
-    "results/v45_longbench_v2_small_slice/slice_001/sha256_manifest.csv",
-    "results/v45_longbench_v2_small_slice/slice_001/official_return/raw_predictions.jsonl",
-    "results/v45_longbench_v2_small_slice/slice_001/official_return/prediction_lineage.jsonl",
-    "results/v45_longbench_v2_small_slice/slice_001/official_return/metrics.json",
-    "results/v45_longbench_v2_small_slice/slice_001/official_return/provenance_manifest.json",
-    "results/v45_longbench_v2_small_slice/slice_001/official_return/official_source_snapshot.json",
-    "results/v45_longbench_v2_small_slice/slice_001/official_return/official_evaluator_status.json",
-    "results/v45_longbench_v2_small_slice/slice_001/official_return/candidate_result_rows.csv",
-    "results/v45_longbench_v2_small_slice/slice_001/official_source_snapshot/download_rows.csv",
+    str(path)
+    for path in EXPECTED_V56_SEED_DEPENDENCY.get("missing_seed_artifact_paths", [])
 ]
 EXPECTED_V52_REQUIREMENT_IDS = [
     "c-7b14b-v53e-actual-adapter-packet",
@@ -2389,17 +2388,7 @@ def verify_v56_replay_contract(
     missing_policy = REQUIRED_V56_REPLAY_POLICY_KEYS - set(policy)
     if missing_policy:
         errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
-    expected_policy = {
-        "replay_artifact_ready": False,
-        "v56_contract_ready": False,
-        "v56b_scale_ready": False,
-        "real_external_benchmark_verified": False,
-        "real_release_package_ready": False,
-        "required_replay_artifact_count": 4,
-        "ready_replay_artifact_count": 0,
-        "blocked_replay_artifact_count": 4,
-    }
-    for field, expected in expected_policy.items():
+    for field, expected in EXPECTED_V56_POLICY.items():
         if policy.get(field) != expected:
             errors.append(f"{path}: policy.{field} expected {expected}, got {policy.get(field)}")
 
@@ -2426,17 +2415,9 @@ def verify_v56_replay_contract(
     missing_seed_keys = REQUIRED_V56_SEED_DEPENDENCY_KEYS - set(seed)
     if missing_seed_keys:
         errors.append(f"{path}: seed_dependency missing keys: {', '.join(sorted(missing_seed_keys))}")
-    expected_seed = {
-        "blocker_ready": True,
-        "required_seed_artifact_count": 20,
-        "missing_seed_artifact_count": 20,
-        "missing_v49_seed_artifact_count": 9,
-        "missing_v45_seed_artifact_count": 11,
-        "implicit_seed_rebuild_allowed": False,
-        "seed_rebuild_approval_required": True,
-        "network_or_download_approval_required": True,
-    }
-    for field, expected in expected_seed.items():
+    for field, expected in EXPECTED_V56_SEED_DEPENDENCY.items():
+        if field == "missing_seed_artifact_paths":
+            continue
         if seed.get(field) != expected:
             errors.append(f"{path}: seed_dependency.{field} expected {expected}, got {seed.get(field)}")
     if seed.get("missing_seed_artifact_paths") != EXPECTED_V56_MISSING_SEED_PATHS:

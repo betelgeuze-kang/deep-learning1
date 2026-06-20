@@ -384,6 +384,53 @@ def validate_leakage_contract_metadata(
     return errors
 
 
+def validate_v56_replay_contract_metadata(
+    schema_path: Path,
+    schema: object,
+    instance: object,
+) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        return errors
+    if instance.get("schema_version") != "v56_replay_contract.v1":
+        return errors
+
+    contract = schema.get("x-contract")
+    if not isinstance(contract, dict):
+        errors.append(f"{schema_path}: x-contract must be an object for v56_replay_contract.v1")
+        return errors
+    expected_policy = contract.get("expected_policy")
+    expected_artifacts = contract.get("expected_replay_artifacts")
+    expected_seed = contract.get("expected_seed_dependency")
+    if not isinstance(expected_policy, dict) or not expected_policy:
+        errors.append(f"{schema_path}: x-contract.expected_policy must be a non-empty object")
+    if not isinstance(expected_artifacts, list) or not expected_artifacts:
+        errors.append(f"{schema_path}: x-contract.expected_replay_artifacts must be a non-empty list")
+    if not isinstance(expected_seed, dict) or not expected_seed:
+        errors.append(f"{schema_path}: x-contract.expected_seed_dependency must be a non-empty object")
+    if errors:
+        return errors
+
+    if instance.get("policy") != expected_policy:
+        errors.append(f"{schema_path}: instance policy must match x-contract.expected_policy")
+    if instance.get("replay_artifacts") != expected_artifacts:
+        errors.append(f"{schema_path}: instance replay_artifacts must match x-contract.expected_replay_artifacts")
+    if instance.get("seed_dependency") != expected_seed:
+        errors.append(f"{schema_path}: instance seed_dependency must match x-contract.expected_seed_dependency")
+
+    artifact_ids = [
+        row.get("artifact_id", "")
+        for row in expected_artifacts
+        if isinstance(row, dict)
+    ]
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{schema_path}: x-contract.expected_replay_artifacts artifact_id values must be unique")
+    seed_paths = expected_seed.get("missing_seed_artifact_paths", [])
+    if not isinstance(seed_paths, list) or len(seed_paths) != len(set(seed_paths)):
+        errors.append(f"{schema_path}: x-contract.expected_seed_dependency.missing_seed_artifact_paths must be a unique list")
+    return errors
+
+
 def tracked_source_json(root: Path) -> list[str]:
     try:
         result = subprocess.run(
@@ -427,6 +474,7 @@ def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
     errors.extend(validate_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_typed_readiness_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_leakage_contract_metadata(schema_path, schema, instance))
+    errors.extend(validate_v56_replay_contract_metadata(schema_path, schema, instance))
     return errors
 
 

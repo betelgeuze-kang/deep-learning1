@@ -134,6 +134,15 @@ expected_leakage_stages = {
 }
 if module.EXPECTED_LEAKAGE_STAGE_CONTRACTS != expected_leakage_stages:
     raise SystemExit("EXPECTED_LEAKAGE_STAGE_CONTRACTS must be derived from schema x-contract.expected_stage_contracts")
+
+v56_schema = json.loads((root / "schemas" / "v56_replay.schema.json").read_text(encoding="utf-8"))
+v56_contract = v56_schema["x-contract"]
+if module.EXPECTED_V56_POLICY != v56_contract["expected_policy"]:
+    raise SystemExit("EXPECTED_V56_POLICY must be derived from schema x-contract.expected_policy")
+if module.EXPECTED_V56_REPLAY_ARTIFACTS != v56_contract["expected_replay_artifacts"]:
+    raise SystemExit("EXPECTED_V56_REPLAY_ARTIFACTS must be derived from schema x-contract.expected_replay_artifacts")
+if module.EXPECTED_V56_SEED_DEPENDENCY != v56_contract["expected_seed_dependency"]:
+    raise SystemExit("EXPECTED_V56_SEED_DEPENDENCY must be derived from schema x-contract.expected_seed_dependency")
 PY
 
 cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_missing_policy.json"
@@ -221,6 +230,38 @@ expect_fail_with \
   "x-contract must be an object for leakage_contract.v1" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/leakage_schema_missing_contract.schema.json" "$ROOT_DIR/leakage/retrieval_model_visible.json"
+
+cp "$ROOT_DIR/schemas/v56_replay.schema.json" "$TMP_DIR/v56_schema_policy_contract_drift.schema.json"
+python3 - "$TMP_DIR/v56_schema_policy_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_policy"]["ready_replay_artifact_count"] = 1
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance policy must match x-contract.expected_policy" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v56_schema_policy_contract_drift.schema.json" "$ROOT_DIR/v56/replay_contract.json"
+
+cp "$ROOT_DIR/schemas/v56_replay.schema.json" "$TMP_DIR/v56_schema_seed_contract_drift.schema.json"
+python3 - "$TMP_DIR/v56_schema_seed_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_seed_dependency"]["missing_seed_artifact_paths"] = data["x-contract"]["expected_seed_dependency"]["missing_seed_artifact_paths"][:-1]
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance seed_dependency must match x-contract.expected_seed_dependency" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v56_schema_seed_contract_drift.schema.json" "$ROOT_DIR/v56/replay_contract.json"
 
 cp "$ROOT_DIR/v61/one_token_path.json" "$TMP_DIR/v61_bad_policy_type.json"
 python3 - "$TMP_DIR/v61_bad_policy_type.json" <<'PY'
