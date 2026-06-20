@@ -405,8 +405,14 @@ for field in [
 ]:
     if not row[field]:
         raise SystemExit(f"v61ab fixture expert FFN should populate {field}")
-if row["transformers_expert_output_sha256"]:
-    raise SystemExit("v61ab fixture expert FFN must not populate original Transformers output without module capture")
+for field in [
+    "transformers_capture_backend",
+    "transformers_capture_module_path",
+    "transformers_capture_artifact_sha256",
+    "transformers_expert_output_sha256",
+]:
+    if row[field]:
+        raise SystemExit(f"v61ab fixture expert FFN must not populate {field} without module capture")
 if row["router_top_k"] != "2" or row["token_id"] != "0":
     raise SystemExit("v61ab fixture expert FFN token/router metadata mismatch")
 if not row["candidate_output_sha256"] or not row["torch_reference_output_sha256"]:

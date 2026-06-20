@@ -3456,7 +3456,14 @@ def verify_v61_one_token_path(
                 and artifact_row.get("real_model_execution_ready") == "1"
             ):
                 transformers_hash = artifact_row.get("transformers_expert_output_sha256", "")
+                transformers_capture_artifact_hash = artifact_row.get("transformers_capture_artifact_sha256", "")
                 independent_hash = artifact_row.get("independent_runtime_output_sha256", "")
+                if not artifact_row.get("transformers_capture_backend"):
+                    errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires transformers_capture_backend")
+                if not artifact_row.get("transformers_capture_module_path"):
+                    errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires transformers_capture_module_path")
+                if not _is_sha256_digest(transformers_capture_artifact_hash):
+                    errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires transformers_capture_artifact_sha256")
                 if not _is_sha256_digest(transformers_hash):
                     errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires transformers_expert_output_sha256")
                 if not _is_sha256_digest(independent_hash):
@@ -3668,6 +3675,11 @@ def _compute_v61ab_expert_ffn_readiness(
     candidate_hash = row.get("candidate_output_sha256", "")
     torch_reference_hash = row.get("torch_reference_output_sha256", "")
     transformers_hash = row.get("transformers_expert_output_sha256", "")
+    transformers_capture_ready = (
+        bool(row.get("transformers_capture_backend"))
+        and bool(row.get("transformers_capture_module_path"))
+        and _is_sha256_digest(row.get("transformers_capture_artifact_sha256", ""))
+    )
     required_fixture_hashes = [
         "config_sha256",
         "shard_index_sha256",
@@ -3686,6 +3698,7 @@ def _compute_v61ab_expert_ffn_readiness(
     fixture_execution_ready = int(contract_ready and tolerance_ok and fixture_hashes_ready and independent_ready and torch_reference_ready)
     real_model_execution_ready = int(
         fixture_execution_ready
+        and transformers_capture_ready
         and _is_sha256_digest(transformers_hash)
         and torch_reference_hash == transformers_hash
     )
