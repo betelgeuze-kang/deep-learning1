@@ -1,22 +1,41 @@
 {
   "schema_version": "v56_replay_contract.v1",
   "policy": {
+    "tests_only_merge_condition": false,
     "replay_artifact_ready": false,
     "v56_contract_ready": false,
     "v56b_scale_ready": false,
+    "official_source_hash_bound": false,
+    "official_evaluator_hash_bound": false,
+    "raw_prediction_rows_replayable": false,
+    "raw_result_rows_replayable": false,
+    "silent_lower_packet_regeneration_allowed": false,
+    "runtime_resource_approval_required_for_rebuild": true,
+    "leaderboard_claim_ready": false,
+    "public_comparison_claim_ready": false,
     "real_external_benchmark_verified": false,
     "real_release_package_ready": false,
     "required_replay_artifact_count": 4,
     "ready_replay_artifact_count": 0,
     "blocked_replay_artifact_count": 4
   },
+  "required_before_merge": [
+    "official source snapshot hashes are bound",
+    "official evaluator hashes are bound",
+    "raw prediction rows are replayable",
+    "raw result rows are replayable",
+    "result manifest and sha256 manifest are present",
+    "replay commands do not rely on private fixtures or undocumented local state",
+    "external verification remains blocked unless independent return evidence is supplied",
+    "lower benchmark packet rebuild is explicit and resource-approved"
+  ],
   "replay_artifacts": [
     {
       "artifact_id": "v56-contract-summary",
       "artifact_path_or_env": "results/v56_ruler_longbench_expanded_contract_summary.csv",
       "artifact_kind": "summary-csv",
       "validation_command": "experiments/test_v56_ruler_longbench_expanded_contract.sh",
-      "claim_boundary": "v56 contract summary is blocked until seed artifacts are replayable; no benchmark or leaderboard claim"
+      "claim_boundary": "v56 contract summary is blocked until seed artifacts are replayable; no benchmark, leaderboard, public comparison, or external-verification claim"
     },
     {
       "artifact_id": "v56-contract-artifacts",
