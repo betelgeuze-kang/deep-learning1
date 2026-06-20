@@ -57,12 +57,22 @@ elif mutation == "operator-input-ready":
     data["policy"]["operator_input_files_ready"] = True
 elif mutation == "actual-generation-ready":
     data["policy"]["actual_generation_ready"] = True
+elif mutation == "production-latency-ready":
+    data["policy"]["production_latency_claim_ready"] = True
+elif mutation == "near-frontier-ready":
+    data["policy"]["near_frontier_claim_ready"] = True
+elif mutation == "quality-comparison-ready":
+    data["policy"]["quality_comparison_claim_ready"] = True
+elif mutation == "public-comparison-ready":
+    data["policy"]["public_comparison_claim_ready"] = True
 elif mutation == "release-ready":
     data["policy"]["release_ready"] = True
 elif mutation == "fixture-closes-return":
     data["policy"]["fixture_can_close_real_return"] = True
 elif mutation == "accepted-human-rows":
     data["policy"]["accepted_human_review_rows"] = 1
+elif mutation == "accepted-adjudication-rows":
+    data["policy"]["accepted_adjudication_rows"] = 1
 elif mutation == "accepted-operator-rows":
     data["policy"]["accepted_operator_return_rows"] = 1
 elif mutation == "requirement-order":
@@ -129,6 +139,26 @@ expect_fail_with \
   "actual_generation_ready must be false" \
   verify_workflow "$bad_path"
 
+bad_path="$(bad_workflow_json review_production_latency_ready_bad production-latency-ready)"
+expect_fail_with \
+  "production_latency_claim_ready must be false" \
+  verify_workflow "$bad_path"
+
+bad_path="$(bad_workflow_json review_near_frontier_ready_bad near-frontier-ready)"
+expect_fail_with \
+  "near_frontier_claim_ready must be false" \
+  verify_workflow "$bad_path"
+
+bad_path="$(bad_workflow_json review_quality_comparison_ready_bad quality-comparison-ready)"
+expect_fail_with \
+  "quality_comparison_claim_ready must be false" \
+  verify_workflow "$bad_path"
+
+bad_path="$(bad_workflow_json review_public_comparison_ready_bad public-comparison-ready)"
+expect_fail_with \
+  "public_comparison_claim_ready must be false" \
+  verify_workflow "$bad_path"
+
 bad_path="$(bad_workflow_json review_release_ready_bad release-ready)"
 expect_fail_with \
   "release_ready must be false" \
@@ -142,6 +172,11 @@ expect_fail_with \
 bad_path="$(bad_workflow_json review_accepted_human_rows_bad accepted-human-rows)"
 expect_fail_with \
   "accepted_human_review_rows must be 0" \
+  verify_workflow "$bad_path"
+
+bad_path="$(bad_workflow_json review_accepted_adjudication_rows_bad accepted-adjudication-rows)"
+expect_fail_with \
+  "accepted_adjudication_rows must be 0" \
   verify_workflow "$bad_path"
 
 bad_path="$(bad_workflow_json review_accepted_operator_rows_bad accepted-operator-rows)"
