@@ -1,0 +1,238 @@
+{
+  "schema_version": "v52_adapter_guard.v1",
+  "policy": {
+    "c_7b14b_actual_adapter_packet_ready": true,
+    "c_quality_claim_ready": false,
+    "de_measured_registry_admission_ready": false,
+    "public_comparison_claim_ready": false,
+    "release_ready": false
+  },
+  "required_artifacts": [
+    {
+      "artifact_id": "c-answer-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_answer_rows.csv",
+      "required_columns": [
+        "answer_id",
+        "system_id",
+        "query_id",
+        "repo_id",
+        "owner_repo",
+        "audit_type",
+        "expected_answer_sha256",
+        "predicted_answer",
+        "predicted_answer_sha256",
+        "correct",
+        "abstained",
+        "retrieved_source_span_id",
+        "raw_prompt_context_bytes",
+        "compact_routehint_bytes",
+        "context_or_hint_sha256",
+        "latency_ns"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-citation-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_citation_rows.csv",
+      "required_columns": [
+        "citation_id",
+        "answer_id",
+        "system_id",
+        "query_id",
+        "source_span_id",
+        "repo_id",
+        "owner_repo",
+        "path",
+        "line_start",
+        "line_end",
+        "source_file_sha256",
+        "evidence_text_sha256",
+        "citation_correct"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-resource-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_resource_rows.csv",
+      "required_columns": [
+        "system_id",
+        "query_id",
+        "latency_ns",
+        "raw_prompt_context_bytes",
+        "compact_routehint_bytes",
+        "retrieved_span_rows",
+        "external_network_used",
+        "external_model_used",
+        "route_memory_store_used",
+        "compact_routehint_used",
+        "source_verified_scorer_used",
+        "domain_policy_used"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-retrieval-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_retrieval_rows.csv",
+      "required_columns": [
+        "system_id",
+        "query_id",
+        "rank",
+        "score",
+        "source_span_id",
+        "owner_repo",
+        "path",
+        "line_start"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-abstain-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_abstain_rows.csv",
+      "required_columns": [
+        "system_id",
+        "query_id",
+        "negative_or_abstain",
+        "abstained",
+        "abstain_correct"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-wrong-answer-guard-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_wrong_answer_guard_rows.csv",
+      "required_columns": [
+        "system_id",
+        "query_id",
+        "expected_answer_sha256",
+        "predicted_answer_sha256",
+        "wrong_answer",
+        "guard_triggered",
+        "guard_status"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-generation-transcript-rows",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/ollama_generation_transcript_rows.csv",
+      "required_columns": [
+        "query_id",
+        "prompt_sha256",
+        "response_sha256",
+        "predicted_answer_sha256",
+        "raw_response"
+      ],
+      "min_rows": 1000,
+      "required_for_c_packet": true
+    },
+    {
+      "artifact_id": "c-sha256-manifest",
+      "artifact_kind": "csv",
+      "path": "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/sha256_manifest.csv",
+      "required_columns": [
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "min_rows": 14,
+      "required_for_c_packet": true
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "c-7b14b-v53e-actual-adapter-packet",
+      "required_evidence": "System C emits 1000 local 7B-14B model+RAG answer, citation, retrieval, abstain, guard, resource, and transcript rows over the v53e query set",
+      "current_status": "pass",
+      "evidence_path": "results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv",
+      "claim_boundary": "Allows actual local C response-packet wording only; not C quality or public comparison wording",
+      "summary_checks": [
+        {"summary_id": "v52l", "field": "v52l_7b14b_local_model_rag_v53e_1000_ready", "expected": "1"},
+        {"summary_id": "v52l", "field": "system_id", "expected": "C"},
+        {"summary_id": "v52l", "field": "query_rows", "expected": "1000"},
+        {"summary_id": "v52l", "field": "answer_rows", "expected": "1000"},
+        {"summary_id": "v52l", "field": "citation_rows", "expected": "1000"},
+        {"summary_id": "v52l", "field": "retrieval_rows", "expected": "1000"},
+        {"summary_id": "v52l", "field": "resource_rows", "expected": "1000"},
+        {"summary_id": "v52l", "field": "transcript_rows", "expected": "1000"},
+        {"summary_id": "v52l", "field": "external_network_used", "expected": "0"},
+        {"summary_id": "v52l", "field": "external_model_used", "expected": "0"}
+      ]
+    },
+    {
+      "requirement_id": "c-7b14b-quality-boundary",
+      "required_evidence": "System C packet keeps quality, D/E replacement, v52 readiness, and release claims blocked",
+      "current_status": "pass",
+      "evidence_path": "results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv",
+      "claim_boundary": "Allows schema pressure-test wording only; 0/1000 exact-label accuracy is not a quality claim",
+      "summary_checks": [
+        {"summary_id": "v52l", "field": "correct_rows", "expected": "0"},
+        {"summary_id": "v52l", "field": "accuracy", "expected": "0.000000"},
+        {"summary_id": "v52l", "field": "c_v53e_absorb_ready", "expected": "1"},
+        {"summary_id": "v52l", "field": "required_30b_baseline_ready", "expected": "0"},
+        {"summary_id": "v52l", "field": "required_70b_baseline_ready", "expected": "0"},
+        {"summary_id": "v52l", "field": "v52_ready", "expected": "0"},
+        {"summary_id": "v52l", "field": "real_release_package_ready", "expected": "0"}
+      ]
+    },
+    {
+      "requirement_id": "c-7b14b-intake-default-blocked",
+      "required_evidence": "The v52c intake contract remains blocked without a supplied C evidence directory, so templates cannot masquerade as supplied evidence",
+      "current_status": "pass",
+      "evidence_path": "results/v52c_7b14b_local_model_rag_evidence_intake_summary.csv",
+      "claim_boundary": "Allows intake contract wording only; no default supplied-evidence readiness",
+      "summary_checks": [
+        {"summary_id": "v52c", "field": "v52c_7b14b_local_model_rag_intake_contract_ready", "expected": "1"},
+        {"summary_id": "v52c", "field": "evidence_dir_supplied", "expected": "0"},
+        {"summary_id": "v52c", "field": "supplied_evidence_ready", "expected": "0"},
+        {"summary_id": "v52c", "field": "v52_absorb_ready", "expected": "0"},
+        {"summary_id": "v52c", "field": "v52_ready", "expected": "0"}
+      ]
+    },
+    {
+      "requirement_id": "de-30b70b-intake-fail-closed",
+      "required_evidence": "D/E intake remains blocked unless both real evidence directories validate; missing seed/evidence rows do not open v52",
+      "current_status": "pass",
+      "evidence_path": "results/v52d_30b70b_llm_rag_evidence_intake_summary.csv",
+      "claim_boundary": "Allows D/E intake-guard wording only; no D/E measured baseline admission",
+      "summary_checks": [
+        {"summary_id": "v52d", "field": "v52d_v50_seed_dependency_blocker_ready", "expected": "1"},
+        {"summary_id": "v52d", "field": "d_30b_evidence_dir_supplied", "expected": "0"},
+        {"summary_id": "v52d", "field": "e_70b_evidence_dir_supplied", "expected": "0"},
+        {"summary_id": "v52d", "field": "d_30b_supplied_evidence_ready", "expected": "0"},
+        {"summary_id": "v52d", "field": "e_70b_supplied_evidence_ready", "expected": "0"},
+        {"summary_id": "v52d", "field": "required_30b_baseline_ready", "expected": "0"},
+        {"summary_id": "v52d", "field": "required_70b_baseline_ready", "expected": "0"},
+        {"summary_id": "v52d", "field": "v52_ready", "expected": "0"}
+      ]
+    },
+    {
+      "requirement_id": "de-measured-registry-blocked",
+      "required_evidence": "Measured registry absorb remains blocked for D/E and optional F cannot satisfy required D/E systems",
+      "current_status": "pass",
+      "evidence_path": "results/v52r_measured_registry_de_absorb_summary.csv;results/v52y_f_optional_final_policy_summary.csv",
+      "claim_boundary": "Allows blocker wording only; no public comparison or v52 final readiness",
+      "summary_checks": [
+        {"summary_id": "v52r", "field": "v52r_measured_registry_de_absorb_ready", "expected": "0"},
+        {"summary_id": "v52r", "field": "required_30b_baseline_ready", "expected": "0"},
+        {"summary_id": "v52r", "field": "required_70b_baseline_ready", "expected": "0"},
+        {"summary_id": "v52r", "field": "v52_ready", "expected": "0"},
+        {"summary_id": "v52y", "field": "f_optional_final_disposition_ready", "expected": "0"},
+        {"summary_id": "v52y", "field": "comparison_30b_150b_wording_status", "expected": "blocked"},
+        {"summary_id": "v52y", "field": "v52_ready", "expected": "0"},
+        {"summary_id": "v52y", "field": "real_release_package_ready", "expected": "0"}
+      ]
+    }
+  ]
+}
