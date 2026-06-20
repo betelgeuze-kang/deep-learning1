@@ -22,6 +22,14 @@ Canonical v61 entrypoint surface:
 - Pipeline migration notes: [`docs/PIPELINE_MIGRATION.md`](docs/PIPELINE_MIGRATION.md)
 - PR #2 review-slice plan: [`docs/PR2_SPLIT_PLAN.md`](docs/PR2_SPLIT_PLAN.md)
 
+Reviewer pipeline inventory for the PR #2 split:
+
+- Baseline intake: [`pipelines/v52.yaml`](pipelines/v52.yaml)
+- Source-bound query/evaluation: [`pipelines/v53.yaml`](pipelines/v53.yaml)
+- Grounded generation / RouteHint: [`pipelines/v54.yaml`](pipelines/v54.yaml)
+- Blind evaluation: [`pipelines/v58.yaml`](pipelines/v58.yaml)
+- SSD MoE runtime roadmap: [`pipelines/v61.yaml`](pipelines/v61.yaml)
+
 The current v61 evidence is summarized by contracts, not by README stage dumps. The accepted public wording is:
 
 - v61 is an SSD-resident MoE runtime R&D track, not an SSD-resident real model runtime claim.
@@ -33,6 +41,9 @@ Use these reviewer entrypoints instead of README stage lists:
 
 ```bash
 tools/verify_artifact.py pr-split pr_slices/pr2.json
+tools/verify_artifact.py pipeline \
+  pipelines/v52.yaml pipelines/v53.yaml pipelines/v54.yaml \
+  pipelines/v58.yaml pipelines/v61.yaml
 tools/verify_artifact.py v61-one-token v61/one_token_path.json \
   --v61aa-summary results/v61aa_hotset_tensor_slice_verifier_summary.csv \
   --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv

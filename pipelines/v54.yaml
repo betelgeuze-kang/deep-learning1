@@ -1,0 +1,62 @@
+{
+  "schema_version": "pipeline.v1",
+  "pipeline_id": "v54-grounded-generation-pipeline",
+  "description": "RouteHint grounded-generation contract separated from v53 source-bound benchmark construction.",
+  "claim_boundary": "Grounded-generation output and leakage contract only; real model generation, human review, public comparison, and release remain blocked.",
+  "stages": [
+    {
+      "stage_id": "v54c-grounded-generation-guard",
+      "requires": [],
+      "adapter": "shell",
+      "command": ["./experiments/test_v54c_complete_source_grounded_generation_1000.sh"],
+      "inputs": [
+        "results/v53i_complete_source_query_instantiation_summary.csv",
+        "results/v53ap_complete_source_abgh_same_query_measured_summary.csv"
+      ],
+      "outputs": ["results/v54c_complete_source_grounded_generation_1000_summary.csv"],
+      "ready_fields": [
+        "v54c_complete_source_grounded_generation_1000_ready",
+        "model_visible_leakage_guard_ready",
+        "grounded_generation_output_contract_ready_rows"
+      ],
+      "blocked_fields": [
+        "real_model_generation_ready",
+        "human_review_ready",
+        "public_comparison_claim_ready",
+        "real_release_package_ready"
+      ],
+      "typed_readiness": {
+        "contract_ready": "grounded_generation_output_contract_ready_rows",
+        "fixture_execution_ready": "deterministic_source_span_generation_fixture_ready",
+        "real_model_execution_ready": "real_model_generation_ready",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "human_review_ready",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": ["sanitized_question", "opaque_routehint"],
+      "model_visible_input_checks": [
+        "model_visible_leakage_guard_ready=1",
+        "model_visible_input_fields=sanitized_question,opaque_routehint",
+        "model_visible_forbidden_field_used_rows=0",
+        "model_visible_source_locator_rows=0",
+        "raw_prompt_context_appended_rows=0"
+      ],
+      "evaluator_only_fields": [
+        "query_id",
+        "query_id_evaluator_only",
+        "source_span_id",
+        "source_span_id_evaluator_only",
+        "source_path",
+        "source_line",
+        "source_file_sha256",
+        "expected_behavior",
+        "expected_answer_sha256",
+        "source_v53ap_adapter_trace_id",
+        "source_v53ap_evaluator_row_id"
+      ],
+      "evidence_boundary": "Deterministic source-span fixture generation with raw prompt context forbidden and compact RouteHint only.",
+      "claim_boundary": "v54 grounded-generation contract and leakage guard only; not real model generation quality."
+    }
+  ]
+}

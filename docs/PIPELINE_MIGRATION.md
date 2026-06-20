@@ -29,7 +29,7 @@ artifacts/    small signed summaries only
 This slice adds:
 
 - `schemas/pipeline.schema.json`: minimal versioned pipeline contract.
-- `pipelines/v52.yaml`, `pipelines/v53.yaml`, `pipelines/v58.yaml`, `pipelines/v61.yaml`: JSON-compatible YAML seed definitions that wrap current shell entrypoints.
+- `pipelines/v52.yaml`, `pipelines/v53.yaml`, `pipelines/v54.yaml`, `pipelines/v58.yaml`, `pipelines/v61.yaml`: JSON-compatible YAML seed definitions that wrap current shell entrypoints.
 - `tools/build_manifest.py`: deterministic sha256 manifest builder.
 - `tools/verify_artifact.py`: manifest and pipeline contract verifier.
 - `tools/run_pipeline.py`: local dry-run/adapter runner for declared stages.
@@ -40,6 +40,7 @@ The seed pipelines are intentionally adapter-based. They are a stable inventory 
 
 - `experiments/run_v53j_complete_source_ah_answer_citation_resource_intake.sh`, `experiments/run_v53k_complete_source_system_a_lexical_measured.sh`, and `experiments/run_v53l_complete_source_system_b_local_rag_measured.sh` now import shared CSV/hash/copy helpers from `tools/pipeline_lib.py`.
 - `pipelines/v53.yaml` declares the v53i -> v53j -> v53k -> v53l path, with v53k/v53l explicitly bounded as `expected_answer_oracle_replay=1` and `actual_adapter_execution_ready=0`.
+- `pipelines/v54.yaml` separates the grounded-generation / RouteHint contract from the v53 source-bound benchmark inventory and keeps `query_id`, source locators, expected behavior, and expected answer hashes evaluator-only.
 - `pipelines/v61.yaml` declares the v61aa tensor-slice verifier before v61ab tile parity, so the v61 runtime path no longer has an implicit missing stage edge.
 - `tools/verify_artifact.py pipeline ...` now rejects unknown, self-referential, or forward `requires` edges.
 - `pr_slices/pr2.json` and `docs/PR2_SPLIT_PLAN.md` pin the draft PR #2 split contract, title/body rewrite, required claim-boundary slices, and tests-only merge-condition ban.

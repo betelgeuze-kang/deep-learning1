@@ -22,6 +22,14 @@ SSD-resident MoE runtime 구현 방향: [docs/V61_SSD_RESIDENT_MOE_RUNTIME.md](d
 - pipeline migration 메모: [`docs/PIPELINE_MIGRATION.md`](docs/PIPELINE_MIGRATION.md)
 - PR #2 review-slice 계획: [`docs/PR2_SPLIT_PLAN.md`](docs/PR2_SPLIT_PLAN.md)
 
+PR #2 분할 리뷰용 pipeline inventory:
+
+- baseline intake: [`pipelines/v52.yaml`](pipelines/v52.yaml)
+- source-bound query/evaluation: [`pipelines/v53.yaml`](pipelines/v53.yaml)
+- grounded generation / RouteHint: [`pipelines/v54.yaml`](pipelines/v54.yaml)
+- blind evaluation: [`pipelines/v58.yaml`](pipelines/v58.yaml)
+- SSD MoE runtime roadmap: [`pipelines/v61.yaml`](pipelines/v61.yaml)
+
 현재 v61 증거는 README의 긴 stage 나열이 아니라 contract로 요약합니다. 허용되는 공개 문구는 다음입니다.
 
 - v61은 SSD-resident MoE runtime R&D 트랙이며, SSD-resident real model runtime claim이 아닙니다.
@@ -33,6 +41,9 @@ README stage 목록 대신 다음 reviewer entrypoint를 사용합니다.
 
 ```bash
 tools/verify_artifact.py pr-split pr_slices/pr2.json
+tools/verify_artifact.py pipeline \
+  pipelines/v52.yaml pipelines/v53.yaml pipelines/v54.yaml \
+  pipelines/v58.yaml pipelines/v61.yaml
 tools/verify_artifact.py v61-one-token v61/one_token_path.json \
   --v61aa-summary results/v61aa_hotset_tensor_slice_verifier_summary.csv \
   --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv

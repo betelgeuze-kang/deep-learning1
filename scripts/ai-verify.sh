@@ -351,7 +351,7 @@ if [ -x tools/verify_artifact.py ]; then
     fi
   fi
   pipeline_files=""
-  for pipeline_file in pipelines/v52.yaml pipelines/v53.yaml pipelines/v58.yaml pipelines/v61.yaml; do
+  for pipeline_file in pipelines/v52.yaml pipelines/v53.yaml pipelines/v54.yaml pipelines/v58.yaml pipelines/v61.yaml; do
     if [ -f "$pipeline_file" ]; then
       pipeline_files="$pipeline_files $pipeline_file"
     fi
