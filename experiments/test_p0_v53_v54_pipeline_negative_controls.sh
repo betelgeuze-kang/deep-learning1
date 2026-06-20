@@ -124,6 +124,48 @@ PY
   printf '%s\n' "$path"
 }
 
+bad_v54_row_json() {
+  local name="$1"
+  local artifact_id="$2"
+  local field="$3"
+  local value="$4"
+  local contract_path="$TMP_DIR/$name.json"
+  local csv_path="$TMP_DIR/$name.csv"
+  python3 - "$ROOT_DIR/v54/grounded_generation_contract.json" "$contract_path" "$csv_path" "$artifact_id" "$field" "$value" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+source, target, csv_target, artifact_id, field, value = sys.argv[1:7]
+data = json.loads(Path(source).read_text(encoding="utf-8"))
+artifact = None
+for row in data["required_artifacts"]:
+    if row["artifact_id"] == artifact_id:
+        artifact = row
+        break
+if artifact is None:
+    raise SystemExit(f"unknown artifact_id: {artifact_id}")
+source_csv = Path(artifact["path"])
+with source_csv.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+if field not in fieldnames:
+    raise SystemExit(f"{source_csv}: missing field {field}")
+if not rows:
+    raise SystemExit(f"{source_csv}: no rows to mutate")
+rows[0][field] = value
+with Path(csv_target).open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+artifact["path"] = csv_target
+Path(target).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+  printf '%s\n' "$contract_path"
+}
+
 bad_path="$(bad_v53_json v53_human_review_bad human-review)"
 expect_fail_with \
   "human_review_ready must remain false" \
@@ -223,6 +265,36 @@ expect_fail_with \
 bad_path="$(bad_v54_json v54_pm_output_bad pm-output)"
 expect_fail_with \
   "PM recommended v54 outputs must set pm_recommended_output=true" \
+  "$ROOT_DIR/tools/verify_artifact.py" v54-grounded-generation "$bad_path" --summary "$V54_SUMMARY"
+
+bad_path="$(bad_v54_row_json v54_generator_source_span_visible_bad generator-input-rows model_visible_source_span_id_used 1)"
+expect_fail_with \
+  "generator-input-rows.model_visible_source_span_id_used expected 0 for all rows" \
+  "$ROOT_DIR/tools/verify_artifact.py" v54-grounded-generation "$bad_path" --summary "$V54_SUMMARY"
+
+bad_path="$(bad_v54_row_json v54_generator_raw_context_bad generator-input-rows raw_prompt_context_appended 1)"
+expect_fail_with \
+  "generator-input-rows.raw_prompt_context_appended expected 0 for all rows" \
+  "$ROOT_DIR/tools/verify_artifact.py" v54-grounded-generation "$bad_path" --summary "$V54_SUMMARY"
+
+bad_path="$(bad_v54_row_json v54_generator_real_generation_bad generator-input-rows real_model_generation_ready 1)"
+expect_fail_with \
+  "generator-input-rows.real_model_generation_ready expected 0 for all rows" \
+  "$ROOT_DIR/tools/verify_artifact.py" v54-grounded-generation "$bad_path" --summary "$V54_SUMMARY"
+
+bad_path="$(bad_v54_row_json v54_routehint_alias_bad compact-routehint-rows compact_routehint_forbidden_alias_used 1)"
+expect_fail_with \
+  "compact-routehint-rows.compact_routehint_forbidden_alias_used expected 0 for all rows" \
+  "$ROOT_DIR/tools/verify_artifact.py" v54-grounded-generation "$bad_path" --summary "$V54_SUMMARY"
+
+bad_path="$(bad_v54_row_json v54_answer_wrong_bad answer-rows wrong_answer 1)"
+expect_fail_with \
+  "answer-rows.wrong_answer expected 0 for all rows" \
+  "$ROOT_DIR/tools/verify_artifact.py" v54-grounded-generation "$bad_path" --summary "$V54_SUMMARY"
+
+bad_path="$(bad_v54_row_json v54_wrong_guard_status_bad wrong-answer-guard-rows guard_status blocked)"
+expect_fail_with \
+  "wrong-answer-guard-rows.guard_status expected pass for all rows" \
   "$ROOT_DIR/tools/verify_artifact.py" v54-grounded-generation "$bad_path" --summary "$V54_SUMMARY"
 
 echo "p0 v53/v54 pipeline negative controls passed"
