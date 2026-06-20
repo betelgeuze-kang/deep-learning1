@@ -583,16 +583,20 @@ EXPECTED_V52_C_MIN_ROWS = {
     "c-generation-transcript-rows": 1000,
     "c-sha256-manifest": 14,
 }
+EXPECTED_V58_POLICY_STATIC = schema_contract_dict(
+    "v58_blind_eval.schema.json",
+    "expected_policy_static",
+)
+EXPECTED_V58_REQUIRED_SYSTEMS = schema_contract_list(
+    "v58_blind_eval.schema.json",
+    "expected_required_systems",
+)
 EXPECTED_V58_REQUIREMENT_IDS = [
-    "ab-cdegh-real-responses",
-    "same-corpus-context-budget",
-    "blind-identity",
-    "two-independent-reviewers",
-    "disagreement-adjudication",
-    "unseen-repository-split",
-    "source-span-exactness",
-    "unsupported-abstention",
-    "latency-memory-separate",
+    str(requirement_id)
+    for requirement_id in schema_contract_list(
+        "v58_blind_eval.schema.json",
+        "expected_requirement_ids",
+    )
 ]
 EXPECTED_V53_REQUIREMENT_IDS = [
     "pinned-public-repo-manifest",
@@ -762,128 +766,32 @@ EXPECTED_V53_V1_EXIT_CRITERION_IDS = [
     "abgh-same-query-internal-prebaseline",
     "claim-boundary-replay-blocker-gate",
 ]
+EXPECTED_V58_ARTIFACTS = schema_contract_list(
+    "v58_blind_eval.schema.json",
+    "expected_required_artifacts",
+)
 EXPECTED_V58_ARTIFACT_IDS = [
-    "v58-blind-response-rows",
-    "v58-run-identity-rows",
-    "v58-query-split-rows",
-    "v58-resource-rows",
-    "v58-human-review-rows",
-    "v58-adjudication-rows",
-    "v58d-review-return-intake",
-    "v58-sha256-manifest",
+    str(row.get("artifact_id", ""))
+    for row in EXPECTED_V58_ARTIFACTS
+    if isinstance(row, dict)
 ]
+EXPECTED_V58_ARTIFACTS_BY_ID = {
+    str(row.get("artifact_id", "")): row
+    for row in EXPECTED_V58_ARTIFACTS
+    if isinstance(row, dict)
+}
 EXPECTED_V58_ARTIFACT_COLUMNS = {
-    "v58-blind-response-rows": {
-        "blind_response_id",
-        "blind_eval_id",
-        "query_id",
-        "blind_system_id",
-        "response_text",
-        "citation_source_span_id",
-        "abstained",
-        "output_sha256",
-        "latency_ns",
-        "memory_peak_bytes",
-        "cost_usd",
-        "model_run_id",
-        "credential_redacted",
-        "resource_trace_sha256",
-        "frozen_query_packet_sha256",
-        "source_manifest_sha256",
-        "context_budget",
-        "retrieval_budget",
-        "latency_memory_excluded_from_quality_score",
-    },
-    "v58-run-identity-rows": {
-        "blind_system_id",
-        "source_system_id",
-        "model_or_architecture_id",
-        "corpus_id",
-        "context_budget",
-        "retrieval_budget",
-        "prompt_template_sha256",
-        "source_manifest_sha256",
-        "external_api_used",
-    },
-    "v58-query-split-rows": {
-        "query_id",
-        "repo_id",
-        "split_name",
-        "unseen_repository",
-        "frozen_query_packet_sha256",
-        "source_manifest_sha256",
-    },
-    "v58-resource-rows": {
-        "blind_response_id",
-        "blind_eval_id",
-        "query_id",
-        "blind_system_id",
-        "latency_ns",
-        "memory_peak_bytes",
-        "resource_trace_sha256",
-        "frozen_query_packet_sha256",
-        "source_manifest_sha256",
-        "context_budget",
-        "retrieval_budget",
-        "latency_memory_excluded_from_quality_score",
-    },
-    "v58-human-review-rows": {
-        "blind_response_id",
-        "blind_eval_id",
-        "blind_system_id",
-        "reviewer_id",
-        "reviewer_pool_id",
-        "reviewer_blinded",
-        "reviewer_independent",
-        "conflict_disclosed",
-        "answer_correctness",
-        "citation_correctness",
-        "abstain_correctness",
-        "source_span_exactness",
-        "unsupported_abstention_correctness",
-        "unseen_repository_split_id",
-        "latency_memory_excluded_from_quality_score",
-        "policy_score",
-        "review_decision",
-        "review_sha256",
-    },
-    "v58-adjudication-rows": {
-        "blind_response_id",
-        "blind_eval_id",
-        "blind_system_id",
-        "reviewer_a_id",
-        "reviewer_b_id",
-        "reviewer_a_decision",
-        "reviewer_b_decision",
-        "adjudicated_decision",
-        "inter_rater_agree",
-        "adjudicator_id",
-        "adjudicator_pool_id",
-        "adjudicator_independent",
-        "adjudication_sha256",
-    },
-    "v58d-review-return-intake": {
-        "review_dir",
-        "accepted_blind_review_rows",
-        "accepted_adjudication_rows",
-        "inter_rater_rows",
-        "review_return_ready",
-    },
-    "v58-sha256-manifest": {"artifact_path", "sha256", "bytes"},
+    artifact_id: set(row.get("required_columns", []))
+    for artifact_id, row in EXPECTED_V58_ARTIFACTS_BY_ID.items()
 }
 EXPECTED_V58_ARTIFACT_MIN_ROWS = {
-    "v58-blind-response-rows": 3500,
-    "v58-run-identity-rows": 7,
-    "v58-query-split-rows": 500,
-    "v58-resource-rows": 3500,
-    "v58-human-review-rows": 7000,
-    "v58-adjudication-rows": 3500,
-    "v58d-review-return-intake": 1,
-    "v58-sha256-manifest": 10,
+    artifact_id: row.get("min_rows")
+    for artifact_id, row in EXPECTED_V58_ARTIFACTS_BY_ID.items()
 }
 EXPECTED_V58_PER_SYSTEM_MIN_ROWS = {
-    "v58-blind-response-rows": {"A": 500, "B": 500, "C": 500, "D": 500, "E": 500, "G": 500, "H": 500},
-    "v58-resource-rows": {"A": 500, "B": 500, "C": 500, "D": 500, "E": 500, "G": 500, "H": 500},
+    artifact_id: dict(row.get("per_system_min_rows", {}))
+    for artifact_id, row in EXPECTED_V58_ARTIFACTS_BY_ID.items()
+    if isinstance(row.get("per_system_min_rows"), dict)
 }
 V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS = {
     "latency_ms",
@@ -901,14 +809,8 @@ V58_REVIEW_FORBIDDEN_IDENTITY_COLUMNS = {
     "run_identity",
 }
 EXPECTED_V58_VALIDATION_COMMANDS = {
-    "v58-blind-response-rows": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-    "v58-run-identity-rows": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-    "v58-query-split-rows": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-    "v58-resource-rows": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-    "v58-human-review-rows": "V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh",
-    "v58-adjudication-rows": "V58D_BLIND_REVIEW_RETURN_DIR=<REVIEW_RETURN_DIR> ./experiments/test_v58d_blind_review_return_intake.sh",
-    "v58d-review-return-intake": "./experiments/test_v58d_blind_review_return_intake.sh",
-    "v58-sha256-manifest": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
+    artifact_id: str(row.get("validation_command", ""))
+    for artifact_id, row in EXPECTED_V58_ARTIFACTS_BY_ID.items()
 }
 EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS = [
     "v53-review-return-intake-blocked",
@@ -2644,35 +2546,24 @@ def verify_v58_blind_eval(
     if data["schema_version"] != "v58_blind_eval.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
-    if policy.get("fixture_allowed") is not False:
-        errors.append(f"{path}: policy.fixture_allowed must be false")
-    if policy.get("tests_only_merge_condition") is not False:
-        errors.append(f"{path}: policy.tests_only_merge_condition must be false")
-    for field in [
+    false_until_real = {
         "real_execution_ready",
         "human_blind_review_ready",
         "inter_rater_rows_ready",
         "v58_full_blind_eval_ready",
         "release_ready",
-    ]:
-        if policy.get(field) is not False:
-            errors.append(f"{path}: policy.{field} must be false until real blind evidence is supplied")
-    if policy.get("required_real_response_systems") != ["A", "B", "C", "D", "E", "G", "H"]:
-        errors.append(f"{path}: policy.required_real_response_systems must be A/B/C/D/E/G/H in order")
-    if policy.get("required_independent_reviewers_per_response") != 2:
-        errors.append(f"{path}: policy.required_independent_reviewers_per_response must be 2")
-    for field in [
-        "blind_identity_required_until_adjudication",
-        "response_text_identity_leakage_forbidden",
-        "adjudication_required_for_disagreement",
-        "unseen_repository_split_required",
-        "source_span_exactness_separate_score",
-        "unsupported_abstention_separate_score",
-        "latency_memory_quality_separated",
-    ]:
-        if policy.get(field) is not True:
-            errors.append(f"{path}: policy.{field} must be true")
-    if set(data.get("required_systems", [])) != {"A", "B", "C", "D", "E", "G", "H"}:
+    }
+    for field, expected in EXPECTED_V58_POLICY_STATIC.items():
+        if policy.get(field) != expected:
+            if field in false_until_real:
+                errors.append(f"{path}: policy.{field} must be false until real blind evidence is supplied")
+            elif field == "required_real_response_systems":
+                errors.append(f"{path}: policy.required_real_response_systems must be A/B/C/D/E/G/H in order")
+            elif field == "required_independent_reviewers_per_response":
+                errors.append(f"{path}: policy.required_independent_reviewers_per_response must be 2")
+            else:
+                errors.append(f"{path}: policy.{field} must be {str(expected).lower()}")
+    if set(data.get("required_systems", [])) != set(EXPECTED_V58_REQUIRED_SYSTEMS):
         errors.append(f"{path}: required_systems must be A/B/C/D/E/G/H")
 
     requirements = data["requirements"]

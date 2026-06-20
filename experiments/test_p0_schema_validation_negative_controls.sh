@@ -155,6 +155,17 @@ if module.EXPECTED_V54_ARTIFACTS != v54_contract["expected_required_artifacts"]:
 if module.EXPECTED_V54_SUMMARY != v54_contract["expected_summary_when_supplied"]:
     raise SystemExit("EXPECTED_V54_SUMMARY must be derived from schema x-contract.expected_summary_when_supplied")
 
+v58_schema = json.loads((root / "schemas" / "v58_blind_eval.schema.json").read_text(encoding="utf-8"))
+v58_contract = v58_schema["x-contract"]
+if module.EXPECTED_V58_POLICY_STATIC != v58_contract["expected_policy_static"]:
+    raise SystemExit("EXPECTED_V58_POLICY_STATIC must be derived from schema x-contract.expected_policy_static")
+if module.EXPECTED_V58_REQUIRED_SYSTEMS != v58_contract["expected_required_systems"]:
+    raise SystemExit("EXPECTED_V58_REQUIRED_SYSTEMS must be derived from schema x-contract.expected_required_systems")
+if module.EXPECTED_V58_REQUIREMENT_IDS != v58_contract["expected_requirement_ids"]:
+    raise SystemExit("EXPECTED_V58_REQUIREMENT_IDS must be derived from schema x-contract.expected_requirement_ids")
+if module.EXPECTED_V58_ARTIFACTS != v58_contract["expected_required_artifacts"]:
+    raise SystemExit("EXPECTED_V58_ARTIFACTS must be derived from schema x-contract.expected_required_artifacts")
+
 v56_schema = json.loads((root / "schemas" / "v56_replay.schema.json").read_text(encoding="utf-8"))
 v56_contract = v56_schema["x-contract"]
 if module.EXPECTED_V56_POLICY != v56_contract["expected_policy"]:
@@ -304,6 +315,58 @@ expect_fail_with \
   "instance required_artifacts must match x-contract.expected_required_artifacts" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/v54_schema_artifact_contract_drift.schema.json" "$ROOT_DIR/v54/grounded_generation_contract.json"
+
+cp "$ROOT_DIR/schemas/v58_blind_eval.schema.json" "$TMP_DIR/v58_schema_policy_contract_drift.schema.json"
+python3 - "$TMP_DIR/v58_schema_policy_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_policy_static"]["real_execution_ready"] = True
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance policy.real_execution_ready must match x-contract.expected_policy_static" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v58_schema_policy_contract_drift.schema.json" "$ROOT_DIR/v58/blind_eval_real.json"
+
+cp "$ROOT_DIR/schemas/v58_blind_eval.schema.json" "$TMP_DIR/v58_schema_requirement_contract_drift.schema.json"
+python3 - "$TMP_DIR/v58_schema_requirement_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_requirement_ids"] = data["x-contract"]["expected_requirement_ids"][:-1]
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance requirements must follow x-contract.expected_requirement_ids" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v58_schema_requirement_contract_drift.schema.json" "$ROOT_DIR/v58/blind_eval_real.json"
+
+cp "$ROOT_DIR/schemas/v58_blind_eval.schema.json" "$TMP_DIR/v58_schema_artifact_contract_drift.schema.json"
+python3 - "$TMP_DIR/v58_schema_artifact_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["x-contract"]["expected_required_artifacts"]:
+    if row["artifact_id"] == "v58-blind-response-rows":
+        row["required_columns"].remove("context_budget")
+        row["per_system_min_rows"]["D"] = 499
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance required_artifacts must match x-contract.expected_required_artifacts" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v58_schema_artifact_contract_drift.schema.json" "$ROOT_DIR/v58/blind_eval_real.json"
 
 cp "$ROOT_DIR/schemas/leakage_contract.schema.json" "$TMP_DIR/leakage_schema_missing_contract.schema.json"
 python3 - "$TMP_DIR/leakage_schema_missing_contract.schema.json" <<'PY'

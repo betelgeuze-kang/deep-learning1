@@ -539,6 +539,95 @@ def validate_v54_grounded_generation_contract_metadata(
     return errors
 
 
+def _v58_static_artifact_projection(row: dict[str, object]) -> dict[str, object]:
+    projected = {
+        "artifact_id": row.get("artifact_id"),
+        "artifact_kind": row.get("artifact_kind"),
+        "validation_command": row.get("validation_command"),
+        "required_columns": row.get("required_columns"),
+        "min_rows": row.get("min_rows"),
+    }
+    if "per_system_min_rows" in row:
+        projected["per_system_min_rows"] = row.get("per_system_min_rows")
+    return projected
+
+
+def validate_v58_blind_eval_contract_metadata(
+    schema_path: Path,
+    schema: object,
+    instance: object,
+) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        return errors
+    if instance.get("schema_version") != "v58_blind_eval.v1":
+        return errors
+
+    contract = schema.get("x-contract")
+    if not isinstance(contract, dict):
+        errors.append(f"{schema_path}: x-contract must be an object for v58_blind_eval.v1")
+        return errors
+
+    expected_policy = contract.get("expected_policy_static")
+    expected_systems = contract.get("expected_required_systems")
+    expected_requirements = contract.get("expected_requirement_ids")
+    expected_artifacts = contract.get("expected_required_artifacts")
+    if not isinstance(expected_policy, dict) or not expected_policy:
+        errors.append(f"{schema_path}: x-contract.expected_policy_static must be a non-empty object")
+    if not isinstance(expected_systems, list) or not expected_systems:
+        errors.append(f"{schema_path}: x-contract.expected_required_systems must be a non-empty list")
+    if not isinstance(expected_requirements, list) or not expected_requirements:
+        errors.append(f"{schema_path}: x-contract.expected_requirement_ids must be a non-empty list")
+    if not isinstance(expected_artifacts, list) or not expected_artifacts:
+        errors.append(f"{schema_path}: x-contract.expected_required_artifacts must be a non-empty list")
+    if errors:
+        return errors
+
+    policy = instance.get("policy", {})
+    if isinstance(policy, dict):
+        for field, expected_value in expected_policy.items():
+            if policy.get(field) != expected_value:
+                errors.append(f"{schema_path}: instance policy.{field} must match x-contract.expected_policy_static")
+
+    if instance.get("required_systems") != expected_systems:
+        errors.append(f"{schema_path}: instance required_systems must match x-contract.expected_required_systems")
+
+    requirement_ids = [
+        row.get("requirement_id", "")
+        for row in instance.get("requirements", [])
+        if isinstance(row, dict)
+    ]
+    if requirement_ids != expected_requirements:
+        errors.append(f"{schema_path}: instance requirements must follow x-contract.expected_requirement_ids")
+    if len(expected_requirements) != len(set(expected_requirements)):
+        errors.append(f"{schema_path}: x-contract.expected_requirement_ids values must be unique")
+
+    artifact_ids = [
+        row.get("artifact_id", "")
+        for row in expected_artifacts
+        if isinstance(row, dict)
+    ]
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{schema_path}: x-contract.expected_required_artifacts artifact_id values must be unique")
+
+    required_artifacts = instance.get("required_artifacts", [])
+    if not isinstance(required_artifacts, list):
+        return errors
+    observed_static = [
+        _v58_static_artifact_projection(row)
+        for row in required_artifacts
+        if isinstance(row, dict)
+    ]
+    expected_static = [
+        _v58_static_artifact_projection(row)
+        for row in expected_artifacts
+        if isinstance(row, dict)
+    ]
+    if observed_static != expected_static:
+        errors.append(f"{schema_path}: instance required_artifacts must match x-contract.expected_required_artifacts")
+    return errors
+
+
 def validate_v56_replay_contract_metadata(
     schema_path: Path,
     schema: object,
@@ -631,6 +720,7 @@ def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
     errors.extend(validate_leakage_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_v50_auditor_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_v54_grounded_generation_contract_metadata(schema_path, schema, instance))
+    errors.extend(validate_v58_blind_eval_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_v56_replay_contract_metadata(schema_path, schema, instance))
     return errors
 
