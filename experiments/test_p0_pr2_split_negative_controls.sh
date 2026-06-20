@@ -90,6 +90,12 @@ elif mutation == "v54-summary-drop":
         command.replace("--summary", "--missing-summary")
         for command in row["verification_commands"]
     ]
+elif mutation == "v59-gate-ledger-drop":
+    row = slice_by_id("v59-one-command-demo")
+    row["verification_commands"] = [
+        command.replace("--gate-ledger", "--missing-gate-ledger")
+        for command in row["verification_commands"]
+    ]
 elif mutation == "v58-template-ledger-drop":
     row = slice_by_id("v58-blind-eval-contract")
     row["verification_commands"] = [
@@ -126,6 +132,128 @@ else:
 Path(target).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
   printf '%s\n' "$path"
+}
+
+write_v59_fixture() {
+  local summary_path="$TMP_DIR/v59_summary.csv"
+  local gate_path="$TMP_DIR/v59_gate_rows.csv"
+  python3 - "$summary_path" "$gate_path" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+summary_path, gate_path = map(Path, sys.argv[1:3])
+summary = {
+    "v59e_one_command_pm_foundation_demo_ready": "1",
+    "v59_ready": "0",
+    "one_command_entrypoint_ready": "1",
+    "challenge_bundle_ready": "1",
+    "one_command_replay_preflight_ready": "1",
+    "pinned_public_sources_verified": "1",
+    "source_snapshot_replay_used": "1",
+    "public_source_download_executed": "0",
+    "public_source_download_approval_required": "1",
+    "full_public_source_download_ready": "0",
+    "local_abgh_row_contract_replay_ready": "1",
+    "v54c_real_model_generation_ready": "0",
+    "v58_full_blind_eval_ready": "0",
+    "undocumented_local_state_required": "0",
+    "private_fixture_required": "0",
+    "manual_postprocessing_required": "0",
+    "network_required": "0",
+    "blocker_false_positive_closed": "1",
+    "real_release_package_ready": "0",
+}
+with summary_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(summary), lineterminator="\n")
+    writer.writeheader()
+    writer.writerow(summary)
+gates = {
+    "pinned-public-sources-verified": "pass",
+    "public-source-replay-policy": "pass",
+    "public-source-download-execution": "blocked",
+    "local-abgh-row-contract-replay": "pass",
+    "evaluator-check": "pass",
+    "grounded-generation-outputs": "pass",
+    "v58-blind-response-intake": "blocked",
+    "v58-blind-review-intake": "blocked",
+    "no-hidden-local-state": "pass",
+    "blocker-false-positive-closed": "pass",
+    "one-command-entrypoint": "pass",
+    "challenge-bundle-written": "pass",
+    "real-blind-eval": "blocked",
+    "full-v59-public-demo": "blocked",
+    "real-release-package": "blocked",
+    "one-command-replay-preflight": "pass",
+}
+with gate_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=["gate", "status", "reason"], lineterminator="\n")
+    writer.writeheader()
+    for gate, status in gates.items():
+        writer.writerow({"gate": gate, "status": status, "reason": f"{gate} expected {status}"})
+PY
+  printf '%s %s\n' "$summary_path" "$gate_path"
+}
+
+bad_v59_summary() {
+  local name="$1"
+  local field="$2"
+  local value="$3"
+  local paths
+  paths="$(write_v59_fixture)"
+  local summary_path="${paths%% *}"
+  local gate_path="${paths##* }"
+  local bad_path="$TMP_DIR/$name.csv"
+  python3 - "$summary_path" "$bad_path" "$field" "$value" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+source, target, field, value = sys.argv[1:5]
+with Path(source).open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0][field] = value
+with Path(target).open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+  printf '%s %s\n' "$bad_path" "$gate_path"
+}
+
+bad_v59_gate() {
+  local name="$1"
+  local gate="$2"
+  local status="$3"
+  local paths
+  paths="$(write_v59_fixture)"
+  local summary_path="${paths%% *}"
+  local gate_path="${paths##* }"
+  local bad_path="$TMP_DIR/$name.csv"
+  python3 - "$gate_path" "$bad_path" "$gate" "$status" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+source, target, gate, status = sys.argv[1:5]
+with Path(source).open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+for row in rows:
+    if row["gate"] == gate:
+        row["status"] = status
+        break
+else:
+    raise SystemExit(f"missing gate: {gate}")
+with Path(target).open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+  printf '%s %s\n' "$summary_path" "$bad_path"
 }
 
 bad_path="$(bad_pr2_json pr2_split_not_required_bad split-not-required)"
@@ -182,6 +310,25 @@ bad_path="$(bad_pr2_json pr2_v54_summary_drop_bad v54-summary-drop)"
 expect_fail_with \
   "v54 verification commands must compare grounded generation contract to the 1000-row summary" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_pr2_json pr2_v59_gate_ledger_drop_bad v59-gate-ledger-drop)"
+expect_fail_with \
+  "v59 verification commands must compare PM foundation replay summary and gate ledger" \
+  "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+paths="$(bad_v59_summary v59_ready_bad v59_ready 1)"
+summary_path="${paths%% *}"
+gate_path="${paths##* }"
+expect_fail_with \
+  "v59_ready expected 0" \
+  "$ROOT_DIR/tools/verify_artifact.py" v59-pm-foundation-demo "$summary_path" --gate-ledger "$gate_path"
+
+paths="$(bad_v59_gate v59_release_gate_bad real-release-package pass)"
+summary_path="${paths%% *}"
+gate_path="${paths##* }"
+expect_fail_with \
+  "real-release-package.status expected blocked" \
+  "$ROOT_DIR/tools/verify_artifact.py" v59-pm-foundation-demo "$summary_path" --gate-ledger "$gate_path"
 
 bad_path="$(bad_pr2_json pr2_v58_template_ledger_drop_bad v58-template-ledger-drop)"
 expect_fail_with \

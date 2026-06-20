@@ -329,6 +329,14 @@ if [ -x tools/verify_artifact.py ]; then
       tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json >/dev/null
     fi
   fi
+  if [ -f results/v59e_one_command_pm_foundation_demo_summary.csv ]; then
+    if [ -f results/v59e_one_command_pm_foundation_demo/pm_foundation_001/pm_foundation_demo_gate_rows.csv ]; then
+      tools/verify_artifact.py v59-pm-foundation-demo results/v59e_one_command_pm_foundation_demo_summary.csv \
+        --gate-ledger results/v59e_one_command_pm_foundation_demo/pm_foundation_001/pm_foundation_demo_gate_rows.csv >/dev/null
+    else
+      tools/verify_artifact.py v59-pm-foundation-demo results/v59e_one_command_pm_foundation_demo_summary.csv >/dev/null
+    fi
+  fi
   if [ -f v58/blind_eval_real.json ]; then
     if [ -f results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv ] &&
        [ -f results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_required_artifact_rows.csv ] &&

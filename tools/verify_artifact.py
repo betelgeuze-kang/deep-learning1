@@ -418,6 +418,51 @@ REQUIRED_PR2_V54_GROUNDED_GENERATION_VERIFICATION_TERMS = {
     "--summary",
     "results/v54c_complete_source_grounded_generation_1000_summary.csv",
 }
+REQUIRED_PR2_V59_PM_FOUNDATION_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py v59-pm-foundation-demo results/v59e_one_command_pm_foundation_demo_summary.csv",
+    "--gate-ledger",
+    "results/v59e_one_command_pm_foundation_demo/pm_foundation_001/pm_foundation_demo_gate_rows.csv",
+    "./experiments/test_v59e_one_command_pm_foundation_demo.sh",
+}
+EXPECTED_V59_PM_FOUNDATION_SUMMARY = {
+    "v59e_one_command_pm_foundation_demo_ready": "1",
+    "v59_ready": "0",
+    "one_command_entrypoint_ready": "1",
+    "challenge_bundle_ready": "1",
+    "one_command_replay_preflight_ready": "1",
+    "pinned_public_sources_verified": "1",
+    "source_snapshot_replay_used": "1",
+    "public_source_download_executed": "0",
+    "public_source_download_approval_required": "1",
+    "full_public_source_download_ready": "0",
+    "local_abgh_row_contract_replay_ready": "1",
+    "v54c_real_model_generation_ready": "0",
+    "v58_full_blind_eval_ready": "0",
+    "undocumented_local_state_required": "0",
+    "private_fixture_required": "0",
+    "manual_postprocessing_required": "0",
+    "network_required": "0",
+    "blocker_false_positive_closed": "1",
+    "real_release_package_ready": "0",
+}
+EXPECTED_V59_PM_FOUNDATION_GATE_STATUS = {
+    "pinned-public-sources-verified": "pass",
+    "public-source-replay-policy": "pass",
+    "public-source-download-execution": "blocked",
+    "local-abgh-row-contract-replay": "pass",
+    "evaluator-check": "pass",
+    "grounded-generation-outputs": "pass",
+    "v58-blind-response-intake": "blocked",
+    "v58-blind-review-intake": "blocked",
+    "no-hidden-local-state": "pass",
+    "blocker-false-positive-closed": "pass",
+    "one-command-entrypoint": "pass",
+    "challenge-bundle-written": "pass",
+    "real-blind-eval": "blocked",
+    "full-v59-public-demo": "blocked",
+    "real-release-package": "blocked",
+    "one-command-replay-preflight": "pass",
+}
 REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "tools/verify_artifact.py pr-split pr_slices/pr2.json",
     "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
@@ -2174,6 +2219,16 @@ def verify_pr_split(path: Path) -> list[str]:
                     f"{prefix}: v54 verification commands must compare grounded generation contract to the 1000-row summary: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
+        if slice_id == "v59-one-command-demo":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_V59_PM_FOUNDATION_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: v59 verification commands must compare PM foundation replay summary and gate ledger: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
         if slice_id == "v58-blind-eval-contract":
             command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
             missing_terms = [
@@ -3354,6 +3409,30 @@ def verify_v54_grounded_generation(
     return errors
 
 
+def verify_v59_pm_foundation_demo(path: Path, gate_ledger: Path | None = None) -> list[str]:
+    errors: list[str] = []
+    summary = read_first_csv(path)
+    for field, expected in EXPECTED_V59_PM_FOUNDATION_SUMMARY.items():
+        if summary.get(field) != expected:
+            errors.append(f"{path}: {field} expected {expected}, got {summary.get(field)}")
+
+    if gate_ledger is not None:
+        rows = read_csv_rows(gate_ledger)
+        by_gate = {row.get("gate", ""): row for row in rows}
+        for gate, expected_status in EXPECTED_V59_PM_FOUNDATION_GATE_STATUS.items():
+            row = by_gate.get(gate)
+            if row is None:
+                errors.append(f"{gate_ledger}: missing gate={gate}")
+                continue
+            if row.get("status") != expected_status:
+                errors.append(
+                    f"{gate_ledger}: {gate}.status expected {expected_status}, got {row.get('status')}"
+                )
+            if not row.get("reason"):
+                errors.append(f"{gate_ledger}: {gate}.reason must be non-empty")
+    return errors
+
+
 def verify_v53_source_benchmark(
     path: Path,
     v53i_summary: Path | None = None,
@@ -4027,6 +4106,9 @@ def main() -> int:
     p_v54 = sub.add_parser("v54-grounded-generation")
     p_v54.add_argument("paths", nargs="+", type=Path)
     p_v54.add_argument("--summary", type=Path, default=None)
+    p_v59 = sub.add_parser("v59-pm-foundation-demo")
+    p_v59.add_argument("paths", nargs="+", type=Path)
+    p_v59.add_argument("--gate-ledger", type=Path, default=None)
     p_v58 = sub.add_parser("v58-blind-eval")
     p_v58.add_argument("paths", nargs="+", type=Path)
     p_v58.add_argument("--readiness-ledger", type=Path, default=None)
@@ -4096,6 +4178,9 @@ def main() -> int:
     elif args.cmd == "v54-grounded-generation":
         for path in args.paths:
             errors.extend(verify_v54_grounded_generation(path, args.summary))
+    elif args.cmd == "v59-pm-foundation-demo":
+        for path in args.paths:
+            errors.extend(verify_v59_pm_foundation_demo(path, args.gate_ledger))
     elif args.cmd == "v58-blind-eval":
         for path in args.paths:
             errors.extend(verify_v58_blind_eval(path, args.readiness_ledger, args.artifact_ledger, args.template_ledger))

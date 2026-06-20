@@ -150,7 +150,7 @@
         "blocked": "Full v59 public challenge demo, public-source download/refresh readiness, v58 blind completion, h10 promotion, or v60 release readiness.",
         "evidence_path": "results/v59e_one_command_pm_foundation_demo_summary.csv"
       },
-      "verification_commands": ["./experiments/test_v59e_one_command_pm_foundation_demo.sh"],
+      "verification_commands": ["tools/verify_artifact.py v59-pm-foundation-demo results/v59e_one_command_pm_foundation_demo_summary.csv --gate-ledger results/v59e_one_command_pm_foundation_demo/pm_foundation_001/pm_foundation_demo_gate_rows.csv", "./experiments/test_v59e_one_command_pm_foundation_demo.sh"],
       "current_status": "pm-foundation-ready-full-demo-blocked"
     },
     {
