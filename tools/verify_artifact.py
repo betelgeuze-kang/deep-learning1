@@ -3869,6 +3869,94 @@ def _parse_token_id_list(value: str) -> list[int] | None:
     return tokens
 
 
+def _compute_v61ab_expert_ffn_readiness(
+    row: dict[str, str],
+    label: str,
+    errors: list[str],
+) -> dict[str, int | str]:
+    if not row:
+        return {
+            "contract_ready": 0,
+            "fixture_execution_ready": 0,
+            "real_model_execution_ready": 0,
+            "release_ready": 0,
+            "status": "blocked",
+        }
+
+    contract_fields = [
+        "checkpoint_id",
+        "model_revision",
+        "layer_index",
+        "expert_index",
+        "token_id",
+        "router_top_k",
+        "rmsnorm_tensor_name",
+        "router_tensor_name",
+        "w1_tensor_name",
+        "w2_tensor_name",
+        "w3_tensor_name",
+    ]
+    contract_ready = int(all(row.get(field, "") != "" for field in contract_fields))
+    forbidden_zero_fields = [
+        "checkpoint_payload_bytes_committed_to_repo",
+        "actual_model_generation_ready",
+        "route_jump_rows",
+        "heldout_metric_ready",
+        "human_review_ready",
+        "independent_reproduction_ready",
+        "release_ready",
+    ]
+    for field in forbidden_zero_fields:
+        if row.get(field, "0") != "0":
+            errors.append(f"{label}: {field} must be 0")
+
+    try:
+        tolerance = float(row.get("tolerance", ""))
+        max_abs_delta = float(row.get("max_abs_delta", ""))
+    except ValueError:
+        tolerance = math.nan
+        max_abs_delta = math.nan
+    tolerance_ok = math.isfinite(tolerance) and math.isfinite(max_abs_delta) and max_abs_delta <= tolerance
+    independent_hash = row.get("independent_runtime_output_sha256", "")
+    candidate_hash = row.get("candidate_output_sha256", "")
+    torch_reference_hash = row.get("torch_reference_output_sha256", "")
+    transformers_hash = row.get("transformers_expert_output_sha256", "")
+    required_fixture_hashes = [
+        "config_sha256",
+        "shard_index_sha256",
+        "full_manifest_sha256",
+        "rmsnorm_payload_sha256",
+        "router_payload_sha256",
+        "w1_payload_sha256",
+        "w2_payload_sha256",
+        "w3_payload_sha256",
+        "residual_input_sha256",
+        "residual_output_sha256",
+    ]
+    fixture_hashes_ready = all(_is_sha256_digest(row.get(field, "")) for field in required_fixture_hashes)
+    independent_ready = _is_sha256_digest(independent_hash) and candidate_hash == independent_hash
+    torch_reference_ready = _is_sha256_digest(torch_reference_hash)
+    fixture_execution_ready = int(contract_ready and tolerance_ok and fixture_hashes_ready and independent_ready and torch_reference_ready)
+    real_model_execution_ready = int(
+        fixture_execution_ready
+        and _is_sha256_digest(transformers_hash)
+        and torch_reference_hash == transformers_hash
+    )
+    if row.get("fixture_execution_ready") == "1" and not fixture_execution_ready:
+        errors.append(f"{label}: fixture_execution_ready=1 is not supported by expert FFN raw parity evidence")
+    if row.get("real_model_execution_ready") == "1" and not real_model_execution_ready:
+        errors.append(f"{label}: real_model_execution_ready=1 is not supported by original Transformers and independent runtime evidence")
+    if row.get("expert_ffn_parity_pass") == "1" and not (fixture_execution_ready or real_model_execution_ready):
+        errors.append(f"{label}: expert_ffn_parity_pass=1 is not supported by expert FFN raw parity evidence")
+    return {
+        "contract_ready": contract_ready,
+        "fixture_execution_ready": fixture_execution_ready,
+        "real_model_execution_ready": real_model_execution_ready,
+        "release_ready": 0,
+        "status": "pass" if fixture_execution_ready or real_model_execution_ready else "blocked",
+    }
+
+
 def _summary_expect_float(
     summary_path: Path,
     summary: dict[str, str],
@@ -3972,6 +4060,11 @@ def verify_v61ab_tile_probe(summary_path: Path, run_dir: Path | None = None) -> 
                 errors.append(f"{prefix}: {field} must be 0")
 
     expert = expert_rows[0] if expert_rows else {}
+    expert_readiness = _compute_v61ab_expert_ffn_readiness(
+        expert,
+        f"{required_paths['expert']}: row 1",
+        errors,
+    )
     numeric_ready = int(
         tile_count > 0
         and len(tile_value_counts) == tile_count
@@ -4013,11 +4106,11 @@ def verify_v61ab_tile_probe(summary_path: Path, run_dir: Path | None = None) -> 
         "q4_quant_probe_ready": str(numeric_ready),
         "torch_matvec_parity_ready": str(numeric_ready),
         "expert_ffn_parity_rows": str(expert_count),
-        "expert_ffn_parity_contract_ready": expert.get("contract_ready", ""),
-        "expert_ffn_parity_fixture_execution_ready": expert.get("fixture_execution_ready", ""),
-        "expert_ffn_parity_real_model_execution_ready": expert.get("real_model_execution_ready", ""),
-        "expert_ffn_parity_release_ready": expert.get("release_ready", ""),
-        "expert_ffn_parity_status": expert.get("status", ""),
+        "expert_ffn_parity_contract_ready": str(expert_readiness["contract_ready"]),
+        "expert_ffn_parity_fixture_execution_ready": str(expert_readiness["fixture_execution_ready"]),
+        "expert_ffn_parity_real_model_execution_ready": str(expert_readiness["real_model_execution_ready"]),
+        "expert_ffn_parity_release_ready": str(expert_readiness["release_ready"]),
+        "expert_ffn_parity_status": str(expert_readiness["status"]),
         "checkpoint_payload_bytes_committed_to_repo": "0",
         "full_checkpoint_materialization_ready": "0",
         "full_safetensors_page_hash_binding_ready": "0",
@@ -4054,6 +4147,10 @@ def verify_v61ab_tile_probe(summary_path: Path, run_dir: Path | None = None) -> 
         "q8_quant_probe_ready": str(numeric_ready),
         "q4_quant_probe_ready": str(numeric_ready),
         "torch_matvec_parity_ready": str(numeric_ready),
+        "expert_ffn_parity_contract_ready": str(expert_readiness["contract_ready"]),
+        "expert_ffn_parity_fixture_execution_ready": str(expert_readiness["fixture_execution_ready"]),
+        "expert_ffn_parity_real_model_execution_ready": str(expert_readiness["real_model_execution_ready"]),
+        "expert_ffn_parity_release_ready": str(expert_readiness["release_ready"]),
     }
     for field, expected in expected_metric.items():
         actual = metric.get(field)
@@ -4066,6 +4163,10 @@ def verify_v61ab_tile_probe(summary_path: Path, run_dir: Path | None = None) -> 
     _manifest_expect(manifest_path, manifest, "torch_matvec_parity_rows", torch_count, errors)
     _manifest_expect(manifest_path, manifest, "torch_matvec_parity_pass_rows", torch_pass_rows, errors)
     _manifest_expect(manifest_path, manifest, "torch_matvec_parity_ready", numeric_ready, errors)
+    _manifest_expect(manifest_path, manifest, "expert_ffn_parity_contract_ready", expert_readiness["contract_ready"], errors)
+    _manifest_expect(manifest_path, manifest, "expert_ffn_parity_fixture_execution_ready", expert_readiness["fixture_execution_ready"], errors)
+    _manifest_expect(manifest_path, manifest, "expert_ffn_parity_real_model_execution_ready", expert_readiness["real_model_execution_ready"], errors)
+    _manifest_expect(manifest_path, manifest, "expert_ffn_parity_release_ready", expert_readiness["release_ready"], errors)
     _manifest_expect(manifest_path, manifest, "actual_model_generation_ready", 0, errors)
     _manifest_expect(manifest_path, manifest, "checkpoint_payload_bytes_committed_to_repo", 0, errors)
     return errors

@@ -418,6 +418,8 @@ if float(row["max_abs_delta"]) > float(row["tolerance"]):
 if row["checkpoint_payload_bytes_committed_to_repo"] != "0":
     raise SystemExit("v61ab fixture expert FFN must not commit checkpoint payload")
 PY
+"$ROOT_DIR/tools/verify_artifact.py" v61ab-tile-probe "$SUMMARY_CSV" \
+  --run-dir "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe/ffn_fixture" >/dev/null
 
 V61AB_RUN_ID="probe_001" \
 V61AB_REUSE_EXISTING=0 \

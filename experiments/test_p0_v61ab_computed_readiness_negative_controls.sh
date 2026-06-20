@@ -33,7 +33,8 @@ V61AB_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ab_hotset_tensor_tile_quant
 "$ROOT_DIR/tools/verify_artifact.py" v61ab-tile-probe "$SUMMARY_CSV" --run-dir "$RUN_DIR" >/dev/null
 
 BAD_RUN_DIR="$TMP_DIR/probe_001"
-cp -R "$RUN_DIR" "$BAD_RUN_DIR"
+mkdir -p "$BAD_RUN_DIR"
+cp -a "$RUN_DIR"/. "$BAD_RUN_DIR"/
 python3 - "$BAD_RUN_DIR/hotset_tensor_tile_torch_parity_rows.csv" <<'PY'
 import csv
 import sys
@@ -54,7 +55,9 @@ expect_fail_with \
   "torch_matvec_parity_pass_rows expected 127, got 128" \
   "$ROOT_DIR/tools/verify_artifact.py" v61ab-tile-probe "$SUMMARY_CSV" --run-dir "$BAD_RUN_DIR"
 
-cp -R "$RUN_DIR" "$BAD_RUN_DIR.summary"
+BAD_SUMMARY_RUN_DIR="$TMP_DIR/probe_001_summary"
+mkdir -p "$BAD_SUMMARY_RUN_DIR"
+cp -a "$RUN_DIR"/. "$BAD_SUMMARY_RUN_DIR"/
 python3 - "$TMP_DIR/bad_summary.csv" "$SUMMARY_CSV" <<'PY'
 import csv
 import sys
@@ -74,6 +77,29 @@ with target.open("w", newline="", encoding="utf-8") as handle:
 PY
 expect_fail_with \
   "actual_model_generation_ready expected 0, got 1" \
-  "$ROOT_DIR/tools/verify_artifact.py" v61ab-tile-probe "$TMP_DIR/bad_summary.csv" --run-dir "$BAD_RUN_DIR.summary"
+  "$ROOT_DIR/tools/verify_artifact.py" v61ab-tile-probe "$TMP_DIR/bad_summary.csv" --run-dir "$BAD_SUMMARY_RUN_DIR"
+
+BAD_EXPERT_RUN_DIR="$TMP_DIR/probe_001_expert"
+mkdir -p "$BAD_EXPERT_RUN_DIR"
+cp -a "$RUN_DIR"/. "$BAD_EXPERT_RUN_DIR"/
+python3 - "$BAD_EXPERT_RUN_DIR/expert_ffn_forward_parity_rows.csv" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["real_model_execution_ready"] = "1"
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "real_model_execution_ready=1 is not supported by original Transformers and independent runtime evidence" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61ab-tile-probe "$SUMMARY_CSV" --run-dir "$BAD_EXPERT_RUN_DIR"
 
 echo "p0 v61ab computed-readiness negative controls passed"
