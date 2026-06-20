@@ -103,6 +103,20 @@ elif mutation == "logits-column-drop":
                 if column != "logits_parity_pass"
             ]
             break
+elif mutation == "expert-column-drop":
+    for row in data["required_artifacts"]:
+        if row["artifact_id"] == "expert-ffn-forward-parity-rows":
+            row["required_columns"] = [
+                column
+                for column in row["required_columns"]
+                if column != "expert_ffn_parity_pass"
+            ]
+            break
+elif mutation == "expert-pass-field":
+    for row in data["required_artifacts"]:
+        if row["artifact_id"] == "expert-ffn-forward-parity-rows":
+            row["pass_field"] = "expert_ffn_ready"
+            break
 elif mutation == "missing-artifact-count":
     data["policy"]["missing_required_artifact_count"] = 4
 elif mutation == "missing-decode-artifact":
@@ -192,6 +206,20 @@ expect_fail_with \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 
+bad_path="$(bad_json expert_column_drop_bad expert-column-drop)"
+expect_fail_with \
+  "required_columns must exactly match the v61 artifact header order" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$bad_path" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+bad_path="$(bad_json expert_pass_field_bad expert-pass-field)"
+expect_fail_with \
+  "pass_field expected expert_ffn_parity_pass, got expert_ffn_ready" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$bad_path" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
 bad_path="$(bad_json missing_artifact_count_bad missing-artifact-count)"
 expect_fail_with \
   "policy.missing_required_artifact_count expected 5, got 4" \
@@ -224,6 +252,31 @@ bad_path="$(bad_json runtime_metric_column_drop_bad runtime-metric-column-drop)"
 expect_fail_with \
   "required_columns must exactly match the v61 artifact header order" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$bad_path" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+EXPERT_ROWS="$TMP_DIR/expert_ffn_forward_parity_rows.csv"
+EXPERT_BAD_JSON="$TMP_DIR/expert_temp_path_bad.json"
+python3 - "$ROOT_DIR/v61/one_token_path.json" "$EXPERT_BAD_JSON" "$EXPERT_ROWS" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+source, target, expert_rows = sys.argv[1:4]
+data = json.loads(Path(source).read_text(encoding="utf-8"))
+for row in data["required_artifacts"]:
+    if row["artifact_id"] == "expert-ffn-forward-parity-rows":
+        row["path"] = expert_rows
+        break
+Path(target).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+cat >"$EXPERT_ROWS" <<'CSV'
+layer_index,expert_index,w1_tensor_name,w2_tensor_name,w3_tensor_name,contract_ready,fixture_execution_ready,real_model_execution_ready,heldout_metric_ready,human_review_ready,independent_reproduction_ready,release_ready,local_checkpoint_root_supplied,checkpoint_payload_bytes_committed_to_repo,actual_model_generation_ready,route_jump_rows,status,reason,w1_shape,w2_shape,w3_shape,w1_payload_sha256,w2_payload_sha256,w3_payload_sha256,input_hidden_size,intermediate_size,output_hidden_size,candidate_output_sha256,torch_reference_output_sha256,max_abs_delta,tolerance,expert_ffn_parity_pass
+0,0,model.layers.0.block_sparse_moe.experts.0.w1.weight,model.layers.0.block_sparse_moe.experts.0.w2.weight,model.layers.0.block_sparse_moe.experts.0.w3.weight,1,0,1,0,0,0,0,1,0,0,0,blocked,malicious blocked expert FFN artifact claims real execution,"[14336,6144]","[6144,14336]","[14336,6144]",sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,6144,14336,6144,sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,0,1e-06,1
+CSV
+expect_fail_with \
+  "blocked milestone real-expert-ffn-forward-parity cannot contain expert_ffn_parity_pass=1 rows" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$EXPERT_BAD_JSON" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 
