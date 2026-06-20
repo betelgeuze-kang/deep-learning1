@@ -500,6 +500,32 @@ EXPECTED_V53_PUBLIC_REPOS = [
     "python/cpython",
     "tiangolo/typer",
 ]
+REQUIRED_PR2_ROADMAP_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py roadmap-doc docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md",
+    "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh",
+}
+REQUIRED_V1_ROADMAP_TERMS = {
+    "# v1.0 Architecture Challenge Roadmap",
+    "This roadmap supersedes publishing v0.3 as a broad public claim",
+    "source-cited answers",
+    "abstention",
+    "deterministic lineage",
+    "blocked until proven",
+    "Transformer replacement",
+    "production release readiness",
+    "claim boundary",
+    "replayable artifacts",
+    "false-positive blocker closure rather than by tests alone",
+    "The first execution priority is v53",
+    "10 pinned public repositories",
+    "1000 source-span-bound queries",
+    "D/E 30B/70B rows",
+    "v58 blind eval",
+    "one-command challenge demo",
+    "Do not publish comparison language if D or E is missing",
+    "Do not call the generator mainline if it answers by copying raw retrieved context",
+    "v1.0 can be called an Architecture Challenge release only when all of these are true",
+}
 REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "tools/verify_artifact.py pr-split pr_slices/pr2.json",
     "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
@@ -2216,6 +2242,16 @@ def verify_pr_split(path: Path) -> list[str]:
                     f"{prefix}: v61 verification commands missing replay summary terms: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
+        if slice_id == "docs/v1-roadmap":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_ROADMAP_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: roadmap verification commands must check v1 claim-boundary wording: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
         if slice_id == "docs-readme-pr2-cleanup":
             command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
             missing_terms = [
@@ -3521,6 +3557,22 @@ def verify_v53_public_source_manifest(path: Path, repo_ledger: Path | None = Non
     return errors
 
 
+def verify_roadmap_doc(path: Path) -> list[str]:
+    errors: list[str] = []
+    text = path.read_text(encoding="utf-8")
+    normalized_text = " ".join(text.split())
+    missing_terms = [
+        term for term in REQUIRED_V1_ROADMAP_TERMS if " ".join(term.split()) not in normalized_text
+    ]
+    if missing_terms:
+        errors.append(f"{path}: roadmap missing required claim-boundary terms: {', '.join(sorted(missing_terms))}")
+    if "general LLM replacement" not in text or "Transformer replacement" not in text:
+        errors.append(f"{path}: roadmap must keep replacement claims explicitly blocked")
+    if "release_ready_claim=0" not in text and "real_release_package_ready" not in text:
+        errors.append(f"{path}: roadmap must keep release readiness wording explicitly blocked")
+    return errors
+
+
 def verify_v53_source_benchmark(
     path: Path,
     v53i_summary: Path | None = None,
@@ -4158,6 +4210,8 @@ def main() -> int:
     p_pipeline.add_argument("paths", nargs="+", type=Path)
     p_pr_split = sub.add_parser("pr-split")
     p_pr_split.add_argument("paths", nargs="+", type=Path)
+    p_roadmap = sub.add_parser("roadmap-doc")
+    p_roadmap.add_argument("paths", nargs="+", type=Path)
     p_typed = sub.add_parser("typed-readiness")
     p_typed.add_argument("paths", nargs="+", type=Path)
     p_typed.add_argument("--pm-ledger", type=Path, default=None)
@@ -4227,6 +4281,9 @@ def main() -> int:
     elif args.cmd == "pr-split":
         for path in args.paths:
             errors.extend(verify_pr_split(path))
+    elif args.cmd == "roadmap-doc":
+        for path in args.paths:
+            errors.extend(verify_roadmap_doc(path))
     elif args.cmd == "typed-readiness":
         for path in args.paths:
             errors.extend(verify_typed_readiness(path, args.pm_ledger))

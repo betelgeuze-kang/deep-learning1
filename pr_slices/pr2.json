@@ -33,7 +33,7 @@
         "blocked": "Transformer replacement, frontier local LLM, production readiness, or public comparison win.",
         "evidence_path": "docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md"
       },
-      "verification_commands": ["./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
+      "verification_commands": ["tools/verify_artifact.py roadmap-doc docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md", "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
       "current_status": "ready-for-review"
     },
     {

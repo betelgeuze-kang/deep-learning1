@@ -160,9 +160,7 @@ echo "==> required orchestration files"
 test -f AGENTS.md
 test -f .codex/config.toml
 test -f opencode.json
-test -f docs/ai/GOAL-LOOP-PLAYBOOK.md
 test -f docs/ai/profiles/deep-learning-research.md
-test -f docs/ai/prompts/deep_learning_research_goal_start.md
 test -f docs/ai/prompts/opencode_worker_slice.md
 test -f docs/ai/prompts/cursor_worker_slice.md
 test -x scripts/ai-worker-cursor.sh
@@ -238,6 +236,9 @@ if [ -x experiments/test_v61_one_token_path_contract.sh ]; then
 fi
 
 if [ -x tools/verify_artifact.py ]; then
+  if [ -f docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md ]; then
+    tools/verify_artifact.py roadmap-doc docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md >/dev/null
+  fi
   if [ -f pr_slices/pr2.json ]; then
     tools/verify_artifact.py pr-split pr_slices/pr2.json >/dev/null
   fi

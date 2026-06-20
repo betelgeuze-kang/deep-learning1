@@ -60,6 +60,12 @@ elif mutation == "gate-tests-only":
 elif mutation == "slice-order":
     rows = data["slices"]
     rows[0], rows[1] = rows[1], rows[0]
+elif mutation == "roadmap-verifier-drop":
+    row = slice_by_id("docs/v1-roadmap")
+    row["verification_commands"] = [
+        command.replace("tools/verify_artifact.py roadmap-doc", "tools/verify_artifact.py missing-roadmap-doc")
+        for command in row["verification_commands"]
+    ]
 elif mutation == "v61-summary-command-drop":
     row = slice_by_id("v61-ssd-moe-runtime-roadmap")
     row["verification_commands"] = [
@@ -262,6 +268,21 @@ PY
   printf '%s %s\n' "$summary_path" "$bad_path"
 }
 
+bad_roadmap_doc() {
+  local path="$TMP_DIR/bad_roadmap.md"
+  python3 - "$ROOT_DIR/docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md" "$path" <<'PY'
+import sys
+from pathlib import Path
+
+source, target = map(Path, sys.argv[1:3])
+text = source.read_text(encoding="utf-8")
+text = text.replace("Transformer replacement", "architecture replacement")
+text = text.replace("false-positive blocker closure rather than by tests alone", "tests pass")
+Path(target).write_text(text, encoding="utf-8")
+PY
+  printf '%s\n' "$path"
+}
+
 write_v53_public_fixture() {
   local summary_path="$TMP_DIR/v53_public_summary.csv"
   local repo_path="$TMP_DIR/v53_public_repo_rows.csv"
@@ -424,6 +445,16 @@ bad_path="$(bad_pr2_json pr2_slice_order_bad slice-order)"
 expect_fail_with \
   "PR #2 slice order must match the PM contract" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_pr2_json pr2_roadmap_verifier_drop_bad roadmap-verifier-drop)"
+expect_fail_with \
+  "roadmap verification commands must check v1 claim-boundary wording" \
+  "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_roadmap_doc)"
+expect_fail_with \
+  "roadmap missing required claim-boundary terms" \
+  "$ROOT_DIR/tools/verify_artifact.py" roadmap-doc "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_v61_summary_command_drop_bad v61-summary-command-drop)"
 expect_fail_with \

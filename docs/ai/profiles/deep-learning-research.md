@@ -6,7 +6,7 @@ Use this profile for work touching model architecture, routing, training/evaluat
 
 ```text
 Codex: research plan, experiment design, metric validity, evidence boundary review, final acceptance
-OpenCode GLM-5.2: large-context implementation, doc/log/result sweeps, broad edits, synthetic checks
+OpenCode DeepSeek V4 Pro: large-context implementation, doc/log/result sweeps, broad edits, synthetic checks
 Cursor auto: current editor/selection/notebook-local edits, small implementation, focused test-fix passes
 Human owner: long runs, GPU/ROCm budget, downloads, remote writes, publication claims
 ```
@@ -22,7 +22,7 @@ Human owner: long runs, GPU/ROCm budget, downloads, remote writes, publication c
 
 ## Routing
 
-Prefer OpenCode GLM-5.2 for:
+Prefer OpenCode DeepSeek V4 Pro for:
 
 - reading long roadmap, benchmark, evidence, or result packet context
 - adding or updating C++ experiment logic across several files

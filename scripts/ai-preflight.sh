@@ -27,9 +27,7 @@ echo "[1] Project files"
 test -f AGENTS.md && ok "AGENTS.md present" || bad "AGENTS.md missing"
 test -f .codex/config.toml && ok ".codex/config.toml present" || note ".codex/config.toml missing"
 test -f opencode.json && ok "opencode.json present" || bad "opencode.json missing"
-test -f docs/ai/GOAL-LOOP-PLAYBOOK.md && ok "playbook present" || bad "playbook missing"
 test -f docs/ai/profiles/deep-learning-research.md && ok "research profile present" || bad "research profile missing"
-test -f docs/ai/prompts/deep_learning_research_goal_start.md && ok "research start prompt present" || bad "research start prompt missing"
 test -f docs/ai/prompts/opencode_worker_slice.md && ok "OpenCode worker prompt present" || bad "OpenCode worker prompt missing"
 test -f docs/ai/prompts/cursor_worker_slice.md && ok "Cursor worker prompt present" || bad "Cursor worker prompt missing"
 
@@ -64,22 +62,22 @@ else
   bad "opencode worker prompt-file wiring missing"
 fi
 
-if grep -q -- 'OPENCODE_MODEL="${OPENCODE_MODEL:-opencode-go/glm-5.2}"' scripts/ai-worker-opencode.sh; then
-  ok "opencode worker default model is GLM-5.2"
+if grep -q -- 'OPENCODE_MODEL="${OPENCODE_MODEL:-opencode-go/deepseek-v4-pro}"' scripts/ai-worker-opencode.sh; then
+  ok "opencode worker default model is DeepSeek V4 Pro"
 else
-  bad "opencode worker default model is not GLM-5.2"
+  bad "opencode worker default model is not DeepSeek V4 Pro"
 fi
 
 if python3 - <<'PY'
 import json
 from pathlib import Path
 data = json.loads(Path("opencode.json").read_text(encoding="utf-8"))
-raise SystemExit(0 if data.get("model") == "opencode-go/glm-5.2" else 1)
+raise SystemExit(0 if data.get("model") == "opencode-go/deepseek-v4-pro" else 1)
 PY
 then
-  ok "opencode.json default model is GLM-5.2"
+  ok "opencode.json default model is DeepSeek V4 Pro"
 else
-  bad "opencode.json default model is not GLM-5.2"
+  bad "opencode.json default model is not DeepSeek V4 Pro"
 fi
 
 if grep -q -- '--model "$CURSOR_AGENT_MODEL"' scripts/ai-worker-cursor.sh; then
