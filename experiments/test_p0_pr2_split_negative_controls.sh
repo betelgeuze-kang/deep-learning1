@@ -102,6 +102,12 @@ elif mutation == "v50-decision-drop":
         command.replace("--decision", "--missing-decision")
         for command in row["verification_commands"]
     ]
+elif mutation == "review-return-v61hv-summary-drop":
+    row = slice_by_id("operator-review-return-workflow")
+    row["verification_commands"] = [
+        command.replace("--v61hv-summary", "--missing-v61hv-summary")
+        for command in row["verification_commands"]
+    ]
 else:
     raise SystemExit(f"unknown mutation: {mutation}")
 
@@ -173,6 +179,11 @@ expect_fail_with \
 bad_path="$(bad_pr2_json pr2_v50_decision_drop_bad v50-decision-drop)"
 expect_fail_with \
   "v50 verification commands must compare auditor contract to summary and decision artifacts" \
+  "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_pr2_json pr2_review_return_v61hv_summary_drop_bad review-return-v61hv-summary-drop)"
+expect_fail_with \
+  "review-return verification commands must compare workflow contract to v53, v58, v61af, and v61hv blocker summaries" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 echo "p0 PR #2 split negative controls passed"

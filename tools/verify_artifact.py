@@ -389,6 +389,17 @@ REQUIRED_PR2_V50_VERIFICATION_TERMS = {
     "--decision",
     "results/v50_public_repo_auditor_3repo_decision.csv",
 }
+REQUIRED_PR2_REVIEW_RETURN_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py review-return-workflow operations/review_return_workflow.json",
+    "--v53s-summary",
+    "results/v53s_complete_source_review_return_intake_summary.csv",
+    "--v58d-summary",
+    "results/v58d_blind_review_return_intake_summary.csv",
+    "--v61af-summary",
+    "results/v61af_checkpoint_warehouse_operator_bundle_summary.csv",
+    "--v61hv-summary",
+    "results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv",
+}
 REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "tools/verify_artifact.py pr-split pr_slices/pr2.json",
     "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
@@ -2163,6 +2174,16 @@ def verify_pr_split(path: Path) -> list[str]:
             if missing_terms:
                 errors.append(
                     f"{prefix}: v50 verification commands must compare auditor contract to summary and decision artifacts: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
+        if slice_id == "operator-review-return-workflow":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_REVIEW_RETURN_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: review-return verification commands must compare workflow contract to v53, v58, v61af, and v61hv blocker summaries: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
         boundary = row.get("claim_boundary", {})
