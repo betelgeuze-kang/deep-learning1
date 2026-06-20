@@ -75,6 +75,8 @@ def validate_contract_metadata(schema_path: Path, schema: object, instance: obje
         "real_model_execution_pass_milestones",
         "required_before_runtime_claim",
     }
+    if not any(key in contract for key in required_contract_keys):
+        return errors
     missing_contract_keys = required_contract_keys - set(contract)
     if missing_contract_keys:
         errors.append(f"{schema_path}: x-contract missing {', '.join(sorted(missing_contract_keys))}")
@@ -180,6 +182,106 @@ def validate_contract_metadata(schema_path: Path, schema: object, instance: obje
     return errors
 
 
+def validate_typed_readiness_contract_metadata(
+    schema_path: Path,
+    schema: object,
+    instance: object,
+) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        return errors
+    if instance.get("schema_version") != "typed_readiness.v1":
+        return errors
+
+    row_schema = (
+        schema.get("properties", {})
+        .get("rows", {})
+        .get("items", {})
+    )
+    if not isinstance(row_schema, dict):
+        errors.append(f"{schema_path}: typed readiness rows schema must be an object")
+        return errors
+    required_row_keys = row_schema.get("required", [])
+    if not isinstance(required_row_keys, list) or not required_row_keys:
+        errors.append(f"{schema_path}: typed readiness row schema must declare required keys")
+        return errors
+    required_row_key_set = {str(key) for key in required_row_keys}
+
+    contract = schema.get("x-contract")
+    if not isinstance(contract, dict):
+        errors.append(f"{schema_path}: x-contract must be an object for typed_readiness.v1")
+        return errors
+    expected_rows = contract.get("expected_rows")
+    if not isinstance(expected_rows, list) or not expected_rows:
+        errors.append(f"{schema_path}: x-contract.expected_rows must be a non-empty list")
+        return errors
+
+    replacement_schema = (
+        row_schema.get("properties", {})
+        .get("replacement_flag", {})
+    )
+    expected_order = replacement_schema.get("enum", [])
+    if not isinstance(expected_order, list) or not expected_order:
+        errors.append(f"{schema_path}: typed readiness replacement_flag enum must be non-empty")
+        expected_order = []
+
+    expected_replacements = [
+        row.get("replacement_flag", "")
+        for row in expected_rows
+        if isinstance(row, dict)
+    ]
+    if expected_order and expected_replacements != [str(value) for value in expected_order]:
+        errors.append(f"{schema_path}: x-contract.expected_rows must follow replacement_flag enum order")
+    if len(expected_replacements) != len(set(expected_replacements)):
+        errors.append(f"{schema_path}: x-contract.expected_rows replacement_flag values must be unique")
+
+    expected_by_replacement: dict[str, dict[str, object]] = {}
+    for index, row in enumerate(expected_rows, start=1):
+        if not isinstance(row, dict):
+            errors.append(f"{schema_path}: x-contract.expected_rows[{index}] must be an object")
+            continue
+        missing = required_row_key_set - set(row)
+        if missing:
+            errors.append(
+                f"{schema_path}: x-contract.expected_rows[{index}] missing {', '.join(sorted(missing))}"
+            )
+        extra = set(row) - required_row_key_set
+        if extra:
+            errors.append(
+                f"{schema_path}: x-contract.expected_rows[{index}] has unexpected keys {', '.join(sorted(extra))}"
+            )
+        replacement = row.get("replacement_flag", "")
+        if isinstance(replacement, str) and replacement:
+            expected_by_replacement[replacement] = row
+
+    rows = instance.get("rows", [])
+    if not isinstance(rows, list):
+        return errors
+    instance_replacements = [
+        row.get("replacement_flag", "")
+        for row in rows
+        if isinstance(row, dict)
+    ]
+    if expected_replacements and instance_replacements != expected_replacements:
+        errors.append(f"{schema_path}: instance rows must follow x-contract.expected_rows")
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            continue
+        replacement = row.get("replacement_flag", "")
+        expected = expected_by_replacement.get(replacement)
+        if expected is None:
+            errors.append(
+                f"{schema_path}: instance readiness[{index}] replacement_flag={replacement} missing from x-contract.expected_rows"
+            )
+            continue
+        for field, expected_value in expected.items():
+            if row.get(field) != expected_value:
+                errors.append(
+                    f"{schema_path}: instance readiness[{index}].{field} must match x-contract.expected_rows"
+                )
+    return errors
+
+
 def tracked_source_json(root: Path) -> list[str]:
     try:
         result = subprocess.run(
@@ -221,6 +323,7 @@ def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
         location = ".".join(str(part) for part in error.path) or "<root>"
         errors.append(f"{instance_path}: schema {schema_path.name}: {location}: {error.message}")
     errors.extend(validate_contract_metadata(schema_path, schema, instance))
+    errors.extend(validate_typed_readiness_contract_metadata(schema_path, schema, instance))
     return errors
 
 

@@ -118,6 +118,14 @@ for constant_name, (schema_name, path_parts) in enum_set_checks.items():
     actual = getattr(module, constant_name)
     if actual != expected:
         raise SystemExit(f"{constant_name} must be derived from schema {'.'.join(path_parts)}.enum")
+
+typed_schema = json.loads((root / "schemas" / "typed_readiness.schema.json").read_text(encoding="utf-8"))
+expected_contracts = {
+    row["replacement_flag"]: row
+    for row in typed_schema["x-contract"]["expected_rows"]
+}
+if module.EXPECTED_TYPED_READINESS_CONTRACTS != expected_contracts:
+    raise SystemExit("EXPECTED_TYPED_READINESS_CONTRACTS must be derived from schema x-contract.expected_rows")
 PY
 
 cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_missing_policy.json"
@@ -135,6 +143,41 @@ expect_fail_with \
   "'policy' is a required property" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/typed_readiness.schema.json" "$TMP_DIR/typed_missing_policy.json"
+
+cp "$ROOT_DIR/schemas/typed_readiness.schema.json" "$TMP_DIR/typed_schema_contract_drift.schema.json"
+python3 - "$TMP_DIR/typed_schema_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["x-contract"]["expected_rows"]:
+    if row["replacement_flag"] == "pm_foundation_contract_fixture_ready":
+        row["evidence_path"] = "results/drifted.csv"
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance readiness[1].evidence_path must match x-contract.expected_rows" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/typed_schema_contract_drift.schema.json" "$ROOT_DIR/readiness/typed_ready.json"
+
+cp "$ROOT_DIR/schemas/typed_readiness.schema.json" "$TMP_DIR/typed_schema_missing_contract.schema.json"
+python3 - "$TMP_DIR/typed_schema_missing_contract.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data.pop("x-contract")
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "x-contract must be an object for typed_readiness.v1" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/typed_schema_missing_contract.schema.json" "$ROOT_DIR/readiness/typed_ready.json"
 
 cp "$ROOT_DIR/v61/one_token_path.json" "$TMP_DIR/v61_bad_policy_type.json"
 python3 - "$TMP_DIR/v61_bad_policy_type.json" <<'PY'

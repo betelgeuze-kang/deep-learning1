@@ -62,6 +62,21 @@ def schema_contract(schema_name: str) -> dict[str, object]:
     return contract
 
 
+def schema_expected_rows_by_replacement(schema_name: str) -> dict[str, dict[str, object]]:
+    contract = schema_contract(schema_name)
+    rows = contract.get("expected_rows", [])
+    if not isinstance(rows, list):
+        return {}
+    expected: dict[str, dict[str, object]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        replacement = row.get("replacement_flag")
+        if isinstance(replacement, str) and replacement:
+            expected[replacement] = dict(row)
+    return expected
+
+
 REQUIRED_PIPELINE_KEYS = schema_required("pipeline.schema.json")
 REQUIRED_STAGE_KEYS = schema_required_at("pipeline.schema.json", "properties", "stages", "items")
 REQUIRED_PR_SPLIT_KEYS = schema_required("pr_split.schema.json")
@@ -343,128 +358,7 @@ TYPED_READINESS_KEYS = {
 }
 AMBIGUOUS_READY_FLAGS = set(schema_enum_at("typed_readiness.schema.json", "properties", "policy", "properties", "ambiguous_ready_flags", "items"))
 EXPECTED_TYPED_READINESS_ORDER = schema_enum_at("typed_readiness.schema.json", "properties", "rows", "items", "properties", "replacement_flag")
-EXPECTED_TYPED_READINESS_CONTRACTS = {
-    "pm_foundation_contract_fixture_ready": {
-        "scope_id": "pm-foundation-bundle",
-        "misleading_ready_flag": "v59_ready",
-        "evidence_path": "results/v59e_one_command_pm_foundation_demo_summary.csv",
-        "contract_ready": True,
-        "fixture_execution_ready": True,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-    "v53_v54_query_eval_contract_ready": {
-        "scope_id": "v53-v54-query-evaluation-pipeline",
-        "misleading_ready_flag": "v53_ready",
-        "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_roadmap_requirement_rows.csv",
-        "contract_ready": True,
-        "fixture_execution_ready": False,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-    "v58_blind_eval_protocol_contract_ready": {
-        "scope_id": "v58-blind-eval",
-        "misleading_ready_flag": "v58_ready",
-        "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_blocker_required_artifact_rows.csv",
-        "contract_ready": True,
-        "fixture_execution_ready": False,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-    "h10_real_label_contract_ready": {
-        "scope_id": "h10-scorer-real-label-promotion",
-        "misleading_ready_flag": "h10_real_label_promotion_ready",
-        "evidence_path": "results/v10_h10_real_label_promotion_readiness_gate/gate_001/pm_h10_real_label_acceptance_rows.csv",
-        "contract_ready": True,
-        "fixture_execution_ready": False,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-    "logical_100b_contract_fixture_ready": {
-        "scope_id": "v61-ssd-moe-runtime",
-        "misleading_ready_flag": "100b_moe_run_ready",
-        "evidence_path": "results/v61j_one_command_ssd_resident_demo_summary.csv",
-        "contract_ready": True,
-        "fixture_execution_ready": True,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-    "real_100b_inference_ready": {
-        "scope_id": "v61-real-100b-inference",
-        "misleading_ready_flag": "100b_moe_run_ready",
-        "evidence_path": "results/v61j_one_command_ssd_resident_demo_summary.csv",
-        "contract_ready": False,
-        "fixture_execution_ready": False,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-    "v61i_logical_100b_contract_fixture_ready": {
-        "scope_id": "v61i-logical-100b-fixture",
-        "misleading_ready_flag": "v61i_100b_moe_active_sparse_run_ready",
-        "evidence_path": "results/v61j_one_command_ssd_resident_demo_summary.csv",
-        "contract_ready": True,
-        "fixture_execution_ready": True,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-    "v60_release_contract_ready": {
-        "scope_id": "v60-release",
-        "misleading_ready_flag": "v60_ready",
-        "evidence_path": "results/v60_architecture_challenge_release_contract_summary.csv",
-        "contract_ready": True,
-        "fixture_execution_ready": False,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-    "operator_review_return_workflow_contract_ready": {
-        "scope_id": "operator-review-return-workflow",
-        "misleading_ready_flag": "review_return_ready",
-        "evidence_path": "operations/review_return_workflow.json",
-        "contract_ready": True,
-        "fixture_execution_ready": False,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-    "pr2_docs_claim_boundary_contract_ready": {
-        "scope_id": "docs-readme-pr2-cleanup",
-        "misleading_ready_flag": "pr2_ready",
-        "evidence_path": "docs/PR2_REWRITE_DRAFT.md",
-        "contract_ready": True,
-        "fixture_execution_ready": False,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
-        "human_review_ready": False,
-        "independent_reproduction_ready": False,
-        "release_ready": False,
-    },
-}
+EXPECTED_TYPED_READINESS_CONTRACTS = schema_expected_rows_by_replacement("typed_readiness.schema.json")
 EXPECTED_LEAKAGE_GUARD_IDS = schema_enum_at("leakage_contract.schema.json", "properties", "forbidden_surfaces", "items", "properties", "guard_id")
 FORBIDDEN_MODEL_VISIBLE_FIELDS = set(schema_enum_at("leakage_contract.schema.json", "properties", "forbidden_surfaces", "items", "properties", "field_names", "items"))
 ALLOWED_MODEL_VISIBLE_FIELDS = set(schema_enum_at("leakage_contract.schema.json", "properties", "policy", "properties", "allowed_model_visible_fields", "items"))
