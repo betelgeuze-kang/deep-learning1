@@ -49,6 +49,82 @@ expect_fail_with \
   "$ROOT_DIR/tools/verify_artifact.py" typed-readiness "$TMP_DIR/typed_real_model_ready_bad.json" \
   --pm-ledger "$PM_READY_LEDGER"
 
+cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_human_review_ready_bad.json"
+python3 - "$TMP_DIR/typed_human_review_ready_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["rows"]:
+    if row["replacement_flag"] == "operator_review_return_workflow_contract_ready":
+        row["human_review_ready"] = True
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "human_review_ready expected False, got True" \
+  "$ROOT_DIR/tools/verify_artifact.py" typed-readiness "$TMP_DIR/typed_human_review_ready_bad.json" \
+  --pm-ledger "$PM_READY_LEDGER"
+
+cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_heldout_metric_ready_bad.json"
+python3 - "$TMP_DIR/typed_heldout_metric_ready_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["rows"]:
+    if row["replacement_flag"] == "v58_blind_eval_protocol_contract_ready":
+        row["heldout_metric_ready"] = True
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "heldout_metric_ready expected False, got True" \
+  "$ROOT_DIR/tools/verify_artifact.py" typed-readiness "$TMP_DIR/typed_heldout_metric_ready_bad.json" \
+  --pm-ledger "$PM_READY_LEDGER"
+
+cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_independent_reproduction_ready_bad.json"
+python3 - "$TMP_DIR/typed_independent_reproduction_ready_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["rows"]:
+    if row["replacement_flag"] == "pr2_docs_claim_boundary_contract_ready":
+        row["independent_reproduction_ready"] = True
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "independent_reproduction_ready expected False, got True" \
+  "$ROOT_DIR/tools/verify_artifact.py" typed-readiness "$TMP_DIR/typed_independent_reproduction_ready_bad.json" \
+  --pm-ledger "$PM_READY_LEDGER"
+
+cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_release_ready_bad.json"
+python3 - "$TMP_DIR/typed_release_ready_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["rows"]:
+    if row["replacement_flag"] == "v60_release_contract_ready":
+        row["release_ready"] = True
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "current contract must not mark release_ready=true" \
+  "$ROOT_DIR/tools/verify_artifact.py" typed-readiness "$TMP_DIR/typed_release_ready_bad.json" \
+  --pm-ledger "$PM_READY_LEDGER"
+
 cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_real_100b_bad.json"
 python3 - "$TMP_DIR/typed_real_100b_bad.json" <<'PY'
 import json
@@ -67,6 +143,56 @@ expect_fail_with \
   "real_100b_inference_ready row must stay all-false until real inference exists" \
   "$ROOT_DIR/tools/verify_artifact.py" typed-readiness "$TMP_DIR/typed_real_100b_bad.json" \
   --pm-ledger "$PM_READY_LEDGER"
+
+cp "$PM_READY_LEDGER" "$TMP_DIR/typed_ledger_human_review_bad.csv"
+python3 - "$TMP_DIR/typed_ledger_human_review_bad.csv" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+for row in rows:
+    if row["replacement_flag"] == "operator_review_return_workflow_contract_ready":
+        row["human_review_ready"] = "1"
+        break
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "operator_review_return_workflow_contract_ready.human_review_ready expected 0, got 1" \
+  "$ROOT_DIR/tools/verify_artifact.py" typed-readiness "$ROOT_DIR/readiness/typed_ready.json" \
+  --pm-ledger "$TMP_DIR/typed_ledger_human_review_bad.csv"
+
+cp "$PM_READY_LEDGER" "$TMP_DIR/typed_ledger_release_bad.csv"
+python3 - "$TMP_DIR/typed_ledger_release_bad.csv" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+for row in rows:
+    if row["replacement_flag"] == "v60_release_contract_ready":
+        row["release_ready"] = "1"
+        break
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "v60_release_contract_ready.release_ready expected 0, got 1" \
+  "$ROOT_DIR/tools/verify_artifact.py" typed-readiness "$ROOT_DIR/readiness/typed_ready.json" \
+  --pm-ledger "$TMP_DIR/typed_ledger_release_bad.csv"
 
 cp "$ROOT_DIR/leakage/retrieval_model_visible.json" "$TMP_DIR/leakage_policy_bad.json"
 python3 - "$TMP_DIR/leakage_policy_bad.json" <<'PY'
