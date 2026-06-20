@@ -42,11 +42,14 @@ expected = {
     "repo_count": "3",
     "audit_case_rows": "9",
     "audit_type_count": "3",
+    "repo_refs_pinned": "1",
     "doc_code_conflict_rows": "3",
     "deprecated_usage_rows": "3",
     "config_mismatch_rows": "3",
-    "detected_doc_code_conflict_rows": "3",
+    "detected_doc_code_conflict_rows": "1",
     "detected_config_mismatch_rows": "1",
+    "guard_negative_rows": "3",
+    "guard_negative_block_rows": "3",
     "source_span_rows": "18",
     "wrong_answer_guard_pass_rows": "9",
     "citation_accuracy_pass_rows": "9",
@@ -73,6 +76,7 @@ for gate in [
     "deprecated-usage",
     "config-mismatch",
     "source-citation-audit-trail",
+    "guard-negative-controls",
     "v18-intake",
 ]:
     if decisions.get(gate, {}).get("status") != "pass":
@@ -85,6 +89,7 @@ required_files = [
     "public_repo_source_snapshot_rows.csv",
     "public_repo_audit_case_rows.csv",
     "public_repo_source_span_rows.csv",
+    "guard_negative_rows.csv",
     "v50_public_repo_auditor_manifest.json",
     "sha256_manifest.csv",
     "commercial_return/domain_manifest.json",
@@ -108,6 +113,10 @@ if manifest.get("v50_public_repo_auditor_3repo_ready") != 1:
     raise SystemExit("v50 manifest should be ready")
 if manifest.get("repo_count") != 3 or manifest.get("audit_case_rows") != 9:
     raise SystemExit("v50 manifest should record 3 repos and 9 audit cases")
+if manifest.get("repo_refs_pinned") != 1:
+    raise SystemExit("v50 manifest should record pinned repo refs")
+if manifest.get("guard_negative_rows") != 3 or manifest.get("guard_negative_block_rows") != 3:
+    raise SystemExit("v50 manifest should record blocked guard negatives")
 if manifest.get("owner_repos") != ["pypa/sampleproject", "psf/requests", "pallets/click"]:
     raise SystemExit("v50 manifest should record the public repos in order")
 if manifest.get("human_review_completed") != 0 or manifest.get("real_release_package_ready") != 0:
@@ -135,6 +144,8 @@ for row in source_rows:
     actual_head = subprocess.check_output(["git", "-C", str(repo_root), "rev-parse", "HEAD"], text=True).strip()
     if len(row["head_sha"]) != 40 or row["head_sha"] != actual_head:
         raise SystemExit(f"v50 head sha mismatch for {row['repo_id']}")
+    if row.get("requested_ref") != row["head_sha"] or row.get("ref_pinned") != "1":
+        raise SystemExit(f"v50 source row should bind requested pinned ref for {row['repo_id']}")
 
 if len(case_rows) != 9 or len(span_rows) != 18:
     raise SystemExit("v50 should write 9 case rows and 18 source spans")
@@ -143,18 +154,26 @@ if {row["audit_type"] for row in case_rows} != {"doc_code_conflict", "deprecated
 for audit_type in ["doc_code_conflict", "deprecated_usage", "config_mismatch"]:
     if sum(1 for row in case_rows if row["audit_type"] == audit_type) != 3:
         raise SystemExit(f"v50 should write 3 rows for {audit_type}")
-if sum(1 for row in case_rows if row["expected_label"] == "conflict") != 3:
-    raise SystemExit("v50 should include doc-code conflict rows")
-if sum(1 for row in case_rows if row["expected_label"] == "config_mismatch_detected") != 1:
+if sum(1 for row in case_rows if row["predicted_label"] == "conflict") != 1:
+    raise SystemExit("v50 should detect one doc-code conflict")
+if sum(1 for row in case_rows if row["predicted_label"] == "config_mismatch_detected") != 1:
     raise SystemExit("v50 should include one detected config mismatch")
 if any(row["correct"] != "1" or row["source_spans_ready"] != "1" or row["not_upstream_defect_claim"] != "1" for row in case_rows):
     raise SystemExit("v50 case rows should be correct, source-bound, and bounded")
+if any(not row.get("detector_method") or row["predicted_label"] != row["expected_label"] for row in case_rows):
+    raise SystemExit("v50 case rows should use independent detector outputs matching expected labels")
+doc_labels = {row["repo_id"]: row["predicted_label"] for row in case_rows if row["audit_type"] == "doc_code_conflict"}
+if doc_labels != {"pypa_sampleproject": "conflict", "psf_requests": "consistent", "pallets_click": "consistent"}:
+    raise SystemExit(f"v50 doc-code detector labels mismatch: {doc_labels}")
 
 poc_rows = read_csv(audit_dir / "commercial_return" / "poc_result_rows.csv")
 query_rows = read_csv(audit_dir / "commercial_return" / "query_set.csv")
 audit_rows = read_csv(audit_dir / "commercial_return" / "audit_trail.csv")
+guard_negative_rows = read_csv(audit_dir / "guard_negative_rows.csv")
 if len(poc_rows) != 9 or len(query_rows) != 9 or len(audit_rows) != 9:
     raise SystemExit("v50 commercial return should write 9 query/result/audit rows")
+if len(guard_negative_rows) != 3 or any(row["blocked"] != "1" or row["expected_block"] != "1" for row in guard_negative_rows):
+    raise SystemExit("v50 guard negative controls should be blocked")
 for field in ["wrong_answer_guard_pass", "citation_accuracy_pass", "abstain_behavior_pass", "audit_trail_bound"]:
     if any(row[field] != "1" for row in poc_rows):
         raise SystemExit(f"v50 result rows should pass {field}")
