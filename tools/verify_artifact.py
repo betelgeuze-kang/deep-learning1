@@ -166,120 +166,25 @@ REQUIRED_V61_POLICY_KEYS = schema_required_at("v61_one_token_path.schema.json", 
 REQUIRED_V61_MILESTONE_KEYS = schema_required_at("v61_one_token_path.schema.json", "properties", "milestones", "items")
 REQUIRED_V61_ARTIFACT_KEYS = schema_required_at("v61_one_token_path.schema.json", "properties", "required_artifacts", "items")
 EXPECTED_PR2_SLICE_ORDER = schema_enum_at("pr_split.schema.json", "properties", "slices", "items", "properties", "slice_id")
-REQUIRED_PR_MERGE_GATES = {
-    "claim-boundary",
-    "replay-artifact",
-    "blocker-false-positive",
-}
-REQUIRED_PR2_REWRITE_TERMS = {
-    "not mergeable as one unit",
-    "v50 artifact schema",
-    "sha256 manifest",
-    "typed readiness",
-    "retrieval leakage",
-    "D/E",
-    "operator/review-return",
-    "mixtral-ssd-tensor-page-read-rows",
-    "torch-matvec-parity-rows",
-    "real expert FFN forward parity",
-    "MoE block forward parity",
-    "one-token logits parity",
-    "real_model_execution_ready=1",
-    "blocked_before_ssd_resident_runtime_claim_count=3",
-    "required_real_evidence_field_count=11",
-    "missing_real_evidence_field_count=11",
-    "latency_memory_excluded_from_quality_score=1",
-    "actual generation",
-    "release claims remain blocked",
-}
-REQUIRED_PR2_V61_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py v61-one-token v61/one_token_path.json",
-    "--v61aa-summary",
-    "--v61ab-summary",
-    "results/v61aa_hotset_tensor_slice_verifier_summary.csv",
-    "results/v61ab_hotset_tensor_tile_quant_probe_summary.csv",
-}
-REQUIRED_PR2_DOCS_CLEANUP_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py typed-readiness readiness/typed_ready.json",
-    "--pm-ledger",
-    "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
-}
-REQUIRED_PR2_LEAKAGE_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py leakage leakage/retrieval_model_visible.json",
-    "--pm-ledger",
-    "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_retrieval_leakage_guard_rows.csv",
-}
-REQUIRED_PR2_V58_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py v58-blind-eval v58/blind_eval_real.json",
-    "--readiness-ledger",
-    "results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv",
-    "--artifact-ledger",
-    "results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_required_artifact_rows.csv",
-    "--template-ledger",
-    "results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_return_template_rows.csv",
-}
-REQUIRED_PR2_DE_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json",
-    "--measured-registry-ledger",
-    "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv",
-    "--acceptance-ledger",
-    "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv",
-}
-REQUIRED_PR2_V56_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py v56-replay v56/replay_contract.json",
-    "--summary",
-    "results/v56_ruler_longbench_expanded_contract_summary.csv",
-    "--blocker-ledger",
-    "results/v56_ruler_longbench_expanded_contract/contract_001/v56_seed_dependency_blocker_rows.csv",
-    "--artifact-ledger",
-    "results/v1_0_pm_pr_claim_slice_gate/gate_001/v56_replay_acceptance_evidence_rows.csv",
-}
-REQUIRED_PR2_V50_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json",
-    "--summary",
-    "results/v50_public_repo_auditor_3repo_summary.csv",
-    "--decision",
-    "results/v50_public_repo_auditor_3repo_decision.csv",
-}
-REQUIRED_PR2_REVIEW_RETURN_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py review-return-workflow operations/review_return_workflow.json",
-    "--v53s-summary",
-    "results/v53s_complete_source_review_return_intake_summary.csv",
-    "--v58d-summary",
-    "results/v58d_blind_review_return_intake_summary.csv",
-    "--v61af-summary",
-    "results/v61af_checkpoint_warehouse_operator_bundle_summary.csv",
-    "--v61hv-summary",
-    "results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv",
-}
-REQUIRED_PR2_V53_SOURCE_BENCHMARK_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json",
-    "--v53i-summary",
-    "results/v53i_complete_source_query_instantiation_summary.csv",
-    "--v53t-summary",
-    "results/v53t_complete_source_audit_readiness_gate_summary.csv",
-    "--v53ap-summary",
-    "results/v53ap_complete_source_abgh_same_query_measured_summary.csv",
-    "--v53aq-summary",
-    "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
-    "--v1-exit-ledger",
-    "results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv",
-}
-REQUIRED_PR2_V53_PUBLIC_SOURCE_MANIFEST_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py v53-public-source-manifest results/v53t_complete_source_audit_readiness_gate_summary.csv",
-    "--repo-ledger",
-    "results/v53t_complete_source_audit_readiness_gate/gate_001/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv",
-}
-REQUIRED_PR2_V54_GROUNDED_GENERATION_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json",
-    "--summary",
-    "results/v54c_complete_source_grounded_generation_1000_summary.csv",
-}
-REQUIRED_PR2_V59_PM_FOUNDATION_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py v59-pm-foundation-demo results/v59e_one_command_pm_foundation_demo_summary.csv",
-    "--gate-ledger",
-    "results/v59e_one_command_pm_foundation_demo/pm_foundation_001/pm_foundation_demo_gate_rows.csv",
-    "./experiments/test_v59e_one_command_pm_foundation_demo.sh",
+REQUIRED_PR_MERGE_GATES = set(
+    schema_enum_at(
+        "pr_split.schema.json",
+        "properties",
+        "merge_gate_policy",
+        "properties",
+        "required_gates",
+        "items",
+    )
+)
+REQUIRED_PR2_REWRITE_TERMS = set(schema_contract_list("pr_split.schema.json", "required_rewrite_terms"))
+REQUIRED_PR2_SPLIT_PLAN_TERMS = set(schema_contract_list("pr_split.schema.json", "required_split_plan_terms"))
+REQUIRED_PR2_VERIFICATION_TERMS_BY_SLICE = {
+    str(slice_id): {str(term) for term in terms}
+    for slice_id, terms in schema_contract_dict(
+        "pr_split.schema.json",
+        "required_verification_terms_by_slice",
+    ).items()
+    if isinstance(terms, list)
 }
 EXPECTED_V59_PM_FOUNDATION_SUMMARY = {
     "v59e_one_command_pm_foundation_demo_ready": "1",
@@ -352,10 +257,6 @@ EXPECTED_V53_PUBLIC_REPOS = [
     "python/cpython",
     "tiangolo/typer",
 ]
-REQUIRED_PR2_ROADMAP_VERIFICATION_TERMS = {
-    "tools/verify_artifact.py roadmap-doc docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md",
-    "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh",
-}
 REQUIRED_V1_ROADMAP_TERMS = {
     "# v1.0 Architecture Challenge Roadmap",
     "This roadmap supersedes publishing v0.3 as a broad public claim",
@@ -377,23 +278,6 @@ REQUIRED_V1_ROADMAP_TERMS = {
     "Do not publish comparison language if D or E is missing",
     "Do not call the generator mainline if it answers by copying raw retrieved context",
     "v1.0 can be called an Architecture Challenge release only when all of these are true",
-}
-REQUIRED_PR2_SPLIT_PLAN_TERMS = {
-    "tools/verify_artifact.py pr-split pr_slices/pr2.json",
-    "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
-    "tools/verify_artifact.py leakage leakage/retrieval_model_visible.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_retrieval_leakage_guard_rows.csv",
-    "PR2_REWRITE_DRAFT.md",
-    "Tests are useful smoke evidence, but tests-only merge conditions are forbidden",
-    "readiness/typed_ready.json",
-    "leakage/retrieval_model_visible.json",
-    "baselines/de_30b70b_real.json",
-    "v58/blind_eval_real.json",
-    "operations/review_return_workflow.json",
-    "v61/one_token_path.json",
-    "blocked_before_ssd_resident_runtime_claim_count=3",
-    "required_real_evidence_field_count=11",
-    "latency_memory_excluded_from_quality_score=1",
-    "docs-readme-pr2-cleanup",
 }
 TESTS_ONLY_MERGE_CONDITIONS = {"tests pass", "test pass", "tests", "test", "ci green"}
 TYPED_READINESS_KEYS = {
@@ -954,132 +838,13 @@ def verify_pr_split(path: Path) -> list[str]:
             errors.append(f"{prefix}: verification_commands must be a non-empty list")
         if any(command.strip().lower() in TESTS_ONLY_MERGE_CONDITIONS for command in row.get("verification_commands", [])):
             errors.append(f"{prefix}: tests-only verification command is forbidden")
-        if slice_id == "v61-ssd-moe-runtime-roadmap":
+        if data["draft_pr"] == "PR #2":
             command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [term for term in REQUIRED_PR2_V61_VERIFICATION_TERMS if term not in command_text]
+            expected_terms = REQUIRED_PR2_VERIFICATION_TERMS_BY_SLICE.get(slice_id, set())
+            missing_terms = [term for term in expected_terms if term not in command_text]
             if missing_terms:
                 errors.append(
-                    f"{prefix}: v61 verification commands missing replay summary terms: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "docs/v1-roadmap":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_ROADMAP_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: roadmap verification commands must check v1 claim-boundary wording: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "docs-readme-pr2-cleanup":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_DOCS_CLEANUP_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: docs cleanup verification commands must compare typed readiness to the PM ledger: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id in {"v53-system-a-b-g-h-measured", "v54-routehint-generation-contract"}:
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_LEAKAGE_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: leakage verification commands must compare the retrieval/model-visible contract to the PM ledger: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id in {"v53-query-instantiation-1000", "v53-system-a-b-g-h-measured"}:
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_V53_SOURCE_BENCHMARK_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: v53 verification commands must compare the source-bound benchmark to query, audit, A/B/G/H, and v1 exit ledgers: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "v53-public-repo-source-manifest":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_V53_PUBLIC_SOURCE_MANIFEST_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: v53 public source manifest verification commands must compare summary to the pinned repo ledger: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "v54-routehint-generation-contract":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_V54_GROUNDED_GENERATION_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: v54 verification commands must compare grounded generation contract to the 1000-row summary: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "v59-one-command-demo":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_V59_PM_FOUNDATION_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: v59 verification commands must compare PM foundation replay summary and gate ledger: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "v58-blind-eval-contract":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_V58_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: v58 verification commands must compare blind-eval blockers to readiness, artifact, and template ledgers: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "v52-baseline-registry-contract":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_DE_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: D/E baseline verification commands must compare measured-registry exclusion and acceptance blocker ledgers: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "v56-ruler-longbench-expanded":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_V56_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: v56 verification commands must compare replay contract to summary, seed blocker, and acceptance ledgers: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "v50-auditor-correctness":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_V50_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: v50 verification commands must compare auditor contract to summary and decision artifacts: "
-                    f"{', '.join(sorted(missing_terms))}"
-                )
-        if slice_id == "operator-review-return-workflow":
-            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
-            missing_terms = [
-                term for term in REQUIRED_PR2_REVIEW_RETURN_VERIFICATION_TERMS if term not in command_text
-            ]
-            if missing_terms:
-                errors.append(
-                    f"{prefix}: review-return verification commands must compare workflow contract to v53, v58, v61af, and v61hv blocker summaries: "
+                    f"{prefix}: verification_commands missing schema x-contract terms: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
         boundary = row.get("claim_boundary", {})

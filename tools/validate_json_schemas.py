@@ -182,6 +182,108 @@ def validate_contract_metadata(schema_path: Path, schema: object, instance: obje
     return errors
 
 
+def validate_pr_split_contract_metadata(
+    schema_path: Path,
+    schema: object,
+    instance: object,
+) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        return errors
+    if instance.get("schema_version") != "pr_split.v1":
+        return errors
+
+    contract = schema.get("x-contract")
+    if not isinstance(contract, dict):
+        errors.append(f"{schema_path}: x-contract must be an object for pr_split.v1")
+        return errors
+
+    def validate_string_list(value: object, label: str) -> list[str]:
+        list_errors: list[str] = []
+        if (
+            not isinstance(value, list)
+            or not value
+            or any(not isinstance(item, str) or not item for item in value)
+        ):
+            list_errors.append(f"{schema_path}: {label} must be a non-empty string list")
+        elif len(value) != len(set(value)):
+            list_errors.append(f"{schema_path}: {label} values must be unique")
+        return list_errors
+
+    required_rewrite_terms = contract.get("required_rewrite_terms")
+    required_split_plan_terms = contract.get("required_split_plan_terms")
+    required_terms_by_slice = contract.get("required_verification_terms_by_slice")
+    errors.extend(validate_string_list(required_rewrite_terms, "x-contract.required_rewrite_terms"))
+    errors.extend(validate_string_list(required_split_plan_terms, "x-contract.required_split_plan_terms"))
+    if not isinstance(required_terms_by_slice, dict) or not required_terms_by_slice:
+        errors.append(
+            f"{schema_path}: x-contract.required_verification_terms_by_slice must be a non-empty object"
+        )
+        required_terms_by_slice = {}
+
+    slice_id_enum = (
+        schema.get("properties", {})
+        .get("slices", {})
+        .get("items", {})
+        .get("properties", {})
+        .get("slice_id", {})
+        .get("enum", [])
+    )
+    if not isinstance(slice_id_enum, list) or any(not isinstance(slice_id, str) for slice_id in slice_id_enum):
+        errors.append(f"{schema_path}: pr_split slice_id enum must be a string list")
+        slice_id_enum = []
+    if isinstance(required_terms_by_slice, dict) and set(required_terms_by_slice) != set(slice_id_enum):
+        errors.append(
+            f"{schema_path}: x-contract.required_verification_terms_by_slice keys must match slice_id enum"
+        )
+    for slice_id, terms in required_terms_by_slice.items():
+        errors.extend(
+            validate_string_list(
+                terms,
+                f"x-contract.required_verification_terms_by_slice.{slice_id}",
+            )
+        )
+
+    required_gate_enum = (
+        schema.get("properties", {})
+        .get("merge_gate_policy", {})
+        .get("properties", {})
+        .get("required_gates", {})
+        .get("items", {})
+        .get("enum", [])
+    )
+    if isinstance(required_gate_enum, list):
+        required_gate_set = {str(gate) for gate in required_gate_enum}
+        policy = instance.get("merge_gate_policy", {})
+        if isinstance(policy, dict) and set(policy.get("required_gates", [])) != required_gate_set:
+            errors.append(f"{schema_path}: instance merge_gate_policy.required_gates must match schema enum")
+
+    if isinstance(required_rewrite_terms, list):
+        body_text = "\n".join(str(row) for row in instance.get("recommended_body", []))
+        if any(str(term) not in body_text for term in required_rewrite_terms):
+            errors.append(f"{schema_path}: instance recommended_body must contain x-contract.required_rewrite_terms")
+
+    slices = instance.get("slices", [])
+    if not isinstance(slices, list):
+        return errors
+    slice_by_id = {
+        row.get("slice_id", ""): row
+        for row in slices
+        if isinstance(row, dict)
+    }
+    for slice_id, terms in required_terms_by_slice.items():
+        row = slice_by_id.get(str(slice_id))
+        if not isinstance(row, dict) or not isinstance(terms, list):
+            continue
+        command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+        if any(str(term) not in command_text for term in terms):
+            errors.append(
+                f"{schema_path}: instance slice {slice_id}.verification_commands must contain "
+                "x-contract.required_verification_terms_by_slice"
+            )
+    return errors
+
+
 def validate_typed_readiness_contract_metadata(
     schema_path: Path,
     schema: object,
@@ -1065,6 +1167,7 @@ def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
         location = ".".join(str(part) for part in error.path) or "<root>"
         errors.append(f"{instance_path}: schema {schema_path.name}: {location}: {error.message}")
     errors.extend(validate_contract_metadata(schema_path, schema, instance))
+    errors.extend(validate_pr_split_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_typed_readiness_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_leakage_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_baseline_admission_contract_metadata(schema_path, schema, instance))

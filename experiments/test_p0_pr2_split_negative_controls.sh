@@ -448,7 +448,7 @@ expect_fail_with \
 
 bad_path="$(bad_pr2_json pr2_roadmap_verifier_drop_bad roadmap-verifier-drop)"
 expect_fail_with \
-  "roadmap verification commands must check v1 claim-boundary wording" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_roadmap_doc)"
@@ -458,22 +458,22 @@ expect_fail_with \
 
 bad_path="$(bad_pr2_json pr2_v61_summary_command_drop_bad v61-summary-command-drop)"
 expect_fail_with \
-  "v61 verification commands missing replay summary terms" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_docs_typed_ledger_drop_bad docs-typed-ledger-drop)"
 expect_fail_with \
-  "docs cleanup verification commands must compare typed readiness to the PM ledger" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_leakage_ledger_drop_bad leakage-ledger-drop)"
 expect_fail_with \
-  "leakage verification commands must compare the retrieval/model-visible contract to the PM ledger" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_v53_public_repo_ledger_drop_bad v53-public-repo-ledger-drop)"
 expect_fail_with \
-  "v53 public source manifest verification commands must compare summary to the pinned repo ledger" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 paths="$(bad_v53_public_summary v53_public_ready_bad v53_ready 1)"
@@ -492,17 +492,17 @@ expect_fail_with \
 
 bad_path="$(bad_pr2_json pr2_v53_v1_exit_ledger_drop_bad v53-v1-exit-ledger-drop)"
 expect_fail_with \
-  "v53 verification commands must compare the source-bound benchmark to query, audit, A/B/G/H, and v1 exit ledgers" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_v54_summary_drop_bad v54-summary-drop)"
 expect_fail_with \
-  "v54 verification commands must compare grounded generation contract to the 1000-row summary" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_v59_gate_ledger_drop_bad v59-gate-ledger-drop)"
 expect_fail_with \
-  "v59 verification commands must compare PM foundation replay summary and gate ledger" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 paths="$(bad_v59_summary v59_ready_bad v59_ready 1)"
@@ -521,27 +521,27 @@ expect_fail_with \
 
 bad_path="$(bad_pr2_json pr2_v58_template_ledger_drop_bad v58-template-ledger-drop)"
 expect_fail_with \
-  "v58 verification commands must compare blind-eval blockers to readiness, artifact, and template ledgers" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_de_acceptance_ledger_drop_bad de-acceptance-ledger-drop)"
 expect_fail_with \
-  "D/E baseline verification commands must compare measured-registry exclusion and acceptance blocker ledgers" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_v56_blocker_ledger_drop_bad v56-blocker-ledger-drop)"
 expect_fail_with \
-  "v56 verification commands must compare replay contract to summary, seed blocker, and acceptance ledgers" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_v50_decision_drop_bad v50-decision-drop)"
 expect_fail_with \
-  "v50 verification commands must compare auditor contract to summary and decision artifacts" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_review_return_v61hv_summary_drop_bad review-return-v61hv-summary-drop)"
 expect_fail_with \
-  "review-return verification commands must compare workflow contract to v53, v58, v61af, and v61hv blocker summaries" \
+  "verification_commands missing schema x-contract terms" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 echo "p0 PR #2 split negative controls passed"

@@ -104,6 +104,27 @@ for constant_name, (schema_name, path_parts) in enum_checks.items():
     if actual != expected:
         raise SystemExit(f"{constant_name} must be derived from schema {'.'.join(path_parts)}.enum")
 
+pr_split_schema = json.loads((root / "schemas" / "pr_split.schema.json").read_text(encoding="utf-8"))
+pr_split_contract = pr_split_schema["x-contract"]
+pr_split_required_gates = set(
+    pr_split_schema["properties"]["merge_gate_policy"]["properties"]["required_gates"]["items"]["enum"]
+)
+pr_split_required_verification_terms = {
+    slice_id: set(terms)
+    for slice_id, terms in pr_split_contract["required_verification_terms_by_slice"].items()
+}
+if module.REQUIRED_PR_MERGE_GATES != pr_split_required_gates:
+    raise SystemExit("REQUIRED_PR_MERGE_GATES must be derived from pr_split required_gates enum")
+if module.REQUIRED_PR2_REWRITE_TERMS != set(pr_split_contract["required_rewrite_terms"]):
+    raise SystemExit("REQUIRED_PR2_REWRITE_TERMS must be derived from pr_split x-contract.required_rewrite_terms")
+if module.REQUIRED_PR2_SPLIT_PLAN_TERMS != set(pr_split_contract["required_split_plan_terms"]):
+    raise SystemExit("REQUIRED_PR2_SPLIT_PLAN_TERMS must be derived from pr_split x-contract.required_split_plan_terms")
+if module.REQUIRED_PR2_VERIFICATION_TERMS_BY_SLICE != pr_split_required_verification_terms:
+    raise SystemExit(
+        "REQUIRED_PR2_VERIFICATION_TERMS_BY_SLICE must be derived from "
+        "pr_split x-contract.required_verification_terms_by_slice"
+    )
+
 enum_set_checks = {
     "TYPED_READINESS_KEYS": ("typed_readiness.schema.json", ("properties", "policy", "properties", "typed_fields", "items")),
     "AMBIGUOUS_READY_FLAGS": ("typed_readiness.schema.json", ("properties", "policy", "properties", "ambiguous_ready_flags", "items")),
@@ -286,6 +307,56 @@ if module.EXPECTED_V56_REPLAY_ARTIFACTS != v56_contract["expected_replay_artifac
 if module.EXPECTED_V56_SEED_DEPENDENCY != v56_contract["expected_seed_dependency"]:
     raise SystemExit("EXPECTED_V56_SEED_DEPENDENCY must be derived from schema x-contract.expected_seed_dependency")
 PY
+
+cp "$ROOT_DIR/schemas/pr_split.schema.json" "$TMP_DIR/pr_split_schema_missing_slice_contract.schema.json"
+python3 - "$TMP_DIR/pr_split_schema_missing_slice_contract.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["required_verification_terms_by_slice"].pop("v59-one-command-demo")
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "x-contract.required_verification_terms_by_slice keys must match slice_id enum" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/pr_split_schema_missing_slice_contract.schema.json" "$ROOT_DIR/pr_slices/pr2.json"
+
+cp "$ROOT_DIR/schemas/pr_split.schema.json" "$TMP_DIR/pr_split_schema_verification_term_drift.schema.json"
+python3 - "$TMP_DIR/pr_split_schema_verification_term_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["required_verification_terms_by_slice"]["v59-one-command-demo"].append(
+    "missing-v59-verification-term"
+)
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance slice v59-one-command-demo.verification_commands must contain x-contract.required_verification_terms_by_slice" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/pr_split_schema_verification_term_drift.schema.json" "$ROOT_DIR/pr_slices/pr2.json"
+
+cp "$ROOT_DIR/schemas/pr_split.schema.json" "$TMP_DIR/pr_split_schema_rewrite_term_drift.schema.json"
+python3 - "$TMP_DIR/pr_split_schema_rewrite_term_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["required_rewrite_terms"].append("missing-pr2-rewrite-term")
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance recommended_body must contain x-contract.required_rewrite_terms" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/pr_split_schema_rewrite_term_drift.schema.json" "$ROOT_DIR/pr_slices/pr2.json"
 
 cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_missing_policy.json"
 python3 - "$TMP_DIR/typed_missing_policy.json" <<'PY'
