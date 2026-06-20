@@ -1,0 +1,8 @@
+# Project-level Codex defaults for research orchestration.
+# Codex owns pursue-goal; OpenCode/Cursor are scoped implementation workers.
+
+model = "gpt-5.5"
+model_reasoning_effort = "xhigh"
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+web_search = "cached"
