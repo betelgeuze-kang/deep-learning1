@@ -765,103 +765,107 @@ void GraphV02::apply_contrastive_learning() {
 }
 
 void GraphV02::validate_params() const {
+    const auto experiment = params_.experiment();
+    const auto energy = params_.energy();
+    const auto route = params_.route();
+    const auto fallback = params_.fallback();
     const auto valid_hint_agg = [](const std::string& agg) {
         return agg == "top1" || agg == "vote" || agg == "weighted-vote";
     };
 
-    if (params_.N <= 0) {
+    if (experiment.n() <= 0) {
         throw std::runtime_error("N must be positive");
     }
-    if (params_.backend != "cpu" && params_.backend != "hip") {
+    if (experiment.backend() != "cpu" && experiment.backend() != "hip") {
         throw std::runtime_error("--backend must be one of: cpu, hip");
     }
-    if (params_.hip_device < 0) {
+    if (experiment.hip_device() < 0) {
         throw std::runtime_error("--hip-device must be non-negative");
     }
-    if (params_.backend == "hip" && !hip_backend_compiled()) {
+    if (experiment.backend() == "hip" && !hip_backend_compiled()) {
         throw std::runtime_error(
             "--backend hip requested, but this binary was built without "
             "DLE_ENABLE_HIP=ON");
     }
-    if (params_.S != FieldTable::States) {
+    if (experiment.states() != FieldTable::States) {
         throw std::runtime_error("v0.2-pre reference requires S = 16");
     }
-    if (params_.channels != FieldTable::Channels) {
+    if (experiment.channels() != FieldTable::Channels) {
         throw std::runtime_error("v0.2-pre reference requires channels = 2");
     }
-    if (params_.R < 1 || params_.R > 4) {
+    if (experiment.radius() < 1 || experiment.radius() > 4) {
         throw std::runtime_error("R must be in [1, 4] for the reference ring graph");
     }
-    if (params_.K != 2 * params_.R) {
+    if (experiment.neighbor_count() != 2 * experiment.radius()) {
         throw std::runtime_error("K must equal 2 * R in the reference ring graph");
     }
-    if (params_.K < 2 || params_.K > 8) {
+    if (experiment.neighbor_count() < 2 || experiment.neighbor_count() > 8) {
         throw std::runtime_error("K must be in [2, 8]");
     }
-    if (params_.C_colors <= 2 * params_.R) {
+    if (experiment.color_count() <= 2 * experiment.radius()) {
         throw std::runtime_error("C_colors must be greater than 2 * R for a safe color schedule");
     }
-    if (params_.proposal_count <= 0) {
+    if (energy.proposal_count() <= 0) {
         throw std::runtime_error("proposal_count must be positive");
     }
-    if (params_.K_jump < 0 || params_.K_jump > RoutingTable::MaxJump) {
+    if (route.jump_neighbor_count() < 0 || route.jump_neighbor_count() > RoutingTable::MaxJump) {
         throw std::runtime_error("K-jump must be in [0, 8]");
     }
-    if (params_.route_reservoir_threshold < 0.0f) {
+    if (route.reservoir_threshold() < 0.0f) {
         throw std::runtime_error("route-reservoir-threshold must be non-negative");
     }
-    if (params_.route_min_anchor_gap < 0.0f && params_.route_min_anchor_gap != -1.0f) {
+    if (route.min_anchor_gap() < 0.0f && route.min_anchor_gap() != -1.0f) {
         throw std::runtime_error(
             "route-min-anchor-gap must be non-negative, or -1 to follow lambda_u");
     }
-    if (params_.route_adaptive_gap_scale < 0.0f) {
+    if (route.adaptive_gap_scale() < 0.0f) {
         throw std::runtime_error("route-adaptive-gap-scale must be non-negative");
     }
-    if (params_.route_confidence_gap_scale < 0.0f) {
+    if (route.confidence_gap_scale() < 0.0f) {
         throw std::runtime_error("route-confidence-gap-scale must be non-negative");
     }
-    if (params_.route_accept_confidence_gain < 0.0f) {
+    if (route.accept_confidence_gain() < 0.0f) {
         throw std::runtime_error("route-accept-confidence-gain must be non-negative");
     }
-    if (params_.lambda_route < 0.0f) {
+    if (route.lambda() < 0.0f) {
         throw std::runtime_error("lambda-route must be non-negative");
     }
-    if (params_.route_strength_mode != "fixed" && params_.route_strength_mode != "margin") {
+    if (route.strength_mode() != "fixed" && route.strength_mode() != "margin") {
         throw std::runtime_error("route-strength-mode must be one of: fixed, margin");
     }
-    if (params_.lambda_route_base < 0.0f) {
+    if (route.lambda_base() < 0.0f) {
         throw std::runtime_error("lambda-route-base must be non-negative");
     }
-    if (params_.lambda_route_max < 0.0f) {
+    if (route.lambda_max() < 0.0f) {
         throw std::runtime_error("lambda-route-max must be non-negative");
     }
-    if (params_.route_margin_alpha < 0.0f) {
+    if (route.margin_alpha() < 0.0f) {
         throw std::runtime_error("route-margin-alpha must be non-negative");
     }
-    if (params_.route_confidence_power < 0.0f) {
+    if (route.confidence_power() < 0.0f) {
         throw std::runtime_error("route-confidence-power must be non-negative");
     }
-    if (params_.route_min_confidence < 0.0f || params_.route_min_confidence > 1.0f) {
+    if (route.min_confidence() < 0.0f || route.min_confidence() > 1.0f) {
         throw std::runtime_error("route-min-confidence must be in [0, 1]");
     }
-    if (params_.route_corrupt_candidate_rate < 0.0f ||
-        params_.route_corrupt_candidate_rate > 1.0f) {
+    if (fallback.corrupt_candidate_rate() < 0.0f ||
+        fallback.corrupt_candidate_rate() > 1.0f) {
         throw std::runtime_error("route-corrupt-candidate-rate must be in [0, 1]");
     }
-    if (params_.route_noisy_source_rate < 0.0f ||
-        params_.route_noisy_source_rate > 1.0f) {
+    if (fallback.noisy_source_rate() < 0.0f ||
+        fallback.noisy_source_rate() > 1.0f) {
         throw std::runtime_error("route-noisy-source-rate must be in [0, 1]");
     }
-    if (params_.route_corrupt_confidence != "keep" &&
-        params_.route_corrupt_confidence != "low") {
+    if (fallback.corrupt_confidence() != "keep" &&
+        fallback.corrupt_confidence() != "low") {
         throw std::runtime_error("route-corrupt-confidence must be one of: keep, low");
     }
-    if (params_.route_corrupt_confidence_value < 0.0f ||
-        params_.route_corrupt_confidence_value > 1.0f) {
+    if (fallback.corrupt_confidence_value() < 0.0f ||
+        fallback.corrupt_confidence_value() > 1.0f) {
         throw std::runtime_error("route-corrupt-confidence-value must be in [0, 1]");
     }
-    if (params_.route_corrupt_preserve_correct < 0 ||
-        params_.route_corrupt_preserve_correct > 1) {
+    if (fallback.corrupt_preserve_correct() < 0 ||
+        fallback.corrupt_preserve_correct() > 1) {
         throw std::runtime_error("route-corrupt-preserve-correct must be 0 or 1");
     }
     if (params_.route_strength_confidence != "weight" &&
