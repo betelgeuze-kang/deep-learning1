@@ -304,6 +304,8 @@ import numpy as np
 root = Path(sys.argv[1])
 shard = root / "model-00001-of-00001.safetensors"
 tensors = {
+    "model.layers.0.input_layernorm.weight": np.arange(4, dtype=np.float32) / 13.0,
+    "model.layers.0.block_sparse_moe.gate.weight": np.arange(8, dtype=np.float32).reshape(2, 4) / 29.0,
     "model.layers.0.block_sparse_moe.experts.0.w1.weight": np.arange(12, dtype=np.float32).reshape(3, 4) / 17.0,
     "model.layers.0.block_sparse_moe.experts.0.w2.weight": np.arange(12, dtype=np.float32).reshape(4, 3) / 19.0,
     "model.layers.0.block_sparse_moe.experts.0.w3.weight": np.arange(12, dtype=np.float32).reshape(3, 4) / 23.0,
@@ -338,6 +340,10 @@ shard.write_bytes(struct.pack("<Q", len(header_bytes)) + header_bytes + b"".join
     + "\n",
     encoding="utf-8",
 )
+(root / "config.json").write_text(
+    json.dumps({"model_type": "mixtral", "hidden_size": 4, "intermediate_size": 3, "num_local_experts": 1}, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
 PY
 
 V61AB_RUN_ID="ffn_fixture" \
@@ -345,6 +351,7 @@ V61AB_REUSE_EXISTING=0 \
 V61AB_EXPERT_FFN_CHECKPOINT_ROOT="$TMP_EXPERT_ROOT" \
 V61AB_EXPERT_FFN_LAYER=0 \
 V61AB_EXPERT_FFN_EXPERT=0 \
+V61AB_EXPERT_FFN_REAL_MODEL_EVIDENCE=1 \
 "$ROOT_DIR/experiments/run_v61ab_hotset_tensor_tile_quant_probe.sh" >/dev/null
 
 python3 - "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe/ffn_fixture" "$SUMMARY_CSV" <<'PY'
@@ -381,6 +388,27 @@ if row["fixture_execution_ready"] != "1" or row["real_model_execution_ready"] !=
     raise SystemExit("v61ab fixture expert FFN typed readiness mismatch")
 if row["w1_shape"] != "3x4" or row["w2_shape"] != "4x3" or row["w3_shape"] != "3x4":
     raise SystemExit("v61ab fixture expert FFN shapes mismatch")
+for field in [
+    "config_sha256",
+    "shard_index_sha256",
+    "full_manifest_sha256",
+    "rmsnorm_payload_sha256",
+    "router_payload_sha256",
+    "residual_input_sha256",
+    "residual_output_sha256",
+    "candidate_output_sha256",
+    "torch_reference_output_sha256",
+]:
+    if not row[field]:
+        raise SystemExit(f"v61ab fixture expert FFN should populate {field}")
+for field in [
+    "transformers_expert_output_sha256",
+    "independent_runtime_output_sha256",
+]:
+    if row[field]:
+        raise SystemExit(f"v61ab fixture expert FFN must not populate real-runtime field {field}")
+if row["router_top_k"] != "2" or row["token_id"] != "0":
+    raise SystemExit("v61ab fixture expert FFN token/router metadata mismatch")
 if not row["candidate_output_sha256"] or not row["torch_reference_output_sha256"]:
     raise SystemExit("v61ab fixture expert FFN should hash candidate/reference outputs")
 if float(row["max_abs_delta"]) > float(row["tolerance"]):

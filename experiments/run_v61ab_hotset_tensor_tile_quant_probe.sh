@@ -48,7 +48,11 @@ tile_elements_target = int(os.environ.get("V61AB_TILE_BF16_VALUES", "4096"))
 expert_ffn_root_raw = os.environ.get("V61AB_EXPERT_FFN_CHECKPOINT_ROOT", "").strip()
 expert_ffn_layer = int(os.environ.get("V61AB_EXPERT_FFN_LAYER", "0"))
 expert_ffn_expert = int(os.environ.get("V61AB_EXPERT_FFN_EXPERT", "0"))
-expert_ffn_real_model_evidence = int(os.environ.get("V61AB_EXPERT_FFN_REAL_MODEL_EVIDENCE", "0") == "1")
+expert_ffn_token_id = os.environ.get("V61AB_EXPERT_FFN_TOKEN_ID", "0")
+expert_ffn_router_top_k = os.environ.get("V61AB_EXPERT_FFN_ROUTER_TOP_K", "2")
+expert_ffn_model_revision = os.environ.get("V61AB_MODEL_REVISION", "not-supplied")
+expert_ffn_tokenizer_revision = os.environ.get("V61AB_TOKENIZER_REVISION", "not-supplied")
+expert_ffn_real_model_evidence_requested = int(os.environ.get("V61AB_EXPERT_FFN_REAL_MODEL_EVIDENCE", "0") == "1")
 if tiles_per_slice <= 0:
     raise SystemExit("V61AB_TILES_PER_SLICE must be positive")
 if tile_elements_target <= 0:
@@ -179,14 +183,28 @@ def read_safetensors_tensor(checkpoint_root, index_json, tensor_name):
 
 def expert_ffn_parity_rows():
     tensor_prefix = f"model.layers.{expert_ffn_layer}.block_sparse_moe.experts.{expert_ffn_expert}"
+    rmsnorm_tensor_name = f"model.layers.{expert_ffn_layer}.input_layernorm.weight"
+    router_tensor_name = f"model.layers.{expert_ffn_layer}.block_sparse_moe.gate.weight"
     tensor_names = {
         "w1": f"{tensor_prefix}.w1.weight",
         "w2": f"{tensor_prefix}.w2.weight",
         "w3": f"{tensor_prefix}.w3.weight",
     }
     base_row = {
+        "checkpoint_id": model_id,
+        "model_revision": expert_ffn_model_revision,
+        "config_sha256": "",
+        "tokenizer_revision": expert_ffn_tokenizer_revision,
+        "shard_index_sha256": "",
+        "full_manifest_sha256": "",
         "layer_index": str(expert_ffn_layer),
         "expert_index": str(expert_ffn_expert),
+        "token_id": str(expert_ffn_token_id),
+        "router_top_k": str(expert_ffn_router_top_k),
+        "rmsnorm_tensor_name": rmsnorm_tensor_name,
+        "rmsnorm_payload_sha256": "",
+        "router_tensor_name": router_tensor_name,
+        "router_payload_sha256": "",
         "w1_tensor_name": tensor_names["w1"],
         "w2_tensor_name": tensor_names["w2"],
         "w3_tensor_name": tensor_names["w3"],
@@ -216,6 +234,10 @@ def expert_ffn_parity_rows():
             "input_hidden_size": "0",
             "intermediate_size": "0",
             "output_hidden_size": "0",
+            "residual_input_sha256": "",
+            "residual_output_sha256": "",
+            "transformers_expert_output_sha256": "",
+            "independent_runtime_output_sha256": "",
             "candidate_output_sha256": "",
             "torch_reference_output_sha256": "",
             "max_abs_delta": "",
@@ -227,7 +249,21 @@ def expert_ffn_parity_rows():
     index_path = checkpoint_root / "model.safetensors.index.json"
     row = dict(base_row)
     try:
+        row["shard_index_sha256"] = sha256(index_path)
+        config_path = checkpoint_root / "config.json"
+        tokenizer_path = checkpoint_root / "tokenizer.json"
+        if config_path.is_file():
+            row["config_sha256"] = sha256(config_path)
+        if tokenizer_path.is_file():
+            row["tokenizer_revision"] = expert_ffn_tokenizer_revision
+            row["full_manifest_sha256"] = sha256_bytes(
+                (row["shard_index_sha256"] + row["config_sha256"] + sha256(tokenizer_path)).encode("utf-8")
+            )
+        else:
+            row["full_manifest_sha256"] = sha256_bytes((row["shard_index_sha256"] + row["config_sha256"]).encode("utf-8"))
         index_json = json.loads(index_path.read_text(encoding="utf-8"))
+        rmsnorm = read_safetensors_tensor(checkpoint_root, index_json, rmsnorm_tensor_name)
+        router = read_safetensors_tensor(checkpoint_root, index_json, router_tensor_name)
         w1 = read_safetensors_tensor(checkpoint_root, index_json, tensor_names["w1"])
         w2 = read_safetensors_tensor(checkpoint_root, index_json, tensor_names["w2"])
         w3 = read_safetensors_tensor(checkpoint_root, index_json, tensor_names["w3"])
@@ -251,21 +287,39 @@ def expert_ffn_parity_rows():
         tolerance = 1e-6
         candidate_bytes = candidate.detach().cpu().numpy().astype("<f4").tobytes()
         reference_bytes = reference.detach().cpu().numpy().astype("<f4").tobytes()
+        residual_input_sha = sha256_bytes(x.detach().cpu().numpy().astype("<f4").tobytes())
+        residual_output_sha = sha256_bytes((x + candidate).detach().cpu().numpy().astype("<f4").tobytes())
         parity_pass = int(math.isfinite(delta) and delta <= tolerance)
+        fixture_ready = parity_pass
+        real_model_ready = 0
+        reason = (
+            "expert FFN fixture tensors loaded from local safetensors root and candidate output matches torch reference; "
+            "independent runtime and original Transformers module outputs not supplied"
+            if parity_pass
+            else "expert FFN parity delta exceeds tolerance"
+        )
+        if expert_ffn_real_model_evidence_requested and parity_pass:
+            reason += "; V61AB_EXPERT_FFN_REAL_MODEL_EVIDENCE is execution-mode metadata only and cannot declare evidence state"
         row.update({
             "status": "pass" if parity_pass else "blocked",
-            "reason": "expert FFN tensors loaded from local safetensors root and candidate output matches torch reference" if parity_pass else "expert FFN parity delta exceeds tolerance",
-            "fixture_execution_ready": "0" if expert_ffn_real_model_evidence else str(parity_pass),
-            "real_model_execution_ready": str(parity_pass if expert_ffn_real_model_evidence else 0),
+            "reason": reason,
+            "fixture_execution_ready": str(fixture_ready),
+            "real_model_execution_ready": str(real_model_ready),
             "w1_shape": w1["shape"],
             "w2_shape": w2["shape"],
             "w3_shape": w3["shape"],
+            "rmsnorm_payload_sha256": rmsnorm["payload_sha256"],
+            "router_payload_sha256": router["payload_sha256"],
             "w1_payload_sha256": w1["payload_sha256"],
             "w2_payload_sha256": w2["payload_sha256"],
             "w3_payload_sha256": w3["payload_sha256"],
             "input_hidden_size": str(hidden),
             "intermediate_size": str(inter),
             "output_hidden_size": str(int(candidate.numel())),
+            "residual_input_sha256": residual_input_sha,
+            "residual_output_sha256": residual_output_sha,
+            "transformers_expert_output_sha256": "",
+            "independent_runtime_output_sha256": "",
             "candidate_output_sha256": sha256_bytes(candidate_bytes),
             "torch_reference_output_sha256": sha256_bytes(reference_bytes),
             "max_abs_delta": fmt(delta),
@@ -285,6 +339,10 @@ def expert_ffn_parity_rows():
             "input_hidden_size": "0",
             "intermediate_size": "0",
             "output_hidden_size": "0",
+            "residual_input_sha256": "",
+            "residual_output_sha256": "",
+            "transformers_expert_output_sha256": "",
+            "independent_runtime_output_sha256": "",
             "candidate_output_sha256": "",
             "torch_reference_output_sha256": "",
             "max_abs_delta": "",

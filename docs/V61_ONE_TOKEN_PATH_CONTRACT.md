@@ -69,9 +69,13 @@ The contract requires these artifact shapes:
   real checkpoint page binding, and payload/generation/route guards
 - `expert-ffn-forward-parity-rows`
   (`results/v61ab_hotset_tensor_tile_quant_probe/probe_001/expert_ffn_forward_parity_rows.csv`):
-  real layer/expert tensor names, W1/W2/W3
-  payload hashes and shapes, typed readiness fields, candidate/reference output
-  hashes, tolerance, max delta, and `expert_ffn_parity_pass`
+  checkpoint/config/tokenizer/shard/manifest hashes, real layer/expert tensor
+  names, router top-k, RMSNorm and router payload hashes, W1/W2/W3 payload
+  hashes and shapes, residual input/output hashes, reserved original
+  Transformers expert output and independent runtime output hashes, typed
+  readiness fields, tolerance, max delta, and `expert_ffn_parity_pass`.
+  Fixture-only rows must leave the original Transformers and independent
+  runtime fields empty until real external implementation evidence exists.
 - `moe-block-forward-parity-rows`
   (`results/v61_moe_block_forward_parity/moe_block_forward_parity_rows.csv`):
   token input hash, router logits hash,
