@@ -2842,6 +2842,8 @@ def verify_baseline_admission(
                     errors.append(f"{measured_registry_ledger}: {system_id}.answer_citation_raw_output_rows must be 0 while blocked")
                 if row.get("resource_row_required") != "1" or row.get("evaluator_version_required") != "1" or row.get("same_query_set_required") != "1":
                     errors.append(f"{measured_registry_ledger}: {system_id}.resource/evaluator/same-query requirements must be 1")
+                if row.get("acceptance_evidence_rows") != "3" or row.get("acceptance_ready_rows") != "0":
+                    errors.append(f"{measured_registry_ledger}: {system_id}.acceptance evidence must have three blocked rows and zero ready rows")
                 if row.get("status") != "blocked":
                     errors.append(f"{measured_registry_ledger}: {system_id}.status must be blocked")
 
@@ -2879,6 +2881,17 @@ def verify_baseline_admission(
                         errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} approval/fixture/tests-only policy mismatch")
                     if row.get("acceptance_ready") != "0" or row.get("acceptance_status") != "blocked":
                         errors.append(f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} must remain blocked")
+                    observed_signal = row.get("observed_signal", "")
+                    for forbidden_ready in [
+                        "baseline_ready=1",
+                        "supplied_evidence_ready=1",
+                        "v52_absorb_ready=1",
+                        "v52_ready=1",
+                    ]:
+                        if forbidden_ready in observed_signal:
+                            errors.append(
+                                f"{acceptance_ledger}: {system_id}.{row.get('artifact_id')} observed_signal must not promote {forbidden_ready}"
+                            )
     return errors
 
 

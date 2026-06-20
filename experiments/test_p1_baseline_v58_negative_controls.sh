@@ -291,6 +291,29 @@ expect_fail_with \
   --measured-registry-ledger "$TMP_DIR/de_registry_same_query_bad.csv" \
   --acceptance-ledger "$DE_ACCEPTANCE_LEDGER"
 
+cp "$DE_REGISTRY_LEDGER" "$TMP_DIR/de_registry_acceptance_ready_rows_bad.csv"
+python3 - "$TMP_DIR/de_registry_acceptance_ready_rows_bad.csv" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["acceptance_ready_rows"] = "1"
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "acceptance evidence must have three blocked rows and zero ready rows" \
+  "$ROOT_DIR/tools/verify_artifact.py" baseline-admission "$ROOT_DIR/baselines/de_30b70b_real.json" \
+  --measured-registry-ledger "$TMP_DIR/de_registry_acceptance_ready_rows_bad.csv" \
+  --acceptance-ledger "$DE_ACCEPTANCE_LEDGER"
+
 cp "$DE_ACCEPTANCE_LEDGER" "$TMP_DIR/de_acceptance_artifact_present_bad.csv"
 python3 - "$TMP_DIR/de_acceptance_artifact_present_bad.csv" <<'PY'
 import csv
@@ -336,6 +359,29 @@ expect_fail_with \
   "$ROOT_DIR/tools/verify_artifact.py" baseline-admission "$ROOT_DIR/baselines/de_30b70b_real.json" \
   --measured-registry-ledger "$DE_REGISTRY_LEDGER" \
   --acceptance-ledger "$TMP_DIR/de_acceptance_ready_bad.csv"
+
+cp "$DE_ACCEPTANCE_LEDGER" "$TMP_DIR/de_acceptance_observed_signal_ready_bad.csv"
+python3 - "$TMP_DIR/de_acceptance_observed_signal_ready_bad.csv" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["observed_signal"] = rows[0]["observed_signal"].replace("baseline_ready=0", "baseline_ready=1")
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "observed_signal must not promote baseline_ready=1" \
+  "$ROOT_DIR/tools/verify_artifact.py" baseline-admission "$ROOT_DIR/baselines/de_30b70b_real.json" \
+  --measured-registry-ledger "$DE_REGISTRY_LEDGER" \
+  --acceptance-ledger "$TMP_DIR/de_acceptance_observed_signal_ready_bad.csv"
 
 cp "$ROOT_DIR/v58/blind_eval_real.json" "$TMP_DIR/v58_fixture_bad.json"
 python3 - "$TMP_DIR/v58_fixture_bad.json" <<'PY'
