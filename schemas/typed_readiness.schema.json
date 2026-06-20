@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/typed_readiness.schema.json",
+  "title": "Typed Readiness Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "rows"],
+  "properties": {
+    "schema_version": {"const": "typed_readiness.v1"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "forbid_ambiguous_ready_claims",
+        "typed_fields",
+        "ambiguous_ready_flags"
+      ],
+      "properties": {
+        "forbid_ambiguous_ready_claims": {"const": true},
+        "typed_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "contract_ready",
+              "fixture_execution_ready",
+              "real_model_execution_ready",
+              "heldout_metric_ready",
+              "human_review_ready",
+              "independent_reproduction_ready",
+              "release_ready"
+            ]
+          },
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true
+        },
+        "ambiguous_ready_flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "100b_moe_run_ready",
+              "h10_real_label_promotion_ready",
+              "pr2_ready",
+              "review_return_ready",
+              "v53_ready",
+              "v58_ready",
+              "v59_ready",
+              "v60_ready",
+              "v61i_100b_moe_active_sparse_run_ready"
+            ]
+          },
+          "minItems": 9,
+          "maxItems": 9,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": [
+          "scope_id",
+          "contract_ready",
+          "fixture_execution_ready",
+          "real_model_execution_ready",
+          "heldout_metric_ready",
+          "human_review_ready",
+          "independent_reproduction_ready",
+          "release_ready",
+          "misleading_ready_flag",
+          "replacement_flag",
+          "ready_wording_policy",
+          "pm_ledger_required",
+          "evidence_path"
+        ],
+        "properties": {
+          "scope_id": {
+            "type": "string",
+            "enum": [
+              "pm-foundation-bundle",
+              "v53-v54-query-evaluation-pipeline",
+              "v58-blind-eval",
+              "h10-scorer-real-label-promotion",
+              "v61-ssd-moe-runtime",
+              "v61-real-100b-inference",
+              "v61i-logical-100b-fixture",
+              "v60-release",
+              "operator-review-return-workflow",
+              "docs-readme-pr2-cleanup"
+            ]
+          },
+          "contract_ready": {"type": "boolean"},
+          "fixture_execution_ready": {"type": "boolean"},
+          "real_model_execution_ready": {"const": false},
+          "heldout_metric_ready": {"const": false},
+          "human_review_ready": {"const": false},
+          "independent_reproduction_ready": {"const": false},
+          "release_ready": {"const": false},
+          "misleading_ready_flag": {
+            "type": "string",
+            "enum": [
+              "100b_moe_run_ready",
+              "h10_real_label_promotion_ready",
+              "pr2_ready",
+              "review_return_ready",
+              "v53_ready",
+              "v58_ready",
+              "v59_ready",
+              "v60_ready",
+              "v61i_100b_moe_active_sparse_run_ready"
+            ]
+          },
+          "replacement_flag": {
+            "type": "string",
+            "enum": [
+              "pm_foundation_contract_fixture_ready",
+              "v53_v54_query_eval_contract_ready",
+              "v58_blind_eval_protocol_contract_ready",
+              "h10_real_label_contract_ready",
+              "logical_100b_contract_fixture_ready",
+              "real_100b_inference_ready",
+              "v61i_logical_100b_contract_fixture_ready",
+              "v60_release_contract_ready",
+              "operator_review_return_workflow_contract_ready",
+              "pr2_docs_claim_boundary_contract_ready"
+            ]
+          },
+          "ready_wording_policy": {"const": "typed-ready-only"},
+          "pm_ledger_required": {"const": true},
+          "evidence_path": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

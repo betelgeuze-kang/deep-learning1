@@ -1,0 +1,195 @@
+{
+  "schema_version": "pr_split.v1",
+  "draft_pr": "PR #2",
+  "split_required": true,
+  "recommended_title": "Split PR #2 into v1.0 claim-boundary slices",
+  "recommended_body": [
+    "This draft PR is not mergeable as one unit. It mixes v50 auditor correctness, v52 baseline intake, v53/v54 query and generation contracts, v58 blind-eval protocol, v59 one-command replay, v61 checkpoint/runtime scaffolding, operator/review-return workflow, and README/documentation cleanup.",
+    "Split it into claim-bounded PRs so each reviewer can replay the artifacts without accepting unrelated scaffold. Merge gates are claim boundary accuracy, replayable output artifacts, and false-positive blocker closure; tests are necessary smoke evidence but are not sufficient merge conditions.",
+    "v50 artifact schema is now explicit, but auditor correctness remains blocked until the required row artifacts and sha256 manifest are present and replay-checkable without implicit public refresh.",
+    "Current v61 state: mixtral-ssd-tensor-page-read-rows, tensor dtype/quant rows, and torch-matvec-parity-rows are replay-bound, but real expert FFN forward parity, MoE block forward parity, one-token logits parity, actual generation, production latency, near-frontier quality, and release claims remain blocked until a replay artifact contains real_model_execution_ready=1. The v61 runtime policy has required_before_ssd_resident_runtime_claim_count=6, passed_before_ssd_resident_runtime_claim_count=3, blocked_before_ssd_resident_runtime_claim_count=3, present_required_artifact_count=5, and missing_required_artifact_count=5.",
+    "Ready wording must use typed readiness. Bare ready=1 does not imply real_model_execution_ready, heldout_metric_ready, human_review_ready, independent_reproduction_ready, or release_ready.",
+    "retrieval leakage remains forbidden: model/retriever input is natural-language question plus searchable corpus only; source spans, paths, lines, hashes, query/source direct bindings, expected behavior, and expected labels are evaluator-only.",
+    "D/E 30B/70B fixture rows remain schema-test evidence only until model revision, quantization, hashes, runtime, prompt/context/retrieval budgets, hardware, seed, raw answer/citation outputs, and evaluator version are accepted; required_real_evidence_field_count=11 and missing_real_evidence_field_count=11 must stay explicit in the measured-registry exclusion ledger, and model identity, raw answer/citation output, and resource/evaluator manifests must stay separate blocker rows in the acceptance ledger.",
+    "v58 response/resource intake rows and external return templates must carry latency_memory_excluded_from_quality_score=1 while A/B/C/D/E/G/H real responses require 500 rows per system; response text must not reveal model/run identity tokens, and two blinded reviewers from distinct reviewer pools, independent adjudication, unseen split, source-span exactness, and unsupported abstention remain required."
+  ],
+  "merge_gate_policy": {
+    "forbid_tests_only": true,
+    "required_gates": [
+      "claim-boundary",
+      "replay-artifact",
+      "blocker-false-positive"
+    ]
+  },
+  "slices": [
+    {
+      "slice_id": "docs/v1-roadmap",
+      "scope": "Roadmap, claim boundary, and release blockers.",
+      "required_artifacts": ["docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "v1.0 roadmap defines source-cited, abstaining, replayable local QA/audit architecture scope.",
+        "blocked": "Transformer replacement, frontier local LLM, production readiness, or public comparison win.",
+        "evidence_path": "docs/V1_0_ARCHITECTURE_CHALLENGE_ROADMAP.md"
+      },
+      "verification_commands": ["./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
+      "current_status": "ready-for-review"
+    },
+    {
+      "slice_id": "v50-auditor-correctness",
+      "scope": "v50 public-repo auditor summary/decision claim boundary, row artifact schema, sha256 manifest, and replay-artifact blocker.",
+      "required_artifacts": ["audits/v50_public_repo_auditor_correctness.json", "results/v50_public_repo_auditor_3repo_summary.csv", "results/v50_public_repo_auditor_3repo_decision.csv", "results/v50_public_repo_auditor_3repo/audit_001/public_repo_source_snapshot_rows.csv", "results/v50_public_repo_auditor_3repo/audit_001/public_repo_audit_case_rows.csv", "results/v50_public_repo_auditor_3repo/audit_001/public_repo_source_span_rows.csv", "results/v50_public_repo_auditor_3repo/audit_001/guard_negative_rows.csv", "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/query_set.csv", "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/poc_result_rows.csv", "results/v50_public_repo_auditor_3repo/audit_001/commercial_return/audit_trail.csv", "results/v50_public_repo_auditor_3repo/audit_001/sha256_manifest.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "v50 summary/decision files record a public-repo auditor ready claim, and the contract now declares required row schemas and replay commands.",
+        "blocked": "Auditor correctness merge readiness remains blocked until source snapshot, audit case, source span, guard negative, commercial return, and sha256 manifest artifacts are present, schema-valid, hash-bound, and replayable; implicit public refresh is forbidden.",
+        "evidence_path": "audits/v50_public_repo_auditor_correctness.json"
+      },
+      "verification_commands": ["tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json --summary results/v50_public_repo_auditor_3repo_summary.csv --decision results/v50_public_repo_auditor_3repo_decision.csv"],
+      "current_status": "blocked-artifact-replay-missing"
+    },
+    {
+      "slice_id": "v52-baseline-registry-contract",
+      "scope": "A-H baseline registry/schema contract, C 7B-14B actual adapter packet, and D/E/F intake blockers.",
+      "required_artifacts": ["baselines/v52_adapter_guard.json", "baselines/de_30b70b_real.json", "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv", "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv", "results/v52_llm_rag_baseline_war_summary.csv", "results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_answer_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_citation_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_resource_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_retrieval_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_abstain_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/c_wrong_answer_guard_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/ollama_generation_transcript_rows.csv", "results/v52l_7b14b_local_model_rag_v53e_1000/measured_001/sha256_manifest.csv", "results/v52d_30b70b_llm_rag_evidence_intake_summary.csv", "results/v52y_f_optional_final_policy_summary.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "A-H baseline registry exists; C has a local 7B-14B response packet; D/E/F blockers are explicit.",
+        "blocked": "C quality claim, D/E measured registry admission, 30B/70B/100B+ comparison readiness, or release readiness.",
+        "evidence_path": "baselines/v52_adapter_guard.json"
+      },
+      "verification_commands": ["tools/verify_artifact.py v52-adapter-guard baselines/v52_adapter_guard.json", "tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json --measured-registry-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv --acceptance-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv", "./experiments/test_v52_llm_rag_baseline_war.sh", "./experiments/test_v52l_7b14b_local_model_rag_v53e_1000.sh", "./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh", "./experiments/test_v52y_f_optional_final_policy.sh"],
+      "current_status": "ready-for-review"
+    },
+    {
+      "slice_id": "v53-public-repo-source-manifest",
+      "scope": "Pinned public repository manifest, commits, licenses, source files, and hashes.",
+      "required_artifacts": ["results/v53t_complete_source_audit_readiness_gate/gate_001/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "10 public repos and complete-source manifest surface are machine-bound for PM freeze.",
+        "blocked": "Human-reviewed quality comparison, public benchmark claim, or v53 final readiness.",
+        "evidence_path": "results/v53t_complete_source_audit_readiness_gate/gate_001/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv"
+      },
+      "verification_commands": ["./experiments/test_v53t_complete_source_audit_readiness_gate.sh"],
+      "current_status": "ready-for-review"
+    },
+    {
+      "slice_id": "v53-query-instantiation-1000",
+      "scope": "1000 source-span-bound query rows with unsupported, missing, and doc-code conflict controls.",
+      "required_artifacts": ["benchmarks/v53_source_bound_freeze.json", "results/v53i_complete_source_query_instantiation_summary.csv", "results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_query_span_binding_audit_rows.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "1000 complete-source queries bind to source spans with unsupported/missing/doc-code controls.",
+        "blocked": "Review-return completion, quality comparison, or v1.0 comparison readiness.",
+        "evidence_path": "benchmarks/v53_source_bound_freeze.json"
+      },
+      "verification_commands": ["tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json --v53i-summary results/v53i_complete_source_query_instantiation_summary.csv --v53t-summary results/v53t_complete_source_audit_readiness_gate_summary.csv --v53ap-summary results/v53ap_complete_source_abgh_same_query_measured_summary.csv --v53aq-summary results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv --v1-exit-ledger results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv", "./experiments/test_v53i_complete_source_query_instantiation.sh", "./experiments/test_v53t_complete_source_audit_readiness_gate.sh"],
+      "current_status": "ready-for-review"
+    },
+    {
+      "slice_id": "v53-system-a-b-g-h-measured",
+      "scope": "Same-query A/B/G/H internal pre-baseline rows and evaluator/resource contracts.",
+      "required_artifacts": ["leakage/retrieval_model_visible.json", "results/v53ap_complete_source_abgh_same_query_measured_summary.csv", "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "A/B/G/H same-query measured run is an internal v1.0 pre-baseline packet.",
+        "blocked": "Public comparison claim, D/E replacement, or 30B/70B symmetric baseline completion.",
+        "evidence_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv"
+      },
+      "verification_commands": ["tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json --v53i-summary results/v53i_complete_source_query_instantiation_summary.csv --v53t-summary results/v53t_complete_source_audit_readiness_gate_summary.csv --v53ap-summary results/v53ap_complete_source_abgh_same_query_measured_summary.csv --v53aq-summary results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv --v1-exit-ledger results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv", "tools/verify_artifact.py leakage leakage/retrieval_model_visible.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_retrieval_leakage_guard_rows.csv", "./experiments/test_v53ap_complete_source_abgh_same_query_measured.sh", "./experiments/test_v53aq_complete_source_abgh_real_adapter_measured.sh"],
+      "current_status": "ready-for-review"
+    },
+    {
+      "slice_id": "v54-routehint-generation-contract",
+      "scope": "Grounded RouteHint generation contract and no raw prompt stuffing guard.",
+      "required_artifacts": ["v54/grounded_generation_contract.json", "leakage/retrieval_model_visible.json", "results/v54c_complete_source_grounded_generation_1000_summary.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/answer_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/citation_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/unsupported_claim_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/abstain_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/generator_resource_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/wrong_answer_guard_rows.csv", "results/v54c_complete_source_grounded_generation_1000/generation_001/sha256sums.txt"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "v54c emits 1000 grounded generation rows with answer/citation/abstain/resource/guard outputs and zero raw prompt stuffing.",
+        "blocked": "Human-reviewed generation quality, mainline raw prompt stuffing, or release-ready generation.",
+        "evidence_path": "results/v54c_complete_source_grounded_generation_1000_summary.csv"
+      },
+      "verification_commands": ["tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json --summary results/v54c_complete_source_grounded_generation_1000_summary.csv", "tools/verify_artifact.py leakage leakage/retrieval_model_visible.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_retrieval_leakage_guard_rows.csv", "./experiments/test_v54c_complete_source_grounded_generation_1000.sh"],
+      "current_status": "ready-for-review"
+    },
+    {
+      "slice_id": "v56-ruler-longbench-expanded",
+      "scope": "Source/evaluator-bound benchmark expansion replay contract.",
+      "required_artifacts": ["v56/replay_contract.json", "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_blocker_required_artifact_rows.csv", "results/v1_0_pm_pr_claim_slice_gate/gate_001/v56_replay_acceptance_evidence_rows.csv", "results/v1_0_pm_pr_claim_slice_gate/gate_001/source_v56/v56_seed_dependency_blocker_rows.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "v56 runner and fail-closed guard define replay requirements for source/evaluator-bound benchmark expansion.",
+        "blocked": "Expanded benchmark readiness, leaderboard claim, or external benchmark verification without replay artifact.",
+        "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_blocker_required_artifact_rows.csv"
+      },
+      "verification_commands": ["tools/verify_artifact.py v56-replay v56/replay_contract.json --summary results/v56_ruler_longbench_expanded_contract_summary.csv --blocker-ledger results/v56_ruler_longbench_expanded_contract/contract_001/v56_seed_dependency_blocker_rows.csv --artifact-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/v56_replay_acceptance_evidence_rows.csv", "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
+      "current_status": "blocked-missing-replay-artifact"
+    },
+    {
+      "slice_id": "v58-blind-eval-contract",
+      "scope": "Blind evaluation contract, real response requirements, and human review blockers.",
+      "required_artifacts": ["v58/blind_eval_real.json", "results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "v58 blocker ledger and intake contract define blind-response/review requirements.",
+        "blocked": "Blind eval completion, model superiority, or human-reviewed blind result without real response/review rows.",
+        "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv"
+      },
+      "verification_commands": ["tools/verify_artifact.py v58-blind-eval v58/blind_eval_real.json", "./experiments/test_v58c_blind_response_evidence_intake.sh", "./experiments/test_v58d_blind_review_return_intake.sh", "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
+      "current_status": "ready-for-contract-review-real-eval-blocked"
+    },
+    {
+      "slice_id": "v59-one-command-demo",
+      "scope": "Reviewer command and PM foundation artifact bundle.",
+      "required_artifacts": ["results/v59e_one_command_pm_foundation_demo_summary.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "v59e PM foundation one-command replay is ready without private fixtures, hidden state, network, downloads, or manual postprocessing, using pinned-source snapshot replay.",
+        "blocked": "Full v59 public challenge demo, public-source download/refresh readiness, v58 blind completion, h10 promotion, or v60 release readiness.",
+        "evidence_path": "results/v59e_one_command_pm_foundation_demo_summary.csv"
+      },
+      "verification_commands": ["./experiments/test_v59e_one_command_pm_foundation_demo.sh"],
+      "current_status": "pm-foundation-ready-full-demo-blocked"
+    },
+    {
+      "slice_id": "v61-ssd-moe-runtime-roadmap",
+      "scope": "SSD-resident runtime R&D roadmap and one-token path blocker surface.",
+      "required_artifacts": ["v61/one_token_path.json", "results/v61j_one_command_ssd_resident_demo_summary.csv", "results/v61aa_hotset_tensor_slice_verifier_summary.csv", "results/v61ab_hotset_tensor_tile_quant_probe_summary.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "v61 SSD-resident runtime remains an R&D roadmap/demo surface.",
+        "blocked": "SSD-resident real model runtime, dense local speed, near-frontier quality, production latency, or release-ready runtime claim until one-token logits parity exists.",
+        "evidence_path": "v61/one_token_path.json"
+      },
+      "verification_commands": ["tools/verify_artifact.py v61-one-token v61/one_token_path.json --v61aa-summary results/v61aa_hotset_tensor_slice_verifier_summary.csv --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv", "./experiments/test_v61j_one_command_ssd_resident_demo.sh", "./experiments/test_v61aa_hotset_tensor_slice_verifier.sh", "./experiments/test_v61ab_hotset_tensor_tile_quant_probe.sh"],
+      "current_status": "ready-for-rd-review"
+    },
+    {
+      "slice_id": "operator-review-return-workflow",
+      "scope": "Operator/review-return workflow contract across v53, v58, and v61 return/intake blockers.",
+      "required_artifacts": ["operations/review_return_workflow.json", "results/v53s_complete_source_review_return_intake_summary.csv", "results/v58d_blind_review_return_intake_summary.csv", "results/v61af_checkpoint_warehouse_operator_bundle_summary.csv", "results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "Operator templates, review-return intake contracts, dry-run bundles, and no-replay scaffolds define the required return surface.",
+        "blocked": "Accepted human review, adjudication, operator input files, real generation, production latency, near-frontier quality, or release readiness.",
+        "evidence_path": "operations/review_return_workflow.json"
+      },
+      "verification_commands": ["tools/verify_artifact.py review-return-workflow operations/review_return_workflow.json --v53s-summary results/v53s_complete_source_review_return_intake_summary.csv --v58d-summary results/v58d_blind_review_return_intake_summary.csv --v61af-summary results/v61af_checkpoint_warehouse_operator_bundle_summary.csv --v61hv-summary results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv"],
+      "current_status": "ready-for-workflow-review-real-return-blocked"
+    },
+    {
+      "slice_id": "docs-readme-pr2-cleanup",
+      "scope": "Reviewer-facing README cleanup, PR #2 title/body rewrite, and pipeline migration guidance.",
+      "required_artifacts": ["README.md", "README.ko.md", "docs/PR2_SPLIT_PLAN.md", "docs/PR2_REWRITE_DRAFT.md", "docs/PIPELINE_MIGRATION.md", "readiness/typed_ready.json", "pr_slices/pr2.json"],
+      "merge_gates": ["claim-boundary", "replay-artifact", "blocker-false-positive"],
+      "claim_boundary": {
+        "allowed": "README and PR text point reviewers to declarative pipeline/contracts instead of giant v61 entrypoint dumps.",
+        "blocked": "Any README/PR wording that promotes scaffold, fixture, dry-run, operator, or runtime-admission evidence into real model generation, production, comparison, or release claims.",
+        "evidence_path": "pr_slices/pr2.json"
+      },
+      "verification_commands": ["tools/verify_artifact.py pr-split pr_slices/pr2.json", "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv", "bash -c '! rg -n \"test_v61hv|test_v61ea|test_v61j_one_command|Current v61 prototype smoke|현재 v61 prototype smoke\" README.md README.ko.md'", "bash -c '! rg -n \"^(The )?v61[a-z]{1,3}\\\\b\" README.md README.ko.md'"],
+      "current_status": "ready-for-review"
+    }
+  ]
+}

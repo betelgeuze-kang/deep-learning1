@@ -7,3 +7,5 @@ results/*
 *.swp
 __pycache__/
 *.pyc
+.cache/
+.betelgeuze/trace.jsonl

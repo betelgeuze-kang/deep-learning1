@@ -1,0 +1,64 @@
+# Typed Readiness Semantics
+
+The repository must not use a bare `ready=1` style field as a release,
+performance, human-review, or real-model claim. Readiness is typed across seven
+fields:
+
+```json
+{
+  "contract_ready": true,
+  "fixture_execution_ready": true,
+  "real_model_execution_ready": false,
+  "heldout_metric_ready": false,
+  "human_review_ready": false,
+  "independent_reproduction_ready": false,
+  "release_ready": false
+}
+```
+
+The source-controlled contract is `readiness/typed_ready.json`. Verify it with:
+
+```bash
+tools/verify_artifact.py typed-readiness readiness/typed_ready.json
+```
+
+`readiness/typed_ready.json` also owns the complete ambiguous-ready denylist.
+Every misleading flag in that list must have at least one typed replacement row,
+and every row's `misleading_ready_flag` must be in the list:
+
+- `100b_moe_run_ready`
+- `h10_real_label_promotion_ready`
+- `pr2_ready`
+- `review_return_ready`
+- `v53_ready`
+- `v58_ready`
+- `v59_ready`
+- `v60_ready`
+- `v61i_100b_moe_active_sparse_run_ready`
+
+Adding a new bare `*_ready` claim boundary requires adding it to
+`policy.ambiguous_ready_flags` and adding a row that spells out all seven typed
+readiness fields.
+
+When the PM ledger exists, compare the source-controlled contract against the
+generated rows with:
+
+```bash
+tools/verify_artifact.py typed-readiness readiness/typed_ready.json \
+  --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv
+```
+
+For v61, the required wording is:
+
+- `logical_100b_contract_fixture_ready=1`
+- `v61i_logical_100b_contract_fixture_ready=1`
+- `real_100b_inference_ready=0`
+
+Do not use `100b_moe_run_ready=1` or
+`v61i_100b_moe_active_sparse_run_ready=1` as a real inference, quality,
+release, or near-frontier claim.
+
+All source-controlled typed readiness rows must also appear in the PM ledger
+when `--pm-ledger` is supplied. Source-only skip exceptions are not allowed for
+PR #2 normalization, because those exceptions let ambiguous `ready=1` wording
+drift away from the replayed claim-boundary artifact.

@@ -1,0 +1,155 @@
+{
+  "schema_version": "pipeline.v1",
+  "pipeline_id": "v52-baseline-registry-contract",
+  "description": "Adapter inventory for the v52 baseline registry and D/E intake guard surface.",
+  "claim_boundary": "Contract and intake guard evidence only; 30B/70B measured baselines remain blocked unless supplied as real pinned artifacts.",
+  "stages": [
+    {
+      "stage_id": "v52-baseline-war",
+      "requires": [],
+      "adapter": "shell",
+      "command": ["./experiments/test_v52_llm_rag_baseline_war.sh"],
+      "inputs": ["experiments/run_v52_llm_rag_baseline_war.sh"],
+      "outputs": ["results/v52_llm_rag_baseline_war_summary.csv"],
+      "ready_fields": ["v52_baseline_war_contract_ready"],
+      "blocked_fields": ["required_30b_baseline_ready", "required_70b_baseline_ready"],
+      "typed_readiness": {
+        "contract_ready": "v52_baseline_war_contract_ready",
+        "fixture_execution_ready": "",
+        "real_model_execution_ready": "0",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": ["natural_language_question", "searchable_corpus"],
+      "model_visible_input_checks": ["source_locator_fields_evaluator_only"],
+      "evaluator_only_fields": ["expected_answer", "source_span_id", "source_path", "source_line", "source_file_sha256"],
+      "evidence_boundary": "Registry contract and blocker surface only.",
+      "claim_boundary": "No public quality comparison or D/E replacement claim."
+    },
+    {
+      "stage_id": "v52c-c-7b14b-intake-contract",
+      "requires": ["v52-baseline-war"],
+      "adapter": "shell",
+      "command": ["./experiments/test_v52c_7b14b_local_model_rag_evidence_intake.sh"],
+      "inputs": ["results/v50_public_repo_auditor_3repo_summary.csv"],
+      "outputs": ["results/v52c_7b14b_local_model_rag_evidence_intake_summary.csv"],
+      "ready_fields": ["v52c_7b14b_local_model_rag_intake_contract_ready"],
+      "blocked_fields": ["supplied_evidence_ready", "v52_absorb_ready", "v52_ready"],
+      "typed_readiness": {
+        "contract_ready": "v52c_7b14b_local_model_rag_intake_contract_ready",
+        "fixture_execution_ready": "0",
+        "real_model_execution_ready": "supplied_evidence_ready",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": ["natural_language_question", "searchable_corpus"],
+      "model_visible_input_checks": ["source_locator_fields_evaluator_only"],
+      "evaluator_only_fields": ["expected_label", "source_span_id", "source_path", "source_file_sha256"],
+      "evidence_boundary": "C evidence intake contract only; default run has no supplied evidence directory.",
+      "claim_boundary": "No default C supplied-evidence or quality claim."
+    },
+    {
+      "stage_id": "v52l-c-7b14b-v53e-actual-packet",
+      "requires": ["v52c-c-7b14b-intake-contract"],
+      "adapter": "shell",
+      "command": ["./experiments/test_v52l_7b14b_local_model_rag_v53e_1000.sh"],
+      "inputs": ["results/v52i_abgh_same_query_measured_1000_summary.csv"],
+      "outputs": ["results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv"],
+      "ready_fields": ["v52l_7b14b_local_model_rag_v53e_1000_ready", "c_v53e_absorb_ready"],
+      "blocked_fields": ["required_30b_baseline_ready", "required_70b_baseline_ready", "v52_ready"],
+      "typed_readiness": {
+        "contract_ready": "v52l_7b14b_local_model_rag_v53e_1000_ready",
+        "fixture_execution_ready": "0",
+        "real_model_execution_ready": "v52l_7b14b_local_model_rag_v53e_1000_ready",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": ["natural_language_question", "searchable_corpus"],
+      "model_visible_input_checks": ["external_network_used=0", "external_model_used=0"],
+      "evaluator_only_fields": ["expected_label", "source_span_id", "source_path", "source_file_sha256"],
+      "evidence_boundary": "C local 7B-14B response packet over v53e; not a quality claim.",
+      "claim_boundary": "C packet readiness cannot replace required D/E baselines."
+    },
+    {
+      "stage_id": "v52d-de-30b70b-intake-guard",
+      "requires": ["v52-baseline-war"],
+      "adapter": "shell",
+      "command": ["./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh"],
+      "inputs": ["results/v50_public_repo_auditor_3repo_summary.csv"],
+      "outputs": ["results/v52d_30b70b_llm_rag_evidence_intake_summary.csv"],
+      "ready_fields": ["v52d_v50_seed_dependency_blocker_ready"],
+      "blocked_fields": ["required_30b_baseline_ready", "required_70b_baseline_ready", "v52_ready"],
+      "typed_readiness": {
+        "contract_ready": "v52d_v50_seed_dependency_blocker_ready",
+        "fixture_execution_ready": "0",
+        "real_model_execution_ready": "required_30b_baseline_ready",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": ["natural_language_question", "searchable_corpus"],
+      "model_visible_input_checks": ["fixture_rows_in_measured_registry=0"],
+      "evaluator_only_fields": ["expected_label", "source_span_id", "source_path", "source_file_sha256"],
+      "evidence_boundary": "D/E intake guard and missing-evidence blocker only.",
+      "claim_boundary": "No D/E measured registry admission until both real evidence directories validate."
+    },
+    {
+      "stage_id": "v52r-de-measured-registry-absorb-blocker",
+      "requires": ["v52l-c-7b14b-v53e-actual-packet", "v52d-de-30b70b-intake-guard"],
+      "adapter": "shell",
+      "command": ["./experiments/test_v52r_measured_registry_de_absorb.sh"],
+      "inputs": [
+        "results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv",
+        "results/v52d_30b70b_llm_rag_evidence_intake_summary.csv"
+      ],
+      "outputs": ["results/v52r_measured_registry_de_absorb_summary.csv"],
+      "ready_fields": ["v52r_dependency_blocker_ready"],
+      "blocked_fields": ["v52r_measured_registry_de_absorb_ready", "required_30b_baseline_ready", "required_70b_baseline_ready", "v52_ready"],
+      "typed_readiness": {
+        "contract_ready": "v52r_dependency_blocker_ready",
+        "fixture_execution_ready": "0",
+        "real_model_execution_ready": "v52r_measured_registry_de_absorb_ready",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": [],
+      "model_visible_input_checks": ["required_30b_baseline_ready=0", "required_70b_baseline_ready=0"],
+      "evaluator_only_fields": ["measured_registry_admission_reason"],
+      "evidence_boundary": "D/E measured registry absorb remains blocked.",
+      "claim_boundary": "No public comparison or v52 final readiness."
+    },
+    {
+      "stage_id": "v52y-f-optional-final-policy",
+      "requires": ["v52r-de-measured-registry-absorb-blocker"],
+      "adapter": "shell",
+      "command": ["./experiments/test_v52y_f_optional_final_policy.sh"],
+      "inputs": ["results/v52r_measured_registry_de_absorb_summary.csv"],
+      "outputs": ["results/v52y_f_optional_final_policy_summary.csv"],
+      "ready_fields": ["v52y_dependency_blocker_ready"],
+      "blocked_fields": ["f_optional_final_disposition_ready", "v52_ready", "v1_0_comparison_ready"],
+      "typed_readiness": {
+        "contract_ready": "v52y_dependency_blocker_ready",
+        "fixture_execution_ready": "0",
+        "real_model_execution_ready": "v52_ready",
+        "heldout_metric_ready": "0",
+        "human_review_ready": "0",
+        "independent_reproduction_ready": "0",
+        "release_ready": "real_release_package_ready"
+      },
+      "model_visible_inputs": [],
+      "model_visible_input_checks": ["comparison_30b_150b_wording_status=blocked"],
+      "evaluator_only_fields": ["optional_final_disposition_reason"],
+      "evidence_boundary": "F optional final policy blocker only.",
+      "claim_boundary": "F cannot replace required D/E evidence."
+    }
+  ]
+}
