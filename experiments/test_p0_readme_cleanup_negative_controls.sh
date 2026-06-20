@@ -38,6 +38,14 @@ check_required_contract_entrypoints() {
   done
 }
 
+check_no_ambiguous_ready_flags() {
+  local pattern='(100b_moe_run_ready|v53_ready|v58_ready|v59_ready|v60_ready|v61i_100b_moe_active_sparse_run_ready|h10_real_label_promotion_ready|review_return_ready|pr2_ready)'
+  if rg -n "$pattern" "$@" >/dev/null; then
+    echo "README must use typed readiness replacement flags instead of ambiguous ready flags" >&2
+    return 1
+  fi
+}
+
 expect_fail_with() {
   local expected="$1"
   shift
@@ -57,6 +65,7 @@ expect_fail_with() {
 
 check_readme_cleanup "$ROOT_DIR/README.md" "$ROOT_DIR/README.ko.md"
 check_required_contract_entrypoints "$ROOT_DIR/README.md" "$ROOT_DIR/README.ko.md"
+check_no_ambiguous_ready_flags "$ROOT_DIR/README.md" "$ROOT_DIR/README.ko.md"
 
 printf '%s\n' "Current v61 prototype smoke: ./experiments/test_v61j_one_command_ssd_resident_demo.sh" >"$TMP_DIR/stale_named_readme.md"
 expect_fail_with \
@@ -72,6 +81,11 @@ printf '%s\n' "The v61ea route admission scaffold" >"$TMP_DIR/the_stage_dump_rea
 expect_fail_with \
   "README must not reintroduce line-start v61 stage dumps" \
   check_readme_cleanup "$TMP_DIR/the_stage_dump_readme.md"
+
+printf '%s\n' "h10_real_label_promotion_ready=0 until review returns" >"$TMP_DIR/ambiguous_ready_readme.md"
+expect_fail_with \
+  "README must use typed readiness replacement flags instead of ambiguous ready flags" \
+  check_no_ambiguous_ready_flags "$TMP_DIR/ambiguous_ready_readme.md"
 
 cp "$ROOT_DIR/README.md" "$TMP_DIR/readme_missing_pr2_plan.md"
 python3 - "$TMP_DIR/readme_missing_pr2_plan.md" <<'PY'
