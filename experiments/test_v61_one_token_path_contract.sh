@@ -10,6 +10,9 @@ BAD_OUTPUT="$TMP_DIR/expect_fail.out"
 cd "$ROOT_DIR"
 
 cleanup() {
+  if [ -n "${REMOTE_BINDING_ROWS:-}" ] && [ -n "${REMOTE_BINDING_BACKUP:-}" ] && [ -f "$REMOTE_BINDING_BACKUP" ]; then
+    cp "$REMOTE_BINDING_BACKUP" "$REMOTE_BINDING_ROWS" 2>/dev/null || true
+  fi
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
@@ -31,6 +34,32 @@ expect_fail_with() {
 }
 
 "$ROOT_DIR/experiments/test_v61ab_hotset_tensor_tile_quant_probe.sh" >/dev/null
+
+REMOTE_BINDING_ROWS="$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier/verify_001/source_v61v/remote_sample_tensor_binding_rows.csv"
+REMOTE_BINDING_BACKUP="$TMP_DIR/remote_sample_tensor_binding_rows.csv.bak"
+cp "$REMOTE_BINDING_ROWS" "$REMOTE_BINDING_BACKUP"
+python3 - "$REMOTE_BINDING_ROWS" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["model_id"] = "fixture/not-mixtral"
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "model_id expected mistralai/Mixtral-8x22B-v0.1, got fixture/not-mixtral" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+cp "$REMOTE_BINDING_BACKUP" "$REMOTE_BINDING_ROWS"
 
 bad_json() {
   local name="$1"

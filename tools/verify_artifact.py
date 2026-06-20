@@ -1796,16 +1796,29 @@ EXPECTED_V61_ARTIFACT_MIN_ROWS = {
 }
 EXPECTED_V61_ARTIFACT_VALUE_CHECKS = {
     "mixtral-ssd-tensor-page-read-rows": {
+        "model_id": "mistralai/Mixtral-8x22B-v0.1",
+        "dtype": "BF16",
         "remote_hash_bound": "1",
         "checkpoint_payload_bytes_committed_to_repo": "0",
         "route_jump_rows": "0",
     },
     "tensor-dtype-stat-rows": {
+        "model_id": "mistralai/Mixtral-8x22B-v0.1",
+        "dtype": "BF16",
         "segment_hash_bound_to_remote_page": "1",
         "direct_read_hash_match": "1",
         "sampled_nan_values": "0",
         "sampled_inf_values": "0",
         "bf16_tensor_slice_stats_ready": "1",
+        "checkpoint_payload_bytes_committed_to_repo": "0",
+        "actual_model_generation_ready": "0",
+        "route_jump_rows": "0",
+    },
+    "torch-matvec-parity-rows": {
+        "model_id": "mistralai/Mixtral-8x22B-v0.1",
+        "dtype_source": "BF16",
+        "torch_matvec_parity_pass": "1",
+        "real_checkpoint_page_bound": "1",
         "checkpoint_payload_bytes_committed_to_repo": "0",
         "actual_model_generation_ready": "0",
         "route_jump_rows": "0",
