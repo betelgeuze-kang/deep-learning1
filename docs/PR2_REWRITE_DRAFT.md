@@ -15,6 +15,12 @@ Split it into claim-bounded PRs so each reviewer can replay the artifacts
 without accepting unrelated scaffold. Merge gates are claim boundary accuracy,
 replayable output artifacts, and false-positive blocker closure. Tests are
 necessary smoke evidence but are not sufficient merge conditions.
+`./scripts/ai-verify.sh` is the required local/CI wrapper for these smoke
+checks: it must run the PR split contract, typed readiness ledger comparison,
+retrieval leakage ledger comparison, D/E baseline admission blockers, v58
+blind-eval blockers, and v61 one-token path contract. Treat those negative
+controls as blocker-drift guards, not proof of real model execution, blind
+review completion, or release readiness.
 
 v50 artifact schema is now explicit, but auditor correctness remains blocked
 until the required source snapshot, audit case, source span, guard negative,
@@ -52,11 +58,20 @@ logits, decode, cache, and SSD metric rows stay explicit.
 Typed readiness is mandatory. Bare `ready=1` does not imply
 `real_model_execution_ready`, `heldout_metric_ready`, `human_review_ready`,
 `independent_reproduction_ready`, or `release_ready`.
+The P0 negative controls must keep `real_100b_inference_ready` all-false until
+real inference exists, reject any `real_model_execution_ready=true` promotion
+from contract rows, and compare the typed-ready contract to
+`pm_ready_semantic_rows.csv`.
 
 Retrieval leakage remains forbidden. Model/retriever input is natural-language
 question plus searchable corpus only; source spans, paths, lines, hashes,
 query/source direct bindings, expected behavior, and expected labels are
 evaluator-only.
+The P0 leakage negative controls must reject policy/stage allowlists containing
+source locators, query/source direct bindings, expected answers, or expected
+labels, and must reject PM ledger drift where aliases or
+`direct_query_source_binding_forbidden=1` no longer match the source-controlled
+contract.
 
 D/E 30B/70B fixture rows remain schema-test evidence only until model revision,
 quantization, hashes, runtime, prompt/context/retrieval budgets, hardware, seed,
@@ -67,6 +82,9 @@ replay artifacts for the v52 slice; the exclusion ledger must show
 and `all_required_real_evidence_missing=1` for both D and E. The acceptance
 blocker ledger must keep model identity, raw answer/citation output, and
 resource/evaluator manifests as separate blocker rows for both systems.
+The P1 D/E negative controls must fail if any required real evidence field or
+artifact column is dropped, if missing real evidence is undercounted, or if
+acceptance blocker rows drift to `artifact_present=1` or `acceptance_ready=1`.
 
 v58 remains a protocol/intake surface, not a completed blind eval. Response and
 resource rows must carry `latency_memory_excluded_from_quality_score=1`, while
@@ -76,6 +94,10 @@ independent adjudication, unseen split, source-span exactness, and unsupported
 abstention are still required. Blind response text must not reveal model/run
 identity tokens, and the external return templates must include those fields
 instead of relying on reviewer instructions outside the artifact.
+The P1 v58 negative controls must fail if reviewer count drops below two,
+blind identity is disabled, review/adjudication rows expose source system or
+resource columns, per-system response minima are weakened, or artifact/template
+ledgers stop requiring approval and ready templates.
 
 v53 source-bound benchmark checks are exact: repo counts, 1000 query/span rows,
 negative controls, evaluator separation, A/B/G/H same-query evidence,

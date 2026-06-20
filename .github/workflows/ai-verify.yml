@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ai-verify-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -19,18 +23,27 @@ concurrency:
 jobs:
   ai-verify:
     name: ai-verify.sh
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
+      - name: Shell checkout
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            bash ca-certificates cmake coreutils findutils g++ git make python3 \
-            sed grep diffutils time procps
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth=1 origin "${GITHUB_SHA}"
+          git checkout --detach FETCH_HEAD
+
+      - name: Toolchain preflight
+        run: |
+          set -euo pipefail
+          bash --version
+          python3 --version
+          cmake --version
+          g++ --version
+          git --version
 
       - name: Run ai-verify
         env:

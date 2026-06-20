@@ -1,9 +1,6 @@
 name: Third-party rerun return
 
 on:
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       return_id:
@@ -16,6 +13,7 @@ permissions:
 
 jobs:
   third-party-rerun:
+    name: third-party-rerun-return-manual
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:

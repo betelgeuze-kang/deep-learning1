@@ -1890,8 +1890,30 @@ def verify_pipeline(path: Path) -> list[str]:
         typed = stage.get("typed_readiness", {})
         if set(typed) != TYPED_READINESS_KEYS:
             errors.append(f"{prefix}: typed_readiness keys must be exactly {', '.join(sorted(TYPED_READINESS_KEYS))}")
+        else:
+            for field, value in typed.items():
+                if str(value).strip().lower() in {"1", "true", "ready"}:
+                    errors.append(f"{prefix}: typed_readiness.{field} cannot be an untyped literal-ready claim")
         if not stage.get("claim_boundary"):
             errors.append(f"{prefix}: claim_boundary must be non-empty")
+        model_visible_inputs = stage.get("model_visible_inputs", [])
+        if model_visible_inputs:
+            if not isinstance(model_visible_inputs, list):
+                errors.append(f"{prefix}: model_visible_inputs must be a list when present")
+            else:
+                pipeline_forbidden_inputs = FORBIDDEN_MODEL_VISIBLE_FIELDS | {"source_span_fixture", "source_fixture"}
+                pipeline_allowed_inputs = ALLOWED_MODEL_VISIBLE_FIELDS | {
+                    "natural_language_question",
+                    "searchable_corpus",
+                    "blind_question",
+                    "shared_context_budget",
+                }
+                leaked_inputs = set(str(item) for item in model_visible_inputs) & pipeline_forbidden_inputs
+                if leaked_inputs:
+                    errors.append(f"{prefix}: model_visible_inputs contains forbidden evaluator-only field(s): {', '.join(sorted(leaked_inputs))}")
+                unknown_visible = set(str(item) for item in model_visible_inputs) - pipeline_allowed_inputs
+                if unknown_visible:
+                    errors.append(f"{prefix}: model_visible_inputs contains undeclared model-visible field(s): {', '.join(sorted(unknown_visible))}")
         requires = stage.get("requires", [])
         if not isinstance(requires, list):
             errors.append(f"{prefix}: requires must be a list when present")
@@ -2438,6 +2460,12 @@ def verify_baseline_admission(
     if set(by_system) != {"D", "E"}:
         errors.append(f"{path}: systems must be exactly D and E")
     expected_ranges = {"D": (25, 40, "30b-open-weight-llm-rag"), "E": (65, 80, "70b-open-weight-llm-rag")}
+    expected_envs = {"D": "V52D_30B_LLM_RAG_EVIDENCE_DIR", "E": "V52D_70B_LLM_RAG_EVIDENCE_DIR"}
+    expected_acceptance_test = (
+        "V52D_30B_LLM_RAG_EVIDENCE_DIR=<D_DIR> "
+        "V52D_70B_LLM_RAG_EVIDENCE_DIR=<E_DIR> "
+        "./experiments/test_v52d_30b70b_llm_rag_evidence_intake.sh"
+    )
     for system_id, row in by_system.items():
         prefix = f"{path}: system[{system_id}]"
         missing_system = REQUIRED_BASELINE_SYSTEM_KEYS - set(row)
@@ -2450,10 +2478,10 @@ def verify_baseline_admission(
             errors.append(f"{prefix}: parameter count range mismatch")
         if row.get("measured_registry_admission_ready") is not False:
             errors.append(f"{prefix}: measured_registry_admission_ready must be false until real evidence is supplied")
-        if not row.get("evidence_env", "").startswith("V52D_"):
-            errors.append(f"{prefix}: evidence_env must name the V52D evidence directory variable")
-        if "test_v52d_30b70b_llm_rag_evidence_intake.sh" not in row.get("acceptance_test", ""):
-            errors.append(f"{prefix}: acceptance_test must use the v52d evidence intake")
+        if row.get("evidence_env") != expected_envs.get(system_id):
+            errors.append(f"{prefix}: evidence_env must be {expected_envs.get(system_id)}")
+        if row.get("acceptance_test") != expected_acceptance_test:
+            errors.append(f"{prefix}: acceptance_test must pin both D/E evidence envs and the v52d evidence intake")
 
     artifacts = data["required_artifacts"]
     artifact_ids = [row.get("artifact_id", "") for row in artifacts]

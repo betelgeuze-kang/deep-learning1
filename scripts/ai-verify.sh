@@ -7,6 +7,45 @@ cd "$PROJECT_ROOT"
 
 echo "==> ai wrapper shell syntax"
 bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh
+if [ -f experiments/run_v50_public_repo_auditor_3repo.sh ]; then
+  bash -n experiments/run_v50_public_repo_auditor_3repo.sh
+fi
+if [ -f experiments/test_v1_0_pm_pr_claim_slice_gate.sh ]; then
+  bash -n experiments/test_v1_0_pm_pr_claim_slice_gate.sh
+fi
+if [ -f experiments/test_p0_ci_workflow_negative_controls.sh ]; then
+  bash -n experiments/test_p0_ci_workflow_negative_controls.sh
+fi
+if [ -f experiments/test_p0_pipeline_contract_negative_controls.sh ]; then
+  bash -n experiments/test_p0_pipeline_contract_negative_controls.sh
+fi
+if [ -f experiments/test_p0_pr2_split_negative_controls.sh ]; then
+  bash -n experiments/test_p0_pr2_split_negative_controls.sh
+fi
+if [ -f experiments/test_p0_readme_cleanup_negative_controls.sh ]; then
+  bash -n experiments/test_p0_readme_cleanup_negative_controls.sh
+fi
+if [ -f experiments/test_p0_ready_leakage_negative_controls.sh ]; then
+  bash -n experiments/test_p0_ready_leakage_negative_controls.sh
+fi
+if [ -f experiments/test_p0_v50_auditor_negative_controls.sh ]; then
+  bash -n experiments/test_p0_v50_auditor_negative_controls.sh
+fi
+if [ -f experiments/test_p0_v52_adapter_guard_negative_controls.sh ]; then
+  bash -n experiments/test_p0_v52_adapter_guard_negative_controls.sh
+fi
+if [ -f experiments/test_p0_v53_v54_pipeline_negative_controls.sh ]; then
+  bash -n experiments/test_p0_v53_v54_pipeline_negative_controls.sh
+fi
+if [ -f experiments/test_p0_review_return_workflow_negative_controls.sh ]; then
+  bash -n experiments/test_p0_review_return_workflow_negative_controls.sh
+fi
+if [ -f experiments/test_p1_baseline_v58_negative_controls.sh ]; then
+  bash -n experiments/test_p1_baseline_v58_negative_controls.sh
+fi
+if [ -f experiments/test_v61_one_token_path_contract.sh ]; then
+  bash -n experiments/test_v61_one_token_path_contract.sh
+fi
 
 echo "==> json"
 python3 -m json.tool opencode.json >/dev/null
@@ -128,6 +167,72 @@ test -f docs/ai/prompts/opencode_worker_slice.md
 test -f docs/ai/prompts/cursor_worker_slice.md
 test -x scripts/ai-worker-cursor.sh
 test -x scripts/ai-worker-opencode.sh
+
+echo "==> CI workflow contract"
+if [ -f .github/workflows/ai-verify.yml ]; then
+  grep -F "pull_request:" .github/workflows/ai-verify.yml >/dev/null
+  grep -F "push:" .github/workflows/ai-verify.yml >/dev/null
+  grep -F "workflow_dispatch:" .github/workflows/ai-verify.yml >/dev/null
+  grep -F "name: ai-verify.sh" .github/workflows/ai-verify.yml >/dev/null
+  grep -F "run: ./scripts/ai-verify.sh" .github/workflows/ai-verify.yml >/dev/null
+  grep -F "DLE_VERIFY_ENABLE_HIP: \"OFF\"" .github/workflows/ai-verify.yml >/dev/null
+fi
+if [ -f .github/workflows/third-party-rerun.yml ]; then
+  grep -F "workflow_dispatch:" .github/workflows/third-party-rerun.yml >/dev/null
+  grep -F "name: third-party-rerun-return-manual" .github/workflows/third-party-rerun.yml >/dev/null
+  if grep -F "pull_request:" .github/workflows/third-party-rerun.yml >/dev/null; then
+    echo "third-party rerun workflow must stay manual-only" >&2
+    exit 1
+  fi
+  if grep -F "push:" .github/workflows/third-party-rerun.yml >/dev/null; then
+    echo "third-party rerun workflow must stay manual-only" >&2
+    exit 1
+  fi
+  if grep -F "schedule:" .github/workflows/third-party-rerun.yml >/dev/null; then
+    echo "third-party rerun workflow must stay manual-only" >&2
+    exit 1
+  fi
+  grep -F "V18_THIRD_PARTY_RERUN_DIR=" .github/workflows/third-party-rerun.yml >/dev/null
+  grep -F "actions/upload-artifact@v4" .github/workflows/third-party-rerun.yml >/dev/null
+fi
+
+echo "==> PM claim and evidence-boundary gate"
+if [ -x experiments/test_v1_0_pm_pr_claim_slice_gate.sh ]; then
+  ./experiments/test_v1_0_pm_pr_claim_slice_gate.sh >/dev/null
+fi
+if [ -x experiments/test_p0_ci_workflow_negative_controls.sh ]; then
+  ./experiments/test_p0_ci_workflow_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p0_pipeline_contract_negative_controls.sh ]; then
+  ./experiments/test_p0_pipeline_contract_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p0_pr2_split_negative_controls.sh ]; then
+  ./experiments/test_p0_pr2_split_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p0_readme_cleanup_negative_controls.sh ]; then
+  ./experiments/test_p0_readme_cleanup_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p0_ready_leakage_negative_controls.sh ]; then
+  ./experiments/test_p0_ready_leakage_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p0_v50_auditor_negative_controls.sh ]; then
+  ./experiments/test_p0_v50_auditor_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p0_v52_adapter_guard_negative_controls.sh ]; then
+  ./experiments/test_p0_v52_adapter_guard_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p0_v53_v54_pipeline_negative_controls.sh ]; then
+  ./experiments/test_p0_v53_v54_pipeline_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p0_review_return_workflow_negative_controls.sh ]; then
+  ./experiments/test_p0_review_return_workflow_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p1_baseline_v58_negative_controls.sh ]; then
+  ./experiments/test_p1_baseline_v58_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_v61_one_token_path_contract.sh ]; then
+  ./experiments/test_v61_one_token_path_contract.sh >/dev/null
+fi
 
 if [ -x tools/verify_artifact.py ]; then
   if [ -f pr_slices/pr2.json ]; then

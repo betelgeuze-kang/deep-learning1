@@ -118,9 +118,9 @@
         "independent_reproduction_ready": "0",
         "release_ready": "real_release_package_ready"
       },
-      "model_visible_inputs": ["question", "source_span_fixture"],
+      "model_visible_inputs": [],
       "model_visible_input_checks": ["expected_answer_oracle_replay=0"],
-      "evaluator_only_fields": ["expected_answer", "source_span_id", "source_path", "source_line_start", "source_file_sha256"],
+      "evaluator_only_fields": ["expected_answer", "source_span_fixture", "source_span_id", "source_path", "source_line_start", "source_file_sha256"],
       "evidence_boundary": "Deterministic source-span adapter fixture evidence; not real system performance.",
       "claim_boundary": "Internal deterministic pre-baseline only."
     },

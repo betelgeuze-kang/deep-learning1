@@ -36,6 +36,12 @@ Every slice must pass all three merge gates:
 
 Tests are useful smoke evidence, but tests-only merge conditions are forbidden.
 Each slice must keep allowed claims, blocked claims, and evidence paths explicit.
+`./scripts/ai-verify.sh` is the required wrapper for local and CI checks. It
+must run the split contract, typed readiness ledger comparison, retrieval
+leakage ledger comparison, D/E baseline blocker checks, v58 blind-eval blocker
+checks, and v61 one-token path contract. These checks are blocker-drift guards;
+they do not convert fixture, protocol, or scaffold evidence into real model
+execution, human review completion, public comparison, or release readiness.
 Ready wording must follow `readiness/typed_ready.json`; bare `ready=1` fields
 must not imply real model execution, human review, heldout metrics, independent
 reproduction, or release readiness.
@@ -45,6 +51,9 @@ readiness/typed_ready.json --pm-ledger
 results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv`, so
 typed-ready documentation and generated claim-boundary artifacts cannot drift
 independently.
+Its negative controls must fail if `real_model_execution_ready` is promoted,
+if `real_100b_inference_ready` is no longer all-false while blocked, or if the
+typed-ready PM ledger stops matching the source-controlled replacement flags.
 v50 auditor wording must follow `audits/v50_public_repo_auditor_correctness.json`;
 summary `ready=1` is not mergeable auditor correctness while replay artifacts
 are missing. The v50 artifact schema, row-count floor, replay commands, and
@@ -64,6 +73,10 @@ the replayed PM ledger via `tools/verify_artifact.py leakage
 leakage/retrieval_model_visible.json --pm-ledger
 results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_retrieval_leakage_guard_rows.csv`,
 so model-visible leakage guards cannot pass from schema checks alone.
+Their negative controls must fail if source locators, query/source direct
+bindings, expected answers, expected labels, or their aliases become
+model/retriever visible, or if the PM ledger stops recording
+`direct_query_source_binding_forbidden=1`.
 D/E baseline wording must follow `baselines/de_30b70b_real.json`; fixture or
 schema-test D/E rows cannot enter measured registry or public comparison rows.
 The v52 slice must include the measured-registry exclusion ledger and acceptance
@@ -74,6 +87,10 @@ must exact-count `required_real_evidence_field_count=11`,
 blocked. The acceptance blocker ledger must keep model identity, raw
 answer/citation output, and resource/evaluator manifests as separate blocker
 rows for both D and E.
+D/E negative controls must fail if any required real evidence field or required
+artifact column is removed, if `missing_real_evidence_fields` no longer lists
+all 11 fields while blocked, or if acceptance blocker rows drift to
+`artifact_present=1` or `acceptance_ready=1`.
 v53 benchmark wording must follow `benchmarks/v53_source_bound_freeze.json`;
 the 1000-row machine-foundation freeze does not imply human-reviewed quality,
 D/E baseline completion, public comparison, or release readiness. The v53
@@ -98,6 +115,10 @@ latency/memory separation are required, while templates and intake contracts do
 not imply real blind-eval completion. Blind response text must not reveal
 model/run identity tokens, and reviewer/adjudicator independence fields must be
 present in the external return templates.
+v58 negative controls must fail if reviewer count drops below two, blind
+identity is disabled, review/adjudication rows expose source system or resource
+columns, response per-system minima are weakened, or artifact/template ledgers
+stop requiring approval and ready templates.
 Response/resource intake rows must carry
 `latency_memory_excluded_from_quality_score=1` so latency and memory cannot be
 folded into answer quality.
@@ -159,6 +180,8 @@ v61 runtime policy currently has 6 pre-runtime-claim milestones, 3 passed, and
 
 Typed readiness, retrieval leakage, and D/E 30B/70B real-baseline admission
 remain separate blocker surfaces.
+The required `ai-verify.sh` wrapper includes negative controls for those
+surfaces plus v58 blind-eval and v61 one-token runtime claim boundaries.
 ```
 
 Full draft: [PR2_REWRITE_DRAFT.md](PR2_REWRITE_DRAFT.md).

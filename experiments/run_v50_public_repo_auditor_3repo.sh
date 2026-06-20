@@ -21,7 +21,9 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
+from os import getenv
 from pathlib import Path
 
 root = Path(sys.argv[1])
@@ -51,8 +53,9 @@ repos = [
     },
 ]
 repo_ref_overrides = {}
-if os.environ.get("V50_REPO_REFS", "").strip():
-    for item in os.environ["V50_REPO_REFS"].split(","):
+repo_refs_env = getenv("V50_REPO_REFS", "").strip()
+if repo_refs_env:
+    for item in repo_refs_env.split(","):
         key, sep, value = item.partition("=")
         if not sep or not key.strip() or not value.strip():
             raise SystemExit("V50_REPO_REFS must use repo_id=sha,repo_id=sha")
@@ -76,7 +79,37 @@ source_root.mkdir(parents=True)
 evidence_dir.mkdir(parents=True)
 
 def run(cmd, cwd=None):
-    return subprocess.run(cmd, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    result = subprocess.run(cmd, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        cwd_text = str(cwd) if cwd is not None else os.getcwd()
+        command_text = " ".join(cmd)
+        stderr = result.stderr.strip() or "<empty stderr>"
+        stdout = result.stdout.strip() or "<empty stdout>"
+        raise SystemExit(
+            f"command failed: {command_text}\n"
+            f"cwd: {cwd_text}\n"
+            f"exit_code: {result.returncode}\n"
+            f"stdout:\n{stdout}\n"
+            f"stderr:\n{stderr}"
+        )
+    return result
+
+def run_retry(cmd, cwd=None, attempts=1, delay_seconds=1):
+    last_error = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return run(cmd, cwd=cwd)
+        except SystemExit as exc:
+            last_error = exc
+            if attempt >= attempts:
+                break
+            print(
+                f"retrying command after failure "
+                f"attempt={attempt}/{attempts}: {' '.join(cmd)}",
+                file=sys.stderr,
+            )
+            time.sleep(delay_seconds)
+    raise last_error
 
 def sha256(path):
     h = hashlib.sha256()
@@ -143,7 +176,13 @@ def clone_repo(repo):
     dest.mkdir(parents=True, exist_ok=True)
     run(["git", "init"], cwd=dest)
     run(["git", "remote", "add", "origin", repo["url"]], cwd=dest)
-    run(["git", "fetch", "--depth", "1", "origin", repo["requested_ref"]], cwd=dest)
+    fetch_attempts = int(getenv("V50_GIT_FETCH_ATTEMPTS", "3"))
+    run_retry(
+        ["git", "fetch", "--depth", "1", "origin", repo["requested_ref"]],
+        cwd=dest,
+        attempts=max(1, fetch_attempts),
+        delay_seconds=2,
+    )
     run(["git", "checkout", "--detach", "FETCH_HEAD"], cwd=dest)
     head = run(["git", "rev-parse", "HEAD"], cwd=dest).stdout.strip()
     if head.lower() != repo["requested_ref"].lower():
@@ -618,8 +657,10 @@ write_json(return_dir / "resource_envelope.json", resource_envelope)
 write_json(return_dir / "privacy_review.json", privacy_review)
 write_csv(return_dir / "acceptance_review.csv", ["gate", "status", "reason"], acceptance_rows)
 
-run_env = os.environ.copy()
-run_env["V18_COMMERCIAL_POC_DIR"] = str(return_dir)
+run_env = {
+    "PATH": getenv("PATH", ""),
+    "V18_COMMERCIAL_POC_DIR": str(return_dir),
+}
 subprocess.run([str(root / "experiments" / "run_v18_external_evidence_intake.sh")], cwd=root, env=run_env, stdout=subprocess.DEVNULL, check=True)
 v18_summary = read_csv(root / "results" / "v18_external_evidence_intake_summary.csv")[0]
 shutil.copy2(root / "results" / "v18_external_evidence_intake_summary.csv", evidence_dir / "v18_public_repo_auditor_summary.csv")
