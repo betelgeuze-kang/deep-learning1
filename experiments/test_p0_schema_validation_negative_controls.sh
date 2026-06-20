@@ -146,6 +146,30 @@ if module.EXPECTED_V50_SUMMARY != v50_contract["expected_summary_when_supplied"]
 if module.EXPECTED_V50_DECISION_GATES != v50_contract["expected_decision_gates_when_supplied"]:
     raise SystemExit("EXPECTED_V50_DECISION_GATES must be derived from schema x-contract.expected_decision_gates_when_supplied")
 
+v53_schema = json.loads((root / "schemas" / "v53_source_benchmark.schema.json").read_text(encoding="utf-8"))
+v53_contract = v53_schema["x-contract"]
+v53_expected_summary_checks = {
+    requirement_id: [
+        (check["summary_id"], check["field"], check["expected"])
+        for check in checks
+    ]
+    for requirement_id, checks in v53_contract["expected_summary_checks"].items()
+}
+v53_default_summary_paths = {
+    summary_id: Path(summary_path)
+    for summary_id, summary_path in v53_contract["default_summary_paths"].items()
+}
+if module.EXPECTED_V53_POLICY_STATIC != v53_contract["expected_policy_static"]:
+    raise SystemExit("EXPECTED_V53_POLICY_STATIC must be derived from schema x-contract.expected_policy_static")
+if module.EXPECTED_V53_REQUIREMENT_IDS != v53_contract["expected_requirement_ids"]:
+    raise SystemExit("EXPECTED_V53_REQUIREMENT_IDS must be derived from schema x-contract.expected_requirement_ids")
+if module.EXPECTED_V53_SUMMARY_CHECKS != v53_expected_summary_checks:
+    raise SystemExit("EXPECTED_V53_SUMMARY_CHECKS must be derived from schema x-contract.expected_summary_checks")
+if module.DEFAULT_V53_SUMMARY_PATHS != v53_default_summary_paths:
+    raise SystemExit("DEFAULT_V53_SUMMARY_PATHS must be derived from schema x-contract.default_summary_paths")
+if module.EXPECTED_V53_V1_EXIT_CRITERION_IDS != v53_contract["expected_v1_exit_criterion_ids"]:
+    raise SystemExit("EXPECTED_V53_V1_EXIT_CRITERION_IDS must be derived from schema x-contract.expected_v1_exit_criterion_ids")
+
 v54_schema = json.loads((root / "schemas" / "v54_grounded_generation.schema.json").read_text(encoding="utf-8"))
 v54_contract = v54_schema["x-contract"]
 if module.EXPECTED_V54_POLICY_STATIC != v54_contract["expected_policy_static"]:
@@ -280,6 +304,88 @@ expect_fail_with \
   "instance required_artifacts must match x-contract.expected_required_artifacts" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/v50_schema_artifact_contract_drift.schema.json" "$ROOT_DIR/audits/v50_public_repo_auditor_correctness.json"
+
+cp "$ROOT_DIR/schemas/v53_source_benchmark.schema.json" "$TMP_DIR/v53_schema_policy_contract_drift.schema.json"
+python3 - "$TMP_DIR/v53_schema_policy_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_policy_static"]["human_review_ready"] = True
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance policy.human_review_ready must match x-contract.expected_policy_static" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v53_schema_policy_contract_drift.schema.json" "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json"
+
+cp "$ROOT_DIR/schemas/v53_source_benchmark.schema.json" "$TMP_DIR/v53_schema_requirement_contract_drift.schema.json"
+python3 - "$TMP_DIR/v53_schema_requirement_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_requirement_ids"] = data["x-contract"]["expected_requirement_ids"][:-1]
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance requirements must follow x-contract.expected_requirement_ids" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v53_schema_requirement_contract_drift.schema.json" "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json"
+
+cp "$ROOT_DIR/schemas/v53_source_benchmark.schema.json" "$TMP_DIR/v53_schema_summary_contract_drift.schema.json"
+python3 - "$TMP_DIR/v53_schema_summary_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+checks = data["x-contract"]["expected_summary_checks"]["sanitized-question-only-adapter-selection"]
+checks[-1]["expected"] = "1"
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance requirement sanitized-question-only-adapter-selection.summary_checks must match x-contract.expected_summary_checks" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v53_schema_summary_contract_drift.schema.json" "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json"
+
+cp "$ROOT_DIR/schemas/v53_source_benchmark.schema.json" "$TMP_DIR/v53_schema_default_summary_paths_drift.schema.json"
+python3 - "$TMP_DIR/v53_schema_default_summary_paths_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["default_summary_paths"].pop("v53aq")
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "x-contract.default_summary_paths keys must match summary_id enum" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v53_schema_default_summary_paths_drift.schema.json" "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json"
+
+cp "$ROOT_DIR/schemas/v53_source_benchmark.schema.json" "$TMP_DIR/v53_schema_v1_exit_contract_duplicate.schema.json"
+python3 - "$TMP_DIR/v53_schema_v1_exit_contract_duplicate.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+criteria = data["x-contract"]["expected_v1_exit_criterion_ids"]
+criteria[-1] = criteria[0]
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "x-contract.expected_v1_exit_criterion_ids values must be unique" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v53_schema_v1_exit_contract_duplicate.schema.json" "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json"
 
 cp "$ROOT_DIR/schemas/v54_grounded_generation.schema.json" "$TMP_DIR/v54_schema_policy_contract_drift.schema.json"
 python3 - "$TMP_DIR/v54_schema_policy_contract_drift.schema.json" <<'PY'

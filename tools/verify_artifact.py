@@ -102,6 +102,24 @@ def schema_contract_list(schema_name: str, key: str) -> list[object]:
     return list(value) if isinstance(value, list) else []
 
 
+def schema_summary_checks_by_requirement(schema_name: str) -> dict[str, list[tuple[str, str, str]]]:
+    checks_by_requirement = schema_contract_dict(schema_name, "expected_summary_checks")
+    expected: dict[str, list[tuple[str, str, str]]] = {}
+    for requirement_id, checks in checks_by_requirement.items():
+        if not isinstance(requirement_id, str) or not isinstance(checks, list):
+            continue
+        expected[requirement_id] = [
+            (
+                str(check.get("summary_id", "")),
+                str(check.get("field", "")),
+                str(check.get("expected", "")),
+            )
+            for check in checks
+            if isinstance(check, dict)
+        ]
+    return expected
+
+
 REQUIRED_PIPELINE_KEYS = schema_required("pipeline.schema.json")
 REQUIRED_STAGE_KEYS = schema_required_at("pipeline.schema.json", "properties", "stages", "items")
 REQUIRED_PR_SPLIT_KEYS = schema_required("pr_split.schema.json")
@@ -598,66 +616,26 @@ EXPECTED_V58_REQUIREMENT_IDS = [
         "expected_requirement_ids",
     )
 ]
+EXPECTED_V53_POLICY_STATIC = schema_contract_dict(
+    "v53_source_benchmark.schema.json",
+    "expected_policy_static",
+)
 EXPECTED_V53_REQUIREMENT_IDS = [
-    "pinned-public-repo-manifest",
-    "source-span-bound-1000-query-surface",
-    "negative-unsupported-missing-doc-code-controls",
-    "answer-citation-resource-separate-evaluator",
-    "abgh-same-query-internal-prebaseline",
-    "sanitized-question-only-adapter-selection",
+    str(requirement_id)
+    for requirement_id in schema_contract_list(
+        "v53_source_benchmark.schema.json",
+        "expected_requirement_ids",
+    )
 ]
-EXPECTED_V53_SUMMARY_CHECKS = {
-    "pinned-public-repo-manifest": [
-        ("v53i", "repo_count", "10"),
-        ("v53t", "foundation_direct_pinned_manifest_ready", "1"),
-        ("v53t", "foundation_direct_repo_manifest_rows", "10"),
-        ("v53t", "foundation_direct_file_manifest_rows", "11266"),
-        ("v53t", "foundation_direct_content_snapshot_rows", "11266"),
-    ],
-    "source-span-bound-1000-query-surface": [
-        ("v53i", "complete_source_query_rows", "1000"),
-        ("v53i", "complete_source_span_rows", "1000"),
-        ("v53i", "missing_query_rows", "0"),
-        ("v53t", "foundation_query_span_binding_audit_ready", "1"),
-        ("v53t", "foundation_query_span_binding_pass_rows", "1000"),
-        ("v53t", "foundation_query_span_binding_blocked_rows", "0"),
-    ],
-    "negative-unsupported-missing-doc-code-controls": [
-        ("v53i", "negative_abstain_rows", "160"),
-        ("v53i", "unsupported_control_rows", "100"),
-        ("v53i", "missing_specific_abstain_rows", "30"),
-        ("v53i", "doc_code_conflict_rows", "140"),
-        ("v53t", "v1_exit_negative_control_share_ready", "1"),
-    ],
-    "answer-citation-resource-separate-evaluator": [
-        ("v53ap", "same_evaluator_contract_all_local_systems", "1"),
-        ("v53ap", "same_resource_contract_all_local_systems", "1"),
-        ("v53aq", "same_evaluator_contract_all_local_systems", "1"),
-        ("v53aq", "same_resource_contract_all_local_systems", "1"),
-        ("v53t", "foundation_direct_evaluator_separate_rows", "4000"),
-    ],
-    "abgh-same-query-internal-prebaseline": [
-        ("v53ap", "same_query_set_all_local_systems", "1"),
-        ("v53aq", "same_query_set_all_local_systems", "1"),
-        ("v53t", "v53aq_same_complete_source_query_hash", "1"),
-        ("v53aq", "public_comparison_claim_ready", "0"),
-        ("v53aq", "required_30b_baseline_ready", "0"),
-        ("v53aq", "required_70b_baseline_ready", "0"),
-    ],
-    "sanitized-question-only-adapter-selection": [
-        ("v53aq", "selection_question_text_only", "1"),
-        ("v53aq", "selection_sanitized_question_only", "1"),
-        ("v53aq", "source_locator_in_question_removed_rows", "4000"),
-        ("v53aq", "selection_oracle_field_used", "0"),
-        ("v53aq", "source_span_oracle_selection_used", "0"),
-        ("v53aq", "expected_answer_oracle_replay", "0"),
-    ],
-}
+EXPECTED_V53_SUMMARY_CHECKS = schema_summary_checks_by_requirement(
+    "v53_source_benchmark.schema.json",
+)
 DEFAULT_V53_SUMMARY_PATHS = {
-    "v53i": Path("results/v53i_complete_source_query_instantiation_summary.csv"),
-    "v53t": Path("results/v53t_complete_source_audit_readiness_gate_summary.csv"),
-    "v53ap": Path("results/v53ap_complete_source_abgh_same_query_measured_summary.csv"),
-    "v53aq": Path("results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv"),
+    str(summary_id): Path(str(summary_path))
+    for summary_id, summary_path in schema_contract_dict(
+        "v53_source_benchmark.schema.json",
+        "default_summary_paths",
+    ).items()
 }
 EXPECTED_V54_POLICY_STATIC = schema_contract_dict(
     "v54_grounded_generation.schema.json",
@@ -759,12 +737,11 @@ EXPECTED_V52_REQUIREMENT_IDS = [
     "de-measured-registry-blocked",
 ]
 EXPECTED_V53_V1_EXIT_CRITERION_IDS = [
-    "repo-count-band-10-30",
-    "query-row-band-1000-3000",
-    "negative-abstain-and-control-families",
-    "answer-citation-separate-evaluator",
-    "abgh-same-query-internal-prebaseline",
-    "claim-boundary-replay-blocker-gate",
+    str(criterion_id)
+    for criterion_id in schema_contract_list(
+        "v53_source_benchmark.schema.json",
+        "expected_v1_exit_criterion_ids",
+    )
 ]
 EXPECTED_V58_ARTIFACTS = schema_contract_list(
     "v58_blind_eval.schema.json",
@@ -2437,16 +2414,17 @@ def verify_v53_source_benchmark(
     if data["schema_version"] != "v53_source_benchmark.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
-    if policy.get("benchmark_id") != "v53i_complete_source_1000":
-        errors.append(f"{path}: policy.benchmark_id must be v53i_complete_source_1000")
-    if policy.get("machine_foundation_freeze_ready") is not True:
-        errors.append(f"{path}: machine_foundation_freeze_ready must be true for the current freeze")
-    if policy.get("human_review_ready") is not False:
-        errors.append(f"{path}: human_review_ready must remain false")
-    if policy.get("public_comparison_claim_ready") is not False:
-        errors.append(f"{path}: public_comparison_claim_ready must remain false")
-    if policy.get("release_ready") is not False:
-        errors.append(f"{path}: release_ready must remain false")
+    policy_messages = {
+        "benchmark_id": "policy.benchmark_id must be v53i_complete_source_1000",
+        "machine_foundation_freeze_ready": "machine_foundation_freeze_ready must be true for the current freeze",
+        "human_review_ready": "human_review_ready must remain false",
+        "public_comparison_claim_ready": "public_comparison_claim_ready must remain false",
+        "release_ready": "release_ready must remain false",
+    }
+    for field, expected in EXPECTED_V53_POLICY_STATIC.items():
+        if policy.get(field) != expected:
+            message = policy_messages.get(field, f"policy.{field} expected {expected}, got {policy.get(field)}")
+            errors.append(f"{path}: {message}")
 
     requirements = data["requirements"]
     if not isinstance(requirements, list) or not requirements:

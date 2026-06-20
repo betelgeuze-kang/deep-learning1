@@ -61,5 +61,83 @@
       }
     }
   },
+  "x-contract": {
+    "expected_policy_static": {
+      "benchmark_id": "v53i_complete_source_1000",
+      "machine_foundation_freeze_ready": true,
+      "human_review_ready": false,
+      "public_comparison_claim_ready": false,
+      "release_ready": false
+    },
+    "expected_requirement_ids": [
+      "pinned-public-repo-manifest",
+      "source-span-bound-1000-query-surface",
+      "negative-unsupported-missing-doc-code-controls",
+      "answer-citation-resource-separate-evaluator",
+      "abgh-same-query-internal-prebaseline",
+      "sanitized-question-only-adapter-selection"
+    ],
+    "expected_summary_checks": {
+      "pinned-public-repo-manifest": [
+        {"summary_id": "v53i", "field": "repo_count", "expected": "10"},
+        {"summary_id": "v53t", "field": "foundation_direct_pinned_manifest_ready", "expected": "1"},
+        {"summary_id": "v53t", "field": "foundation_direct_repo_manifest_rows", "expected": "10"},
+        {"summary_id": "v53t", "field": "foundation_direct_file_manifest_rows", "expected": "11266"},
+        {"summary_id": "v53t", "field": "foundation_direct_content_snapshot_rows", "expected": "11266"}
+      ],
+      "source-span-bound-1000-query-surface": [
+        {"summary_id": "v53i", "field": "complete_source_query_rows", "expected": "1000"},
+        {"summary_id": "v53i", "field": "complete_source_span_rows", "expected": "1000"},
+        {"summary_id": "v53i", "field": "missing_query_rows", "expected": "0"},
+        {"summary_id": "v53t", "field": "foundation_query_span_binding_audit_ready", "expected": "1"},
+        {"summary_id": "v53t", "field": "foundation_query_span_binding_pass_rows", "expected": "1000"},
+        {"summary_id": "v53t", "field": "foundation_query_span_binding_blocked_rows", "expected": "0"}
+      ],
+      "negative-unsupported-missing-doc-code-controls": [
+        {"summary_id": "v53i", "field": "negative_abstain_rows", "expected": "160"},
+        {"summary_id": "v53i", "field": "unsupported_control_rows", "expected": "100"},
+        {"summary_id": "v53i", "field": "missing_specific_abstain_rows", "expected": "30"},
+        {"summary_id": "v53i", "field": "doc_code_conflict_rows", "expected": "140"},
+        {"summary_id": "v53t", "field": "v1_exit_negative_control_share_ready", "expected": "1"}
+      ],
+      "answer-citation-resource-separate-evaluator": [
+        {"summary_id": "v53ap", "field": "same_evaluator_contract_all_local_systems", "expected": "1"},
+        {"summary_id": "v53ap", "field": "same_resource_contract_all_local_systems", "expected": "1"},
+        {"summary_id": "v53aq", "field": "same_evaluator_contract_all_local_systems", "expected": "1"},
+        {"summary_id": "v53aq", "field": "same_resource_contract_all_local_systems", "expected": "1"},
+        {"summary_id": "v53t", "field": "foundation_direct_evaluator_separate_rows", "expected": "4000"}
+      ],
+      "abgh-same-query-internal-prebaseline": [
+        {"summary_id": "v53ap", "field": "same_query_set_all_local_systems", "expected": "1"},
+        {"summary_id": "v53aq", "field": "same_query_set_all_local_systems", "expected": "1"},
+        {"summary_id": "v53t", "field": "v53aq_same_complete_source_query_hash", "expected": "1"},
+        {"summary_id": "v53aq", "field": "public_comparison_claim_ready", "expected": "0"},
+        {"summary_id": "v53aq", "field": "required_30b_baseline_ready", "expected": "0"},
+        {"summary_id": "v53aq", "field": "required_70b_baseline_ready", "expected": "0"}
+      ],
+      "sanitized-question-only-adapter-selection": [
+        {"summary_id": "v53aq", "field": "selection_question_text_only", "expected": "1"},
+        {"summary_id": "v53aq", "field": "selection_sanitized_question_only", "expected": "1"},
+        {"summary_id": "v53aq", "field": "source_locator_in_question_removed_rows", "expected": "4000"},
+        {"summary_id": "v53aq", "field": "selection_oracle_field_used", "expected": "0"},
+        {"summary_id": "v53aq", "field": "source_span_oracle_selection_used", "expected": "0"},
+        {"summary_id": "v53aq", "field": "expected_answer_oracle_replay", "expected": "0"}
+      ]
+    },
+    "default_summary_paths": {
+      "v53i": "results/v53i_complete_source_query_instantiation_summary.csv",
+      "v53t": "results/v53t_complete_source_audit_readiness_gate_summary.csv",
+      "v53ap": "results/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+      "v53aq": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv"
+    },
+    "expected_v1_exit_criterion_ids": [
+      "repo-count-band-10-30",
+      "query-row-band-1000-3000",
+      "negative-abstain-and-control-families",
+      "answer-citation-separate-evaluator",
+      "abgh-same-query-internal-prebaseline",
+      "claim-boundary-replay-blocker-gate"
+    ]
+  },
   "additionalProperties": false
 }
