@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -1790,9 +1791,14 @@ EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
         "candidate_logits_sha256",
         "torch_reference_logits_sha256",
         "max_abs_delta",
+        "mean_abs_delta",
         "tolerance",
         "top1_token_id",
         "reference_top1_token_id",
+        "top_k_token_count",
+        "candidate_top_k_token_ids",
+        "reference_top_k_token_ids",
+        "top_k_token_ranking_match",
         "logits_parity_pass",
     ],
     "sixteen-token-decode-rows": [
@@ -4083,6 +4089,24 @@ def verify_v61_one_token_path(
             for field, expected in value_checks.items():
                 if artifact_row.get(field) != expected:
                     errors.append(f"{artifact_path}: row {row_index} {field} expected {expected}, got {artifact_row.get(field)}")
+            if artifact_id == "one-token-logits-parity-rows" and artifact_row.get(pass_field) == "1":
+                try:
+                    tolerance_value = float(artifact_row.get("tolerance", ""))
+                    max_abs_delta_value = float(artifact_row.get("max_abs_delta", ""))
+                    mean_abs_delta_value = float(artifact_row.get("mean_abs_delta", ""))
+                except ValueError:
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires numeric max_abs_delta, mean_abs_delta, and tolerance")
+                    tolerance_value = math.nan
+                    max_abs_delta_value = math.nan
+                    mean_abs_delta_value = math.nan
+                if artifact_row.get("top1_token_id") != artifact_row.get("reference_top1_token_id"):
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires top1_token_id to match reference_top1_token_id")
+                if artifact_row.get("top_k_token_ranking_match") != "1":
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires top_k_token_ranking_match=1")
+                if not math.isfinite(max_abs_delta_value) or not math.isfinite(mean_abs_delta_value) or not math.isfinite(tolerance_value):
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires finite max_abs_delta, mean_abs_delta, and tolerance")
+                elif max_abs_delta_value > tolerance_value or mean_abs_delta_value > tolerance_value:
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires max_abs_delta and mean_abs_delta <= tolerance")
         real_pass_rows = [
             artifact_row
             for artifact_row in rows

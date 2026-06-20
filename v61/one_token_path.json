@@ -436,9 +436,14 @@
         "candidate_logits_sha256",
         "torch_reference_logits_sha256",
         "max_abs_delta",
+        "mean_abs_delta",
         "tolerance",
         "top1_token_id",
         "reference_top1_token_id",
+        "top_k_token_count",
+        "candidate_top_k_token_ids",
+        "reference_top_k_token_ids",
+        "top_k_token_ranking_match",
         "logits_parity_pass"
       ]
     },

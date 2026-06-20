@@ -89,7 +89,8 @@ The contract requires these artifact shapes:
   hash, tokenizer revision, route path hash, upstream MoE-block artifact hash,
   final hidden hash, LM-head tensor/payload hash, vocab/logit counts,
   candidate/reference logits hashes, typed readiness fields, top-1 agreement,
-  tolerance, max delta, and `logits_parity_pass`
+  max and mean absolute logit error, tolerance, top-k token ranking agreement,
+  and `logits_parity_pass`
 - `sixteen-token-decode-rows`
   (`results/v61_sixteen_token_decode/sixteen_token_decode_rows.csv`):
   checkpoint/revision and tokenizer revision, upstream logits-parity artifact
