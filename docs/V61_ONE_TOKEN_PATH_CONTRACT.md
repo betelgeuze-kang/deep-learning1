@@ -76,7 +76,10 @@ The contract requires these artifact shapes:
   readiness fields, tolerance, max delta, and `expert_ffn_parity_pass`.
   Fixture-only rows may populate the independent C++ runtime hash, but must
   leave the original Transformers module output empty until that module capture
-  exists.
+  exists. A real `expert_ffn_parity_pass=1` row with
+  `real_model_execution_ready=1` must bind both hashes: the candidate output
+  must match the independent runtime output hash, and the torch reference
+  output must match the original Transformers expert output hash.
 - `moe-block-forward-parity-rows`
   (`results/v61_moe_block_forward_parity/moe_block_forward_parity_rows.csv`):
   token input hash, router logits hash,

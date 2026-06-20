@@ -1611,13 +1611,6 @@ EXPECTED_V61_ARTIFACT_VALUE_CHECKS = {
         "real_release_package_ready": "0",
         "route_jump_rows": "0",
     },
-    "torch-matvec-parity-rows": {
-        "torch_matvec_parity_pass": "1",
-        "real_checkpoint_page_bound": "1",
-        "checkpoint_payload_bytes_committed_to_repo": "0",
-        "actual_model_generation_ready": "0",
-        "route_jump_rows": "0",
-    },
 }
 V61_REAL_MODEL_EXECUTION_PASS_MILESTONES = {
     "real-expert-ffn-forward-parity",
@@ -3764,6 +3757,21 @@ def verify_v61_one_token_path(
             for field, expected in value_checks.items():
                 if artifact_row.get(field) != expected:
                     errors.append(f"{artifact_path}: row {row_index} {field} expected {expected}, got {artifact_row.get(field)}")
+            if (
+                artifact_id == "expert-ffn-forward-parity-rows"
+                and artifact_row.get(pass_field) == "1"
+                and artifact_row.get("real_model_execution_ready") == "1"
+            ):
+                transformers_hash = artifact_row.get("transformers_expert_output_sha256", "")
+                independent_hash = artifact_row.get("independent_runtime_output_sha256", "")
+                if not _is_sha256_digest(transformers_hash):
+                    errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires transformers_expert_output_sha256")
+                if not _is_sha256_digest(independent_hash):
+                    errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires independent_runtime_output_sha256")
+                if artifact_row.get("candidate_output_sha256") != independent_hash:
+                    errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires candidate_output_sha256 to match independent_runtime_output_sha256")
+                if artifact_row.get("torch_reference_output_sha256") != transformers_hash:
+                    errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires torch_reference_output_sha256 to match transformers_expert_output_sha256")
             if artifact_id == "one-token-logits-parity-rows" and artifact_row.get(pass_field) == "1":
                 try:
                     tolerance_value = float(artifact_row.get("tolerance", ""))
@@ -3852,6 +3860,15 @@ def _summary_expect(summary_path: Path, summary: dict[str, str], field: str, exp
     actual = summary.get(field)
     if actual != expected:
         errors.append(f"{summary_path}: {field} expected {expected}, got {actual}")
+
+
+def _is_sha256_digest(value: str) -> bool:
+    digest = value.removeprefix("sha256:")
+    return (
+        value.startswith("sha256:")
+        and len(digest) == 64
+        and all(character in "0123456789abcdef" for character in digest)
+    )
 
 
 def _summary_expect_float(

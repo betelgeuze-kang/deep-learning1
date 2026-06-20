@@ -13,6 +13,9 @@ cleanup() {
   if [ -n "${REMOTE_BINDING_ROWS:-}" ] && [ -n "${REMOTE_BINDING_BACKUP:-}" ] && [ -f "$REMOTE_BINDING_BACKUP" ]; then
     cp "$REMOTE_BINDING_BACKUP" "$REMOTE_BINDING_ROWS" 2>/dev/null || true
   fi
+  if [ -n "${TORCH_PARITY_ROWS:-}" ] && [ -n "${TORCH_PARITY_BACKUP:-}" ] && [ -f "$TORCH_PARITY_BACKUP" ]; then
+    cp "$TORCH_PARITY_BACKUP" "$TORCH_PARITY_ROWS" 2>/dev/null || true
+  fi
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
@@ -60,6 +63,32 @@ expect_fail_with \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 cp "$REMOTE_BINDING_BACKUP" "$REMOTE_BINDING_ROWS"
+
+TORCH_PARITY_ROWS="$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe/probe_001/hotset_tensor_tile_torch_parity_rows.csv"
+TORCH_PARITY_BACKUP="$TMP_DIR/hotset_tensor_tile_torch_parity_rows.csv.bak"
+cp "$TORCH_PARITY_ROWS" "$TORCH_PARITY_BACKUP"
+python3 - "$TORCH_PARITY_ROWS" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["model_id"] = "fixture/not-mixtral"
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "model_id expected mistralai/Mixtral-8x22B-v0.1, got fixture/not-mixtral" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+cp "$TORCH_PARITY_BACKUP" "$TORCH_PARITY_ROWS"
 
 bad_json() {
   local name="$1"
@@ -340,6 +369,16 @@ fixture-checkpoint,fixture-revision,sha256:1212121212121212121212121212121212121
 CSV
 expect_fail_with \
   "blocked milestone real-expert-ffn-forward-parity cannot contain expert_ffn_parity_pass=1 rows" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$EXPERT_BAD_JSON" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+cat >"$EXPERT_ROWS" <<'CSV'
+checkpoint_id,model_revision,config_sha256,tokenizer_revision,shard_index_sha256,full_manifest_sha256,layer_index,expert_index,token_id,router_top_k,rmsnorm_tensor_name,rmsnorm_payload_sha256,router_tensor_name,router_payload_sha256,w1_tensor_name,w2_tensor_name,w3_tensor_name,contract_ready,fixture_execution_ready,real_model_execution_ready,heldout_metric_ready,human_review_ready,independent_reproduction_ready,release_ready,local_checkpoint_root_supplied,checkpoint_payload_bytes_committed_to_repo,actual_model_generation_ready,route_jump_rows,status,reason,w1_shape,w2_shape,w3_shape,w1_payload_sha256,w2_payload_sha256,w3_payload_sha256,input_hidden_size,intermediate_size,output_hidden_size,residual_input_sha256,residual_output_sha256,transformers_expert_output_sha256,independent_runtime_output_sha256,candidate_output_sha256,torch_reference_output_sha256,max_abs_delta,tolerance,expert_ffn_parity_pass
+fixture-checkpoint,fixture-revision,sha256:1212121212121212121212121212121212121212121212121212121212121212,fixture-tokenizer,sha256:3434343434343434343434343434343434343434343434343434343434343434,sha256:5656565656565656565656565656565656565656565656565656565656565656,0,0,1,2,model.layers.0.input_layernorm.weight,sha256:7777777777777777777777777777777777777777777777777777777777777777,model.layers.0.block_sparse_moe.gate.weight,sha256:8888888888888888888888888888888888888888888888888888888888888888,model.layers.0.block_sparse_moe.experts.0.w1.weight,model.layers.0.block_sparse_moe.experts.0.w2.weight,model.layers.0.block_sparse_moe.experts.0.w3.weight,1,0,1,0,0,0,0,1,0,0,0,blocked,malicious real expert FFN pass omits original Transformers output,"[14336,6144]","[6144,14336]","[14336,6144]",sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,6144,14336,6144,sha256:9999999999999999999999999999999999999999999999999999999999999999,sha256:abababababababababababababababababababababababababababababababab,,sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef,sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef,sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,0,1e-06,1
+CSV
+expect_fail_with \
+  "real expert_ffn_parity_pass=1 requires transformers_expert_output_sha256" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$EXPERT_BAD_JSON" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
