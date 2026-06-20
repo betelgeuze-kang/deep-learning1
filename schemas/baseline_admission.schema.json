@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/baseline_admission.schema.json",
+  "title": "Real Baseline Admission Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "policy",
+    "required_real_evidence_fields",
+    "required_pm_ledgers",
+    "systems",
+    "required_artifacts"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "fixture_schema_test_allowed",
+        "fixture_rows_in_measured_registry",
+        "public_comparison_requires_all_systems"
+      ],
+      "properties": {
+        "fixture_schema_test_allowed": {"type": "boolean"},
+        "fixture_rows_in_measured_registry": {"type": "boolean"},
+        "public_comparison_requires_all_systems": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "required_real_evidence_fields": {"type": "array", "items": {"type": "string"}},
+    "required_pm_ledgers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ledger_id", "path", "required_for"],
+        "properties": {
+          "ledger_id": {"type": "string"},
+          "path": {"type": "string"},
+          "required_for": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "systems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "system_id",
+          "baseline_class",
+          "parameter_count_b_min",
+          "parameter_count_b_max",
+          "evidence_env",
+          "measured_registry_admission_ready",
+          "acceptance_test"
+        ],
+        "properties": {
+          "system_id": {"type": "string"},
+          "baseline_class": {"type": "string"},
+          "parameter_count_b_min": {"type": "number"},
+          "parameter_count_b_max": {"type": "number"},
+          "evidence_env": {"type": "string"},
+          "measured_registry_admission_ready": {"type": "boolean"},
+          "acceptance_test": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "required_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "artifact_kind", "required_columns"],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "artifact_kind": {"type": "string"},
+          "required_columns": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
