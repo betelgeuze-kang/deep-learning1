@@ -1,0 +1,99 @@
+{
+  "schema_version": "v53_source_benchmark.v1",
+  "policy": {
+    "benchmark_id": "v53i_complete_source_1000",
+    "machine_foundation_freeze_ready": true,
+    "human_review_ready": false,
+    "public_comparison_claim_ready": false,
+    "release_ready": false
+  },
+  "requirements": [
+    {
+      "requirement_id": "pinned-public-repo-manifest",
+      "required_evidence": "10-30 pinned public repositories with direct repo/file/content snapshot manifests",
+      "current_status": "pass",
+      "evidence_path": "results/v53g_complete_source_manifest/manifest_001/complete_source_repo_coverage_rows.csv",
+      "claim_boundary": "Allows v53 public source manifest wording only; not release or benchmark-win wording",
+      "summary_checks": [
+        {"summary_id": "v53i", "field": "repo_count", "expected": "10"},
+        {"summary_id": "v53t", "field": "foundation_direct_pinned_manifest_ready", "expected": "1"},
+        {"summary_id": "v53t", "field": "foundation_direct_repo_manifest_rows", "expected": "10"},
+        {"summary_id": "v53t", "field": "foundation_direct_file_manifest_rows", "expected": "11266"},
+        {"summary_id": "v53t", "field": "foundation_direct_content_snapshot_rows", "expected": "11266"}
+      ]
+    },
+    {
+      "requirement_id": "source-span-bound-1000-query-surface",
+      "required_evidence": "1000 query rows and 1000 source-span rows with every query/span binding audit passing",
+      "current_status": "pass",
+      "evidence_path": "results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_query_span_binding_audit_rows.csv",
+      "claim_boundary": "Allows frozen source-span-bound benchmark surface wording only; not human-reviewed correctness",
+      "summary_checks": [
+        {"summary_id": "v53i", "field": "complete_source_query_rows", "expected": "1000"},
+        {"summary_id": "v53i", "field": "complete_source_span_rows", "expected": "1000"},
+        {"summary_id": "v53i", "field": "missing_query_rows", "expected": "0"},
+        {"summary_id": "v53t", "field": "foundation_query_span_binding_audit_ready", "expected": "1"},
+        {"summary_id": "v53t", "field": "foundation_query_span_binding_pass_rows", "expected": "1000"},
+        {"summary_id": "v53t", "field": "foundation_query_span_binding_blocked_rows", "expected": "0"}
+      ]
+    },
+    {
+      "requirement_id": "negative-unsupported-missing-doc-code-controls",
+      "required_evidence": "negative/abstain controls are at least 10 percent, with unsupported, missing-specific, and doc-code conflict rows present",
+      "current_status": "pass",
+      "evidence_path": "results/v53i_complete_source_query_instantiation/instantiate_001/complete_source_query_family_rows.csv",
+      "claim_boundary": "Allows corpus-control coverage wording only; not model quality or abstention performance wording",
+      "summary_checks": [
+        {"summary_id": "v53i", "field": "negative_abstain_rows", "expected": "160"},
+        {"summary_id": "v53i", "field": "unsupported_control_rows", "expected": "100"},
+        {"summary_id": "v53i", "field": "missing_specific_abstain_rows", "expected": "30"},
+        {"summary_id": "v53i", "field": "doc_code_conflict_rows", "expected": "140"},
+        {"summary_id": "v53t", "field": "v1_exit_negative_control_share_ready", "expected": "1"}
+      ]
+    },
+    {
+      "requirement_id": "answer-citation-resource-separate-evaluator",
+      "required_evidence": "answer, citation/source-span, and resource checks are emitted as separate evaluator/resource rows",
+      "current_status": "pass",
+      "evidence_path": "results/v53ap_complete_source_abgh_same_query_measured_summary.csv;results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+      "claim_boundary": "Allows evaluator-contract wording only; not human-reviewed answer quality",
+      "summary_checks": [
+        {"summary_id": "v53ap", "field": "same_evaluator_contract_all_local_systems", "expected": "1"},
+        {"summary_id": "v53ap", "field": "same_resource_contract_all_local_systems", "expected": "1"},
+        {"summary_id": "v53aq", "field": "same_evaluator_contract_all_local_systems", "expected": "1"},
+        {"summary_id": "v53aq", "field": "same_resource_contract_all_local_systems", "expected": "1"},
+        {"summary_id": "v53t", "field": "foundation_direct_evaluator_separate_rows", "expected": "4000"}
+      ]
+    },
+    {
+      "requirement_id": "abgh-same-query-internal-prebaseline",
+      "required_evidence": "A/B/G/H use the same frozen v53 query hash with D/E and public comparison claims blocked",
+      "current_status": "pass",
+      "evidence_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+      "claim_boundary": "Allows internal v1.0 pre-baseline A/B/G/H wording only; public comparison remains blocked without D/E",
+      "summary_checks": [
+        {"summary_id": "v53ap", "field": "same_query_set_all_local_systems", "expected": "1"},
+        {"summary_id": "v53aq", "field": "same_query_set_all_local_systems", "expected": "1"},
+        {"summary_id": "v53t", "field": "v53aq_same_complete_source_query_hash", "expected": "1"},
+        {"summary_id": "v53aq", "field": "public_comparison_claim_ready", "expected": "0"},
+        {"summary_id": "v53aq", "field": "required_30b_baseline_ready", "expected": "0"},
+        {"summary_id": "v53aq", "field": "required_70b_baseline_ready", "expected": "0"}
+      ]
+    },
+    {
+      "requirement_id": "sanitized-question-only-adapter-selection",
+      "required_evidence": "v53aq adapter selection reads sanitized question text only; oracle/source locator/expected-label fields remain forbidden",
+      "current_status": "pass",
+      "evidence_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+      "claim_boundary": "Allows no-oracle adapter-selection wording only; evaluator-only fields remain unavailable to retriever/model selection",
+      "summary_checks": [
+        {"summary_id": "v53aq", "field": "selection_question_text_only", "expected": "1"},
+        {"summary_id": "v53aq", "field": "selection_sanitized_question_only", "expected": "1"},
+        {"summary_id": "v53aq", "field": "source_locator_in_question_removed_rows", "expected": "4000"},
+        {"summary_id": "v53aq", "field": "selection_oracle_field_used", "expected": "0"},
+        {"summary_id": "v53aq", "field": "source_span_oracle_selection_used", "expected": "0"},
+        {"summary_id": "v53aq", "field": "expected_answer_oracle_replay", "expected": "0"}
+      ]
+    }
+  ]
+}
