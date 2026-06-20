@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI verify toolchain lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "github_actions_runner",
+    "container_image_digest",
+    "python",
+    "numpy",
+    "torch",
+    "rocm",
+    "compiler",
+    "cmake"
+  ],
+  "properties": {
+    "schema_version": {"const": "ai_verify_toolchain_lock.v1"},
+    "github_actions_runner": {"const": "ubuntu-24.04"},
+    "container_image_digest": {"const": ""},
+    "python": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "version_command"],
+      "properties": {
+        "source": {"const": "github-actions-runner"},
+        "version_command": {"const": "python3 --version"}
+      }
+    },
+    "numpy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "version_command"],
+      "properties": {
+        "source": {"const": "not-required-by-ai-verify"},
+        "version_command": {"const": ""}
+      }
+    },
+    "torch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "version_command"],
+      "properties": {
+        "source": {"const": "not-required-by-ai-verify"},
+        "version_command": {"const": ""}
+      }
+    },
+    "rocm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "required_env"],
+      "properties": {
+        "source": {"const": "disabled-in-ai-verify"},
+        "required_env": {"const": "DLE_VERIFY_ENABLE_HIP=OFF"}
+      }
+    },
+    "compiler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "version_command"],
+      "properties": {
+        "source": {"const": "github-actions-runner"},
+        "version_command": {"const": "g++ --version"}
+      }
+    },
+    "cmake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "version_command"],
+      "properties": {
+        "source": {"const": "github-actions-runner"},
+        "version_command": {"const": "cmake --version"}
+      }
+    }
+  }
+}

@@ -49,6 +49,9 @@ fi
 if [ -f experiments/test_p1_baseline_v58_negative_controls.sh ]; then
   bash -n experiments/test_p1_baseline_v58_negative_controls.sh
 fi
+if [ -f experiments/test_p1_atomic_run_dir_contract.sh ]; then
+  bash -n experiments/test_p1_atomic_run_dir_contract.sh
+fi
 if [ -f experiments/test_v61_one_token_path_contract.sh ]; then
   bash -n experiments/test_v61_one_token_path_contract.sh
 fi
@@ -205,6 +208,9 @@ if [ -x experiments/test_p0_review_return_workflow_negative_controls.sh ]; then
 fi
 if [ -x experiments/test_p1_baseline_v58_negative_controls.sh ]; then
   ./experiments/test_p1_baseline_v58_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p1_atomic_run_dir_contract.sh ]; then
+  ./experiments/test_p1_atomic_run_dir_contract.sh >/dev/null
 fi
 if [ -x experiments/test_v61_one_token_path_contract.sh ]; then
   ./experiments/test_v61_one_token_path_contract.sh >/dev/null

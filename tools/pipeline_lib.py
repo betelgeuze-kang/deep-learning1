@@ -7,9 +7,11 @@ import csv
 import hashlib
 import json
 import shutil
+import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Iterator
 
 
 def sha256_file(path: Path) -> str:
@@ -35,6 +37,45 @@ def write_csv(path: Path, fieldnames: Iterable[str], rows: Iterable[dict[str, ob
         writer = csv.DictWriter(handle, fieldnames=list(fieldnames), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def write_summary_csv(run_dir: Path, summary: dict[str, object]) -> Path:
+    """Write the canonical per-run summary artifact."""
+    summary_path = run_dir / "summary.csv"
+    write_csv(summary_path, summary.keys(), [summary])
+    return summary_path
+
+
+def run_packet_dir(results_root: Path, stage_id: str, run_id: str) -> Path:
+    if not stage_id or "/" in stage_id or "\\" in stage_id:
+        raise ValueError("stage_id must be a non-empty path segment")
+    if not run_id or "/" in run_id or "\\" in run_id:
+        raise ValueError("run_id must be a non-empty path segment")
+    return results_root / stage_id / run_id
+
+
+@contextmanager
+def atomic_run_dir(final_dir: Path) -> Iterator[Path]:
+    """Publish a new run directory atomically after all artifacts are written."""
+    final_dir = final_dir.resolve()
+    final_dir.parent.mkdir(parents=True, exist_ok=True)
+    if final_dir.exists():
+        raise FileExistsError(f"run directory already exists: {final_dir}")
+    tmp_dir = Path(tempfile.mkdtemp(prefix=f".{final_dir.name}.tmp-", dir=final_dir.parent))
+    try:
+        yield tmp_dir
+        summary_path = tmp_dir / "summary.csv"
+        if not summary_path.is_file() or summary_path.stat().st_size == 0:
+            _raise_missing_summary(tmp_dir)
+        tmp_dir.replace(final_dir)
+    except Exception:
+        if tmp_dir.exists():
+            shutil.rmtree(tmp_dir)
+        raise
+
+
+def _raise_missing_summary(tmp_dir: Path) -> None:
+    raise FileNotFoundError(f"atomic run directory missing non-empty summary.csv: {tmp_dir}")
 
 
 def copy_into(src: Path, dst: Path) -> None:
@@ -67,6 +108,9 @@ class PipelineRun:
 
     def write_summary(self, path: Path) -> None:
         write_csv(path, self.summary.keys(), [self.summary])
+
+    def write_run_summary(self) -> Path:
+        return write_summary_csv(self.run_dir, self.summary)
 
     def write_decisions(self, path: Path) -> None:
         write_csv(path, ["gate", "status", "reason"], self.decisions)

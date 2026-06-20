@@ -18,6 +18,7 @@ except ImportError as exc:  # pragma: no cover - exercised only on missing env d
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SCHEMA_INSTANCE_REGISTRY = {
+    "schemas/ai_verify_toolchain_lock.schema.json": ["ci/ai_verify_toolchain.lock.json"],
     "schemas/pr_split.schema.json": ["pr_slices/pr2.json"],
     "schemas/typed_readiness.schema.json": ["readiness/typed_ready.json"],
     "schemas/leakage_contract.schema.json": ["leakage/retrieval_model_visible.json"],
