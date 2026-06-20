@@ -22,6 +22,15 @@ def schema_required(schema_name: str) -> set[str]:
     return set(schema.get("required", []))
 
 
+def schema_contract(schema_name: str) -> dict[str, object]:
+    schema_path = SCHEMA_ROOT / schema_name
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    contract = schema.get("x-contract", {})
+    if not isinstance(contract, dict):
+        return {}
+    return contract
+
+
 REQUIRED_PIPELINE_KEYS = schema_required("pipeline.schema.json")
 REQUIRED_STAGE_KEYS = {"stage_id", "adapter", "command", "outputs", "ready_fields", "claim_boundary"}
 REQUIRED_PR_SPLIT_KEYS = schema_required("pr_split.schema.json")
@@ -1527,28 +1536,13 @@ EXPECTED_REVIEW_RETURN_SUMMARY_CHECKS = {
         ("v61hv", "real_release_package_ready", "0"),
     ],
 }
-EXPECTED_V61_MILESTONE_IDS = [
-    "actual-mixtral-ssd-tensor-page-read",
-    "actual-tensor-dtype-quant-dequant",
-    "torch-matvec-parity",
-    "real-expert-ffn-forward-parity",
-    "real-moe-block-forward-parity",
-    "one-token-logits-parity",
-    "sixteen-token-decode",
-    "cold-warm-cache-measurement",
-    "ssd-bytes-miss-tps-recording",
-]
-V61_REQUIRED_BEFORE_RUNTIME_CLAIM = EXPECTED_V61_MILESTONE_IDS[:6]
-EXPECTED_V61_CURRENT_STATUS = {
-    "actual-mixtral-ssd-tensor-page-read": "pass",
-    "actual-tensor-dtype-quant-dequant": "pass",
-    "torch-matvec-parity": "pass",
-    "real-expert-ffn-forward-parity": "blocked",
-    "real-moe-block-forward-parity": "blocked",
-    "one-token-logits-parity": "blocked",
-    "sixteen-token-decode": "blocked",
-    "cold-warm-cache-measurement": "blocked",
-    "ssd-bytes-miss-tps-recording": "blocked",
+V61_SCHEMA_CONTRACT = schema_contract("v61_one_token_path.schema.json")
+EXPECTED_V61_MILESTONE_IDS = list(V61_SCHEMA_CONTRACT["milestone_order"])
+V61_REQUIRED_BEFORE_RUNTIME_CLAIM = list(V61_SCHEMA_CONTRACT["required_before_runtime_claim"])
+EXPECTED_V61_CURRENT_STATUS = dict(V61_SCHEMA_CONTRACT["current_status_by_milestone"])
+V61_ARTIFACT_CONTRACTS = {
+    row["artifact_id"]: row
+    for row in V61_SCHEMA_CONTRACT["artifact_contracts"]
 }
 V61_BLOCKED_BEFORE_RUNTIME_CLAIM = [
     milestone_id
@@ -1868,53 +1862,22 @@ EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS = {
         "ssd_runtime_metrics_pass",
     ],
 }
+EXPECTED_V61_ARTIFACT_IDS = list(V61_ARTIFACT_CONTRACTS)
 EXPECTED_V61_REQUIRED_ARTIFACT_PATHS = {
-    "mixtral-ssd-tensor-page-read-rows": "results/v61aa_hotset_tensor_slice_verifier/verify_001/source_v61v/remote_sample_tensor_binding_rows.csv",
-    "tensor-dtype-stat-rows": "results/v61aa_hotset_tensor_slice_verifier/verify_001/hotset_tensor_slice_stat_rows.csv",
-    "tensor-quant-dequant-metric-rows": "results/v61ab_hotset_tensor_tile_quant_probe/probe_001/hotset_tensor_tile_quant_metric_rows.csv",
-    "torch-matvec-parity-rows": "results/v61ab_hotset_tensor_tile_quant_probe/probe_001/hotset_tensor_tile_torch_parity_rows.csv",
-    "expert-ffn-forward-parity-rows": "results/v61ab_hotset_tensor_tile_quant_probe/probe_001/expert_ffn_forward_parity_rows.csv",
-    "moe-block-forward-parity-rows": "results/v61_moe_block_forward_parity/moe_block_forward_parity_rows.csv",
-    "one-token-logits-parity-rows": "results/v61_one_token_logits_parity/one_token_logits_parity_rows.csv",
-    "sixteen-token-decode-rows": "results/v61_sixteen_token_decode/sixteen_token_decode_rows.csv",
-    "cold-warm-cache-measurement-rows": "results/v61_cold_warm_cache_measurement/cold_warm_cache_measurement_rows.csv",
-    "ssd-bytes-miss-tps-rows": "results/v61_ssd_runtime_metrics/ssd_bytes_miss_tps_rows.csv",
+    artifact_id: row["path"]
+    for artifact_id, row in V61_ARTIFACT_CONTRACTS.items()
 }
 EXPECTED_V61_ARTIFACT_MILESTONES = {
-    "mixtral-ssd-tensor-page-read-rows": "actual-mixtral-ssd-tensor-page-read",
-    "tensor-dtype-stat-rows": "actual-tensor-dtype-quant-dequant",
-    "tensor-quant-dequant-metric-rows": "actual-tensor-dtype-quant-dequant",
-    "torch-matvec-parity-rows": "torch-matvec-parity",
-    "expert-ffn-forward-parity-rows": "real-expert-ffn-forward-parity",
-    "moe-block-forward-parity-rows": "real-moe-block-forward-parity",
-    "one-token-logits-parity-rows": "one-token-logits-parity",
-    "sixteen-token-decode-rows": "sixteen-token-decode",
-    "cold-warm-cache-measurement-rows": "cold-warm-cache-measurement",
-    "ssd-bytes-miss-tps-rows": "ssd-bytes-miss-tps-recording",
+    artifact_id: row["linked_milestone_id"]
+    for artifact_id, row in V61_ARTIFACT_CONTRACTS.items()
 }
 EXPECTED_V61_ARTIFACT_PASS_FIELDS = {
-    "mixtral-ssd-tensor-page-read-rows": "remote_hash_bound",
-    "tensor-dtype-stat-rows": "bf16_tensor_slice_stats_ready",
-    "tensor-quant-dequant-metric-rows": "hotset_numeric_tile_probe_ready",
-    "torch-matvec-parity-rows": "torch_matvec_parity_pass",
-    "expert-ffn-forward-parity-rows": "expert_ffn_parity_pass",
-    "moe-block-forward-parity-rows": "moe_block_parity_pass",
-    "one-token-logits-parity-rows": "logits_parity_pass",
-    "sixteen-token-decode-rows": "decode_parity_pass",
-    "cold-warm-cache-measurement-rows": "cache_measurement_pass",
-    "ssd-bytes-miss-tps-rows": "ssd_runtime_metrics_pass",
+    artifact_id: row["pass_field"]
+    for artifact_id, row in V61_ARTIFACT_CONTRACTS.items()
 }
 EXPECTED_V61_ARTIFACT_MIN_ROWS = {
-    "mixtral-ssd-tensor-page-read-rows": 16,
-    "tensor-dtype-stat-rows": 16,
-    "tensor-quant-dequant-metric-rows": 1,
-    "torch-matvec-parity-rows": 128,
-    "expert-ffn-forward-parity-rows": 1,
-    "moe-block-forward-parity-rows": 1,
-    "one-token-logits-parity-rows": 1,
-    "sixteen-token-decode-rows": 1,
-    "cold-warm-cache-measurement-rows": 2,
-    "ssd-bytes-miss-tps-rows": 1,
+    artifact_id: row["min_rows"]
+    for artifact_id, row in V61_ARTIFACT_CONTRACTS.items()
 }
 EXPECTED_V61_ARTIFACT_VALUE_CHECKS = {
     "mixtral-ssd-tensor-page-read-rows": {
@@ -4025,7 +3988,7 @@ def verify_v61_one_token_path(
 
     artifacts = data["required_artifacts"]
     artifact_ids = [row.get("artifact_id", "") for row in artifacts]
-    if artifact_ids != list(EXPECTED_V61_REQUIRED_ARTIFACT_COLUMNS):
+    if artifact_ids != EXPECTED_V61_ARTIFACT_IDS:
         errors.append(f"{path}: required_artifacts order must match the v61 one-token replay artifact contract")
     if len(artifact_ids) != len(set(artifact_ids)):
         errors.append(f"{path}: duplicate required_artifacts are forbidden")

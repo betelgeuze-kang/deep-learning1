@@ -45,6 +45,77 @@ def validate_schema(schema_path: Path) -> list[str]:
     return errors
 
 
+def validate_contract_metadata(schema_path: Path, schema: object, instance: object) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        return errors
+    contract = schema.get("x-contract")
+    if contract is None:
+        return errors
+    if not isinstance(contract, dict):
+        return [f"{schema_path}: x-contract must be an object"]
+
+    milestone_order = contract.get("milestone_order", [])
+    status_by_milestone = contract.get("current_status_by_milestone", {})
+    required_before_runtime = contract.get("required_before_runtime_claim", [])
+    artifact_contracts = contract.get("artifact_contracts", [])
+    if not isinstance(milestone_order, list) or not milestone_order or len(set(milestone_order)) != len(milestone_order):
+        errors.append(f"{schema_path}: x-contract.milestone_order must be a non-empty unique list")
+    if not isinstance(status_by_milestone, dict) or set(status_by_milestone) != set(milestone_order):
+        errors.append(f"{schema_path}: x-contract.current_status_by_milestone keys must match milestone_order")
+    elif any(value not in {"pass", "blocked"} for value in status_by_milestone.values()):
+        errors.append(f"{schema_path}: x-contract.current_status_by_milestone values must be pass or blocked")
+    if not isinstance(required_before_runtime, list) or not set(required_before_runtime).issubset(set(milestone_order)):
+        errors.append(f"{schema_path}: x-contract.required_before_runtime_claim must be a milestone subset")
+    if not isinstance(artifact_contracts, list) or not artifact_contracts:
+        errors.append(f"{schema_path}: x-contract.artifact_contracts must be a non-empty list")
+        artifact_contracts = []
+    artifact_ids = [row.get("artifact_id") for row in artifact_contracts if isinstance(row, dict)]
+    if len(set(artifact_ids)) != len(artifact_ids):
+        errors.append(f"{schema_path}: x-contract.artifact_contracts artifact_id values must be unique")
+    artifact_by_id = {}
+    for index, row in enumerate(artifact_contracts, start=1):
+        if not isinstance(row, dict):
+            errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] must be an object")
+            continue
+        missing = {"artifact_id", "path", "linked_milestone_id", "pass_field", "min_rows"} - set(row)
+        if missing:
+            errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] missing {', '.join(sorted(missing))}")
+        if row.get("linked_milestone_id") not in milestone_order:
+            errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] linked_milestone_id must reference milestone_order")
+        if not isinstance(row.get("min_rows"), int) or row.get("min_rows", 0) < 1:
+            errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] min_rows must be a positive integer")
+        artifact_by_id[row.get("artifact_id", "")] = row
+
+    milestones = instance.get("milestones", [])
+    milestone_ids = [row.get("milestone_id", "") for row in milestones if isinstance(row, dict)]
+    if milestone_order and milestone_ids != milestone_order:
+        errors.append(f"{schema_path}: instance milestones must follow x-contract.milestone_order")
+    for row in milestones:
+        if isinstance(row, dict) and status_by_milestone.get(row.get("milestone_id", "")) != row.get("current_status"):
+            errors.append(f"{schema_path}: instance milestone {row.get('milestone_id')} status must match x-contract")
+
+    policy = instance.get("policy", {})
+    if isinstance(policy, dict) and policy.get("required_before_ssd_resident_runtime_claim") != required_before_runtime:
+        errors.append(f"{schema_path}: instance policy.required_before_ssd_resident_runtime_claim must match x-contract")
+
+    required_artifacts = instance.get("required_artifacts", [])
+    required_artifact_ids = [row.get("artifact_id", "") for row in required_artifacts if isinstance(row, dict)]
+    if artifact_ids and required_artifact_ids != artifact_ids:
+        errors.append(f"{schema_path}: instance required_artifacts must follow x-contract.artifact_contracts")
+    for row in required_artifacts:
+        if not isinstance(row, dict):
+            continue
+        artifact_id = row.get("artifact_id", "")
+        contract_row = artifact_by_id.get(artifact_id)
+        if not contract_row:
+            continue
+        for field in ["path", "linked_milestone_id", "pass_field", "min_rows"]:
+            if row.get(field) != contract_row.get(field):
+                errors.append(f"{schema_path}: instance required_artifact {artifact_id}.{field} must match x-contract")
+    return errors
+
+
 def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
     errors: list[str] = []
     schema = load_json(schema_path)
@@ -53,6 +124,7 @@ def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
     for error in sorted(validator.iter_errors(instance), key=lambda item: list(item.path)):
         location = ".".join(str(part) for part in error.path) or "<root>"
         errors.append(f"{instance_path}: schema {schema_path.name}: {location}: {error.message}")
+    errors.extend(validate_contract_metadata(schema_path, schema, instance))
     return errors
 
 
