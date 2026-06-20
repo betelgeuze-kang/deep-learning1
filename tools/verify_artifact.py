@@ -400,6 +400,24 @@ REQUIRED_PR2_REVIEW_RETURN_VERIFICATION_TERMS = {
     "--v61hv-summary",
     "results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv",
 }
+REQUIRED_PR2_V53_SOURCE_BENCHMARK_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json",
+    "--v53i-summary",
+    "results/v53i_complete_source_query_instantiation_summary.csv",
+    "--v53t-summary",
+    "results/v53t_complete_source_audit_readiness_gate_summary.csv",
+    "--v53ap-summary",
+    "results/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+    "--v53aq-summary",
+    "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+    "--v1-exit-ledger",
+    "results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv",
+}
+REQUIRED_PR2_V54_GROUNDED_GENERATION_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json",
+    "--summary",
+    "results/v54c_complete_source_grounded_generation_1000_summary.csv",
+}
 REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "tools/verify_artifact.py pr-split pr_slices/pr2.json",
     "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
@@ -2134,6 +2152,26 @@ def verify_pr_split(path: Path) -> list[str]:
             if missing_terms:
                 errors.append(
                     f"{prefix}: leakage verification commands must compare the retrieval/model-visible contract to the PM ledger: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
+        if slice_id in {"v53-query-instantiation-1000", "v53-system-a-b-g-h-measured"}:
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_V53_SOURCE_BENCHMARK_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: v53 verification commands must compare the source-bound benchmark to query, audit, A/B/G/H, and v1 exit ledgers: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
+        if slice_id == "v54-routehint-generation-contract":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_V54_GROUNDED_GENERATION_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: v54 verification commands must compare grounded generation contract to the 1000-row summary: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
         if slice_id == "v58-blind-eval-contract":

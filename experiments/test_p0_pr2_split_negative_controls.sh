@@ -78,6 +78,18 @@ elif mutation == "leakage-ledger-drop":
         command.replace("--pm-ledger", "--missing-pm-ledger")
         for command in row["verification_commands"]
     ]
+elif mutation == "v53-v1-exit-ledger-drop":
+    row = slice_by_id("v53-query-instantiation-1000")
+    row["verification_commands"] = [
+        command.replace("--v1-exit-ledger", "--missing-v1-exit-ledger")
+        for command in row["verification_commands"]
+    ]
+elif mutation == "v54-summary-drop":
+    row = slice_by_id("v54-routehint-generation-contract")
+    row["verification_commands"] = [
+        command.replace("--summary", "--missing-summary")
+        for command in row["verification_commands"]
+    ]
 elif mutation == "v58-template-ledger-drop":
     row = slice_by_id("v58-blind-eval-contract")
     row["verification_commands"] = [
@@ -159,6 +171,16 @@ expect_fail_with \
 bad_path="$(bad_pr2_json pr2_leakage_ledger_drop_bad leakage-ledger-drop)"
 expect_fail_with \
   "leakage verification commands must compare the retrieval/model-visible contract to the PM ledger" \
+  "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_pr2_json pr2_v53_v1_exit_ledger_drop_bad v53-v1-exit-ledger-drop)"
+expect_fail_with \
+  "v53 verification commands must compare the source-bound benchmark to query, audit, A/B/G/H, and v1 exit ledgers" \
+  "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_pr2_json pr2_v54_summary_drop_bad v54-summary-drop)"
+expect_fail_with \
+  "v54 verification commands must compare grounded generation contract to the 1000-row summary" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 bad_path="$(bad_pr2_json pr2_v58_template_ledger_drop_bad v58-template-ledger-drop)"
