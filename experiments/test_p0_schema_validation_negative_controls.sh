@@ -135,6 +135,17 @@ expected_leakage_stages = {
 if module.EXPECTED_LEAKAGE_STAGE_CONTRACTS != expected_leakage_stages:
     raise SystemExit("EXPECTED_LEAKAGE_STAGE_CONTRACTS must be derived from schema x-contract.expected_stage_contracts")
 
+v50_schema = json.loads((root / "schemas" / "v50_auditor_correctness.schema.json").read_text(encoding="utf-8"))
+v50_contract = v50_schema["x-contract"]
+if module.EXPECTED_V50_POLICY_STATIC != v50_contract["expected_policy_static"]:
+    raise SystemExit("EXPECTED_V50_POLICY_STATIC must be derived from schema x-contract.expected_policy_static")
+if module.EXPECTED_V50_ARTIFACTS != v50_contract["expected_required_artifacts"]:
+    raise SystemExit("EXPECTED_V50_ARTIFACTS must be derived from schema x-contract.expected_required_artifacts")
+if module.EXPECTED_V50_SUMMARY != v50_contract["expected_summary_when_supplied"]:
+    raise SystemExit("EXPECTED_V50_SUMMARY must be derived from schema x-contract.expected_summary_when_supplied")
+if module.EXPECTED_V50_DECISION_GATES != v50_contract["expected_decision_gates_when_supplied"]:
+    raise SystemExit("EXPECTED_V50_DECISION_GATES must be derived from schema x-contract.expected_decision_gates_when_supplied")
+
 v56_schema = json.loads((root / "schemas" / "v56_replay.schema.json").read_text(encoding="utf-8"))
 v56_contract = v56_schema["x-contract"]
 if module.EXPECTED_V56_POLICY != v56_contract["expected_policy"]:
@@ -214,6 +225,41 @@ expect_fail_with \
   "instance stage_contract[2] must match x-contract.expected_stage_contracts" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/leakage_schema_stage_contract_drift.schema.json" "$ROOT_DIR/leakage/retrieval_model_visible.json"
+
+cp "$ROOT_DIR/schemas/v50_auditor_correctness.schema.json" "$TMP_DIR/v50_schema_policy_contract_drift.schema.json"
+python3 - "$TMP_DIR/v50_schema_policy_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_policy_static"]["artifact_replay_ready"] = True
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance policy.artifact_replay_ready must match x-contract.expected_policy_static" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v50_schema_policy_contract_drift.schema.json" "$ROOT_DIR/audits/v50_public_repo_auditor_correctness.json"
+
+cp "$ROOT_DIR/schemas/v50_auditor_correctness.schema.json" "$TMP_DIR/v50_schema_artifact_contract_drift.schema.json"
+python3 - "$TMP_DIR/v50_schema_artifact_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["x-contract"]["expected_required_artifacts"]:
+    if row["artifact_id"] == "source-snapshot-rows":
+        row["required_columns"].remove("head_sha")
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance required_artifacts must match x-contract.expected_required_artifacts" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v50_schema_artifact_contract_drift.schema.json" "$ROOT_DIR/audits/v50_public_repo_auditor_correctness.json"
 
 cp "$ROOT_DIR/schemas/leakage_contract.schema.json" "$TMP_DIR/leakage_schema_missing_contract.schema.json"
 python3 - "$TMP_DIR/leakage_schema_missing_contract.schema.json" <<'PY'

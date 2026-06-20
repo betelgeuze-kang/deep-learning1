@@ -774,137 +774,40 @@ EXPECTED_V54_MIN_ROWS = {
     "sha256-manifest": 10,
     "sha256sums": 1,
 }
+EXPECTED_V50_POLICY_STATIC = schema_contract_dict(
+    "v50_auditor_correctness.schema.json",
+    "expected_policy_static",
+)
+EXPECTED_V50_ARTIFACTS = schema_contract_list(
+    "v50_auditor_correctness.schema.json",
+    "expected_required_artifacts",
+)
 EXPECTED_V50_ARTIFACT_IDS = [
-    "source-snapshot-rows",
-    "audit-case-rows",
-    "source-span-rows",
-    "guard-negative-rows",
-    "commercial-return-query-set",
-    "commercial-return-poc-results",
-    "commercial-return-audit-trail",
-    "sha256-manifest",
+    str(row.get("artifact_id", ""))
+    for row in EXPECTED_V50_ARTIFACTS
+    if isinstance(row, dict)
 ]
+EXPECTED_V50_ARTIFACTS_BY_ID = {
+    str(row.get("artifact_id", "")): row
+    for row in EXPECTED_V50_ARTIFACTS
+    if isinstance(row, dict)
+}
 EXPECTED_V50_ARTIFACT_COLUMNS = {
-    "source-snapshot-rows": [
-        "repo_id",
-        "owner_repo",
-        "repo_url",
-        "requested_ref",
-        "head_sha",
-        "ref_pinned",
-        "file_path",
-        "artifact_path",
-        "sha256",
-        "bytes",
-        "line_count",
-        "public_repo_snapshot",
-    ],
-    "audit-case-rows": [
-        "case_id",
-        "repo_id",
-        "owner_repo",
-        "repo_url",
-        "head_sha",
-        "audit_type",
-        "detector_method",
-        "primary_observed",
-        "secondary_observed",
-        "expected_label",
-        "predicted_label",
-        "correct",
-        "finding",
-        "primary_path",
-        "primary_sha256",
-        "primary_line",
-        "secondary_path",
-        "secondary_sha256",
-        "secondary_line",
-        "source_spans_ready",
-        "not_upstream_defect_claim",
-    ],
-    "source-span-rows": [
-        "case_id",
-        "repo_id",
-        "kind",
-        "path",
-        "sha256",
-        "line",
-        "text",
-    ],
-    "guard-negative-rows": [
-        "negative_case_id",
-        "guard",
-        "expected_block",
-        "blocked",
-        "wrong_answer_guard_pass",
-        "citation_accuracy_pass",
-        "abstain_behavior_pass",
-        "reason",
-    ],
-    "commercial-return-query-set": [
-        "query_id",
-        "question",
-        "expected_behavior",
-        "source_path",
-        "source_sha256",
-        "source_line",
-    ],
-    "commercial-return-poc-results": [
-        "query_id",
-        "answer",
-        "citation_path",
-        "citation_sha256",
-        "citation_line",
-        "citation_text",
-        "secondary_citation_path",
-        "secondary_citation_sha256",
-        "secondary_citation_line",
-        "secondary_citation_text",
-        "wrong_answer_guard_pass",
-        "citation_accuracy_pass",
-        "abstain_behavior_pass",
-        "query_to_evidence_latency_ready",
-        "latency_ms",
-        "route_memory_lineage_bound",
-        "mmap_or_exact_span_bound",
-        "audit_trail_bound",
-    ],
-    "commercial-return-audit-trail": [
-        "event_id",
-        "query_id",
-        "event",
-        "repo_id",
-        "verifier_decision",
-        "status",
-    ],
-    "sha256-manifest": [
-        "path",
-        "sha256",
-        "bytes",
-    ],
+    artifact_id: list(row.get("required_columns", []))
+    for artifact_id, row in EXPECTED_V50_ARTIFACTS_BY_ID.items()
 }
 EXPECTED_V50_MIN_ROWS = {
-    "source-snapshot-rows": 9,
-    "audit-case-rows": 9,
-    "source-span-rows": 18,
-    "guard-negative-rows": 3,
-    "commercial-return-query-set": 9,
-    "commercial-return-poc-results": 9,
-    "commercial-return-audit-trail": 9,
-    "sha256-manifest": 7,
+    artifact_id: row.get("min_rows")
+    for artifact_id, row in EXPECTED_V50_ARTIFACTS_BY_ID.items()
 }
-EXPECTED_V50_DECISION_GATES = [
-    "v50-public-repo-auditor-3repo",
-    "public-repo-count",
-    "pinned-repo-refs",
-    "source-snapshot",
-    "doc-code-conflict",
-    "deprecated-usage",
-    "config-mismatch",
-    "source-citation-audit-trail",
-    "guard-negative-controls",
-    "v18-intake",
-]
+EXPECTED_V50_SUMMARY = schema_contract_dict(
+    "v50_auditor_correctness.schema.json",
+    "expected_summary_when_supplied",
+)
+EXPECTED_V50_DECISION_GATES = schema_contract_dict(
+    "v50_auditor_correctness.schema.json",
+    "expected_decision_gates_when_supplied",
+)
 EXPECTED_V56_POLICY = schema_contract_dict("v56_replay.schema.json", "expected_policy")
 EXPECTED_V56_REPLAY_ARTIFACTS = schema_contract_list(
     "v56_replay.schema.json",
@@ -2190,16 +2093,17 @@ def verify_v50_auditor_correctness(
     missing_policy = REQUIRED_V50_POLICY_KEYS - set(policy)
     if missing_policy:
         errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
-    if policy.get("summary_ready_claim_present") is not True:
-        errors.append(f"{path}: summary_ready_claim_present must be true while the v50 summary has ready=1")
-    if policy.get("artifact_replay_ready") is not False:
-        errors.append(f"{path}: artifact_replay_ready must remain false until required artifacts exist")
-    if policy.get("auditor_correctness_merge_ready") is not False:
-        errors.append(f"{path}: auditor_correctness_merge_ready must remain false")
-    if policy.get("implicit_public_refresh_allowed") is not False:
-        errors.append(f"{path}: implicit_public_refresh_allowed must be false")
-    if policy.get("network_required_to_regenerate") is not True:
-        errors.append(f"{path}: network_required_to_regenerate must be true for the current v50 runner")
+    policy_messages = {
+        "summary_ready_claim_present": "summary_ready_claim_present must be true while the v50 summary has ready=1",
+        "artifact_replay_ready": "artifact_replay_ready must remain false until required artifacts exist",
+        "auditor_correctness_merge_ready": "auditor_correctness_merge_ready must remain false",
+        "implicit_public_refresh_allowed": "implicit_public_refresh_allowed must be false",
+        "network_required_to_regenerate": "network_required_to_regenerate must be true for the current v50 runner",
+    }
+    for field, expected in EXPECTED_V50_POLICY_STATIC.items():
+        if policy.get(field) is not expected:
+            message = policy_messages.get(field, f"policy.{field} expected {expected}, got {policy.get(field)}")
+            errors.append(f"{path}: {message}")
 
     replay = data["replay_commands"]
     missing_replay = REQUIRED_V50_REPLAY_COMMAND_KEYS - set(replay)
@@ -2232,8 +2136,10 @@ def verify_v50_auditor_correctness(
         if missing_row:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
         artifact_id = row.get("artifact_id", "")
-        if row.get("artifact_kind") != "csv":
-            errors.append(f"{prefix}: artifact_kind must be csv")
+        expected_artifact = EXPECTED_V50_ARTIFACTS_BY_ID.get(artifact_id, {})
+        expected_kind = expected_artifact.get("artifact_kind", "csv")
+        if row.get("artifact_kind") != expected_kind:
+            errors.append(f"{prefix}: artifact_kind must be {expected_kind}")
         expected_columns = EXPECTED_V50_ARTIFACT_COLUMNS.get(artifact_id)
         required_columns = row.get("required_columns", [])
         if not isinstance(required_columns, list) or not required_columns:
@@ -2246,9 +2152,13 @@ def verify_v50_auditor_correctness(
             errors.append(f"{prefix}: min_rows must be a positive integer")
         elif expected_min_rows is not None and min_rows != expected_min_rows:
             errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+        expected_sha_manifest = expected_artifact.get("sha256_manifest_required")
         if not isinstance(row.get("sha256_manifest_required"), bool):
             errors.append(f"{prefix}: sha256_manifest_required must be boolean")
-        if row.get("required_for_merge") is not True:
+        elif expected_sha_manifest is not None and row.get("sha256_manifest_required") is not expected_sha_manifest:
+            errors.append(f"{prefix}: sha256_manifest_required expected {expected_sha_manifest}, got {row.get('sha256_manifest_required')}")
+        expected_required_for_merge = expected_artifact.get("required_for_merge", True)
+        if row.get("required_for_merge") is not expected_required_for_merge:
             errors.append(f"{prefix}: required_for_merge must be true")
         artifact_path = Path(row.get("path", ""))
         if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
@@ -2323,39 +2233,27 @@ def verify_v50_auditor_correctness(
 
     if summary_path is not None:
         summary = read_first_csv(summary_path)
-        expected_summary = {
-            "v50_public_repo_auditor_3repo_ready": "1",
-            "repo_count": "3",
-            "repo_refs_pinned": "1",
-            "audit_case_rows": "9",
-            "audit_type_count": "3",
-            "guard_negative_rows": "3",
-            "guard_negative_block_rows": "3",
-            "source_span_rows": "18",
-            "wrong_answer_guard_pass_rows": "9",
-            "citation_accuracy_pass_rows": "9",
-            "audit_trail_bound_rows": "9",
-            "human_review_completed": "0",
-            "real_release_package_ready": "0",
-        }
-        for field, expected in expected_summary.items():
+        for field, expected in EXPECTED_V50_SUMMARY.items():
             if summary.get(field) != expected:
                 errors.append(f"{summary_path}: {field} expected {expected}, got {summary.get(field)}")
     if decision_path is not None:
         decision_rows = read_csv_rows(decision_path)
         by_gate = {row.get("gate", ""): row for row in decision_rows}
-        for gate in EXPECTED_V50_DECISION_GATES:
+        for gate in EXPECTED_V50_DECISION_GATES.get("pass", []):
             row = by_gate.get(gate)
             if row is None:
                 errors.append(f"{decision_path}: missing gate={gate}")
                 continue
             if row.get("status") != "pass":
                 errors.append(f"{decision_path}: {gate}.status expected pass, got {row.get('status')}")
-        release = by_gate.get("real-release-package")
-        if release is None:
-            errors.append(f"{decision_path}: missing gate=real-release-package")
-        elif release.get("status") != "blocked":
-            errors.append(f"{decision_path}: real-release-package.status expected blocked, got {release.get('status')}")
+        blocked_gates = EXPECTED_V50_DECISION_GATES.get("blocked", {})
+        if isinstance(blocked_gates, dict):
+            for gate, expected_status in blocked_gates.items():
+                row = by_gate.get(gate)
+                if row is None:
+                    errors.append(f"{decision_path}: missing gate={gate}")
+                elif row.get("status") != expected_status:
+                    errors.append(f"{decision_path}: {gate}.status expected {expected_status}, got {row.get('status')}")
     return errors
 
 
