@@ -62,7 +62,7 @@
       "artifact_id": "v58-blind-response-rows",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["blind_response_id", "blind_eval_id", "blind_system_id", "response_text", "citation_source_span_id", "abstained", "output_sha256", "latency_ns", "memory_peak_bytes", "cost_usd", "model_run_id", "credential_redacted", "resource_trace_sha256", "latency_memory_excluded_from_quality_score"],
+      "required_columns": ["blind_response_id", "blind_eval_id", "query_id", "blind_system_id", "response_text", "citation_source_span_id", "abstained", "output_sha256", "latency_ns", "memory_peak_bytes", "cost_usd", "model_run_id", "credential_redacted", "resource_trace_sha256", "frozen_query_packet_sha256", "source_manifest_sha256", "context_budget", "retrieval_budget", "latency_memory_excluded_from_quality_score"],
       "min_rows": 3500,
       "per_system_min_rows": {"A": 500, "B": 500, "C": 500, "D": 500, "E": 500, "G": 500, "H": 500}
     },
@@ -84,7 +84,7 @@
       "artifact_id": "v58-resource-rows",
       "artifact_kind": "csv",
       "validation_command": "V58C_BLIND_RESPONSE_EVIDENCE_DIR=<BLIND_RESPONSE_DIR> ./experiments/test_v58c_blind_response_evidence_intake.sh",
-      "required_columns": ["blind_response_id", "blind_eval_id", "blind_system_id", "latency_ns", "memory_peak_bytes", "resource_trace_sha256", "latency_memory_excluded_from_quality_score"],
+      "required_columns": ["blind_response_id", "blind_eval_id", "query_id", "blind_system_id", "latency_ns", "memory_peak_bytes", "resource_trace_sha256", "frozen_query_packet_sha256", "source_manifest_sha256", "context_budget", "retrieval_budget", "latency_memory_excluded_from_quality_score"],
       "min_rows": 3500,
       "per_system_min_rows": {"A": 500, "B": 500, "C": 500, "D": 500, "E": 500, "G": 500, "H": 500}
     },

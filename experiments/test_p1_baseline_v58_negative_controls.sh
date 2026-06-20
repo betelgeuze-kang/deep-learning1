@@ -565,6 +565,52 @@ expect_fail_with \
   --artifact-ledger "$V58_ARTIFACT_LEDGER" \
   --template-ledger "$V58_TEMPLATE_LEDGER"
 
+cp "$ROOT_DIR/v58/blind_eval_real.json" "$TMP_DIR/v58_response_query_binding_column_bad.json"
+python3 - "$TMP_DIR/v58_response_query_binding_column_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["required_artifacts"]:
+    if row["artifact_id"] == "v58-blind-response-rows":
+        row["required_columns"].remove("query_id")
+        row["required_columns"].remove("frozen_query_packet_sha256")
+        row["required_columns"].remove("source_manifest_sha256")
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "required_columns must be exactly" \
+  "$ROOT_DIR/tools/verify_artifact.py" v58-blind-eval "$TMP_DIR/v58_response_query_binding_column_bad.json" \
+  --readiness-ledger "$V58_READY_LEDGER" \
+  --artifact-ledger "$V58_ARTIFACT_LEDGER" \
+  --template-ledger "$V58_TEMPLATE_LEDGER"
+
+cp "$ROOT_DIR/v58/blind_eval_real.json" "$TMP_DIR/v58_resource_budget_binding_column_bad.json"
+python3 - "$TMP_DIR/v58_resource_budget_binding_column_bad.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["required_artifacts"]:
+    if row["artifact_id"] == "v58-resource-rows":
+        row["required_columns"].remove("context_budget")
+        row["required_columns"].remove("retrieval_budget")
+        row["required_columns"].remove("frozen_query_packet_sha256")
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "required_columns must be exactly" \
+  "$ROOT_DIR/tools/verify_artifact.py" v58-blind-eval "$TMP_DIR/v58_resource_budget_binding_column_bad.json" \
+  --readiness-ledger "$V58_READY_LEDGER" \
+  --artifact-ledger "$V58_ARTIFACT_LEDGER" \
+  --template-ledger "$V58_TEMPLATE_LEDGER"
+
 cp "$ROOT_DIR/v58/blind_eval_real.json" "$TMP_DIR/v58_review_identity_bad.json"
 python3 - "$TMP_DIR/v58_review_identity_bad.json" <<'PY'
 import json

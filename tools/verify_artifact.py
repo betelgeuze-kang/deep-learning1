@@ -1218,6 +1218,7 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
     "v58-blind-response-rows": {
         "blind_response_id",
         "blind_eval_id",
+        "query_id",
         "blind_system_id",
         "response_text",
         "citation_source_span_id",
@@ -1229,6 +1230,10 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
         "model_run_id",
         "credential_redacted",
         "resource_trace_sha256",
+        "frozen_query_packet_sha256",
+        "source_manifest_sha256",
+        "context_budget",
+        "retrieval_budget",
         "latency_memory_excluded_from_quality_score",
     },
     "v58-run-identity-rows": {
@@ -1253,10 +1258,15 @@ EXPECTED_V58_ARTIFACT_COLUMNS = {
     "v58-resource-rows": {
         "blind_response_id",
         "blind_eval_id",
+        "query_id",
         "blind_system_id",
         "latency_ns",
         "memory_peak_bytes",
         "resource_trace_sha256",
+        "frozen_query_packet_sha256",
+        "source_manifest_sha256",
+        "context_budget",
+        "retrieval_budget",
         "latency_memory_excluded_from_quality_score",
     },
     "v58-human-review-rows": {
