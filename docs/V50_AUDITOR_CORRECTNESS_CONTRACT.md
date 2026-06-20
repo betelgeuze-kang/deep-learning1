@@ -19,10 +19,26 @@ Current state:
   `present_required_artifact_count=0` and `missing_required_artifact_count=8`
 - implicit regeneration is not allowed because the v50 runner performs public
   GitHub fetches
+- no offline, local, fixture, or `file://` substitute counts as public fetch
+  evidence for this gate
+
+Public fetch replay requirements:
+
+- every source checkout must use the pinned GitHub URL and 40-hex commit SHA
+  listed in `experiments/run_v50_public_repo_auditor_3repo.sh`
+- transient fetch failures may be retried, but the command, cwd, exit code,
+  stdout, and stderr must remain visible in failure output
+- a DNS, authentication, or transport failure is a real blocker until the pinned
+  source snapshot, audit rows, source-span rows, guard-negative rows,
+  commercial-return rows, and sha256 manifest are regenerated and verified
+- the runner must not forward unrelated local environment variables to nested
+  evidence-intake commands; pass only the minimal variables required for the
+  child verifier
 
 Merge boundary:
 
 - allowed: v50 summary/decision claim exists and must be reviewed
+- allowed: v50 runner diagnostics may make public-fetch blockers reviewable
 - blocked: v50 auditor correctness merge readiness
 - blocked: human-reviewed correctness
 - blocked: release readiness
