@@ -28,6 +28,11 @@ expect_fail_with() {
 
 "$ROOT_DIR/tools/validate_json_schemas.py" >/dev/null
 
+if ! grep -F "git ls-files '*.json' ':(exclude)results/**' ':(exclude)build/**'" "$ROOT_DIR/scripts/ai-verify.sh" >/dev/null; then
+  echo "ai-verify.sh must parse all tracked source JSON dynamically" >&2
+  exit 1
+fi
+
 python3 - "$ROOT_DIR" <<'PY'
 import importlib.util
 import json

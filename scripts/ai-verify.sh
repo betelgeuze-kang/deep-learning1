@@ -54,72 +54,14 @@ if [ -f experiments/test_v61_one_token_path_contract.sh ]; then
 fi
 
 echo "==> json"
-python3 -m json.tool opencode.json >/dev/null
-if [ -f schemas/pipeline.schema.json ]; then
-  python3 -m json.tool schemas/pipeline.schema.json >/dev/null
-fi
-if [ -f schemas/pr_split.schema.json ]; then
-  python3 -m json.tool schemas/pr_split.schema.json >/dev/null
-fi
-if [ -f schemas/typed_readiness.schema.json ]; then
-  python3 -m json.tool schemas/typed_readiness.schema.json >/dev/null
-fi
-if [ -f schemas/leakage_contract.schema.json ]; then
-  python3 -m json.tool schemas/leakage_contract.schema.json >/dev/null
-fi
-if [ -f schemas/baseline_admission.schema.json ]; then
-  python3 -m json.tool schemas/baseline_admission.schema.json >/dev/null
-fi
-if [ -f schemas/v52_adapter_guard.schema.json ]; then
-  python3 -m json.tool schemas/v52_adapter_guard.schema.json >/dev/null
-fi
-if [ -f schemas/v50_auditor_correctness.schema.json ]; then
-  python3 -m json.tool schemas/v50_auditor_correctness.schema.json >/dev/null
-fi
-if [ -f schemas/v56_replay.schema.json ]; then
-  python3 -m json.tool schemas/v56_replay.schema.json >/dev/null
-fi
-if [ -f schemas/v53_source_benchmark.schema.json ]; then
-  python3 -m json.tool schemas/v53_source_benchmark.schema.json >/dev/null
-fi
-if [ -f schemas/v58_blind_eval.schema.json ]; then
-  python3 -m json.tool schemas/v58_blind_eval.schema.json >/dev/null
-fi
-if [ -f schemas/review_return_workflow.schema.json ]; then
-  python3 -m json.tool schemas/review_return_workflow.schema.json >/dev/null
-fi
-if [ -f schemas/v61_one_token_path.schema.json ]; then
-  python3 -m json.tool schemas/v61_one_token_path.schema.json >/dev/null
-fi
-if [ -f pr_slices/pr2.json ]; then
-  python3 -m json.tool pr_slices/pr2.json >/dev/null
-fi
-if [ -f readiness/typed_ready.json ]; then
-  python3 -m json.tool readiness/typed_ready.json >/dev/null
-fi
-if [ -f leakage/retrieval_model_visible.json ]; then
-  python3 -m json.tool leakage/retrieval_model_visible.json >/dev/null
-fi
-if [ -f baselines/de_30b70b_real.json ]; then
-  python3 -m json.tool baselines/de_30b70b_real.json >/dev/null
-fi
-if [ -f baselines/v52_adapter_guard.json ]; then
-  python3 -m json.tool baselines/v52_adapter_guard.json >/dev/null
-fi
-if [ -f audits/v50_public_repo_auditor_correctness.json ]; then
-  python3 -m json.tool audits/v50_public_repo_auditor_correctness.json >/dev/null
-fi
-if [ -f benchmarks/v53_source_bound_freeze.json ]; then
-  python3 -m json.tool benchmarks/v53_source_bound_freeze.json >/dev/null
-fi
-if [ -f v58/blind_eval_real.json ]; then
-  python3 -m json.tool v58/blind_eval_real.json >/dev/null
-fi
-if [ -f operations/review_return_workflow.json ]; then
-  python3 -m json.tool operations/review_return_workflow.json >/dev/null
-fi
-if [ -f v61/one_token_path.json ]; then
-  python3 -m json.tool v61/one_token_path.json >/dev/null
+json_files="$(git ls-files '*.json' ':(exclude)results/**' ':(exclude)build/**')"
+if [ -n "$json_files" ]; then
+  while IFS= read -r json_file; do
+    [ -n "$json_file" ] || continue
+    python3 -m json.tool "$json_file" >/dev/null
+  done <<EOF
+$json_files
+EOF
 fi
 if [ -x tools/validate_json_schemas.py ]; then
   tools/validate_json_schemas.py >/dev/null
