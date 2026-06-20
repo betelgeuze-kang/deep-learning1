@@ -20,6 +20,24 @@ check_readme_cleanup() {
   fi
 }
 
+check_required_contract_entrypoints() {
+  for readme_path in "$@"; do
+    for required in \
+      "pipelines/v61.yaml" \
+      "v61/one_token_path.json" \
+      "operations/review_return_workflow.json" \
+      "docs/PIPELINE_MIGRATION.md" \
+      "docs/PR2_SPLIT_PLAN.md" \
+      "tools/verify_artifact.py pr-split pr_slices/pr2.json"
+    do
+      if ! grep -F "$required" "$readme_path" >/dev/null; then
+        echo "$readme_path missing reviewer contract entrypoint: $required" >&2
+        return 1
+      fi
+    done
+  done
+}
+
 expect_fail_with() {
   local expected="$1"
   shift
@@ -38,20 +56,7 @@ expect_fail_with() {
 }
 
 check_readme_cleanup "$ROOT_DIR/README.md" "$ROOT_DIR/README.ko.md"
-
-for required in \
-  "pipelines/v61.yaml" \
-  "v61/one_token_path.json" \
-  "operations/review_return_workflow.json" \
-  "docs/PIPELINE_MIGRATION.md" \
-  "docs/PR2_SPLIT_PLAN.md" \
-  "tools/verify_artifact.py pr-split pr_slices/pr2.json"
-do
-  if ! grep -F "$required" "$ROOT_DIR/README.md" >/dev/null; then
-    echo "README.md missing reviewer contract entrypoint: $required" >&2
-    exit 1
-  fi
-done
+check_required_contract_entrypoints "$ROOT_DIR/README.md" "$ROOT_DIR/README.ko.md"
 
 printf '%s\n' "Current v61 prototype smoke: ./experiments/test_v61j_one_command_ssd_resident_demo.sh" >"$TMP_DIR/stale_named_readme.md"
 expect_fail_with \
@@ -67,5 +72,37 @@ printf '%s\n' "The v61ea route admission scaffold" >"$TMP_DIR/the_stage_dump_rea
 expect_fail_with \
   "README must not reintroduce line-start v61 stage dumps" \
   check_readme_cleanup "$TMP_DIR/the_stage_dump_readme.md"
+
+cp "$ROOT_DIR/README.md" "$TMP_DIR/readme_missing_pr2_plan.md"
+python3 - "$TMP_DIR/readme_missing_pr2_plan.md" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+lines = [
+    line for line in path.read_text(encoding="utf-8").splitlines()
+    if "docs/PR2_SPLIT_PLAN.md" not in line
+]
+path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "missing reviewer contract entrypoint: docs/PR2_SPLIT_PLAN.md" \
+  check_required_contract_entrypoints "$TMP_DIR/readme_missing_pr2_plan.md"
+
+cp "$ROOT_DIR/README.ko.md" "$TMP_DIR/readme_ko_missing_pr_split_command.md"
+python3 - "$TMP_DIR/readme_ko_missing_pr_split_command.md" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8").replace(
+    "tools/verify_artifact.py pr-split pr_slices/pr2.json",
+    "tools/verify_artifact.py pr-split"
+)
+path.write_text(text, encoding="utf-8")
+PY
+expect_fail_with \
+  "missing reviewer contract entrypoint: tools/verify_artifact.py pr-split pr_slices/pr2.json" \
+  check_required_contract_entrypoints "$TMP_DIR/readme_ko_missing_pr_split_command.md"
 
 echo "p0 README cleanup negative controls passed"
