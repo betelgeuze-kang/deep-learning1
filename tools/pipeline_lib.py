@@ -26,6 +26,39 @@ def sha256_text(text: str) -> str:
     return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def canonical_json_sha256(payload: object) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return sha256_text(encoded)
+
+
+def content_addressed_cache_key(
+    *,
+    source_sha256: dict[str, str],
+    input_sha256: dict[str, str],
+    environment: dict[str, object],
+    config: dict[str, object],
+) -> str:
+    """Build a stable cache key from source, input, environment, and config state."""
+    for label, values in [
+        ("source_sha256", source_sha256),
+        ("input_sha256", input_sha256),
+        ("environment", environment),
+        ("config", config),
+    ]:
+        if not isinstance(values, dict):
+            raise TypeError(f"{label} must be a dict for content-addressed cache keys")
+        if not values:
+            raise ValueError(f"{label} must be non-empty for content-addressed cache keys")
+    payload = {
+        "schema_version": "pipeline_cache_key.v1",
+        "source_sha256": source_sha256,
+        "input_sha256": input_sha256,
+        "environment": environment,
+        "config": config,
+    }
+    return canonical_json_sha256(payload)
+
+
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
