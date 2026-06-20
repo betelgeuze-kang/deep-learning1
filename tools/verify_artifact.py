@@ -366,6 +366,13 @@ REQUIRED_PR2_V58_VERIFICATION_TERMS = {
     "--template-ledger",
     "results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_return_template_rows.csv",
 }
+REQUIRED_PR2_DE_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json",
+    "--measured-registry-ledger",
+    "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_measured_registry_exclusion_rows.csv",
+    "--acceptance-ledger",
+    "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv",
+}
 REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "tools/verify_artifact.py pr-split pr_slices/pr2.json",
     "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
@@ -2110,6 +2117,16 @@ def verify_pr_split(path: Path) -> list[str]:
             if missing_terms:
                 errors.append(
                     f"{prefix}: v58 verification commands must compare blind-eval blockers to readiness, artifact, and template ledgers: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
+        if slice_id == "v52-baseline-registry-contract":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_DE_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: D/E baseline verification commands must compare measured-registry exclusion and acceptance blocker ledgers: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
         boundary = row.get("claim_boundary", {})
