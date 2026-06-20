@@ -38,6 +38,21 @@ def schema_required_at(schema_name: str, *path_parts: str) -> set[str]:
     return set(str(field) for field in required)
 
 
+def schema_enum_at(schema_name: str, *path_parts: str) -> list[str]:
+    schema_path = SCHEMA_ROOT / schema_name
+    node: object = json.loads(schema_path.read_text(encoding="utf-8"))
+    for part in path_parts:
+        if not isinstance(node, dict):
+            return []
+        node = node.get(part, {})
+    if not isinstance(node, dict):
+        return []
+    enum_values = node.get("enum", [])
+    if not isinstance(enum_values, list):
+        return []
+    return [str(value) for value in enum_values]
+
+
 def schema_contract(schema_name: str) -> dict[str, object]:
     schema_path = SCHEMA_ROOT / schema_name
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -92,21 +107,7 @@ REQUIRED_V61_ONE_TOKEN_KEYS = schema_required("v61_one_token_path.schema.json")
 REQUIRED_V61_POLICY_KEYS = schema_required_at("v61_one_token_path.schema.json", "properties", "policy")
 REQUIRED_V61_MILESTONE_KEYS = schema_required_at("v61_one_token_path.schema.json", "properties", "milestones", "items")
 REQUIRED_V61_ARTIFACT_KEYS = schema_required_at("v61_one_token_path.schema.json", "properties", "required_artifacts", "items")
-EXPECTED_PR2_SLICE_ORDER = [
-    "docs/v1-roadmap",
-    "v50-auditor-correctness",
-    "v52-baseline-registry-contract",
-    "v53-public-repo-source-manifest",
-    "v53-query-instantiation-1000",
-    "v53-system-a-b-g-h-measured",
-    "v54-routehint-generation-contract",
-    "v56-ruler-longbench-expanded",
-    "v58-blind-eval-contract",
-    "v59-one-command-demo",
-    "v61-ssd-moe-runtime-roadmap",
-    "operator-review-return-workflow",
-    "docs-readme-pr2-cleanup",
-]
+EXPECTED_PR2_SLICE_ORDER = schema_enum_at("pr_split.schema.json", "properties", "slices", "items", "properties", "slice_id")
 REQUIRED_PR_MERGE_GATES = {
     "claim-boundary",
     "replay-artifact",
@@ -338,37 +339,10 @@ REQUIRED_PR2_SPLIT_PLAN_TERMS = {
 }
 TESTS_ONLY_MERGE_CONDITIONS = {"tests pass", "test pass", "tests", "test", "ci green"}
 TYPED_READINESS_KEYS = {
-    "contract_ready",
-    "fixture_execution_ready",
-    "real_model_execution_ready",
-    "heldout_metric_ready",
-    "human_review_ready",
-    "independent_reproduction_ready",
-    "release_ready",
+    *schema_enum_at("typed_readiness.schema.json", "properties", "policy", "properties", "typed_fields", "items"),
 }
-AMBIGUOUS_READY_FLAGS = {
-    "100b_moe_run_ready",
-    "v53_ready",
-    "v58_ready",
-    "v59_ready",
-    "v60_ready",
-    "v61i_100b_moe_active_sparse_run_ready",
-    "h10_real_label_promotion_ready",
-    "review_return_ready",
-    "pr2_ready",
-}
-EXPECTED_TYPED_READINESS_ORDER = [
-    "pm_foundation_contract_fixture_ready",
-    "v53_v54_query_eval_contract_ready",
-    "v58_blind_eval_protocol_contract_ready",
-    "h10_real_label_contract_ready",
-    "logical_100b_contract_fixture_ready",
-    "real_100b_inference_ready",
-    "v61i_logical_100b_contract_fixture_ready",
-    "v60_release_contract_ready",
-    "operator_review_return_workflow_contract_ready",
-    "pr2_docs_claim_boundary_contract_ready",
-]
+AMBIGUOUS_READY_FLAGS = set(schema_enum_at("typed_readiness.schema.json", "properties", "policy", "properties", "ambiguous_ready_flags", "items"))
+EXPECTED_TYPED_READINESS_ORDER = schema_enum_at("typed_readiness.schema.json", "properties", "rows", "items", "properties", "replacement_flag")
 EXPECTED_TYPED_READINESS_CONTRACTS = {
     "pm_foundation_contract_fixture_ready": {
         "scope_id": "pm-foundation-bundle",
@@ -491,73 +465,10 @@ EXPECTED_TYPED_READINESS_CONTRACTS = {
         "release_ready": False,
     },
 }
-EXPECTED_LEAKAGE_GUARD_IDS = [
-    "source-span-id",
-    "source-path",
-    "source-line",
-    "source-file-hash",
-    "query-source-direct-binding",
-    "expected-behavior",
-    "expected-label",
-]
-FORBIDDEN_MODEL_VISIBLE_FIELDS = {
-    "source_span_id",
-    "span_id",
-    "source_span_row_id",
-    "span_row_id",
-    "source_path",
-    "source_file_path",
-    "file_path",
-    "repo_path",
-    "path",
-    "parsed_path",
-    "source_line",
-    "source_line_start",
-    "source_line_end",
-    "line",
-    "start_line",
-    "end_line",
-    "line_start",
-    "line_end",
-    "parsed_line",
-    "source_file_hash",
-    "source_file_sha256",
-    "source_sha256",
-    "file_sha256",
-    "content_sha256",
-    "sha256",
-    "blob_sha256",
-    "git_blob_sha",
-    "source_git_blob_sha",
-    "query_id",
-    "case_id",
-    "source_row_id",
-    "source_case_id",
-    "source_query_id",
-    "query_source_id",
-    "source_binding_id",
-    "expected_behavior",
-    "expected_answer",
-    "expected_answer_sha256",
-    "expected_citation",
-    "expected_output",
-    "gold_answer",
-    "gold_citation",
-    "negative_or_abstain",
-    "audit_type",
-    "expected_label",
-    "gold_label",
-    "target_label",
-}
-ALLOWED_MODEL_VISIBLE_FIELDS = {
-    "sanitized_question",
-    "opaque_routehint",
-}
-EXPECTED_LEAKAGE_STAGE_ORDER = [
-    "v53aq-sanitized-abgh-real-adapter",
-    "v54c-grounded-generation-guard",
-    "v53ap-source-span-fixture-replay-boundary",
-]
+EXPECTED_LEAKAGE_GUARD_IDS = schema_enum_at("leakage_contract.schema.json", "properties", "forbidden_surfaces", "items", "properties", "guard_id")
+FORBIDDEN_MODEL_VISIBLE_FIELDS = set(schema_enum_at("leakage_contract.schema.json", "properties", "forbidden_surfaces", "items", "properties", "field_names", "items"))
+ALLOWED_MODEL_VISIBLE_FIELDS = set(schema_enum_at("leakage_contract.schema.json", "properties", "policy", "properties", "allowed_model_visible_fields", "items"))
+EXPECTED_LEAKAGE_STAGE_ORDER = schema_enum_at("leakage_contract.schema.json", "properties", "stage_contracts", "items", "properties", "stage_id")
 EXPECTED_LEAKAGE_STAGE_CONTRACTS = {
     "v53aq-sanitized-abgh-real-adapter": {
         "surface_kind": "model_or_retriever",

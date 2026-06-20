@@ -88,6 +88,36 @@ for constant_name, (schema_name, path_parts) in checks.items():
     actual = getattr(module, constant_name)
     if actual != expected:
         raise SystemExit(f"{constant_name} must be derived from schema {'.'.join(path_parts)}.required")
+
+enum_checks = {
+    "EXPECTED_PR2_SLICE_ORDER": ("pr_split.schema.json", ("properties", "slices", "items", "properties", "slice_id")),
+    "EXPECTED_TYPED_READINESS_ORDER": ("typed_readiness.schema.json", ("properties", "rows", "items", "properties", "replacement_flag")),
+    "EXPECTED_LEAKAGE_GUARD_IDS": ("leakage_contract.schema.json", ("properties", "forbidden_surfaces", "items", "properties", "guard_id")),
+    "EXPECTED_LEAKAGE_STAGE_ORDER": ("leakage_contract.schema.json", ("properties", "stage_contracts", "items", "properties", "stage_id")),
+}
+for constant_name, (schema_name, path_parts) in enum_checks.items():
+    schema_node = json.loads((root / "schemas" / schema_name).read_text(encoding="utf-8"))
+    for path_part in path_parts:
+        schema_node = schema_node[path_part]
+    expected = [str(value) for value in schema_node["enum"]]
+    actual = getattr(module, constant_name)
+    if actual != expected:
+        raise SystemExit(f"{constant_name} must be derived from schema {'.'.join(path_parts)}.enum")
+
+enum_set_checks = {
+    "TYPED_READINESS_KEYS": ("typed_readiness.schema.json", ("properties", "policy", "properties", "typed_fields", "items")),
+    "AMBIGUOUS_READY_FLAGS": ("typed_readiness.schema.json", ("properties", "policy", "properties", "ambiguous_ready_flags", "items")),
+    "FORBIDDEN_MODEL_VISIBLE_FIELDS": ("leakage_contract.schema.json", ("properties", "forbidden_surfaces", "items", "properties", "field_names", "items")),
+    "ALLOWED_MODEL_VISIBLE_FIELDS": ("leakage_contract.schema.json", ("properties", "policy", "properties", "allowed_model_visible_fields", "items")),
+}
+for constant_name, (schema_name, path_parts) in enum_set_checks.items():
+    schema_node = json.loads((root / "schemas" / schema_name).read_text(encoding="utf-8"))
+    for path_part in path_parts:
+        schema_node = schema_node[path_part]
+    expected = {str(value) for value in schema_node["enum"]}
+    actual = getattr(module, constant_name)
+    if actual != expected:
+        raise SystemExit(f"{constant_name} must be derived from schema {'.'.join(path_parts)}.enum")
 PY
 
 cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_missing_policy.json"
