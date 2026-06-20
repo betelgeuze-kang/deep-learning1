@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/v54_grounded_generation.schema.json",
+  "title": "v54 Grounded Generation Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "required_artifacts"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "generation_contract_ready",
+        "raw_prompt_context_allowed",
+        "allowed_model_visible_fields",
+        "deterministic_source_span_generation_fixture_ready",
+        "real_model_generation_ready",
+        "human_review_ready",
+        "public_comparison_claim_ready",
+        "release_ready"
+      ],
+      "properties": {
+        "generation_contract_ready": {"type": "boolean"},
+        "raw_prompt_context_allowed": {"type": "boolean"},
+        "allowed_model_visible_fields": {"type": "array", "items": {"type": "string"}},
+        "deterministic_source_span_generation_fixture_ready": {"type": "boolean"},
+        "real_model_generation_ready": {"type": "boolean"},
+        "human_review_ready": {"type": "boolean"},
+        "public_comparison_claim_ready": {"type": "boolean"},
+        "release_ready": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "required_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "artifact_kind",
+          "path",
+          "required_columns",
+          "min_rows",
+          "pm_recommended_output",
+          "raw_prompt_context_forbidden",
+          "model_visible_leakage_forbidden"
+        ],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "artifact_kind": {"type": "string", "enum": ["csv", "text"]},
+          "path": {"type": "string"},
+          "required_columns": {"type": "array", "items": {"type": "string"}},
+          "min_rows": {"type": "integer", "minimum": 1},
+          "pm_recommended_output": {"type": "boolean"},
+          "raw_prompt_context_forbidden": {"type": "boolean"},
+          "model_visible_leakage_forbidden": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

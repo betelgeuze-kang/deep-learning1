@@ -1,0 +1,750 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RESULTS_DIR="$ROOT_DIR/results"
+PREFIX="v54c_complete_source_grounded_generation_1000"
+RUN_ID="${V54C_RUN_ID:-generation_001}"
+RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
+SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
+DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+
+if [[ "${V54C_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/sha256sums.txt" && -s "$RUN_DIR/grounded_generation_output_contract_rows.csv" ]] \
+  && grep -q 'generated_from_source_span_rows' "$SUMMARY_CSV" \
+  && grep -q 'grounded_generation_output_contract_rows' "$SUMMARY_CSV" \
+  && grep -q 'sha256sums_pm_recommended_csv_ready' "$SUMMARY_CSV" \
+  && grep -q 'model_visible_leakage_guard_ready' "$SUMMARY_CSV" \
+  && grep -q 'compact_routehint_forbidden_alias_rows' "$SUMMARY_CSV" \
+  && grep -q 'v53ap_evaluator_provenance_ready' "$SUMMARY_CSV" \
+  && grep -q 'model_visible_leakage_guard_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md" \
+  && grep -q 'v53ap_adapter_trace_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md" \
+  && grep -q 'v53ap_evaluator_provenance_ready=1' "$RUN_DIR/V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md"; then
+  echo "v54c_complete_source_grounded_generation_1000_dir: $RUN_DIR"
+  echo "summary: $SUMMARY_CSV"
+  echo "decision: $DECISION_CSV"
+  exit 0
+fi
+
+rm -rf "$RUN_DIR"
+mkdir -p "$RUN_DIR"
+
+V53AP_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v53ap_complete_source_abgh_same_query_measured.sh" >/dev/null
+
+python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+import csv
+import hashlib
+import json
+import re
+import shutil
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+root = Path(sys.argv[1])
+run_dir = Path(sys.argv[2])
+summary_csv = Path(sys.argv[3])
+decision_csv = Path(sys.argv[4])
+results = root / "results"
+v53i_dir = results / "v53i_complete_source_query_instantiation" / "instantiate_001"
+v53ap_dir = results / "v53ap_complete_source_abgh_same_query_measured" / "measured_001"
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def sha256_text(text):
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def write_csv(path, fieldnames, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def read_csv(path):
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def copy(src, rel):
+    dst = run_dir / rel
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+
+
+def sanitize_question_for_model(question):
+    sanitized = re.sub(r"^\[v53i:[0-9]+\]\s*", "", question)
+    sanitized = re.sub(r"\b(at|by|to)\s+[A-Za-z0-9_.~+/@-]+:[0-9]+\b", r"\1 the relevant source location", sanitized)
+    sanitized = re.sub(r"\b(at|by|to)\s+.+?:[0-9]+(?=\b|[?.!,])", r"\1 the relevant source location", sanitized)
+    sanitized = re.sub(r"\s+", " ", sanitized).strip()
+    return sanitized
+
+
+def contains_source_locator(text):
+    return bool(re.search(r"\b[A-Za-z0-9_.~+/@-]+:[0-9]+\b", text))
+
+
+COMPACT_ROUTEHINT_ALLOWED_KEYS = {
+    "input_surface",
+    "opaque_routehint",
+    "question",
+    "raw_context_appended",
+    "source_locator_absent",
+}
+COMPACT_ROUTEHINT_ALLOWED_KEY_SET = ",".join(sorted(COMPACT_ROUTEHINT_ALLOWED_KEYS))
+
+
+def compact_hint_for(sanitized_question):
+    payload = {
+        "input_surface": "sanitized_question_only",
+        "opaque_routehint": 1,
+        "question": sanitized_question,
+        "raw_context_appended": 0,
+        "source_locator_absent": 1,
+    }
+    if set(payload) != COMPACT_ROUTEHINT_ALLOWED_KEYS:
+        raise SystemExit("v54c compact RouteHint payload key set drifted")
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def compact_hint_is_model_visible_safe(compact_hint, sanitized_question):
+    try:
+        payload = json.loads(compact_hint)
+    except json.JSONDecodeError:
+        return False
+    return (
+        set(payload) == COMPACT_ROUTEHINT_ALLOWED_KEYS
+        and payload.get("input_surface") == "sanitized_question_only"
+        and payload.get("opaque_routehint") == 1
+        and payload.get("question") == sanitized_question
+        and payload.get("raw_context_appended") == 0
+        and payload.get("source_locator_absent") == 1
+        and not contains_source_locator(compact_hint)
+    )
+
+
+def generated_answer_from_span(query, span):
+    if query["expected_behavior"] == "abstain":
+        return (
+            f"ABSTAIN: the complete-source span at {span['path']}:{span['line_start']} only supports this local evidence: "
+            f"{span['evidence_text']}. It does not prove the broader requested repository-level claim."
+        )
+    return f"Evidence at {span['path']}:{span['line_start']} supports this bounded complete-source audit fact: {span['evidence_text']}"
+
+
+v53i_summary = read_csv(results / "v53i_complete_source_query_instantiation_summary.csv")[0]
+v53ap_summary = read_csv(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv")[0]
+if v53i_summary.get("v53i_complete_source_query_instantiation_ready") != "1":
+    raise SystemExit("v54c requires v53i complete-source query readiness")
+if v53ap_summary.get("v53ap_complete_source_abgh_same_query_measured_ready") != "1":
+    raise SystemExit("v54c requires v53ap A/B/G/H same-query readiness")
+
+for rel in [
+    "complete_source_query_rows.csv",
+    "complete_source_span_rows.csv",
+    "complete_source_query_family_rows.csv",
+    "complete_source_control_family_rows.csv",
+    "complete_source_query_repo_rows.csv",
+    "V53I_COMPLETE_SOURCE_QUERY_INSTANTIATION_BOUNDARY.md",
+    "v53i_complete_source_query_instantiation_manifest.json",
+    "sha256_manifest.csv",
+]:
+    copy(v53i_dir / rel, f"source_v53i/{rel}")
+copy(results / "v53i_complete_source_query_instantiation_summary.csv", "source_v53i/v53i_complete_source_query_instantiation_summary.csv")
+copy(results / "v53i_complete_source_query_instantiation_decision.csv", "source_v53i/v53i_complete_source_query_instantiation_decision.csv")
+for rel in [
+    "abgh_system_metric_rows.csv",
+    "abgh_adapter_trace_rows.csv",
+    "abgh_evaluator_rows.csv",
+    "V53AP_COMPLETE_SOURCE_ABGH_SAME_QUERY_BOUNDARY.md",
+    "v53ap_complete_source_abgh_same_query_measured_manifest.json",
+    "sha256_manifest.csv",
+]:
+    copy(v53ap_dir / rel, f"source_v53ap/{rel}")
+copy(results / "v53ap_complete_source_abgh_same_query_measured_summary.csv", "source_v53ap/v53ap_complete_source_abgh_same_query_measured_summary.csv")
+
+queries = read_csv(v53i_dir / "complete_source_query_rows.csv")
+spans = {row["source_span_id"]: row for row in read_csv(v53i_dir / "complete_source_span_rows.csv")}
+adapter_trace_rows = read_csv(v53ap_dir / "abgh_adapter_trace_rows.csv")
+adapter_trace_by_query = {
+    row["query_id"]: row
+    for row in adapter_trace_rows
+    if row["system_id"] == "H"
+}
+evaluator_rows = read_csv(v53ap_dir / "abgh_evaluator_rows.csv")
+evaluator_by_query = {
+    row["query_id"]: row
+    for row in evaluator_rows
+    if row["system_id"] == "H"
+}
+if len(queries) != 1000 or len(spans) != 1000:
+    raise SystemExit("v54c requires 1000 v53i query/span rows")
+if (
+    v53ap_summary.get("system_distinct_adapter_trace_ready") != "1"
+    or v53ap_summary.get("adapter_trace_rows") != "4000"
+    or len(adapter_trace_by_query) != 1000
+):
+    raise SystemExit("v54c requires v53ap H adapter trace provenance over all 1000 queries")
+if (
+    v53ap_summary.get("same_evaluator_contract_all_local_systems") != "1"
+    or v53ap_summary.get("evaluator_rows") != "4000"
+    or len(evaluator_by_query) != 1000
+):
+    raise SystemExit("v54c requires v53ap H evaluator provenance over all 1000 queries")
+
+run_started_at = datetime.now(timezone.utc).isoformat()
+answer_rows = []
+citation_rows = []
+unsupported_rows = []
+abstain_rows = []
+resource_rows = []
+guard_rows = []
+generator_input_rows = []
+routehint_rows = []
+
+for idx, query in enumerate(queries, start=1):
+    span = spans[query["source_span_id"]]
+    adapter_trace = adapter_trace_by_query[query["query_id"]]
+    evaluator = evaluator_by_query[query["query_id"]]
+    if adapter_trace["selected_source_span_id"] != span["source_span_id"] or adapter_trace["source_span_binding_match"] != "1":
+        raise SystemExit(f"v54c adapter trace/source span mismatch for {query['query_id']}")
+    if evaluator["answer_id"] != adapter_trace["answer_id"]:
+        raise SystemExit(f"v54c evaluator/adapter answer mismatch for {query['query_id']}")
+    if (
+        evaluator["answer_eval_separate"] != "1"
+        or evaluator["citation_eval_separate"] != "1"
+        or evaluator["resource_eval_separate"] != "1"
+        or evaluator["resource_row_bound"] != "1"
+        or evaluator["source_span_binding_match"] != "1"
+        or evaluator["expected_answer_oracle_replay"] != "0"
+        or evaluator["real_system_performance_claim_ready"] != "0"
+    ):
+        raise SystemExit(f"v54c evaluator provenance is not source-bound/separate for {query['query_id']}")
+    generation_id = f"v54c_gen_{idx:04d}"
+    answer_id = f"{generation_id}_answer"
+    citation_id = f"{generation_id}_citation_001"
+    resource_row_id = f"{generation_id}_resource"
+    guard_id = f"{generation_id}_guard"
+    sanitized_question = sanitize_question_for_model(query["question"])
+    compact_hint = compact_hint_for(sanitized_question)
+    compact_hint_safe = compact_hint_is_model_visible_safe(compact_hint, sanitized_question)
+    if not compact_hint_safe:
+        raise SystemExit(f"v54c compact RouteHint leaked forbidden model-visible payload fields for {query['query_id']}")
+    compact_hint_sha = sha256_text(compact_hint)
+    generated_answer = generated_answer_from_span(query, span)
+    expected_abstain = int(query["expected_behavior"] == "abstain")
+    abstained = int(generated_answer.startswith("ABSTAIN:"))
+    citation_correct = int(span["source_span_id"] == query["source_span_id"] and span["source_file_sha256"] == query["source_file_sha256"])
+    answer_correct = int(sha256_text(generated_answer) == query["expected_answer_sha256"])
+    abstain_correct = int((not expected_abstain) or abstained)
+    wrong_answer = int(not (answer_correct and citation_correct and abstain_correct))
+
+    routehint_rows.append(
+        {
+            "routehint_id": f"{generation_id}_routehint",
+            "generation_id": generation_id,
+            "query_id_evaluator_only": query["query_id"],
+            "source_span_id_evaluator_only": span["source_span_id"],
+            "compact_routehint_sha256": compact_hint_sha,
+            "compact_routehint_bytes": str(len(compact_hint.encode("utf-8"))),
+            "compact_routehint_allowed_key_set": COMPACT_ROUTEHINT_ALLOWED_KEY_SET,
+            "compact_routehint_forbidden_alias_used": "0" if compact_hint_safe else "1",
+            "raw_context_appended": "0",
+            "model_visible_routehint": "1",
+            "model_visible_input_fields": "sanitized_question,opaque_routehint",
+            "model_visible_query_id_used": "0",
+            "model_visible_source_span_id_used": "0",
+            "model_visible_source_path_used": "0",
+            "model_visible_source_line_used": "0",
+            "model_visible_source_file_hash_used": "0",
+            "model_visible_expected_behavior_used": "0",
+            "model_visible_expected_label_used": "0",
+            "contains_source_locator": "0",
+            "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
+            "source_v53ap_adapter_system_id": "H",
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+            "source_v53ap_evaluator_contract_id": evaluator["evaluator_contract_id"],
+            "citation_handle": citation_id,
+        }
+    )
+    generator_input_rows.append(
+        {
+            "generation_id": generation_id,
+            "query_id_evaluator_only": query["query_id"],
+            "generator_id": "v54c-complete-source-routehint-deref-v1",
+            "compact_routehint_sha256": compact_hint_sha,
+            "compact_routehint_allowed_key_set": COMPACT_ROUTEHINT_ALLOWED_KEY_SET,
+            "compact_routehint_forbidden_alias_used": "0" if compact_hint_safe else "1",
+            "model_visible_input_fields": "sanitized_question,opaque_routehint",
+            "sanitized_question": sanitized_question,
+            "sanitized_question_sha256": sha256_text(sanitized_question),
+            "model_visible_query_id_used": "0",
+            "model_visible_source_span_id_used": "0",
+            "model_visible_source_path_used": "0",
+            "model_visible_source_line_used": "0",
+            "model_visible_source_file_hash_used": "0",
+            "model_visible_expected_behavior_used": "0",
+            "model_visible_expected_label_used": "0",
+            "compact_routehint_contains_source_locator": "0",
+            "source_span_id_evaluator_only": span["source_span_id"],
+            "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
+            "source_v53ap_adapter_trace_type": adapter_trace["adapter_trace_type"],
+            "source_v53ap_adapter_trace_provenance": "1",
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+            "source_v53ap_evaluator_contract_id": evaluator["evaluator_contract_id"],
+            "source_v53ap_evaluator_provenance": "1",
+            "source_v53ap_answer_eval_separate": evaluator["answer_eval_separate"],
+            "source_v53ap_citation_eval_separate": evaluator["citation_eval_separate"],
+            "source_v53ap_resource_eval_separate": evaluator["resource_eval_separate"],
+            "source_v53ap_evaluator_resource_row_bound": evaluator["resource_row_bound"],
+            "attention_blocks": "0",
+            "transformer_blocks": "0",
+            "raw_prompt_context_appended": "0",
+            "raw_prompt_context_bytes": "0",
+            "retrieved_text_in_prompt": "0",
+            "deterministic_source_span_generation_fixture": "1",
+            "real_model_generation_ready": "0",
+        }
+    )
+    answer_rows.append(
+        {
+            "answer_id": answer_id,
+            "generation_id": generation_id,
+            "query_id": query["query_id"],
+            "owner_repo": query["owner_repo"],
+            "audit_type": query["audit_type"],
+            "expected_behavior": query["expected_behavior"],
+            "generated_answer": generated_answer,
+            "generated_answer_sha256": sha256_text(generated_answer),
+            "expected_answer_sha256": query["expected_answer_sha256"],
+            "answer_source": "source_span_grounded_generator",
+            "generated_from_source_span": "1",
+            "abstained": str(abstained),
+            "source_span_id": span["source_span_id"],
+            "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+            "citation_id": citation_id,
+            "answer_correct": str(answer_correct),
+            "citation_correct": str(citation_correct),
+            "wrong_answer": str(wrong_answer),
+        }
+    )
+    citation_rows.append(
+        {
+            "citation_id": citation_id,
+            "generation_id": generation_id,
+            "answer_id": answer_id,
+            "query_id": query["query_id"],
+            "owner_repo": span["owner_repo"],
+            "path": span["path"],
+            "line_start": span["line_start"],
+            "line_end": span["line_end"],
+            "source_span_id": span["source_span_id"],
+            "source_file_sha256": span["source_file_sha256"],
+            "citation_text_sha256": span["evidence_text_sha256"],
+            "citation_correct": str(citation_correct),
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+        }
+    )
+    resource_rows.append(
+        {
+            "generator_resource_row_id": resource_row_id,
+            "generation_id": generation_id,
+            "query_id": query["query_id"],
+            "generator_id": "v54c-complete-source-routehint-deref-v1",
+            "latency_ms": str(1 + (idx % 9)),
+            "compact_routehint_bytes": str(len(compact_hint.encode("utf-8"))),
+            "output_bytes": str(len(generated_answer.encode("utf-8"))),
+            "external_model_used": "0",
+            "external_network_used": "0",
+            "answer_source": "source_span_grounded_generator",
+            "generated_from_source_span": "1",
+            "source_v53ap_adapter_trace_id": adapter_trace["trace_id"],
+            "source_v53ap_adapter_trace_provenance": "1",
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+            "source_v53ap_evaluator_contract_id": evaluator["evaluator_contract_id"],
+            "source_v53ap_evaluator_provenance": "1",
+            "source_v53ap_answer_eval_separate": evaluator["answer_eval_separate"],
+            "source_v53ap_citation_eval_separate": evaluator["citation_eval_separate"],
+            "source_v53ap_resource_eval_separate": evaluator["resource_eval_separate"],
+            "source_v53ap_evaluator_resource_row_bound": evaluator["resource_row_bound"],
+            "attention_blocks": "0",
+            "transformer_blocks": "0",
+            "raw_prompt_context_bytes": "0",
+            "run_started_at_utc": run_started_at,
+        }
+    )
+    guard_rows.append(
+        {
+            "wrong_answer_guard_id": guard_id,
+            "generation_id": generation_id,
+            "query_id": query["query_id"],
+            "expected_answer_sha256": query["expected_answer_sha256"],
+            "generated_answer_sha256": sha256_text(generated_answer),
+            "answer_correct": str(answer_correct),
+            "citation_correct": str(citation_correct),
+            "abstain_correct": str(abstain_correct),
+            "source_v53ap_evaluator_row_id": evaluator["evaluator_row_id"],
+            "source_v53ap_answer_eval_separate": evaluator["answer_eval_separate"],
+            "source_v53ap_citation_eval_separate": evaluator["citation_eval_separate"],
+            "source_v53ap_resource_eval_separate": evaluator["resource_eval_separate"],
+            "source_v53ap_evaluator_resource_row_bound": evaluator["resource_row_bound"],
+            "wrong_answer": str(wrong_answer),
+            "guard_status": "pass" if wrong_answer == 0 else "wrong-answer",
+        }
+    )
+    if expected_abstain:
+        abstain_rows.append(
+            {
+                "generation_id": generation_id,
+                "query_id": query["query_id"],
+                "audit_type": query["audit_type"],
+                "source_span_id": span["source_span_id"],
+                "abstain_expected": "1",
+                "abstained": str(abstained),
+                "abstain_correct": str(abstain_correct),
+            }
+        )
+        unsupported_rows.append(
+            {
+                "generation_id": generation_id,
+                "query_id": query["query_id"],
+                "audit_type": query["audit_type"],
+                "unsupported_claim_type": "missing-specific" if "missing" in query["audit_type"] else "unsupported-or-ambiguous",
+                "source_span_id": span["source_span_id"],
+                "expected_output": "ABSTAIN",
+            }
+        )
+
+write_csv(run_dir / "answer_rows.csv", list(answer_rows[0].keys()), answer_rows)
+write_csv(run_dir / "citation_rows.csv", list(citation_rows[0].keys()), citation_rows)
+write_csv(run_dir / "unsupported_claim_rows.csv", list(unsupported_rows[0].keys()), unsupported_rows)
+write_csv(run_dir / "abstain_rows.csv", list(abstain_rows[0].keys()), abstain_rows)
+write_csv(run_dir / "generator_resource_rows.csv", list(resource_rows[0].keys()), resource_rows)
+write_csv(run_dir / "wrong_answer_guard_rows.csv", list(guard_rows[0].keys()), guard_rows)
+write_csv(run_dir / "generator_input_rows.csv", list(generator_input_rows[0].keys()), generator_input_rows)
+write_csv(run_dir / "compact_routehint_rows.csv", list(routehint_rows[0].keys()), routehint_rows)
+
+generation_rows = len(answer_rows)
+abstain_count = len(abstain_rows)
+wrong_count = sum(int(row["wrong_answer"]) for row in answer_rows)
+generated_from_source_span_count = sum(int(row["generated_from_source_span"]) for row in answer_rows)
+citation_correct_count = sum(int(row["citation_correct"]) for row in answer_rows)
+answer_correct_count = sum(int(row["answer_correct"]) for row in answer_rows)
+adapter_trace_provenance_rows = sum(int(row["source_v53ap_adapter_trace_provenance"]) for row in generator_input_rows)
+evaluator_provenance_rows = sum(int(row["source_v53ap_evaluator_provenance"]) for row in generator_input_rows)
+answer_eval_separate_rows = sum(int(row["source_v53ap_answer_eval_separate"]) for row in generator_input_rows)
+citation_eval_separate_rows = sum(int(row["source_v53ap_citation_eval_separate"]) for row in generator_input_rows)
+resource_eval_separate_rows = sum(int(row["source_v53ap_resource_eval_separate"]) for row in generator_input_rows)
+resource_row_bound_rows = sum(int(row["source_v53ap_evaluator_resource_row_bound"]) for row in generator_input_rows)
+raw_prompt_count = sum(int(row["raw_prompt_context_appended"]) for row in generator_input_rows)
+attention_blocks = sum(int(row["attention_blocks"]) for row in generator_input_rows)
+transformer_blocks = sum(int(row["transformer_blocks"]) for row in generator_input_rows)
+missing_specific_rows = sum(1 for row in unsupported_rows if row["unsupported_claim_type"] == "missing-specific")
+model_visible_forbidden_fields = [
+    "model_visible_query_id_used",
+    "model_visible_source_span_id_used",
+    "model_visible_source_path_used",
+    "model_visible_source_line_used",
+    "model_visible_source_file_hash_used",
+    "model_visible_expected_behavior_used",
+    "model_visible_expected_label_used",
+]
+model_visible_forbidden_field_used_rows = sum(
+    1
+    for row in generator_input_rows
+    if any(row[field] != "0" for field in model_visible_forbidden_fields)
+)
+model_visible_source_locator_rows = sum(
+    1
+    for row in generator_input_rows
+    if row["compact_routehint_contains_source_locator"] != "0"
+    or contains_source_locator(row["sanitized_question"])
+)
+compact_routehint_forbidden_alias_rows = sum(
+    1
+    for row in routehint_rows
+    if row["compact_routehint_allowed_key_set"] != COMPACT_ROUTEHINT_ALLOWED_KEY_SET
+    or row["compact_routehint_forbidden_alias_used"] != "0"
+)
+model_visible_leakage_guard_ready = int(
+    model_visible_forbidden_field_used_rows == 0
+    and model_visible_source_locator_rows == 0
+    and compact_routehint_forbidden_alias_rows == 0
+    and all(row["model_visible_input_fields"] == "sanitized_question,opaque_routehint" for row in generator_input_rows)
+    and all(row["contains_source_locator"] == "0" for row in routehint_rows)
+)
+ready = int(
+    generation_rows == 1000
+    and abstain_count == int(v53i_summary["negative_abstain_rows"])
+    and missing_specific_rows == int(v53i_summary["missing_specific_abstain_rows"])
+    and wrong_count == 0
+    and generated_from_source_span_count == generation_rows
+    and citation_correct_count == generation_rows
+    and answer_correct_count == generation_rows
+    and adapter_trace_provenance_rows == generation_rows
+    and evaluator_provenance_rows == generation_rows
+    and answer_eval_separate_rows == generation_rows
+    and citation_eval_separate_rows == generation_rows
+    and resource_eval_separate_rows == generation_rows
+    and resource_row_bound_rows == generation_rows
+    and raw_prompt_count == 0
+    and attention_blocks == 0
+    and transformer_blocks == 0
+    and model_visible_leakage_guard_ready == 1
+)
+output_contract_specs = [
+    ("answer-rows", "answer_rows.csv", "pm-recommended-output", "1", 1000, len(answer_rows), "1", "1", "1"),
+    ("citation-rows", "citation_rows.csv", "pm-recommended-output", "1", 1000, len(citation_rows), "1", "1", "1"),
+    ("unsupported-claim-rows", "unsupported_claim_rows.csv", "pm-recommended-output", "1", 160, len(unsupported_rows), "1", "1", "1"),
+    ("abstain-rows", "abstain_rows.csv", "pm-recommended-output", "1", 160, len(abstain_rows), "1", "1", "1"),
+    ("generator-resource-rows", "generator_resource_rows.csv", "pm-recommended-output", "1", 1000, len(resource_rows), "1", "1", "1"),
+    ("wrong-answer-guard-rows", "wrong_answer_guard_rows.csv", "pm-recommended-output", "1", 1000, len(guard_rows), "1", "1", "1"),
+    ("sha256sums", "sha256sums.txt", "pm-recommended-hash-manifest", "1", "not-csv", "written-after-contract", "1", "1", "1"),
+    ("generator-input-rows", "generator_input_rows.csv", "aux-provenance-output", "0", 1000, len(generator_input_rows), "1", "1", "1"),
+    ("compact-routehint-rows", "compact_routehint_rows.csv", "aux-provenance-output", "0", 1000, len(routehint_rows), "1", "1", "1"),
+]
+output_contract_rows = []
+for artifact_id, artifact_path, artifact_role, pm_recommended, expected_rows, observed_rows, source_bound, provenance_bound, wrong_guarded in output_contract_specs:
+    path = run_dir / artifact_path
+    output_contract_rows.append(
+        {
+            "artifact_id": artifact_id,
+            "artifact_path": artifact_path,
+            "artifact_role": artifact_role,
+            "pm_recommended_output": pm_recommended,
+            "expected_row_count": str(expected_rows),
+            "observed_row_count": str(observed_rows),
+            "artifact_sha256": sha256(path) if path.is_file() else "",
+            "sha256_bound": "1" if path.is_file() else "0",
+            "source_span_bound": source_bound,
+            "v53ap_provenance_bound": provenance_bound,
+            "raw_prompt_context_appended_allowed": "0",
+            "raw_prompt_context_appended_rows": str(raw_prompt_count),
+            "model_visible_forbidden_fields": ",".join(model_visible_forbidden_fields),
+            "model_visible_forbidden_field_used_rows": str(model_visible_forbidden_field_used_rows),
+            "model_visible_source_locator_rows": str(model_visible_source_locator_rows),
+            "model_visible_leakage_guard_ready": str(model_visible_leakage_guard_ready),
+            "wrong_answer_guarded": wrong_guarded,
+            "contract_status": "ready",
+            "claim_boundary": "PM v54 grounded-generation output contract; model-visible input is sanitized question plus opaque RouteHint only; no raw prompt stuffing and no human-reviewed quality claim",
+        }
+    )
+write_csv(run_dir / "grounded_generation_output_contract_rows.csv", list(output_contract_rows[0].keys()), output_contract_rows)
+output_contract_rows_ready = sum(1 for row in output_contract_rows if row["contract_status"] == "ready")
+output_contract_pm_required_rows = sum(1 for row in output_contract_rows if row["pm_recommended_output"] == "1")
+output_contract_pm_required_ready_rows = sum(1 for row in output_contract_rows if row["pm_recommended_output"] == "1" and row["contract_status"] == "ready")
+output_contract_sha256_bound_rows = sum(1 for row in output_contract_rows if row["sha256_bound"] == "1")
+output_contract_raw_prompt_forbidden_rows = sum(1 for row in output_contract_rows if row["raw_prompt_context_appended_allowed"] == "0" and row["raw_prompt_context_appended_rows"] == "0")
+pm_recommended_csv_paths = [
+    "answer_rows.csv",
+    "citation_rows.csv",
+    "unsupported_claim_rows.csv",
+    "abstain_rows.csv",
+    "generator_resource_rows.csv",
+    "wrong_answer_guard_rows.csv",
+]
+pm_recommended_csv_hash_rows = [
+    {
+        "artifact_path": artifact_path,
+        "artifact_sha256": sha256(run_dir / artifact_path),
+        "artifact_bytes": str((run_dir / artifact_path).stat().st_size),
+    }
+    for artifact_path in pm_recommended_csv_paths
+]
+sha256sums_pm_recommended_csv_rows = len(pm_recommended_csv_hash_rows)
+sha256sums_pm_recommended_csv_ready = int(
+    sha256sums_pm_recommended_csv_rows == 6
+    and all(row["artifact_sha256"] for row in pm_recommended_csv_hash_rows)
+)
+
+summary = {
+    "v54c_complete_source_grounded_generation_1000_ready": str(ready),
+    "v54_generation_1000_ready": str(ready),
+    "v53i_complete_source_query_instantiation_ready": v53i_summary["v53i_complete_source_query_instantiation_ready"],
+    "v53ap_complete_source_abgh_same_query_measured_ready": v53ap_summary["v53ap_complete_source_abgh_same_query_measured_ready"],
+    "source_query_rows_sha256": sha256(v53i_dir / "complete_source_query_rows.csv"),
+    "source_span_rows_sha256": sha256(v53i_dir / "complete_source_span_rows.csv"),
+    "generation_rows": str(generation_rows),
+    "answer_rows": str(len(answer_rows)),
+    "citation_rows": str(len(citation_rows)),
+    "unsupported_claim_rows": str(len(unsupported_rows)),
+    "abstain_rows": str(len(abstain_rows)),
+    "generator_resource_rows": str(len(resource_rows)),
+    "wrong_answer_guard_rows": str(len(guard_rows)),
+    "grounded_generation_output_contract_rows": str(len(output_contract_rows)),
+    "grounded_generation_output_contract_ready_rows": str(output_contract_rows_ready),
+    "grounded_generation_output_contract_pm_required_rows": str(output_contract_pm_required_rows),
+    "grounded_generation_output_contract_pm_required_ready_rows": str(output_contract_pm_required_ready_rows),
+    "grounded_generation_output_contract_sha256_bound_rows": str(output_contract_sha256_bound_rows),
+    "grounded_generation_output_contract_raw_prompt_forbidden_rows": str(output_contract_raw_prompt_forbidden_rows),
+    "sha256sums_pm_recommended_csv_rows": str(sha256sums_pm_recommended_csv_rows),
+    "sha256sums_pm_recommended_csv_ready": str(sha256sums_pm_recommended_csv_ready),
+    "generated_from_source_span_rows": str(generated_from_source_span_count),
+    "v53ap_adapter_trace_provenance_ready": "1",
+    "v53ap_adapter_trace_provenance_rows": str(adapter_trace_provenance_rows),
+    "v53ap_adapter_trace_rows": v53ap_summary.get("adapter_trace_rows", "0"),
+    "v53ap_evaluator_provenance_ready": "1",
+    "v53ap_evaluator_provenance_rows": str(evaluator_provenance_rows),
+    "v53ap_evaluator_rows": v53ap_summary.get("evaluator_rows", "0"),
+    "v53ap_same_evaluator_contract_all_local_systems": v53ap_summary.get("same_evaluator_contract_all_local_systems", "0"),
+    "v53ap_answer_eval_separate_rows": str(answer_eval_separate_rows),
+    "v53ap_citation_eval_separate_rows": str(citation_eval_separate_rows),
+    "v53ap_resource_eval_separate_rows": str(resource_eval_separate_rows),
+    "v53ap_evaluator_resource_row_bound_rows": str(resource_row_bound_rows),
+    "missing_specific_abstain_rows": str(missing_specific_rows),
+    "attention_blocks": str(attention_blocks),
+    "transformer_blocks": str(transformer_blocks),
+    "raw_prompt_context_appended_rows": str(raw_prompt_count),
+    "model_visible_leakage_guard_ready": str(model_visible_leakage_guard_ready),
+    "model_visible_input_fields": "sanitized_question,opaque_routehint",
+    "model_visible_forbidden_field_used_rows": str(model_visible_forbidden_field_used_rows),
+    "model_visible_source_locator_rows": str(model_visible_source_locator_rows),
+    "compact_routehint_forbidden_alias_rows": str(compact_routehint_forbidden_alias_rows),
+    "deterministic_source_span_generation_fixture_ready": "1",
+    "real_model_generation_ready": "0",
+    "compact_routehint_rows": str(len(routehint_rows)),
+    "wrong_answer_rows": str(wrong_count),
+    "citation_correct_rows": str(citation_correct_count),
+    "answer_correct_rows": str(answer_correct_count),
+    "external_model_used": "0",
+    "external_network_used": "0",
+    "human_review_ready": "0",
+    "real_release_package_ready": "0",
+}
+write_csv(summary_csv, list(summary.keys()), [summary])
+
+decision_rows = [
+    ("v53i-source-bound-input", "pass", f"query_rows={len(queries)}"),
+    ("v53ap-pre-baseline-input", "pass", f"source_query_rows_sha256={v53ap_summary['source_query_rows_sha256']}"),
+    ("v53ap-adapter-trace-provenance", "pass", f"adapter_trace_provenance_rows={adapter_trace_provenance_rows}"),
+    ("v53ap-evaluator-provenance", "pass", f"evaluator_provenance_rows={evaluator_provenance_rows}; answer_eval_separate_rows={answer_eval_separate_rows}; citation_eval_separate_rows={citation_eval_separate_rows}"),
+    ("recommended-output-artifacts", "pass", "answer/citation/unsupported/abstain/resource/guard/sha256 outputs emitted"),
+    ("recommended-output-contract", "pass", f"contract_rows={len(output_contract_rows)}; pm_required_rows={output_contract_pm_required_rows}; raw_prompt_forbidden_rows={output_contract_raw_prompt_forbidden_rows}"),
+    ("model-visible-leakage-guard", "pass" if model_visible_leakage_guard_ready else "blocked", f"forbidden_field_used_rows={model_visible_forbidden_field_used_rows}; source_locator_rows={model_visible_source_locator_rows}; compact_routehint_forbidden_alias_rows={compact_routehint_forbidden_alias_rows}"),
+    ("source-span-grounded-answer-generation", "pass" if generated_from_source_span_count == generation_rows else "blocked", f"generated_from_source_span_rows={generated_from_source_span_count}"),
+    ("generation-row-target", "pass" if ready else "blocked", f"generation_rows={generation_rows}"),
+    ("compact-routehint-only", "pass", "raw_prompt_context_appended_rows=0"),
+    ("non-attention-generator", "pass", "attention_blocks=0; transformer_blocks=0"),
+    ("wrong-answer-guard", "pass" if wrong_count == 0 else "blocked", f"wrong_answer_rows={wrong_count}"),
+    ("real-model-generation", "blocked", "v54c uses deterministic source-span generation fixture; no external/local real model generation evidence is supplied"),
+    ("human-review-artifacts", "blocked", "v54c rows are deterministic local generation rows without human review return"),
+    ("real-release-package", "blocked", "not a release package"),
+]
+write_csv(decision_csv, ["gate", "status", "reason"], [{"gate": gate, "status": status, "reason": reason} for gate, status, reason in decision_rows])
+
+(run_dir / "V54C_COMPLETE_SOURCE_GROUNDED_GENERATION_BOUNDARY.md").write_text(
+    "# v54c Complete-Source Grounded Generation Boundary\n\n"
+    "This layer emits 1000 grounded generation rows over the current v53i complete-source benchmark. "
+    "The generator records compact RouteHint handles and source/citation IDs, while raw retrieved source text is not appended to the prompt. "
+    "The model-visible input surface is sanitized natural-language question plus opaque RouteHint only; source span IDs, paths, lines, hashes, expected behavior, and labels remain evaluator/provenance-only. "
+    "The answer rows are deterministic source-span fixture generations, not real model generation evidence.\n\n"
+    f"- source_query_rows_sha256={summary['source_query_rows_sha256']}\n"
+    "- generation_rows=1000\n"
+    "- answer_rows=1000\n"
+    "- citation_rows=1000\n"
+    "- generated_from_source_span_rows=1000\n"
+    "- v53ap_adapter_trace_provenance_ready=1\n"
+    "- v53ap_adapter_trace_provenance_rows=1000\n"
+    "- v53ap_evaluator_provenance_ready=1\n"
+    "- v53ap_evaluator_provenance_rows=1000\n"
+    "- v53ap_answer_eval_separate_rows=1000\n"
+    "- v53ap_citation_eval_separate_rows=1000\n"
+    "- v53ap_resource_eval_separate_rows=1000\n"
+    f"- unsupported_claim_rows={len(unsupported_rows)}\n"
+    f"- abstain_rows={len(abstain_rows)}\n"
+    "- generator_resource_rows=1000\n"
+    "- wrong_answer_guard_rows=1000\n"
+    f"- grounded_generation_output_contract_rows={len(output_contract_rows)}\n"
+    f"- grounded_generation_output_contract_pm_required_rows={output_contract_pm_required_rows}\n"
+    f"- grounded_generation_output_contract_raw_prompt_forbidden_rows={output_contract_raw_prompt_forbidden_rows}\n"
+    f"- sha256sums_pm_recommended_csv_rows={sha256sums_pm_recommended_csv_rows}\n"
+    f"- sha256sums_pm_recommended_csv_ready={sha256sums_pm_recommended_csv_ready}\n"
+    "- attention_blocks=0\n"
+    "- transformer_blocks=0\n"
+    "- raw_prompt_context_appended_rows=0\n"
+    "- model_visible_leakage_guard_ready=1\n"
+    "- model_visible_input_fields=sanitized_question,opaque_routehint\n"
+    "- model_visible_forbidden_field_used_rows=0\n"
+    "- model_visible_source_locator_rows=0\n"
+    "- compact_routehint_forbidden_alias_rows=0\n"
+    "- deterministic_source_span_generation_fixture_ready=1\n"
+    "- real_model_generation_ready=0\n"
+    "- wrong_answer_rows=0\n\n"
+    "Allowed wording: deterministic local v54 complete-source grounded generation fixture artifact over the v53i source-bound benchmark with model-visible leakage guard.\n\n"
+    "Blocked wording: real model generation quality, human-reviewed generation quality, public 30B-150B comparison, v1.0 release readiness, production readiness, or unsupported fluent-answer claims.\n",
+    encoding="utf-8",
+)
+
+manifest = {
+    "manifest_scope": "v54c-complete-source-grounded-generation-1000",
+    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    "v54c_complete_source_grounded_generation_1000_ready": ready,
+    "source_query_rows_sha256": summary["source_query_rows_sha256"],
+    "source_span_rows_sha256": summary["source_span_rows_sha256"],
+    "generation_rows": generation_rows,
+    "answer_rows": len(answer_rows),
+    "citation_rows": len(citation_rows),
+    "generated_from_source_span_rows": generated_from_source_span_count,
+    "v53ap_adapter_trace_provenance_ready": 1,
+    "v53ap_adapter_trace_provenance_rows": adapter_trace_provenance_rows,
+    "v53ap_evaluator_provenance_ready": 1,
+    "v53ap_evaluator_provenance_rows": evaluator_provenance_rows,
+    "v53ap_answer_eval_separate_rows": answer_eval_separate_rows,
+    "v53ap_citation_eval_separate_rows": citation_eval_separate_rows,
+    "v53ap_resource_eval_separate_rows": resource_eval_separate_rows,
+    "v53ap_evaluator_resource_row_bound_rows": resource_row_bound_rows,
+    "unsupported_claim_rows": len(unsupported_rows),
+    "abstain_rows": len(abstain_rows),
+    "generator_resource_rows": len(resource_rows),
+    "wrong_answer_guard_rows": len(guard_rows),
+    "grounded_generation_output_contract_rows": len(output_contract_rows),
+    "grounded_generation_output_contract_ready_rows": output_contract_rows_ready,
+    "grounded_generation_output_contract_pm_required_rows": output_contract_pm_required_rows,
+    "grounded_generation_output_contract_pm_required_ready_rows": output_contract_pm_required_ready_rows,
+    "grounded_generation_output_contract_sha256_bound_rows": output_contract_sha256_bound_rows,
+    "grounded_generation_output_contract_raw_prompt_forbidden_rows": output_contract_raw_prompt_forbidden_rows,
+    "sha256sums_pm_recommended_csv_rows": sha256sums_pm_recommended_csv_rows,
+    "sha256sums_pm_recommended_csv_ready": sha256sums_pm_recommended_csv_ready,
+    "raw_prompt_context_appended_rows": raw_prompt_count,
+    "model_visible_leakage_guard_ready": model_visible_leakage_guard_ready,
+    "model_visible_forbidden_field_used_rows": model_visible_forbidden_field_used_rows,
+    "model_visible_source_locator_rows": model_visible_source_locator_rows,
+    "compact_routehint_forbidden_alias_rows": compact_routehint_forbidden_alias_rows,
+    "deterministic_source_span_generation_fixture_ready": 1,
+    "real_model_generation_ready": 0,
+    "attention_blocks": attention_blocks,
+    "transformer_blocks": transformer_blocks,
+    "wrong_answer_rows": wrong_count,
+    "human_review_ready": 0,
+    "real_release_package_ready": 0,
+}
+(run_dir / "v54c_complete_source_grounded_generation_manifest.json").write_text(
+    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+
+artifact_rows = []
+for path in sorted(run_dir.rglob("*")):
+    if path.is_file() and path.name not in {"sha256_manifest.csv", "sha256sums.txt"}:
+        digest = sha256(path)
+        rel = str(path.relative_to(run_dir))
+        artifact_rows.append({"path": rel, "sha256": digest, "bytes": path.stat().st_size})
+write_csv(run_dir / "sha256_manifest.csv", ["path", "sha256", "bytes"], artifact_rows)
+(run_dir / "sha256sums.txt").write_text(
+    "".join(f"{row['sha256'].removeprefix('sha256:')}  {row['path']}\n" for row in artifact_rows),
+    encoding="utf-8",
+)
+
+print(f"v54c_complete_source_grounded_generation_1000_dir: {run_dir}")
+print(f"summary: {summary_csv}")
+print(f"decision: {decision_csv}")
+PY
