@@ -110,7 +110,13 @@ The contract requires these artifact shapes:
   (`results/v61_sixteen_token_decode/sixteen_token_decode_rows.csv`):
   checkpoint/revision and tokenizer revision, upstream logits-parity artifact
   hash, prompt input hash, candidate/reference token IDs and text hashes,
-  typed readiness fields, token mismatch count, and `decode_parity_pass`
+  typed readiness fields, token mismatch count, and `decode_parity_pass`. A
+  passing row must bind valid SHA-256 hashes for the upstream one-token logits
+  artifact, prompt input, and candidate/reference text, must decode the exact
+  declared token count, must match candidate/reference token IDs exactly, and
+  must keep `max_token_mismatch_count=0`. `real_model_execution_ready=1` is
+  valid only on rows that also set `decode_parity_pass=1` and satisfy the same
+  raw evidence checks.
 - `cold-warm-cache-measurement-rows`
   (`results/v61_cold_warm_cache_measurement/cold_warm_cache_measurement_rows.csv`):
   cold and warm `cache_state` rows, upstream decode artifact hash, runtime

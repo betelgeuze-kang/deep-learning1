@@ -3485,6 +3485,19 @@ def verify_v61_one_token_path(
                         errors.append(f"{artifact_path}: row {row_index} real_model_execution_ready=1 requires logits_parity_pass=1")
                     if not logits_ready:
                         errors.append(f"{artifact_path}: row {row_index} real_model_execution_ready=1 is not supported by one-token logits raw parity evidence")
+            if artifact_id == "sixteen-token-decode-rows":
+                decode_label = f"{artifact_path}: row {row_index} decode_parity_pass=1"
+                decode_ready = _compute_v61_decode_parity_ready(
+                    artifact_row,
+                    decode_label,
+                    errors,
+                    emit_pass_diagnostics=artifact_row.get(pass_field) == "1",
+                )
+                if artifact_row.get("real_model_execution_ready") == "1":
+                    if artifact_row.get(pass_field) != "1":
+                        errors.append(f"{artifact_path}: row {row_index} real_model_execution_ready=1 requires decode_parity_pass=1")
+                    if not decode_ready:
+                        errors.append(f"{artifact_path}: row {row_index} real_model_execution_ready=1 is not supported by sixteen-token decode raw parity evidence")
         real_pass_rows = [
             artifact_row
             for artifact_row in rows
@@ -3642,6 +3655,54 @@ def _compute_v61_logits_parity_ready(
         local_errors.append(f"{label} requires finite max_abs_delta, mean_abs_delta, and tolerance")
     elif max_abs_delta_value > tolerance_value or mean_abs_delta_value > tolerance_value:
         local_errors.append(f"{label} requires max_abs_delta and mean_abs_delta <= tolerance")
+    if emit_pass_diagnostics:
+        errors.extend(local_errors)
+    return not local_errors
+
+
+def _compute_v61_decode_parity_ready(
+    row: dict[str, str],
+    label: str,
+    errors: list[str],
+    emit_pass_diagnostics: bool,
+) -> bool:
+    local_errors: list[str] = []
+    try:
+        decode_token_count = int(row.get("decode_token_count", ""))
+    except ValueError:
+        local_errors.append(f"{label} requires positive integer decode_token_count")
+        decode_token_count = -1
+    if decode_token_count <= 0:
+        local_errors.append(f"{label} requires positive integer decode_token_count")
+    try:
+        mismatch_count = int(row.get("max_token_mismatch_count", ""))
+    except ValueError:
+        local_errors.append(f"{label} requires nonnegative integer max_token_mismatch_count")
+        mismatch_count = -1
+    if mismatch_count < 0:
+        local_errors.append(f"{label} requires nonnegative integer max_token_mismatch_count")
+    elif mismatch_count != 0:
+        local_errors.append(f"{label} requires max_token_mismatch_count=0")
+    for field in [
+        "logits_parity_artifact_sha256",
+        "prompt_input_sha256",
+        "candidate_text_sha256",
+        "reference_text_sha256",
+    ]:
+        if not _is_sha256_digest(row.get(field, "")):
+            local_errors.append(f"{label} requires {field}")
+    candidate_tokens = _parse_token_id_list(row.get("candidate_token_ids", ""))
+    reference_tokens = _parse_token_id_list(row.get("reference_token_ids", ""))
+    if candidate_tokens is None:
+        local_errors.append(f"{label} requires parseable candidate_token_ids")
+    if reference_tokens is None:
+        local_errors.append(f"{label} requires parseable reference_token_ids")
+    if candidate_tokens is not None and decode_token_count > 0 and len(candidate_tokens) != decode_token_count:
+        local_errors.append(f"{label} requires candidate_token_ids length to equal decode_token_count")
+    if reference_tokens is not None and decode_token_count > 0 and len(reference_tokens) != decode_token_count:
+        local_errors.append(f"{label} requires reference_token_ids length to equal decode_token_count")
+    if candidate_tokens is not None and reference_tokens is not None and candidate_tokens != reference_tokens:
+        local_errors.append(f"{label} requires candidate_token_ids to match reference_token_ids")
     if emit_pass_diagnostics:
         errors.extend(local_errors)
     return not local_errors

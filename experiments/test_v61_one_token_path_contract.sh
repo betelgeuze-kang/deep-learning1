@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RESULTS_DIR="$ROOT_DIR/results"
 MOE_ROWS="$RESULTS_DIR/v61_moe_block_forward_parity/moe_block_forward_parity_rows.csv"
 LOGITS_ROWS="$RESULTS_DIR/v61_one_token_logits_parity/one_token_logits_parity_rows.csv"
+DECODE_ROWS="$RESULTS_DIR/v61_sixteen_token_decode/sixteen_token_decode_rows.csv"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/v61-one-token-contract.XXXXXX")"
 BAD_OUTPUT="$TMP_DIR/expect_fail.out"
 cd "$ROOT_DIR"
@@ -401,8 +402,10 @@ mkdir -p "$(dirname "$MOE_ROWS")"
 cleanup() {
   rm -f "$MOE_ROWS"
   rm -f "$LOGITS_ROWS"
+  rm -f "$DECODE_ROWS"
   rmdir "$(dirname "$MOE_ROWS")" 2>/dev/null || true
   rmdir "$(dirname "$LOGITS_ROWS")" 2>/dev/null || true
+  rmdir "$(dirname "$DECODE_ROWS")" 2>/dev/null || true
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
@@ -597,6 +600,145 @@ expect_fail_with \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 
 rm -f "$LOGITS_ROWS"
+
+if [ -e "$DECODE_ROWS" ]; then
+  echo "refusing to overwrite existing v61 sixteen-token decode artifact: $DECODE_ROWS" >&2
+  exit 1
+fi
+mkdir -p "$(dirname "$DECODE_ROWS")"
+
+write_bad_decode_row() {
+  local mode="$1"
+  python3 - "$ROOT_DIR/v61/one_token_path.json" "$DECODE_ROWS" "$mode" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+contract_path, rows_path, mode = sys.argv[1:4]
+data = json.loads(Path(contract_path).read_text(encoding="utf-8"))
+columns = next(
+    row["required_columns"]
+    for row in data["required_artifacts"]
+    if row["artifact_id"] == "sixteen-token-decode-rows"
+)
+values = {column: "" for column in columns}
+values.update({
+    "checkpoint_id": "fixture-checkpoint",
+    "model_revision": "fixture-revision",
+    "tokenizer_revision": "fixture-tokenizer",
+    "contract_ready": "1",
+    "fixture_execution_ready": "0",
+    "real_model_execution_ready": "0",
+    "heldout_metric_ready": "0",
+    "human_review_ready": "0",
+    "independent_reproduction_ready": "0",
+    "release_ready": "0",
+    "local_checkpoint_root_supplied": "0",
+    "checkpoint_payload_bytes_committed_to_repo": "0",
+    "actual_model_generation_ready": "0",
+    "route_jump_rows": "0",
+    "status": "blocked",
+    "reason": "malicious blocked decode artifact claims parity",
+    "logits_parity_artifact_sha256": "sha256:" + "a" * 64,
+    "prompt_input_sha256": "sha256:" + "b" * 64,
+    "decode_token_count": "3",
+    "candidate_token_ids": "1|2|3",
+    "reference_token_ids": "1|2|3",
+    "candidate_text_sha256": "sha256:" + "c" * 64,
+    "reference_text_sha256": "sha256:" + "d" * 64,
+    "max_token_mismatch_count": "0",
+    "decode_parity_pass": "1",
+})
+if mode == "token_ids_bad":
+    values["candidate_token_ids"] = "1|2|9"
+elif mode == "logits_hash_bad":
+    values["logits_parity_artifact_sha256"] = "sha256:" + "z" * 64
+elif mode == "prompt_hash_bad":
+    values["prompt_input_sha256"] = "sha256:" + "z" * 64
+elif mode == "mismatch_count_bad":
+    values["max_token_mismatch_count"] = "1"
+elif mode == "token_count_bad":
+    values["decode_token_count"] = "2"
+elif mode == "real_ready_bad_raw":
+    values["real_model_execution_ready"] = "1"
+    values["candidate_text_sha256"] = "sha256:" + "z" * 64
+elif mode == "real_ready_without_pass":
+    values["real_model_execution_ready"] = "1"
+    values["decode_parity_pass"] = "0"
+else:
+    raise SystemExit(f"unknown mode: {mode}")
+path = Path(rows_path)
+path.parent.mkdir(parents=True, exist_ok=True)
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=columns, lineterminator="\n")
+    writer.writeheader()
+    writer.writerow(values)
+PY
+}
+
+write_bad_decode_row token_ids_bad
+expect_fail_with \
+  "decode_parity_pass=1 requires candidate_token_ids to match reference_token_ids" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$DECODE_ROWS"
+
+write_bad_decode_row logits_hash_bad
+expect_fail_with \
+  "decode_parity_pass=1 requires logits_parity_artifact_sha256" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$DECODE_ROWS"
+
+write_bad_decode_row prompt_hash_bad
+expect_fail_with \
+  "decode_parity_pass=1 requires prompt_input_sha256" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$DECODE_ROWS"
+
+write_bad_decode_row mismatch_count_bad
+expect_fail_with \
+  "decode_parity_pass=1 requires max_token_mismatch_count=0" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$DECODE_ROWS"
+
+write_bad_decode_row token_count_bad
+expect_fail_with \
+  "decode_parity_pass=1 requires candidate_token_ids length to equal decode_token_count" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$DECODE_ROWS"
+
+write_bad_decode_row real_ready_bad_raw
+expect_fail_with \
+  "real_model_execution_ready=1 is not supported by sixteen-token decode raw parity evidence" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$DECODE_ROWS"
+
+write_bad_decode_row real_ready_without_pass
+expect_fail_with \
+  "real_model_execution_ready=1 requires decode_parity_pass=1" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$DECODE_ROWS"
 
 "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
