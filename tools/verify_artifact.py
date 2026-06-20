@@ -382,6 +382,13 @@ REQUIRED_PR2_V56_VERIFICATION_TERMS = {
     "--artifact-ledger",
     "results/v1_0_pm_pr_claim_slice_gate/gate_001/v56_replay_acceptance_evidence_rows.csv",
 }
+REQUIRED_PR2_V50_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json",
+    "--summary",
+    "results/v50_public_repo_auditor_3repo_summary.csv",
+    "--decision",
+    "results/v50_public_repo_auditor_3repo_decision.csv",
+}
 REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "tools/verify_artifact.py pr-split pr_slices/pr2.json",
     "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
@@ -2146,6 +2153,16 @@ def verify_pr_split(path: Path) -> list[str]:
             if missing_terms:
                 errors.append(
                     f"{prefix}: v56 verification commands must compare replay contract to summary, seed blocker, and acceptance ledgers: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
+        if slice_id == "v50-auditor-correctness":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_V50_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: v50 verification commands must compare auditor contract to summary and decision artifacts: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
         boundary = row.get("claim_boundary", {})

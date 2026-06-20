@@ -96,6 +96,12 @@ elif mutation == "v56-blocker-ledger-drop":
         command.replace("--blocker-ledger", "--missing-blocker-ledger")
         for command in row["verification_commands"]
     ]
+elif mutation == "v50-decision-drop":
+    row = slice_by_id("v50-auditor-correctness")
+    row["verification_commands"] = [
+        command.replace("--decision", "--missing-decision")
+        for command in row["verification_commands"]
+    ]
 else:
     raise SystemExit(f"unknown mutation: {mutation}")
 
@@ -162,6 +168,11 @@ expect_fail_with \
 bad_path="$(bad_pr2_json pr2_v56_blocker_ledger_drop_bad v56-blocker-ledger-drop)"
 expect_fail_with \
   "v56 verification commands must compare replay contract to summary, seed blocker, and acceptance ledgers" \
+  "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_pr2_json pr2_v50_decision_drop_bad v50-decision-drop)"
+expect_fail_with \
+  "v50 verification commands must compare auditor contract to summary and decision artifacts" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 echo "p0 PR #2 split negative controls passed"
