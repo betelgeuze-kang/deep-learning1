@@ -3734,7 +3734,18 @@ def verify_v61_one_token_path(
                     errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires top_k_token_ranking_match=1")
                 if not artifact_row.get("token_id"):
                     errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires token_id")
-                for field in ["router_top_k", "layer_activation_trace_rows", "top_k_token_count"]:
+                parsed_ints: dict[str, int] = {}
+                for field in ["token_id", "top1_token_id", "reference_top1_token_id"]:
+                    try:
+                        parsed = int(artifact_row.get(field, ""))
+                    except ValueError:
+                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires nonnegative integer {field}")
+                        continue
+                    if parsed < 0:
+                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires nonnegative integer {field}")
+                        continue
+                    parsed_ints[field] = parsed
+                for field in ["router_top_k", "layer_activation_trace_rows", "top_k_token_count", "vocab_size", "logit_count"]:
                     try:
                         parsed = int(artifact_row.get(field, ""))
                     except ValueError:
@@ -3742,9 +3753,35 @@ def verify_v61_one_token_path(
                         continue
                     if parsed <= 0:
                         errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires positive integer {field}")
-                activation_trace = artifact_row.get("layer_activation_trace_sha256", "")
-                if not activation_trace.startswith("sha256:") or len(activation_trace) != 71:
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires layer_activation_trace_sha256")
+                        continue
+                    parsed_ints[field] = parsed
+                if parsed_ints.get("vocab_size") != parsed_ints.get("logit_count"):
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires logit_count to equal vocab_size")
+                for field in [
+                    "moe_block_artifact_sha256",
+                    "tokenizer_input_sha256",
+                    "layer_activation_trace_sha256",
+                    "route_path_sha256",
+                    "final_hidden_sha256",
+                    "lm_head_payload_sha256",
+                    "candidate_logits_sha256",
+                    "torch_reference_logits_sha256",
+                ]:
+                    if not _is_sha256_digest(artifact_row.get(field, "")):
+                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires {field}")
+                candidate_top_k = _parse_token_id_list(artifact_row.get("candidate_top_k_token_ids", ""))
+                reference_top_k = _parse_token_id_list(artifact_row.get("reference_top_k_token_ids", ""))
+                if candidate_top_k is None:
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires parseable candidate_top_k_token_ids")
+                if reference_top_k is None:
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires parseable reference_top_k_token_ids")
+                top_k_token_count = parsed_ints.get("top_k_token_count")
+                if candidate_top_k is not None and top_k_token_count is not None and len(candidate_top_k) != top_k_token_count:
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires candidate_top_k_token_ids length to equal top_k_token_count")
+                if reference_top_k is not None and top_k_token_count is not None and len(reference_top_k) != top_k_token_count:
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires reference_top_k_token_ids length to equal top_k_token_count")
+                if candidate_top_k is not None and reference_top_k is not None and candidate_top_k != reference_top_k:
+                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires candidate_top_k_token_ids to match reference_top_k_token_ids")
                 if not math.isfinite(max_abs_delta_value) or not math.isfinite(mean_abs_delta_value) or not math.isfinite(tolerance_value):
                     errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires finite max_abs_delta, mean_abs_delta, and tolerance")
                 elif max_abs_delta_value > tolerance_value or mean_abs_delta_value > tolerance_value:
@@ -3815,6 +3852,21 @@ def _is_sha256_digest(value: str) -> bool:
         and len(digest) == 64
         and all(character in "0123456789abcdef" for character in digest)
     )
+
+
+def _parse_token_id_list(value: str) -> list[int] | None:
+    if not value:
+        return None
+    tokens: list[int] = []
+    for part in value.split("|"):
+        try:
+            token_id = int(part)
+        except ValueError:
+            return None
+        if token_id < 0:
+            return None
+        tokens.append(token_id)
+    return tokens
 
 
 def _summary_expect_float(

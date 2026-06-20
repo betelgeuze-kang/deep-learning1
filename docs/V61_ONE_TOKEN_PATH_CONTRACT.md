@@ -95,7 +95,13 @@ The contract requires these artifact shapes:
   final hidden hash, LM-head tensor/payload hash, vocab/logit counts,
   candidate/reference logits hashes, typed readiness fields, top-1 agreement,
   max and mean absolute logit error, tolerance, top-k token ranking agreement,
-  and `logits_parity_pass`
+  and `logits_parity_pass`. A passing row must bind valid SHA-256 hashes for
+  the upstream MoE-block artifact, tokenizer input, route path, layer
+  activation trace, final hidden state, LM-head payload, candidate logits, and
+  reference logits. The verifier also checks that `logit_count` equals
+  `vocab_size`, and that candidate/reference top-k token ID lists are
+  parseable, have exactly `top_k_token_count` entries, and match when
+  `top_k_token_ranking_match=1`.
 - `sixteen-token-decode-rows`
   (`results/v61_sixteen_token_decode/sixteen_token_decode_rows.csv`):
   checkpoint/revision and tokenizer revision, upstream logits-parity artifact

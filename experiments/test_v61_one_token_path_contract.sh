@@ -501,6 +501,12 @@ values.update({
 })
 if mode == "topk_bad":
     values["top_k_token_ranking_match"] = "0"
+elif mode == "topk_ids_bad":
+    values["candidate_top_k_token_ids"] = "1|2|3|4|9"
+elif mode == "topk_count_bad":
+    values["top_k_token_count"] = "4"
+elif mode == "candidate_logits_hash_bad":
+    values["candidate_logits_sha256"] = "sha256:" + "z" * 64
 elif mode == "mean_bad":
     values["mean_abs_delta"] = "0.01"
 elif mode == "activation_bad":
@@ -519,6 +525,33 @@ PY
 write_bad_logits_row topk_bad
 expect_fail_with \
   "logits_parity_pass=1 requires top_k_token_ranking_match=1" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row topk_ids_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires candidate_top_k_token_ids to match reference_top_k_token_ids" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row topk_count_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires candidate_top_k_token_ids length to equal top_k_token_count" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row candidate_logits_hash_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires candidate_logits_sha256" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
