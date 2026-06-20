@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "backend/RouteQualityBackend.hpp"
+#include "v02_pre/CreditCoreV02.hpp"
 #include "v02_pre/EnergyCoreV02.hpp"
 #include "v02_pre/RouteCoreV02.hpp"
 
@@ -2974,8 +2975,7 @@ float GraphV02::route_source_credit_strength_scale_for_node(int index) const {
 }
 
 bool GraphV02::route_source_filter_active() const {
-    return route_source_credit_apply_active() &&
-           params_.route_source_filter_mode != "off";
+    return CreditCoreV02::route_source_filter_active(params_.credit(), current_epoch_);
 }
 
 bool GraphV02::route_source_candidate_allowed(int query_index, int value_pos) const {
@@ -3026,37 +3026,31 @@ bool GraphV02::route_source_node_has_allowed_candidate(int index) const {
 }
 
 bool GraphV02::route_credit_learn_active() const {
-    return params_.route_credit_learning != 0 &&
-           params_.route_credit_mode != "off" &&
-           current_epoch_ >= params_.route_credit_learn_after_epoch;
+    return CreditCoreV02::route_credit_learn_active(params_.credit(), current_epoch_);
 }
 
 bool GraphV02::route_credit_apply_active() const {
-    return params_.route_credit_learning != 0 &&
-           params_.route_credit_mode != "off" &&
-           current_epoch_ >= params_.route_credit_apply_after_epoch;
+    return CreditCoreV02::route_credit_apply_active(params_.credit(), current_epoch_);
 }
 
 bool GraphV02::route_source_credit_active() const {
-    return params_.route_source_credit_learning != 0;
+    return CreditCoreV02::route_source_credit_active(params_.credit());
 }
 
 bool GraphV02::route_source_credit_apply_active() const {
-    return route_source_credit_active() &&
-           params_.route_source_credit_apply_mode != "off" &&
-           current_epoch_ >= params_.route_credit_apply_after_epoch;
+    return CreditCoreV02::route_source_credit_apply_active(params_.credit(), current_epoch_);
 }
 
 bool GraphV02::route_source_credit_ranking_apply_active() const {
-    return route_source_credit_apply_active() &&
-           (params_.route_source_credit_apply_mode == "ranking" ||
-            params_.route_source_credit_apply_mode == "ranking-strength");
+    return CreditCoreV02::route_source_credit_ranking_apply_active(
+        params_.credit(),
+        current_epoch_);
 }
 
 bool GraphV02::route_source_credit_strength_apply_active() const {
-    return route_source_credit_apply_active() &&
-           (params_.route_source_credit_apply_mode == "strength" ||
-            params_.route_source_credit_apply_mode == "ranking-strength");
+    return CreditCoreV02::route_source_credit_strength_apply_active(
+        params_.credit(),
+        current_epoch_);
 }
 
 void GraphV02::apply_route_credit_learning() {

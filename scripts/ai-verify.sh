@@ -73,6 +73,9 @@ fi
 if [ -f experiments/test_p1_v02_route_core_contract.sh ]; then
   bash -n experiments/test_p1_v02_route_core_contract.sh
 fi
+if [ -f experiments/test_p1_v02_credit_core_contract.sh ]; then
+  bash -n experiments/test_p1_v02_credit_core_contract.sh
+fi
 if [ -f experiments/test_v61_one_token_path_contract.sh ]; then
   bash -n experiments/test_v61_one_token_path_contract.sh
 fi
@@ -255,6 +258,9 @@ if [ -x experiments/test_p1_v02_energy_core_contract.sh ]; then
 fi
 if [ -x experiments/test_p1_v02_route_core_contract.sh ]; then
   ./experiments/test_p1_v02_route_core_contract.sh >/dev/null
+fi
+if [ -x experiments/test_p1_v02_credit_core_contract.sh ]; then
+  ./experiments/test_p1_v02_credit_core_contract.sh >/dev/null
 fi
 if [ -x experiments/test_v61_one_token_path_contract.sh ]; then
   ./experiments/test_v61_one_token_path_contract.sh >/dev/null
