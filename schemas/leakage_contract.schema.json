@@ -78,6 +78,7 @@
                 "query_id",
                 "query_source_id",
                 "repo_path",
+                "sha256",
                 "source_binding_id",
                 "source_case_id",
                 "source_file_hash",

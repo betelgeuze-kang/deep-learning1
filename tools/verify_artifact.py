@@ -12,17 +12,19 @@ import sys
 from pathlib import Path
 
 
-REQUIRED_PIPELINE_KEYS = {"schema_version", "pipeline_id", "claim_boundary", "stages"}
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_ROOT = REPO_ROOT / "schemas"
+
+
+def schema_required(schema_name: str) -> set[str]:
+    schema_path = SCHEMA_ROOT / schema_name
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    return set(schema.get("required", []))
+
+
+REQUIRED_PIPELINE_KEYS = schema_required("pipeline.schema.json")
 REQUIRED_STAGE_KEYS = {"stage_id", "adapter", "command", "outputs", "ready_fields", "claim_boundary"}
-REQUIRED_PR_SPLIT_KEYS = {
-    "schema_version",
-    "draft_pr",
-    "split_required",
-    "recommended_title",
-    "recommended_body",
-    "merge_gate_policy",
-    "slices",
-}
+REQUIRED_PR_SPLIT_KEYS = schema_required("pr_split.schema.json")
 REQUIRED_PR_SLICE_KEYS = {
     "slice_id",
     "scope",
@@ -32,11 +34,7 @@ REQUIRED_PR_SLICE_KEYS = {
     "verification_commands",
     "current_status",
 }
-REQUIRED_TYPED_READINESS_KEYS = {
-    "schema_version",
-    "policy",
-    "rows",
-}
+REQUIRED_TYPED_READINESS_KEYS = schema_required("typed_readiness.schema.json")
 REQUIRED_TYPED_READINESS_ROW_KEYS = {
     "scope_id",
     "contract_ready",
@@ -52,12 +50,7 @@ REQUIRED_TYPED_READINESS_ROW_KEYS = {
     "pm_ledger_required",
     "evidence_path",
 }
-REQUIRED_LEAKAGE_KEYS = {
-    "schema_version",
-    "policy",
-    "forbidden_surfaces",
-    "stage_contracts",
-}
+REQUIRED_LEAKAGE_KEYS = schema_required("leakage_contract.schema.json")
 REQUIRED_LEAKAGE_POLICY_KEYS = {
     "allowed_surface",
     "allowed_model_visible_fields",
@@ -80,14 +73,7 @@ REQUIRED_LEAKAGE_STAGE_KEYS = {
 OPTIONAL_LEAKAGE_STAGE_KEYS = {
     "forbidden_field_summary",
 }
-REQUIRED_BASELINE_ADMISSION_KEYS = {
-    "schema_version",
-    "policy",
-    "required_real_evidence_fields",
-    "required_pm_ledgers",
-    "systems",
-    "required_artifacts",
-}
+REQUIRED_BASELINE_ADMISSION_KEYS = schema_required("baseline_admission.schema.json")
 REQUIRED_BASELINE_LEDGER_KEYS = {
     "ledger_id",
     "path",
@@ -107,12 +93,7 @@ REQUIRED_BASELINE_ARTIFACT_KEYS = {
     "artifact_kind",
     "required_columns",
 }
-REQUIRED_V52_ADAPTER_GUARD_KEYS = {
-    "schema_version",
-    "policy",
-    "required_artifacts",
-    "requirements",
-}
+REQUIRED_V52_ADAPTER_GUARD_KEYS = schema_required("v52_adapter_guard.schema.json")
 REQUIRED_V52_ARTIFACT_KEYS = {
     "artifact_id",
     "artifact_kind",
@@ -128,13 +109,7 @@ REQUIRED_V52_REQUIREMENT_KEYS = {
     "evidence_path",
     "claim_boundary",
 }
-REQUIRED_V50_AUDITOR_KEYS = {
-    "schema_version",
-    "policy",
-    "replay_commands",
-    "required_artifacts",
-    "claim_boundaries",
-}
+REQUIRED_V50_AUDITOR_KEYS = schema_required("v50_auditor_correctness.schema.json")
 REQUIRED_V50_POLICY_KEYS = {
     "summary_ready_claim_present",
     "artifact_replay_ready",
@@ -199,16 +174,8 @@ REQUIRED_V56_SEED_DEPENDENCY_KEYS = {
     "network_or_download_approval_required",
     "missing_seed_artifact_paths",
 }
-REQUIRED_V53_SOURCE_BENCHMARK_KEYS = {
-    "schema_version",
-    "policy",
-    "requirements",
-}
-REQUIRED_V54_GROUNDED_GENERATION_KEYS = {
-    "schema_version",
-    "policy",
-    "required_artifacts",
-}
+REQUIRED_V53_SOURCE_BENCHMARK_KEYS = schema_required("v53_source_benchmark.schema.json")
+REQUIRED_V54_GROUNDED_GENERATION_KEYS = schema_required("v54_grounded_generation.schema.json")
 REQUIRED_V54_ARTIFACT_KEYS = {
     "artifact_id",
     "artifact_kind",
@@ -227,13 +194,7 @@ REQUIRED_V53_REQUIREMENT_KEYS = {
     "claim_boundary",
     "summary_checks",
 }
-REQUIRED_V58_BLIND_EVAL_KEYS = {
-    "schema_version",
-    "policy",
-    "required_systems",
-    "requirements",
-    "required_artifacts",
-}
+REQUIRED_V58_BLIND_EVAL_KEYS = schema_required("v58_blind_eval.schema.json")
 REQUIRED_V58_REQUIREMENT_KEYS = {
     "requirement_id",
     "required_evidence",
@@ -248,11 +209,7 @@ REQUIRED_V58_ARTIFACT_KEYS = {
 OPTIONAL_V58_ARTIFACT_KEYS = {
     "per_system_min_rows",
 }
-REQUIRED_REVIEW_RETURN_WORKFLOW_KEYS = {
-    "schema_version",
-    "policy",
-    "requirements",
-}
+REQUIRED_REVIEW_RETURN_WORKFLOW_KEYS = schema_required("review_return_workflow.schema.json")
 REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS = {
     "requirement_id",
     "required_evidence",
@@ -261,12 +218,7 @@ REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS = {
     "claim_boundary",
     "summary_checks",
 }
-REQUIRED_V61_ONE_TOKEN_KEYS = {
-    "schema_version",
-    "policy",
-    "milestones",
-    "required_artifacts",
-}
+REQUIRED_V61_ONE_TOKEN_KEYS = schema_required("v61_one_token_path.schema.json")
 REQUIRED_V61_POLICY_KEYS = {
     "ssd_resident_real_model_runtime_claim_ready",
     "real_model_execution_ready",

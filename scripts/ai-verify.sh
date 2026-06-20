@@ -25,6 +25,9 @@ fi
 if [ -f experiments/test_p0_readme_cleanup_negative_controls.sh ]; then
   bash -n experiments/test_p0_readme_cleanup_negative_controls.sh
 fi
+if [ -f experiments/test_p0_schema_validation_negative_controls.sh ]; then
+  bash -n experiments/test_p0_schema_validation_negative_controls.sh
+fi
 if [ -f experiments/test_p0_ready_leakage_negative_controls.sh ]; then
   bash -n experiments/test_p0_ready_leakage_negative_controls.sh
 fi
@@ -111,6 +114,9 @@ if [ -f operations/review_return_workflow.json ]; then
 fi
 if [ -f v61/one_token_path.json ]; then
   python3 -m json.tool v61/one_token_path.json >/dev/null
+fi
+if [ -x tools/validate_json_schemas.py ]; then
+  tools/validate_json_schemas.py >/dev/null
 fi
 
 echo "==> python syntax"
@@ -209,6 +215,9 @@ if [ -x experiments/test_p0_pr2_split_negative_controls.sh ]; then
 fi
 if [ -x experiments/test_p0_readme_cleanup_negative_controls.sh ]; then
   ./experiments/test_p0_readme_cleanup_negative_controls.sh >/dev/null
+fi
+if [ -x experiments/test_p0_schema_validation_negative_controls.sh ]; then
+  ./experiments/test_p0_schema_validation_negative_controls.sh >/dev/null
 fi
 if [ -x experiments/test_p0_ready_leakage_negative_controls.sh ]; then
   ./experiments/test_p0_ready_leakage_negative_controls.sh >/dev/null

@@ -12,7 +12,15 @@
         "ssd_resident_real_model_runtime_claim_ready",
         "real_model_execution_ready",
         "release_ready",
-        "required_before_ssd_resident_runtime_claim"
+        "required_before_ssd_resident_runtime_claim",
+        "required_before_ssd_resident_runtime_claim_count",
+        "passed_before_ssd_resident_runtime_claim_count",
+        "blocked_before_ssd_resident_runtime_claim_count",
+        "required_artifact_count",
+        "present_required_artifact_count",
+        "missing_required_artifact_count",
+        "missing_required_artifact_ids",
+        "blocked_before_ssd_resident_runtime_claim"
       ],
       "properties": {
         "ssd_resident_real_model_runtime_claim_ready": {"type": "boolean"},
@@ -31,6 +39,46 @@
               "one-token-logits-parity"
             ]
           }
+        },
+        "required_before_ssd_resident_runtime_claim_count": {"type": "integer", "minimum": 1},
+        "passed_before_ssd_resident_runtime_claim_count": {"type": "integer", "minimum": 0},
+        "blocked_before_ssd_resident_runtime_claim_count": {"type": "integer", "minimum": 0},
+        "required_artifact_count": {"type": "integer", "minimum": 1},
+        "present_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "mixtral-ssd-tensor-page-read-rows",
+              "tensor-dtype-stat-rows",
+              "tensor-quant-dequant-metric-rows",
+              "torch-matvec-parity-rows",
+              "expert-ffn-forward-parity-rows",
+              "moe-block-forward-parity-rows",
+              "one-token-logits-parity-rows",
+              "sixteen-token-decode-rows",
+              "cold-warm-cache-measurement-rows",
+              "ssd-bytes-miss-tps-rows"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "blocked_before_ssd_resident_runtime_claim": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "actual-mixtral-ssd-tensor-page-read",
+              "actual-tensor-dtype-quant-dequant",
+              "torch-matvec-parity",
+              "real-expert-ffn-forward-parity",
+              "real-moe-block-forward-parity",
+              "one-token-logits-parity"
+            ]
+          },
+          "uniqueItems": true
         }
       },
       "additionalProperties": false

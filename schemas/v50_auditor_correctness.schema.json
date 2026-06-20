@@ -12,6 +12,10 @@
         "summary_ready_claim_present",
         "artifact_replay_ready",
         "auditor_correctness_merge_ready",
+        "required_artifact_count",
+        "present_required_artifact_count",
+        "missing_required_artifact_count",
+        "missing_required_artifact_ids",
         "implicit_public_refresh_allowed",
         "network_required_to_regenerate"
       ],
@@ -19,6 +23,14 @@
         "summary_ready_claim_present": {"type": "boolean"},
         "artifact_replay_ready": {"type": "boolean"},
         "auditor_correctness_merge_ready": {"type": "boolean"},
+        "required_artifact_count": {"type": "integer", "minimum": 1},
+        "present_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_ids": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
         "implicit_public_refresh_allowed": {"type": "boolean"},
         "network_required_to_regenerate": {"type": "boolean"}
       },
