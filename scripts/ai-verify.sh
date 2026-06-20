@@ -28,6 +28,9 @@ fi
 if [ -f experiments/test_p0_schema_validation_negative_controls.sh ]; then
   bash -n experiments/test_p0_schema_validation_negative_controls.sh
 fi
+if [ -f experiments/test_p0_v61ab_computed_readiness_negative_controls.sh ]; then
+  bash -n experiments/test_p0_v61ab_computed_readiness_negative_controls.sh
+fi
 if [ -f experiments/test_p0_ready_leakage_negative_controls.sh ]; then
   bash -n experiments/test_p0_ready_leakage_negative_controls.sh
 fi
@@ -222,6 +225,9 @@ fi
 if [ -x experiments/test_p0_schema_validation_negative_controls.sh ]; then
   ./experiments/test_p0_schema_validation_negative_controls.sh >/dev/null
 fi
+if [ -x experiments/test_p0_v61ab_computed_readiness_negative_controls.sh ]; then
+  ./experiments/test_p0_v61ab_computed_readiness_negative_controls.sh >/dev/null
+fi
 if [ -x experiments/test_p0_ready_leakage_negative_controls.sh ]; then
   ./experiments/test_p0_ready_leakage_negative_controls.sh >/dev/null
 fi
@@ -390,6 +396,11 @@ if [ -x tools/verify_artifact.py ]; then
       tools/verify_artifact.py v61-one-token v61/one_token_path.json \
         --v61aa-summary results/v61aa_hotset_tensor_slice_verifier_summary.csv \
         --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv >/dev/null
+      if [ -d results/v61ab_hotset_tensor_tile_quant_probe/probe_001 ]; then
+        tools/verify_artifact.py v61ab-tile-probe \
+          results/v61ab_hotset_tensor_tile_quant_probe_summary.csv \
+          --run-dir results/v61ab_hotset_tensor_tile_quant_probe/probe_001 >/dev/null
+      fi
     else
       tools/verify_artifact.py v61-one-token v61/one_token_path.json >/dev/null
     fi

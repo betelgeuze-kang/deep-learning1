@@ -3824,6 +3824,225 @@ def verify_v61_one_token_path(
     return errors
 
 
+def _parse_finite_float(value: str, label: str, errors: list[str]) -> float:
+    try:
+        parsed = float(value)
+    except ValueError:
+        errors.append(f"{label}: expected finite numeric value, got {value!r}")
+        return math.nan
+    if not math.isfinite(parsed):
+        errors.append(f"{label}: expected finite numeric value, got {value!r}")
+    return parsed
+
+
+def _summary_expect(summary_path: Path, summary: dict[str, str], field: str, expected: str, errors: list[str]) -> None:
+    actual = summary.get(field)
+    if actual != expected:
+        errors.append(f"{summary_path}: {field} expected {expected}, got {actual}")
+
+
+def _summary_expect_float(
+    summary_path: Path,
+    summary: dict[str, str],
+    field: str,
+    expected: float,
+    errors: list[str],
+    tolerance: float = 1e-9,
+) -> None:
+    actual = _parse_finite_float(summary.get(field, ""), f"{summary_path}: {field}", errors)
+    if math.isfinite(actual) and not math.isclose(actual, expected, rel_tol=tolerance, abs_tol=tolerance):
+        errors.append(f"{summary_path}: {field} expected {expected:.12g}, got {summary.get(field)}")
+
+
+def _manifest_expect(manifest_path: Path, manifest: dict[str, object], field: str, expected: object, errors: list[str]) -> None:
+    actual = manifest.get(field)
+    if actual != expected:
+        errors.append(f"{manifest_path}: {field} expected {expected}, got {actual}")
+
+
+def verify_v61ab_tile_probe(summary_path: Path, run_dir: Path | None = None) -> list[str]:
+    errors: list[str] = []
+    summary = read_first_csv(summary_path)
+    if not summary:
+        return [f"{summary_path}: missing v61ab summary row"]
+    resolved_run_dir = run_dir or summary_path.parent / "v61ab_hotset_tensor_tile_quant_probe" / "probe_001"
+    required_paths = {
+        "tile": resolved_run_dir / "hotset_tensor_tile_probe_rows.csv",
+        "sample": resolved_run_dir / "hotset_tensor_tile_sample_trace_rows.csv",
+        "torch": resolved_run_dir / "hotset_tensor_tile_torch_parity_rows.csv",
+        "expert": resolved_run_dir / "expert_ffn_forward_parity_rows.csv",
+        "metric": resolved_run_dir / "hotset_tensor_tile_quant_metric_rows.csv",
+        "manifest": resolved_run_dir / "v61ab_hotset_tensor_tile_quant_probe_manifest.json",
+    }
+    for label, path in required_paths.items():
+        if not path.is_file() or path.stat().st_size == 0:
+            errors.append(f"{path}: missing non-empty v61ab {label} artifact")
+    if errors:
+        return errors
+
+    tile_rows = read_csv_rows(required_paths["tile"])
+    sample_rows = read_csv_rows(required_paths["sample"])
+    torch_rows = read_csv_rows(required_paths["torch"])
+    expert_rows = read_csv_rows(required_paths["expert"])
+    metric_rows = read_csv_rows(required_paths["metric"])
+    if len(metric_rows) != 1:
+        errors.append(f"{required_paths['metric']}: expected exactly one metric row, got {len(metric_rows)}")
+        return errors
+    metric = metric_rows[0]
+    manifest_path = required_paths["manifest"]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        return [f"{manifest_path}: expected JSON object manifest"]
+
+    tile_count = len(tile_rows)
+    sample_count = len(sample_rows)
+    torch_count = len(torch_rows)
+    expert_count = len(expert_rows)
+    tile_values = 0
+    tile_value_counts: list[int] = []
+    moe_tile_rows = 0
+    embedding_tile_rows = 0
+    finite_baseline_rows = 0
+    finite_q8_rows = 0
+    finite_q4_rows = 0
+    finite_q8_error_rows = 0
+    finite_q4_error_rows = 0
+    q8_errors: list[float] = []
+    q4_errors: list[float] = []
+    for index, row in enumerate(tile_rows, start=1):
+        prefix = f"{required_paths['tile']}: row {index}"
+        try:
+            tile_value_count = int(row.get("tile_bf16_values", ""))
+            tile_values += tile_value_count
+            tile_value_counts.append(tile_value_count)
+        except ValueError:
+            errors.append(f"{prefix}: tile_bf16_values must be an integer")
+        moe_tile_rows += int(row.get("moe_expert_tile") == "1")
+        embedding_tile_rows += int(row.get("embedding_tile") == "1")
+        finite_baseline_rows += int(row.get("baseline_dot_finite") == "1")
+        finite_q8_rows += int(row.get("q8_dot_finite") == "1")
+        finite_q4_rows += int(row.get("q4_dot_finite") == "1")
+        finite_q8_error_rows += int(row.get("q8_error_finite") == "1")
+        finite_q4_error_rows += int(row.get("q4_error_finite") == "1")
+        q8_errors.append(_parse_finite_float(row.get("q8_abs_error", ""), f"{prefix}: q8_abs_error", errors))
+        q4_errors.append(_parse_finite_float(row.get("q4_abs_error", ""), f"{prefix}: q4_abs_error", errors))
+        for field in ["checkpoint_payload_bytes_committed_to_repo", "actual_model_generation_ready", "route_jump_rows"]:
+            if row.get(field) != "0":
+                errors.append(f"{prefix}: {field} must be 0")
+        if row.get("tile_hash_bound_to_remote_page") != "1":
+            errors.append(f"{prefix}: tile_hash_bound_to_remote_page must be 1")
+
+    torch_pass_rows = 0
+    for index, row in enumerate(torch_rows, start=1):
+        prefix = f"{required_paths['torch']}: row {index}"
+        torch_pass_rows += int(row.get("torch_matvec_parity_pass") == "1")
+        for field in ["real_checkpoint_page_bound"]:
+            if row.get(field) != "1":
+                errors.append(f"{prefix}: {field} must be 1")
+        for field in ["checkpoint_payload_bytes_committed_to_repo", "actual_model_generation_ready", "route_jump_rows"]:
+            if row.get(field) != "0":
+                errors.append(f"{prefix}: {field} must be 0")
+
+    expert = expert_rows[0] if expert_rows else {}
+    numeric_ready = int(
+        tile_count > 0
+        and len(tile_value_counts) == tile_count
+        and len(set(tile_value_counts)) == 1
+        and tile_values == tile_count * tile_value_counts[0]
+        and sample_count == tile_count * 3
+        and finite_baseline_rows == tile_count
+        and finite_q8_rows == tile_count
+        and finite_q4_rows == tile_count
+        and finite_q8_error_rows == tile_count
+        and finite_q4_error_rows == tile_count
+        and torch_count == tile_count
+        and torch_pass_rows == tile_count
+    )
+    finite_q8_values = [value for value in q8_errors if math.isfinite(value)]
+    finite_q4_values = [value for value in q4_errors if math.isfinite(value)]
+    q8_mean = math.fsum(finite_q8_values) / len(finite_q8_values) if finite_q8_values else math.nan
+    q4_mean = math.fsum(finite_q4_values) / len(finite_q4_values) if finite_q4_values else math.nan
+    q8_max = max(finite_q8_values) if finite_q8_values else math.nan
+    q4_max = max(finite_q4_values) if finite_q4_values else math.nan
+
+    expected_summary = {
+        "v61ab_hotset_tensor_tile_quant_probe_ready": str(numeric_ready),
+        "model_id": "mistralai/Mixtral-8x22B-v0.1",
+        "tensor_tile_probe_rows": str(tile_count),
+        "moe_tensor_tile_probe_rows": str(moe_tile_rows),
+        "embedding_tensor_tile_probe_rows": str(embedding_tile_rows),
+        "tile_bf16_value_rows": str(tile_values),
+        "tile_sample_trace_rows": str(sample_count),
+        "finite_baseline_dot_rows": str(finite_baseline_rows),
+        "finite_q8_dot_rows": str(finite_q8_rows),
+        "finite_q4_dot_rows": str(finite_q4_rows),
+        "finite_q8_error_rows": str(finite_q8_error_rows),
+        "finite_q4_error_rows": str(finite_q4_error_rows),
+        "torch_matvec_parity_rows": str(torch_count),
+        "torch_matvec_parity_pass_rows": str(torch_pass_rows),
+        "hotset_numeric_tile_probe_ready": str(numeric_ready),
+        "q8_quant_probe_ready": str(numeric_ready),
+        "q4_quant_probe_ready": str(numeric_ready),
+        "torch_matvec_parity_ready": str(numeric_ready),
+        "expert_ffn_parity_rows": str(expert_count),
+        "expert_ffn_parity_contract_ready": expert.get("contract_ready", ""),
+        "expert_ffn_parity_fixture_execution_ready": expert.get("fixture_execution_ready", ""),
+        "expert_ffn_parity_real_model_execution_ready": expert.get("real_model_execution_ready", ""),
+        "expert_ffn_parity_release_ready": expert.get("release_ready", ""),
+        "expert_ffn_parity_status": expert.get("status", ""),
+        "checkpoint_payload_bytes_committed_to_repo": "0",
+        "full_checkpoint_materialization_ready": "0",
+        "full_safetensors_page_hash_binding_ready": "0",
+        "actual_model_generation_ready": "0",
+        "near_frontier_claim_ready": "0",
+        "production_latency_claim_ready": "0",
+        "real_release_package_ready": "0",
+        "route_jump_rows": "0",
+    }
+    for field, expected in expected_summary.items():
+        _summary_expect(summary_path, summary, field, expected, errors)
+    for field, expected in {
+        "q8_abs_error_mean": q8_mean,
+        "q4_abs_error_mean": q4_mean,
+        "q8_abs_error_max": q8_max,
+        "q4_abs_error_max": q4_max,
+    }.items():
+        _summary_expect_float(summary_path, summary, field, expected, errors)
+
+    expected_metric = {
+        "tensor_tile_probe_rows": str(tile_count),
+        "moe_tensor_tile_probe_rows": str(moe_tile_rows),
+        "embedding_tensor_tile_probe_rows": str(embedding_tile_rows),
+        "tile_bf16_value_rows": str(tile_values),
+        "tile_sample_trace_rows": str(sample_count),
+        "finite_baseline_dot_rows": str(finite_baseline_rows),
+        "finite_q8_dot_rows": str(finite_q8_rows),
+        "finite_q4_dot_rows": str(finite_q4_rows),
+        "finite_q8_error_rows": str(finite_q8_error_rows),
+        "finite_q4_error_rows": str(finite_q4_error_rows),
+        "torch_matvec_parity_rows": str(torch_count),
+        "torch_matvec_parity_pass_rows": str(torch_pass_rows),
+        "hotset_numeric_tile_probe_ready": str(numeric_ready),
+        "q8_quant_probe_ready": str(numeric_ready),
+        "q4_quant_probe_ready": str(numeric_ready),
+        "torch_matvec_parity_ready": str(numeric_ready),
+    }
+    for field, expected in expected_metric.items():
+        actual = metric.get(field)
+        if actual != expected:
+            errors.append(f"{required_paths['metric']}: {field} expected {expected}, got {actual}")
+
+    _manifest_expect(manifest_path, manifest, "v61ab_hotset_tensor_tile_quant_probe_ready", numeric_ready, errors)
+    _manifest_expect(manifest_path, manifest, "tensor_tile_probe_rows", tile_count, errors)
+    _manifest_expect(manifest_path, manifest, "tile_bf16_value_rows", tile_values, errors)
+    _manifest_expect(manifest_path, manifest, "torch_matvec_parity_rows", torch_count, errors)
+    _manifest_expect(manifest_path, manifest, "torch_matvec_parity_pass_rows", torch_pass_rows, errors)
+    _manifest_expect(manifest_path, manifest, "torch_matvec_parity_ready", numeric_ready, errors)
+    _manifest_expect(manifest_path, manifest, "actual_model_generation_ready", 0, errors)
+    _manifest_expect(manifest_path, manifest, "checkpoint_payload_bytes_committed_to_repo", 0, errors)
+    return errors
+
+
 def verify_manifest(path: Path, root: Path) -> list[str]:
     errors: list[str] = []
     with path.open(newline="", encoding="utf-8") as handle:
@@ -3910,6 +4129,9 @@ def main() -> int:
     p_v61.add_argument("paths", nargs="+", type=Path)
     p_v61.add_argument("--v61aa-summary", type=Path, default=None)
     p_v61.add_argument("--v61ab-summary", type=Path, default=None)
+    p_v61ab = sub.add_parser("v61ab-tile-probe")
+    p_v61ab.add_argument("summary", type=Path)
+    p_v61ab.add_argument("--run-dir", type=Path, default=None)
     p_manifest = sub.add_parser("manifest")
     p_manifest.add_argument("manifest", type=Path)
     p_manifest.add_argument("--root", type=Path, default=None)
@@ -3990,6 +4212,8 @@ def main() -> int:
     elif args.cmd == "v61-one-token":
         for path in args.paths:
             errors.extend(verify_v61_one_token_path(path, args.v61aa_summary, args.v61ab_summary))
+    elif args.cmd == "v61ab-tile-probe":
+        errors.extend(verify_v61ab_tile_probe(args.summary, args.run_dir))
     elif args.cmd == "manifest":
         root = args.root if args.root is not None else args.manifest.parent
         errors.extend(verify_manifest(args.manifest, root))
