@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/leakage_contract.schema.json",
+  "title": "Retrieval And Model-Visible Leakage Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "forbidden_surfaces", "stage_contracts"],
+  "properties": {
+    "schema_version": {"const": "leakage_contract.v1"},
+    "policy": {
+      "type": "object",
+      "required": ["allowed_surface", "allowed_model_visible_fields", "direct_query_source_binding_forbidden"],
+      "properties": {
+        "allowed_surface": {"const": "natural_language_question_plus_searchable_corpus"},
+        "allowed_model_visible_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["sanitized_question", "opaque_routehint"]
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "direct_query_source_binding_forbidden": {"const": true}
+      },
+      "additionalProperties": false
+    },
+    "forbidden_surfaces": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "required": ["guard_id", "forbidden_surface", "field_names", "evaluator_only_or_absent", "pm_ledger_required"],
+        "properties": {
+          "guard_id": {
+            "type": "string",
+            "enum": [
+              "source-span-id",
+              "source-path",
+              "source-line",
+              "source-file-hash",
+              "query-source-direct-binding",
+              "expected-behavior",
+              "expected-label"
+            ]
+          },
+          "forbidden_surface": {"type": "string"},
+          "field_names": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "audit_type",
+                "blob_sha256",
+                "case_id",
+                "content_sha256",
+                "end_line",
+                "expected_answer",
+                "expected_answer_sha256",
+                "expected_behavior",
+                "expected_citation",
+                "expected_label",
+                "expected_output",
+                "file_path",
+                "file_sha256",
+                "git_blob_sha",
+                "gold_answer",
+                "gold_citation",
+                "gold_label",
+                "line",
+                "line_end",
+                "line_start",
+                "negative_or_abstain",
+                "path",
+                "parsed_line",
+                "parsed_path",
+                "query_id",
+                "query_source_id",
+                "repo_path",
+                "source_binding_id",
+                "source_case_id",
+                "source_file_hash",
+                "source_file_path",
+                "source_file_sha256",
+                "source_git_blob_sha",
+                "source_line",
+                "source_line_end",
+                "source_line_start",
+                "source_path",
+                "source_query_id",
+                "source_row_id",
+                "source_sha256",
+                "source_span_id",
+                "source_span_row_id",
+                "span_id",
+                "span_row_id",
+                "start_line",
+                "target_label"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "evaluator_only_or_absent": {"const": true},
+          "pm_ledger_required": {"const": true}
+        },
+        "additionalProperties": false
+      }
+    },
+    "stage_contracts": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["stage_id", "surface_kind", "summary_path", "allowed_model_visible_fields", "must_equal"],
+        "properties": {
+          "stage_id": {
+            "type": "string",
+            "enum": [
+              "v53aq-sanitized-abgh-real-adapter",
+              "v54c-grounded-generation-guard",
+              "v53ap-source-span-fixture-replay-boundary"
+            ]
+          },
+          "surface_kind": {
+            "type": "string",
+            "enum": ["model_or_retriever", "fixture_or_evaluator_replay", "source_bound_non_model_adapter"]
+          },
+          "summary_path": {
+            "type": "string",
+            "enum": [
+              "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+              "results/v54c_complete_source_grounded_generation_1000_summary.csv",
+              "results/v53ap_complete_source_abgh_same_query_measured_summary.csv"
+            ]
+          },
+          "allowed_model_visible_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["sanitized_question", "opaque_routehint", "none"]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "forbidden_field_summary": {"type": "string"},
+          "must_equal": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {"type": "string"}
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
