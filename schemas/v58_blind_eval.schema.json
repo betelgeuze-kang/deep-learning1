@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/v58_blind_eval.schema.json",
+  "title": "v58 Real Blind Evaluation Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "required_systems", "requirements", "required_artifacts"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "fixture_allowed",
+        "tests_only_merge_condition",
+        "real_execution_ready",
+        "human_blind_review_ready",
+        "inter_rater_rows_ready",
+        "v58_full_blind_eval_ready",
+        "release_ready",
+        "required_real_response_systems",
+        "required_independent_reviewers_per_response",
+        "blind_identity_required_until_adjudication",
+        "response_text_identity_leakage_forbidden",
+        "adjudication_required_for_disagreement",
+        "unseen_repository_split_required",
+        "source_span_exactness_separate_score",
+        "unsupported_abstention_separate_score",
+        "latency_memory_quality_separated"
+      ],
+      "properties": {
+        "fixture_allowed": {"type": "boolean"},
+        "tests_only_merge_condition": {"type": "boolean"},
+        "real_execution_ready": {"type": "boolean"},
+        "human_blind_review_ready": {"type": "boolean"},
+        "inter_rater_rows_ready": {"type": "boolean"},
+        "v58_full_blind_eval_ready": {"type": "boolean"},
+        "release_ready": {"type": "boolean"},
+        "required_real_response_systems": {"type": "array", "items": {"type": "string"}},
+        "required_independent_reviewers_per_response": {"type": "integer", "minimum": 2},
+        "blind_identity_required_until_adjudication": {"type": "boolean"},
+        "response_text_identity_leakage_forbidden": {"type": "boolean"},
+        "adjudication_required_for_disagreement": {"type": "boolean"},
+        "unseen_repository_split_required": {"type": "boolean"},
+        "source_span_exactness_separate_score": {"type": "boolean"},
+        "unsupported_abstention_separate_score": {"type": "boolean"},
+        "latency_memory_quality_separated": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "required_systems": {"type": "array", "items": {"type": "string"}},
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["requirement_id", "required_evidence"],
+        "properties": {
+          "requirement_id": {"type": "string"},
+          "required_evidence": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "required_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "artifact_kind", "validation_command", "required_columns", "min_rows"],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "artifact_kind": {"type": "string"},
+          "validation_command": {"type": "string"},
+          "required_columns": {"type": "array", "items": {"type": "string"}},
+          "min_rows": {"type": "integer", "minimum": 1},
+          "per_system_min_rows": {
+            "type": "object",
+            "required": ["A", "B", "C", "D", "E", "G", "H"],
+            "properties": {
+              "A": {"const": 500},
+              "B": {"const": 500},
+              "C": {"const": 500},
+              "D": {"const": 500},
+              "E": {"const": 500},
+              "G": {"const": 500},
+              "H": {"const": 500}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
