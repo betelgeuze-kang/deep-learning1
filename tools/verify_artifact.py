@@ -373,6 +373,15 @@ REQUIRED_PR2_DE_VERIFICATION_TERMS = {
     "--acceptance-ledger",
     "results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv",
 }
+REQUIRED_PR2_V56_VERIFICATION_TERMS = {
+    "tools/verify_artifact.py v56-replay v56/replay_contract.json",
+    "--summary",
+    "results/v56_ruler_longbench_expanded_contract_summary.csv",
+    "--blocker-ledger",
+    "results/v56_ruler_longbench_expanded_contract/contract_001/v56_seed_dependency_blocker_rows.csv",
+    "--artifact-ledger",
+    "results/v1_0_pm_pr_claim_slice_gate/gate_001/v56_replay_acceptance_evidence_rows.csv",
+}
 REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "tools/verify_artifact.py pr-split pr_slices/pr2.json",
     "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
@@ -2127,6 +2136,16 @@ def verify_pr_split(path: Path) -> list[str]:
             if missing_terms:
                 errors.append(
                     f"{prefix}: D/E baseline verification commands must compare measured-registry exclusion and acceptance blocker ledgers: "
+                    f"{', '.join(sorted(missing_terms))}"
+                )
+        if slice_id == "v56-ruler-longbench-expanded":
+            command_text = "\n".join(str(command) for command in row.get("verification_commands", []))
+            missing_terms = [
+                term for term in REQUIRED_PR2_V56_VERIFICATION_TERMS if term not in command_text
+            ]
+            if missing_terms:
+                errors.append(
+                    f"{prefix}: v56 verification commands must compare replay contract to summary, seed blocker, and acceptance ledgers: "
                     f"{', '.join(sorted(missing_terms))}"
                 )
         boundary = row.get("claim_boundary", {})

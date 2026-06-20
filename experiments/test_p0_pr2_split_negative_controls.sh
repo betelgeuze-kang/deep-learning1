@@ -90,6 +90,12 @@ elif mutation == "de-acceptance-ledger-drop":
         command.replace("--acceptance-ledger", "--missing-acceptance-ledger")
         for command in row["verification_commands"]
     ]
+elif mutation == "v56-blocker-ledger-drop":
+    row = slice_by_id("v56-ruler-longbench-expanded")
+    row["verification_commands"] = [
+        command.replace("--blocker-ledger", "--missing-blocker-ledger")
+        for command in row["verification_commands"]
+    ]
 else:
     raise SystemExit(f"unknown mutation: {mutation}")
 
@@ -151,6 +157,11 @@ expect_fail_with \
 bad_path="$(bad_pr2_json pr2_de_acceptance_ledger_drop_bad de-acceptance-ledger-drop)"
 expect_fail_with \
   "D/E baseline verification commands must compare measured-registry exclusion and acceptance blocker ledgers" \
+  "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_pr2_json pr2_v56_blocker_ledger_drop_bad v56-blocker-ledger-drop)"
+expect_fail_with \
+  "v56 verification commands must compare replay contract to summary, seed blocker, and acceptance ledgers" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 echo "p0 PR #2 split negative controls passed"
