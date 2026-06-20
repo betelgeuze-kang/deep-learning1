@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -23,11 +24,20 @@ SCHEMA_INSTANCE_REGISTRY = {
     "schemas/baseline_admission.schema.json": ["baselines/de_30b70b_real.json"],
     "schemas/v52_adapter_guard.schema.json": ["baselines/v52_adapter_guard.json"],
     "schemas/v50_auditor_correctness.schema.json": ["audits/v50_public_repo_auditor_correctness.json"],
+    "schemas/v56_replay.schema.json": ["v56/replay_contract.json"],
     "schemas/v53_source_benchmark.schema.json": ["benchmarks/v53_source_bound_freeze.json"],
     "schemas/v54_grounded_generation.schema.json": ["v54/grounded_generation_contract.json"],
     "schemas/v58_blind_eval.schema.json": ["v58/blind_eval_real.json"],
     "schemas/review_return_workflow.schema.json": ["operations/review_return_workflow.json"],
     "schemas/v61_one_token_path.schema.json": ["v61/one_token_path.json"],
+}
+
+NON_CONTRACT_JSON_ALLOWLIST = {
+    "opencode.json",
+    "experiments/fixtures/v52x_external_de_bake/D/external_bake_manifest.json",
+    "experiments/fixtures/v52x_external_de_bake/D/model_identity.json",
+    "experiments/fixtures/v52x_external_de_bake/E/external_bake_manifest.json",
+    "experiments/fixtures/v52x_external_de_bake/E/model_identity.json",
 }
 
 
@@ -116,6 +126,38 @@ def validate_contract_metadata(schema_path: Path, schema: object, instance: obje
     return errors
 
 
+def tracked_source_json(root: Path) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "*.json", ":(exclude)results/**", ":(exclude)build/**"],
+            cwd=root,
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return []
+    return sorted(line for line in result.stdout.splitlines() if line)
+
+
+def validate_registry_coverage(root: Path, registry: dict[str, list[str]]) -> list[str]:
+    registered_instances = {
+        instance
+        for instances in registry.values()
+        for instance in instances
+    }
+    errors: list[str] = []
+    for rel_path in tracked_source_json(root):
+        if rel_path.startswith("schemas/"):
+            continue
+        if rel_path in NON_CONTRACT_JSON_ALLOWLIST:
+            continue
+        if rel_path not in registered_instances:
+            errors.append(f"{rel_path}: tracked contract JSON is not registered for schema validation")
+    return errors
+
+
 def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
     errors: list[str] = []
     schema = load_json(schema_path)
@@ -157,6 +199,8 @@ def main() -> int:
         if args.schema_instance
         else SCHEMA_INSTANCE_REGISTRY
     )
+    if not args.schema_instance:
+        errors.extend(validate_registry_coverage(root, registry))
     for schema_rel, instance_rels in registry.items():
         schema_path = root / schema_rel
         if not schema_path.is_file():

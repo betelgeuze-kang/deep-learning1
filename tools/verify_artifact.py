@@ -149,12 +149,7 @@ REQUIRED_V50_BOUNDARY_KEYS = {
     "allowed",
     "blocked",
 }
-REQUIRED_V56_REPLAY_KEYS = {
-    "schema_version",
-    "policy",
-    "replay_artifacts",
-    "seed_dependency",
-}
+REQUIRED_V56_REPLAY_KEYS = schema_required("v56_replay.schema.json")
 REQUIRED_V56_REPLAY_POLICY_KEYS = {
     "replay_artifact_ready",
     "v56_contract_ready",

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/v56_replay.schema.json",
+  "title": "v56 Replay Contract",
+  "type": "object",
+  "required": ["schema_version", "policy", "replay_artifacts", "seed_dependency"],
+  "properties": {
+    "schema_version": {"const": "v56_replay_contract.v1"},
+    "policy": {
+      "type": "object",
+      "required": [
+        "replay_artifact_ready",
+        "v56_contract_ready",
+        "v56b_scale_ready",
+        "real_external_benchmark_verified",
+        "real_release_package_ready",
+        "required_replay_artifact_count",
+        "ready_replay_artifact_count",
+        "blocked_replay_artifact_count"
+      ],
+      "properties": {
+        "replay_artifact_ready": {"type": "boolean"},
+        "v56_contract_ready": {"type": "boolean"},
+        "v56b_scale_ready": {"type": "boolean"},
+        "real_external_benchmark_verified": {"type": "boolean"},
+        "real_release_package_ready": {"type": "boolean"},
+        "required_replay_artifact_count": {"type": "integer", "minimum": 1},
+        "ready_replay_artifact_count": {"type": "integer", "minimum": 0},
+        "blocked_replay_artifact_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "replay_artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "artifact_path_or_env",
+          "artifact_kind",
+          "validation_command",
+          "claim_boundary"
+        ],
+        "properties": {
+          "artifact_id": {"type": "string"},
+          "artifact_path_or_env": {"type": "string"},
+          "artifact_kind": {"type": "string", "enum": ["summary-csv", "artifact-directory"]},
+          "validation_command": {"type": "string"},
+          "claim_boundary": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "seed_dependency": {
+      "type": "object",
+      "required": [
+        "blocker_ready",
+        "required_seed_artifact_count",
+        "missing_seed_artifact_count",
+        "missing_v49_seed_artifact_count",
+        "missing_v45_seed_artifact_count",
+        "implicit_seed_rebuild_allowed",
+        "seed_rebuild_approval_required",
+        "network_or_download_approval_required",
+        "missing_seed_artifact_paths"
+      ],
+      "properties": {
+        "blocker_ready": {"type": "boolean"},
+        "required_seed_artifact_count": {"type": "integer", "minimum": 1},
+        "missing_seed_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_v49_seed_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_v45_seed_artifact_count": {"type": "integer", "minimum": 0},
+        "implicit_seed_rebuild_allowed": {"type": "boolean"},
+        "seed_rebuild_approval_required": {"type": "boolean"},
+        "network_or_download_approval_required": {"type": "boolean"},
+        "missing_seed_artifact_paths": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -73,6 +73,9 @@ fi
 if [ -f schemas/v50_auditor_correctness.schema.json ]; then
   python3 -m json.tool schemas/v50_auditor_correctness.schema.json >/dev/null
 fi
+if [ -f schemas/v56_replay.schema.json ]; then
+  python3 -m json.tool schemas/v56_replay.schema.json >/dev/null
+fi
 if [ -f schemas/v53_source_benchmark.schema.json ]; then
   python3 -m json.tool schemas/v53_source_benchmark.schema.json >/dev/null
 fi

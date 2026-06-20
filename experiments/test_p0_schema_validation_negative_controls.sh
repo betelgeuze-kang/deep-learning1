@@ -79,6 +79,22 @@ expect_fail_with \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/v61_schema_contract_drift.schema.json" "$ROOT_DIR/v61/one_token_path.json"
 
+cp "$ROOT_DIR/tools/validate_json_schemas.py" "$TMP_DIR/validate_json_schemas_missing_v56.py"
+python3 - "$TMP_DIR/validate_json_schemas_missing_v56.py" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+line = '    "schemas/v56_replay.schema.json": ["v56/replay_contract.json"],\n'
+if line not in text:
+    raise SystemExit("v56 registry line not found")
+path.write_text(text.replace(line, ""), encoding="utf-8")
+PY
+expect_fail_with \
+  "v56/replay_contract.json: tracked contract JSON is not registered for schema validation" \
+  python3 "$TMP_DIR/validate_json_schemas_missing_v56.py" --root "$ROOT_DIR"
+
 cp "$ROOT_DIR/audits/v50_public_repo_auditor_correctness.json" "$TMP_DIR/v50_extra_policy.json"
 python3 - "$TMP_DIR/v50_extra_policy.json" <<'PY'
 import json
