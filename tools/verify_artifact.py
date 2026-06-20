@@ -655,125 +655,41 @@ DEFAULT_V53_SUMMARY_PATHS = {
     "v53ap": Path("results/v53ap_complete_source_abgh_same_query_measured_summary.csv"),
     "v53aq": Path("results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv"),
 }
+EXPECTED_V54_POLICY_STATIC = schema_contract_dict(
+    "v54_grounded_generation.schema.json",
+    "expected_policy_static",
+)
+EXPECTED_V54_ARTIFACTS = schema_contract_list(
+    "v54_grounded_generation.schema.json",
+    "expected_required_artifacts",
+)
 EXPECTED_V54_ARTIFACT_IDS = [
-    "answer-rows",
-    "citation-rows",
-    "unsupported-claim-rows",
-    "abstain-rows",
-    "generator-resource-rows",
-    "wrong-answer-guard-rows",
-    "generator-input-rows",
-    "compact-routehint-rows",
-    "sha256-manifest",
-    "sha256sums",
+    str(row.get("artifact_id", ""))
+    for row in EXPECTED_V54_ARTIFACTS
+    if isinstance(row, dict)
 ]
+EXPECTED_V54_ARTIFACTS_BY_ID = {
+    str(row.get("artifact_id", "")): row
+    for row in EXPECTED_V54_ARTIFACTS
+    if isinstance(row, dict)
+}
 EXPECTED_V54_ARTIFACT_COLUMNS = {
-    "answer-rows": [
-        "answer_id", "generation_id", "query_id", "owner_repo", "audit_type",
-        "expected_behavior", "generated_answer", "generated_answer_sha256",
-        "expected_answer_sha256", "answer_source", "generated_from_source_span",
-        "abstained", "source_span_id", "source_v53ap_adapter_trace_id",
-        "source_v53ap_evaluator_row_id", "citation_id", "answer_correct",
-        "citation_correct", "wrong_answer",
-    ],
-    "citation-rows": [
-        "citation_id", "generation_id", "answer_id", "query_id", "owner_repo",
-        "path", "line_start", "line_end", "source_span_id",
-        "source_file_sha256", "citation_text_sha256", "citation_correct",
-        "source_v53ap_evaluator_row_id",
-    ],
-    "unsupported-claim-rows": [
-        "generation_id", "query_id", "audit_type", "unsupported_claim_type",
-        "source_span_id", "expected_output",
-    ],
-    "abstain-rows": [
-        "generation_id", "query_id", "audit_type", "source_span_id",
-        "abstain_expected", "abstained", "abstain_correct",
-    ],
-    "generator-resource-rows": [
-        "generator_resource_row_id", "generation_id", "query_id",
-        "generator_id", "latency_ms", "compact_routehint_bytes",
-        "output_bytes", "external_model_used", "external_network_used",
-        "answer_source", "generated_from_source_span",
-        "source_v53ap_adapter_trace_id",
-        "source_v53ap_adapter_trace_provenance",
-        "source_v53ap_evaluator_row_id",
-        "source_v53ap_evaluator_contract_id",
-        "source_v53ap_evaluator_provenance",
-        "source_v53ap_answer_eval_separate",
-        "source_v53ap_citation_eval_separate",
-        "source_v53ap_resource_eval_separate",
-        "source_v53ap_evaluator_resource_row_bound",
-        "attention_blocks", "transformer_blocks", "raw_prompt_context_bytes",
-        "run_started_at_utc",
-    ],
-    "wrong-answer-guard-rows": [
-        "wrong_answer_guard_id", "generation_id", "query_id",
-        "expected_answer_sha256", "generated_answer_sha256",
-        "answer_correct", "citation_correct", "abstain_correct",
-        "source_v53ap_evaluator_row_id", "source_v53ap_answer_eval_separate",
-        "source_v53ap_citation_eval_separate",
-        "source_v53ap_resource_eval_separate",
-        "source_v53ap_evaluator_resource_row_bound", "wrong_answer",
-        "guard_status",
-    ],
-    "generator-input-rows": [
-        "generation_id", "query_id_evaluator_only", "generator_id",
-        "compact_routehint_sha256", "compact_routehint_allowed_key_set",
-        "compact_routehint_forbidden_alias_used", "model_visible_input_fields",
-        "sanitized_question", "sanitized_question_sha256",
-        "model_visible_query_id_used", "model_visible_source_span_id_used",
-        "model_visible_source_path_used", "model_visible_source_line_used",
-        "model_visible_source_file_hash_used",
-        "model_visible_expected_behavior_used",
-        "model_visible_expected_label_used",
-        "compact_routehint_contains_source_locator",
-        "source_span_id_evaluator_only", "source_v53ap_adapter_trace_id",
-        "source_v53ap_adapter_trace_type",
-        "source_v53ap_adapter_trace_provenance",
-        "source_v53ap_evaluator_row_id",
-        "source_v53ap_evaluator_contract_id",
-        "source_v53ap_evaluator_provenance",
-        "source_v53ap_answer_eval_separate",
-        "source_v53ap_citation_eval_separate",
-        "source_v53ap_resource_eval_separate",
-        "source_v53ap_evaluator_resource_row_bound",
-        "attention_blocks", "transformer_blocks",
-        "raw_prompt_context_appended", "raw_prompt_context_bytes",
-        "retrieved_text_in_prompt",
-        "deterministic_source_span_generation_fixture",
-        "real_model_generation_ready",
-    ],
-    "compact-routehint-rows": [
-        "routehint_id", "generation_id", "query_id_evaluator_only",
-        "source_span_id_evaluator_only", "compact_routehint_sha256",
-        "compact_routehint_bytes", "compact_routehint_allowed_key_set",
-        "compact_routehint_forbidden_alias_used", "raw_context_appended",
-        "model_visible_routehint", "model_visible_input_fields",
-        "model_visible_query_id_used", "model_visible_source_span_id_used",
-        "model_visible_source_path_used", "model_visible_source_line_used",
-        "model_visible_source_file_hash_used",
-        "model_visible_expected_behavior_used",
-        "model_visible_expected_label_used", "contains_source_locator",
-        "source_v53ap_adapter_trace_id", "source_v53ap_adapter_system_id",
-        "source_v53ap_evaluator_row_id",
-        "source_v53ap_evaluator_contract_id", "citation_handle",
-    ],
-    "sha256-manifest": ["path", "sha256", "bytes"],
-    "sha256sums": [],
+    artifact_id: list(row.get("required_columns", []))
+    for artifact_id, row in EXPECTED_V54_ARTIFACTS_BY_ID.items()
 }
 EXPECTED_V54_MIN_ROWS = {
-    "answer-rows": 1000,
-    "citation-rows": 1000,
-    "unsupported-claim-rows": 160,
-    "abstain-rows": 160,
-    "generator-resource-rows": 1000,
-    "wrong-answer-guard-rows": 1000,
-    "generator-input-rows": 1000,
-    "compact-routehint-rows": 1000,
-    "sha256-manifest": 10,
-    "sha256sums": 1,
+    artifact_id: row.get("min_rows")
+    for artifact_id, row in EXPECTED_V54_ARTIFACTS_BY_ID.items()
 }
+EXPECTED_V54_PM_RECOMMENDED_ARTIFACT_IDS = {
+    artifact_id
+    for artifact_id, row in EXPECTED_V54_ARTIFACTS_BY_ID.items()
+    if row.get("pm_recommended_output") is True
+}
+EXPECTED_V54_SUMMARY = schema_contract_dict(
+    "v54_grounded_generation.schema.json",
+    "expected_summary_when_supplied",
+)
 EXPECTED_V50_POLICY_STATIC = schema_contract_dict(
     "v50_auditor_correctness.schema.json",
     "expected_policy_static",
@@ -2396,20 +2312,15 @@ def verify_v54_grounded_generation(
     if data["schema_version"] != "v54_grounded_generation.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
-    if policy.get("generation_contract_ready") is not True:
-        errors.append(f"{path}: generation_contract_ready must be true")
-    for field in [
-        "real_model_generation_ready",
-        "human_review_ready",
-        "public_comparison_claim_ready",
-        "release_ready",
-    ]:
-        if policy.get(field) is not False:
-            errors.append(f"{path}: {field} must be false")
-    if policy.get("raw_prompt_context_allowed") is not False:
-        errors.append(f"{path}: raw_prompt_context_allowed must be false")
-    if policy.get("allowed_model_visible_fields") != ["sanitized_question", "opaque_routehint"]:
-        errors.append(f"{path}: allowed_model_visible_fields must be sanitized_question, opaque_routehint")
+    policy_messages = {
+        "generation_contract_ready": "generation_contract_ready must be true",
+        "raw_prompt_context_allowed": "raw_prompt_context_allowed must be false",
+        "allowed_model_visible_fields": "allowed_model_visible_fields must be sanitized_question, opaque_routehint",
+    }
+    for field, expected in EXPECTED_V54_POLICY_STATIC.items():
+        if policy.get(field) != expected:
+            message = policy_messages.get(field, f"{field} must be {str(expected).lower()}")
+            errors.append(f"{path}: {message}")
 
     artifacts = data["required_artifacts"]
     if not isinstance(artifacts, list) or not artifacts:
@@ -2429,7 +2340,11 @@ def verify_v54_grounded_generation(
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_artifact))}")
         artifact_id = row.get("artifact_id", "")
         artifact_kind = row.get("artifact_kind", "")
-        if artifact_kind not in {"csv", "text"}:
+        expected_artifact = EXPECTED_V54_ARTIFACTS_BY_ID.get(artifact_id, {})
+        expected_kind = expected_artifact.get("artifact_kind")
+        if expected_kind is not None and artifact_kind != expected_kind:
+            errors.append(f"{prefix}: artifact_kind expected {expected_kind}, got {artifact_kind}")
+        elif artifact_kind not in {"csv", "text"}:
             errors.append(f"{prefix}: artifact_kind must be csv or text")
         required_columns = row.get("required_columns", [])
         expected_columns = EXPECTED_V54_ARTIFACT_COLUMNS.get(artifact_id)
@@ -2443,20 +2358,21 @@ def verify_v54_grounded_generation(
             errors.append(f"{prefix}: min_rows must be a positive integer")
         elif expected_min_rows is not None and min_rows != expected_min_rows:
             errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
-        if row.get("pm_recommended_output") is not True and artifact_id in {
-            "answer-rows",
-            "citation-rows",
-            "unsupported-claim-rows",
-            "abstain-rows",
-            "generator-resource-rows",
-            "wrong-answer-guard-rows",
-            "sha256sums",
-        }:
+        expected_pm_recommended = expected_artifact.get("pm_recommended_output")
+        if row.get("pm_recommended_output") is not True and artifact_id in EXPECTED_V54_PM_RECOMMENDED_ARTIFACT_IDS:
             errors.append(f"{prefix}: PM recommended v54 outputs must set pm_recommended_output=true")
+        elif expected_pm_recommended is not None and row.get("pm_recommended_output") is not expected_pm_recommended:
+            errors.append(f"{prefix}: pm_recommended_output expected {expected_pm_recommended}, got {row.get('pm_recommended_output')}")
+        expected_raw_prompt_forbidden = expected_artifact.get("raw_prompt_context_forbidden")
         if row.get("raw_prompt_context_forbidden") is not True:
             errors.append(f"{prefix}: raw_prompt_context_forbidden must be true")
+        elif expected_raw_prompt_forbidden is not None and row.get("raw_prompt_context_forbidden") is not expected_raw_prompt_forbidden:
+            errors.append(f"{prefix}: raw_prompt_context_forbidden expected {expected_raw_prompt_forbidden}, got {row.get('raw_prompt_context_forbidden')}")
+        expected_model_leakage_forbidden = expected_artifact.get("model_visible_leakage_forbidden")
         if row.get("model_visible_leakage_forbidden") is not True:
             errors.append(f"{prefix}: model_visible_leakage_forbidden must be true")
+        elif expected_model_leakage_forbidden is not None and row.get("model_visible_leakage_forbidden") is not expected_model_leakage_forbidden:
+            errors.append(f"{prefix}: model_visible_leakage_forbidden expected {expected_model_leakage_forbidden}, got {row.get('model_visible_leakage_forbidden')}")
         artifact_path = Path(row.get("path", ""))
         if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
             errors.append(f"{prefix}: missing or empty artifact path {artifact_path}")
@@ -2515,32 +2431,7 @@ def verify_v54_grounded_generation(
 
     if summary_path is not None:
         summary = read_first_csv(summary_path)
-        expected_summary = {
-            "v54c_complete_source_grounded_generation_1000_ready": "1",
-            "generation_rows": "1000",
-            "answer_rows": "1000",
-            "citation_rows": "1000",
-            "unsupported_claim_rows": "160",
-            "abstain_rows": "160",
-            "generator_resource_rows": "1000",
-            "wrong_answer_guard_rows": "1000",
-            "grounded_generation_output_contract_pm_required_rows": "7",
-            "grounded_generation_output_contract_pm_required_ready_rows": "7",
-            "sha256sums_pm_recommended_csv_ready": "1",
-            "v53ap_answer_eval_separate_rows": "1000",
-            "v53ap_citation_eval_separate_rows": "1000",
-            "v53ap_resource_eval_separate_rows": "1000",
-            "raw_prompt_context_appended_rows": "0",
-            "model_visible_leakage_guard_ready": "1",
-            "model_visible_forbidden_field_used_rows": "0",
-            "model_visible_source_locator_rows": "0",
-            "compact_routehint_forbidden_alias_rows": "0",
-            "deterministic_source_span_generation_fixture_ready": "1",
-            "real_model_generation_ready": "0",
-            "human_review_ready": "0",
-            "real_release_package_ready": "0",
-        }
-        for field, expected in expected_summary.items():
+        for field, expected in EXPECTED_V54_SUMMARY.items():
             if summary.get(field) != expected:
                 errors.append(f"{summary_path}: {field} expected {expected}, got {summary.get(field)}")
     return errors
