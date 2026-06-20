@@ -15,6 +15,7 @@
 
 #include "backend/RouteQualityBackend.hpp"
 #include "v02_pre/EnergyCoreV02.hpp"
+#include "v02_pre/RouteCoreV02.hpp"
 
 namespace dle {
 
@@ -1384,47 +1385,43 @@ bool GraphV02::pair_proposals_enabled() const {
 }
 
 bool GraphV02::routing_enabled() const {
-    return params_.K_jump > 0 && params_.routing_source != "none" &&
-           params_.route_mode != "off" && params_.route_mode != "hint-oracle" &&
-           params_.route_mode != "hint-parsed" && params_.route_mode != "hint-kv-exact" &&
-           params_.route_mode != "hint-kv-hash";
+    return RouteCoreV02::routing_enabled(params_.route());
 }
 
 bool GraphV02::jump_neighbors_active() const {
-    return routing_enabled() && params_.route_mode == "jump-neighbors";
+    return RouteCoreV02::jump_neighbors_active(params_.route());
 }
 
 bool GraphV02::route_hint_oracle_active() const {
-    return params_.route_mode == "hint-oracle" && params_.lambda_route > 0.0f;
+    return RouteCoreV02::route_hint_oracle_active(params_.route());
 }
 
 bool GraphV02::route_hint_parsed_active() const {
-    return params_.route_mode == "hint-parsed" && params_.lambda_route > 0.0f;
+    return RouteCoreV02::route_hint_parsed_active(params_.route());
 }
 
 bool GraphV02::route_hint_kv_exact_active() const {
-    return params_.route_mode == "hint-kv-exact" && params_.lambda_route > 0.0f;
+    return RouteCoreV02::route_hint_kv_exact_active(params_.route());
 }
 
 bool GraphV02::route_hint_kv_hash_active() const {
-    return params_.route_mode == "hint-kv-hash" && params_.lambda_route > 0.0f;
+    return RouteCoreV02::route_hint_kv_hash_active(params_.route());
 }
 
 bool GraphV02::joint_code_key_hash_active() const {
-    return route_hint_kv_hash_active() && params_.route_hash_source == "joint-code-key";
+    return RouteCoreV02::joint_code_key_hash_active(params_.route());
 }
 
 bool GraphV02::route_code_key_hash_active() const {
-    return route_hint_kv_hash_active() && params_.route_hash_source == "route-code-key";
+    return RouteCoreV02::route_code_key_hash_active(params_.route());
 }
 
 bool GraphV02::learned_code_key_hash_active() const {
-    return joint_code_key_hash_active() || route_code_key_hash_active();
+    return RouteCoreV02::learned_code_key_hash_active(params_.route());
 }
 
 bool GraphV02::route_hint_active() const {
-    return route_hint_oracle_active() || route_hint_parsed_active() ||
-           route_hint_kv_exact_active() || route_hint_kv_hash_active();
+    return RouteCoreV02::route_hint_active(params_.route());
 }
 
 bool GraphV02::route_hint_value_for_node(int index, std::uint8_t& out_value) const {
