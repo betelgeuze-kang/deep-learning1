@@ -65,10 +65,26 @@ def validate_contract_metadata(schema_path: Path, schema: object, instance: obje
     if not isinstance(contract, dict):
         return [f"{schema_path}: x-contract must be an object"]
 
+    required_contract_keys = {
+        "artifact_contracts",
+        "artifact_value_checks",
+        "blocked_runtime_forbidden_ready_fields",
+        "current_status_by_milestone",
+        "milestone_order",
+        "real_model_execution_pass_milestones",
+        "required_before_runtime_claim",
+    }
+    missing_contract_keys = required_contract_keys - set(contract)
+    if missing_contract_keys:
+        errors.append(f"{schema_path}: x-contract missing {', '.join(sorted(missing_contract_keys))}")
+
     milestone_order = contract.get("milestone_order", [])
     status_by_milestone = contract.get("current_status_by_milestone", {})
     required_before_runtime = contract.get("required_before_runtime_claim", [])
     artifact_contracts = contract.get("artifact_contracts", [])
+    real_model_execution_pass_milestones = contract.get("real_model_execution_pass_milestones", [])
+    blocked_runtime_forbidden_ready_fields = contract.get("blocked_runtime_forbidden_ready_fields", [])
+    artifact_value_checks = contract.get("artifact_value_checks", {})
     if not isinstance(milestone_order, list) or not milestone_order or len(set(milestone_order)) != len(milestone_order):
         errors.append(f"{schema_path}: x-contract.milestone_order must be a non-empty unique list")
     if not isinstance(status_by_milestone, dict) or set(status_by_milestone) != set(milestone_order):
@@ -101,6 +117,38 @@ def validate_contract_metadata(schema_path: Path, schema: object, instance: obje
         elif len(set(required_columns)) != len(required_columns):
             errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] required_columns values must be unique")
         artifact_by_id[row.get("artifact_id", "")] = row
+
+    if real_model_execution_pass_milestones:
+        if not isinstance(real_model_execution_pass_milestones, list) or len(set(real_model_execution_pass_milestones)) != len(real_model_execution_pass_milestones):
+            errors.append(f"{schema_path}: x-contract.real_model_execution_pass_milestones must be a unique list")
+        elif not set(real_model_execution_pass_milestones).issubset(set(milestone_order)):
+            errors.append(f"{schema_path}: x-contract.real_model_execution_pass_milestones must reference milestone_order")
+    if blocked_runtime_forbidden_ready_fields:
+        if (
+            not isinstance(blocked_runtime_forbidden_ready_fields, list)
+            or not blocked_runtime_forbidden_ready_fields
+            or any(not isinstance(field, str) or not field for field in blocked_runtime_forbidden_ready_fields)
+            or len(set(blocked_runtime_forbidden_ready_fields)) != len(blocked_runtime_forbidden_ready_fields)
+        ):
+            errors.append(f"{schema_path}: x-contract.blocked_runtime_forbidden_ready_fields must be a non-empty unique string list")
+    if artifact_value_checks:
+        if not isinstance(artifact_value_checks, dict):
+            errors.append(f"{schema_path}: x-contract.artifact_value_checks must be an object")
+        else:
+            for artifact_id, checks in artifact_value_checks.items():
+                contract_row = artifact_by_id.get(artifact_id)
+                if contract_row is None:
+                    errors.append(f"{schema_path}: x-contract.artifact_value_checks.{artifact_id} must reference artifact_contracts")
+                    continue
+                if not isinstance(checks, dict) or not checks:
+                    errors.append(f"{schema_path}: x-contract.artifact_value_checks.{artifact_id} must be a non-empty object")
+                    continue
+                required_columns = set(contract_row.get("required_columns", []))
+                for field, expected in checks.items():
+                    if field not in required_columns:
+                        errors.append(f"{schema_path}: x-contract.artifact_value_checks.{artifact_id}.{field} must reference required_columns")
+                    if not isinstance(expected, str):
+                        errors.append(f"{schema_path}: x-contract.artifact_value_checks.{artifact_id}.{field} expected value must be a string")
 
     milestones = instance.get("milestones", [])
     milestone_ids = [row.get("milestone_id", "") for row in milestones if isinstance(row, dict)]

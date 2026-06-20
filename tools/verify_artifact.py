@@ -1572,65 +1572,11 @@ EXPECTED_V61_ARTIFACT_MIN_ROWS = {
     for artifact_id, row in V61_ARTIFACT_CONTRACTS.items()
 }
 EXPECTED_V61_ARTIFACT_VALUE_CHECKS = {
-    "mixtral-ssd-tensor-page-read-rows": {
-        "model_id": "mistralai/Mixtral-8x22B-v0.1",
-        "dtype": "BF16",
-        "remote_hash_bound": "1",
-        "checkpoint_payload_bytes_committed_to_repo": "0",
-        "route_jump_rows": "0",
-    },
-    "tensor-dtype-stat-rows": {
-        "model_id": "mistralai/Mixtral-8x22B-v0.1",
-        "dtype": "BF16",
-        "segment_hash_bound_to_remote_page": "1",
-        "direct_read_hash_match": "1",
-        "sampled_nan_values": "0",
-        "sampled_inf_values": "0",
-        "bf16_tensor_slice_stats_ready": "1",
-        "checkpoint_payload_bytes_committed_to_repo": "0",
-        "actual_model_generation_ready": "0",
-        "route_jump_rows": "0",
-    },
-    "torch-matvec-parity-rows": {
-        "model_id": "mistralai/Mixtral-8x22B-v0.1",
-        "dtype_source": "BF16",
-        "torch_matvec_parity_pass": "1",
-        "real_checkpoint_page_bound": "1",
-        "checkpoint_payload_bytes_committed_to_repo": "0",
-        "actual_model_generation_ready": "0",
-        "route_jump_rows": "0",
-    },
-    "tensor-quant-dequant-metric-rows": {
-        "hotset_numeric_tile_probe_ready": "1",
-        "q8_quant_probe_ready": "1",
-        "q4_quant_probe_ready": "1",
-        "torch_matvec_parity_ready": "1",
-        "expert_ffn_parity_real_model_execution_ready": "0",
-        "checkpoint_payload_bytes_committed_to_repo": "0",
-        "actual_model_generation_ready": "0",
-        "real_release_package_ready": "0",
-        "route_jump_rows": "0",
-    },
+    artifact_id: dict(checks)
+    for artifact_id, checks in V61_SCHEMA_CONTRACT["artifact_value_checks"].items()
 }
-V61_REAL_MODEL_EXECUTION_PASS_MILESTONES = {
-    "real-expert-ffn-forward-parity",
-    "real-moe-block-forward-parity",
-    "one-token-logits-parity",
-}
-V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS = {
-    "actual_model_generation_ready",
-    "full_checkpoint_materialization_ready",
-    "full_safetensors_page_hash_binding_ready",
-    "heldout_metric_ready",
-    "human_review_ready",
-    "independent_reproduction_ready",
-    "local_checkpoint_root_supplied",
-    "near_frontier_claim_ready",
-    "production_latency_claim_ready",
-    "real_model_execution_ready",
-    "real_release_package_ready",
-    "release_ready",
-}
+V61_REAL_MODEL_EXECUTION_PASS_MILESTONES = set(V61_SCHEMA_CONTRACT["real_model_execution_pass_milestones"])
+V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS = set(V61_SCHEMA_CONTRACT["blocked_runtime_forbidden_ready_fields"])
 
 
 def sha256(path: Path) -> str:
