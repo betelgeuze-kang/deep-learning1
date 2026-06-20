@@ -77,6 +77,21 @@ def schema_expected_rows_by_replacement(schema_name: str) -> dict[str, dict[str,
     return expected
 
 
+def schema_expected_stage_contracts_by_id(schema_name: str) -> dict[str, dict[str, object]]:
+    contract = schema_contract(schema_name)
+    stages = contract.get("expected_stage_contracts", [])
+    if not isinstance(stages, list):
+        return {}
+    expected: dict[str, dict[str, object]] = {}
+    for stage in stages:
+        if not isinstance(stage, dict):
+            continue
+        stage_id = stage.get("stage_id")
+        if isinstance(stage_id, str) and stage_id:
+            expected[stage_id] = dict(stage)
+    return expected
+
+
 REQUIRED_PIPELINE_KEYS = schema_required("pipeline.schema.json")
 REQUIRED_STAGE_KEYS = schema_required_at("pipeline.schema.json", "properties", "stages", "items")
 REQUIRED_PR_SPLIT_KEYS = schema_required("pr_split.schema.json")
@@ -363,50 +378,7 @@ EXPECTED_LEAKAGE_GUARD_IDS = schema_enum_at("leakage_contract.schema.json", "pro
 FORBIDDEN_MODEL_VISIBLE_FIELDS = set(schema_enum_at("leakage_contract.schema.json", "properties", "forbidden_surfaces", "items", "properties", "field_names", "items"))
 ALLOWED_MODEL_VISIBLE_FIELDS = set(schema_enum_at("leakage_contract.schema.json", "properties", "policy", "properties", "allowed_model_visible_fields", "items"))
 EXPECTED_LEAKAGE_STAGE_ORDER = schema_enum_at("leakage_contract.schema.json", "properties", "stage_contracts", "items", "properties", "stage_id")
-EXPECTED_LEAKAGE_STAGE_CONTRACTS = {
-    "v53aq-sanitized-abgh-real-adapter": {
-        "surface_kind": "model_or_retriever",
-        "summary_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
-        "allowed_model_visible_fields": ["sanitized_question"],
-        "forbidden_field_summary": "selection_forbidden_fields",
-        "must_equal": {
-            "selection_question_text_only": "1",
-            "selection_sanitized_question_only": "1",
-            "source_locator_in_question_removed_rows": "4000",
-            "selection_allowed_fields": "sanitized_question",
-            "selection_oracle_field_used": "0",
-            "source_span_oracle_selection_used": "0",
-            "expected_answer_oracle_replay": "0",
-            "deterministic_source_span_adapter_execution": "0",
-        },
-    },
-    "v54c-grounded-generation-guard": {
-        "surface_kind": "model_or_retriever",
-        "summary_path": "results/v54c_complete_source_grounded_generation_1000_summary.csv",
-        "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
-        "must_equal": {
-            "model_visible_leakage_guard_ready": "1",
-            "model_visible_input_fields": "sanitized_question,opaque_routehint",
-            "model_visible_forbidden_field_used_rows": "0",
-            "model_visible_source_locator_rows": "0",
-            "compact_routehint_forbidden_alias_rows": "0",
-            "raw_prompt_context_appended_rows": "0",
-            "real_model_generation_ready": "0",
-        },
-    },
-    "v53ap-source-span-fixture-replay-boundary": {
-        "surface_kind": "source_bound_non_model_adapter",
-        "summary_path": "results/v53ap_complete_source_abgh_same_query_measured_summary.csv",
-        "allowed_model_visible_fields": ["none"],
-        "must_equal": {
-            "expected_answer_oracle_replay": "0",
-            "deterministic_source_span_adapter_execution": "1",
-            "actual_adapter_execution_ready": "1",
-            "real_system_performance_claim_ready": "0",
-            "public_comparison_claim_ready": "0",
-        },
-    },
-}
+EXPECTED_LEAKAGE_STAGE_CONTRACTS = schema_expected_stage_contracts_by_id("leakage_contract.schema.json")
 REQUIRED_DE_REAL_EVIDENCE_FIELDS = {
     "model_repository_exact_revision",
     "quantization",

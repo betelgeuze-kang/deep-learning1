@@ -282,6 +282,108 @@ def validate_typed_readiness_contract_metadata(
     return errors
 
 
+def validate_leakage_contract_metadata(
+    schema_path: Path,
+    schema: object,
+    instance: object,
+) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        return errors
+    if instance.get("schema_version") != "leakage_contract.v1":
+        return errors
+
+    stage_schema = (
+        schema.get("properties", {})
+        .get("stage_contracts", {})
+        .get("items", {})
+    )
+    if not isinstance(stage_schema, dict):
+        errors.append(f"{schema_path}: leakage stage_contracts schema must be an object")
+        return errors
+    required_stage_keys = stage_schema.get("required", [])
+    if not isinstance(required_stage_keys, list) or not required_stage_keys:
+        errors.append(f"{schema_path}: leakage stage_contracts schema must declare required keys")
+        return errors
+    optional_stage_keys = set(stage_schema.get("properties", {})) - set(required_stage_keys)
+    allowed_stage_keys = {str(key) for key in required_stage_keys} | {
+        str(key) for key in optional_stage_keys
+    }
+
+    contract = schema.get("x-contract")
+    if not isinstance(contract, dict):
+        errors.append(f"{schema_path}: x-contract must be an object for leakage_contract.v1")
+        return errors
+    expected_stages = contract.get("expected_stage_contracts")
+    if not isinstance(expected_stages, list) or not expected_stages:
+        errors.append(f"{schema_path}: x-contract.expected_stage_contracts must be a non-empty list")
+        return errors
+
+    stage_id_schema = (
+        stage_schema.get("properties", {})
+        .get("stage_id", {})
+    )
+    expected_order = stage_id_schema.get("enum", [])
+    if not isinstance(expected_order, list) or not expected_order:
+        errors.append(f"{schema_path}: leakage stage_id enum must be non-empty")
+        expected_order = []
+
+    expected_stage_ids = [
+        row.get("stage_id", "")
+        for row in expected_stages
+        if isinstance(row, dict)
+    ]
+    if expected_order and expected_stage_ids != [str(value) for value in expected_order]:
+        errors.append(f"{schema_path}: x-contract.expected_stage_contracts must follow stage_id enum order")
+    if len(expected_stage_ids) != len(set(expected_stage_ids)):
+        errors.append(f"{schema_path}: x-contract.expected_stage_contracts stage_id values must be unique")
+
+    expected_by_stage: dict[str, dict[str, object]] = {}
+    for index, row in enumerate(expected_stages, start=1):
+        if not isinstance(row, dict):
+            errors.append(f"{schema_path}: x-contract.expected_stage_contracts[{index}] must be an object")
+            continue
+        missing = set(required_stage_keys) - set(row)
+        if missing:
+            errors.append(
+                f"{schema_path}: x-contract.expected_stage_contracts[{index}] missing {', '.join(sorted(missing))}"
+            )
+        extra = set(row) - allowed_stage_keys
+        if extra:
+            errors.append(
+                f"{schema_path}: x-contract.expected_stage_contracts[{index}] has unexpected keys {', '.join(sorted(extra))}"
+            )
+        stage_id = row.get("stage_id", "")
+        if isinstance(stage_id, str) and stage_id:
+            expected_by_stage[stage_id] = row
+
+    stages = instance.get("stage_contracts", [])
+    if not isinstance(stages, list):
+        return errors
+    instance_stage_ids = [
+        row.get("stage_id", "")
+        for row in stages
+        if isinstance(row, dict)
+    ]
+    if expected_stage_ids and instance_stage_ids != expected_stage_ids:
+        errors.append(f"{schema_path}: instance stage_contracts must follow x-contract.expected_stage_contracts")
+    for index, row in enumerate(stages, start=1):
+        if not isinstance(row, dict):
+            continue
+        stage_id = row.get("stage_id", "")
+        expected = expected_by_stage.get(stage_id)
+        if expected is None:
+            errors.append(
+                f"{schema_path}: instance stage_contract[{index}] stage_id={stage_id} missing from x-contract.expected_stage_contracts"
+            )
+            continue
+        if row != expected:
+            errors.append(
+                f"{schema_path}: instance stage_contract[{index}] must match x-contract.expected_stage_contracts"
+            )
+    return errors
+
+
 def tracked_source_json(root: Path) -> list[str]:
     try:
         result = subprocess.run(
@@ -324,6 +426,7 @@ def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
         errors.append(f"{instance_path}: schema {schema_path.name}: {location}: {error.message}")
     errors.extend(validate_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_typed_readiness_contract_metadata(schema_path, schema, instance))
+    errors.extend(validate_leakage_contract_metadata(schema_path, schema, instance))
     return errors
 
 
