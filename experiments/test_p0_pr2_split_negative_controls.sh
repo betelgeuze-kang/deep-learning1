@@ -78,6 +78,12 @@ elif mutation == "leakage-ledger-drop":
         command.replace("--pm-ledger", "--missing-pm-ledger")
         for command in row["verification_commands"]
     ]
+elif mutation == "v58-template-ledger-drop":
+    row = slice_by_id("v58-blind-eval-contract")
+    row["verification_commands"] = [
+        command.replace("--template-ledger", "--missing-template-ledger")
+        for command in row["verification_commands"]
+    ]
 else:
     raise SystemExit(f"unknown mutation: {mutation}")
 
@@ -129,6 +135,11 @@ expect_fail_with \
 bad_path="$(bad_pr2_json pr2_leakage_ledger_drop_bad leakage-ledger-drop)"
 expect_fail_with \
   "leakage verification commands must compare the retrieval/model-visible contract to the PM ledger" \
+  "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
+
+bad_path="$(bad_pr2_json pr2_v58_template_ledger_drop_bad v58-template-ledger-drop)"
+expect_fail_with \
+  "v58 verification commands must compare blind-eval blockers to readiness, artifact, and template ledgers" \
   "$ROOT_DIR/tools/verify_artifact.py" pr-split "$bad_path"
 
 echo "p0 PR #2 split negative controls passed"

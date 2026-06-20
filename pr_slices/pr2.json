@@ -137,7 +137,7 @@
         "blocked": "Blind eval completion, model superiority, or human-reviewed blind result without real response/review rows.",
         "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv"
       },
-      "verification_commands": ["tools/verify_artifact.py v58-blind-eval v58/blind_eval_real.json", "./experiments/test_v58c_blind_response_evidence_intake.sh", "./experiments/test_v58d_blind_review_return_intake.sh", "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
+      "verification_commands": ["tools/verify_artifact.py v58-blind-eval v58/blind_eval_real.json --readiness-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/v58_real_execution_readiness_rows.csv --artifact-ledger results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_required_artifact_rows.csv --template-ledger results/v59e_one_command_pm_foundation_demo/pm_foundation_001/v58_blind_eval_return_template_rows.csv", "./experiments/test_v58c_blind_response_evidence_intake.sh", "./experiments/test_v58d_blind_review_return_intake.sh", "./experiments/test_v1_0_pm_pr_claim_slice_gate.sh"],
       "current_status": "ready-for-contract-review-real-eval-blocked"
     },
     {
