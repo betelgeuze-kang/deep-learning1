@@ -64,6 +64,24 @@ else
   bad "opencode worker prompt-file wiring missing"
 fi
 
+if grep -q -- 'OPENCODE_MODEL="${OPENCODE_MODEL:-opencode-go/glm-5.2}"' scripts/ai-worker-opencode.sh; then
+  ok "opencode worker default model is GLM-5.2"
+else
+  bad "opencode worker default model is not GLM-5.2"
+fi
+
+if python3 - <<'PY'
+import json
+from pathlib import Path
+data = json.loads(Path("opencode.json").read_text(encoding="utf-8"))
+raise SystemExit(0 if data.get("model") == "opencode-go/glm-5.2" else 1)
+PY
+then
+  ok "opencode.json default model is GLM-5.2"
+else
+  bad "opencode.json default model is not GLM-5.2"
+fi
+
 if grep -q -- '--model "$CURSOR_AGENT_MODEL"' scripts/ai-worker-cursor.sh; then
   ok "cursor worker uses configured model"
 else

@@ -6,8 +6,8 @@ Use this profile for work touching model architecture, routing, training/evaluat
 
 ```text
 Codex: research plan, experiment design, metric validity, evidence boundary review, final acceptance
-OpenCode Minimax M3: large-context implementation, doc/log/result sweeps, broad edits, synthetic checks
-Cursor auto: current editor/selection/notebook-local edits
+OpenCode GLM-5.2: large-context implementation, doc/log/result sweeps, broad edits, synthetic checks
+Cursor auto: current editor/selection/notebook-local edits, small implementation, focused test-fix passes
 Human owner: long runs, GPU/ROCm budget, downloads, remote writes, publication claims
 ```
 
@@ -22,7 +22,7 @@ Human owner: long runs, GPU/ROCm budget, downloads, remote writes, publication c
 
 ## Routing
 
-Prefer OpenCode Minimax M3 for:
+Prefer OpenCode GLM-5.2 for:
 
 - reading long roadmap, benchmark, evidence, or result packet context
 - adding or updating C++ experiment logic across several files
@@ -35,6 +35,8 @@ Prefer Cursor auto for:
 - small localized C++ edits around an open file
 - selected shell/Python script edits
 - notebook or editor-state-dependent changes
+- focused test-fix passes on a narrow failure
+- narrow validator, prompt-template, or doc synchronization edits
 - quick UI/editor affordance work
 
 Keep Codex responsible for:

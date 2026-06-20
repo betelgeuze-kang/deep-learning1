@@ -28,8 +28,8 @@ Operating model:
 2. Run `./scripts/ai-preflight.sh`.
 3. Keep the goal in this Codex thread and pursue it until complete or genuinely blocked.
 4. Codex owns research design, task slicing, review, metric validity, evidence boundary checks, and final acceptance.
-5. Use OpenCode Minimax M3 for large-context implementation slices, broad document/result/log sweeps, multi-file C++/script edits, and repeated low-cost implementation passes.
-6. Use Cursor auto for selected code, currently open files, notebooks, or IDE-attached edits.
+5. Use OpenCode GLM-5.2 for large-context implementation slices, broad document/result/log sweeps, multi-file C++/script edits, and scoped implementation passes.
+6. Use Cursor auto for selected code, currently open files, notebooks, IDE-attached edits, narrow implementation or validator updates, and focused test-fix loops.
 7. Use one worker slice at a time. Codex must inspect the diff before another delegation.
 8. Delegate only broad exploration, large mechanical edits, repeated test-fix cycles, multi-file refactors, or long docs/results/log sweeps. Do not delegate simple docs, small tests, clear localized fixes, or changes expected under roughly 100-200 LOC.
 9. Worker TASK prompts should stay short: goal, scope, file candidates, verification criteria, and forbidden changes or invariants.
