@@ -521,6 +521,9 @@ elif mode == "mean_bad":
     values["mean_abs_delta"] = "0.01"
 elif mode == "activation_bad":
     values["layer_activation_trace_sha256"] = ""
+elif mode == "real_ready_without_pass":
+    values["real_model_execution_ready"] = "1"
+    values["logits_parity_pass"] = "0"
 else:
     raise SystemExit(f"unknown mode: {mode}")
 path = Path(rows_path)
@@ -580,6 +583,15 @@ rm -f "$LOGITS_ROWS"
 write_bad_logits_row activation_bad
 expect_fail_with \
   "logits_parity_pass=1 requires layer_activation_trace_sha256" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row real_ready_without_pass
+expect_fail_with \
+  "real_model_execution_ready=1 requires logits_parity_pass=1" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"

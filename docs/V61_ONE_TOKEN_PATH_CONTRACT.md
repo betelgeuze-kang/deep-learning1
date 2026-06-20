@@ -103,7 +103,9 @@ The contract requires these artifact shapes:
   reference logits. The verifier also checks that `logit_count` equals
   `vocab_size`, and that candidate/reference top-k token ID lists are
   parseable, have exactly `top_k_token_count` entries, and match when
-  `top_k_token_ranking_match=1`.
+  `top_k_token_ranking_match=1`. `real_model_execution_ready=1` is valid only
+  on rows that also set `logits_parity_pass=1` and satisfy the same raw
+  evidence checks.
 - `sixteen-token-decode-rows`
   (`results/v61_sixteen_token_decode/sixteen_token_decode_rows.csv`):
   checkpoint/revision and tokenizer revision, upstream logits-parity artifact

@@ -3472,74 +3472,19 @@ def verify_v61_one_token_path(
                     errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires candidate_output_sha256 to match independent_runtime_output_sha256")
                 if artifact_row.get("torch_reference_output_sha256") != transformers_hash:
                     errors.append(f"{artifact_path}: row {row_index} real expert_ffn_parity_pass=1 requires torch_reference_output_sha256 to match transformers_expert_output_sha256")
-            if artifact_id == "one-token-logits-parity-rows" and artifact_row.get(pass_field) == "1":
-                try:
-                    tolerance_value = float(artifact_row.get("tolerance", ""))
-                    max_abs_delta_value = float(artifact_row.get("max_abs_delta", ""))
-                    mean_abs_delta_value = float(artifact_row.get("mean_abs_delta", ""))
-                except ValueError:
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires numeric max_abs_delta, mean_abs_delta, and tolerance")
-                    tolerance_value = math.nan
-                    max_abs_delta_value = math.nan
-                    mean_abs_delta_value = math.nan
-                if artifact_row.get("top1_token_id") != artifact_row.get("reference_top1_token_id"):
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires top1_token_id to match reference_top1_token_id")
-                if artifact_row.get("top_k_token_ranking_match") != "1":
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires top_k_token_ranking_match=1")
-                if not artifact_row.get("token_id"):
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires token_id")
-                parsed_ints: dict[str, int] = {}
-                for field in ["token_id", "top1_token_id", "reference_top1_token_id"]:
-                    try:
-                        parsed = int(artifact_row.get(field, ""))
-                    except ValueError:
-                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires nonnegative integer {field}")
-                        continue
-                    if parsed < 0:
-                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires nonnegative integer {field}")
-                        continue
-                    parsed_ints[field] = parsed
-                for field in ["router_top_k", "layer_activation_trace_rows", "top_k_token_count", "vocab_size", "logit_count"]:
-                    try:
-                        parsed = int(artifact_row.get(field, ""))
-                    except ValueError:
-                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires positive integer {field}")
-                        continue
-                    if parsed <= 0:
-                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires positive integer {field}")
-                        continue
-                    parsed_ints[field] = parsed
-                if parsed_ints.get("vocab_size") != parsed_ints.get("logit_count"):
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires logit_count to equal vocab_size")
-                for field in [
-                    "moe_block_artifact_sha256",
-                    "tokenizer_input_sha256",
-                    "layer_activation_trace_sha256",
-                    "route_path_sha256",
-                    "final_hidden_sha256",
-                    "lm_head_payload_sha256",
-                    "candidate_logits_sha256",
-                    "torch_reference_logits_sha256",
-                ]:
-                    if not _is_sha256_digest(artifact_row.get(field, "")):
-                        errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires {field}")
-                candidate_top_k = _parse_token_id_list(artifact_row.get("candidate_top_k_token_ids", ""))
-                reference_top_k = _parse_token_id_list(artifact_row.get("reference_top_k_token_ids", ""))
-                if candidate_top_k is None:
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires parseable candidate_top_k_token_ids")
-                if reference_top_k is None:
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires parseable reference_top_k_token_ids")
-                top_k_token_count = parsed_ints.get("top_k_token_count")
-                if candidate_top_k is not None and top_k_token_count is not None and len(candidate_top_k) != top_k_token_count:
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires candidate_top_k_token_ids length to equal top_k_token_count")
-                if reference_top_k is not None and top_k_token_count is not None and len(reference_top_k) != top_k_token_count:
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires reference_top_k_token_ids length to equal top_k_token_count")
-                if candidate_top_k is not None and reference_top_k is not None and candidate_top_k != reference_top_k:
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires candidate_top_k_token_ids to match reference_top_k_token_ids")
-                if not math.isfinite(max_abs_delta_value) or not math.isfinite(mean_abs_delta_value) or not math.isfinite(tolerance_value):
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires finite max_abs_delta, mean_abs_delta, and tolerance")
-                elif max_abs_delta_value > tolerance_value or mean_abs_delta_value > tolerance_value:
-                    errors.append(f"{artifact_path}: row {row_index} logits_parity_pass=1 requires max_abs_delta and mean_abs_delta <= tolerance")
+            if artifact_id == "one-token-logits-parity-rows":
+                logits_label = f"{artifact_path}: row {row_index} logits_parity_pass=1"
+                logits_ready = _compute_v61_logits_parity_ready(
+                    artifact_row,
+                    logits_label,
+                    errors,
+                    emit_pass_diagnostics=artifact_row.get(pass_field) == "1",
+                )
+                if artifact_row.get("real_model_execution_ready") == "1":
+                    if artifact_row.get(pass_field) != "1":
+                        errors.append(f"{artifact_path}: row {row_index} real_model_execution_ready=1 requires logits_parity_pass=1")
+                    if not logits_ready:
+                        errors.append(f"{artifact_path}: row {row_index} real_model_execution_ready=1 is not supported by one-token logits raw parity evidence")
         real_pass_rows = [
             artifact_row
             for artifact_row in rows
@@ -3621,6 +3566,85 @@ def _parse_token_id_list(value: str) -> list[int] | None:
             return None
         tokens.append(token_id)
     return tokens
+
+
+def _compute_v61_logits_parity_ready(
+    row: dict[str, str],
+    label: str,
+    errors: list[str],
+    emit_pass_diagnostics: bool,
+) -> bool:
+    local_errors: list[str] = []
+    try:
+        tolerance_value = float(row.get("tolerance", ""))
+        max_abs_delta_value = float(row.get("max_abs_delta", ""))
+        mean_abs_delta_value = float(row.get("mean_abs_delta", ""))
+    except ValueError:
+        local_errors.append(f"{label} requires numeric max_abs_delta, mean_abs_delta, and tolerance")
+        tolerance_value = math.nan
+        max_abs_delta_value = math.nan
+        mean_abs_delta_value = math.nan
+    if row.get("top1_token_id") != row.get("reference_top1_token_id"):
+        local_errors.append(f"{label} requires top1_token_id to match reference_top1_token_id")
+    if row.get("top_k_token_ranking_match") != "1":
+        local_errors.append(f"{label} requires top_k_token_ranking_match=1")
+    if not row.get("token_id"):
+        local_errors.append(f"{label} requires token_id")
+    parsed_ints: dict[str, int] = {}
+    for field in ["token_id", "top1_token_id", "reference_top1_token_id"]:
+        try:
+            parsed = int(row.get(field, ""))
+        except ValueError:
+            local_errors.append(f"{label} requires nonnegative integer {field}")
+            continue
+        if parsed < 0:
+            local_errors.append(f"{label} requires nonnegative integer {field}")
+            continue
+        parsed_ints[field] = parsed
+    for field in ["router_top_k", "layer_activation_trace_rows", "top_k_token_count", "vocab_size", "logit_count"]:
+        try:
+            parsed = int(row.get(field, ""))
+        except ValueError:
+            local_errors.append(f"{label} requires positive integer {field}")
+            continue
+        if parsed <= 0:
+            local_errors.append(f"{label} requires positive integer {field}")
+            continue
+        parsed_ints[field] = parsed
+    if parsed_ints.get("vocab_size") != parsed_ints.get("logit_count"):
+        local_errors.append(f"{label} requires logit_count to equal vocab_size")
+    for field in [
+        "moe_block_artifact_sha256",
+        "tokenizer_input_sha256",
+        "layer_activation_trace_sha256",
+        "route_path_sha256",
+        "final_hidden_sha256",
+        "lm_head_payload_sha256",
+        "candidate_logits_sha256",
+        "torch_reference_logits_sha256",
+    ]:
+        if not _is_sha256_digest(row.get(field, "")):
+            local_errors.append(f"{label} requires {field}")
+    candidate_top_k = _parse_token_id_list(row.get("candidate_top_k_token_ids", ""))
+    reference_top_k = _parse_token_id_list(row.get("reference_top_k_token_ids", ""))
+    if candidate_top_k is None:
+        local_errors.append(f"{label} requires parseable candidate_top_k_token_ids")
+    if reference_top_k is None:
+        local_errors.append(f"{label} requires parseable reference_top_k_token_ids")
+    top_k_token_count = parsed_ints.get("top_k_token_count")
+    if candidate_top_k is not None and top_k_token_count is not None and len(candidate_top_k) != top_k_token_count:
+        local_errors.append(f"{label} requires candidate_top_k_token_ids length to equal top_k_token_count")
+    if reference_top_k is not None and top_k_token_count is not None and len(reference_top_k) != top_k_token_count:
+        local_errors.append(f"{label} requires reference_top_k_token_ids length to equal top_k_token_count")
+    if candidate_top_k is not None and reference_top_k is not None and candidate_top_k != reference_top_k:
+        local_errors.append(f"{label} requires candidate_top_k_token_ids to match reference_top_k_token_ids")
+    if not math.isfinite(max_abs_delta_value) or not math.isfinite(mean_abs_delta_value) or not math.isfinite(tolerance_value):
+        local_errors.append(f"{label} requires finite max_abs_delta, mean_abs_delta, and tolerance")
+    elif max_abs_delta_value > tolerance_value or mean_abs_delta_value > tolerance_value:
+        local_errors.append(f"{label} requires max_abs_delta and mean_abs_delta <= tolerance")
+    if emit_pass_diagnostics:
+        errors.extend(local_errors)
+    return not local_errors
 
 
 def _compute_v61ab_expert_ffn_readiness(
