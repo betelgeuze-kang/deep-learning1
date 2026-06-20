@@ -1,0 +1,105 @@
+{
+  "schema_version": "leakage_contract.v1",
+  "policy": {
+    "allowed_surface": "natural_language_question_plus_searchable_corpus",
+    "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
+    "direct_query_source_binding_forbidden": true
+  },
+  "forbidden_surfaces": [
+    {
+      "guard_id": "source-span-id",
+      "forbidden_surface": "source span ID",
+      "field_names": ["source_span_id", "span_id", "source_span_row_id", "span_row_id"],
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
+    },
+    {
+      "guard_id": "source-path",
+      "forbidden_surface": "source path",
+      "field_names": ["source_path", "source_file_path", "file_path", "repo_path", "path", "parsed_path"],
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
+    },
+    {
+      "guard_id": "source-line",
+      "forbidden_surface": "source line",
+      "field_names": ["source_line", "source_line_start", "source_line_end", "line", "start_line", "end_line", "line_start", "line_end", "parsed_line"],
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
+    },
+    {
+      "guard_id": "source-file-hash",
+      "forbidden_surface": "source file hash",
+      "field_names": ["source_file_hash", "source_file_sha256", "source_sha256", "file_sha256", "content_sha256", "sha256", "blob_sha256", "git_blob_sha", "source_git_blob_sha"],
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
+    },
+    {
+      "guard_id": "query-source-direct-binding",
+      "forbidden_surface": "query ID and direct source row binding",
+      "field_names": ["query_id", "case_id", "source_row_id", "source_case_id", "source_query_id", "query_source_id", "source_binding_id"],
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
+    },
+    {
+      "guard_id": "expected-behavior",
+      "forbidden_surface": "expected behavior",
+      "field_names": ["expected_behavior", "expected_answer", "expected_answer_sha256", "expected_citation", "expected_output", "gold_answer", "gold_citation"],
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
+    },
+    {
+      "guard_id": "expected-label",
+      "forbidden_surface": "expected label",
+      "field_names": ["negative_or_abstain", "audit_type", "expected_label", "gold_label", "target_label"],
+      "evaluator_only_or_absent": true,
+      "pm_ledger_required": true
+    }
+  ],
+  "stage_contracts": [
+    {
+      "stage_id": "v53aq-sanitized-abgh-real-adapter",
+      "surface_kind": "model_or_retriever",
+      "summary_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
+      "allowed_model_visible_fields": ["sanitized_question"],
+      "forbidden_field_summary": "selection_forbidden_fields",
+      "must_equal": {
+        "selection_question_text_only": "1",
+        "selection_sanitized_question_only": "1",
+        "source_locator_in_question_removed_rows": "4000",
+        "selection_allowed_fields": "sanitized_question",
+        "selection_oracle_field_used": "0",
+        "source_span_oracle_selection_used": "0",
+        "expected_answer_oracle_replay": "0",
+        "deterministic_source_span_adapter_execution": "0"
+      }
+    },
+    {
+      "stage_id": "v54c-grounded-generation-guard",
+      "surface_kind": "model_or_retriever",
+      "summary_path": "results/v54c_complete_source_grounded_generation_1000_summary.csv",
+      "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
+      "must_equal": {
+        "model_visible_leakage_guard_ready": "1",
+        "model_visible_input_fields": "sanitized_question,opaque_routehint",
+        "model_visible_forbidden_field_used_rows": "0",
+        "model_visible_source_locator_rows": "0",
+        "raw_prompt_context_appended_rows": "0",
+        "real_model_generation_ready": "0"
+      }
+    },
+    {
+      "stage_id": "v53ap-source-span-fixture-replay-boundary",
+      "surface_kind": "source_bound_non_model_adapter",
+      "summary_path": "results/v53ap_complete_source_abgh_same_query_measured_summary.csv",
+      "allowed_model_visible_fields": ["none"],
+      "must_equal": {
+        "expected_answer_oracle_replay": "0",
+        "deterministic_source_span_adapter_execution": "1",
+        "actual_adapter_execution_ready": "1",
+        "real_system_performance_claim_ready": "0",
+        "public_comparison_claim_ready": "0"
+      }
+    }
+  ]
+}
