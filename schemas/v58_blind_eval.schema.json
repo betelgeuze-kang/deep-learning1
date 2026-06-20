@@ -179,6 +179,21 @@
         "required_columns": ["artifact_path", "sha256", "bytes"],
         "min_rows": 10
       }
+    ],
+    "review_forbidden_resource_columns": [
+      "latency_ms",
+      "latency_ns",
+      "memory_mb",
+      "memory_peak_bytes",
+      "peak_memory_mb",
+      "tokens_per_second"
+    ],
+    "review_forbidden_identity_columns": [
+      "system_id",
+      "source_system_id",
+      "source_system_name",
+      "model_or_architecture_id",
+      "run_identity"
     ]
   },
   "additionalProperties": false

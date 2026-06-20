@@ -281,6 +281,10 @@ if module.EXPECTED_V58_REQUIREMENT_IDS != v58_contract["expected_requirement_ids
     raise SystemExit("EXPECTED_V58_REQUIREMENT_IDS must be derived from schema x-contract.expected_requirement_ids")
 if module.EXPECTED_V58_ARTIFACTS != v58_contract["expected_required_artifacts"]:
     raise SystemExit("EXPECTED_V58_ARTIFACTS must be derived from schema x-contract.expected_required_artifacts")
+if module.V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS != set(v58_contract["review_forbidden_resource_columns"]):
+    raise SystemExit("V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS must be derived from schema x-contract.review_forbidden_resource_columns")
+if module.V58_REVIEW_FORBIDDEN_IDENTITY_COLUMNS != set(v58_contract["review_forbidden_identity_columns"]):
+    raise SystemExit("V58_REVIEW_FORBIDDEN_IDENTITY_COLUMNS must be derived from schema x-contract.review_forbidden_identity_columns")
 
 review_return_schema = json.loads((root / "schemas" / "review_return_workflow.schema.json").read_text(encoding="utf-8"))
 review_return_contract = review_return_schema["x-contract"]
@@ -753,6 +757,42 @@ expect_fail_with \
   "instance required_artifacts must match x-contract.expected_required_artifacts" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/v58_schema_artifact_contract_drift.schema.json" "$ROOT_DIR/v58/blind_eval_real.json"
+
+cp "$ROOT_DIR/schemas/v58_blind_eval.schema.json" "$TMP_DIR/v58_schema_review_forbidden_duplicate.schema.json"
+python3 - "$TMP_DIR/v58_schema_review_forbidden_duplicate.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+columns = data["x-contract"]["review_forbidden_resource_columns"]
+columns.append(columns[0])
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "x-contract.review_forbidden_resource_columns must be a non-empty unique string list" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v58_schema_review_forbidden_duplicate.schema.json" "$ROOT_DIR/v58/blind_eval_real.json"
+
+cp "$ROOT_DIR/schemas/v58_blind_eval.schema.json" "$TMP_DIR/v58_schema_review_forbidden_artifact_leak.schema.json"
+python3 - "$TMP_DIR/v58_schema_review_forbidden_artifact_leak.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["x-contract"]["expected_required_artifacts"]:
+    if row["artifact_id"] == "v58-human-review-rows":
+        row["required_columns"].append("latency_ns")
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "x-contract.expected_required_artifacts.v58-human-review-rows must not contain v58 review forbidden columns" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v58_schema_review_forbidden_artifact_leak.schema.json" "$ROOT_DIR/v58/blind_eval_real.json"
 
 cp "$ROOT_DIR/schemas/review_return_workflow.schema.json" "$TMP_DIR/review_return_schema_policy_contract_drift.schema.json"
 python3 - "$TMP_DIR/review_return_schema_policy_contract_drift.schema.json" <<'PY'

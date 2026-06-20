@@ -1023,6 +1023,8 @@ def validate_v58_blind_eval_contract_metadata(
     expected_systems = contract.get("expected_required_systems")
     expected_requirements = contract.get("expected_requirement_ids")
     expected_artifacts = contract.get("expected_required_artifacts")
+    forbidden_resource_columns = contract.get("review_forbidden_resource_columns")
+    forbidden_identity_columns = contract.get("review_forbidden_identity_columns")
     if not isinstance(expected_policy, dict) or not expected_policy:
         errors.append(f"{schema_path}: x-contract.expected_policy_static must be a non-empty object")
     if not isinstance(expected_systems, list) or not expected_systems:
@@ -1031,6 +1033,20 @@ def validate_v58_blind_eval_contract_metadata(
         errors.append(f"{schema_path}: x-contract.expected_requirement_ids must be a non-empty list")
     if not isinstance(expected_artifacts, list) or not expected_artifacts:
         errors.append(f"{schema_path}: x-contract.expected_required_artifacts must be a non-empty list")
+    if (
+        not isinstance(forbidden_resource_columns, list)
+        or not forbidden_resource_columns
+        or any(not isinstance(column, str) or not column for column in forbidden_resource_columns)
+        or len(forbidden_resource_columns) != len(set(forbidden_resource_columns))
+    ):
+        errors.append(f"{schema_path}: x-contract.review_forbidden_resource_columns must be a non-empty unique string list")
+    if (
+        not isinstance(forbidden_identity_columns, list)
+        or not forbidden_identity_columns
+        or any(not isinstance(column, str) or not column for column in forbidden_identity_columns)
+        or len(forbidden_identity_columns) != len(set(forbidden_identity_columns))
+    ):
+        errors.append(f"{schema_path}: x-contract.review_forbidden_identity_columns must be a non-empty unique string list")
     if errors:
         return errors
 
@@ -1060,6 +1076,19 @@ def validate_v58_blind_eval_contract_metadata(
     ]
     if len(artifact_ids) != len(set(artifact_ids)):
         errors.append(f"{schema_path}: x-contract.expected_required_artifacts artifact_id values must be unique")
+    review_forbidden_columns = set(forbidden_resource_columns) | set(forbidden_identity_columns)
+    if set(forbidden_resource_columns) & set(forbidden_identity_columns):
+        errors.append(f"{schema_path}: v58 forbidden resource and identity column lists must be disjoint")
+    for row in expected_artifacts:
+        if not isinstance(row, dict) or row.get("artifact_kind") != "review-return":
+            continue
+        artifact_id = row.get("artifact_id", "")
+        leaked_columns = review_forbidden_columns & set(row.get("required_columns", []))
+        if leaked_columns:
+            errors.append(
+                f"{schema_path}: x-contract.expected_required_artifacts.{artifact_id} "
+                "must not contain v58 review forbidden columns"
+            )
 
     required_artifacts = instance.get("required_artifacts", [])
     if not isinstance(required_artifacts, list):

@@ -555,21 +555,18 @@ EXPECTED_V58_PER_SYSTEM_MIN_ROWS = {
     for artifact_id, row in EXPECTED_V58_ARTIFACTS_BY_ID.items()
     if isinstance(row.get("per_system_min_rows"), dict)
 }
-V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS = {
-    "latency_ms",
-    "latency_ns",
-    "memory_mb",
-    "memory_peak_bytes",
-    "peak_memory_mb",
-    "tokens_per_second",
-}
-V58_REVIEW_FORBIDDEN_IDENTITY_COLUMNS = {
-    "system_id",
-    "source_system_id",
-    "source_system_name",
-    "model_or_architecture_id",
-    "run_identity",
-}
+V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS = set(
+    schema_contract_list(
+        "v58_blind_eval.schema.json",
+        "review_forbidden_resource_columns",
+    )
+)
+V58_REVIEW_FORBIDDEN_IDENTITY_COLUMNS = set(
+    schema_contract_list(
+        "v58_blind_eval.schema.json",
+        "review_forbidden_identity_columns",
+    )
+)
 EXPECTED_V58_VALIDATION_COMMANDS = {
     artifact_id: str(row.get("validation_command", ""))
     for artifact_id, row in EXPECTED_V58_ARTIFACTS_BY_ID.items()
