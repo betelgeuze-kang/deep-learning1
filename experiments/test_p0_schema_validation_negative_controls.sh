@@ -28,6 +28,29 @@ expect_fail_with() {
 
 "$ROOT_DIR/tools/validate_json_schemas.py" >/dev/null
 
+python3 - "$ROOT_DIR" <<'PY'
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("verify_artifact", root / "tools" / "verify_artifact.py")
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(module)
+schema = json.loads((root / "schemas" / "v61_one_token_path.schema.json").read_text(encoding="utf-8"))
+expected_policy = set(schema["properties"]["policy"]["required"])
+expected_milestone = set(schema["properties"]["milestones"]["items"]["required"])
+expected_artifact = set(schema["properties"]["required_artifacts"]["items"]["required"])
+if module.REQUIRED_V61_POLICY_KEYS != expected_policy:
+    raise SystemExit("REQUIRED_V61_POLICY_KEYS must be derived from schema policy.required")
+if module.REQUIRED_V61_MILESTONE_KEYS != expected_milestone:
+    raise SystemExit("REQUIRED_V61_MILESTONE_KEYS must be derived from schema milestones.items.required")
+if module.REQUIRED_V61_ARTIFACT_KEYS != expected_artifact:
+    raise SystemExit("REQUIRED_V61_ARTIFACT_KEYS must be derived from schema required_artifacts.items.required")
+PY
+
 cp "$ROOT_DIR/readiness/typed_ready.json" "$TMP_DIR/typed_missing_policy.json"
 python3 - "$TMP_DIR/typed_missing_policy.json" <<'PY'
 import json

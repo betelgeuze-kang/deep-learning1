@@ -23,6 +23,21 @@ def schema_required(schema_name: str) -> set[str]:
     return set(schema.get("required", []))
 
 
+def schema_required_at(schema_name: str, *path_parts: str) -> set[str]:
+    schema_path = SCHEMA_ROOT / schema_name
+    node: object = json.loads(schema_path.read_text(encoding="utf-8"))
+    for part in path_parts:
+        if not isinstance(node, dict):
+            return set()
+        node = node.get(part, {})
+    if not isinstance(node, dict):
+        return set()
+    required = node.get("required", [])
+    if not isinstance(required, list):
+        return set()
+    return set(str(field) for field in required)
+
+
 def schema_contract(schema_name: str) -> dict[str, object]:
     schema_path = SCHEMA_ROOT / schema_name
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -224,38 +239,9 @@ REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS = {
     "summary_checks",
 }
 REQUIRED_V61_ONE_TOKEN_KEYS = schema_required("v61_one_token_path.schema.json")
-REQUIRED_V61_POLICY_KEYS = {
-    "ssd_resident_real_model_runtime_claim_ready",
-    "real_model_execution_ready",
-    "release_ready",
-    "required_before_ssd_resident_runtime_claim",
-    "required_before_ssd_resident_runtime_claim_count",
-    "passed_before_ssd_resident_runtime_claim_count",
-    "blocked_before_ssd_resident_runtime_claim_count",
-    "required_artifact_count",
-    "present_required_artifact_count",
-    "missing_required_artifact_count",
-    "missing_required_artifact_ids",
-    "blocked_before_ssd_resident_runtime_claim",
-}
-REQUIRED_V61_MILESTONE_KEYS = {
-    "order",
-    "milestone_id",
-    "required_evidence",
-    "current_status",
-    "evidence_path",
-    "claim_boundary",
-}
-REQUIRED_V61_ARTIFACT_KEYS = {
-    "artifact_id",
-    "artifact_kind",
-    "path",
-    "linked_milestone_id",
-    "required_for_runtime_claim",
-    "min_rows",
-    "pass_field",
-    "required_columns",
-}
+REQUIRED_V61_POLICY_KEYS = schema_required_at("v61_one_token_path.schema.json", "properties", "policy")
+REQUIRED_V61_MILESTONE_KEYS = schema_required_at("v61_one_token_path.schema.json", "properties", "milestones", "items")
+REQUIRED_V61_ARTIFACT_KEYS = schema_required_at("v61_one_token_path.schema.json", "properties", "required_artifacts", "items")
 EXPECTED_PR2_SLICE_ORDER = [
     "docs/v1-roadmap",
     "v50-auditor-correctness",
