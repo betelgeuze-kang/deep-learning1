@@ -72,10 +72,11 @@ The contract requires these artifact shapes:
   checkpoint/config/tokenizer/shard/manifest hashes, real layer/expert tensor
   names, router top-k, RMSNorm and router payload hashes, W1/W2/W3 payload
   hashes and shapes, residual input/output hashes, reserved original
-  Transformers expert output and independent runtime output hashes, typed
+  Transformers expert output hash, independent C++ runtime output hash, typed
   readiness fields, tolerance, max delta, and `expert_ffn_parity_pass`.
-  Fixture-only rows must leave the original Transformers and independent
-  runtime fields empty until real external implementation evidence exists.
+  Fixture-only rows may populate the independent C++ runtime hash, but must
+  leave the original Transformers module output empty until that module capture
+  exists.
 - `moe-block-forward-parity-rows`
   (`results/v61_moe_block_forward_parity/moe_block_forward_parity_rows.csv`):
   token input hash, router logits hash,

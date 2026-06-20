@@ -29,6 +29,7 @@ import math
 import os
 import shutil
 import struct
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -53,6 +54,9 @@ expert_ffn_router_top_k = os.environ.get("V61AB_EXPERT_FFN_ROUTER_TOP_K", "2")
 expert_ffn_model_revision = os.environ.get("V61AB_MODEL_REVISION", "not-supplied")
 expert_ffn_tokenizer_revision = os.environ.get("V61AB_TOKENIZER_REVISION", "not-supplied")
 expert_ffn_real_model_evidence_requested = int(os.environ.get("V61AB_EXPERT_FFN_REAL_MODEL_EVIDENCE", "0") == "1")
+expert_ffn_runtime_bin = Path(
+    os.environ.get("V61AB_EXPERT_FFN_RUNTIME_BIN", str(root / "build" / "expert_ffn_forward_parity"))
+).expanduser()
 if tiles_per_slice <= 0:
     raise SystemExit("V61AB_TILES_PER_SLICE must be positive")
 if tile_elements_target <= 0:
@@ -279,22 +283,62 @@ def expert_ffn_parity_rows():
         hidden = int(w1_t.shape[1])
         inter = int(w1_t.shape[0])
         x = torch.linspace(-0.5, 0.5, hidden, dtype=torch.float32)
+        if not expert_ffn_runtime_bin.is_file():
+            raise RuntimeError(f"independent expert FFN runtime missing: {expert_ffn_runtime_bin}")
         gate = torch.nn.functional.silu(torch.matmul(w1_t, x))
         up = torch.matmul(w3_t, x)
-        candidate = torch.matmul(w2_t, gate * up)
         reference = torch.nn.functional.linear((gate * up).reshape(1, inter), w2_t).reshape(hidden)
-        delta = torch.max(torch.abs(candidate - reference)).item()
+        runtime_dir = run_dir / "expert_ffn_runtime_inputs"
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+        runtime_files = {
+            "w1": runtime_dir / "w1.f32",
+            "w2": runtime_dir / "w2.f32",
+            "w3": runtime_dir / "w3.f32",
+            "input": runtime_dir / "input.f32",
+            "output": runtime_dir / "independent_output.f32",
+        }
+        runtime_files["w1"].write_bytes(w1_t.detach().cpu().numpy().astype("<f4").tobytes())
+        runtime_files["w2"].write_bytes(w2_t.detach().cpu().numpy().astype("<f4").tobytes())
+        runtime_files["w3"].write_bytes(w3_t.detach().cpu().numpy().astype("<f4").tobytes())
+        runtime_files["input"].write_bytes(x.detach().cpu().numpy().astype("<f4").tobytes())
+        subprocess.run(
+            [
+                str(expert_ffn_runtime_bin),
+                "--hidden",
+                str(hidden),
+                "--intermediate",
+                str(inter),
+                "--w1",
+                str(runtime_files["w1"]),
+                "--w2",
+                str(runtime_files["w2"]),
+                "--w3",
+                str(runtime_files["w3"]),
+                "--input",
+                str(runtime_files["input"]),
+                "--output",
+                str(runtime_files["output"]),
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        independent = torch.from_numpy(
+            np.frombuffer(runtime_files["output"].read_bytes(), dtype="<f4").copy()
+        ).reshape(hidden).to(torch.float32)
+        delta = torch.max(torch.abs(independent - reference)).item()
         tolerance = 1e-6
-        candidate_bytes = candidate.detach().cpu().numpy().astype("<f4").tobytes()
+        candidate_bytes = independent.detach().cpu().numpy().astype("<f4").tobytes()
         reference_bytes = reference.detach().cpu().numpy().astype("<f4").tobytes()
         residual_input_sha = sha256_bytes(x.detach().cpu().numpy().astype("<f4").tobytes())
-        residual_output_sha = sha256_bytes((x + candidate).detach().cpu().numpy().astype("<f4").tobytes())
+        residual_output_sha = sha256_bytes((x + independent).detach().cpu().numpy().astype("<f4").tobytes())
         parity_pass = int(math.isfinite(delta) and delta <= tolerance)
         fixture_ready = parity_pass
         real_model_ready = 0
         reason = (
-            "expert FFN fixture tensors loaded from local safetensors root and candidate output matches torch reference; "
-            "independent runtime and original Transformers module outputs not supplied"
+            "expert FFN fixture tensors loaded from local safetensors root and independent C++ runtime output matches torch reference; "
+            "original Transformers module output not supplied"
             if parity_pass
             else "expert FFN parity delta exceeds tolerance"
         )
@@ -315,11 +359,11 @@ def expert_ffn_parity_rows():
             "w3_payload_sha256": w3["payload_sha256"],
             "input_hidden_size": str(hidden),
             "intermediate_size": str(inter),
-            "output_hidden_size": str(int(candidate.numel())),
+            "output_hidden_size": str(int(independent.numel())),
             "residual_input_sha256": residual_input_sha,
             "residual_output_sha256": residual_output_sha,
             "transformers_expert_output_sha256": "",
-            "independent_runtime_output_sha256": "",
+            "independent_runtime_output_sha256": sha256_bytes(candidate_bytes),
             "candidate_output_sha256": sha256_bytes(candidate_bytes),
             "torch_reference_output_sha256": sha256_bytes(reference_bytes),
             "max_abs_delta": fmt(delta),

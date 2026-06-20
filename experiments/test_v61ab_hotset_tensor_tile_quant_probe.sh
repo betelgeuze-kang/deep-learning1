@@ -346,6 +346,9 @@ shard.write_bytes(struct.pack("<Q", len(header_bytes)) + header_bytes + b"".join
 )
 PY
 
+cmake -S "$ROOT_DIR" -B "$ROOT_DIR/build" -DDLE_ENABLE_HIP="${DLE_VERIFY_ENABLE_HIP:-OFF}" >/dev/null
+cmake --build "$ROOT_DIR/build" --target expert_ffn_forward_parity -j "${AI_VERIFY_JOBS:-2}" >/dev/null
+
 V61AB_RUN_ID="ffn_fixture" \
 V61AB_REUSE_EXISTING=0 \
 V61AB_EXPERT_FFN_CHECKPOINT_ROOT="$TMP_EXPERT_ROOT" \
@@ -396,21 +399,20 @@ for field in [
     "router_payload_sha256",
     "residual_input_sha256",
     "residual_output_sha256",
+    "independent_runtime_output_sha256",
     "candidate_output_sha256",
     "torch_reference_output_sha256",
 ]:
     if not row[field]:
         raise SystemExit(f"v61ab fixture expert FFN should populate {field}")
-for field in [
-    "transformers_expert_output_sha256",
-    "independent_runtime_output_sha256",
-]:
-    if row[field]:
-        raise SystemExit(f"v61ab fixture expert FFN must not populate real-runtime field {field}")
+if row["transformers_expert_output_sha256"]:
+    raise SystemExit("v61ab fixture expert FFN must not populate original Transformers output without module capture")
 if row["router_top_k"] != "2" or row["token_id"] != "0":
     raise SystemExit("v61ab fixture expert FFN token/router metadata mismatch")
 if not row["candidate_output_sha256"] or not row["torch_reference_output_sha256"]:
     raise SystemExit("v61ab fixture expert FFN should hash candidate/reference outputs")
+if row["candidate_output_sha256"] != row["independent_runtime_output_sha256"]:
+    raise SystemExit("v61ab fixture expert FFN candidate output must come from independent runtime")
 if float(row["max_abs_delta"]) > float(row["tolerance"]):
     raise SystemExit("v61ab fixture expert FFN delta exceeds tolerance")
 if row["checkpoint_payload_bytes_committed_to_repo"] != "0":

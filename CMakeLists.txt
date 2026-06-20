@@ -78,8 +78,15 @@ add_executable(
 )
 target_link_libraries(hip_candidate_weight_parity PRIVATE dm_common dm_backend)
 
+add_executable(
+  expert_ffn_forward_parity
+  src/tools/expert_ffn_forward_parity.cpp
+)
+target_link_libraries(expert_ffn_forward_parity PRIVATE dm_common)
+
 foreach(target dmv01 dmv02)
   target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
 endforeach()
 target_compile_options(dm_backend PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_options(hip_candidate_weight_parity PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(expert_ffn_forward_parity PRIVATE -Wall -Wextra -Wpedantic)
