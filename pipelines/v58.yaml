@@ -24,7 +24,7 @@
       },
       "model_visible_inputs": ["blind_question", "shared_context_budget"],
       "model_visible_input_checks": ["blind_identity=hidden", "same_context_budget=required"],
-      "evaluator_only_fields": ["system_identity", "source_span_id", "source_path", "label", "reviewer_identity"],
+      "evaluator_only_fields": ["query_id", "system_identity", "source_span_id", "source_path", "source_file_sha256", "label", "reviewer_identity"],
       "evidence_boundary": "Artifact intake contract until real blind responses are supplied.",
       "claim_boundary": "No blind-eval result claim until response and review artifacts are supplied."
     },

@@ -24,7 +24,7 @@
       },
       "model_visible_inputs": ["natural_language_question", "searchable_corpus"],
       "model_visible_input_checks": ["source_locator_fields_evaluator_only"],
-      "evaluator_only_fields": ["expected_answer", "source_span_id", "source_path", "source_line", "source_file_sha256"],
+      "evaluator_only_fields": ["query_id", "case_id", "expected_answer", "source_span_id", "source_path", "source_line", "source_file_sha256"],
       "evidence_boundary": "Registry contract and blocker surface only.",
       "claim_boundary": "No public quality comparison or D/E replacement claim."
     },
@@ -48,7 +48,7 @@
       },
       "model_visible_inputs": ["natural_language_question", "searchable_corpus"],
       "model_visible_input_checks": ["source_locator_fields_evaluator_only"],
-      "evaluator_only_fields": ["expected_label", "source_span_id", "source_path", "source_file_sha256"],
+      "evaluator_only_fields": ["query_id", "case_id", "expected_label", "source_span_id", "source_path", "source_file_sha256"],
       "evidence_boundary": "C evidence intake contract only; default run has no supplied evidence directory.",
       "claim_boundary": "No default C supplied-evidence or quality claim."
     },
@@ -72,7 +72,7 @@
       },
       "model_visible_inputs": ["natural_language_question", "searchable_corpus"],
       "model_visible_input_checks": ["external_network_used=0", "external_model_used=0"],
-      "evaluator_only_fields": ["expected_label", "source_span_id", "source_path", "source_file_sha256"],
+      "evaluator_only_fields": ["query_id", "case_id", "expected_label", "source_span_id", "source_path", "source_file_sha256"],
       "evidence_boundary": "C local 7B-14B response packet over v53e; not a quality claim.",
       "claim_boundary": "C packet readiness cannot replace required D/E baselines."
     },
@@ -96,7 +96,7 @@
       },
       "model_visible_inputs": ["natural_language_question", "searchable_corpus"],
       "model_visible_input_checks": ["fixture_rows_in_measured_registry=0"],
-      "evaluator_only_fields": ["expected_label", "source_span_id", "source_path", "source_file_sha256"],
+      "evaluator_only_fields": ["query_id", "case_id", "expected_label", "source_span_id", "source_path", "source_file_sha256"],
       "evidence_boundary": "D/E intake guard and missing-evidence blocker only.",
       "claim_boundary": "No D/E measured registry admission until both real evidence directories validate."
     },

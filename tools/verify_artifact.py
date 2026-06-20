@@ -1937,6 +1937,11 @@ def verify_pipeline(path: Path) -> list[str]:
                 unknown_visible = set(str(item) for item in model_visible_inputs) - pipeline_allowed_inputs
                 if unknown_visible:
                     errors.append(f"{prefix}: model_visible_inputs contains undeclared model-visible field(s): {', '.join(sorted(unknown_visible))}")
+                evaluator_only_fields = stage.get("evaluator_only_fields", [])
+                if not isinstance(evaluator_only_fields, list):
+                    errors.append(f"{prefix}: evaluator_only_fields must be a list when model_visible_inputs are declared")
+                elif "query_id" not in set(str(item) for item in evaluator_only_fields):
+                    errors.append(f"{prefix}: model-visible stages must declare query_id as evaluator-only")
         requires = stage.get("requires", [])
         if not isinstance(requires, list):
             errors.append(f"{prefix}: requires must be a list when present")

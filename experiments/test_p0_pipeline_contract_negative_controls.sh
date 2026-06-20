@@ -84,6 +84,28 @@ PY
   printf '%s\n' "$path"
 }
 
+bad_v52_pipeline_json() {
+  local name="$1"
+  shift
+  local path="$TMP_DIR/$name.json"
+  python3 - "$ROOT_DIR/pipelines/v52.yaml" "$path" "$@" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+source, target, mutation = sys.argv[1:4]
+data = json.loads(Path(source).read_text(encoding="utf-8"))
+if mutation == "missing-query-evaluator-only":
+    data["stages"][0]["evaluator_only_fields"] = [
+        field for field in data["stages"][0]["evaluator_only_fields"] if field != "query_id"
+    ]
+else:
+    raise SystemExit(f"unknown mutation: {mutation}")
+Path(target).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+  printf '%s\n' "$path"
+}
+
 "$ROOT_DIR/tools/verify_artifact.py" pipeline \
   "$ROOT_DIR/pipelines/v52.yaml" \
   "$ROOT_DIR/pipelines/v53.yaml" \
@@ -129,6 +151,11 @@ expect_fail_with \
 bad_path="$(bad_v54_pipeline_json pipeline_v54_literal_human_review_bad literal-human-review-ready)"
 expect_fail_with \
   "typed_readiness.human_review_ready cannot be an untyped literal-ready claim" \
+  "$ROOT_DIR/tools/verify_artifact.py" pipeline "$bad_path"
+
+bad_path="$(bad_v52_pipeline_json pipeline_v52_missing_query_evaluator_only_bad missing-query-evaluator-only)"
+expect_fail_with \
+  "model-visible stages must declare query_id as evaluator-only" \
   "$ROOT_DIR/tools/verify_artifact.py" pipeline "$bad_path"
 
 echo "p0 pipeline contract negative controls passed"
