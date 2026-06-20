@@ -190,6 +190,22 @@ if module.EXPECTED_V58_REQUIREMENT_IDS != v58_contract["expected_requirement_ids
 if module.EXPECTED_V58_ARTIFACTS != v58_contract["expected_required_artifacts"]:
     raise SystemExit("EXPECTED_V58_ARTIFACTS must be derived from schema x-contract.expected_required_artifacts")
 
+review_return_schema = json.loads((root / "schemas" / "review_return_workflow.schema.json").read_text(encoding="utf-8"))
+review_return_contract = review_return_schema["x-contract"]
+review_return_expected_summary_checks = {
+    requirement_id: [
+        (check["summary_id"], check["field"], check["expected"])
+        for check in checks
+    ]
+    for requirement_id, checks in review_return_contract["expected_summary_checks"].items()
+}
+if module.EXPECTED_REVIEW_RETURN_POLICY_STATIC != review_return_contract["expected_policy_static"]:
+    raise SystemExit("EXPECTED_REVIEW_RETURN_POLICY_STATIC must be derived from schema x-contract.expected_policy_static")
+if module.EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS != review_return_contract["expected_requirement_ids"]:
+    raise SystemExit("EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS must be derived from schema x-contract.expected_requirement_ids")
+if module.EXPECTED_REVIEW_RETURN_SUMMARY_CHECKS != review_return_expected_summary_checks:
+    raise SystemExit("EXPECTED_REVIEW_RETURN_SUMMARY_CHECKS must be derived from schema x-contract.expected_summary_checks")
+
 v56_schema = json.loads((root / "schemas" / "v56_replay.schema.json").read_text(encoding="utf-8"))
 v56_contract = v56_schema["x-contract"]
 if module.EXPECTED_V56_POLICY != v56_contract["expected_policy"]:
@@ -473,6 +489,74 @@ expect_fail_with \
   "instance required_artifacts must match x-contract.expected_required_artifacts" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/v58_schema_artifact_contract_drift.schema.json" "$ROOT_DIR/v58/blind_eval_real.json"
+
+cp "$ROOT_DIR/schemas/review_return_workflow.schema.json" "$TMP_DIR/review_return_schema_policy_contract_drift.schema.json"
+python3 - "$TMP_DIR/review_return_schema_policy_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_policy_static"]["release_ready"] = True
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance policy.release_ready must match x-contract.expected_policy_static" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/review_return_schema_policy_contract_drift.schema.json" "$ROOT_DIR/operations/review_return_workflow.json"
+
+cp "$ROOT_DIR/schemas/review_return_workflow.schema.json" "$TMP_DIR/review_return_schema_counter_contract_drift.schema.json"
+python3 - "$TMP_DIR/review_return_schema_counter_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_policy_static"]["accepted_human_review_rows"] = 1
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance policy.accepted_human_review_rows must match x-contract.expected_policy_static" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/review_return_schema_counter_contract_drift.schema.json" "$ROOT_DIR/operations/review_return_workflow.json"
+
+cp "$ROOT_DIR/schemas/review_return_workflow.schema.json" "$TMP_DIR/review_return_schema_requirement_contract_drift.schema.json"
+python3 - "$TMP_DIR/review_return_schema_requirement_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_requirement_ids"] = list(reversed(data["x-contract"]["expected_requirement_ids"]))
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance requirements must follow x-contract.expected_requirement_ids" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/review_return_schema_requirement_contract_drift.schema.json" "$ROOT_DIR/operations/review_return_workflow.json"
+
+cp "$ROOT_DIR/schemas/review_return_workflow.schema.json" "$TMP_DIR/review_return_schema_summary_contract_drift.schema.json"
+python3 - "$TMP_DIR/review_return_schema_summary_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+checks = data["x-contract"]["expected_summary_checks"]["v61-operator-bundle-logistics-only"]
+for check in checks:
+    if check["field"] == "operator_command_rows":
+        check["expected"] = "61"
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance requirement v61-operator-bundle-logistics-only.summary_checks must match x-contract.expected_summary_checks" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/review_return_schema_summary_contract_drift.schema.json" "$ROOT_DIR/operations/review_return_workflow.json"
 
 cp "$ROOT_DIR/schemas/leakage_contract.schema.json" "$TMP_DIR/leakage_schema_missing_contract.schema.json"
 python3 - "$TMP_DIR/leakage_schema_missing_contract.schema.json" <<'PY'

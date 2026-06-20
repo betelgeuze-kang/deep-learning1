@@ -3,6 +3,77 @@
   "$id": "https://local.discrete-local-energy/schemas/review_return_workflow.schema.json",
   "title": "Operator Review-Return Workflow Contract",
   "type": "object",
+  "x-contract": {
+    "expected_policy_static": {
+      "workflow_contract_ready": true,
+      "human_review_ready": false,
+      "adjudication_ready": false,
+      "operator_input_files_ready": false,
+      "actual_generation_ready": false,
+      "production_latency_claim_ready": false,
+      "near_frontier_claim_ready": false,
+      "quality_comparison_claim_ready": false,
+      "public_comparison_claim_ready": false,
+      "release_ready": false,
+      "fixture_can_close_real_return": false,
+      "accepted_human_review_rows": 0,
+      "accepted_adjudication_rows": 0,
+      "accepted_operator_return_rows": 0
+    },
+    "expected_requirement_ids": [
+      "v53-review-return-intake-blocked",
+      "v58-blind-review-return-blocked",
+      "v61-operator-bundle-logistics-only",
+      "v61-first-slice-operator-input-blocked"
+    ],
+    "expected_summary_checks": {
+      "v53-review-return-intake-blocked": [
+        {"summary_id": "v53s", "field": "v53s_complete_source_review_return_intake_ready", "expected": "1"},
+        {"summary_id": "v53s", "field": "review_return_input_supplied", "expected": "0"},
+        {"summary_id": "v53s", "field": "expected_human_review_rows", "expected": "7000"},
+        {"summary_id": "v53s", "field": "accepted_human_review_rows", "expected": "0"},
+        {"summary_id": "v53s", "field": "expected_adjudication_rows", "expected": "1000"},
+        {"summary_id": "v53s", "field": "accepted_adjudication_rows", "expected": "0"},
+        {"summary_id": "v53s", "field": "human_review_completed", "expected": "0"},
+        {"summary_id": "v53s", "field": "adjudication_completed", "expected": "0"},
+        {"summary_id": "v53s", "field": "review_return_ready", "expected": "0"}
+      ],
+      "v58-blind-review-return-blocked": [
+        {"summary_id": "v58d", "field": "v58d_blind_review_return_intake_ready", "expected": "1"},
+        {"summary_id": "v58d", "field": "v58d_dependency_blocker_ready", "expected": "1"},
+        {"summary_id": "v58d", "field": "review_dir_supplied", "expected": "0"},
+        {"summary_id": "v58d", "field": "required_blind_review_ready", "expected": "0"},
+        {"summary_id": "v58d", "field": "required_adjudication_ready", "expected": "0"},
+        {"summary_id": "v58d", "field": "human_blind_review_ready", "expected": "0"},
+        {"summary_id": "v58d", "field": "inter_rater_rows_ready", "expected": "0"},
+        {"summary_id": "v58d", "field": "v58_full_blind_eval_ready", "expected": "0"},
+        {"summary_id": "v58d", "field": "real_release_package_ready", "expected": "0"}
+      ],
+      "v61-operator-bundle-logistics-only": [
+        {"summary_id": "v61af", "field": "v61af_checkpoint_warehouse_operator_bundle_ready", "expected": "1"},
+        {"summary_id": "v61af", "field": "operator_command_rows", "expected": "62"},
+        {"summary_id": "v61af", "field": "download_dry_run_default", "expected": "1"},
+        {"summary_id": "v61af", "field": "full_hash_dry_run_default", "expected": "1"},
+        {"summary_id": "v61af", "field": "materialization_admission_ready", "expected": "0"},
+        {"summary_id": "v61af", "field": "local_checkpoint_materialization_ready", "expected": "0"},
+        {"summary_id": "v61af", "field": "generation_admitted_rows", "expected": "0"},
+        {"summary_id": "v61af", "field": "actual_model_generation_ready", "expected": "0"},
+        {"summary_id": "v61af", "field": "real_release_package_ready", "expected": "0"}
+      ],
+      "v61-first-slice-operator-input-blocked": [
+        {"summary_id": "v61hv", "field": "v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_ready", "expected": "1"},
+        {"summary_id": "v61hv", "field": "replacements_to_readiness_ready", "expected": "1"},
+        {"summary_id": "v61hv", "field": "form_values_supplied", "expected": "0"},
+        {"summary_id": "v61hv", "field": "operator_input_files_ready", "expected": "0"},
+        {"summary_id": "v61hv", "field": "ack_values_supplied", "expected": "0"},
+        {"summary_id": "v61hv", "field": "dual_output_roots_ready", "expected": "0"},
+        {"summary_id": "v61hv", "field": "row_acceptance_ready", "expected": "0"},
+        {"summary_id": "v61hv", "field": "generation_acceptance_closure_ready", "expected": "0"},
+        {"summary_id": "v61hv", "field": "actual_model_generation_ready", "expected": "0"},
+        {"summary_id": "v61hv", "field": "real_release_package_ready", "expected": "0"}
+      ]
+    }
+  },
   "required": ["schema_version", "policy", "requirements"],
   "properties": {
     "schema_version": {"type": "string"},

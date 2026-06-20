@@ -789,59 +789,20 @@ EXPECTED_V58_VALIDATION_COMMANDS = {
     artifact_id: str(row.get("validation_command", ""))
     for artifact_id, row in EXPECTED_V58_ARTIFACTS_BY_ID.items()
 }
+EXPECTED_REVIEW_RETURN_POLICY_STATIC = schema_contract_dict(
+    "review_return_workflow.schema.json",
+    "expected_policy_static",
+)
 EXPECTED_REVIEW_RETURN_REQUIREMENT_IDS = [
-    "v53-review-return-intake-blocked",
-    "v58-blind-review-return-blocked",
-    "v61-operator-bundle-logistics-only",
-    "v61-first-slice-operator-input-blocked",
+    str(requirement_id)
+    for requirement_id in schema_contract_list(
+        "review_return_workflow.schema.json",
+        "expected_requirement_ids",
+    )
 ]
-EXPECTED_REVIEW_RETURN_SUMMARY_CHECKS = {
-    "v53-review-return-intake-blocked": [
-        ("v53s", "v53s_complete_source_review_return_intake_ready", "1"),
-        ("v53s", "review_return_input_supplied", "0"),
-        ("v53s", "expected_human_review_rows", "7000"),
-        ("v53s", "accepted_human_review_rows", "0"),
-        ("v53s", "expected_adjudication_rows", "1000"),
-        ("v53s", "accepted_adjudication_rows", "0"),
-        ("v53s", "human_review_completed", "0"),
-        ("v53s", "adjudication_completed", "0"),
-        ("v53s", "review_return_ready", "0"),
-    ],
-    "v58-blind-review-return-blocked": [
-        ("v58d", "v58d_blind_review_return_intake_ready", "1"),
-        ("v58d", "v58d_dependency_blocker_ready", "1"),
-        ("v58d", "review_dir_supplied", "0"),
-        ("v58d", "required_blind_review_ready", "0"),
-        ("v58d", "required_adjudication_ready", "0"),
-        ("v58d", "human_blind_review_ready", "0"),
-        ("v58d", "inter_rater_rows_ready", "0"),
-        ("v58d", "v58_full_blind_eval_ready", "0"),
-        ("v58d", "real_release_package_ready", "0"),
-    ],
-    "v61-operator-bundle-logistics-only": [
-        ("v61af", "v61af_checkpoint_warehouse_operator_bundle_ready", "1"),
-        ("v61af", "operator_command_rows", "62"),
-        ("v61af", "download_dry_run_default", "1"),
-        ("v61af", "full_hash_dry_run_default", "1"),
-        ("v61af", "materialization_admission_ready", "0"),
-        ("v61af", "local_checkpoint_materialization_ready", "0"),
-        ("v61af", "generation_admitted_rows", "0"),
-        ("v61af", "actual_model_generation_ready", "0"),
-        ("v61af", "real_release_package_ready", "0"),
-    ],
-    "v61-first-slice-operator-input-blocked": [
-        ("v61hv", "v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_ready", "1"),
-        ("v61hv", "replacements_to_readiness_ready", "1"),
-        ("v61hv", "form_values_supplied", "0"),
-        ("v61hv", "operator_input_files_ready", "0"),
-        ("v61hv", "ack_values_supplied", "0"),
-        ("v61hv", "dual_output_roots_ready", "0"),
-        ("v61hv", "row_acceptance_ready", "0"),
-        ("v61hv", "generation_acceptance_closure_ready", "0"),
-        ("v61hv", "actual_model_generation_ready", "0"),
-        ("v61hv", "real_release_package_ready", "0"),
-    ],
-}
+EXPECTED_REVIEW_RETURN_SUMMARY_CHECKS = schema_summary_checks_by_requirement(
+    "review_return_workflow.schema.json",
+)
 V61_SCHEMA_CONTRACT = schema_contract("v61_one_token_path.schema.json")
 EXPECTED_V61_MILESTONE_IDS = list(V61_SCHEMA_CONTRACT["milestone_order"])
 V61_REQUIRED_BEFORE_RUNTIME_CLAIM = list(V61_SCHEMA_CONTRACT["required_before_runtime_claim"])
@@ -2692,29 +2653,16 @@ def verify_review_return_workflow(
     if data["schema_version"] != "review_return_workflow.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
-    if policy.get("workflow_contract_ready") is not True:
-        errors.append(f"{path}: workflow_contract_ready must be true")
-    for field in [
-        "human_review_ready",
-        "adjudication_ready",
-        "operator_input_files_ready",
-        "actual_generation_ready",
-        "production_latency_claim_ready",
-        "near_frontier_claim_ready",
-        "quality_comparison_claim_ready",
-        "public_comparison_claim_ready",
-        "release_ready",
-        "fixture_can_close_real_return",
-    ]:
-        if policy.get(field) is not False:
-            errors.append(f"{path}: {field} must be false")
-    for field in [
-        "accepted_human_review_rows",
-        "accepted_adjudication_rows",
-        "accepted_operator_return_rows",
-    ]:
-        if policy.get(field) != 0:
-            errors.append(f"{path}: {field} must be 0")
+    policy_messages = {
+        "workflow_contract_ready": "workflow_contract_ready must be true",
+        "accepted_human_review_rows": "accepted_human_review_rows must be 0",
+        "accepted_adjudication_rows": "accepted_adjudication_rows must be 0",
+        "accepted_operator_return_rows": "accepted_operator_return_rows must be 0",
+    }
+    for field, expected in EXPECTED_REVIEW_RETURN_POLICY_STATIC.items():
+        if policy.get(field) != expected:
+            message = policy_messages.get(field, f"{field} must be false")
+            errors.append(f"{path}: {message}")
 
     requirements = data["requirements"]
     if not isinstance(requirements, list) or not requirements:
