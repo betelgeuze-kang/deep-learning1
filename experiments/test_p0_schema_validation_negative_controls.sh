@@ -172,6 +172,40 @@ if module.DEFAULT_DE_MEASURED_REGISTRY_LEDGER != Path(baseline_expected_pm_ledge
 if module.DEFAULT_DE_ACCEPTANCE_LEDGER != Path(baseline_expected_pm_ledgers_by_id["de-acceptance-evidence-blockers"]["path"]):
     raise SystemExit("DEFAULT_DE_ACCEPTANCE_LEDGER must be derived from schema x-contract.expected_pm_ledgers")
 
+v52_schema = json.loads((root / "schemas" / "v52_adapter_guard.schema.json").read_text(encoding="utf-8"))
+v52_contract = v52_schema["x-contract"]
+v52_expected_artifacts_by_id = {
+    row["artifact_id"]: row
+    for row in v52_contract["expected_required_artifacts"]
+}
+v52_expected_summary_checks = {
+    requirement_id: [
+        (check["summary_id"], check["field"], check["expected"])
+        for check in checks
+    ]
+    for requirement_id, checks in v52_contract["expected_summary_checks"].items()
+}
+if module.EXPECTED_V52_POLICY_STATIC != v52_contract["expected_policy_static"]:
+    raise SystemExit("EXPECTED_V52_POLICY_STATIC must be derived from schema x-contract.expected_policy_static")
+if module.EXPECTED_V52_ARTIFACTS != v52_contract["expected_required_artifacts"]:
+    raise SystemExit("EXPECTED_V52_ARTIFACTS must be derived from schema x-contract.expected_required_artifacts")
+if module.EXPECTED_V52_ARTIFACTS_BY_ID != v52_expected_artifacts_by_id:
+    raise SystemExit("EXPECTED_V52_ARTIFACTS_BY_ID must be derived from schema x-contract.expected_required_artifacts")
+if module.EXPECTED_V52_C_ARTIFACT_IDS != [row["artifact_id"] for row in v52_contract["expected_required_artifacts"]]:
+    raise SystemExit("EXPECTED_V52_C_ARTIFACT_IDS must be derived from schema x-contract.expected_required_artifacts")
+if module.EXPECTED_V52_C_ARTIFACT_COLUMNS != {row["artifact_id"]: row["required_columns"] for row in v52_contract["expected_required_artifacts"]}:
+    raise SystemExit("EXPECTED_V52_C_ARTIFACT_COLUMNS must be derived from schema x-contract.expected_required_artifacts")
+if module.EXPECTED_V52_C_MIN_ROWS != {row["artifact_id"]: row["min_rows"] for row in v52_contract["expected_required_artifacts"]}:
+    raise SystemExit("EXPECTED_V52_C_MIN_ROWS must be derived from schema x-contract.expected_required_artifacts")
+if module.EXPECTED_V52_ARTIFACT_KINDS != {row["artifact_id"]: row["artifact_kind"] for row in v52_contract["expected_required_artifacts"]}:
+    raise SystemExit("EXPECTED_V52_ARTIFACT_KINDS must be derived from schema x-contract.expected_required_artifacts")
+if module.EXPECTED_V52_REQUIRED_FOR_C_PACKET != {row["artifact_id"]: row["required_for_c_packet"] for row in v52_contract["expected_required_artifacts"]}:
+    raise SystemExit("EXPECTED_V52_REQUIRED_FOR_C_PACKET must be derived from schema x-contract.expected_required_artifacts")
+if module.EXPECTED_V52_REQUIREMENT_IDS != v52_contract["expected_requirement_ids"]:
+    raise SystemExit("EXPECTED_V52_REQUIREMENT_IDS must be derived from schema x-contract.expected_requirement_ids")
+if module.EXPECTED_V52_SUMMARY_CHECKS != v52_expected_summary_checks:
+    raise SystemExit("EXPECTED_V52_SUMMARY_CHECKS must be derived from schema x-contract.expected_summary_checks")
+
 v50_schema = json.loads((root / "schemas" / "v50_auditor_correctness.schema.json").read_text(encoding="utf-8"))
 v50_contract = v50_schema["x-contract"]
 if module.EXPECTED_V50_POLICY_STATIC != v50_contract["expected_policy_static"]:
@@ -373,6 +407,77 @@ expect_fail_with \
   "instance systems must match x-contract.expected_systems" \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/baseline_admission.schema.json" "$TMP_DIR/baseline_instance_system_drift.json"
+
+cp "$ROOT_DIR/schemas/v52_adapter_guard.schema.json" "$TMP_DIR/v52_schema_policy_contract_drift.schema.json"
+python3 - "$TMP_DIR/v52_schema_policy_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_policy_static"]["release_ready"] = True
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance policy must match x-contract.expected_policy_static" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v52_schema_policy_contract_drift.schema.json" "$ROOT_DIR/baselines/v52_adapter_guard.json"
+
+cp "$ROOT_DIR/schemas/v52_adapter_guard.schema.json" "$TMP_DIR/v52_schema_artifact_contract_drift.schema.json"
+python3 - "$TMP_DIR/v52_schema_artifact_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["x-contract"]["expected_required_artifacts"]:
+    if row["artifact_id"] == "c-answer-rows":
+        row["required_columns"].remove("latency_ns")
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance required_artifacts must match x-contract.expected_required_artifacts" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v52_schema_artifact_contract_drift.schema.json" "$ROOT_DIR/baselines/v52_adapter_guard.json"
+
+cp "$ROOT_DIR/schemas/v52_adapter_guard.schema.json" "$TMP_DIR/v52_schema_requirement_contract_drift.schema.json"
+python3 - "$TMP_DIR/v52_schema_requirement_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["x-contract"]["expected_requirement_ids"] = data["x-contract"]["expected_requirement_ids"][:-1]
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance requirements must follow x-contract.expected_requirement_ids" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v52_schema_requirement_contract_drift.schema.json" "$ROOT_DIR/baselines/v52_adapter_guard.json"
+
+cp "$ROOT_DIR/schemas/v52_adapter_guard.schema.json" "$TMP_DIR/v52_schema_summary_contract_drift.schema.json"
+python3 - "$TMP_DIR/v52_schema_summary_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+checks = data["x-contract"]["expected_summary_checks"]["c-7b14b-quality-boundary"]
+for check in checks:
+    if check["field"] == "accuracy":
+        check["expected"] = "1.000000"
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance requirement c-7b14b-quality-boundary.summary_checks must match x-contract.expected_summary_checks" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v52_schema_summary_contract_drift.schema.json" "$ROOT_DIR/baselines/v52_adapter_guard.json"
 
 cp "$ROOT_DIR/schemas/v50_auditor_correctness.schema.json" "$TMP_DIR/v50_schema_policy_contract_drift.schema.json"
 python3 - "$TMP_DIR/v50_schema_policy_contract_drift.schema.json" <<'PY'

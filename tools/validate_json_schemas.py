@@ -466,6 +466,88 @@ def validate_baseline_admission_contract_metadata(
     return errors
 
 
+def validate_v52_adapter_guard_contract_metadata(
+    schema_path: Path,
+    schema: object,
+    instance: object,
+) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        return errors
+    if instance.get("schema_version") != "v52_adapter_guard.v1":
+        return errors
+
+    contract = schema.get("x-contract")
+    if not isinstance(contract, dict):
+        errors.append(f"{schema_path}: x-contract must be an object for v52_adapter_guard.v1")
+        return errors
+
+    expected_policy = contract.get("expected_policy_static")
+    expected_artifacts = contract.get("expected_required_artifacts")
+    expected_requirements = contract.get("expected_requirement_ids")
+    expected_summary_checks = contract.get("expected_summary_checks")
+    if not isinstance(expected_policy, dict) or not expected_policy:
+        errors.append(f"{schema_path}: x-contract.expected_policy_static must be a non-empty object")
+    if not isinstance(expected_artifacts, list) or not expected_artifacts:
+        errors.append(f"{schema_path}: x-contract.expected_required_artifacts must be a non-empty list")
+    if not isinstance(expected_requirements, list) or not expected_requirements:
+        errors.append(f"{schema_path}: x-contract.expected_requirement_ids must be a non-empty list")
+    if not isinstance(expected_summary_checks, dict) or not expected_summary_checks:
+        errors.append(f"{schema_path}: x-contract.expected_summary_checks must be a non-empty object")
+    if errors:
+        return errors
+
+    if instance.get("policy") != expected_policy:
+        errors.append(f"{schema_path}: instance policy must match x-contract.expected_policy_static")
+    if instance.get("required_artifacts") != expected_artifacts:
+        errors.append(f"{schema_path}: instance required_artifacts must match x-contract.expected_required_artifacts")
+
+    requirements = instance.get("requirements", [])
+    if not isinstance(requirements, list):
+        return errors
+    requirement_ids = [
+        row.get("requirement_id", "")
+        for row in requirements
+        if isinstance(row, dict)
+    ]
+    if requirement_ids != expected_requirements:
+        errors.append(f"{schema_path}: instance requirements must follow x-contract.expected_requirement_ids")
+    if len(expected_requirements) != len(set(expected_requirements)):
+        errors.append(f"{schema_path}: x-contract.expected_requirement_ids values must be unique")
+    if set(expected_summary_checks) != set(expected_requirements):
+        errors.append(f"{schema_path}: x-contract.expected_summary_checks keys must match expected_requirement_ids")
+
+    artifact_ids = [
+        row.get("artifact_id", "")
+        for row in expected_artifacts
+        if isinstance(row, dict)
+    ]
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{schema_path}: x-contract.expected_required_artifacts artifact_id values must be unique")
+    for row in requirements:
+        if not isinstance(row, dict):
+            continue
+        requirement_id = row.get("requirement_id", "")
+        expected_checks = expected_summary_checks.get(requirement_id)
+        if not isinstance(expected_checks, list):
+            errors.append(f"{schema_path}: x-contract.expected_summary_checks.{requirement_id} must be a list")
+            continue
+        for check in expected_checks:
+            if not isinstance(check, dict):
+                errors.append(f"{schema_path}: x-contract.expected_summary_checks.{requirement_id} values must be objects")
+                continue
+            if set(check) != {"summary_id", "field", "expected"}:
+                errors.append(f"{schema_path}: x-contract.expected_summary_checks.{requirement_id} entries must have summary_id, field, expected")
+            if any(not isinstance(check.get(key), str) or not check.get(key) for key in ("summary_id", "field", "expected")):
+                errors.append(f"{schema_path}: x-contract.expected_summary_checks.{requirement_id} entries must use non-empty string values")
+        if expected_checks is None:
+            errors.append(f"{schema_path}: x-contract.expected_summary_checks missing {requirement_id}")
+            continue
+        if row.get("summary_checks") != expected_checks:
+            errors.append(f"{schema_path}: instance requirement {requirement_id}.summary_checks must match x-contract.expected_summary_checks")
+    return errors
+
+
 def validate_v50_auditor_contract_metadata(
     schema_path: Path,
     schema: object,
@@ -986,6 +1068,7 @@ def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
     errors.extend(validate_typed_readiness_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_leakage_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_baseline_admission_contract_metadata(schema_path, schema, instance))
+    errors.extend(validate_v52_adapter_guard_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_v50_auditor_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_v53_source_benchmark_contract_metadata(schema_path, schema, instance))
     errors.extend(validate_review_return_workflow_contract_metadata(schema_path, schema, instance))

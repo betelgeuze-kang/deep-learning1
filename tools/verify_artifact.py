@@ -463,112 +463,41 @@ EXPECTED_DE_REQUIRED_ARTIFACT_KINDS = {
     str(row.get("artifact_id", "")): str(row.get("artifact_kind", ""))
     for row in EXPECTED_DE_ARTIFACTS
 }
+EXPECTED_V52_POLICY_STATIC = schema_contract_dict(
+    "v52_adapter_guard.schema.json",
+    "expected_policy_static",
+)
+EXPECTED_V52_ARTIFACTS = [
+    dict(row)
+    for row in schema_contract_list(
+        "v52_adapter_guard.schema.json",
+        "expected_required_artifacts",
+    )
+    if isinstance(row, dict)
+]
+EXPECTED_V52_ARTIFACTS_BY_ID = {
+    str(row.get("artifact_id", "")): row
+    for row in EXPECTED_V52_ARTIFACTS
+}
 EXPECTED_V52_C_ARTIFACT_IDS = [
-    "c-answer-rows",
-    "c-citation-rows",
-    "c-resource-rows",
-    "c-retrieval-rows",
-    "c-abstain-rows",
-    "c-wrong-answer-guard-rows",
-    "c-generation-transcript-rows",
-    "c-sha256-manifest",
+    str(row.get("artifact_id", ""))
+    for row in EXPECTED_V52_ARTIFACTS
 ]
 EXPECTED_V52_C_ARTIFACT_COLUMNS = {
-    "c-answer-rows": [
-        "answer_id",
-        "system_id",
-        "query_id",
-        "repo_id",
-        "owner_repo",
-        "audit_type",
-        "expected_answer_sha256",
-        "predicted_answer",
-        "predicted_answer_sha256",
-        "correct",
-        "abstained",
-        "retrieved_source_span_id",
-        "raw_prompt_context_bytes",
-        "compact_routehint_bytes",
-        "context_or_hint_sha256",
-        "latency_ns",
-    ],
-    "c-citation-rows": [
-        "citation_id",
-        "answer_id",
-        "system_id",
-        "query_id",
-        "source_span_id",
-        "repo_id",
-        "owner_repo",
-        "path",
-        "line_start",
-        "line_end",
-        "source_file_sha256",
-        "evidence_text_sha256",
-        "citation_correct",
-    ],
-    "c-resource-rows": [
-        "system_id",
-        "query_id",
-        "latency_ns",
-        "raw_prompt_context_bytes",
-        "compact_routehint_bytes",
-        "retrieved_span_rows",
-        "external_network_used",
-        "external_model_used",
-        "route_memory_store_used",
-        "compact_routehint_used",
-        "source_verified_scorer_used",
-        "domain_policy_used",
-    ],
-    "c-retrieval-rows": [
-        "system_id",
-        "query_id",
-        "rank",
-        "score",
-        "source_span_id",
-        "owner_repo",
-        "path",
-        "line_start",
-    ],
-    "c-abstain-rows": [
-        "system_id",
-        "query_id",
-        "negative_or_abstain",
-        "abstained",
-        "abstain_correct",
-    ],
-    "c-wrong-answer-guard-rows": [
-        "system_id",
-        "query_id",
-        "expected_answer_sha256",
-        "predicted_answer_sha256",
-        "wrong_answer",
-        "guard_triggered",
-        "guard_status",
-    ],
-    "c-generation-transcript-rows": [
-        "query_id",
-        "prompt_sha256",
-        "response_sha256",
-        "predicted_answer_sha256",
-        "raw_response",
-    ],
-    "c-sha256-manifest": [
-        "path",
-        "sha256",
-        "bytes",
-    ],
+    artifact_id: list(row.get("required_columns", []))
+    for artifact_id, row in EXPECTED_V52_ARTIFACTS_BY_ID.items()
 }
 EXPECTED_V52_C_MIN_ROWS = {
-    "c-answer-rows": 1000,
-    "c-citation-rows": 1000,
-    "c-resource-rows": 1000,
-    "c-retrieval-rows": 1000,
-    "c-abstain-rows": 1000,
-    "c-wrong-answer-guard-rows": 1000,
-    "c-generation-transcript-rows": 1000,
-    "c-sha256-manifest": 14,
+    artifact_id: row.get("min_rows")
+    for artifact_id, row in EXPECTED_V52_ARTIFACTS_BY_ID.items()
+}
+EXPECTED_V52_ARTIFACT_KINDS = {
+    artifact_id: row.get("artifact_kind")
+    for artifact_id, row in EXPECTED_V52_ARTIFACTS_BY_ID.items()
+}
+EXPECTED_V52_REQUIRED_FOR_C_PACKET = {
+    artifact_id: row.get("required_for_c_packet")
+    for artifact_id, row in EXPECTED_V52_ARTIFACTS_BY_ID.items()
 }
 EXPECTED_V58_POLICY_STATIC = schema_contract_dict(
     "v58_blind_eval.schema.json",
@@ -699,12 +628,15 @@ EXPECTED_V56_MISSING_SEED_PATHS = [
     for path in EXPECTED_V56_SEED_DEPENDENCY.get("missing_seed_artifact_paths", [])
 ]
 EXPECTED_V52_REQUIREMENT_IDS = [
-    "c-7b14b-v53e-actual-adapter-packet",
-    "c-7b14b-quality-boundary",
-    "c-7b14b-intake-default-blocked",
-    "de-30b70b-intake-fail-closed",
-    "de-measured-registry-blocked",
+    str(requirement_id)
+    for requirement_id in schema_contract_list(
+        "v52_adapter_guard.schema.json",
+        "expected_requirement_ids",
+    )
 ]
+EXPECTED_V52_SUMMARY_CHECKS = schema_summary_checks_by_requirement(
+    "v52_adapter_guard.schema.json",
+)
 EXPECTED_V53_V1_EXIT_CRITERION_IDS = [
     str(criterion_id)
     for criterion_id in schema_contract_list(
@@ -1702,16 +1634,16 @@ def verify_v52_adapter_guard(
     if data["schema_version"] != "v52_adapter_guard.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
-    if policy.get("c_7b14b_actual_adapter_packet_ready") is not True:
-        errors.append(f"{path}: c_7b14b_actual_adapter_packet_ready must be true")
-    for field in [
-        "c_quality_claim_ready",
-        "de_measured_registry_admission_ready",
-        "public_comparison_claim_ready",
-        "release_ready",
-    ]:
-        if policy.get(field) is not False:
-            errors.append(f"{path}: {field} must be false")
+    policy_messages = {
+        "c_7b14b_actual_adapter_packet_ready": "c_7b14b_actual_adapter_packet_ready must be true",
+        "c_quality_claim_ready": "c_quality_claim_ready must be false",
+        "de_measured_registry_admission_ready": "de_measured_registry_admission_ready must be false",
+        "public_comparison_claim_ready": "public_comparison_claim_ready must be false",
+        "release_ready": "release_ready must be false",
+    }
+    for field, expected in EXPECTED_V52_POLICY_STATIC.items():
+        if policy.get(field) != expected:
+            errors.append(f"{path}: {policy_messages.get(field, f'policy.{field} expected {expected}')}")
 
     artifacts = data["required_artifacts"]
     if not isinstance(artifacts, list) or not artifacts:
@@ -1728,10 +1660,12 @@ def verify_v52_adapter_guard(
         if missing_artifact:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_artifact))}")
         artifact_id = row.get("artifact_id", "")
-        if row.get("artifact_kind") != "csv":
-            errors.append(f"{prefix}: artifact_kind must be csv")
-        if row.get("required_for_c_packet") is not True:
-            errors.append(f"{prefix}: required_for_c_packet must be true")
+        expected_kind = EXPECTED_V52_ARTIFACT_KINDS.get(artifact_id)
+        if expected_kind is not None and row.get("artifact_kind") != expected_kind:
+            errors.append(f"{prefix}: artifact_kind must be {expected_kind}")
+        expected_required = EXPECTED_V52_REQUIRED_FOR_C_PACKET.get(artifact_id)
+        if expected_required is not None and row.get("required_for_c_packet") != expected_required:
+            errors.append(f"{prefix}: required_for_c_packet must be {str(expected_required).lower()}")
         required_columns = row.get("required_columns", [])
         expected_columns = EXPECTED_V52_C_ARTIFACT_COLUMNS.get(artifact_id)
         if not isinstance(required_columns, list) or not required_columns:
@@ -1792,6 +1726,14 @@ def verify_v52_adapter_guard(
         if checks and not isinstance(checks, list):
             errors.append(f"{prefix}: summary_checks must be a list when present")
             continue
+        expected_checks = EXPECTED_V52_SUMMARY_CHECKS.get(row.get("requirement_id", ""))
+        actual_checks = [
+            (check.get("summary_id", ""), check.get("field", ""), check.get("expected", ""))
+            for check in checks
+            if isinstance(check, dict)
+        ]
+        if expected_checks is not None and actual_checks != expected_checks:
+            errors.append(f"{prefix}: summary_checks must exactly match the v52 adapter guard contract")
         for check in checks:
             summary_id = check.get("summary_id", "")
             summary = summaries.get(summary_id)
