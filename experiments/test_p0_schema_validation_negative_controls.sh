@@ -79,6 +79,29 @@ expect_fail_with \
   "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$TMP_DIR/v61_schema_contract_drift.schema.json" "$ROOT_DIR/v61/one_token_path.json"
 
+cp "$ROOT_DIR/schemas/v61_one_token_path.schema.json" "$TMP_DIR/v61_schema_column_contract_drift.schema.json"
+python3 - "$TMP_DIR/v61_schema_column_contract_drift.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for row in data["x-contract"]["artifact_contracts"]:
+    if row["artifact_id"] == "one-token-logits-parity-rows":
+        row["required_columns"] = [
+            column
+            for column in row["required_columns"]
+            if column != "mean_abs_delta"
+        ]
+        break
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "instance required_artifact one-token-logits-parity-rows.required_columns must match x-contract" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$TMP_DIR/v61_schema_column_contract_drift.schema.json" "$ROOT_DIR/v61/one_token_path.json"
+
 cp "$ROOT_DIR/tools/validate_json_schemas.py" "$TMP_DIR/validate_json_schemas_missing_v56.py"
 python3 - "$TMP_DIR/validate_json_schemas_missing_v56.py" <<'PY'
 import sys

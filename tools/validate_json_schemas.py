@@ -88,13 +88,18 @@ def validate_contract_metadata(schema_path: Path, schema: object, instance: obje
         if not isinstance(row, dict):
             errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] must be an object")
             continue
-        missing = {"artifact_id", "path", "linked_milestone_id", "pass_field", "min_rows"} - set(row)
+        missing = {"artifact_id", "path", "linked_milestone_id", "pass_field", "min_rows", "required_columns"} - set(row)
         if missing:
             errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] missing {', '.join(sorted(missing))}")
         if row.get("linked_milestone_id") not in milestone_order:
             errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] linked_milestone_id must reference milestone_order")
         if not isinstance(row.get("min_rows"), int) or row.get("min_rows", 0) < 1:
             errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] min_rows must be a positive integer")
+        required_columns = row.get("required_columns", [])
+        if not isinstance(required_columns, list) or not required_columns or any(not isinstance(column, str) for column in required_columns):
+            errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] required_columns must be a non-empty string list")
+        elif len(set(required_columns)) != len(required_columns):
+            errors.append(f"{schema_path}: x-contract.artifact_contracts[{index}] required_columns values must be unique")
         artifact_by_id[row.get("artifact_id", "")] = row
 
     milestones = instance.get("milestones", [])
@@ -120,7 +125,7 @@ def validate_contract_metadata(schema_path: Path, schema: object, instance: obje
         contract_row = artifact_by_id.get(artifact_id)
         if not contract_row:
             continue
-        for field in ["path", "linked_milestone_id", "pass_field", "min_rows"]:
+        for field in ["path", "linked_milestone_id", "pass_field", "min_rows", "required_columns"]:
             if row.get(field) != contract_row.get(field):
                 errors.append(f"{schema_path}: instance required_artifact {artifact_id}.{field} must match x-contract")
     return errors
