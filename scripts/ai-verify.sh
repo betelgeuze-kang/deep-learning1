@@ -221,6 +221,9 @@ fi
 if [ -x experiments/test_p0_v52_adapter_guard_negative_controls.sh ]; then
   ./experiments/test_p0_v52_adapter_guard_negative_controls.sh >/dev/null
 fi
+if [ -x experiments/test_p0_v56_replay_negative_controls.sh ]; then
+  ./experiments/test_p0_v56_replay_negative_controls.sh >/dev/null
+fi
 if [ -x experiments/test_p0_v53_v54_pipeline_negative_controls.sh ]; then
   ./experiments/test_p0_v53_v54_pipeline_negative_controls.sh >/dev/null
 fi
@@ -288,6 +291,18 @@ if [ -x tools/verify_artifact.py ]; then
         --decision results/v50_public_repo_auditor_3repo_decision.csv >/dev/null
     else
       tools/verify_artifact.py v50-auditor-correctness audits/v50_public_repo_auditor_correctness.json >/dev/null
+    fi
+  fi
+  if [ -f v56/replay_contract.json ]; then
+    if [ -f results/v56_ruler_longbench_expanded_contract_summary.csv ] &&
+       [ -f results/v56_ruler_longbench_expanded_contract/contract_001/v56_seed_dependency_blocker_rows.csv ] &&
+       [ -f results/v1_0_pm_pr_claim_slice_gate/gate_001/v56_replay_acceptance_evidence_rows.csv ]; then
+      tools/verify_artifact.py v56-replay v56/replay_contract.json \
+        --summary results/v56_ruler_longbench_expanded_contract_summary.csv \
+        --blocker-ledger results/v56_ruler_longbench_expanded_contract/contract_001/v56_seed_dependency_blocker_rows.csv \
+        --artifact-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/v56_replay_acceptance_evidence_rows.csv >/dev/null
+    else
+      tools/verify_artifact.py v56-replay v56/replay_contract.json >/dev/null
     fi
   fi
   if [ -f benchmarks/v53_source_bound_freeze.json ]; then
