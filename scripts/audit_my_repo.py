@@ -13,6 +13,7 @@ import sys
 import time
 from pathlib import Path
 
+from auditor_plugin_user_question import USER_QUESTION_PLUGIN
 from auditor_plugins import DEFAULT_PLUGINS, Finding, SourceFile
 
 SCHEMA_VERSION = "local_repo_audit.v1"
@@ -378,18 +379,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     plugin_findings: list[Finding] = []
     for plugin in DEFAULT_PLUGINS:
         plugin_findings.extend(plugin.run(target, sources))
-    question_finding: Finding | None = None
-    if question:
-        evidence = tuple([sources[0].path]) if sources else tuple()
-        question_finding = Finding(
-            "user_question",
-            question,
-            "Abstain: free-form user questions require exact source evidence; this alpha path records the question but does not infer an unsupported answer.",
-            evidence,
-            grounded=0,
-            abstain=1,
-            plugin_id="user_question",
-        )
+    question_finding = USER_QUESTION_PLUGIN.run_question(sources, question)
     if question_finding is not None:
         findings = plugin_findings[: max_queries - 1] + [question_finding]
     else:
@@ -600,7 +590,7 @@ def plugin_registry_payload() -> dict:
                 "language": plugin.language,
                 "module": plugin.__class__.__module__,
             }
-            for plugin in DEFAULT_PLUGINS
+            for plugin in list(DEFAULT_PLUGINS) + [USER_QUESTION_PLUGIN]
         ],
     }
 

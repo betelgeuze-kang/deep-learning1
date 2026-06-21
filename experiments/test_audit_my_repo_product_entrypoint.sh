@@ -278,7 +278,7 @@ for idx in range(1, 4):
         raise SystemExit("plugin registry schema version mismatch")
     if plugin_registry["tool_version"] != "audit_my_repo_alpha.v1":
         raise SystemExit("plugin registry tool version mismatch")
-    if plugin_ids != {"doc_code_identity", "deprecated_api", "config_consistency", "unsupported_claim", "missing_evidence"}:
+    if plugin_ids != {"doc_code_identity", "deprecated_api", "config_consistency", "unsupported_claim", "missing_evidence", "user_question"}:
         raise SystemExit("plugin registry must bind the deterministic plugin set")
     expected_plugin_modules = {
         "doc_code_identity": "auditor_plugin_doc_code_identity",
@@ -286,6 +286,7 @@ for idx in range(1, 4):
         "config_consistency": "auditor_plugin_config_consistency",
         "unsupported_claim": "auditor_plugin_unsupported_claim",
         "missing_evidence": "auditor_plugin_missing_evidence",
+        "user_question": "auditor_plugin_user_question",
     }
     if {row["plugin_id"]: row.get("module") for row in plugin_registry["plugins"]} != expected_plugin_modules:
         raise SystemExit("plugin registry must bind each deterministic plugin to its module")

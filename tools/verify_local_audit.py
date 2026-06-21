@@ -21,6 +21,7 @@ EXPECTED_PLUGIN_IDS = [
     "config_consistency",
     "unsupported_claim",
     "missing_evidence",
+    "user_question",
 ]
 EXPECTED_PLUGIN_MODULES = [
     "auditor_plugin_doc_code_identity",
@@ -28,6 +29,7 @@ EXPECTED_PLUGIN_MODULES = [
     "auditor_plugin_config_consistency",
     "auditor_plugin_unsupported_claim",
     "auditor_plugin_missing_evidence",
+    "auditor_plugin_user_question",
 ]
 
 REQUIRED_FILES = {
@@ -59,6 +61,40 @@ REQUIRED_FILES = {
     "unsupported_claim_rows.csv",
     "wrong_answer_guard_rows.csv",
 }
+EXPECTED_SUMMARY_KEYS = [
+    "schema_version",
+    "tool_version",
+    "audit_my_repo_ready",
+    "target_repo",
+    "mode",
+    "namespace",
+    "generator",
+    "question_supplied",
+    "source_files",
+    "finding_rows",
+    "citation_span_rows",
+    "abstain_rows",
+    "unsupported_claim_rows",
+    "accuracy_rows",
+    "citation_correctness_rows",
+    "false_positive_candidate_rows",
+    "wrong_answer_guard_rows",
+    "wrong_answer_guard_pass_rows",
+    "claim_boundary_ready",
+    "route_memory_lineage_rows",
+    "mmap_read_trace_rows",
+    "compact_route_hint_rows",
+    "grounded_generation_rows",
+    "raw_prompt_context_bytes",
+    "attention_blocks",
+    "transformer_blocks",
+    "oracle_prediction_used",
+    "raw_input_extractor_used",
+    "real_release_package_ready",
+    "public_comparison_claim_ready",
+    "gpu_speedup_claim",
+    "latency_ms",
+]
 
 
 def sha256_hex(path: Path) -> str:
@@ -125,6 +161,10 @@ def verify_summary(summary_json: dict, summary_csv_rows: list[dict[str, str]], e
         add(errors, "audit_summary.csv must have exactly one row")
         return {}
     row = summary_csv_rows[0]
+    if set(summary_json.keys()) != set(EXPECTED_SUMMARY_KEYS):
+        add(errors, "audit_summary.json keys drifted")
+    if list(row.keys()) != EXPECTED_SUMMARY_KEYS:
+        add(errors, "audit_summary.csv columns drifted")
     if summary_json.get("schema_version") != SUMMARY_SCHEMA_VERSION:
         add(errors, "audit_summary schema_version mismatch")
     if summary_json.get("tool_version") != TOOL_VERSION:

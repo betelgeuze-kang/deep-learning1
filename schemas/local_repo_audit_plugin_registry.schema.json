@@ -14,8 +14,8 @@
     "tool_version": {"const": "audit_my_repo_alpha.v1"},
     "plugins": {
       "type": "array",
-      "minItems": 5,
-      "maxItems": 5,
+      "minItems": 6,
+      "maxItems": 6,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -33,7 +33,8 @@
               "deprecated_api",
               "config_consistency",
               "unsupported_claim",
-              "missing_evidence"
+              "missing_evidence",
+              "user_question"
             ]
           },
           "audit_type": {
@@ -43,7 +44,8 @@
               "deprecated_api",
               "config_consistency",
               "unsupported_claim",
-              "missing_evidence"
+              "missing_evidence",
+              "user_question"
             ]
           },
           "language": {"type": "string", "enum": ["generic", "multi"]},
@@ -54,7 +56,8 @@
               "auditor_plugin_deprecated_api",
               "auditor_plugin_config_consistency",
               "auditor_plugin_unsupported_claim",
-              "auditor_plugin_missing_evidence"
+              "auditor_plugin_missing_evidence",
+              "auditor_plugin_user_question"
             ]
           }
         }

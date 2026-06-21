@@ -74,6 +74,7 @@ expected = {
     "config_consistency": "auditor_plugin_config_consistency",
     "unsupported_claim": "auditor_plugin_unsupported_claim",
     "missing_evidence": "auditor_plugin_missing_evidence",
+    "user_question": "auditor_plugin_user_question",
 }
 if set(plugins) != set(expected):
     raise SystemExit(f"plugin registry mismatch: {sorted(plugins)}")
@@ -228,6 +229,7 @@ expected_plugin_modules = {
     "config_consistency": "auditor_plugin_config_consistency",
     "unsupported_claim": "auditor_plugin_unsupported_claim",
     "missing_evidence": "auditor_plugin_missing_evidence",
+    "user_question": "auditor_plugin_user_question",
 }
 plugin_modules = {row["plugin_id"]: row.get("module") for row in plugin_registry["plugins"]}
 if plugin_modules != expected_plugin_modules:
@@ -790,6 +792,50 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
     raise SystemExit("local-audit verifier must reject wrong-answer guard pass summary row-count drift")
 summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
 summary_json_path.write_text(original_summary_json_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with summary_csv_path.open(newline="", encoding="utf-8") as handle:
+    summary_csv_rows = list(csv.DictReader(handle))
+tampered_summary_json = json.loads(original_summary_json_text)
+summary_csv_rows[0]["unexpected_ready_claim"] = "1"
+tampered_summary_json["unexpected_ready_claim"] = 1
+with summary_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(summary_csv_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(summary_csv_rows)
+summary_json_path.write_text(json.dumps(tampered_summary_json, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+with contract_path.open(newline="", encoding="utf-8") as handle:
+    contract_rows = list(csv.DictReader(handle))
+for row in contract_rows:
+    if row["artifact_path"] == "audit_summary.csv":
+        row["required_columns"] = row["required_columns"] + "|unexpected_ready_claim"
+        row["actual_columns"] = row["actual_columns"] + "|unexpected_ready_claim"
+    if row["artifact_path"] == "audit_summary.json":
+        row["required_keys"] = row["required_keys"] + "|unexpected_ready_claim"
+        row["actual_keys"] = row["actual_keys"] + "|unexpected_ready_claim"
+with contract_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(contract_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(contract_rows)
+new_summary_csv_sha = sha256(summary_csv_path)
+new_summary_json_sha = sha256(summary_json_path)
+new_contract_sha = sha256(contract_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_summary.csv"):
+        sha_lines.append(f"{new_summary_csv_sha}  audit_summary.csv")
+    elif line.endswith("  audit_summary.json"):
+        sha_lines.append(f"{new_summary_json_sha}  audit_summary.json")
+    elif line.endswith("  artifact_contract_rows.csv"):
+        sha_lines.append(f"{new_contract_sha}  artifact_contract_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject unexpected audit summary keys")
+summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
+summary_json_path.write_text(original_summary_json_text, encoding="utf-8")
+contract_path.write_text(original_contract_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 claim_boundary_path = out_a / "claim_boundary.md"
