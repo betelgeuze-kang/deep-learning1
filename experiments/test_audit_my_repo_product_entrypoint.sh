@@ -123,6 +123,8 @@ for idx in 1 2 3; do
     --question "Does this repo prove production readiness?" \
     --generator routehint-tiny >/dev/null
   cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
+  "$out/reproduce.sh" >/dev/null
+  cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
   "$ROOT_DIR/tools/verify_artifact.py" local-audit "$out" >/dev/null
 done
 
