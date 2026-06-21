@@ -53,6 +53,7 @@ class UnsupportedClaimPlugin(AuditPlugin):
                     severity="high",
                     unsupported_claim=1,
                     plugin_id=self.plugin_id,
+                    rule_ids=("unsupported-claim-readiness-capability-wording",),
                 )
             ]
         evidence = (_first_existing(repo, ["README.md"]) or sources[0].path,) if sources else tuple()
@@ -65,5 +66,6 @@ class UnsupportedClaimPlugin(AuditPlugin):
                 ("README",),
                 abstain=1,
                 plugin_id=self.plugin_id,
+                rule_ids=("unsupported-claim-readiness-capability-wording",),
             )
         ]

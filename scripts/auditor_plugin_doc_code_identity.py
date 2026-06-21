@@ -33,6 +33,7 @@ class DocCodeIdentityPlugin(AuditPlugin):
                     ("README",),
                     abstain=1,
                     plugin_id=self.plugin_id,
+                    rule_ids=("doc-code-identity-readme-config-name",),
                 )
             ]
         if config is None:
@@ -45,6 +46,7 @@ class DocCodeIdentityPlugin(AuditPlugin):
                     ("# ",),
                     abstain=1,
                     plugin_id=self.plugin_id,
+                    rule_ids=("doc-code-identity-readme-config-name",),
                 )
             ]
 
@@ -74,5 +76,6 @@ class DocCodeIdentityPlugin(AuditPlugin):
                 tuple(term for term in [readme_h1, package_name, "name"] if term),
                 severity=severity,
                 plugin_id=self.plugin_id,
+                rule_ids=("doc-code-identity-readme-config-name",),
             )
         ]

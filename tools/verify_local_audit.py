@@ -475,6 +475,9 @@ def verify_finding_registry_binding(out_dir: Path, registry: dict, errors: list[
         str(plugin.get("plugin_id", "")): plugin
         for plugin in registry.get("plugins", [])
     }
+    plugin_rule_ids: dict[str, set[str]] = {}
+    for rule in read_csv(out_dir / "plugin_rule_rows.csv"):
+        plugin_rule_ids.setdefault(rule.get("plugin_id", ""), set()).add(rule.get("rule_id", ""))
     findings = read_csv(out_dir / "audit_findings.csv")
     expected_plugin_ids = set(EXPECTED_PLUGIN_IDS)
     summary = read_json(out_dir / "audit_summary.json")
@@ -497,6 +500,12 @@ def verify_finding_registry_binding(out_dir: Path, registry: dict, errors: list[
         if plugin is None:
             add(errors, f"audit finding references unregistered plugin: {finding_id} {plugin_id}")
             continue
+        rule_ids = [cell for cell in row.get("plugin_rule_ids", "").split("|") if cell]
+        if not rule_ids:
+            add(errors, f"audit finding missing plugin rule provenance: {finding_id}")
+        unknown_rule_ids = sorted(set(rule_ids) - plugin_rule_ids.get(plugin_id, set()))
+        if unknown_rule_ids:
+            add(errors, f"audit finding references unknown plugin rules: {finding_id} {','.join(unknown_rule_ids)}")
         if row.get("audit_type") != str(plugin.get("audit_type", "")):
             add(errors, f"audit finding audit_type does not match plugin registry: {finding_id}")
         plugin_language = str(plugin.get("language", ""))

@@ -365,6 +365,9 @@ for idx in range(1, 4):
         raise SystemExit("deprecated_api rules must expose python/cpp/javascript coverage")
     if any(row["evidence_policy"] not in {"source-bound-span", "abstain-when-missing-source-bound-span"} for row in plugin_rule_rows):
         raise SystemExit("plugin rule rows must bind a replayable evidence policy")
+    plugin_rule_ids = {}
+    for row in plugin_rule_rows:
+        plugin_rule_ids.setdefault(row["plugin_id"], set()).add(row["rule_id"])
     if summary["real_release_package_ready"] != 0 or summary["public_comparison_claim_ready"] != 0:
         raise SystemExit("audit product smoke must keep release/comparison claims blocked")
     if summary["latency_ms"] != 0:
@@ -399,6 +402,12 @@ for idx in range(1, 4):
         raise SystemExit("findings, citations, and lineage must be non-empty")
     if not any(row["audit_type"] == "user_question" and row["abstain"] == 1 and row["grounded"] == 0 and row["citations"] for row in findings):
         raise SystemExit("unsupported user question must abstain without a grounded answer while keeping source context")
+    for row in findings:
+        rule_ids = [cell for cell in str(row.get("plugin_rule_ids", "")).split("|") if cell]
+        if not rule_ids:
+            raise SystemExit(f"finding must bind plugin rule provenance: {row['finding_id']}")
+        if set(rule_ids) - plugin_rule_ids.get(row["plugin_id"], set()):
+            raise SystemExit(f"finding references plugin rules outside its plugin: {row['finding_id']}")
     if any(row["grounded"] == 1 and not row["citations"] for row in findings):
         raise SystemExit("grounded findings must have citations")
     if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") or not row["span_sha256"].startswith("sha256:") for row in citations):

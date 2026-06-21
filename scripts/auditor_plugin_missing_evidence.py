@@ -34,6 +34,7 @@ class MissingEvidencePlugin(AuditPlugin):
                     ("README", "evidence", "results", "docs"),
                     abstain=1,
                     plugin_id=self.plugin_id,
+                    rule_ids=("missing-evidence-local-results-docs-surface",),
                 )
             ]
         return [
@@ -48,5 +49,6 @@ class MissingEvidencePlugin(AuditPlugin):
                 )[:2] or evidence,
                 ("evidence", "results", "docs"),
                 plugin_id=self.plugin_id,
+                rule_ids=("missing-evidence-local-results-docs-surface",),
             )
         ]

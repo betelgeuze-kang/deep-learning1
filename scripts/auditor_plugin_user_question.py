@@ -36,6 +36,7 @@ class UserQuestionPlugin(AuditPlugin):
             grounded=0,
             abstain=1,
             plugin_id=self.plugin_id,
+            rule_ids=("user-question-source-evidence-required",),
         )
 
 

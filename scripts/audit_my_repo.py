@@ -29,12 +29,12 @@ class AuditInputError(Exception):
 
 CSV_CONTRACTS: dict[str, list[str]] = {
     "source_manifest.csv": ["source_id", "file_path", "sha256", "bytes", "route_memory_source"],
-    "audit_findings.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
+    "audit_findings.csv": ["finding_id", "audit_type", "plugin_id", "plugin_rule_ids", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
     "citation_spans.csv": ["finding_id", "citation_id", "file_path", "line_start", "line_end", "sha256", "span_sha256", "span_text_preview", "mmap_value_byte_read"],
     "compact_route_hint_rows.csv": ["hint_id", "finding_id", "hint_bytes", "source_citation_count", "raw_context_appended", "proposal_hint_used"],
     "grounded_generation_rows.csv": ["generation_id", "finding_id", "hint_id", "generator", "attention_blocks", "transformer_blocks", "raw_prompt_context_bytes", "grounded", "abstain", "unsupported_claim", "answer"],
-    "abstain_rows.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
-    "unsupported_claim_rows.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
+    "abstain_rows.csv": ["finding_id", "audit_type", "plugin_id", "plugin_rule_ids", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
+    "unsupported_claim_rows.csv": ["finding_id", "audit_type", "plugin_id", "plugin_rule_ids", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
     "wrong_answer_guard_rows.csv": ["finding_id", "guard_id", "unsupported_direct_answer_blocked", "citation_required", "audit_trail_required", "wrong_answer_guard_pass"],
     "accuracy_rows.csv": ["finding_id", "accuracy_label", "automatic_accuracy_claimed", "manual_accuracy_review_required"],
     "citation_correctness_rows.csv": ["finding_id", "citation_count", "citation_bound", "citation_correctness_label", "manual_citation_review_required"],
@@ -367,6 +367,7 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
                 "finding_id": finding_id,
                 "audit_type": finding.audit_type,
                 "plugin_id": finding.plugin_id,
+                "plugin_rule_ids": "|".join(finding.rule_ids),
                 "language": finding.language,
                 "question": finding.question,
                 "answer": finding.answer if citation_cells else "Abstain: no source citation could be bound for this finding.",

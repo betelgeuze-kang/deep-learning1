@@ -32,6 +32,7 @@ class ConfigConsistencyPlugin(AuditPlugin):
                     ("README",),
                     abstain=1,
                     plugin_id=self.plugin_id,
+                    rule_ids=("config-consistency-supported-config-surface",),
                 )
             ]
         config_text = _read(config)
@@ -47,5 +48,6 @@ class ConfigConsistencyPlugin(AuditPlugin):
                 tuple(path for path in [config, readme] if path is not None),
                 ("requires-python", "Python", "name"),
                 plugin_id=self.plugin_id,
+                rule_ids=("config-consistency-supported-config-surface",),
             )
         ]

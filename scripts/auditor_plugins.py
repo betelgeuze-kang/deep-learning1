@@ -25,6 +25,7 @@ class Finding:
     unsupported_claim: int = 0
     plugin_id: str = ""
     language: str = "generic"
+    rule_ids: tuple[str, ...] = tuple()
 
 
 @dataclass(frozen=True)

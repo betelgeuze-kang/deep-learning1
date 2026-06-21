@@ -43,6 +43,13 @@ class DeprecatedApiPlugin(AuditPlugin):
             for idx, (suffixes, _needle, label) in enumerate(self.patterns, start=1)
         )
 
+    def rule_ids_for_labels(self, labels: set[str]) -> tuple[str, ...]:
+        return tuple(
+            f"deprecated-api-{idx:02d}"
+            for idx, (_suffixes, _needle, label) in enumerate(self.patterns, start=1)
+            if label in labels
+        )
+
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
         hits: list[tuple[Path, str, str]] = []
         for source in sources:
@@ -57,6 +64,7 @@ class DeprecatedApiPlugin(AuditPlugin):
                 break
         if hits:
             labels = sorted({label for _, label, _ in hits})
+            rule_ids = self.rule_ids_for_labels(set(labels))
             return [
                 Finding(
                     self.audit_type,
@@ -67,6 +75,7 @@ class DeprecatedApiPlugin(AuditPlugin):
                     severity="medium",
                     plugin_id=self.plugin_id,
                     language=self.language,
+                    rule_ids=rule_ids,
                 )
             ]
         evidence = (_first_existing(repo, ["README.md"]) or sources[0].path,) if sources else tuple()
@@ -79,5 +88,6 @@ class DeprecatedApiPlugin(AuditPlugin):
                 ("README",),
                 plugin_id=self.plugin_id,
                 language=self.language,
+                rule_ids=tuple(rule.rule_id for rule in self.rules()),
             )
         ]
