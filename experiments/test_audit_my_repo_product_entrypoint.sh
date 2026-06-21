@@ -100,6 +100,7 @@ for idx in 1 2 3; do
     artifact_contract_rows.csv \
     audit_findings.csv \
     audit_findings.jsonl \
+    audit_invocation.json \
     audit_manifest.json \
     audit_summary.csv \
     audit_summary.json \
@@ -130,6 +131,8 @@ for idx in 1 2 3; do
   done
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out/audit_manifest.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_invocation.schema.json" "$out/audit_invocation.json" >/dev/null
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_summary.schema.json" "$out/audit_summary.json" >/dev/null
   "$ROOT_DIR/tools/validate_json_schemas.py" \
@@ -215,6 +218,7 @@ def read_contract(out):
         "plugin_registry.json",
         "plugin_rule_rows.csv",
         "source_snapshot.json",
+        "audit_invocation.json",
         "audit_manifest.json",
         "audit_summary.json",
         "AUDIT_REPORT.md",
@@ -237,6 +241,7 @@ for idx in range(1, 4):
     out = root / f"out_{idx}"
     repo = root / f"repo_{idx}"
     manifest = json.loads((out / "audit_manifest.json").read_text(encoding="utf-8"))
+    invocation = json.loads((out / "audit_invocation.json").read_text(encoding="utf-8"))
     if manifest["namespace"] != "synthetic":
         raise SystemExit("generated fixture repos must stay in the synthetic namespace")
     if manifest["real_benchmark_namespace_confirmed"] != 0:
@@ -245,6 +250,16 @@ for idx in range(1, 4):
         raise SystemExit("synthetic product smoke must not promote fixture results or claim real evidence")
     if manifest["tool_version"] != "audit_my_repo_alpha.v1":
         raise SystemExit("audit manifest must expose the tool version")
+    if invocation["tool_version"] != manifest["tool_version"]:
+        raise SystemExit("audit invocation must expose the tool version")
+    if invocation["target_repo"] != str(repo.resolve()) or invocation["out_dir"] != str(out.resolve()):
+        raise SystemExit("audit invocation must bind target repo and output directory")
+    if invocation["mode"] != "quick" or invocation["max_queries"] != 12 or invocation["generator"] != "routehint-tiny":
+        raise SystemExit("audit invocation must bind resolved execution options")
+    if invocation["namespace"] != "synthetic" or invocation["real_benchmark_namespace_confirmed"] != 0:
+        raise SystemExit("audit invocation must bind namespace confirmation")
+    if invocation["verify_output_requested"] != 1:
+        raise SystemExit("audit invocation must record default verify-output")
     if manifest["generated_at_utc"] != "1970-01-01T00:00:00+00:00":
         raise SystemExit("audit manifest timestamp must be deterministic")
     if manifest["atomic_publish"] != 1 or manifest["output_dir_destroyed"] != 0:
@@ -434,6 +449,10 @@ for idx in range(1, 4):
         "namespace": "synthetic",
         "real_benchmark_namespace_confirmed": 0,
         "question": "Does this repo prove production readiness?",
+        "verify_output_requested": 1,
+        "emit_report_requested": 1,
+        "emit_lineage_requested": 1,
+        "emit_reproduce_requested": 1,
         "plugin_registry_sha256": plugin_registry_sha256,
     }, sort_keys=True).encode("utf-8")).hexdigest()
     if manifest["cache_key"] != expected_cache_key:
@@ -448,6 +467,7 @@ for idx in range(1, 4):
         "ARCHITECTURE_TRACE.md",
         "accuracy_rows.csv",
         "artifact_contract_rows.csv",
+        "audit_invocation.json",
         "audit_manifest.json",
         "audit_summary.json",
         "audit_findings.jsonl",

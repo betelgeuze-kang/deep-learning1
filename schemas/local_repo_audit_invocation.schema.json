@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_invocation.schema.json",
+  "title": "Local repo audit invocation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "target_repo",
+    "out_dir",
+    "mode",
+    "max_queries",
+    "generator",
+    "namespace",
+    "real_benchmark_namespace_confirmed",
+    "question_supplied",
+    "question_sha256",
+    "verify_output_requested",
+    "emit_report_requested",
+    "emit_lineage_requested",
+    "emit_reproduce_requested"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_invocation.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "target_repo": {"type": "string", "minLength": 1},
+    "out_dir": {"type": "string", "minLength": 1},
+    "mode": {"type": "string", "enum": ["quick", "full"]},
+    "max_queries": {"type": "integer", "minimum": 1},
+    "generator": {"const": "routehint-tiny"},
+    "namespace": {"type": "string", "enum": ["fixture", "synthetic", "real_benchmark"]},
+    "real_benchmark_namespace_confirmed": {"type": "integer", "enum": [0, 1]},
+    "question_supplied": {"type": "integer", "enum": [0, 1]},
+    "question_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "verify_output_requested": {"type": "integer", "enum": [0, 1]},
+    "emit_report_requested": {"const": 1},
+    "emit_lineage_requested": {"const": 1},
+    "emit_reproduce_requested": {"const": 1}
+  }
+}

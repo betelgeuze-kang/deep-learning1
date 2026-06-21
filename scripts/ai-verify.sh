@@ -55,6 +55,9 @@ fi
 if [ -f schemas/local_repo_audit_output.schema.json ]; then
   python3 -m json.tool schemas/local_repo_audit_output.schema.json >/dev/null
 fi
+if [ -f schemas/local_repo_audit_invocation.schema.json ]; then
+  python3 -m json.tool schemas/local_repo_audit_invocation.schema.json >/dev/null
+fi
 if [ -f schemas/local_repo_audit_summary.schema.json ]; then
   python3 -m json.tool schemas/local_repo_audit_summary.schema.json >/dev/null
 fi

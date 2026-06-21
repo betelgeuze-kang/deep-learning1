@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 from auditor_plugin_user_question import USER_QUESTION_PLUGIN
-from auditor_plugins import DEFAULT_PLUGINS, Finding, SourceFile
+from auditor_plugins import DEFAULT_PLUGINS, AuditPlugin, Finding, SourceFile
 
 SCHEMA_VERSION = "local_repo_audit.v1"
 OUTPUT_SCHEMA_VERSION = "local_repo_audit_output.v1"
@@ -52,6 +52,7 @@ JSONL_CONTRACTS: dict[str, list[str]] = {
 }
 
 JSON_CONTRACTS: dict[str, list[str]] = {
+    "audit_invocation.json": ["schema_version", "tool_version", "target_repo", "out_dir", "mode", "max_queries", "generator", "namespace", "real_benchmark_namespace_confirmed", "question_supplied", "question_sha256", "verify_output_requested", "emit_report_requested", "emit_lineage_requested", "emit_reproduce_requested"],
     "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "real_benchmark_namespace_confirmed", "fixture_result_promoted", "real_evidence_claimed", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "output_dir_overwritten", "publish_mode", "cache_key", "plugin_registry_sha256", "claim_boundary"],
     "audit_summary.json": list(CSV_CONTRACTS["audit_summary.csv"]),
     "plugin_registry.json": ["schema_version", "tool_version", "plugins"],
@@ -434,7 +435,7 @@ def publish_atomic(staging: Path, out_dir: Path) -> str:
     return "created"
 
 
-def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: str, max_queries: int, generator: str, namespace: str, real_benchmark_namespace_confirmed: int, question: str, emit_report: bool, emit_lineage: bool, emit_reproduce: bool) -> dict:
+def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: str, max_queries: int, generator: str, namespace: str, real_benchmark_namespace_confirmed: int, question: str, verify_output: bool, emit_report: bool, emit_lineage: bool, emit_reproduce: bool) -> dict:
     sources, source_rows = collect_sources(target, max_queries)
     write_json(staging / "plugin_registry.json", plugin_registry_payload())
     write_csv(staging / "plugin_rule_rows.csv", CSV_CONTRACTS["plugin_rule_rows.csv"], plugin_rule_rows())
@@ -495,6 +496,26 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     write_csv(staging / "citation_correctness_rows.csv", ["finding_id", "citation_count", "citation_bound", "citation_correctness_label", "manual_citation_review_required"], citation_correctness_rows)
     write_csv(staging / "latency_rows.csv", ["finding_id", "latency_ms", "latency_source"], latency_rows)
     write_csv(staging / "false_positive_candidate_rows.csv", ["finding_id", "manual_review_required", "false_positive_candidate", "auto_promoted"], false_positive_rows)
+    write_json(
+        staging / "audit_invocation.json",
+        {
+            "schema_version": "local_repo_audit_invocation.v1",
+            "tool_version": TOOL_VERSION,
+            "target_repo": str(target),
+            "out_dir": str(out_dir),
+            "mode": mode,
+            "max_queries": max_queries,
+            "generator": generator,
+            "namespace": namespace,
+            "real_benchmark_namespace_confirmed": real_benchmark_namespace_confirmed,
+            "question_supplied": int(bool(question)),
+            "question_sha256": sha256_text(question),
+            "verify_output_requested": int(verify_output),
+            "emit_report_requested": int(emit_report),
+            "emit_lineage_requested": int(emit_lineage),
+            "emit_reproduce_requested": int(emit_reproduce),
+        },
+    )
 
     claim_boundary = (
         "# Audit Claim Boundary\n\n"
@@ -609,7 +630,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "output_dir_destroyed": 0,
         "output_dir_overwritten": 0,
         "publish_mode": "create-or-idempotent-cache-hit",
-        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "source_snapshot": json.loads((staging / "source_snapshot.json").read_text(encoding="utf-8")), "mode": mode, "max_queries": max_queries, "namespace": namespace, "real_benchmark_namespace_confirmed": real_benchmark_namespace_confirmed, "question": question, "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
+        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "source_snapshot": json.loads((staging / "source_snapshot.json").read_text(encoding="utf-8")), "mode": mode, "max_queries": max_queries, "namespace": namespace, "real_benchmark_namespace_confirmed": real_benchmark_namespace_confirmed, "question": question, "verify_output_requested": int(verify_output), "emit_report_requested": int(emit_report), "emit_lineage_requested": int(emit_lineage), "emit_reproduce_requested": int(emit_reproduce), "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
         "plugin_registry_sha256": plugin_registry_sha256,
         "claim_boundary": "alpha-local-code-doc-audit-only",
     }
@@ -673,77 +694,24 @@ def plugin_registry_payload() -> dict:
     }
 
 
-def language_for_suffixes(suffixes: set[str]) -> str:
-    if suffixes <= {".py", ".cfg", ".toml", ".md", ".txt"}:
-        return "python"
-    if suffixes <= {".c", ".h", ".cc", ".cpp", ".cxx", ".hpp"}:
-        return "cpp"
-    if suffixes <= {".js", ".jsx", ".ts", ".tsx"}:
-        return "javascript"
-    return "generic"
+def plugin_rule_row(plugin: AuditPlugin, rule) -> dict:
+    return {
+        "plugin_id": plugin.plugin_id,
+        "audit_type": plugin.audit_type,
+        "rule_id": rule.rule_id,
+        "language": rule.language,
+        "file_suffixes": "|".join(rule.file_suffixes),
+        "pattern_label": rule.pattern_label,
+        "evidence_policy": rule.evidence_policy,
+    }
 
 
 def plugin_rule_rows() -> list[dict]:
     rows = [
-        {
-            "plugin_id": "doc_code_identity",
-            "audit_type": "doc_code_identity",
-            "rule_id": "doc-code-identity-readme-config-name",
-            "language": "generic",
-            "file_suffixes": "README.md|README.rst|README.txt|pyproject.toml|package.json|setup.cfg",
-            "pattern_label": "README heading/package name consistency",
-            "evidence_policy": "source-bound-span",
-        },
-        {
-            "plugin_id": "config_consistency",
-            "audit_type": "config_consistency",
-            "rule_id": "config-consistency-supported-config-surface",
-            "language": "generic",
-            "file_suffixes": "pyproject.toml|setup.cfg|tox.ini|CMakeLists.txt|package.json",
-            "pattern_label": "supported config surface",
-            "evidence_policy": "source-bound-span",
-        },
-        {
-            "plugin_id": "unsupported_claim",
-            "audit_type": "unsupported_claim",
-            "rule_id": "unsupported-claim-readiness-capability-wording",
-            "language": "generic",
-            "file_suffixes": ".md|.txt|.py|.toml|.json|.js|.ts|.cpp|.hpp|.c|.h",
-            "pattern_label": "readiness/capability claim terms",
-            "evidence_policy": "source-bound-span",
-        },
-        {
-            "plugin_id": "missing_evidence",
-            "audit_type": "missing_evidence",
-            "rule_id": "missing-evidence-local-results-docs-surface",
-            "language": "generic",
-            "file_suffixes": "evidence/|results/|docs/",
-            "pattern_label": "local evidence surface presence",
-            "evidence_policy": "abstain-when-missing-source-bound-span",
-        },
-        {
-            "plugin_id": "user_question",
-            "audit_type": "user_question",
-            "rule_id": "user-question-source-evidence-required",
-            "language": "generic",
-            "file_suffixes": "*",
-            "pattern_label": "free-form question abstains without exact evidence",
-            "evidence_policy": "abstain-when-missing-source-bound-span",
-        },
+        plugin_rule_row(plugin, rule)
+        for plugin in list(DEFAULT_PLUGINS) + [USER_QUESTION_PLUGIN]
+        for rule in plugin.rules()
     ]
-    deprecated_plugin = next(plugin for plugin in DEFAULT_PLUGINS if plugin.plugin_id == "deprecated_api")
-    for idx, (suffixes, _needle, label) in enumerate(deprecated_plugin.patterns, start=1):
-        rows.append(
-            {
-                "plugin_id": "deprecated_api",
-                "audit_type": "deprecated_api",
-                "rule_id": f"deprecated-api-{idx:02d}",
-                "language": language_for_suffixes(set(suffixes)),
-                "file_suffixes": "|".join(sorted(suffixes)),
-                "pattern_label": label,
-                "evidence_policy": "source-bound-span",
-            }
-        )
     return sorted(rows, key=lambda row: (row["plugin_id"], row["rule_id"]))
 
 
@@ -811,7 +779,7 @@ def main(argv: list[str]) -> int:
     staging.mkdir(parents=True)
     try:
         real_benchmark_namespace_confirmed = int(args.namespace == "real_benchmark" and args.confirm_real_benchmark_namespace)
-        summary = write_outputs(root, target, out_dir, staging, args.mode, args.max_queries, args.generator, args.namespace, real_benchmark_namespace_confirmed, question, args.emit_report, args.emit_lineage, args.emit_reproduce)
+        summary = write_outputs(root, target, out_dir, staging, args.mode, args.max_queries, args.generator, args.namespace, real_benchmark_namespace_confirmed, question, args.verify_output, args.emit_report, args.emit_lineage, args.emit_reproduce)
         publish_status = publish_atomic(staging, out_dir)
     except AuditInputError as exc:
         print(f"input_error: {exc}", file=sys.stderr)

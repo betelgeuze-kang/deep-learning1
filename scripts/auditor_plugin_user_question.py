@@ -2,13 +2,24 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from auditor_plugins import AuditPlugin, Finding, SourceFile
+from auditor_plugins import AuditPlugin, Finding, PluginRule, SourceFile
 
 
 class UserQuestionPlugin(AuditPlugin):
     plugin_id = "user_question"
     audit_type = "user_question"
     language = "generic"
+
+    def rules(self) -> tuple[PluginRule, ...]:
+        return (
+            PluginRule(
+                rule_id="user-question-source-evidence-required",
+                language="generic",
+                file_suffixes=("*",),
+                pattern_label="free-form question abstains without exact evidence",
+                evidence_policy="abstain-when-missing-source-bound-span",
+            ),
+        )
 
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
         return []

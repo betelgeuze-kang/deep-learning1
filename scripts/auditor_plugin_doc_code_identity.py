@@ -3,12 +3,22 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from auditor_plugins import AuditPlugin, Finding, SourceFile, _first_existing, _read
+from auditor_plugins import AuditPlugin, Finding, PluginRule, SourceFile, _first_existing, _read
 
 
 class DocCodeIdentityPlugin(AuditPlugin):
     plugin_id = "doc_code_identity"
     audit_type = "doc_code_identity"
+
+    def rules(self) -> tuple[PluginRule, ...]:
+        return (
+            PluginRule(
+                rule_id="doc-code-identity-readme-config-name",
+                language="generic",
+                file_suffixes=("README.md", "README.rst", "README.txt", "pyproject.toml", "package.json", "setup.cfg"),
+                pattern_label="README heading/package name consistency",
+            ),
+        )
 
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
         readme = _first_existing(repo, ["README.md", "README.rst", "README.txt"])

@@ -41,6 +41,7 @@ REQUIRED_FILES = {
     "artifact_contract_rows.csv",
     "audit_findings.csv",
     "audit_findings.jsonl",
+    "audit_invocation.json",
     "audit_manifest.json",
     "audit_summary.csv",
     "audit_summary.json",
@@ -244,6 +245,54 @@ def verify_resource(resource: dict, summary: dict[str, str], errors: list[str]) 
             add(errors, f"resource envelope drift: {resource_key}")
 
 
+def verify_invocation(out_dir: Path, manifest: dict, summary: dict[str, str], errors: list[str]) -> None:
+    invocation = read_json(out_dir / "audit_invocation.json")
+    expected_keys = {
+        "schema_version",
+        "tool_version",
+        "target_repo",
+        "out_dir",
+        "mode",
+        "max_queries",
+        "generator",
+        "namespace",
+        "real_benchmark_namespace_confirmed",
+        "question_supplied",
+        "question_sha256",
+        "verify_output_requested",
+        "emit_report_requested",
+        "emit_lineage_requested",
+        "emit_reproduce_requested",
+    }
+    if set(invocation) != expected_keys:
+        add(errors, "audit_invocation.json keys drifted")
+    for key, expected in {
+        "schema_version": "local_repo_audit_invocation.v1",
+        "tool_version": TOOL_VERSION,
+        "target_repo": str(manifest.get("target_repo")),
+        "out_dir": str(out_dir),
+        "mode": str(summary.get("mode")),
+        "generator": str(summary.get("generator")),
+        "namespace": str(manifest.get("namespace")),
+        "real_benchmark_namespace_confirmed": int(manifest.get("real_benchmark_namespace_confirmed", -1)),
+        "question_supplied": int(summary.get("question_supplied", -1)),
+        "emit_report_requested": 1,
+        "emit_lineage_requested": 1,
+        "emit_reproduce_requested": 1,
+    }.items():
+        if invocation.get(key) != expected:
+            add(errors, f"audit_invocation.{key} mismatch")
+    resource = read_json(out_dir / "resource_envelope.json")
+    if str(invocation.get("max_queries")) != str(resource.get("max_queries")):
+        add(errors, "audit_invocation max_queries mismatch")
+    if invocation.get("verify_output_requested") not in {0, 1}:
+        add(errors, "audit_invocation verify_output_requested must be binary")
+    questions = [row.get("question", "") for row in read_csv(out_dir / "audit_findings.csv") if row.get("audit_type") == "user_question"]
+    question = questions[0] if len(questions) == 1 else ""
+    if invocation.get("question_sha256") != sha256_text(question):
+        add(errors, "audit_invocation question_sha256 mismatch")
+
+
 def verify_claim_boundary_docs(out_dir: Path, errors: list[str]) -> None:
     claim_boundary = (out_dir / "claim_boundary.md").read_text(encoding="utf-8")
     for snippet in [
@@ -361,12 +410,42 @@ def verify_finding_registry_binding(out_dir: Path, registry: dict, errors: list[
             add(errors, f"audit finding language does not match plugin registry: {finding_id}")
 
 
+def expected_plugin_rule_rows(errors: list[str]) -> list[dict[str, str]]:
+    scripts_dir = Path(__file__).resolve().parents[1] / "scripts"
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    try:
+        from auditor_plugin_user_question import USER_QUESTION_PLUGIN
+        from auditor_plugins import DEFAULT_PLUGINS
+    except Exception as exc:
+        add(errors, f"could not import auditor plugins for rule verification: {exc}")
+        return []
+    rows = []
+    for plugin in list(DEFAULT_PLUGINS) + [USER_QUESTION_PLUGIN]:
+        for rule in plugin.rules():
+            rows.append(
+                {
+                    "plugin_id": str(plugin.plugin_id),
+                    "audit_type": str(plugin.audit_type),
+                    "rule_id": str(rule.rule_id),
+                    "language": str(rule.language),
+                    "file_suffixes": "|".join(rule.file_suffixes),
+                    "pattern_label": str(rule.pattern_label),
+                    "evidence_policy": str(rule.evidence_policy),
+                }
+            )
+    return sorted(rows, key=lambda row: (row["plugin_id"], row["rule_id"]))
+
+
 def verify_plugin_rules(out_dir: Path, registry: dict, errors: list[str]) -> None:
     registry_by_plugin = {
         str(plugin.get("plugin_id", "")): plugin
         for plugin in registry.get("plugins", [])
     }
     rows = read_csv(out_dir / "plugin_rule_rows.csv")
+    expected_rows = expected_plugin_rule_rows(errors)
+    if expected_rows and rows != expected_rows:
+        add(errors, "plugin_rule_rows.csv does not match plugin-owned rule metadata")
     expected_columns = ["plugin_id", "audit_type", "rule_id", "language", "file_suffixes", "pattern_label", "evidence_policy"]
     with (out_dir / "plugin_rule_rows.csv").open(newline="", encoding="utf-8") as handle:
         columns = list(csv.DictReader(handle).fieldnames or [])
@@ -628,6 +707,7 @@ def verify_citations(out_dir: Path, manifest: dict, source_by_path: dict[str, di
 def verify_cache_key(out_dir: Path, manifest: dict, summary: dict[str, str], errors: list[str]) -> None:
     source_rows = read_csv(out_dir / "source_manifest.csv")
     source_snapshot = read_json(out_dir / "source_snapshot.json")
+    invocation = read_json(out_dir / "audit_invocation.json")
     questions = {row.get("question", "") for row in read_csv(out_dir / "audit_findings.csv") if row.get("audit_type") == "user_question"}
     question = sorted(questions)[0] if summary.get("question_supplied") == "1" and questions else ""
     payload = {
@@ -640,6 +720,10 @@ def verify_cache_key(out_dir: Path, manifest: dict, summary: dict[str, str], err
         "namespace": manifest.get("namespace"),
         "real_benchmark_namespace_confirmed": manifest.get("real_benchmark_namespace_confirmed"),
         "question": question,
+        "verify_output_requested": int(invocation.get("verify_output_requested", -1)),
+        "emit_report_requested": int(invocation.get("emit_report_requested", -1)),
+        "emit_lineage_requested": int(invocation.get("emit_lineage_requested", -1)),
+        "emit_reproduce_requested": int(invocation.get("emit_reproduce_requested", -1)),
         "plugin_registry_sha256": manifest.get("plugin_registry_sha256"),
     }
     expected = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
@@ -902,6 +986,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     summary = verify_summary(summary_json, read_csv(out_dir / "audit_summary.csv"), errors)
     verify_manifest(manifest, summary_json, out_dir, errors)
     verify_resource(read_json(out_dir / "resource_envelope.json"), summary, errors)
+    verify_invocation(out_dir, manifest, summary, errors)
     verify_claim_boundary_docs(out_dir, errors)
     verify_audit_report(out_dir, summary, errors)
     registry = read_json(out_dir / "plugin_registry.json")

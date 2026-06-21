@@ -242,6 +242,8 @@ test "$(cat "$out_a/sentinel.txt")" = "keep"
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out_a/audit_manifest.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_invocation.schema.json" "$out_a/audit_invocation.json" >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_summary.schema.json" "$out_a/audit_summary.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$out_a/plugin_registry.json" >/dev/null
@@ -271,7 +273,16 @@ def sha256(path):
     return h.hexdigest()
 
 manifest = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
+invocation = json.loads((out_a / "audit_invocation.json").read_text(encoding="utf-8"))
 plugin_registry = json.loads((out_a / "plugin_registry.json").read_text(encoding="utf-8"))
+if invocation["target_repo"] != str(repo) or invocation["out_dir"] != str(out_a):
+    raise SystemExit("audit invocation must bind target repo and output directory")
+if invocation["mode"] != "quick" or invocation["max_queries"] != 12 or invocation["generator"] != "routehint-tiny":
+    raise SystemExit("audit invocation must bind resolved execution options")
+if invocation["namespace"] != "fixture" or invocation["real_benchmark_namespace_confirmed"] != 0:
+    raise SystemExit("audit invocation must bind fixture namespace")
+if invocation["question_supplied"] != 1 or invocation["verify_output_requested"] != 1:
+    raise SystemExit("audit invocation must bind question and verification settings")
 if plugin_registry["tool_version"] != manifest["tool_version"]:
     raise SystemExit("plugin registry must be bound to the manifest tool version")
 expected_plugin_modules = {
@@ -558,8 +569,8 @@ if cache_hit_tamper_result.returncode != 2:
 if (out_a / "AUDIT_REPORT.md").read_text(encoding="utf-8") != original_report_text_for_cache_hit + "\ncache-hit tamper\n":
     raise SystemExit("tampered cache-hit failure must not overwrite existing report")
 (out_a / "AUDIT_REPORT.md").write_text(original_report_text_for_cache_hit, encoding="utf-8")
-if subprocess.run(cache_hit_tamper_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
-    raise SystemExit("untampered cache-hit output should still succeed with --no-verify-output")
+if subprocess.run(cache_hit_tamper_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 2:
+    raise SystemExit("cache-hit with changed verify-output setting must fail to preserve invocation artifacts")
 
 conflict_out = out_a.parent / "out_conflict"
 conflict_out.mkdir(parents=True, exist_ok=True)
@@ -644,6 +655,24 @@ sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject source snapshot/source manifest drift")
 source_snapshot_path.write_text(original_source_snapshot_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+invocation_path = out_a / "audit_invocation.json"
+original_invocation_text = invocation_path.read_text(encoding="utf-8")
+tampered_invocation = json.loads(original_invocation_text)
+tampered_invocation["max_queries"] = tampered_invocation["max_queries"] + 1
+invocation_path.write_text(json.dumps(tampered_invocation, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_invocation_sha = sha256(invocation_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_invocation.json"):
+        sha_lines.append(f"{new_invocation_sha}  audit_invocation.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject audit invocation option drift")
+invocation_path.write_text(original_invocation_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 plugin_rule_path = out_a / "plugin_rule_rows.csv"

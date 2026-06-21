@@ -27,12 +27,24 @@ class Finding:
     language: str = "generic"
 
 
+@dataclass(frozen=True)
+class PluginRule:
+    rule_id: str
+    language: str
+    file_suffixes: tuple[str, ...]
+    pattern_label: str
+    evidence_policy: str = "source-bound-span"
+
+
 class AuditPlugin:
     plugin_id = "base"
     audit_type = "base"
     language = "generic"
 
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
+        raise NotImplementedError
+
+    def rules(self) -> tuple[PluginRule, ...]:
         raise NotImplementedError
 
 

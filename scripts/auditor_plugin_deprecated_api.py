@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from auditor_plugins import AuditPlugin, Finding, SourceFile, _first_existing
+from auditor_plugins import AuditPlugin, Finding, PluginRule, SourceFile, _first_existing
 
 
 class DeprecatedApiPlugin(AuditPlugin):
@@ -21,6 +21,27 @@ class DeprecatedApiPlugin(AuditPlugin):
         ({".js", ".jsx", ".ts", ".tsx"}, "eval(", "javascript eval usage"),
         ({".js", ".jsx", ".ts", ".tsx"}, "var ", "javascript var declaration candidate"),
     )
+
+    @staticmethod
+    def language_for_suffixes(suffixes: set[str]) -> str:
+        if suffixes <= {".py", ".cfg", ".toml", ".md", ".txt"}:
+            return "python"
+        if suffixes <= {".c", ".h", ".cc", ".cpp", ".cxx", ".hpp"}:
+            return "cpp"
+        if suffixes <= {".js", ".jsx", ".ts", ".tsx"}:
+            return "javascript"
+        return "generic"
+
+    def rules(self) -> tuple[PluginRule, ...]:
+        return tuple(
+            PluginRule(
+                rule_id=f"deprecated-api-{idx:02d}",
+                language=self.language_for_suffixes(set(suffixes)),
+                file_suffixes=tuple(sorted(suffixes)),
+                pattern_label=label,
+            )
+            for idx, (suffixes, _needle, label) in enumerate(self.patterns, start=1)
+        )
 
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
         hits: list[tuple[Path, str, str]] = []
