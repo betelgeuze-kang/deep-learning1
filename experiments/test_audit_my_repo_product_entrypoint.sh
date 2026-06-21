@@ -117,6 +117,7 @@ for idx in 1 2 3; do
     reproduce.sh \
     sha256sums.txt \
     source_manifest.csv \
+    source_snapshot.json \
     unsupported_claim_rows.csv \
     false_positive_candidate_rows.csv \
     latency_rows.csv \
@@ -133,6 +134,8 @@ for idx in 1 2 3; do
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_summary.schema.json" "$out/audit_summary.json" >/dev/null
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$out/plugin_registry.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_source_snapshot.schema.json" "$out/source_snapshot.json" >/dev/null
   "$ROOT_DIR/tools/verify_local_audit.py" "$out" >/dev/null
 
   cp "$out/sha256sums.txt" "$out/sha256sums.first"
@@ -211,6 +214,7 @@ def read_contract(out):
         "prediction_lineage.jsonl",
         "plugin_registry.json",
         "plugin_rule_rows.csv",
+        "source_snapshot.json",
         "audit_manifest.json",
         "audit_summary.json",
         "AUDIT_REPORT.md",
@@ -338,6 +342,7 @@ for idx in range(1, 4):
                     raise SystemExit(f"{csv_name} drift: {key}")
     with (out / "source_manifest.csv").open(newline="", encoding="utf-8") as handle:
         source_rows = list(csv.DictReader(handle))
+    source_snapshot = json.loads((out / "source_snapshot.json").read_text(encoding="utf-8"))
     source_files = {row["file_path"] for row in source_rows}
     if not findings or not citations or not lineage:
         raise SystemExit("findings, citations, and lineage must be non-empty")
@@ -403,10 +408,27 @@ for idx in range(1, 4):
             raise SystemExit(f"source manifest byte count mismatch: {row['file_path']}")
         if row["route_memory_source"] != "1":
             raise SystemExit(f"source manifest route_memory_source mismatch: {row['file_path']}")
+    if source_snapshot["schema_version"] != "local_repo_audit_source_snapshot.v1":
+        raise SystemExit("source snapshot schema_version mismatch")
+    if source_snapshot["tool_version"] != manifest["tool_version"]:
+        raise SystemExit("source snapshot tool_version mismatch")
+    if source_snapshot["target_repo"] != str(repo.resolve()):
+        raise SystemExit("source snapshot target repo mismatch")
+    if source_snapshot["source_manifest_sha256"] != "sha256:" + sha256(out / "source_manifest.csv"):
+        raise SystemExit("source snapshot must bind source_manifest.csv sha256")
+    if source_snapshot["source_file_count"] != len(source_rows):
+        raise SystemExit("source snapshot source_file_count mismatch")
+    if source_snapshot["git_available"] != 1:
+        raise SystemExit("source snapshot must record git availability for product smoke repos")
+    if source_snapshot["git_dirty"] != 0:
+        raise SystemExit("source snapshot must record clean product smoke repos")
+    if len(source_snapshot["git_head"]) != 40:
+        raise SystemExit("source snapshot must record the git HEAD sha")
     expected_cache_key = hashlib.sha256(json.dumps({
         "tool_version": "audit_my_repo_alpha.v1",
         "target": str((root / f"repo_{idx}").resolve()),
         "source": [(row["file_path"], row["sha256"]) for row in source_rows],
+        "source_snapshot": source_snapshot,
         "mode": "quick",
         "max_queries": 12,
         "namespace": "synthetic",
@@ -434,6 +456,7 @@ for idx in range(1, 4):
         "prediction_lineage.jsonl",
         "plugin_registry.json",
         "plugin_rule_rows.csv",
+        "source_snapshot.json",
         "reproduce.sh",
     ]:
         if manifest_rows.get(rel) != sha256(out / rel):

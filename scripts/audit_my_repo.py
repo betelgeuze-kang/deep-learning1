@@ -56,6 +56,7 @@ JSON_CONTRACTS: dict[str, list[str]] = {
     "audit_summary.json": list(CSV_CONTRACTS["audit_summary.csv"]),
     "plugin_registry.json": ["schema_version", "tool_version", "plugins"],
     "resource_envelope.json": ["resource_envelope_ready", "tool_version", "source_files_scanned", "max_queries", "mode", "namespace", "external_network_used", "raw_prompt_context_bytes", "latency_ms", "wrong_answer_guard_rows", "claim_boundary_ready"],
+    "source_snapshot.json": ["schema_version", "tool_version", "target_repo", "source_manifest_sha256", "source_file_count", "git_available", "git_head", "git_dirty", "git_status_sha256", "git_tracked_files"],
 }
 
 OPTIONAL_ZERO_ROW_ARTIFACTS = {"abstain_rows.csv", "unsupported_claim_rows.csv"}
@@ -67,6 +68,10 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             h.update(chunk)
     return "sha256:" + h.hexdigest()
+
+
+def sha256_text(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def read_text(path: Path) -> str:
@@ -269,6 +274,44 @@ def collect_sources(target: Path, max_queries: int) -> tuple[list[SourceFile], l
     return sources, rows
 
 
+def git_output(target: Path, args: list[str]) -> tuple[int, str]:
+    result = subprocess.run(
+        ["git", "-C", str(target), *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    return result.returncode, result.stdout
+
+
+def source_snapshot_payload(target: Path, source_manifest: Path, source_file_count: int) -> dict:
+    payload = {
+        "schema_version": "local_repo_audit_source_snapshot.v1",
+        "tool_version": TOOL_VERSION,
+        "target_repo": str(target),
+        "source_manifest_sha256": sha256(source_manifest),
+        "source_file_count": source_file_count,
+        "git_available": 0,
+        "git_head": "",
+        "git_dirty": 0,
+        "git_status_sha256": sha256_text(""),
+        "git_tracked_files": 0,
+    }
+    rc, inside = git_output(target, ["rev-parse", "--is-inside-work-tree"])
+    if rc != 0 or inside.strip() != "true":
+        return payload
+    payload["git_available"] = 1
+    rc, head = git_output(target, ["rev-parse", "HEAD"])
+    payload["git_head"] = head.strip() if rc == 0 else ""
+    rc, status = git_output(target, ["status", "--porcelain", "--untracked-files=all"])
+    status_text = status if rc == 0 else ""
+    payload["git_dirty"] = int(bool(status_text.strip()))
+    payload["git_status_sha256"] = sha256_text(status_text)
+    rc, tracked = git_output(target, ["ls-files"])
+    payload["git_tracked_files"] = len([line for line in tracked.splitlines() if line.strip()]) if rc == 0 else 0
+    return payload
+
+
 def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[dict]]:
     finding_rows: list[dict] = []
     span_rows: list[dict] = []
@@ -406,6 +449,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     finding_rows, span_rows = build_rows(target, findings)
 
     write_csv(staging / "source_manifest.csv", ["source_id", "file_path", "sha256", "bytes", "route_memory_source"], source_rows)
+    write_json(staging / "source_snapshot.json", source_snapshot_payload(target, staging / "source_manifest.csv", len(source_rows)))
     (staging / "audit_findings.jsonl").write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in finding_rows), encoding="utf-8")
     (staging / "citation_spans.jsonl").write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in span_rows), encoding="utf-8")
     write_csv(staging / "audit_findings.csv", list(finding_rows[0].keys()), finding_rows)
@@ -565,7 +609,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "output_dir_destroyed": 0,
         "output_dir_overwritten": 0,
         "publish_mode": "create-or-idempotent-cache-hit",
-        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "mode": mode, "max_queries": max_queries, "namespace": namespace, "real_benchmark_namespace_confirmed": real_benchmark_namespace_confirmed, "question": question, "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
+        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "source_snapshot": json.loads((staging / "source_snapshot.json").read_text(encoding="utf-8")), "mode": mode, "max_queries": max_queries, "namespace": namespace, "real_benchmark_namespace_confirmed": real_benchmark_namespace_confirmed, "question": question, "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
         "plugin_registry_sha256": plugin_registry_sha256,
         "claim_boundary": "alpha-local-code-doc-audit-only",
     }

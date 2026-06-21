@@ -7,6 +7,7 @@ import hashlib
 import json
 import shlex
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
@@ -59,6 +60,7 @@ REQUIRED_FILES = {
     "resource_envelope.json",
     "sha256sums.txt",
     "source_manifest.csv",
+    "source_snapshot.json",
     "unsupported_claim_rows.csv",
     "wrong_answer_guard_rows.csv",
 }
@@ -108,6 +110,10 @@ def sha256_hex(path: Path) -> str:
 
 def sha256_prefixed(path: Path) -> str:
     return "sha256:" + sha256_hex(path)
+
+
+def sha256_text(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def read_json(path: Path) -> dict:
@@ -509,6 +515,65 @@ def verify_sources(out_dir: Path, manifest: dict, errors: list[str]) -> dict[str
     return by_path
 
 
+def git_output(target: Path, args: list[str]) -> tuple[int, str]:
+    result = subprocess.run(
+        ["git", "-C", str(target), *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    return result.returncode, result.stdout
+
+
+def verify_source_snapshot(out_dir: Path, manifest: dict, source_by_path: dict[str, dict[str, str]], errors: list[str]) -> None:
+    snapshot = read_json(out_dir / "source_snapshot.json")
+    target = Path(str(manifest.get("target_repo", ""))).resolve()
+    expected_keys = {
+        "schema_version",
+        "tool_version",
+        "target_repo",
+        "source_manifest_sha256",
+        "source_file_count",
+        "git_available",
+        "git_head",
+        "git_dirty",
+        "git_status_sha256",
+        "git_tracked_files",
+    }
+    if set(snapshot) != expected_keys:
+        add(errors, "source_snapshot.json keys drifted")
+    if snapshot.get("schema_version") != "local_repo_audit_source_snapshot.v1":
+        add(errors, "source_snapshot schema_version mismatch")
+    if snapshot.get("tool_version") != TOOL_VERSION:
+        add(errors, "source_snapshot tool_version mismatch")
+    if snapshot.get("target_repo") != str(target):
+        add(errors, "source_snapshot target_repo mismatch")
+    if snapshot.get("source_manifest_sha256") != sha256_prefixed(out_dir / "source_manifest.csv"):
+        add(errors, "source_snapshot source_manifest hash mismatch")
+    if str(snapshot.get("source_file_count")) != str(len(source_by_path)):
+        add(errors, "source_snapshot source_file_count mismatch")
+    rc, inside = git_output(target, ["rev-parse", "--is-inside-work-tree"])
+    current_git_available = int(rc == 0 and inside.strip() == "true")
+    if int(snapshot.get("git_available", -1)) != current_git_available:
+        add(errors, "source_snapshot git_available mismatch")
+        return
+    if not current_git_available:
+        return
+    rc, head = git_output(target, ["rev-parse", "HEAD"])
+    if rc != 0 or snapshot.get("git_head") != head.strip():
+        add(errors, "source_snapshot git_head mismatch")
+    rc, status = git_output(target, ["status", "--porcelain", "--untracked-files=all"])
+    status_text = status if rc == 0 else ""
+    if int(snapshot.get("git_dirty", -1)) != int(bool(status_text.strip())):
+        add(errors, "source_snapshot git_dirty mismatch")
+    if snapshot.get("git_status_sha256") != sha256_text(status_text):
+        add(errors, "source_snapshot git_status hash mismatch")
+    rc, tracked = git_output(target, ["ls-files"])
+    tracked_count = len([line for line in tracked.splitlines() if line.strip()]) if rc == 0 else 0
+    if int(snapshot.get("git_tracked_files", -1)) != tracked_count:
+        add(errors, "source_snapshot git_tracked_files mismatch")
+
+
 def verify_citations(out_dir: Path, manifest: dict, source_by_path: dict[str, dict[str, str]], errors: list[str]) -> None:
     target = Path(str(manifest.get("target_repo", ""))).resolve()
     findings = {row["finding_id"]: row for row in read_csv(out_dir / "audit_findings.csv")}
@@ -562,12 +627,14 @@ def verify_citations(out_dir: Path, manifest: dict, source_by_path: dict[str, di
 
 def verify_cache_key(out_dir: Path, manifest: dict, summary: dict[str, str], errors: list[str]) -> None:
     source_rows = read_csv(out_dir / "source_manifest.csv")
+    source_snapshot = read_json(out_dir / "source_snapshot.json")
     questions = {row.get("question", "") for row in read_csv(out_dir / "audit_findings.csv") if row.get("audit_type") == "user_question"}
     question = sorted(questions)[0] if summary.get("question_supplied") == "1" and questions else ""
     payload = {
         "tool_version": TOOL_VERSION,
         "target": manifest.get("target_repo"),
         "source": [(row["file_path"], row["sha256"]) for row in source_rows],
+        "source_snapshot": source_snapshot,
         "mode": summary.get("mode"),
         "max_queries": int(read_json(out_dir / "resource_envelope.json").get("max_queries")),
         "namespace": manifest.get("namespace"),
@@ -844,6 +911,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     verify_contract(out_dir, sha_entries, errors)
     verify_csv_jsonl(out_dir, errors)
     source_by_path = verify_sources(out_dir, manifest, errors)
+    verify_source_snapshot(out_dir, manifest, source_by_path, errors)
     verify_citations(out_dir, manifest, source_by_path, errors)
     verify_cache_key(out_dir, manifest, summary, errors)
     verify_reproduce(out_dir, manifest, summary, errors)

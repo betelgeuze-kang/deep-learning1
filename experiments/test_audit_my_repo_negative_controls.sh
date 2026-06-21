@@ -245,6 +245,8 @@ test "$(cat "$out_a/sentinel.txt")" = "keep"
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_summary.schema.json" "$out_a/audit_summary.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$out_a/plugin_registry.json" >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_source_snapshot.schema.json" "$out_a/source_snapshot.json" >/dev/null
 "$ROOT_DIR/tools/verify_local_audit.py" "$out_a" >/dev/null
 
 python3 - "$ROOT_DIR" "$repo" "$out_a" "$out_b" <<'PY'
@@ -337,6 +339,17 @@ with (out_a / "source_manifest.csv").open(newline="", encoding="utf-8") as handl
 source_manifest_paths = {row["file_path"] for row in source_manifest_rows}
 if "OUTSIDE_LINK.md" in source_manifest_paths:
     raise SystemExit("source manifest must not include tracked symlinks")
+source_snapshot = json.loads((out_a / "source_snapshot.json").read_text(encoding="utf-8"))
+if source_snapshot["schema_version"] != "local_repo_audit_source_snapshot.v1":
+    raise SystemExit("source snapshot schema_version mismatch")
+if source_snapshot["target_repo"] != str(repo):
+    raise SystemExit("source snapshot must bind the target repo")
+if source_snapshot["source_manifest_sha256"] != "sha256:" + sha256(out_a / "source_manifest.csv"):
+    raise SystemExit("source snapshot must bind source_manifest.csv sha256")
+if source_snapshot["source_file_count"] != len(source_manifest_rows):
+    raise SystemExit("source snapshot source_file_count mismatch")
+if source_snapshot["git_available"] != 1 or source_snapshot["git_dirty"] != 0:
+    raise SystemExit("fixture source snapshot must bind a clean git repo")
 
 findings = [json.loads(line) for line in (out_a / "audit_findings.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
 plugin_ids = {row["plugin_id"] for row in findings}
@@ -615,6 +628,24 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 unexpected_artifact_path.unlink()
 
+source_snapshot_path = out_a / "source_snapshot.json"
+original_source_snapshot_text = source_snapshot_path.read_text(encoding="utf-8")
+tampered_source_snapshot = json.loads(original_source_snapshot_text)
+tampered_source_snapshot["source_file_count"] = tampered_source_snapshot["source_file_count"] + 1
+source_snapshot_path.write_text(json.dumps(tampered_source_snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_source_snapshot_sha = sha256(source_snapshot_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  source_snapshot.json"):
+        sha_lines.append(f"{new_source_snapshot_sha}  source_snapshot.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject source snapshot/source manifest drift")
+source_snapshot_path.write_text(original_source_snapshot_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 plugin_rule_path = out_a / "plugin_rule_rows.csv"
 original_plugin_rule_text = plugin_rule_path.read_text(encoding="utf-8")
 with plugin_rule_path.open(newline="", encoding="utf-8") as handle:
@@ -817,6 +848,24 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 tampered_citations.write_text(original_citations, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+source_snapshot_path = out_a / "source_snapshot.json"
+original_source_snapshot_text = source_snapshot_path.read_text(encoding="utf-8")
+tampered_source_snapshot = json.loads(original_source_snapshot_text)
+tampered_source_snapshot["source_manifest_sha256"] = "sha256:" + ("0" * 64)
+source_snapshot_path.write_text(json.dumps(tampered_source_snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_source_snapshot_sha = sha256(source_snapshot_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  source_snapshot.json"):
+        sha_lines.append(f"{new_source_snapshot_sha}  source_snapshot.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject source snapshot manifest hash drift")
+source_snapshot_path.write_text(original_source_snapshot_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 source_manifest_path = out_a / "source_manifest.csv"
 original_source_manifest_text = source_manifest_path.read_text(encoding="utf-8")
 with source_manifest_path.open(newline="", encoding="utf-8") as handle:
@@ -921,6 +970,7 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 tampered_citations.write_text(original_citations, encoding="utf-8")
 audit_findings_path.write_text(original_findings_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+outside_source.unlink()
 
 summary_csv_path = out_a / "audit_summary.csv"
 original_summary_csv_text = summary_csv_path.read_text(encoding="utf-8")
