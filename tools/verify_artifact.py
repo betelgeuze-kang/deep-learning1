@@ -3614,6 +3614,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
         elif actual_rows_declared < min_rows:
             errors.append(f"{artifact}: row count does not satisfy artifact contract")
 
+    source_header, source_rows = _read_csv(out_dir / "source_manifest.csv", errors)
     findings = _read_jsonl(out_dir / "audit_findings.jsonl", errors)
     citations = _read_jsonl(out_dir / "citation_spans.jsonl", errors)
     lineage = _read_jsonl(out_dir / "prediction_lineage.jsonl", errors)
@@ -3621,8 +3622,37 @@ def verify_local_audit(out_dir: Path) -> list[str]:
         errors.append(f"{out_dir}: findings, citations, and lineage must be non-empty")
     if any(row.get("grounded") == 1 and not row.get("citations") for row in findings):
         errors.append(f"{out_dir / 'audit_findings.jsonl'}: grounded rows must have citations")
-    if not any(row.get("audit_type") == "user_question" and row.get("abstain") == 1 for row in findings):
-        errors.append(f"{out_dir / 'audit_findings.jsonl'}: user_question rows must abstain")
+    question = ""
+    user_question_rows = [row for row in findings if row.get("audit_type") == "user_question"]
+    if summary.get("question_supplied") == 1:
+        if not any(row.get("abstain") == 1 for row in user_question_rows):
+            errors.append(f"{out_dir / 'audit_findings.jsonl'}: supplied user_question rows must abstain")
+        if user_question_rows:
+            question = str(user_question_rows[0].get("question", ""))
+    elif user_question_rows:
+        errors.append(f"{out_dir / 'audit_findings.jsonl'}: user_question rows require question_supplied=1")
+    try:
+        max_queries = int(resource.get("max_queries", 0))
+    except (TypeError, ValueError):
+        max_queries = 0
+    if source_header and source_rows and max_queries > 0:
+        expected_cache_key = hashlib.sha256(
+            json.dumps(
+                {
+                    "tool_version": manifest.get("tool_version"),
+                    "target": str(manifest.get("target_repo", "")),
+                    "source": [(row.get("file_path", ""), row.get("sha256", "")) for row in source_rows],
+                    "mode": resource.get("mode"),
+                    "max_queries": max_queries,
+                    "namespace": manifest.get("namespace"),
+                    "question": question,
+                    "plugin_registry_sha256": manifest.get("plugin_registry_sha256"),
+                },
+                sort_keys=True,
+            ).encode("utf-8")
+        ).hexdigest()
+        if manifest.get("cache_key") != expected_cache_key:
+            errors.append(f"{out_dir / 'audit_manifest.json'}: cache_key does not match source/query/plugin inputs")
 
     target_repo = Path(str(manifest.get("target_repo", "")))
     if target_repo.is_dir():

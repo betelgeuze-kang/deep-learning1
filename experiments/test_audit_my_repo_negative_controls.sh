@@ -107,6 +107,13 @@ manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 if manifest["namespace"] != "synthetic":
     raise SystemExit("default namespace must be synthetic, not real_benchmark")
 PY
+"$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
+  --mode quick \
+  --max-queries 12 \
+  --out "$TMP_DIR/no_question" \
+  --namespace synthetic \
+  --generator routehint-tiny >/dev/null
+"$ROOT_DIR/tools/verify_artifact.py" local-audit "$TMP_DIR/no_question" >/dev/null
 
 audit_log="$TMP_DIR/audit.log"
 "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
@@ -281,6 +288,13 @@ tampered_manifest["plugin_registry_sha256"] = "sha256:" + ("0" * 64)
 manifest_path.write_text(json.dumps(tampered_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject plugin registry hash mismatch")
+manifest_path.write_text(original_manifest_text, encoding="utf-8")
+
+tampered_manifest = json.loads(original_manifest_text)
+tampered_manifest["cache_key"] = "0" * 64
+manifest_path.write_text(json.dumps(tampered_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject cache key mismatches")
 manifest_path.write_text(original_manifest_text, encoding="utf-8")
 
 subprocess.run(
