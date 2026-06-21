@@ -543,6 +543,13 @@ elif mode == "activation_bad":
 elif mode == "real_ready_without_pass":
     values["real_model_execution_ready"] = "1"
     values["logits_parity_pass"] = "0"
+elif mode == "blocked_fixture_ready_claim":
+    values["fixture_execution_ready"] = "1"
+    values["status"] = "pass"
+    values["logits_parity_pass"] = "0"
+elif mode == "blocked_status_pass_claim":
+    values["status"] = "pass"
+    values["logits_parity_pass"] = "0"
 else:
     raise SystemExit(f"unknown mode: {mode}")
 path = Path(rows_path)
@@ -662,6 +669,24 @@ expect_fail_with \
 
 rm -f "$LOGITS_ROWS"
 
+write_bad_logits_row blocked_fixture_ready_claim
+expect_fail_with \
+  "blocked milestone one-token-logits-parity forbids fixture_execution_ready=1" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row blocked_status_pass_claim
+expect_fail_with \
+  "blocked milestone one-token-logits-parity requires status=blocked" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
 if [ -e "$DECODE_ROWS" ]; then
   echo "refusing to overwrite existing v61 sixteen-token decode artifact: $DECODE_ROWS" >&2
   exit 1
@@ -707,7 +732,7 @@ values.update({
     "candidate_token_ids": "1|2|3",
     "reference_token_ids": "1|2|3",
     "candidate_text_sha256": "sha256:" + "c" * 64,
-    "reference_text_sha256": "sha256:" + "d" * 64,
+    "reference_text_sha256": "sha256:" + "c" * 64,
     "max_token_mismatch_count": "0",
     "decode_parity_pass": "1",
 })
@@ -719,6 +744,8 @@ elif mode == "prompt_hash_bad":
     values["prompt_input_sha256"] = "sha256:" + "z" * 64
 elif mode == "mismatch_count_bad":
     values["max_token_mismatch_count"] = "1"
+elif mode == "text_hash_mismatch_bad":
+    values["reference_text_sha256"] = "sha256:" + "d" * 64
 elif mode == "token_count_bad":
     values["decode_token_count"] = "2"
 elif mode == "real_ready_bad_raw":
@@ -768,6 +795,15 @@ rm -f "$DECODE_ROWS"
 write_bad_decode_row mismatch_count_bad
 expect_fail_with \
   "decode_parity_pass=1 requires max_token_mismatch_count=0" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$DECODE_ROWS"
+
+write_bad_decode_row text_hash_mismatch_bad
+expect_fail_with \
+  "decode_parity_pass=1 requires candidate_text_sha256 to match reference_text_sha256" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"

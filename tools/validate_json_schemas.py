@@ -1211,6 +1211,13 @@ def validate_registry_coverage(root: Path, registry: dict[str, list[str]]) -> li
     return errors
 
 
+def tracked_schema_paths(root: Path) -> list[Path]:
+    schema_dir = root / "schemas"
+    if not schema_dir.is_dir():
+        return []
+    return sorted(schema_dir.glob("*.schema.json"))
+
+
 def validate_instance(schema_path: Path, instance_path: Path) -> list[str]:
     errors: list[str] = []
     schema = load_json(schema_path)
@@ -1265,12 +1272,18 @@ def main() -> int:
     )
     if not args.schema_instance:
         errors.extend(validate_registry_coverage(root, registry))
+    validated_schema_paths: set[Path] = set()
+    if not args.schema_instance:
+        for schema_path in tracked_schema_paths(root):
+            validated_schema_paths.add(schema_path.resolve())
+            errors.extend(validate_schema(schema_path))
     for schema_rel, instance_rels in registry.items():
         schema_path = root / schema_rel
         if not schema_path.is_file():
             errors.append(f"{schema_path}: registered schema is missing")
             continue
-        errors.extend(validate_schema(schema_path))
+        if schema_path.resolve() not in validated_schema_paths:
+            errors.extend(validate_schema(schema_path))
         for instance_rel in instance_rels:
             instance_path = root / instance_rel
             if not instance_path.is_file():

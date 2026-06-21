@@ -2622,6 +2622,12 @@ def verify_v61_one_token_path(
             errors.append(f"{artifact_path}: pass milestone {linked_milestone} requires a real_model_execution_ready=1 {pass_field}=1 row")
         if linked_status == "blocked" and real_pass_rows:
             errors.append(f"{artifact_path}: blocked milestone {linked_milestone} cannot contain {pass_field}=1 rows")
+        if linked_status == "blocked":
+            for row_index, artifact_row in enumerate(rows, start=1):
+                if artifact_row.get("status") != "blocked":
+                    errors.append(f"{artifact_path}: row {row_index} blocked milestone {linked_milestone} requires status=blocked")
+                if artifact_row.get("fixture_execution_ready") == "1":
+                    errors.append(f"{artifact_path}: row {row_index} blocked milestone {linked_milestone} forbids fixture_execution_ready=1")
         if linked_status == "blocked" and linked_milestone in V61_REQUIRED_BEFORE_RUNTIME_CLAIM:
             for row_index, artifact_row in enumerate(rows, start=1):
                 for field in sorted(V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS & set(fieldnames)):
@@ -2829,6 +2835,8 @@ def _compute_v61_decode_parity_ready(
         local_errors.append(f"{label} requires reference_token_ids length to equal decode_token_count")
     if candidate_tokens is not None and reference_tokens is not None and candidate_tokens != reference_tokens:
         local_errors.append(f"{label} requires candidate_token_ids to match reference_token_ids")
+    if row.get("candidate_text_sha256") != row.get("reference_text_sha256"):
+        local_errors.append(f"{label} requires candidate_text_sha256 to match reference_text_sha256")
     if emit_pass_diagnostics:
         errors.extend(local_errors)
     return not local_errors

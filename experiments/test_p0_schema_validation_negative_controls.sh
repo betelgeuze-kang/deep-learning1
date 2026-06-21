@@ -28,6 +28,23 @@ expect_fail_with() {
 
 "$ROOT_DIR/tools/validate_json_schemas.py" >/dev/null
 
+SCHEMA_ONLY_ROOT="$TMP_DIR/schema_only_root"
+mkdir -p "$SCHEMA_ONLY_ROOT"
+cp -a "$ROOT_DIR/schemas" "$SCHEMA_ONLY_ROOT/schemas"
+python3 - "$SCHEMA_ONLY_ROOT/schemas/pipeline.schema.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["properties"]["stages"]["items"]["required"] = "stage_id"
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_fail_with \
+  "invalid schema" \
+  "$ROOT_DIR/tools/validate_json_schemas.py" --root "$SCHEMA_ONLY_ROOT" --skip-missing
+
 if ! grep -F "git ls-files '*.json' ':(exclude)results/**' ':(exclude)build/**'" "$ROOT_DIR/scripts/ai-verify.sh" >/dev/null; then
   echo "ai-verify.sh must parse all tracked source JSON dynamically" >&2
   exit 1
