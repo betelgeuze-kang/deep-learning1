@@ -252,8 +252,13 @@ def verify_audit_report(out_dir: Path, summary: dict[str, str], errors: list[str
             f"  abstain={row.get('abstain', '')}",
             f"  unsupported_claims={row.get('unsupported_claim', '')}",
         ]
-        for citation in [cell for cell in row.get("citations", "").split(";") if cell]:
+        citation_sha256s = [cell for cell in row.get("citation_sha256s", "").split(";") if cell]
+        for citation, citation_sha256 in zip(
+            [cell for cell in row.get("citations", "").split(";") if cell],
+            citation_sha256s,
+        ):
             expected_lines.append(f"  {citation}")
+            expected_lines.append(f"  sha256={citation_sha256}")
         for line in expected_lines:
             if line not in section:
                 add(errors, f"AUDIT_REPORT.md drift for finding: {finding_id}")
@@ -425,9 +430,18 @@ def verify_citations(out_dir: Path, manifest: dict, source_by_path: dict[str, di
         cells = [cell for cell in finding.get("citations", "").split(";") if cell]
         if not cells:
             add(errors, f"finding has no citation: {finding_id}")
-        for cell in cells:
-            if (finding_id, cell) not in citation_cells:
+        sha_cells = [cell for cell in finding.get("citation_sha256s", "").split(";") if cell]
+        if len(cells) != len(sha_cells):
+            add(errors, f"finding citation/citation_sha256 count drift: {finding_id}")
+        for idx, cell in enumerate(cells):
+            span = citation_cells.get((finding_id, cell))
+            if span is None:
                 add(errors, f"finding citation has no matching span row: {finding_id} {cell}")
+                continue
+            if idx >= len(sha_cells):
+                continue
+            if sha_cells[idx] != span.get("sha256"):
+                add(errors, f"finding citation sha256 drift: {finding_id} {cell}")
 
 
 def verify_cache_key(out_dir: Path, manifest: dict, summary: dict[str, str], errors: list[str]) -> None:

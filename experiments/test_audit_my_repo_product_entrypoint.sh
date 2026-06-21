@@ -326,6 +326,21 @@ for idx in range(1, 4):
         raise SystemExit("grounded findings must have citations")
     if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") for row in citations):
         raise SystemExit("citation rows must bind line numbers and sha256")
+    citation_by_finding_cell = {
+        (row["finding_id"], f"{row['file_path']}:{row['line_start']}"): row
+        for row in citations
+    }
+    for row in findings:
+        finding_cells = [cell for cell in str(row.get("citations", "")).split(";") if cell]
+        finding_sha256s = [cell for cell in str(row.get("citation_sha256s", "")).split(";") if cell]
+        if len(finding_cells) != len(finding_sha256s):
+            raise SystemExit(f"finding citation sha count drift: {row['finding_id']}")
+        for cell, digest in zip(finding_cells, finding_sha256s):
+            citation = citation_by_finding_cell.get((row["finding_id"], cell))
+            if citation is None:
+                raise SystemExit(f"finding citation has no span row: {row['finding_id']} {cell}")
+            if digest != citation["sha256"]:
+                raise SystemExit(f"finding citation sha drift: {row['finding_id']} {cell}")
     for row in citations:
         cited = repo / row["file_path"]
         if row["file_path"] not in source_files:

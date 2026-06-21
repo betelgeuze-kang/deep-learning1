@@ -509,6 +509,50 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
     raise SystemExit("local-audit verifier must reject tampered citation hashes")
 tampered_citations.write_text(original_citations, encoding="utf-8")
 
+findings_csv_path = out_a / "audit_findings.csv"
+audit_findings_path = out_a / "audit_findings.jsonl"
+original_findings_csv_text = findings_csv_path.read_text(encoding="utf-8")
+original_findings_text = audit_findings_path.read_text(encoding="utf-8")
+with findings_csv_path.open(newline="", encoding="utf-8") as handle:
+    findings_csv_rows = list(csv.DictReader(handle))
+finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
+tampered_binding_id = ""
+for row in findings_csv_rows:
+    sha_cells = [cell for cell in row.get("citation_sha256s", "").split(";") if cell]
+    if sha_cells:
+        tampered_binding_id = row["finding_id"]
+        sha_cells[0] = "sha256:" + ("0" * 64)
+        row["citation_sha256s"] = ";".join(sha_cells)
+        break
+if tampered_binding_id:
+    for row in finding_json_rows:
+        if row["finding_id"] == tampered_binding_id:
+            sha_cells = [cell for cell in str(row.get("citation_sha256s", "")).split(";") if cell]
+            sha_cells[0] = "sha256:" + ("0" * 64)
+            row["citation_sha256s"] = ";".join(sha_cells)
+            break
+    with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(findings_csv_rows)
+    audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in finding_json_rows), encoding="utf-8")
+    new_findings_csv_sha = sha256(findings_csv_path)
+    new_findings_jsonl_sha = sha256(audit_findings_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  audit_findings.csv"):
+            sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
+        elif line.endswith("  audit_findings.jsonl"):
+            sha_lines.append(f"{new_findings_jsonl_sha}  audit_findings.jsonl")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit("local-audit verifier must reject finding citation sha binding drift")
+    findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+    audit_findings_path.write_text(original_findings_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 tampered_rows = [json.loads(line) for line in original_citations.splitlines() if line.strip()]
 tampered_rows[0]["span_text_preview"] = "tampered preview that does not match the source line"
 tampered_citations.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in tampered_rows), encoding="utf-8")
@@ -754,6 +798,62 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
     raise SystemExit("local-audit verifier must reject duplicate audit report decision lines")
 audit_report_path.write_text(original_audit_report_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+findings_csv_path = out_a / "audit_findings.csv"
+audit_findings_path = out_a / "audit_findings.jsonl"
+original_findings_csv_text = findings_csv_path.read_text(encoding="utf-8")
+original_findings_text = audit_findings_path.read_text(encoding="utf-8")
+with findings_csv_path.open(newline="", encoding="utf-8") as handle:
+    findings_csv_rows = list(csv.DictReader(handle))
+finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
+tampered_citation_sha = "sha256:" + ("0" * 64)
+original_citation_sha = ""
+for row in findings_csv_rows:
+    sha_cells = [cell for cell in row.get("citation_sha256s", "").split(";") if cell]
+    if sha_cells:
+        original_citation_sha = sha_cells[0]
+        sha_cells[0] = tampered_citation_sha
+        row["citation_sha256s"] = ";".join(sha_cells)
+        tampered_finding_id = row["finding_id"]
+        break
+else:
+    tampered_finding_id = ""
+if tampered_finding_id:
+    for row in finding_json_rows:
+        if row["finding_id"] == tampered_finding_id:
+            sha_cells = [cell for cell in row.get("citation_sha256s", "").split(";") if cell]
+            sha_cells[0] = tampered_citation_sha
+            row["citation_sha256s"] = ";".join(sha_cells)
+            break
+    with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(findings_csv_rows)
+    audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in finding_json_rows), encoding="utf-8")
+    audit_report_path.write_text(
+        original_audit_report_text.replace(f"  sha256={original_citation_sha}", f"  sha256={tampered_citation_sha}", 1),
+        encoding="utf-8",
+    )
+    new_findings_csv_sha = sha256(findings_csv_path)
+    new_findings_jsonl_sha = sha256(audit_findings_path)
+    new_audit_report_sha = sha256(audit_report_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  audit_findings.csv"):
+            sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
+        elif line.endswith("  audit_findings.jsonl"):
+            sha_lines.append(f"{new_findings_jsonl_sha}  audit_findings.jsonl")
+        elif line.endswith("  AUDIT_REPORT.md"):
+            sha_lines.append(f"{new_audit_report_sha}  AUDIT_REPORT.md")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit("local-audit verifier must reject finding-level citation sha256 drift")
+    findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+    audit_findings_path.write_text(original_findings_text, encoding="utf-8")
+    audit_report_path.write_text(original_audit_report_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 resource_path = out_a / "resource_envelope.json"
 original_resource_text = resource_path.read_text(encoding="utf-8")

@@ -24,12 +24,12 @@ ARTIFACT_CONTRACT_SCHEMA_VERSION = "local_repo_audit_artifacts.v1"
 
 CSV_CONTRACTS: dict[str, list[str]] = {
     "source_manifest.csv": ["source_id", "file_path", "sha256", "bytes", "route_memory_source"],
-    "audit_findings.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
+    "audit_findings.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
     "citation_spans.csv": ["finding_id", "citation_id", "file_path", "line_start", "line_end", "sha256", "span_text_preview", "mmap_value_byte_read"],
     "compact_route_hint_rows.csv": ["hint_id", "finding_id", "hint_bytes", "source_citation_count", "raw_context_appended", "proposal_hint_used"],
     "grounded_generation_rows.csv": ["generation_id", "finding_id", "hint_id", "generator", "attention_blocks", "transformer_blocks", "raw_prompt_context_bytes", "grounded", "abstain", "unsupported_claim", "answer"],
-    "abstain_rows.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
-    "unsupported_claim_rows.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
+    "abstain_rows.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
+    "unsupported_claim_rows.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
     "wrong_answer_guard_rows.csv": ["finding_id", "guard_id", "unsupported_direct_answer_blocked", "citation_required", "audit_trail_required", "wrong_answer_guard_pass"],
     "accuracy_rows.csv": ["finding_id", "accuracy_label", "automatic_accuracy_claimed", "manual_accuracy_review_required"],
     "citation_correctness_rows.csv": ["finding_id", "citation_count", "citation_bound", "citation_correctness_label", "manual_citation_review_required"],
@@ -269,6 +269,7 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
     for idx, finding in enumerate(findings, start=1):
         finding_id = f"finding_{idx:03d}"
         citation_cells = []
+        citation_sha256s = []
         for cidx, path in enumerate(finding.evidence_paths, start=1):
             if not path.exists() or not path.is_file():
                 continue
@@ -286,7 +287,9 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
             line_no, snippet = line_for(path, citation_patterns)
             citation_id = f"{finding_id}_cite_{cidx}"
             rel_path = rel_to_target(target, path)
+            citation_sha256 = sha256(path)
             citation_cells.append(f"{rel_path}:{line_no}")
+            citation_sha256s.append(citation_sha256)
             span_rows.append(
                 {
                     "finding_id": finding_id,
@@ -294,7 +297,7 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
                     "file_path": rel_path,
                     "line_start": line_no,
                     "line_end": line_no,
-                    "sha256": sha256(path),
+                    "sha256": citation_sha256,
                     "span_text_preview": snippet,
                     "mmap_value_byte_read": 1,
                 }
@@ -316,6 +319,7 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
                 "abstain": abstain,
                 "unsupported_claim": finding.unsupported_claim,
                 "citations": ";".join(citation_cells),
+                "citation_sha256s": ";".join(citation_sha256s),
                 "route_memory_lineage": 1,
                 "raw_prompt_context_bytes": 0,
                 "oracle_prediction_used": 0,
@@ -486,9 +490,13 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         lines = ["# Local Codebase Audit Report", "", "Summary:", f"- {len(finding_rows)} source-bound findings", f"- {len(abstain_rows)} unsupported questions abstained", f"- {len(unsupported_rows)} unsupported claims flagged", "- RouteMemory evidence, compact RouteHint, grounded answer, citation/abstain, and audit trail artifacts were emitted.", ""]
         for finding in finding_rows:
             lines.extend([f"## {finding['finding_id']}: {finding['audit_type']}", "", "Question:", f"  {finding['question']}", "", "Answer:", f"  {finding['answer']}", "", "Evidence:"])
-            for citation in finding["citations"].split(";"):
-                if citation:
-                    lines.append(f"  {citation}")
+            citation_sha256s = [cell for cell in finding["citation_sha256s"].split(";") if cell]
+            for citation, citation_sha256 in zip(
+                [cell for cell in finding["citations"].split(";") if cell],
+                citation_sha256s,
+            ):
+                lines.append(f"  {citation}")
+                lines.append(f"  sha256={citation_sha256}")
             lines.extend(["", "Decision:", f"  grounded={finding['grounded']}", f"  abstain={finding['abstain']}", f"  unsupported_claims={finding['unsupported_claim']}", ""])
         (staging / "AUDIT_REPORT.md").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
