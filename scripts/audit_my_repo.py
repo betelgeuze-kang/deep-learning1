@@ -19,6 +19,39 @@ SCHEMA_VERSION = "local_repo_audit.v1"
 OUTPUT_SCHEMA_VERSION = "local_repo_audit_output.v1"
 TOOL_VERSION = "audit_my_repo_alpha.v1"
 DETERMINISTIC_GENERATED_AT_UTC = "1970-01-01T00:00:00+00:00"
+ARTIFACT_CONTRACT_SCHEMA_VERSION = "local_repo_audit_artifacts.v1"
+
+
+CSV_CONTRACTS: dict[str, list[str]] = {
+    "source_manifest.csv": ["source_id", "file_path", "sha256", "bytes", "route_memory_source"],
+    "audit_findings.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
+    "citation_spans.csv": ["finding_id", "citation_id", "file_path", "line_start", "line_end", "sha256", "span_text_preview", "mmap_value_byte_read"],
+    "compact_route_hint_rows.csv": ["hint_id", "finding_id", "hint_bytes", "source_citation_count", "raw_context_appended", "proposal_hint_used"],
+    "grounded_generation_rows.csv": ["generation_id", "finding_id", "hint_id", "generator", "attention_blocks", "transformer_blocks", "raw_prompt_context_bytes", "grounded", "abstain", "unsupported_claim", "answer"],
+    "abstain_rows.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
+    "unsupported_claim_rows.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
+    "wrong_answer_guard_rows.csv": ["finding_id", "guard_id", "unsupported_direct_answer_blocked", "citation_required", "audit_trail_required", "wrong_answer_guard_pass"],
+    "accuracy_rows.csv": ["finding_id", "accuracy_label", "automatic_accuracy_claimed", "manual_accuracy_review_required"],
+    "citation_correctness_rows.csv": ["finding_id", "citation_count", "citation_bound", "citation_correctness_label", "manual_citation_review_required"],
+    "latency_rows.csv": ["finding_id", "latency_ms", "latency_source"],
+    "false_positive_candidate_rows.csv": ["finding_id", "manual_review_required", "false_positive_candidate", "auto_promoted"],
+    "audit_summary.csv": ["schema_version", "tool_version", "audit_my_repo_ready", "target_repo", "mode", "namespace", "generator", "question_supplied", "source_files", "finding_rows", "citation_span_rows", "abstain_rows", "unsupported_claim_rows", "accuracy_rows", "citation_correctness_rows", "false_positive_candidate_rows", "wrong_answer_guard_rows", "wrong_answer_guard_pass_rows", "claim_boundary_ready", "route_memory_lineage_rows", "mmap_read_trace_rows", "compact_route_hint_rows", "grounded_generation_rows", "raw_prompt_context_bytes", "attention_blocks", "transformer_blocks", "oracle_prediction_used", "raw_input_extractor_used", "real_release_package_ready", "public_comparison_claim_ready", "gpu_speedup_claim", "latency_ms"],
+}
+
+JSONL_CONTRACTS: dict[str, list[str]] = {
+    "audit_findings.jsonl": CSV_CONTRACTS["audit_findings.csv"],
+    "citation_spans.jsonl": CSV_CONTRACTS["citation_spans.csv"],
+    "prediction_lineage.jsonl": ["finding_id", "route_index_row", "compact_route_hint_id", "generator_id", "citation_count", "audit_trail_bound"],
+    "mmap_read_trace.jsonl": ["finding_id", "file_path", "line_start", "sha256", "mmap_value_byte_read"],
+}
+
+JSON_CONTRACTS: dict[str, list[str]] = {
+    "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "cache_key", "claim_boundary"],
+    "audit_summary.json": list(CSV_CONTRACTS["audit_summary.csv"]),
+    "resource_envelope.json": ["resource_envelope_ready", "tool_version", "source_files_scanned", "max_queries", "mode", "namespace", "external_network_used", "raw_prompt_context_bytes", "latency_ms", "wrong_answer_guard_rows", "claim_boundary_ready"],
+}
+
+OPTIONAL_ZERO_ROW_ARTIFACTS = {"abstain_rows.csv", "unsupported_claim_rows.csv"}
 
 
 def sha256(path: Path) -> str:
@@ -44,6 +77,109 @@ def write_csv(path: Path, fieldnames: list[str], rows: list[dict]) -> None:
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def csv_row_count_and_header(path: Path) -> tuple[int, list[str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        rows = list(reader)
+        return len(rows), list(reader.fieldnames or [])
+
+
+def jsonl_row_count_and_keys(path: Path) -> tuple[int, list[str]]:
+    keys: set[str] = set()
+    rows = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        rows += 1
+        payload = json.loads(line)
+        keys.update(payload.keys())
+    return rows, sorted(keys)
+
+
+def write_artifact_contract(staging: Path) -> int:
+    rows: list[dict] = []
+    for artifact_path, required_columns in sorted(CSV_CONTRACTS.items()):
+        actual_rows, actual_columns = csv_row_count_and_header(staging / artifact_path)
+        min_rows = 0 if artifact_path in OPTIONAL_ZERO_ROW_ARTIFACTS else 1
+        rows.append(
+            {
+                "schema_version": ARTIFACT_CONTRACT_SCHEMA_VERSION,
+                "artifact_path": artifact_path,
+                "artifact_kind": "csv",
+                "required_columns": "|".join(required_columns),
+                "actual_columns": "|".join(actual_columns),
+                "required_keys": "",
+                "actual_keys": "",
+                "min_rows": min_rows,
+                "actual_rows": actual_rows,
+                "sha256_manifest_required": 1,
+                "deterministic_required": 1,
+            }
+        )
+    for artifact_path, required_keys in sorted(JSONL_CONTRACTS.items()):
+        actual_rows, actual_keys = jsonl_row_count_and_keys(staging / artifact_path)
+        rows.append(
+            {
+                "schema_version": ARTIFACT_CONTRACT_SCHEMA_VERSION,
+                "artifact_path": artifact_path,
+                "artifact_kind": "jsonl",
+                "required_columns": "",
+                "actual_columns": "",
+                "required_keys": "|".join(required_keys),
+                "actual_keys": "|".join(actual_keys),
+                "min_rows": 1,
+                "actual_rows": actual_rows,
+                "sha256_manifest_required": 1,
+                "deterministic_required": 1,
+            }
+        )
+    for artifact_path, required_keys in sorted(JSON_CONTRACTS.items()):
+        payload = json.loads((staging / artifact_path).read_text(encoding="utf-8"))
+        rows.append(
+            {
+                "schema_version": ARTIFACT_CONTRACT_SCHEMA_VERSION,
+                "artifact_path": artifact_path,
+                "artifact_kind": "json",
+                "required_columns": "",
+                "actual_columns": "",
+                "required_keys": "|".join(required_keys),
+                "actual_keys": "|".join(sorted(payload.keys())),
+                "min_rows": 1,
+                "actual_rows": 1,
+                "sha256_manifest_required": 1,
+                "deterministic_required": 1,
+            }
+        )
+    for artifact_path, artifact_kind in [
+        ("AUDIT_REPORT.md", "markdown"),
+        ("ARCHITECTURE_TRACE.md", "markdown"),
+        ("claim_boundary.md", "markdown"),
+        ("reproduce.sh", "shell"),
+    ]:
+        if (staging / artifact_path).is_file():
+            rows.append(
+                {
+                    "schema_version": ARTIFACT_CONTRACT_SCHEMA_VERSION,
+                    "artifact_path": artifact_path,
+                    "artifact_kind": artifact_kind,
+                    "required_columns": "",
+                    "actual_columns": "",
+                    "required_keys": "",
+                    "actual_keys": "",
+                    "min_rows": 1,
+                    "actual_rows": 1,
+                    "sha256_manifest_required": 1,
+                    "deterministic_required": 1,
+                }
+            )
+    write_csv(
+        staging / "artifact_contract_rows.csv",
+        ["schema_version", "artifact_path", "artifact_kind", "required_columns", "actual_columns", "required_keys", "actual_keys", "min_rows", "actual_rows", "sha256_manifest_required", "deterministic_required"],
+        rows,
+    )
+    return len(rows)
 
 
 def rel_to_target(target: Path, path: Path) -> str:
@@ -360,6 +496,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "claim_boundary": "alpha-local-code-doc-audit-only",
     }
     write_json(staging / "audit_manifest.json", manifest)
+    write_artifact_contract(staging)
     sha_rows = []
     for path in sorted(staging.rglob("*")):
         if path.is_file() and path.name != "sha256sums.txt":

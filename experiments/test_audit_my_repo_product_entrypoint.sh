@@ -54,6 +54,7 @@ for idx in 1 2 3; do
     AUDIT_REPORT.md \
     ARCHITECTURE_TRACE.md \
     accuracy_rows.csv \
+    artifact_contract_rows.csv \
     audit_findings.jsonl \
     audit_manifest.json \
     audit_summary.json \
@@ -102,6 +103,59 @@ def sha256(path):
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def read_contract(out):
+    with (out / "artifact_contract_rows.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    if not rows:
+        raise SystemExit("artifact contract rows must be non-empty")
+    for row in rows:
+        if row["schema_version"] != "local_repo_audit_artifacts.v1":
+            raise SystemExit("artifact contract schema version mismatch")
+        artifact = out / row["artifact_path"]
+        if not artifact.is_file():
+            raise SystemExit(f"contract artifact missing: {row['artifact_path']}")
+        if row["artifact_kind"] == "csv":
+            with artifact.open(newline="", encoding="utf-8") as handle:
+                reader = csv.DictReader(handle)
+                actual_columns = list(reader.fieldnames or [])
+                actual_rows = list(reader)
+            expected_columns = row["required_columns"].split("|") if row["required_columns"] else []
+            if actual_columns != expected_columns or row["actual_columns"].split("|") != expected_columns:
+                raise SystemExit(f"csv contract columns mismatch: {row['artifact_path']}")
+            if int(row["actual_rows"]) != len(actual_rows):
+                raise SystemExit(f"csv contract row count mismatch: {row['artifact_path']}")
+        elif row["artifact_kind"] == "jsonl":
+            actual_rows = [json.loads(line) for line in artifact.read_text(encoding="utf-8").splitlines() if line.strip()]
+            actual_keys = sorted({key for payload in actual_rows for key in payload})
+            required_keys = sorted(row["required_keys"].split("|")) if row["required_keys"] else []
+            if not set(required_keys).issubset(actual_keys):
+                raise SystemExit(f"jsonl contract keys mismatch: {row['artifact_path']}")
+            if int(row["actual_rows"]) != len(actual_rows):
+                raise SystemExit(f"jsonl contract row count mismatch: {row['artifact_path']}")
+        elif row["artifact_kind"] == "json":
+            payload = json.loads(artifact.read_text(encoding="utf-8"))
+            required_keys = row["required_keys"].split("|") if row["required_keys"] else []
+            if not set(required_keys).issubset(payload):
+                raise SystemExit(f"json contract keys mismatch: {row['artifact_path']}")
+        if row["sha256_manifest_required"] != "1" or row["deterministic_required"] != "1":
+            raise SystemExit("artifact contract must require sha manifest and deterministic output")
+    required_artifacts = {
+        "audit_findings.csv",
+        "audit_findings.jsonl",
+        "citation_spans.csv",
+        "citation_spans.jsonl",
+        "prediction_lineage.jsonl",
+        "audit_manifest.json",
+        "audit_summary.json",
+        "AUDIT_REPORT.md",
+        "reproduce.sh",
+    }
+    seen = {row["artifact_path"] for row in rows}
+    if not required_artifacts.issubset(seen):
+        raise SystemExit(f"artifact contract missing required artifacts: {sorted(required_artifacts - seen)}")
+    return rows
 
 
 for idx in range(1, 4):
@@ -160,6 +214,7 @@ for idx in range(1, 4):
     }, sort_keys=True).encode("utf-8")).hexdigest()
     if manifest["cache_key"] != expected_cache_key:
         raise SystemExit("audit manifest cache key does not match source/query/plugin inputs")
+    contract_rows = read_contract(out)
     manifest_rows = {}
     for line in (out / "sha256sums.txt").read_text(encoding="utf-8").splitlines():
         digest, rel = line.split(None, 1)
@@ -168,6 +223,7 @@ for idx in range(1, 4):
         "AUDIT_REPORT.md",
         "ARCHITECTURE_TRACE.md",
         "accuracy_rows.csv",
+        "artifact_contract_rows.csv",
         "audit_manifest.json",
         "audit_summary.json",
         "audit_findings.jsonl",
@@ -178,6 +234,9 @@ for idx in range(1, 4):
     ]:
         if manifest_rows.get(rel) != sha256(out / rel):
             raise SystemExit(f"sha256 mismatch: {rel}")
+    for row in contract_rows:
+        if row["sha256_manifest_required"] == "1" and row["artifact_path"] not in manifest_rows:
+            raise SystemExit(f"contract artifact missing from sha256 manifest: {row['artifact_path']}")
     reproduce_text = (out / "reproduce.sh").read_text(encoding="utf-8")
     if "--question 'Does this repo prove production readiness?'" not in reproduce_text:
         raise SystemExit("reproduce.sh must preserve the user question")
