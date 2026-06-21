@@ -88,6 +88,25 @@ if "$ROOT_DIR/scripts/audit_my_repo.sh" "$TMP_DIR/missing" --out "$TMP_DIR/bad_t
   echo "missing target repo must fail" >&2
   exit 12
 fi
+if "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" --namespace real_benchmark --out "$TMP_DIR/bad_real_namespace" >/dev/null 2>&1; then
+  echo "real_benchmark namespace must require explicit confirmation" >&2
+  exit 13
+fi
+"$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
+  --mode quick \
+  --max-queries 12 \
+  --out "$TMP_DIR/default_namespace" \
+  --question "What namespace is used by default?" \
+  --generator routehint-tiny >/dev/null
+python3 - "$TMP_DIR/default_namespace/audit_manifest.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if manifest["namespace"] != "synthetic":
+    raise SystemExit("default namespace must be synthetic, not real_benchmark")
+PY
 
 audit_log="$TMP_DIR/audit.log"
 "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
@@ -99,7 +118,7 @@ audit_log="$TMP_DIR/audit.log"
   --generator routehint-tiny >"$audit_log"
 if ! grep -q '^artifact_verify: ok$' "$audit_log"; then
   echo "audit entrypoint must verify its output artifact by default" >&2
-  exit 13
+  exit 14
 fi
 
 test "$(cat "$out_a/sentinel.txt")" = "keep"

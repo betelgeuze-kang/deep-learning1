@@ -278,6 +278,7 @@ for idx in range(1, 4):
         "source": [(row["file_path"], row["sha256"]) for row in source_rows],
         "mode": "quick",
         "max_queries": 12,
+        "namespace": "synthetic",
         "question": "Does this repo prove production readiness?",
         "plugin_registry_sha256": plugin_registry_sha256,
     }, sort_keys=True).encode("utf-8")).hexdigest()

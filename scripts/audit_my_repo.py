@@ -476,6 +476,8 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
             "--emit-lineage",
             "--emit-reproduce",
         ]
+        if namespace == "real_benchmark":
+            command.append("--confirm-real-benchmark-namespace")
         if question:
             command.extend(["--question", question])
         reproduce.write_text(
@@ -498,7 +500,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "finding_rows": len(finding_rows),
         "atomic_publish": 1,
         "output_dir_destroyed": 0,
-        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "mode": mode, "max_queries": max_queries, "question": question, "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
+        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "mode": mode, "max_queries": max_queries, "namespace": namespace, "question": question, "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
         "plugin_registry_sha256": plugin_registry_sha256,
         "claim_boundary": "alpha-local-code-doc-audit-only",
     }
@@ -521,7 +523,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--max-queries", type=int, default=100)
     parser.add_argument("--out", default="results/my_repo_audit")
     parser.add_argument("--generator", default="routehint-tiny")
-    parser.add_argument("--namespace", choices=["fixture", "synthetic", "real_benchmark"], default="real_benchmark")
+    parser.add_argument("--namespace", choices=["fixture", "synthetic", "real_benchmark"], default="synthetic")
+    parser.add_argument("--confirm-real-benchmark-namespace", action="store_true", help="Allow writing outputs in the real_benchmark namespace.")
     parser.add_argument("--question", default="")
     parser.add_argument("--emit-report", action="store_true", default=True)
     parser.add_argument("--emit-lineage", action="store_true", default=True)
@@ -587,6 +590,9 @@ def main(argv: list[str]) -> int:
         return 2
     if args.max_queries <= 0:
         print("--max-queries must be positive", file=sys.stderr)
+        return 2
+    if args.namespace == "real_benchmark" and not args.confirm_real_benchmark_namespace:
+        print("--namespace real_benchmark requires --confirm-real-benchmark-namespace", file=sys.stderr)
         return 2
 
     staging_parent = out_dir.parent
