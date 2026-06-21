@@ -187,15 +187,26 @@ def rel_to_target(target: Path, path: Path) -> str:
     return str(path.resolve().relative_to(target))
 
 
+def is_target_regular_file(target: Path, path: Path) -> bool:
+    if path.is_symlink() or not path.is_file():
+        return False
+    try:
+        resolved = path.resolve()
+        resolved.relative_to(target)
+    except (OSError, ValueError):
+        return False
+    return True
+
+
 def tracked_files(target: Path, max_queries: int) -> list[Path]:
     try:
         output = subprocess.check_output(["git", "-C", str(target), "ls-files"], text=True, stderr=subprocess.DEVNULL)
         files = [target / line for line in output.splitlines() if line.strip()]
     except Exception:
-        files = [path for path in target.rglob("*") if path.is_file() and ".git" not in path.parts]
+        files = [path for path in target.rglob("*") if ".git" not in path.parts]
     allowed = []
     for path in files:
-        if not path.is_file():
+        if not is_target_regular_file(target, path):
             continue
         try:
             size = path.stat().st_size

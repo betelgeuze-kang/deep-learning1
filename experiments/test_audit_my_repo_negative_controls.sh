@@ -39,9 +39,15 @@ cat >"$repo/legacy.js" <<'EOF'
 var answer = eval("1 + 1");
 document.write(answer);
 EOF
+cat >"$TMP_DIR/outside_link_target.md" <<'EOF'
+# Outside Link Target
+
+This file is outside the audited repository and must never enter source_manifest.csv.
+EOF
+ln -s "$TMP_DIR/outside_link_target.md" "$repo/OUTSIDE_LINK.md"
 
 git -C "$repo" init -q
-git -C "$repo" add README.md pyproject.toml legacy.py legacy.cpp legacy.js
+git -C "$repo" add README.md pyproject.toml legacy.py legacy.cpp legacy.js OUTSIDE_LINK.md
 git -C "$repo" -c user.email=audit@example.invalid -c user.name=Audit commit -q -m init
 
 if [[ "$("$ROOT_DIR/scripts/audit_my_repo.sh" --version)" != "audit_my_repo_alpha.v1" ]]; then
@@ -246,6 +252,12 @@ if summary["namespace"] != "fixture":
 if summary["unsupported_claim_rows"] < 1 or summary["abstain_rows"] < 1:
     raise SystemExit("unsupported and abstain rows must be present")
 
+with (out_a / "source_manifest.csv").open(newline="", encoding="utf-8") as handle:
+    source_manifest_rows = list(csv.DictReader(handle))
+source_manifest_paths = {row["file_path"] for row in source_manifest_rows}
+if "OUTSIDE_LINK.md" in source_manifest_paths:
+    raise SystemExit("source manifest must not include tracked symlinks")
+
 findings = [json.loads(line) for line in (out_a / "audit_findings.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
 plugin_ids = {row["plugin_id"] for row in findings}
 expected_plugins = {
@@ -289,6 +301,8 @@ unsupported_previews = [
 if not any("production ready" in preview or "state of the art" in preview for preview in unsupported_previews):
     raise SystemExit("unsupported claim citation must bind exact readiness wording")
 for row in citations:
+    if row["file_path"] == "OUTSIDE_LINK.md":
+        raise SystemExit("citation spans must not include tracked symlinks")
     path = repo / row["file_path"]
     if not path.is_file():
         raise SystemExit(f"citation path missing: {row['file_path']}")
@@ -535,6 +549,29 @@ sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 with source_manifest_path.open(newline="", encoding="utf-8") as handle:
     source_manifest_rows = list(csv.DictReader(handle))
+outside_target = repo.parent / "outside_link_target.md"
+source_manifest_rows[0]["file_path"] = "../outside_link_target.md"
+source_manifest_rows[0]["sha256"] = "sha256:" + sha256(outside_target)
+source_manifest_rows[0]["bytes"] = str(outside_target.stat().st_size)
+with source_manifest_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(source_manifest_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(source_manifest_rows)
+new_source_manifest_sha = sha256(source_manifest_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  source_manifest.csv"):
+        sha_lines.append(f"{new_source_manifest_sha}  source_manifest.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject source manifest path traversal")
+source_manifest_path.write_text(original_source_manifest_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with source_manifest_path.open(newline="", encoding="utf-8") as handle:
+    source_manifest_rows = list(csv.DictReader(handle))
 if len(source_manifest_rows) >= 2:
     source_manifest_rows[1]["file_path"] = source_manifest_rows[0]["file_path"]
     source_manifest_rows[1]["sha256"] = source_manifest_rows[0]["sha256"]
@@ -680,6 +717,25 @@ sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject architecture trace raw-context drift")
 architecture_trace_path.write_text(original_architecture_trace_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+audit_report_path = out_a / "AUDIT_REPORT.md"
+original_audit_report_text = audit_report_path.read_text(encoding="utf-8")
+audit_report_path.write_text(
+    original_audit_report_text.replace("  abstain=1", "  abstain=0", 1),
+    encoding="utf-8",
+)
+new_audit_report_sha = sha256(audit_report_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  AUDIT_REPORT.md"):
+        sha_lines.append(f"{new_audit_report_sha}  AUDIT_REPORT.md")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject audit report decision drift")
+audit_report_path.write_text(original_audit_report_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 resource_path = out_a / "resource_envelope.json"

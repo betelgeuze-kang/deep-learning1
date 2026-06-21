@@ -222,6 +222,43 @@ def verify_claim_boundary_docs(out_dir: Path, errors: list[str]) -> None:
             add(errors, "ARCHITECTURE_TRACE.md must preserve non-LLM/non-release boundary")
 
 
+def verify_audit_report(out_dir: Path, summary: dict[str, str], errors: list[str]) -> None:
+    report = (out_dir / "AUDIT_REPORT.md").read_text(encoding="utf-8")
+    findings = read_csv(out_dir / "audit_findings.csv")
+    expected_summary_lines = [
+        "# Local Codebase Audit Report",
+        f"- {summary.get('finding_rows')} source-bound findings",
+        f"- {summary.get('abstain_rows')} unsupported questions abstained",
+        f"- {summary.get('unsupported_claim_rows')} unsupported claims flagged",
+        "- RouteMemory evidence, compact RouteHint, grounded answer, citation/abstain, and audit trail artifacts were emitted.",
+    ]
+    for line in expected_summary_lines:
+        if line not in report:
+            add(errors, "AUDIT_REPORT.md summary must match audit_summary rows")
+    for row in findings:
+        finding_id = row.get("finding_id", "")
+        section_header = f"## {finding_id}: {row.get('audit_type', '')}"
+        section_start = report.find(section_header)
+        if section_start < 0:
+            add(errors, f"AUDIT_REPORT.md drift for finding: {finding_id}")
+            continue
+        next_section_start = report.find("\n## ", section_start + 1)
+        section = report[section_start:] if next_section_start < 0 else report[section_start:next_section_start]
+        expected_lines = [
+            section_header,
+            f"  {row.get('question', '')}",
+            f"  {row.get('answer', '')}",
+            f"  grounded={row.get('grounded', '')}",
+            f"  abstain={row.get('abstain', '')}",
+            f"  unsupported_claims={row.get('unsupported_claim', '')}",
+        ]
+        for citation in [cell for cell in row.get("citations", "").split(";") if cell]:
+            expected_lines.append(f"  {citation}")
+        for line in expected_lines:
+            if line not in section:
+                add(errors, f"AUDIT_REPORT.md drift for finding: {finding_id}")
+
+
 def verify_registry(registry: dict, errors: list[str]) -> None:
     if registry.get("schema_version") != "local_repo_audit.v1":
         add(errors, "plugin registry schema_version mismatch")
@@ -293,9 +330,17 @@ def verify_csv_jsonl(out_dir: Path, errors: list[str]) -> None:
             add(errors, f"CSV/JSONL drift: {csv_rel} vs {jsonl_rel}")
 
 
+def relative_source_path(rel: str, errors: list[str], label: str) -> Path | None:
+    path = Path(rel)
+    if not rel or path.is_absolute() or ".." in path.parts:
+        add(errors, f"{label} path escapes target repo: {rel}")
+        return None
+    return path
+
+
 def verify_sources(out_dir: Path, manifest: dict, errors: list[str]) -> dict[str, dict[str, str]]:
     rows = read_csv(out_dir / "source_manifest.csv")
-    target = Path(str(manifest.get("target_repo", "")))
+    target = Path(str(manifest.get("target_repo", ""))).resolve()
     by_path: dict[str, dict[str, str]] = {}
     source_ids: set[str] = set()
     if not target.is_dir():
@@ -303,15 +348,26 @@ def verify_sources(out_dir: Path, manifest: dict, errors: list[str]) -> dict[str
     for row in rows:
         source_id = row.get("source_id", "")
         rel = row.get("file_path", "")
+        rel_path = relative_source_path(rel, errors, "source_manifest")
         if source_id in source_ids:
             add(errors, f"duplicate source_id in source_manifest.csv: {source_id}")
         source_ids.add(source_id)
         if rel in by_path:
             add(errors, f"duplicate file_path in source_manifest.csv: {rel}")
         by_path[rel] = row
-        source = target / rel
+        if rel_path is None:
+            continue
+        source = target / rel_path
         if row.get("route_memory_source") != "1":
             add(errors, f"source_manifest route_memory_source must be 1: {rel}")
+        try:
+            source.resolve().relative_to(target)
+        except (OSError, ValueError):
+            add(errors, f"source manifest resolved path escapes target repo: {rel}")
+            continue
+        if source.is_symlink():
+            add(errors, f"source manifest must not include symlinks: {rel}")
+            continue
         if not source.is_file():
             add(errors, f"source manifest file missing in target repo: {rel}")
             continue
@@ -325,12 +381,13 @@ def verify_sources(out_dir: Path, manifest: dict, errors: list[str]) -> dict[str
 
 
 def verify_citations(out_dir: Path, manifest: dict, source_by_path: dict[str, dict[str, str]], errors: list[str]) -> None:
-    target = Path(str(manifest.get("target_repo", "")))
+    target = Path(str(manifest.get("target_repo", ""))).resolve()
     findings = {row["finding_id"]: row for row in read_csv(out_dir / "audit_findings.csv")}
     citation_cells: dict[tuple[str, str], dict[str, str]] = {}
     citation_ids: set[str] = set()
     for row in read_csv(out_dir / "citation_spans.csv"):
         rel = row.get("file_path", "")
+        rel_path = relative_source_path(rel, errors, "citation")
         finding_id = row.get("finding_id", "")
         citation_id = row.get("citation_id", "")
         line_start = int(row.get("line_start") or 0)
@@ -341,7 +398,9 @@ def verify_citations(out_dir: Path, manifest: dict, source_by_path: dict[str, di
         if rel not in source_by_path:
             add(errors, f"citation outside source_manifest.csv: {rel}")
             continue
-        source = target / rel
+        if rel_path is None:
+            continue
+        source = target / rel_path
         if row.get("sha256") != source_by_path[rel].get("sha256") or row.get("sha256") != sha256_prefixed(source):
             add(errors, f"citation sha mismatch: {rel}")
         lines = source.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -603,6 +662,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     verify_manifest(manifest, summary_json, out_dir, errors)
     verify_resource(read_json(out_dir / "resource_envelope.json"), summary, errors)
     verify_claim_boundary_docs(out_dir, errors)
+    verify_audit_report(out_dir, summary, errors)
     verify_registry(read_json(out_dir / "plugin_registry.json"), errors)
     verify_contract(out_dir, sha_entries, errors)
     verify_csv_jsonl(out_dir, errors)
