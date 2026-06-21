@@ -112,6 +112,7 @@ for idx in 1 2 3; do
     mmap_read_trace.jsonl \
     prediction_lineage.jsonl \
     plugin_registry.json \
+    plugin_rule_rows.csv \
     resource_envelope.json \
     reproduce.sh \
     sha256sums.txt \
@@ -209,6 +210,7 @@ def read_contract(out):
         "citation_spans.jsonl",
         "prediction_lineage.jsonl",
         "plugin_registry.json",
+        "plugin_rule_rows.csv",
         "audit_manifest.json",
         "audit_summary.json",
         "AUDIT_REPORT.md",
@@ -293,6 +295,22 @@ for idx in range(1, 4):
     plugin_registry_sha256 = "sha256:" + sha256(out / "plugin_registry.json")
     if manifest["plugin_registry_sha256"] != plugin_registry_sha256:
         raise SystemExit("audit manifest must bind plugin_registry.json sha256")
+    with (out / "plugin_rule_rows.csv").open(newline="", encoding="utf-8") as handle:
+        plugin_rule_rows = list(csv.DictReader(handle))
+    if not plugin_rule_rows:
+        raise SystemExit("plugin rule rows must be emitted")
+    rule_plugin_ids = {row["plugin_id"] for row in plugin_rule_rows}
+    if rule_plugin_ids != plugin_ids:
+        raise SystemExit("plugin rule rows must cover every registered plugin")
+    deprecated_rule_languages = {
+        row["language"]
+        for row in plugin_rule_rows
+        if row["plugin_id"] == "deprecated_api"
+    }
+    if not {"python", "cpp", "javascript"}.issubset(deprecated_rule_languages):
+        raise SystemExit("deprecated_api rules must expose python/cpp/javascript coverage")
+    if any(row["evidence_policy"] not in {"source-bound-span", "abstain-when-missing-source-bound-span"} for row in plugin_rule_rows):
+        raise SystemExit("plugin rule rows must bind a replayable evidence policy")
     if summary["real_release_package_ready"] != 0 or summary["public_comparison_claim_ready"] != 0:
         raise SystemExit("audit product smoke must keep release/comparison claims blocked")
     if summary["latency_ms"] != 0:
@@ -415,6 +433,7 @@ for idx in range(1, 4):
         "citation_correctness_rows.csv",
         "prediction_lineage.jsonl",
         "plugin_registry.json",
+        "plugin_rule_rows.csv",
         "reproduce.sh",
     ]:
         if manifest_rows.get(rel) != sha256(out / rel):

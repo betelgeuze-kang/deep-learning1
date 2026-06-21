@@ -40,6 +40,7 @@ CSV_CONTRACTS: dict[str, list[str]] = {
     "citation_correctness_rows.csv": ["finding_id", "citation_count", "citation_bound", "citation_correctness_label", "manual_citation_review_required"],
     "latency_rows.csv": ["finding_id", "latency_ms", "latency_source"],
     "false_positive_candidate_rows.csv": ["finding_id", "manual_review_required", "false_positive_candidate", "auto_promoted"],
+    "plugin_rule_rows.csv": ["plugin_id", "audit_type", "rule_id", "language", "file_suffixes", "pattern_label", "evidence_policy"],
     "audit_summary.csv": ["schema_version", "tool_version", "audit_my_repo_ready", "target_repo", "mode", "namespace", "generator", "question_supplied", "source_files", "finding_rows", "citation_span_rows", "abstain_rows", "unsupported_claim_rows", "accuracy_rows", "citation_correctness_rows", "false_positive_candidate_rows", "wrong_answer_guard_rows", "wrong_answer_guard_pass_rows", "claim_boundary_ready", "route_memory_lineage_rows", "mmap_read_trace_rows", "compact_route_hint_rows", "grounded_generation_rows", "raw_prompt_context_bytes", "attention_blocks", "transformer_blocks", "oracle_prediction_used", "raw_input_extractor_used", "real_release_package_ready", "public_comparison_claim_ready", "gpu_speedup_claim", "latency_ms"],
 }
 
@@ -344,6 +345,23 @@ def publish_atomic(staging: Path, out_dir: Path) -> str:
                 "output directory already contains a different audit_manifest.json cache_key; "
                 "use a fresh --out path to preserve existing results"
             )
+        staging_sha = (staging / "sha256sums.txt").read_text(encoding="utf-8")
+        existing_sha_path = out_dir / "sha256sums.txt"
+        if not existing_sha_path.is_file() or existing_sha_path.read_text(encoding="utf-8") != staging_sha:
+            raise RuntimeError(
+                "output directory cache_key matches but sha256sums.txt differs; "
+                "use a fresh --out path or verify the existing artifact"
+            )
+        for path in sorted(staging.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(staging)
+            existing_artifact = out_dir / rel
+            if not existing_artifact.is_file() or sha256(existing_artifact) != sha256(path):
+                raise RuntimeError(
+                    "output directory cache_key matches but artifact content differs: "
+                    f"{rel}"
+                )
         return "idempotent-cache-hit"
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -376,6 +394,7 @@ def publish_atomic(staging: Path, out_dir: Path) -> str:
 def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: str, max_queries: int, generator: str, namespace: str, real_benchmark_namespace_confirmed: int, question: str, emit_report: bool, emit_lineage: bool, emit_reproduce: bool) -> dict:
     sources, source_rows = collect_sources(target, max_queries)
     write_json(staging / "plugin_registry.json", plugin_registry_payload())
+    write_csv(staging / "plugin_rule_rows.csv", CSV_CONTRACTS["plugin_rule_rows.csv"], plugin_rule_rows())
     plugin_findings: list[Finding] = []
     for plugin in DEFAULT_PLUGINS:
         plugin_findings.extend(plugin.run(target, sources))
@@ -608,6 +627,80 @@ def plugin_registry_payload() -> dict:
             for plugin in list(DEFAULT_PLUGINS) + [USER_QUESTION_PLUGIN]
         ],
     }
+
+
+def language_for_suffixes(suffixes: set[str]) -> str:
+    if suffixes <= {".py", ".cfg", ".toml", ".md", ".txt"}:
+        return "python"
+    if suffixes <= {".c", ".h", ".cc", ".cpp", ".cxx", ".hpp"}:
+        return "cpp"
+    if suffixes <= {".js", ".jsx", ".ts", ".tsx"}:
+        return "javascript"
+    return "generic"
+
+
+def plugin_rule_rows() -> list[dict]:
+    rows = [
+        {
+            "plugin_id": "doc_code_identity",
+            "audit_type": "doc_code_identity",
+            "rule_id": "doc-code-identity-readme-config-name",
+            "language": "generic",
+            "file_suffixes": "README.md|README.rst|README.txt|pyproject.toml|package.json|setup.cfg",
+            "pattern_label": "README heading/package name consistency",
+            "evidence_policy": "source-bound-span",
+        },
+        {
+            "plugin_id": "config_consistency",
+            "audit_type": "config_consistency",
+            "rule_id": "config-consistency-supported-config-surface",
+            "language": "generic",
+            "file_suffixes": "pyproject.toml|setup.cfg|tox.ini|CMakeLists.txt|package.json",
+            "pattern_label": "supported config surface",
+            "evidence_policy": "source-bound-span",
+        },
+        {
+            "plugin_id": "unsupported_claim",
+            "audit_type": "unsupported_claim",
+            "rule_id": "unsupported-claim-readiness-capability-wording",
+            "language": "generic",
+            "file_suffixes": ".md|.txt|.py|.toml|.json|.js|.ts|.cpp|.hpp|.c|.h",
+            "pattern_label": "readiness/capability claim terms",
+            "evidence_policy": "source-bound-span",
+        },
+        {
+            "plugin_id": "missing_evidence",
+            "audit_type": "missing_evidence",
+            "rule_id": "missing-evidence-local-results-docs-surface",
+            "language": "generic",
+            "file_suffixes": "evidence/|results/|docs/",
+            "pattern_label": "local evidence surface presence",
+            "evidence_policy": "abstain-when-missing-source-bound-span",
+        },
+        {
+            "plugin_id": "user_question",
+            "audit_type": "user_question",
+            "rule_id": "user-question-source-evidence-required",
+            "language": "generic",
+            "file_suffixes": "*",
+            "pattern_label": "free-form question abstains without exact evidence",
+            "evidence_policy": "abstain-when-missing-source-bound-span",
+        },
+    ]
+    deprecated_plugin = next(plugin for plugin in DEFAULT_PLUGINS if plugin.plugin_id == "deprecated_api")
+    for idx, (suffixes, _needle, label) in enumerate(deprecated_plugin.patterns, start=1):
+        rows.append(
+            {
+                "plugin_id": "deprecated_api",
+                "audit_type": "deprecated_api",
+                "rule_id": f"deprecated-api-{idx:02d}",
+                "language": language_for_suffixes(set(suffixes)),
+                "file_suffixes": "|".join(sorted(suffixes)),
+                "pattern_label": label,
+                "evidence_policy": "source-bound-span",
+            }
+        )
+    return sorted(rows, key=lambda row: (row["plugin_id"], row["rule_id"]))
 
 
 def verify_output_artifact(root: Path, out_dir: Path) -> int:

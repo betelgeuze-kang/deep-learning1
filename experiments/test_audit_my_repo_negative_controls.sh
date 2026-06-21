@@ -285,6 +285,20 @@ if plugin_modules != expected_plugin_modules:
     raise SystemExit("fixture audit output must bind the deterministic plugin registry")
 if manifest["plugin_registry_sha256"] != "sha256:" + sha256(out_a / "plugin_registry.json"):
     raise SystemExit("manifest must bind plugin registry sha256")
+with (out_a / "plugin_rule_rows.csv").open(newline="", encoding="utf-8") as handle:
+    plugin_rule_rows = list(csv.DictReader(handle))
+rule_plugin_ids = {row["plugin_id"] for row in plugin_rule_rows}
+if rule_plugin_ids != set(expected_plugin_modules):
+    raise SystemExit("plugin rule rows must cover every registered plugin")
+deprecated_rule_languages = {
+    row["language"]
+    for row in plugin_rule_rows
+    if row["plugin_id"] == "deprecated_api"
+}
+if not {"python", "cpp", "javascript"}.issubset(deprecated_rule_languages):
+    raise SystemExit("deprecated API plugin rules must expose python/cpp/javascript coverage")
+if any(row["evidence_policy"] not in {"source-bound-span", "abstain-when-missing-source-bound-span"} for row in plugin_rule_rows):
+    raise SystemExit("plugin rule rows must bind a replayable evidence policy")
 if manifest["namespace"] != "fixture":
     raise SystemExit("negative-control fixture must not be promoted out of fixture namespace")
 if manifest["real_benchmark_namespace_confirmed"] != 0:
@@ -506,6 +520,34 @@ if (out_a / "audit_manifest.json").read_text(encoding="utf-8") != before_manifes
 if (out_a / "sha256sums.txt").read_text(encoding="utf-8") != before_sha:
     raise SystemExit("failed overwrite attempt must not change sha256sums.txt")
 
+original_report_text_for_cache_hit = (out_a / "AUDIT_REPORT.md").read_text(encoding="utf-8")
+(out_a / "AUDIT_REPORT.md").write_text(original_report_text_for_cache_hit + "\ncache-hit tamper\n", encoding="utf-8")
+cache_hit_tamper_cmd = [
+    str(root / "scripts/audit_my_repo.sh"),
+    str(repo),
+    "--mode",
+    "quick",
+    "--max-queries",
+    "12",
+    "--out",
+    str(out_a),
+    "--namespace",
+    "fixture",
+    "--question",
+    "Can I ship this as production ready?",
+    "--generator",
+    "routehint-tiny",
+    "--no-verify-output",
+]
+cache_hit_tamper_result = subprocess.run(cache_hit_tamper_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+if cache_hit_tamper_result.returncode != 2:
+    raise SystemExit(f"tampered cache-hit output must fail before verify-output, got {cache_hit_tamper_result.returncode}")
+if (out_a / "AUDIT_REPORT.md").read_text(encoding="utf-8") != original_report_text_for_cache_hit + "\ncache-hit tamper\n":
+    raise SystemExit("tampered cache-hit failure must not overwrite existing report")
+(out_a / "AUDIT_REPORT.md").write_text(original_report_text_for_cache_hit, encoding="utf-8")
+if subprocess.run(cache_hit_tamper_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
+    raise SystemExit("untampered cache-hit output should still succeed with --no-verify-output")
+
 conflict_out = out_a.parent / "out_conflict"
 conflict_out.mkdir(parents=True, exist_ok=True)
 (conflict_out / "AUDIT_REPORT.md").write_text("existing report must survive\n", encoding="utf-8")
@@ -572,6 +614,52 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
     raise SystemExit("local-audit verifier must reject unexpected sha256 manifest artifacts")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 unexpected_artifact_path.unlink()
+
+plugin_rule_path = out_a / "plugin_rule_rows.csv"
+original_plugin_rule_text = plugin_rule_path.read_text(encoding="utf-8")
+with plugin_rule_path.open(newline="", encoding="utf-8") as handle:
+    plugin_rule_rows = list(csv.DictReader(handle))
+plugin_rule_rows[0]["plugin_id"] = "unregistered_plugin"
+with plugin_rule_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(plugin_rule_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(plugin_rule_rows)
+new_plugin_rule_sha = sha256(plugin_rule_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  plugin_rule_rows.csv"):
+        sha_lines.append(f"{new_plugin_rule_sha}  plugin_rule_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject plugin rules from unregistered plugins")
+plugin_rule_path.write_text(original_plugin_rule_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with plugin_rule_path.open(newline="", encoding="utf-8") as handle:
+    plugin_rule_rows = list(csv.DictReader(handle))
+plugin_rule_rows = [
+    row
+    for row in plugin_rule_rows
+    if not (row["plugin_id"] == "deprecated_api" and row["language"] == "javascript")
+]
+with plugin_rule_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(plugin_rule_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(plugin_rule_rows)
+new_plugin_rule_sha = sha256(plugin_rule_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  plugin_rule_rows.csv"):
+        sha_lines.append(f"{new_plugin_rule_sha}  plugin_rule_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject missing deprecated_api javascript rule coverage")
+plugin_rule_path.write_text(original_plugin_rule_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 contract_path = out_a / "artifact_contract_rows.csv"
 original_contract_text = contract_path.read_text(encoding="utf-8")

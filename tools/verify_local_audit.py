@@ -53,6 +53,7 @@ REQUIRED_FILES = {
     "latency_rows.csv",
     "mmap_read_trace.jsonl",
     "plugin_registry.json",
+    "plugin_rule_rows.csv",
     "prediction_lineage.jsonl",
     "reproduce.sh",
     "resource_envelope.json",
@@ -352,6 +353,52 @@ def verify_finding_registry_binding(out_dir: Path, registry: dict, errors: list[
         plugin_language = str(plugin.get("language", ""))
         if plugin_language != "multi" and row.get("language") != plugin_language:
             add(errors, f"audit finding language does not match plugin registry: {finding_id}")
+
+
+def verify_plugin_rules(out_dir: Path, registry: dict, errors: list[str]) -> None:
+    registry_by_plugin = {
+        str(plugin.get("plugin_id", "")): plugin
+        for plugin in registry.get("plugins", [])
+    }
+    rows = read_csv(out_dir / "plugin_rule_rows.csv")
+    expected_columns = ["plugin_id", "audit_type", "rule_id", "language", "file_suffixes", "pattern_label", "evidence_policy"]
+    with (out_dir / "plugin_rule_rows.csv").open(newline="", encoding="utf-8") as handle:
+        columns = list(csv.DictReader(handle).fieldnames or [])
+    if columns != expected_columns:
+        add(errors, "plugin_rule_rows.csv columns drifted")
+    rule_ids: set[str] = set()
+    deprecated_languages: set[str] = set()
+    plugin_ids_with_rules: set[str] = set()
+    for row in rows:
+        plugin_id = row.get("plugin_id", "")
+        rule_id = row.get("rule_id", "")
+        plugin = registry_by_plugin.get(plugin_id)
+        if not rule_id:
+            add(errors, "plugin rule row missing rule_id")
+        if rule_id in rule_ids:
+            add(errors, f"duplicate plugin rule_id: {rule_id}")
+        rule_ids.add(rule_id)
+        if plugin is None:
+            add(errors, f"plugin rule references unregistered plugin: {plugin_id}")
+            continue
+        plugin_ids_with_rules.add(plugin_id)
+        if row.get("audit_type") != str(plugin.get("audit_type", "")):
+            add(errors, f"plugin rule audit_type does not match registry: {rule_id}")
+        if row.get("language") not in {"generic", "python", "cpp", "javascript"}:
+            add(errors, f"plugin rule language is unsupported: {rule_id}")
+        if row.get("evidence_policy") not in {"source-bound-span", "abstain-when-missing-source-bound-span"}:
+            add(errors, f"plugin rule evidence policy is unsupported: {rule_id}")
+        if not row.get("file_suffixes") or not row.get("pattern_label"):
+            add(errors, f"plugin rule missing replay metadata: {rule_id}")
+        if plugin_id == "deprecated_api":
+            deprecated_languages.add(row.get("language", ""))
+            if row.get("evidence_policy") != "source-bound-span":
+                add(errors, f"deprecated_api rule must be source-bound: {rule_id}")
+    missing_rule_plugins = set(registry_by_plugin) - plugin_ids_with_rules
+    if missing_rule_plugins:
+        add(errors, f"plugin rule rows missing registered plugins: {','.join(sorted(missing_rule_plugins))}")
+    if not {"python", "cpp", "javascript"}.issubset(deprecated_languages):
+        add(errors, "deprecated_api plugin rules must cover python, cpp, and javascript")
 
 
 def verify_contract(out_dir: Path, sha_entries: dict[str, str], errors: list[str]) -> None:
@@ -793,6 +840,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     registry = read_json(out_dir / "plugin_registry.json")
     verify_registry(registry, errors)
     verify_finding_registry_binding(out_dir, registry, errors)
+    verify_plugin_rules(out_dir, registry, errors)
     verify_contract(out_dir, sha_entries, errors)
     verify_csv_jsonl(out_dir, errors)
     source_by_path = verify_sources(out_dir, manifest, errors)
