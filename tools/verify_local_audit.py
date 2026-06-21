@@ -358,18 +358,48 @@ def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], err
 
 
 def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]) -> None:
+    findings = read_csv(out_dir / "audit_findings.csv")
+    finding_ids = {row.get("finding_id", "") for row in findings}
+    abstain_ids = {row.get("finding_id", "") for row in findings if row.get("abstain") == "1"}
+    unsupported_ids = {row.get("finding_id", "") for row in findings if row.get("unsupported_claim") == "1"}
+    abstain_rows = read_csv(out_dir / "abstain_rows.csv")
+    unsupported_rows = read_csv(out_dir / "unsupported_claim_rows.csv")
+    if {row.get("finding_id", "") for row in abstain_rows} != abstain_ids:
+        add(errors, "abstain_rows.csv must exactly match abstaining findings")
+    if {row.get("finding_id", "") for row in unsupported_rows} != unsupported_ids:
+        add(errors, "unsupported_claim_rows.csv must exactly match unsupported-claim findings")
+    if str(len(abstain_rows)) != summary.get("abstain_rows"):
+        add(errors, "abstain row count drift")
+    if str(len(unsupported_rows)) != summary.get("unsupported_claim_rows"):
+        add(errors, "unsupported claim row count drift")
+
     guard_rows = read_csv(out_dir / "wrong_answer_guard_rows.csv")
     if len([row for row in guard_rows if row.get("wrong_answer_guard_pass") == "1"]) != len(guard_rows):
         add(errors, "wrong answer guard rows are not all passing")
     if str(len(guard_rows)) != summary.get("wrong_answer_guard_rows"):
         add(errors, "wrong answer guard row count drift")
-    for row in read_csv(out_dir / "accuracy_rows.csv"):
+    latency_rows = read_csv(out_dir / "latency_rows.csv")
+    if {row.get("finding_id", "") for row in latency_rows} != finding_ids:
+        add(errors, "latency_rows.csv must contain exactly one row per finding")
+    for row in latency_rows:
+        if row.get("latency_ms") != "0" or row.get("latency_source") != "deterministic-local-smoke":
+            add(errors, "latency rows must stay deterministic-local-smoke")
+    accuracy_rows = read_csv(out_dir / "accuracy_rows.csv")
+    if {row.get("finding_id", "") for row in accuracy_rows} != finding_ids:
+        add(errors, "accuracy_rows.csv must contain exactly one row per finding")
+    for row in accuracy_rows:
         if row.get("automatic_accuracy_claimed") != "0" or row.get("manual_accuracy_review_required") != "1":
             add(errors, "accuracy rows must remain manual/unreviewed")
-    for row in read_csv(out_dir / "citation_correctness_rows.csv"):
+    citation_rows = read_csv(out_dir / "citation_correctness_rows.csv")
+    if {row.get("finding_id", "") for row in citation_rows} != finding_ids:
+        add(errors, "citation_correctness_rows.csv must contain exactly one row per finding")
+    for row in citation_rows:
         if row.get("citation_correctness_label") != "source_bound_unreviewed" or row.get("manual_citation_review_required") != "1":
             add(errors, "citation correctness rows must remain source-bound unreviewed")
-    for row in read_csv(out_dir / "false_positive_candidate_rows.csv"):
+    fp_rows = read_csv(out_dir / "false_positive_candidate_rows.csv")
+    if {row.get("finding_id", "") for row in fp_rows} != finding_ids:
+        add(errors, "false_positive_candidate_rows.csv must contain exactly one row per finding")
+    for row in fp_rows:
         if row.get("auto_promoted") != "0":
             add(errors, "false-positive candidates must not be auto-promoted")
 

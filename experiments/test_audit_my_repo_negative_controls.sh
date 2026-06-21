@@ -99,6 +99,37 @@ expect_audit_exit 2 "real_benchmark namespace must require explicit confirmation
 "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
   --mode quick \
   --max-queries 12 \
+  --out "$TMP_DIR/real_namespace_confirmed" \
+  --namespace real_benchmark \
+  --confirm-real-benchmark-namespace \
+  --question "Does confirmed real_benchmark namespace prove release readiness?" \
+  --generator routehint-tiny >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$TMP_DIR/real_namespace_confirmed/audit_manifest.json" >/dev/null
+"$ROOT_DIR/tools/verify_local_audit.py" "$TMP_DIR/real_namespace_confirmed" >/dev/null
+python3 - "$TMP_DIR/real_namespace_confirmed" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+out_dir = Path(sys.argv[1])
+manifest = json.loads((out_dir / "audit_manifest.json").read_text(encoding="utf-8"))
+summary = json.loads((out_dir / "audit_summary.json").read_text(encoding="utf-8"))
+reproduce = (out_dir / "reproduce.sh").read_text(encoding="utf-8")
+if manifest["namespace"] != "real_benchmark":
+    raise SystemExit("confirmed namespace smoke must write real_benchmark namespace")
+if manifest["real_benchmark_namespace_confirmed"] != 1:
+    raise SystemExit("confirmed namespace smoke must record explicit confirmation")
+if manifest["fixture_result_promoted"] != 0 or manifest["real_evidence_claimed"] != 0:
+    raise SystemExit("confirmed namespace must not promote fixture output or claim real evidence")
+if summary["real_release_package_ready"] != 0 or summary["public_comparison_claim_ready"] != 0:
+    raise SystemExit("confirmed namespace must keep release/comparison claims blocked")
+if "--confirm-real-benchmark-namespace" not in reproduce:
+    raise SystemExit("reproduce.sh must preserve real_benchmark confirmation")
+PY
+"$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
+  --mode quick \
+  --max-queries 12 \
   --out "$TMP_DIR/default_namespace" \
   --question "What namespace is used by default?" \
   --generator routehint-tiny >/dev/null
@@ -309,6 +340,12 @@ tampered["real_evidence_claimed"] = 1
 bad_manifest.write_text(json.dumps(tampered, sort_keys=True), encoding="utf-8")
 if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("schema must reject real_evidence_claimed=1")
+
+tampered = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
+tampered["real_benchmark_namespace_confirmed"] = 2
+bad_manifest.write_text(json.dumps(tampered, sort_keys=True), encoding="utf-8")
+if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("schema must reject invalid real_benchmark_namespace_confirmed values")
 
 tampered = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
 tampered["real_benchmark_namespace_confirmed"] = 1
@@ -522,6 +559,49 @@ sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject resource envelope drift")
 resource_path.write_text(original_resource_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+latency_path = out_a / "latency_rows.csv"
+original_latency_text = latency_path.read_text(encoding="utf-8")
+with latency_path.open(newline="", encoding="utf-8") as handle:
+    latency_rows = list(csv.DictReader(handle))
+latency_rows[0]["latency_ms"] = "7"
+with latency_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(latency_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(latency_rows)
+new_latency_sha = sha256(latency_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  latency_rows.csv"):
+        sha_lines.append(f"{new_latency_sha}  latency_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject non-deterministic latency rows")
+latency_path.write_text(original_latency_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+accuracy_path = out_a / "accuracy_rows.csv"
+original_accuracy_text = accuracy_path.read_text(encoding="utf-8")
+with accuracy_path.open(newline="", encoding="utf-8") as handle:
+    accuracy_rows = list(csv.DictReader(handle))
+with accuracy_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(accuracy_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(accuracy_rows[1:])
+new_accuracy_sha = sha256(accuracy_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  accuracy_rows.csv"):
+        sha_lines.append(f"{new_accuracy_sha}  accuracy_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject missing per-finding accuracy rows")
+accuracy_path.write_text(original_accuracy_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 findings_csv_path = out_a / "audit_findings.csv"
