@@ -3755,6 +3755,17 @@ def verify_local_audit(out_dir: Path) -> list[str]:
             expected_sha = row.get("sha256")
             if expected_sha != sha256(path):
                 errors.append(f"{out_dir / 'citation_spans.jsonl'}: citation sha mismatch for {rel}")
+            try:
+                source_lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+            except OSError as exc:
+                errors.append(f"{out_dir / 'citation_spans.jsonl'}: failed to read citation target {rel}: {exc}")
+                continue
+            if start > len(source_lines) or end > len(source_lines):
+                errors.append(f"{out_dir / 'citation_spans.jsonl'}: citation line out of range for {rel}")
+                continue
+            expected_preview = source_lines[start - 1].strip()[:280]
+            if row.get("span_text_preview") != expected_preview:
+                errors.append(f"{out_dir / 'citation_spans.jsonl'}: span_text_preview mismatch for {rel}:{start}")
     else:
         errors.append(f"{out_dir / 'audit_manifest.json'}: target_repo is not available for citation verification")
 

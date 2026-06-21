@@ -262,6 +262,12 @@ for idx in range(1, 4):
             raise SystemExit(f"citation target missing: {row['file_path']}")
         if row["sha256"] != "sha256:" + sha256(cited):
             raise SystemExit(f"citation sha does not match file content: {row['file_path']}")
+        source_lines = cited.read_text(encoding="utf-8", errors="replace").splitlines()
+        line_start = int(row["line_start"])
+        if line_start > len(source_lines):
+            raise SystemExit(f"citation line is out of range: {row['file_path']}:{line_start}")
+        if row["span_text_preview"] != source_lines[line_start - 1].strip()[:280]:
+            raise SystemExit(f"citation preview does not match source line: {row['file_path']}:{line_start}")
     with (out / "wrong_answer_guard_rows.csv").open(newline="", encoding="utf-8") as handle:
         guards = list(csv.DictReader(handle))
     if not guards or any(row["wrong_answer_guard_pass"] != "1" for row in guards):

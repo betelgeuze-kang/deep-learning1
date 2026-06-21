@@ -274,12 +274,30 @@ if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
     raise SystemExit("schema must reject output_dir_destroyed=1")
 
 tampered_citations = out_a / "citation_spans.jsonl"
+sha_manifest_path = out_a / "sha256sums.txt"
 original_citations = tampered_citations.read_text(encoding="utf-8")
+original_sha_manifest_text = sha_manifest_path.read_text(encoding="utf-8")
 tampered_citations.write_text(original_citations.replace("sha256:", "sha256:0000", 1), encoding="utf-8")
 verify_cmd = [str(root / "tools/verify_artifact.py"), "local-audit", str(out_a)]
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject tampered citation hashes")
 tampered_citations.write_text(original_citations, encoding="utf-8")
+
+tampered_rows = [json.loads(line) for line in original_citations.splitlines() if line.strip()]
+tampered_rows[0]["span_text_preview"] = "tampered preview that does not match the source line"
+tampered_citations.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in tampered_rows), encoding="utf-8")
+new_citation_sha = sha256(tampered_citations)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  citation_spans.jsonl"):
+        sha_lines.append(f"{new_citation_sha}  citation_spans.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject citation preview mismatches")
+tampered_citations.write_text(original_citations, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 manifest_path = out_a / "audit_manifest.json"
 original_manifest_text = manifest_path.read_text(encoding="utf-8")
@@ -298,9 +316,7 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 manifest_path.write_text(original_manifest_text, encoding="utf-8")
 
 reproduce_path = out_a / "reproduce.sh"
-sha_manifest_path = out_a / "sha256sums.txt"
 original_reproduce_text = reproduce_path.read_text(encoding="utf-8")
-original_sha_manifest_text = sha_manifest_path.read_text(encoding="utf-8")
 reproduce_path.write_text(original_reproduce_text.replace(" --verify-output", ""), encoding="utf-8")
 new_reproduce_sha = sha256(reproduce_path)
 sha_lines = []
