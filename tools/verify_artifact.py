@@ -215,10 +215,35 @@ REQUIRED_V53_SOURCE_BENCHMARK_KEYS = {
     "policy",
     "requirements",
 }
+REQUIRED_V53_POLICY_KEYS = {
+    "benchmark_id",
+    "machine_foundation_freeze_ready",
+    "human_review_ready",
+    "public_comparison_claim_ready",
+    "release_ready",
+    "required_summary_evidence_count",
+    "present_summary_evidence_count",
+    "missing_summary_evidence_count",
+    "missing_summary_evidence_ids",
+}
 REQUIRED_V54_GROUNDED_GENERATION_KEYS = {
     "schema_version",
     "policy",
     "required_artifacts",
+}
+REQUIRED_V54_POLICY_KEYS = {
+    "generation_contract_ready",
+    "raw_prompt_context_allowed",
+    "allowed_model_visible_fields",
+    "deterministic_source_span_generation_fixture_ready",
+    "real_model_generation_ready",
+    "human_review_ready",
+    "public_comparison_claim_ready",
+    "release_ready",
+    "required_artifact_count",
+    "present_required_artifact_count",
+    "missing_required_artifact_count",
+    "missing_required_artifact_ids",
 }
 REQUIRED_V54_ARTIFACT_KEYS = {
     "artifact_id",
@@ -264,6 +289,27 @@ REQUIRED_REVIEW_RETURN_WORKFLOW_KEYS = {
     "policy",
     "requirements",
 }
+REQUIRED_REVIEW_RETURN_POLICY_KEYS = {
+    "workflow_contract_ready",
+    "human_review_ready",
+    "adjudication_ready",
+    "operator_input_files_ready",
+    "actual_generation_ready",
+    "production_latency_claim_ready",
+    "near_frontier_claim_ready",
+    "quality_comparison_claim_ready",
+    "public_comparison_claim_ready",
+    "release_ready",
+    "fixture_can_close_real_return",
+    "accepted_human_review_rows",
+    "accepted_adjudication_rows",
+    "accepted_operator_return_rows",
+    "summary_evidence_ready",
+    "required_summary_evidence_count",
+    "present_summary_evidence_count",
+    "missing_summary_evidence_count",
+    "missing_summary_evidence_ids",
+}
 REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS = {
     "requirement_id",
     "required_evidence",
@@ -291,6 +337,11 @@ REQUIRED_V61_POLICY_KEYS = {
     "missing_required_artifact_count",
     "missing_required_artifact_ids",
     "blocked_before_ssd_resident_runtime_claim",
+    "summary_evidence_ready",
+    "required_summary_evidence_count",
+    "present_summary_evidence_count",
+    "missing_summary_evidence_count",
+    "missing_summary_evidence_ids",
 }
 REQUIRED_V61_MILESTONE_KEYS = {
     "order",
@@ -344,7 +395,7 @@ REQUIRED_PR2_REWRITE_TERMS = {
     "MoE block forward parity",
     "one-token logits parity",
     "real_model_execution_ready=1",
-    "blocked_before_ssd_resident_runtime_claim_count=3",
+    "blocked_before_ssd_resident_runtime_claim_count=6",
     "required_real_evidence_field_count=11",
     "missing_real_evidence_field_count=11",
     "latency_memory_excluded_from_quality_score=1",
@@ -380,7 +431,7 @@ REQUIRED_PR2_SPLIT_PLAN_TERMS = {
     "v58/blind_eval_real.json",
     "operations/review_return_workflow.json",
     "v61/one_token_path.json",
-    "blocked_before_ssd_resident_runtime_claim_count=3",
+    "blocked_before_ssd_resident_runtime_claim_count=6",
     "required_real_evidence_field_count=11",
     "latency_memory_excluded_from_quality_score=1",
     "docs-readme-pr2-cleanup",
@@ -1419,9 +1470,9 @@ EXPECTED_V61_MILESTONE_IDS = [
 ]
 V61_REQUIRED_BEFORE_RUNTIME_CLAIM = EXPECTED_V61_MILESTONE_IDS[:6]
 EXPECTED_V61_CURRENT_STATUS = {
-    "actual-mixtral-ssd-tensor-page-read": "pass",
-    "actual-tensor-dtype-quant-dequant": "pass",
-    "torch-matvec-parity": "pass",
+    "actual-mixtral-ssd-tensor-page-read": "blocked",
+    "actual-tensor-dtype-quant-dequant": "blocked",
+    "torch-matvec-parity": "blocked",
     "real-expert-ffn-forward-parity": "blocked",
     "real-moe-block-forward-parity": "blocked",
     "one-token-logits-parity": "blocked",
@@ -3095,8 +3146,14 @@ def verify_v54_grounded_generation(
     if data["schema_version"] != "v54_grounded_generation.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
+    missing_policy = REQUIRED_V54_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
     if policy.get("generation_contract_ready") is not True:
         errors.append(f"{path}: generation_contract_ready must be true")
+    deterministic_generation_ready = policy.get("deterministic_source_span_generation_fixture_ready")
+    if not isinstance(deterministic_generation_ready, bool):
+        errors.append(f"{path}: deterministic_source_span_generation_fixture_ready must be boolean")
     for field in [
         "real_model_generation_ready",
         "human_review_ready",
@@ -3121,6 +3178,8 @@ def verify_v54_grounded_generation(
         errors.append(f"{path}: duplicate required_artifacts are forbidden")
 
     artifact_rows_by_id: dict[str, list[dict[str, str]]] = {}
+    present_artifact_ids: list[str] = []
+    validate_artifact_files = deterministic_generation_ready is True
     for index, row in enumerate(artifacts, start=1):
         prefix = f"{path}: required_artifact[{index}]"
         missing_artifact = REQUIRED_V54_ARTIFACT_KEYS - set(row)
@@ -3157,9 +3216,13 @@ def verify_v54_grounded_generation(
         if row.get("model_visible_leakage_forbidden") is not True:
             errors.append(f"{prefix}: model_visible_leakage_forbidden must be true")
         artifact_path = Path(row.get("path", ""))
-        if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
+        artifact_exists = artifact_path.is_file() and artifact_path.stat().st_size > 0
+        if not validate_artifact_files:
+            continue
+        if not artifact_exists:
             errors.append(f"{prefix}: missing or empty artifact path {artifact_path}")
             continue
+        present_artifact_ids.append(artifact_id)
         if artifact_kind == "csv":
             with artifact_path.open(newline="", encoding="utf-8") as handle:
                 reader = csv.DictReader(handle)
@@ -3175,6 +3238,35 @@ def verify_v54_grounded_generation(
             line_count = len([line for line in artifact_path.read_text(encoding="utf-8").splitlines() if line.strip()])
             if isinstance(min_rows, int) and line_count < min_rows:
                 errors.append(f"{artifact_path}: expected at least {min_rows} non-empty lines, got {line_count}")
+
+    missing_artifact_ids = [
+        artifact_id for artifact_id in EXPECTED_V54_ARTIFACT_IDS if artifact_id not in present_artifact_ids
+    ]
+    present_artifact_count = len(EXPECTED_V54_ARTIFACT_IDS) - len(missing_artifact_ids)
+    if policy.get("required_artifact_count") != len(EXPECTED_V54_ARTIFACT_IDS):
+        errors.append(
+            f"{path}: policy.required_artifact_count expected {len(EXPECTED_V54_ARTIFACT_IDS)}, "
+            f"got {policy.get('required_artifact_count')}"
+        )
+    if policy.get("present_required_artifact_count") != present_artifact_count:
+        errors.append(
+            f"{path}: policy.present_required_artifact_count expected {present_artifact_count}, "
+            f"got {policy.get('present_required_artifact_count')}"
+        )
+    if policy.get("missing_required_artifact_count") != len(missing_artifact_ids):
+        errors.append(
+            f"{path}: policy.missing_required_artifact_count expected {len(missing_artifact_ids)}, "
+            f"got {policy.get('missing_required_artifact_count')}"
+        )
+    if policy.get("missing_required_artifact_ids") != missing_artifact_ids:
+        errors.append(
+            f"{path}: policy.missing_required_artifact_ids expected {missing_artifact_ids}, "
+            f"got {policy.get('missing_required_artifact_ids')}"
+        )
+    if deterministic_generation_ready is not (len(missing_artifact_ids) == 0):
+        errors.append(
+            f"{path}: deterministic_source_span_generation_fixture_ready must match required artifact presence"
+        )
 
     def require_all(artifact_id: str, field: str, expected: str) -> None:
         rows = artifact_rows_by_id.get(artifact_id, [])
@@ -3212,7 +3304,7 @@ def verify_v54_grounded_generation(
     require_all("wrong-answer-guard-rows", "wrong_answer", "0")
     require_all("wrong-answer-guard-rows", "guard_status", "pass")
 
-    if summary_path is not None:
+    if summary_path is not None and deterministic_generation_ready is True:
         summary = read_first_csv(summary_path)
         expected_summary = {
             "v54c_complete_source_grounded_generation_1000_ready": "1",
@@ -3261,10 +3353,14 @@ def verify_v53_source_benchmark(
     if data["schema_version"] != "v53_source_benchmark.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
+    missing_policy = REQUIRED_V53_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
     if policy.get("benchmark_id") != "v53i_complete_source_1000":
         errors.append(f"{path}: policy.benchmark_id must be v53i_complete_source_1000")
-    if policy.get("machine_foundation_freeze_ready") is not True:
-        errors.append(f"{path}: machine_foundation_freeze_ready must be true for the current freeze")
+    machine_foundation_ready = policy.get("machine_foundation_freeze_ready")
+    if not isinstance(machine_foundation_ready, bool):
+        errors.append(f"{path}: machine_foundation_freeze_ready must be boolean")
     if policy.get("human_review_ready") is not False:
         errors.append(f"{path}: human_review_ready must remain false")
     if policy.get("public_comparison_claim_ready") is not False:
@@ -3283,27 +3379,55 @@ def verify_v53_source_benchmark(
         errors.append(f"{path}: duplicate requirement_id values are forbidden")
 
     summaries: dict[str, dict[str, str]] = {}
-    if v53i_summary is not None:
-        summaries["v53i"] = read_first_csv(v53i_summary)
-    if v53t_summary is not None:
-        summaries["v53t"] = read_first_csv(v53t_summary)
-    if v53ap_summary is not None:
-        summaries["v53ap"] = read_first_csv(v53ap_summary)
-    if v53aq_summary is not None:
-        summaries["v53aq"] = read_first_csv(v53aq_summary)
-    for summary_id, summary_path in DEFAULT_V53_SUMMARY_PATHS.items():
-        if summary_id in summaries:
-            continue
-        if summary_path.is_file() and summary_path.stat().st_size > 0:
-            summaries[summary_id] = read_first_csv(summary_path)
+    if machine_foundation_ready is True:
+        if v53i_summary is not None:
+            summaries["v53i"] = read_first_csv(v53i_summary)
+        if v53t_summary is not None:
+            summaries["v53t"] = read_first_csv(v53t_summary)
+        if v53ap_summary is not None:
+            summaries["v53ap"] = read_first_csv(v53ap_summary)
+        if v53aq_summary is not None:
+            summaries["v53aq"] = read_first_csv(v53aq_summary)
+        for summary_id, summary_path in DEFAULT_V53_SUMMARY_PATHS.items():
+            if summary_id in summaries:
+                continue
+            if summary_path.is_file() and summary_path.stat().st_size > 0:
+                summaries[summary_id] = read_first_csv(summary_path)
+    missing_summary_evidence = [
+        summary_id for summary_id in DEFAULT_V53_SUMMARY_PATHS if summary_id not in summaries
+    ]
+    present_summary_evidence = len(DEFAULT_V53_SUMMARY_PATHS) - len(missing_summary_evidence)
+    if policy.get("required_summary_evidence_count") != len(DEFAULT_V53_SUMMARY_PATHS):
+        errors.append(
+            f"{path}: policy.required_summary_evidence_count expected {len(DEFAULT_V53_SUMMARY_PATHS)}, "
+            f"got {policy.get('required_summary_evidence_count')}"
+        )
+    if policy.get("present_summary_evidence_count") != present_summary_evidence:
+        errors.append(
+            f"{path}: policy.present_summary_evidence_count expected {present_summary_evidence}, "
+            f"got {policy.get('present_summary_evidence_count')}"
+        )
+    if policy.get("missing_summary_evidence_count") != len(missing_summary_evidence):
+        errors.append(
+            f"{path}: policy.missing_summary_evidence_count expected {len(missing_summary_evidence)}, "
+            f"got {policy.get('missing_summary_evidence_count')}"
+        )
+    if policy.get("missing_summary_evidence_ids") != missing_summary_evidence:
+        errors.append(
+            f"{path}: policy.missing_summary_evidence_ids expected {missing_summary_evidence}, "
+            f"got {policy.get('missing_summary_evidence_ids')}"
+        )
+    if machine_foundation_ready is not (len(missing_summary_evidence) == 0):
+        errors.append(f"{path}: machine_foundation_freeze_ready must match summary evidence presence")
 
     for index, row in enumerate(requirements, start=1):
         prefix = f"{path}: requirement[{index}]"
         missing_row = REQUIRED_V53_REQUIREMENT_KEYS - set(row)
         if missing_row:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
-        if row.get("current_status") != "pass":
-            errors.append(f"{prefix}: current_status must be pass for the machine foundation freeze")
+        expected_status = "pass" if machine_foundation_ready is True else "blocked"
+        if row.get("current_status") != expected_status:
+            errors.append(f"{prefix}: current_status must be {expected_status}")
         if not row.get("required_evidence") or not row.get("evidence_path") or not row.get("claim_boundary"):
             errors.append(f"{prefix}: required_evidence, evidence_path, and claim_boundary must be non-empty")
         checks = row.get("summary_checks", [])
@@ -3322,6 +3446,8 @@ def verify_v53_source_benchmark(
             summary_id = check.get("summary_id", "")
             summary = summaries.get(summary_id)
             if summary is None:
+                if machine_foundation_ready is False:
+                    continue
                 expected_path = DEFAULT_V53_SUMMARY_PATHS.get(summary_id)
                 errors.append(f"{prefix}: missing summary evidence for {summary_id} at {expected_path}")
                 continue
@@ -3549,8 +3675,14 @@ def verify_review_return_workflow(
     if data["schema_version"] != "review_return_workflow.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
+    missing_policy = REQUIRED_REVIEW_RETURN_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
     if policy.get("workflow_contract_ready") is not True:
         errors.append(f"{path}: workflow_contract_ready must be true")
+    summary_evidence_ready = policy.get("summary_evidence_ready")
+    if not isinstance(summary_evidence_ready, bool):
+        errors.append(f"{path}: summary_evidence_ready must be boolean")
     for field in [
         "human_review_ready",
         "adjudication_ready",
@@ -3584,36 +3716,65 @@ def verify_review_return_workflow(
         errors.append(f"{path}: duplicate requirement_id values are forbidden")
 
     summaries: dict[str, dict[str, str]] = {}
-    if v53s_summary is not None:
-        summaries["v53s"] = read_first_csv(v53s_summary)
-    if v58d_summary is not None:
-        summaries["v58d"] = read_first_csv(v58d_summary)
-    if v61af_summary is not None:
-        summaries["v61af"] = read_first_csv(v61af_summary)
-    if v61hv_summary is not None:
-        summaries["v61hv"] = read_first_csv(v61hv_summary)
+    if summary_evidence_ready is True:
+        if v53s_summary is not None:
+            summaries["v53s"] = read_first_csv(v53s_summary)
+        if v58d_summary is not None:
+            summaries["v58d"] = read_first_csv(v58d_summary)
+        if v61af_summary is not None:
+            summaries["v61af"] = read_first_csv(v61af_summary)
+        if v61hv_summary is not None:
+            summaries["v61hv"] = read_first_csv(v61hv_summary)
 
-    for row in requirements:
-        checks = row.get("summary_checks", [])
-        if not isinstance(checks, list) or not checks:
-            continue
-        summary_ids = {check.get("summary_id", "") for check in checks if isinstance(check, dict)}
-        if len(summary_ids) != 1:
-            continue
-        summary_id = next(iter(summary_ids))
-        if not summary_id or summary_id in summaries:
-            continue
-        evidence_path = Path(row.get("evidence_path", ""))
-        if evidence_path.is_file() and evidence_path.stat().st_size > 0:
-            summaries[summary_id] = read_first_csv(evidence_path)
+        for row in requirements:
+            checks = row.get("summary_checks", [])
+            if not isinstance(checks, list) or not checks:
+                continue
+            summary_ids = {check.get("summary_id", "") for check in checks if isinstance(check, dict)}
+            if len(summary_ids) != 1:
+                continue
+            summary_id = next(iter(summary_ids))
+            if not summary_id or summary_id in summaries:
+                continue
+            evidence_path = Path(row.get("evidence_path", ""))
+            if evidence_path.is_file() and evidence_path.stat().st_size > 0:
+                summaries[summary_id] = read_first_csv(evidence_path)
+
+    missing_summary_evidence = [
+        summary_id for summary_id in ["v53s", "v58d", "v61af", "v61hv"] if summary_id not in summaries
+    ]
+    present_summary_evidence = 4 - len(missing_summary_evidence)
+    if policy.get("required_summary_evidence_count") != 4:
+        errors.append(
+            f"{path}: policy.required_summary_evidence_count expected 4, "
+            f"got {policy.get('required_summary_evidence_count')}"
+        )
+    if policy.get("present_summary_evidence_count") != present_summary_evidence:
+        errors.append(
+            f"{path}: policy.present_summary_evidence_count expected {present_summary_evidence}, "
+            f"got {policy.get('present_summary_evidence_count')}"
+        )
+    if policy.get("missing_summary_evidence_count") != len(missing_summary_evidence):
+        errors.append(
+            f"{path}: policy.missing_summary_evidence_count expected {len(missing_summary_evidence)}, "
+            f"got {policy.get('missing_summary_evidence_count')}"
+        )
+    if policy.get("missing_summary_evidence_ids") != missing_summary_evidence:
+        errors.append(
+            f"{path}: policy.missing_summary_evidence_ids expected {missing_summary_evidence}, "
+            f"got {policy.get('missing_summary_evidence_ids')}"
+        )
+    if summary_evidence_ready is not (len(missing_summary_evidence) == 0):
+        errors.append(f"{path}: summary_evidence_ready must match summary evidence presence")
 
     for index, row in enumerate(requirements, start=1):
         prefix = f"{path}: requirement[{index}]"
         missing_row = REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS - set(row)
         if missing_row:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
-        if row.get("current_status") != "pass":
-            errors.append(f"{prefix}: current_status must be pass")
+        expected_status = "pass" if summary_evidence_ready is True else "blocked"
+        if row.get("current_status") != expected_status:
+            errors.append(f"{prefix}: current_status must be {expected_status}")
         if not row.get("required_evidence") or not row.get("evidence_path") or not row.get("claim_boundary"):
             errors.append(f"{prefix}: required_evidence, evidence_path, and claim_boundary must be non-empty")
         checks = row.get("summary_checks", [])
@@ -3632,6 +3793,8 @@ def verify_review_return_workflow(
             summary_id = check.get("summary_id", "")
             summary = summaries.get(summary_id)
             if summary is None:
+                if summary_evidence_ready is False:
+                    continue
                 errors.append(f"{prefix}: missing summary evidence for {summary_id} at {row.get('evidence_path')}")
                 continue
             field = check.get("field", "")
@@ -3664,6 +3827,9 @@ def verify_v61_one_token_path(
         errors.append(f"{path}: real_model_execution_ready must stay false until one-token evidence exists")
     if policy.get("release_ready") is not False:
         errors.append(f"{path}: release_ready must stay false")
+    summary_evidence_ready = policy.get("summary_evidence_ready")
+    if not isinstance(summary_evidence_ready, bool):
+        errors.append(f"{path}: summary_evidence_ready must be boolean")
     if policy.get("required_before_ssd_resident_runtime_claim") != V61_REQUIRED_BEFORE_RUNTIME_CLAIM:
         errors.append(f"{path}: required_before_ssd_resident_runtime_claim must be milestones 1-6")
     if policy.get("required_before_ssd_resident_runtime_claim_count") != len(V61_REQUIRED_BEFORE_RUNTIME_CLAIM):
@@ -3686,11 +3852,37 @@ def verify_v61_one_token_path(
         errors.append(f"{path}: duplicate milestone_id values are forbidden")
 
     summaries: dict[str, dict[str, str]] = {}
-    if v61aa_summary is not None:
-        summaries["v61aa"] = read_first_csv(v61aa_summary)
-    if v61ab_summary is not None:
-        summaries["v61ab"] = read_first_csv(v61ab_summary)
-    summary_evidence_supplied = bool(summaries)
+    if summary_evidence_ready is True:
+        if v61aa_summary is not None:
+            summaries["v61aa"] = read_first_csv(v61aa_summary)
+        if v61ab_summary is not None:
+            summaries["v61ab"] = read_first_csv(v61ab_summary)
+    missing_summary_evidence = [
+        summary_id for summary_id in ["v61aa", "v61ab"] if summary_id not in summaries
+    ]
+    present_summary_evidence = 2 - len(missing_summary_evidence)
+    if policy.get("required_summary_evidence_count") != 2:
+        errors.append(
+            f"{path}: policy.required_summary_evidence_count expected 2, "
+            f"got {policy.get('required_summary_evidence_count')}"
+        )
+    if policy.get("present_summary_evidence_count") != present_summary_evidence:
+        errors.append(
+            f"{path}: policy.present_summary_evidence_count expected {present_summary_evidence}, "
+            f"got {policy.get('present_summary_evidence_count')}"
+        )
+    if policy.get("missing_summary_evidence_count") != len(missing_summary_evidence):
+        errors.append(
+            f"{path}: policy.missing_summary_evidence_count expected {len(missing_summary_evidence)}, "
+            f"got {policy.get('missing_summary_evidence_count')}"
+        )
+    if policy.get("missing_summary_evidence_ids") != missing_summary_evidence:
+        errors.append(
+            f"{path}: policy.missing_summary_evidence_ids expected {missing_summary_evidence}, "
+            f"got {policy.get('missing_summary_evidence_ids')}"
+        )
+    if summary_evidence_ready is not (len(missing_summary_evidence) == 0):
+        errors.append(f"{path}: summary_evidence_ready must match summary evidence presence")
 
     for index, row in enumerate(milestones, start=1):
         prefix = f"{path}: milestone[{index}]"
@@ -3719,6 +3911,8 @@ def verify_v61_one_token_path(
             summary_id = check.get("summary_id", "")
             summary = summaries.get(summary_id)
             if summary is None:
+                if summary_evidence_ready is False:
+                    continue
                 errors.append(f"{prefix}: missing summary evidence for {summary_id} at {row.get('evidence_path')}")
                 continue
             field = check.get("field", "")
@@ -3752,6 +3946,7 @@ def verify_v61_one_token_path(
     if runtime_gate_blocked != V61_BLOCKED_BEFORE_RUNTIME_CLAIM:
         errors.append(f"{path}: milestones 1-6 blocked list no longer matches policy")
     missing_required_artifacts: list[str] = []
+    validate_artifact_files = summary_evidence_ready is True
     for index, row in enumerate(artifacts, start=1):
         prefix = f"{path}: required_artifact[{index}]"
         missing_artifact = REQUIRED_V61_ARTIFACT_KEYS - set(row)
@@ -3788,10 +3983,13 @@ def verify_v61_one_token_path(
 
         artifact_path = Path(row.get("path", ""))
         artifact_exists = artifact_path.is_file() and artifact_path.stat().st_size > 0
+        if not validate_artifact_files:
+            missing_required_artifacts.append(artifact_id)
+            continue
         if not artifact_exists:
             missing_required_artifacts.append(artifact_id)
         linked_status = milestone_status.get(linked_milestone, "")
-        if linked_status == "pass" and summary_evidence_supplied and not artifact_exists:
+        if linked_status == "pass" and not artifact_exists:
             errors.append(f"{prefix}: pass milestone requires non-empty artifact path {artifact_path}")
             continue
         if not artifact_exists:

@@ -13,12 +13,17 @@
       "one-token-logits-parity"
     ],
     "required_before_ssd_resident_runtime_claim_count": 6,
-    "passed_before_ssd_resident_runtime_claim_count": 3,
-    "blocked_before_ssd_resident_runtime_claim_count": 3,
+    "passed_before_ssd_resident_runtime_claim_count": 0,
+    "blocked_before_ssd_resident_runtime_claim_count": 6,
     "required_artifact_count": 10,
-    "present_required_artifact_count": 5,
-    "missing_required_artifact_count": 5,
+    "present_required_artifact_count": 0,
+    "missing_required_artifact_count": 10,
     "missing_required_artifact_ids": [
+      "mixtral-ssd-tensor-page-read-rows",
+      "tensor-dtype-stat-rows",
+      "tensor-quant-dequant-metric-rows",
+      "torch-matvec-parity-rows",
+      "expert-ffn-forward-parity-rows",
       "moe-block-forward-parity-rows",
       "one-token-logits-parity-rows",
       "sixteen-token-decode-rows",
@@ -26,9 +31,20 @@
       "ssd-bytes-miss-tps-rows"
     ],
     "blocked_before_ssd_resident_runtime_claim": [
+      "actual-mixtral-ssd-tensor-page-read",
+      "actual-tensor-dtype-quant-dequant",
+      "torch-matvec-parity",
       "real-expert-ffn-forward-parity",
       "real-moe-block-forward-parity",
       "one-token-logits-parity"
+    ],
+    "summary_evidence_ready": false,
+    "required_summary_evidence_count": 2,
+    "present_summary_evidence_count": 0,
+    "missing_summary_evidence_count": 2,
+    "missing_summary_evidence_ids": [
+      "v61aa",
+      "v61ab"
     ]
   },
   "milestones": [
@@ -36,7 +52,7 @@
       "order": 1,
       "milestone_id": "actual-mixtral-ssd-tensor-page-read",
       "required_evidence": "actual Mixtral hotset tensor page is bound to remote/direct-IO replay and sampled without committing checkpoint payloads",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v61aa_hotset_tensor_slice_verifier_summary.csv",
       "claim_boundary": "bounded tensor-page read evidence only; not model forward execution",
       "summary_checks": [
@@ -44,13 +60,14 @@
         {"summary_id": "v61aa", "field": "v61z_hotset_direct_io_replay_ready", "expected": "1"},
         {"summary_id": "v61aa", "field": "v61v_remote_page_tensor_binding_ready", "expected": "1"},
         {"summary_id": "v61aa", "field": "checkpoint_payload_bytes_committed_to_repo", "expected": "0"}
-      ]
+      ],
+      "blocked_by": ["v61aa summary and tensor-page artifacts are not present in the source-controlled clean checkout"]
     },
     {
       "order": 2,
       "milestone_id": "actual-tensor-dtype-quant-dequant",
       "required_evidence": "sampled BF16 tensor values are finite and q8/q4 tile quant probes are replayable",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v61aa_hotset_tensor_slice_verifier_summary.csv;results/v61ab_hotset_tensor_tile_quant_probe_summary.csv",
       "claim_boundary": "bounded dtype/quant probe evidence only; not expert or block forward parity",
       "summary_checks": [
@@ -59,20 +76,22 @@
         {"summary_id": "v61aa", "field": "sampled_bf16_inf_rows", "expected": "0"},
         {"summary_id": "v61ab", "field": "q8_quant_probe_ready", "expected": "1"},
         {"summary_id": "v61ab", "field": "q4_quant_probe_ready", "expected": "1"}
-      ]
+      ],
+      "blocked_by": ["v61aa/v61ab summary and quant/dequant artifacts are not present in the source-controlled clean checkout"]
     },
     {
       "order": 3,
       "milestone_id": "torch-matvec-parity",
       "required_evidence": "hotset BF16 tile matvec rows match PyTorch CPU reference",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v61ab_hotset_tensor_tile_quant_probe_summary.csv",
       "claim_boundary": "tile matvec parity only; not expert FFN real execution",
       "summary_checks": [
         {"summary_id": "v61ab", "field": "torch_matvec_parity_ready", "expected": "1"},
         {"summary_id": "v61ab", "field": "torch_matvec_parity_rows", "expected": "128"},
         {"summary_id": "v61ab", "field": "torch_matvec_parity_pass_rows", "expected": "128"}
-      ]
+      ],
+      "blocked_by": ["v61ab summary and torch matvec parity artifacts are not present in the source-controlled clean checkout"]
     },
     {
       "order": 4,

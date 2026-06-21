@@ -4,11 +4,26 @@
     "generation_contract_ready": true,
     "raw_prompt_context_allowed": false,
     "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
-    "deterministic_source_span_generation_fixture_ready": true,
+    "deterministic_source_span_generation_fixture_ready": false,
     "real_model_generation_ready": false,
     "human_review_ready": false,
     "public_comparison_claim_ready": false,
-    "release_ready": false
+    "release_ready": false,
+    "required_artifact_count": 10,
+    "present_required_artifact_count": 0,
+    "missing_required_artifact_count": 10,
+    "missing_required_artifact_ids": [
+      "answer-rows",
+      "citation-rows",
+      "unsupported-claim-rows",
+      "abstain-rows",
+      "generator-resource-rows",
+      "wrong-answer-guard-rows",
+      "generator-input-rows",
+      "compact-routehint-rows",
+      "sha256-manifest",
+      "sha256sums"
+    ]
   },
   "required_artifacts": [
     {

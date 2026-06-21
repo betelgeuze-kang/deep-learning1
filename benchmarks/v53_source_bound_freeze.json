@@ -2,16 +2,25 @@
   "schema_version": "v53_source_benchmark.v1",
   "policy": {
     "benchmark_id": "v53i_complete_source_1000",
-    "machine_foundation_freeze_ready": true,
+    "machine_foundation_freeze_ready": false,
     "human_review_ready": false,
     "public_comparison_claim_ready": false,
-    "release_ready": false
+    "release_ready": false,
+    "required_summary_evidence_count": 4,
+    "present_summary_evidence_count": 0,
+    "missing_summary_evidence_count": 4,
+    "missing_summary_evidence_ids": [
+      "v53i",
+      "v53t",
+      "v53ap",
+      "v53aq"
+    ]
   },
   "requirements": [
     {
       "requirement_id": "pinned-public-repo-manifest",
       "required_evidence": "10-30 pinned public repositories with direct repo/file/content snapshot manifests",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v53g_complete_source_manifest/manifest_001/complete_source_repo_coverage_rows.csv",
       "claim_boundary": "Allows v53 public source manifest wording only; not release or benchmark-win wording",
       "summary_checks": [
@@ -25,7 +34,7 @@
     {
       "requirement_id": "source-span-bound-1000-query-surface",
       "required_evidence": "1000 query rows and 1000 source-span rows with every query/span binding audit passing",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_query_span_binding_audit_rows.csv",
       "claim_boundary": "Allows frozen source-span-bound benchmark surface wording only; not human-reviewed correctness",
       "summary_checks": [
@@ -40,7 +49,7 @@
     {
       "requirement_id": "negative-unsupported-missing-doc-code-controls",
       "required_evidence": "negative/abstain controls are at least 10 percent, with unsupported, missing-specific, and doc-code conflict rows present",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v53i_complete_source_query_instantiation/instantiate_001/complete_source_query_family_rows.csv",
       "claim_boundary": "Allows corpus-control coverage wording only; not model quality or abstention performance wording",
       "summary_checks": [
@@ -54,7 +63,7 @@
     {
       "requirement_id": "answer-citation-resource-separate-evaluator",
       "required_evidence": "answer, citation/source-span, and resource checks are emitted as separate evaluator/resource rows",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v53ap_complete_source_abgh_same_query_measured_summary.csv;results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
       "claim_boundary": "Allows evaluator-contract wording only; not human-reviewed answer quality",
       "summary_checks": [
@@ -68,7 +77,7 @@
     {
       "requirement_id": "abgh-same-query-internal-prebaseline",
       "required_evidence": "A/B/G/H use the same frozen v53 query hash with D/E and public comparison claims blocked",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
       "claim_boundary": "Allows internal v1.0 pre-baseline A/B/G/H wording only; public comparison remains blocked without D/E",
       "summary_checks": [
@@ -83,7 +92,7 @@
     {
       "requirement_id": "sanitized-question-only-adapter-selection",
       "required_evidence": "v53aq adapter selection reads sanitized question text only; oracle/source locator/expected-label fields remain forbidden",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv",
       "claim_boundary": "Allows no-oracle adapter-selection wording only; evaluator-only fields remain unavailable to retriever/model selection",
       "summary_checks": [

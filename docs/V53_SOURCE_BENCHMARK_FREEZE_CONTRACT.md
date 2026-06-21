@@ -3,6 +3,12 @@
 The v1.0 machine foundation benchmark is frozen by
 `benchmarks/v53_source_bound_freeze.json`.
 
+The clean checkout contract is fail-closed: it lists the required v53 summary
+evidence ids, but keeps `machine_foundation_freeze_ready=false` until the
+summary artifacts are present and explicitly supplied or replayed. Local
+`results/` files must not silently turn the tracked contract into a release or
+public comparison claim.
+
 Verify the contract with:
 
 ```bash
@@ -32,6 +38,8 @@ Accepted machine-foundation evidence:
 
 Blocked claims:
 
+- clean-checkout machine foundation readiness while the required summary
+  evidence files are absent
 - human-reviewed correctness
 - public A/B/G/H comparison
 - D/E 30B/70B replacement or public baseline comparison

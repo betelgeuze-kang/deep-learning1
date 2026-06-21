@@ -22,7 +22,12 @@
         "fixture_can_close_real_return",
         "accepted_human_review_rows",
         "accepted_adjudication_rows",
-        "accepted_operator_return_rows"
+        "accepted_operator_return_rows",
+        "summary_evidence_ready",
+        "required_summary_evidence_count",
+        "present_summary_evidence_count",
+        "missing_summary_evidence_count",
+        "missing_summary_evidence_ids"
       ],
       "properties": {
         "workflow_contract_ready": {"type": "boolean"},
@@ -38,7 +43,15 @@
         "fixture_can_close_real_return": {"type": "boolean"},
         "accepted_human_review_rows": {"type": "integer", "const": 0},
         "accepted_adjudication_rows": {"type": "integer", "const": 0},
-        "accepted_operator_return_rows": {"type": "integer", "const": 0}
+        "accepted_operator_return_rows": {"type": "integer", "const": 0},
+        "summary_evidence_ready": {"type": "boolean"},
+        "required_summary_evidence_count": {"type": "integer", "minimum": 0},
+        "present_summary_evidence_count": {"type": "integer", "minimum": 0},
+        "missing_summary_evidence_count": {"type": "integer", "minimum": 0},
+        "missing_summary_evidence_ids": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["v53s", "v58d", "v61af", "v61hv"]}
+        }
       },
       "additionalProperties": false
     },
@@ -57,7 +70,7 @@
         "properties": {
           "requirement_id": {"type": "string"},
           "required_evidence": {"type": "string"},
-          "current_status": {"type": "string", "enum": ["pass"]},
+          "current_status": {"type": "string", "enum": ["pass", "blocked"]},
           "evidence_path": {"type": "string"},
           "claim_boundary": {"type": "string"},
           "summary_checks": {
