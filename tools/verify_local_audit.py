@@ -335,6 +335,25 @@ def verify_registry(registry: dict, errors: list[str]) -> None:
         add(errors, "plugin registry modules drifted")
 
 
+def verify_finding_registry_binding(out_dir: Path, registry: dict, errors: list[str]) -> None:
+    registry_by_plugin = {
+        str(plugin.get("plugin_id", "")): plugin
+        for plugin in registry.get("plugins", [])
+    }
+    for row in read_csv(out_dir / "audit_findings.csv"):
+        finding_id = row.get("finding_id", "")
+        plugin_id = row.get("plugin_id", "")
+        plugin = registry_by_plugin.get(plugin_id)
+        if plugin is None:
+            add(errors, f"audit finding references unregistered plugin: {finding_id} {plugin_id}")
+            continue
+        if row.get("audit_type") != str(plugin.get("audit_type", "")):
+            add(errors, f"audit finding audit_type does not match plugin registry: {finding_id}")
+        plugin_language = str(plugin.get("language", ""))
+        if plugin_language != "multi" and row.get("language") != plugin_language:
+            add(errors, f"audit finding language does not match plugin registry: {finding_id}")
+
+
 def verify_contract(out_dir: Path, sha_entries: dict[str, str], errors: list[str]) -> None:
     rows = read_csv(out_dir / "artifact_contract_rows.csv")
     expected_contract_paths = REQUIRED_FILES - {"sha256sums.txt", "artifact_contract_rows.csv"}
@@ -771,7 +790,9 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     verify_resource(read_json(out_dir / "resource_envelope.json"), summary, errors)
     verify_claim_boundary_docs(out_dir, errors)
     verify_audit_report(out_dir, summary, errors)
-    verify_registry(read_json(out_dir / "plugin_registry.json"), errors)
+    registry = read_json(out_dir / "plugin_registry.json")
+    verify_registry(registry, errors)
+    verify_finding_registry_binding(out_dir, registry, errors)
     verify_contract(out_dir, sha_entries, errors)
     verify_csv_jsonl(out_dir, errors)
     source_by_path = verify_sources(out_dir, manifest, errors)

@@ -558,6 +558,75 @@ original_findings_text = audit_findings_path.read_text(encoding="utf-8")
 with findings_csv_path.open(newline="", encoding="utf-8") as handle:
     findings_csv_rows = list(csv.DictReader(handle))
 finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
+
+tampered_registry_binding_id = ""
+for row in findings_csv_rows:
+    if row.get("plugin_id") != "deprecated_api":
+        tampered_registry_binding_id = row["finding_id"]
+        row["language"] = "multi"
+        break
+if tampered_registry_binding_id:
+    for row in finding_json_rows:
+        if row["finding_id"] == tampered_registry_binding_id:
+            row["language"] = "multi"
+            break
+    with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(findings_csv_rows)
+    audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in finding_json_rows), encoding="utf-8")
+    new_findings_csv_sha = sha256(findings_csv_path)
+    new_findings_jsonl_sha = sha256(audit_findings_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  audit_findings.csv"):
+            sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
+        elif line.endswith("  audit_findings.jsonl"):
+            sha_lines.append(f"{new_findings_jsonl_sha}  audit_findings.jsonl")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit("local-audit verifier must reject finding language drift from plugin registry")
+    findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+    audit_findings_path.write_text(original_findings_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with findings_csv_path.open(newline="", encoding="utf-8") as handle:
+    findings_csv_rows = list(csv.DictReader(handle))
+finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
+tampered_registry_binding_id = findings_csv_rows[0]["finding_id"] if findings_csv_rows else ""
+if tampered_registry_binding_id:
+    findings_csv_rows[0]["plugin_id"] = "unregistered_plugin"
+    for row in finding_json_rows:
+        if row["finding_id"] == tampered_registry_binding_id:
+            row["plugin_id"] = "unregistered_plugin"
+            break
+    with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(findings_csv_rows)
+    audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in finding_json_rows), encoding="utf-8")
+    new_findings_csv_sha = sha256(findings_csv_path)
+    new_findings_jsonl_sha = sha256(audit_findings_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  audit_findings.csv"):
+            sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
+        elif line.endswith("  audit_findings.jsonl"):
+            sha_lines.append(f"{new_findings_jsonl_sha}  audit_findings.jsonl")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit("local-audit verifier must reject findings from unregistered plugins")
+    findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+    audit_findings_path.write_text(original_findings_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with findings_csv_path.open(newline="", encoding="utf-8") as handle:
+    findings_csv_rows = list(csv.DictReader(handle))
+finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
 tampered_binding_id = ""
 for row in findings_csv_rows:
     sha_cells = [cell for cell in row.get("citation_sha256s", "").split(";") if cell]
@@ -1352,6 +1421,33 @@ sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject audit findings CSV/JSONL drift")
 findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with findings_csv_path.open(newline="", encoding="utf-8") as handle:
+    findings_csv_rows = list(csv.DictReader(handle))
+finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
+findings_csv_rows[0]["plugin_id"] = "unregistered_plugin"
+finding_json_rows[0]["plugin_id"] = "unregistered_plugin"
+with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(findings_csv_rows)
+audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in finding_json_rows), encoding="utf-8")
+new_findings_csv_sha = sha256(findings_csv_path)
+new_findings_jsonl_sha = sha256(audit_findings_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_findings.csv"):
+        sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
+    elif line.endswith("  audit_findings.jsonl"):
+        sha_lines.append(f"{new_findings_jsonl_sha}  audit_findings.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject findings from unregistered plugins")
+findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+audit_findings_path.write_text(original_findings_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 manifest_path = out_a / "audit_manifest.json"
