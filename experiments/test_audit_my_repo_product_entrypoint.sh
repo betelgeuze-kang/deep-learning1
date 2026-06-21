@@ -226,6 +226,9 @@ for idx in range(1, 4):
         raise SystemExit("plugin registry tool version mismatch")
     if plugin_ids != {"doc_code_identity", "deprecated_api", "config_consistency", "unsupported_claim", "missing_evidence"}:
         raise SystemExit("plugin registry must bind the deterministic plugin set")
+    plugin_registry_sha256 = "sha256:" + sha256(out / "plugin_registry.json")
+    if manifest["plugin_registry_sha256"] != plugin_registry_sha256:
+        raise SystemExit("audit manifest must bind plugin_registry.json sha256")
     if summary["real_release_package_ready"] != 0 or summary["public_comparison_claim_ready"] != 0:
         raise SystemExit("audit product smoke must keep release/comparison claims blocked")
     if summary["latency_ms"] != 0:
@@ -276,7 +279,7 @@ for idx in range(1, 4):
         "mode": "quick",
         "max_queries": 12,
         "question": "Does this repo prove production readiness?",
-        "plugins": ["doc_code_identity", "deprecated_api", "config_consistency", "unsupported_claim", "missing_evidence"],
+        "plugin_registry_sha256": plugin_registry_sha256,
     }, sort_keys=True).encode("utf-8")).hexdigest()
     if manifest["cache_key"] != expected_cache_key:
         raise SystemExit("audit manifest cache key does not match source/query/plugin inputs")

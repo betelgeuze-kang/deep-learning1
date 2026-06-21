@@ -46,7 +46,7 @@ JSONL_CONTRACTS: dict[str, list[str]] = {
 }
 
 JSON_CONTRACTS: dict[str, list[str]] = {
-    "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "cache_key", "claim_boundary"],
+    "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "cache_key", "plugin_registry_sha256", "claim_boundary"],
     "audit_summary.json": list(CSV_CONTRACTS["audit_summary.csv"]),
     "plugin_registry.json": ["schema_version", "tool_version", "plugins"],
     "resource_envelope.json": ["resource_envelope_ready", "tool_version", "source_files_scanned", "max_queries", "mode", "namespace", "external_network_used", "raw_prompt_context_bytes", "latency_ms", "wrong_answer_guard_rows", "claim_boundary_ready"],
@@ -487,6 +487,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         )
         reproduce.chmod(0o755)
 
+    plugin_registry_sha256 = sha256(staging / "plugin_registry.json")
     manifest = {
         "schema_version": OUTPUT_SCHEMA_VERSION,
         "tool_version": TOOL_VERSION,
@@ -497,7 +498,8 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "finding_rows": len(finding_rows),
         "atomic_publish": 1,
         "output_dir_destroyed": 0,
-        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "mode": mode, "max_queries": max_queries, "question": question, "plugins": [plugin.plugin_id for plugin in DEFAULT_PLUGINS]}, sort_keys=True).encode("utf-8")).hexdigest(),
+        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "mode": mode, "max_queries": max_queries, "question": question, "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
+        "plugin_registry_sha256": plugin_registry_sha256,
         "claim_boundary": "alpha-local-code-doc-audit-only",
     }
     write_json(staging / "audit_manifest.json", manifest)

@@ -110,6 +110,7 @@ test "$(cat "$out_a/sentinel.txt")" = "keep"
 
 python3 - "$ROOT_DIR" "$repo" "$out_a" "$out_b" <<'PY'
 import csv
+import hashlib
 import json
 import subprocess
 import sys
@@ -119,6 +120,14 @@ root = Path(sys.argv[1])
 repo = Path(sys.argv[2]).resolve()
 out_a = Path(sys.argv[3])
 out_b = Path(sys.argv[4])
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 manifest = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
 plugin_registry = json.loads((out_a / "plugin_registry.json").read_text(encoding="utf-8"))
@@ -132,6 +141,8 @@ if {row["plugin_id"] for row in plugin_registry["plugins"]} != {
     "missing_evidence",
 }:
     raise SystemExit("fixture audit output must bind the deterministic plugin registry")
+if manifest["plugin_registry_sha256"] != "sha256:" + sha256(out_a / "plugin_registry.json"):
+    raise SystemExit("manifest must bind plugin registry sha256")
 if manifest["namespace"] != "fixture":
     raise SystemExit("negative-control fixture must not be promoted out of fixture namespace")
 if manifest["claim_boundary"] != "alpha-local-code-doc-audit-only":

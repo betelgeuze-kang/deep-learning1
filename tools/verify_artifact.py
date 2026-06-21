@@ -3501,6 +3501,12 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     cache_key = str(manifest.get("cache_key", ""))
     if len(cache_key) != 64 or any(ch not in "0123456789abcdef" for ch in cache_key):
         errors.append(f"{out_dir / 'audit_manifest.json'}: cache_key must be 64 lowercase hex chars")
+    plugin_registry_sha256 = sha256(out_dir / "plugin_registry.json") if (out_dir / "plugin_registry.json").is_file() else ""
+    if manifest.get("plugin_registry_sha256") != plugin_registry_sha256:
+        errors.append(
+            f"{out_dir / 'audit_manifest.json'}: plugin_registry_sha256 expected "
+            f"{plugin_registry_sha256!r}, got {manifest.get('plugin_registry_sha256')!r}"
+        )
 
     blocked_zero_fields = [
         "real_release_package_ready",
