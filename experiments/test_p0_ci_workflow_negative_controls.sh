@@ -44,8 +44,8 @@ check_ai_verify_workflow() {
     echo "ai-verify workflow must support workflow_dispatch" >&2
     return 1
   }
-  grep -F "runs-on: ubuntu-24.04" "$path" >/dev/null || {
-    echo "ai-verify workflow must pin the runner to ubuntu-24.04" >&2
+  grep -F "runs-on: [self-hosted, linux, x64]" "$path" >/dev/null || {
+    echo "ai-verify workflow must use self-hosted linux x64 runner" >&2
     return 1
   }
   grep -F "name: ai-verify.sh" "$path" >/dev/null || {
@@ -69,8 +69,8 @@ check_toolchain_lock() {
     echo "ai-verify toolchain lock schema_version must be ai_verify_toolchain_lock.v1" >&2
     return 1
   }
-  grep -F '"github_actions_runner": "ubuntu-24.04"' "$path" >/dev/null || {
-    echo "ai-verify toolchain lock must pin github_actions_runner=ubuntu-24.04" >&2
+  grep -F '"github_actions_runner": "self-hosted-linux-x64"' "$path" >/dev/null || {
+    echo "ai-verify toolchain lock must pin github_actions_runner=self-hosted-linux-x64" >&2
     return 1
   }
   grep -F '"container_image_digest": ""' "$path" >/dev/null || {
@@ -105,6 +105,14 @@ check_third_party_workflow() {
     echo "third-party rerun job name must remain manual" >&2
     return 1
   }
+  grep -F "runs-on: [self-hosted, linux, x64]" "$path" >/dev/null || {
+    echo "third-party rerun workflow must use self-hosted linux x64 runner" >&2
+    return 1
+  }
+  grep -F "upload_artifact:" "$path" >/dev/null || {
+    echo "third-party rerun artifact upload must stay opt-in" >&2
+    return 1
+  }
   if grep -F "pull_request:" "$path" >/dev/null; then
     echo "third-party rerun workflow must stay manual-only: pull_request forbidden" >&2
     return 1
@@ -117,6 +125,18 @@ check_third_party_workflow() {
     echo "third-party rerun workflow must stay manual-only: schedule forbidden" >&2
     return 1
   fi
+  if grep -F "repository_dispatch:" "$path" >/dev/null; then
+    echo "third-party rerun workflow must stay manual-only: repository_dispatch forbidden" >&2
+    return 1
+  fi
+  if grep -F "workflow_run:" "$path" >/dev/null; then
+    echo "third-party rerun workflow must stay manual-only: workflow_run forbidden" >&2
+    return 1
+  fi
+  if grep -F "workflow_call:" "$path" >/dev/null; then
+    echo "third-party rerun workflow must stay manual-only: workflow_call forbidden" >&2
+    return 1
+  fi
   grep -F "V18_THIRD_PARTY_RERUN_DIR=" "$path" >/dev/null || {
     echo "third-party rerun workflow must feed v18 external evidence intake" >&2
     return 1
@@ -125,11 +145,50 @@ check_third_party_workflow() {
     echo "third-party rerun workflow must upload a return artifact" >&2
     return 1
   }
+  grep -F "if: \${{ inputs.upload_artifact == 'true' }}" "$path" >/dev/null || {
+    echo "third-party rerun artifact upload must require upload_artifact=true" >&2
+    return 1
+  }
+  grep -Fx "          retention-days: 1" "$path" >/dev/null || {
+    echo "third-party rerun artifact retention must stay at 1 day" >&2
+    return 1
+  }
+}
+
+check_workflow_billing_policy() {
+  local workflow_dir="$1"
+  local workflow_file
+  while IFS= read -r workflow_file; do
+    [ -n "$workflow_file" ] || continue
+    if grep -En "runs-on:.*(ubuntu|windows|macos)" "$workflow_file" >/dev/null; then
+      echo "workflow must not use GitHub-hosted runners: $workflow_file" >&2
+      return 1
+    fi
+    if grep -F "actions/cache@" "$workflow_file" >/dev/null; then
+      echo "workflow must not use GitHub artifact/cache storage by default: $workflow_file" >&2
+      return 1
+    fi
+    if grep -F "actions/upload-artifact@" "$workflow_file" >/dev/null; then
+      grep -F "upload_artifact:" "$workflow_file" >/dev/null || {
+        echo "workflow artifact upload must be manual opt-in: $workflow_file" >&2
+        return 1
+      }
+      grep -F "if: \${{ inputs.upload_artifact == 'true' }}" "$workflow_file" >/dev/null || {
+        echo "workflow artifact upload must require upload_artifact=true: $workflow_file" >&2
+        return 1
+      }
+      grep -Fx "          retention-days: 1" "$workflow_file" >/dev/null || {
+        echo "workflow artifact upload retention must stay at 1 day: $workflow_file" >&2
+        return 1
+      }
+    fi
+  done < <(find "$workflow_dir" -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)
 }
 
 check_ai_verify_workflow "$ROOT_DIR/.github/workflows/ai-verify.yml"
 check_toolchain_lock "$ROOT_DIR/ci/ai_verify_toolchain.lock.json"
 check_third_party_workflow "$ROOT_DIR/.github/workflows/third-party-rerun.yml"
+check_workflow_billing_policy "$ROOT_DIR/.github/workflows"
 grep -F "bash -n experiments/test_p0_v56_replay_negative_controls.sh" "$ROOT_DIR/scripts/ai-verify.sh" >/dev/null || {
   echo "ai-verify.sh must syntax-check v56 replay negative controls before execution" >&2
   exit 1
@@ -194,11 +253,11 @@ from pathlib import Path
 
 path = Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-text = text.replace("runs-on: ubuntu-24.04", "runs-on: ubuntu-latest")
+text = text.replace("runs-on: [self-hosted, linux, x64]", "runs-on: ubuntu-latest")
 path.write_text(text, encoding="utf-8")
 PY
 expect_fail_with \
-  "ai-verify workflow must pin the runner to ubuntu-24.04" \
+  "ai-verify workflow must use self-hosted linux x64 runner" \
   check_ai_verify_workflow "$TMP_DIR/ai_verify_runner_bad.yml"
 
 cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/ai_verify_push_branch_limited_bad.yml"
@@ -227,7 +286,7 @@ data["github_actions_runner"] = "ubuntu-latest"
 path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 PY
 expect_fail_with \
-  "ai-verify toolchain lock must pin github_actions_runner=ubuntu-24.04" \
+  "ai-verify toolchain lock must pin github_actions_runner=self-hosted-linux-x64" \
   check_toolchain_lock "$TMP_DIR/toolchain_runner_bad.json"
 
 cp "$ROOT_DIR/ci/ai_verify_toolchain.lock.json" "$TMP_DIR/toolchain_schema_bad.json"
@@ -318,6 +377,20 @@ expect_fail_with \
   "third-party rerun workflow must stay manual-only: push forbidden" \
   check_third_party_workflow "$TMP_DIR/third_party_push_bad.yml"
 
+cp "$ROOT_DIR/.github/workflows/third-party-rerun.yml" "$TMP_DIR/third_party_repository_dispatch_bad.yml"
+python3 - "$TMP_DIR/third_party_repository_dispatch_bad.yml" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace("on:\n  workflow_dispatch:", "on:\n  repository_dispatch:\n  workflow_dispatch:")
+path.write_text(text, encoding="utf-8")
+PY
+expect_fail_with \
+  "third-party rerun workflow must stay manual-only: repository_dispatch forbidden" \
+  check_third_party_workflow "$TMP_DIR/third_party_repository_dispatch_bad.yml"
+
 cp "$ROOT_DIR/.github/workflows/third-party-rerun.yml" "$TMP_DIR/third_party_no_upload_bad.yml"
 python3 - "$TMP_DIR/third_party_no_upload_bad.yml" <<'PY'
 import sys
@@ -331,5 +404,73 @@ PY
 expect_fail_with \
   "third-party rerun workflow must upload a return artifact" \
   check_third_party_workflow "$TMP_DIR/third_party_no_upload_bad.yml"
+
+cp "$ROOT_DIR/.github/workflows/third-party-rerun.yml" "$TMP_DIR/third_party_upload_unconditional_bad.yml"
+python3 - "$TMP_DIR/third_party_upload_unconditional_bad.yml" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace("        if: ${{ inputs.upload_artifact == 'true' }}\n", "")
+path.write_text(text, encoding="utf-8")
+PY
+expect_fail_with \
+  "third-party rerun artifact upload must require upload_artifact=true" \
+  check_third_party_workflow "$TMP_DIR/third_party_upload_unconditional_bad.yml"
+
+cp "$ROOT_DIR/.github/workflows/third-party-rerun.yml" "$TMP_DIR/third_party_retention_bad.yml"
+python3 - "$TMP_DIR/third_party_retention_bad.yml" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace("retention-days: 1", "retention-days: 14")
+path.write_text(text, encoding="utf-8")
+PY
+expect_fail_with \
+  "third-party rerun artifact retention must stay at 1 day" \
+  check_third_party_workflow "$TMP_DIR/third_party_retention_bad.yml"
+
+mkdir -p "$TMP_DIR/workflows_hosted_bad"
+cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/workflows_hosted_bad/ai-verify.yml"
+python3 - "$TMP_DIR/workflows_hosted_bad/ai-verify.yml" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace("runs-on: [self-hosted, linux, x64]", "runs-on: ubuntu-latest")
+path.write_text(text, encoding="utf-8")
+PY
+expect_fail_with \
+  "workflow must not use GitHub-hosted runners" \
+  check_workflow_billing_policy "$TMP_DIR/workflows_hosted_bad"
+
+mkdir -p "$TMP_DIR/workflows_cache_bad"
+cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/workflows_cache_bad/ai-verify.yml"
+cat >>"$TMP_DIR/workflows_cache_bad/ai-verify.yml" <<'EOF'
+      - name: Bad cache
+        uses: actions/cache@v4
+EOF
+expect_fail_with \
+  "workflow must not use GitHub artifact/cache storage by default" \
+  check_workflow_billing_policy "$TMP_DIR/workflows_cache_bad"
+
+mkdir -p "$TMP_DIR/workflows_artifact_bad"
+cp "$ROOT_DIR/.github/workflows/third-party-rerun.yml" "$TMP_DIR/workflows_artifact_bad/third-party-rerun.yml"
+python3 - "$TMP_DIR/workflows_artifact_bad/third-party-rerun.yml" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace("        if: ${{ inputs.upload_artifact == 'true' }}\n", "")
+path.write_text(text, encoding="utf-8")
+PY
+expect_fail_with \
+  "workflow artifact upload must require upload_artifact=true" \
+  check_workflow_billing_policy "$TMP_DIR/workflows_artifact_bad"
 
 echo "p0 CI workflow negative controls passed"

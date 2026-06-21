@@ -16,14 +16,14 @@
   ],
   "properties": {
     "schema_version": {"const": "ai_verify_toolchain_lock.v1"},
-    "github_actions_runner": {"const": "ubuntu-24.04"},
+    "github_actions_runner": {"const": "self-hosted-linux-x64"},
     "container_image_digest": {"const": ""},
     "python": {
       "type": "object",
       "additionalProperties": false,
       "required": ["source", "version_command"],
       "properties": {
-        "source": {"const": "github-actions-runner"},
+        "source": {"const": "github-actions-self-hosted-runner"},
         "version_command": {"const": "python3 --version"}
       }
     },
@@ -59,7 +59,7 @@
       "additionalProperties": false,
       "required": ["source", "version_command"],
       "properties": {
-        "source": {"const": "github-actions-runner"},
+        "source": {"const": "github-actions-self-hosted-runner"},
         "version_command": {"const": "g++ --version"}
       }
     },
@@ -68,7 +68,7 @@
       "additionalProperties": false,
       "required": ["source", "version_command"],
       "properties": {
-        "source": {"const": "github-actions-runner"},
+        "source": {"const": "github-actions-self-hosted-runner"},
         "version_command": {"const": "cmake --version"}
       }
     }

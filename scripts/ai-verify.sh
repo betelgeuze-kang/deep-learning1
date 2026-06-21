@@ -177,10 +177,40 @@ test -x scripts/ai-worker-cursor.sh
 test -x scripts/ai-worker-opencode.sh
 
 echo "==> CI workflow contract"
+workflow_files="$(find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null | sort || true)"
+if [ -n "$workflow_files" ]; then
+  while IFS= read -r workflow_file; do
+    [ -n "$workflow_file" ] || continue
+    if grep -En "runs-on:.*(ubuntu|windows|macos)" "$workflow_file" >/dev/null; then
+      echo "workflow must not use GitHub-hosted runners: $workflow_file" >&2
+      exit 1
+    fi
+    if grep -F "actions/cache@" "$workflow_file" >/dev/null; then
+      echo "workflow must not use GitHub artifact/cache storage by default: $workflow_file" >&2
+      exit 1
+    fi
+    if grep -F "actions/upload-artifact@" "$workflow_file" >/dev/null; then
+      grep -F "upload_artifact:" "$workflow_file" >/dev/null || {
+        echo "workflow artifact upload must be manual opt-in: $workflow_file" >&2
+        exit 1
+      }
+      grep -F "if: \${{ inputs.upload_artifact == 'true' }}" "$workflow_file" >/dev/null || {
+        echo "workflow artifact upload must require upload_artifact=true: $workflow_file" >&2
+        exit 1
+      }
+      grep -Fx "          retention-days: 1" "$workflow_file" >/dev/null || {
+        echo "workflow artifact upload retention must stay at 1 day: $workflow_file" >&2
+        exit 1
+      }
+    fi
+  done <<EOF
+$workflow_files
+EOF
+fi
 if [ -f ci/ai_verify_toolchain.lock.json ]; then
   python3 -m json.tool ci/ai_verify_toolchain.lock.json >/dev/null
   grep -F '"schema_version": "ai_verify_toolchain_lock.v1"' ci/ai_verify_toolchain.lock.json >/dev/null
-  grep -F '"github_actions_runner": "ubuntu-24.04"' ci/ai_verify_toolchain.lock.json >/dev/null
+  grep -F '"github_actions_runner": "self-hosted-linux-x64"' ci/ai_verify_toolchain.lock.json >/dev/null
   grep -F '"container_image_digest": ""' ci/ai_verify_toolchain.lock.json >/dev/null
   grep -F '"required_env": "DLE_VERIFY_ENABLE_HIP=OFF"' ci/ai_verify_toolchain.lock.json >/dev/null
   grep -F '"version_command": "python3 --version"' ci/ai_verify_toolchain.lock.json >/dev/null
@@ -195,7 +225,7 @@ if [ -f .github/workflows/ai-verify.yml ]; then
     exit 1
   fi
   grep -F "workflow_dispatch:" .github/workflows/ai-verify.yml >/dev/null
-  grep -F "runs-on: ubuntu-24.04" .github/workflows/ai-verify.yml >/dev/null
+  grep -F "runs-on: [self-hosted, linux, x64]" .github/workflows/ai-verify.yml >/dev/null
   grep -F "name: ai-verify.sh" .github/workflows/ai-verify.yml >/dev/null
   grep -F "run: ./scripts/ai-verify.sh" .github/workflows/ai-verify.yml >/dev/null
   grep -F "DLE_VERIFY_ENABLE_HIP: \"OFF\"" .github/workflows/ai-verify.yml >/dev/null
@@ -203,6 +233,9 @@ fi
 if [ -f .github/workflows/third-party-rerun.yml ]; then
   grep -F "workflow_dispatch:" .github/workflows/third-party-rerun.yml >/dev/null
   grep -F "name: third-party-rerun-return-manual" .github/workflows/third-party-rerun.yml >/dev/null
+  grep -F "runs-on: [self-hosted, linux, x64]" .github/workflows/third-party-rerun.yml >/dev/null
+  grep -F "upload_artifact:" .github/workflows/third-party-rerun.yml >/dev/null
+  grep -F "if: \${{ inputs.upload_artifact == 'true' }}" .github/workflows/third-party-rerun.yml >/dev/null
   if grep -F "pull_request:" .github/workflows/third-party-rerun.yml >/dev/null; then
     echo "third-party rerun workflow must stay manual-only" >&2
     exit 1
@@ -215,8 +248,21 @@ if [ -f .github/workflows/third-party-rerun.yml ]; then
     echo "third-party rerun workflow must stay manual-only" >&2
     exit 1
   fi
+  if grep -F "repository_dispatch:" .github/workflows/third-party-rerun.yml >/dev/null; then
+    echo "third-party rerun workflow must stay manual-only" >&2
+    exit 1
+  fi
+  if grep -F "workflow_run:" .github/workflows/third-party-rerun.yml >/dev/null; then
+    echo "third-party rerun workflow must stay manual-only" >&2
+    exit 1
+  fi
+  if grep -F "workflow_call:" .github/workflows/third-party-rerun.yml >/dev/null; then
+    echo "third-party rerun workflow must stay manual-only" >&2
+    exit 1
+  fi
   grep -F "V18_THIRD_PARTY_RERUN_DIR=" .github/workflows/third-party-rerun.yml >/dev/null
   grep -F "actions/upload-artifact@v4" .github/workflows/third-party-rerun.yml >/dev/null
+  grep -Fx "          retention-days: 1" .github/workflows/third-party-rerun.yml >/dev/null
 fi
 
 echo "==> PM claim and evidence-boundary gate"

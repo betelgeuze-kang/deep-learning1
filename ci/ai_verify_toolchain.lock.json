@@ -1,9 +1,9 @@
 {
   "schema_version": "ai_verify_toolchain_lock.v1",
-  "github_actions_runner": "ubuntu-24.04",
+  "github_actions_runner": "self-hosted-linux-x64",
   "container_image_digest": "",
   "python": {
-    "source": "github-actions-runner",
+    "source": "github-actions-self-hosted-runner",
     "version_command": "python3 --version"
   },
   "numpy": {
@@ -19,11 +19,11 @@
     "required_env": "DLE_VERIFY_ENABLE_HIP=OFF"
   },
   "compiler": {
-    "source": "github-actions-runner",
+    "source": "github-actions-self-hosted-runner",
     "version_command": "g++ --version"
   },
   "cmake": {
-    "source": "github-actions-runner",
+    "source": "github-actions-self-hosted-runner",
     "version_command": "cmake --version"
   }
 }
