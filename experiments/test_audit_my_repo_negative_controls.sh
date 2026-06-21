@@ -255,6 +255,15 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
     raise SystemExit("local-audit verifier must reject tampered citation hashes")
 tampered_citations.write_text(original_citations, encoding="utf-8")
 
+manifest_path = out_a / "audit_manifest.json"
+original_manifest_text = manifest_path.read_text(encoding="utf-8")
+tampered_manifest = json.loads(original_manifest_text)
+tampered_manifest["plugin_registry_sha256"] = "sha256:" + ("0" * 64)
+manifest_path.write_text(json.dumps(tampered_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject plugin registry hash mismatch")
+manifest_path.write_text(original_manifest_text, encoding="utf-8")
+
 subprocess.run(
     [
         str(root / "scripts/audit_my_repo.sh"),
