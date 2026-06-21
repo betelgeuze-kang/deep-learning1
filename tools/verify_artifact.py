@@ -9,6 +9,7 @@ import hashlib
 import json
 import math
 import os
+import shlex
 import sys
 from pathlib import Path
 
@@ -3531,6 +3532,57 @@ def verify_local_audit(out_dir: Path) -> list[str]:
         errors.append(f"{out_dir / 'audit_summary.json'}: all wrong-answer guard rows must pass")
     if resource.get("external_network_used") != 0:
         errors.append(f"{out_dir / 'resource_envelope.json'}: external_network_used expected 0")
+    reproduce_path = out_dir / "reproduce.sh"
+    reproduce_text = reproduce_path.read_text(encoding="utf-8", errors="replace") if reproduce_path.is_file() else ""
+    reproduce_audit_parts: list[str] = []
+    if reproduce_text:
+        if not os.access(reproduce_path, os.X_OK):
+            errors.append(f"{reproduce_path}: reproduce script must be executable")
+        lines = [line.strip() for line in reproduce_text.splitlines() if line.strip()]
+        if not lines or lines[0] != "#!/usr/bin/env bash":
+            errors.append(f"{reproduce_path}: missing bash shebang")
+        commands = [line for line in lines[1:] if not line.startswith("#")]
+        if len(commands) != 3 or commands[0] != "set -euo pipefail":
+            errors.append(f"{reproduce_path}: expected strict mode, cd, and one audit command")
+        else:
+            try:
+                cd_parts = shlex.split(commands[1])
+                audit_parts = shlex.split(commands[2])
+            except ValueError as exc:
+                errors.append(f"{reproduce_path}: invalid shell quoting: {exc}")
+                cd_parts = []
+                audit_parts = []
+            reproduce_audit_parts = audit_parts
+            if len(cd_parts) != 2 or cd_parts[0] != "cd":
+                errors.append(f"{reproduce_path}: second command must cd to the repo root")
+            if not audit_parts or audit_parts[0] != "./scripts/audit_my_repo.sh":
+                errors.append(f"{reproduce_path}: reproduce command must call ./scripts/audit_my_repo.sh")
+            elif len(audit_parts) < 2 or audit_parts[1] != str(manifest.get("target_repo", "")):
+                errors.append(f"{reproduce_path}: reproduce target does not match manifest")
+
+            def _opt_value(parts: list[str], option: str) -> str:
+                try:
+                    index = parts.index(option)
+                except ValueError:
+                    return ""
+                return parts[index + 1] if index + 1 < len(parts) else ""
+
+            if audit_parts:
+                expected_options = {
+                    "--mode": str(resource.get("mode", "")),
+                    "--max-queries": str(resource.get("max_queries", "")),
+                    "--out": str(out_dir),
+                    "--generator": str(summary.get("generator", "")),
+                    "--namespace": str(manifest.get("namespace", "")),
+                }
+                for option, expected in expected_options.items():
+                    if _opt_value(audit_parts, option) != expected:
+                        errors.append(f"{reproduce_path}: {option} does not match output metadata")
+                for flag in ["--verify-output", "--emit-report", "--emit-lineage", "--emit-reproduce"]:
+                    if flag not in audit_parts:
+                        errors.append(f"{reproduce_path}: missing required flag {flag}")
+                if manifest.get("namespace") == "real_benchmark" and "--confirm-real-benchmark-namespace" not in audit_parts:
+                    errors.append(f"{reproduce_path}: real_benchmark reproduce command must include confirmation flag")
     expected_plugins = {
         "doc_code_identity",
         "deprecated_api",
@@ -3631,6 +3683,16 @@ def verify_local_audit(out_dir: Path) -> list[str]:
             question = str(user_question_rows[0].get("question", ""))
     elif user_question_rows:
         errors.append(f"{out_dir / 'audit_findings.jsonl'}: user_question rows require question_supplied=1")
+    if reproduce_audit_parts:
+        if summary.get("question_supplied") == 1:
+            try:
+                question_arg = reproduce_audit_parts[reproduce_audit_parts.index("--question") + 1]
+            except (ValueError, IndexError):
+                question_arg = ""
+            if question_arg != question:
+                errors.append(f"{reproduce_path}: --question does not match audit findings")
+        elif "--question" in reproduce_audit_parts:
+            errors.append(f"{reproduce_path}: --question present but question_supplied=0")
     try:
         max_queries = int(resource.get("max_queries", 0))
     except (TypeError, ValueError):
