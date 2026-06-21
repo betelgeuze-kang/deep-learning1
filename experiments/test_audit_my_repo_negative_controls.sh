@@ -72,26 +72,25 @@ if set(plugins) != expected:
 if plugins["deprecated_api"]["language"] != "multi":
     raise SystemExit("deprecated_api plugin must advertise multi-language coverage")
 PY
-if "$ROOT_DIR/scripts/audit_my_repo.sh" --out "$TMP_DIR/no_target" >/dev/null 2>&1; then
-  echo "target repo must be required for audit execution" >&2
-  exit 9
-fi
-if "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" --generator unsupported --out "$TMP_DIR/bad_generator" >/dev/null 2>&1; then
-  echo "unsupported generator must fail" >&2
-  exit 10
-fi
-if "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" --max-queries 0 --out "$TMP_DIR/bad_queries" >/dev/null 2>&1; then
-  echo "non-positive max queries must fail" >&2
-  exit 11
-fi
-if "$ROOT_DIR/scripts/audit_my_repo.sh" "$TMP_DIR/missing" --out "$TMP_DIR/bad_target" >/dev/null 2>&1; then
-  echo "missing target repo must fail" >&2
-  exit 12
-fi
-if "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" --namespace real_benchmark --out "$TMP_DIR/bad_real_namespace" >/dev/null 2>&1; then
-  echo "real_benchmark namespace must require explicit confirmation" >&2
-  exit 13
-fi
+expect_audit_exit() {
+  local expected="$1"
+  local label="$2"
+  shift 2
+  set +e
+  "$ROOT_DIR/scripts/audit_my_repo.sh" "$@" >/dev/null 2>&1
+  local rc="$?"
+  set -e
+  if [[ "$rc" -ne "$expected" ]]; then
+    echo "$label expected exit $expected, got $rc" >&2
+    exit 9
+  fi
+}
+
+expect_audit_exit 2 "target repo must be required for audit execution" --out "$TMP_DIR/no_target"
+expect_audit_exit 2 "unsupported generator must fail with stable usage exit code" "$repo" --generator unsupported --out "$TMP_DIR/bad_generator"
+expect_audit_exit 2 "non-positive max queries must fail with stable usage exit code" "$repo" --max-queries 0 --out "$TMP_DIR/bad_queries"
+expect_audit_exit 2 "missing target repo must fail with stable usage exit code" "$TMP_DIR/missing" --out "$TMP_DIR/bad_target"
+expect_audit_exit 2 "real_benchmark namespace must require explicit confirmation" "$repo" --namespace real_benchmark --out "$TMP_DIR/bad_real_namespace"
 "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
   --mode quick \
   --max-queries 12 \
@@ -175,6 +174,10 @@ if manifest["claim_boundary"] != "alpha-local-code-doc-audit-only":
     raise SystemExit("claim boundary must remain alpha-only")
 if manifest["generated_at_utc"] != "1970-01-01T00:00:00+00:00":
     raise SystemExit("manifest timestamp must be deterministic")
+if manifest["output_dir_overwritten"] != 0:
+    raise SystemExit("manifest must prove output artifacts were not overwritten")
+if manifest["publish_mode"] != "create-or-idempotent-cache-hit":
+    raise SystemExit("manifest must expose the no-overwrite publish mode")
 
 summary = json.loads((out_a / "audit_summary.json").read_text(encoding="utf-8"))
 for field in [
@@ -208,8 +211,8 @@ if not expected_plugins.issubset(plugin_ids):
     raise SystemExit(f"missing plugin rows: {sorted(expected_plugins - plugin_ids)}")
 if not any(row["plugin_id"] == "unsupported_claim" and row["unsupported_claim"] == 1 and row["severity"] == "high" for row in findings):
     raise SystemExit("unsupported readiness wording must be flagged as high severity")
-if not any(row["plugin_id"] == "user_question" and row["abstain"] == 1 and row["grounded"] == 1 for row in findings):
-    raise SystemExit("free-form production question must abstain with bound source citation")
+if not any(row["plugin_id"] == "user_question" and row["abstain"] == 1 and row["grounded"] == 0 and row["citations"] for row in findings):
+    raise SystemExit("free-form production question must abstain without a grounded answer while keeping source context")
 if any(row["plugin_id"] == "user_question" and "ship" in row["answer"].lower() and row["abstain"] != 1 for row in findings):
     raise SystemExit("user question must not be answered as a shippability claim")
 deprecated = [row for row in findings if row["plugin_id"] == "deprecated_api"]
@@ -273,12 +276,84 @@ schema_cmd = [
 if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("schema must reject output_dir_destroyed=1")
 
+tampered = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
+tampered["output_dir_overwritten"] = 1
+bad_manifest.write_text(json.dumps(tampered, sort_keys=True), encoding="utf-8")
+if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("schema must reject output_dir_overwritten=1")
+
+before_manifest = (out_a / "audit_manifest.json").read_text(encoding="utf-8")
+before_sha = (out_a / "sha256sums.txt").read_text(encoding="utf-8")
+overwrite_cmd = [
+    str(root / "scripts/audit_my_repo.sh"),
+    str(repo),
+    "--mode",
+    "quick",
+    "--max-queries",
+    "12",
+    "--out",
+    str(out_a),
+    "--namespace",
+    "fixture",
+    "--question",
+    "A different unsupported release question?",
+    "--generator",
+    "routehint-tiny",
+]
+overwrite_result = subprocess.run(overwrite_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+if overwrite_result.returncode != 2:
+    raise SystemExit(f"same output directory with a different cache key must return exit 2, got {overwrite_result.returncode}")
+if (out_a / "audit_manifest.json").read_text(encoding="utf-8") != before_manifest:
+    raise SystemExit("failed overwrite attempt must not change audit_manifest.json")
+if (out_a / "sha256sums.txt").read_text(encoding="utf-8") != before_sha:
+    raise SystemExit("failed overwrite attempt must not change sha256sums.txt")
+
+conflict_out = out_a.parent / "out_conflict"
+conflict_out.mkdir(parents=True, exist_ok=True)
+(conflict_out / "AUDIT_REPORT.md").write_text("existing report must survive\n", encoding="utf-8")
+conflict_cmd = [
+    str(root / "scripts/audit_my_repo.sh"),
+    str(repo),
+    "--mode",
+    "quick",
+    "--max-queries",
+    "12",
+    "--out",
+    str(conflict_out),
+    "--namespace",
+    "fixture",
+    "--question",
+    "Can this conflicting out dir be reused?",
+    "--generator",
+    "routehint-tiny",
+]
+conflict_result = subprocess.run(conflict_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+if conflict_result.returncode != 2:
+    raise SystemExit(f"output directory with an existing artifact and no manifest must return exit 2, got {conflict_result.returncode}")
+if (conflict_out / "AUDIT_REPORT.md").read_text(encoding="utf-8") != "existing report must survive\n":
+    raise SystemExit("conflicting output artifact must not be overwritten")
+if (conflict_out / "ARCHITECTURE_TRACE.md").exists() or (conflict_out / "audit_manifest.json").exists():
+    raise SystemExit("conflict preflight must not partially publish new output artifacts")
+
 tampered_citations = out_a / "citation_spans.jsonl"
 sha_manifest_path = out_a / "sha256sums.txt"
 original_citations = tampered_citations.read_text(encoding="utf-8")
 original_sha_manifest_text = sha_manifest_path.read_text(encoding="utf-8")
-tampered_citations.write_text(original_citations.replace("sha256:", "sha256:0000", 1), encoding="utf-8")
+sha_manifest_path.write_text(
+    "\n".join(
+        line
+        for line in original_sha_manifest_text.splitlines()
+        if not line.endswith("  abstain_rows.csv")
+    )
+    + "\n",
+    encoding="utf-8",
+)
 verify_cmd = [str(root / "tools/verify_local_audit.py"), str(out_a)]
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must require abstain_rows.csv in sha256sums.txt")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+tampered_citations.write_text(original_citations.replace("sha256:", "sha256:0000", 1), encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject tampered citation hashes")
 tampered_citations.write_text(original_citations, encoding="utf-8")

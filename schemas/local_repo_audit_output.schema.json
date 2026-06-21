@@ -14,6 +14,8 @@
     "finding_rows",
     "atomic_publish",
     "output_dir_destroyed",
+    "output_dir_overwritten",
+    "publish_mode",
     "cache_key",
     "plugin_registry_sha256",
     "claim_boundary"
@@ -28,6 +30,8 @@
     "finding_rows": {"type": "integer", "minimum": 1},
     "atomic_publish": {"const": 1},
     "output_dir_destroyed": {"const": 0},
+    "output_dir_overwritten": {"const": 0},
+    "publish_mode": {"const": "create-or-idempotent-cache-hit"},
     "cache_key": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "plugin_registry_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "claim_boundary": {"const": "alpha-local-code-doc-audit-only"}

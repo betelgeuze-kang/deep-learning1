@@ -26,6 +26,7 @@ EXPECTED_PLUGIN_IDS = [
 REQUIRED_FILES = {
     "ARCHITECTURE_TRACE.md",
     "AUDIT_REPORT.md",
+    "abstain_rows.csv",
     "accuracy_rows.csv",
     "artifact_contract_rows.csv",
     "audit_findings.csv",
@@ -139,6 +140,8 @@ def verify_manifest(manifest: dict, summary_json: dict, out_dir: Path, errors: l
         "generated_at_utc": "1970-01-01T00:00:00+00:00",
         "atomic_publish": 1,
         "output_dir_destroyed": 0,
+        "output_dir_overwritten": 0,
+        "publish_mode": "create-or-idempotent-cache-hit",
         "claim_boundary": CLAIM_BOUNDARY,
     }.items():
         if manifest.get(key) != expected:

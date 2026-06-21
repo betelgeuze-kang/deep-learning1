@@ -46,7 +46,7 @@ JSONL_CONTRACTS: dict[str, list[str]] = {
 }
 
 JSON_CONTRACTS: dict[str, list[str]] = {
-    "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "cache_key", "plugin_registry_sha256", "claim_boundary"],
+    "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "output_dir_overwritten", "publish_mode", "cache_key", "plugin_registry_sha256", "claim_boundary"],
     "audit_summary.json": list(CSV_CONTRACTS["audit_summary.csv"]),
     "plugin_registry.json": ["schema_version", "tool_version", "plugins"],
     "resource_envelope.json": ["resource_envelope_ready", "tool_version", "source_files_scanned", "max_queries", "mode", "namespace", "external_network_used", "raw_prompt_context_bytes", "latency_ms", "wrong_answer_guard_rows", "claim_boundary_ready"],
@@ -312,9 +312,33 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
     return finding_rows, span_rows
 
 
-def publish_atomic(staging: Path, out_dir: Path) -> None:
+def publish_atomic(staging: Path, out_dir: Path) -> str:
+    staging_manifest = json.loads((staging / "audit_manifest.json").read_text(encoding="utf-8"))
+    existing_manifest_path = out_dir / "audit_manifest.json"
+    if existing_manifest_path.is_file():
+        existing_manifest = json.loads(existing_manifest_path.read_text(encoding="utf-8"))
+        if existing_manifest.get("cache_key") != staging_manifest.get("cache_key"):
+            raise RuntimeError(
+                "output directory already contains a different audit_manifest.json cache_key; "
+                "use a fresh --out path to preserve existing results"
+            )
+        return "idempotent-cache-hit"
+
     out_dir.mkdir(parents=True, exist_ok=True)
-    for path in sorted(staging.rglob("*")):
+    staging_paths = sorted(staging.rglob("*"))
+    conflicting_targets = [
+        out_dir / path.relative_to(staging)
+        for path in staging_paths
+        if path.is_file() and (out_dir / path.relative_to(staging)).exists()
+    ]
+    if conflicting_targets:
+        rel_conflicts = ", ".join(str(path.relative_to(out_dir)) for path in conflicting_targets[:5])
+        raise RuntimeError(
+            "refusing to overwrite existing output artifact without a matching cache_key: "
+            f"{rel_conflicts}"
+        )
+
+    for path in staging_paths:
         rel = path.relative_to(staging)
         target = out_dir / rel
         if path.is_dir():
@@ -324,6 +348,7 @@ def publish_atomic(staging: Path, out_dir: Path) -> None:
         tmp = target.with_name(f".{target.name}.tmp-{os.getpid()}")
         shutil.copy2(path, tmp)
         os.replace(tmp, target)
+    return "created"
 
 
 def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: str, max_queries: int, generator: str, namespace: str, question: str, emit_report: bool, emit_lineage: bool, emit_reproduce: bool) -> dict:
@@ -340,6 +365,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
             question,
             "Abstain: free-form user questions require exact source evidence; this alpha path records the question but does not infer an unsupported answer.",
             evidence,
+            grounded=0,
             abstain=1,
             plugin_id="user_question",
         )
@@ -500,6 +526,8 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "finding_rows": len(finding_rows),
         "atomic_publish": 1,
         "output_dir_destroyed": 0,
+        "output_dir_overwritten": 0,
+        "publish_mode": "create-or-idempotent-cache-hit",
         "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "mode": mode, "max_queries": max_queries, "namespace": namespace, "question": question, "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
         "plugin_registry_sha256": plugin_registry_sha256,
         "claim_boundary": "alpha-local-code-doc-audit-only",
@@ -603,7 +631,10 @@ def main(argv: list[str]) -> int:
     staging.mkdir(parents=True)
     try:
         summary = write_outputs(root, target, out_dir, staging, args.mode, args.max_queries, args.generator, args.namespace, args.question, args.emit_report, args.emit_lineage, args.emit_reproduce)
-        publish_atomic(staging, out_dir)
+        publish_status = publish_atomic(staging, out_dir)
+    except RuntimeError as exc:
+        print(f"publish_error: {exc}", file=sys.stderr)
+        return 2
     finally:
         shutil.rmtree(staging, ignore_errors=True)
     if args.verify_output:

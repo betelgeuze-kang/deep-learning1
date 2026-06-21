@@ -95,21 +95,31 @@ for idx in 1 2 3; do
   for file in \
     AUDIT_REPORT.md \
     ARCHITECTURE_TRACE.md \
+    abstain_rows.csv \
     accuracy_rows.csv \
     artifact_contract_rows.csv \
+    audit_findings.csv \
     audit_findings.jsonl \
     audit_manifest.json \
+    audit_summary.csv \
     audit_summary.json \
+    citation_spans.csv \
     citation_spans.jsonl \
     citation_correctness_rows.csv \
+    claim_boundary.md \
+    compact_route_hint_rows.csv \
+    grounded_generation_rows.csv \
+    mmap_read_trace.jsonl \
     prediction_lineage.jsonl \
     plugin_registry.json \
     resource_envelope.json \
     reproduce.sh \
     sha256sums.txt \
     source_manifest.csv \
+    unsupported_claim_rows.csv \
     false_positive_candidate_rows.csv \
-    latency_rows.csv
+    latency_rows.csv \
+    wrong_answer_guard_rows.csv
   do
     if [[ ! -s "$out/$file" ]]; then
       echo "missing audit product artifact for repo_$idx: $file" >&2
@@ -225,6 +235,10 @@ for idx in range(1, 4):
         raise SystemExit("audit manifest timestamp must be deterministic")
     if manifest["atomic_publish"] != 1 or manifest["output_dir_destroyed"] != 0:
         raise SystemExit("audit manifest must prove atomic non-destructive publish")
+    if manifest["output_dir_overwritten"] != 0:
+        raise SystemExit("audit manifest must prove output artifacts were not overwritten")
+    if manifest["publish_mode"] != "create-or-idempotent-cache-hit":
+        raise SystemExit("audit manifest publish mode must be no-overwrite/idempotent")
     summary = json.loads((out / "audit_summary.json").read_text(encoding="utf-8"))
     with (out / "audit_summary.csv").open(newline="", encoding="utf-8") as handle:
         summary_rows = list(csv.DictReader(handle))
@@ -291,8 +305,8 @@ for idx in range(1, 4):
     source_files = {row["file_path"] for row in source_rows}
     if not findings or not citations or not lineage:
         raise SystemExit("findings, citations, and lineage must be non-empty")
-    if not any(row["audit_type"] == "user_question" and row["abstain"] == 1 for row in findings):
-        raise SystemExit("unsupported user question must abstain")
+    if not any(row["audit_type"] == "user_question" and row["abstain"] == 1 and row["grounded"] == 0 and row["citations"] for row in findings):
+        raise SystemExit("unsupported user question must abstain without a grounded answer while keeping source context")
     if any(row["grounded"] == 1 and not row["citations"] for row in findings):
         raise SystemExit("grounded findings must have citations")
     if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") for row in citations):
