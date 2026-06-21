@@ -57,13 +57,18 @@ if "$ROOT_DIR/scripts/audit_my_repo.sh" "$TMP_DIR/missing" --out "$TMP_DIR/bad_t
   exit 12
 fi
 
+audit_log="$TMP_DIR/audit.log"
 "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
   --mode quick \
   --max-queries 12 \
   --out "$out_a" \
   --namespace fixture \
   --question "Can I ship this as production ready?" \
-  --generator routehint-tiny >/dev/null
+  --generator routehint-tiny >"$audit_log"
+if ! grep -q '^artifact_verify: ok$' "$audit_log"; then
+  echo "audit entrypoint must verify its output artifact by default" >&2
+  exit 13
+fi
 
 test "$(cat "$out_a/sentinel.txt")" = "keep"
 

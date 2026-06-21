@@ -327,22 +327,24 @@ def publish_atomic(staging: Path, out_dir: Path) -> None:
 
 def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: str, max_queries: int, generator: str, namespace: str, question: str, emit_report: bool, emit_lineage: bool, emit_reproduce: bool) -> dict:
     sources, source_rows = collect_sources(target, max_queries)
-    findings: list[Finding] = []
+    plugin_findings: list[Finding] = []
     for plugin in DEFAULT_PLUGINS:
-        findings.extend(plugin.run(target, sources))
+        plugin_findings.extend(plugin.run(target, sources))
+    question_finding: Finding | None = None
     if question:
         evidence = tuple([sources[0].path]) if sources else tuple()
-        findings.append(
-            Finding(
-                "user_question",
-                question,
-                "Abstain: free-form user questions require exact source evidence; this alpha path records the question but does not infer an unsupported answer.",
-                evidence,
-                abstain=1,
-                plugin_id="user_question",
-            )
+        question_finding = Finding(
+            "user_question",
+            question,
+            "Abstain: free-form user questions require exact source evidence; this alpha path records the question but does not infer an unsupported answer.",
+            evidence,
+            abstain=1,
+            plugin_id="user_question",
         )
-    findings = findings[:max_queries]
+    if question_finding is not None:
+        findings = plugin_findings[: max_queries - 1] + [question_finding]
+    else:
+        findings = plugin_findings[:max_queries]
     finding_rows, span_rows = build_rows(target, findings)
 
     write_csv(staging / "source_manifest.csv", ["source_id", "file_path", "sha256", "bytes", "route_memory_source"], source_rows)
@@ -467,6 +469,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
             generator,
             "--namespace",
             namespace,
+            "--verify-output",
             "--emit-report",
             "--emit-lineage",
             "--emit-reproduce",
@@ -517,7 +520,27 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--emit-report", action="store_true", default=True)
     parser.add_argument("--emit-lineage", action="store_true", default=True)
     parser.add_argument("--emit-reproduce", action="store_true", default=True)
+    parser.add_argument("--verify-output", action=argparse.BooleanOptionalAction, default=True)
     return parser.parse_args(argv)
+
+
+def verify_output_artifact(root: Path, out_dir: Path) -> int:
+    verifier = root / "tools" / "verify_artifact.py"
+    result = subprocess.run(
+        [sys.executable, str(verifier), "local-audit", str(out_dir)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
+        if result.stdout:
+            print(result.stdout.rstrip(), file=sys.stderr)
+        if result.stderr:
+            print(result.stderr.rstrip(), file=sys.stderr)
+        print(f"artifact_verify: failed ({out_dir})", file=sys.stderr)
+        return result.returncode
+    print("artifact_verify: ok")
+    return 0
 
 
 def main(argv: list[str]) -> int:
@@ -550,6 +573,10 @@ def main(argv: list[str]) -> int:
         publish_atomic(staging, out_dir)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
+    if args.verify_output:
+        verify_status = verify_output_artifact(root, out_dir)
+        if verify_status != 0:
+            return 1
     print(f"audit_report: {out_dir / 'AUDIT_REPORT.md'}")
     print(f"audit_summary: {out_dir / 'audit_summary.csv'}")
     return 0 if int(summary["wrong_answer_guard_pass_rows"]) == int(summary["wrong_answer_guard_rows"]) else 1
