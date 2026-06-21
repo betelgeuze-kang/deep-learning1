@@ -25,6 +25,16 @@ class Finding:
     unsupported_claim: int = 0
     plugin_id: str = ""
     language: str = "generic"
+    rule_ids: tuple[str, ...] = tuple()
+
+
+@dataclass(frozen=True)
+class PluginRule:
+    rule_id: str
+    language: str
+    file_suffixes: tuple[str, ...]
+    pattern_label: str
+    evidence_policy: str = "source-bound-span"
 
 
 class AuditPlugin:
@@ -33,6 +43,9 @@ class AuditPlugin:
     language = "generic"
 
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
+        raise NotImplementedError
+
+    def rules(self) -> tuple[PluginRule, ...]:
         raise NotImplementedError
 
 

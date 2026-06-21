@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def add(errors: list[str], message: str) -> None:
+    errors.append(message)
+
+
+def require(text: str, snippet: str, label: str, errors: list[str]) -> None:
+    if snippet not in text:
+        add(errors, f"{label} missing snippet: {snippet}")
+
+
+def block_after(text: str, marker: str) -> str:
+    start = text.find(marker)
+    if start < 0:
+        return ""
+    following = text[start + len(marker) :]
+    next_top = following.find("\n[a-zA-Z0-9_-]")
+    return following if next_top < 0 else following[:next_top]
+
+
+def verify_ai_verify_workflow(root: Path, errors: list[str]) -> None:
+    path = root / ".github" / "workflows" / "ai-verify.yml"
+    if not path.is_file():
+        add(errors, "missing .github/workflows/ai-verify.yml")
+        return
+    text = path.read_text(encoding="utf-8")
+    for snippet in [
+        "name: AI verify",
+        "pull_request:",
+        "branches:",
+        "- main",
+        "push:",
+        "workflow_dispatch:",
+        "contents: read",
+        "concurrency:",
+        "cancel-in-progress: true",
+        "ai-verify:",
+        "name: ai-verify.sh",
+        "runs-on: [self-hosted, linux, x64]",
+        "timeout-minutes: 30",
+        "DLE_VERIFY_ENABLE_HIP: \"OFF\"",
+        "AI_VERIFY_JOBS: \"2\"",
+        "run: ./scripts/ai-verify.sh",
+    ]:
+        require(text, snippet, str(path), errors)
+
+
+def verify_third_party_workflow(root: Path, errors: list[str]) -> None:
+    path = root / ".github" / "workflows" / "third-party-rerun.yml"
+    if not path.is_file():
+        add(errors, "missing .github/workflows/third-party-rerun.yml")
+        return
+    text = path.read_text(encoding="utf-8")
+    on_block = block_after(text, "on:\n")
+    if "workflow_dispatch:" not in on_block:
+        add(errors, "third-party workflow must be manual workflow_dispatch")
+    for forbidden in ["pull_request:", "push:"]:
+        if forbidden in on_block:
+            add(errors, f"third-party workflow must not run automatically via {forbidden}")
+    for snippet in [
+        "name: Third-party rerun return",
+        "third-party-rerun:",
+        "name: third-party-rerun-return-manual",
+        "runs-on: [self-hosted, linux, x64]",
+        "timeout-minutes: 45",
+        "if: ${{ inputs.upload_artifact == 'true' }}",
+        "uses: actions/upload-artifact@v4",
+        "retention-days: 1",
+        "GitHub Actions self-hosted runner; automated reviewer, not a GitHub-hosted clean-room rerun.",
+    ]:
+        require(text, snippet, str(path), errors)
+
+
+def main(argv: list[str]) -> int:
+    root = Path(argv[0]).resolve() if argv else Path.cwd()
+    errors: list[str] = []
+    verify_ai_verify_workflow(root, errors)
+    verify_third_party_workflow(root, errors)
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        return 1
+    print("ci workflow verify ok")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

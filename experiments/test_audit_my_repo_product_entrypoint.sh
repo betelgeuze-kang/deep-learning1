@@ -100,6 +100,7 @@ for idx in 1 2 3; do
     artifact_contract_rows.csv \
     audit_findings.csv \
     audit_findings.jsonl \
+    audit_invocation.json \
     audit_manifest.json \
     audit_summary.csv \
     audit_summary.json \
@@ -108,17 +109,22 @@ for idx in 1 2 3; do
     citation_correctness_rows.csv \
     claim_boundary.md \
     compact_route_hint_rows.csv \
+    exit_code_contract.json \
     grounded_generation_rows.csv \
     mmap_read_trace.jsonl \
     prediction_lineage.jsonl \
     plugin_registry.json \
+    plugin_rule_rows.csv \
     resource_envelope.json \
     reproduce.sh \
     sha256sums.txt \
     source_manifest.csv \
+    source_snapshot.json \
     unsupported_claim_rows.csv \
     false_positive_candidate_rows.csv \
     latency_rows.csv \
+    manual_review_queue.csv \
+    verify.sh \
     wrong_answer_guard_rows.csv
   do
     if [[ ! -s "$out/$file" ]]; then
@@ -129,8 +135,19 @@ for idx in 1 2 3; do
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out/audit_manifest.json" >/dev/null
   "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_exit_code_contract.schema.json" "$out/exit_code_contract.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_invocation.schema.json" "$out/audit_invocation.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_summary.schema.json" "$out/audit_summary.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$out/plugin_registry.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_resource_envelope.schema.json" "$out/resource_envelope.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_source_snapshot.schema.json" "$out/source_snapshot.json" >/dev/null
   "$ROOT_DIR/tools/verify_local_audit.py" "$out" >/dev/null
+  "$ROOT_DIR/scripts/audit_my_repo.sh" --verify-existing "$out" >/dev/null
 
   cp "$out/sha256sums.txt" "$out/sha256sums.first"
   "$ROOT_DIR/scripts/audit_my_repo.sh" "$TMP_DIR/repo_$idx" \
@@ -141,12 +158,15 @@ for idx in 1 2 3; do
     --question "Does this repo prove production readiness?" \
     --generator routehint-tiny >/dev/null
   cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
-  "$out/reproduce.sh" >/dev/null
+  (cd "$TMP_DIR" && "$out/reproduce.sh") >/dev/null
+  cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
+  (cd "$TMP_DIR" && "$out/verify.sh") >/dev/null
   cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
   "$ROOT_DIR/tools/verify_local_audit.py" "$out" >/dev/null
+  "$ROOT_DIR/scripts/audit_my_repo.sh" --verify-existing "$out" >/dev/null
 done
 
-python3 - "$TMP_DIR" <<'PY'
+python3 - "$TMP_DIR" "$ROOT_DIR" <<'PY'
 import csv
 import hashlib
 import json
@@ -154,6 +174,7 @@ import sys
 from pathlib import Path
 
 root = Path(sys.argv[1])
+project_root = Path(sys.argv[2]).resolve()
 
 
 def sha256(path):
@@ -162,6 +183,10 @@ def sha256(path):
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def sha256_text(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def read_contract(out):
@@ -207,10 +232,15 @@ def read_contract(out):
         "citation_spans.jsonl",
         "prediction_lineage.jsonl",
         "plugin_registry.json",
+        "plugin_rule_rows.csv",
+        "source_snapshot.json",
+        "audit_invocation.json",
+        "exit_code_contract.json",
         "audit_manifest.json",
         "audit_summary.json",
         "AUDIT_REPORT.md",
         "reproduce.sh",
+        "verify.sh",
     }
     seen = {row["artifact_path"] for row in rows}
     if not required_artifacts.issubset(seen):
@@ -229,6 +259,8 @@ for idx in range(1, 4):
     out = root / f"out_{idx}"
     repo = root / f"repo_{idx}"
     manifest = json.loads((out / "audit_manifest.json").read_text(encoding="utf-8"))
+    invocation = json.loads((out / "audit_invocation.json").read_text(encoding="utf-8"))
+    exit_contract = json.loads((out / "exit_code_contract.json").read_text(encoding="utf-8"))
     if manifest["namespace"] != "synthetic":
         raise SystemExit("generated fixture repos must stay in the synthetic namespace")
     if manifest["real_benchmark_namespace_confirmed"] != 0:
@@ -237,6 +269,22 @@ for idx in range(1, 4):
         raise SystemExit("synthetic product smoke must not promote fixture results or claim real evidence")
     if manifest["tool_version"] != "audit_my_repo_alpha.v1":
         raise SystemExit("audit manifest must expose the tool version")
+    if manifest["tool_source_sha256"] != "sha256:" + sha256(project_root / "scripts/audit_my_repo.py"):
+        raise SystemExit("audit manifest must bind the audit entrypoint source sha")
+    if invocation["tool_version"] != manifest["tool_version"]:
+        raise SystemExit("audit invocation must expose the tool version")
+    if invocation["target_repo"] != str(repo.resolve()) or invocation["out_dir"] != str(out.resolve()):
+        raise SystemExit("audit invocation must bind target repo and output directory")
+    if invocation["mode"] != "quick" or invocation["max_queries"] != 12 or invocation["generator"] != "routehint-tiny":
+        raise SystemExit("audit invocation must bind resolved execution options")
+    if invocation["namespace"] != "synthetic" or invocation["real_benchmark_namespace_confirmed"] != 0:
+        raise SystemExit("audit invocation must bind namespace confirmation")
+    if invocation["verify_output_requested"] != 1:
+        raise SystemExit("audit invocation must record default verify-output")
+    if exit_contract["success_exit_code"] != 0 or exit_contract["artifact_verify_failure_exit_code"] != 1:
+        raise SystemExit("exit code contract must bind success and verify failure codes")
+    if exit_contract["input_or_publish_error_exit_code"] != 2:
+        raise SystemExit("exit code contract must bind input/publish error code")
     if manifest["generated_at_utc"] != "1970-01-01T00:00:00+00:00":
         raise SystemExit("audit manifest timestamp must be deterministic")
     if manifest["atomic_publish"] != 1 or manifest["output_dir_destroyed"] != 0:
@@ -276,7 +324,7 @@ for idx in range(1, 4):
         raise SystemExit("plugin registry schema version mismatch")
     if plugin_registry["tool_version"] != "audit_my_repo_alpha.v1":
         raise SystemExit("plugin registry tool version mismatch")
-    if plugin_ids != {"doc_code_identity", "deprecated_api", "config_consistency", "unsupported_claim", "missing_evidence"}:
+    if plugin_ids != {"doc_code_identity", "deprecated_api", "config_consistency", "unsupported_claim", "missing_evidence", "user_question"}:
         raise SystemExit("plugin registry must bind the deterministic plugin set")
     expected_plugin_modules = {
         "doc_code_identity": "auditor_plugin_doc_code_identity",
@@ -284,12 +332,42 @@ for idx in range(1, 4):
         "config_consistency": "auditor_plugin_config_consistency",
         "unsupported_claim": "auditor_plugin_unsupported_claim",
         "missing_evidence": "auditor_plugin_missing_evidence",
+        "user_question": "auditor_plugin_user_question",
     }
     if {row["plugin_id"]: row.get("module") for row in plugin_registry["plugins"]} != expected_plugin_modules:
         raise SystemExit("plugin registry must bind each deterministic plugin to its module")
+    expected_plugin_source_paths = {
+        plugin_id: f"scripts/{module}.py"
+        for plugin_id, module in expected_plugin_modules.items()
+    }
+    if {row["plugin_id"]: row.get("source_path") for row in plugin_registry["plugins"]} != expected_plugin_source_paths:
+        raise SystemExit("plugin registry must bind each deterministic plugin to its source path")
+    for row in plugin_registry["plugins"]:
+        source_path = project_root / row["source_path"]
+        if row.get("source_sha256") != "sha256:" + sha256(source_path):
+            raise SystemExit(f"plugin registry source sha mismatch: {row['plugin_id']}")
     plugin_registry_sha256 = "sha256:" + sha256(out / "plugin_registry.json")
     if manifest["plugin_registry_sha256"] != plugin_registry_sha256:
         raise SystemExit("audit manifest must bind plugin_registry.json sha256")
+    with (out / "plugin_rule_rows.csv").open(newline="", encoding="utf-8") as handle:
+        plugin_rule_rows = list(csv.DictReader(handle))
+    if not plugin_rule_rows:
+        raise SystemExit("plugin rule rows must be emitted")
+    rule_plugin_ids = {row["plugin_id"] for row in plugin_rule_rows}
+    if rule_plugin_ids != plugin_ids:
+        raise SystemExit("plugin rule rows must cover every registered plugin")
+    deprecated_rule_languages = {
+        row["language"]
+        for row in plugin_rule_rows
+        if row["plugin_id"] == "deprecated_api"
+    }
+    if not {"python", "cpp", "javascript"}.issubset(deprecated_rule_languages):
+        raise SystemExit("deprecated_api rules must expose python/cpp/javascript coverage")
+    if any(row["evidence_policy"] not in {"source-bound-span", "abstain-when-missing-source-bound-span"} for row in plugin_rule_rows):
+        raise SystemExit("plugin rule rows must bind a replayable evidence policy")
+    plugin_rule_ids = {}
+    for row in plugin_rule_rows:
+        plugin_rule_ids.setdefault(row["plugin_id"], set()).add(row["rule_id"])
     if summary["real_release_package_ready"] != 0 or summary["public_comparison_claim_ready"] != 0:
         raise SystemExit("audit product smoke must keep release/comparison claims blocked")
     if summary["latency_ms"] != 0:
@@ -301,6 +379,7 @@ for idx in range(1, 4):
     findings = [json.loads(line) for line in (out / "audit_findings.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     citations = [json.loads(line) for line in (out / "citation_spans.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     lineage = [json.loads(line) for line in (out / "prediction_lineage.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    mmap_rows = [json.loads(line) for line in (out / "mmap_read_trace.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     for csv_name, jsonl_rows in [
         ("audit_findings.csv", findings),
         ("citation_spans.csv", citations),
@@ -317,15 +396,47 @@ for idx in range(1, 4):
                     raise SystemExit(f"{csv_name} drift: {key}")
     with (out / "source_manifest.csv").open(newline="", encoding="utf-8") as handle:
         source_rows = list(csv.DictReader(handle))
+    source_snapshot = json.loads((out / "source_snapshot.json").read_text(encoding="utf-8"))
     source_files = {row["file_path"] for row in source_rows}
     if not findings or not citations or not lineage:
         raise SystemExit("findings, citations, and lineage must be non-empty")
     if not any(row["audit_type"] == "user_question" and row["abstain"] == 1 and row["grounded"] == 0 and row["citations"] for row in findings):
         raise SystemExit("unsupported user question must abstain without a grounded answer while keeping source context")
+    for row in findings:
+        rule_ids = [cell for cell in str(row.get("plugin_rule_ids", "")).split("|") if cell]
+        if not rule_ids:
+            raise SystemExit(f"finding must bind plugin rule provenance: {row['finding_id']}")
+        if set(rule_ids) - plugin_rule_ids.get(row["plugin_id"], set()):
+            raise SystemExit(f"finding references plugin rules outside its plugin: {row['finding_id']}")
     if any(row["grounded"] == 1 and not row["citations"] for row in findings):
         raise SystemExit("grounded findings must have citations")
-    if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") for row in citations):
-        raise SystemExit("citation rows must bind line numbers and sha256")
+    if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") or not row["span_sha256"].startswith("sha256:") for row in citations):
+        raise SystemExit("citation rows must bind line numbers, file sha256, and span sha256")
+    citation_trace_keys = {
+        (row["finding_id"], row["file_path"], str(row["line_start"]), row["sha256"], row["span_sha256"])
+        for row in citations
+    }
+    mmap_trace_keys = {
+        (row["finding_id"], row["file_path"], str(row["line_start"]), row["sha256"], row["span_sha256"])
+        for row in mmap_rows
+    }
+    if mmap_trace_keys != citation_trace_keys or len(mmap_rows) != len(citations):
+        raise SystemExit("mmap trace rows must exactly bind every citation span hash")
+    citation_by_finding_cell = {
+        (row["finding_id"], f"{row['file_path']}:{row['line_start']}"): row
+        for row in citations
+    }
+    for row in findings:
+        finding_cells = [cell for cell in str(row.get("citations", "")).split(";") if cell]
+        finding_sha256s = [cell for cell in str(row.get("citation_sha256s", "")).split(";") if cell]
+        if len(finding_cells) != len(finding_sha256s):
+            raise SystemExit(f"finding citation sha count drift: {row['finding_id']}")
+        for cell, digest in zip(finding_cells, finding_sha256s):
+            citation = citation_by_finding_cell.get((row["finding_id"], cell))
+            if citation is None:
+                raise SystemExit(f"finding citation has no span row: {row['finding_id']} {cell}")
+            if digest != citation["sha256"]:
+                raise SystemExit(f"finding citation sha drift: {row['finding_id']} {cell}")
     for row in citations:
         cited = repo / row["file_path"]
         if row["file_path"] not in source_files:
@@ -340,6 +451,9 @@ for idx in range(1, 4):
             raise SystemExit(f"citation line is out of range: {row['file_path']}:{line_start}")
         if row["span_text_preview"] != source_lines[line_start - 1].strip()[:280]:
             raise SystemExit(f"citation preview does not match source line: {row['file_path']}:{line_start}")
+        span_text = "\n".join(line.strip() for line in source_lines[line_start - 1:int(row["line_end"])])
+        if row["span_sha256"] != "sha256:" + sha256_text(span_text):
+            raise SystemExit(f"citation span sha does not match source line: {row['file_path']}:{line_start}")
     with (out / "wrong_answer_guard_rows.csv").open(newline="", encoding="utf-8") as handle:
         guards = list(csv.DictReader(handle))
     if not guards or any(row["wrong_answer_guard_pass"] != "1" for row in guards):
@@ -352,6 +466,14 @@ for idx in range(1, 4):
         citation_rows = list(csv.DictReader(handle))
     if not citation_rows or any(row["manual_citation_review_required"] != "1" for row in citation_rows):
         raise SystemExit("citation correctness rows must require manual review")
+    with (out / "manual_review_queue.csv").open(newline="", encoding="utf-8") as handle:
+        manual_review_rows = list(csv.DictReader(handle))
+    if {row["finding_id"] for row in manual_review_rows} != {row["finding_id"] for row in findings}:
+        raise SystemExit("manual review queue must contain exactly one row per finding")
+    if summary["manual_review_queue_rows"] != len(manual_review_rows):
+        raise SystemExit("manual review queue summary row count must match the CSV")
+    if any(row["manual_review_required"] != "1" or row["auto_promoted"] != "0" for row in manual_review_rows):
+        raise SystemExit("manual review queue must require review and forbid auto-promotion")
     source_sets.append(tuple(sorted(source_files)))
     if expected_sources[idx] not in source_files:
         raise SystemExit(f"repo_{idx} source manifest missing expected source: {expected_sources[idx]}")
@@ -367,15 +489,37 @@ for idx in range(1, 4):
             raise SystemExit(f"source manifest byte count mismatch: {row['file_path']}")
         if row["route_memory_source"] != "1":
             raise SystemExit(f"source manifest route_memory_source mismatch: {row['file_path']}")
+    if source_snapshot["schema_version"] != "local_repo_audit_source_snapshot.v1":
+        raise SystemExit("source snapshot schema_version mismatch")
+    if source_snapshot["tool_version"] != manifest["tool_version"]:
+        raise SystemExit("source snapshot tool_version mismatch")
+    if source_snapshot["target_repo"] != str(repo.resolve()):
+        raise SystemExit("source snapshot target repo mismatch")
+    if source_snapshot["source_manifest_sha256"] != "sha256:" + sha256(out / "source_manifest.csv"):
+        raise SystemExit("source snapshot must bind source_manifest.csv sha256")
+    if source_snapshot["source_file_count"] != len(source_rows):
+        raise SystemExit("source snapshot source_file_count mismatch")
+    if source_snapshot["git_available"] != 1:
+        raise SystemExit("source snapshot must record git availability for product smoke repos")
+    if source_snapshot["git_dirty"] != 0:
+        raise SystemExit("source snapshot must record clean product smoke repos")
+    if len(source_snapshot["git_head"]) != 40:
+        raise SystemExit("source snapshot must record the git HEAD sha")
     expected_cache_key = hashlib.sha256(json.dumps({
         "tool_version": "audit_my_repo_alpha.v1",
+        "tool_source_sha256": "sha256:" + sha256(project_root / "scripts/audit_my_repo.py"),
         "target": str((root / f"repo_{idx}").resolve()),
         "source": [(row["file_path"], row["sha256"]) for row in source_rows],
+        "source_snapshot": source_snapshot,
         "mode": "quick",
         "max_queries": 12,
         "namespace": "synthetic",
         "real_benchmark_namespace_confirmed": 0,
         "question": "Does this repo prove production readiness?",
+        "verify_output_requested": 1,
+        "emit_report_requested": 1,
+        "emit_lineage_requested": 1,
+        "emit_reproduce_requested": 1,
         "plugin_registry_sha256": plugin_registry_sha256,
     }, sort_keys=True).encode("utf-8")).hexdigest()
     if manifest["cache_key"] != expected_cache_key:
@@ -390,14 +534,20 @@ for idx in range(1, 4):
         "ARCHITECTURE_TRACE.md",
         "accuracy_rows.csv",
         "artifact_contract_rows.csv",
+        "audit_invocation.json",
         "audit_manifest.json",
         "audit_summary.json",
         "audit_findings.jsonl",
         "citation_spans.jsonl",
         "citation_correctness_rows.csv",
+        "exit_code_contract.json",
+        "manual_review_queue.csv",
         "prediction_lineage.jsonl",
         "plugin_registry.json",
+        "plugin_rule_rows.csv",
+        "source_snapshot.json",
         "reproduce.sh",
+        "verify.sh",
     ]:
         if manifest_rows.get(rel) != sha256(out / rel):
             raise SystemExit(f"sha256 mismatch: {rel}")
@@ -407,6 +557,9 @@ for idx in range(1, 4):
     reproduce_text = (out / "reproduce.sh").read_text(encoding="utf-8")
     if "--question 'Does this repo prove production readiness?'" not in reproduce_text:
         raise SystemExit("reproduce.sh must preserve the user question")
+    verify_text = (out / "verify.sh").read_text(encoding="utf-8")
+    if f"--verify-existing {out}" not in verify_text:
+        raise SystemExit("verify.sh must preserve the output directory verification command")
 if len(set(source_sets)) != 3:
     raise SystemExit("product smoke must exercise three distinct unseen local repository shapes")
 PY

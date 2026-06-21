@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from auditor_plugins import AuditPlugin, Finding, SourceFile, _first_existing
+from auditor_plugins import AuditPlugin, Finding, PluginRule, SourceFile, _first_existing
 
 
 class UnsupportedClaimPlugin(AuditPlugin):
@@ -20,6 +20,16 @@ class UnsupportedClaimPlugin(AuditPlugin):
         "human-level",
         "frontier",
     )
+
+    def rules(self) -> tuple[PluginRule, ...]:
+        return (
+            PluginRule(
+                rule_id="unsupported-claim-readiness-capability-wording",
+                language="generic",
+                file_suffixes=(".md", ".txt", ".py", ".toml", ".json", ".js", ".ts", ".cpp", ".hpp", ".c", ".h"),
+                pattern_label="readiness/capability claim terms",
+            ),
+        )
 
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
         hits: list[Path] = []
@@ -43,6 +53,7 @@ class UnsupportedClaimPlugin(AuditPlugin):
                     severity="high",
                     unsupported_claim=1,
                     plugin_id=self.plugin_id,
+                    rule_ids=("unsupported-claim-readiness-capability-wording",),
                 )
             ]
         evidence = (_first_existing(repo, ["README.md"]) or sources[0].path,) if sources else tuple()
@@ -55,5 +66,6 @@ class UnsupportedClaimPlugin(AuditPlugin):
                 ("README",),
                 abstain=1,
                 plugin_id=self.plugin_id,
+                rule_ids=("unsupported-claim-readiness-capability-wording",),
             )
         ]

@@ -14,8 +14,8 @@
     "tool_version": {"const": "audit_my_repo_alpha.v1"},
     "plugins": {
       "type": "array",
-      "minItems": 5,
-      "maxItems": 5,
+      "minItems": 6,
+      "maxItems": 6,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -23,7 +23,9 @@
           "plugin_id",
           "audit_type",
           "language",
-          "module"
+          "module",
+          "source_path",
+          "source_sha256"
         ],
         "properties": {
           "plugin_id": {
@@ -33,7 +35,8 @@
               "deprecated_api",
               "config_consistency",
               "unsupported_claim",
-              "missing_evidence"
+              "missing_evidence",
+              "user_question"
             ]
           },
           "audit_type": {
@@ -43,7 +46,8 @@
               "deprecated_api",
               "config_consistency",
               "unsupported_claim",
-              "missing_evidence"
+              "missing_evidence",
+              "user_question"
             ]
           },
           "language": {"type": "string", "enum": ["generic", "multi"]},
@@ -54,8 +58,24 @@
               "auditor_plugin_deprecated_api",
               "auditor_plugin_config_consistency",
               "auditor_plugin_unsupported_claim",
-              "auditor_plugin_missing_evidence"
+              "auditor_plugin_missing_evidence",
+              "auditor_plugin_user_question"
             ]
+          },
+          "source_path": {
+            "type": "string",
+            "enum": [
+              "scripts/auditor_plugin_doc_code_identity.py",
+              "scripts/auditor_plugin_deprecated_api.py",
+              "scripts/auditor_plugin_config_consistency.py",
+              "scripts/auditor_plugin_unsupported_claim.py",
+              "scripts/auditor_plugin_missing_evidence.py",
+              "scripts/auditor_plugin_user_question.py"
+            ]
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
           }
         }
       }

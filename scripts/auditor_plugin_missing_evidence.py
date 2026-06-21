@@ -2,12 +2,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from auditor_plugins import AuditPlugin, Finding, SourceFile, _first_existing, _first_file_under
+from auditor_plugins import AuditPlugin, Finding, PluginRule, SourceFile, _first_existing, _first_file_under
 
 
 class MissingEvidencePlugin(AuditPlugin):
     plugin_id = "missing_evidence"
     audit_type = "missing_evidence"
+
+    def rules(self) -> tuple[PluginRule, ...]:
+        return (
+            PluginRule(
+                rule_id="missing-evidence-local-results-docs-surface",
+                language="generic",
+                file_suffixes=("evidence/", "results/", "docs/"),
+                pattern_label="local evidence surface presence",
+                evidence_policy="abstain-when-missing-source-bound-span",
+            ),
+        )
 
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
         evidence_dirs = [repo / "evidence", repo / "results", repo / "docs"]
@@ -23,6 +34,7 @@ class MissingEvidencePlugin(AuditPlugin):
                     ("README", "evidence", "results", "docs"),
                     abstain=1,
                     plugin_id=self.plugin_id,
+                    rule_ids=("missing-evidence-local-results-docs-surface",),
                 )
             ]
         return [
@@ -37,5 +49,6 @@ class MissingEvidencePlugin(AuditPlugin):
                 )[:2] or evidence,
                 ("evidence", "results", "docs"),
                 plugin_id=self.plugin_id,
+                rule_ids=("missing-evidence-local-results-docs-surface",),
             )
         ]

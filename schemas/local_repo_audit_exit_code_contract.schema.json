@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_exit_code_contract.schema.json",
+  "title": "Local repo audit exit code contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "success_exit_code",
+    "artifact_verify_failure_exit_code",
+    "input_or_publish_error_exit_code",
+    "wrong_answer_guard_failure_exit_code",
+    "stable_exit_code_policy"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_exit_code_contract.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "success_exit_code": {"const": 0},
+    "artifact_verify_failure_exit_code": {"const": 1},
+    "input_or_publish_error_exit_code": {"const": 2},
+    "wrong_answer_guard_failure_exit_code": {"const": 1},
+    "stable_exit_code_policy": {"const": "0=verified-success,1=artifact-or-guard-failure,2=input-or-publish-error"}
+  }
+}
