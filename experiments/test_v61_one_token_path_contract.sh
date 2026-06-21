@@ -518,6 +518,22 @@ elif mode == "topk_ids_bad":
     values["candidate_top_k_token_ids"] = "1|2|3|4|9"
 elif mode == "topk_count_bad":
     values["top_k_token_count"] = "4"
+elif mode == "topk_oob_bad":
+    values["vocab_size"] = "3"
+    values["logit_count"] = "3"
+elif mode == "candidate_topk_token_oob_bad":
+    values["vocab_size"] = "6"
+    values["logit_count"] = "6"
+    values["candidate_top_k_token_ids"] = "1|2|3|4|6"
+elif mode == "reference_topk_token_oob_bad":
+    values["vocab_size"] = "6"
+    values["logit_count"] = "6"
+    values["reference_top_k_token_ids"] = "1|2|3|4|6"
+elif mode == "topk_duplicate_bad":
+    values["candidate_top_k_token_ids"] = "1|2|2|4|5"
+    values["reference_top_k_token_ids"] = "1|2|2|4|5"
+elif mode == "reference_topk_duplicate_bad":
+    values["reference_top_k_token_ids"] = "1|2|2|4|5"
 elif mode == "candidate_logits_hash_bad":
     values["candidate_logits_sha256"] = "sha256:" + "z" * 64
 elif mode == "mean_bad":
@@ -559,6 +575,51 @@ rm -f "$LOGITS_ROWS"
 write_bad_logits_row topk_count_bad
 expect_fail_with \
   "logits_parity_pass=1 requires candidate_top_k_token_ids length to equal top_k_token_count" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row topk_oob_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires top_k_token_count <= vocab_size" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row candidate_topk_token_oob_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires candidate_top_k_token_ids < vocab_size" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row reference_topk_token_oob_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires reference_top_k_token_ids < vocab_size" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row topk_duplicate_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires unique candidate_top_k_token_ids" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row reference_topk_duplicate_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires unique reference_top_k_token_ids" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"

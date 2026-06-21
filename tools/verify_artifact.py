@@ -2734,6 +2734,15 @@ def _compute_v61_logits_parity_ready(
         parsed_ints[field] = parsed
     if parsed_ints.get("vocab_size") != parsed_ints.get("logit_count"):
         local_errors.append(f"{label} requires logit_count to equal vocab_size")
+    vocab_size = parsed_ints.get("vocab_size")
+    if vocab_size is not None:
+        for field in ["token_id", "top1_token_id", "reference_top1_token_id"]:
+            token_id = parsed_ints.get(field)
+            if token_id is not None and token_id >= vocab_size:
+                local_errors.append(f"{label} requires {field} < vocab_size")
+    top_k_token_count = parsed_ints.get("top_k_token_count")
+    if top_k_token_count is not None and vocab_size is not None and top_k_token_count > vocab_size:
+        local_errors.append(f"{label} requires top_k_token_count <= vocab_size")
     for field in [
         "moe_block_artifact_sha256",
         "tokenizer_input_sha256",
@@ -2752,11 +2761,20 @@ def _compute_v61_logits_parity_ready(
         local_errors.append(f"{label} requires parseable candidate_top_k_token_ids")
     if reference_top_k is None:
         local_errors.append(f"{label} requires parseable reference_top_k_token_ids")
-    top_k_token_count = parsed_ints.get("top_k_token_count")
     if candidate_top_k is not None and top_k_token_count is not None and len(candidate_top_k) != top_k_token_count:
         local_errors.append(f"{label} requires candidate_top_k_token_ids length to equal top_k_token_count")
     if reference_top_k is not None and top_k_token_count is not None and len(reference_top_k) != top_k_token_count:
         local_errors.append(f"{label} requires reference_top_k_token_ids length to equal top_k_token_count")
+    if candidate_top_k is not None:
+        if len(set(candidate_top_k)) != len(candidate_top_k):
+            local_errors.append(f"{label} requires unique candidate_top_k_token_ids")
+        if vocab_size is not None and any(token_id >= vocab_size for token_id in candidate_top_k):
+            local_errors.append(f"{label} requires candidate_top_k_token_ids < vocab_size")
+    if reference_top_k is not None:
+        if len(set(reference_top_k)) != len(reference_top_k):
+            local_errors.append(f"{label} requires unique reference_top_k_token_ids")
+        if vocab_size is not None and any(token_id >= vocab_size for token_id in reference_top_k):
+            local_errors.append(f"{label} requires reference_top_k_token_ids < vocab_size")
     if candidate_top_k is not None and reference_top_k is not None and candidate_top_k != reference_top_k:
         local_errors.append(f"{label} requires candidate_top_k_token_ids to match reference_top_k_token_ids")
     if not math.isfinite(max_abs_delta_value) or not math.isfinite(mean_abs_delta_value) or not math.isfinite(tolerance_value):
