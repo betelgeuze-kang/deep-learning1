@@ -171,10 +171,14 @@ if module.EXPECTED_TYPED_READINESS_CONTRACTS != expected_contracts:
     raise SystemExit("EXPECTED_TYPED_READINESS_CONTRACTS must be derived from schema x-contract.expected_rows")
 
 leakage_schema = json.loads((root / "schemas" / "leakage_contract.schema.json").read_text(encoding="utf-8"))
+leakage_stage_schema = leakage_schema["properties"]["stage_contracts"]["items"]
+leakage_optional_stage_keys = set(leakage_stage_schema["properties"]) - set(leakage_stage_schema["required"])
 expected_leakage_stages = {
     row["stage_id"]: row
     for row in leakage_schema["x-contract"]["expected_stage_contracts"]
 }
+if module.OPTIONAL_LEAKAGE_STAGE_KEYS != leakage_optional_stage_keys:
+    raise SystemExit("OPTIONAL_LEAKAGE_STAGE_KEYS must be derived from schema stage_contracts.items.properties")
 if module.EXPECTED_LEAKAGE_STAGE_CONTRACTS != expected_leakage_stages:
     raise SystemExit("EXPECTED_LEAKAGE_STAGE_CONTRACTS must be derived from schema x-contract.expected_stage_contracts")
 

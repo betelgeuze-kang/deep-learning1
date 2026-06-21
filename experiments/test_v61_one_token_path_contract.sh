@@ -20,6 +20,9 @@ cleanup() {
   if [ -n "${V61AB_METRIC_ROWS:-}" ] && [ -n "${V61AB_METRIC_BACKUP:-}" ] && [ -f "$V61AB_METRIC_BACKUP" ]; then
     cp "$V61AB_METRIC_BACKUP" "$V61AB_METRIC_ROWS" 2>/dev/null || true
   fi
+  if [ -n "${V61AA_METRIC_ROWS:-}" ] && [ -n "${V61AA_METRIC_BACKUP:-}" ] && [ -f "$V61AA_METRIC_BACKUP" ]; then
+    cp "$V61AA_METRIC_BACKUP" "$V61AA_METRIC_ROWS" 2>/dev/null || true
+  fi
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
@@ -169,6 +172,33 @@ expect_fail_with \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 cp "$V61AB_METRIC_BACKUP" "$V61AB_METRIC_ROWS"
+
+V61AA_METRIC_ROWS="$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier/verify_001/hotset_tensor_slice_metric_rows.csv"
+V61AA_METRIC_BACKUP="$TMP_DIR/hotset_tensor_slice_metric_rows.csv.bak"
+cp "$V61AA_METRIC_ROWS" "$V61AA_METRIC_BACKUP"
+python3 - "$V61AA_METRIC_ROWS" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["tensor_slice_rows"] = "0"
+rows[0]["bf16_tensor_slice_stats_ready"] = "1"
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "tensor_slice_rows expected 16, got 0" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+cp "$V61AA_METRIC_BACKUP" "$V61AA_METRIC_ROWS"
 
 bad_json() {
   local name="$1"

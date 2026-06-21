@@ -145,9 +145,10 @@ REQUIRED_LEAKAGE_KEYS = schema_required("leakage_contract.schema.json")
 REQUIRED_LEAKAGE_POLICY_KEYS = schema_required_at("leakage_contract.schema.json", "properties", "policy")
 REQUIRED_LEAKAGE_SURFACE_KEYS = schema_required_at("leakage_contract.schema.json", "properties", "forbidden_surfaces", "items")
 REQUIRED_LEAKAGE_STAGE_KEYS = schema_required_at("leakage_contract.schema.json", "properties", "stage_contracts", "items")
-OPTIONAL_LEAKAGE_STAGE_KEYS = {
-    "forbidden_field_summary",
-}
+OPTIONAL_LEAKAGE_STAGE_KEYS = (
+    schema_properties_at("leakage_contract.schema.json", "properties", "stage_contracts", "items")
+    - REQUIRED_LEAKAGE_STAGE_KEYS
+)
 REQUIRED_BASELINE_ADMISSION_KEYS = schema_required("baseline_admission.schema.json")
 REQUIRED_BASELINE_LEDGER_KEYS = schema_required_at("baseline_admission.schema.json", "properties", "required_pm_ledgers", "items")
 REQUIRED_BASELINE_SYSTEM_KEYS = schema_required_at("baseline_admission.schema.json", "properties", "systems", "items")
@@ -2461,6 +2462,7 @@ def verify_v61_one_token_path(
     summaries: dict[str, dict[str, str]] = {}
     if v61aa_summary is not None:
         summaries["v61aa"] = read_first_csv(v61aa_summary)
+        errors.extend(verify_v61aa_hotset_tensor_slice(v61aa_summary))
     if v61ab_summary is not None:
         summaries["v61ab"] = read_first_csv(v61ab_summary)
         errors.extend(verify_v61ab_tile_probe(v61ab_summary))
@@ -3029,6 +3031,128 @@ def _manifest_expect(manifest_path: Path, manifest: dict[str, object], field: st
     actual = manifest.get(field)
     if actual != expected:
         errors.append(f"{manifest_path}: {field} expected {expected}, got {actual}")
+
+
+def verify_v61aa_hotset_tensor_slice(summary_path: Path, run_dir: Path | None = None) -> list[str]:
+    errors: list[str] = []
+    summary = read_first_csv(summary_path)
+    if not summary:
+        return [f"{summary_path}: missing v61aa summary row"]
+    resolved_run_dir = run_dir or summary_path.parent / "v61aa_hotset_tensor_slice_verifier" / "verify_001"
+    required_paths = {
+        "slice": resolved_run_dir / "hotset_tensor_slice_stat_rows.csv",
+        "sample": resolved_run_dir / "hotset_tensor_slice_sample_value_rows.csv",
+        "metric": resolved_run_dir / "hotset_tensor_slice_metric_rows.csv",
+        "manifest": resolved_run_dir / "v61aa_hotset_tensor_slice_verifier_manifest.json",
+    }
+    for label, path in required_paths.items():
+        if not path.is_file() or path.stat().st_size == 0:
+            errors.append(f"{path}: missing non-empty v61aa {label} artifact")
+    if errors:
+        return errors
+
+    slice_rows = read_csv_rows(required_paths["slice"])
+    sample_rows = read_csv_rows(required_paths["sample"])
+    metric_rows = read_csv_rows(required_paths["metric"])
+    if len(metric_rows) != 1:
+        errors.append(f"{required_paths['metric']}: expected exactly one metric row, got {len(metric_rows)}")
+        return errors
+    metric = metric_rows[0]
+    manifest_path = required_paths["manifest"]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        return [f"{manifest_path}: expected JSON object manifest"]
+
+    slice_count = len(slice_rows)
+    sample_count = len(sample_rows)
+    moe_rows = 0
+    embedding_rows = 0
+    segment_bytes = 0
+    sampled_values = 0
+    finite_values = 0
+    nan_values = 0
+    inf_values = 0
+    nonzero_values = 0
+    hash_match_rows = 0
+    stats_ready_rows = 0
+    for index, row in enumerate(slice_rows, start=1):
+        prefix = f"{required_paths['slice']}: row {index}"
+        moe_rows += int(row.get("moe_expert_page") == "1")
+        embedding_rows += int(row.get("embedding_page") == "1")
+        if row.get("dtype") != "BF16":
+            errors.append(f"{prefix}: dtype must be BF16")
+        if row.get("segment_hash_bound_to_remote_page") != "1":
+            errors.append(f"{prefix}: segment_hash_bound_to_remote_page must be 1")
+        if row.get("direct_read_hash_match") != "1":
+            errors.append(f"{prefix}: direct_read_hash_match must be 1")
+        if row.get("checkpoint_payload_bytes_committed_to_repo") != "0":
+            errors.append(f"{prefix}: checkpoint_payload_bytes_committed_to_repo must be 0")
+        if row.get("actual_model_generation_ready") != "0":
+            errors.append(f"{prefix}: actual_model_generation_ready must be 0")
+        try:
+            segment_bytes += int(row.get("tensor_segment_bytes", ""))
+            sampled_values += int(row.get("sampled_bf16_values", ""))
+            finite_values += int(row.get("sampled_finite_values", ""))
+            nan_values += int(row.get("sampled_nan_values", ""))
+            inf_values += int(row.get("sampled_inf_values", ""))
+            nonzero_values += int(row.get("sampled_nonzero_values", ""))
+        except ValueError:
+            errors.append(f"{prefix}: tensor segment/sample counts must be integers")
+        hash_match_rows += int(row.get("segment_hash_bound_to_remote_page") == "1" and row.get("direct_read_hash_match") == "1")
+        stats_ready_rows += int(row.get("bf16_tensor_slice_stats_ready") == "1")
+    for index, row in enumerate(sample_rows, start=1):
+        if row.get("checkpoint_payload_bytes_committed_to_repo", "0") != "0":
+            errors.append(f"{required_paths['sample']}: row {index} checkpoint_payload_bytes_committed_to_repo must be 0")
+
+    numeric_ready = int(
+        slice_count == 16
+        and sample_count == sampled_values
+        and moe_rows == 15
+        and embedding_rows == 1
+        and finite_values == sampled_values
+        and nan_values == 0
+        and inf_values == 0
+        and hash_match_rows == slice_count
+        and stats_ready_rows == slice_count
+    )
+    expected = {
+        "v61aa_hotset_tensor_slice_verifier_ready": str(numeric_ready),
+        "v61z_hotset_direct_io_replay_ready": "1",
+        "v61v_remote_page_tensor_binding_ready": "1",
+        "model_id": "mistralai/Mixtral-8x22B-v0.1",
+        "tensor_slice_rows": str(slice_count),
+        "moe_tensor_slice_rows": str(moe_rows),
+        "embedding_tensor_slice_rows": str(embedding_rows),
+        "tensor_segment_bytes_bound": str(segment_bytes),
+        "sampled_bf16_value_rows": str(sampled_values),
+        "sampled_bf16_finite_rows": str(finite_values),
+        "sampled_bf16_nan_rows": str(nan_values),
+        "sampled_bf16_inf_rows": str(inf_values),
+        "sampled_bf16_nonzero_rows": str(nonzero_values),
+        "slice_hash_match_rows": str(hash_match_rows),
+        "bf16_tensor_slice_stats_ready": str(numeric_ready),
+        "checkpoint_payload_bytes_committed_to_repo": "0",
+        "full_checkpoint_materialization_ready": "0",
+        "full_safetensors_page_hash_binding_ready": "0",
+        "actual_model_generation_ready": "0",
+        "near_frontier_claim_ready": "0",
+        "production_latency_claim_ready": "0",
+        "real_release_package_ready": "0",
+        "route_jump_rows": "0",
+    }
+    for field, value in expected.items():
+        _summary_expect(summary_path, summary, field, value, errors)
+        if field in metric:
+            actual = metric.get(field)
+            if actual != value:
+                errors.append(f"{required_paths['metric']}: {field} expected {value}, got {actual}")
+
+    _manifest_expect(manifest_path, manifest, "v61aa_hotset_tensor_slice_verifier_ready", numeric_ready, errors)
+    _manifest_expect(manifest_path, manifest, "tensor_slice_rows", slice_count, errors)
+    _manifest_expect(manifest_path, manifest, "sampled_bf16_value_rows", sampled_values, errors)
+    _manifest_expect(manifest_path, manifest, "bf16_tensor_slice_stats_ready", numeric_ready, errors)
+    _manifest_expect(manifest_path, manifest, "actual_model_generation_ready", 0, errors)
+    return errors
 
 
 def verify_v61ab_tile_probe(summary_path: Path, run_dir: Path | None = None) -> list[str]:
