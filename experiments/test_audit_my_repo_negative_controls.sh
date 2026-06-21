@@ -95,6 +95,11 @@ expect_audit_exit 2 "target repo must be required for audit execution" --out "$T
 expect_audit_exit 2 "unsupported generator must fail with stable usage exit code" "$repo" --generator unsupported --out "$TMP_DIR/bad_generator"
 expect_audit_exit 2 "non-positive max queries must fail with stable usage exit code" "$repo" --max-queries 0 --out "$TMP_DIR/bad_queries"
 expect_audit_exit 2 "missing target repo must fail with stable usage exit code" "$TMP_DIR/missing" --out "$TMP_DIR/bad_target"
+expect_audit_exit 2 "output path inside audited repo must fail before publish" "$repo" --out "$repo/audit-output"
+if [[ -e "$repo/audit-output" ]] || compgen -G "$repo/.audit-output.staging-*" >/dev/null; then
+  echo "audit entrypoint must not create output or staging directories inside the audited repo" >&2
+  exit 9
+fi
 expect_audit_exit 2 "real_benchmark namespace must require explicit confirmation" "$repo" --namespace real_benchmark --out "$TMP_DIR/bad_real_namespace"
 "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
   --mode quick \

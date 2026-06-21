@@ -619,6 +619,9 @@ def main(argv: list[str]) -> int:
     if not target.is_dir():
         print(f"target repo is not a directory: {target}", file=sys.stderr)
         return 2
+    if out_dir == target or target in out_dir.parents:
+        print("refusing --out inside target repo; use an output path outside the audited repository", file=sys.stderr)
+        return 2
     if args.generator != "routehint-tiny":
         print("only --generator routehint-tiny is supported in the alpha path", file=sys.stderr)
         return 2
