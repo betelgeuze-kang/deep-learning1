@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_output.schema.json",
+  "title": "Local repo audit output manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "generated_at_utc",
+    "target_repo",
+    "namespace",
+    "source_file_count",
+    "finding_rows",
+    "atomic_publish",
+    "output_dir_destroyed",
+    "cache_key",
+    "claim_boundary"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_output.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "generated_at_utc": {"type": "string", "minLength": 1},
+    "target_repo": {"type": "string", "minLength": 1},
+    "namespace": {"enum": ["fixture", "synthetic", "real_benchmark"]},
+    "source_file_count": {"type": "integer", "minimum": 1},
+    "finding_rows": {"type": "integer", "minimum": 1},
+    "atomic_publish": {"const": 1},
+    "output_dir_destroyed": {"const": 0},
+    "cache_key": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "claim_boundary": {"const": "alpha-local-code-doc-audit-only"}
+  }
+}
