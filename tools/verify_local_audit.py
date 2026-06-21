@@ -73,6 +73,7 @@ REQUIRED_FILES = {
     "source_manifest.csv",
     "source_snapshot.json",
     "unsupported_claim_rows.csv",
+    "verify.sh",
     "wrong_answer_guard_rows.csv",
 }
 EXPECTED_SUMMARY_KEYS = [
@@ -847,6 +848,25 @@ def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], err
         expected_question = questions[0] if len(questions) == 1 else ""
         if flag_values.get("--question") != expected_question:
             add(errors, "reproduce.sh question value drift")
+
+    verify_path = out_dir / "verify.sh"
+    if not (verify_path.stat().st_mode & stat.S_IXUSR):
+        add(errors, "verify.sh must be executable")
+    verify_text = verify_path.read_text(encoding="utf-8")
+    if not verify_text.startswith("#!/usr/bin/env bash\nset -euo pipefail\n"):
+        add(errors, "verify.sh must use bash strict mode")
+    try:
+        verify_parts = shlex.split(verify_text.splitlines()[-1])
+    except ValueError as exc:
+        add(errors, f"verify.sh command is not parseable: {exc}")
+        return
+    expected_verify_parts = [
+        "./scripts/audit_my_repo.sh",
+        "--verify-existing",
+        str(out_dir),
+    ]
+    if verify_parts != expected_verify_parts:
+        add(errors, "verify.sh command drift")
 
 
 def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]) -> None:

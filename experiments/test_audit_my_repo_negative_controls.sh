@@ -2006,6 +2006,22 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 reproduce_path.write_text(original_reproduce_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+verify_script_path = out_a / "verify.sh"
+original_verify_script_text = verify_script_path.read_text(encoding="utf-8")
+verify_script_path.write_text(original_verify_script_text.replace(" --verify-existing ", " --version "), encoding="utf-8")
+new_verify_script_sha = sha256(verify_script_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  verify.sh"):
+        sha_lines.append(f"{new_verify_script_sha}  verify.sh")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject verify.sh command drift")
+verify_script_path.write_text(original_verify_script_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 subprocess.run(
     [
         str(root / "scripts/audit_my_repo.sh"),

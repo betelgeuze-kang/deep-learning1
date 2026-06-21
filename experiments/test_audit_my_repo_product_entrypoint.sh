@@ -124,6 +124,7 @@ for idx in 1 2 3; do
     false_positive_candidate_rows.csv \
     latency_rows.csv \
     manual_review_queue.csv \
+    verify.sh \
     wrong_answer_guard_rows.csv
   do
     if [[ ! -s "$out/$file" ]]; then
@@ -158,6 +159,8 @@ for idx in 1 2 3; do
     --generator routehint-tiny >/dev/null
   cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
   "$out/reproduce.sh" >/dev/null
+  cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
+  "$out/verify.sh" >/dev/null
   cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
   "$ROOT_DIR/tools/verify_local_audit.py" "$out" >/dev/null
   "$ROOT_DIR/scripts/audit_my_repo.sh" --verify-existing "$out" >/dev/null
@@ -233,6 +236,7 @@ def read_contract(out):
         "audit_summary.json",
         "AUDIT_REPORT.md",
         "reproduce.sh",
+        "verify.sh",
     }
     seen = {row["artifact_path"] for row in rows}
     if not required_artifacts.issubset(seen):
@@ -516,6 +520,7 @@ for idx in range(1, 4):
         "plugin_rule_rows.csv",
         "source_snapshot.json",
         "reproduce.sh",
+        "verify.sh",
     ]:
         if manifest_rows.get(rel) != sha256(out / rel):
             raise SystemExit(f"sha256 mismatch: {rel}")
@@ -525,6 +530,9 @@ for idx in range(1, 4):
     reproduce_text = (out / "reproduce.sh").read_text(encoding="utf-8")
     if "--question 'Does this repo prove production readiness?'" not in reproduce_text:
         raise SystemExit("reproduce.sh must preserve the user question")
+    verify_text = (out / "verify.sh").read_text(encoding="utf-8")
+    if f"--verify-existing {out}" not in verify_text:
+        raise SystemExit("verify.sh must preserve the output directory verification command")
 if len(set(source_sets)) != 3:
     raise SystemExit("product smoke must exercise three distinct unseen local repository shapes")
 PY

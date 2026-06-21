@@ -172,6 +172,7 @@ def write_artifact_contract(staging: Path) -> int:
         ("ARCHITECTURE_TRACE.md", "markdown"),
         ("claim_boundary.md", "markdown"),
         ("reproduce.sh", "shell"),
+        ("verify.sh", "shell"),
     ]:
         if (staging / artifact_path).is_file():
             rows.append(
@@ -644,6 +645,22 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
             encoding="utf-8",
         )
         reproduce.chmod(0o755)
+        verify_script = staging / "verify.sh"
+        verify_script.write_text(
+            "#!/usr/bin/env bash\nset -euo pipefail\n"
+            f"cd {shlex.quote(str(root))}\n"
+            + " ".join(
+                shlex.quote(part)
+                for part in [
+                    "./scripts/audit_my_repo.sh",
+                    "--verify-existing",
+                    str(out_dir),
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        verify_script.chmod(0o755)
 
     plugin_registry_sha256 = sha256(staging / "plugin_registry.json")
     tool_source_sha256 = sha256(Path(__file__).resolve())
