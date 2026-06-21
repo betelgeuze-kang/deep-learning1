@@ -259,6 +259,8 @@ for idx in range(1, 4):
         raise SystemExit("synthetic product smoke must not promote fixture results or claim real evidence")
     if manifest["tool_version"] != "audit_my_repo_alpha.v1":
         raise SystemExit("audit manifest must expose the tool version")
+    if manifest["tool_source_sha256"] != "sha256:" + sha256(project_root / "scripts/audit_my_repo.py"):
+        raise SystemExit("audit manifest must bind the audit entrypoint source sha")
     if invocation["tool_version"] != manifest["tool_version"]:
         raise SystemExit("audit invocation must expose the tool version")
     if invocation["target_repo"] != str(repo.resolve()) or invocation["out_dir"] != str(out.resolve()):
@@ -472,6 +474,7 @@ for idx in range(1, 4):
         raise SystemExit("source snapshot must record the git HEAD sha")
     expected_cache_key = hashlib.sha256(json.dumps({
         "tool_version": "audit_my_repo_alpha.v1",
+        "tool_source_sha256": "sha256:" + sha256(project_root / "scripts/audit_my_repo.py"),
         "target": str((root / f"repo_{idx}").resolve()),
         "source": [(row["file_path"], row["sha256"]) for row in source_rows],
         "source_snapshot": source_snapshot,

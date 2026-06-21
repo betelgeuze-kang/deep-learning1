@@ -389,6 +389,8 @@ if manifest["fixture_result_promoted"] != 0 or manifest["real_evidence_claimed"]
     raise SystemExit("fixture output must not be promoted or claimed as real evidence")
 if manifest["claim_boundary"] != "alpha-local-code-doc-audit-only":
     raise SystemExit("claim boundary must remain alpha-only")
+if manifest["tool_source_sha256"] != "sha256:" + sha256(root / "scripts/audit_my_repo.py"):
+    raise SystemExit("manifest must bind audit entrypoint source sha")
 if manifest["generated_at_utc"] != "1970-01-01T00:00:00+00:00":
     raise SystemExit("manifest timestamp must be deterministic")
 if manifest["output_dir_overwritten"] != 0:
@@ -1865,6 +1867,22 @@ manifest_path.write_text(json.dumps(tampered_manifest, indent=2, sort_keys=True)
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject cache key mismatches")
 manifest_path.write_text(original_manifest_text, encoding="utf-8")
+
+tampered_manifest = json.loads(original_manifest_text)
+tampered_manifest["tool_source_sha256"] = "sha256:" + ("0" * 64)
+manifest_path.write_text(json.dumps(tampered_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_manifest_sha = sha256(manifest_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_manifest.json"):
+        sha_lines.append(f"{new_manifest_sha}  audit_manifest.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject audit entrypoint source sha drift")
+manifest_path.write_text(original_manifest_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 tampered_manifest = json.loads(original_manifest_text)
 tampered_manifest["real_benchmark_namespace_confirmed"] = 1

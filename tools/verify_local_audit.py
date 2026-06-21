@@ -208,9 +208,11 @@ def verify_summary(summary_json: dict, summary_csv_rows: list[dict[str, str]], e
 
 
 def verify_manifest(manifest: dict, summary_json: dict, out_dir: Path, errors: list[str]) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
     for key, expected in {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "tool_version": TOOL_VERSION,
+        "tool_source_sha256": sha256_prefixed(repo_root / "scripts" / "audit_my_repo.py"),
         "generated_at_utc": "1970-01-01T00:00:00+00:00",
         "atomic_publish": 1,
         "output_dir_destroyed": 0,
@@ -757,6 +759,7 @@ def verify_cache_key(out_dir: Path, manifest: dict, summary: dict[str, str], err
     question = sorted(questions)[0] if summary.get("question_supplied") == "1" and questions else ""
     payload = {
         "tool_version": TOOL_VERSION,
+        "tool_source_sha256": manifest.get("tool_source_sha256"),
         "target": manifest.get("target_repo"),
         "source": [(row["file_path"], row["sha256"]) for row in source_rows],
         "source_snapshot": source_snapshot,

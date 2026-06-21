@@ -54,7 +54,7 @@ JSONL_CONTRACTS: dict[str, list[str]] = {
 
 JSON_CONTRACTS: dict[str, list[str]] = {
     "audit_invocation.json": ["schema_version", "tool_version", "target_repo", "out_dir", "mode", "max_queries", "generator", "namespace", "real_benchmark_namespace_confirmed", "question_supplied", "question_sha256", "verify_output_requested", "emit_report_requested", "emit_lineage_requested", "emit_reproduce_requested"],
-    "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "real_benchmark_namespace_confirmed", "fixture_result_promoted", "real_evidence_claimed", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "output_dir_overwritten", "publish_mode", "cache_key", "plugin_registry_sha256", "claim_boundary"],
+    "audit_manifest.json": ["schema_version", "tool_version", "tool_source_sha256", "generated_at_utc", "target_repo", "namespace", "real_benchmark_namespace_confirmed", "fixture_result_promoted", "real_evidence_claimed", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "output_dir_overwritten", "publish_mode", "cache_key", "plugin_registry_sha256", "claim_boundary"],
     "audit_summary.json": list(CSV_CONTRACTS["audit_summary.csv"]),
     "exit_code_contract.json": ["schema_version", "tool_version", "success_exit_code", "artifact_verify_failure_exit_code", "input_or_publish_error_exit_code", "wrong_answer_guard_failure_exit_code", "stable_exit_code_policy"],
     "plugin_registry.json": ["schema_version", "tool_version", "plugins"],
@@ -646,9 +646,11 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         reproduce.chmod(0o755)
 
     plugin_registry_sha256 = sha256(staging / "plugin_registry.json")
+    tool_source_sha256 = sha256(Path(__file__).resolve())
     manifest = {
         "schema_version": OUTPUT_SCHEMA_VERSION,
         "tool_version": TOOL_VERSION,
+        "tool_source_sha256": tool_source_sha256,
         "generated_at_utc": DETERMINISTIC_GENERATED_AT_UTC,
         "target_repo": str(target),
         "namespace": namespace,
@@ -661,7 +663,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "output_dir_destroyed": 0,
         "output_dir_overwritten": 0,
         "publish_mode": "create-or-idempotent-cache-hit",
-        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "source_snapshot": json.loads((staging / "source_snapshot.json").read_text(encoding="utf-8")), "mode": mode, "max_queries": max_queries, "namespace": namespace, "real_benchmark_namespace_confirmed": real_benchmark_namespace_confirmed, "question": question, "verify_output_requested": int(verify_output), "emit_report_requested": int(emit_report), "emit_lineage_requested": int(emit_lineage), "emit_reproduce_requested": int(emit_reproduce), "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
+        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "tool_source_sha256": tool_source_sha256, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "source_snapshot": json.loads((staging / "source_snapshot.json").read_text(encoding="utf-8")), "mode": mode, "max_queries": max_queries, "namespace": namespace, "real_benchmark_namespace_confirmed": real_benchmark_namespace_confirmed, "question": question, "verify_output_requested": int(verify_output), "emit_report_requested": int(emit_report), "emit_lineage_requested": int(emit_lineage), "emit_reproduce_requested": int(emit_reproduce), "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
         "plugin_registry_sha256": plugin_registry_sha256,
         "claim_boundary": "alpha-local-code-doc-audit-only",
     }
