@@ -40,6 +40,7 @@ CSV_CONTRACTS: dict[str, list[str]] = {
     "citation_correctness_rows.csv": ["finding_id", "citation_count", "citation_bound", "citation_correctness_label", "manual_citation_review_required"],
     "latency_rows.csv": ["finding_id", "latency_ms", "latency_source"],
     "false_positive_candidate_rows.csv": ["finding_id", "manual_review_required", "false_positive_candidate", "auto_promoted"],
+    "manual_review_queue.csv": ["finding_id", "review_queue_id", "review_types", "manual_review_required", "review_reason", "auto_promoted"],
     "plugin_rule_rows.csv": ["plugin_id", "audit_type", "rule_id", "language", "file_suffixes", "pattern_label", "evidence_policy"],
     "audit_summary.csv": ["schema_version", "tool_version", "audit_my_repo_ready", "target_repo", "mode", "namespace", "generator", "question_supplied", "source_files", "finding_rows", "citation_span_rows", "abstain_rows", "unsupported_claim_rows", "accuracy_rows", "citation_correctness_rows", "false_positive_candidate_rows", "wrong_answer_guard_rows", "wrong_answer_guard_pass_rows", "claim_boundary_ready", "route_memory_lineage_rows", "mmap_read_trace_rows", "compact_route_hint_rows", "grounded_generation_rows", "raw_prompt_context_bytes", "attention_blocks", "transformer_blocks", "oracle_prediction_used", "raw_input_extractor_used", "real_release_package_ready", "public_comparison_claim_ready", "gpu_speedup_claim", "latency_ms"],
 }
@@ -468,6 +469,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     false_positive_rows = []
     accuracy_rows = []
     citation_correctness_rows = []
+    manual_review_rows = []
     for idx, finding in enumerate(finding_rows, start=1):
         hint_id = f"hint_{idx:04d}"
         citation_count = len([c for c in finding["citations"].split(";") if c])
@@ -482,6 +484,14 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         false_positive_rows.append({"finding_id": finding["finding_id"], "manual_review_required": 1, "false_positive_candidate": int(finding["severity"] in {"medium", "high"}), "auto_promoted": 0})
         accuracy_rows.append({"finding_id": finding["finding_id"], "accuracy_label": "unreviewed", "automatic_accuracy_claimed": 0, "manual_accuracy_review_required": 1})
         citation_correctness_rows.append({"finding_id": finding["finding_id"], "citation_count": citation_count, "citation_bound": int(citation_count > 0), "citation_correctness_label": "source_bound_unreviewed", "manual_citation_review_required": 1})
+        manual_review_rows.append({
+            "finding_id": finding["finding_id"],
+            "review_queue_id": f"manual_review_{idx:04d}",
+            "review_types": "accuracy|citation_correctness|false_positive",
+            "manual_review_required": 1,
+            "review_reason": "alpha outputs are source-bound but unreviewed; no automatic accuracy/citation correctness/false-positive promotion is allowed",
+            "auto_promoted": 0,
+        })
         wrong_answer_guard_rows.append({"finding_id": finding["finding_id"], "guard_id": f"wrong_answer_guard_{idx:04d}", "unsupported_direct_answer_blocked": int(finding["abstain"] == 1 or finding["grounded"] == 1), "citation_required": 1, "audit_trail_required": 1, "wrong_answer_guard_pass": 1})
     for row in span_rows:
         mmap_rows.append({"finding_id": row["finding_id"], "file_path": row["file_path"], "line_start": row["line_start"], "sha256": row["sha256"], "mmap_value_byte_read": 1})
@@ -497,6 +507,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     write_csv(staging / "citation_correctness_rows.csv", ["finding_id", "citation_count", "citation_bound", "citation_correctness_label", "manual_citation_review_required"], citation_correctness_rows)
     write_csv(staging / "latency_rows.csv", ["finding_id", "latency_ms", "latency_source"], latency_rows)
     write_csv(staging / "false_positive_candidate_rows.csv", ["finding_id", "manual_review_required", "false_positive_candidate", "auto_promoted"], false_positive_rows)
+    write_csv(staging / "manual_review_queue.csv", CSV_CONTRACTS["manual_review_queue.csv"], manual_review_rows)
     write_json(
         staging / "audit_invocation.json",
         {
@@ -663,6 +674,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--version", action="version", version=TOOL_VERSION)
     parser.add_argument("--list-plugins", action="store_true", help="Print the deterministic auditor plugin registry as JSON and exit.")
     parser.add_argument("--list-plugin-rules", action="store_true", help="Print deterministic auditor plugin rule metadata as JSON and exit.")
+    parser.add_argument("--verify-existing", metavar="OUT_DIR", default="", help="Verify an existing audit output directory and exit.")
     parser.add_argument("--mode", choices=["quick", "full"], default="quick")
     parser.add_argument("--max-queries", type=int, default=100)
     parser.add_argument("--out", default="results/my_repo_audit")
@@ -758,16 +770,23 @@ def verify_output_artifact(root: Path, out_dir: Path) -> int:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    root = Path(__file__).resolve().parents[1]
     if args.list_plugins:
         print(json.dumps(plugin_registry_payload(), indent=2, sort_keys=True))
         return 0
     if args.list_plugin_rules:
         print(json.dumps(plugin_rules_payload(), indent=2, sort_keys=True))
         return 0
+    if args.verify_existing:
+        existing_out = Path(args.verify_existing).expanduser()
+        if not existing_out.is_absolute():
+            existing_out = (root / existing_out).resolve()
+        else:
+            existing_out = existing_out.resolve()
+        return 0 if verify_output_artifact(root, existing_out) == 0 else 1
     if not args.target_repo:
-        print("target repo is required unless --version, --list-plugins, or --list-plugin-rules is used", file=sys.stderr)
+        print("target repo is required unless --version, --list-plugins, --list-plugin-rules, or --verify-existing is used", file=sys.stderr)
         return 2
-    root = Path(__file__).resolve().parents[1]
     target = Path(args.target_repo).expanduser().resolve()
     out_dir = Path(args.out).expanduser()
     if not out_dir.is_absolute():

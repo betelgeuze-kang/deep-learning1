@@ -133,6 +133,7 @@ expect_audit_exit() {
 }
 
 expect_audit_exit 2 "target repo must be required for audit execution" --out "$TMP_DIR/no_target"
+expect_audit_exit 1 "verify-existing must reject missing output directories" --verify-existing "$TMP_DIR/missing_audit_output"
 expect_audit_exit 2 "unsupported generator must fail with stable usage exit code" "$repo" --generator unsupported --out "$TMP_DIR/bad_generator"
 expect_audit_exit 2 "non-positive max queries must fail with stable usage exit code" "$repo" --max-queries 0 --out "$TMP_DIR/bad_queries"
 expect_audit_exit 2 "missing target repo must fail with stable usage exit code" "$TMP_DIR/missing" --out "$TMP_DIR/bad_target"
@@ -470,6 +471,12 @@ with (out_a / "false_positive_candidate_rows.csv").open(newline="", encoding="ut
     fp_rows = list(csv.DictReader(handle))
 if not fp_rows or not any(row["false_positive_candidate"] == "1" and row["auto_promoted"] == "0" for row in fp_rows):
     raise SystemExit("high/medium findings must be manual false-positive candidates, not auto-promoted")
+with (out_a / "manual_review_queue.csv").open(newline="", encoding="utf-8") as handle:
+    manual_review_rows = list(csv.DictReader(handle))
+if {row["finding_id"] for row in manual_review_rows} != {row["finding_id"] for row in findings}:
+    raise SystemExit("manual review queue must cover every finding")
+if any(row["manual_review_required"] != "1" or row["auto_promoted"] != "0" for row in manual_review_rows):
+    raise SystemExit("manual review queue must require review and forbid auto-promotion")
 
 before_manifest = (out_a / "audit_manifest.json").read_text(encoding="utf-8")
 before_sha = (out_a / "sha256sums.txt").read_text(encoding="utf-8")
@@ -653,7 +660,7 @@ sha_manifest_path.write_text(
     + "\n",
     encoding="utf-8",
 )
-verify_cmd = [str(root / "tools/verify_local_audit.py"), str(out_a)]
+verify_cmd = [str(root / "scripts/audit_my_repo.sh"), "--verify-existing", str(out_a)]
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must require abstain_rows.csv in sha256sums.txt")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
@@ -732,6 +739,28 @@ sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject exit code contract drift")
 exit_contract_path.write_text(original_exit_contract_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+manual_review_path = out_a / "manual_review_queue.csv"
+original_manual_review_text = manual_review_path.read_text(encoding="utf-8")
+with manual_review_path.open(newline="", encoding="utf-8") as handle:
+    manual_review_rows = list(csv.DictReader(handle))
+manual_review_rows[0]["auto_promoted"] = "1"
+with manual_review_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(manual_review_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(manual_review_rows)
+new_manual_review_sha = sha256(manual_review_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  manual_review_queue.csv"):
+        sha_lines.append(f"{new_manual_review_sha}  manual_review_queue.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject manual review auto-promotion")
+manual_review_path.write_text(original_manual_review_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 plugin_rule_path = out_a / "plugin_rule_rows.csv"

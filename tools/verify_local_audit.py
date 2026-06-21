@@ -54,6 +54,7 @@ REQUIRED_FILES = {
     "false_positive_candidate_rows.csv",
     "grounded_generation_rows.csv",
     "latency_rows.csv",
+    "manual_review_queue.csv",
     "mmap_read_trace.jsonl",
     "plugin_registry.json",
     "plugin_rule_rows.csv",
@@ -892,6 +893,20 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     for row in fp_rows:
         if row.get("auto_promoted") != "0":
             add(errors, "false-positive candidates must not be auto-promoted")
+    manual_review_rows = read_csv(out_dir / "manual_review_queue.csv")
+    manual_review_ids = {row.get("finding_id", "") for row in manual_review_rows}
+    if len(manual_review_ids) != len(manual_review_rows) or manual_review_ids != finding_ids:
+        add(errors, "manual_review_queue.csv must contain exactly one row per finding")
+    review_queue_ids = {row.get("review_queue_id", "") for row in manual_review_rows}
+    if len(review_queue_ids) != len(manual_review_rows) or "" in review_queue_ids:
+        add(errors, "manual_review_queue.csv review_queue_id values must be unique and non-empty")
+    for row in manual_review_rows:
+        if row.get("review_types") != "accuracy|citation_correctness|false_positive":
+            add(errors, "manual_review_queue.csv review_types drifted")
+        if row.get("manual_review_required") != "1" or row.get("auto_promoted") != "0":
+            add(errors, "manual review queue rows must require manual review and forbid auto-promotion")
+        if "unreviewed" not in row.get("review_reason", ""):
+            add(errors, "manual review queue rows must preserve unreviewed reason")
 
 
 def verify_route_generation_rows(out_dir: Path, summary: dict[str, str], errors: list[str]) -> None:

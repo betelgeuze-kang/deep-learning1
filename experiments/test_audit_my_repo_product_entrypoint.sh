@@ -123,6 +123,7 @@ for idx in 1 2 3; do
     unsupported_claim_rows.csv \
     false_positive_candidate_rows.csv \
     latency_rows.csv \
+    manual_review_queue.csv \
     wrong_answer_guard_rows.csv
   do
     if [[ ! -s "$out/$file" ]]; then
@@ -143,6 +144,7 @@ for idx in 1 2 3; do
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_source_snapshot.schema.json" "$out/source_snapshot.json" >/dev/null
   "$ROOT_DIR/tools/verify_local_audit.py" "$out" >/dev/null
+  "$ROOT_DIR/scripts/audit_my_repo.sh" --verify-existing "$out" >/dev/null
 
   cp "$out/sha256sums.txt" "$out/sha256sums.first"
   "$ROOT_DIR/scripts/audit_my_repo.sh" "$TMP_DIR/repo_$idx" \
@@ -156,6 +158,7 @@ for idx in 1 2 3; do
   "$out/reproduce.sh" >/dev/null
   cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
   "$ROOT_DIR/tools/verify_local_audit.py" "$out" >/dev/null
+  "$ROOT_DIR/scripts/audit_my_repo.sh" --verify-existing "$out" >/dev/null
 done
 
 python3 - "$TMP_DIR" <<'PY'
@@ -417,6 +420,12 @@ for idx in range(1, 4):
         citation_rows = list(csv.DictReader(handle))
     if not citation_rows or any(row["manual_citation_review_required"] != "1" for row in citation_rows):
         raise SystemExit("citation correctness rows must require manual review")
+    with (out / "manual_review_queue.csv").open(newline="", encoding="utf-8") as handle:
+        manual_review_rows = list(csv.DictReader(handle))
+    if {row["finding_id"] for row in manual_review_rows} != {row["finding_id"] for row in findings}:
+        raise SystemExit("manual review queue must contain exactly one row per finding")
+    if any(row["manual_review_required"] != "1" or row["auto_promoted"] != "0" for row in manual_review_rows):
+        raise SystemExit("manual review queue must require review and forbid auto-promotion")
     source_sets.append(tuple(sorted(source_files)))
     if expected_sources[idx] not in source_files:
         raise SystemExit(f"repo_{idx} source manifest missing expected source: {expected_sources[idx]}")
@@ -483,6 +492,7 @@ for idx in range(1, 4):
         "citation_spans.jsonl",
         "citation_correctness_rows.csv",
         "exit_code_contract.json",
+        "manual_review_queue.csv",
         "prediction_lineage.jsonl",
         "plugin_registry.json",
         "plugin_rule_rows.csv",
