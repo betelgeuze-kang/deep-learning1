@@ -153,6 +153,7 @@ expect_audit_exit 2 "target repo must be required for audit execution" --out "$T
 expect_audit_exit 1 "verify-existing must reject missing output directories" --verify-existing "$TMP_DIR/missing_audit_output"
 expect_audit_exit 2 "unsupported generator must fail with stable usage exit code" "$repo" --generator unsupported --out "$TMP_DIR/bad_generator"
 expect_audit_exit 2 "non-positive max queries must fail with stable usage exit code" "$repo" --max-queries 0 --out "$TMP_DIR/bad_queries"
+expect_audit_exit 2 "too-small max queries must not skip required auditor plugins" "$repo" --max-queries 4 --out "$TMP_DIR/bad_too_few_plugin_queries"
 expect_audit_exit 2 "missing target repo must fail with stable usage exit code" "$TMP_DIR/missing" --out "$TMP_DIR/bad_target"
 question_file="$TMP_DIR/question.txt"
 printf 'Does this file-input question prove release readiness?\n' >"$question_file"
@@ -1005,6 +1006,34 @@ if tampered_registry_binding_id:
     sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
     if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
         raise SystemExit("local-audit verifier must reject findings from unregistered plugins")
+    findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+    audit_findings_path.write_text(original_findings_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with findings_csv_path.open(newline="", encoding="utf-8") as handle:
+    findings_csv_rows = list(csv.DictReader(handle))
+finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
+missing_plugin_rows = [row for row in findings_csv_rows if row.get("plugin_id") != "missing_evidence"]
+missing_plugin_json_rows = [row for row in finding_json_rows if row.get("plugin_id") != "missing_evidence"]
+if len(missing_plugin_rows) != len(findings_csv_rows):
+    with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(missing_plugin_rows)
+    audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in missing_plugin_json_rows), encoding="utf-8")
+    new_findings_csv_sha = sha256(findings_csv_path)
+    new_findings_jsonl_sha = sha256(audit_findings_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  audit_findings.csv"):
+            sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
+        elif line.endswith("  audit_findings.jsonl"):
+            sha_lines.append(f"{new_findings_jsonl_sha}  audit_findings.jsonl")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit("local-audit verifier must reject missing required plugin findings")
     findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
     audit_findings_path.write_text(original_findings_text, encoding="utf-8")
     sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")

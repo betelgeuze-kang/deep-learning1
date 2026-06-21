@@ -443,7 +443,22 @@ def verify_finding_registry_binding(out_dir: Path, registry: dict, errors: list[
         str(plugin.get("plugin_id", "")): plugin
         for plugin in registry.get("plugins", [])
     }
-    for row in read_csv(out_dir / "audit_findings.csv"):
+    findings = read_csv(out_dir / "audit_findings.csv")
+    expected_plugin_ids = set(EXPECTED_PLUGIN_IDS)
+    summary = read_json(out_dir / "audit_summary.json")
+    if str(summary.get("question_supplied")) != "1":
+        expected_plugin_ids.remove("user_question")
+    finding_plugin_ids = [row.get("plugin_id", "") for row in findings]
+    if set(finding_plugin_ids) != expected_plugin_ids:
+        add(errors, "audit findings must contain exactly the expected required plugin rows")
+    duplicate_plugins = sorted(
+        plugin_id
+        for plugin_id in set(finding_plugin_ids)
+        if finding_plugin_ids.count(plugin_id) > 1
+    )
+    if duplicate_plugins:
+        add(errors, f"audit findings contain duplicate plugin rows: {','.join(duplicate_plugins)}")
+    for row in findings:
         finding_id = row.get("finding_id", "")
         plugin_id = row.get("plugin_id", "")
         plugin = registry_by_plugin.get(plugin_id)

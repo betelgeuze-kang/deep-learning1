@@ -836,6 +836,13 @@ def main(argv: list[str]) -> int:
     except AuditInputError as exc:
         print(f"input_error: {exc}", file=sys.stderr)
         return 2
+    minimum_queries = len(DEFAULT_PLUGINS) + int(bool(question))
+    if args.max_queries < minimum_queries:
+        print(
+            f"--max-queries must be at least {minimum_queries} to run every required auditor plugin",
+            file=sys.stderr,
+        )
+        return 2
 
     staging_parent = out_dir.parent
     staging_parent.mkdir(parents=True, exist_ok=True)
