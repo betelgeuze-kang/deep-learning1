@@ -286,6 +286,18 @@ for idx in range(1, 4):
     source_sets.append(tuple(sorted(source_files)))
     if expected_sources[idx] not in source_files:
         raise SystemExit(f"repo_{idx} source manifest missing expected source: {expected_sources[idx]}")
+    if len(source_files) != len(source_rows):
+        raise SystemExit("source manifest file paths must be unique")
+    for row in source_rows:
+        source_path = repo / row["file_path"]
+        if not source_path.is_file():
+            raise SystemExit(f"source manifest target missing: {row['file_path']}")
+        if row["sha256"] != "sha256:" + sha256(source_path):
+            raise SystemExit(f"source manifest sha mismatch: {row['file_path']}")
+        if int(row["bytes"]) != source_path.stat().st_size:
+            raise SystemExit(f"source manifest byte count mismatch: {row['file_path']}")
+        if row["route_memory_source"] != "1":
+            raise SystemExit(f"source manifest route_memory_source mismatch: {row['file_path']}")
     expected_cache_key = hashlib.sha256(json.dumps({
         "tool_version": "audit_my_repo_alpha.v1",
         "target": str((root / f"repo_{idx}").resolve()),

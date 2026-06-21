@@ -3738,6 +3738,40 @@ def verify_local_audit(out_dir: Path) -> list[str]:
 
     target_repo = Path(str(manifest.get("target_repo", "")))
     if target_repo.is_dir():
+        target_root = target_repo.resolve()
+        if len(source_rows) != manifest.get("source_file_count"):
+            errors.append(f"{out_dir / 'source_manifest.csv'}: row count must match manifest source_file_count")
+        seen_source_ids: set[str] = set()
+        seen_source_paths: set[str] = set()
+        for row in source_rows:
+            source_id = str(row.get("source_id", ""))
+            rel = str(row.get("file_path", ""))
+            if not source_id or source_id in seen_source_ids:
+                errors.append(f"{out_dir / 'source_manifest.csv'}: source_id must be present and unique: {source_id!r}")
+            seen_source_ids.add(source_id)
+            if not rel or rel in seen_source_paths:
+                errors.append(f"{out_dir / 'source_manifest.csv'}: file_path must be present and unique: {rel!r}")
+            seen_source_paths.add(rel)
+            source_path = (target_root / rel).resolve()
+            try:
+                source_path.relative_to(target_root)
+            except ValueError:
+                errors.append(f"{out_dir / 'source_manifest.csv'}: source path escapes target repo: {rel}")
+                continue
+            if not source_path.is_file():
+                errors.append(f"{out_dir / 'source_manifest.csv'}: source file missing: {rel}")
+                continue
+            if row.get("sha256") != sha256(source_path):
+                errors.append(f"{out_dir / 'source_manifest.csv'}: source sha mismatch for {rel}")
+            try:
+                declared_bytes = int(str(row.get("bytes", "")))
+            except ValueError:
+                errors.append(f"{out_dir / 'source_manifest.csv'}: bytes must be an integer for {rel}")
+                declared_bytes = -1
+            if declared_bytes != source_path.stat().st_size:
+                errors.append(f"{out_dir / 'source_manifest.csv'}: byte count mismatch for {rel}")
+            if row.get("route_memory_source") != "1":
+                errors.append(f"{out_dir / 'source_manifest.csv'}: route_memory_source must be 1 for {rel}")
         for row in citations:
             rel = str(row.get("file_path", ""))
             path = target_repo / rel

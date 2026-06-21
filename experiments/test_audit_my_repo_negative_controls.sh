@@ -299,6 +299,28 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 tampered_citations.write_text(original_citations, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+source_manifest_path = out_a / "source_manifest.csv"
+original_source_manifest_text = source_manifest_path.read_text(encoding="utf-8")
+with source_manifest_path.open(newline="", encoding="utf-8") as handle:
+    source_manifest_rows = list(csv.DictReader(handle))
+source_manifest_rows[0]["route_memory_source"] = "0"
+with source_manifest_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(source_manifest_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(source_manifest_rows)
+new_source_manifest_sha = sha256(source_manifest_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  source_manifest.csv"):
+        sha_lines.append(f"{new_source_manifest_sha}  source_manifest.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject invalid source manifest rows")
+source_manifest_path.write_text(original_source_manifest_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 manifest_path = out_a / "audit_manifest.json"
 original_manifest_text = manifest_path.read_text(encoding="utf-8")
 tampered_manifest = json.loads(original_manifest_text)
