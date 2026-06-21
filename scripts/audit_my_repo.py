@@ -385,7 +385,13 @@ def publish_atomic(staging: Path, out_dir: Path) -> str:
     staging_manifest = json.loads((staging / "audit_manifest.json").read_text(encoding="utf-8"))
     existing_manifest_path = out_dir / "audit_manifest.json"
     if existing_manifest_path.is_file():
-        existing_manifest = json.loads(existing_manifest_path.read_text(encoding="utf-8"))
+        try:
+            existing_manifest = json.loads(existing_manifest_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            raise RuntimeError(
+                "output directory contains an unreadable audit_manifest.json; "
+                "use a fresh --out path or repair the existing artifact"
+            ) from exc
         if existing_manifest.get("cache_key") != staging_manifest.get("cache_key"):
             raise RuntimeError(
                 "output directory already contains a different audit_manifest.json cache_key; "

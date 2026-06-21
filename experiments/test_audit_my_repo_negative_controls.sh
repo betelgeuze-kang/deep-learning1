@@ -674,6 +674,36 @@ if (conflict_out / "AUDIT_REPORT.md").read_text(encoding="utf-8") != "existing r
 if (conflict_out / "ARCHITECTURE_TRACE.md").exists() or (conflict_out / "audit_manifest.json").exists():
     raise SystemExit("conflict preflight must not partially publish new output artifacts")
 
+corrupt_manifest_out = out_a.parent / "out_corrupt_manifest"
+corrupt_manifest_out.mkdir(parents=True, exist_ok=True)
+(corrupt_manifest_out / "audit_manifest.json").write_text("{not json\n", encoding="utf-8")
+(corrupt_manifest_out / "sentinel.txt").write_text("keep\n", encoding="utf-8")
+corrupt_manifest_cmd = [
+    str(root / "scripts/audit_my_repo.sh"),
+    str(repo),
+    "--mode",
+    "quick",
+    "--max-queries",
+    "12",
+    "--out",
+    str(corrupt_manifest_out),
+    "--namespace",
+    "fixture",
+    "--question",
+    "Can this corrupt output manifest be reused?",
+    "--generator",
+    "routehint-tiny",
+]
+corrupt_manifest_result = subprocess.run(corrupt_manifest_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+if corrupt_manifest_result.returncode != 2:
+    raise SystemExit(f"corrupt existing audit_manifest.json must return exit 2, got {corrupt_manifest_result.returncode}")
+if (corrupt_manifest_out / "audit_manifest.json").read_text(encoding="utf-8") != "{not json\n":
+    raise SystemExit("corrupt existing audit_manifest.json must not be overwritten")
+if (corrupt_manifest_out / "sentinel.txt").read_text(encoding="utf-8") != "keep\n":
+    raise SystemExit("corrupt manifest publish failure must preserve unrelated files")
+if (corrupt_manifest_out / "AUDIT_REPORT.md").exists() or (corrupt_manifest_out / "sha256sums.txt").exists():
+    raise SystemExit("corrupt manifest publish failure must not partially publish artifacts")
+
 tampered_citations = out_a / "citation_spans.jsonl"
 sha_manifest_path = out_a / "sha256sums.txt"
 original_citations = tampered_citations.read_text(encoding="utf-8")
