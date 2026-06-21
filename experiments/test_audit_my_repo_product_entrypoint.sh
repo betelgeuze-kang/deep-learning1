@@ -226,6 +226,15 @@ for idx in range(1, 4):
     if manifest["atomic_publish"] != 1 or manifest["output_dir_destroyed"] != 0:
         raise SystemExit("audit manifest must prove atomic non-destructive publish")
     summary = json.loads((out / "audit_summary.json").read_text(encoding="utf-8"))
+    with (out / "audit_summary.csv").open(newline="", encoding="utf-8") as handle:
+        summary_rows = list(csv.DictReader(handle))
+    if len(summary_rows) != 1:
+        raise SystemExit("audit summary CSV must contain exactly one row")
+    if set(summary_rows[0]) != set(summary):
+        raise SystemExit("audit summary CSV columns must match audit_summary.json keys")
+    for key, value in summary.items():
+        if summary_rows[0][key] != str(value):
+            raise SystemExit(f"audit summary CSV/JSON mismatch: {key}")
     plugin_registry = json.loads((out / "plugin_registry.json").read_text(encoding="utf-8"))
     plugin_ids = {row["plugin_id"] for row in plugin_registry["plugins"]}
     if plugin_registry["schema_version"] != "local_repo_audit.v1":

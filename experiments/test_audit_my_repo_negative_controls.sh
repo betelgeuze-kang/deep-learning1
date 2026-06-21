@@ -358,6 +358,28 @@ tampered_citations.write_text(original_citations, encoding="utf-8")
 audit_findings_path.write_text(original_findings_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+summary_csv_path = out_a / "audit_summary.csv"
+original_summary_csv_text = summary_csv_path.read_text(encoding="utf-8")
+with summary_csv_path.open(newline="", encoding="utf-8") as handle:
+    summary_csv_rows = list(csv.DictReader(handle))
+summary_csv_rows[0]["public_comparison_claim_ready"] = "1"
+with summary_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(summary_csv_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(summary_csv_rows)
+new_summary_csv_sha = sha256(summary_csv_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_summary.csv"):
+        sha_lines.append(f"{new_summary_csv_sha}  audit_summary.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject audit summary CSV/JSON drift")
+summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 manifest_path = out_a / "audit_manifest.json"
 original_manifest_text = manifest_path.read_text(encoding="utf-8")
 tampered_manifest = json.loads(original_manifest_text)

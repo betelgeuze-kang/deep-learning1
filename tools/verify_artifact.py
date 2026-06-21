@@ -3485,6 +3485,18 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     summary = _read_json(out_dir / "audit_summary.json", errors)
     plugin_registry = _read_json(out_dir / "plugin_registry.json", errors)
     resource = _read_json(out_dir / "resource_envelope.json", errors)
+    summary_csv_header, summary_csv_rows = _read_csv(out_dir / "audit_summary.csv", errors)
+    if len(summary_csv_rows) != 1:
+        errors.append(f"{out_dir / 'audit_summary.csv'}: expected exactly one summary row")
+    else:
+        csv_summary = summary_csv_rows[0]
+        summary_keys = set(summary)
+        csv_keys = set(summary_csv_header)
+        if csv_keys != summary_keys:
+            errors.append(f"{out_dir / 'audit_summary.csv'}: columns must match audit_summary.json keys")
+        for key in sorted(summary_keys & csv_keys):
+            if csv_summary.get(key) != str(summary.get(key)):
+                errors.append(f"{out_dir / 'audit_summary.csv'}: {key} does not match audit_summary.json")
 
     expected_manifest = {
         "schema_version": "local_repo_audit_output.v1",
