@@ -272,6 +272,20 @@ for idx in range(1, 4):
     findings = [json.loads(line) for line in (out / "audit_findings.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     citations = [json.loads(line) for line in (out / "citation_spans.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     lineage = [json.loads(line) for line in (out / "prediction_lineage.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    for csv_name, jsonl_rows in [
+        ("audit_findings.csv", findings),
+        ("citation_spans.csv", citations),
+    ]:
+        with (out / csv_name).open(newline="", encoding="utf-8") as handle:
+            csv_rows = list(csv.DictReader(handle))
+        if len(csv_rows) != len(jsonl_rows):
+            raise SystemExit(f"{csv_name} row count must match jsonl")
+        for csv_row, jsonl_row in zip(csv_rows, jsonl_rows):
+            if set(csv_row) != set(jsonl_row):
+                raise SystemExit(f"{csv_name} columns must match jsonl keys")
+            for key, value in jsonl_row.items():
+                if csv_row[key] != str(value):
+                    raise SystemExit(f"{csv_name} drift: {key}")
     with (out / "source_manifest.csv").open(newline="", encoding="utf-8") as handle:
         source_rows = list(csv.DictReader(handle))
     source_files = {row["file_path"] for row in source_rows}

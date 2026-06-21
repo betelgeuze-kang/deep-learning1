@@ -3695,6 +3695,21 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     findings = _read_jsonl(out_dir / "audit_findings.jsonl", errors)
     citations = _read_jsonl(out_dir / "citation_spans.jsonl", errors)
     lineage = _read_jsonl(out_dir / "prediction_lineage.jsonl", errors)
+    for csv_name, jsonl_name, jsonl_rows in [
+        ("audit_findings.csv", "audit_findings.jsonl", findings),
+        ("citation_spans.csv", "citation_spans.jsonl", citations),
+    ]:
+        csv_header, csv_rows = _read_csv(out_dir / csv_name, errors)
+        if len(csv_rows) != len(jsonl_rows):
+            errors.append(f"{out_dir / csv_name}: row count must match {jsonl_name}")
+            continue
+        for row_index, (csv_row, jsonl_row) in enumerate(zip(csv_rows, jsonl_rows), start=2):
+            if set(csv_header) != set(jsonl_row):
+                errors.append(f"{out_dir / csv_name}:{row_index}: columns must match {jsonl_name} keys")
+                continue
+            for key in csv_header:
+                if csv_row.get(key) != str(jsonl_row.get(key)):
+                    errors.append(f"{out_dir / csv_name}:{row_index}: {key} does not match {jsonl_name}")
     if not findings or not citations or not lineage:
         errors.append(f"{out_dir}: findings, citations, and lineage must be non-empty")
     citation_cells_by_finding: dict[str, set[str]] = {}

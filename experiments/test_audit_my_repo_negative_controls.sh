@@ -398,6 +398,28 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 resource_path.write_text(original_resource_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+findings_csv_path = out_a / "audit_findings.csv"
+original_findings_csv_text = findings_csv_path.read_text(encoding="utf-8")
+with findings_csv_path.open(newline="", encoding="utf-8") as handle:
+    findings_csv_rows = list(csv.DictReader(handle))
+findings_csv_rows[0]["grounded"] = "0" if findings_csv_rows[0]["grounded"] != "0" else "1"
+with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(findings_csv_rows)
+new_findings_csv_sha = sha256(findings_csv_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_findings.csv"):
+        sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject audit findings CSV/JSONL drift")
+findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 manifest_path = out_a / "audit_manifest.json"
 original_manifest_text = manifest_path.read_text(encoding="utf-8")
 tampered_manifest = json.loads(original_manifest_text)
