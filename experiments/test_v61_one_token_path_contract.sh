@@ -17,6 +17,9 @@ cleanup() {
   if [ -n "${TORCH_PARITY_ROWS:-}" ] && [ -n "${TORCH_PARITY_BACKUP:-}" ] && [ -f "$TORCH_PARITY_BACKUP" ]; then
     cp "$TORCH_PARITY_BACKUP" "$TORCH_PARITY_ROWS" 2>/dev/null || true
   fi
+  if [ -n "${V61AB_METRIC_ROWS:-}" ] && [ -n "${V61AB_METRIC_BACKUP:-}" ] && [ -f "$V61AB_METRIC_BACKUP" ]; then
+    cp "$V61AB_METRIC_BACKUP" "$V61AB_METRIC_ROWS" 2>/dev/null || true
+  fi
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
@@ -60,6 +63,29 @@ with path.open("w", newline="", encoding="utf-8") as handle:
 PY
 expect_fail_with \
   "model_id expected mistralai/Mixtral-8x22B-v0.1, got fixture/not-mixtral" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+cp "$REMOTE_BINDING_BACKUP" "$REMOTE_BINDING_ROWS"
+
+python3 - "$REMOTE_BINDING_ROWS" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["remote_page_sha256"] = "sha256:" + "z" * 64
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "remote_hash_bound=1 requires remote_page_sha256" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
@@ -115,6 +141,34 @@ expect_fail_with \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 cp "$TORCH_PARITY_BACKUP" "$TORCH_PARITY_ROWS"
+
+V61AB_METRIC_ROWS="$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe/probe_001/hotset_tensor_tile_quant_metric_rows.csv"
+V61AB_METRIC_BACKUP="$TMP_DIR/hotset_tensor_tile_quant_metric_rows.csv.bak"
+cp "$V61AB_METRIC_ROWS" "$V61AB_METRIC_BACKUP"
+python3 - "$V61AB_METRIC_ROWS" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["tensor_tile_probe_rows"] = "0"
+rows[0]["tile_bf16_value_rows"] = "0"
+rows[0]["hotset_numeric_tile_probe_ready"] = "1"
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "tensor_tile_probe_rows expected 128, got 0" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+cp "$V61AB_METRIC_BACKUP" "$V61AB_METRIC_ROWS"
 
 bad_json() {
   local name="$1"

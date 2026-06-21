@@ -299,6 +299,8 @@ if module.EXPECTED_V54_SUMMARY != v54_contract["expected_summary_when_supplied"]
 
 v58_schema = json.loads((root / "schemas" / "v58_blind_eval.schema.json").read_text(encoding="utf-8"))
 v58_contract = v58_schema["x-contract"]
+v58_artifact_schema = v58_schema["properties"]["required_artifacts"]["items"]
+v58_optional_artifact_keys = set(v58_artifact_schema["properties"]) - set(v58_artifact_schema["required"])
 if module.EXPECTED_V58_POLICY_STATIC != v58_contract["expected_policy_static"]:
     raise SystemExit("EXPECTED_V58_POLICY_STATIC must be derived from schema x-contract.expected_policy_static")
 if module.EXPECTED_V58_REQUIRED_SYSTEMS != v58_contract["expected_required_systems"]:
@@ -307,6 +309,8 @@ if module.EXPECTED_V58_REQUIREMENT_IDS != v58_contract["expected_requirement_ids
     raise SystemExit("EXPECTED_V58_REQUIREMENT_IDS must be derived from schema x-contract.expected_requirement_ids")
 if module.EXPECTED_V58_ARTIFACTS != v58_contract["expected_required_artifacts"]:
     raise SystemExit("EXPECTED_V58_ARTIFACTS must be derived from schema x-contract.expected_required_artifacts")
+if module.OPTIONAL_V58_ARTIFACT_KEYS != v58_optional_artifact_keys:
+    raise SystemExit("OPTIONAL_V58_ARTIFACT_KEYS must be derived from schema required_artifacts.items.properties")
 if module.V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS != set(v58_contract["review_forbidden_resource_columns"]):
     raise SystemExit("V58_REVIEW_FORBIDDEN_RESOURCE_COLUMNS must be derived from schema x-contract.review_forbidden_resource_columns")
 if module.V58_REVIEW_FORBIDDEN_IDENTITY_COLUMNS != set(v58_contract["review_forbidden_identity_columns"]):

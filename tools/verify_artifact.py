@@ -38,6 +38,21 @@ def schema_required_at(schema_name: str, *path_parts: str) -> set[str]:
     return set(str(field) for field in required)
 
 
+def schema_properties_at(schema_name: str, *path_parts: str) -> set[str]:
+    schema_path = SCHEMA_ROOT / schema_name
+    node: object = json.loads(schema_path.read_text(encoding="utf-8"))
+    for part in path_parts:
+        if not isinstance(node, dict):
+            return set()
+        node = node.get(part, {})
+    if not isinstance(node, dict):
+        return set()
+    properties = node.get("properties", {})
+    if not isinstance(properties, dict):
+        return set()
+    return set(str(field) for field in properties)
+
+
 def schema_enum_at(schema_name: str, *path_parts: str) -> list[str]:
     schema_path = SCHEMA_ROOT / schema_name
     node: object = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -156,9 +171,10 @@ REQUIRED_V53_REQUIREMENT_KEYS = schema_required_at("v53_source_benchmark.schema.
 REQUIRED_V58_BLIND_EVAL_KEYS = schema_required("v58_blind_eval.schema.json")
 REQUIRED_V58_REQUIREMENT_KEYS = schema_required_at("v58_blind_eval.schema.json", "properties", "requirements", "items")
 REQUIRED_V58_ARTIFACT_KEYS = schema_required_at("v58_blind_eval.schema.json", "properties", "required_artifacts", "items")
-OPTIONAL_V58_ARTIFACT_KEYS = {
-    "per_system_min_rows",
-}
+OPTIONAL_V58_ARTIFACT_KEYS = (
+    schema_properties_at("v58_blind_eval.schema.json", "properties", "required_artifacts", "items")
+    - REQUIRED_V58_ARTIFACT_KEYS
+)
 REQUIRED_REVIEW_RETURN_WORKFLOW_KEYS = schema_required("review_return_workflow.schema.json")
 REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS = schema_required_at("review_return_workflow.schema.json", "properties", "requirements", "items")
 REQUIRED_V61_ONE_TOKEN_KEYS = schema_required("v61_one_token_path.schema.json")
@@ -2447,6 +2463,7 @@ def verify_v61_one_token_path(
         summaries["v61aa"] = read_first_csv(v61aa_summary)
     if v61ab_summary is not None:
         summaries["v61ab"] = read_first_csv(v61ab_summary)
+        errors.extend(verify_v61ab_tile_probe(v61ab_summary))
     summary_evidence_supplied = bool(summaries)
 
     for index, row in enumerate(milestones, start=1):
@@ -2569,6 +2586,8 @@ def verify_v61_one_token_path(
             for field, expected in value_checks.items():
                 if artifact_row.get(field) != expected:
                     errors.append(f"{artifact_path}: row {row_index} {field} expected {expected}, got {artifact_row.get(field)}")
+            if artifact_row.get(pass_field) == "1":
+                _validate_v61_pass_row_sha256_fields(artifact_path, row_index, pass_field, artifact_row, fieldnames, errors)
             if artifact_id == "torch-matvec-parity-rows":
                 torch_label = f"{artifact_path}: row {row_index} torch_matvec_parity_pass=1"
                 _compute_v61_torch_matvec_parity_ready(
@@ -2712,6 +2731,19 @@ def _parse_token_id_list(value: str) -> list[int] | None:
             return None
         tokens.append(token_id)
     return tokens
+
+
+def _validate_v61_pass_row_sha256_fields(
+    artifact_path: Path,
+    row_index: int,
+    pass_field: str,
+    row: dict[str, str],
+    fieldnames: list[str],
+    errors: list[str],
+) -> None:
+    for field in fieldnames:
+        if field.endswith("_sha256") and not _is_sha256_digest(row.get(field, "")):
+            errors.append(f"{artifact_path}: row {row_index} {pass_field}=1 requires {field}")
 
 
 def _compute_v61_torch_matvec_parity_ready(
