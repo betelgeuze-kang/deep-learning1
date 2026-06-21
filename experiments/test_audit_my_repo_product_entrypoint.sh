@@ -161,7 +161,7 @@ for idx in 1 2 3; do
   "$ROOT_DIR/scripts/audit_my_repo.sh" --verify-existing "$out" >/dev/null
 done
 
-python3 - "$TMP_DIR" <<'PY'
+python3 - "$TMP_DIR" "$ROOT_DIR" <<'PY'
 import csv
 import hashlib
 import json
@@ -169,6 +169,7 @@ import sys
 from pathlib import Path
 
 root = Path(sys.argv[1])
+project_root = Path(sys.argv[2]).resolve()
 
 
 def sha256(path):
@@ -323,6 +324,16 @@ for idx in range(1, 4):
     }
     if {row["plugin_id"]: row.get("module") for row in plugin_registry["plugins"]} != expected_plugin_modules:
         raise SystemExit("plugin registry must bind each deterministic plugin to its module")
+    expected_plugin_source_paths = {
+        plugin_id: f"scripts/{module}.py"
+        for plugin_id, module in expected_plugin_modules.items()
+    }
+    if {row["plugin_id"]: row.get("source_path") for row in plugin_registry["plugins"]} != expected_plugin_source_paths:
+        raise SystemExit("plugin registry must bind each deterministic plugin to its source path")
+    for row in plugin_registry["plugins"]:
+        source_path = project_root / row["source_path"]
+        if row.get("source_sha256") != "sha256:" + sha256(source_path):
+            raise SystemExit(f"plugin registry source sha mismatch: {row['plugin_id']}")
     plugin_registry_sha256 = "sha256:" + sha256(out / "plugin_registry.json")
     if manifest["plugin_registry_sha256"] != plugin_registry_sha256:
         raise SystemExit("audit manifest must bind plugin_registry.json sha256")

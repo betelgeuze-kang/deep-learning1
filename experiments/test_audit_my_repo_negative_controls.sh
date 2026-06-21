@@ -60,12 +60,24 @@ fi
 "$ROOT_DIR/scripts/audit_my_repo.sh" --list-plugin-rules >"$TMP_DIR/plugin_rules.json"
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_rules.schema.json" "$TMP_DIR/plugin_rules.json" >/dev/null
-python3 - "$TMP_DIR/plugins.json" <<'PY'
+python3 - "$TMP_DIR/plugins.json" "$ROOT_DIR" <<'PY'
+import hashlib
 import json
 import sys
 from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+root = Path(sys.argv[2]).resolve()
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 if payload["schema_version"] != "local_repo_audit.v1":
     raise SystemExit("plugin registry schema version mismatch")
 if payload["tool_version"] != "audit_my_repo_alpha.v1":
@@ -84,6 +96,11 @@ if set(plugins) != set(expected):
 for plugin_id, module in expected.items():
     if plugins[plugin_id].get("module") != module:
         raise SystemExit(f"plugin registry module mismatch for {plugin_id}")
+    expected_source_path = f"scripts/{module}.py"
+    if plugins[plugin_id].get("source_path") != expected_source_path:
+        raise SystemExit(f"plugin registry source path mismatch for {plugin_id}")
+    if plugins[plugin_id].get("source_sha256") != "sha256:" + sha256(root / expected_source_path):
+        raise SystemExit(f"plugin registry source sha mismatch for {plugin_id}")
 if plugins["deprecated_api"]["language"] != "multi":
     raise SystemExit("deprecated_api plugin must advertise multi-language coverage")
 PY
@@ -664,6 +681,18 @@ verify_cmd = [str(root / "scripts/audit_my_repo.sh"), "--verify-existing", str(o
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must require abstain_rows.csv in sha256sums.txt")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+summary_json_path = out_a / "audit_summary.json"
+original_summary_json_text = summary_json_path.read_text(encoding="utf-8")
+summary_json_path.write_text("{not json\n", encoding="utf-8")
+corrupt_result = subprocess.run(verify_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+if corrupt_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject corrupt JSON artifacts")
+if "Traceback" in corrupt_result.stderr:
+    raise SystemExit("local-audit verifier must not expose Python traceback for corrupt JSON artifacts")
+if "local_audit_verify_error:" not in corrupt_result.stderr or "artifact_verify: failed" not in corrupt_result.stderr:
+    raise SystemExit("corrupt JSON verifier failure must include stable error and artifact failure lines")
+summary_json_path.write_text(original_summary_json_text, encoding="utf-8")
 
 first_sha_line = original_sha_manifest_text.splitlines()[0]
 sha_manifest_path.write_text(original_sha_manifest_text + first_sha_line + "\n", encoding="utf-8")

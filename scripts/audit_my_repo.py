@@ -706,18 +706,31 @@ def resolve_question(args: argparse.Namespace) -> str:
 
 
 def plugin_registry_payload() -> dict:
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "tool_version": TOOL_VERSION,
-        "plugins": [
+    root = Path(__file__).resolve().parents[1]
+
+    def plugin_source(plugin: AuditPlugin) -> tuple[str, str]:
+        module = sys.modules[plugin.__class__.__module__]
+        module_path = Path(str(module.__file__)).resolve()
+        rel_path = str(module_path.relative_to(root))
+        return rel_path, sha256(module_path)
+
+    plugin_rows = []
+    for plugin in list(DEFAULT_PLUGINS) + [USER_QUESTION_PLUGIN]:
+        source_path, source_digest = plugin_source(plugin)
+        plugin_rows.append(
             {
                 "plugin_id": plugin.plugin_id,
                 "audit_type": plugin.audit_type,
                 "language": plugin.language,
                 "module": plugin.__class__.__module__,
+                "source_path": source_path,
+                "source_sha256": source_digest,
             }
-            for plugin in list(DEFAULT_PLUGINS) + [USER_QUESTION_PLUGIN]
-        ],
+        )
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "tool_version": TOOL_VERSION,
+        "plugins": plugin_rows,
     }
 
 

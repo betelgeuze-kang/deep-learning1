@@ -23,7 +23,9 @@
           "plugin_id",
           "audit_type",
           "language",
-          "module"
+          "module",
+          "source_path",
+          "source_sha256"
         ],
         "properties": {
           "plugin_id": {
@@ -59,6 +61,21 @@
               "auditor_plugin_missing_evidence",
               "auditor_plugin_user_question"
             ]
+          },
+          "source_path": {
+            "type": "string",
+            "enum": [
+              "scripts/auditor_plugin_doc_code_identity.py",
+              "scripts/auditor_plugin_deprecated_api.py",
+              "scripts/auditor_plugin_config_consistency.py",
+              "scripts/auditor_plugin_unsupported_claim.py",
+              "scripts/auditor_plugin_missing_evidence.py",
+              "scripts/auditor_plugin_user_question.py"
+            ]
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
           }
         }
       }

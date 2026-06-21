@@ -32,6 +32,14 @@ EXPECTED_PLUGIN_MODULES = [
     "auditor_plugin_missing_evidence",
     "auditor_plugin_user_question",
 ]
+EXPECTED_PLUGIN_SOURCE_PATHS = [
+    "scripts/auditor_plugin_doc_code_identity.py",
+    "scripts/auditor_plugin_deprecated_api.py",
+    "scripts/auditor_plugin_config_consistency.py",
+    "scripts/auditor_plugin_unsupported_claim.py",
+    "scripts/auditor_plugin_missing_evidence.py",
+    "scripts/auditor_plugin_user_question.py",
+]
 
 REQUIRED_FILES = {
     "ARCHITECTURE_TRACE.md",
@@ -400,6 +408,7 @@ def verify_audit_report(out_dir: Path, summary: dict[str, str], errors: list[str
 
 
 def verify_registry(registry: dict, errors: list[str]) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
     if registry.get("schema_version") != "local_repo_audit.v1":
         add(errors, "plugin registry schema_version mismatch")
     if registry.get("tool_version") != TOOL_VERSION:
@@ -410,6 +419,21 @@ def verify_registry(registry: dict, errors: list[str]) -> None:
     plugin_modules = [plugin.get("module") for plugin in registry.get("plugins", [])]
     if plugin_modules != EXPECTED_PLUGIN_MODULES:
         add(errors, "plugin registry modules drifted")
+    plugin_source_paths = [plugin.get("source_path") for plugin in registry.get("plugins", [])]
+    if plugin_source_paths != EXPECTED_PLUGIN_SOURCE_PATHS:
+        add(errors, "plugin registry source paths drifted")
+    for plugin in registry.get("plugins", []):
+        source_path = str(plugin.get("source_path", ""))
+        rel = Path(source_path)
+        if not source_path or rel.is_absolute() or ".." in rel.parts:
+            add(errors, f"plugin registry source path escapes repo: {source_path}")
+            continue
+        source = repo_root / rel
+        if not source.is_file():
+            add(errors, f"plugin registry source file missing: {source_path}")
+            continue
+        if plugin.get("source_sha256") != sha256_prefixed(source):
+            add(errors, f"plugin registry source sha mismatch: {source_path}")
 
 
 def verify_finding_registry_binding(out_dir: Path, registry: dict, errors: list[str]) -> None:
@@ -1047,7 +1071,20 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Verify local audit product artifacts.")
     parser.add_argument("out_dir")
     args = parser.parse_args(argv)
-    errors = verify_local_audit(Path(args.out_dir).resolve())
+    try:
+        errors = verify_local_audit(Path(args.out_dir).resolve())
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        csv.Error,
+        KeyError,
+        TypeError,
+        ValueError,
+        subprocess.SubprocessError,
+    ) as exc:
+        print(f"local_audit_verify_error: {exc}", file=sys.stderr)
+        return 1
     if errors:
         for error in errors:
             print(error, file=sys.stderr)
