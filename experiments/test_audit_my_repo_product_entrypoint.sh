@@ -235,6 +235,21 @@ for idx in range(1, 4):
     for key, value in summary.items():
         if summary_rows[0][key] != str(value):
             raise SystemExit(f"audit summary CSV/JSON mismatch: {key}")
+    resource = json.loads((out / "resource_envelope.json").read_text(encoding="utf-8"))
+    expected_resource = {
+        "tool_version": manifest["tool_version"],
+        "source_files_scanned": manifest["source_file_count"],
+        "mode": summary["mode"],
+        "namespace": manifest["namespace"],
+        "external_network_used": 0,
+        "raw_prompt_context_bytes": summary["raw_prompt_context_bytes"],
+        "latency_ms": summary["latency_ms"],
+        "wrong_answer_guard_rows": summary["wrong_answer_guard_rows"],
+        "claim_boundary_ready": summary["claim_boundary_ready"],
+    }
+    for key, value in expected_resource.items():
+        if resource[key] != value:
+            raise SystemExit(f"resource envelope mismatch: {key}")
     plugin_registry = json.loads((out / "plugin_registry.json").read_text(encoding="utf-8"))
     plugin_ids = {row["plugin_id"] for row in plugin_registry["plugins"]}
     if plugin_registry["schema_version"] != "local_repo_audit.v1":

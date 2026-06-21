@@ -380,6 +380,24 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+resource_path = out_a / "resource_envelope.json"
+original_resource_text = resource_path.read_text(encoding="utf-8")
+tampered_resource = json.loads(original_resource_text)
+tampered_resource["source_files_scanned"] = 999
+resource_path.write_text(json.dumps(tampered_resource, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_resource_sha = sha256(resource_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  resource_envelope.json"):
+        sha_lines.append(f"{new_resource_sha}  resource_envelope.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject resource envelope drift")
+resource_path.write_text(original_resource_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 manifest_path = out_a / "audit_manifest.json"
 original_manifest_text = manifest_path.read_text(encoding="utf-8")
 tampered_manifest = json.loads(original_manifest_text)

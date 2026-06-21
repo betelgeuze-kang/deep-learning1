@@ -3542,6 +3542,19 @@ def verify_local_audit(out_dir: Path) -> list[str]:
         errors.append(f"{out_dir / 'audit_summary.json'}: source_files must match manifest source_file_count")
     if summary.get("wrong_answer_guard_rows") != summary.get("wrong_answer_guard_pass_rows"):
         errors.append(f"{out_dir / 'audit_summary.json'}: all wrong-answer guard rows must pass")
+    expected_resource_fields = {
+        "tool_version": manifest.get("tool_version"),
+        "source_files_scanned": manifest.get("source_file_count"),
+        "mode": summary.get("mode"),
+        "namespace": manifest.get("namespace"),
+        "raw_prompt_context_bytes": summary.get("raw_prompt_context_bytes"),
+        "latency_ms": summary.get("latency_ms"),
+        "wrong_answer_guard_rows": summary.get("wrong_answer_guard_rows"),
+        "claim_boundary_ready": summary.get("claim_boundary_ready"),
+    }
+    for field, expected in expected_resource_fields.items():
+        if resource.get(field) != expected:
+            errors.append(f"{out_dir / 'resource_envelope.json'}: {field} expected {expected!r}, got {resource.get(field)!r}")
     if resource.get("external_network_used") != 0:
         errors.append(f"{out_dir / 'resource_envelope.json'}: external_network_used expected 0")
     reproduce_path = out_dir / "reproduce.sh"
