@@ -44,6 +44,38 @@ git -C "$repo" init -q
 git -C "$repo" add README.md pyproject.toml legacy.py legacy.cpp legacy.js
 git -C "$repo" -c user.email=audit@example.invalid -c user.name=Audit commit -q -m init
 
+if [[ "$("$ROOT_DIR/scripts/audit_my_repo.sh" --version)" != "audit_my_repo_alpha.v1" ]]; then
+  echo "audit entrypoint must expose a stable tool version" >&2
+  exit 8
+fi
+"$ROOT_DIR/scripts/audit_my_repo.sh" --list-plugins >"$TMP_DIR/plugins.json"
+python3 - "$TMP_DIR/plugins.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload["schema_version"] != "local_repo_audit.v1":
+    raise SystemExit("plugin registry schema version mismatch")
+if payload["tool_version"] != "audit_my_repo_alpha.v1":
+    raise SystemExit("plugin registry tool version mismatch")
+plugins = {row["plugin_id"]: row for row in payload["plugins"]}
+expected = {
+    "doc_code_identity",
+    "deprecated_api",
+    "config_consistency",
+    "unsupported_claim",
+    "missing_evidence",
+}
+if set(plugins) != expected:
+    raise SystemExit(f"plugin registry mismatch: {sorted(plugins)}")
+if plugins["deprecated_api"]["language"] != "multi":
+    raise SystemExit("deprecated_api plugin must advertise multi-language coverage")
+PY
+if "$ROOT_DIR/scripts/audit_my_repo.sh" --out "$TMP_DIR/no_target" >/dev/null 2>&1; then
+  echo "target repo must be required for audit execution" >&2
+  exit 9
+fi
 if "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" --generator unsupported --out "$TMP_DIR/bad_generator" >/dev/null 2>&1; then
   echo "unsupported generator must fail" >&2
   exit 10

@@ -510,7 +510,9 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a local evidence-bound code/documentation audit.")
-    parser.add_argument("target_repo")
+    parser.add_argument("target_repo", nargs="?")
+    parser.add_argument("--version", action="version", version=TOOL_VERSION)
+    parser.add_argument("--list-plugins", action="store_true", help="Print the deterministic auditor plugin registry as JSON and exit.")
     parser.add_argument("--mode", choices=["quick", "full"], default="quick")
     parser.add_argument("--max-queries", type=int, default=100)
     parser.add_argument("--out", default="results/my_repo_audit")
@@ -522,6 +524,21 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--emit-reproduce", action="store_true", default=True)
     parser.add_argument("--verify-output", action=argparse.BooleanOptionalAction, default=True)
     return parser.parse_args(argv)
+
+
+def plugin_registry_payload() -> dict:
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "tool_version": TOOL_VERSION,
+        "plugins": [
+            {
+                "plugin_id": plugin.plugin_id,
+                "audit_type": plugin.audit_type,
+                "language": plugin.language,
+            }
+            for plugin in DEFAULT_PLUGINS
+        ],
+    }
 
 
 def verify_output_artifact(root: Path, out_dir: Path) -> int:
@@ -545,6 +562,12 @@ def verify_output_artifact(root: Path, out_dir: Path) -> int:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    if args.list_plugins:
+        print(json.dumps(plugin_registry_payload(), indent=2, sort_keys=True))
+        return 0
+    if not args.target_repo:
+        print("target repo is required unless --version or --list-plugins is used", file=sys.stderr)
+        return 2
     root = Path(__file__).resolve().parents[1]
     target = Path(args.target_repo).expanduser().resolve()
     out_dir = Path(args.out).expanduser()
