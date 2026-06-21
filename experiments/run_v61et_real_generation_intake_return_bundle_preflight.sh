@@ -21,16 +21,19 @@ fi
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-V61ES_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61es_dispatch_receipt_to_generation_intake_handoff_guard.sh" >/dev/null
-V61ER_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61er_real_generation_intake_dispatch_receipt_preflight.sh" >/dev/null
-V61EJ_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ej_real_generation_return_receiver_preflight.sh" >/dev/null
-V61EL_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61el_real_prerequisite_binding_receiver_preflight.sh" >/dev/null
-V61EO_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61eo_real_generation_intake_evidence_inbox_scaffold.sh" >/dev/null
+if [[ "${V61ET_REFRESH_SOURCES:-1}" == "1" ]]; then
+  V61ES_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61es_dispatch_receipt_to_generation_intake_handoff_guard.sh" >/dev/null
+  V61ER_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61er_real_generation_intake_dispatch_receipt_preflight.sh" >/dev/null
+  V61EJ_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ej_real_generation_return_receiver_preflight.sh" >/dev/null
+  V61EL_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61el_real_prerequisite_binding_receiver_preflight.sh" >/dev/null
+  V61EO_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61eo_real_generation_intake_evidence_inbox_scaffold.sh" >/dev/null
+fi
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$RETURN_BUNDLE_DIR_ARG" "$RETURN_BUNDLE_PROVENANCE" <<'PY'
 import csv
 import hashlib
 import json
+import re
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -44,6 +47,9 @@ bundle_arg = sys.argv[5].strip()
 bundle_provenance = sys.argv[6].strip() or "unspecified"
 results = root / "results"
 bundle_dir = Path(bundle_arg).expanduser().resolve() if bundle_arg else None
+REAL_BUNDLE_PROVENANCE = "real-generation-intake-return-bundle"
+DEFAULT_AUTHORITY_REL = "review_return_provenance/operator_attestation/generation_operator_authority_statement.txt"
+SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def sha256(path):
@@ -78,6 +84,20 @@ def status(flag):
     return "pass" if flag else "blocked"
 
 
+def valid_sha(value):
+    return isinstance(value, str) and bool(SHA_RE.match(value))
+
+
+def safe_relative(base, rel):
+    rel_value = str(rel or "")
+    if not rel_value:
+        return None, "authority-path-missing"
+    rel_path = Path(rel_value)
+    if rel_path.is_absolute() or ".." in rel_path.parts:
+        return None, "authority-path-unsafe"
+    return base / rel_path, ""
+
+
 source_paths = [
     (results / "v61es_dispatch_receipt_to_generation_intake_handoff_guard_summary.csv", "source_summaries/v61es_dispatch_receipt_to_generation_intake_handoff_guard_summary.csv"),
     (results / "v61er_real_generation_intake_dispatch_receipt_preflight_summary.csv", "source_summaries/v61er_real_generation_intake_dispatch_receipt_preflight_summary.csv"),
@@ -104,14 +124,83 @@ required_files = [
     *[("generation-result", f"generation_result_return/{name}") for name in required_generation],
     *[("prerequisite-binding", f"prerequisite_binding/{name}") for name in required_binding],
     ("review-return-provenance", "review_return_provenance/REAL_REVIEW_RETURN_PROVENANCE.json"),
+    ("review-return-provenance", DEFAULT_AUTHORITY_REL),
 ]
 
 bundle_dir_supplied = int(bundle_dir is not None)
 bundle_dir_exists = int(bundle_dir is not None and bundle_dir.is_dir())
-fixture_provenance = bundle_provenance.startswith("fixture")
+env_real_provenance = int(bundle_provenance == REAL_BUNDLE_PROVENANCE)
+marker_rel = "review_return_provenance/REAL_REVIEW_RETURN_PROVENANCE.json"
+marker_path = bundle_dir / marker_rel if bundle_dir is not None else None
+marker_supplied = int(marker_path is not None and marker_path.is_file())
+marker_payload = {}
+marker_errors = []
+marker_sha = ""
+marker_source_class = ""
+marker_authority_sha = ""
+marker_authority_path = ""
+marker_authority_file_sha = ""
+marker_authority_file_bytes = 0
+marker_authority_file_exists = 0
+marker_accepted_as_real = 0
+if marker_supplied:
+    marker_sha = sha256(marker_path)
+    try:
+        marker_payload = json.loads(marker_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        marker_errors.append("invalid-json")
+    provenance_value = marker_payload.get("provenance") or marker_payload.get("provenance_class")
+    if provenance_value != REAL_BUNDLE_PROVENANCE:
+        marker_errors.append("provenance-mismatch")
+    marker_source_class = str(marker_payload.get("source_class") or marker_payload.get("provenance_class", ""))
+    if marker_source_class.startswith("fixture"):
+        marker_errors.append("fixture-source-class")
+    if marker_source_class not in {"external-generation-intake-return", "external-operator-return", REAL_BUNDLE_PROVENANCE}:
+        marker_errors.append("source-class-not-external-generation-intake")
+    marker_authority_sha = str(
+        marker_payload.get(
+            "generation_operator_authority_sha256",
+            marker_payload.get("reviewer_authority_sha256", ""),
+        )
+    )
+    if not valid_sha(marker_authority_sha):
+        marker_errors.append("operator-authority-sha256-missing")
+    marker_authority_path = str(
+        marker_payload.get(
+            "generation_operator_authority_path",
+            marker_payload.get("reviewer_authority_path", marker_payload.get("authority_statement_path", DEFAULT_AUTHORITY_REL)),
+        )
+    )
+    authority_path, authority_error = safe_relative(bundle_dir, marker_authority_path)
+    if authority_error:
+        marker_errors.append(authority_error)
+    marker_authority_file_exists = int(authority_path is not None and authority_path.is_file())
+    if marker_authority_file_exists:
+        marker_authority_file_sha = sha256(authority_path)
+        marker_authority_file_bytes = authority_path.stat().st_size
+        if marker_authority_file_bytes <= 0:
+            marker_errors.append("authority-file-empty")
+        if marker_authority_sha and marker_authority_file_sha != marker_authority_sha:
+            marker_errors.append("authority-sha-mismatch")
+        try:
+            authority_text = authority_path.read_text(encoding="utf-8", errors="replace").lower()
+        except OSError:
+            authority_text = ""
+            marker_errors.append("authority-file-unreadable")
+        if "fixture" in authority_text or "synthetic" in authority_text:
+            marker_errors.append("authority-file-fixture-text")
+    else:
+        marker_errors.append("authority-file-missing")
+    marker_accepted_as_real = int(marker_payload.get("accepted_as_real") in {1, True, "1", "true", "True"})
+    if not marker_accepted_as_real:
+        marker_errors.append("accepted-as-real-missing")
+else:
+    marker_errors.append("missing-provenance-marker")
+marker_real_provenance = int(marker_supplied and not marker_errors)
+
 if not bundle_dir_supplied:
     selected_bundle_source_class = "none"
-elif fixture_provenance:
+elif marker_source_class.startswith("fixture"):
     selected_bundle_source_class = "fixture-v61et-return-bundle"
 else:
     selected_bundle_source_class = "operator-supplied"
@@ -181,8 +270,8 @@ candidate_preflight_ready = int(
     and template_named_rows == 0
     and payload_like_rows == 0
 )
-non_fixture_return_bundle = int(bundle_dir_supplied and not fixture_provenance)
-real_return_bundle_provenance_asserted = int(bundle_provenance == "real-generation-intake-return-bundle")
+non_fixture_return_bundle = int(bundle_dir_supplied and selected_bundle_source_class == "operator-supplied")
+real_return_bundle_provenance_asserted = int(env_real_provenance and marker_real_provenance)
 real_return_bundle_preflight_ready = int(
     candidate_preflight_ready
     and non_fixture_return_bundle
@@ -198,8 +287,8 @@ requirement_rows = [
     {"requirement_id": "no-payload-like-files", "status": status(payload_like_rows == 0), "required_value": "0", "actual_value": str(payload_like_rows), "reason": "return bundle must not contain checkpoint payload files"},
     {"requirement_id": "return-bundle-candidate-preflight", "status": status(candidate_preflight_ready), "required_value": "1", "actual_value": str(candidate_preflight_ready), "reason": "mechanical one-root bundle preflight"},
     {"requirement_id": "non-fixture-return-bundle", "status": status(non_fixture_return_bundle), "required_value": "1", "actual_value": str(non_fixture_return_bundle), "reason": "fixture bundle does not count as real evidence"},
-    {"requirement_id": "real-return-bundle-provenance", "status": status(real_return_bundle_provenance_asserted), "required_value": "real-generation-intake-return-bundle", "actual_value": bundle_provenance, "reason": "real provenance must be explicit"},
-    {"requirement_id": "real-return-bundle-preflight", "status": status(real_return_bundle_preflight_ready), "required_value": "1", "actual_value": str(real_return_bundle_preflight_ready), "reason": "candidate plus non-fixture provenance required"},
+    {"requirement_id": "real-return-bundle-provenance", "status": status(real_return_bundle_provenance_asserted), "required_value": "env=real-generation-intake-return-bundle;marker=real-generation-intake-return-bundle", "actual_value": f"env={bundle_provenance};marker_real={marker_real_provenance};errors={';'.join(marker_errors)}", "reason": "real provenance must be backed by bundle provenance marker evidence"},
+    {"requirement_id": "real-return-bundle-preflight", "status": status(real_return_bundle_preflight_ready), "required_value": "1", "actual_value": str(real_return_bundle_preflight_ready), "reason": "candidate plus non-fixture marker-backed provenance required"},
     {"requirement_id": "downstream-row-acceptance", "status": "blocked", "required_value": "1", "actual_value": "0", "reason": "v61et is bundle preflight only"},
     {"requirement_id": "actual-generation", "status": "blocked", "required_value": "1", "actual_value": "0", "reason": "actual generation remains unproven"},
 ]
@@ -252,6 +341,18 @@ summary = {
     "return_bundle_dir_supplied": str(bundle_dir_supplied),
     "return_bundle_dir_exists": str(bundle_dir_exists),
     "selected_bundle_source_class": selected_bundle_source_class,
+    "return_bundle_provenance_env_real": str(env_real_provenance),
+    "return_bundle_marker_supplied": str(marker_supplied),
+    "return_bundle_marker_real_provenance": str(marker_real_provenance),
+    "return_bundle_marker_source_class": marker_source_class,
+    "return_bundle_marker_authority_path": marker_authority_path,
+    "return_bundle_marker_authority_sha256": marker_authority_sha,
+    "return_bundle_marker_authority_file_exists": str(marker_authority_file_exists),
+    "return_bundle_marker_authority_file_sha256": marker_authority_file_sha,
+    "return_bundle_marker_authority_file_bytes": str(marker_authority_file_bytes),
+    "return_bundle_marker_accepted_as_real": str(marker_accepted_as_real),
+    "return_bundle_marker_sha256": marker_sha,
+    "return_bundle_marker_errors": ";".join(marker_errors),
     "required_return_bundle_files": str(required_file_rows),
     "present_return_bundle_files": str(present_rows),
     "return_bundle_family_rows": str(len(family_rows)),
@@ -277,7 +378,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 decision_rows = [
     {"gate": "return-bundle-candidate-preflight", "status": status(candidate_preflight_ready), "reason": f"candidate={candidate_preflight_ready}"},
     {"gate": "non-fixture-return-bundle", "status": status(non_fixture_return_bundle), "reason": f"class={selected_bundle_source_class}"},
-    {"gate": "real-return-bundle-provenance", "status": status(real_return_bundle_provenance_asserted), "reason": f"provenance={bundle_provenance}"},
+    {"gate": "real-return-bundle-provenance", "status": status(real_return_bundle_provenance_asserted), "reason": f"env={bundle_provenance}; marker_real={marker_real_provenance}; errors={';'.join(marker_errors)}"},
     {"gate": "real-return-bundle-preflight", "status": status(real_return_bundle_preflight_ready), "reason": f"real_bundle={real_return_bundle_preflight_ready}"},
     {"gate": "downstream-row-acceptance", "status": "blocked", "reason": "bundle preflight only"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "no accepted generation rows"},
@@ -294,6 +395,8 @@ boundary.write_text(
             f"- return_bundle_dir_supplied={bundle_dir_supplied}",
             f"- present_return_bundle_files={present_rows}/{required_file_rows}",
             f"- return_bundle_candidate_preflight_ready={candidate_preflight_ready}",
+            f"- return_bundle_marker_real_provenance={marker_real_provenance}",
+            f"- return_bundle_marker_errors={';'.join(marker_errors)}",
             f"- real_return_bundle_preflight_ready={real_return_bundle_preflight_ready}",
             "- downstream_row_acceptance_ready=0",
             "- actual_model_generation_ready=0",
@@ -316,6 +419,8 @@ manifest = {
     "generated_at": datetime.now(timezone.utc).isoformat(),
     "v61et_real_generation_intake_return_bundle_preflight_ready": 1,
     "return_bundle_candidate_preflight_ready": candidate_preflight_ready,
+    "return_bundle_marker_real_provenance": marker_real_provenance,
+    "return_bundle_marker_errors": marker_errors,
     "real_return_bundle_preflight_ready": real_return_bundle_preflight_ready,
     "downstream_row_acceptance_ready": 0,
     "actual_model_generation_ready": 0,

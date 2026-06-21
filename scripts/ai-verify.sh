@@ -97,6 +97,9 @@ fi
 if [ -f experiments/test_v61er_real_generation_intake_dispatch_receipt_preflight.sh ]; then
   bash -n experiments/test_v61er_real_generation_intake_dispatch_receipt_preflight.sh
 fi
+if [ -f experiments/test_v61et_real_generation_intake_return_bundle_preflight.sh ]; then
+  bash -n experiments/test_v61et_real_generation_intake_return_bundle_preflight.sh
+fi
 if [ -f experiments/test_v61_one_token_path_contract.sh ]; then
   bash -n experiments/test_v61_one_token_path_contract.sh
 fi
@@ -297,6 +300,9 @@ if [ -x experiments/test_v61_one_token_path_contract.sh ]; then
 fi
 if [ -x experiments/test_v61er_real_generation_intake_dispatch_receipt_preflight.sh ]; then
   ./experiments/test_v61er_real_generation_intake_dispatch_receipt_preflight.sh >/dev/null
+fi
+if [ -x experiments/test_v61et_real_generation_intake_return_bundle_preflight.sh ]; then
+  ./experiments/test_v61et_real_generation_intake_return_bundle_preflight.sh >/dev/null
 fi
 
 if [ -x tools/verify_artifact.py ]; then

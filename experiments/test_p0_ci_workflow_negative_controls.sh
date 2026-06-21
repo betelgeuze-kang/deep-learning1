@@ -150,6 +150,14 @@ grep -F "./experiments/test_v61er_real_generation_intake_dispatch_receipt_prefli
   echo "ai-verify.sh must execute v61er receipt provenance negative control" >&2
   exit 1
 }
+grep -F "bash -n experiments/test_v61et_real_generation_intake_return_bundle_preflight.sh" "$ROOT_DIR/scripts/ai-verify.sh" >/dev/null || {
+  echo "ai-verify.sh must syntax-check v61et return bundle provenance negative control before execution" >&2
+  exit 1
+}
+grep -F "./experiments/test_v61et_real_generation_intake_return_bundle_preflight.sh >/dev/null" "$ROOT_DIR/scripts/ai-verify.sh" >/dev/null || {
+  echo "ai-verify.sh must execute v61et return bundle provenance negative control" >&2
+  exit 1
+}
 
 cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/ai_verify_no_wrapper.yml"
 python3 - "$TMP_DIR/ai_verify_no_wrapper.yml" <<'PY'
