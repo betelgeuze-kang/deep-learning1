@@ -130,6 +130,23 @@ if not deprecated or deprecated[0]["language"] != "multi":
 citations = [json.loads(line) for line in (out_a / "citation_spans.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
 if not citations:
     raise SystemExit("citation spans must be present")
+deprecated_ids = {row["finding_id"] for row in deprecated}
+deprecated_previews = [
+    row["span_text_preview"]
+    for row in citations
+    if row["finding_id"] in deprecated_ids
+]
+for expected in ["distutils", "std::auto_ptr", "document.write"]:
+    if not any(expected in preview for preview in deprecated_previews):
+        raise SystemExit(f"deprecated citation must bind exact evidence line for {expected}")
+unsupported_ids = {row["finding_id"] for row in findings if row["plugin_id"] == "unsupported_claim"}
+unsupported_previews = [
+    row["span_text_preview"].lower()
+    for row in citations
+    if row["finding_id"] in unsupported_ids
+]
+if not any("production ready" in preview or "state of the art" in preview for preview in unsupported_previews):
+    raise SystemExit("unsupported claim citation must bind exact readiness wording")
 for row in citations:
     path = repo / row["file_path"]
     if not path.is_file():

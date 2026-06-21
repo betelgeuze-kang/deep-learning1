@@ -79,7 +79,7 @@ def line_for(path: Path, patterns: list[str]) -> tuple[int, str]:
         if not pattern:
             continue
         for idx, line in enumerate(text.splitlines(), start=1):
-            if pattern in line:
+            if pattern in line or pattern.lower() in line.lower():
                 return idx, line.strip()[:280]
     for idx, line in enumerate(text.splitlines(), start=1):
         if line.strip():
@@ -124,7 +124,18 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
         for cidx, path in enumerate(finding.evidence_paths, start=1):
             if not path.exists() or not path.is_file():
                 continue
-            line_no, snippet = line_for(path, [finding.answer, "name", "project", "default", "timeout", "distutils", "pkg_resources", "TODO", "# "])
+            citation_patterns = list(finding.evidence_terms) + [
+                finding.answer,
+                "name",
+                "project",
+                "default",
+                "timeout",
+                "distutils",
+                "pkg_resources",
+                "TODO",
+                "# ",
+            ]
+            line_no, snippet = line_for(path, citation_patterns)
             citation_id = f"{finding_id}_cite_{cidx}"
             rel_path = rel_to_target(target, path)
             citation_cells.append(f"{rel_path}:{line_no}")

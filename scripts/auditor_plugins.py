@@ -20,6 +20,7 @@ class Finding:
     question: str
     answer: str
     evidence_paths: tuple[Path, ...]
+    evidence_terms: tuple[str, ...] = tuple()
     severity: str = "info"
     grounded: int = 1
     abstain: int = 0
@@ -63,6 +64,7 @@ class DocCodeIdentityPlugin(AuditPlugin):
                     "Can project identity be checked against top-level documentation?",
                     "Abstain: README was not found, so project identity cannot be checked.",
                     (sources[0].path,) if sources else tuple(),
+                    ("README",),
                     abstain=1,
                     plugin_id=self.plugin_id,
                 )
@@ -74,6 +76,7 @@ class DocCodeIdentityPlugin(AuditPlugin):
                     "Can project identity be checked against package config?",
                     "Abstain: package/config file was not found, so project identity cannot be verified.",
                     (readme,),
+                    ("# ",),
                     abstain=1,
                     plugin_id=self.plugin_id,
                 )
@@ -102,6 +105,7 @@ class DocCodeIdentityPlugin(AuditPlugin):
                 "Does top-level documentation agree with project/package identity?",
                 answer,
                 (readme, config),
+                tuple(term for term in [readme_h1, package_name, "name"] if term),
                 severity=severity,
                 plugin_id=self.plugin_id,
             )
@@ -126,25 +130,26 @@ class DeprecatedApiPlugin(AuditPlugin):
     )
 
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
-        hits: list[tuple[Path, str]] = []
+        hits: list[tuple[Path, str, str]] = []
         for source in sources:
             suffix = source.path.suffix.lower()
             for suffixes, needle, label in self.patterns:
                 if suffix not in suffixes:
                     continue
                 if needle in source.text:
-                    hits.append((source.path, label))
+                    hits.append((source.path, label, needle))
                     break
             if len(hits) >= 5:
                 break
         if hits:
-            labels = sorted({label for _, label in hits})
+            labels = sorted({label for _, label, _ in hits})
             return [
                 Finding(
                     self.audit_type,
                     "Are there source-bound deprecated or legacy API usage candidates?",
                     "Potential deprecated/legacy usage candidates detected: " + ", ".join(labels) + ".",
-                    tuple(path for path, _ in hits),
+                    tuple(path for path, _, _ in hits),
+                    tuple(needle for _, _, needle in hits),
                     severity="medium",
                     plugin_id=self.plugin_id,
                     language=self.language,
@@ -157,6 +162,7 @@ class DeprecatedApiPlugin(AuditPlugin):
                 "Are there source-bound deprecated or legacy API usage candidates?",
                 "No deprecated/legacy API candidate was detected by the deterministic pattern set.",
                 evidence,
+                ("README",),
                 plugin_id=self.plugin_id,
                 language=self.language,
             )
@@ -177,6 +183,7 @@ class ConfigConsistencyPlugin(AuditPlugin):
                     "Is there a source-bound configuration surface to inspect?",
                     "Abstain: no supported config file was found.",
                     (readme or sources[0].path,) if sources else tuple(),
+                    ("README",),
                     abstain=1,
                     plugin_id=self.plugin_id,
                 )
@@ -192,6 +199,7 @@ class ConfigConsistencyPlugin(AuditPlugin):
                 "Is there a source-bound configuration mismatch candidate?",
                 answer,
                 tuple(path for path in [config, readme] if path is not None),
+                ("requires-python", "Python", "name"),
                 plugin_id=self.plugin_id,
             )
         ]
@@ -215,10 +223,13 @@ class UnsupportedClaimPlugin(AuditPlugin):
 
     def run(self, repo: Path, sources: list[SourceFile]) -> list[Finding]:
         hits: list[Path] = []
+        terms: list[str] = []
         for source in sources:
             lower = source.text.lower()
-            if any(term in lower for term in self.risky_terms):
+            matched = [term for term in self.risky_terms if term in lower]
+            if matched:
                 hits.append(source.path)
+                terms.extend(matched)
             if len(hits) >= 5:
                 break
         if hits:
@@ -228,6 +239,7 @@ class UnsupportedClaimPlugin(AuditPlugin):
                     "Does the repository contain unsupported readiness or capability wording?",
                     "Potential unsupported capability/readiness wording was detected and must remain blocked until evidence is supplied.",
                     tuple(hits),
+                    tuple(dict.fromkeys(terms)),
                     severity="high",
                     unsupported_claim=1,
                     plugin_id=self.plugin_id,
@@ -240,6 +252,7 @@ class UnsupportedClaimPlugin(AuditPlugin):
                 "Does the repository prove an unsupported production-readiness claim?",
                 "Abstain: this local audit did not find independent release-review evidence and will not promote production-ready wording.",
                 evidence,
+                ("README",),
                 abstain=1,
                 plugin_id=self.plugin_id,
             )
@@ -261,6 +274,7 @@ class MissingEvidencePlugin(AuditPlugin):
                     "Is there local evidence for release or benchmark claims?",
                     "Abstain: no local evidence/results/docs surface was detected for benchmark or release claims.",
                     evidence,
+                    ("README", "evidence", "results", "docs"),
                     abstain=1,
                     plugin_id=self.plugin_id,
                 )
@@ -271,6 +285,7 @@ class MissingEvidencePlugin(AuditPlugin):
                 "Is there local evidence for release or benchmark claims?",
                 "Local evidence/documentation directories exist, but this audit does not promote release claims without exact source-bound receipts.",
                 tuple(path for path in evidence_dirs if path.exists())[:2] or evidence,
+                ("evidence", "results", "docs"),
                 plugin_id=self.plugin_id,
             )
         ]
