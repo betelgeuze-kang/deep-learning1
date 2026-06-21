@@ -321,6 +321,43 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 source_manifest_path.write_text(original_source_manifest_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+outside_source = repo / "UNTRACKED_EXTRA.md"
+outside_source.write_text("# Untracked Extra\n\nThis file was not part of the audit source manifest.\n", encoding="utf-8")
+audit_findings_path = out_a / "audit_findings.jsonl"
+original_findings_text = audit_findings_path.read_text(encoding="utf-8")
+tampered_citation_rows = [json.loads(line) for line in original_citations.splitlines() if line.strip()]
+tampered_finding_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
+outside_rel = "UNTRACKED_EXTRA.md"
+outside_cell = f"{outside_rel}:1"
+outside_sha = "sha256:" + sha256(outside_source)
+tampered_citation_rows[0]["file_path"] = outside_rel
+tampered_citation_rows[0]["line_start"] = 1
+tampered_citation_rows[0]["line_end"] = 1
+tampered_citation_rows[0]["sha256"] = outside_sha
+tampered_citation_rows[0]["span_text_preview"] = "# Untracked Extra"
+for row in tampered_finding_rows:
+    if row["finding_id"] == tampered_citation_rows[0]["finding_id"]:
+        row["citations"] = outside_cell
+        break
+tampered_citations.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in tampered_citation_rows), encoding="utf-8")
+audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in tampered_finding_rows), encoding="utf-8")
+new_citation_sha = sha256(tampered_citations)
+new_findings_sha = sha256(audit_findings_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  citation_spans.jsonl"):
+        sha_lines.append(f"{new_citation_sha}  citation_spans.jsonl")
+    elif line.endswith("  audit_findings.jsonl"):
+        sha_lines.append(f"{new_findings_sha}  audit_findings.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject citations outside source_manifest.csv")
+tampered_citations.write_text(original_citations, encoding="utf-8")
+audit_findings_path.write_text(original_findings_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 manifest_path = out_a / "audit_manifest.json"
 original_manifest_text = manifest_path.read_text(encoding="utf-8")
 tampered_manifest = json.loads(original_manifest_text)

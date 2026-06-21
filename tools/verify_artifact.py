@@ -3775,6 +3775,8 @@ def verify_local_audit(out_dir: Path) -> list[str]:
         for row in citations:
             rel = str(row.get("file_path", ""))
             path = target_repo / rel
+            if rel not in seen_source_paths:
+                errors.append(f"{out_dir / 'citation_spans.jsonl'}: citation file is not listed in source_manifest.csv: {rel}")
             if not path.is_file():
                 errors.append(f"{out_dir / 'citation_spans.jsonl'}: citation target missing: {rel}")
                 continue

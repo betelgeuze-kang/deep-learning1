@@ -248,6 +248,9 @@ for idx in range(1, 4):
     findings = [json.loads(line) for line in (out / "audit_findings.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     citations = [json.loads(line) for line in (out / "citation_spans.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     lineage = [json.loads(line) for line in (out / "prediction_lineage.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    with (out / "source_manifest.csv").open(newline="", encoding="utf-8") as handle:
+        source_rows = list(csv.DictReader(handle))
+    source_files = {row["file_path"] for row in source_rows}
     if not findings or not citations or not lineage:
         raise SystemExit("findings, citations, and lineage must be non-empty")
     if not any(row["audit_type"] == "user_question" and row["abstain"] == 1 for row in findings):
@@ -258,6 +261,8 @@ for idx in range(1, 4):
         raise SystemExit("citation rows must bind line numbers and sha256")
     for row in citations:
         cited = repo / row["file_path"]
+        if row["file_path"] not in source_files:
+            raise SystemExit(f"citation is not listed in source manifest: {row['file_path']}")
         if not cited.is_file():
             raise SystemExit(f"citation target missing: {row['file_path']}")
         if row["sha256"] != "sha256:" + sha256(cited):
@@ -280,9 +285,6 @@ for idx in range(1, 4):
         citation_rows = list(csv.DictReader(handle))
     if not citation_rows or any(row["manual_citation_review_required"] != "1" for row in citation_rows):
         raise SystemExit("citation correctness rows must require manual review")
-    with (out / "source_manifest.csv").open(newline="", encoding="utf-8") as handle:
-        source_rows = list(csv.DictReader(handle))
-    source_files = {row["file_path"] for row in source_rows}
     source_sets.append(tuple(sorted(source_files)))
     if expected_sources[idx] not in source_files:
         raise SystemExit(f"repo_{idx} source manifest missing expected source: {expected_sources[idx]}")
