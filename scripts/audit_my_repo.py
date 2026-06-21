@@ -55,6 +55,7 @@ JSON_CONTRACTS: dict[str, list[str]] = {
     "audit_invocation.json": ["schema_version", "tool_version", "target_repo", "out_dir", "mode", "max_queries", "generator", "namespace", "real_benchmark_namespace_confirmed", "question_supplied", "question_sha256", "verify_output_requested", "emit_report_requested", "emit_lineage_requested", "emit_reproduce_requested"],
     "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "real_benchmark_namespace_confirmed", "fixture_result_promoted", "real_evidence_claimed", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "output_dir_overwritten", "publish_mode", "cache_key", "plugin_registry_sha256", "claim_boundary"],
     "audit_summary.json": list(CSV_CONTRACTS["audit_summary.csv"]),
+    "exit_code_contract.json": ["schema_version", "tool_version", "success_exit_code", "artifact_verify_failure_exit_code", "input_or_publish_error_exit_code", "wrong_answer_guard_failure_exit_code", "stable_exit_code_policy"],
     "plugin_registry.json": ["schema_version", "tool_version", "plugins"],
     "resource_envelope.json": ["resource_envelope_ready", "tool_version", "source_files_scanned", "max_queries", "mode", "namespace", "external_network_used", "raw_prompt_context_bytes", "latency_ms", "wrong_answer_guard_rows", "claim_boundary_ready"],
     "source_snapshot.json": ["schema_version", "tool_version", "target_repo", "source_manifest_sha256", "source_file_count", "git_available", "git_head", "git_dirty", "git_status_sha256", "git_tracked_files"],
@@ -516,6 +517,18 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
             "emit_reproduce_requested": int(emit_reproduce),
         },
     )
+    write_json(
+        staging / "exit_code_contract.json",
+        {
+            "schema_version": "local_repo_audit_exit_code_contract.v1",
+            "tool_version": TOOL_VERSION,
+            "success_exit_code": 0,
+            "artifact_verify_failure_exit_code": 1,
+            "input_or_publish_error_exit_code": 2,
+            "wrong_answer_guard_failure_exit_code": 1,
+            "stable_exit_code_policy": "0=verified-success,1=artifact-or-guard-failure,2=input-or-publish-error",
+        },
+    )
 
     claim_boundary = (
         "# Audit Claim Boundary\n\n"
@@ -649,6 +662,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("target_repo", nargs="?")
     parser.add_argument("--version", action="version", version=TOOL_VERSION)
     parser.add_argument("--list-plugins", action="store_true", help="Print the deterministic auditor plugin registry as JSON and exit.")
+    parser.add_argument("--list-plugin-rules", action="store_true", help="Print deterministic auditor plugin rule metadata as JSON and exit.")
     parser.add_argument("--mode", choices=["quick", "full"], default="quick")
     parser.add_argument("--max-queries", type=int, default=100)
     parser.add_argument("--out", default="results/my_repo_audit")
@@ -715,6 +729,14 @@ def plugin_rule_rows() -> list[dict]:
     return sorted(rows, key=lambda row: (row["plugin_id"], row["rule_id"]))
 
 
+def plugin_rules_payload() -> dict:
+    return {
+        "schema_version": "local_repo_audit_plugin_rules.v1",
+        "tool_version": TOOL_VERSION,
+        "rules": plugin_rule_rows(),
+    }
+
+
 def verify_output_artifact(root: Path, out_dir: Path) -> int:
     verifier = root / "tools" / "verify_local_audit.py"
     result = subprocess.run(
@@ -739,8 +761,11 @@ def main(argv: list[str]) -> int:
     if args.list_plugins:
         print(json.dumps(plugin_registry_payload(), indent=2, sort_keys=True))
         return 0
+    if args.list_plugin_rules:
+        print(json.dumps(plugin_rules_payload(), indent=2, sort_keys=True))
+        return 0
     if not args.target_repo:
-        print("target repo is required unless --version or --list-plugins is used", file=sys.stderr)
+        print("target repo is required unless --version, --list-plugins, or --list-plugin-rules is used", file=sys.stderr)
         return 2
     root = Path(__file__).resolve().parents[1]
     target = Path(args.target_repo).expanduser().resolve()

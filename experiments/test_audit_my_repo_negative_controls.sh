@@ -57,6 +57,9 @@ fi
 "$ROOT_DIR/scripts/audit_my_repo.sh" --list-plugins >"$TMP_DIR/plugins.json"
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$TMP_DIR/plugins.json" >/dev/null
+"$ROOT_DIR/scripts/audit_my_repo.sh" --list-plugin-rules >"$TMP_DIR/plugin_rules.json"
+"$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_rules.schema.json" "$TMP_DIR/plugin_rules.json" >/dev/null
 python3 - "$TMP_DIR/plugins.json" <<'PY'
 import json
 import sys
@@ -83,6 +86,37 @@ for plugin_id, module in expected.items():
         raise SystemExit(f"plugin registry module mismatch for {plugin_id}")
 if plugins["deprecated_api"]["language"] != "multi":
     raise SystemExit("deprecated_api plugin must advertise multi-language coverage")
+PY
+python3 - "$TMP_DIR/plugin_rules.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload["schema_version"] != "local_repo_audit_plugin_rules.v1":
+    raise SystemExit("plugin rules schema version mismatch")
+if payload["tool_version"] != "audit_my_repo_alpha.v1":
+    raise SystemExit("plugin rules tool version mismatch")
+rules = payload["rules"]
+plugin_ids = {row["plugin_id"] for row in rules}
+expected_plugin_ids = {
+    "doc_code_identity",
+    "deprecated_api",
+    "config_consistency",
+    "unsupported_claim",
+    "missing_evidence",
+    "user_question",
+}
+if plugin_ids != expected_plugin_ids:
+    raise SystemExit(f"plugin rules must cover every plugin: {sorted(plugin_ids)}")
+rule_ids = [row["rule_id"] for row in rules]
+if len(rule_ids) != len(set(rule_ids)):
+    raise SystemExit("plugin rules must have unique rule_id values")
+deprecated_languages = {row["language"] for row in rules if row["plugin_id"] == "deprecated_api"}
+if not {"python", "cpp", "javascript"}.issubset(deprecated_languages):
+    raise SystemExit("deprecated_api listed rules must expose python/cpp/javascript coverage")
+if any(row["evidence_policy"] not in {"source-bound-span", "abstain-when-missing-source-bound-span"} for row in rules):
+    raise SystemExit("plugin rules must expose supported evidence policies")
 PY
 expect_audit_exit() {
   local expected="$1"
@@ -242,6 +276,8 @@ test "$(cat "$out_a/sentinel.txt")" = "keep"
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out_a/audit_manifest.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_exit_code_contract.schema.json" "$out_a/exit_code_contract.json" >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_invocation.schema.json" "$out_a/audit_invocation.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_summary.schema.json" "$out_a/audit_summary.json" >/dev/null
@@ -274,6 +310,7 @@ def sha256(path):
 
 manifest = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
 invocation = json.loads((out_a / "audit_invocation.json").read_text(encoding="utf-8"))
+exit_contract = json.loads((out_a / "exit_code_contract.json").read_text(encoding="utf-8"))
 plugin_registry = json.loads((out_a / "plugin_registry.json").read_text(encoding="utf-8"))
 if invocation["target_repo"] != str(repo) or invocation["out_dir"] != str(out_a):
     raise SystemExit("audit invocation must bind target repo and output directory")
@@ -283,6 +320,10 @@ if invocation["namespace"] != "fixture" or invocation["real_benchmark_namespace_
     raise SystemExit("audit invocation must bind fixture namespace")
 if invocation["question_supplied"] != 1 or invocation["verify_output_requested"] != 1:
     raise SystemExit("audit invocation must bind question and verification settings")
+if exit_contract["success_exit_code"] != 0 or exit_contract["artifact_verify_failure_exit_code"] != 1:
+    raise SystemExit("exit code contract must bind stable success/failure codes")
+if exit_contract["input_or_publish_error_exit_code"] != 2:
+    raise SystemExit("exit code contract must bind stable user-correctable error code")
 if plugin_registry["tool_version"] != manifest["tool_version"]:
     raise SystemExit("plugin registry must be bound to the manifest tool version")
 expected_plugin_modules = {
@@ -673,6 +714,24 @@ sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject audit invocation option drift")
 invocation_path.write_text(original_invocation_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+exit_contract_path = out_a / "exit_code_contract.json"
+original_exit_contract_text = exit_contract_path.read_text(encoding="utf-8")
+tampered_exit_contract = json.loads(original_exit_contract_text)
+tampered_exit_contract["input_or_publish_error_exit_code"] = 3
+exit_contract_path.write_text(json.dumps(tampered_exit_contract, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_exit_contract_sha = sha256(exit_contract_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  exit_code_contract.json"):
+        sha_lines.append(f"{new_exit_contract_sha}  exit_code_contract.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject exit code contract drift")
+exit_contract_path.write_text(original_exit_contract_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 plugin_rule_path = out_a / "plugin_rule_rows.csv"

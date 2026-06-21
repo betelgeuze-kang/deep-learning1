@@ -50,6 +50,7 @@ REQUIRED_FILES = {
     "citation_spans.jsonl",
     "claim_boundary.md",
     "compact_route_hint_rows.csv",
+    "exit_code_contract.json",
     "false_positive_candidate_rows.csv",
     "grounded_generation_rows.csv",
     "latency_rows.csv",
@@ -291,6 +292,24 @@ def verify_invocation(out_dir: Path, manifest: dict, summary: dict[str, str], er
     question = questions[0] if len(questions) == 1 else ""
     if invocation.get("question_sha256") != sha256_text(question):
         add(errors, "audit_invocation question_sha256 mismatch")
+
+
+def verify_exit_code_contract(out_dir: Path, errors: list[str]) -> None:
+    contract = read_json(out_dir / "exit_code_contract.json")
+    expected = {
+        "schema_version": "local_repo_audit_exit_code_contract.v1",
+        "tool_version": TOOL_VERSION,
+        "success_exit_code": 0,
+        "artifact_verify_failure_exit_code": 1,
+        "input_or_publish_error_exit_code": 2,
+        "wrong_answer_guard_failure_exit_code": 1,
+        "stable_exit_code_policy": "0=verified-success,1=artifact-or-guard-failure,2=input-or-publish-error",
+    }
+    if set(contract) != set(expected):
+        add(errors, "exit_code_contract.json keys drifted")
+    for key, value in expected.items():
+        if contract.get(key) != value:
+            add(errors, f"exit_code_contract.{key} mismatch")
 
 
 def verify_claim_boundary_docs(out_dir: Path, errors: list[str]) -> None:
@@ -987,6 +1006,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     verify_manifest(manifest, summary_json, out_dir, errors)
     verify_resource(read_json(out_dir / "resource_envelope.json"), summary, errors)
     verify_invocation(out_dir, manifest, summary, errors)
+    verify_exit_code_contract(out_dir, errors)
     verify_claim_boundary_docs(out_dir, errors)
     verify_audit_report(out_dir, summary, errors)
     registry = read_json(out_dir / "plugin_registry.json")

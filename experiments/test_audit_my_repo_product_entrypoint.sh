@@ -109,6 +109,7 @@ for idx in 1 2 3; do
     citation_correctness_rows.csv \
     claim_boundary.md \
     compact_route_hint_rows.csv \
+    exit_code_contract.json \
     grounded_generation_rows.csv \
     mmap_read_trace.jsonl \
     prediction_lineage.jsonl \
@@ -131,6 +132,8 @@ for idx in 1 2 3; do
   done
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out/audit_manifest.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_exit_code_contract.schema.json" "$out/exit_code_contract.json" >/dev/null
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_invocation.schema.json" "$out/audit_invocation.json" >/dev/null
   "$ROOT_DIR/tools/validate_json_schemas.py" \
@@ -219,6 +222,7 @@ def read_contract(out):
         "plugin_rule_rows.csv",
         "source_snapshot.json",
         "audit_invocation.json",
+        "exit_code_contract.json",
         "audit_manifest.json",
         "audit_summary.json",
         "AUDIT_REPORT.md",
@@ -242,6 +246,7 @@ for idx in range(1, 4):
     repo = root / f"repo_{idx}"
     manifest = json.loads((out / "audit_manifest.json").read_text(encoding="utf-8"))
     invocation = json.loads((out / "audit_invocation.json").read_text(encoding="utf-8"))
+    exit_contract = json.loads((out / "exit_code_contract.json").read_text(encoding="utf-8"))
     if manifest["namespace"] != "synthetic":
         raise SystemExit("generated fixture repos must stay in the synthetic namespace")
     if manifest["real_benchmark_namespace_confirmed"] != 0:
@@ -260,6 +265,10 @@ for idx in range(1, 4):
         raise SystemExit("audit invocation must bind namespace confirmation")
     if invocation["verify_output_requested"] != 1:
         raise SystemExit("audit invocation must record default verify-output")
+    if exit_contract["success_exit_code"] != 0 or exit_contract["artifact_verify_failure_exit_code"] != 1:
+        raise SystemExit("exit code contract must bind success and verify failure codes")
+    if exit_contract["input_or_publish_error_exit_code"] != 2:
+        raise SystemExit("exit code contract must bind input/publish error code")
     if manifest["generated_at_utc"] != "1970-01-01T00:00:00+00:00":
         raise SystemExit("audit manifest timestamp must be deterministic")
     if manifest["atomic_publish"] != 1 or manifest["output_dir_destroyed"] != 0:
@@ -473,6 +482,7 @@ for idx in range(1, 4):
         "audit_findings.jsonl",
         "citation_spans.jsonl",
         "citation_correctness_rows.csv",
+        "exit_code_contract.json",
         "prediction_lineage.jsonl",
         "plugin_registry.json",
         "plugin_rule_rows.csv",

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_plugin_rules.schema.json",
+  "title": "Local repo audit plugin rules",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "rules"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_plugin_rules.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "rules": {
+      "type": "array",
+      "minItems": 14,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "plugin_id",
+          "audit_type",
+          "rule_id",
+          "language",
+          "file_suffixes",
+          "pattern_label",
+          "evidence_policy"
+        ],
+        "properties": {
+          "plugin_id": {
+            "type": "string",
+            "enum": [
+              "doc_code_identity",
+              "deprecated_api",
+              "config_consistency",
+              "unsupported_claim",
+              "missing_evidence",
+              "user_question"
+            ]
+          },
+          "audit_type": {
+            "type": "string",
+            "enum": [
+              "doc_code_identity",
+              "deprecated_api",
+              "config_consistency",
+              "unsupported_claim",
+              "missing_evidence",
+              "user_question"
+            ]
+          },
+          "rule_id": {"type": "string", "minLength": 1},
+          "language": {"type": "string", "enum": ["generic", "python", "cpp", "javascript"]},
+          "file_suffixes": {"type": "string", "minLength": 1},
+          "pattern_label": {"type": "string", "minLength": 1},
+          "evidence_policy": {
+            "type": "string",
+            "enum": [
+              "source-bound-span",
+              "abstain-when-missing-source-bound-span"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
