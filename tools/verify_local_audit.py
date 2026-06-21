@@ -92,6 +92,7 @@ def add(errors: list[str], message: str) -> None:
 
 def verify_sha_manifest(out_dir: Path, errors: list[str]) -> dict[str, str]:
     entries: dict[str, str] = {}
+    allowed_entries = set(REQUIRED_FILES)
     for line in (out_dir / "sha256sums.txt").read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -105,6 +106,8 @@ def verify_sha_manifest(out_dir: Path, errors: list[str]) -> dict[str, str]:
         if Path(rel).is_absolute() or ".." in Path(rel).parts:
             add(errors, f"sha manifest path escapes output directory: {rel}")
             continue
+        if rel not in allowed_entries:
+            add(errors, f"sha manifest references unexpected artifact: {rel}")
         entries[rel] = digest
         artifact = out_dir / rel
         if not artifact.is_file():
@@ -396,6 +399,13 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
         add(errors, "audit_findings.csv must not contain duplicate finding_id values")
     if str(len(findings)) != summary.get("finding_rows"):
         add(errors, "finding row count drift")
+    for row in findings:
+        finding_id = row.get("finding_id", "")
+        if row.get("abstain") == "1":
+            if row.get("grounded") != "0":
+                add(errors, f"abstain finding must not be grounded: {finding_id}")
+            if not row.get("answer", "").startswith("Abstain:"):
+                add(errors, f"abstain finding must keep explicit abstain answer boundary: {finding_id}")
     abstain_ids = {row.get("finding_id", "") for row in findings if row.get("abstain") == "1"}
     unsupported_ids = {row.get("finding_id", "") for row in findings if row.get("unsupported_claim") == "1"}
     abstain_rows = read_csv(out_dir / "abstain_rows.csv")

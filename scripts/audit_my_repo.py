@@ -288,7 +288,9 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
                     "mmap_value_byte_read": 1,
                 }
             )
-        grounded = finding.grounded if citation_cells else 0
+        grounded = 0
+        if not finding.abstain and citation_cells:
+            grounded = finding.grounded
         abstain = finding.abstain if citation_cells else 1
         finding_rows.append(
             {

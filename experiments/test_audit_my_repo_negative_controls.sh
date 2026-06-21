@@ -452,6 +452,17 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
     raise SystemExit("local-audit verifier must reject sha256 manifest path traversal")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+unexpected_artifact_path = out_a / "unexpected_extra_artifact.txt"
+unexpected_artifact_path.write_text("unexpected artifact must not be hash-admitted\n", encoding="utf-8")
+sha_manifest_path.write_text(
+    original_sha_manifest_text + f"{sha256(unexpected_artifact_path)}  unexpected_extra_artifact.txt\n",
+    encoding="utf-8",
+)
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject unexpected sha256 manifest artifacts")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+unexpected_artifact_path.unlink()
+
 contract_path = out_a / "artifact_contract_rows.csv"
 original_contract_text = contract_path.read_text(encoding="utf-8")
 with contract_path.open(newline="", encoding="utf-8") as handle:
@@ -813,6 +824,61 @@ sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 findings_csv_path = out_a / "audit_findings.csv"
 original_findings_csv_text = findings_csv_path.read_text(encoding="utf-8")
+with findings_csv_path.open(newline="", encoding="utf-8") as handle:
+    findings_csv_rows = list(csv.DictReader(handle))
+finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
+generation_rows = []
+with generation_path.open(newline="", encoding="utf-8") as handle:
+    generation_rows = list(csv.DictReader(handle))
+tampered_abstain_id = ""
+for row in findings_csv_rows:
+    if row["abstain"] == "1":
+        tampered_abstain_id = row["finding_id"]
+        row["grounded"] = "0"
+        row["answer"] = "Yes, this repository is production ready."
+        break
+if tampered_abstain_id:
+    for row in finding_json_rows:
+        if row["finding_id"] == tampered_abstain_id:
+            row["grounded"] = 0
+            row["answer"] = "Yes, this repository is production ready."
+            break
+    for row in generation_rows:
+        if row["finding_id"] == tampered_abstain_id:
+            row["answer"] = "Yes, this repository is production ready."
+            row["grounded"] = "0"
+            row["abstain"] = "1"
+            break
+    with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(findings_csv_rows)
+    audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in finding_json_rows), encoding="utf-8")
+    with generation_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(generation_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(generation_rows)
+    new_findings_csv_sha = sha256(findings_csv_path)
+    new_findings_jsonl_sha = sha256(audit_findings_path)
+    new_generation_sha = sha256(generation_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  audit_findings.csv"):
+            sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
+        elif line.endswith("  audit_findings.jsonl"):
+            sha_lines.append(f"{new_findings_jsonl_sha}  audit_findings.jsonl")
+        elif line.endswith("  grounded_generation_rows.csv"):
+            sha_lines.append(f"{new_generation_sha}  grounded_generation_rows.csv")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit("local-audit verifier must reject direct answers in abstain findings")
+    findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+    audit_findings_path.write_text(original_findings_text, encoding="utf-8")
+    generation_path.write_text(original_generation_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 with findings_csv_path.open(newline="", encoding="utf-8") as handle:
     findings_csv_rows = list(csv.DictReader(handle))
 findings_csv_rows[0]["grounded"] = "0" if findings_csv_rows[0]["grounded"] != "0" else "1"
