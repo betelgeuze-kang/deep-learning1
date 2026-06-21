@@ -50,6 +50,7 @@ provenance_dir = v61_root / "review_return_provenance" if v61_root else None
 
 REAL_PROVENANCE = "real-generation-intake-return-bundle"
 PROVENANCE_MARKER = "review_return_provenance/REAL_REVIEW_RETURN_PROVENANCE.json"
+DEFAULT_AUTHORITY_REL = "review_return_provenance/operator_attestation/generation_operator_authority_statement.txt"
 MODEL_ID = "mistralai/Mixtral-8x22B-v0.1"
 SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 CSV_FIELDS = {
@@ -163,6 +164,20 @@ def valid_sha(value):
     return isinstance(value, str) and bool(SHA_RE.match(value))
 
 
+def safe_relative(base, rel):
+    if base is None or not rel:
+        return None, "authority-path-missing"
+    rel_path = Path(str(rel))
+    if rel_path.is_absolute():
+        return None, "authority-path-absolute"
+    candidate = (base / rel_path).resolve()
+    try:
+        candidate.relative_to(base.resolve())
+    except ValueError:
+        return None, "authority-path-escapes-root"
+    return candidate, ""
+
+
 def numeric_positive(value):
     try:
         return float(value) > 0
@@ -206,6 +221,10 @@ marker_supplied = int(marker_path is not None and marker_path.is_file())
 marker_errors = []
 marker_payload = {}
 marker_sha = ""
+marker_authority_path = ""
+marker_authority_file_exists = 0
+marker_authority_file_sha = ""
+marker_authority_file_bytes = 0
 if marker_supplied:
     marker_sha = sha256(marker_path)
     try:
@@ -220,8 +239,35 @@ if marker_supplied:
         marker_errors.append("fixture-source-class")
     if source_class not in {"external-generation-intake-return", "external-operator-return", REAL_PROVENANCE}:
         marker_errors.append("source-class-not-external-generation-intake")
-    if not valid_sha(marker_payload.get("generation_operator_authority_sha256", marker_payload.get("reviewer_authority_sha256", ""))):
+    expected_authority_sha = marker_payload.get("generation_operator_authority_sha256", marker_payload.get("reviewer_authority_sha256", ""))
+    if not valid_sha(expected_authority_sha):
         marker_errors.append("operator-authority-sha256-missing")
+    marker_authority_path = str(
+        marker_payload.get(
+            "generation_operator_authority_path",
+            marker_payload.get("reviewer_authority_path", marker_payload.get("authority_statement_path", DEFAULT_AUTHORITY_REL)),
+        )
+    )
+    authority_path, authority_error = safe_relative(v61_root, marker_authority_path)
+    if authority_error:
+        marker_errors.append(authority_error)
+    marker_authority_file_exists = int(authority_path is not None and authority_path.is_file())
+    if marker_authority_file_exists:
+        marker_authority_file_sha = sha256(authority_path)
+        marker_authority_file_bytes = authority_path.stat().st_size
+        if marker_authority_file_bytes <= 0:
+            marker_errors.append("authority-file-empty")
+        if valid_sha(expected_authority_sha) and marker_authority_file_sha != expected_authority_sha:
+            marker_errors.append("authority-sha-mismatch")
+        try:
+            authority_text = authority_path.read_text(encoding="utf-8", errors="replace").lower()
+        except OSError:
+            authority_text = ""
+            marker_errors.append("authority-file-unreadable")
+        if "fixture" in authority_text or "synthetic" in authority_text:
+            marker_errors.append("authority-file-fixture-text")
+    else:
+        marker_errors.append("authority-file-missing")
 else:
     marker_errors.append("missing-provenance-marker")
 marker_real_provenance = int(marker_supplied and not marker_errors)
@@ -257,6 +303,15 @@ supplied_file_rows.append({
     "bytes": str(marker_path.stat().st_size) if marker_supplied else "0",
     "sha256": marker_sha,
     "metadata_only": "0" if marker_supplied else "1",
+})
+authority_supplied = int(marker_supplied and 'authority_path' in locals() and authority_path is not None and authority_path.is_file())
+supplied_file_rows.append({
+    "artifact": "generation_operator_authority_statement",
+    "expected_relative_path": marker_authority_path or DEFAULT_AUTHORITY_REL,
+    "supplied": str(authority_supplied),
+    "bytes": str(authority_path.stat().st_size) if authority_supplied else "0",
+    "sha256": marker_authority_file_sha,
+    "metadata_only": "0" if authority_supplied else "1",
 })
 write_csv(run_dir / "v61_partial_generation_intake_slice_supplied_file_rows.csv", list(supplied_file_rows[0].keys()), supplied_file_rows)
 
@@ -476,8 +531,8 @@ template_rows = [
 ]
 template_rows.append({
     "template_artifact": PROVENANCE_MARKER,
-    "field_hint": "provenance,source_class,generation_operator_authority_sha256",
-    "minimum_slice_note": "provenance must be real-generation-intake-return-bundle and source_class must not be fixture",
+    "field_hint": "provenance,source_class,generation_operator_authority_path,generation_operator_authority_sha256",
+    "minimum_slice_note": "provenance marker must bind a non-fixture authority file inside the return root by sha256",
 })
 write_csv(run_dir / "v61_partial_generation_intake_slice_minimum_template_rows.csv", list(template_rows[0].keys()), template_rows)
 
@@ -577,6 +632,8 @@ summary = {
     "v61_env_real_provenance": str(env_real_provenance),
     "v61_marker_supplied": str(marker_supplied),
     "v61_marker_real_provenance": str(marker_real_provenance),
+    "v61_marker_authority_file_exists": str(marker_authority_file_exists),
+    "v61_marker_authority_file_sha256": marker_authority_file_sha,
     "v61_real_provenance_ready": str(real_provenance_ready),
     "candidate_generation_result_artifacts": str(candidate_generation_result_artifacts),
     "candidate_answer_rows": str(candidate_answer_rows),

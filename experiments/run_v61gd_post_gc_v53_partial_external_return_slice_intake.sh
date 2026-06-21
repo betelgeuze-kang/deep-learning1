@@ -28,6 +28,7 @@ python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$V53_RETURN_ROO
 import csv
 import hashlib
 import json
+import re
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -49,6 +50,8 @@ aggregate_dir = v53_root / "aggregate_review_return" if v53_root else None
 REQUIRED_SHA_PREFIX = "sha256:"
 REAL_PROVENANCE = "real-external-return-bundle"
 PROVENANCE_MARKER = "REAL_EXTERNAL_RETURN_PROVENANCE.json"
+DEFAULT_AUTHORITY_REL = "operator_attestation/reviewer_authority_statement.txt"
+SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 HUMAN_FIELDS = [
     "review_answer_packet_id",
     "answer_id",
@@ -148,7 +151,21 @@ def status(flag):
 
 
 def valid_sha(value):
-    return isinstance(value, str) and value.startswith(REQUIRED_SHA_PREFIX)
+    return isinstance(value, str) and bool(SHA_RE.match(value))
+
+
+def safe_relative(base, rel):
+    if base is None or not rel:
+        return None, "authority-path-missing"
+    rel_path = Path(str(rel))
+    if rel_path.is_absolute():
+        return None, "authority-path-absolute"
+    candidate = (base / rel_path).resolve()
+    try:
+        candidate.relative_to(base.resolve())
+    except ValueError:
+        return None, "authority-path-escapes-root"
+    return candidate, ""
 
 
 source_paths = {
@@ -199,6 +216,10 @@ marker_supplied = int(marker_path is not None and marker_path.is_file())
 marker_errors = []
 marker_payload = {}
 marker_sha = ""
+marker_authority_path = ""
+marker_authority_file_exists = 0
+marker_authority_file_sha = ""
+marker_authority_file_bytes = 0
 if marker_supplied:
     marker_sha = sha256(marker_path)
     try:
@@ -211,8 +232,30 @@ if marker_supplied:
         marker_errors.append("fixture-source-class")
     if marker_payload.get("source_class") not in {"external-operator-return", "external-review-return"}:
         marker_errors.append("source-class-not-external")
-    if not valid_sha(marker_payload.get("reviewer_authority_sha256", "")):
+    expected_authority_sha = marker_payload.get("reviewer_authority_sha256", "")
+    if not valid_sha(expected_authority_sha):
         marker_errors.append("reviewer-authority-sha256-missing")
+    marker_authority_path = str(marker_payload.get("reviewer_authority_path", marker_payload.get("authority_statement_path", DEFAULT_AUTHORITY_REL)))
+    authority_path, authority_error = safe_relative(v53_root, marker_authority_path)
+    if authority_error:
+        marker_errors.append(authority_error)
+    marker_authority_file_exists = int(authority_path is not None and authority_path.is_file())
+    if marker_authority_file_exists:
+        marker_authority_file_sha = sha256(authority_path)
+        marker_authority_file_bytes = authority_path.stat().st_size
+        if marker_authority_file_bytes <= 0:
+            marker_errors.append("authority-file-empty")
+        if valid_sha(expected_authority_sha) and marker_authority_file_sha != expected_authority_sha:
+            marker_errors.append("authority-sha-mismatch")
+        try:
+            authority_text = authority_path.read_text(encoding="utf-8", errors="replace").lower()
+        except OSError:
+            authority_text = ""
+            marker_errors.append("authority-file-unreadable")
+        if "fixture" in authority_text or "synthetic" in authority_text:
+            marker_errors.append("authority-file-fixture-text")
+    else:
+        marker_errors.append("authority-file-missing")
 else:
     marker_errors.append("missing-provenance-marker")
 marker_real_provenance = int(marker_supplied and not marker_errors)
@@ -230,19 +273,20 @@ identity_rows, identity_fields, identity_sha = read_csv_with_fields(identity_pat
 conflict_rows, conflict_fields, conflict_sha = read_csv_with_fields(conflict_path)
 
 supplied_file_rows = []
-for artifact, path in [
-    ("human_review_rows.csv", human_path),
-    ("adjudication_rows.csv", adjudication_path),
-    ("reviewer_identity_rows.csv", identity_path),
-    ("reviewer_conflict_rows.csv", conflict_path),
-    ("acceptance_summary.json", acceptance_path),
-    (PROVENANCE_MARKER, marker_path),
+for artifact, expected_rel, path in [
+    ("human_review_rows.csv", "aggregate_review_return/human_review_rows.csv", human_path),
+    ("adjudication_rows.csv", "aggregate_review_return/adjudication_rows.csv", adjudication_path),
+    ("reviewer_identity_rows.csv", "aggregate_review_return/reviewer_identity_rows.csv", identity_path),
+    ("reviewer_conflict_rows.csv", "aggregate_review_return/reviewer_conflict_rows.csv", conflict_path),
+    ("acceptance_summary.json", "aggregate_review_return/acceptance_summary.json", acceptance_path),
+    (PROVENANCE_MARKER, PROVENANCE_MARKER, marker_path),
+    ("reviewer_authority_statement", marker_authority_path or DEFAULT_AUTHORITY_REL, authority_path if marker_supplied and 'authority_path' in locals() else None),
 ]:
     supplied = int(path is not None and path.is_file())
     digest = sha256(path) if supplied else ""
     supplied_file_rows.append({
         "artifact": artifact,
-        "expected_relative_path": PROVENANCE_MARKER if artifact == PROVENANCE_MARKER else f"aggregate_review_return/{artifact}",
+        "expected_relative_path": expected_rel,
         "supplied": str(supplied),
         "bytes": str(path.stat().st_size) if supplied else "0",
         "sha256": digest,
@@ -517,8 +561,8 @@ template_rows.extend([
     },
     {
         "template_artifact": PROVENANCE_MARKER,
-        "field_hint": "provenance,source_class,reviewer_authority_sha256",
-        "minimum_slice_note": "source_class must be external-operator-return or external-review-return; fixture is rejected",
+        "field_hint": "provenance,source_class,reviewer_authority_path,reviewer_authority_sha256",
+        "minimum_slice_note": "source_class must be external; authority path must stay inside root and hash-match non-fixture text",
     },
 ])
 write_csv(run_dir / "v53_partial_external_return_slice_minimum_template_rows.csv", list(template_rows[0].keys()), template_rows)
@@ -628,6 +672,8 @@ summary = {
     "v53_env_real_provenance": str(env_real_provenance),
     "v53_marker_supplied": str(marker_supplied),
     "v53_marker_real_provenance": str(marker_real_provenance),
+    "v53_marker_authority_file_exists": str(marker_authority_file_exists),
+    "v53_marker_authority_file_sha256": marker_authority_file_sha,
     "v53_real_provenance_ready": str(real_provenance_ready),
     "candidate_human_review_rows": str(candidate_human),
     "candidate_adjudication_rows": str(candidate_adjudication),

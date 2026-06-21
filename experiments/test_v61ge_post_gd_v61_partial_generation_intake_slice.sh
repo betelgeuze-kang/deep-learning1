@@ -326,7 +326,8 @@ acceptance_path.write_text(json.dumps({
 }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 (prov / "REAL_REVIEW_RETURN_PROVENANCE.json").write_text(json.dumps({
     "provenance": "real-generation-intake-return-bundle",
-    "source_class": "fixture-generation-intake-return",
+    "source_class": "external-generation-intake-return",
+    "generation_operator_authority_path": "review_return_provenance/operator_attestation/missing_generation_operator_authority_statement.txt",
     "generation_operator_authority_sha256": sha_text("fixture operator authority is intentionally rejected"),
 }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
@@ -380,12 +381,14 @@ for field, value in expected.items():
     if summary.get(field) != value:
         raise SystemExit(f"v61ge fixture candidate {field}: expected {value}, got {summary.get(field)}")
 
-decisions = {row["gate"]: row["status"] for row in read_csv(run_dir / "v61ge_post_gd_v61_partial_generation_intake_slice_decision.csv")}
-if decisions.get("candidate-generation-result-slice") != "pass":
+decision_rows = {row["gate"]: row for row in read_csv(run_dir / "v61ge_post_gd_v61_partial_generation_intake_slice_decision.csv")}
+if decision_rows["candidate-generation-result-slice"]["status"] != "pass":
     raise SystemExit("v61ge fixture candidate should pass candidate generation-result mechanics")
 for gate in ["v61-real-provenance", "real-generation-result-artifacts", "accepted-generation-result-artifacts", "generation-result-row-acceptance"]:
-    if decisions.get(gate) != "blocked":
+    if decision_rows[gate]["status"] != "blocked":
         raise SystemExit(f"v61ge fixture candidate must keep real gate blocked: {gate}")
+if "authority-file-missing" not in decision_rows["v61-real-provenance"]["evidence"]:
+    raise SystemExit("v61ge fixture candidate must reject external marker without authority file evidence")
 
 print("v61ge fixture candidate rejection smoke passed")
 PY
