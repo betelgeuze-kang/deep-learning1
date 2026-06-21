@@ -3375,6 +3375,260 @@ def verify_manifest(path: Path, root: Path) -> list[str]:
     return errors
 
 
+def _read_json(path: Path, errors: list[str]) -> dict:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        errors.append(f"{path}: invalid json: {exc}")
+        return {}
+    if not isinstance(payload, dict):
+        errors.append(f"{path}: expected json object")
+        return {}
+    return payload
+
+
+def _read_jsonl(path: Path, errors: list[str]) -> list[dict]:
+    rows: list[dict] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except Exception as exc:
+        errors.append(f"{path}: failed to read jsonl: {exc}")
+        return rows
+    for line_no, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except Exception as exc:
+            errors.append(f"{path}:{line_no}: invalid jsonl row: {exc}")
+            continue
+        if not isinstance(payload, dict):
+            errors.append(f"{path}:{line_no}: expected object row")
+            continue
+        rows.append(payload)
+    return rows
+
+
+def _read_csv(path: Path, errors: list[str]) -> tuple[list[str], list[dict]]:
+    try:
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            rows = list(reader)
+            return list(reader.fieldnames or []), rows
+    except Exception as exc:
+        errors.append(f"{path}: failed to read csv: {exc}")
+        return [], []
+
+
+def _verify_local_audit_sha_manifest(out_dir: Path, errors: list[str]) -> dict[str, str]:
+    manifest_path = out_dir / "sha256sums.txt"
+    entries: dict[str, str] = {}
+    if not manifest_path.is_file():
+        errors.append(f"{manifest_path}: missing sha256 manifest")
+        return entries
+    for line_no, line in enumerate(manifest_path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        parts = line.split(None, 1)
+        if len(parts) != 2:
+            errors.append(f"{manifest_path}:{line_no}: expected '<sha256>  <path>'")
+            continue
+        expected, rel = parts
+        artifact = out_dir / rel
+        entries[rel] = expected
+        if not artifact.is_file():
+            errors.append(f"{manifest_path}:{line_no}: missing artifact {rel}")
+            continue
+        actual = sha256(artifact).removeprefix("sha256:")
+        if actual != expected:
+            errors.append(f"{manifest_path}:{line_no}: sha mismatch for {rel}: expected {expected}, got {actual}")
+    return entries
+
+
+def verify_local_audit(out_dir: Path) -> list[str]:
+    errors: list[str] = []
+    out_dir = out_dir.resolve()
+    if not out_dir.is_dir():
+        return [f"{out_dir}: local audit output directory not found"]
+
+    required_files = {
+        "AUDIT_REPORT.md",
+        "ARCHITECTURE_TRACE.md",
+        "accuracy_rows.csv",
+        "artifact_contract_rows.csv",
+        "audit_findings.jsonl",
+        "audit_manifest.json",
+        "audit_summary.json",
+        "citation_correctness_rows.csv",
+        "citation_spans.jsonl",
+        "false_positive_candidate_rows.csv",
+        "latency_rows.csv",
+        "prediction_lineage.jsonl",
+        "reproduce.sh",
+        "resource_envelope.json",
+        "sha256sums.txt",
+        "source_manifest.csv",
+    }
+    for rel in sorted(required_files):
+        path = out_dir / rel
+        if not path.is_file() or path.stat().st_size <= 0:
+            errors.append(f"{path}: required local audit artifact missing or empty")
+
+    sha_entries = _verify_local_audit_sha_manifest(out_dir, errors)
+    for rel in sorted(required_files - {"sha256sums.txt"}):
+        if rel not in sha_entries:
+            errors.append(f"{out_dir / 'sha256sums.txt'}: required artifact not listed: {rel}")
+
+    manifest = _read_json(out_dir / "audit_manifest.json", errors)
+    summary = _read_json(out_dir / "audit_summary.json", errors)
+    resource = _read_json(out_dir / "resource_envelope.json", errors)
+
+    expected_manifest = {
+        "schema_version": "local_repo_audit_output.v1",
+        "tool_version": "audit_my_repo_alpha.v1",
+        "generated_at_utc": "1970-01-01T00:00:00+00:00",
+        "atomic_publish": 1,
+        "output_dir_destroyed": 0,
+        "claim_boundary": "alpha-local-code-doc-audit-only",
+    }
+    for field, expected in expected_manifest.items():
+        if manifest.get(field) != expected:
+            errors.append(f"{out_dir / 'audit_manifest.json'}: {field} expected {expected!r}, got {manifest.get(field)!r}")
+    if manifest.get("namespace") not in {"fixture", "synthetic", "real_benchmark"}:
+        errors.append(f"{out_dir / 'audit_manifest.json'}: invalid namespace {manifest.get('namespace')!r}")
+    cache_key = str(manifest.get("cache_key", ""))
+    if len(cache_key) != 64 or any(ch not in "0123456789abcdef" for ch in cache_key):
+        errors.append(f"{out_dir / 'audit_manifest.json'}: cache_key must be 64 lowercase hex chars")
+
+    blocked_zero_fields = [
+        "real_release_package_ready",
+        "public_comparison_claim_ready",
+        "raw_prompt_context_bytes",
+        "attention_blocks",
+        "transformer_blocks",
+        "oracle_prediction_used",
+        "raw_input_extractor_used",
+        "latency_ms",
+    ]
+    for field in blocked_zero_fields:
+        if summary.get(field) != 0:
+            errors.append(f"{out_dir / 'audit_summary.json'}: {field} expected 0, got {summary.get(field)!r}")
+    if summary.get("namespace") != manifest.get("namespace"):
+        errors.append(f"{out_dir / 'audit_summary.json'}: namespace must match manifest")
+    if summary.get("finding_rows") != manifest.get("finding_rows"):
+        errors.append(f"{out_dir / 'audit_summary.json'}: finding_rows must match manifest")
+    if summary.get("source_files") != manifest.get("source_file_count"):
+        errors.append(f"{out_dir / 'audit_summary.json'}: source_files must match manifest source_file_count")
+    if summary.get("wrong_answer_guard_rows") != summary.get("wrong_answer_guard_pass_rows"):
+        errors.append(f"{out_dir / 'audit_summary.json'}: all wrong-answer guard rows must pass")
+    if resource.get("external_network_used") != 0:
+        errors.append(f"{out_dir / 'resource_envelope.json'}: external_network_used expected 0")
+
+    contract_header, contract_rows = _read_csv(out_dir / "artifact_contract_rows.csv", errors)
+    expected_contract_header = [
+        "schema_version",
+        "artifact_path",
+        "artifact_kind",
+        "required_columns",
+        "actual_columns",
+        "required_keys",
+        "actual_keys",
+        "min_rows",
+        "actual_rows",
+        "sha256_manifest_required",
+        "deterministic_required",
+    ]
+    if contract_header != expected_contract_header:
+        errors.append(f"{out_dir / 'artifact_contract_rows.csv'}: unexpected header")
+    for index, row in enumerate(contract_rows, start=2):
+        rel = row.get("artifact_path", "")
+        artifact = out_dir / rel
+        if row.get("schema_version") != "local_repo_audit_artifacts.v1":
+            errors.append(f"{out_dir / 'artifact_contract_rows.csv'}:{index}: schema_version mismatch")
+        if not rel or not artifact.is_file():
+            errors.append(f"{out_dir / 'artifact_contract_rows.csv'}:{index}: contract artifact missing: {rel}")
+            continue
+        if row.get("sha256_manifest_required") == "1" and rel not in sha_entries:
+            errors.append(f"{out_dir / 'artifact_contract_rows.csv'}:{index}: artifact not listed in sha256sums.txt: {rel}")
+        if row.get("deterministic_required") != "1":
+            errors.append(f"{out_dir / 'artifact_contract_rows.csv'}:{index}: deterministic_required must be 1")
+        try:
+            min_rows = int(row.get("min_rows", "0"))
+            actual_rows_declared = int(row.get("actual_rows", "0"))
+        except ValueError:
+            errors.append(f"{out_dir / 'artifact_contract_rows.csv'}:{index}: min_rows/actual_rows must be integers")
+            continue
+        kind = row.get("artifact_kind")
+        if kind == "csv":
+            header, data_rows = _read_csv(artifact, errors)
+            required_columns = row.get("required_columns", "").split("|") if row.get("required_columns") else []
+            if header != required_columns or row.get("actual_columns", "").split("|") != required_columns:
+                errors.append(f"{artifact}: csv columns do not match artifact contract")
+            if len(data_rows) != actual_rows_declared or len(data_rows) < min_rows:
+                errors.append(f"{artifact}: row count does not satisfy artifact contract")
+        elif kind == "jsonl":
+            data_rows = _read_jsonl(artifact, errors)
+            actual_keys = sorted({key for payload in data_rows for key in payload})
+            required_keys = sorted(row.get("required_keys", "").split("|")) if row.get("required_keys") else []
+            if not set(required_keys).issubset(actual_keys):
+                errors.append(f"{artifact}: jsonl keys do not satisfy artifact contract")
+            if len(data_rows) != actual_rows_declared or len(data_rows) < min_rows:
+                errors.append(f"{artifact}: row count does not satisfy artifact contract")
+        elif kind == "json":
+            payload = _read_json(artifact, errors)
+            required_keys = row.get("required_keys", "").split("|") if row.get("required_keys") else []
+            if not set(required_keys).issubset(payload):
+                errors.append(f"{artifact}: json keys do not satisfy artifact contract")
+        elif actual_rows_declared < min_rows:
+            errors.append(f"{artifact}: row count does not satisfy artifact contract")
+
+    findings = _read_jsonl(out_dir / "audit_findings.jsonl", errors)
+    citations = _read_jsonl(out_dir / "citation_spans.jsonl", errors)
+    lineage = _read_jsonl(out_dir / "prediction_lineage.jsonl", errors)
+    if not findings or not citations or not lineage:
+        errors.append(f"{out_dir}: findings, citations, and lineage must be non-empty")
+    if any(row.get("grounded") == 1 and not row.get("citations") for row in findings):
+        errors.append(f"{out_dir / 'audit_findings.jsonl'}: grounded rows must have citations")
+    if not any(row.get("audit_type") == "user_question" and row.get("abstain") == 1 for row in findings):
+        errors.append(f"{out_dir / 'audit_findings.jsonl'}: user_question rows must abstain")
+
+    target_repo = Path(str(manifest.get("target_repo", "")))
+    if target_repo.is_dir():
+        for row in citations:
+            rel = str(row.get("file_path", ""))
+            path = target_repo / rel
+            if not path.is_file():
+                errors.append(f"{out_dir / 'citation_spans.jsonl'}: citation target missing: {rel}")
+                continue
+            try:
+                start = int(row.get("line_start", 0))
+                end = int(row.get("line_end", 0))
+            except (TypeError, ValueError):
+                errors.append(f"{out_dir / 'citation_spans.jsonl'}: invalid citation line bounds for {rel}")
+                continue
+            if start <= 0 or end < start:
+                errors.append(f"{out_dir / 'citation_spans.jsonl'}: invalid citation line bounds for {rel}")
+            expected_sha = row.get("sha256")
+            if expected_sha != sha256(path):
+                errors.append(f"{out_dir / 'citation_spans.jsonl'}: citation sha mismatch for {rel}")
+    else:
+        errors.append(f"{out_dir / 'audit_manifest.json'}: target_repo is not available for citation verification")
+
+    _, guards = _read_csv(out_dir / "wrong_answer_guard_rows.csv", errors)
+    if not guards or any(row.get("wrong_answer_guard_pass") != "1" for row in guards):
+        errors.append(f"{out_dir / 'wrong_answer_guard_rows.csv'}: all wrong-answer guard rows must pass")
+    _, accuracy_rows = _read_csv(out_dir / "accuracy_rows.csv", errors)
+    if any(row.get("automatic_accuracy_claimed") != "0" for row in accuracy_rows):
+        errors.append(f"{out_dir / 'accuracy_rows.csv'}: automatic accuracy claims are forbidden")
+    _, citation_review_rows = _read_csv(out_dir / "citation_correctness_rows.csv", errors)
+    if any(row.get("manual_citation_review_required") != "1" for row in citation_review_rows):
+        errors.append(f"{out_dir / 'citation_correctness_rows.csv'}: manual citation review must be required")
+    _, fp_rows = _read_csv(out_dir / "false_positive_candidate_rows.csv", errors)
+    if any(row.get("auto_promoted") != "0" for row in fp_rows):
+        errors.append(f"{out_dir / 'false_positive_candidate_rows.csv'}: false-positive candidates must not be auto-promoted")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -3447,6 +3701,8 @@ def main() -> int:
     p_manifest = sub.add_parser("manifest")
     p_manifest.add_argument("manifest", type=Path)
     p_manifest.add_argument("--root", type=Path, default=None)
+    p_local_audit = sub.add_parser("local-audit")
+    p_local_audit.add_argument("paths", nargs="+", type=Path)
     args = parser.parse_args()
 
     errors: list[str] = []
@@ -3529,6 +3785,9 @@ def main() -> int:
     elif args.cmd == "manifest":
         root = args.root if args.root is not None else args.manifest.parent
         errors.extend(verify_manifest(args.manifest, root))
+    elif args.cmd == "local-audit":
+        for path in args.paths:
+            errors.extend(verify_local_audit(path))
     if errors:
         for error in errors:
             print(error, file=sys.stderr)

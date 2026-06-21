@@ -69,6 +69,7 @@ test "$(cat "$out_a/sentinel.txt")" = "keep"
 
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out_a/audit_manifest.json" >/dev/null
+"$ROOT_DIR/tools/verify_artifact.py" local-audit "$out_a" >/dev/null
 
 python3 - "$ROOT_DIR" "$repo" "$out_a" "$out_b" <<'PY'
 import csv
@@ -186,6 +187,14 @@ schema_cmd = [
 ]
 if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("schema must reject output_dir_destroyed=1")
+
+tampered_citations = out_a / "citation_spans.jsonl"
+original_citations = tampered_citations.read_text(encoding="utf-8")
+tampered_citations.write_text(original_citations.replace("sha256:", "sha256:0000", 1), encoding="utf-8")
+verify_cmd = [str(root / "tools/verify_artifact.py"), "local-audit", str(out_a)]
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject tampered citation hashes")
+tampered_citations.write_text(original_citations, encoding="utf-8")
 
 subprocess.run(
     [

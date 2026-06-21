@@ -75,6 +75,7 @@ for idx in 1 2 3; do
   done
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out/audit_manifest.json" >/dev/null
+  "$ROOT_DIR/tools/verify_artifact.py" local-audit "$out" >/dev/null
 
   cp "$out/sha256sums.txt" "$out/sha256sums.first"
   "$ROOT_DIR/scripts/audit_my_repo.sh" "$TMP_DIR/repo_$idx" \
@@ -85,6 +86,7 @@ for idx in 1 2 3; do
     --question "Does this repo prove production readiness?" \
     --generator routehint-tiny >/dev/null
   cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
+  "$ROOT_DIR/tools/verify_artifact.py" local-audit "$out" >/dev/null
 done
 
 python3 - "$TMP_DIR" <<'PY'
