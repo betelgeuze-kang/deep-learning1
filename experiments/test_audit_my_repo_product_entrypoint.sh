@@ -13,29 +13,65 @@ make_repo() {
   local repo="$1"
   local title="$2"
   local package="$3"
+  local variant="$4"
   mkdir -p "$repo"
   cat >"$repo/README.md" <<EOF
 # $title
 
 This repository is a local audit target. It is not production ready without evidence.
 EOF
-  cat >"$repo/pyproject.toml" <<EOF
+  case "$variant" in
+    python)
+      cat >"$repo/pyproject.toml" <<EOF
 [project]
 name = "$package"
 requires-python = ">=3.10"
 EOF
-  cat >"$repo/module.py" <<'EOF'
+      cat >"$repo/module.py" <<'EOF'
 def answer():
     return "ok"
 EOF
+      ;;
+    javascript)
+      cat >"$repo/package.json" <<EOF
+{"name":"$package","version":"0.0.0","type":"module"}
+EOF
+      mkdir -p "$repo/src"
+      cat >"$repo/src/index.js" <<'EOF'
+export function answer() {
+  return "ok";
+}
+EOF
+      ;;
+    cpp)
+      cat >"$repo/CMakeLists.txt" <<EOF
+cmake_minimum_required(VERSION 3.16)
+project(${package//-/_} LANGUAGES CXX)
+add_executable(${package//-/_} src/main.cpp)
+EOF
+      mkdir -p "$repo/src"
+      cat >"$repo/src/main.cpp" <<'EOF'
+#include <iostream>
+
+int main() {
+  std::cout << "ok\n";
+  return 0;
+}
+EOF
+      ;;
+    *)
+      echo "unknown test repo variant: $variant" >&2
+      exit 2
+      ;;
+  esac
   git -C "$repo" init -q
-  git -C "$repo" add README.md pyproject.toml module.py
+  git -C "$repo" add .
   git -C "$repo" -c user.email=audit@example.invalid -c user.name=Audit commit -q -m init
 }
 
-for idx in 1 2 3; do
-  make_repo "$TMP_DIR/repo_$idx" "Audit Target $idx" "audit-target-$idx"
-done
+make_repo "$TMP_DIR/repo_1" "Audit Target Python" "audit-target-python" python
+make_repo "$TMP_DIR/repo_2" "Audit Target JavaScript" "audit-target-js" javascript
+make_repo "$TMP_DIR/repo_3" "Audit Target Cpp" "audit-target-cpp" cpp
 
 for idx in 1 2 3; do
   out="$TMP_DIR/out_$idx"
@@ -160,8 +196,16 @@ def read_contract(out):
     return rows
 
 
+expected_sources = {
+    1: "module.py",
+    2: "src/index.js",
+    3: "src/main.cpp",
+}
+source_sets = []
+
 for idx in range(1, 4):
     out = root / f"out_{idx}"
+    repo = root / f"repo_{idx}"
     manifest = json.loads((out / "audit_manifest.json").read_text(encoding="utf-8"))
     if manifest["namespace"] != "synthetic":
         raise SystemExit("generated fixture repos must stay in the synthetic namespace")
@@ -191,6 +235,12 @@ for idx in range(1, 4):
         raise SystemExit("grounded findings must have citations")
     if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") for row in citations):
         raise SystemExit("citation rows must bind line numbers and sha256")
+    for row in citations:
+        cited = repo / row["file_path"]
+        if not cited.is_file():
+            raise SystemExit(f"citation target missing: {row['file_path']}")
+        if row["sha256"] != "sha256:" + sha256(cited):
+            raise SystemExit(f"citation sha does not match file content: {row['file_path']}")
     with (out / "wrong_answer_guard_rows.csv").open(newline="", encoding="utf-8") as handle:
         guards = list(csv.DictReader(handle))
     if not guards or any(row["wrong_answer_guard_pass"] != "1" for row in guards):
@@ -205,6 +255,10 @@ for idx in range(1, 4):
         raise SystemExit("citation correctness rows must require manual review")
     with (out / "source_manifest.csv").open(newline="", encoding="utf-8") as handle:
         source_rows = list(csv.DictReader(handle))
+    source_files = {row["file_path"] for row in source_rows}
+    source_sets.append(tuple(sorted(source_files)))
+    if expected_sources[idx] not in source_files:
+        raise SystemExit(f"repo_{idx} source manifest missing expected source: {expected_sources[idx]}")
     expected_cache_key = hashlib.sha256(json.dumps({
         "tool_version": "audit_my_repo_alpha.v1",
         "target": str((root / f"repo_{idx}").resolve()),
@@ -242,6 +296,8 @@ for idx in range(1, 4):
     reproduce_text = (out / "reproduce.sh").read_text(encoding="utf-8")
     if "--question 'Does this repo prove production readiness?'" not in reproduce_text:
         raise SystemExit("reproduce.sh must preserve the user question")
+if len(set(source_sets)) != 3:
+    raise SystemExit("product smoke must exercise three distinct unseen local repository shapes")
 PY
 
 echo "audit_my_repo product entrypoint smoke passed"
