@@ -22,6 +22,10 @@ DETERMINISTIC_GENERATED_AT_UTC = "1970-01-01T00:00:00+00:00"
 ARTIFACT_CONTRACT_SCHEMA_VERSION = "local_repo_audit_artifacts.v1"
 
 
+class AuditInputError(Exception):
+    """User-correctable audit invocation/input error."""
+
+
 CSV_CONTRACTS: dict[str, list[str]] = {
     "source_manifest.csv": ["source_id", "file_path", "sha256", "bytes", "route_memory_source"],
     "audit_findings.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
@@ -238,7 +242,7 @@ def line_for(path: Path, patterns: list[str]) -> tuple[int, str]:
 def collect_sources(target: Path, max_queries: int) -> tuple[list[SourceFile], list[dict]]:
     source_paths = tracked_files(target, max_queries)
     if not source_paths:
-        raise SystemExit("no auditable source files found")
+        raise AuditInputError("no auditable source files found")
     sources: list[SourceFile] = []
     rows: list[dict] = []
     for idx, path in enumerate(source_paths, start=1):
@@ -661,6 +665,9 @@ def main(argv: list[str]) -> int:
         real_benchmark_namespace_confirmed = int(args.namespace == "real_benchmark" and args.confirm_real_benchmark_namespace)
         summary = write_outputs(root, target, out_dir, staging, args.mode, args.max_queries, args.generator, args.namespace, real_benchmark_namespace_confirmed, args.question, args.emit_report, args.emit_lineage, args.emit_reproduce)
         publish_status = publish_atomic(staging, out_dir)
+    except AuditInputError as exc:
+        print(f"input_error: {exc}", file=sys.stderr)
+        return 2
     except RuntimeError as exc:
         print(f"publish_error: {exc}", file=sys.stderr)
         return 2

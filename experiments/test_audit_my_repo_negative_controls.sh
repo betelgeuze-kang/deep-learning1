@@ -101,6 +101,17 @@ expect_audit_exit 2 "target repo must be required for audit execution" --out "$T
 expect_audit_exit 2 "unsupported generator must fail with stable usage exit code" "$repo" --generator unsupported --out "$TMP_DIR/bad_generator"
 expect_audit_exit 2 "non-positive max queries must fail with stable usage exit code" "$repo" --max-queries 0 --out "$TMP_DIR/bad_queries"
 expect_audit_exit 2 "missing target repo must fail with stable usage exit code" "$TMP_DIR/missing" --out "$TMP_DIR/bad_target"
+no_source_repo="$TMP_DIR/no_source_repo"
+mkdir -p "$no_source_repo"
+printf 'binary-ish payload\n' >"$no_source_repo/blob.bin"
+git -C "$no_source_repo" init -q
+git -C "$no_source_repo" add blob.bin
+git -C "$no_source_repo" -c user.email=audit@example.invalid -c user.name=Audit commit -q -m init
+expect_audit_exit 2 "repo without auditable source files must fail with stable usage exit code" "$no_source_repo" --out "$TMP_DIR/no_source_out"
+if [[ -e "$TMP_DIR/no_source_out/audit_manifest.json" ]] || compgen -G "$TMP_DIR/.no_source_out.staging-*" >/dev/null; then
+  echo "repo without auditable source files must not publish audit artifacts" >&2
+  exit 9
+fi
 expect_audit_exit 2 "output path inside audited repo must fail before publish" "$repo" --out "$repo/audit-output"
 if [[ -e "$repo/audit-output" ]] || compgen -G "$repo/.audit-output.staging-*" >/dev/null; then
   echo "audit entrypoint must not create output or staging directories inside the audited repo" >&2
@@ -117,6 +128,8 @@ expect_audit_exit 2 "real_benchmark namespace must require explicit confirmation
   --generator routehint-tiny >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$TMP_DIR/real_namespace_confirmed/audit_manifest.json" >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_summary.schema.json" "$TMP_DIR/real_namespace_confirmed/audit_summary.json" >/dev/null
 "$ROOT_DIR/tools/verify_local_audit.py" "$TMP_DIR/real_namespace_confirmed" >/dev/null
 python3 - "$TMP_DIR/real_namespace_confirmed" <<'PY'
 import json
@@ -178,6 +191,8 @@ test "$(cat "$out_a/sentinel.txt")" = "keep"
 
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out_a/audit_manifest.json" >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_summary.schema.json" "$out_a/audit_summary.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$out_a/plugin_registry.json" >/dev/null
 "$ROOT_DIR/tools/verify_local_audit.py" "$out_a" >/dev/null
@@ -365,6 +380,31 @@ tampered["real_benchmark_namespace_confirmed"] = 2
 bad_manifest.write_text(json.dumps(tampered, sort_keys=True), encoding="utf-8")
 if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("schema must reject invalid real_benchmark_namespace_confirmed values")
+
+bad_summary = out_a / "tampered_summary.json"
+summary_schema_cmd = [
+    str(root / "tools/validate_json_schemas.py"),
+    "--schema-instance",
+    str(root / "schemas/local_repo_audit_summary.schema.json"),
+    str(bad_summary),
+]
+tampered_summary = json.loads((out_a / "audit_summary.json").read_text(encoding="utf-8"))
+tampered_summary["real_release_package_ready"] = 1
+bad_summary.write_text(json.dumps(tampered_summary, sort_keys=True), encoding="utf-8")
+if subprocess.run(summary_schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("summary schema must reject real_release_package_ready=1")
+
+tampered_summary = json.loads((out_a / "audit_summary.json").read_text(encoding="utf-8"))
+tampered_summary["public_comparison_claim_ready"] = 1
+bad_summary.write_text(json.dumps(tampered_summary, sort_keys=True), encoding="utf-8")
+if subprocess.run(summary_schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("summary schema must reject public_comparison_claim_ready=1")
+
+tampered_summary = json.loads((out_a / "audit_summary.json").read_text(encoding="utf-8"))
+tampered_summary["raw_prompt_context_bytes"] = 128
+bad_summary.write_text(json.dumps(tampered_summary, sort_keys=True), encoding="utf-8")
+if subprocess.run(summary_schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("summary schema must reject raw_prompt_context_bytes drift")
 
 tampered = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
 tampered["real_benchmark_namespace_confirmed"] = 1
