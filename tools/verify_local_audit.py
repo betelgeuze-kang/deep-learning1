@@ -100,6 +100,11 @@ def verify_sha_manifest(out_dir: Path, errors: list[str]) -> dict[str, str]:
         except ValueError:
             add(errors, f"invalid sha256 line: {line!r}")
             continue
+        if rel in entries:
+            add(errors, f"duplicate sha manifest entry: {rel}")
+        if Path(rel).is_absolute() or ".." in Path(rel).parts:
+            add(errors, f"sha manifest path escapes output directory: {rel}")
+            continue
         entries[rel] = digest
         artifact = out_dir / rel
         if not artifact.is_file():
@@ -203,9 +208,15 @@ def verify_registry(registry: dict, errors: list[str]) -> None:
 
 
 def verify_contract(out_dir: Path, sha_entries: dict[str, str], errors: list[str]) -> None:
-    for row in read_csv(out_dir / "artifact_contract_rows.csv"):
+    rows = read_csv(out_dir / "artifact_contract_rows.csv")
+    expected_contract_paths = REQUIRED_FILES - {"sha256sums.txt", "artifact_contract_rows.csv"}
+    seen_contract_paths: set[str] = set()
+    for row in rows:
         rel = row.get("artifact_path", "")
         artifact = out_dir / rel
+        if rel in seen_contract_paths:
+            add(errors, f"duplicate artifact contract row: {rel}")
+        seen_contract_paths.add(rel)
         if row.get("schema_version") != "local_repo_audit_artifacts.v1":
             add(errors, f"artifact contract schema drift: {rel}")
         if row.get("sha256_manifest_required") == "1" and rel not in sha_entries:
@@ -238,6 +249,12 @@ def verify_contract(out_dir: Path, sha_entries: dict[str, str], errors: list[str
                 add(errors, f"json contract actual keys drift: {rel}")
             if not set(required_keys).issubset(payload):
                 add(errors, f"json contract required keys missing: {rel}")
+    missing_contracts = expected_contract_paths - seen_contract_paths
+    extra_contracts = seen_contract_paths - expected_contract_paths
+    if missing_contracts:
+        add(errors, f"artifact contract missing required rows: {','.join(sorted(missing_contracts))}")
+    if extra_contracts:
+        add(errors, f"artifact contract has unexpected rows: {','.join(sorted(extra_contracts))}")
 
 
 def verify_csv_jsonl(out_dir: Path, errors: list[str]) -> None:
@@ -252,10 +269,17 @@ def verify_sources(out_dir: Path, manifest: dict, errors: list[str]) -> dict[str
     rows = read_csv(out_dir / "source_manifest.csv")
     target = Path(str(manifest.get("target_repo", "")))
     by_path: dict[str, dict[str, str]] = {}
+    source_ids: set[str] = set()
     if not target.is_dir():
         add(errors, "target_repo directory is missing")
     for row in rows:
+        source_id = row.get("source_id", "")
         rel = row.get("file_path", "")
+        if source_id in source_ids:
+            add(errors, f"duplicate source_id in source_manifest.csv: {source_id}")
+        source_ids.add(source_id)
+        if rel in by_path:
+            add(errors, f"duplicate file_path in source_manifest.csv: {rel}")
         by_path[rel] = row
         source = target / rel
         if row.get("route_memory_source") != "1":
@@ -276,11 +300,16 @@ def verify_citations(out_dir: Path, manifest: dict, source_by_path: dict[str, di
     target = Path(str(manifest.get("target_repo", "")))
     findings = {row["finding_id"]: row for row in read_csv(out_dir / "audit_findings.csv")}
     citation_cells: dict[tuple[str, str], dict[str, str]] = {}
+    citation_ids: set[str] = set()
     for row in read_csv(out_dir / "citation_spans.csv"):
         rel = row.get("file_path", "")
         finding_id = row.get("finding_id", "")
+        citation_id = row.get("citation_id", "")
         line_start = int(row.get("line_start") or 0)
         line_end = int(row.get("line_end") or 0)
+        if citation_id in citation_ids:
+            add(errors, f"duplicate citation_id in citation_spans.csv: {citation_id}")
+        citation_ids.add(citation_id)
         if rel not in source_by_path:
             add(errors, f"citation outside source_manifest.csv: {rel}")
             continue
@@ -293,7 +322,10 @@ def verify_citations(out_dir: Path, manifest: dict, source_by_path: dict[str, di
             continue
         if row.get("span_text_preview") != lines[line_start - 1].strip()[:280]:
             add(errors, f"citation preview mismatch: {rel}:{line_start}")
-        citation_cells[(finding_id, f"{rel}:{line_start}")] = row
+        cell_key = (finding_id, f"{rel}:{line_start}")
+        if cell_key in citation_cells:
+            add(errors, f"duplicate citation cell in citation_spans.csv: {finding_id} {rel}:{line_start}")
+        citation_cells[cell_key] = row
     for finding_id, finding in findings.items():
         cells = [cell for cell in finding.get("citations", "").split(";") if cell]
         if not cells:
@@ -374,10 +406,20 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
         add(errors, "unsupported claim row count drift")
 
     guard_rows = read_csv(out_dir / "wrong_answer_guard_rows.csv")
+    guard_by_finding = {row.get("finding_id", ""): row for row in guard_rows}
+    if set(guard_by_finding) != finding_ids:
+        add(errors, "wrong_answer_guard_rows.csv must contain exactly one row per finding")
     if len([row for row in guard_rows if row.get("wrong_answer_guard_pass") == "1"]) != len(guard_rows):
         add(errors, "wrong answer guard rows are not all passing")
     if str(len(guard_rows)) != summary.get("wrong_answer_guard_rows"):
         add(errors, "wrong answer guard row count drift")
+    for finding_id, row in guard_by_finding.items():
+        finding = next((item for item in findings if item.get("finding_id") == finding_id), {})
+        expected_blocked = "1" if finding.get("abstain") == "1" or finding.get("grounded") == "1" else "0"
+        if row.get("unsupported_direct_answer_blocked") != expected_blocked:
+            add(errors, f"wrong answer guard blocked flag drift: {finding_id}")
+        if row.get("citation_required") != "1" or row.get("audit_trail_required") != "1":
+            add(errors, f"wrong answer guard must require citation and audit trail: {finding_id}")
     latency_rows = read_csv(out_dir / "latency_rows.csv")
     if {row.get("finding_id", "") for row in latency_rows} != finding_ids:
         add(errors, "latency_rows.csv must contain exactly one row per finding")
@@ -404,6 +446,104 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
             add(errors, "false-positive candidates must not be auto-promoted")
 
 
+def verify_route_generation_rows(out_dir: Path, summary: dict[str, str], errors: list[str]) -> None:
+    findings = read_csv(out_dir / "audit_findings.csv")
+    finding_by_id = {row.get("finding_id", ""): row for row in findings}
+    finding_ids = set(finding_by_id)
+    citation_counts = {
+        finding_id: len([cell for cell in row.get("citations", "").split(";") if cell])
+        for finding_id, row in finding_by_id.items()
+    }
+
+    hint_rows = read_csv(out_dir / "compact_route_hint_rows.csv")
+    hint_by_finding = {row.get("finding_id", ""): row for row in hint_rows}
+    if len(hint_by_finding) != len(hint_rows) or set(hint_by_finding) != finding_ids:
+        add(errors, "compact_route_hint_rows.csv must contain exactly one row per finding")
+    if str(len(hint_rows)) != summary.get("compact_route_hint_rows"):
+        add(errors, "compact route hint row count drift")
+    hint_ids = set()
+    for finding_id, row in hint_by_finding.items():
+        hint_id = row.get("hint_id", "")
+        if not hint_id:
+            add(errors, f"route hint id missing: {finding_id}")
+        if hint_id in hint_ids:
+            add(errors, f"duplicate route hint id: {hint_id}")
+        hint_ids.add(hint_id)
+        if row.get("source_citation_count") != str(citation_counts.get(finding_id, -1)):
+            add(errors, f"route hint citation count drift: {finding_id}")
+        if row.get("raw_context_appended") != "0" or row.get("proposal_hint_used") != "1":
+            add(errors, "route hints must use compact proposal hints without raw context")
+
+    generation_rows = read_csv(out_dir / "grounded_generation_rows.csv")
+    generation_by_finding = {row.get("finding_id", ""): row for row in generation_rows}
+    if len(generation_by_finding) != len(generation_rows) or set(generation_by_finding) != finding_ids:
+        add(errors, "grounded_generation_rows.csv must contain exactly one row per finding")
+    if str(len(generation_rows)) != summary.get("grounded_generation_rows"):
+        add(errors, "grounded generation row count drift")
+    generation_ids = set()
+    for finding_id, row in generation_by_finding.items():
+        finding = finding_by_id.get(finding_id, {})
+        generation_id = row.get("generation_id", "")
+        if not generation_id:
+            add(errors, f"generation id missing: {finding_id}")
+        if generation_id in generation_ids:
+            add(errors, f"duplicate generation id: {generation_id}")
+        generation_ids.add(generation_id)
+        if row.get("hint_id") != hint_by_finding.get(finding_id, {}).get("hint_id"):
+            add(errors, f"generation hint binding drift: {finding_id}")
+        for key in ["grounded", "abstain", "unsupported_claim", "answer"]:
+            if row.get(key) != finding.get(key):
+                add(errors, f"generation/finding drift: {finding_id} {key}")
+        if row.get("raw_prompt_context_bytes") != "0" or row.get("attention_blocks") != "0" or row.get("transformer_blocks") != "0":
+            add(errors, "generation rows must not claim raw prompt stuffing or attention/transformer blocks")
+
+    lineage_rows = read_jsonl(out_dir / "prediction_lineage.jsonl")
+    lineage_by_finding = {str(row.get("finding_id", "")): row for row in lineage_rows}
+    if len(lineage_by_finding) != len(lineage_rows) or set(lineage_by_finding) != finding_ids:
+        add(errors, "prediction_lineage.jsonl must contain exactly one row per finding")
+    if str(len(lineage_rows)) != summary.get("route_memory_lineage_rows"):
+        add(errors, "prediction lineage row count drift")
+    for finding_id, row in lineage_by_finding.items():
+        if str(row.get("compact_route_hint_id")) != hint_by_finding.get(finding_id, {}).get("hint_id"):
+            add(errors, f"lineage hint id not bound: {finding_id}")
+        if str(row.get("generator_id")) != generation_by_finding.get(finding_id, {}).get("generation_id"):
+            add(errors, f"lineage generator id not bound: {finding_id}")
+        if str(row.get("citation_count")) != str(citation_counts.get(finding_id, -1)):
+            add(errors, f"lineage citation count drift: {finding_id}")
+        if str(row.get("audit_trail_bound")) != "1":
+            add(errors, f"lineage audit trail must be bound: {finding_id}")
+
+    citation_rows = read_csv(out_dir / "citation_spans.csv")
+    expected_mmap_keys = {
+        (
+            row.get("finding_id", ""),
+            row.get("file_path", ""),
+            str(row.get("line_start", "")),
+            row.get("sha256", ""),
+        )
+        for row in citation_rows
+    }
+    mmap_rows = read_jsonl(out_dir / "mmap_read_trace.jsonl")
+    mmap_keys = {
+        (
+            str(row.get("finding_id", "")),
+            str(row.get("file_path", "")),
+            str(row.get("line_start", "")),
+            str(row.get("sha256", "")),
+        )
+        for row in mmap_rows
+    }
+    if mmap_keys != expected_mmap_keys or len(mmap_keys) != len(mmap_rows):
+        add(errors, "mmap read trace must exactly match citation spans")
+    if str(len(mmap_rows)) != summary.get("mmap_read_trace_rows"):
+        add(errors, "mmap read trace row count drift")
+    for row in mmap_rows:
+        if str(row.get("finding_id", "")) not in finding_ids:
+            add(errors, "mmap read trace references unknown finding")
+        if str(row.get("mmap_value_byte_read")) != "1":
+            add(errors, "mmap read trace must prove value byte read")
+
+
 def verify_local_audit(out_dir: Path) -> list[str]:
     errors: list[str] = []
     for rel in REQUIRED_FILES:
@@ -425,6 +565,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     verify_cache_key(out_dir, manifest, summary, errors)
     verify_reproduce(out_dir, manifest, summary, errors)
     verify_manual_rows(out_dir, summary, errors)
+    verify_route_generation_rows(out_dir, summary, errors)
     return errors
 
 

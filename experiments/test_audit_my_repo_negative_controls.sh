@@ -441,6 +441,39 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
     raise SystemExit("local-audit verifier must require abstain_rows.csv in sha256sums.txt")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+first_sha_line = original_sha_manifest_text.splitlines()[0]
+sha_manifest_path.write_text(original_sha_manifest_text + first_sha_line + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject duplicate sha256 manifest entries")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+sha_manifest_path.write_text(original_sha_manifest_text + "0" * 64 + "  ../escape.txt\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject sha256 manifest path traversal")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+contract_path = out_a / "artifact_contract_rows.csv"
+original_contract_text = contract_path.read_text(encoding="utf-8")
+with contract_path.open(newline="", encoding="utf-8") as handle:
+    contract_rows = list(csv.DictReader(handle))
+contract_rows = [row for row in contract_rows if row["artifact_path"] != "grounded_generation_rows.csv"]
+with contract_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(contract_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(contract_rows)
+new_contract_sha = sha256(contract_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  artifact_contract_rows.csv"):
+        sha_lines.append(f"{new_contract_sha}  artifact_contract_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject missing artifact contract rows")
+contract_path.write_text(original_contract_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 tampered_citations.write_text(original_citations.replace("sha256:", "sha256:0000", 1), encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject tampered citation hashes")
@@ -483,6 +516,29 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
     raise SystemExit("local-audit verifier must reject invalid source manifest rows")
 source_manifest_path.write_text(original_source_manifest_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with source_manifest_path.open(newline="", encoding="utf-8") as handle:
+    source_manifest_rows = list(csv.DictReader(handle))
+if len(source_manifest_rows) >= 2:
+    source_manifest_rows[1]["file_path"] = source_manifest_rows[0]["file_path"]
+    source_manifest_rows[1]["sha256"] = source_manifest_rows[0]["sha256"]
+    source_manifest_rows[1]["bytes"] = source_manifest_rows[0]["bytes"]
+    with source_manifest_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(source_manifest_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(source_manifest_rows)
+    new_source_manifest_sha = sha256(source_manifest_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  source_manifest.csv"):
+            sha_lines.append(f"{new_source_manifest_sha}  source_manifest.csv")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit("local-audit verifier must reject duplicate source manifest file paths")
+    source_manifest_path.write_text(original_source_manifest_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 outside_source = repo / "UNTRACKED_EXTRA.md"
 outside_source.write_text("# Untracked Extra\n\nThis file was not part of the audit source manifest.\n", encoding="utf-8")
@@ -602,6 +658,128 @@ sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject missing per-finding accuracy rows")
 accuracy_path.write_text(original_accuracy_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+generation_path = out_a / "grounded_generation_rows.csv"
+original_generation_text = generation_path.read_text(encoding="utf-8")
+with generation_path.open(newline="", encoding="utf-8") as handle:
+    generation_rows = list(csv.DictReader(handle))
+generation_rows[0]["raw_prompt_context_bytes"] = "128"
+with generation_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(generation_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(generation_rows)
+new_generation_sha = sha256(generation_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  grounded_generation_rows.csv"):
+        sha_lines.append(f"{new_generation_sha}  grounded_generation_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject raw prompt stuffing in generation rows")
+generation_path.write_text(original_generation_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+hint_path = out_a / "compact_route_hint_rows.csv"
+original_hint_text = hint_path.read_text(encoding="utf-8")
+with hint_path.open(newline="", encoding="utf-8") as handle:
+    hint_rows = list(csv.DictReader(handle))
+hint_rows[0]["raw_context_appended"] = "1"
+with hint_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(hint_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(hint_rows)
+new_hint_sha = sha256(hint_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  compact_route_hint_rows.csv"):
+        sha_lines.append(f"{new_hint_sha}  compact_route_hint_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject raw context in route hint rows")
+hint_path.write_text(original_hint_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with generation_path.open(newline="", encoding="utf-8") as handle:
+    generation_rows = list(csv.DictReader(handle))
+generation_rows[0]["hint_id"] = "missing_hint"
+with generation_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(generation_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(generation_rows)
+new_generation_sha = sha256(generation_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  grounded_generation_rows.csv"):
+        sha_lines.append(f"{new_generation_sha}  grounded_generation_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject generation hint binding drift")
+generation_path.write_text(original_generation_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+lineage_path = out_a / "prediction_lineage.jsonl"
+original_lineage_text = lineage_path.read_text(encoding="utf-8")
+lineage_rows = [json.loads(line) for line in original_lineage_text.splitlines() if line.strip()]
+lineage_rows[0]["generator_id"] = "missing_gen"
+lineage_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in lineage_rows), encoding="utf-8")
+new_lineage_sha = sha256(lineage_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  prediction_lineage.jsonl"):
+        sha_lines.append(f"{new_lineage_sha}  prediction_lineage.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject prediction lineage generator drift")
+lineage_path.write_text(original_lineage_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+mmap_path = out_a / "mmap_read_trace.jsonl"
+original_mmap_text = mmap_path.read_text(encoding="utf-8")
+mmap_rows = [json.loads(line) for line in original_mmap_text.splitlines() if line.strip()]
+mmap_rows[0]["mmap_value_byte_read"] = 0
+mmap_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in mmap_rows), encoding="utf-8")
+new_mmap_sha = sha256(mmap_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  mmap_read_trace.jsonl"):
+        sha_lines.append(f"{new_mmap_sha}  mmap_read_trace.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject mmap trace byte-read drift")
+mmap_path.write_text(original_mmap_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+guard_path = out_a / "wrong_answer_guard_rows.csv"
+original_guard_text = guard_path.read_text(encoding="utf-8")
+with guard_path.open(newline="", encoding="utf-8") as handle:
+    guard_rows = list(csv.DictReader(handle))
+guard_rows[0]["citation_required"] = "0"
+with guard_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(guard_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(guard_rows)
+new_guard_sha = sha256(guard_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  wrong_answer_guard_rows.csv"):
+        sha_lines.append(f"{new_guard_sha}  wrong_answer_guard_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject wrong-answer guard citation bypass")
+guard_path.write_text(original_guard_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 findings_csv_path = out_a / "audit_findings.csv"
