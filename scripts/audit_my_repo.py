@@ -572,11 +572,26 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--namespace", choices=["fixture", "synthetic", "real_benchmark"], default="synthetic")
     parser.add_argument("--confirm-real-benchmark-namespace", action="store_true", help="Allow writing outputs in the real_benchmark namespace.")
     parser.add_argument("--question", default="")
+    parser.add_argument("--question-file", default="", help="Read one non-empty question from a UTF-8 text file.")
     parser.add_argument("--emit-report", action="store_true", default=True)
     parser.add_argument("--emit-lineage", action="store_true", default=True)
     parser.add_argument("--emit-reproduce", action="store_true", default=True)
     parser.add_argument("--verify-output", action=argparse.BooleanOptionalAction, default=True)
     return parser.parse_args(argv)
+
+
+def resolve_question(args: argparse.Namespace) -> str:
+    if args.question and args.question_file:
+        raise AuditInputError("--question and --question-file are mutually exclusive")
+    if not args.question_file:
+        return args.question
+    question_file = Path(args.question_file).expanduser().resolve()
+    if not question_file.is_file():
+        raise AuditInputError(f"--question-file is not a file: {question_file}")
+    lines = [line.strip() for line in question_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if len(lines) != 1:
+        raise AuditInputError("--question-file must contain exactly one non-empty question line")
+    return lines[0]
 
 
 def plugin_registry_payload() -> dict:
@@ -645,6 +660,12 @@ def main(argv: list[str]) -> int:
         print("--namespace real_benchmark requires --confirm-real-benchmark-namespace", file=sys.stderr)
         return 2
 
+    try:
+        question = resolve_question(args)
+    except AuditInputError as exc:
+        print(f"input_error: {exc}", file=sys.stderr)
+        return 2
+
     staging_parent = out_dir.parent
     staging_parent.mkdir(parents=True, exist_ok=True)
     staging = staging_parent / f".{out_dir.name}.staging-{os.getpid()}-{int(time.time())}"
@@ -653,7 +674,7 @@ def main(argv: list[str]) -> int:
     staging.mkdir(parents=True)
     try:
         real_benchmark_namespace_confirmed = int(args.namespace == "real_benchmark" and args.confirm_real_benchmark_namespace)
-        summary = write_outputs(root, target, out_dir, staging, args.mode, args.max_queries, args.generator, args.namespace, real_benchmark_namespace_confirmed, args.question, args.emit_report, args.emit_lineage, args.emit_reproduce)
+        summary = write_outputs(root, target, out_dir, staging, args.mode, args.max_queries, args.generator, args.namespace, real_benchmark_namespace_confirmed, question, args.emit_report, args.emit_lineage, args.emit_reproduce)
         publish_status = publish_atomic(staging, out_dir)
     except AuditInputError as exc:
         print(f"input_error: {exc}", file=sys.stderr)

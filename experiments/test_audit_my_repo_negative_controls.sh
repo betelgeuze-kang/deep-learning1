@@ -102,6 +102,20 @@ expect_audit_exit 2 "target repo must be required for audit execution" --out "$T
 expect_audit_exit 2 "unsupported generator must fail with stable usage exit code" "$repo" --generator unsupported --out "$TMP_DIR/bad_generator"
 expect_audit_exit 2 "non-positive max queries must fail with stable usage exit code" "$repo" --max-queries 0 --out "$TMP_DIR/bad_queries"
 expect_audit_exit 2 "missing target repo must fail with stable usage exit code" "$TMP_DIR/missing" --out "$TMP_DIR/bad_target"
+question_file="$TMP_DIR/question.txt"
+printf 'Does this file-input question prove release readiness?\n' >"$question_file"
+expect_audit_exit 2 "missing question file must fail with stable usage exit code" "$repo" --question-file "$TMP_DIR/missing_question.txt" --out "$TMP_DIR/bad_question_missing"
+expect_audit_exit 2 "question and question-file must be mutually exclusive" "$repo" --question "Inline?" --question-file "$question_file" --out "$TMP_DIR/bad_question_both"
+printf '\n' >"$TMP_DIR/empty_question.txt"
+expect_audit_exit 2 "empty question file must fail with stable usage exit code" "$repo" --question-file "$TMP_DIR/empty_question.txt" --out "$TMP_DIR/bad_question_empty"
+printf 'One?\nTwo?\n' >"$TMP_DIR/multi_question.txt"
+expect_audit_exit 2 "multi-question file must fail with stable usage exit code" "$repo" --question-file "$TMP_DIR/multi_question.txt" --out "$TMP_DIR/bad_question_multi"
+for bad_question_out in bad_question_missing bad_question_both bad_question_empty bad_question_multi; do
+  if [[ -e "$TMP_DIR/$bad_question_out/audit_manifest.json" ]] || compgen -G "$TMP_DIR/.$bad_question_out.staging-*" >/dev/null; then
+    echo "invalid question-file inputs must not publish audit artifacts: $bad_question_out" >&2
+    exit 9
+  fi
+done
 no_source_repo="$TMP_DIR/no_source_repo"
 mkdir -p "$no_source_repo"
 printf 'binary-ish payload\n' >"$no_source_repo/blob.bin"
@@ -166,6 +180,41 @@ from pathlib import Path
 manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 if manifest["namespace"] != "synthetic":
     raise SystemExit("default namespace must be synthetic, not real_benchmark")
+PY
+"$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
+  --mode quick \
+  --max-queries 12 \
+  --out "$TMP_DIR/question_file_out" \
+  --question-file "$question_file" \
+  --generator routehint-tiny >/dev/null
+"$ROOT_DIR/tools/verify_local_audit.py" "$TMP_DIR/question_file_out" >/dev/null
+python3 - "$TMP_DIR/question_file_out" <<'PY'
+import csv
+import json
+import shlex
+import sys
+from pathlib import Path
+
+out_dir = Path(sys.argv[1])
+summary = json.loads((out_dir / "audit_summary.json").read_text(encoding="utf-8"))
+if summary["question_supplied"] != 1:
+    raise SystemExit("question-file input must set question_supplied=1")
+with (out_dir / "audit_findings.csv").open(newline="", encoding="utf-8") as handle:
+    question_rows = [row for row in csv.DictReader(handle) if row["plugin_id"] == "user_question"]
+if len(question_rows) != 1:
+    raise SystemExit("question-file input must produce exactly one user_question row")
+expected_question = "Does this file-input question prove release readiness?"
+if question_rows[0]["question"] != expected_question:
+    raise SystemExit("question-file input question text drift")
+if question_rows[0]["abstain"] != "1" or question_rows[0]["grounded"] != "0":
+    raise SystemExit("question-file input must abstain without grounding")
+reproduce_parts = shlex.split((out_dir / "reproduce.sh").read_text(encoding="utf-8").splitlines()[-1])
+if "--question-file" in reproduce_parts:
+    raise SystemExit("reproduce.sh must freeze question-file input as --question text")
+if "--question" not in reproduce_parts:
+    raise SystemExit("reproduce.sh must preserve question-file input as --question")
+if reproduce_parts[reproduce_parts.index("--question") + 1] != expected_question:
+    raise SystemExit("reproduce.sh question-file value drift")
 PY
 "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
   --mode quick \
@@ -1421,33 +1470,6 @@ sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject audit findings CSV/JSONL drift")
 findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
-sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
-
-with findings_csv_path.open(newline="", encoding="utf-8") as handle:
-    findings_csv_rows = list(csv.DictReader(handle))
-finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
-findings_csv_rows[0]["plugin_id"] = "unregistered_plugin"
-finding_json_rows[0]["plugin_id"] = "unregistered_plugin"
-with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
-    writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
-    writer.writeheader()
-    writer.writerows(findings_csv_rows)
-audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in finding_json_rows), encoding="utf-8")
-new_findings_csv_sha = sha256(findings_csv_path)
-new_findings_jsonl_sha = sha256(audit_findings_path)
-sha_lines = []
-for line in original_sha_manifest_text.splitlines():
-    if line.endswith("  audit_findings.csv"):
-        sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
-    elif line.endswith("  audit_findings.jsonl"):
-        sha_lines.append(f"{new_findings_jsonl_sha}  audit_findings.jsonl")
-    else:
-        sha_lines.append(line)
-sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
-if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
-    raise SystemExit("local-audit verifier must reject findings from unregistered plugins")
-findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
-audit_findings_path.write_text(original_findings_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 manifest_path = out_a / "audit_manifest.json"
