@@ -107,17 +107,16 @@ orders, dry-run bundles, and fixture mechanics do not imply accepted human
 review, adjudication, real generation, or release readiness.
 v61 runtime wording must follow `v61/one_token_path.json`;
 `mixtral-ssd-tensor-page-read-rows`, tensor dtype/quant rows, and
-`torch-matvec-parity-rows` are replay-bound, but real expert FFN forward parity,
-MoE block forward parity, one-token logits parity, actual generation,
-production latency, near-frontier quality, and release claims remain blocked
-until a replay artifact contains `real_model_execution_ready=1`. The runtime
-claim policy must keep `required_before_ssd_resident_runtime_claim_count=6`,
-`passed_before_ssd_resident_runtime_claim_count=3`, and
-`blocked_before_ssd_resident_runtime_claim_count=3`, with
-`blocked_before_ssd_resident_runtime_claim` listing real expert FFN, MoE block,
-and one-token logits parity. It must also keep
-`present_required_artifact_count=5` and `missing_required_artifact_count=5` so
-the gap between scaffolded contracts and missing one-token/decode/runtime rows is
+`torch-matvec-parity-rows` are typed replay targets, but clean checkout keeps
+their ignored `results/` evidence absent. Real expert FFN forward parity, MoE
+block forward parity, one-token logits parity, actual generation, production
+latency, near-frontier quality, and release claims remain blocked until a replay
+artifact contains `real_model_execution_ready=1`. The runtime claim policy must
+keep `required_before_ssd_resident_runtime_claim_count=6`,
+`passed_before_ssd_resident_runtime_claim_count=0`, and
+`blocked_before_ssd_resident_runtime_claim_count=6`. It must also keep
+`present_required_artifact_count=0` and `missing_required_artifact_count=10` so
+the gap between source-controlled contracts and ignored runtime rows is
 machine-visible.
 README and PR-body wording must follow the `docs-readme-pr2-cleanup` slice:
 reviewers should be pointed to declarative pipeline/contracts instead of a giant

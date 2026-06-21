@@ -14,13 +14,23 @@
     "fixture_can_close_real_return": false,
     "accepted_human_review_rows": 0,
     "accepted_adjudication_rows": 0,
-    "accepted_operator_return_rows": 0
+    "accepted_operator_return_rows": 0,
+    "summary_evidence_ready": false,
+    "required_summary_evidence_count": 4,
+    "present_summary_evidence_count": 0,
+    "missing_summary_evidence_count": 4,
+    "missing_summary_evidence_ids": [
+      "v53s",
+      "v58d",
+      "v61af",
+      "v61hv"
+    ]
   },
   "requirements": [
     {
       "requirement_id": "v53-review-return-intake-blocked",
       "required_evidence": "v53 review-return intake contract exists but no human review, adjudication, reviewer identity, or conflict disclosure rows are accepted",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v53s_complete_source_review_return_intake_summary.csv",
       "claim_boundary": "Allows v53 review-return intake-contract wording only; not human-reviewed correctness",
       "summary_checks": [
@@ -38,7 +48,7 @@
     {
       "requirement_id": "v58-blind-review-return-blocked",
       "required_evidence": "v58 blind review-return intake contract exists while blind responses, review rows, adjudication rows, inter-rater rows, and full blind eval remain blocked",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v58d_blind_review_return_intake_summary.csv",
       "claim_boundary": "Allows v58d intake/dependency blocker wording only; not real blind-eval completion",
       "summary_checks": [
@@ -56,7 +66,7 @@
     {
       "requirement_id": "v61-operator-bundle-logistics-only",
       "required_evidence": "v61 checkpoint warehouse operator bundle exists as a dry-run/logistics packet, with materialization, local checkpoint execution, generation, and release blocked",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v61af_checkpoint_warehouse_operator_bundle_summary.csv",
       "claim_boundary": "Allows operator bundle/logistics wording only; not checkpoint materialization or generation execution",
       "summary_checks": [
@@ -74,7 +84,7 @@
     {
       "requirement_id": "v61-first-slice-operator-input-blocked",
       "required_evidence": "v61 first-slice replacement pipeline scaffolds operator input and publish/run mechanics while real operator values, row acceptance, generation acceptance, and release remain blocked",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv",
       "claim_boundary": "Allows no-replay operator pipeline scaffolding wording only; not real return execution",
       "summary_checks": [

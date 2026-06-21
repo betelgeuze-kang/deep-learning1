@@ -16,7 +16,11 @@
         "real_model_generation_ready",
         "human_review_ready",
         "public_comparison_claim_ready",
-        "release_ready"
+        "release_ready",
+        "required_artifact_count",
+        "present_required_artifact_count",
+        "missing_required_artifact_count",
+        "missing_required_artifact_ids"
       ],
       "properties": {
         "generation_contract_ready": {"type": "boolean"},
@@ -26,7 +30,28 @@
         "real_model_generation_ready": {"type": "boolean"},
         "human_review_ready": {"type": "boolean"},
         "public_comparison_claim_ready": {"type": "boolean"},
-        "release_ready": {"type": "boolean"}
+        "release_ready": {"type": "boolean"},
+        "required_artifact_count": {"type": "integer", "minimum": 0},
+        "present_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "answer-rows",
+              "citation-rows",
+              "unsupported-claim-rows",
+              "abstain-rows",
+              "generator-resource-rows",
+              "wrong-answer-guard-rows",
+              "generator-input-rows",
+              "compact-routehint-rows",
+              "sha256-manifest",
+              "sha256sums"
+            ]
+          }
+        }
       },
       "additionalProperties": false
     },

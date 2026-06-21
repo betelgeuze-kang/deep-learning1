@@ -14,11 +14,12 @@ tools/verify_artifact.py review-return-workflow operations/review_return_workflo
   --v61hv-summary results/v61hv_post_hu_first_real_slice_replacements_to_readiness_no_replay_pipeline_summary.csv
 ```
 
-Each `current_status=pass` requirement must have a non-empty `summary_checks`
-list and replayable summary evidence. When explicit summary paths are not
-passed, the verifier attempts to load the requirement `evidence_path`; if the
-summary evidence is missing, the check fails instead of silently accepting a
-summary-only claim.
+The clean checkout contract is fail-closed. It lists the four required summary
+evidence ids, but keeps `summary_evidence_ready=false` and each requirement
+`current_status=blocked` until those summaries are explicitly supplied or
+replayed. Local ignored `results/` files must not silently turn the tracked
+workflow contract into accepted human review, operator return, generation, or
+release evidence.
 
 The verifier pins the exact blocker summary checks for each requirement. A
 contract edit cannot promote accepted human review, adjudication, operator

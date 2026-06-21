@@ -7,6 +7,12 @@ cd "$PROJECT_ROOT"
 
 echo "==> ai wrapper shell syntax"
 bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh
+if [ -f experiments/test_audit_my_repo_product_entrypoint.sh ]; then
+  bash -n experiments/test_audit_my_repo_product_entrypoint.sh
+fi
+if [ -f experiments/test_audit_my_repo_negative_controls.sh ]; then
+  bash -n experiments/test_audit_my_repo_negative_controls.sh
+fi
 
 echo "==> json"
 python3 -m json.tool opencode.json >/dev/null
@@ -42,6 +48,12 @@ if [ -f schemas/review_return_workflow.schema.json ]; then
 fi
 if [ -f schemas/v61_one_token_path.schema.json ]; then
   python3 -m json.tool schemas/v61_one_token_path.schema.json >/dev/null
+fi
+if [ -f schemas/local_repo_audit_output.schema.json ]; then
+  python3 -m json.tool schemas/local_repo_audit_output.schema.json >/dev/null
+fi
+if [ -f schemas/local_repo_audit_plugin_registry.schema.json ]; then
+  python3 -m json.tool schemas/local_repo_audit_plugin_registry.schema.json >/dev/null
 fi
 if [ -f pr_slices/pr2.json ]; then
   python3 -m json.tool pr_slices/pr2.json >/dev/null
@@ -255,6 +267,14 @@ if [ -x tools/verify_artifact.py ]; then
     # shellcheck disable=SC2086
     tools/verify_artifact.py pipeline $pipeline_files >/dev/null
   fi
+fi
+
+echo "==> audit-my-repo product smoke"
+if [ -x experiments/test_audit_my_repo_product_entrypoint.sh ]; then
+  ./experiments/test_audit_my_repo_product_entrypoint.sh >/dev/null
+fi
+if [ -x experiments/test_audit_my_repo_negative_controls.sh ]; then
+  ./experiments/test_audit_my_repo_negative_controls.sh >/dev/null
 fi
 
 echo "verify ok"

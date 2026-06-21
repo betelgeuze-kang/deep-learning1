@@ -13,14 +13,25 @@
         "c_quality_claim_ready",
         "de_measured_registry_admission_ready",
         "public_comparison_claim_ready",
-        "release_ready"
+        "release_ready",
+        "required_artifact_count",
+        "present_required_artifact_count",
+        "missing_required_artifact_count",
+        "missing_required_artifact_ids"
       ],
       "properties": {
         "c_7b14b_actual_adapter_packet_ready": {"type": "boolean"},
         "c_quality_claim_ready": {"type": "boolean"},
         "de_measured_registry_admission_ready": {"type": "boolean"},
         "public_comparison_claim_ready": {"type": "boolean"},
-        "release_ready": {"type": "boolean"}
+        "release_ready": {"type": "boolean"},
+        "required_artifact_count": {"type": "integer", "minimum": 0},
+        "present_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_ids": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
       },
       "additionalProperties": false
     },

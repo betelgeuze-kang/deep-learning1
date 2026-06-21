@@ -12,7 +12,20 @@
         "ssd_resident_real_model_runtime_claim_ready",
         "real_model_execution_ready",
         "release_ready",
-        "required_before_ssd_resident_runtime_claim"
+        "required_before_ssd_resident_runtime_claim",
+        "required_before_ssd_resident_runtime_claim_count",
+        "passed_before_ssd_resident_runtime_claim_count",
+        "blocked_before_ssd_resident_runtime_claim_count",
+        "required_artifact_count",
+        "present_required_artifact_count",
+        "missing_required_artifact_count",
+        "missing_required_artifact_ids",
+        "blocked_before_ssd_resident_runtime_claim",
+        "summary_evidence_ready",
+        "required_summary_evidence_count",
+        "present_summary_evidence_count",
+        "missing_summary_evidence_count",
+        "missing_summary_evidence_ids"
       ],
       "properties": {
         "ssd_resident_real_model_runtime_claim_ready": {"type": "boolean"},
@@ -31,6 +44,35 @@
               "one-token-logits-parity"
             ]
           }
+        },
+        "required_before_ssd_resident_runtime_claim_count": {"type": "integer", "minimum": 0},
+        "passed_before_ssd_resident_runtime_claim_count": {"type": "integer", "minimum": 0},
+        "blocked_before_ssd_resident_runtime_claim_count": {"type": "integer", "minimum": 0},
+        "required_artifact_count": {"type": "integer", "minimum": 0},
+        "present_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_count": {"type": "integer", "minimum": 0},
+        "missing_required_artifact_ids": {"type": "array", "items": {"type": "string"}},
+        "blocked_before_ssd_resident_runtime_claim": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "actual-mixtral-ssd-tensor-page-read",
+              "actual-tensor-dtype-quant-dequant",
+              "torch-matvec-parity",
+              "real-expert-ffn-forward-parity",
+              "real-moe-block-forward-parity",
+              "one-token-logits-parity"
+            ]
+          }
+        },
+        "summary_evidence_ready": {"type": "boolean"},
+        "required_summary_evidence_count": {"type": "integer", "minimum": 0},
+        "present_summary_evidence_count": {"type": "integer", "minimum": 0},
+        "missing_summary_evidence_count": {"type": "integer", "minimum": 0},
+        "missing_summary_evidence_ids": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["v61aa", "v61ab"]}
         }
       },
       "additionalProperties": false

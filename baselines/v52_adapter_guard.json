@@ -1,11 +1,24 @@
 {
   "schema_version": "v52_adapter_guard.v1",
   "policy": {
-    "c_7b14b_actual_adapter_packet_ready": true,
+    "c_7b14b_actual_adapter_packet_ready": false,
     "c_quality_claim_ready": false,
     "de_measured_registry_admission_ready": false,
     "public_comparison_claim_ready": false,
-    "release_ready": false
+    "release_ready": false,
+    "required_artifact_count": 8,
+    "present_required_artifact_count": 0,
+    "missing_required_artifact_count": 8,
+    "missing_required_artifact_ids": [
+      "c-answer-rows",
+      "c-citation-rows",
+      "c-resource-rows",
+      "c-retrieval-rows",
+      "c-abstain-rows",
+      "c-wrong-answer-guard-rows",
+      "c-generation-transcript-rows",
+      "c-sha256-manifest"
+    ]
   },
   "required_artifacts": [
     {
@@ -154,9 +167,9 @@
     {
       "requirement_id": "c-7b14b-v53e-actual-adapter-packet",
       "required_evidence": "System C emits 1000 local 7B-14B model+RAG answer, citation, retrieval, abstain, guard, resource, and transcript rows over the v53e query set",
-      "current_status": "pass",
+      "current_status": "blocked",
       "evidence_path": "results/v52l_7b14b_local_model_rag_v53e_1000_summary.csv",
-      "claim_boundary": "Allows actual local C response-packet wording only; not C quality or public comparison wording",
+      "claim_boundary": "Blocked in clean checkout until the required C packet artifacts are present and replayable; not C quality or public comparison wording",
       "summary_checks": [
         {"summary_id": "v52l", "field": "v52l_7b14b_local_model_rag_v53e_1000_ready", "expected": "1"},
         {"summary_id": "v52l", "field": "system_id", "expected": "C"},

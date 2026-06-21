@@ -13,14 +13,25 @@
         "machine_foundation_freeze_ready",
         "human_review_ready",
         "public_comparison_claim_ready",
-        "release_ready"
+        "release_ready",
+        "required_summary_evidence_count",
+        "present_summary_evidence_count",
+        "missing_summary_evidence_count",
+        "missing_summary_evidence_ids"
       ],
       "properties": {
         "benchmark_id": {"type": "string"},
         "machine_foundation_freeze_ready": {"type": "boolean"},
         "human_review_ready": {"type": "boolean"},
         "public_comparison_claim_ready": {"type": "boolean"},
-        "release_ready": {"type": "boolean"}
+        "release_ready": {"type": "boolean"},
+        "required_summary_evidence_count": {"type": "integer", "minimum": 0},
+        "present_summary_evidence_count": {"type": "integer", "minimum": 0},
+        "missing_summary_evidence_count": {"type": "integer", "minimum": 0},
+        "missing_summary_evidence_ids": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["v53i", "v53t", "v53ap", "v53aq"]}
+        }
       },
       "additionalProperties": false
     },
@@ -39,7 +50,7 @@
         "properties": {
           "requirement_id": {"type": "string"},
           "required_evidence": {"type": "string"},
-          "current_status": {"type": "string", "enum": ["pass"]},
+          "current_status": {"type": "string", "enum": ["pass", "blocked"]},
           "evidence_path": {"type": "string"},
           "claim_boundary": {"type": "string"},
           "summary_checks": {

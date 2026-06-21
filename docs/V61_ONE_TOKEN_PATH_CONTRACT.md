@@ -12,17 +12,17 @@ tools/verify_artifact.py v61-one-token v61/one_token_path.json \
   --v61ab-summary results/v61ab_hotset_tensor_tile_quant_probe_summary.csv
 ```
 
-The verifier intentionally fails if summary evidence is omitted while milestones
-are marked `pass` or carry summary checks.
+The clean checkout contract is fail-closed. It lists the required v61aa/v61ab
+summary ids and all one-token-path artifacts, but keeps
+`summary_evidence_ready=false`, `present_required_artifact_count=0`, and the
+first six runtime-claim milestones blocked until the ignored `results/` packet
+is replayed or explicitly supplied.
 
-Current accepted evidence:
+Clean-checkout blockers:
 
-- actual Mixtral hotset tensor page read/binding evidence
-- sampled BF16 dtype/stat evidence and q8/q4 tile quant probes
-- PyTorch CPU matvec parity over bounded hotset tiles
-
-Current blockers:
-
+- actual Mixtral hotset tensor page read/binding replay evidence
+- sampled BF16 dtype/stat evidence and q8/q4 tile quant probe replay evidence
+- PyTorch CPU matvec parity replay evidence
 - real expert FFN forward parity
 - real MoE block forward parity
 - one-token logits parity
