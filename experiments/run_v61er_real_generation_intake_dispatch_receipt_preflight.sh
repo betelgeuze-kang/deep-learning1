@@ -21,12 +21,15 @@ fi
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-V61EQ_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61eq_real_generation_intake_dispatch_seal.sh" >/dev/null
+if [[ "${V61ER_REFRESH_SOURCES:-1}" == "1" ]]; then
+  V61EQ_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61eq_real_generation_intake_dispatch_seal.sh" >/dev/null
+fi
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$RECEIPT_DIR_ARG" "$RECEIPT_PROVENANCE" <<'PY'
 import csv
 import hashlib
 import json
+import re
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -40,6 +43,8 @@ receipt_arg = sys.argv[5].strip()
 receipt_provenance = sys.argv[6].strip() or "unspecified"
 results = root / "results"
 receipt_dir = Path(receipt_arg).expanduser().resolve() if receipt_arg else None
+REAL_RECEIPT_PROVENANCE = "real-external-dispatch"
+SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def sha256(path):
@@ -76,6 +81,10 @@ def status(flag):
 
 def ready(flag):
     return "ready" if flag else "blocked"
+
+
+def valid_sha(value):
+    return isinstance(value, str) and bool(SHA_RE.match(value))
 
 
 v61eq_summary_path = results / "v61eq_real_generation_intake_dispatch_seal_summary.csv"
@@ -128,10 +137,34 @@ if receipt_file_present:
         receipt_data = {}
     copy(receipt_path, "supplied_dispatch_receipt/DISPATCH_RECEIPT.json")
 
-fixture_provenance = receipt_provenance.startswith("fixture")
+env_real_provenance = int(receipt_provenance == REAL_RECEIPT_PROVENANCE)
+receipt_source_class = str(receipt_data.get("source_class", ""))
+receipt_authority_sha = str(
+    receipt_data.get(
+        "dispatcher_authority_sha256",
+        receipt_data.get("operator_authority_sha256", ""),
+    )
+)
+receipt_provenance_value = str(receipt_data.get("provenance", ""))
+provenance_errors = []
+if not receipt_file_present:
+    provenance_errors.append("missing-dispatch-receipt")
+elif not receipt_json_readable:
+    provenance_errors.append("unreadable-dispatch-receipt")
+else:
+    if receipt_provenance_value != REAL_RECEIPT_PROVENANCE:
+        provenance_errors.append("provenance-mismatch")
+    if receipt_source_class.startswith("fixture"):
+        provenance_errors.append("fixture-source-class")
+    if receipt_source_class not in {"external-dispatch-receipt", "external-operator-dispatch", REAL_RECEIPT_PROVENANCE}:
+        provenance_errors.append("source-class-not-external-dispatch")
+    if not valid_sha(receipt_authority_sha):
+        provenance_errors.append("dispatcher-authority-sha256-missing")
+receipt_marker_real_provenance = int(receipt_json_readable and not provenance_errors)
+
 if not receipt_dir_supplied:
     selected_receipt_source_class = "none"
-elif fixture_provenance:
+elif receipt_source_class.startswith("fixture"):
     selected_receipt_source_class = "fixture-v61er-dispatch-receipt"
 else:
     selected_receipt_source_class = "operator-supplied"
@@ -156,8 +189,8 @@ candidate_preflight_ready = int(
     and recipient_present
     and sent_at_present
 )
-non_fixture_receipt = int(receipt_dir_supplied and not fixture_provenance)
-real_dispatch_receipt_provenance_asserted = int(receipt_provenance == "real-external-dispatch")
+non_fixture_receipt = int(receipt_dir_supplied and selected_receipt_source_class == "operator-supplied")
+real_dispatch_receipt_provenance_asserted = int(env_real_provenance and receipt_marker_real_provenance)
 real_dispatch_receipt_ready = int(
     candidate_preflight_ready
     and non_fixture_receipt
@@ -215,8 +248,8 @@ check_rows = [
     {"check_id": "sent-at-present", "status": status(sent_at_present), "required_value": "1", "actual_value": str(sent_at_present), "reason": "sent timestamp must be supplied"},
     {"check_id": "dispatch-receipt-candidate-preflight-ready", "status": status(candidate_preflight_ready), "required_value": "1", "actual_value": str(candidate_preflight_ready), "reason": "mechanical receipt checks must pass"},
     {"check_id": "non-fixture-dispatch-receipt", "status": status(non_fixture_receipt), "required_value": "1", "actual_value": str(non_fixture_receipt), "reason": "fixture receipts are not real dispatch evidence"},
-    {"check_id": "real-dispatch-receipt-provenance", "status": status(real_dispatch_receipt_provenance_asserted), "required_value": "real-external-dispatch", "actual_value": receipt_provenance, "reason": "real dispatch provenance must be explicit"},
-    {"check_id": "real-dispatch-receipt-ready", "status": status(real_dispatch_receipt_ready), "required_value": "1", "actual_value": str(real_dispatch_receipt_ready), "reason": "candidate receipt plus non-fixture provenance required"},
+    {"check_id": "real-dispatch-receipt-provenance", "status": status(real_dispatch_receipt_provenance_asserted), "required_value": "env=real-external-dispatch;receipt=real-external-dispatch", "actual_value": f"env={receipt_provenance};receipt_real={receipt_marker_real_provenance};errors={';'.join(provenance_errors)}", "reason": "real dispatch provenance must be backed by receipt JSON evidence"},
+    {"check_id": "real-dispatch-receipt-ready", "status": status(real_dispatch_receipt_ready), "required_value": "1", "actual_value": str(real_dispatch_receipt_ready), "reason": "candidate receipt plus non-fixture marker-backed provenance required"},
     {"check_id": "real-generation-intake-handoff", "status": "blocked", "required_value": "1", "actual_value": "0", "reason": "receipt alone is not generation evidence"},
     {"check_id": "actual-model-generation", "status": "blocked", "required_value": "1", "actual_value": "0", "reason": "actual generation remains unproven"},
 ]
@@ -228,6 +261,12 @@ metric = {
     "receipt_dir_supplied": str(receipt_dir_supplied),
     "receipt_dir_exists": str(receipt_dir_exists),
     "selected_receipt_source_class": selected_receipt_source_class,
+    "receipt_provenance_env_real": str(env_real_provenance),
+    "receipt_provenance_value": receipt_provenance_value,
+    "receipt_source_class": receipt_source_class,
+    "receipt_dispatcher_authority_sha256": receipt_authority_sha,
+    "receipt_marker_real_provenance": str(receipt_marker_real_provenance),
+    "receipt_provenance_errors": ";".join(provenance_errors),
     "dispatch_receipt_file_present": str(receipt_file_present),
     "dispatch_receipt_json_readable": str(receipt_json_readable),
     "required_receipt_field_rows": str(len(required_fields)),
@@ -294,7 +333,7 @@ decision_rows = [
     {"gate": "v61eq-dispatch-bundle-ready", "status": "pass", "reason": "v61eq dispatch seal is ready"},
     {"gate": "dispatch-receipt-candidate-preflight", "status": status(candidate_preflight_ready), "reason": f"candidate_preflight_ready={candidate_preflight_ready}"},
     {"gate": "non-fixture-dispatch-receipt", "status": status(non_fixture_receipt), "reason": f"selected_receipt_source_class={selected_receipt_source_class}"},
-    {"gate": "real-dispatch-receipt-provenance", "status": status(real_dispatch_receipt_provenance_asserted), "reason": f"provenance={receipt_provenance}"},
+    {"gate": "real-dispatch-receipt-provenance", "status": status(real_dispatch_receipt_provenance_asserted), "reason": f"env={receipt_provenance}; receipt_real={receipt_marker_real_provenance}; errors={';'.join(provenance_errors)}"},
     {"gate": "real-dispatch-receipt-ready", "status": status(real_dispatch_receipt_ready), "reason": f"real_dispatch_receipt_ready={real_dispatch_receipt_ready}"},
     {"gate": "real-generation-intake", "status": "blocked", "reason": "dispatch receipt is not generation evidence"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "no accepted generation rows"},
@@ -310,6 +349,8 @@ boundary.write_text(
             "",
             f"- receipt_dir_supplied={receipt_dir_supplied}",
             f"- dispatch_receipt_candidate_preflight_ready={candidate_preflight_ready}",
+            f"- receipt_marker_real_provenance={receipt_marker_real_provenance}",
+            f"- receipt_provenance_errors={';'.join(provenance_errors)}",
             f"- real_dispatch_receipt_ready={real_dispatch_receipt_ready}",
             "- real_generation_intake_handoff_ready=0",
             "- actual_model_generation_ready=0",
@@ -333,6 +374,8 @@ manifest = {
     "generated_at": datetime.now(timezone.utc).isoformat(),
     "v61er_real_generation_intake_dispatch_receipt_preflight_ready": 1,
     "dispatch_receipt_candidate_preflight_ready": candidate_preflight_ready,
+    "receipt_marker_real_provenance": receipt_marker_real_provenance,
+    "receipt_provenance_errors": provenance_errors,
     "real_dispatch_receipt_ready": real_dispatch_receipt_ready,
     "accepted_dispatch_receipt_rows": accepted_dispatch_receipt_rows,
     "real_generation_intake_handoff_ready": 0,

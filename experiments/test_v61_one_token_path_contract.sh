@@ -503,6 +503,122 @@ expect_fail_with \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 
+write_bad_expert_row() {
+  local mode="$1"
+  python3 - "$ROOT_DIR/v61/one_token_path.json" "$EXPERT_ROWS" "$mode" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+contract_path, rows_path, mode = sys.argv[1:4]
+data = json.loads(Path(contract_path).read_text(encoding="utf-8"))
+columns = next(
+    row["required_columns"]
+    for row in data["required_artifacts"]
+    if row["artifact_id"] == "expert-ffn-forward-parity-rows"
+)
+values = {column: "" for column in columns}
+values.update({
+    "checkpoint_id": "fixture-checkpoint",
+    "model_revision": "fixture-revision",
+    "config_sha256": "sha256:" + "1" * 64,
+    "tokenizer_revision": "fixture-tokenizer",
+    "shard_index_sha256": "sha256:" + "2" * 64,
+    "full_manifest_sha256": "sha256:" + "3" * 64,
+    "layer_index": "0",
+    "expert_index": "0",
+    "token_id": "1",
+    "router_top_k": "2",
+    "rmsnorm_tensor_name": "model.layers.0.input_layernorm.weight",
+    "rmsnorm_payload_sha256": "sha256:" + "4" * 64,
+    "router_tensor_name": "model.layers.0.block_sparse_moe.gate.weight",
+    "router_payload_sha256": "sha256:" + "5" * 64,
+    "w1_tensor_name": "model.layers.0.block_sparse_moe.experts.0.w1.weight",
+    "w2_tensor_name": "model.layers.0.block_sparse_moe.experts.0.w2.weight",
+    "w3_tensor_name": "model.layers.0.block_sparse_moe.experts.0.w3.weight",
+    "contract_ready": "1",
+    "fixture_execution_ready": "0",
+    "real_model_execution_ready": "1",
+    "heldout_metric_ready": "0",
+    "human_review_ready": "0",
+    "independent_reproduction_ready": "0",
+    "release_ready": "0",
+    "local_checkpoint_root_supplied": "1",
+    "checkpoint_payload_bytes_committed_to_repo": "0",
+    "actual_model_generation_ready": "0",
+    "route_jump_rows": "0",
+    "status": "blocked",
+    "reason": "malicious real expert FFN parity row",
+    "w1_shape": "[14336,6144]",
+    "w2_shape": "[6144,14336]",
+    "w3_shape": "[14336,6144]",
+    "w1_payload_sha256": "sha256:" + "6" * 64,
+    "w2_payload_sha256": "sha256:" + "7" * 64,
+    "w3_payload_sha256": "sha256:" + "8" * 64,
+    "input_hidden_size": "6144",
+    "intermediate_size": "14336",
+    "output_hidden_size": "6144",
+    "residual_input_sha256": "sha256:" + "9" * 64,
+    "residual_output_sha256": "sha256:" + "a" * 64,
+    "transformers_capture_backend": "transformers",
+    "transformers_capture_module_path": "model.layers.0.block_sparse_moe.experts.0",
+    "transformers_capture_artifact_sha256": "sha256:" + "b" * 64,
+    "transformers_expert_output_sha256": "sha256:" + "c" * 64,
+    "independent_runtime_output_sha256": "sha256:" + "d" * 64,
+    "candidate_output_sha256": "sha256:" + "d" * 64,
+    "torch_reference_output_sha256": "sha256:" + "c" * 64,
+    "max_abs_delta": "0",
+    "tolerance": "1e-06",
+    "expert_ffn_parity_pass": "1",
+})
+if mode == "missing_backend":
+    values["transformers_capture_backend"] = ""
+elif mode == "missing_module_path":
+    values["transformers_capture_module_path"] = ""
+elif mode == "independent_mismatch":
+    values["candidate_output_sha256"] = "sha256:" + "e" * 64
+elif mode == "transformers_mismatch":
+    values["torch_reference_output_sha256"] = "sha256:" + "f" * 64
+else:
+    raise SystemExit(f"unknown mode: {mode}")
+path = Path(rows_path)
+path.parent.mkdir(parents=True, exist_ok=True)
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=columns, lineterminator="\n")
+    writer.writeheader()
+    writer.writerow(values)
+PY
+}
+
+write_bad_expert_row missing_backend
+expect_fail_with \
+  "real expert_ffn_parity_pass=1 requires transformers_capture_backend" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$EXPERT_BAD_JSON" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+write_bad_expert_row missing_module_path
+expect_fail_with \
+  "real expert_ffn_parity_pass=1 requires transformers_capture_module_path" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$EXPERT_BAD_JSON" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+write_bad_expert_row independent_mismatch
+expect_fail_with \
+  "real expert_ffn_parity_pass=1 requires candidate_output_sha256 to match independent_runtime_output_sha256" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$EXPERT_BAD_JSON" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+write_bad_expert_row transformers_mismatch
+expect_fail_with \
+  "real expert_ffn_parity_pass=1 requires torch_reference_output_sha256 to match transformers_expert_output_sha256" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$EXPERT_BAD_JSON" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
 if [ -e "$MOE_ROWS" ]; then
   echo "refusing to overwrite existing v61 MoE block artifact: $MOE_ROWS" >&2
   exit 1
@@ -582,7 +698,10 @@ values = {column: "" for column in columns}
 values.update({
     "checkpoint_id": "fixture-checkpoint",
     "model_revision": "fixture-revision",
+    "config_sha256": "sha256:" + "2" * 64,
     "tokenizer_revision": "fixture-tokenizer",
+    "shard_index_sha256": "sha256:" + "3" * 64,
+    "full_manifest_sha256": "sha256:" + "4" * 64,
     "contract_ready": "1",
     "fixture_execution_ready": "0",
     "real_model_execution_ready": "0",
@@ -645,10 +764,28 @@ elif mode == "reference_topk_duplicate_bad":
     values["reference_top_k_token_ids"] = "1|2|2|4|5"
 elif mode == "candidate_logits_hash_bad":
     values["candidate_logits_sha256"] = "sha256:" + "z" * 64
+elif mode == "blank_checkpoint_bad":
+    values["checkpoint_id"] = ""
+elif mode == "blank_model_revision_bad":
+    values["model_revision"] = ""
+elif mode == "blank_tokenizer_revision_bad":
+    values["tokenizer_revision"] = ""
+elif mode == "config_hash_bad":
+    values["config_sha256"] = "sha256:" + "z" * 64
+elif mode == "shard_index_hash_bad":
+    values["shard_index_sha256"] = ""
+elif mode == "full_manifest_hash_bad":
+    values["full_manifest_sha256"] = "not-a-sha"
 elif mode == "mean_bad":
     values["mean_abs_delta"] = "0.01"
+elif mode == "max_bad":
+    values["max_abs_delta"] = "0.01"
 elif mode == "activation_bad":
     values["layer_activation_trace_sha256"] = ""
+elif mode == "activation_rows_bad":
+    values["layer_activation_trace_rows"] = "0"
+elif mode == "topk_parse_bad":
+    values["candidate_top_k_token_ids"] = "1|two|3|4|5"
 elif mode == "real_ready_without_pass":
     values["real_model_execution_ready"] = "1"
     values["logits_parity_pass"] = "0"
@@ -751,7 +888,70 @@ expect_fail_with \
 
 rm -f "$LOGITS_ROWS"
 
+write_bad_logits_row blank_checkpoint_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires checkpoint_id" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row blank_model_revision_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires model_revision" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row blank_tokenizer_revision_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires tokenizer_revision" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row config_hash_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires config_sha256" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row shard_index_hash_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires shard_index_sha256" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row full_manifest_hash_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires full_manifest_sha256" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
 write_bad_logits_row mean_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires max_abs_delta and mean_abs_delta <= tolerance" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row max_bad
 expect_fail_with \
   "logits_parity_pass=1 requires max_abs_delta and mean_abs_delta <= tolerance" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
@@ -763,6 +963,24 @@ rm -f "$LOGITS_ROWS"
 write_bad_logits_row activation_bad
 expect_fail_with \
   "logits_parity_pass=1 requires layer_activation_trace_sha256" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row activation_rows_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires positive integer layer_activation_trace_rows" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+
+rm -f "$LOGITS_ROWS"
+
+write_bad_logits_row topk_parse_bad
+expect_fail_with \
+  "logits_parity_pass=1 requires parseable candidate_top_k_token_ids" \
   "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"

@@ -2793,8 +2793,9 @@ def _compute_v61_logits_parity_ready(
         local_errors.append(f"{label} requires top1_token_id to match reference_top1_token_id")
     if row.get("top_k_token_ranking_match") != "1":
         local_errors.append(f"{label} requires top_k_token_ranking_match=1")
-    if not row.get("token_id"):
-        local_errors.append(f"{label} requires token_id")
+    for field in ["checkpoint_id", "model_revision", "tokenizer_revision", "token_id"]:
+        if not row.get(field):
+            local_errors.append(f"{label} requires {field}")
     parsed_ints: dict[str, int] = {}
     for field in ["token_id", "top1_token_id", "reference_top1_token_id"]:
         try:
@@ -2829,6 +2830,9 @@ def _compute_v61_logits_parity_ready(
         local_errors.append(f"{label} requires top_k_token_count <= vocab_size")
     for field in [
         "moe_block_artifact_sha256",
+        "config_sha256",
+        "shard_index_sha256",
+        "full_manifest_sha256",
         "tokenizer_input_sha256",
         "layer_activation_trace_sha256",
         "route_path_sha256",

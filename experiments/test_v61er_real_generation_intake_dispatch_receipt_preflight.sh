@@ -7,12 +7,65 @@ PREFIX="v61er_real_generation_intake_dispatch_receipt_preflight"
 RUN_DIR="$RESULTS_DIR/$PREFIX/preflight_001"
 FIXTURE_RECEIPT_DIR="$RESULTS_DIR/$PREFIX/fixture_dispatch_receipt_input"
 FIXTURE_RUN_DIR="$RESULTS_DIR/$PREFIX/fixture_dispatch_receipt_preflight_v61er"
+SPOOF_RUN_DIR="$RESULTS_DIR/$PREFIX/copied_fixture_spoof_v61er"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/v61er-negative.XXXXXX")"
 
-V61EQ_REUSE_EXISTING=1 "$ROOT_DIR/experiments/test_v61eq_real_generation_intake_dispatch_seal.sh" >/dev/null
+cleanup() {
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
 
-V61ER_REUSE_EXISTING="${V61ER_REUSE_EXISTING:-0}" "$ROOT_DIR/experiments/run_v61er_real_generation_intake_dispatch_receipt_preflight.sh" >/dev/null
+python3 - "$RESULTS_DIR" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+results = Path(sys.argv[1])
+seal_dir = results / "v61eq_real_generation_intake_dispatch_seal" / "seal_001"
+bundle_dir = seal_dir / "dispatch_bundle"
+bundle_dir.mkdir(parents=True, exist_ok=True)
+
+
+def write_csv(path, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+write_csv(results / "v61eq_real_generation_intake_dispatch_seal_summary.csv", [{
+    "v61eq_real_generation_intake_dispatch_seal_ready": "1",
+}])
+write_csv(results / "v61eq_real_generation_intake_dispatch_seal_decision.csv", [{
+    "gate": "dispatch-seal",
+    "status": "pass",
+    "reason": "synthetic source fixture for v61er receipt preflight",
+}])
+for name in [
+    "real_generation_intake_dispatch_bundle_file_rows.csv",
+    "real_generation_intake_dispatch_nested_member_rows.csv",
+    "real_generation_intake_dispatch_receipt_contract_rows.csv",
+    "real_generation_intake_dispatch_requirement_rows.csv",
+]:
+    write_csv(seal_dir / name, [{"row_id": name, "status": "pass"}])
+(bundle_dir / "DISPATCH_MANIFEST.json").write_text(
+    json.dumps({"manifest_scope": "v61er-test-dispatch-bundle"}, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+(bundle_dir / "BUNDLE_FILE_LIST.txt").write_text("DISPATCH_MANIFEST.json\n", encoding="utf-8")
+(bundle_dir / "BUNDLE_SHA256SUMS.txt").write_text(
+    "0" * 64 + "  DISPATCH_MANIFEST.json\n",
+    encoding="utf-8",
+)
+PY
+
+V61ER_REFRESH_SOURCES=0 \
+V61ER_REUSE_EXISTING="${V61ER_REUSE_EXISTING:-0}" \
+"$ROOT_DIR/experiments/run_v61er_real_generation_intake_dispatch_receipt_preflight.sh" >/dev/null
 
 rm -rf "$FIXTURE_RECEIPT_DIR"
 mkdir -p "$FIXTURE_RECEIPT_DIR"
@@ -32,23 +85,38 @@ with sha_path.open("rb") as handle:
         h.update(chunk)
 payload = {
     "dispatch_bundle_sha256": "sha256:" + h.hexdigest(),
+    "dispatcher_authority_sha256": "sha256:" + hashlib.sha256(b"fixture dispatcher authority").hexdigest(),
     "operator_identity": "fixture-v61er-operator",
+    "provenance": "fixture-v61er-dispatch-receipt",
     "sent_at_utc": "2026-06-14T00:00:00+00:00",
     "recipient": "fixture-receiver",
     "receipt_status": "sent",
+    "source_class": "fixture-v61er-dispatch-receipt",
 }
 (receipt_dir / "DISPATCH_RECEIPT.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
+V61ER_REFRESH_SOURCES=0 \
 V61ER_RUN_ID="fixture_dispatch_receipt_preflight_v61er" \
 V61ER_DISPATCH_RECEIPT_DIR="$FIXTURE_RECEIPT_DIR" \
 V61ER_RECEIPT_PROVENANCE="fixture-v61er-dispatch-receipt" \
 V61ER_REUSE_EXISTING=0 \
 "$ROOT_DIR/experiments/run_v61er_real_generation_intake_dispatch_receipt_preflight.sh" >/dev/null
 
-V61ER_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61er_real_generation_intake_dispatch_receipt_preflight.sh" >/dev/null
+COPIED_FIXTURE_RECEIPT_DIR="$TMP_DIR/operator_receipt_copy"
+cp -a "$FIXTURE_RECEIPT_DIR" "$COPIED_FIXTURE_RECEIPT_DIR"
+V61ER_REFRESH_SOURCES=0 \
+V61ER_RUN_ID="copied_fixture_spoof_v61er" \
+V61ER_DISPATCH_RECEIPT_DIR="$COPIED_FIXTURE_RECEIPT_DIR" \
+V61ER_RECEIPT_PROVENANCE="real-external-dispatch" \
+V61ER_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61er_real_generation_intake_dispatch_receipt_preflight.sh" >/dev/null
 
-python3 - "$RUN_DIR" "$FIXTURE_RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+V61ER_REFRESH_SOURCES=0 \
+V61ER_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61er_real_generation_intake_dispatch_receipt_preflight.sh" >/dev/null
+
+python3 - "$RUN_DIR" "$FIXTURE_RUN_DIR" "$SPOOF_RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib
 import json
@@ -57,8 +125,9 @@ from pathlib import Path
 
 run_dir = Path(sys.argv[1])
 fixture_run_dir = Path(sys.argv[2])
-summary_csv = Path(sys.argv[3])
-decision_csv = Path(sys.argv[4])
+spoof_run_dir = Path(sys.argv[3])
+summary_csv = Path(sys.argv[4])
+decision_csv = Path(sys.argv[5])
 
 
 def sha256(path):
@@ -81,6 +150,8 @@ expected = {
     "receipt_dir_supplied": "0",
     "receipt_dir_exists": "0",
     "selected_receipt_source_class": "none",
+    "receipt_provenance_env_real": "0",
+    "receipt_marker_real_provenance": "0",
     "dispatch_receipt_file_present": "0",
     "dispatch_receipt_json_readable": "0",
     "required_receipt_field_rows": "5",
@@ -145,6 +216,10 @@ fixture_expected = {
     "receipt_dir_supplied": "1",
     "receipt_dir_exists": "1",
     "selected_receipt_source_class": "fixture-v61er-dispatch-receipt",
+    "receipt_provenance_env_real": "0",
+    "receipt_provenance_value": "fixture-v61er-dispatch-receipt",
+    "receipt_source_class": "fixture-v61er-dispatch-receipt",
+    "receipt_marker_real_provenance": "0",
     "dispatch_receipt_file_present": "1",
     "dispatch_receipt_json_readable": "1",
     "required_receipt_field_rows": "5",
@@ -191,6 +266,35 @@ for check in [
 
 if not (fixture_run_dir / "supplied_dispatch_receipt/DISPATCH_RECEIPT.json").is_file():
     raise SystemExit("v61er fixture receipt was not copied")
+
+spoof_metric = read_csv(spoof_run_dir / "real_generation_intake_dispatch_receipt_preflight_metric_rows.csv")[0]
+spoof_expected = {
+    "receipt_dir_supplied": "1",
+    "receipt_dir_exists": "1",
+    "selected_receipt_source_class": "fixture-v61er-dispatch-receipt",
+    "receipt_provenance_env_real": "1",
+    "receipt_provenance_value": "fixture-v61er-dispatch-receipt",
+    "receipt_source_class": "fixture-v61er-dispatch-receipt",
+    "receipt_marker_real_provenance": "0",
+    "dispatch_receipt_candidate_preflight_ready": "1",
+    "non_fixture_dispatch_receipt": "0",
+    "real_dispatch_receipt_provenance_asserted": "0",
+    "real_dispatch_receipt_ready": "0",
+    "accepted_dispatch_receipt_rows": "0",
+    "real_generation_intake_handoff_ready": "0",
+    "actual_model_generation_ready": "0",
+}
+for field, value in spoof_expected.items():
+    if spoof_metric.get(field) != value:
+        raise SystemExit(f"v61er copied fixture spoof {field}: expected {value}, got {spoof_metric.get(field)}")
+
+spoof_checks = {row["check_id"]: row["status"] for row in read_csv(spoof_run_dir / "real_generation_intake_dispatch_receipt_preflight_check_rows.csv")}
+if spoof_checks["dispatch-receipt-candidate-preflight-ready"] != "pass":
+    raise SystemExit("v61er copied fixture spoof should pass mechanical receipt preflight")
+if spoof_checks["real-dispatch-receipt-provenance"] != "blocked":
+    raise SystemExit("v61er copied fixture spoof must reject env-only provenance")
+if spoof_checks["real-dispatch-receipt-ready"] != "blocked":
+    raise SystemExit("v61er copied fixture spoof must keep real receipt blocked")
 
 decisions = {row["gate"]: row["status"] for row in read_csv(decision_csv)}
 if decisions["v61eq-dispatch-bundle-ready"] != "pass" or decisions["repo-checkpoint-payload"] != "pass":

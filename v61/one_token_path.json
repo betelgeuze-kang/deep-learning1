@@ -414,7 +414,10 @@
       "required_columns": [
         "checkpoint_id",
         "model_revision",
+        "config_sha256",
         "tokenizer_revision",
+        "shard_index_sha256",
+        "full_manifest_sha256",
         "contract_ready",
         "fixture_execution_ready",
         "real_model_execution_ready",
