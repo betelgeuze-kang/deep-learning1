@@ -392,6 +392,10 @@ def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], err
 def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]) -> None:
     findings = read_csv(out_dir / "audit_findings.csv")
     finding_ids = {row.get("finding_id", "") for row in findings}
+    if len(finding_ids) != len(findings):
+        add(errors, "audit_findings.csv must not contain duplicate finding_id values")
+    if str(len(findings)) != summary.get("finding_rows"):
+        add(errors, "finding row count drift")
     abstain_ids = {row.get("finding_id", "") for row in findings if row.get("abstain") == "1"}
     unsupported_ids = {row.get("finding_id", "") for row in findings if row.get("unsupported_claim") == "1"}
     abstain_rows = read_csv(out_dir / "abstain_rows.csv")
@@ -429,18 +433,24 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     accuracy_rows = read_csv(out_dir / "accuracy_rows.csv")
     if {row.get("finding_id", "") for row in accuracy_rows} != finding_ids:
         add(errors, "accuracy_rows.csv must contain exactly one row per finding")
+    if str(len(accuracy_rows)) != summary.get("accuracy_rows"):
+        add(errors, "accuracy row count drift")
     for row in accuracy_rows:
         if row.get("automatic_accuracy_claimed") != "0" or row.get("manual_accuracy_review_required") != "1":
             add(errors, "accuracy rows must remain manual/unreviewed")
     citation_rows = read_csv(out_dir / "citation_correctness_rows.csv")
     if {row.get("finding_id", "") for row in citation_rows} != finding_ids:
         add(errors, "citation_correctness_rows.csv must contain exactly one row per finding")
+    if str(len(citation_rows)) != summary.get("citation_correctness_rows"):
+        add(errors, "citation correctness row count drift")
     for row in citation_rows:
         if row.get("citation_correctness_label") != "source_bound_unreviewed" or row.get("manual_citation_review_required") != "1":
             add(errors, "citation correctness rows must remain source-bound unreviewed")
     fp_rows = read_csv(out_dir / "false_positive_candidate_rows.csv")
     if {row.get("finding_id", "") for row in fp_rows} != finding_ids:
         add(errors, "false_positive_candidate_rows.csv must contain exactly one row per finding")
+    if str(len(fp_rows)) != summary.get("false_positive_candidate_rows"):
+        add(errors, "false-positive candidate row count drift")
     for row in fp_rows:
         if row.get("auto_promoted") != "0":
             add(errors, "false-positive candidates must not be auto-promoted")

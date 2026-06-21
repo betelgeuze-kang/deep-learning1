@@ -447,7 +447,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "unsupported_claim_rows": len(unsupported_rows),
         "accuracy_rows": len(accuracy_rows),
         "citation_correctness_rows": len(citation_correctness_rows),
-        "false_positive_candidate_rows": sum(int(row["false_positive_candidate"]) for row in false_positive_rows),
+        "false_positive_candidate_rows": len(false_positive_rows),
         "wrong_answer_guard_rows": len(wrong_answer_guard_rows),
         "wrong_answer_guard_pass_rows": sum(1 for row in wrong_answer_guard_rows if row["wrong_answer_guard_pass"] == 1),
         "claim_boundary_ready": 1,

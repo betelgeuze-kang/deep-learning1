@@ -599,6 +599,35 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+summary_json_path = out_a / "audit_summary.json"
+original_summary_json_text = summary_json_path.read_text(encoding="utf-8")
+with summary_csv_path.open(newline="", encoding="utf-8") as handle:
+    summary_csv_rows = list(csv.DictReader(handle))
+tampered_summary_json = json.loads(original_summary_json_text)
+summary_csv_rows[0]["false_positive_candidate_rows"] = "0"
+tampered_summary_json["false_positive_candidate_rows"] = 0
+with summary_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(summary_csv_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(summary_csv_rows)
+summary_json_path.write_text(json.dumps(tampered_summary_json, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_summary_csv_sha = sha256(summary_csv_path)
+new_summary_json_sha = sha256(summary_json_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_summary.csv"):
+        sha_lines.append(f"{new_summary_csv_sha}  audit_summary.csv")
+    elif line.endswith("  audit_summary.json"):
+        sha_lines.append(f"{new_summary_json_sha}  audit_summary.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject false-positive candidate summary row-count drift")
+summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
+summary_json_path.write_text(original_summary_json_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 resource_path = out_a / "resource_envelope.json"
 original_resource_text = resource_path.read_text(encoding="utf-8")
 tampered_resource = json.loads(original_resource_text)
