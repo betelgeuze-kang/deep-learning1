@@ -774,6 +774,9 @@ def verify_citations(out_dir: Path, manifest: dict, source_by_path: dict[str, di
         if line_start < 1 or line_end < line_start or line_end > len(lines):
             add(errors, f"citation line bounds invalid: {rel}:{line_start}")
             continue
+        span_text = "\n".join(line.strip() for line in lines[line_start - 1:line_end])
+        if row.get("span_sha256") != sha256_text(span_text):
+            add(errors, f"citation span sha mismatch: {rel}:{line_start}")
         if row.get("span_text_preview") != lines[line_start - 1].strip()[:280]:
             add(errors, f"citation preview mismatch: {rel}:{line_start}")
         cell_key = (finding_id, f"{rel}:{line_start}")

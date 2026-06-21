@@ -185,6 +185,10 @@ def sha256(path):
     return h.hexdigest()
 
 
+def sha256_text(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def read_contract(out):
     with (out / "artifact_contract_rows.csv").open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
@@ -396,8 +400,8 @@ for idx in range(1, 4):
         raise SystemExit("unsupported user question must abstain without a grounded answer while keeping source context")
     if any(row["grounded"] == 1 and not row["citations"] for row in findings):
         raise SystemExit("grounded findings must have citations")
-    if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") for row in citations):
-        raise SystemExit("citation rows must bind line numbers and sha256")
+    if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") or not row["span_sha256"].startswith("sha256:") for row in citations):
+        raise SystemExit("citation rows must bind line numbers, file sha256, and span sha256")
     citation_by_finding_cell = {
         (row["finding_id"], f"{row['file_path']}:{row['line_start']}"): row
         for row in citations
@@ -427,6 +431,9 @@ for idx in range(1, 4):
             raise SystemExit(f"citation line is out of range: {row['file_path']}:{line_start}")
         if row["span_text_preview"] != source_lines[line_start - 1].strip()[:280]:
             raise SystemExit(f"citation preview does not match source line: {row['file_path']}:{line_start}")
+        span_text = "\n".join(line.strip() for line in source_lines[line_start - 1:int(row["line_end"])])
+        if row["span_sha256"] != "sha256:" + sha256_text(span_text):
+            raise SystemExit(f"citation span sha does not match source line: {row['file_path']}:{line_start}")
     with (out / "wrong_answer_guard_rows.csv").open(newline="", encoding="utf-8") as handle:
         guards = list(csv.DictReader(handle))
     if not guards or any(row["wrong_answer_guard_pass"] != "1" for row in guards):

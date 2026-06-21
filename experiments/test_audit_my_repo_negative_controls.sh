@@ -710,8 +710,10 @@ if (corrupt_manifest_out / "AUDIT_REPORT.md").exists() or (corrupt_manifest_out 
     raise SystemExit("corrupt manifest publish failure must not partially publish artifacts")
 
 tampered_citations = out_a / "citation_spans.jsonl"
+citation_spans_csv_path = out_a / "citation_spans.csv"
 sha_manifest_path = out_a / "sha256sums.txt"
 original_citations = tampered_citations.read_text(encoding="utf-8")
+original_citation_spans_csv_text = citation_spans_csv_path.read_text(encoding="utf-8")
 original_sha_manifest_text = sha_manifest_path.read_text(encoding="utf-8")
 sha_manifest_path.write_text(
     "\n".join(
@@ -967,6 +969,33 @@ tampered_citations.write_text(original_citations.replace("sha256:", "sha256:0000
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject tampered citation hashes")
 tampered_citations.write_text(original_citations, encoding="utf-8")
+
+with citation_spans_csv_path.open(newline="", encoding="utf-8") as handle:
+    citation_csv_rows = list(csv.DictReader(handle))
+citation_json_rows = [json.loads(line) for line in original_citations.splitlines() if line.strip()]
+citation_csv_rows[0]["span_sha256"] = "sha256:" + ("0" * 64)
+citation_json_rows[0]["span_sha256"] = "sha256:" + ("0" * 64)
+with citation_spans_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(citation_csv_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(citation_csv_rows)
+tampered_citations.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in citation_json_rows), encoding="utf-8")
+new_citation_csv_sha = sha256(citation_spans_csv_path)
+new_citation_jsonl_sha = sha256(tampered_citations)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  citation_spans.csv"):
+        sha_lines.append(f"{new_citation_csv_sha}  citation_spans.csv")
+    elif line.endswith("  citation_spans.jsonl"):
+        sha_lines.append(f"{new_citation_jsonl_sha}  citation_spans.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject citation span sha drift")
+citation_spans_csv_path.write_text(original_citation_spans_csv_text, encoding="utf-8")
+tampered_citations.write_text(original_citations, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 findings_csv_path = out_a / "audit_findings.csv"
 audit_findings_path = out_a / "audit_findings.jsonl"

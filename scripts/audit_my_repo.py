@@ -30,7 +30,7 @@ class AuditInputError(Exception):
 CSV_CONTRACTS: dict[str, list[str]] = {
     "source_manifest.csv": ["source_id", "file_path", "sha256", "bytes", "route_memory_source"],
     "audit_findings.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
-    "citation_spans.csv": ["finding_id", "citation_id", "file_path", "line_start", "line_end", "sha256", "span_text_preview", "mmap_value_byte_read"],
+    "citation_spans.csv": ["finding_id", "citation_id", "file_path", "line_start", "line_end", "sha256", "span_sha256", "span_text_preview", "mmap_value_byte_read"],
     "compact_route_hint_rows.csv": ["hint_id", "finding_id", "hint_bytes", "source_citation_count", "raw_context_appended", "proposal_hint_used"],
     "grounded_generation_rows.csv": ["generation_id", "finding_id", "hint_id", "generator", "attention_blocks", "transformer_blocks", "raw_prompt_context_bytes", "grounded", "abstain", "unsupported_claim", "answer"],
     "abstain_rows.csv": ["finding_id", "audit_type", "plugin_id", "language", "question", "answer", "severity", "grounded", "abstain", "unsupported_claim", "citations", "citation_sha256s", "route_memory_lineage", "raw_prompt_context_bytes", "oracle_prediction_used", "raw_input_extractor_used"],
@@ -341,6 +341,8 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
             citation_id = f"{finding_id}_cite_{cidx}"
             rel_path = rel_to_target(target, path)
             citation_sha256 = sha256(path)
+            source_lines = read_text(path).splitlines()
+            span_text = source_lines[line_no - 1].strip() if 0 < line_no <= len(source_lines) else snippet
             citation_cells.append(f"{rel_path}:{line_no}")
             citation_sha256s.append(citation_sha256)
             span_rows.append(
@@ -351,6 +353,7 @@ def build_rows(target: Path, findings: list[Finding]) -> tuple[list[dict], list[
                     "line_start": line_no,
                     "line_end": line_no,
                     "sha256": citation_sha256,
+                    "span_sha256": sha256_text(span_text),
                     "span_text_preview": snippet,
                     "mmap_value_byte_read": 1,
                 }
