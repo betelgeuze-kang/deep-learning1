@@ -1790,6 +1790,22 @@ sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 mmap_path = out_a / "mmap_read_trace.jsonl"
 original_mmap_text = mmap_path.read_text(encoding="utf-8")
 mmap_rows = [json.loads(line) for line in original_mmap_text.splitlines() if line.strip()]
+mmap_rows[0]["span_sha256"] = "sha256:" + ("0" * 64)
+mmap_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in mmap_rows), encoding="utf-8")
+new_mmap_sha = sha256(mmap_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  mmap_read_trace.jsonl"):
+        sha_lines.append(f"{new_mmap_sha}  mmap_read_trace.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject mmap trace span sha drift")
+mmap_path.write_text(original_mmap_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+mmap_rows = [json.loads(line) for line in original_mmap_text.splitlines() if line.strip()]
 mmap_rows[0]["mmap_value_byte_read"] = 0
 mmap_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in mmap_rows), encoding="utf-8")
 new_mmap_sha = sha256(mmap_path)

@@ -376,6 +376,7 @@ for idx in range(1, 4):
     findings = [json.loads(line) for line in (out / "audit_findings.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     citations = [json.loads(line) for line in (out / "citation_spans.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     lineage = [json.loads(line) for line in (out / "prediction_lineage.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    mmap_rows = [json.loads(line) for line in (out / "mmap_read_trace.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     for csv_name, jsonl_rows in [
         ("audit_findings.csv", findings),
         ("citation_spans.csv", citations),
@@ -402,6 +403,16 @@ for idx in range(1, 4):
         raise SystemExit("grounded findings must have citations")
     if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") or not row["span_sha256"].startswith("sha256:") for row in citations):
         raise SystemExit("citation rows must bind line numbers, file sha256, and span sha256")
+    citation_trace_keys = {
+        (row["finding_id"], row["file_path"], str(row["line_start"]), row["sha256"], row["span_sha256"])
+        for row in citations
+    }
+    mmap_trace_keys = {
+        (row["finding_id"], row["file_path"], str(row["line_start"]), row["sha256"], row["span_sha256"])
+        for row in mmap_rows
+    }
+    if mmap_trace_keys != citation_trace_keys or len(mmap_rows) != len(citations):
+        raise SystemExit("mmap trace rows must exactly bind every citation span hash")
     citation_by_finding_cell = {
         (row["finding_id"], f"{row['file_path']}:{row['line_start']}"): row
         for row in citations

@@ -1105,6 +1105,7 @@ def verify_route_generation_rows(out_dir: Path, summary: dict[str, str], errors:
             row.get("file_path", ""),
             str(row.get("line_start", "")),
             row.get("sha256", ""),
+            row.get("span_sha256", ""),
         )
         for row in citation_rows
     }
@@ -1115,6 +1116,7 @@ def verify_route_generation_rows(out_dir: Path, summary: dict[str, str], errors:
             str(row.get("file_path", "")),
             str(row.get("line_start", "")),
             str(row.get("sha256", "")),
+            str(row.get("span_sha256", "")),
         )
         for row in mmap_rows
     }

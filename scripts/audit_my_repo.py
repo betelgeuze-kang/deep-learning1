@@ -49,7 +49,7 @@ JSONL_CONTRACTS: dict[str, list[str]] = {
     "audit_findings.jsonl": CSV_CONTRACTS["audit_findings.csv"],
     "citation_spans.jsonl": CSV_CONTRACTS["citation_spans.csv"],
     "prediction_lineage.jsonl": ["finding_id", "route_index_row", "compact_route_hint_id", "generator_id", "citation_count", "audit_trail_bound"],
-    "mmap_read_trace.jsonl": ["finding_id", "file_path", "line_start", "sha256", "mmap_value_byte_read"],
+    "mmap_read_trace.jsonl": ["finding_id", "file_path", "line_start", "sha256", "span_sha256", "mmap_value_byte_read"],
 }
 
 JSON_CONTRACTS: dict[str, list[str]] = {
@@ -504,7 +504,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         })
         wrong_answer_guard_rows.append({"finding_id": finding["finding_id"], "guard_id": f"wrong_answer_guard_{idx:04d}", "unsupported_direct_answer_blocked": int(finding["abstain"] == 1 or finding["grounded"] == 1), "citation_required": 1, "audit_trail_required": 1, "wrong_answer_guard_pass": 1})
     for row in span_rows:
-        mmap_rows.append({"finding_id": row["finding_id"], "file_path": row["file_path"], "line_start": row["line_start"], "sha256": row["sha256"], "mmap_value_byte_read": 1})
+        mmap_rows.append({"finding_id": row["finding_id"], "file_path": row["file_path"], "line_start": row["line_start"], "sha256": row["sha256"], "span_sha256": row["span_sha256"], "mmap_value_byte_read": 1})
 
     write_csv(staging / "compact_route_hint_rows.csv", ["hint_id", "finding_id", "hint_bytes", "source_citation_count", "raw_context_appended", "proposal_hint_used"], routehint_rows)
     write_csv(staging / "grounded_generation_rows.csv", ["generation_id", "finding_id", "hint_id", "generator", "attention_blocks", "transformer_blocks", "raw_prompt_context_bytes", "grounded", "abstain", "unsupported_claim", "answer"], generation_rows)
