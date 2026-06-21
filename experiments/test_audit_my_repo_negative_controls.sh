@@ -49,6 +49,8 @@ if [[ "$("$ROOT_DIR/scripts/audit_my_repo.sh" --version)" != "audit_my_repo_alph
   exit 8
 fi
 "$ROOT_DIR/scripts/audit_my_repo.sh" --list-plugins >"$TMP_DIR/plugins.json"
+"$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$TMP_DIR/plugins.json" >/dev/null
 python3 - "$TMP_DIR/plugins.json" <<'PY'
 import json
 import sys
@@ -61,14 +63,17 @@ if payload["tool_version"] != "audit_my_repo_alpha.v1":
     raise SystemExit("plugin registry tool version mismatch")
 plugins = {row["plugin_id"]: row for row in payload["plugins"]}
 expected = {
-    "doc_code_identity",
-    "deprecated_api",
-    "config_consistency",
-    "unsupported_claim",
-    "missing_evidence",
+    "doc_code_identity": "auditor_plugin_doc_code_identity",
+    "deprecated_api": "auditor_plugin_deprecated_api",
+    "config_consistency": "auditor_plugin_config_consistency",
+    "unsupported_claim": "auditor_plugin_unsupported_claim",
+    "missing_evidence": "auditor_plugin_missing_evidence",
 }
-if set(plugins) != expected:
+if set(plugins) != set(expected):
     raise SystemExit(f"plugin registry mismatch: {sorted(plugins)}")
+for plugin_id, module in expected.items():
+    if plugins[plugin_id].get("module") != module:
+        raise SystemExit(f"plugin registry module mismatch for {plugin_id}")
 if plugins["deprecated_api"]["language"] != "multi":
     raise SystemExit("deprecated_api plugin must advertise multi-language coverage")
 PY
@@ -131,6 +136,8 @@ test "$(cat "$out_a/sentinel.txt")" = "keep"
 
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out_a/audit_manifest.json" >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$out_a/plugin_registry.json" >/dev/null
 "$ROOT_DIR/tools/verify_local_audit.py" "$out_a" >/dev/null
 
 python3 - "$ROOT_DIR" "$repo" "$out_a" "$out_b" <<'PY'
@@ -158,18 +165,24 @@ manifest = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"
 plugin_registry = json.loads((out_a / "plugin_registry.json").read_text(encoding="utf-8"))
 if plugin_registry["tool_version"] != manifest["tool_version"]:
     raise SystemExit("plugin registry must be bound to the manifest tool version")
-if {row["plugin_id"] for row in plugin_registry["plugins"]} != {
-    "doc_code_identity",
-    "deprecated_api",
-    "config_consistency",
-    "unsupported_claim",
-    "missing_evidence",
-}:
+expected_plugin_modules = {
+    "doc_code_identity": "auditor_plugin_doc_code_identity",
+    "deprecated_api": "auditor_plugin_deprecated_api",
+    "config_consistency": "auditor_plugin_config_consistency",
+    "unsupported_claim": "auditor_plugin_unsupported_claim",
+    "missing_evidence": "auditor_plugin_missing_evidence",
+}
+plugin_modules = {row["plugin_id"]: row.get("module") for row in plugin_registry["plugins"]}
+if plugin_modules != expected_plugin_modules:
     raise SystemExit("fixture audit output must bind the deterministic plugin registry")
 if manifest["plugin_registry_sha256"] != "sha256:" + sha256(out_a / "plugin_registry.json"):
     raise SystemExit("manifest must bind plugin registry sha256")
 if manifest["namespace"] != "fixture":
     raise SystemExit("negative-control fixture must not be promoted out of fixture namespace")
+if manifest["real_benchmark_namespace_confirmed"] != 0:
+    raise SystemExit("fixture namespace must not carry real_benchmark confirmation")
+if manifest["fixture_result_promoted"] != 0 or manifest["real_evidence_claimed"] != 0:
+    raise SystemExit("fixture output must not be promoted or claimed as real evidence")
 if manifest["claim_boundary"] != "alpha-local-code-doc-audit-only":
     raise SystemExit("claim boundary must remain alpha-only")
 if manifest["generated_at_utc"] != "1970-01-01T00:00:00+00:00":
@@ -263,6 +276,9 @@ with (out_a / "false_positive_candidate_rows.csv").open(newline="", encoding="ut
 if not fp_rows or not any(row["false_positive_candidate"] == "1" and row["auto_promoted"] == "0" for row in fp_rows):
     raise SystemExit("high/medium findings must be manual false-positive candidates, not auto-promoted")
 
+before_manifest = (out_a / "audit_manifest.json").read_text(encoding="utf-8")
+before_sha = (out_a / "sha256sums.txt").read_text(encoding="utf-8")
+
 tampered = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
 tampered["output_dir_destroyed"] = 1
 bad_manifest = out_a / "tampered_manifest.json"
@@ -282,8 +298,43 @@ bad_manifest.write_text(json.dumps(tampered, sort_keys=True), encoding="utf-8")
 if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("schema must reject output_dir_overwritten=1")
 
-before_manifest = (out_a / "audit_manifest.json").read_text(encoding="utf-8")
-before_sha = (out_a / "sha256sums.txt").read_text(encoding="utf-8")
+tampered = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
+tampered["fixture_result_promoted"] = 1
+bad_manifest.write_text(json.dumps(tampered, sort_keys=True), encoding="utf-8")
+if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("schema must reject fixture_result_promoted=1")
+
+tampered = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
+tampered["real_evidence_claimed"] = 1
+bad_manifest.write_text(json.dumps(tampered, sort_keys=True), encoding="utf-8")
+if subprocess.run(schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("schema must reject real_evidence_claimed=1")
+
+tampered = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
+tampered["real_benchmark_namespace_confirmed"] = 1
+(out_a / "audit_manifest.json").write_text(json.dumps(tampered, sort_keys=True), encoding="utf-8")
+verify_bad_namespace = subprocess.run(
+    [str(root / "tools/verify_local_audit.py"), str(out_a)],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+)
+if verify_bad_namespace.returncode == 0:
+    raise SystemExit("verify_local_audit must reject fixture namespace with real_benchmark confirmation")
+(out_a / "audit_manifest.json").write_text(before_manifest, encoding="utf-8")
+
+bad_registry = json.loads((out_a / "plugin_registry.json").read_text(encoding="utf-8"))
+bad_registry["plugins"][0]["module"] = "auditor_plugin_fake"
+bad_registry_path = out_a / "tampered_plugin_registry.json"
+bad_registry_path.write_text(json.dumps(bad_registry, sort_keys=True), encoding="utf-8")
+registry_schema_cmd = [
+    str(root / "tools/validate_json_schemas.py"),
+    "--schema-instance",
+    str(root / "schemas/local_repo_audit_plugin_registry.schema.json"),
+    str(bad_registry_path),
+]
+if subprocess.run(registry_schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("plugin registry schema must reject unknown plugin modules")
+
 overwrite_cmd = [
     str(root / "scripts/audit_my_repo.sh"),
     str(repo),
@@ -510,6 +561,22 @@ manifest_path.write_text(json.dumps(tampered_manifest, indent=2, sort_keys=True)
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject cache key mismatches")
 manifest_path.write_text(original_manifest_text, encoding="utf-8")
+
+tampered_manifest = json.loads(original_manifest_text)
+tampered_manifest["real_benchmark_namespace_confirmed"] = 1
+manifest_path.write_text(json.dumps(tampered_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_manifest_sha = sha256(manifest_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_manifest.json"):
+        sha_lines.append(f"{new_manifest_sha}  audit_manifest.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject fixture namespace real_benchmark confirmation")
+manifest_path.write_text(original_manifest_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 reproduce_path = out_a / "reproduce.sh"
 original_reproduce_text = reproduce_path.read_text(encoding="utf-8")

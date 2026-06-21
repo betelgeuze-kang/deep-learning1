@@ -128,6 +128,8 @@ for idx in 1 2 3; do
   done
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out/audit_manifest.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$out/plugin_registry.json" >/dev/null
   "$ROOT_DIR/tools/verify_local_audit.py" "$out" >/dev/null
 
   cp "$out/sha256sums.txt" "$out/sha256sums.first"
@@ -229,6 +231,10 @@ for idx in range(1, 4):
     manifest = json.loads((out / "audit_manifest.json").read_text(encoding="utf-8"))
     if manifest["namespace"] != "synthetic":
         raise SystemExit("generated fixture repos must stay in the synthetic namespace")
+    if manifest["real_benchmark_namespace_confirmed"] != 0:
+        raise SystemExit("synthetic product smoke must not confirm the real_benchmark namespace")
+    if manifest["fixture_result_promoted"] != 0 or manifest["real_evidence_claimed"] != 0:
+        raise SystemExit("synthetic product smoke must not promote fixture results or claim real evidence")
     if manifest["tool_version"] != "audit_my_repo_alpha.v1":
         raise SystemExit("audit manifest must expose the tool version")
     if manifest["generated_at_utc"] != "1970-01-01T00:00:00+00:00":
@@ -272,6 +278,15 @@ for idx in range(1, 4):
         raise SystemExit("plugin registry tool version mismatch")
     if plugin_ids != {"doc_code_identity", "deprecated_api", "config_consistency", "unsupported_claim", "missing_evidence"}:
         raise SystemExit("plugin registry must bind the deterministic plugin set")
+    expected_plugin_modules = {
+        "doc_code_identity": "auditor_plugin_doc_code_identity",
+        "deprecated_api": "auditor_plugin_deprecated_api",
+        "config_consistency": "auditor_plugin_config_consistency",
+        "unsupported_claim": "auditor_plugin_unsupported_claim",
+        "missing_evidence": "auditor_plugin_missing_evidence",
+    }
+    if {row["plugin_id"]: row.get("module") for row in plugin_registry["plugins"]} != expected_plugin_modules:
+        raise SystemExit("plugin registry must bind each deterministic plugin to its module")
     plugin_registry_sha256 = "sha256:" + sha256(out / "plugin_registry.json")
     if manifest["plugin_registry_sha256"] != plugin_registry_sha256:
         raise SystemExit("audit manifest must bind plugin_registry.json sha256")
@@ -359,6 +374,7 @@ for idx in range(1, 4):
         "mode": "quick",
         "max_queries": 12,
         "namespace": "synthetic",
+        "real_benchmark_namespace_confirmed": 0,
         "question": "Does this repo prove production readiness?",
         "plugin_registry_sha256": plugin_registry_sha256,
     }, sort_keys=True).encode("utf-8")).hexdigest()

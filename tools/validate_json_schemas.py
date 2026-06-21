@@ -43,6 +43,20 @@ def validate_value(schema: dict, value, path: str, errors: list[str]) -> None:
             return
         if "minimum" in schema and value < schema["minimum"]:
             errors.append(f"{path}: integer below minimum")
+        if "maximum" in schema and value > schema["maximum"]:
+            errors.append(f"{path}: integer above maximum")
+    elif expected_type == "array":
+        if not isinstance(value, list):
+            errors.append(f"{path}: expected array")
+            return
+        if "minItems" in schema and len(value) < int(schema["minItems"]):
+            errors.append(f"{path}: array shorter than minItems")
+        if "maxItems" in schema and len(value) > int(schema["maxItems"]):
+            errors.append(f"{path}: array longer than maxItems")
+        item_schema = schema.get("items")
+        if isinstance(item_schema, dict):
+            for index, item in enumerate(value):
+                validate_value(item_schema, item, f"{path}[{index}]", errors)
 
 
 def main(argv: list[str]) -> int:

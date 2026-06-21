@@ -22,6 +22,13 @@ EXPECTED_PLUGIN_IDS = [
     "unsupported_claim",
     "missing_evidence",
 ]
+EXPECTED_PLUGIN_MODULES = [
+    "auditor_plugin_doc_code_identity",
+    "auditor_plugin_deprecated_api",
+    "auditor_plugin_config_consistency",
+    "auditor_plugin_unsupported_claim",
+    "auditor_plugin_missing_evidence",
+]
 
 REQUIRED_FILES = {
     "ARCHITECTURE_TRACE.md",
@@ -141,6 +148,8 @@ def verify_manifest(manifest: dict, summary_json: dict, out_dir: Path, errors: l
         "atomic_publish": 1,
         "output_dir_destroyed": 0,
         "output_dir_overwritten": 0,
+        "fixture_result_promoted": 0,
+        "real_evidence_claimed": 0,
         "publish_mode": "create-or-idempotent-cache-hit",
         "claim_boundary": CLAIM_BOUNDARY,
     }.items():
@@ -148,6 +157,9 @@ def verify_manifest(manifest: dict, summary_json: dict, out_dir: Path, errors: l
             add(errors, f"audit_manifest.{key} mismatch")
     if manifest.get("namespace") not in {"fixture", "synthetic", "real_benchmark"}:
         add(errors, "audit_manifest.namespace invalid")
+    expected_real_namespace_confirmed = 1 if manifest.get("namespace") == "real_benchmark" else 0
+    if manifest.get("real_benchmark_namespace_confirmed") != expected_real_namespace_confirmed:
+        add(errors, "audit_manifest.real_benchmark_namespace_confirmed mismatch")
     if manifest.get("plugin_registry_sha256") != sha256_prefixed(out_dir / "plugin_registry.json"):
         add(errors, "plugin registry hash mismatch")
     if str(manifest.get("source_file_count")) != str(summary_json.get("source_files")):
@@ -185,6 +197,9 @@ def verify_registry(registry: dict, errors: list[str]) -> None:
     plugin_ids = [plugin.get("plugin_id") for plugin in registry.get("plugins", [])]
     if plugin_ids != EXPECTED_PLUGIN_IDS:
         add(errors, "plugin registry ids drifted")
+    plugin_modules = [plugin.get("module") for plugin in registry.get("plugins", [])]
+    if plugin_modules != EXPECTED_PLUGIN_MODULES:
+        add(errors, "plugin registry modules drifted")
 
 
 def verify_contract(out_dir: Path, sha_entries: dict[str, str], errors: list[str]) -> None:
@@ -299,6 +314,7 @@ def verify_cache_key(out_dir: Path, manifest: dict, summary: dict[str, str], err
         "mode": summary.get("mode"),
         "max_queries": int(read_json(out_dir / "resource_envelope.json").get("max_queries")),
         "namespace": manifest.get("namespace"),
+        "real_benchmark_namespace_confirmed": manifest.get("real_benchmark_namespace_confirmed"),
         "question": question,
         "plugin_registry_sha256": manifest.get("plugin_registry_sha256"),
     }

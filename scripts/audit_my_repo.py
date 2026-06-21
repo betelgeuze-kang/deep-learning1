@@ -46,7 +46,7 @@ JSONL_CONTRACTS: dict[str, list[str]] = {
 }
 
 JSON_CONTRACTS: dict[str, list[str]] = {
-    "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "output_dir_overwritten", "publish_mode", "cache_key", "plugin_registry_sha256", "claim_boundary"],
+    "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "real_benchmark_namespace_confirmed", "fixture_result_promoted", "real_evidence_claimed", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "output_dir_overwritten", "publish_mode", "cache_key", "plugin_registry_sha256", "claim_boundary"],
     "audit_summary.json": list(CSV_CONTRACTS["audit_summary.csv"]),
     "plugin_registry.json": ["schema_version", "tool_version", "plugins"],
     "resource_envelope.json": ["resource_envelope_ready", "tool_version", "source_files_scanned", "max_queries", "mode", "namespace", "external_network_used", "raw_prompt_context_bytes", "latency_ms", "wrong_answer_guard_rows", "claim_boundary_ready"],
@@ -351,7 +351,7 @@ def publish_atomic(staging: Path, out_dir: Path) -> str:
     return "created"
 
 
-def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: str, max_queries: int, generator: str, namespace: str, question: str, emit_report: bool, emit_lineage: bool, emit_reproduce: bool) -> dict:
+def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: str, max_queries: int, generator: str, namespace: str, real_benchmark_namespace_confirmed: int, question: str, emit_report: bool, emit_lineage: bool, emit_reproduce: bool) -> dict:
     sources, source_rows = collect_sources(target, max_queries)
     write_json(staging / "plugin_registry.json", plugin_registry_payload())
     plugin_findings: list[Finding] = []
@@ -522,13 +522,16 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "generated_at_utc": DETERMINISTIC_GENERATED_AT_UTC,
         "target_repo": str(target),
         "namespace": namespace,
+        "real_benchmark_namespace_confirmed": real_benchmark_namespace_confirmed,
+        "fixture_result_promoted": 0,
+        "real_evidence_claimed": 0,
         "source_file_count": len(source_rows),
         "finding_rows": len(finding_rows),
         "atomic_publish": 1,
         "output_dir_destroyed": 0,
         "output_dir_overwritten": 0,
         "publish_mode": "create-or-idempotent-cache-hit",
-        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "mode": mode, "max_queries": max_queries, "namespace": namespace, "question": question, "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
+        "cache_key": hashlib.sha256(json.dumps({"tool_version": TOOL_VERSION, "target": str(target), "source": [(row["file_path"], row["sha256"]) for row in source_rows], "mode": mode, "max_queries": max_queries, "namespace": namespace, "real_benchmark_namespace_confirmed": real_benchmark_namespace_confirmed, "question": question, "plugin_registry_sha256": plugin_registry_sha256}, sort_keys=True).encode("utf-8")).hexdigest(),
         "plugin_registry_sha256": plugin_registry_sha256,
         "claim_boundary": "alpha-local-code-doc-audit-only",
     }
@@ -570,6 +573,7 @@ def plugin_registry_payload() -> dict:
                 "plugin_id": plugin.plugin_id,
                 "audit_type": plugin.audit_type,
                 "language": plugin.language,
+                "module": plugin.__class__.__module__,
             }
             for plugin in DEFAULT_PLUGINS
         ],
@@ -630,7 +634,8 @@ def main(argv: list[str]) -> int:
         shutil.rmtree(staging)
     staging.mkdir(parents=True)
     try:
-        summary = write_outputs(root, target, out_dir, staging, args.mode, args.max_queries, args.generator, args.namespace, args.question, args.emit_report, args.emit_lineage, args.emit_reproduce)
+        real_benchmark_namespace_confirmed = int(args.namespace == "real_benchmark" and args.confirm_real_benchmark_namespace)
+        summary = write_outputs(root, target, out_dir, staging, args.mode, args.max_queries, args.generator, args.namespace, real_benchmark_namespace_confirmed, args.question, args.emit_report, args.emit_lineage, args.emit_reproduce)
         publish_status = publish_atomic(staging, out_dir)
     except RuntimeError as exc:
         print(f"publish_error: {exc}", file=sys.stderr)
