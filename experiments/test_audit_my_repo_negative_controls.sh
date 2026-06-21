@@ -355,6 +355,16 @@ expected_plugin_modules = {
 plugin_modules = {row["plugin_id"]: row.get("module") for row in plugin_registry["plugins"]}
 if plugin_modules != expected_plugin_modules:
     raise SystemExit("fixture audit output must bind the deterministic plugin registry")
+expected_plugin_source_paths = {
+    plugin_id: f"scripts/{module}.py"
+    for plugin_id, module in expected_plugin_modules.items()
+}
+if {row["plugin_id"]: row.get("source_path") for row in plugin_registry["plugins"]} != expected_plugin_source_paths:
+    raise SystemExit("fixture audit output must bind deterministic plugin source paths")
+for row in plugin_registry["plugins"]:
+    source_path = root / row["source_path"]
+    if row.get("source_sha256") != "sha256:" + sha256(source_path):
+        raise SystemExit("fixture audit output must bind plugin source sha: " + row["plugin_id"])
 if manifest["plugin_registry_sha256"] != "sha256:" + sha256(out_a / "plugin_registry.json"):
     raise SystemExit("manifest must bind plugin registry sha256")
 with (out_a / "plugin_rule_rows.csv").open(newline="", encoding="utf-8") as handle:
@@ -680,6 +690,33 @@ sha_manifest_path.write_text(
 verify_cmd = [str(root / "scripts/audit_my_repo.sh"), "--verify-existing", str(out_a)]
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must require abstain_rows.csv in sha256sums.txt")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+plugin_registry_path = out_a / "plugin_registry.json"
+manifest_path = out_a / "audit_manifest.json"
+original_plugin_registry_text = plugin_registry_path.read_text(encoding="utf-8")
+original_manifest_text = manifest_path.read_text(encoding="utf-8")
+tampered_registry = json.loads(original_plugin_registry_text)
+tampered_registry["plugins"][0]["source_sha256"] = "sha256:" + ("0" * 64)
+plugin_registry_path.write_text(json.dumps(tampered_registry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+tampered_manifest = json.loads(original_manifest_text)
+tampered_manifest["plugin_registry_sha256"] = "sha256:" + sha256(plugin_registry_path)
+manifest_path.write_text(json.dumps(tampered_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_plugin_registry_sha = sha256(plugin_registry_path)
+new_manifest_sha = sha256(manifest_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  plugin_registry.json"):
+        sha_lines.append(f"{new_plugin_registry_sha}  plugin_registry.json")
+    elif line.endswith("  audit_manifest.json"):
+        sha_lines.append(f"{new_manifest_sha}  audit_manifest.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject plugin source sha drift")
+plugin_registry_path.write_text(original_plugin_registry_text, encoding="utf-8")
+manifest_path.write_text(original_manifest_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 summary_json_path = out_a / "audit_summary.json"
