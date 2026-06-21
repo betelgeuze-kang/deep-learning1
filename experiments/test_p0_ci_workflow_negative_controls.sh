@@ -130,6 +130,10 @@ check_third_party_workflow() {
 check_ai_verify_workflow "$ROOT_DIR/.github/workflows/ai-verify.yml"
 check_toolchain_lock "$ROOT_DIR/ci/ai_verify_toolchain.lock.json"
 check_third_party_workflow "$ROOT_DIR/.github/workflows/third-party-rerun.yml"
+grep -F "bash -n experiments/test_p0_v56_replay_negative_controls.sh" "$ROOT_DIR/scripts/ai-verify.sh" >/dev/null || {
+  echo "ai-verify.sh must syntax-check v56 replay negative controls before execution" >&2
+  exit 1
+}
 
 cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/ai_verify_no_wrapper.yml"
 python3 - "$TMP_DIR/ai_verify_no_wrapper.yml" <<'PY'

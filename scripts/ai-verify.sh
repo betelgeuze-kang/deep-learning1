@@ -43,6 +43,9 @@ fi
 if [ -f experiments/test_p0_v52_adapter_guard_negative_controls.sh ]; then
   bash -n experiments/test_p0_v52_adapter_guard_negative_controls.sh
 fi
+if [ -f experiments/test_p0_v56_replay_negative_controls.sh ]; then
+  bash -n experiments/test_p0_v56_replay_negative_controls.sh
+fi
 if [ -f experiments/test_p0_v53_v54_pipeline_negative_controls.sh ]; then
   bash -n experiments/test_p0_v53_v54_pipeline_negative_controls.sh
 fi
