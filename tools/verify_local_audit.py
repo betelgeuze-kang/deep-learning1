@@ -481,12 +481,28 @@ def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], err
     ]:
         if item not in parts:
             add(errors, f"reproduce.sh missing required token: {item}")
-    if "--out" not in parts or str(out_dir) not in parts:
-        add(errors, "reproduce.sh must reproduce into the same output directory")
+    flag_values = {
+        flag: parts[idx + 1] if idx + 1 < len(parts) else ""
+        for idx, flag in enumerate(parts)
+        if flag.startswith("--")
+    }
+    expected_flag_values = {
+        "--mode": str(summary.get("mode")),
+        "--max-queries": str(resource.get("max_queries")),
+        "--out": str(out_dir),
+        "--generator": str(summary.get("generator")),
+        "--namespace": str(manifest.get("namespace")),
+    }
+    for flag, expected in expected_flag_values.items():
+        if flag_values.get(flag) != expected:
+            add(errors, f"reproduce.sh {flag} value drift")
     if manifest.get("namespace") == "real_benchmark" and "--confirm-real-benchmark-namespace" not in parts:
         add(errors, "real_benchmark reproduce command must include confirmation flag")
-    if summary.get("question_supplied") == "1" and "--question" not in parts:
-        add(errors, "reproduce.sh missing question flag")
+    if summary.get("question_supplied") == "1":
+        questions = [row.get("question", "") for row in read_csv(out_dir / "audit_findings.csv") if row.get("audit_type") == "user_question"]
+        expected_question = questions[0] if len(questions) == 1 else ""
+        if flag_values.get("--question") != expected_question:
+            add(errors, "reproduce.sh question value drift")
 
 
 def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]) -> None:

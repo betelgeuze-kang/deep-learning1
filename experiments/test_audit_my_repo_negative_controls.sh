@@ -1091,6 +1091,23 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 reproduce_path.write_text(original_reproduce_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+reproduce_path.write_text(
+    original_reproduce_text.replace("Can I ship this as production ready?", "Can I claim this is release ready?"),
+    encoding="utf-8",
+)
+new_reproduce_sha = sha256(reproduce_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  reproduce.sh"):
+        sha_lines.append(f"{new_reproduce_sha}  reproduce.sh")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject reproduce.sh question drift")
+reproduce_path.write_text(original_reproduce_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 subprocess.run(
     [
         str(root / "scripts/audit_my_repo.sh"),
