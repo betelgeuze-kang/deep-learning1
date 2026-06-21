@@ -84,6 +84,7 @@ EXPECTED_SUMMARY_KEYS = [
     "accuracy_rows",
     "citation_correctness_rows",
     "false_positive_candidate_rows",
+    "manual_review_queue_rows",
     "wrong_answer_guard_rows",
     "wrong_answer_guard_pass_rows",
     "claim_boundary_ready",
@@ -897,6 +898,8 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     manual_review_ids = {row.get("finding_id", "") for row in manual_review_rows}
     if len(manual_review_ids) != len(manual_review_rows) or manual_review_ids != finding_ids:
         add(errors, "manual_review_queue.csv must contain exactly one row per finding")
+    if str(len(manual_review_rows)) != summary.get("manual_review_queue_rows"):
+        add(errors, "manual_review_queue_rows summary mismatch")
     review_queue_ids = {row.get("review_queue_id", "") for row in manual_review_rows}
     if len(review_queue_ids) != len(manual_review_rows) or "" in review_queue_ids:
         add(errors, "manual_review_queue.csv review_queue_id values must be unique and non-empty")

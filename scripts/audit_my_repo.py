@@ -42,7 +42,7 @@ CSV_CONTRACTS: dict[str, list[str]] = {
     "false_positive_candidate_rows.csv": ["finding_id", "manual_review_required", "false_positive_candidate", "auto_promoted"],
     "manual_review_queue.csv": ["finding_id", "review_queue_id", "review_types", "manual_review_required", "review_reason", "auto_promoted"],
     "plugin_rule_rows.csv": ["plugin_id", "audit_type", "rule_id", "language", "file_suffixes", "pattern_label", "evidence_policy"],
-    "audit_summary.csv": ["schema_version", "tool_version", "audit_my_repo_ready", "target_repo", "mode", "namespace", "generator", "question_supplied", "source_files", "finding_rows", "citation_span_rows", "abstain_rows", "unsupported_claim_rows", "accuracy_rows", "citation_correctness_rows", "false_positive_candidate_rows", "wrong_answer_guard_rows", "wrong_answer_guard_pass_rows", "claim_boundary_ready", "route_memory_lineage_rows", "mmap_read_trace_rows", "compact_route_hint_rows", "grounded_generation_rows", "raw_prompt_context_bytes", "attention_blocks", "transformer_blocks", "oracle_prediction_used", "raw_input_extractor_used", "real_release_package_ready", "public_comparison_claim_ready", "gpu_speedup_claim", "latency_ms"],
+    "audit_summary.csv": ["schema_version", "tool_version", "audit_my_repo_ready", "target_repo", "mode", "namespace", "generator", "question_supplied", "source_files", "finding_rows", "citation_span_rows", "abstain_rows", "unsupported_claim_rows", "accuracy_rows", "citation_correctness_rows", "false_positive_candidate_rows", "manual_review_queue_rows", "wrong_answer_guard_rows", "wrong_answer_guard_pass_rows", "claim_boundary_ready", "route_memory_lineage_rows", "mmap_read_trace_rows", "compact_route_hint_rows", "grounded_generation_rows", "raw_prompt_context_bytes", "attention_blocks", "transformer_blocks", "oracle_prediction_used", "raw_input_extractor_used", "real_release_package_ready", "public_comparison_claim_ready", "gpu_speedup_claim", "latency_ms"],
 }
 
 JSONL_CONTRACTS: dict[str, list[str]] = {
@@ -567,6 +567,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "accuracy_rows": len(accuracy_rows),
         "citation_correctness_rows": len(citation_correctness_rows),
         "false_positive_candidate_rows": len(false_positive_rows),
+        "manual_review_queue_rows": len(manual_review_rows),
         "wrong_answer_guard_rows": len(wrong_answer_guard_rows),
         "wrong_answer_guard_pass_rows": sum(1 for row in wrong_answer_guard_rows if row["wrong_answer_guard_pass"] == 1),
         "claim_boundary_ready": 1,

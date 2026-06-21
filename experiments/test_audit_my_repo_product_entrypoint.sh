@@ -424,6 +424,8 @@ for idx in range(1, 4):
         manual_review_rows = list(csv.DictReader(handle))
     if {row["finding_id"] for row in manual_review_rows} != {row["finding_id"] for row in findings}:
         raise SystemExit("manual review queue must contain exactly one row per finding")
+    if summary["manual_review_queue_rows"] != len(manual_review_rows):
+        raise SystemExit("manual review queue summary row count must match the CSV")
     if any(row["manual_review_required"] != "1" or row["auto_promoted"] != "0" for row in manual_review_rows):
         raise SystemExit("manual review queue must require review and forbid auto-promotion")
     source_sets.append(tuple(sorted(source_files)))
