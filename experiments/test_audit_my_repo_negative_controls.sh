@@ -644,6 +644,44 @@ summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
 summary_json_path.write_text(original_summary_json_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+claim_boundary_path = out_a / "claim_boundary.md"
+original_claim_boundary_text = claim_boundary_path.read_text(encoding="utf-8")
+claim_boundary_path.write_text(
+    original_claim_boundary_text.replace("real_release_package_ready=0", "real_release_package_ready=1"),
+    encoding="utf-8",
+)
+new_claim_boundary_sha = sha256(claim_boundary_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  claim_boundary.md"):
+        sha_lines.append(f"{new_claim_boundary_sha}  claim_boundary.md")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject claim boundary release drift")
+claim_boundary_path.write_text(original_claim_boundary_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+architecture_trace_path = out_a / "ARCHITECTURE_TRACE.md"
+original_architecture_trace_text = architecture_trace_path.read_text(encoding="utf-8")
+architecture_trace_path.write_text(
+    original_architecture_trace_text.replace("- raw_prompt_context_bytes=0", "- raw_prompt_context_bytes=128"),
+    encoding="utf-8",
+)
+new_architecture_trace_sha = sha256(architecture_trace_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  ARCHITECTURE_TRACE.md"):
+        sha_lines.append(f"{new_architecture_trace_sha}  ARCHITECTURE_TRACE.md")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject architecture trace raw-context drift")
+architecture_trace_path.write_text(original_architecture_trace_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 resource_path = out_a / "resource_envelope.json"
 original_resource_text = resource_path.read_text(encoding="utf-8")
 tampered_resource = json.loads(original_resource_text)

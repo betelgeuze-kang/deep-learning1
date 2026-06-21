@@ -197,6 +197,31 @@ def verify_resource(resource: dict, summary: dict[str, str], errors: list[str]) 
             add(errors, f"resource envelope drift: {resource_key}")
 
 
+def verify_claim_boundary_docs(out_dir: Path, errors: list[str]) -> None:
+    claim_boundary = (out_dir / "claim_boundary.md").read_text(encoding="utf-8")
+    for snippet in [
+        "Allowed claim: local evidence-bound codebase QA/audit assistance with citations, abstention, and an audit trail.",
+        "Blocked claims: Transformer replacement, frontier local LLM, production-ready release, expert replacement, long-context solved, and GPU acceleration proven.",
+        "`real_release_package_ready=0`, `public_comparison_claim_ready=0`, and `gpu_speedup_claim=deferred` remain explicit.",
+    ]:
+        if snippet not in claim_boundary:
+            add(errors, "claim_boundary.md must preserve alpha product claim boundary")
+
+    architecture_trace = (out_dir / "ARCHITECTURE_TRACE.md").read_text(encoding="utf-8")
+    for snippet in [
+        "- raw_prompt_context_bytes=0",
+        "- attention_blocks=0",
+        "- transformer_blocks=0",
+        "- oracle_prediction_used=0",
+        "- raw_input_extractor_used=0",
+        "not a Transformer replacement",
+        "GPU-speedup proof",
+        "production release",
+    ]:
+        if snippet not in architecture_trace:
+            add(errors, "ARCHITECTURE_TRACE.md must preserve non-LLM/non-release boundary")
+
+
 def verify_registry(registry: dict, errors: list[str]) -> None:
     if registry.get("schema_version") != "local_repo_audit.v1":
         add(errors, "plugin registry schema_version mismatch")
@@ -577,6 +602,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     summary = verify_summary(summary_json, read_csv(out_dir / "audit_summary.csv"), errors)
     verify_manifest(manifest, summary_json, out_dir, errors)
     verify_resource(read_json(out_dir / "resource_envelope.json"), summary, errors)
+    verify_claim_boundary_docs(out_dir, errors)
     verify_registry(read_json(out_dir / "plugin_registry.json"), errors)
     verify_contract(out_dir, sha_entries, errors)
     verify_csv_jsonl(out_dir, errors)
