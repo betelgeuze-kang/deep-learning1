@@ -562,6 +562,9 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
         add(errors, "wrong answer guard rows are not all passing")
     if str(len(guard_rows)) != summary.get("wrong_answer_guard_rows"):
         add(errors, "wrong answer guard row count drift")
+    guard_pass_rows = [row for row in guard_rows if row.get("wrong_answer_guard_pass") == "1"]
+    if str(len(guard_pass_rows)) != summary.get("wrong_answer_guard_pass_rows"):
+        add(errors, "wrong answer guard pass row count drift")
     for finding_id, row in guard_by_finding.items():
         finding = next((item for item in findings if item.get("finding_id") == finding_id), {})
         expected_blocked = "1" if finding.get("abstain") == "1" or finding.get("grounded") == "1" else "0"
