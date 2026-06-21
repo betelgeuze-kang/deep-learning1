@@ -514,6 +514,14 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
         add(errors, "finding row count drift")
     for row in findings:
         finding_id = row.get("finding_id", "")
+        grounded = row.get("grounded")
+        abstain = row.get("abstain")
+        if grounded not in {"0", "1"} or abstain not in {"0", "1"}:
+            add(errors, f"finding grounded/abstain flags must be binary: {finding_id}")
+        elif grounded == "1" and abstain == "1":
+            add(errors, f"finding cannot be both grounded and abstain: {finding_id}")
+        elif grounded == "0" and abstain == "0":
+            add(errors, f"ungrounded finding must abstain: {finding_id}")
         if row.get("abstain") == "1":
             if row.get("grounded") != "0":
                 add(errors, f"abstain finding must not be grounded: {finding_id}")

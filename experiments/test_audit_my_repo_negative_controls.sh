@@ -997,6 +997,59 @@ if tampered_abstain_id:
 
 with findings_csv_path.open(newline="", encoding="utf-8") as handle:
     findings_csv_rows = list(csv.DictReader(handle))
+finding_json_rows = [json.loads(line) for line in original_findings_text.splitlines() if line.strip()]
+with generation_path.open(newline="", encoding="utf-8") as handle:
+    generation_rows = list(csv.DictReader(handle))
+tampered_ungrounded_id = ""
+for row in findings_csv_rows:
+    if row["grounded"] == "1":
+        tampered_ungrounded_id = row["finding_id"]
+        row["grounded"] = "0"
+        row["abstain"] = "0"
+        break
+if tampered_ungrounded_id:
+    for row in finding_json_rows:
+        if row["finding_id"] == tampered_ungrounded_id:
+            row["grounded"] = 0
+            row["abstain"] = 0
+            break
+    for row in generation_rows:
+        if row["finding_id"] == tampered_ungrounded_id:
+            row["grounded"] = "0"
+            row["abstain"] = "0"
+            break
+    with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(findings_csv_rows)
+    audit_findings_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in finding_json_rows), encoding="utf-8")
+    with generation_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(generation_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(generation_rows)
+    new_findings_csv_sha = sha256(findings_csv_path)
+    new_findings_jsonl_sha = sha256(audit_findings_path)
+    new_generation_sha = sha256(generation_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  audit_findings.csv"):
+            sha_lines.append(f"{new_findings_csv_sha}  audit_findings.csv")
+        elif line.endswith("  audit_findings.jsonl"):
+            sha_lines.append(f"{new_findings_jsonl_sha}  audit_findings.jsonl")
+        elif line.endswith("  grounded_generation_rows.csv"):
+            sha_lines.append(f"{new_generation_sha}  grounded_generation_rows.csv")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit("local-audit verifier must reject ungrounded non-abstain findings")
+    findings_csv_path.write_text(original_findings_csv_text, encoding="utf-8")
+    audit_findings_path.write_text(original_findings_text, encoding="utf-8")
+    generation_path.write_text(original_generation_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with findings_csv_path.open(newline="", encoding="utf-8") as handle:
+    findings_csv_rows = list(csv.DictReader(handle))
 findings_csv_rows[0]["grounded"] = "0" if findings_csv_rows[0]["grounded"] != "0" else "1"
 with findings_csv_path.open("w", newline="", encoding="utf-8") as handle:
     writer = csv.DictWriter(handle, fieldnames=list(findings_csv_rows[0].keys()), lineterminator="\n")
