@@ -21,7 +21,26 @@ REQUIRED_PR_SPLIT_KEYS = {
     "recommended_title",
     "recommended_body",
     "merge_gate_policy",
+    "branch_integration_policy",
     "slices",
+}
+REQUIRED_PR_BRANCH_POLICY_KEYS = {
+    "source_of_truth_ref",
+    "main_source_of_truth",
+    "development_rebase_required",
+    "forbid_giant_branch_merge",
+    "max_ahead_commits_per_pr",
+    "max_behind_commits_per_pr",
+    "readiness_increase_requires_artifact",
+    "required_pr_groups",
+    "blocked_integration_patterns",
+    "current_development_branch_risk",
+}
+REQUIRED_PR_BRANCH_RISK_KEYS = {
+    "branch",
+    "ahead_commits",
+    "behind_commits",
+    "status",
 }
 REQUIRED_PR_SLICE_KEYS = {
     "slice_id",
@@ -381,6 +400,14 @@ REQUIRED_PR_MERGE_GATES = {
     "replay-artifact",
     "blocker-false-positive",
 }
+EXPECTED_PR_BRANCH_GROUPS = [
+    "product",
+    "v52",
+    "v53",
+    "v54",
+    "v58",
+    "v61",
+]
 REQUIRED_PR2_REWRITE_TERMS = {
     "not mergeable as one unit",
     "v50 artifact schema",
@@ -2066,6 +2093,59 @@ def verify_pr_split(path: Path) -> list[str]:
         errors.append(f"{path}: merge_gate_policy.forbid_tests_only must be true")
     if set(policy.get("required_gates", [])) != REQUIRED_PR_MERGE_GATES:
         errors.append(f"{path}: required_gates must be exactly {', '.join(sorted(REQUIRED_PR_MERGE_GATES))}")
+    branch_policy = data["branch_integration_policy"]
+    missing_branch_policy = REQUIRED_PR_BRANCH_POLICY_KEYS - set(branch_policy)
+    if missing_branch_policy:
+        errors.append(
+            f"{path}: branch_integration_policy missing keys: "
+            f"{', '.join(sorted(missing_branch_policy))}"
+        )
+    if branch_policy.get("source_of_truth_ref") != "main":
+        errors.append(f"{path}: branch_integration_policy.source_of_truth_ref must be main")
+    if branch_policy.get("main_source_of_truth") is not True:
+        errors.append(f"{path}: branch_integration_policy.main_source_of_truth must be true")
+    if branch_policy.get("development_rebase_required") is not True:
+        errors.append(f"{path}: branch_integration_policy.development_rebase_required must be true")
+    if branch_policy.get("forbid_giant_branch_merge") is not True:
+        errors.append(f"{path}: branch_integration_policy.forbid_giant_branch_merge must be true")
+    max_ahead = branch_policy.get("max_ahead_commits_per_pr")
+    if not isinstance(max_ahead, int) or max_ahead <= 0 or max_ahead > 80:
+        errors.append(f"{path}: branch_integration_policy.max_ahead_commits_per_pr must be an integer between 1 and 80")
+    max_behind = branch_policy.get("max_behind_commits_per_pr")
+    if max_behind != 0:
+        errors.append(f"{path}: branch_integration_policy.max_behind_commits_per_pr must be 0")
+    if branch_policy.get("readiness_increase_requires_artifact") is not True:
+        errors.append(f"{path}: branch_integration_policy.readiness_increase_requires_artifact must be true")
+    if branch_policy.get("required_pr_groups") != EXPECTED_PR_BRANCH_GROUPS:
+        errors.append(
+            f"{path}: branch_integration_policy.required_pr_groups must be exactly "
+            f"{', '.join(EXPECTED_PR_BRANCH_GROUPS)}"
+        )
+    blocked_patterns = branch_policy.get("blocked_integration_patterns", [])
+    if not isinstance(blocked_patterns, list) or not blocked_patterns:
+        errors.append(f"{path}: branch_integration_policy.blocked_integration_patterns must be a non-empty list")
+    else:
+        blocked_text = "\n".join(str(pattern) for pattern in blocked_patterns).lower()
+        for term in ["400", "codex/route-memory-local-energy-policy", "direct merge"]:
+            if term not in blocked_text:
+                errors.append(f"{path}: branch_integration_policy.blocked_integration_patterns missing {term}")
+    branch_risk = branch_policy.get("current_development_branch_risk", {})
+    missing_branch_risk = REQUIRED_PR_BRANCH_RISK_KEYS - set(branch_risk)
+    if missing_branch_risk:
+        errors.append(
+            f"{path}: branch_integration_policy.current_development_branch_risk missing keys: "
+            f"{', '.join(sorted(missing_branch_risk))}"
+        )
+    if branch_risk.get("branch") != "codex/route-memory-local-energy-policy":
+        errors.append(f"{path}: current_development_branch_risk.branch must name codex/route-memory-local-energy-policy")
+    risk_ahead = branch_risk.get("ahead_commits")
+    risk_behind = branch_risk.get("behind_commits")
+    if not isinstance(risk_ahead, int) or risk_ahead < 400:
+        errors.append(f"{path}: current_development_branch_risk.ahead_commits must record the 400+ commit merge risk")
+    if not isinstance(risk_behind, int) or risk_behind <= 0:
+        errors.append(f"{path}: current_development_branch_risk.behind_commits must record a behind-main branch")
+    if branch_risk.get("status") != "blocked-large-branch":
+        errors.append(f"{path}: current_development_branch_risk.status must be blocked-large-branch")
     slices = data["slices"]
     if not isinstance(slices, list) or not slices:
         errors.append(f"{path}: slices must be a non-empty list")

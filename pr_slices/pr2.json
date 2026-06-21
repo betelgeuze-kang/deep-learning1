@@ -21,6 +21,34 @@
       "blocker-false-positive"
     ]
   },
+  "branch_integration_policy": {
+    "source_of_truth_ref": "main",
+    "main_source_of_truth": true,
+    "development_rebase_required": true,
+    "forbid_giant_branch_merge": true,
+    "max_ahead_commits_per_pr": 80,
+    "max_behind_commits_per_pr": 0,
+    "readiness_increase_requires_artifact": true,
+    "required_pr_groups": [
+      "product",
+      "v52",
+      "v53",
+      "v54",
+      "v58",
+      "v61"
+    ],
+    "blocked_integration_patterns": [
+      "direct merge of codex/route-memory-local-energy-policy",
+      "single 400+ commit merge",
+      "readiness increase without replay artifact"
+    ],
+    "current_development_branch_risk": {
+      "branch": "codex/route-memory-local-energy-policy",
+      "ahead_commits": 449,
+      "behind_commits": 32,
+      "status": "blocked-large-branch"
+    }
+  },
   "slices": [
     {
       "slice_id": "docs/v1-roadmap",

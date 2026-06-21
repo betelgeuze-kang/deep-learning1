@@ -13,6 +13,9 @@ fi
 if [ -f experiments/test_audit_my_repo_negative_controls.sh ]; then
   bash -n experiments/test_audit_my_repo_negative_controls.sh
 fi
+if [ -f experiments/test_pr_split_branch_policy.sh ]; then
+  bash -n experiments/test_pr_split_branch_policy.sh
+fi
 
 echo "==> json"
 python3 -m json.tool opencode.json >/dev/null
@@ -141,6 +144,13 @@ test -f docs/ai/prompts/cursor_worker_slice.md
 test -x scripts/ai-worker-cursor.sh
 test -x scripts/ai-worker-opencode.sh
 
+echo "==> ci workflow contract"
+if [ -x tools/verify_ci_workflows.py ]; then
+  tools/verify_ci_workflows.py . >/dev/null
+else
+  python3 tools/verify_ci_workflows.py . >/dev/null
+fi
+
 if [ -x tools/verify_artifact.py ]; then
   if [ -f pr_slices/pr2.json ]; then
     tools/verify_artifact.py pr-split pr_slices/pr2.json >/dev/null
@@ -267,6 +277,10 @@ if [ -x tools/verify_artifact.py ]; then
     # shellcheck disable=SC2086
     tools/verify_artifact.py pipeline $pipeline_files >/dev/null
   fi
+fi
+
+if [ -f experiments/test_pr_split_branch_policy.sh ]; then
+  bash experiments/test_pr_split_branch_policy.sh >/dev/null
 fi
 
 echo "==> audit-my-repo product smoke"
