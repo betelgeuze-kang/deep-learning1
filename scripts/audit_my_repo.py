@@ -6,6 +6,7 @@ import csv
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -213,6 +214,8 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     wrong_answer_guard_rows = []
     latency_rows = []
     false_positive_rows = []
+    accuracy_rows = []
+    citation_correctness_rows = []
     for idx, finding in enumerate(finding_rows, start=1):
         hint_id = f"hint_{idx:04d}"
         citation_count = len([c for c in finding["citations"].split(";") if c])
@@ -225,6 +228,8 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         if finding["unsupported_claim"] == 1:
             unsupported_rows.append(finding)
         false_positive_rows.append({"finding_id": finding["finding_id"], "manual_review_required": 1, "false_positive_candidate": int(finding["severity"] in {"medium", "high"}), "auto_promoted": 0})
+        accuracy_rows.append({"finding_id": finding["finding_id"], "accuracy_label": "unreviewed", "automatic_accuracy_claimed": 0, "manual_accuracy_review_required": 1})
+        citation_correctness_rows.append({"finding_id": finding["finding_id"], "citation_count": citation_count, "citation_bound": int(citation_count > 0), "citation_correctness_label": "source_bound_unreviewed", "manual_citation_review_required": 1})
         wrong_answer_guard_rows.append({"finding_id": finding["finding_id"], "guard_id": f"wrong_answer_guard_{idx:04d}", "unsupported_direct_answer_blocked": int(finding["abstain"] == 1 or finding["grounded"] == 1), "citation_required": 1, "audit_trail_required": 1, "wrong_answer_guard_pass": 1})
     for row in span_rows:
         mmap_rows.append({"finding_id": row["finding_id"], "file_path": row["file_path"], "line_start": row["line_start"], "sha256": row["sha256"], "mmap_value_byte_read": 1})
@@ -236,6 +241,8 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     write_csv(staging / "abstain_rows.csv", list(finding_rows[0].keys()), abstain_rows)
     write_csv(staging / "unsupported_claim_rows.csv", list(finding_rows[0].keys()), unsupported_rows)
     write_csv(staging / "wrong_answer_guard_rows.csv", ["finding_id", "guard_id", "unsupported_direct_answer_blocked", "citation_required", "audit_trail_required", "wrong_answer_guard_pass"], wrong_answer_guard_rows)
+    write_csv(staging / "accuracy_rows.csv", ["finding_id", "accuracy_label", "automatic_accuracy_claimed", "manual_accuracy_review_required"], accuracy_rows)
+    write_csv(staging / "citation_correctness_rows.csv", ["finding_id", "citation_count", "citation_bound", "citation_correctness_label", "manual_citation_review_required"], citation_correctness_rows)
     write_csv(staging / "latency_rows.csv", ["finding_id", "latency_ms", "latency_source"], latency_rows)
     write_csv(staging / "false_positive_candidate_rows.csv", ["finding_id", "manual_review_required", "false_positive_candidate", "auto_promoted"], false_positive_rows)
 
@@ -262,6 +269,8 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "citation_span_rows": len(span_rows),
         "abstain_rows": len(abstain_rows),
         "unsupported_claim_rows": len(unsupported_rows),
+        "accuracy_rows": len(accuracy_rows),
+        "citation_correctness_rows": len(citation_correctness_rows),
         "false_positive_candidate_rows": sum(int(row["false_positive_candidate"]) for row in false_positive_rows),
         "wrong_answer_guard_rows": len(wrong_answer_guard_rows),
         "wrong_answer_guard_pass_rows": sum(1 for row in wrong_answer_guard_rows if row["wrong_answer_guard_pass"] == 1),
@@ -299,7 +308,32 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
 
     if emit_reproduce:
         reproduce = staging / "reproduce.sh"
-        reproduce.write_text("#!/usr/bin/env bash\nset -euo pipefail\n" f"cd {str(root)!r}\n" f"./scripts/audit_my_repo.sh {str(target)!r} --mode {mode} --max-queries {max_queries} --out {str(out_dir)!r} --generator {generator} --namespace {namespace} --emit-report --emit-lineage --emit-reproduce\n", encoding="utf-8")
+        command = [
+            "./scripts/audit_my_repo.sh",
+            str(target),
+            "--mode",
+            mode,
+            "--max-queries",
+            str(max_queries),
+            "--out",
+            str(out_dir),
+            "--generator",
+            generator,
+            "--namespace",
+            namespace,
+            "--emit-report",
+            "--emit-lineage",
+            "--emit-reproduce",
+        ]
+        if question:
+            command.extend(["--question", question])
+        reproduce.write_text(
+            "#!/usr/bin/env bash\nset -euo pipefail\n"
+            f"cd {shlex.quote(str(root))}\n"
+            + " ".join(shlex.quote(part) for part in command)
+            + "\n",
+            encoding="utf-8",
+        )
         reproduce.chmod(0o755)
 
     manifest = {
@@ -333,9 +367,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--generator", default="routehint-tiny")
     parser.add_argument("--namespace", choices=["fixture", "synthetic", "real_benchmark"], default="real_benchmark")
     parser.add_argument("--question", default="")
-    parser.add_argument("--emit-report", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--emit-lineage", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--emit-reproduce", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--emit-report", action="store_true", default=True)
+    parser.add_argument("--emit-lineage", action="store_true", default=True)
+    parser.add_argument("--emit-reproduce", action="store_true", default=True)
     return parser.parse_args(argv)
 
 

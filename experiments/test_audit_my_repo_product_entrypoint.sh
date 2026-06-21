@@ -47,18 +47,18 @@ for idx in 1 2 3; do
     --out "$out" \
     --namespace synthetic \
     --question "Does this repo prove production readiness?" \
-    --generator routehint-tiny \
-    --emit-report \
-    --emit-lineage \
-    --emit-reproduce >/dev/null
+    --generator routehint-tiny >/dev/null
 
   test "$(cat "$out/sentinel.txt")" = "keep"
   for file in \
     AUDIT_REPORT.md \
+    ARCHITECTURE_TRACE.md \
+    accuracy_rows.csv \
     audit_findings.jsonl \
     audit_manifest.json \
     audit_summary.json \
     citation_spans.jsonl \
+    citation_correctness_rows.csv \
     prediction_lineage.jsonl \
     resource_envelope.json \
     reproduce.sh \
@@ -108,6 +108,8 @@ for idx in range(1, 4):
         raise SystemExit("audit product smoke must keep release/comparison claims blocked")
     if summary["question_supplied"] != 1:
         raise SystemExit("audit product smoke should record user question support")
+    if summary["accuracy_rows"] <= 0 or summary["citation_correctness_rows"] <= 0:
+        raise SystemExit("accuracy and citation correctness rows must be recorded separately")
     findings = [json.loads(line) for line in (out / "audit_findings.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     citations = [json.loads(line) for line in (out / "citation_spans.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     lineage = [json.loads(line) for line in (out / "prediction_lineage.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -117,17 +119,54 @@ for idx in range(1, 4):
         raise SystemExit("unsupported user question must abstain")
     if any(row["grounded"] == 1 and not row["citations"] for row in findings):
         raise SystemExit("grounded findings must have citations")
+    if any(int(row["line_start"]) <= 0 or not row["sha256"].startswith("sha256:") for row in citations):
+        raise SystemExit("citation rows must bind line numbers and sha256")
     with (out / "wrong_answer_guard_rows.csv").open(newline="", encoding="utf-8") as handle:
         guards = list(csv.DictReader(handle))
     if not guards or any(row["wrong_answer_guard_pass"] != "1" for row in guards):
         raise SystemExit("wrong-answer guard rows must pass")
+    with (out / "accuracy_rows.csv").open(newline="", encoding="utf-8") as handle:
+        accuracy_rows = list(csv.DictReader(handle))
+    if not accuracy_rows or any(row["automatic_accuracy_claimed"] != "0" for row in accuracy_rows):
+        raise SystemExit("automatic accuracy must not be claimed by the alpha smoke")
+    with (out / "citation_correctness_rows.csv").open(newline="", encoding="utf-8") as handle:
+        citation_rows = list(csv.DictReader(handle))
+    if not citation_rows or any(row["manual_citation_review_required"] != "1" for row in citation_rows):
+        raise SystemExit("citation correctness rows must require manual review")
+    with (out / "source_manifest.csv").open(newline="", encoding="utf-8") as handle:
+        source_rows = list(csv.DictReader(handle))
+    expected_cache_key = hashlib.sha256(json.dumps({
+        "tool_version": "audit_my_repo_alpha.v1",
+        "target": str((root / f"repo_{idx}").resolve()),
+        "source": [(row["file_path"], row["sha256"]) for row in source_rows],
+        "mode": "quick",
+        "max_queries": 12,
+        "question": "Does this repo prove production readiness?",
+        "plugins": ["doc_code_identity", "deprecated_api", "config_consistency", "unsupported_claim", "missing_evidence"],
+    }, sort_keys=True).encode("utf-8")).hexdigest()
+    if manifest["cache_key"] != expected_cache_key:
+        raise SystemExit("audit manifest cache key does not match source/query/plugin inputs")
     manifest_rows = {}
     for line in (out / "sha256sums.txt").read_text(encoding="utf-8").splitlines():
         digest, rel = line.split(None, 1)
         manifest_rows[rel] = digest
-    for rel in ["audit_manifest.json", "audit_summary.json", "audit_findings.jsonl", "citation_spans.jsonl"]:
+    for rel in [
+        "AUDIT_REPORT.md",
+        "ARCHITECTURE_TRACE.md",
+        "accuracy_rows.csv",
+        "audit_manifest.json",
+        "audit_summary.json",
+        "audit_findings.jsonl",
+        "citation_spans.jsonl",
+        "citation_correctness_rows.csv",
+        "prediction_lineage.jsonl",
+        "reproduce.sh",
+    ]:
         if manifest_rows.get(rel) != sha256(out / rel):
             raise SystemExit(f"sha256 mismatch: {rel}")
+    reproduce_text = (out / "reproduce.sh").read_text(encoding="utf-8")
+    if "--question 'Does this repo prove production readiness?'" not in reproduce_text:
+        raise SystemExit("reproduce.sh must preserve the user question")
 PY
 
 echo "audit_my_repo product entrypoint smoke passed"
