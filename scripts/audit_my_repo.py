@@ -11,7 +11,6 @@ import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 from auditor_plugins import DEFAULT_PLUGINS, Finding, SourceFile
@@ -19,6 +18,7 @@ from auditor_plugins import DEFAULT_PLUGINS, Finding, SourceFile
 SCHEMA_VERSION = "local_repo_audit.v1"
 OUTPUT_SCHEMA_VERSION = "local_repo_audit_output.v1"
 TOOL_VERSION = "audit_my_repo_alpha.v1"
+DETERMINISTIC_GENERATED_AT_UTC = "1970-01-01T00:00:00+00:00"
 
 
 def sha256(path: Path) -> str:
@@ -190,7 +190,6 @@ def publish_atomic(staging: Path, out_dir: Path) -> None:
 
 
 def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: str, max_queries: int, generator: str, namespace: str, question: str, emit_report: bool, emit_lineage: bool, emit_reproduce: bool) -> dict:
-    start = time.monotonic()
     sources, source_rows = collect_sources(target, max_queries)
     findings: list[Finding] = []
     for plugin in DEFAULT_PLUGINS:
@@ -265,7 +264,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     )
     (staging / "claim_boundary.md").write_text(claim_boundary, encoding="utf-8")
 
-    elapsed_ms = int((time.monotonic() - start) * 1000)
+    deterministic_latency_ms = 0
     summary = {
         "schema_version": SCHEMA_VERSION,
         "tool_version": TOOL_VERSION,
@@ -298,9 +297,9 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         "real_release_package_ready": 0,
         "public_comparison_claim_ready": 0,
         "gpu_speedup_claim": "deferred",
-        "latency_ms": elapsed_ms,
+        "latency_ms": deterministic_latency_ms,
     }
-    write_json(staging / "resource_envelope.json", {"resource_envelope_ready": 1, "tool_version": TOOL_VERSION, "source_files_scanned": len(source_rows), "max_queries": max_queries, "mode": mode, "namespace": namespace, "external_network_used": 0, "raw_prompt_context_bytes": 0, "latency_ms": elapsed_ms, "wrong_answer_guard_rows": len(wrong_answer_guard_rows), "claim_boundary_ready": 1})
+    write_json(staging / "resource_envelope.json", {"resource_envelope_ready": 1, "tool_version": TOOL_VERSION, "source_files_scanned": len(source_rows), "max_queries": max_queries, "mode": mode, "namespace": namespace, "external_network_used": 0, "raw_prompt_context_bytes": 0, "latency_ms": deterministic_latency_ms, "wrong_answer_guard_rows": len(wrong_answer_guard_rows), "claim_boundary_ready": 1})
     write_json(staging / "audit_summary.json", summary)
     write_csv(staging / "audit_summary.csv", list(summary.keys()), [summary])
 
@@ -350,7 +349,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     manifest = {
         "schema_version": OUTPUT_SCHEMA_VERSION,
         "tool_version": TOOL_VERSION,
-        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "generated_at_utc": DETERMINISTIC_GENERATED_AT_UTC,
         "target_repo": str(target),
         "namespace": namespace,
         "source_file_count": len(source_rows),

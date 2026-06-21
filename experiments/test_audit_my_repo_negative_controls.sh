@@ -87,6 +87,8 @@ if manifest["namespace"] != "fixture":
     raise SystemExit("negative-control fixture must not be promoted out of fixture namespace")
 if manifest["claim_boundary"] != "alpha-local-code-doc-audit-only":
     raise SystemExit("claim boundary must remain alpha-only")
+if manifest["generated_at_utc"] != "1970-01-01T00:00:00+00:00":
+    raise SystemExit("manifest timestamp must be deterministic")
 
 summary = json.loads((out_a / "audit_summary.json").read_text(encoding="utf-8"))
 for field in [
@@ -97,6 +99,7 @@ for field in [
     "transformer_blocks",
     "oracle_prediction_used",
     "raw_input_extractor_used",
+    "latency_ms",
 ]:
     if summary[field] != 0:
         raise SystemExit(f"{field} must stay zero in product negative controls")

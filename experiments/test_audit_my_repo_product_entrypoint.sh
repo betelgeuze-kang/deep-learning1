@@ -74,6 +74,16 @@ for idx in 1 2 3; do
   done
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_output.schema.json" "$out/audit_manifest.json" >/dev/null
+
+  cp "$out/sha256sums.txt" "$out/sha256sums.first"
+  "$ROOT_DIR/scripts/audit_my_repo.sh" "$TMP_DIR/repo_$idx" \
+    --mode quick \
+    --max-queries 12 \
+    --out "$out" \
+    --namespace synthetic \
+    --question "Does this repo prove production readiness?" \
+    --generator routehint-tiny >/dev/null
+  cmp "$out/sha256sums.first" "$out/sha256sums.txt" >/dev/null
 done
 
 python3 - "$TMP_DIR" <<'PY'
@@ -101,11 +111,15 @@ for idx in range(1, 4):
         raise SystemExit("generated fixture repos must stay in the synthetic namespace")
     if manifest["tool_version"] != "audit_my_repo_alpha.v1":
         raise SystemExit("audit manifest must expose the tool version")
+    if manifest["generated_at_utc"] != "1970-01-01T00:00:00+00:00":
+        raise SystemExit("audit manifest timestamp must be deterministic")
     if manifest["atomic_publish"] != 1 or manifest["output_dir_destroyed"] != 0:
         raise SystemExit("audit manifest must prove atomic non-destructive publish")
     summary = json.loads((out / "audit_summary.json").read_text(encoding="utf-8"))
     if summary["real_release_package_ready"] != 0 or summary["public_comparison_claim_ready"] != 0:
         raise SystemExit("audit product smoke must keep release/comparison claims blocked")
+    if summary["latency_ms"] != 0:
+        raise SystemExit("summary latency must stay deterministic; latency rows carry measurement slots")
     if summary["question_supplied"] != 1:
         raise SystemExit("audit product smoke should record user question support")
     if summary["accuracy_rows"] <= 0 or summary["citation_correctness_rows"] <= 0:
