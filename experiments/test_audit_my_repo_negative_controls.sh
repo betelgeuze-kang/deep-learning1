@@ -738,6 +738,23 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 audit_report_path.write_text(original_audit_report_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+audit_report_path.write_text(
+    original_audit_report_text.replace("  abstain=1\n", "  abstain=1\n  abstain=0\n", 1),
+    encoding="utf-8",
+)
+new_audit_report_sha = sha256(audit_report_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  AUDIT_REPORT.md"):
+        sha_lines.append(f"{new_audit_report_sha}  AUDIT_REPORT.md")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject duplicate audit report decision lines")
+audit_report_path.write_text(original_audit_report_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 resource_path = out_a / "resource_envelope.json"
 original_resource_text = resource_path.read_text(encoding="utf-8")
 tampered_resource = json.loads(original_resource_text)
@@ -1043,6 +1060,34 @@ for line in original_sha_manifest_text.splitlines():
 sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject reproduce.sh without --verify-output")
+reproduce_path.write_text(original_reproduce_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+reproduce_path.write_text(original_reproduce_text.replace(" --max-queries 12", " --max-queries 11"), encoding="utf-8")
+new_reproduce_sha = sha256(reproduce_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  reproduce.sh"):
+        sha_lines.append(f"{new_reproduce_sha}  reproduce.sh")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject reproduce.sh max-queries drift")
+reproduce_path.write_text(original_reproduce_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+reproduce_path.write_text(original_reproduce_text.replace(" --generator routehint-tiny", " --generator routehint-other"), encoding="utf-8")
+new_reproduce_sha = sha256(reproduce_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  reproduce.sh"):
+        sha_lines.append(f"{new_reproduce_sha}  reproduce.sh")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject reproduce.sh generator drift")
 reproduce_path.write_text(original_reproduce_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 

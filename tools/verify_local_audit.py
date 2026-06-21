@@ -257,6 +257,14 @@ def verify_audit_report(out_dir: Path, summary: dict[str, str], errors: list[str
         for line in expected_lines:
             if line not in section:
                 add(errors, f"AUDIT_REPORT.md drift for finding: {finding_id}")
+        for prefix, expected in {
+            "  grounded=": f"  grounded={row.get('grounded', '')}",
+            "  abstain=": f"  abstain={row.get('abstain', '')}",
+            "  unsupported_claims=": f"  unsupported_claims={row.get('unsupported_claim', '')}",
+        }.items():
+            decision_lines = [line for line in section.splitlines() if line.startswith(prefix)]
+            if decision_lines != [expected]:
+                add(errors, f"AUDIT_REPORT.md duplicate or conflicting decision line: {finding_id}")
 
 
 def verify_registry(registry: dict, errors: list[str]) -> None:
@@ -444,6 +452,7 @@ def verify_cache_key(out_dir: Path, manifest: dict, summary: dict[str, str], err
 
 def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], errors: list[str]) -> None:
     path = out_dir / "reproduce.sh"
+    resource = read_json(out_dir / "resource_envelope.json")
     if not (path.stat().st_mode & stat.S_IXUSR):
         add(errors, "reproduce.sh must be executable")
     text = path.read_text(encoding="utf-8")
@@ -459,6 +468,10 @@ def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], err
         str(manifest.get("target_repo")),
         "--mode",
         str(summary.get("mode")),
+        "--max-queries",
+        str(resource.get("max_queries")),
+        "--generator",
+        str(summary.get("generator")),
         "--namespace",
         str(manifest.get("namespace")),
         "--verify-output",
