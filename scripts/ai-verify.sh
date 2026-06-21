@@ -43,6 +43,9 @@ fi
 if [ -f experiments/test_audit_my_repo_product_entrypoint.sh ]; then
   bash -n experiments/test_audit_my_repo_product_entrypoint.sh
 fi
+if [ -f experiments/test_audit_my_repo_negative_controls.sh ]; then
+  bash -n experiments/test_audit_my_repo_negative_controls.sh
+fi
 if [ -f experiments/test_p0_v52_adapter_guard_negative_controls.sh ]; then
   bash -n experiments/test_p0_v52_adapter_guard_negative_controls.sh
 fi
@@ -298,6 +301,9 @@ if [ -x experiments/test_p0_v50_auditor_negative_controls.sh ]; then
 fi
 if [ -x experiments/test_audit_my_repo_product_entrypoint.sh ]; then
   ./experiments/test_audit_my_repo_product_entrypoint.sh >/dev/null
+fi
+if [ -x experiments/test_audit_my_repo_negative_controls.sh ]; then
+  ./experiments/test_audit_my_repo_negative_controls.sh >/dev/null
 fi
 if [ -x experiments/test_p0_v52_adapter_guard_negative_controls.sh ]; then
   ./experiments/test_p0_v52_adapter_guard_negative_controls.sh >/dev/null
