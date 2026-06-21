@@ -111,6 +111,15 @@ EXPECTED_SUMMARY_KEYS = [
     "gpu_speedup_claim",
     "latency_ms",
 ]
+SCHEMA_INSTANCE_PAIRS = [
+    ("schemas/local_repo_audit_output.schema.json", "audit_manifest.json"),
+    ("schemas/local_repo_audit_exit_code_contract.schema.json", "exit_code_contract.json"),
+    ("schemas/local_repo_audit_invocation.schema.json", "audit_invocation.json"),
+    ("schemas/local_repo_audit_summary.schema.json", "audit_summary.json"),
+    ("schemas/local_repo_audit_plugin_registry.schema.json", "plugin_registry.json"),
+    ("schemas/local_repo_audit_resource_envelope.schema.json", "resource_envelope.json"),
+    ("schemas/local_repo_audit_source_snapshot.schema.json", "source_snapshot.json"),
+]
 
 
 def sha256_hex(path: Path) -> str:
@@ -144,6 +153,28 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def add(errors: list[str], message: str) -> None:
     errors.append(message)
+
+
+def verify_schema_instances(out_dir: Path, errors: list[str]) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    validator = repo_root / "tools" / "validate_json_schemas.py"
+    for schema_rel, instance_rel in SCHEMA_INSTANCE_PAIRS:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(validator),
+                "--schema-instance",
+                str(repo_root / schema_rel),
+                str(out_dir / instance_rel),
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip().splitlines()
+            suffix = f": {detail[0]}" if detail else ""
+            add(errors, f"schema instance validation failed: {instance_rel}{suffix}")
 
 
 def verify_sha_manifest(out_dir: Path, errors: list[str]) -> dict[str, str]:
@@ -1080,6 +1111,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     if errors:
         return errors
     sha_entries = verify_sha_manifest(out_dir, errors)
+    verify_schema_instances(out_dir, errors)
     manifest = read_json(out_dir / "audit_manifest.json")
     summary_json = read_json(out_dir / "audit_summary.json")
     summary = verify_summary(summary_json, read_csv(out_dir / "audit_summary.csv"), errors)

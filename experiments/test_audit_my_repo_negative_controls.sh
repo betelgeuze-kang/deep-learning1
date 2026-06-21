@@ -731,6 +731,37 @@ plugin_registry_path = out_a / "plugin_registry.json"
 manifest_path = out_a / "audit_manifest.json"
 original_plugin_registry_text = plugin_registry_path.read_text(encoding="utf-8")
 original_manifest_text = manifest_path.read_text(encoding="utf-8")
+contract_path_for_manifest_schema = out_a / "artifact_contract_rows.csv"
+original_contract_text_for_manifest_schema = contract_path_for_manifest_schema.read_text(encoding="utf-8")
+tampered_manifest = json.loads(original_manifest_text)
+tampered_manifest["schema_only_extra_key"] = 1
+manifest_path.write_text(json.dumps(tampered_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+with contract_path_for_manifest_schema.open(newline="", encoding="utf-8") as handle:
+    contract_rows = list(csv.DictReader(handle))
+for row in contract_rows:
+    if row["artifact_path"] == "audit_manifest.json":
+        row["actual_keys"] = row["actual_keys"] + "|schema_only_extra_key"
+with contract_path_for_manifest_schema.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(contract_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(contract_rows)
+new_manifest_sha = sha256(manifest_path)
+new_contract_sha = sha256(contract_path_for_manifest_schema)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_manifest.json"):
+        sha_lines.append(f"{new_manifest_sha}  audit_manifest.json")
+    elif line.endswith("  artifact_contract_rows.csv"):
+        sha_lines.append(f"{new_contract_sha}  artifact_contract_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must schema-check audit_manifest.json instances")
+manifest_path.write_text(original_manifest_text, encoding="utf-8")
+contract_path_for_manifest_schema.write_text(original_contract_text_for_manifest_schema, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 tampered_registry = json.loads(original_plugin_registry_text)
 tampered_registry["plugins"][0]["source_sha256"] = "sha256:" + ("0" * 64)
 plugin_registry_path.write_text(json.dumps(tampered_registry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
