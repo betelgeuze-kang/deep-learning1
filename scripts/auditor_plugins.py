@@ -50,6 +50,17 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def _first_file_under(path: Path) -> Path | None:
+    if path.is_file():
+        return path
+    if not path.is_dir():
+        return None
+    for candidate in sorted(path.rglob("*")):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 class DocCodeIdentityPlugin(AuditPlugin):
     plugin_id = "doc_code_identity"
     audit_type = "doc_code_identity"
@@ -284,7 +295,11 @@ class MissingEvidencePlugin(AuditPlugin):
                 self.audit_type,
                 "Is there local evidence for release or benchmark claims?",
                 "Local evidence/documentation directories exist, but this audit does not promote release claims without exact source-bound receipts.",
-                tuple(path for path in evidence_dirs if path.exists())[:2] or evidence,
+                tuple(
+                    candidate
+                    for candidate in (_first_file_under(path) for path in evidence_dirs)
+                    if candidate is not None
+                )[:2] or evidence,
                 ("evidence", "results", "docs"),
                 plugin_id=self.plugin_id,
             )

@@ -31,6 +31,12 @@ EOF
 def answer():
     return "ok"
 EOF
+      mkdir -p "$repo/docs"
+      cat >"$repo/docs/evidence.md" <<'EOF'
+# Evidence Notes
+
+This local evidence note is a citation target, not release proof.
+EOF
       ;;
     javascript)
       cat >"$repo/package.json" <<EOF

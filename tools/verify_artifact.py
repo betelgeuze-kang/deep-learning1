@@ -3672,8 +3672,28 @@ def verify_local_audit(out_dir: Path) -> list[str]:
     lineage = _read_jsonl(out_dir / "prediction_lineage.jsonl", errors)
     if not findings or not citations or not lineage:
         errors.append(f"{out_dir}: findings, citations, and lineage must be non-empty")
-    if any(row.get("grounded") == 1 and not row.get("citations") for row in findings):
-        errors.append(f"{out_dir / 'audit_findings.jsonl'}: grounded rows must have citations")
+    citation_cells_by_finding: dict[str, set[str]] = {}
+    for row in citations:
+        try:
+            line_start = int(row.get("line_start", 0))
+        except (TypeError, ValueError):
+            line_start = 0
+        citation_cells_by_finding.setdefault(str(row.get("finding_id", "")), set()).add(
+            f"{row.get('file_path', '')}:{line_start}"
+        )
+    for row in findings:
+        finding_id = str(row.get("finding_id", ""))
+        citation_cells = {
+            cell
+            for cell in str(row.get("citations", "")).split(";")
+            if cell
+        }
+        if not citation_cells:
+            errors.append(f"{out_dir / 'audit_findings.jsonl'}: every finding must bind at least one citation: {finding_id}")
+            continue
+        missing_cells = citation_cells - citation_cells_by_finding.get(finding_id, set())
+        if missing_cells:
+            errors.append(f"{out_dir / 'audit_findings.jsonl'}: finding citations lack matching span rows: {finding_id} {sorted(missing_cells)}")
     question = ""
     user_question_rows = [row for row in findings if row.get("audit_type") == "user_question"]
     if summary.get("question_supplied") == 1:
