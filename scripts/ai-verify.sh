@@ -70,6 +70,9 @@ fi
 if [ -f schemas/local_repo_audit_plugin_rules.schema.json ]; then
   python3 -m json.tool schemas/local_repo_audit_plugin_rules.schema.json >/dev/null
 fi
+if [ -f schemas/local_repo_audit_resource_envelope.schema.json ]; then
+  python3 -m json.tool schemas/local_repo_audit_resource_envelope.schema.json >/dev/null
+fi
 if [ -f schemas/local_repo_audit_source_snapshot.schema.json ]; then
   python3 -m json.tool schemas/local_repo_audit_source_snapshot.schema.json >/dev/null
 fi

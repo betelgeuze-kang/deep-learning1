@@ -142,6 +142,8 @@ for idx in 1 2 3; do
   "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$out/plugin_registry.json" >/dev/null
   "$ROOT_DIR/tools/validate_json_schemas.py" \
+    --schema-instance "$ROOT_DIR/schemas/local_repo_audit_resource_envelope.schema.json" "$out/resource_envelope.json" >/dev/null
+  "$ROOT_DIR/tools/validate_json_schemas.py" \
     --schema-instance "$ROOT_DIR/schemas/local_repo_audit_source_snapshot.schema.json" "$out/source_snapshot.json" >/dev/null
   "$ROOT_DIR/tools/verify_local_audit.py" "$out" >/dev/null
   "$ROOT_DIR/scripts/audit_my_repo.sh" --verify-existing "$out" >/dev/null

@@ -302,6 +302,8 @@ test "$(cat "$out_a/sentinel.txt")" = "keep"
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_plugin_registry.schema.json" "$out_a/plugin_registry.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_resource_envelope.schema.json" "$out_a/resource_envelope.json" >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_source_snapshot.schema.json" "$out_a/source_snapshot.json" >/dev/null
 "$ROOT_DIR/tools/verify_local_audit.py" "$out_a" >/dev/null
 
@@ -1490,6 +1492,20 @@ if tampered_finding_id:
 
 resource_path = out_a / "resource_envelope.json"
 original_resource_text = resource_path.read_text(encoding="utf-8")
+bad_resource_schema_path = out_a / "tampered_resource_envelope.json"
+bad_resource_schema = json.loads(original_resource_text)
+bad_resource_schema["external_network_used"] = 1
+bad_resource_schema_path.write_text(json.dumps(bad_resource_schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+resource_schema_cmd = [
+    str(root / "tools/validate_json_schemas.py"),
+    "--schema-instance",
+    str(root / "schemas/local_repo_audit_resource_envelope.schema.json"),
+    str(bad_resource_schema_path),
+]
+if subprocess.run(resource_schema_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("resource envelope schema must reject external network usage")
+bad_resource_schema_path.unlink()
+
 tampered_resource = json.loads(original_resource_text)
 tampered_resource["source_files_scanned"] = 999
 resource_path.write_text(json.dumps(tampered_resource, indent=2, sort_keys=True) + "\n", encoding="utf-8")
