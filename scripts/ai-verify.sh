@@ -88,6 +88,12 @@ fi
 if [ -f experiments/test_p1_v02_dataset_span_core_contract.sh ]; then
   bash -n experiments/test_p1_v02_dataset_span_core_contract.sh
 fi
+if [ -f experiments/test_v61aa_hotset_tensor_slice_verifier.sh ]; then
+  bash -n experiments/test_v61aa_hotset_tensor_slice_verifier.sh
+fi
+if [ -f experiments/test_v61ab_hotset_tensor_tile_quant_probe.sh ]; then
+  bash -n experiments/test_v61ab_hotset_tensor_tile_quant_probe.sh
+fi
 if [ -f experiments/test_v61_one_token_path_contract.sh ]; then
   bash -n experiments/test_v61_one_token_path_contract.sh
 fi

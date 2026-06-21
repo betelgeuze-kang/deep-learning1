@@ -134,6 +134,14 @@ grep -F "bash -n experiments/test_p0_v56_replay_negative_controls.sh" "$ROOT_DIR
   echo "ai-verify.sh must syntax-check v56 replay negative controls before execution" >&2
   exit 1
 }
+grep -F "bash -n experiments/test_v61aa_hotset_tensor_slice_verifier.sh" "$ROOT_DIR/scripts/ai-verify.sh" >/dev/null || {
+  echo "ai-verify.sh must syntax-check v61aa raw evidence verifier before indirect execution" >&2
+  exit 1
+}
+grep -F "bash -n experiments/test_v61ab_hotset_tensor_tile_quant_probe.sh" "$ROOT_DIR/scripts/ai-verify.sh" >/dev/null || {
+  echo "ai-verify.sh must syntax-check v61ab raw evidence verifier before indirect execution" >&2
+  exit 1
+}
 
 cp "$ROOT_DIR/.github/workflows/ai-verify.yml" "$TMP_DIR/ai_verify_no_wrapper.yml"
 python3 - "$TMP_DIR/ai_verify_no_wrapper.yml" <<'PY'

@@ -65,12 +65,17 @@ schema = json.loads((root / "schemas" / "v61_one_token_path.schema.json").read_t
 expected_policy = set(schema["properties"]["policy"]["required"])
 expected_milestone = set(schema["properties"]["milestones"]["items"]["required"])
 expected_artifact = set(schema["properties"]["required_artifacts"]["items"]["required"])
+expected_blocked_runtime_forbidden_ready_fields = set(
+    schema["x-contract"]["blocked_runtime_forbidden_ready_fields"]
+)
 if module.REQUIRED_V61_POLICY_KEYS != expected_policy:
     raise SystemExit("REQUIRED_V61_POLICY_KEYS must be derived from schema policy.required")
 if module.REQUIRED_V61_MILESTONE_KEYS != expected_milestone:
     raise SystemExit("REQUIRED_V61_MILESTONE_KEYS must be derived from schema milestones.items.required")
 if module.REQUIRED_V61_ARTIFACT_KEYS != expected_artifact:
     raise SystemExit("REQUIRED_V61_ARTIFACT_KEYS must be derived from schema required_artifacts.items.required")
+if module.V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS != expected_blocked_runtime_forbidden_ready_fields:
+    raise SystemExit("V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS must be derived from schema x-contract.blocked_runtime_forbidden_ready_fields")
 
 checks = {
     "REQUIRED_STAGE_KEYS": ("pipeline.schema.json", ("properties", "stages", "items")),
