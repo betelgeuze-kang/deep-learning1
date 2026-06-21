@@ -293,15 +293,25 @@ def verify_audit_report(out_dir: Path, summary: dict[str, str], errors: list[str
             f"  unsupported_claims={row.get('unsupported_claim', '')}",
         ]
         citation_sha256s = [cell for cell in row.get("citation_sha256s", "").split(";") if cell]
+        expected_evidence_lines: list[str] = []
         for citation, citation_sha256 in zip(
             [cell for cell in row.get("citations", "").split(";") if cell],
             citation_sha256s,
         ):
-            expected_lines.append(f"  {citation}")
-            expected_lines.append(f"  sha256={citation_sha256}")
+            expected_evidence_lines.extend([f"  {citation}", f"  sha256={citation_sha256}"])
+        expected_lines.extend(expected_evidence_lines)
         for line in expected_lines:
             if line not in section:
                 add(errors, f"AUDIT_REPORT.md drift for finding: {finding_id}")
+        section_lines = section.splitlines()
+        try:
+            evidence_start = section_lines.index("Evidence:") + 1
+            evidence_end = section_lines.index("Decision:")
+            actual_evidence_lines = [line for line in section_lines[evidence_start:evidence_end] if line.strip()]
+            if actual_evidence_lines != expected_evidence_lines:
+                add(errors, f"AUDIT_REPORT.md evidence block drift: {finding_id}")
+        except ValueError:
+            add(errors, f"AUDIT_REPORT.md missing evidence or decision block: {finding_id}")
         for prefix, expected in {
             "  grounded=": f"  grounded={row.get('grounded', '')}",
             "  abstain=": f"  abstain={row.get('abstain', '')}",
@@ -596,7 +606,7 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
 
     guard_rows = read_csv(out_dir / "wrong_answer_guard_rows.csv")
     guard_by_finding = {row.get("finding_id", ""): row for row in guard_rows}
-    if set(guard_by_finding) != finding_ids:
+    if len(guard_by_finding) != len(guard_rows) or set(guard_by_finding) != finding_ids:
         add(errors, "wrong_answer_guard_rows.csv must contain exactly one row per finding")
     if len([row for row in guard_rows if row.get("wrong_answer_guard_pass") == "1"]) != len(guard_rows):
         add(errors, "wrong answer guard rows are not all passing")
@@ -613,13 +623,15 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
         if row.get("citation_required") != "1" or row.get("audit_trail_required") != "1":
             add(errors, f"wrong answer guard must require citation and audit trail: {finding_id}")
     latency_rows = read_csv(out_dir / "latency_rows.csv")
-    if {row.get("finding_id", "") for row in latency_rows} != finding_ids:
+    latency_ids = {row.get("finding_id", "") for row in latency_rows}
+    if len(latency_ids) != len(latency_rows) or latency_ids != finding_ids:
         add(errors, "latency_rows.csv must contain exactly one row per finding")
     for row in latency_rows:
         if row.get("latency_ms") != "0" or row.get("latency_source") != "deterministic-local-smoke":
             add(errors, "latency rows must stay deterministic-local-smoke")
     accuracy_rows = read_csv(out_dir / "accuracy_rows.csv")
-    if {row.get("finding_id", "") for row in accuracy_rows} != finding_ids:
+    accuracy_ids = {row.get("finding_id", "") for row in accuracy_rows}
+    if len(accuracy_ids) != len(accuracy_rows) or accuracy_ids != finding_ids:
         add(errors, "accuracy_rows.csv must contain exactly one row per finding")
     if str(len(accuracy_rows)) != summary.get("accuracy_rows"):
         add(errors, "accuracy row count drift")
@@ -627,7 +639,8 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
         if row.get("automatic_accuracy_claimed") != "0" or row.get("manual_accuracy_review_required") != "1":
             add(errors, "accuracy rows must remain manual/unreviewed")
     citation_rows = read_csv(out_dir / "citation_correctness_rows.csv")
-    if {row.get("finding_id", "") for row in citation_rows} != finding_ids:
+    citation_ids = {row.get("finding_id", "") for row in citation_rows}
+    if len(citation_ids) != len(citation_rows) or citation_ids != finding_ids:
         add(errors, "citation_correctness_rows.csv must contain exactly one row per finding")
     if str(len(citation_rows)) != summary.get("citation_correctness_rows"):
         add(errors, "citation correctness row count drift")
@@ -635,7 +648,8 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
         if row.get("citation_correctness_label") != "source_bound_unreviewed" or row.get("manual_citation_review_required") != "1":
             add(errors, "citation correctness rows must remain source-bound unreviewed")
     fp_rows = read_csv(out_dir / "false_positive_candidate_rows.csv")
-    if {row.get("finding_id", "") for row in fp_rows} != finding_ids:
+    fp_ids = {row.get("finding_id", "") for row in fp_rows}
+    if len(fp_ids) != len(fp_rows) or fp_ids != finding_ids:
         add(errors, "false_positive_candidate_rows.csv must contain exactly one row per finding")
     if str(len(fp_rows)) != summary.get("false_positive_candidate_rows"):
         add(errors, "false-positive candidate row count drift")

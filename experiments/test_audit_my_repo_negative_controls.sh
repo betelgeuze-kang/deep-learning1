@@ -912,6 +912,28 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 audit_report_path.write_text(original_audit_report_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+first_report_sha_line = next(
+    (line for line in original_audit_report_text.splitlines() if line.startswith("  sha256=sha256:")),
+    "",
+)
+if first_report_sha_line:
+    audit_report_path.write_text(
+        original_audit_report_text.replace(first_report_sha_line, first_report_sha_line + "\n" + first_report_sha_line, 1),
+        encoding="utf-8",
+    )
+    new_audit_report_sha = sha256(audit_report_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  AUDIT_REPORT.md"):
+            sha_lines.append(f"{new_audit_report_sha}  AUDIT_REPORT.md")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        raise SystemExit("local-audit verifier must reject duplicate audit report evidence sha lines")
+    audit_report_path.write_text(original_audit_report_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 findings_csv_path = out_a / "audit_findings.csv"
 audit_findings_path = out_a / "audit_findings.jsonl"
 original_findings_csv_text = findings_csv_path.read_text(encoding="utf-8")
@@ -1027,6 +1049,57 @@ sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject missing per-finding accuracy rows")
 accuracy_path.write_text(original_accuracy_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with accuracy_path.open(newline="", encoding="utf-8") as handle:
+    accuracy_rows = list(csv.DictReader(handle))
+accuracy_rows.append(dict(accuracy_rows[0]))
+with accuracy_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(accuracy_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(accuracy_rows)
+with summary_csv_path.open(newline="", encoding="utf-8") as handle:
+    summary_csv_rows = list(csv.DictReader(handle))
+tampered_summary_json = json.loads(original_summary_json_text)
+summary_csv_rows[0]["accuracy_rows"] = str(len(accuracy_rows))
+tampered_summary_json["accuracy_rows"] = len(accuracy_rows)
+with summary_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(summary_csv_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(summary_csv_rows)
+summary_json_path.write_text(json.dumps(tampered_summary_json, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+with contract_path.open(newline="", encoding="utf-8") as handle:
+    contract_rows = list(csv.DictReader(handle))
+for row in contract_rows:
+    if row["artifact_path"] == "accuracy_rows.csv":
+        row["actual_rows"] = str(len(accuracy_rows))
+with contract_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(contract_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(contract_rows)
+new_accuracy_sha = sha256(accuracy_path)
+new_summary_csv_sha = sha256(summary_csv_path)
+new_summary_json_sha = sha256(summary_json_path)
+new_contract_sha = sha256(contract_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  accuracy_rows.csv"):
+        sha_lines.append(f"{new_accuracy_sha}  accuracy_rows.csv")
+    elif line.endswith("  audit_summary.csv"):
+        sha_lines.append(f"{new_summary_csv_sha}  audit_summary.csv")
+    elif line.endswith("  audit_summary.json"):
+        sha_lines.append(f"{new_summary_json_sha}  audit_summary.json")
+    elif line.endswith("  artifact_contract_rows.csv"):
+        sha_lines.append(f"{new_contract_sha}  artifact_contract_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject duplicate per-finding accuracy rows")
+accuracy_path.write_text(original_accuracy_text, encoding="utf-8")
+summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
+summary_json_path.write_text(original_summary_json_text, encoding="utf-8")
+contract_path.write_text(original_contract_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 generation_path = out_a / "grounded_generation_rows.csv"
