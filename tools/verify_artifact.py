@@ -113,6 +113,17 @@ REQUIRED_V52_ADAPTER_GUARD_KEYS = {
     "required_artifacts",
     "requirements",
 }
+REQUIRED_V52_POLICY_KEYS = {
+    "c_7b14b_actual_adapter_packet_ready",
+    "c_quality_claim_ready",
+    "de_measured_registry_admission_ready",
+    "public_comparison_claim_ready",
+    "release_ready",
+    "required_artifact_count",
+    "present_required_artifact_count",
+    "missing_required_artifact_count",
+    "missing_required_artifact_ids",
+}
 REQUIRED_V52_ARTIFACT_KEYS = {
     "artifact_id",
     "artifact_kind",
@@ -2604,8 +2615,12 @@ def verify_v52_adapter_guard(
     if data["schema_version"] != "v52_adapter_guard.v1":
         errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
     policy = data["policy"]
-    if policy.get("c_7b14b_actual_adapter_packet_ready") is not True:
-        errors.append(f"{path}: c_7b14b_actual_adapter_packet_ready must be true")
+    missing_policy = REQUIRED_V52_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
+    c_packet_ready = policy.get("c_7b14b_actual_adapter_packet_ready")
+    if not isinstance(c_packet_ready, bool):
+        errors.append(f"{path}: c_7b14b_actual_adapter_packet_ready must be boolean")
     for field in [
         "c_quality_claim_ready",
         "de_measured_registry_admission_ready",
@@ -2624,6 +2639,8 @@ def verify_v52_adapter_guard(
         errors.append(f"{path}: required_artifacts order must match the v52 C packet contract")
     if len(artifact_ids) != len(set(artifact_ids)):
         errors.append(f"{path}: duplicate required_artifacts are forbidden")
+    missing_required_artifacts: list[str] = []
+    strict_artifact_replay = c_packet_ready is True
     for index, row in enumerate(artifacts, start=1):
         prefix = f"{path}: required_artifact[{index}]"
         missing_artifact = REQUIRED_V52_ARTIFACT_KEYS - set(row)
@@ -2646,9 +2663,13 @@ def verify_v52_adapter_guard(
             errors.append(f"{prefix}: min_rows must be a positive integer")
         elif expected_min_rows is not None and min_rows != expected_min_rows:
             errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+        if not strict_artifact_replay:
+            missing_required_artifacts.append(artifact_id)
+            continue
         artifact_path = Path(row.get("path", ""))
         if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
             errors.append(f"{prefix}: missing or empty artifact path {artifact_path}")
+            missing_required_artifacts.append(artifact_id)
             continue
         with artifact_path.open(newline="", encoding="utf-8") as handle:
             reader = csv.DictReader(handle)
@@ -2658,6 +2679,30 @@ def verify_v52_adapter_guard(
             row_count = sum(1 for _ in reader)
         if isinstance(min_rows, int) and row_count < min_rows:
             errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
+
+    present_required_artifacts = len(artifacts) - len(missing_required_artifacts)
+    if policy.get("required_artifact_count") != len(artifacts):
+        errors.append(
+            f"{path}: policy.required_artifact_count expected {len(artifacts)}, "
+            f"got {policy.get('required_artifact_count')}"
+        )
+    if policy.get("present_required_artifact_count") != present_required_artifacts:
+        errors.append(
+            f"{path}: policy.present_required_artifact_count expected {present_required_artifacts}, "
+            f"got {policy.get('present_required_artifact_count')}"
+        )
+    if policy.get("missing_required_artifact_count") != len(missing_required_artifacts):
+        errors.append(
+            f"{path}: policy.missing_required_artifact_count expected {len(missing_required_artifacts)}, "
+            f"got {policy.get('missing_required_artifact_count')}"
+        )
+    if policy.get("missing_required_artifact_ids") != missing_required_artifacts:
+        errors.append(
+            f"{path}: policy.missing_required_artifact_ids expected {missing_required_artifacts}, "
+            f"got {policy.get('missing_required_artifact_ids')}"
+        )
+    if c_packet_ready is not (len(missing_required_artifacts) == 0):
+        errors.append(f"{path}: c_7b14b_actual_adapter_packet_ready must match required artifact presence")
 
     requirements = data["requirements"]
     if not isinstance(requirements, list) or not requirements:
@@ -2686,8 +2731,9 @@ def verify_v52_adapter_guard(
         missing_row = REQUIRED_V52_REQUIREMENT_KEYS - set(row)
         if missing_row:
             errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
-        if row.get("current_status") != "pass":
-            errors.append(f"{prefix}: current_status must be pass")
+        expected_status = "blocked" if row.get("requirement_id") == "c-7b14b-v53e-actual-adapter-packet" and c_packet_ready is False else "pass"
+        if row.get("current_status") != expected_status:
+            errors.append(f"{prefix}: current_status must be {expected_status}")
         if not row.get("required_evidence") or not row.get("evidence_path") or not row.get("claim_boundary"):
             errors.append(f"{prefix}: required_evidence, evidence_path, and claim_boundary must be non-empty")
         checks = row.get("summary_checks", [])

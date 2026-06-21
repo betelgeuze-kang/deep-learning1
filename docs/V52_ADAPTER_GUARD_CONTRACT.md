@@ -2,7 +2,9 @@
 
 `baselines/v52_adapter_guard.json` binds two separate v52 facts:
 
-- System C has a replayable 1000-row local 7B-14B response packet over v53e.
+- System C declares the required 1000-row local 7B-14B response packet
+  artifacts over v53e, but the clean checkout keeps that packet blocked until
+  those artifacts are present and replayable.
 - Required D/E 30B/70B measured registry admission remains blocked until real
   pinned evidence directories validate.
 
@@ -19,12 +21,15 @@ tools/verify_artifact.py v52-adapter-guard baselines/v52_adapter_guard.json \
 
 Allowed wording:
 
-- C emits a local 7B-14B actual response/resource/transcript packet.
 - C is a schema pressure test and same-surface response packet.
+- C lists the answer, citation, resource, retrieval, abstain, guard,
+  transcript, and sha256 manifest artifacts required before local packet
+  readiness can open.
 - D/E intake guards and measured registry blockers are explicit.
 
 Blocked wording:
 
+- Clean-checkout C packet replay readiness while required artifacts are absent.
 - C quality improvement or public comparison.
 - D/E 30B/70B measured baseline readiness.
 - F optional baseline replacing D/E.
