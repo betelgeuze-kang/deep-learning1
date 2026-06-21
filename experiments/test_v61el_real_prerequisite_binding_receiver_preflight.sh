@@ -6,22 +6,117 @@ RESULTS_DIR="$ROOT_DIR/results"
 PREFIX="v61el_real_prerequisite_binding_receiver_preflight"
 RUN_DIR="$RESULTS_DIR/$PREFIX/preflight_001"
 FIXTURE_RUN_DIR="$RESULTS_DIR/$PREFIX/fixture_binding_preflight_v61el"
+SPOOF_RUN_DIR="$RESULTS_DIR/$PREFIX/copied_fixture_spoof_v61el"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 FIXTURE_BINDING_DIR="$RESULTS_DIR/v61eg_generation_result_prereq_binding_fixture_gate/gate_001/v61bt_prerequisite_binding"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/v61el-negative.XXXXXX")"
 
-V61EG_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61eg_generation_result_prereq_binding_fixture_gate.sh" >/dev/null
+cleanup() {
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
 
-V61EL_REUSE_EXISTING="${V61EL_REUSE_EXISTING:-0}" "$ROOT_DIR/experiments/run_v61el_real_prerequisite_binding_receiver_preflight.sh" >/dev/null
+python3 - "$RESULTS_DIR" "$FIXTURE_BINDING_DIR" <<'PY'
+import csv
+import shutil
+import sys
+from pathlib import Path
 
+results = Path(sys.argv[1])
+fixture_binding_dir = Path(sys.argv[2])
+if fixture_binding_dir.exists():
+    shutil.rmtree(fixture_binding_dir)
+fixture_binding_dir.mkdir(parents=True, exist_ok=True)
+
+def write_csv(path, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+model_id = "fixture-model"
+target_root = "/tmp/v61el-target-root"
+generation_rows = "3"
+sources = {
+    "v61eh_real_generation_result_return_packet_summary.csv": [{
+        "v61eh_real_generation_result_return_packet_ready": "1",
+        "real_review_return_ready": "1",
+        "generation_execution_admitted_rows": generation_rows,
+        "generation_execution_admission_rows": generation_rows,
+    }],
+    "v61ek_preflight_to_generation_intake_handoff_guard_summary.csv": [{
+        "v61ek_preflight_to_generation_intake_handoff_guard_ready": "1",
+    }],
+    "v61bt_ubuntu1_actual_generation_result_intake_summary.csv": [{
+        "model_id": model_id,
+        "target_root_path": target_root,
+        "expected_generation_rows": generation_rows,
+        "accepted_generation_result_artifacts": "3",
+        "expected_generation_result_artifacts": "3",
+    }],
+    "v61de_post_review_generation_result_handoff_bridge_summary.csv": [{
+        "model_id": model_id,
+        "review_return_ready": "1",
+        "v61_review_unblock_ready": "1",
+        "generation_execution_admitted_rows": generation_rows,
+    }],
+    "v61ck_real_generation_unblocker_operator_matrix_summary.csv": [{
+        "model_id": model_id,
+        "target_root_path": target_root,
+        "full_checkpoint_materialization_ready": "1",
+        "completed_full_safetensors_page_hash_coverage_ready": "1",
+        "full_safetensors_page_hash_binding_ready": "1",
+    }],
+    "v61cs_complete_source_generation_execution_admission_gate_summary.csv": [{
+        "model_id": model_id,
+        "complete_source_review_return_ready": "1",
+        "generation_execution_admission_ready": "1",
+        "generation_execution_admitted_rows": generation_rows,
+        "generation_execution_admission_rows": generation_rows,
+    }],
+    "v61dd_review_return_generation_refresh_bridge_summary.csv": [{
+        "model_id": model_id,
+        "review_return_ready": "1",
+        "v61_review_unblock_ready": "1",
+        "generation_execution_admitted_rows": generation_rows,
+    }],
+}
+for name, rows in sources.items():
+    write_csv(results / name, rows)
+for name in [
+    "v61ck_real_generation_unblocker_operator_matrix_summary.csv",
+    "v61cs_complete_source_generation_execution_admission_gate_summary.csv",
+    "v61dd_review_return_generation_refresh_bridge_summary.csv",
+]:
+    write_csv(fixture_binding_dir / name, sources[name])
+PY
+
+V61EL_REFRESH_SOURCES=0 \
+V61EL_REUSE_EXISTING="${V61EL_REUSE_EXISTING:-0}" \
+"$ROOT_DIR/experiments/run_v61el_real_prerequisite_binding_receiver_preflight.sh" >/dev/null
+
+V61EL_REFRESH_SOURCES=0 \
 V61EL_RUN_ID="fixture_binding_preflight_v61el" \
 V61EL_PREREQUISITE_BINDING_DIR="$FIXTURE_BINDING_DIR" \
 V61EL_REUSE_EXISTING=0 \
 "$ROOT_DIR/experiments/run_v61el_real_prerequisite_binding_receiver_preflight.sh" >/dev/null
 
-V61EL_REUSE_EXISTING=0 "$ROOT_DIR/experiments/run_v61el_real_prerequisite_binding_receiver_preflight.sh" >/dev/null
+COPIED_FIXTURE_BINDING_DIR="$TMP_DIR/operator_binding_copy"
+cp -a "$FIXTURE_BINDING_DIR" "$COPIED_FIXTURE_BINDING_DIR"
+V61EL_REFRESH_SOURCES=0 \
+V61EL_RUN_ID="copied_fixture_spoof_v61el" \
+V61EL_PREREQUISITE_BINDING_DIR="$COPIED_FIXTURE_BINDING_DIR" \
+V61EL_BINDING_PROVENANCE="real-review-return" \
+V61EL_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61el_real_prerequisite_binding_receiver_preflight.sh" >/dev/null
 
-python3 - "$ROOT_DIR" "$RUN_DIR" "$FIXTURE_RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
+V61EL_REFRESH_SOURCES=0 \
+V61EL_REUSE_EXISTING=0 \
+"$ROOT_DIR/experiments/run_v61el_real_prerequisite_binding_receiver_preflight.sh" >/dev/null
+
+python3 - "$ROOT_DIR" "$RUN_DIR" "$FIXTURE_RUN_DIR" "$SPOOF_RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib
 import json
@@ -31,8 +126,9 @@ from pathlib import Path
 root = Path(sys.argv[1])
 run_dir = Path(sys.argv[2])
 fixture_run_dir = Path(sys.argv[3])
-summary_csv = Path(sys.argv[4])
-decision_csv = Path(sys.argv[5])
+spoof_run_dir = Path(sys.argv[4])
+summary_csv = Path(sys.argv[5])
+decision_csv = Path(sys.argv[6])
 
 
 def sha256(path):
@@ -54,6 +150,10 @@ expected = {
     "binding_dir_supplied": "0",
     "binding_dir_exists": "0",
     "selected_binding_source_class": "none",
+    "binding_provenance_env_real": "0",
+    "binding_provenance_marker_supplied": "0",
+    "binding_provenance_marker_real": "0",
+    "binding_provenance_marker_errors": "missing-provenance-marker",
     "required_binding_source_files": "3",
     "present_binding_source_files": "0",
     "readable_binding_source_files": "0",
@@ -79,6 +179,7 @@ for field, value in expected.items():
 required_files = [
     "prerequisite_binding_file_rows.csv",
     "prerequisite_binding_field_check_rows.csv",
+    "prerequisite_binding_provenance_rows.csv",
     "prerequisite_binding_preflight_check_rows.csv",
     "prerequisite_binding_preflight_metric_rows.csv",
     "prerequisite_binding_handoff_command_rows.csv",
@@ -117,6 +218,10 @@ fixture_expected = {
     "binding_dir_supplied": "1",
     "binding_dir_exists": "1",
     "selected_binding_source_class": "fixture-v61eg-prerequisite-binding",
+    "binding_provenance_env_real": "0",
+    "binding_provenance_marker_supplied": "0",
+    "binding_provenance_marker_real": "0",
+    "binding_provenance_marker_errors": "missing-provenance-marker",
     "required_binding_source_files": "3",
     "present_binding_source_files": "3",
     "readable_binding_source_files": "3",
@@ -150,6 +255,40 @@ if fixture_checks["binding-candidate-preflight-ready"] != "pass":
     raise SystemExit("v61el fixture binding candidate should pass preflight")
 if fixture_checks["non-fixture-binding-source"] != "blocked":
     raise SystemExit("v61el fixture binding must remain non-real")
+
+spoof_metric = read_csv(spoof_run_dir / "prerequisite_binding_preflight_metric_rows.csv")[0]
+spoof_expected = {
+    "binding_dir_supplied": "1",
+    "binding_dir_exists": "1",
+    "selected_binding_source_class": "operator-supplied",
+    "binding_provenance": "real-review-return",
+    "binding_provenance_env_real": "1",
+    "binding_provenance_marker_supplied": "0",
+    "binding_provenance_marker_real": "0",
+    "binding_provenance_marker_errors": "missing-provenance-marker",
+    "binding_candidate_preflight_ready": "1",
+    "non_fixture_binding_source": "1",
+    "real_review_return_provenance_asserted": "0",
+    "real_prerequisite_binding_ready": "0",
+    "v61bt_intake_handoff_ready": "0",
+    "v61de_generation_result_handoff_ready": "0",
+    "actual_model_generation_ready": "0",
+}
+for field, value in spoof_expected.items():
+    if spoof_metric.get(field) != value:
+        raise SystemExit(f"v61el copied fixture spoof {field}: expected {value}, got {spoof_metric.get(field)}")
+
+spoof_checks = {row["check_id"]: row for row in read_csv(spoof_run_dir / "prerequisite_binding_preflight_check_rows.csv")}
+if spoof_checks["binding-candidate-preflight-ready"]["status"] != "pass":
+    raise SystemExit("v61el copied fixture spoof should pass file/field preflight")
+if spoof_checks["non-fixture-binding-source"]["status"] != "pass":
+    raise SystemExit("v61el copied fixture spoof should look operator supplied by path")
+if spoof_checks["real-review-return-provenance"]["status"] != "blocked":
+    raise SystemExit("v61el copied fixture spoof must require marker-backed provenance")
+
+spoof_provenance = read_csv(spoof_run_dir / "prerequisite_binding_provenance_rows.csv")[0]
+if spoof_provenance["env_real_provenance"] != "1" or spoof_provenance["marker_real_provenance"] != "0":
+    raise SystemExit("v61el copied fixture spoof provenance row must reject env-only provenance")
 
 restored_summary = read_csv(root / "results/v61el_real_prerequisite_binding_receiver_preflight_summary.csv")[0]
 if restored_summary["binding_dir_supplied"] != "0":

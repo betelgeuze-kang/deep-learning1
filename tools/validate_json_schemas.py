@@ -1211,6 +1211,31 @@ def validate_registry_coverage(root: Path, registry: dict[str, list[str]]) -> li
     return errors
 
 
+def validate_registry_definition(root: Path, registry: dict[str, list[str]]) -> list[str]:
+    errors: list[str] = []
+    tracked_schemas = {
+        str(path.relative_to(root))
+        for path in tracked_schema_paths(root)
+    }
+    instance_to_schemas: dict[str, list[str]] = {}
+    for schema_rel, instance_rels in registry.items():
+        if not schema_rel.startswith("schemas/") or not schema_rel.endswith(".schema.json"):
+            errors.append(f"{schema_rel}: registered schema must be a schemas/*.schema.json path")
+        elif schema_rel not in tracked_schemas:
+            errors.append(f"{schema_rel}: registered schema is not tracked under schemas/")
+        if not instance_rels:
+            errors.append(f"{schema_rel}: registered schema must have at least one JSON instance")
+        for instance_rel in instance_rels:
+            instance_to_schemas.setdefault(instance_rel, []).append(schema_rel)
+    for instance_rel, schema_rels in sorted(instance_to_schemas.items()):
+        if len(schema_rels) > 1:
+            errors.append(
+                f"{instance_rel}: registered JSON instance is assigned to multiple schemas: "
+                + ", ".join(sorted(schema_rels))
+            )
+    return errors
+
+
 def tracked_schema_paths(root: Path) -> list[Path]:
     schema_dir = root / "schemas"
     if not schema_dir.is_dir():
@@ -1271,6 +1296,7 @@ def main() -> int:
         else SCHEMA_INSTANCE_REGISTRY
     )
     if not args.schema_instance:
+        errors.extend(validate_registry_definition(root, registry))
         errors.extend(validate_registry_coverage(root, registry))
     validated_schema_paths: set[Path] = set()
     if not args.schema_instance:

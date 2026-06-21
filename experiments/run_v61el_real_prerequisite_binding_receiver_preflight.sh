@@ -21,18 +21,21 @@ fi
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"
 
-V61EH_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61eh_real_generation_result_return_packet.sh" >/dev/null
-V61EK_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ek_preflight_to_generation_intake_handoff_guard.sh" >/dev/null
-V61BT_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh" >/dev/null
-V61DE_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61de_post_review_generation_result_handoff_bridge.sh" >/dev/null
-V61CK_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ck_real_generation_unblocker_operator_matrix.sh" >/dev/null
-V61CS_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cs_complete_source_generation_execution_admission_gate.sh" >/dev/null
-V61DD_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61dd_review_return_generation_refresh_bridge.sh" >/dev/null
+if [[ "${V61EL_REFRESH_SOURCES:-1}" == "1" ]]; then
+  V61EH_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61eh_real_generation_result_return_packet.sh" >/dev/null
+  V61EK_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ek_preflight_to_generation_intake_handoff_guard.sh" >/dev/null
+  V61BT_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61bt_ubuntu1_actual_generation_result_intake.sh" >/dev/null
+  V61DE_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61de_post_review_generation_result_handoff_bridge.sh" >/dev/null
+  V61CK_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61ck_real_generation_unblocker_operator_matrix.sh" >/dev/null
+  V61CS_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61cs_complete_source_generation_execution_admission_gate.sh" >/dev/null
+  V61DD_REUSE_EXISTING=1 "$ROOT_DIR/experiments/run_v61dd_review_return_generation_refresh_bridge.sh" >/dev/null
+fi
 
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" "$BINDING_DIR_ARG" "$BINDING_PROVENANCE" <<'PY'
 import csv
 import hashlib
 import json
+import re
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -52,6 +55,8 @@ known_fixture_binding_dir = (
     / "gate_001"
     / "v61bt_prerequisite_binding"
 ).resolve()
+REAL_BINDING_PROVENANCE = "real-review-return"
+SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def sha256(path):
@@ -91,6 +96,10 @@ def pass_status(flag):
 
 def ready_status(flag):
     return "ready" if flag else "blocked"
+
+
+def valid_sha(value):
+    return isinstance(value, str) and bool(SHA_RE.match(value))
 
 
 source_files = {
@@ -152,6 +161,56 @@ elif binding_dir == known_fixture_binding_dir:
     selected_binding_source_class = "fixture-v61eg-prerequisite-binding"
 else:
     selected_binding_source_class = "operator-supplied"
+
+env_real_provenance = int(binding_provenance == REAL_BINDING_PROVENANCE)
+marker_path = binding_dir / "REAL_REVIEW_RETURN_PROVENANCE.json" if binding_dir is not None else None
+marker_supplied = int(marker_path is not None and marker_path.is_file())
+marker_payload = {}
+marker_errors = []
+marker_sha = ""
+marker_source_class = ""
+marker_authority_sha = ""
+if marker_supplied:
+    marker_sha = sha256(marker_path)
+    try:
+        marker_payload = json.loads(marker_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        marker_errors.append("invalid-json")
+    provenance_value = marker_payload.get("provenance") or marker_payload.get("provenance_class")
+    if provenance_value != REAL_BINDING_PROVENANCE:
+        marker_errors.append("provenance-mismatch")
+    marker_source_class = str(marker_payload.get("source_class") or marker_payload.get("provenance_class", ""))
+    if marker_source_class.startswith("fixture"):
+        marker_errors.append("fixture-source-class")
+    if marker_source_class not in {"external-review-return", "external-operator-return", REAL_BINDING_PROVENANCE}:
+        marker_errors.append("source-class-not-external-review-return")
+    marker_authority_sha = str(
+        marker_payload.get(
+            "reviewer_authority_sha256",
+            marker_payload.get("generation_operator_authority_sha256", ""),
+        )
+    )
+    if not valid_sha(marker_authority_sha):
+        marker_errors.append("authority-sha256-missing")
+    copy(marker_path, "selected_prerequisite_binding/REAL_REVIEW_RETURN_PROVENANCE.json")
+else:
+    marker_errors.append("missing-provenance-marker")
+marker_real_provenance = int(marker_supplied and not marker_errors)
+
+provenance_rows = [
+    {
+        "marker_path": "REAL_REVIEW_RETURN_PROVENANCE.json",
+        "binding_provenance_env": binding_provenance,
+        "env_real_provenance": str(env_real_provenance),
+        "marker_supplied": str(marker_supplied),
+        "marker_real_provenance": str(marker_real_provenance),
+        "marker_source_class": marker_source_class,
+        "marker_authority_sha256": marker_authority_sha,
+        "marker_sha256": marker_sha,
+        "marker_errors": ";".join(marker_errors),
+    }
+]
+write_csv(run_dir / "prerequisite_binding_provenance_rows.csv", list(provenance_rows[0].keys()), provenance_rows)
 
 file_rows = []
 source_rows = {}
@@ -299,7 +358,7 @@ binding_candidate_preflight_ready = int(
     and ready_check_pass_rows == required_ready_check_rows
 )
 non_fixture_binding = int(selected_binding_source_class == "operator-supplied")
-real_provenance_asserted = int(binding_provenance == "real-review-return")
+real_provenance_asserted = int(env_real_provenance and marker_real_provenance)
 real_prerequisite_binding_ready = int(
     binding_candidate_preflight_ready and non_fixture_binding and real_provenance_asserted
 )
@@ -323,9 +382,9 @@ check_rows.extend(
         {
             "check_id": "real-review-return-provenance",
             "status": pass_status(real_provenance_asserted),
-            "required_value": "real-review-return",
-            "actual_value": binding_provenance,
-            "reason": "real binding admission requires explicit real review-return provenance",
+            "required_value": "env=real-review-return;marker=real-review-return",
+            "actual_value": f"env={binding_provenance};marker_real={marker_real_provenance};errors={';'.join(marker_errors)}",
+            "reason": "real binding admission requires a marker-backed real review-return provenance assertion",
         },
     ]
 )
@@ -379,6 +438,10 @@ metric = {
     "binding_dir_exists": str(binding_dir_exists),
     "selected_binding_source_class": selected_binding_source_class,
     "binding_provenance": binding_provenance,
+    "binding_provenance_env_real": str(env_real_provenance),
+    "binding_provenance_marker_supplied": str(marker_supplied),
+    "binding_provenance_marker_real": str(marker_real_provenance),
+    "binding_provenance_marker_errors": ";".join(marker_errors),
     "required_binding_source_files": str(required_file_rows),
     "present_binding_source_files": str(present_file_rows),
     "readable_binding_source_files": str(readable_file_rows),
@@ -412,7 +475,7 @@ decision_rows = [
     {"gate": "source-gates-ready", "status": "pass", "reason": "v61eh/v61ek/v61bt/v61de summaries are present"},
     {"gate": "binding-candidate-preflight", "status": pass_status(binding_candidate_preflight_ready), "reason": f"ready_checks={ready_check_pass_rows}/{required_ready_check_rows}; files={present_file_rows}/{required_file_rows}"},
     {"gate": "non-fixture-binding-source", "status": pass_status(non_fixture_binding), "reason": f"selected_binding_source_class={selected_binding_source_class}"},
-    {"gate": "real-review-return-provenance", "status": pass_status(real_provenance_asserted), "reason": f"binding_provenance={binding_provenance}"},
+    {"gate": "real-review-return-provenance", "status": pass_status(real_provenance_asserted), "reason": f"binding_provenance={binding_provenance}; marker_real={marker_real_provenance}; errors={';'.join(marker_errors)}"},
     {"gate": "real-prerequisite-binding", "status": pass_status(real_prerequisite_binding_ready), "reason": f"real_prerequisite_binding_ready={real_prerequisite_binding_ready}"},
     {"gate": "v61bt-intake-handoff", "status": pass_status(v61bt_intake_handoff_ready), "reason": f"real_prerequisite_binding_ready={real_prerequisite_binding_ready}"},
     {"gate": "actual-model-generation", "status": "blocked", "reason": "preflight does not accept generation results or claim generation"},
@@ -430,6 +493,9 @@ generation evidence.
 - binding_dir_supplied={binding_dir_supplied}
 - binding_dir_exists={binding_dir_exists}
 - selected_binding_source_class={selected_binding_source_class}
+- binding_provenance_marker_supplied={marker_supplied}
+- binding_provenance_marker_real={marker_real_provenance}
+- binding_provenance_marker_errors={';'.join(marker_errors)}
 - binding_candidate_preflight_ready={binding_candidate_preflight_ready}
 - non_fixture_binding_source={non_fixture_binding}
 - real_review_return_provenance_asserted={real_provenance_asserted}
@@ -452,6 +518,9 @@ manifest = {
     "generated_at": datetime.now(timezone.utc).isoformat(),
     "v61el_real_prerequisite_binding_receiver_preflight_ready": 1,
     "binding_candidate_preflight_ready": binding_candidate_preflight_ready,
+    "binding_provenance_marker_supplied": marker_supplied,
+    "binding_provenance_marker_real": marker_real_provenance,
+    "binding_provenance_marker_errors": marker_errors,
     "real_prerequisite_binding_ready": real_prerequisite_binding_ready,
     "actual_model_generation_ready": actual_model_generation_ready,
     "checkpoint_payload_bytes_committed_to_repo": 0,

@@ -78,29 +78,42 @@ if module.V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS != expected_blocked_runtime
     raise SystemExit("V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS must be derived from schema x-contract.blocked_runtime_forbidden_ready_fields")
 
 checks = {
+    "REQUIRED_PIPELINE_KEYS": ("pipeline.schema.json", ()),
     "REQUIRED_STAGE_KEYS": ("pipeline.schema.json", ("properties", "stages", "items")),
+    "REQUIRED_PR_SPLIT_KEYS": ("pr_split.schema.json", ()),
     "REQUIRED_PR_SLICE_KEYS": ("pr_split.schema.json", ("properties", "slices", "items")),
+    "REQUIRED_TYPED_READINESS_KEYS": ("typed_readiness.schema.json", ()),
     "REQUIRED_TYPED_READINESS_ROW_KEYS": ("typed_readiness.schema.json", ("properties", "rows", "items")),
+    "REQUIRED_LEAKAGE_KEYS": ("leakage_contract.schema.json", ()),
     "REQUIRED_LEAKAGE_POLICY_KEYS": ("leakage_contract.schema.json", ("properties", "policy")),
     "REQUIRED_LEAKAGE_SURFACE_KEYS": ("leakage_contract.schema.json", ("properties", "forbidden_surfaces", "items")),
     "REQUIRED_LEAKAGE_STAGE_KEYS": ("leakage_contract.schema.json", ("properties", "stage_contracts", "items")),
+    "REQUIRED_BASELINE_ADMISSION_KEYS": ("baseline_admission.schema.json", ()),
     "REQUIRED_BASELINE_LEDGER_KEYS": ("baseline_admission.schema.json", ("properties", "required_pm_ledgers", "items")),
     "REQUIRED_BASELINE_SYSTEM_KEYS": ("baseline_admission.schema.json", ("properties", "systems", "items")),
     "REQUIRED_BASELINE_ARTIFACT_KEYS": ("baseline_admission.schema.json", ("properties", "required_artifacts", "items")),
+    "REQUIRED_V52_ADAPTER_GUARD_KEYS": ("v52_adapter_guard.schema.json", ()),
     "REQUIRED_V52_ARTIFACT_KEYS": ("v52_adapter_guard.schema.json", ("properties", "required_artifacts", "items")),
     "REQUIRED_V52_REQUIREMENT_KEYS": ("v52_adapter_guard.schema.json", ("properties", "requirements", "items")),
+    "REQUIRED_V50_AUDITOR_KEYS": ("v50_auditor_correctness.schema.json", ()),
     "REQUIRED_V50_POLICY_KEYS": ("v50_auditor_correctness.schema.json", ("properties", "policy")),
     "REQUIRED_V50_ARTIFACT_KEYS": ("v50_auditor_correctness.schema.json", ("properties", "required_artifacts", "items")),
     "REQUIRED_V50_REPLAY_COMMAND_KEYS": ("v50_auditor_correctness.schema.json", ("properties", "replay_commands")),
     "REQUIRED_V50_BOUNDARY_KEYS": ("v50_auditor_correctness.schema.json", ("properties", "claim_boundaries", "items")),
+    "REQUIRED_V56_REPLAY_KEYS": ("v56_replay.schema.json", ()),
     "REQUIRED_V56_REPLAY_POLICY_KEYS": ("v56_replay.schema.json", ("properties", "policy")),
     "REQUIRED_V56_REPLAY_ARTIFACT_KEYS": ("v56_replay.schema.json", ("properties", "replay_artifacts", "items")),
     "REQUIRED_V56_SEED_DEPENDENCY_KEYS": ("v56_replay.schema.json", ("properties", "seed_dependency")),
+    "REQUIRED_V54_GROUNDED_GENERATION_KEYS": ("v54_grounded_generation.schema.json", ()),
     "REQUIRED_V54_ARTIFACT_KEYS": ("v54_grounded_generation.schema.json", ("properties", "required_artifacts", "items")),
+    "REQUIRED_V53_SOURCE_BENCHMARK_KEYS": ("v53_source_benchmark.schema.json", ()),
     "REQUIRED_V53_REQUIREMENT_KEYS": ("v53_source_benchmark.schema.json", ("properties", "requirements", "items")),
+    "REQUIRED_V58_BLIND_EVAL_KEYS": ("v58_blind_eval.schema.json", ()),
     "REQUIRED_V58_REQUIREMENT_KEYS": ("v58_blind_eval.schema.json", ("properties", "requirements", "items")),
     "REQUIRED_V58_ARTIFACT_KEYS": ("v58_blind_eval.schema.json", ("properties", "required_artifacts", "items")),
+    "REQUIRED_REVIEW_RETURN_WORKFLOW_KEYS": ("review_return_workflow.schema.json", ()),
     "REQUIRED_REVIEW_RETURN_REQUIREMENT_KEYS": ("review_return_workflow.schema.json", ("properties", "requirements", "items")),
+    "REQUIRED_V61_ONE_TOKEN_KEYS": ("v61_one_token_path.schema.json", ()),
 }
 for constant_name, (schema_name, path_parts) in checks.items():
     schema_node = json.loads((root / "schemas" / schema_name).read_text(encoding="utf-8"))
@@ -1089,6 +1102,40 @@ PY
 expect_fail_with \
   "v56/replay_contract.json: tracked contract JSON is not registered for schema validation" \
   python3 "$TMP_DIR/validate_json_schemas_missing_v56.py" --root "$ROOT_DIR"
+
+cp "$ROOT_DIR/tools/validate_json_schemas.py" "$TMP_DIR/validate_json_schemas_bad_schema_key.py"
+python3 - "$TMP_DIR/validate_json_schemas_bad_schema_key.py" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = '    "schemas/v56_replay.schema.json": ["v56/replay_contract.json"],\n'
+new = '    "schema/v56_replay.schema.json": ["v56/replay_contract.json"],\n'
+if old not in text:
+    raise SystemExit("v56 registry line not found")
+path.write_text(text.replace(old, new), encoding="utf-8")
+PY
+expect_fail_with \
+  "schema/v56_replay.schema.json: registered schema must be a schemas/*.schema.json path" \
+  python3 "$TMP_DIR/validate_json_schemas_bad_schema_key.py" --root "$ROOT_DIR"
+
+cp "$ROOT_DIR/tools/validate_json_schemas.py" "$TMP_DIR/validate_json_schemas_duplicate_instance.py"
+python3 - "$TMP_DIR/validate_json_schemas_duplicate_instance.py" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = '    "schemas/v56_replay.schema.json": ["v56/replay_contract.json"],\n'
+new = '    "schemas/v56_replay.schema.json": ["v56/replay_contract.json", "v61/one_token_path.json"],\n'
+if old not in text:
+    raise SystemExit("v56 registry line not found")
+path.write_text(text.replace(old, new), encoding="utf-8")
+PY
+expect_fail_with \
+  "v61/one_token_path.json: registered JSON instance is assigned to multiple schemas" \
+  python3 "$TMP_DIR/validate_json_schemas_duplicate_instance.py" --root "$ROOT_DIR"
 
 cp "$ROOT_DIR/audits/v50_public_repo_auditor_correctness.json" "$TMP_DIR/v50_extra_policy.json"
 python3 - "$TMP_DIR/v50_extra_policy.json" <<'PY'
