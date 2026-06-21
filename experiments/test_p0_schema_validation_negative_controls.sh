@@ -126,12 +126,17 @@ pr_split_contract = pr_split_schema["x-contract"]
 pr_split_required_gates = set(
     pr_split_schema["properties"]["merge_gate_policy"]["properties"]["required_gates"]["items"]["enum"]
 )
+pr_split_tests_only_merge_conditions = set(
+    pr_split_schema["properties"]["slices"]["items"]["properties"]["verification_commands"]["items"]["not"]["enum"]
+)
 pr_split_required_verification_terms = {
     slice_id: set(terms)
     for slice_id, terms in pr_split_contract["required_verification_terms_by_slice"].items()
 }
 if module.REQUIRED_PR_MERGE_GATES != pr_split_required_gates:
     raise SystemExit("REQUIRED_PR_MERGE_GATES must be derived from pr_split required_gates enum")
+if module.TESTS_ONLY_MERGE_CONDITIONS != pr_split_tests_only_merge_conditions:
+    raise SystemExit("TESTS_ONLY_MERGE_CONDITIONS must be derived from pr_split verification_commands.items.not.enum")
 if module.REQUIRED_PR2_REWRITE_TERMS != set(pr_split_contract["required_rewrite_terms"]):
     raise SystemExit("REQUIRED_PR2_REWRITE_TERMS must be derived from pr_split x-contract.required_rewrite_terms")
 if module.REQUIRED_PR2_SPLIT_PLAN_TERMS != set(pr_split_contract["required_split_plan_terms"]):

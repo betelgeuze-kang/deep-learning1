@@ -91,6 +91,31 @@ expect_fail_with \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 cp "$TORCH_PARITY_BACKUP" "$TORCH_PARITY_ROWS"
 
+python3 - "$TORCH_PARITY_ROWS" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open(newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    rows = list(reader)
+    fieldnames = reader.fieldnames or []
+rows[0]["torch_abs_delta"] = "999"
+rows[0]["torch_tolerance"] = "1e-06"
+rows[0]["torch_matvec_parity_pass"] = "1"
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+expect_fail_with \
+  "torch_matvec_parity_pass=1 requires torch_abs_delta <= torch_tolerance" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
+cp "$TORCH_PARITY_BACKUP" "$TORCH_PARITY_ROWS"
+
 bad_json() {
   local name="$1"
   shift
@@ -836,6 +861,69 @@ expect_fail_with \
   --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 
 rm -f "$DECODE_ROWS"
+
+CACHE_ROWS="$TMP_DIR/cold_warm_cache_measurement_rows.csv"
+CACHE_BAD_JSON="$TMP_DIR/cache_temp_path_bad.json"
+python3 - "$ROOT_DIR/v61/one_token_path.json" "$CACHE_BAD_JSON" "$CACHE_ROWS" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+source, target, rows_path = sys.argv[1:4]
+data = json.loads(Path(source).read_text(encoding="utf-8"))
+columns = next(
+    row["required_columns"]
+    for row in data["required_artifacts"]
+    if row["artifact_id"] == "cold-warm-cache-measurement-rows"
+)
+for row in data["required_artifacts"]:
+    if row["artifact_id"] == "cold-warm-cache-measurement-rows":
+        row["path"] = rows_path
+        break
+values = {column: "" for column in columns}
+values.update({
+    "measurement_id": "cold",
+    "cache_state": "cold",
+    "checkpoint_id": "fixture-checkpoint",
+    "model_revision": "fixture-revision",
+    "contract_ready": "1",
+    "fixture_execution_ready": "0",
+    "real_model_execution_ready": "1",
+    "heldout_metric_ready": "0",
+    "human_review_ready": "0",
+    "independent_reproduction_ready": "0",
+    "release_ready": "0",
+    "local_checkpoint_root_supplied": "0",
+    "checkpoint_payload_bytes_committed_to_repo": "0",
+    "actual_model_generation_ready": "0",
+    "route_jump_rows": "0",
+    "status": "blocked",
+    "reason": "malicious blocked cache artifact claims real execution",
+    "decode_artifact_sha256": "sha256:" + "a" * 64,
+    "runtime_settings_sha256": "sha256:" + "b" * 64,
+    "tokens_decoded": "16",
+    "wall_time_ms": "10",
+    "first_token_latency_ms": "2",
+    "steady_state_tps": "100",
+    "ssd_bytes_read": "0",
+    "cache_miss_count": "0",
+    "cache_hit_count": "1",
+    "cache_measurement_pass": "0",
+})
+Path(target).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+path = Path(rows_path)
+path.parent.mkdir(parents=True, exist_ok=True)
+with path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=columns, lineterminator="\n")
+    writer.writeheader()
+    writer.writerow(values)
+PY
+expect_fail_with \
+  "blocked milestone cold-warm-cache-measurement forbids real_model_execution_ready=1" \
+  "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$CACHE_BAD_JSON" \
+  --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \
+  --v61ab-summary "$RESULTS_DIR/v61ab_hotset_tensor_tile_quant_probe_summary.csv"
 
 "$ROOT_DIR/tools/verify_artifact.py" v61-one-token "$ROOT_DIR/v61/one_token_path.json" \
   --v61aa-summary "$RESULTS_DIR/v61aa_hotset_tensor_slice_verifier_summary.csv" \

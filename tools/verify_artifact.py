@@ -258,7 +258,18 @@ REQUIRED_V1_ROADMAP_TERMS = {
     "Do not call the generator mainline if it answers by copying raw retrieved context",
     "v1.0 can be called an Architecture Challenge release only when all of these are true",
 }
-TESTS_ONLY_MERGE_CONDITIONS = {"tests pass", "test pass", "tests", "test", "ci green"}
+TESTS_ONLY_MERGE_CONDITIONS = set(
+    schema_enum_at(
+        "pr_split.schema.json",
+        "properties",
+        "slices",
+        "items",
+        "properties",
+        "verification_commands",
+        "items",
+        "not",
+    )
+)
 TYPED_READINESS_KEYS = {
     *schema_enum_at("typed_readiness.schema.json", "properties", "policy", "properties", "typed_fields", "items"),
 }
@@ -2558,6 +2569,14 @@ def verify_v61_one_token_path(
             for field, expected in value_checks.items():
                 if artifact_row.get(field) != expected:
                     errors.append(f"{artifact_path}: row {row_index} {field} expected {expected}, got {artifact_row.get(field)}")
+            if artifact_id == "torch-matvec-parity-rows":
+                torch_label = f"{artifact_path}: row {row_index} torch_matvec_parity_pass=1"
+                _compute_v61_torch_matvec_parity_ready(
+                    artifact_row,
+                    torch_label,
+                    errors,
+                    emit_pass_diagnostics=artifact_row.get(pass_field) == "1",
+                )
             if (
                 artifact_id == "expert-ffn-forward-parity-rows"
                 and artifact_row.get(pass_field) == "1"
@@ -2628,7 +2647,7 @@ def verify_v61_one_token_path(
                     errors.append(f"{artifact_path}: row {row_index} blocked milestone {linked_milestone} requires status=blocked")
                 if artifact_row.get("fixture_execution_ready") == "1":
                     errors.append(f"{artifact_path}: row {row_index} blocked milestone {linked_milestone} forbids fixture_execution_ready=1")
-        if linked_status == "blocked" and linked_milestone in V61_REQUIRED_BEFORE_RUNTIME_CLAIM:
+        if linked_status == "blocked":
             for row_index, artifact_row in enumerate(rows, start=1):
                 for field in sorted(V61_BLOCKED_RUNTIME_FORBIDDEN_READY_FIELDS & set(fieldnames)):
                     if artifact_row.get(field) == "1":
@@ -2693,6 +2712,31 @@ def _parse_token_id_list(value: str) -> list[int] | None:
             return None
         tokens.append(token_id)
     return tokens
+
+
+def _compute_v61_torch_matvec_parity_ready(
+    row: dict[str, str],
+    label: str,
+    errors: list[str],
+    emit_pass_diagnostics: bool,
+) -> bool:
+    local_errors: list[str] = []
+    try:
+        abs_delta = float(row.get("torch_abs_delta", ""))
+        tolerance = float(row.get("torch_tolerance", ""))
+    except ValueError:
+        local_errors.append(f"{label} requires numeric torch_abs_delta and torch_tolerance")
+        abs_delta = math.nan
+        tolerance = math.nan
+    if not math.isfinite(abs_delta) or not math.isfinite(tolerance):
+        local_errors.append(f"{label} requires finite torch_abs_delta and torch_tolerance")
+    elif abs_delta < 0 or tolerance < 0:
+        local_errors.append(f"{label} requires nonnegative torch_abs_delta and torch_tolerance")
+    elif abs_delta > tolerance:
+        local_errors.append(f"{label} requires torch_abs_delta <= torch_tolerance")
+    if emit_pass_diagnostics:
+        errors.extend(local_errors)
+    return not local_errors
 
 
 def _compute_v61_logits_parity_ready(
