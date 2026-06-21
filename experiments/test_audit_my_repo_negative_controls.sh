@@ -1978,6 +1978,22 @@ sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 reproduce_path = out_a / "reproduce.sh"
 original_reproduce_text = reproduce_path.read_text(encoding="utf-8")
+reproduce_lines = original_reproduce_text.splitlines()
+reproduce_lines[2] = "cd /tmp"
+reproduce_path.write_text("\n".join(reproduce_lines) + "\n", encoding="utf-8")
+new_reproduce_sha = sha256(reproduce_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  reproduce.sh"):
+        sha_lines.append(f"{new_reproduce_sha}  reproduce.sh")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject reproduce.sh repo-root cd drift")
+reproduce_path.write_text(original_reproduce_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 reproduce_path.write_text(original_reproduce_text.replace(" --verify-output", ""), encoding="utf-8")
 new_reproduce_sha = sha256(reproduce_path)
 sha_lines = []
@@ -2039,6 +2055,22 @@ sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 verify_script_path = out_a / "verify.sh"
 original_verify_script_text = verify_script_path.read_text(encoding="utf-8")
+verify_script_lines = original_verify_script_text.splitlines()
+verify_script_lines[2] = "cd /tmp"
+verify_script_path.write_text("\n".join(verify_script_lines) + "\n", encoding="utf-8")
+new_verify_script_sha = sha256(verify_script_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  verify.sh"):
+        sha_lines.append(f"{new_verify_script_sha}  verify.sh")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject verify.sh repo-root cd drift")
+verify_script_path.write_text(original_verify_script_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 verify_script_path.write_text(original_verify_script_text.replace(" --verify-existing ", " --version "), encoding="utf-8")
 new_verify_script_sha = sha256(verify_script_path)
 sha_lines = []

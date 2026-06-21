@@ -827,6 +827,7 @@ def verify_cache_key(out_dir: Path, manifest: dict, summary: dict[str, str], err
 
 
 def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], errors: list[str]) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
     path = out_dir / "reproduce.sh"
     resource = read_json(out_dir / "resource_envelope.json")
     if not (path.stat().st_mode & stat.S_IXUSR):
@@ -834,8 +835,19 @@ def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], err
     text = path.read_text(encoding="utf-8")
     if not text.startswith("#!/usr/bin/env bash\nset -euo pipefail\n"):
         add(errors, "reproduce.sh must use bash strict mode")
+    lines = text.splitlines()
+    if len(lines) < 4:
+        add(errors, "reproduce.sh must include repo-root cd and command lines")
+        return
     try:
-        parts = shlex.split(text.splitlines()[-1])
+        cd_parts = shlex.split(lines[2])
+    except ValueError as exc:
+        add(errors, f"reproduce.sh cd line is not parseable: {exc}")
+        return
+    if cd_parts != ["cd", str(repo_root)]:
+        add(errors, "reproduce.sh repo-root cd drift")
+    try:
+        parts = shlex.split(lines[-1])
     except ValueError as exc:
         add(errors, f"reproduce.sh command is not parseable: {exc}")
         return
@@ -886,8 +898,19 @@ def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], err
     verify_text = verify_path.read_text(encoding="utf-8")
     if not verify_text.startswith("#!/usr/bin/env bash\nset -euo pipefail\n"):
         add(errors, "verify.sh must use bash strict mode")
+    verify_lines = verify_text.splitlines()
+    if len(verify_lines) < 4:
+        add(errors, "verify.sh must include repo-root cd and command lines")
+        return
     try:
-        verify_parts = shlex.split(verify_text.splitlines()[-1])
+        verify_cd_parts = shlex.split(verify_lines[2])
+    except ValueError as exc:
+        add(errors, f"verify.sh cd line is not parseable: {exc}")
+        return
+    if verify_cd_parts != ["cd", str(repo_root)]:
+        add(errors, "verify.sh repo-root cd drift")
+    try:
+        verify_parts = shlex.split(verify_lines[-1])
     except ValueError as exc:
         add(errors, f"verify.sh command is not parseable: {exc}")
         return
