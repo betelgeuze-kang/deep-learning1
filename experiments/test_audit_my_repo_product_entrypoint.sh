@@ -97,6 +97,7 @@ for idx in 1 2 3; do
     citation_spans.jsonl \
     citation_correctness_rows.csv \
     prediction_lineage.jsonl \
+    plugin_registry.json \
     resource_envelope.json \
     reproduce.sh \
     sha256sums.txt \
@@ -185,6 +186,7 @@ def read_contract(out):
         "citation_spans.csv",
         "citation_spans.jsonl",
         "prediction_lineage.jsonl",
+        "plugin_registry.json",
         "audit_manifest.json",
         "audit_summary.json",
         "AUDIT_REPORT.md",
@@ -216,6 +218,14 @@ for idx in range(1, 4):
     if manifest["atomic_publish"] != 1 or manifest["output_dir_destroyed"] != 0:
         raise SystemExit("audit manifest must prove atomic non-destructive publish")
     summary = json.loads((out / "audit_summary.json").read_text(encoding="utf-8"))
+    plugin_registry = json.loads((out / "plugin_registry.json").read_text(encoding="utf-8"))
+    plugin_ids = {row["plugin_id"] for row in plugin_registry["plugins"]}
+    if plugin_registry["schema_version"] != "local_repo_audit.v1":
+        raise SystemExit("plugin registry schema version mismatch")
+    if plugin_registry["tool_version"] != "audit_my_repo_alpha.v1":
+        raise SystemExit("plugin registry tool version mismatch")
+    if plugin_ids != {"doc_code_identity", "deprecated_api", "config_consistency", "unsupported_claim", "missing_evidence"}:
+        raise SystemExit("plugin registry must bind the deterministic plugin set")
     if summary["real_release_package_ready"] != 0 or summary["public_comparison_claim_ready"] != 0:
         raise SystemExit("audit product smoke must keep release/comparison claims blocked")
     if summary["latency_ms"] != 0:
@@ -286,6 +296,7 @@ for idx in range(1, 4):
         "citation_spans.jsonl",
         "citation_correctness_rows.csv",
         "prediction_lineage.jsonl",
+        "plugin_registry.json",
         "reproduce.sh",
     ]:
         if manifest_rows.get(rel) != sha256(out / rel):

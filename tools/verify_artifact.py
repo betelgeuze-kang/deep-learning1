@@ -3463,6 +3463,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
         "citation_spans.jsonl",
         "false_positive_candidate_rows.csv",
         "latency_rows.csv",
+        "plugin_registry.json",
         "prediction_lineage.jsonl",
         "reproduce.sh",
         "resource_envelope.json",
@@ -3481,6 +3482,7 @@ def verify_local_audit(out_dir: Path) -> list[str]:
 
     manifest = _read_json(out_dir / "audit_manifest.json", errors)
     summary = _read_json(out_dir / "audit_summary.json", errors)
+    plugin_registry = _read_json(out_dir / "plugin_registry.json", errors)
     resource = _read_json(out_dir / "resource_envelope.json", errors)
 
     expected_manifest = {
@@ -3523,6 +3525,30 @@ def verify_local_audit(out_dir: Path) -> list[str]:
         errors.append(f"{out_dir / 'audit_summary.json'}: all wrong-answer guard rows must pass")
     if resource.get("external_network_used") != 0:
         errors.append(f"{out_dir / 'resource_envelope.json'}: external_network_used expected 0")
+    expected_plugins = {
+        "doc_code_identity",
+        "deprecated_api",
+        "config_consistency",
+        "unsupported_claim",
+        "missing_evidence",
+    }
+    plugin_rows = plugin_registry.get("plugins", [])
+    if plugin_registry.get("schema_version") != "local_repo_audit.v1":
+        errors.append(f"{out_dir / 'plugin_registry.json'}: schema_version mismatch")
+    if plugin_registry.get("tool_version") != "audit_my_repo_alpha.v1":
+        errors.append(f"{out_dir / 'plugin_registry.json'}: tool_version mismatch")
+    if not isinstance(plugin_rows, list):
+        errors.append(f"{out_dir / 'plugin_registry.json'}: plugins must be a list")
+        plugin_rows = []
+    plugin_ids = {str(row.get("plugin_id", "")) for row in plugin_rows if isinstance(row, dict)}
+    if plugin_ids != expected_plugins:
+        errors.append(f"{out_dir / 'plugin_registry.json'}: plugin ids mismatch: {sorted(plugin_ids)}")
+    deprecated_rows = [
+        row for row in plugin_rows
+        if isinstance(row, dict) and row.get("plugin_id") == "deprecated_api"
+    ]
+    if not deprecated_rows or deprecated_rows[0].get("language") != "multi":
+        errors.append(f"{out_dir / 'plugin_registry.json'}: deprecated_api must advertise multi-language coverage")
 
     contract_header, contract_rows = _read_csv(out_dir / "artifact_contract_rows.csv", errors)
     expected_contract_header = [

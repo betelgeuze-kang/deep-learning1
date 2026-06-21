@@ -121,6 +121,17 @@ out_a = Path(sys.argv[3])
 out_b = Path(sys.argv[4])
 
 manifest = json.loads((out_a / "audit_manifest.json").read_text(encoding="utf-8"))
+plugin_registry = json.loads((out_a / "plugin_registry.json").read_text(encoding="utf-8"))
+if plugin_registry["tool_version"] != manifest["tool_version"]:
+    raise SystemExit("plugin registry must be bound to the manifest tool version")
+if {row["plugin_id"] for row in plugin_registry["plugins"]} != {
+    "doc_code_identity",
+    "deprecated_api",
+    "config_consistency",
+    "unsupported_claim",
+    "missing_evidence",
+}:
+    raise SystemExit("fixture audit output must bind the deterministic plugin registry")
 if manifest["namespace"] != "fixture":
     raise SystemExit("negative-control fixture must not be promoted out of fixture namespace")
 if manifest["claim_boundary"] != "alpha-local-code-doc-audit-only":

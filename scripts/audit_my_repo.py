@@ -48,6 +48,7 @@ JSONL_CONTRACTS: dict[str, list[str]] = {
 JSON_CONTRACTS: dict[str, list[str]] = {
     "audit_manifest.json": ["schema_version", "tool_version", "generated_at_utc", "target_repo", "namespace", "source_file_count", "finding_rows", "atomic_publish", "output_dir_destroyed", "cache_key", "claim_boundary"],
     "audit_summary.json": list(CSV_CONTRACTS["audit_summary.csv"]),
+    "plugin_registry.json": ["schema_version", "tool_version", "plugins"],
     "resource_envelope.json": ["resource_envelope_ready", "tool_version", "source_files_scanned", "max_queries", "mode", "namespace", "external_network_used", "raw_prompt_context_bytes", "latency_ms", "wrong_answer_guard_rows", "claim_boundary_ready"],
 }
 
@@ -327,6 +328,7 @@ def publish_atomic(staging: Path, out_dir: Path) -> None:
 
 def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: str, max_queries: int, generator: str, namespace: str, question: str, emit_report: bool, emit_lineage: bool, emit_reproduce: bool) -> dict:
     sources, source_rows = collect_sources(target, max_queries)
+    write_json(staging / "plugin_registry.json", plugin_registry_payload())
     plugin_findings: list[Finding] = []
     for plugin in DEFAULT_PLUGINS:
         plugin_findings.extend(plugin.run(target, sources))
