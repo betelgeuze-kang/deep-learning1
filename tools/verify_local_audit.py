@@ -2071,6 +2071,9 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     guard_by_finding = {row.get("finding_id", ""): row for row in guard_rows}
     if len(guard_by_finding) != len(guard_rows) or set(guard_by_finding) != finding_ids:
         add(errors, "wrong_answer_guard_rows.csv must contain exactly one row per finding")
+    guard_ids = {row.get("guard_id", "") for row in guard_rows}
+    if len(guard_ids) != len(guard_rows) or "" in guard_ids:
+        add(errors, "wrong_answer_guard_rows.csv guard_id values must be unique and non-empty")
     if len([row for row in guard_rows if row.get("wrong_answer_guard_pass") == "1"]) != len(guard_rows):
         add(errors, "wrong answer guard rows are not all passing")
     if str(len(guard_rows)) != summary.get("wrong_answer_guard_rows"):
@@ -2080,6 +2083,13 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
         add(errors, "wrong answer guard pass row count drift")
     for finding_id, row in guard_by_finding.items():
         finding = next((item for item in findings if item.get("finding_id") == finding_id), {})
+        suffix = finding_id.removeprefix("finding_")
+        if not suffix.isdigit():
+            add(errors, f"wrong_answer_guard_rows.csv finding_id format drift: {finding_id}")
+        else:
+            expected_guard_id = f"wrong_answer_guard_{int(suffix):04d}"
+            if row.get("guard_id") != expected_guard_id:
+                add(errors, f"wrong_answer_guard_rows.csv guard_id must bind finding_id: {finding_id}")
         expected_blocked = "1" if finding.get("abstain") == "1" or finding.get("grounded") == "1" else "0"
         if row.get("unsupported_direct_answer_blocked") != expected_blocked:
             add(errors, f"wrong answer guard blocked flag drift: {finding_id}")

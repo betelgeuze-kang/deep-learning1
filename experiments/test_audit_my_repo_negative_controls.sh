@@ -6197,6 +6197,30 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 guard_path.write_text(original_guard_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+with guard_path.open(newline="", encoding="utf-8") as handle:
+    guard_rows = list(csv.DictReader(handle))
+if len(guard_rows) >= 2:
+    guard_rows[0]["guard_id"], guard_rows[1]["guard_id"] = guard_rows[1]["guard_id"], guard_rows[0]["guard_id"]
+    with guard_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(guard_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(guard_rows)
+    new_guard_sha = sha256(guard_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  wrong_answer_guard_rows.csv"):
+            sha_lines.append(f"{new_guard_sha}  wrong_answer_guard_rows.csv")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    guard_swap_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if guard_swap_result.returncode == 0:
+        raise SystemExit("local-audit verifier must reject swapped wrong-answer guard ids")
+    if "wrong_answer_guard_rows.csv guard_id must bind finding_id" not in guard_swap_result.stderr:
+        raise SystemExit("local-audit verifier must explain wrong-answer guard id binding drift")
+    guard_path.write_text(original_guard_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 findings_csv_path = out_a / "audit_findings.csv"
 original_findings_csv_text = findings_csv_path.read_text(encoding="utf-8")
 with findings_csv_path.open(newline="", encoding="utf-8") as handle:
