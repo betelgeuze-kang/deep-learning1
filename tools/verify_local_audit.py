@@ -525,6 +525,44 @@ def verify_resource(resource: dict, summary: dict[str, str], errors: list[str]) 
         add(errors, "resource latency_ms must equal measured phase timing sum")
 
 
+def verify_budget_envelope(out_dir: Path, resource: dict, errors: list[str]) -> None:
+    def positive_int(key: str) -> int:
+        try:
+            value = int(resource.get(key, 0))
+        except (TypeError, ValueError):
+            add(errors, f"resource_envelope.{key} must be an integer budget")
+            return 0
+        if value <= 0:
+            add(errors, f"resource_envelope.{key} must be positive")
+        return value
+
+    max_files = positive_int("max_files")
+    max_total_bytes = positive_int("max_total_bytes")
+    max_file_bytes = positive_int("max_file_bytes")
+    max_findings = positive_int("max_findings")
+    source_rows = read_csv(out_dir / "source_manifest.csv")
+    finding_rows = read_csv(out_dir / "audit_findings.csv")
+    source_bytes_total = 0
+    if max_files and len(source_rows) > max_files:
+        add(errors, "source files exceed max_files budget")
+    if max_findings and len(finding_rows) > max_findings:
+        add(errors, "finding rows exceed max_findings budget")
+    for row in source_rows:
+        rel = row.get("file_path", "")
+        try:
+            size = int(row.get("bytes", "0"))
+        except ValueError:
+            add(errors, f"source manifest bytes must be integer: {rel}")
+            continue
+        if size <= 0:
+            add(errors, f"source manifest bytes must be positive: {rel}")
+        if max_file_bytes and size > max_file_bytes:
+            add(errors, f"source file exceeds max_file_bytes budget: {rel}")
+        source_bytes_total += max(size, 0)
+    if max_total_bytes and source_bytes_total > max_total_bytes:
+        add(errors, "source files exceed max_total_bytes budget")
+
+
 def verify_invocation(out_dir: Path, manifest: dict, summary: dict[str, str], errors: list[str]) -> None:
     invocation = read_json(out_dir / "audit_invocation.json")
     publish_root = publish_root_for(out_dir, manifest)
@@ -2379,7 +2417,9 @@ def verify_local_audit(out_dir: Path, *, live_source_check: bool = True) -> list
     summary_json = read_json(out_dir / "audit_summary.json")
     summary = verify_summary(summary_json, read_csv(out_dir / "audit_summary.csv"), errors)
     verify_manifest(manifest, summary_json, out_dir, errors)
-    verify_resource(read_json(out_dir / "resource_envelope.json"), summary, errors)
+    resource = read_json(out_dir / "resource_envelope.json")
+    verify_resource(resource, summary, errors)
+    verify_budget_envelope(out_dir, resource, errors)
     verify_invocation(out_dir, manifest, summary, errors)
     verify_diagnostics(out_dir, manifest, summary, errors)
     verify_exit_code_contract(out_dir, errors)

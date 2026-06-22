@@ -5631,6 +5631,35 @@ if subprocess.run(resource_schema_cmd, stdout=subprocess.DEVNULL, stderr=subproc
     raise SystemExit("resource envelope schema must reject external network usage")
 bad_resource_schema_path.unlink()
 
+import importlib.util
+
+spec = importlib.util.spec_from_file_location("verify_local_audit", root / "tools" / "verify_local_audit.py")
+verify_local_audit = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(verify_local_audit)
+source_rows = list(csv.DictReader((out_a / "source_manifest.csv").open(newline="", encoding="utf-8")))
+finding_rows = list(csv.DictReader((out_a / "audit_findings.csv").open(newline="", encoding="utf-8")))
+resource_payload = json.loads(original_resource_text)
+source_byte_values = [int(row["bytes"]) for row in source_rows]
+budget_checks = []
+if len(source_rows) > 1:
+    budget_checks.append(("source files exceed max_files budget", {"max_files": len(source_rows) - 1}))
+if sum(source_byte_values) > 1:
+    budget_checks.append(("source files exceed max_total_bytes budget", {"max_total_bytes": sum(source_byte_values) - 1}))
+if max(source_byte_values) > 1:
+    budget_checks.append(("source file exceeds max_file_bytes budget", {"max_file_bytes": max(source_byte_values) - 1}))
+if len(finding_rows) > 1:
+    budget_checks.append(("finding rows exceed max_findings budget", {"max_findings": len(finding_rows) - 1}))
+if len(budget_checks) < 4:
+    raise SystemExit("budget verifier fixture must contain enough rows and bytes to exercise split budget checks")
+for expected_error, updates in budget_checks:
+    candidate = dict(resource_payload)
+    candidate.update(updates)
+    errors = []
+    verify_local_audit.verify_budget_envelope(out_a, candidate, errors)
+    if not any(expected_error in error for error in errors):
+        raise SystemExit(f"budget verifier must reject {expected_error}")
+
 tampered_resource = json.loads(original_resource_text)
 tampered_resource["source_files_scanned"] = 999
 resource_path.write_text(json.dumps(tampered_resource, indent=2, sort_keys=True) + "\n", encoding="utf-8")
