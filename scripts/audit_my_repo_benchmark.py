@@ -21,6 +21,7 @@ MIN_MAINTAINER_FEEDBACK_FOR_BETA = 3
 OVERALL_PRECISION_THRESHOLD = 0.80
 P0_P1_PRECISION_THRESHOLD = 0.90
 SAFE_CASE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+SAFE_FEEDBACK_ID = SAFE_CASE_ID
 VALID_LABEL_PRIORITIES = {"", "P0", "P1", "P2", "P3"}
 BENCHMARK_ARTIFACTS = (
     "benchmark_summary.json",
@@ -664,12 +665,19 @@ def assess_label_quality(cases: list[dict]) -> tuple[dict[str, int], list[dict]]
 def normalize_maintainer_feedback(raw_rows: list[dict], cases: list[dict]) -> list[dict]:
     cases_by_id = {case["case_id"]: case for case in cases}
     rows: list[dict] = []
+    seen_feedback_ids: set[str] = set()
     for idx, row in enumerate(raw_rows, start=1):
         case_id = str(row.get("case_id") or "").strip()
         if not case_id:
             raise ValueError(f"feedback row {idx} missing case_id")
         if case_id not in cases_by_id:
             raise ValueError(f"feedback row {idx} references unknown case_id: {case_id}")
+        feedback_id = str(row.get("feedback_id") or f"feedback_{idx:04d}").strip()
+        if not SAFE_FEEDBACK_ID.fullmatch(feedback_id):
+            raise ValueError(f"feedback row {idx} has unsafe feedback_id: {feedback_id}")
+        if feedback_id in seen_feedback_ids:
+            raise ValueError(f"feedback row {idx} duplicates feedback_id: {feedback_id}")
+        seen_feedback_ids.add(feedback_id)
         maintainer_id = str(row.get("maintainer_id") or "").strip()
         if not maintainer_id:
             raise ValueError(f"feedback row {idx} missing maintainer_id")
@@ -693,7 +701,7 @@ def normalize_maintainer_feedback(raw_rows: list[dict], cases: list[dict]) -> li
         )
         rows.append(
             {
-                "feedback_id": str(row.get("feedback_id") or f"feedback_{idx:04d}"),
+                "feedback_id": feedback_id,
                 "case_id": case_id,
                 "feedback_source": "feedback_file",
                 "maintainer_id_sha256": sha256_text(maintainer_id),
@@ -1260,6 +1268,7 @@ def write_benchmark_manifest(
         "feedback_input_sha256": feedback_input_sha256,
         "mode": args.mode,
         "namespace": args.namespace,
+        "real_benchmark_namespace_confirmed": int(args.namespace == "real_benchmark" and bool(args.confirm_real_benchmark_namespace)),
         "rerun_check_requested": int(bool(args.rerun_check)),
         "max_files": args.max_files,
         "max_total_bytes": args.max_total_bytes,
@@ -1430,6 +1439,12 @@ def verify_benchmark_output(root: Path, out_dir: Path) -> list[str]:
             add(f"benchmark_manifest.{key} mismatch")
     if manifest.get("namespace") not in {"fixture", "synthetic", "real_benchmark"}:
         add("benchmark_manifest.namespace invalid")
+    if manifest.get("real_benchmark_namespace_confirmed") not in {0, 1}:
+        add("benchmark_manifest.real_benchmark_namespace_confirmed invalid")
+    elif manifest.get("namespace") == "real_benchmark" and manifest.get("real_benchmark_namespace_confirmed") != 1:
+        add("real_benchmark benchmark manifest must carry explicit namespace confirmation")
+    elif manifest.get("namespace") != "real_benchmark" and manifest.get("real_benchmark_namespace_confirmed") != 0:
+        add("non-real benchmark manifest must not carry real_benchmark namespace confirmation")
     if manifest.get("mode") not in {"quick", "full"}:
         add("benchmark_manifest.mode invalid")
     if str(manifest.get("case_rows")) != str(summary.get("case_rows")):
@@ -1975,6 +1990,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--out", default="")
     parser.add_argument("--mode", choices=["quick", "full"], default="full")
     parser.add_argument("--namespace", choices=["fixture", "synthetic", "real_benchmark"], default="synthetic")
+    parser.add_argument("--confirm-real-benchmark-namespace", action="store_true", help="Explicitly confirm that real_benchmark inputs are real local repositories with human labels.")
     parser.add_argument("--max-files", type=int, default=220)
     parser.add_argument("--max-total-bytes", type=int, default=15_000_000)
     parser.add_argument("--max-file-bytes", type=int, default=700_000)
@@ -1995,6 +2011,12 @@ def main(argv: list[str]) -> int:
         return 0
     if bool(args.labels) == bool(args.label_intake):
         print("exactly one of --labels or --label-intake is required unless --verify-existing is used", file=sys.stderr)
+        return 2
+    if args.namespace == "real_benchmark" and not args.confirm_real_benchmark_namespace:
+        print("--namespace real_benchmark requires --confirm-real-benchmark-namespace", file=sys.stderr)
+        return 2
+    if args.namespace != "real_benchmark" and args.confirm_real_benchmark_namespace:
+        print("--confirm-real-benchmark-namespace is only valid with --namespace real_benchmark", file=sys.stderr)
         return 2
     if not args.out:
         print("--out is required unless --verify-existing is used", file=sys.stderr)
@@ -2136,7 +2158,12 @@ def main(argv: list[str]) -> int:
     real_repo_count = len({str(Path(case["repo_path"]).expanduser().resolve()) for case in cases})
     maintainer_feedback_case_rows = len({row["case_id"] for row in maintainer_feedback_rows if int(row["counts_for_beta"]) == 1})
     maintainer_feedback_count = len({row["maintainer_id_sha256"] for row in maintainer_feedback_rows if int(row["counts_for_beta"]) == 1})
-    real_human_label_basis = int(args.namespace == "real_benchmark" and bool(cases) and all(case["human_labeled"] and not case["synthetic"] for case in cases))
+    real_human_label_basis = int(
+        args.namespace == "real_benchmark"
+        and bool(args.confirm_real_benchmark_namespace)
+        and bool(cases)
+        and all(case["human_labeled"] and not case["synthetic"] for case in cases)
+    )
     p0_p1_label_rows = p0_p1_tp + p0_p1_fp + p0_p1_fn
     repo_snapshot_count = len(repo_snapshot_rows)
     repo_snapshot_locked_rows = sum(int(row["repo_snapshot_locked"]) for row in repo_snapshot_rows)

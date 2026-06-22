@@ -1629,6 +1629,8 @@ if manifest["release_ready"] != 0 or manifest["public_comparison_claim_ready"] !
     raise SystemExit("benchmark manifest readiness flags must remain false")
 if manifest["synthetic_smoke_promoted_to_real_benchmark"] != 0:
     raise SystemExit("benchmark manifest must not promote synthetic smoke")
+if manifest["real_benchmark_namespace_confirmed"] != 0:
+    raise SystemExit("synthetic benchmark manifest must not carry real_benchmark confirmation")
 if manifest["case_ids"] != ["fixture_case"]:
     raise SystemExit("benchmark manifest must bind sorted case ids")
 for rel, digest in manifest["artifact_sha256s"].items():
@@ -1972,6 +1974,38 @@ if "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/be
   echo "benchmark verifier must reject tampered benchmark_manifest readiness" >&2
   exit 27
 fi
+cp "$TMP_DIR/benchmark_manifest.original.json" "$benchmark_manifest_path"
+cp "$TMP_DIR/benchmark_sha256sums.original.txt" "$benchmark_sha_path"
+"$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/benchmark_out" >/dev/null
+
+python3 - "$benchmark_manifest_path" <<'PY'
+import json
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["real_benchmark_namespace_confirmed"] = 1
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+python3 - "$benchmark_sha_path" "$benchmark_manifest_path" "benchmark_manifest.json" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+sha_path = Path(sys.argv[1])
+target = Path(sys.argv[2])
+rel = sys.argv[3]
+new_sha = hashlib.sha256(target.read_bytes()).hexdigest()
+lines = []
+for line in sha_path.read_text(encoding="utf-8").splitlines():
+    if line.endswith("  " + rel):
+        lines.append(f"{new_sha}  {rel}")
+    else:
+        lines.append(line)
+sha_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+expect_benchmark_verify_failure \
+  "benchmark verifier must reject synthetic namespace with real_benchmark confirmation" \
+  "non-real benchmark manifest must not carry real_benchmark namespace confirmation"
 cp "$TMP_DIR/benchmark_manifest.original.json" "$benchmark_manifest_path"
 cp "$TMP_DIR/benchmark_sha256sums.original.txt" "$benchmark_sha_path"
 "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/benchmark_out" >/dev/null
@@ -2797,10 +2831,23 @@ set +e
   --out "$TMP_DIR/synthetic_benchmark_out" \
   --mode full \
   --namespace real_benchmark >/dev/null 2>&1
+synthetic_benchmark_unconfirmed_rc="$?"
+set -e
+if [[ "$synthetic_benchmark_unconfirmed_rc" -ne 2 ]]; then
+  echo "benchmark harness must require explicit confirmation for real_benchmark namespace" >&2
+  exit 16
+fi
+set +e
+"$ROOT_DIR/scripts/audit_my_repo_benchmark.py" \
+  --labels "$TMP_DIR/synthetic_benchmark_labels.jsonl" \
+  --out "$TMP_DIR/synthetic_benchmark_out" \
+  --mode full \
+  --namespace real_benchmark \
+  --confirm-real-benchmark-namespace >/dev/null 2>&1
 synthetic_benchmark_rc="$?"
 set -e
 if [[ "$synthetic_benchmark_rc" -ne 2 ]]; then
-  echo "benchmark harness must reject synthetic cases in real_benchmark namespace" >&2
+  echo "benchmark harness must reject synthetic cases in confirmed real_benchmark namespace" >&2
   exit 16
 fi
 printf '{"case_id":"fixture_case","repo_path":"%s","human_labeled":true,"synthetic":false,"plugin_id":"deprecated_api","expected":"present"}\n' "$repo" >"$TMP_DIR/.env.labels"
@@ -2859,6 +2906,7 @@ EOF
   --out "$TMP_DIR/benchmark_mismatched_repo_head_out" \
   --mode quick \
   --namespace real_benchmark \
+  --confirm-real-benchmark-namespace \
   --no-rerun-check >/dev/null
 "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/benchmark_mismatched_repo_head_out" >/dev/null
 python3 - "$TMP_DIR/benchmark_mismatched_repo_head_out" <<'PY'
@@ -2892,6 +2940,7 @@ EOF
   --out "$TMP_DIR/benchmark_dirty_repo_out" \
   --mode quick \
   --namespace real_benchmark \
+  --confirm-real-benchmark-namespace \
   --no-rerun-check >/dev/null
 "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/benchmark_dirty_repo_out" >/dev/null
 python3 - "$TMP_DIR/benchmark_dirty_repo_out" <<'PY'
@@ -2954,6 +3003,7 @@ EOF
   --out "$TMP_DIR/real_benchmark_small_out" \
   --mode quick \
   --namespace real_benchmark \
+  --confirm-real-benchmark-namespace \
   --no-rerun-check >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_manifest.schema.json" "$TMP_DIR/real_benchmark_small_out/benchmark_manifest.json" >/dev/null
@@ -2973,11 +3023,14 @@ from pathlib import Path
 
 summary = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 label_citation_payload = json.loads((Path(sys.argv[1]).parent / "benchmark_label_citation_expectations.json").read_text(encoding="utf-8"))
+manifest = json.loads((Path(sys.argv[1]).parent / "benchmark_manifest.json").read_text(encoding="utf-8"))
 with Path(sys.argv[2]).open(newline="", encoding="utf-8") as handle:
     feedback_rows = list(csv.DictReader(handle))
 with (Path(sys.argv[1]).parent / "benchmark_repo_snapshots.csv").open(newline="", encoding="utf-8") as handle:
     repo_snapshot_rows = list(csv.DictReader(handle))
 feedback_input = Path(sys.argv[3])
+if manifest["namespace"] != "real_benchmark" or manifest["real_benchmark_namespace_confirmed"] != 1:
+    raise SystemExit("real benchmark manifest must bind explicit namespace confirmation")
 if summary["product_readiness_calculated_from_real_labels"] != 1:
     raise SystemExit("real_benchmark human labels must enable readiness calculation basis")
 if summary["label_quality_total_rows"] != 2 or summary["label_quality_specific_rows"] != 2:
@@ -3027,6 +3080,44 @@ if summary["release_ready"] != 0 or summary["public_comparison_claim_ready"] != 
     raise SystemExit("real benchmark summary must keep release/comparison/model flags false")
 PY
 
+cat >"$TMP_DIR/duplicate_feedback_id.jsonl" <<EOF
+{"feedback_id":"fb-duplicate","case_id":"real_small_case","maintainer_id":"maintainer-one","human_feedback":true,"synthetic":false,"feedback_text":"First duplicate feedback row."}
+{"feedback_id":"fb-duplicate","case_id":"real_small_case","maintainer_id":"maintainer-two","human_feedback":true,"synthetic":false,"feedback_text":"Second duplicate feedback row."}
+EOF
+set +e
+"$ROOT_DIR/scripts/audit_my_repo_benchmark.py" \
+  --labels "$TMP_DIR/real_benchmark_small_labels.jsonl" \
+  --feedback "$TMP_DIR/duplicate_feedback_id.jsonl" \
+  --out "$TMP_DIR/duplicate_feedback_id_out" \
+  --mode quick \
+  --namespace real_benchmark \
+  --confirm-real-benchmark-namespace \
+  --no-rerun-check >/dev/null 2>&1
+duplicate_feedback_id_rc="$?"
+set -e
+if [[ "$duplicate_feedback_id_rc" -ne 2 ]]; then
+  echo "benchmark harness must reject duplicate maintainer feedback ids" >&2
+  exit 16
+fi
+cat >"$TMP_DIR/unsafe_feedback_id.jsonl" <<EOF
+{"feedback_id":"bad/id","case_id":"real_small_case","maintainer_id":"maintainer-one","human_feedback":true,"synthetic":false,"feedback_text":"Unsafe feedback id must be rejected."}
+EOF
+set +e
+"$ROOT_DIR/scripts/audit_my_repo_benchmark.py" \
+  --labels "$TMP_DIR/real_benchmark_small_labels.jsonl" \
+  --feedback "$TMP_DIR/unsafe_feedback_id.jsonl" \
+  --out "$TMP_DIR/unsafe_feedback_id_out" \
+  --mode quick \
+  --namespace real_benchmark \
+  --confirm-real-benchmark-namespace \
+  --no-rerun-check >/dev/null 2>&1
+unsafe_feedback_id_rc="$?"
+set -e
+if [[ "$unsafe_feedback_id_rc" -ne 2 ]]; then
+  echo "benchmark harness must reject unsafe maintainer feedback ids" >&2
+  exit 16
+fi
+
 cat >"$TMP_DIR/real_benchmark_wrong_citation_labels.jsonl" <<EOF
 {"case_id":"real_wrong_citation_case","repo_path":"$repo","expected_repo_git_head":"$repo_head","human_labeled":true,"synthetic":false,"priority":"P1","maintainer_id":"maintainer-one","maintainer_feedback":true,"plugin_id":"deprecated_api","rule_id":"deprecated-api-01","file_path":"legacy.py","expected_line_start":1,"expected_line_end":1,"expected_span_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000","expected":"present","expected_abstain":false}
 EOF
@@ -3039,6 +3130,7 @@ EOF
   --out "$TMP_DIR/real_benchmark_wrong_citation_out" \
   --mode quick \
   --namespace real_benchmark \
+  --confirm-real-benchmark-namespace \
   --no-rerun-check >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_label_citation_expectations.schema.json" "$TMP_DIR/real_benchmark_wrong_citation_out/benchmark_label_citation_expectations.json" >/dev/null
@@ -3125,6 +3217,7 @@ set +e
   --out "$TMP_DIR/synthetic_feedback_real_benchmark_out" \
   --mode quick \
   --namespace real_benchmark \
+  --confirm-real-benchmark-namespace \
   --no-rerun-check >/dev/null 2>&1
 synthetic_feedback_rc="$?"
 set -e

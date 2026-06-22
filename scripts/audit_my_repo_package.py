@@ -83,6 +83,7 @@ def changelog_text() -> str:
 - First-report smoke runner that verifies install, run, report, and artifact verification inside the ten-minute alpha budget.
 - Human-label template generator that turns a verified audit bundle into template-only candidate rows for design-partner review.
 - Human-label intake compiler that turns explicit human decisions into benchmark-ready label rows without promoting template-only rows.
+- Explicit confirmation gate for real-benchmark evaluation namespaces so fixture/synthetic runs cannot opt into readiness calculation by name alone.
 - Split quick/full execution modes and split resource budgets for files, total bytes, file bytes, and findings.
 - Local alpha package manifest generation with source sha256 binding and changelog verification.
 

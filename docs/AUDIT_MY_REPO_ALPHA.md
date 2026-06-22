@@ -218,5 +218,6 @@ Feedback rows are local JSON/JSONL records linked to a benchmark `case_id`. They
 Citation validity rows are emitted in `benchmark_citation_validity.csv`; each row recomputes file existence, file sha256, source-manifest sha256, line bounds, span sha256, and preview matching against the provided local repository.
 
 Synthetic cases cannot be promoted into the `real_benchmark` namespace, and product readiness is calculated only from non-synthetic human-labeled cases run in `real_benchmark`.
+Benchmark runs using `--namespace real_benchmark` must also pass `--confirm-real-benchmark-namespace`; without that explicit confirmation the harness exits with usage error code `2`.
 
 `design_partner_beta_candidate_ready` remains `0` unless the benchmark is based on real human labels, at least 10 local repositories, at least 300 human label rows, clean expected git HEAD snapshot locking for every case, no broad/citation-unbound/duplicate/contradictory label rows, matched label citation expectations, at least 3 maintainer feedback sources, overall precision >= 80%, P0/P1 precision >= 90%, citation validity 100%, valid standard JSON findings for every case, successful install/first-report checks, and successful rerun checks.
