@@ -1648,10 +1648,13 @@ def verify_sources(out_dir: Path, manifest: dict, errors: list[str], *, live_sou
     source_ids: set[str] = set()
     if live_source_check and not target.is_dir():
         add(errors, "target_repo directory is missing")
-    for row in rows:
+    for idx, row in enumerate(rows, start=1):
         source_id = row.get("source_id", "")
         rel = row.get("file_path", "")
         rel_path = relative_source_path(rel, errors, "source_manifest")
+        expected_source_id = f"src_{idx:04d}"
+        if source_id != expected_source_id:
+            add(errors, f"source_manifest source_id must bind row order: {rel}")
         if source_id in source_ids:
             add(errors, f"duplicate source_id in source_manifest.csv: {source_id}")
         source_ids.add(source_id)

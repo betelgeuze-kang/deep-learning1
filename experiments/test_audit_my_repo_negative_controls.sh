@@ -5540,6 +5540,29 @@ sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 with source_manifest_path.open(newline="", encoding="utf-8") as handle:
     source_manifest_rows = list(csv.DictReader(handle))
+source_manifest_rows[0]["source_id"] = "src_tampered"
+with source_manifest_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(source_manifest_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(source_manifest_rows)
+new_source_manifest_sha = sha256(source_manifest_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  source_manifest.csv"):
+        sha_lines.append(f"{new_source_manifest_sha}  source_manifest.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+source_id_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if source_id_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject source manifest source_id drift")
+if "source_manifest source_id must bind row order" not in source_id_result.stderr:
+    raise SystemExit("local-audit verifier must explain source manifest source_id drift")
+source_manifest_path.write_text(original_source_manifest_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with source_manifest_path.open(newline="", encoding="utf-8") as handle:
+    source_manifest_rows = list(csv.DictReader(handle))
 outside_target = repo.parent / "outside_link_target.md"
 source_manifest_rows[0]["file_path"] = "../outside_link_target.md"
 source_manifest_rows[0]["sha256"] = "sha256:" + sha256(outside_target)
