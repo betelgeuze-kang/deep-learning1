@@ -1563,6 +1563,8 @@ PY
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_evaluation.schema.json" "$TMP_DIR/benchmark_out/benchmark_evaluation.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_readiness.schema.json" "$TMP_DIR/benchmark_out/benchmark_readiness.json" >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_labels.schema.json" "$TMP_DIR/benchmark_out/benchmark_labels.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_label_citation_expectations.schema.json" "$TMP_DIR/benchmark_out/benchmark_label_citation_expectations.json" >/dev/null
@@ -1599,6 +1601,7 @@ with (Path(sys.argv[1]).parent / "benchmark_findings.csv").open(newline="", enco
     benchmark_finding_rows = list(csv.DictReader(handle))
 benchmark_findings = json.loads((Path(sys.argv[1]).parent / "benchmark_findings.json").read_text(encoding="utf-8"))
 benchmark_evaluation = json.loads((Path(sys.argv[1]).parent / "benchmark_evaluation.json").read_text(encoding="utf-8"))
+benchmark_readiness = json.loads((Path(sys.argv[1]).parent / "benchmark_readiness.json").read_text(encoding="utf-8"))
 manifest = json.loads(Path(sys.argv[7]).read_text(encoding="utf-8"))
 sha_rows = {
     rel: digest
@@ -1759,6 +1762,33 @@ if benchmark_evaluation["abstain_correctness_rows"] != len(abstain_rows) or benc
     raise SystemExit("benchmark evaluation JSON must bind abstain correctness rows")
 if benchmark_evaluation["citation_validity_detail_rows"] != len(citation_validity) or benchmark_evaluation["citation_validity"] != citation_validity:
     raise SystemExit("benchmark evaluation JSON must bind citation validity rows")
+if benchmark_readiness["schema_version"] != "local_repo_audit_benchmark_readiness.v1":
+    raise SystemExit("benchmark readiness JSON schema_version mismatch")
+if benchmark_readiness["claim_boundary"] != "alpha-local-code-doc-audit-only":
+    raise SystemExit("benchmark readiness JSON must bind alpha claim boundary")
+if benchmark_readiness["release_ready"] != 0 or benchmark_readiness["public_comparison_claim_ready"] != 0 or benchmark_readiness["real_model_execution_ready"] != 0:
+    raise SystemExit("benchmark readiness JSON must keep readiness claims blocked")
+if benchmark_readiness["product_readiness_calculated_from_real_labels"] != summary["product_readiness_calculated_from_real_labels"]:
+    raise SystemExit("benchmark readiness JSON must bind real-label readiness basis")
+if benchmark_readiness["design_partner_beta_candidate_ready"] != summary["design_partner_beta_candidate_ready"]:
+    raise SystemExit("benchmark readiness JSON must bind beta candidate readiness")
+if benchmark_readiness["gate_rows"] != len(benchmark_readiness["rows"]):
+    raise SystemExit("benchmark readiness JSON must bind gate row count")
+if benchmark_readiness["passed_gate_rows"] != sum(1 for row in benchmark_readiness["rows"] if row["passed"] == 1):
+    raise SystemExit("benchmark readiness JSON must bind passed gate count")
+if benchmark_readiness["blocked_gate_rows"] != sum(1 for row in benchmark_readiness["rows"] if row["passed"] == 0):
+    raise SystemExit("benchmark readiness JSON must bind blocked gate count")
+if benchmark_readiness["blocked_gate_rows"] == 0:
+    raise SystemExit("synthetic benchmark readiness JSON must record blocked gates")
+gate_ids = {row["gate_id"] for row in benchmark_readiness["rows"]}
+for gate_id in ["real_repo_requirement_met", "human_label_requirement_met", "maintainer_feedback_requirement_met"]:
+    if gate_id not in gate_ids:
+        raise SystemExit(f"benchmark readiness JSON must include gate: {gate_id}")
+for row in benchmark_readiness["rows"]:
+    if row["passed"] == 0 and not row["blocked_reason"]:
+        raise SystemExit("blocked benchmark readiness gate must include a blocker reason")
+    if row["passed"] == 1 and row["blocked_reason"]:
+        raise SystemExit("passed benchmark readiness gate must not include a blocker reason")
 if len(repo_snapshot_rows) != 1:
     raise SystemExit("benchmark_repo_snapshots.csv must include one row per case")
 snapshot = repo_snapshot_rows[0]
@@ -1854,6 +1884,7 @@ benchmark_label_citation_json_path="$TMP_DIR/benchmark_out/benchmark_label_citat
 benchmark_findings_csv_path="$TMP_DIR/benchmark_out/benchmark_findings.csv"
 benchmark_findings_json_path="$TMP_DIR/benchmark_out/benchmark_findings.json"
 benchmark_evaluation_path="$TMP_DIR/benchmark_out/benchmark_evaluation.json"
+benchmark_readiness_path="$TMP_DIR/benchmark_out/benchmark_readiness.json"
 benchmark_confusion_path="$TMP_DIR/benchmark_out/benchmark_confusion_rows.csv"
 benchmark_sha_path="$TMP_DIR/benchmark_out/benchmark_sha256sums.txt"
 cp "$benchmark_manifest_path" "$TMP_DIR/benchmark_manifest.original.json"
@@ -1867,6 +1898,7 @@ cp "$benchmark_label_citation_json_path" "$TMP_DIR/benchmark_label_citation_expe
 cp "$benchmark_findings_csv_path" "$TMP_DIR/benchmark_findings.original.csv"
 cp "$benchmark_findings_json_path" "$TMP_DIR/benchmark_findings.original.json"
 cp "$benchmark_evaluation_path" "$TMP_DIR/benchmark_evaluation.original.json"
+cp "$benchmark_readiness_path" "$TMP_DIR/benchmark_readiness.original.json"
 cp "$benchmark_confusion_path" "$TMP_DIR/benchmark_confusion_rows.original.csv"
 cp "$benchmark_sha_path" "$TMP_DIR/benchmark_sha256sums.original.txt"
 
@@ -2109,6 +2141,41 @@ if "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/be
 fi
 cp "$TMP_DIR/benchmark_manifest.original.json" "$benchmark_manifest_path"
 cp "$TMP_DIR/benchmark_evaluation.original.json" "$benchmark_evaluation_path"
+cp "$TMP_DIR/benchmark_sha256sums.original.txt" "$benchmark_sha_path"
+"$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/benchmark_out" >/dev/null
+
+python3 - "$benchmark_manifest_path" "$benchmark_sha_path" "$benchmark_readiness_path" <<'PY'
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+sha_path = Path(sys.argv[2])
+readiness_path = Path(sys.argv[3])
+payload = json.loads(readiness_path.read_text(encoding="utf-8"))
+payload["design_partner_beta_candidate_ready"] = 1
+readiness_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+readiness_sha = "sha256:" + hashlib.sha256(readiness_path.read_bytes()).hexdigest()
+manifest["artifact_sha256s"]["benchmark_readiness.json"] = readiness_sha
+manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+updates = {
+    "benchmark_manifest.json": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+    "benchmark_readiness.json": readiness_sha.split(":", 1)[1],
+}
+lines = []
+for line in sha_path.read_text(encoding="utf-8").splitlines():
+    digest, rel = line.split(None, 1)
+    rel = rel.strip()
+    lines.append(f"{updates.get(rel, digest)}  {rel}")
+sha_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+expect_benchmark_verify_failure \
+  "benchmark verifier must reject tampered benchmark_readiness beta gate" \
+  "benchmark_readiness summary drift: design_partner_beta_candidate_ready"
+cp "$TMP_DIR/benchmark_manifest.original.json" "$benchmark_manifest_path"
+cp "$TMP_DIR/benchmark_readiness.original.json" "$benchmark_readiness_path"
 cp "$TMP_DIR/benchmark_sha256sums.original.txt" "$benchmark_sha_path"
 "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/benchmark_out" >/dev/null
 
@@ -3010,6 +3077,8 @@ EOF
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_summary.schema.json" "$TMP_DIR/real_benchmark_small_out/benchmark_summary.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
+  --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_readiness.schema.json" "$TMP_DIR/real_benchmark_small_out/benchmark_readiness.json" >/dev/null
+"$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_label_citation_expectations.schema.json" "$TMP_DIR/real_benchmark_small_out/benchmark_label_citation_expectations.json" >/dev/null
 "$ROOT_DIR/tools/validate_json_schemas.py" \
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_benchmark_maintainer_feedback.schema.json" "$TMP_DIR/real_benchmark_small_out/benchmark_maintainer_feedback.json" >/dev/null
@@ -3023,6 +3092,7 @@ from pathlib import Path
 
 summary = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 label_citation_payload = json.loads((Path(sys.argv[1]).parent / "benchmark_label_citation_expectations.json").read_text(encoding="utf-8"))
+readiness_payload = json.loads((Path(sys.argv[1]).parent / "benchmark_readiness.json").read_text(encoding="utf-8"))
 manifest = json.loads((Path(sys.argv[1]).parent / "benchmark_manifest.json").read_text(encoding="utf-8"))
 with Path(sys.argv[2]).open(newline="", encoding="utf-8") as handle:
     feedback_rows = list(csv.DictReader(handle))
@@ -3045,6 +3115,17 @@ if label_citation_payload["citation_expectation_rows"] != 2 or label_citation_pa
     raise SystemExit("real_benchmark citation expectation JSON must bind exact matched spans")
 if summary["design_partner_beta_candidate_ready"] != 0:
     raise SystemExit("undersized real_benchmark must not be beta candidate ready")
+if readiness_payload["product_readiness_calculated_from_real_labels"] != 1 or readiness_payload["design_partner_beta_candidate_ready"] != 0:
+    raise SystemExit("real_benchmark readiness JSON must bind real-label basis and blocked beta candidate state")
+if readiness_payload["release_ready"] != 0 or readiness_payload["public_comparison_claim_ready"] != 0 or readiness_payload["real_model_execution_ready"] != 0:
+    raise SystemExit("real_benchmark readiness JSON must keep release/model claims blocked")
+readiness_by_gate = {row["gate_id"]: row for row in readiness_payload["rows"]}
+for gate_id in ["real_repo_requirement_met", "human_label_requirement_met", "maintainer_feedback_requirement_met"]:
+    if readiness_by_gate[gate_id]["passed"] != 0 or not readiness_by_gate[gate_id]["blocked_reason"]:
+        raise SystemExit(f"undersized real_benchmark readiness JSON must block gate: {gate_id}")
+for gate_id in ["repo_snapshot_requirement_met", "label_quality_requirement_met", "label_citation_expectation_requirement_met"]:
+    if readiness_by_gate[gate_id]["passed"] != 1 or readiness_by_gate[gate_id]["blocked_reason"]:
+        raise SystemExit(f"real_benchmark readiness JSON must pass satisfied sub-gate: {gate_id}")
 if summary["real_repo_count"] != 1 or summary["real_repo_requirement_met"] != 0:
     raise SystemExit("beta gate must require at least 10 real repositories")
 if summary["human_label_rows"] != 2 or summary["human_label_requirement_met"] != 0:

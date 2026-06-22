@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_benchmark_readiness.schema.json",
+  "title": "Local repo audit benchmark readiness gates",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "claim_boundary",
+    "product_readiness_calculated_from_real_labels",
+    "design_partner_beta_candidate_ready",
+    "release_ready",
+    "public_comparison_claim_ready",
+    "real_model_execution_ready",
+    "gate_rows",
+    "passed_gate_rows",
+    "blocked_gate_rows",
+    "rows"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_benchmark_readiness.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "claim_boundary": {"const": "alpha-local-code-doc-audit-only"},
+    "product_readiness_calculated_from_real_labels": {"type": "integer", "enum": [0, 1]},
+    "design_partner_beta_candidate_ready": {"type": "integer", "enum": [0, 1]},
+    "release_ready": {"const": 0},
+    "public_comparison_claim_ready": {"const": 0},
+    "real_model_execution_ready": {"const": 0},
+    "gate_rows": {"type": "integer", "minimum": 0},
+    "passed_gate_rows": {"type": "integer", "minimum": 0},
+    "blocked_gate_rows": {"type": "integer", "minimum": 0},
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "gate_id",
+          "passed",
+          "observed",
+          "required",
+          "blocked_reason"
+        ],
+        "properties": {
+          "gate_id": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+          "passed": {"type": "integer", "enum": [0, 1]},
+          "observed": {"type": "string"},
+          "required": {"type": "string"},
+          "blocked_reason": {"type": "string"}
+        }
+      }
+    }
+  }
+}

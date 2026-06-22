@@ -27,6 +27,7 @@ BENCHMARK_ARTIFACTS = (
     "benchmark_summary.json",
     "benchmark_summary.csv",
     "benchmark_evaluation.json",
+    "benchmark_readiness.json",
     "benchmark_run_metrics.csv",
     "benchmark_case_metrics.csv",
     "benchmark_repo_snapshots.csv",
@@ -48,10 +49,26 @@ BENCHMARK_SCHEMA_INSTANCE_PAIRS = (
     ("schemas/local_repo_audit_benchmark_manifest.schema.json", "benchmark_manifest.json"),
     ("schemas/local_repo_audit_benchmark_summary.schema.json", "benchmark_summary.json"),
     ("schemas/local_repo_audit_benchmark_evaluation.schema.json", "benchmark_evaluation.json"),
+    ("schemas/local_repo_audit_benchmark_readiness.schema.json", "benchmark_readiness.json"),
     ("schemas/local_repo_audit_benchmark_labels.schema.json", "benchmark_labels.json"),
     ("schemas/local_repo_audit_benchmark_label_citation_expectations.schema.json", "benchmark_label_citation_expectations.json"),
     ("schemas/local_repo_audit_benchmark_findings.schema.json", "benchmark_findings.json"),
     ("schemas/local_repo_audit_benchmark_maintainer_feedback.schema.json", "benchmark_maintainer_feedback.json"),
+)
+READINESS_GATES = (
+    ("real_repo_requirement_met", "real_repo_count", "min_real_repos_required", "At least 10 real local repositories"),
+    ("human_label_requirement_met", "human_label_rows", "min_human_label_rows_required", "At least 300 human label rows"),
+    ("repo_snapshot_requirement_met", "repo_snapshot_locked_rows", "repo_snapshot_rows", "Every case has clean expected repo snapshot"),
+    ("maintainer_feedback_requirement_met", "maintainer_feedback_count", "min_maintainer_feedback_required", "At least 3 maintainer feedback sources"),
+    ("overall_precision_requirement_met", "precision", "overall_precision_threshold", "Overall precision >= threshold"),
+    ("p0_p1_precision_requirement_met", "p0_p1_precision", "p0_p1_precision_threshold", "P0/P1 precision >= threshold"),
+    ("citation_validity_requirement_met", "citation_validity_pass_rows", "citation_validity_rows", "All citation validity rows pass"),
+    ("label_citation_expectation_requirement_met", "label_citation_expectation_met_rows", "label_citation_expectation_rows", "All human citation expectations are matched"),
+    ("standard_json_findings_requirement_met", "standard_json_findings_valid_rows", "standard_json_findings_checked_rows", "All standard JSON finding outputs validate"),
+    ("install_success_requirement_met", "install_success_rows", "install_check_rows", "Install/preflight succeeds"),
+    ("first_report_requirement_met", "first_report_success_rows", "case_rows", "First verified report succeeds for every case"),
+    ("rerun_requirement_met", "rerun_success_rows", "rerun_checked_rows", "Rerun/cache/semantic repeatability succeeds when checked"),
+    ("label_quality_requirement_met", "label_quality_specific_rows", "label_quality_total_rows", "Human labels are specific, citation-bound, non-duplicate, non-contradictory"),
 )
 LABEL_QUALITY_FIELDS = [
     "case_id",
@@ -1220,6 +1237,42 @@ def write_benchmark_evaluation_json(
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def readiness_gate_rows(summary: dict) -> list[dict[str, str | int]]:
+    rows: list[dict[str, str | int]] = []
+    for gate_id, observed_key, required_key, description in READINESS_GATES:
+        passed = int(str(summary.get(gate_id, "0")) == "1")
+        rows.append(
+            {
+                "gate_id": gate_id,
+                "passed": passed,
+                "observed": str(summary.get(observed_key, "")),
+                "required": str(summary.get(required_key, "")),
+                "blocked_reason": "" if passed else description,
+            }
+        )
+    return rows
+
+
+def write_benchmark_readiness_json(path: Path, summary: dict) -> None:
+    rows = readiness_gate_rows(summary)
+    blocked_rows = sum(1 for row in rows if int(row["passed"]) == 0)
+    payload = {
+        "schema_version": "local_repo_audit_benchmark_readiness.v1",
+        "tool_version": "audit_my_repo_alpha.v1",
+        "claim_boundary": "alpha-local-code-doc-audit-only",
+        "product_readiness_calculated_from_real_labels": int(summary["product_readiness_calculated_from_real_labels"]),
+        "design_partner_beta_candidate_ready": int(summary["design_partner_beta_candidate_ready"]),
+        "release_ready": 0,
+        "public_comparison_claim_ready": 0,
+        "real_model_execution_ready": 0,
+        "gate_rows": len(rows),
+        "passed_gate_rows": len(rows) - blocked_rows,
+        "blocked_gate_rows": blocked_rows,
+        "rows": rows,
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def sort_rows_for_compare(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     return sorted(rows, key=lambda row: json.dumps(row, sort_keys=True, separators=(",", ":")))
 
@@ -1968,6 +2021,45 @@ def verify_benchmark_output(root: Path, out_dir: Path) -> list[str]:
         if normalized_rows != expected_rows:
             add(f"benchmark_evaluation.{key} CSV drift")
 
+    try:
+        readiness_payload = json.loads((out_dir / "benchmark_readiness.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        add(f"benchmark readiness JSON read failed: {exc}")
+        readiness_payload = {}
+    for key, expected in {
+        "schema_version": "local_repo_audit_benchmark_readiness.v1",
+        "tool_version": "audit_my_repo_alpha.v1",
+        "claim_boundary": "alpha-local-code-doc-audit-only",
+        "release_ready": 0,
+        "public_comparison_claim_ready": 0,
+        "real_model_execution_ready": 0,
+    }.items():
+        if readiness_payload.get(key) != expected:
+            add(f"benchmark_readiness.{key} mismatch")
+    for key in ["product_readiness_calculated_from_real_labels", "design_partner_beta_candidate_ready"]:
+        if str(readiness_payload.get(key, "")) != str(summary.get(key, "")):
+            add(f"benchmark_readiness summary drift: {key}")
+    expected_readiness_rows = readiness_gate_rows(summary)
+    readiness_rows = readiness_payload.get("rows", [])
+    if not isinstance(readiness_rows, list):
+        add("benchmark_readiness.rows must be a list")
+        readiness_rows = []
+    if readiness_rows != expected_readiness_rows:
+        add("benchmark_readiness rows drift")
+    passed_gate_rows = sum(1 for row in expected_readiness_rows if int(row["passed"]) == 1)
+    blocked_gate_rows = len(expected_readiness_rows) - passed_gate_rows
+    for key, expected in {
+        "gate_rows": len(expected_readiness_rows),
+        "passed_gate_rows": passed_gate_rows,
+        "blocked_gate_rows": blocked_gate_rows,
+    }.items():
+        if readiness_payload.get(key) != expected:
+            add(f"benchmark_readiness.{key} drift")
+    if int(summary.get("design_partner_beta_candidate_ready", 0)) == 1 and blocked_gate_rows != 0:
+        add("benchmark_readiness beta-ready summary has blocked gates")
+    if int(summary.get("design_partner_beta_candidate_ready", 0)) == 0 and expected_readiness_rows and blocked_gate_rows == 0:
+        add("benchmark_readiness blocked gate count missing for non-ready summary")
+
     expected_sha_paths = {"benchmark_manifest.json", *BENCHMARK_ARTIFACTS}
     expected_sha_paths.update(f"case_runs/{case_id}/audit_manifest.json" for case_id in case_ids)
     if set(sha_rows) != expected_sha_paths:
@@ -2318,6 +2410,7 @@ def main(argv: list[str]) -> int:
             all_abstain_correctness_rows,
             all_citation_validity_rows,
         )
+        write_benchmark_readiness_json(out / "benchmark_readiness.json", summary)
         write_benchmark_manifest(
             root,
             out,
