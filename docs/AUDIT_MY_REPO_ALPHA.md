@@ -84,7 +84,7 @@ Suppressed findings remain in the artifact set with `suppressed=1`, `suppression
 
 Deprecated API checks are parser-bound where the alpha has deterministic local support. Python uses AST import/call detection. JavaScript/TypeScript uses a lexical executable-code candidate parser that masks comments, strings, template literal text, and regex literals while preserving `${...}` template expressions before matching deprecated API patterns. C/C++ uses a lexical executable-code candidate parser that masks comments, ordinary strings, character literals, and raw strings before matching.
 
-Unsupported-claim checks ignore claim-boundary files, negated readiness wording, Markdown fenced examples, Markdown inline-code examples, and code-file comments/string literals before flagging risky readiness or capability terms.
+Unsupported-claim checks ignore claim-boundary files, negated readiness wording, Markdown fenced examples, Markdown inline-code examples, JS/TS regex literals, and code-file comments/string literals before flagging risky readiness or capability terms.
 
 ## Baseline Diff
 

@@ -159,6 +159,57 @@ class UnsupportedClaimPlugin(AuditPlugin):
         return close + len(delimiter) + 2
 
     @staticmethod
+    def _previous_significant_token(masked_text: str) -> tuple[str, str]:
+        idx = len(masked_text) - 1
+        while idx >= 0 and masked_text[idx].isspace():
+            idx -= 1
+        if idx < 0:
+            return "", ""
+        ch = masked_text[idx]
+        if ch.isidentifier() or ch in {"$", "_"}:
+            end = idx + 1
+            while idx >= 0 and (masked_text[idx].isalnum() or masked_text[idx] in {"$", "_"}):
+                idx -= 1
+            return masked_text[idx + 1 : end], "word"
+        return ch, "char"
+
+    @staticmethod
+    def _looks_like_js_regex_start(masked_text: str) -> bool:
+        token, token_type = UnsupportedClaimPlugin._previous_significant_token(masked_text)
+        if not token:
+            return True
+        if token_type == "word":
+            return token in {"return", "throw", "case", "delete", "typeof", "void", "new", "in", "of", "yield", "await"}
+        return token in {"(", "[", "{", ":", ";", ",", "=", "!", "?", "&", "|", "+", "-", "*", "~", "^", "<", ">"}
+
+    @staticmethod
+    def _js_regex_literal_end(text: str, start: int) -> int | None:
+        idx = start + 1
+        in_class = False
+        while idx < len(text):
+            ch = text[idx]
+            if ch == "\n" or ch == "\r":
+                return None
+            if ch == "\\":
+                idx += 2
+                continue
+            if ch == "[":
+                in_class = True
+                idx += 1
+                continue
+            if ch == "]" and in_class:
+                in_class = False
+                idx += 1
+                continue
+            if ch == "/" and not in_class:
+                idx += 1
+                while idx < len(text) and (text[idx].isalpha() or text[idx].isdigit()):
+                    idx += 1
+                return idx
+            idx += 1
+        return None
+
+    @staticmethod
     def _mask_code_comments_and_strings(text: str, suffix: str) -> str:
         out: list[str] = []
         idx = 0
@@ -192,6 +243,12 @@ class UnsupportedClaimPlugin(AuditPlugin):
                     if raw_end is not None:
                         out.append(UnsupportedClaimPlugin._mask_segment(text, idx, raw_end))
                         idx = raw_end
+                        continue
+                if js_like and ch == "/" and nxt not in {"/", "*"} and UnsupportedClaimPlugin._looks_like_js_regex_start("".join(out)):
+                    regex_end = UnsupportedClaimPlugin._js_regex_literal_end(text, idx)
+                    if regex_end is not None:
+                        out.append(UnsupportedClaimPlugin._mask_segment(text, idx, regex_end))
+                        idx = regex_end
                         continue
                 if py_like and text.startswith("'''", idx):
                     out.extend([" ", " ", " "])

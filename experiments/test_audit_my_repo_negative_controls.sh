@@ -318,6 +318,7 @@ cat >"$negative_syntax_repo/demo.js" <<'EOF'
 // This package is production ready and guaranteed must not count inside a comment
 const text = "document.write must not count inside a string";
 const claimText = "release ready and state of the art must not count inside a string";
+const claimRegex = /production ready|frontier/;
 export function ok() { return 1; }
 EOF
 cat >"$negative_syntax_repo/demo.ts" <<'EOF'
@@ -325,6 +326,7 @@ cat >"$negative_syntax_repo/demo.ts" <<'EOF'
 // This module is human-level and frontier must not count inside a comment.
 const templateText = `eval(input) and document.write stay literal text`;
 const claimTemplate = `production ready and guaranteed must not count inside template literal text`;
+const claimRegex: RegExp = /release ready|human-level/;
 export const ok: number = 1;
 EOF
 cat >"$negative_syntax_repo/demo.cpp" <<'EOF'
