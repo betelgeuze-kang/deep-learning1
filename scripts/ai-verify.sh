@@ -6,7 +6,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "==> ai wrapper shell syntax"
-bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh
+bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh scripts/audit_my_repo.sh scripts/audit_my_repo_pr.sh
 if [ -f experiments/test_audit_my_repo_product_entrypoint.sh ]; then
   bash -n experiments/test_audit_my_repo_product_entrypoint.sh
 fi
@@ -76,6 +76,10 @@ fi
 if [ -f schemas/local_repo_audit_source_snapshot.schema.json ]; then
   python3 -m json.tool schemas/local_repo_audit_source_snapshot.schema.json >/dev/null
 fi
+for schema_file in schemas/local_repo_audit_*.schema.json; do
+  [ -f "$schema_file" ] || continue
+  python3 -m json.tool "$schema_file" >/dev/null
+done
 if [ -f pr_slices/pr2.json ]; then
   python3 -m json.tool pr_slices/pr2.json >/dev/null
 fi

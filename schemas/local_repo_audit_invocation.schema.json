@@ -11,6 +11,19 @@
     "out_dir",
     "mode",
     "max_queries",
+    "max_files",
+    "max_total_bytes",
+    "max_file_bytes",
+    "max_findings",
+    "source_scope",
+    "changed_files_from",
+    "changed_files_from_sha256",
+    "changed_file_rows",
+    "active_plugin_ids",
+    "suppression_file",
+    "suppression_file_sha256",
+    "baseline_output",
+    "baseline_output_sha256",
     "generator",
     "namespace",
     "real_benchmark_namespace_confirmed",
@@ -19,7 +32,8 @@
     "verify_output_requested",
     "emit_report_requested",
     "emit_lineage_requested",
-    "emit_reproduce_requested"
+    "emit_reproduce_requested",
+    "emit_diagnostics_requested"
   ],
   "properties": {
     "schema_version": {"const": "local_repo_audit_invocation.v1"},
@@ -28,6 +42,19 @@
     "out_dir": {"type": "string", "minLength": 1},
     "mode": {"type": "string", "enum": ["quick", "full"]},
     "max_queries": {"type": "integer", "minimum": 1},
+    "max_files": {"type": "integer", "minimum": 1},
+    "max_total_bytes": {"type": "integer", "minimum": 1},
+    "max_file_bytes": {"type": "integer", "minimum": 1},
+    "max_findings": {"type": "integer", "minimum": 1},
+    "source_scope": {"type": "string", "enum": ["tracked", "changed-files"]},
+    "changed_files_from": {"type": "string"},
+    "changed_files_from_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "changed_file_rows": {"type": "integer", "minimum": 0},
+    "active_plugin_ids": {"type": "string", "minLength": 1},
+    "suppression_file": {"type": "string"},
+    "suppression_file_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "baseline_output": {"type": "string"},
+    "baseline_output_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "generator": {"const": "routehint-tiny"},
     "namespace": {"type": "string", "enum": ["fixture", "synthetic", "real_benchmark"]},
     "real_benchmark_namespace_confirmed": {"type": "integer", "enum": [0, 1]},
@@ -36,6 +63,7 @@
     "verify_output_requested": {"type": "integer", "enum": [0, 1]},
     "emit_report_requested": {"const": 1},
     "emit_lineage_requested": {"const": 1},
-    "emit_reproduce_requested": {"const": 1}
+    "emit_reproduce_requested": {"const": 1},
+    "emit_diagnostics_requested": {"type": "integer", "enum": [0, 1]}
   }
 }

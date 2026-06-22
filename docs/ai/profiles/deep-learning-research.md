@@ -6,7 +6,7 @@ Use this profile for work touching model architecture, routing, training/evaluat
 
 ```text
 Codex: research plan, experiment design, metric validity, evidence boundary review, final acceptance
-OpenCode Minimax M3: large-context implementation, doc/log/result sweeps, broad edits, synthetic checks
+Cursor Composer 2.5 (`composer-2.5`): large-context implementation, doc/log/result sweeps, broad edits, synthetic checks
 Cursor auto: current editor/selection/notebook-local edits
 Human owner: long runs, GPU/ROCm budget, downloads, remote writes, publication claims
 ```
@@ -22,13 +22,15 @@ Human owner: long runs, GPU/ROCm budget, downloads, remote writes, publication c
 
 ## Routing
 
-Prefer OpenCode Minimax M3 for:
+Prefer Cursor Composer 2.5 (`composer-2.5`) for:
 
 - reading long roadmap, benchmark, evidence, or result packet context
 - adding or updating C++ experiment logic across several files
 - adding shell/Python validators for a scoped experiment gate
 - updating generated-artifact contracts, manifests, and smoke tests
 - broad mechanical edits across `docs/`, `experiments/`, and `src/`
+
+`scripts/ai-worker-opencode.sh` remains as a compatibility wrapper for existing dispatch habits, but it now routes the former OpenCode worker slot to Cursor Composer 2.5 (`composer-2.5`).
 
 Prefer Cursor auto for:
 

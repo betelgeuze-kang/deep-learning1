@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_suppressions.schema.json",
+  "title": "Local repo audit suppression and allowlist input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "suppressions"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_suppressions.v1"},
+    "suppressions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "suppression_id",
+          "reason"
+        ],
+        "properties": {
+          "suppression_id": {"type": "string", "minLength": 1},
+          "plugin_id": {"type": "string"},
+          "rule_id": {"type": "string"},
+          "file_path": {"type": "string"},
+          "reason": {"type": "string", "minLength": 1},
+          "active": {"enum": [true, false]}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_diagnostics.schema.json",
+  "title": "Local repo audit diagnostics (opt-in, local-only)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "diagnostics_opt_in",
+    "diagnostics_collected",
+    "external_network_used",
+    "scope"
+  ],
+  "oneOf": [
+    {
+      "required": [
+        "schema_version",
+        "tool_version",
+        "diagnostics_opt_in",
+        "diagnostics_collected",
+        "external_network_used",
+        "scope",
+        "reason"
+      ],
+      "properties": {
+        "diagnostics_opt_in": {"const": 0},
+        "diagnostics_collected": {"const": 0},
+        "scope": {"const": "none"},
+        "reason": {"const": "default-opt-out"}
+      },
+      "not": {
+        "anyOf": [
+          {"required": ["mode"]},
+          {"required": ["namespace"]},
+          {"required": ["max_files"]},
+          {"required": ["max_total_bytes"]},
+          {"required": ["max_file_bytes"]},
+          {"required": ["max_findings"]},
+          {"required": ["max_queries"]},
+          {"required": ["active_plugin_ids"]},
+          {"required": ["source_file_count"]},
+          {"required": ["finding_rows"]},
+          {"required": ["suppression_rows"]},
+          {"required": ["scan_latency_ms"]},
+          {"required": ["plugin_latency_ms"]},
+          {"required": ["serialize_latency_ms"]},
+          {"required": ["verify_latency_ms"]},
+          {"required": ["latency_ms"]},
+          {"required": ["install_verified"]},
+          {"required": ["first_report_verified"]}
+        ]
+      }
+    },
+    {
+      "required": [
+        "schema_version",
+        "tool_version",
+        "diagnostics_opt_in",
+        "diagnostics_collected",
+        "external_network_used",
+        "scope",
+        "mode",
+        "namespace",
+        "max_files",
+        "max_total_bytes",
+        "max_file_bytes",
+        "max_findings",
+        "max_queries",
+        "active_plugin_ids",
+        "source_file_count",
+        "finding_rows",
+        "suppression_rows",
+        "scan_latency_ms",
+        "plugin_latency_ms",
+        "serialize_latency_ms",
+        "verify_latency_ms",
+        "latency_ms",
+        "install_verified",
+        "first_report_verified"
+      ],
+      "properties": {
+        "diagnostics_opt_in": {"const": 1},
+        "diagnostics_collected": {"const": 1},
+        "scope": {"const": "coarse-run-metrics"}
+      },
+      "not": {"required": ["reason"]}
+    }
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_diagnostics.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "diagnostics_opt_in": {"type": "integer", "enum": [0, 1]},
+    "diagnostics_collected": {"type": "integer", "enum": [0, 1]},
+    "external_network_used": {"const": 0},
+    "scope": {"type": "string", "enum": ["none", "coarse-run-metrics"]},
+    "reason": {"type": "string", "enum": ["default-opt-out"]},
+    "mode": {"type": "string", "enum": ["quick", "full"]},
+    "namespace": {"type": "string", "enum": ["fixture", "synthetic", "real_benchmark"]},
+    "max_files": {"type": "integer", "minimum": 1},
+    "max_total_bytes": {"type": "integer", "minimum": 1},
+    "max_file_bytes": {"type": "integer", "minimum": 1},
+    "max_findings": {"type": "integer", "minimum": 1},
+    "max_queries": {"type": "integer", "minimum": 1},
+    "active_plugin_ids": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1
+    },
+    "source_file_count": {"type": "integer", "minimum": 0},
+    "finding_rows": {"type": "integer", "minimum": 0},
+    "suppression_rows": {"type": "integer", "minimum": 0},
+    "scan_latency_ms": {"type": "integer", "minimum": 1},
+    "plugin_latency_ms": {"type": "integer", "minimum": 1},
+    "serialize_latency_ms": {"type": "integer", "minimum": 1},
+    "verify_latency_ms": {"type": "integer", "minimum": 1},
+    "latency_ms": {"type": "integer", "minimum": 4},
+    "install_verified": {"type": "integer", "enum": [0, 1]},
+    "first_report_verified": {"type": "integer", "enum": [0, 1]}
+  }
+}

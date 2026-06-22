@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_benchmark_findings.schema.json",
+  "title": "Local repo audit benchmark finding rows",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "claim_boundary",
+    "finding_rows",
+    "rows"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_benchmark_findings.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "claim_boundary": {"const": "alpha-local-code-doc-audit-only"},
+    "finding_rows": {"type": "integer", "minimum": 0},
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "finding_id",
+          "audit_type",
+          "plugin_id",
+          "plugin_rule_ids",
+          "confidence",
+          "language",
+          "question",
+          "answer",
+          "severity",
+          "grounded",
+          "abstain",
+          "unsupported_claim",
+          "suppressed",
+          "suppression_ids",
+          "citations",
+          "citation_sha256s",
+          "route_memory_lineage",
+          "raw_prompt_context_bytes",
+          "oracle_prediction_used",
+          "raw_input_extractor_used"
+        ],
+        "properties": {
+          "case_id": {"type": "string", "minLength": 1},
+          "finding_id": {"type": "string", "minLength": 1},
+          "audit_type": {"type": "string", "minLength": 1},
+          "plugin_id": {"type": "string", "minLength": 1},
+          "plugin_rule_ids": {"type": "string", "minLength": 1},
+          "confidence": {"type": "string", "minLength": 1},
+          "language": {"type": "string", "minLength": 1},
+          "question": {"type": "string"},
+          "answer": {"type": "string", "minLength": 1},
+          "severity": {"type": "string", "enum": ["info", "low", "medium", "high"]},
+          "grounded": {"type": "string", "enum": ["0", "1"]},
+          "abstain": {"type": "string", "enum": ["0", "1"]},
+          "unsupported_claim": {"type": "string", "enum": ["0", "1"]},
+          "suppressed": {"type": "string", "enum": ["0", "1"]},
+          "suppression_ids": {"type": "string"},
+          "citations": {"type": "string"},
+          "citation_sha256s": {"type": "string"},
+          "route_memory_lineage": {"type": "string", "enum": ["0", "1"]},
+          "raw_prompt_context_bytes": {"type": "string", "pattern": "^[0-9]+$"},
+          "oracle_prediction_used": {"type": "string", "enum": ["0", "1"]},
+          "raw_input_extractor_used": {"type": "string", "enum": ["0", "1"]}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_semantic_summary.schema.json",
+  "title": "Local repo audit semantic summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "claim_boundary",
+    "semantic_artifacts",
+    "artifact_sha256s",
+    "semantic_result_sha256",
+    "release_ready",
+    "public_comparison_claim_ready",
+    "real_model_execution_ready"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_semantic_summary.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "claim_boundary": {"const": "alpha-local-code-doc-audit-only"},
+    "semantic_artifacts": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1
+    },
+    "artifact_sha256s": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+    },
+    "semantic_result_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "release_ready": {"const": 0},
+    "public_comparison_claim_ready": {"const": 0},
+    "real_model_execution_ready": {"const": 0}
+  }
+}

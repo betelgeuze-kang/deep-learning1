@@ -26,6 +26,8 @@ class Finding:
     plugin_id: str = ""
     language: str = "generic"
     rule_ids: tuple[str, ...] = tuple()
+    confidence: str = "medium"
+    evidence_line_numbers: tuple[int, ...] = tuple()
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,8 @@ class PluginRule:
     file_suffixes: tuple[str, ...]
     pattern_label: str
     evidence_policy: str = "source-bound-span"
+    confidence: str = "medium"
+    parser_id: str = "deterministic_source_span_parser"
 
 
 class AuditPlugin:

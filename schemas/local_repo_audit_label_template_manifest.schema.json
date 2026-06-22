@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_label_template_manifest.schema.json",
+  "title": "Local repo audit label template manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "claim_boundary",
+    "label_template_source_sha256",
+    "local_audit_verifier_source_sha256",
+    "schema_sha256s",
+    "input_audit_output",
+    "input_audit_output_sha256",
+    "input_audit_manifest_sha256",
+    "input_audit_cache_key",
+    "input_audit_namespace",
+    "input_audit_real_benchmark_namespace_confirmed",
+    "input_audit_semantic_result_sha256",
+    "input_repo_git_available",
+    "input_repo_git_head",
+    "input_repo_git_dirty",
+    "case_id",
+    "template_only",
+    "human_label_rows",
+    "candidate_label_rows",
+    "artifact_sha256s",
+    "release_ready",
+    "public_comparison_claim_ready",
+    "real_model_execution_ready",
+    "design_partner_beta_candidate_ready"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_label_template_manifest.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "claim_boundary": {"const": "alpha-local-code-doc-audit-only"},
+    "label_template_source_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "local_audit_verifier_source_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "schema_sha256s": {
+      "type": "object",
+      "minProperties": 2,
+      "additionalProperties": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+    },
+    "input_audit_output": {"type": "string", "minLength": 1},
+    "input_audit_output_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "input_audit_manifest_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "input_audit_cache_key": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "input_audit_namespace": {"type": "string", "enum": ["fixture", "synthetic", "real_benchmark"]},
+    "input_audit_real_benchmark_namespace_confirmed": {"type": "integer", "enum": [0, 1]},
+    "input_audit_semantic_result_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "input_repo_git_available": {"type": "integer", "enum": [0, 1]},
+    "input_repo_git_head": {"type": "string"},
+    "input_repo_git_dirty": {"type": "integer", "enum": [0, 1]},
+    "case_id": {"type": "string", "minLength": 1},
+    "template_only": {"const": 1},
+    "human_label_rows": {"const": 0},
+    "candidate_label_rows": {"type": "integer", "minimum": 0},
+    "artifact_sha256s": {
+      "type": "object",
+      "required": [
+        "label_template.csv",
+        "label_template.json",
+        "label_template.jsonl"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "label_template.csv": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "label_template.json": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "label_template.jsonl": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "release_ready": {"const": 0},
+    "public_comparison_claim_ready": {"const": 0},
+    "real_model_execution_ready": {"const": 0},
+    "design_partner_beta_candidate_ready": {"const": 0}
+  }
+}

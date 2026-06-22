@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_benchmark_maintainer_feedback.schema.json",
+  "title": "Local repo audit benchmark maintainer feedback evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "feedback_rows",
+    "rows"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_benchmark_maintainer_feedback.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "feedback_rows": {"type": "integer", "minimum": 0},
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "feedback_id",
+          "case_id",
+          "feedback_source",
+          "maintainer_id_sha256",
+          "human_feedback",
+          "synthetic",
+          "counts_for_beta",
+          "feedback_text_sha256",
+          "feedback_text_bytes"
+        ],
+        "properties": {
+          "feedback_id": {"type": "string", "minLength": 1},
+          "case_id": {"type": "string", "minLength": 1},
+          "feedback_source": {"const": "feedback_file"},
+          "maintainer_id_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "human_feedback": {"type": "integer", "enum": [0, 1]},
+          "synthetic": {"type": "integer", "enum": [0, 1]},
+          "counts_for_beta": {"type": "integer", "enum": [0, 1]},
+          "feedback_text_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "feedback_text_bytes": {"type": "integer", "minimum": 0}
+        }
+      }
+    }
+  }
+}

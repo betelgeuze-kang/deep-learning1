@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "claim_boundary",
+    "release_ready",
+    "public_comparison_claim_ready",
+    "real_model_execution_ready",
+    "accuracy_rows",
+    "automatic_accuracy_claimed",
+    "manual_accuracy_review_required",
+    "rows"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_accuracy_rows.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "claim_boundary": {"const": "alpha-local-code-doc-audit-only"},
+    "release_ready": {"const": 0},
+    "public_comparison_claim_ready": {"const": 0},
+    "real_model_execution_ready": {"const": 0},
+    "accuracy_rows": {"type": "integer", "minimum": 1},
+    "automatic_accuracy_claimed": {"const": 0},
+    "manual_accuracy_review_required": {"const": 1},
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "finding_id",
+          "accuracy_label",
+          "automatic_accuracy_claimed",
+          "manual_accuracy_review_required"
+        ],
+        "properties": {
+          "finding_id": {"type": "string", "minLength": 1},
+          "accuracy_label": {"const": "unreviewed"},
+          "automatic_accuracy_claimed": {"const": 0},
+          "manual_accuracy_review_required": {"const": 1}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_benchmark_labels.schema.json",
+  "title": "Local repo audit benchmark human label rows",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "claim_boundary",
+    "human_label_rows",
+    "rows"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_benchmark_labels.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "claim_boundary": {"const": "alpha-local-code-doc-audit-only"},
+    "human_label_rows": {"type": "integer", "minimum": 0},
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "label_id",
+          "plugin_id",
+          "rule_id",
+          "file_path",
+          "expected_line_start",
+          "expected_line_end",
+          "expected_span_sha256",
+          "expected",
+          "expected_abstain",
+          "priority",
+          "maintainer_id",
+          "maintainer_feedback",
+          "citation_expectation_supplied",
+          "matched_citation_id",
+          "citation_expectation_met",
+          "outcome"
+        ],
+        "properties": {
+          "case_id": {"type": "string", "minLength": 1},
+          "label_id": {"type": "string", "minLength": 1},
+          "plugin_id": {"type": "string", "minLength": 1},
+          "rule_id": {"type": "string"},
+          "file_path": {"type": "string"},
+          "expected_line_start": {"type": "string", "pattern": "^$|^[0-9]+$"},
+          "expected_line_end": {"type": "string", "pattern": "^$|^[0-9]+$"},
+          "expected_span_sha256": {"type": "string", "pattern": "^$|^sha256:[0-9a-f]{64}$"},
+          "expected": {"type": "string", "enum": ["present", "absent"]},
+          "expected_abstain": {"type": "string", "enum": ["", "0", "1"]},
+          "priority": {"type": "string"},
+          "maintainer_id": {"type": "string"},
+          "maintainer_feedback": {"type": "string", "enum": ["0", "1"]},
+          "citation_expectation_supplied": {"type": "string", "enum": ["0", "1"]},
+          "matched_citation_id": {"type": "string"},
+          "citation_expectation_met": {"type": "string", "enum": ["", "0", "1"]},
+          "outcome": {"type": "string", "enum": ["TP", "FP", "FN", "TN"]}
+        }
+      }
+    }
+  }
+}

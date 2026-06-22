@@ -6,7 +6,7 @@ This repository uses Codex VS Code extension pursue-goal as the top-level loop.
 User gives Codex a research/implementation goal
 -> Codex reads AGENTS.md and the research profile
 -> Codex designs the slice and chooses a worker only when useful
--> OpenCode Minimax M3 or Cursor auto implements one scoped slice
+-> Cursor Composer 2.5 (`composer-2.5`) or Cursor auto implements one scoped slice
 -> Codex inspects the diff and runs ./scripts/ai-verify.sh
 -> Codex accepts, fixes, or delegates the next scoped slice
 ```
@@ -15,7 +15,7 @@ User gives Codex a research/implementation goal
 
 ```text
 Codex: goal tracking, research design, task slicing, code review, evidence review, final acceptance
-OpenCode Minimax M3: large-context code/doc/result sweeps and scoped implementation
+Cursor Composer 2.5 (`composer-2.5`): large-context code/doc/result sweeps and scoped implementation
 Cursor auto: IDE-attached edits and selected-code implementation
 ai-verify.sh: local lightweight verification gate
 Human owner: downloads, long GPU jobs, benchmark sweeps, remote writes, publication claims
@@ -31,13 +31,15 @@ docs/ai/prompts/deep_learning_research_goal_start.md
 
 ## Worker Selection
 
-Use OpenCode Minimax M3 for:
+Use Cursor Composer 2.5 (`composer-2.5`) for:
 
 - long `docs/` or `results/` context
 - broad `experiments/` and `src/` changes
 - generated artifact contract updates
 - C++/shell/Python implementation slices
 - cheap repeated implementation passes
+
+`scripts/ai-worker-opencode.sh` is kept as a compatibility wrapper for the former OpenCode slot, but it routes tasks to Cursor Composer 2.5 (`composer-2.5`).
 
 Use Cursor auto for:
 

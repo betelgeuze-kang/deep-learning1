@@ -25,7 +25,9 @@
           "language",
           "file_suffixes",
           "pattern_label",
-          "evidence_policy"
+          "evidence_policy",
+          "confidence",
+          "parser_id"
         ],
         "properties": {
           "plugin_id": {
@@ -59,6 +61,18 @@
             "enum": [
               "source-bound-span",
               "abstain-when-missing-source-bound-span"
+            ]
+          },
+          "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+          "parser_id": {
+            "type": "string",
+            "enum": [
+              "deterministic_source_span_parser",
+              "python_ast",
+              "text_pattern",
+              "claim_boundary_negation_code_literal_filter",
+              "cpp_lexical_code_candidate_parser",
+              "javascript_typescript_lexical_code_candidate_parser"
             ]
           }
         }

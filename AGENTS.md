@@ -4,16 +4,16 @@
 
 This repository is a machine-verifiable research artifact for `discrete-local-energy`.
 
-Codex operates from the VS Code extension using pursue-goal behavior. Cursor auto and OpenCode Minimax M3 are implementation workers only; Codex owns research design, task slicing, review, verification choice, and final acceptance.
+Codex operates from the VS Code extension using pursue-goal behavior. Cursor auto and Cursor Composer 2.5 (`composer-2.5`) are implementation workers only; Codex owns research design, task slicing, review, verification choice, and final acceptance.
 
 ## Core Rules
 
 - Keep the active goal in the Codex thread. Do not start a nested autonomous loop.
 - For research goals, paste `docs/ai/prompts/deep_learning_research_goal_start.md` into Codex first.
 - Read `docs/ai/profiles/deep-learning-research.md` before changing model, routing, checkpoint, benchmark, experiment, or evidence code.
-- For OpenCode delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-opencode.sh <prompt-file>`.
+- For the former OpenCode delegation slot, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-opencode.sh <prompt-file>`; this compatibility wrapper now routes the task to Cursor Composer 2.5 (`composer-2.5`).
 - For Cursor delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-cursor.sh <prompt-file>`.
-- Prefer OpenCode Minimax M3 for large-context work across `docs/`, `experiments/`, `results/`, `src/`, benchmark packets, long logs, and broad mechanical implementation.
+- Prefer Cursor Composer 2.5 (`composer-2.5`) for large-context work across `docs/`, `experiments/`, `results/`, `src/`, benchmark packets, long logs, and broad mechanical implementation.
 - Prefer Cursor auto for IDE-attached edits, notebooks, selected code, or small changes tied to current editor state.
 - Use one worker slice at a time. Codex must inspect the diff before delegating another slice.
 - Run `./scripts/ai-verify.sh` before marking work complete.

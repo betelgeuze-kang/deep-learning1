@@ -26,6 +26,16 @@ def validate_value(schema: dict, value, path: str, errors: list[str]) -> None:
             for key in value:
                 if key not in allowed:
                     errors.append(f"{path}.{key}: unexpected property")
+        elif isinstance(schema.get("additionalProperties"), dict):
+            allowed = set(schema.get("properties", {}))
+            additional_schema = schema["additionalProperties"]
+            for key, child_value in value.items():
+                if key not in allowed:
+                    validate_value(additional_schema, child_value, f"{path}.{key}", errors)
+        if "minProperties" in schema and len(value) < int(schema["minProperties"]):
+            errors.append(f"{path}: object has fewer properties than minProperties")
+        if "maxProperties" in schema and len(value) > int(schema["maxProperties"]):
+            errors.append(f"{path}: object has more properties than maxProperties")
         for key, child in schema.get("properties", {}).items():
             if key in value:
                 validate_value(child, value[key], f"{path}.{key}", errors)

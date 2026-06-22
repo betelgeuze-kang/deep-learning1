@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_dashboard.schema.json",
+  "title": "Local repo audit dashboard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "dashboard_kind",
+    "claim_boundary",
+    "generated_at_utc",
+    "target_repo",
+    "cache_key",
+    "run_id",
+    "mode",
+    "namespace",
+    "source_scope",
+    "baseline",
+    "diff_counts",
+    "review_counts",
+    "readiness",
+    "links",
+    "top_findings"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_dashboard.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "dashboard_kind": {"const": "local-audit-diff-dashboard"},
+    "claim_boundary": {"const": "alpha-local-code-doc-audit-only"},
+    "generated_at_utc": {"const": "1970-01-01T00:00:00+00:00"},
+    "target_repo": {"type": "string", "minLength": 1},
+    "cache_key": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "run_id": {"type": "string", "pattern": "^run-[0-9a-f]{16}$"},
+    "mode": {"type": "string", "enum": ["quick", "full"]},
+    "namespace": {"type": "string", "enum": ["fixture", "synthetic", "real_benchmark"]},
+    "source_scope": {"type": "string", "enum": ["tracked", "changed-files"]},
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supplied",
+        "baseline_output_sha256",
+        "baseline_manifest_sha256",
+        "baseline_cache_key"
+      ],
+      "properties": {
+        "supplied": {"type": "integer", "enum": [0, 1]},
+        "baseline_output_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "baseline_manifest_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "baseline_cache_key": {"type": "string"}
+      }
+    },
+    "diff_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "not_compared_findings",
+        "new_findings",
+        "changed_findings",
+        "resolved_findings",
+        "unchanged_findings",
+        "manual_review_required_rows"
+      ],
+      "properties": {
+        "not_compared_findings": {"type": "integer", "minimum": 0},
+        "new_findings": {"type": "integer", "minimum": 0},
+        "changed_findings": {"type": "integer", "minimum": 0},
+        "resolved_findings": {"type": "integer", "minimum": 0},
+        "unchanged_findings": {"type": "integer", "minimum": 0},
+        "manual_review_required_rows": {"type": "integer", "minimum": 0}
+      }
+    },
+    "review_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finding_rows",
+        "source_files",
+        "citation_span_rows",
+        "abstain_rows",
+        "unsupported_claim_rows",
+        "manual_review_queue_rows",
+        "suppression_rows"
+      ],
+      "properties": {
+        "finding_rows": {"type": "integer", "minimum": 0},
+        "source_files": {"type": "integer", "minimum": 0},
+        "citation_span_rows": {"type": "integer", "minimum": 0},
+        "abstain_rows": {"type": "integer", "minimum": 0},
+        "unsupported_claim_rows": {"type": "integer", "minimum": 0},
+        "manual_review_queue_rows": {"type": "integer", "minimum": 0},
+        "suppression_rows": {"type": "integer", "minimum": 0}
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_ready",
+        "public_comparison_claim_ready",
+        "real_model_execution_ready",
+        "automatic_accuracy_claimed"
+      ],
+      "properties": {
+        "release_ready": {"const": 0},
+        "public_comparison_claim_ready": {"const": 0},
+        "real_model_execution_ready": {"const": 0},
+        "automatic_accuracy_claimed": {"const": 0}
+      }
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "audit_report",
+        "baseline_diff",
+        "findings_json",
+        "findings_sarif",
+        "manual_review_queue",
+        "reproduce",
+        "verify"
+      ],
+      "properties": {
+        "audit_report": {"const": "AUDIT_REPORT.md"},
+        "baseline_diff": {"const": "BASELINE_DIFF.md"},
+        "findings_json": {"const": "audit_findings.json"},
+        "findings_sarif": {"const": "audit_findings.sarif.json"},
+        "manual_review_queue": {"const": "manual_review_queue.csv"},
+        "reproduce": {"const": "reproduce.sh"},
+        "verify": {"const": "verify.sh"}
+      }
+    },
+    "top_findings": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "finding_id",
+          "plugin_id",
+          "rule_ids",
+          "severity",
+          "confidence",
+          "language",
+          "grounded",
+          "abstain",
+          "unsupported_claim",
+          "suppressed",
+          "citation_count",
+          "primary_citation",
+          "citation_sha256s",
+          "answer_preview"
+        ],
+        "properties": {
+          "finding_id": {"type": "string", "minLength": 1},
+          "plugin_id": {"type": "string", "minLength": 1},
+          "rule_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "severity": {"type": "string", "enum": ["info", "low", "medium", "high"]},
+          "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+          "language": {"type": "string"},
+          "grounded": {"type": "integer", "enum": [0, 1]},
+          "abstain": {"type": "integer", "enum": [0, 1]},
+          "unsupported_claim": {"type": "integer", "enum": [0, 1]},
+          "suppressed": {"type": "integer", "enum": [0, 1]},
+          "citation_count": {"type": "integer", "minimum": 0},
+          "primary_citation": {"type": "string"},
+          "citation_sha256s": {"type": "array", "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+          "answer_preview": {"type": "string", "maxLength": 220}
+        }
+      }
+    }
+  }
+}

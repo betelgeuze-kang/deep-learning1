@@ -40,28 +40,28 @@ if command -v cursor-agent >/dev/null 2>&1; then
 elif command -v cursor >/dev/null 2>&1; then
   ok "cursor found: $(command -v cursor)"
 else
-  note "Cursor CLI not found; Cursor worker unavailable until installed"
+  bad "Cursor CLI not found; Cursor composer-2.5 worker unavailable until installed"
 fi
 
 if command -v opencode >/dev/null 2>&1; then
-  ok "opencode found: $(command -v opencode)"
-  ok "opencode version: $(opencode --version)"
+  note "opencode found but former OpenCode worker assignment routes to Cursor composer-2.5"
 else
-  bad "opencode not found. Install with: npm install -g opencode-ai"
+  note "opencode not required; former OpenCode worker assignment routes to Cursor composer-2.5"
 fi
 
 echo
 echo "[3] Wrapper syntax"
-if bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh; then
+if bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh scripts/audit_my_repo.sh scripts/audit_my_repo_pr.sh; then
   ok "ai wrapper shell syntax ok"
 else
   bad "ai wrapper shell syntax failed"
 fi
 
-if grep -q -- '--file "$prompt_file"' scripts/ai-worker-opencode.sh; then
-  ok "opencode worker passes prompt by file"
+if grep -q -- 'OPENCODE_WORKER_CURSOR_MODEL="${OPENCODE_WORKER_CURSOR_MODEL:-composer-2.5}"' scripts/ai-worker-opencode.sh &&
+   grep -q -- 'CURSOR_AGENT_MODEL="$OPENCODE_WORKER_CURSOR_MODEL" ./scripts/ai-worker-cursor.sh "$prompt_file"' scripts/ai-worker-opencode.sh; then
+  ok "former OpenCode worker assignment routes to Cursor composer-2.5"
 else
-  bad "opencode worker prompt-file wiring missing"
+  bad "former OpenCode worker assignment is not routed to Cursor composer-2.5"
 fi
 
 if grep -q -- '--model "$CURSOR_AGENT_MODEL"' scripts/ai-worker-cursor.sh; then

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.discrete-local-energy/schemas/local_repo_audit_package_manifest.schema.json",
+  "title": "Local repo audit alpha package manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool_version",
+    "package_version",
+    "claim_boundary",
+    "generated_at_utc",
+    "package_kind",
+    "version_pinned",
+    "network_download_used",
+    "package_upload_performed",
+    "real_release_package_ready",
+    "release_ready",
+    "public_comparison_claim_ready",
+    "real_model_execution_ready",
+    "source_file_count",
+    "schema_file_count",
+    "changelog_path",
+    "changelog_sha256",
+    "source_sha256s",
+    "schema_sha256s",
+    "entrypoints",
+    "verification_commands"
+  ],
+  "properties": {
+    "schema_version": {"const": "local_repo_audit_package_manifest.v1"},
+    "tool_version": {"const": "audit_my_repo_alpha.v1"},
+    "package_version": {"const": "audit_my_repo_alpha.v1"},
+    "claim_boundary": {"const": "alpha-local-code-doc-audit-only"},
+    "generated_at_utc": {"const": "1970-01-01T00:00:00+00:00"},
+    "package_kind": {"const": "local-alpha-reproducibility-package"},
+    "version_pinned": {"const": 1},
+    "network_download_used": {"const": 0},
+    "package_upload_performed": {"const": 0},
+    "real_release_package_ready": {"const": 0},
+    "release_ready": {"const": 0},
+    "public_comparison_claim_ready": {"const": 0},
+    "real_model_execution_ready": {"const": 0},
+    "source_file_count": {"type": "integer", "minimum": 1},
+    "schema_file_count": {"type": "integer", "minimum": 1},
+    "changelog_path": {"const": "CHANGELOG.audit-my-repo.md"},
+    "changelog_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "source_sha256s": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+      "minProperties": 1
+    },
+    "schema_sha256s": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+      "minProperties": 1
+    },
+    "entrypoints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "purpose"],
+        "properties": {
+          "command": {"type": "string", "minLength": 1},
+          "purpose": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "verification_commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "purpose"],
+        "properties": {
+          "command": {"type": "string", "minLength": 1},
+          "purpose": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}
