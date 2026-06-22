@@ -249,6 +249,11 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def csv_fieldnames(path: Path) -> list[str]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle).fieldnames or [])
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -1958,6 +1963,11 @@ def verify_benchmark_output(root: Path, out_dir: Path) -> list[str]:
     }.items():
         if benchmark_findings_payload.get(key) != expected:
             add(f"benchmark_findings.{key} mismatch")
+    try:
+        if csv_fieldnames(out_dir / "benchmark_findings.csv") != BENCHMARK_FINDING_FIELDS:
+            add("benchmark_findings.csv header drift")
+    except OSError as exc:
+        add(f"benchmark_findings.csv header read failed: {exc}")
     rows_payload = benchmark_findings_payload.get("rows", [])
     if not isinstance(rows_payload, list):
         add("benchmark_findings.rows must be a list")
@@ -2438,7 +2448,7 @@ def main(argv: list[str]) -> int:
         write_csv(out / "benchmark_label_quality.csv", LABEL_QUALITY_FIELDS, label_quality_rows)
         write_csv(out / "benchmark_label_citation_expectations.csv", LABEL_CITATION_EXPECTATION_FIELDS, all_label_citation_rows)
         write_benchmark_label_citation_expectations_json(out / "benchmark_label_citation_expectations.json", all_label_citation_rows)
-        write_csv(out / "benchmark_findings.csv", list(all_finding_rows[0].keys()) if all_finding_rows else ["case_id"], all_finding_rows)
+        write_csv(out / "benchmark_findings.csv", BENCHMARK_FINDING_FIELDS, all_finding_rows)
         write_benchmark_findings_json(out / "benchmark_findings.json", all_finding_rows)
         write_csv(out / "benchmark_citation_validity.csv", list(all_citation_validity_rows[0].keys()) if all_citation_validity_rows else ["case_id"], all_citation_validity_rows)
         write_csv(out / "benchmark_confusion_rows.csv", list(all_confusion_rows[0].keys()) if all_confusion_rows else ["case_id"], all_confusion_rows)

@@ -1469,9 +1469,27 @@ cat >"$TMP_DIR/benchmark_allowlist.json" <<'EOF'
     {
       "suppression_id": "benchmark-accepted-distutils",
       "plugin_id": "deprecated_api",
-      "rule_id": "deprecated-api-01",
-      "file_path": "legacy.py",
-      "reason": "benchmark fixture accepts distutils debt"
+      "reason": "benchmark fixture accepts deprecated API debt"
+    },
+    {
+      "suppression_id": "benchmark-accepted-readiness-wording",
+      "plugin_id": "unsupported_claim",
+      "reason": "benchmark fixture accepts claim wording for suppression coverage"
+    },
+    {
+      "suppression_id": "benchmark-accepted-doc-code-identity",
+      "plugin_id": "doc_code_identity",
+      "reason": "benchmark fixture accepts doc-code identity mismatch for zero-row finding coverage"
+    },
+    {
+      "suppression_id": "benchmark-accepted-config-consistency",
+      "plugin_id": "config_consistency",
+      "reason": "benchmark fixture accepts config consistency finding for zero-row finding coverage"
+    },
+    {
+      "suppression_id": "benchmark-accepted-missing-evidence",
+      "plugin_id": "missing_evidence",
+      "reason": "benchmark fixture accepts missing-evidence finding for zero-row finding coverage"
     }
   ]
 }
@@ -1523,7 +1541,9 @@ with (out / "benchmark_confusion_rows.csv").open(newline="", encoding="utf-8") a
 with (out / "benchmark_labels.csv").open(newline="", encoding="utf-8") as handle:
     label_rows = list(csv.DictReader(handle))
 with (out / "benchmark_findings.csv").open(newline="", encoding="utf-8") as handle:
-    benchmark_findings = list(csv.DictReader(handle))
+    benchmark_reader = csv.DictReader(handle)
+    benchmark_finding_fieldnames = list(benchmark_reader.fieldnames or [])
+    benchmark_findings = list(benchmark_reader)
 with (out / "case_runs" / "suppressed_case" / "audit_findings.csv").open(newline="", encoding="utf-8") as handle:
     case_findings = list(csv.DictReader(handle))
 with (out / "case_runs" / "suppressed_case" / "suppressed_findings.csv").open(newline="", encoding="utf-8") as handle:
@@ -1544,9 +1564,72 @@ if not suppressed_rows:
     raise SystemExit("case audit must emit suppressed_findings.csv row")
 if any(row["plugin_id"] == "deprecated_api" and row["suppressed"] == "1" for row in benchmark_findings):
     raise SystemExit("benchmark_findings.csv must include only active unsuppressed findings")
+expected_benchmark_finding_fields = [
+    "case_id",
+    "finding_id",
+    "audit_type",
+    "plugin_id",
+    "plugin_rule_ids",
+    "confidence",
+    "language",
+    "question",
+    "answer",
+    "severity",
+    "grounded",
+    "abstain",
+    "unsupported_claim",
+    "suppressed",
+    "suppression_ids",
+    "citations",
+    "citation_sha256s",
+    "route_memory_lineage",
+    "raw_prompt_context_bytes",
+    "oracle_prediction_used",
+    "raw_input_extractor_used",
+]
+if benchmark_findings or benchmark_finding_fieldnames != expected_benchmark_finding_fields:
+    raise SystemExit("zero-row benchmark_findings.csv must keep the full stable finding header")
 if summary["precision"] != "0.000000" or summary["recall"] != "0.000000":
     raise SystemExit("suppressed-only benchmark should keep zero precision/recall without claiming positives")
 PY
+
+python3 - "$TMP_DIR/benchmark_allowlist_out" <<'PY'
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+out = Path(sys.argv[1])
+manifest_path = out / "benchmark_manifest.json"
+sha_path = out / "benchmark_sha256sums.txt"
+findings_csv = out / "benchmark_findings.csv"
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+findings_csv.write_text("case_id\n", encoding="utf-8")
+csv_sha = "sha256:" + hashlib.sha256(findings_csv.read_bytes()).hexdigest()
+manifest["artifact_sha256s"]["benchmark_findings.csv"] = csv_sha
+manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+manifest_sha = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+lines = []
+for line in sha_path.read_text(encoding="utf-8").splitlines():
+    digest, rel = line.split(None, 1)
+    rel = rel.strip()
+    if rel == "benchmark_findings.csv":
+        digest = csv_sha.split(":", 1)[1]
+    elif rel == "benchmark_manifest.json":
+        digest = manifest_sha
+    lines.append(f"{digest}  {rel}")
+sha_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+allowlist_header_stderr="$TMP_DIR/benchmark_allowlist_header_verify.stderr"
+if "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/benchmark_allowlist_out" >/dev/null 2>"$allowlist_header_stderr"; then
+  echo "benchmark verifier must reject zero-row benchmark_findings.csv header drift" >&2
+  exit 30
+fi
+if ! grep -F "benchmark_findings.csv header drift" "$allowlist_header_stderr" >/dev/null; then
+  echo "benchmark verifier must explain zero-row benchmark_findings.csv header drift" >&2
+  cat "$allowlist_header_stderr" >&2
+  exit 30
+fi
 
 "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" \
   --labels "$TMP_DIR/benchmark_labels.jsonl" \
