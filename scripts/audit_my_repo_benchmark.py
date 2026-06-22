@@ -126,6 +126,100 @@ LABEL_CITATION_EXPECTATION_FIELDS = [
     "citation_expectation_met",
     "outcome",
 ]
+ABSTAIN_CORRECTNESS_FIELDS = [
+    "case_id",
+    "label_id",
+    "plugin_id",
+    "rule_id",
+    "file_path",
+    "expected",
+    "expected_abstain",
+    "matched_finding_id",
+    "actual_abstain",
+    "outcome",
+    "abstain_correct",
+]
+RUN_METRIC_FIELDS = [
+    "case_id",
+    "install_check_returncode",
+    "install_success",
+    "install_wall_ms",
+    "audit_exit_code",
+    "verify_exit_code",
+    "first_report_success",
+    "first_report_wall_ms",
+    "cache_key",
+    "semantic_result_sha256",
+    "source_scope",
+    "source_file_count",
+    "changed_files_from",
+    "changed_files_from_sha256",
+    "changed_file_rows",
+    "standard_json_findings_checked",
+    "standard_json_findings_valid",
+    "standard_json_finding_rows",
+    "standard_json_findings_invalid_reasons",
+    "rerun_checked",
+    "rerun_exit_code",
+    "rerun_verify_exit_code",
+    "rerun_wall_ms",
+    "rerun_cache_key_match",
+    "rerun_semantic_result_match",
+    "rerun_success",
+]
+CASE_METRIC_FIELDS = [
+    "case_id",
+    "tp",
+    "fp",
+    "fn",
+    "p0_p1_tp",
+    "p0_p1_fp",
+    "p0_p1_fn",
+    "abstain_checked",
+    "abstain_correct",
+    "citation_validity_rows",
+    "citation_validity_pass_rows",
+    "label_citation_expectation_rows",
+    "label_citation_expectation_met_rows",
+]
+CITATION_VALIDITY_FIELDS = [
+    "case_id",
+    "finding_id",
+    "citation_id",
+    "file_path",
+    "line_start",
+    "line_end",
+    "file_exists",
+    "file_sha256_valid",
+    "source_manifest_sha256_valid",
+    "line_bounds_valid",
+    "span_sha256_valid",
+    "span_preview_valid",
+    "citation_valid",
+    "invalid_reasons",
+]
+CONFUSION_FIELDS = [
+    "case_id",
+    "row_type",
+    "label_id",
+    "plugin_id",
+    "rule_id",
+    "file_path",
+    "expected_line_start",
+    "expected_line_end",
+    "expected_span_sha256",
+    "expected",
+    "priority",
+    "matched_finding_id",
+    "citation_expectation_supplied",
+    "matched_citation_id",
+    "citation_expectation_met",
+    "outcome",
+    "tp",
+    "fp",
+    "fn",
+    "tn",
+]
 REPO_SNAPSHOT_FIELDS = [
     "case_id",
     "repo_path_sha256",
@@ -1922,6 +2016,18 @@ def verify_benchmark_output(root: Path, out_dir: Path) -> list[str]:
     except OSError as exc:
         add(f"benchmark run metrics read failed: {exc}")
         run_metric_rows = []
+    for rel, expected_fields in {
+        "benchmark_run_metrics.csv": RUN_METRIC_FIELDS,
+        "benchmark_case_metrics.csv": CASE_METRIC_FIELDS,
+        "benchmark_citation_validity.csv": CITATION_VALIDITY_FIELDS,
+        "benchmark_confusion_rows.csv": CONFUSION_FIELDS,
+        "benchmark_abstain_correctness.csv": ABSTAIN_CORRECTNESS_FIELDS,
+    }.items():
+        try:
+            if csv_fieldnames(out_dir / rel) != expected_fields:
+                add(f"{rel} header drift")
+        except OSError as exc:
+            add(f"{rel} header read failed: {exc}")
     standard_json_checked_rows = sum(1 for row in run_metric_rows if row.get("standard_json_findings_checked") == "1")
     standard_json_valid_rows = sum(1 for row in run_metric_rows if row.get("standard_json_findings_valid") == "1")
     if str(summary.get("standard_json_findings_checked_rows")) != str(standard_json_checked_rows):
@@ -2438,10 +2544,10 @@ def main(argv: list[str]) -> int:
         "real_model_execution_ready": 0,
     }
     try:
-        write_csv(out / "benchmark_run_metrics.csv", list(run_metric_rows[0].keys()) if run_metric_rows else ["case_id"], run_metric_rows)
+        write_csv(out / "benchmark_run_metrics.csv", RUN_METRIC_FIELDS, run_metric_rows)
         if os.environ.get("AUDIT_MY_REPO_BENCHMARK_FAIL_DURING_WRITE") == "1":
             raise OSError("simulated benchmark artifact write failure")
-        write_csv(out / "benchmark_case_metrics.csv", list(metric_rows[0].keys()) if metric_rows else ["case_id"], metric_rows)
+        write_csv(out / "benchmark_case_metrics.csv", CASE_METRIC_FIELDS, metric_rows)
         write_csv(out / "benchmark_repo_snapshots.csv", REPO_SNAPSHOT_FIELDS, repo_snapshot_rows)
         write_csv(out / "benchmark_labels.csv", BENCHMARK_LABEL_FIELDS, all_label_rows)
         write_benchmark_labels_json(out / "benchmark_labels.json", all_label_rows)
@@ -2450,9 +2556,9 @@ def main(argv: list[str]) -> int:
         write_benchmark_label_citation_expectations_json(out / "benchmark_label_citation_expectations.json", all_label_citation_rows)
         write_csv(out / "benchmark_findings.csv", BENCHMARK_FINDING_FIELDS, all_finding_rows)
         write_benchmark_findings_json(out / "benchmark_findings.json", all_finding_rows)
-        write_csv(out / "benchmark_citation_validity.csv", list(all_citation_validity_rows[0].keys()) if all_citation_validity_rows else ["case_id"], all_citation_validity_rows)
-        write_csv(out / "benchmark_confusion_rows.csv", list(all_confusion_rows[0].keys()) if all_confusion_rows else ["case_id"], all_confusion_rows)
-        write_csv(out / "benchmark_abstain_correctness.csv", list(all_abstain_correctness_rows[0].keys()) if all_abstain_correctness_rows else ["case_id"], all_abstain_correctness_rows)
+        write_csv(out / "benchmark_citation_validity.csv", CITATION_VALIDITY_FIELDS, all_citation_validity_rows)
+        write_csv(out / "benchmark_confusion_rows.csv", CONFUSION_FIELDS, all_confusion_rows)
+        write_csv(out / "benchmark_abstain_correctness.csv", ABSTAIN_CORRECTNESS_FIELDS, all_abstain_correctness_rows)
         feedback_fields = ["feedback_id", "case_id", "feedback_source", "maintainer_id_sha256", "human_feedback", "synthetic", "counts_for_beta", "feedback_text_sha256", "feedback_text_bytes"]
         write_csv(out / "benchmark_maintainer_feedback.csv", feedback_fields, maintainer_feedback_rows)
         feedback_payload = {

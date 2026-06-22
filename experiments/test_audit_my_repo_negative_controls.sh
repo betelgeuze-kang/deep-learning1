@@ -1544,6 +1544,10 @@ with (out / "benchmark_findings.csv").open(newline="", encoding="utf-8") as hand
     benchmark_reader = csv.DictReader(handle)
     benchmark_finding_fieldnames = list(benchmark_reader.fieldnames or [])
     benchmark_findings = list(benchmark_reader)
+with (out / "benchmark_abstain_correctness.csv").open(newline="", encoding="utf-8") as handle:
+    abstain_reader = csv.DictReader(handle)
+    abstain_fieldnames = list(abstain_reader.fieldnames or [])
+    abstain_rows = list(abstain_reader)
 with (out / "case_runs" / "suppressed_case" / "audit_findings.csv").open(newline="", encoding="utf-8") as handle:
     case_findings = list(csv.DictReader(handle))
 with (out / "case_runs" / "suppressed_case" / "suppressed_findings.csv").open(newline="", encoding="utf-8") as handle:
@@ -1589,6 +1593,21 @@ expected_benchmark_finding_fields = [
 ]
 if benchmark_findings or benchmark_finding_fieldnames != expected_benchmark_finding_fields:
     raise SystemExit("zero-row benchmark_findings.csv must keep the full stable finding header")
+expected_abstain_fields = [
+    "case_id",
+    "label_id",
+    "plugin_id",
+    "rule_id",
+    "file_path",
+    "expected",
+    "expected_abstain",
+    "matched_finding_id",
+    "actual_abstain",
+    "outcome",
+    "abstain_correct",
+]
+if abstain_rows or abstain_fieldnames != expected_abstain_fields:
+    raise SystemExit("zero-row benchmark_abstain_correctness.csv must keep the full stable abstain header")
 if summary["precision"] != "0.000000" or summary["recall"] != "0.000000":
     raise SystemExit("suppressed-only benchmark should keep zero precision/recall without claiming positives")
 PY
@@ -1602,19 +1621,28 @@ from pathlib import Path
 out = Path(sys.argv[1])
 manifest_path = out / "benchmark_manifest.json"
 sha_path = out / "benchmark_sha256sums.txt"
-findings_csv = out / "benchmark_findings.csv"
+tampered_csvs = {
+    "benchmark_run_metrics.csv": out / "benchmark_run_metrics.csv",
+    "benchmark_case_metrics.csv": out / "benchmark_case_metrics.csv",
+    "benchmark_citation_validity.csv": out / "benchmark_citation_validity.csv",
+    "benchmark_confusion_rows.csv": out / "benchmark_confusion_rows.csv",
+    "benchmark_findings.csv": out / "benchmark_findings.csv",
+    "benchmark_abstain_correctness.csv": out / "benchmark_abstain_correctness.csv",
+}
 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-findings_csv.write_text("case_id\n", encoding="utf-8")
-csv_sha = "sha256:" + hashlib.sha256(findings_csv.read_bytes()).hexdigest()
-manifest["artifact_sha256s"]["benchmark_findings.csv"] = csv_sha
+csv_shas = {}
+for rel, path in tampered_csvs.items():
+    path.write_text("case_id\n", encoding="utf-8")
+    csv_shas[rel] = "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    manifest["artifact_sha256s"][rel] = csv_shas[rel]
 manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 manifest_sha = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
 lines = []
 for line in sha_path.read_text(encoding="utf-8").splitlines():
     digest, rel = line.split(None, 1)
     rel = rel.strip()
-    if rel == "benchmark_findings.csv":
-        digest = csv_sha.split(":", 1)[1]
+    if rel in csv_shas:
+        digest = csv_shas[rel].split(":", 1)[1]
     elif rel == "benchmark_manifest.json":
         digest = manifest_sha
     lines.append(f"{digest}  {rel}")
@@ -1622,14 +1650,22 @@ sha_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
 allowlist_header_stderr="$TMP_DIR/benchmark_allowlist_header_verify.stderr"
 if "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/benchmark_allowlist_out" >/dev/null 2>"$allowlist_header_stderr"; then
-  echo "benchmark verifier must reject zero-row benchmark_findings.csv header drift" >&2
+  echo "benchmark verifier must reject benchmark CSV header drift" >&2
   exit 30
 fi
-if ! grep -F "benchmark_findings.csv header drift" "$allowlist_header_stderr" >/dev/null; then
-  echo "benchmark verifier must explain zero-row benchmark_findings.csv header drift" >&2
-  cat "$allowlist_header_stderr" >&2
-  exit 30
-fi
+for expected_header_error in \
+  "benchmark_run_metrics.csv header drift" \
+  "benchmark_case_metrics.csv header drift" \
+  "benchmark_citation_validity.csv header drift" \
+  "benchmark_confusion_rows.csv header drift" \
+  "benchmark_findings.csv header drift" \
+  "benchmark_abstain_correctness.csv header drift"; do
+  if ! grep -F "$expected_header_error" "$allowlist_header_stderr" >/dev/null; then
+    echo "benchmark verifier must explain CSV header drift: $expected_header_error" >&2
+    cat "$allowlist_header_stderr" >&2
+    exit 30
+  fi
+done
 
 "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" \
   --labels "$TMP_DIR/benchmark_labels.jsonl" \
