@@ -100,13 +100,15 @@
         "release_ready",
         "public_comparison_claim_ready",
         "real_model_execution_ready",
-        "automatic_accuracy_claimed"
+        "automatic_accuracy_claimed",
+        "design_partner_beta_candidate_ready"
       ],
       "properties": {
         "release_ready": {"const": 0},
         "public_comparison_claim_ready": {"const": 0},
         "real_model_execution_ready": {"const": 0},
-        "automatic_accuracy_claimed": {"const": 0}
+        "automatic_accuracy_claimed": {"const": 0},
+        "design_partner_beta_candidate_ready": {"const": 0}
       }
     },
     "links": {

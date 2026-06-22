@@ -1095,6 +1095,7 @@ for idx in range(1, 4):
         "release_ready=0",
         "public_comparison_claim_ready=0",
         "real_model_execution_ready=0",
+        "design_partner_beta_candidate_ready=0",
     ]:
         if snippet not in dashboard:
             raise SystemExit(f"AUDIT_DASHBOARD.html must bind run/readiness metadata: {snippet}")
@@ -1109,6 +1110,7 @@ for idx in range(1, 4):
         "public_comparison_claim_ready": 0,
         "real_model_execution_ready": 0,
         "automatic_accuracy_claimed": 0,
+        "design_partner_beta_candidate_ready": 0,
     }:
         raise SystemExit("audit_dashboard.json must keep readiness claims blocked")
     for row in findings:
@@ -1259,6 +1261,7 @@ for idx in range(1, 4):
         "public_comparison_claim_ready": 0,
         "real_model_execution_ready": 0,
         "automatic_accuracy_claimed": 0,
+        "design_partner_beta_candidate_ready": 0,
     }
     if dashboard["readiness"] != expected_readiness:
         raise SystemExit("dashboard must keep readiness and automatic accuracy blocked")

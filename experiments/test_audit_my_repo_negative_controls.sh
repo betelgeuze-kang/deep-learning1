@@ -785,9 +785,11 @@ for snippet in [
     'data-release-ready="0"',
     'data-public-comparison-claim-ready="0"',
     'data-real-model-execution-ready="0"',
+    'data-design-partner-beta-candidate-ready="0"',
     "release_ready=0",
     "public_comparison_claim_ready=0",
     "real_model_execution_ready=0",
+    "design_partner_beta_candidate_ready=0",
 ]:
     if snippet not in audit_dashboard:
         raise SystemExit(f"AUDIT_DASHBOARD.html must preserve verified run/diff boundary: {snippet}")
@@ -4225,7 +4227,12 @@ if audit_dashboard_json["cache_key"] != manifest["cache_key"] or audit_dashboard
     raise SystemExit("audit_dashboard.json must bind manifest run/cache identity")
 if audit_dashboard_json["review_counts"]["finding_rows"] != summary["finding_rows"]:
     raise SystemExit("audit_dashboard.json must bind summary finding count")
-if audit_dashboard_json["readiness"]["release_ready"] != 0 or audit_dashboard_json["readiness"]["public_comparison_claim_ready"] != 0 or audit_dashboard_json["readiness"]["real_model_execution_ready"] != 0:
+if (
+    audit_dashboard_json["readiness"]["release_ready"] != 0
+    or audit_dashboard_json["readiness"]["public_comparison_claim_ready"] != 0
+    or audit_dashboard_json["readiness"]["real_model_execution_ready"] != 0
+    or audit_dashboard_json["readiness"]["design_partner_beta_candidate_ready"] != 0
+):
     raise SystemExit("audit_dashboard.json must keep readiness claims blocked")
 
 with (out_a / "source_manifest.csv").open(newline="", encoding="utf-8") as handle:
@@ -5688,6 +5695,22 @@ for line in original_sha_manifest_text.splitlines():
 sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject audit dashboard JSON readiness drift")
+audit_dashboard_json_path.write_text(original_audit_dashboard_json_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+audit_dashboard_json_payload = json.loads(original_audit_dashboard_json_text)
+audit_dashboard_json_payload["readiness"]["design_partner_beta_candidate_ready"] = 1
+audit_dashboard_json_path.write_text(json.dumps(audit_dashboard_json_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_audit_dashboard_json_sha = sha256(audit_dashboard_json_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_dashboard.json"):
+        sha_lines.append(f"{new_audit_dashboard_json_sha}  audit_dashboard.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject audit dashboard design-partner readiness drift")
 audit_dashboard_json_path.write_text(original_audit_dashboard_json_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 

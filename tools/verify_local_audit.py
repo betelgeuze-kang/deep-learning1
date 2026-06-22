@@ -859,6 +859,7 @@ def verify_audit_dashboard(out_dir: Path, manifest: dict, summary: dict[str, str
         "public_comparison_claim_ready": 0,
         "real_model_execution_ready": 0,
         "automatic_accuracy_claimed": 0,
+        "design_partner_beta_candidate_ready": 0,
     }
     expected_links = {
         "audit_report": "AUDIT_REPORT.md",
@@ -939,12 +940,14 @@ def verify_audit_dashboard(out_dir: Path, manifest: dict, summary: dict[str, str
         'data-release-ready="0"',
         'data-public-comparison-claim-ready="0"',
         'data-real-model-execution-ready="0"',
+        'data-design-partner-beta-candidate-ready="0"',
         f"<code>{esc(manifest.get('run_id', ''))}</code>",
         f"<code>{esc(manifest.get('cache_key', ''))}</code>",
         "release_ready=0",
         "public_comparison_claim_ready=0",
         "real_model_execution_ready=0",
         "automatic_accuracy_claimed=0",
+        "design_partner_beta_candidate_ready=0",
     ]
     for token in expected_tokens:
         if token not in dashboard:

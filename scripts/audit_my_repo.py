@@ -1355,6 +1355,7 @@ def write_audit_dashboard(
         "public_comparison_claim_ready": 0,
         "real_model_execution_ready": 0,
         "automatic_accuracy_claimed": 0,
+        "design_partner_beta_candidate_ready": 0,
     }
     payload = {
         "schema_version": "local_repo_audit_dashboard.v1",
@@ -1428,7 +1429,8 @@ def write_audit_dashboard(
   data-unchanged-findings="{esc(diff_counts['unchanged_findings'])}"
   data-release-ready="0"
   data-public-comparison-claim-ready="0"
-  data-real-model-execution-ready="0">
+  data-real-model-execution-ready="0"
+  data-design-partner-beta-candidate-ready="0">
 <head>
   <meta charset="utf-8">
   <title>audit-my-repo dashboard</title>
@@ -1448,7 +1450,7 @@ def write_audit_dashboard(
 <main>
   <h1>audit-my-repo dashboard</h1>
   <p>Run <code>{esc(payload['run_id'])}</code> in <code>{esc(payload['mode'])}</code> mode. Cache key <code>{esc(payload['cache_key'])}</code>.</p>
-  <p class="blocked">release_ready=0, public_comparison_claim_ready=0, real_model_execution_ready=0, automatic_accuracy_claimed=0.</p>
+  <p class="blocked">release_ready=0, public_comparison_claim_ready=0, real_model_execution_ready=0, automatic_accuracy_claimed=0, design_partner_beta_candidate_ready=0.</p>
   <section>
     <h2>Diff Counts</h2>
     <table>{diff_cells}</table>
