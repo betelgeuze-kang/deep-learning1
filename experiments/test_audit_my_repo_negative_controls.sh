@@ -5968,6 +5968,29 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 latency_path.write_text(original_latency_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+with latency_path.open(newline="", encoding="utf-8") as handle:
+    latency_rows = list(csv.DictReader(handle))
+latency_rows[0]["latency_ms"] = str(int(latency_rows[0]["latency_ms"]) + 7)
+with latency_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(latency_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(latency_rows)
+new_latency_sha = sha256(latency_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  latency_rows.csv"):
+        sha_lines.append(f"{new_latency_sha}  latency_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+latency_share_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if latency_share_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject latency phase-share drift")
+if "latency rows must bind measured plugin phase share" not in latency_share_result.stderr:
+    raise SystemExit("local-audit verifier must explain latency phase-share drift")
+latency_path.write_text(original_latency_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 accuracy_path = out_a / "accuracy_rows.csv"
 original_accuracy_text = accuracy_path.read_text(encoding="utf-8")
 with accuracy_path.open(newline="", encoding="utf-8") as handle:
@@ -6038,6 +6061,111 @@ accuracy_path.write_text(original_accuracy_text, encoding="utf-8")
 summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
 summary_json_path.write_text(original_summary_json_text, encoding="utf-8")
 contract_path.write_text(original_contract_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with accuracy_path.open(newline="", encoding="utf-8") as handle:
+    accuracy_rows = list(csv.DictReader(handle))
+accuracy_rows[0]["accuracy_label"] = "reviewed_true_positive"
+with accuracy_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(accuracy_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(accuracy_rows)
+accuracy_json = json.loads(original_accuracy_json_text)
+accuracy_json["rows"] = accuracy_rows
+accuracy_json_path.write_text(json.dumps(accuracy_json, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_accuracy_sha = sha256(accuracy_path)
+new_accuracy_json_sha = sha256(accuracy_json_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  accuracy_rows.csv"):
+        sha_lines.append(f"{new_accuracy_sha}  accuracy_rows.csv")
+    elif line.endswith("  accuracy_rows.json"):
+        sha_lines.append(f"{new_accuracy_json_sha}  accuracy_rows.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+accuracy_label_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if accuracy_label_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject reviewed accuracy labels")
+if "accuracy rows must not claim reviewed labels" not in accuracy_label_result.stderr:
+    raise SystemExit("local-audit verifier must explain reviewed accuracy label drift")
+accuracy_path.write_text(original_accuracy_text, encoding="utf-8")
+accuracy_json_path.write_text(original_accuracy_json_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+citation_path = out_a / "citation_correctness_rows.csv"
+original_citation_text = citation_path.read_text(encoding="utf-8")
+with citation_path.open(newline="", encoding="utf-8") as handle:
+    citation_rows = list(csv.DictReader(handle))
+tampered_citation_row = citation_rows[0]
+if tampered_citation_row["citation_count"] == "0":
+    tampered_citation_row["citation_count"] = "1"
+    tampered_citation_row["citation_bound"] = "1"
+else:
+    tampered_citation_row["citation_count"] = "0"
+    tampered_citation_row["citation_bound"] = "0"
+with citation_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(citation_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(citation_rows)
+citation_json = json.loads(original_citation_json_text)
+citation_json["rows"] = citation_rows
+citation_json_path.write_text(json.dumps(citation_json, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_citation_sha = sha256(citation_path)
+new_citation_json_sha = sha256(citation_json_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  citation_correctness_rows.csv"):
+        sha_lines.append(f"{new_citation_sha}  citation_correctness_rows.csv")
+    elif line.endswith("  citation_correctness_rows.json"):
+        sha_lines.append(f"{new_citation_json_sha}  citation_correctness_rows.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+citation_binding_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if citation_binding_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject citation correctness count/bound drift")
+if "citation correctness rows must bind finding citations" not in citation_binding_result.stderr:
+    raise SystemExit("local-audit verifier must explain citation correctness binding drift")
+citation_path.write_text(original_citation_text, encoding="utf-8")
+citation_json_path.write_text(original_citation_json_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+fp_path = out_a / "false_positive_candidate_rows.csv"
+original_fp_text = fp_path.read_text(encoding="utf-8")
+with (out_a / "audit_findings.csv").open(newline="", encoding="utf-8") as handle:
+    finding_rows_for_fp = list(csv.DictReader(handle))
+severity_by_finding = {row["finding_id"]: row["severity"] for row in finding_rows_for_fp}
+with fp_path.open(newline="", encoding="utf-8") as handle:
+    fp_rows = list(csv.DictReader(handle))
+tampered_fp_row = None
+for row in fp_rows:
+    expected_candidate = "1" if severity_by_finding[row["finding_id"]] in {"medium", "high"} else "0"
+    row["manual_review_required"] = "1"
+    if row["false_positive_candidate"] == expected_candidate:
+        row["false_positive_candidate"] = "0" if expected_candidate == "1" else "1"
+        tampered_fp_row = row
+        break
+if tampered_fp_row is None:
+    raise SystemExit("local-audit false-positive binding negative control needs a tamperable row")
+with fp_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(fp_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(fp_rows)
+new_fp_sha = sha256(fp_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  false_positive_candidate_rows.csv"):
+        sha_lines.append(f"{new_fp_sha}  false_positive_candidate_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+fp_binding_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if fp_binding_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject false-positive candidate severity drift")
+if "false-positive candidate rows must bind finding severity" not in fp_binding_result.stderr:
+    raise SystemExit("local-audit verifier must explain false-positive severity binding drift")
+fp_path.write_text(original_fp_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
 generation_path = out_a / "grounded_generation_rows.csv"

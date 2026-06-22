@@ -2014,6 +2014,7 @@ def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], err
 
 def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]) -> None:
     findings = read_csv(out_dir / "audit_findings.csv")
+    finding_by_id = {row.get("finding_id", ""): row for row in findings}
     finding_ids = {row.get("finding_id", "") for row in findings}
     if len(finding_ids) != len(findings):
         add(errors, "audit_findings.csv must not contain duplicate finding_id values")
@@ -2082,7 +2083,7 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     if str(len(guard_pass_rows)) != summary.get("wrong_answer_guard_pass_rows"):
         add(errors, "wrong answer guard pass row count drift")
     for finding_id, row in guard_by_finding.items():
-        finding = next((item for item in findings if item.get("finding_id") == finding_id), {})
+        finding = finding_by_id.get(finding_id, {})
         suffix = finding_id.removeprefix("finding_")
         if not suffix.isdigit():
             add(errors, f"wrong_answer_guard_rows.csv finding_id format drift: {finding_id}")
@@ -2099,9 +2100,12 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     latency_ids = {row.get("finding_id", "") for row in latency_rows}
     if len(latency_ids) != len(latency_rows) or latency_ids != finding_ids:
         add(errors, "latency_rows.csv must contain exactly one row per finding")
+    expected_latency_ms = max(1, int(summary.get("plugin_latency_ms", "0")) // max(1, len(findings)))
     for row in latency_rows:
         if int(row.get("latency_ms", "0")) <= 0 or row.get("latency_source") != "measured-plugin-phase-share":
             add(errors, "latency rows must use positive measured plugin phase shares")
+        if row.get("latency_ms") != str(expected_latency_ms):
+            add(errors, f"latency rows must bind measured plugin phase share: {row.get('finding_id', '')}")
     accuracy_rows = read_csv(out_dir / "accuracy_rows.csv")
     accuracy_ids = {row.get("finding_id", "") for row in accuracy_rows}
     if len(accuracy_ids) != len(accuracy_rows) or accuracy_ids != finding_ids:
@@ -2109,6 +2113,8 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     if str(len(accuracy_rows)) != summary.get("accuracy_rows"):
         add(errors, "accuracy row count drift")
     for row in accuracy_rows:
+        if row.get("accuracy_label") != "unreviewed":
+            add(errors, "accuracy rows must not claim reviewed labels")
         if row.get("automatic_accuracy_claimed") != "0" or row.get("manual_accuracy_review_required") != "1":
             add(errors, "accuracy rows must remain manual/unreviewed")
     accuracy_payload = read_json(out_dir / "accuracy_rows.json")
@@ -2141,6 +2147,12 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     if str(len(citation_rows)) != summary.get("citation_correctness_rows"):
         add(errors, "citation correctness row count drift")
     for row in citation_rows:
+        finding_id = row.get("finding_id", "")
+        finding = finding_by_id.get(finding_id, {})
+        citation_count = len([cell for cell in finding.get("citations", "").split(";") if cell])
+        expected_bound = "1" if citation_count > 0 else "0"
+        if row.get("citation_count") != str(citation_count) or row.get("citation_bound") != expected_bound:
+            add(errors, f"citation correctness rows must bind finding citations: {finding_id}")
         if row.get("citation_correctness_label") != "source_bound_unreviewed" or row.get("manual_citation_review_required") != "1":
             add(errors, "citation correctness rows must remain source-bound unreviewed")
     citation_payload = read_json(out_dir / "citation_correctness_rows.json")
@@ -2173,6 +2185,11 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     if str(len(fp_rows)) != summary.get("false_positive_candidate_rows"):
         add(errors, "false-positive candidate row count drift")
     for row in fp_rows:
+        finding_id = row.get("finding_id", "")
+        finding = finding_by_id.get(finding_id, {})
+        expected_candidate = "1" if finding.get("severity") in {"medium", "high"} else "0"
+        if row.get("manual_review_required") != "1" or row.get("false_positive_candidate") != expected_candidate:
+            add(errors, f"false-positive candidate rows must bind finding severity: {finding_id}")
         if row.get("auto_promoted") != "0":
             add(errors, "false-positive candidates must not be auto-promoted")
     manual_review_rows = read_csv(out_dir / "manual_review_queue.csv")
