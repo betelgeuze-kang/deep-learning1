@@ -1663,6 +1663,8 @@ if benchmark_labels["human_label_rows"] != len(benchmark_label_rows) or benchmar
     raise SystemExit("benchmark labels JSON must match benchmark_labels.csv")
 if len(benchmark_label_rows) != 2:
     raise SystemExit("benchmark_labels.csv must include one row per human label")
+if summary["label_source_trace_rows"] != 1 or summary["label_source_trace_missing_rows"] != 1 or summary["label_source_trace_requirement_met"] != 0:
+    raise SystemExit("benchmark summary must count present and missing label source traces")
 if label_citation_payload["schema_version"] != "local_repo_audit_benchmark_label_citation_expectations.v1":
     raise SystemExit("benchmark label citation expectation JSON schema_version mismatch")
 if label_citation_payload["claim_boundary"] != "alpha-local-code-doc-audit-only":
@@ -1787,7 +1789,7 @@ if benchmark_readiness["blocked_gate_rows"] != sum(1 for row in benchmark_readin
 if benchmark_readiness["blocked_gate_rows"] == 0:
     raise SystemExit("synthetic benchmark readiness JSON must record blocked gates")
 gate_ids = {row["gate_id"] for row in benchmark_readiness["rows"]}
-for gate_id in ["real_repo_requirement_met", "human_label_requirement_met", "maintainer_feedback_requirement_met"]:
+for gate_id in ["real_repo_requirement_met", "human_label_requirement_met", "label_source_trace_requirement_met", "maintainer_feedback_requirement_met"]:
     if gate_id not in gate_ids:
         raise SystemExit(f"benchmark readiness JSON must include gate: {gate_id}")
 for row in benchmark_readiness["rows"]:
@@ -2350,6 +2352,70 @@ if "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/be
   exit 30
 fi
 cp "$TMP_DIR/benchmark_manifest.original.json" "$benchmark_manifest_path"
+cp "$TMP_DIR/benchmark_labels.original.csv" "$benchmark_labels_csv_path"
+cp "$TMP_DIR/benchmark_labels.original.json" "$benchmark_labels_json_path"
+cp "$TMP_DIR/benchmark_sha256sums.original.txt" "$benchmark_sha_path"
+"$ROOT_DIR/scripts/audit_my_repo_benchmark.py" --verify-existing "$TMP_DIR/benchmark_out" >/dev/null
+
+python3 - "$benchmark_manifest_path" "$benchmark_sha_path" "$benchmark_labels_csv_path" "$benchmark_labels_json_path" "$benchmark_summary_path" "$benchmark_readiness_path" <<'PY'
+import csv
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+sha_path = Path(sys.argv[2])
+csv_path = Path(sys.argv[3])
+json_path = Path(sys.argv[4])
+summary_path = Path(sys.argv[5])
+readiness_path = Path(sys.argv[6])
+with csv_path.open(newline="", encoding="utf-8") as handle:
+    rows = list(csv.DictReader(handle))
+fieldnames = list(rows[0].keys())
+rows[0]["source_candidate_label_id"] = ""
+rows[0]["source_review_queue_id"] = ""
+with csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+payload = json.loads(json_path.read_text(encoding="utf-8"))
+payload["rows"] = rows
+json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+summary = json.loads(summary_path.read_text(encoding="utf-8"))
+summary["label_source_trace_rows"] = 0
+summary["label_source_trace_missing_rows"] = len(rows)
+summary["label_source_trace_requirement_met"] = 0
+summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+readiness = json.loads(readiness_path.read_text(encoding="utf-8"))
+for row in readiness["rows"]:
+    if row["gate_id"] == "label_source_trace_requirement_met":
+        row["observed"] = "0"
+readiness_path.write_text(json.dumps(readiness, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+updates = {
+    "benchmark_labels.csv": hashlib.sha256(csv_path.read_bytes()).hexdigest(),
+    "benchmark_labels.json": hashlib.sha256(json_path.read_bytes()).hexdigest(),
+    "benchmark_summary.json": hashlib.sha256(summary_path.read_bytes()).hexdigest(),
+    "benchmark_readiness.json": hashlib.sha256(readiness_path.read_bytes()).hexdigest(),
+}
+for rel, digest in updates.items():
+    manifest["artifact_sha256s"][rel] = "sha256:" + digest
+manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+updates["benchmark_manifest.json"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+lines = []
+for line in sha_path.read_text(encoding="utf-8").splitlines():
+    digest, rel = line.split(None, 1)
+    rel = rel.strip()
+    lines.append(f"{updates.get(rel, digest)}  {rel}")
+sha_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+expect_benchmark_verify_failure \
+  "benchmark verifier must reject coordinated label source trace drift" \
+  "benchmark label rows drift from case audit outputs"
+cp "$TMP_DIR/benchmark_manifest.original.json" "$benchmark_manifest_path"
+cp "$TMP_DIR/benchmark_summary.original.json" "$benchmark_summary_path"
+cp "$TMP_DIR/benchmark_readiness.original.json" "$benchmark_readiness_path"
 cp "$TMP_DIR/benchmark_labels.original.csv" "$benchmark_labels_csv_path"
 cp "$TMP_DIR/benchmark_labels.original.json" "$benchmark_labels_json_path"
 cp "$TMP_DIR/benchmark_sha256sums.original.txt" "$benchmark_sha_path"
@@ -3115,6 +3181,8 @@ if summary["label_quality_broad_rows"] != 0 or summary["label_quality_duplicate_
     raise SystemExit("real_benchmark specific labels must not record label quality defects")
 if summary["label_quality_requirement_met"] != 1:
     raise SystemExit("real_benchmark specific labels must satisfy label quality requirement")
+if summary["label_source_trace_rows"] != 0 or summary["label_source_trace_missing_rows"] != 2 or summary["label_source_trace_requirement_met"] != 0:
+    raise SystemExit("real_benchmark direct labels without review queue trace must fail source trace sub-gate")
 if summary["label_citation_expectation_rows"] != 2 or summary["label_citation_expectation_met_rows"] != 2 or summary["label_citation_expectation_requirement_met"] != 1:
     raise SystemExit("real_benchmark with exact human citation spans must satisfy citation expectation sub-gate")
 if label_citation_payload["citation_expectation_rows"] != 2 or label_citation_payload["citation_expectation_met_rows"] != 2:
@@ -3126,7 +3194,7 @@ if readiness_payload["product_readiness_calculated_from_real_labels"] != 1 or re
 if readiness_payload["release_ready"] != 0 or readiness_payload["public_comparison_claim_ready"] != 0 or readiness_payload["real_model_execution_ready"] != 0:
     raise SystemExit("real_benchmark readiness JSON must keep release/model claims blocked")
 readiness_by_gate = {row["gate_id"]: row for row in readiness_payload["rows"]}
-for gate_id in ["real_repo_requirement_met", "human_label_requirement_met", "maintainer_feedback_requirement_met"]:
+for gate_id in ["real_repo_requirement_met", "human_label_requirement_met", "label_source_trace_requirement_met", "maintainer_feedback_requirement_met"]:
     if readiness_by_gate[gate_id]["passed"] != 0 or not readiness_by_gate[gate_id]["blocked_reason"]:
         raise SystemExit(f"undersized real_benchmark readiness JSON must block gate: {gate_id}")
 for gate_id in ["repo_snapshot_requirement_met", "label_quality_requirement_met", "label_citation_expectation_requirement_met"]:

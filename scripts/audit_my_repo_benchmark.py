@@ -58,6 +58,7 @@ BENCHMARK_SCHEMA_INSTANCE_PAIRS = (
 READINESS_GATES = (
     ("real_repo_requirement_met", "real_repo_count", "min_real_repos_required", "At least 10 real local repositories"),
     ("human_label_requirement_met", "human_label_rows", "min_human_label_rows_required", "At least 300 human label rows"),
+    ("label_source_trace_requirement_met", "label_source_trace_rows", "human_label_rows", "Every human label preserves candidate and review-queue trace IDs"),
     ("repo_snapshot_requirement_met", "repo_snapshot_locked_rows", "repo_snapshot_rows", "Every case has clean expected repo snapshot"),
     ("maintainer_feedback_requirement_met", "maintainer_feedback_count", "min_maintainer_feedback_required", "At least 3 maintainer feedback sources"),
     ("overall_precision_requirement_met", "precision", "overall_precision_threshold", "Overall precision >= threshold"),
@@ -1764,6 +1765,12 @@ def verify_benchmark_output(root: Path, out_dir: Path) -> list[str]:
         )
         expected_summary_from_cases = {
             "human_label_rows": len(expected_label_rows),
+            "label_source_trace_rows": sum(
+                1
+                for row in expected_label_rows
+                if str(row.get("source_candidate_label_id", "")).strip()
+                and str(row.get("source_review_queue_id", "")).strip()
+            ),
             "tp": expected_total_tp,
             "fp": expected_total_fp,
             "fn": expected_total_fn,
@@ -1781,6 +1788,9 @@ def verify_benchmark_output(root: Path, out_dir: Path) -> list[str]:
             "label_citation_expectation_rows": sum(int(row["label_citation_expectation_rows"]) for row in expected_metric_rows),
             "label_citation_expectation_met_rows": sum(int(row["label_citation_expectation_met_rows"]) for row in expected_metric_rows),
         }
+        expected_summary_from_cases["label_source_trace_missing_rows"] = (
+            expected_summary_from_cases["human_label_rows"] - expected_summary_from_cases["label_source_trace_rows"]
+        )
         for key, expected in expected_summary_from_cases.items():
             if str(summary.get(key, "")) != str(expected):
                 add(f"benchmark summary drift from case audit outputs: {key}")
@@ -1829,6 +1839,25 @@ def verify_benchmark_output(root: Path, out_dir: Path) -> list[str]:
             add(f"benchmark_labels row {idx} invalid outcome")
         if row.get("maintainer_feedback", "") not in {"0", "1"}:
             add(f"benchmark_labels row {idx} invalid maintainer_feedback")
+    label_trace_rows = sum(
+        1
+        for row in benchmark_label_rows
+        if str(row.get("source_candidate_label_id", "")).strip()
+        and str(row.get("source_review_queue_id", "")).strip()
+    )
+    label_trace_missing_rows = len(benchmark_label_rows) - label_trace_rows
+    expected_label_trace_requirement = int(
+        int(summary.get("product_readiness_calculated_from_real_labels", 0)) == 1
+        and len(benchmark_label_rows) > 0
+        and label_trace_rows == len(benchmark_label_rows)
+    )
+    for key, expected in {
+        "label_source_trace_rows": label_trace_rows,
+        "label_source_trace_missing_rows": label_trace_missing_rows,
+        "label_source_trace_requirement_met": expected_label_trace_requirement,
+    }.items():
+        if str(summary.get(key, "")) != str(expected):
+            add(f"benchmark label source trace summary drift: {key}")
 
     try:
         label_citation_rows = read_csv(out_dir / "benchmark_label_citation_expectations.csv")
@@ -2268,8 +2297,20 @@ def main(argv: list[str]) -> int:
     repo_snapshot_dirty_rows = sum(int(row["repo_git_dirty"]) for row in repo_snapshot_rows)
     repo_snapshot_mismatch_rows = sum(int(row["repo_snapshot_mismatch"]) for row in repo_snapshot_rows)
     repo_snapshot_missing_expectation_rows = sum(int(row["repo_snapshot_missing_expectation"]) for row in repo_snapshot_rows)
+    label_source_trace_rows = sum(
+        1
+        for row in all_label_rows
+        if str(row.get("source_candidate_label_id", "")).strip()
+        and str(row.get("source_review_queue_id", "")).strip()
+    )
+    label_source_trace_missing_rows = len(all_label_rows) - label_source_trace_rows
     real_repo_requirement_met = int(real_human_label_basis == 1 and real_repo_count >= MIN_REAL_REPOS_FOR_BETA)
     human_label_requirement_met = int(real_human_label_basis == 1 and len(all_label_rows) >= MIN_HUMAN_LABELS_FOR_BETA)
+    label_source_trace_requirement_met = int(
+        real_human_label_basis == 1
+        and len(all_label_rows) > 0
+        and label_source_trace_rows == len(all_label_rows)
+    )
     repo_snapshot_requirement_met = int(
         real_human_label_basis == 1
         and repo_snapshot_count > 0
@@ -2296,6 +2337,7 @@ def main(argv: list[str]) -> int:
     design_partner_beta_candidate_ready = int(
         real_repo_requirement_met
         and human_label_requirement_met
+        and label_source_trace_requirement_met
         and repo_snapshot_requirement_met
         and maintainer_feedback_requirement_met
         and overall_precision_requirement_met
@@ -2360,6 +2402,9 @@ def main(argv: list[str]) -> int:
         "real_repo_requirement_met": real_repo_requirement_met,
         "min_human_label_rows_required": MIN_HUMAN_LABELS_FOR_BETA,
         "human_label_requirement_met": human_label_requirement_met,
+        "label_source_trace_rows": label_source_trace_rows,
+        "label_source_trace_missing_rows": label_source_trace_missing_rows,
+        "label_source_trace_requirement_met": label_source_trace_requirement_met,
         "maintainer_feedback_count": maintainer_feedback_count,
         "maintainer_feedback_rows": len(maintainer_feedback_rows),
         "maintainer_feedback_case_rows": maintainer_feedback_case_rows,

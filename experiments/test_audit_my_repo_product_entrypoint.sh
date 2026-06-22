@@ -544,6 +544,10 @@ if compiled_label["source_candidate_label_id"] != intake_label["source_candidate
     raise SystemExit("compiled benchmark labels must preserve source candidate label id")
 if compiled_label["source_review_queue_id"] != intake_label["source_review_queue_id"]:
     raise SystemExit("compiled benchmark labels must preserve source review queue id")
+if summary["label_source_trace_rows"] != 1 or summary["label_source_trace_missing_rows"] != 0:
+    raise SystemExit("compiled benchmark summary must count complete label source traces")
+if summary["label_source_trace_requirement_met"] != 0:
+    raise SystemExit("synthetic compiled-label benchmark must not pass real-label source trace readiness")
 for key in ["release_ready", "public_comparison_claim_ready", "real_model_execution_ready", "design_partner_beta_candidate_ready"]:
     if summary[key] != 0:
         raise SystemExit(f"synthetic compiled-label benchmark must keep {key}=0")
