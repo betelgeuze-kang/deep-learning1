@@ -2174,6 +2174,16 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     review_queue_ids = {row.get("review_queue_id", "") for row in manual_review_rows}
     if len(review_queue_ids) != len(manual_review_rows) or "" in review_queue_ids:
         add(errors, "manual_review_queue.csv review_queue_id values must be unique and non-empty")
+    manual_by_finding = {row.get("finding_id", ""): row for row in manual_review_rows}
+    for finding_id in sorted(finding_ids):
+        suffix = finding_id.removeprefix("finding_")
+        if not suffix.isdigit():
+            add(errors, f"manual_review_queue.csv finding_id format drift: {finding_id}")
+            continue
+        expected_review_queue_id = f"manual_review_{int(suffix):04d}"
+        actual_review_queue_id = manual_by_finding.get(finding_id, {}).get("review_queue_id")
+        if actual_review_queue_id != expected_review_queue_id:
+            add(errors, f"manual_review_queue.csv review_queue_id must bind finding_id: {finding_id}")
     for row in manual_review_rows:
         if row.get("review_types") != "accuracy|citation_correctness|false_positive":
             add(errors, "manual_review_queue.csv review_types drifted")

@@ -4817,6 +4817,62 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 manual_review_json_path.write_text(original_manual_review_json_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+manual_review_path.write_text(original_manual_review_text, encoding="utf-8")
+manual_review_json_path.write_text(original_manual_review_json_text, encoding="utf-8")
+audit_semantic_summary_path = out_a / "audit_semantic_summary.json"
+original_audit_semantic_summary_text = audit_semantic_summary_path.read_text(encoding="utf-8")
+with manual_review_path.open(newline="", encoding="utf-8") as handle:
+    manual_review_rows = list(csv.DictReader(handle))
+manual_review_json = json.loads(original_manual_review_json_text)
+if len(manual_review_rows) >= 2 and len(manual_review_json.get("rows", [])) >= 2:
+    manual_review_rows[0]["review_queue_id"], manual_review_rows[1]["review_queue_id"] = (
+        manual_review_rows[1]["review_queue_id"],
+        manual_review_rows[0]["review_queue_id"],
+    )
+    manual_review_json["rows"][0]["review_queue_id"], manual_review_json["rows"][1]["review_queue_id"] = (
+        manual_review_json["rows"][1]["review_queue_id"],
+        manual_review_json["rows"][0]["review_queue_id"],
+    )
+    with manual_review_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(manual_review_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(manual_review_rows)
+    manual_review_json_path.write_text(json.dumps(manual_review_json, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    semantic_payload = json.loads(original_audit_semantic_summary_text)
+    semantic_payload["artifact_sha256s"]["manual_review_queue.csv"] = "sha256:" + sha256(manual_review_path)
+    digest = hashlib.sha256()
+    for rel in semantic_payload["semantic_artifacts"]:
+        artifact = out_a / rel
+        digest.update(rel.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(("sha256:" + sha256(artifact)).encode("utf-8") if artifact.is_file() else b"missing")
+        digest.update(b"\n")
+    semantic_payload["semantic_result_sha256"] = "sha256:" + digest.hexdigest()
+    audit_semantic_summary_path.write_text(json.dumps(semantic_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    new_manual_review_sha = sha256(manual_review_path)
+    new_manual_review_json_sha = sha256(manual_review_json_path)
+    new_audit_semantic_summary_sha = sha256(audit_semantic_summary_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  manual_review_queue.csv"):
+            sha_lines.append(f"{new_manual_review_sha}  manual_review_queue.csv")
+        elif line.endswith("  manual_review_queue.json"):
+            sha_lines.append(f"{new_manual_review_json_sha}  manual_review_queue.json")
+        elif line.endswith("  audit_semantic_summary.json"):
+            sha_lines.append(f"{new_audit_semantic_summary_sha}  audit_semantic_summary.json")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    manual_review_swap_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if manual_review_swap_result.returncode == 0:
+        raise SystemExit("local-audit verifier must reject swapped manual review queue ids")
+    if "manual_review_queue.csv review_queue_id must bind finding_id" not in manual_review_swap_result.stderr:
+        raise SystemExit("local-audit verifier must explain manual review queue id binding drift")
+    manual_review_path.write_text(original_manual_review_text, encoding="utf-8")
+    manual_review_json_path.write_text(original_manual_review_json_text, encoding="utf-8")
+    audit_semantic_summary_path.write_text(original_audit_semantic_summary_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 accuracy_json_path = out_a / "accuracy_rows.json"
 original_accuracy_json_text = accuracy_json_path.read_text(encoding="utf-8")
 accuracy_json = json.loads(original_accuracy_json_text)
