@@ -585,6 +585,121 @@ if manifest["cache_key"] != expected_cache_key:
     raise SystemExit("changed-files cache key must bind source scope/input sha/source snapshot/plugin inputs")
 PY
 
+python3 - "$changed_files_out" <<'PY'
+import csv
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+out = Path(sys.argv[1])
+
+
+def sha256(path):
+    import hashlib
+
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+sha_manifest_path = out / "sha256sums.txt"
+original_sha_manifest_text = sha_manifest_path.read_text(encoding="utf-8")
+paths = {
+    "audit_manifest.json": out / "audit_manifest.json",
+    "audit_invocation.json": out / "audit_invocation.json",
+    "audit_summary.json": out / "audit_summary.json",
+    "resource_envelope.json": out / "resource_envelope.json",
+}
+original_texts = {name: path.read_text(encoding="utf-8") for name, path in paths.items()}
+summary_csv_path = out / "audit_summary.csv"
+original_summary_csv_text = summary_csv_path.read_text(encoding="utf-8")
+for name, path in paths.items():
+    payload = json.loads(original_texts[name])
+    if "changed_file_rows" in payload:
+        payload["changed_file_rows"] = 2
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+with summary_csv_path.open(newline="", encoding="utf-8") as handle:
+    summary_rows = list(csv.DictReader(handle))
+summary_rows[0]["changed_file_rows"] = "2"
+with summary_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(summary_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(summary_rows)
+new_shas = {name: sha256(path) for name, path in paths.items()}
+new_shas["audit_summary.csv"] = sha256(summary_csv_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    artifact = line.split("  ", 1)[1] if "  " in line else ""
+    if artifact in new_shas:
+        sha_lines.append(f"{new_shas[artifact]}  {artifact}")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+result = subprocess.run(["./scripts/audit_my_repo.sh", "--verify-existing", str(out)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject changed-files row count drift")
+if "changed-files manifest row count mismatch" not in result.stderr or "changed-files invocation row count mismatch" not in result.stderr:
+    raise SystemExit("local-audit verifier must explain changed-files row count drift")
+for name, text in original_texts.items():
+    paths[name].write_text(text, encoding="utf-8")
+summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+PY
+
+python3 - "$changed_files_out" <<'PY'
+import hashlib
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+out = Path(sys.argv[1])
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+sha_manifest_path = out / "sha256sums.txt"
+original_sha_manifest_text = sha_manifest_path.read_text(encoding="utf-8")
+paths = {
+    "audit_manifest.json": out / "audit_manifest.json",
+    "audit_invocation.json": out / "audit_invocation.json",
+}
+original_texts = {name: path.read_text(encoding="utf-8") for name, path in paths.items()}
+env_like_changed_files = out.parent / ".env.changed-files"
+empty_sha = "sha256:" + hashlib.sha256(b"").hexdigest()
+for name, path in paths.items():
+    payload = json.loads(original_texts[name])
+    payload["changed_files_from"] = str(env_like_changed_files)
+    payload["changed_files_from_sha256"] = empty_sha
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_shas = {name: sha256(path) for name, path in paths.items()}
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    artifact = line.split("  ", 1)[1] if "  " in line else ""
+    if artifact in new_shas:
+        sha_lines.append(f"{new_shas[artifact]}  {artifact}")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+result = subprocess.run(["./scripts/audit_my_repo.sh", "--verify-existing", str(out)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject .env-like changed-files metadata paths")
+if "changed-files manifest input must not be .env-like" not in result.stderr or "changed-files invocation input must not be .env-like" not in result.stderr:
+    raise SystemExit("local-audit verifier must reject .env-like changed-files paths before sha validation")
+for name, text in original_texts.items():
+    paths[name].write_text(text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+PY
+
 printf '%s\n' "$repo/legacy.js" >"$TMP_DIR/changed-files-absolute.txt"
 expect_audit_exit 2 "absolute changed-files rows must fail" "$repo" \
   --mode quick --changed-files-from "$TMP_DIR/changed-files-absolute.txt" \

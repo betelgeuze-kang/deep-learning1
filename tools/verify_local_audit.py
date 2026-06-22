@@ -234,6 +234,11 @@ def sha256_text(text: str) -> str:
     return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def is_forbidden_env_path(path: Path) -> bool:
+    name = path.name
+    return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
+
+
 def schema_sha256s(repo_root: Path) -> dict[str, str]:
     return {rel: sha256_prefixed(repo_root / rel) for rel in SCHEMA_FILES}
 
@@ -459,6 +464,7 @@ def verify_summary(summary_json: dict, summary_csv_rows: list[dict[str, str]], e
 def verify_manifest(manifest: dict, summary_json: dict, out_dir: Path, errors: list[str]) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     publish_root = publish_root_for(out_dir, manifest)
+    target = Path(str(manifest.get("target_repo", ""))).resolve()
     for key, expected in {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "tool_version": TOOL_VERSION,
@@ -500,12 +506,18 @@ def verify_manifest(manifest: dict, summary_json: dict, out_dir: Path, errors: l
             add(errors, "tracked manifest must bind empty changed-files input")
     elif manifest.get("source_scope") == "changed-files":
         changed_files_from = str(manifest.get("changed_files_from", ""))
+        changed_files_path = Path(changed_files_from)
         if not changed_files_from:
             add(errors, "changed-files manifest must bind changed_files_from")
-        elif not Path(changed_files_from).is_file():
+        elif is_forbidden_env_path(changed_files_path):
+            add(errors, "changed-files manifest input must not be .env-like")
+        elif not changed_files_path.is_file():
             add(errors, "changed-files manifest input file is missing")
-        elif manifest.get("changed_files_from_sha256") != sha256_prefixed(Path(changed_files_from)):
+        elif manifest.get("changed_files_from_sha256") != sha256_prefixed(changed_files_path):
             add(errors, "changed-files manifest input sha mismatch")
+        expected_changed_rows = changed_file_input_row_count(changed_files_from, target, errors, "manifest")
+        if expected_changed_rows is not None and int(manifest.get("changed_file_rows", 0)) != expected_changed_rows:
+            add(errors, "changed-files manifest row count mismatch")
         if int(manifest.get("changed_file_rows", 0)) <= 0:
             add(errors, "changed-files manifest must record at least one changed file row")
     expected_real_namespace_confirmed = 1 if manifest.get("namespace") == "real_benchmark" else 0
@@ -568,6 +580,42 @@ def verify_resource(resource: dict, summary: dict[str, str], errors: list[str]) 
         add(errors, "resource latency_ms must equal measured phase timing sum")
 
 
+def changed_file_input_row_count(path_text: str, target: Path, errors: list[str], label: str) -> int | None:
+    path = Path(path_text)
+    if is_forbidden_env_path(path):
+        add(errors, f"changed-files {label} input must not be .env-like")
+        return None
+    if not path.is_file():
+        return None
+    seen: set[str] = set()
+    rows: list[str] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
+        raw = line.strip()
+        if not raw:
+            continue
+        if "\0" in raw:
+            add(errors, f"changed-files {label} input line {line_number} contains a NUL byte")
+            continue
+        rel_path = Path(raw)
+        if raw.startswith("~") or rel_path.is_absolute() or ".." in rel_path.parts:
+            add(errors, f"changed-files {label} input line {line_number} must be relative")
+            continue
+        normalized = rel_path.as_posix()
+        if normalized in {"", "."}:
+            continue
+        try:
+            (target / normalized).resolve().relative_to(target)
+        except (OSError, ValueError):
+            add(errors, f"changed-files {label} input line {line_number} escapes target repo")
+            continue
+        if normalized not in seen:
+            rows.append(normalized)
+            seen.add(normalized)
+    if not rows:
+        add(errors, f"changed-files {label} input must contain at least one relative path")
+    return len(rows)
+
+
 def verify_budget_envelope(out_dir: Path, resource: dict, errors: list[str]) -> None:
     def positive_int(key: str) -> int:
         try:
@@ -609,6 +657,7 @@ def verify_budget_envelope(out_dir: Path, resource: dict, errors: list[str]) -> 
 def verify_invocation(out_dir: Path, manifest: dict, summary: dict[str, str], errors: list[str]) -> None:
     invocation = read_json(out_dir / "audit_invocation.json")
     publish_root = publish_root_for(out_dir, manifest)
+    target = Path(str(manifest.get("target_repo", ""))).resolve()
     expected_keys = {
         "schema_version",
         "tool_version",
@@ -684,10 +733,15 @@ def verify_invocation(out_dir: Path, manifest: dict, summary: dict[str, str], er
             add(errors, "changed-files invocation must bind changed_files_from")
         else:
             changed_files_path = Path(changed_files_from)
-            if not changed_files_path.is_file():
+            if is_forbidden_env_path(changed_files_path):
+                add(errors, "changed-files invocation input must not be .env-like")
+            elif not changed_files_path.is_file():
                 add(errors, "changed-files invocation input file is missing")
             elif invocation.get("changed_files_from_sha256") != sha256_prefixed(changed_files_path):
                 add(errors, "changed-files invocation input sha mismatch")
+        expected_changed_rows = changed_file_input_row_count(changed_files_from, target, errors, "invocation")
+        if expected_changed_rows is not None and int(invocation.get("changed_file_rows", 0)) != expected_changed_rows:
+            add(errors, "changed-files invocation row count mismatch")
         if int(invocation.get("changed_file_rows", 0)) <= 0:
             add(errors, "changed-files invocation must record at least one changed file row")
     suppression_file = str(invocation.get("suppression_file", ""))
