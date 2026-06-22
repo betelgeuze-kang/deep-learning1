@@ -5699,6 +5699,36 @@ sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 with summary_csv_path.open(newline="", encoding="utf-8") as handle:
     summary_csv_rows = list(csv.DictReader(handle))
 tampered_summary_json = json.loads(original_summary_json_text)
+summary_csv_rows[0]["citation_span_rows"] = "0"
+tampered_summary_json["citation_span_rows"] = 0
+with summary_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(summary_csv_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(summary_csv_rows)
+summary_json_path.write_text(json.dumps(tampered_summary_json, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_summary_csv_sha = sha256(summary_csv_path)
+new_summary_json_sha = sha256(summary_json_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  audit_summary.csv"):
+        sha_lines.append(f"{new_summary_csv_sha}  audit_summary.csv")
+    elif line.endswith("  audit_summary.json"):
+        sha_lines.append(f"{new_summary_json_sha}  audit_summary.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+citation_span_summary_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if citation_span_summary_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject citation span summary row-count drift")
+if "citation span row count drift" not in citation_span_summary_result.stderr:
+    raise SystemExit("local-audit verifier must explain citation span summary row-count drift")
+summary_csv_path.write_text(original_summary_csv_text, encoding="utf-8")
+summary_json_path.write_text(original_summary_json_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with summary_csv_path.open(newline="", encoding="utf-8") as handle:
+    summary_csv_rows = list(csv.DictReader(handle))
+tampered_summary_json = json.loads(original_summary_json_text)
 summary_csv_rows[0]["manual_review_queue_rows"] = "0"
 tampered_summary_json["manual_review_queue_rows"] = 0
 with summary_csv_path.open("w", newline="", encoding="utf-8") as handle:

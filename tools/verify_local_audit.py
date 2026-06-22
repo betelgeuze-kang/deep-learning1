@@ -1759,6 +1759,7 @@ def verify_source_snapshot(
 def verify_citations(
     out_dir: Path,
     manifest: dict,
+    summary: dict[str, str],
     source_by_path: dict[str, dict[str, str]],
     errors: list[str],
     *,
@@ -1769,7 +1770,10 @@ def verify_citations(
     citation_cells: dict[tuple[str, str], dict[str, str]] = {}
     citation_ids: set[str] = set()
     referenced_span_cells: set[tuple[str, str]] = set()
-    for row in read_csv(out_dir / "citation_spans.csv"):
+    citation_rows = read_csv(out_dir / "citation_spans.csv")
+    if str(len(citation_rows)) != str(summary.get("citation_span_rows")):
+        add(errors, "citation span row count drift")
+    for row in citation_rows:
         rel = row.get("file_path", "")
         rel_path = relative_source_path(rel, errors, "citation")
         finding_id = row.get("finding_id", "")
@@ -2572,7 +2576,7 @@ def verify_local_audit(out_dir: Path, *, live_source_check: bool = True) -> list
     verify_audit_semantic_summary(out_dir, errors)
     source_by_path = verify_sources(out_dir, manifest, errors, live_source_check=live_source_check)
     verify_source_snapshot(out_dir, manifest, source_by_path, errors, live_source_check=live_source_check)
-    verify_citations(out_dir, manifest, source_by_path, errors, live_source_check=live_source_check)
+    verify_citations(out_dir, manifest, summary, source_by_path, errors, live_source_check=live_source_check)
     verify_cache_key(out_dir, manifest, summary, errors)
     verify_reproduce(out_dir, manifest, summary, errors)
     verify_manual_rows(out_dir, summary, errors)
