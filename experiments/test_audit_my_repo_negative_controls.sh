@@ -1296,7 +1296,7 @@ PY
 )"
 
 cat >"$TMP_DIR/benchmark_labels.jsonl" <<EOF
-{"case_id":"fixture_case","repo_path":"$repo","expected_repo_git_head":"$repo_head","human_labeled":true,"synthetic":false,"priority":"P1","plugin_id":"deprecated_api","rule_id":"deprecated-api-01","file_path":"legacy.py","expected_line_start":1,"expected_line_end":1,"expected_span_sha256":"$legacy_py_line1_span_sha","expected":"present","expected_abstain":false}
+{"case_id":"fixture_case","repo_path":"$repo","expected_repo_git_head":"$repo_head","human_labeled":true,"synthetic":false,"priority":"P1","source_candidate_label_id":"direct-candidate-001","source_review_queue_id":"direct-review-001","plugin_id":"deprecated_api","rule_id":"deprecated-api-01","file_path":"legacy.py","expected_line_start":1,"expected_line_end":1,"expected_span_sha256":"$legacy_py_line1_span_sha","expected":"present","expected_abstain":false}
 {"case_id":"fixture_case","repo_path":"$repo","expected_repo_git_head":"$repo_head","human_labeled":true,"synthetic":false,"priority":"P2","plugin_id":"unsupported_claim","rule_id":"unsupported-claim-readiness-capability-wording","file_path":"README.md","expected_line_start":3,"expected_line_end":3,"expected_span_sha256":"$readme_line3_span_sha","expected":"present"}
 EOF
 "$ROOT_DIR/scripts/audit_my_repo_benchmark.py" \
@@ -1686,6 +1686,10 @@ for label in benchmark_labels["rows"]:
         raise SystemExit("benchmark labels JSON must preserve expected citation span fields")
 deprecated_label = [row for row in benchmark_labels["rows"] if row["plugin_id"] == "deprecated_api"][0]
 unsupported_label = [row for row in benchmark_labels["rows"] if row["plugin_id"] == "unsupported_claim"][0]
+if deprecated_label["source_candidate_label_id"] != "direct-candidate-001" or deprecated_label["source_review_queue_id"] != "direct-review-001":
+    raise SystemExit("benchmark labels JSON must preserve direct-label source trace ids")
+if unsupported_label["source_candidate_label_id"] != "" or unsupported_label["source_review_queue_id"] != "":
+    raise SystemExit("benchmark labels JSON must keep absent direct-label source trace ids as empty strings")
 if deprecated_label["expected_abstain"] != "0" or unsupported_label["expected_abstain"] != "":
     raise SystemExit("benchmark labels JSON must normalize expected_abstain to 0/1/empty")
 if deprecated_label["expected_line_start"] != "1" or unsupported_label["expected_line_start"] != "3":

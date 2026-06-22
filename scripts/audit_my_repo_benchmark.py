@@ -91,6 +91,8 @@ LABEL_QUALITY_FIELDS = [
 BENCHMARK_LABEL_FIELDS = [
     "case_id",
     "label_id",
+    "source_candidate_label_id",
+    "source_review_queue_id",
     "plugin_id",
     "rule_id",
     "file_path",
@@ -471,6 +473,10 @@ def normalize_cases(raw_rows: list[dict], labels_dir: Path) -> list[dict]:
         expected_line_start, expected_line_end, expected_span_sha256 = normalize_label_citation_expectation(row, case_id, label_id)
         label = {
             "label_id": label_id,
+            "source_candidate_label_id": str(
+                row.get("source_candidate_label_id") or row.get("candidate_label_id") or ""
+            ).strip(),
+            "source_review_queue_id": str(row.get("source_review_queue_id") or "").strip(),
             "plugin_id": str(row.get("plugin_id") or ""),
             "rule_id": str(row.get("rule_id") or ""),
             "file_path": str(row.get("file_path") or ""),
@@ -2382,7 +2388,7 @@ def main(argv: list[str]) -> int:
             raise OSError("simulated benchmark artifact write failure")
         write_csv(out / "benchmark_case_metrics.csv", list(metric_rows[0].keys()) if metric_rows else ["case_id"], metric_rows)
         write_csv(out / "benchmark_repo_snapshots.csv", REPO_SNAPSHOT_FIELDS, repo_snapshot_rows)
-        write_csv(out / "benchmark_labels.csv", list(all_label_rows[0].keys()) if all_label_rows else ["case_id"], all_label_rows)
+        write_csv(out / "benchmark_labels.csv", BENCHMARK_LABEL_FIELDS, all_label_rows)
         write_benchmark_labels_json(out / "benchmark_labels.json", all_label_rows)
         write_csv(out / "benchmark_label_quality.csv", LABEL_QUALITY_FIELDS, label_quality_rows)
         write_csv(out / "benchmark_label_citation_expectations.csv", LABEL_CITATION_EXPECTATION_FIELDS, all_label_citation_rows)

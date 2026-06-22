@@ -522,6 +522,8 @@ label_intake_out = Path(sys.argv[2]).resolve()
 summary = json.loads((out / "benchmark_summary.json").read_text(encoding="utf-8"))
 evaluation = json.loads((out / "benchmark_evaluation.json").read_text(encoding="utf-8"))
 manifest = json.loads((out / "benchmark_manifest.json").read_text(encoding="utf-8"))
+benchmark_labels = json.loads((out / "benchmark_labels.json").read_text(encoding="utf-8"))
+intake_rows = [json.loads(line) for line in (label_intake_out / "benchmark_labels.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
 if summary["human_label_rows"] != 1 or evaluation["metrics"]["human_label_rows"] != 1:
     raise SystemExit("compiled benchmark labels must count as human label rows")
 if manifest["label_source_kind"] != "label_intake":
@@ -534,6 +536,14 @@ if manifest["label_intake_manifest_sha256"] != "sha256:" + hashlib.sha256((label
     raise SystemExit("compiled benchmark must bind label intake manifest sha")
 if manifest["label_intake_sha256sums_sha256"] != "sha256:" + hashlib.sha256((label_intake_out / "label_intake_sha256sums.txt").read_bytes()).hexdigest():
     raise SystemExit("compiled benchmark must bind label intake sha manifest sha")
+if len(benchmark_labels["rows"]) != 1 or len(intake_rows) != 1:
+    raise SystemExit("compiled benchmark traceability check expected one label row")
+compiled_label = benchmark_labels["rows"][0]
+intake_label = intake_rows[0]
+if compiled_label["source_candidate_label_id"] != intake_label["source_candidate_label_id"]:
+    raise SystemExit("compiled benchmark labels must preserve source candidate label id")
+if compiled_label["source_review_queue_id"] != intake_label["source_review_queue_id"]:
+    raise SystemExit("compiled benchmark labels must preserve source review queue id")
 for key in ["release_ready", "public_comparison_claim_ready", "real_model_execution_ready", "design_partner_beta_candidate_ready"]:
     if summary[key] != 0:
         raise SystemExit(f"synthetic compiled-label benchmark must keep {key}=0")

@@ -24,6 +24,8 @@
         "required": [
           "case_id",
           "label_id",
+          "source_candidate_label_id",
+          "source_review_queue_id",
           "plugin_id",
           "rule_id",
           "file_path",
@@ -43,6 +45,8 @@
         "properties": {
           "case_id": {"type": "string", "minLength": 1},
           "label_id": {"type": "string", "minLength": 1},
+          "source_candidate_label_id": {"type": "string"},
+          "source_review_queue_id": {"type": "string"},
           "plugin_id": {"type": "string", "minLength": 1},
           "rule_id": {"type": "string"},
           "file_path": {"type": "string"},
