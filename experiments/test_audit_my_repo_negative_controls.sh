@@ -5104,6 +5104,137 @@ if citation_csv_rows and citation_json_rows:
     tampered_citations.write_text(original_citations, encoding="utf-8")
     sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+with citation_spans_csv_path.open(newline="", encoding="utf-8") as handle:
+    citation_csv_rows = list(csv.DictReader(handle))
+citation_json_rows = [json.loads(line) for line in original_citations.splitlines() if line.strip()]
+sarif_path = out_a / "audit_findings.sarif.json"
+mmap_path = out_a / "mmap_read_trace.jsonl"
+original_sarif_text = sarif_path.read_text(encoding="utf-8")
+original_mmap_text_for_citation_span = mmap_path.read_text(encoding="utf-8")
+target_idx = None
+target_lines = []
+for idx, row in enumerate(citation_csv_rows):
+    source_path = repo / row["file_path"]
+    lines = source_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    if int(row["line_start"]) < len(lines):
+        target_idx = idx
+        target_lines = lines
+        break
+if target_idx is None:
+    raise SystemExit("local-audit multi-line span negative control needs a citation before EOF")
+target_csv_row = citation_csv_rows[target_idx]
+target_json_row = citation_json_rows[target_idx]
+original_target_span_sha = target_csv_row["span_sha256"]
+line_start = int(target_csv_row["line_start"])
+line_end = line_start + 1
+span_text = "\n".join(line.strip() for line in target_lines[line_start - 1:line_end])
+new_span_sha = "sha256:" + hashlib.sha256(span_text.encode("utf-8")).hexdigest()
+for row in (target_csv_row, target_json_row):
+    row["line_end"] = str(line_end)
+    row["span_sha256"] = new_span_sha
+with citation_spans_csv_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(citation_csv_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(citation_csv_rows)
+tampered_citations.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in citation_json_rows), encoding="utf-8")
+sarif_payload = json.loads(original_sarif_text)
+for result in sarif_payload["runs"][0]["results"]:
+    if result.get("properties", {}).get("finding_id") != target_csv_row["finding_id"]:
+        continue
+    if result.get("partialFingerprints", {}).get("primaryLocationLineHash") == original_target_span_sha:
+        result["partialFingerprints"]["primaryLocationLineHash"] = new_span_sha
+    for location in result.get("locations", []):
+        physical = location.get("physicalLocation", {})
+        artifact = physical.get("artifactLocation", {})
+        region = physical.get("region", {})
+        if artifact.get("uri") == target_csv_row["file_path"] and str(region.get("startLine")) == str(line_start):
+            region["endLine"] = line_end
+            physical.setdefault("properties", {})["span_sha256"] = new_span_sha
+sarif_path.write_text(json.dumps(sarif_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+mmap_rows = [json.loads(line) for line in original_mmap_text_for_citation_span.splitlines() if line.strip()]
+for row in mmap_rows:
+    if (
+        row.get("finding_id") == target_csv_row["finding_id"]
+        and row.get("file_path") == target_csv_row["file_path"]
+        and str(row.get("line_start")) == str(line_start)
+        and row.get("sha256") == target_csv_row["sha256"]
+    ):
+        row["span_sha256"] = new_span_sha
+mmap_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in mmap_rows), encoding="utf-8")
+semantic_payload = json.loads(original_audit_semantic_summary_text)
+semantic_payload["artifact_sha256s"]["citation_spans.csv"] = "sha256:" + sha256(citation_spans_csv_path)
+digest = hashlib.sha256()
+for rel in semantic_payload["semantic_artifacts"]:
+    artifact = out_a / rel
+    digest.update(rel.encode("utf-8"))
+    digest.update(b"\0")
+    digest.update(("sha256:" + sha256(artifact)).encode("utf-8") if artifact.is_file() else b"missing")
+    digest.update(b"\n")
+semantic_payload["semantic_result_sha256"] = "sha256:" + digest.hexdigest()
+audit_semantic_summary_path.write_text(json.dumps(semantic_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+new_citation_csv_sha = sha256(citation_spans_csv_path)
+new_citation_jsonl_sha = sha256(tampered_citations)
+new_sarif_sha = sha256(sarif_path)
+new_mmap_sha = sha256(mmap_path)
+new_semantic_summary_sha = sha256(audit_semantic_summary_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  citation_spans.csv"):
+        sha_lines.append(f"{new_citation_csv_sha}  citation_spans.csv")
+    elif line.endswith("  citation_spans.jsonl"):
+        sha_lines.append(f"{new_citation_jsonl_sha}  citation_spans.jsonl")
+    elif line.endswith("  audit_findings.sarif.json"):
+        sha_lines.append(f"{new_sarif_sha}  audit_findings.sarif.json")
+    elif line.endswith("  mmap_read_trace.jsonl"):
+        sha_lines.append(f"{new_mmap_sha}  mmap_read_trace.jsonl")
+    elif line.endswith("  audit_semantic_summary.json"):
+        sha_lines.append(f"{new_semantic_summary_sha}  audit_semantic_summary.json")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+single_line_span_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if single_line_span_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject widened citation spans")
+if "citation span must remain single-line" not in single_line_span_result.stderr:
+    raise SystemExit("local-audit verifier must explain widened citation span drift")
+citation_spans_csv_path.write_text(original_citation_spans_csv_text, encoding="utf-8")
+tampered_citations.write_text(original_citations, encoding="utf-8")
+sarif_path.write_text(original_sarif_text, encoding="utf-8")
+mmap_path.write_text(original_mmap_text_for_citation_span, encoding="utf-8")
+audit_semantic_summary_path.write_text(original_audit_semantic_summary_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with citation_spans_csv_path.open(newline="", encoding="utf-8") as handle:
+    citation_csv_rows = list(csv.DictReader(handle))
+citation_json_rows = [json.loads(line) for line in original_citations.splitlines() if line.strip()]
+if citation_csv_rows and citation_json_rows:
+    citation_csv_rows[0]["citation_id"] = citation_csv_rows[0]["citation_id"] + "_tampered"
+    citation_json_rows[0]["citation_id"] = citation_json_rows[0]["citation_id"] + "_tampered"
+    with citation_spans_csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(citation_csv_rows[0].keys()), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(citation_csv_rows)
+    tampered_citations.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in citation_json_rows), encoding="utf-8")
+    new_citation_csv_sha = sha256(citation_spans_csv_path)
+    new_citation_jsonl_sha = sha256(tampered_citations)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  citation_spans.csv"):
+            sha_lines.append(f"{new_citation_csv_sha}  citation_spans.csv")
+        elif line.endswith("  citation_spans.jsonl"):
+            sha_lines.append(f"{new_citation_jsonl_sha}  citation_spans.jsonl")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if result.returncode == 0:
+        raise SystemExit("local-audit verifier must reject citation id/order drift")
+    if "citation id must bind finding citation order" not in result.stderr:
+        raise SystemExit("local-audit verifier must explain citation id/order drift")
+    citation_spans_csv_path.write_text(original_citation_spans_csv_text, encoding="utf-8")
+    tampered_citations.write_text(original_citations, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 findings_csv_path = out_a / "audit_findings.csv"
 audit_findings_json_path = out_a / "audit_findings.json"
 audit_findings_path = out_a / "audit_findings.jsonl"

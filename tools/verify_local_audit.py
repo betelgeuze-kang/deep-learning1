@@ -1788,6 +1788,8 @@ def verify_citations(
         if line_start < 1 or line_end < line_start:
             add(errors, f"citation line bounds invalid: {rel}:{line_start}")
             continue
+        if line_end != line_start:
+            add(errors, f"citation span must remain single-line: {rel}:{line_start}-{line_end}")
         if not live_source_check:
             cell_key = (finding_id, f"{rel}:{line_start}")
             if cell_key in citation_cells:
@@ -1824,6 +1826,9 @@ def verify_citations(
             if span is None:
                 add(errors, f"finding citation has no matching span row: {finding_id} {cell}")
                 continue
+            expected_citation_id = f"{finding_id}_cite_{idx + 1}"
+            if span.get("citation_id") != expected_citation_id:
+                add(errors, f"citation id must bind finding citation order: {finding_id} {cell}")
             if idx >= len(sha_cells):
                 continue
             if sha_cells[idx] != span.get("sha256"):
