@@ -1628,6 +1628,7 @@ tampered_csvs = {
     "benchmark_confusion_rows.csv": out / "benchmark_confusion_rows.csv",
     "benchmark_findings.csv": out / "benchmark_findings.csv",
     "benchmark_abstain_correctness.csv": out / "benchmark_abstain_correctness.csv",
+    "benchmark_label_quality.csv": out / "benchmark_label_quality.csv",
 }
 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 csv_shas = {}
@@ -1659,7 +1660,8 @@ for expected_header_error in \
   "benchmark_citation_validity.csv header drift" \
   "benchmark_confusion_rows.csv header drift" \
   "benchmark_findings.csv header drift" \
-  "benchmark_abstain_correctness.csv header drift"; do
+  "benchmark_abstain_correctness.csv header drift" \
+  "benchmark_label_quality.csv header drift"; do
   if ! grep -F "$expected_header_error" "$allowlist_header_stderr" >/dev/null; then
     echo "benchmark verifier must explain CSV header drift: $expected_header_error" >&2
     cat "$allowlist_header_stderr" >&2

@@ -2022,6 +2022,7 @@ def verify_benchmark_output(root: Path, out_dir: Path) -> list[str]:
         "benchmark_citation_validity.csv": CITATION_VALIDITY_FIELDS,
         "benchmark_confusion_rows.csv": CONFUSION_FIELDS,
         "benchmark_abstain_correctness.csv": ABSTAIN_CORRECTNESS_FIELDS,
+        "benchmark_label_quality.csv": LABEL_QUALITY_FIELDS,
     }.items():
         try:
             if csv_fieldnames(out_dir / rel) != expected_fields:
