@@ -3598,6 +3598,7 @@ for key in [
     "release_ready",
     "public_comparison_claim_ready",
     "real_model_execution_ready",
+    "design_partner_beta_candidate_ready",
 ]:
     if manifest[key] != 0:
         raise SystemExit(f"package manifest must keep {key}=0")
@@ -3827,6 +3828,39 @@ if "$ROOT_DIR/scripts/audit_my_repo_package.py" --verify-existing "$package_out"
   echo "package verifier must reject package_sha256s-only digest drift" >&2
   exit 31
 fi
+cp "$TMP_DIR/package_sha256s.original.txt" "$package_sha_path"
+"$ROOT_DIR/scripts/audit_my_repo_package.py" --verify-existing "$package_out" >/dev/null
+
+python3 - "$package_manifest_path" <<'PY'
+import json
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["design_partner_beta_candidate_ready"] = 1
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+python3 - "$package_sha_path" "$package_manifest_path" "package_manifest.json" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+sha_path = Path(sys.argv[1])
+target = Path(sys.argv[2])
+rel = sys.argv[3]
+new_sha = hashlib.sha256(target.read_bytes()).hexdigest()
+lines = []
+for line in sha_path.read_text(encoding="utf-8").splitlines():
+    if line.endswith("  " + rel):
+        lines.append(f"{new_sha}  {rel}")
+    else:
+        lines.append(line)
+sha_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+if "$ROOT_DIR/scripts/audit_my_repo_package.py" --verify-existing "$package_out" >/dev/null 2>&1; then
+  echo "package verifier must reject tampered design-partner beta readiness" >&2
+  exit 31
+fi
+cp "$TMP_DIR/package_manifest.original.json" "$package_manifest_path"
 cp "$TMP_DIR/package_sha256s.original.txt" "$package_sha_path"
 "$ROOT_DIR/scripts/audit_my_repo_package.py" --verify-existing "$package_out" >/dev/null
 
@@ -4910,6 +4944,7 @@ with contract_path.open(newline="", encoding="utf-8") as handle:
     contract_rows = list(csv.DictReader(handle))
 for row in contract_rows:
     if row["artifact_path"] == "suppressed_findings.csv":
+        row["artifact_kind"] = "text"
         row["required_columns"] = "suppression_id"
         row["actual_columns"] = "suppression_id"
         row["actual_rows"] = "0"
@@ -4928,8 +4963,11 @@ for line in original_sha_manifest_text.splitlines():
     else:
         sha_lines.append(line)
 sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
-if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
-    raise SystemExit("local-audit verifier must reject coordinated CSV contract/header drift")
+contract_kind_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if contract_kind_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject coordinated CSV contract kind/header drift")
+if "artifact contract kind drift: suppressed_findings.csv" not in contract_kind_result.stderr:
+    raise SystemExit("local-audit verifier must explain artifact contract kind drift")
 suppressed_findings_path.write_text(original_suppressed_findings_text, encoding="utf-8")
 contract_path.write_text(original_contract_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")

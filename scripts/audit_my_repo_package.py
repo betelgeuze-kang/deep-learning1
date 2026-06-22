@@ -135,6 +135,7 @@ def build_manifest(root: Path) -> dict:
         "release_ready": 0,
         "public_comparison_claim_ready": 0,
         "real_model_execution_ready": 0,
+        "design_partner_beta_candidate_ready": 0,
         "source_file_count": len(source_rows),
         "schema_file_count": len(schema_rows),
         "changelog_path": CHANGELOG_REL,
@@ -404,6 +405,7 @@ def verify_package(root: Path, out_dir: Path) -> list[str]:
         "release_ready",
         "public_comparison_claim_ready",
         "real_model_execution_ready",
+        "design_partner_beta_candidate_ready",
     ]:
         if manifest.get(key) != expected_manifest[key]:
             add(f"package_manifest readiness/boundary drift: {key}")

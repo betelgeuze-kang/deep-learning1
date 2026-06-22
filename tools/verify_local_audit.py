@@ -19,6 +19,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from audit_my_repo import CSV_CONTRACTS as EXPECTED_CSV_CONTRACTS
+from audit_my_repo import JSON_CONTRACTS as EXPECTED_JSON_CONTRACTS
 from audit_my_repo import JSONL_CONTRACTS as EXPECTED_JSONL_CONTRACTS
 
 
@@ -162,6 +163,21 @@ EXPECTED_ARTIFACT_CONTRACT_FIELDS = [
     "sha256_manifest_required",
     "deterministic_required",
 ]
+EXPECTED_TEXT_ARTIFACT_KINDS = {
+    "AUDIT_DASHBOARD.html": "html",
+    "AUDIT_REPORT.md": "markdown",
+    "ARCHITECTURE_TRACE.md": "markdown",
+    "BASELINE_DIFF.md": "markdown",
+    "claim_boundary.md": "markdown",
+    "reproduce.sh": "shell",
+    "verify.sh": "shell",
+}
+EXPECTED_ARTIFACT_KINDS = {
+    **{rel: "csv" for rel in EXPECTED_CSV_CONTRACTS},
+    **{rel: "jsonl" for rel in EXPECTED_JSONL_CONTRACTS},
+    **{rel: "json" for rel in EXPECTED_JSON_CONTRACTS},
+    **EXPECTED_TEXT_ARTIFACT_KINDS,
+}
 SCHEMA_FILES = (
     "schemas/local_repo_audit_output.schema.json",
     "schemas/local_repo_audit_diagnostics.schema.json",
@@ -1159,7 +1175,13 @@ def verify_contract(out_dir: Path, sha_entries: dict[str, str], errors: list[str
         if not artifact.is_file():
             add(errors, f"contract artifact missing: {rel}")
             continue
+        expected_kind = EXPECTED_ARTIFACT_KINDS.get(rel)
         kind = row.get("artifact_kind")
+        if expected_kind is None:
+            add(errors, f"artifact contract missing verifier kind expectation: {rel}")
+        elif kind != expected_kind:
+            add(errors, f"artifact contract kind drift: {rel}")
+            kind = expected_kind
         min_rows = int(row.get("min_rows") or 0)
         if kind == "csv":
             with artifact.open(newline="", encoding="utf-8") as handle:
