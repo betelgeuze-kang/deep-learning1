@@ -13,6 +13,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_DIR = REPO_ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from audit_my_repo import CSV_CONTRACTS as EXPECTED_CSV_CONTRACTS
+from audit_my_repo import JSONL_CONTRACTS as EXPECTED_JSONL_CONTRACTS
+
 
 TOOL_VERSION = "audit_my_repo_alpha.v1"
 MANIFEST_SCHEMA_VERSION = "local_repo_audit_output.v1"
@@ -141,6 +149,19 @@ EXPECTED_SUMMARY_KEYS = [
     "verify_latency_ms",
     "latency_ms",
 ]
+EXPECTED_ARTIFACT_CONTRACT_FIELDS = [
+    "schema_version",
+    "artifact_path",
+    "artifact_kind",
+    "required_columns",
+    "actual_columns",
+    "required_keys",
+    "actual_keys",
+    "min_rows",
+    "actual_rows",
+    "sha256_manifest_required",
+    "deterministic_required",
+]
 SCHEMA_FILES = (
     "schemas/local_repo_audit_output.schema.json",
     "schemas/local_repo_audit_diagnostics.schema.json",
@@ -236,6 +257,12 @@ def read_json(path: Path) -> dict:
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
+
+
+def csv_fieldnames(path: Path) -> list[str]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        return list(reader.fieldnames or [])
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -1114,6 +1141,8 @@ def verify_plugin_rules(out_dir: Path, registry: dict, errors: list[str]) -> Non
 
 
 def verify_contract(out_dir: Path, sha_entries: dict[str, str], errors: list[str]) -> None:
+    if csv_fieldnames(out_dir / "artifact_contract_rows.csv") != EXPECTED_ARTIFACT_CONTRACT_FIELDS:
+        add(errors, "artifact_contract_rows.csv header drift")
     rows = read_csv(out_dir / "artifact_contract_rows.csv")
     expected_contract_paths = REQUIRED_FILES - {"sha256sums.txt", "artifact_contract_rows.csv"}
     seen_contract_paths: set[str] = set()
@@ -1138,7 +1167,13 @@ def verify_contract(out_dir: Path, sha_entries: dict[str, str], errors: list[str
                 rows = list(reader)
                 columns = list(reader.fieldnames or [])
             expected_columns = row.get("required_columns", "").split("|") if row.get("required_columns") else []
-            if columns != expected_columns or row.get("actual_columns", "").split("|") != expected_columns:
+            verifier_columns = EXPECTED_CSV_CONTRACTS.get(rel)
+            if verifier_columns is None:
+                add(errors, f"csv contract missing verifier expectation: {rel}")
+                verifier_columns = expected_columns
+            if expected_columns != verifier_columns:
+                add(errors, f"csv contract required columns drift: {rel}")
+            if columns != verifier_columns or row.get("actual_columns", "").split("|") != verifier_columns:
                 add(errors, f"csv contract columns mismatch: {rel}")
             if len(rows) != int(row.get("actual_rows") or -1) or len(rows) < min_rows:
                 add(errors, f"csv contract row count mismatch: {rel}")
@@ -1146,6 +1181,14 @@ def verify_contract(out_dir: Path, sha_entries: dict[str, str], errors: list[str
             rows = read_jsonl(artifact)
             keys = sorted({key for payload in rows for key in payload})
             required_keys = sorted(row.get("required_keys", "").split("|")) if row.get("required_keys") else []
+            actual_keys = sorted(row.get("actual_keys", "").split("|")) if row.get("actual_keys") else []
+            verifier_keys = sorted(EXPECTED_JSONL_CONTRACTS.get(rel, []))
+            if verifier_keys and required_keys != verifier_keys:
+                add(errors, f"jsonl contract required keys drift: {rel}")
+            if keys != actual_keys:
+                add(errors, f"jsonl contract actual keys drift: {rel}")
+            if verifier_keys and keys != verifier_keys:
+                add(errors, f"jsonl contract keys mismatch: {rel}")
             if not set(required_keys).issubset(keys) or len(rows) < min_rows:
                 add(errors, f"jsonl contract mismatch: {rel}")
         elif kind == "json":

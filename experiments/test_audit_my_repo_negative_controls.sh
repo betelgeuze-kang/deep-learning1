@@ -4903,6 +4903,37 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 contract_path.write_text(original_contract_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+suppressed_findings_path = out_a / "suppressed_findings.csv"
+original_suppressed_findings_text = suppressed_findings_path.read_text(encoding="utf-8")
+suppressed_findings_path.write_text("suppression_id\n", encoding="utf-8")
+with contract_path.open(newline="", encoding="utf-8") as handle:
+    contract_rows = list(csv.DictReader(handle))
+for row in contract_rows:
+    if row["artifact_path"] == "suppressed_findings.csv":
+        row["required_columns"] = "suppression_id"
+        row["actual_columns"] = "suppression_id"
+        row["actual_rows"] = "0"
+with contract_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(contract_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(contract_rows)
+new_suppressed_findings_sha = sha256(suppressed_findings_path)
+new_contract_sha = sha256(contract_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  suppressed_findings.csv"):
+        sha_lines.append(f"{new_suppressed_findings_sha}  suppressed_findings.csv")
+    elif line.endswith("  artifact_contract_rows.csv"):
+        sha_lines.append(f"{new_contract_sha}  artifact_contract_rows.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+    raise SystemExit("local-audit verifier must reject coordinated CSV contract/header drift")
+suppressed_findings_path.write_text(original_suppressed_findings_text, encoding="utf-8")
+contract_path.write_text(original_contract_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 tampered_citations.write_text(original_citations.replace("sha256:", "sha256:0000", 1), encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject tampered citation hashes")
@@ -5971,6 +6002,25 @@ for line in original_sha_manifest_text.splitlines():
 sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
 if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
     raise SystemExit("local-audit verifier must reject prediction lineage generator drift")
+lineage_path.write_text(original_lineage_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+lineage_rows = [json.loads(line) for line in original_lineage_text.splitlines() if line.strip()]
+lineage_rows[0]["schema_drift_probe"] = "extra"
+lineage_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in lineage_rows), encoding="utf-8")
+new_lineage_sha = sha256(lineage_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  prediction_lineage.jsonl"):
+        sha_lines.append(f"{new_lineage_sha}  prediction_lineage.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+lineage_schema_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if lineage_schema_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject prediction lineage JSONL key drift")
+if "jsonl contract actual keys drift: prediction_lineage.jsonl" not in lineage_schema_result.stderr:
+    raise SystemExit("local-audit verifier must explain prediction lineage JSONL key drift")
 lineage_path.write_text(original_lineage_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
