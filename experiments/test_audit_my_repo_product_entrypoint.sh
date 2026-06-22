@@ -383,9 +383,12 @@ with (audit_out / "audit_findings.csv").open(newline="", encoding="utf-8") as ha
     unsuppressed_findings = [row for row in csv.DictReader(handle) if row["suppressed"] == "0"]
 with (audit_out / "citation_spans.csv").open(newline="", encoding="utf-8") as handle:
     spans = list(csv.DictReader(handle))
+with (audit_out / "manual_review_queue.csv").open(newline="", encoding="utf-8") as handle:
+    manual_review_rows = list(csv.DictReader(handle))
 spans_by_finding = {}
 for span in spans:
     spans_by_finding.setdefault(span["finding_id"], []).append(span)
+review_queue_by_finding = {row["finding_id"]: row for row in manual_review_rows}
 
 if payload["candidate_label_rows"] != len(unsuppressed_findings) or manifest["candidate_label_rows"] != len(unsuppressed_findings):
     raise SystemExit("label template must emit one candidate per unsuppressed finding")
@@ -405,6 +408,9 @@ for row in csv_rows:
         raise SystemExit("synthetic audit output must stamp synthetic=1 on template rows")
     if not row["candidate_label_id"].startswith("product_case_1_"):
         raise SystemExit("label template candidate ids must be case scoped")
+    review_row = review_queue_by_finding.get(row["source_finding_id"])
+    if not review_row or row["source_review_queue_id"] != review_row["review_queue_id"]:
+        raise SystemExit("label template must bind the source manual review queue row")
     if row["human_expected"] or row["human_expected_abstain"] or row["human_priority"] or row["reviewer_notes"]:
         raise SystemExit("label template human fields must start blank")
     source_spans = spans_by_finding.get(row["source_finding_id"], [])
@@ -481,6 +487,8 @@ if not row.get("repo_path") or not row.get("plugin_id") or not row.get("rule_id"
     raise SystemExit("compiled benchmark label must bind repo/plugin/rule")
 if not row.get("expected_line_start") or not row.get("expected_span_sha256"):
     raise SystemExit("compiled benchmark label must carry citation expectation")
+if not row.get("source_finding_id") or not row.get("source_review_queue_id"):
+    raise SystemExit("compiled benchmark label must preserve source finding and review queue ids")
 if manifest["human_label_rows"] != 1 or manifest["label_rows"] != 1:
     raise SystemExit("label intake manifest must count compiled human labels")
 if manifest["decisions_input_sha256"] != "sha256:" + hashlib.sha256(decisions.read_bytes()).hexdigest():

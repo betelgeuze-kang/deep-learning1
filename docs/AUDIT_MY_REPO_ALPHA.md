@@ -170,7 +170,7 @@ Pass `--emit-diagnostics` to opt in to coarse run metrics only. The artifact wil
 
 ## Human Label Templates
 
-Create template-only candidate rows from a verified audit bundle before asking a design partner to label findings:
+Create template-only candidate rows from a verified audit bundle before asking a design partner to label findings. Each candidate binds the source finding, primary citation span, and source manual-review queue id so human labels stay tied to the unreviewed queue row:
 
 ```bash
 ./scripts/audit_my_repo_label_template.py --audit-output results/my_repo_audit --out results/my_repo_label_template --case-id my_repo

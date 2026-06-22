@@ -251,6 +251,7 @@ def compile_benchmark_labels(
             "expected_abstain": decision["expected_abstain"],
             "source_candidate_label_id": candidate_id,
             "source_finding_id": candidate["source_finding_id"],
+            "source_review_queue_id": candidate.get("source_review_queue_id", ""),
             "source_template_span_sha256": candidate.get("expected_span_sha256", ""),
         }
         labels.append(label)

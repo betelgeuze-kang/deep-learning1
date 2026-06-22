@@ -27,6 +27,7 @@ LABEL_TEMPLATE_FIELDS = [
     "human_labeled",
     "synthetic",
     "source_finding_id",
+    "source_review_queue_id",
     "plugin_id",
     "rule_id",
     "plugin_rule_ids",
@@ -184,6 +185,10 @@ def build_template_rows(audit_output: Path, case_id: str) -> list[dict[str, str]
     manifest = read_json(audit_output / "audit_manifest.json")
     findings = read_csv_rows(audit_output / "audit_findings.csv")
     citations = rows_by_finding_id(read_csv_rows(audit_output / "citation_spans.csv"))
+    review_queue = {
+        row.get("finding_id", ""): row
+        for row in read_csv_rows(audit_output / "manual_review_queue.csv")
+    }
     real_benchmark_confirmed = (
         str(manifest.get("namespace", "")) == "real_benchmark"
         and int(manifest.get("real_benchmark_namespace_confirmed", 0)) == 1
@@ -208,6 +213,7 @@ def build_template_rows(audit_output: Path, case_id: str) -> list[dict[str, str]
             "human_labeled": "0",
             "synthetic": synthetic,
             "source_finding_id": finding_id,
+            "source_review_queue_id": str(review_queue.get(finding_id, {}).get("review_queue_id", "")),
             "plugin_id": str(finding.get("plugin_id", "")),
             "rule_id": first_rule_id(str(finding.get("plugin_rule_ids", ""))),
             "plugin_rule_ids": str(finding.get("plugin_rule_ids", "")),
@@ -433,6 +439,8 @@ def verify_template_dir(out_dir: Path, *, allow_source_drift: bool = False) -> l
                 errors.append(f"label template row must keep {blocked_key}=0")
         if not row.get("case_id") or not row.get("candidate_label_id") or not row.get("source_finding_id"):
             errors.append("label template rows must bind case, candidate, and source finding ids")
+        if not row.get("source_review_queue_id"):
+            errors.append("label template rows must bind source review queue ids")
 
     audit_output = Path(str(manifest.get("input_audit_output", ""))).expanduser()
     if not audit_output.is_absolute():
