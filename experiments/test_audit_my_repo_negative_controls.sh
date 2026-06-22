@@ -6122,6 +6122,79 @@ if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNU
 lineage_path.write_text(original_lineage_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+with hint_path.open(newline="", encoding="utf-8") as handle:
+    hint_rows = list(csv.DictReader(handle))
+with generation_path.open(newline="", encoding="utf-8") as handle:
+    generation_rows = list(csv.DictReader(handle))
+lineage_rows = [json.loads(line) for line in original_lineage_text.splitlines() if line.strip()]
+if len(hint_rows) < 2 or len(generation_rows) < 2 or len(lineage_rows) < 2:
+    raise SystemExit("local-audit route/generation ID swap negative control needs at least two findings")
+hint_rows[0]["hint_id"], hint_rows[1]["hint_id"] = hint_rows[1]["hint_id"], hint_rows[0]["hint_id"]
+generation_rows[0]["generation_id"], generation_rows[1]["generation_id"] = (
+    generation_rows[1]["generation_id"],
+    generation_rows[0]["generation_id"],
+)
+hint_id_by_finding = {row["finding_id"]: row["hint_id"] for row in hint_rows}
+generation_id_by_finding = {row["finding_id"]: row["generation_id"] for row in generation_rows}
+for row in generation_rows:
+    row["hint_id"] = hint_id_by_finding[row["finding_id"]]
+for row in lineage_rows:
+    row["compact_route_hint_id"] = hint_id_by_finding[row["finding_id"]]
+    row["generator_id"] = generation_id_by_finding[row["finding_id"]]
+with hint_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(hint_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(hint_rows)
+with generation_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(generation_rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(generation_rows)
+lineage_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in lineage_rows), encoding="utf-8")
+new_hint_sha = sha256(hint_path)
+new_generation_sha = sha256(generation_path)
+new_lineage_sha = sha256(lineage_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  compact_route_hint_rows.csv"):
+        sha_lines.append(f"{new_hint_sha}  compact_route_hint_rows.csv")
+    elif line.endswith("  grounded_generation_rows.csv"):
+        sha_lines.append(f"{new_generation_sha}  grounded_generation_rows.csv")
+    elif line.endswith("  prediction_lineage.jsonl"):
+        sha_lines.append(f"{new_lineage_sha}  prediction_lineage.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+route_generation_swap_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if route_generation_swap_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject coordinated route/generation ID swaps")
+if "route hint id/finding binding drift" not in route_generation_swap_result.stderr:
+    raise SystemExit("local-audit verifier must explain route hint/finding binding drift")
+hint_path.write_text(original_hint_text, encoding="utf-8")
+generation_path.write_text(original_generation_text, encoding="utf-8")
+lineage_path.write_text(original_lineage_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+lineage_rows = [json.loads(line) for line in original_lineage_text.splitlines() if line.strip()]
+if len(lineage_rows) < 2:
+    raise SystemExit("local-audit lineage route-index negative control needs at least two findings")
+lineage_rows[0]["route_index_row"] = lineage_rows[1]["route_index_row"]
+lineage_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in lineage_rows), encoding="utf-8")
+new_lineage_sha = sha256(lineage_path)
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  prediction_lineage.jsonl"):
+        sha_lines.append(f"{new_lineage_sha}  prediction_lineage.jsonl")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+route_index_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+if route_index_result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject lineage route index/finding drift")
+if "lineage route index/finding binding drift" not in route_index_result.stderr:
+    raise SystemExit("local-audit verifier must explain lineage route index/finding drift")
+lineage_path.write_text(original_lineage_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 lineage_rows = [json.loads(line) for line in original_lineage_text.splitlines() if line.strip()]
 lineage_rows[0]["schema_drift_probe"] = "extra"
 lineage_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in lineage_rows), encoding="utf-8")

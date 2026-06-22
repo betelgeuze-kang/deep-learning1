@@ -2254,6 +2254,14 @@ def verify_route_generation_rows(out_dir: Path, summary: dict[str, str], errors:
         finding_id: len([cell for cell in row.get("citations", "").split(";") if cell])
         for finding_id, row in finding_by_id.items()
     }
+    sequence_by_finding: dict[str, int] = {}
+    for finding_id in finding_ids:
+        prefix = "finding_"
+        suffix = finding_id[len(prefix):] if finding_id.startswith(prefix) else ""
+        if not suffix.isdigit():
+            add(errors, f"finding id must use deterministic sequence form: {finding_id}")
+            continue
+        sequence_by_finding[finding_id] = int(suffix)
 
     hint_rows = read_csv(out_dir / "compact_route_hint_rows.csv")
     hint_by_finding = {row.get("finding_id", ""): row for row in hint_rows}
@@ -2269,6 +2277,9 @@ def verify_route_generation_rows(out_dir: Path, summary: dict[str, str], errors:
         if hint_id in hint_ids:
             add(errors, f"duplicate route hint id: {hint_id}")
         hint_ids.add(hint_id)
+        sequence = sequence_by_finding.get(finding_id)
+        if sequence is not None and hint_id != f"hint_{sequence:04d}":
+            add(errors, f"route hint id/finding binding drift: {finding_id}")
         if row.get("source_citation_count") != str(citation_counts.get(finding_id, -1)):
             add(errors, f"route hint citation count drift: {finding_id}")
         if row.get("raw_context_appended") != "0" or row.get("proposal_hint_used") != "1":
@@ -2289,6 +2300,9 @@ def verify_route_generation_rows(out_dir: Path, summary: dict[str, str], errors:
         if generation_id in generation_ids:
             add(errors, f"duplicate generation id: {generation_id}")
         generation_ids.add(generation_id)
+        sequence = sequence_by_finding.get(finding_id)
+        if sequence is not None and generation_id != f"gen_{sequence:04d}":
+            add(errors, f"generation id/finding binding drift: {finding_id}")
         if row.get("hint_id") != hint_by_finding.get(finding_id, {}).get("hint_id"):
             add(errors, f"generation hint binding drift: {finding_id}")
         for key in ["grounded", "abstain", "unsupported_claim", "answer"]:
@@ -2304,6 +2318,14 @@ def verify_route_generation_rows(out_dir: Path, summary: dict[str, str], errors:
     if str(len(lineage_rows)) != summary.get("route_memory_lineage_rows"):
         add(errors, "prediction lineage row count drift")
     for finding_id, row in lineage_by_finding.items():
+        sequence = sequence_by_finding.get(finding_id)
+        if sequence is not None:
+            if str(row.get("route_index_row")) != str(sequence):
+                add(errors, f"lineage route index/finding binding drift: {finding_id}")
+            if str(row.get("compact_route_hint_id")) != f"hint_{sequence:04d}":
+                add(errors, f"lineage hint sequence drift: {finding_id}")
+            if str(row.get("generator_id")) != f"gen_{sequence:04d}":
+                add(errors, f"lineage generator sequence drift: {finding_id}")
         if str(row.get("compact_route_hint_id")) != hint_by_finding.get(finding_id, {}).get("hint_id"):
             add(errors, f"lineage hint id not bound: {finding_id}")
         if str(row.get("generator_id")) != generation_by_finding.get(finding_id, {}).get("generation_id"):
