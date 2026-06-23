@@ -9,7 +9,7 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/complete_source_pm_acceptance_evidence_rows.csv" && -s "$RUN_DIR/complete_source_abgh_real_adapter_freeze_rows.csv" && -s "$RUN_DIR/complete_source_v1_exit_criteria_rows.csv" && -s "$RUN_DIR/complete_source_query_span_binding_audit_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_query_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_span_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_repo_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_adapter_trace_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/adapter_selection_contract_rows.csv"   && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_internal_prebaseline_contract_rows.csv" ]] && grep -q 'negative_abstain_rows=160' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'ambiguous_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'pm_acceptance_evidence_rows=10' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v1_exit_criteria_rows=6' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v1_exit_machine_foundation_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_query_span_binding_audit_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_pinned_manifest_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_same_query_ledger_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_real_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_internal_real_adapter_metric_claim_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_public_real_system_performance_claim_ready=0' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_selection_runtime_guard_passed_rows=4000' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
+if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/complete_source_pm_acceptance_evidence_rows.csv" && -s "$RUN_DIR/complete_source_abgh_real_adapter_freeze_rows.csv" && -s "$RUN_DIR/complete_source_v1_exit_criteria_rows.csv" && -s "$RUN_DIR/complete_source_query_span_binding_audit_rows.csv" && -s "$RUN_DIR/complete_source_unseen_repository_split_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_query_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_span_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_repo_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_adapter_trace_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/adapter_selection_contract_rows.csv"   && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_internal_prebaseline_contract_rows.csv" ]] && grep -q 'negative_abstain_rows=160' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'ambiguous_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'unseen_repository_split_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'pm_acceptance_evidence_rows=11' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v1_exit_criteria_rows=7' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v1_exit_machine_foundation_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_query_span_binding_audit_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_pinned_manifest_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_same_query_ledger_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_real_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_internal_real_adapter_metric_claim_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_public_real_system_performance_claim_ready=0' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_selection_runtime_guard_passed_rows=4000' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
   echo "v53t_complete_source_audit_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -271,6 +271,75 @@ foundation_query_span_binding_audit_ready = int(
     and foundation_query_span_binding_pass_rows == 1000
     and foundation_query_span_binding_blocked_rows == 0
 )
+query_rows_by_repo = {}
+span_rows_by_repo = {}
+for row in v53i_query_rows:
+    query_rows_by_repo[row["owner_repo"]] = query_rows_by_repo.get(row["owner_repo"], 0) + 1
+for row in v53i_span_rows:
+    span_rows_by_repo[row["owner_repo"]] = span_rows_by_repo.get(row["owner_repo"], 0) + 1
+content_repo_by_owner = {row["owner_repo"]: row for row in v53i_content_repo_rows}
+coverage_by_owner = {row["owner_repo"]: row for row in v53i_repo_coverage_rows}
+split_owner_repos = sorted(query_rows_by_repo)
+unseen_holdout_repos = set(split_owner_repos[-2:])
+unseen_repository_split_rows = []
+for split_index, owner_repo in enumerate(split_owner_repos, start=1):
+    coverage = coverage_by_owner.get(owner_repo, {})
+    content = content_repo_by_owner.get(owner_repo, {})
+    query_count = query_rows_by_repo.get(owner_repo, 0)
+    span_count = span_rows_by_repo.get(owner_repo, 0)
+    split_name = "unseen_holdout" if owner_repo in unseen_holdout_repos else "calibration"
+    split_status = int(
+        query_count == 100
+        and span_count == query_count
+        and bool(coverage)
+        and bool(content)
+        and coverage.get("head_sha") == content.get("head_sha")
+        and coverage.get("complete_source_tree_manifest_ready") == "1"
+        and content.get("content_snapshot_ready") == "1"
+    )
+    unseen_repository_split_rows.append(
+        {
+            "split_row_id": f"v53t_repo_split_{split_index:02d}",
+            "split_id": "v53t_repo_level_unseen_holdout_v1",
+            "split_name": split_name,
+            "owner_repo": owner_repo,
+            "repo_id": coverage.get("repo_id", ""),
+            "head_sha": coverage.get("head_sha", ""),
+            "query_rows": str(query_count),
+            "source_span_rows": str(span_count),
+            "repo_manifest_bound": str(int(bool(coverage))),
+            "content_snapshot_bound": str(int(bool(content))),
+            "head_sha_match": str(int(bool(coverage) and bool(content) and coverage.get("head_sha") == content.get("head_sha"))),
+            "tree_manifest_ready": "1" if coverage.get("complete_source_tree_manifest_ready") == "1" else "0",
+            "content_snapshot_ready": "1" if content.get("content_snapshot_ready") == "1" else "0",
+            "split_status": "pass" if split_status else "blocked",
+            "claim_boundary": "repo-level unseen split for future heldout evaluation only; no human-reviewed quality or public comparison claim",
+        }
+    )
+write_csv(
+    run_dir / "complete_source_unseen_repository_split_rows.csv",
+    list(unseen_repository_split_rows[0].keys()),
+    unseen_repository_split_rows,
+)
+unseen_repository_split_rows_count = len(unseen_repository_split_rows)
+unseen_repository_split_pass_rows = sum(1 for row in unseen_repository_split_rows if row["split_status"] == "pass")
+unseen_repository_holdout_repo_rows = sum(1 for row in unseen_repository_split_rows if row["split_name"] == "unseen_holdout")
+unseen_repository_calibration_repo_rows = unseen_repository_split_rows_count - unseen_repository_holdout_repo_rows
+unseen_repository_holdout_query_rows = sum(
+    int(row["query_rows"]) for row in unseen_repository_split_rows if row["split_name"] == "unseen_holdout"
+)
+unseen_repository_calibration_query_rows = sum(
+    int(row["query_rows"]) for row in unseen_repository_split_rows if row["split_name"] == "calibration"
+)
+unseen_repository_split_query_rows = unseen_repository_holdout_query_rows + unseen_repository_calibration_query_rows
+unseen_repository_split_ready = int(
+    unseen_repository_split_rows_count == 10
+    and unseen_repository_split_pass_rows == 10
+    and unseen_repository_holdout_repo_rows == 2
+    and unseen_repository_calibration_repo_rows == 8
+    and unseen_repository_holdout_query_rows == 200
+    and unseen_repository_split_query_rows == len(v53i_query_rows)
+)
 current_v53i_query_rows_sha256 = sha256(v53i_dir / "complete_source_query_rows.csv")
 v53ap_query_rows_sha256 = v53ap["source_query_rows_sha256"]
 v53aq_query_rows_sha256 = v53aq["source_query_rows_sha256"]
@@ -469,6 +538,13 @@ requirements = [
         "reason": "human review surface must be frozen before external review return",
     },
     {
+        "requirement_id": "unseen-repository-split-ready",
+        "status": "pass" if unseen_repository_split_ready else "blocked",
+        "required_value": "repo-level calibration/unseen split with 2 heldout repos and all 1000 queries assigned",
+        "actual_value": f"split_rows={unseen_repository_split_rows_count}; pass_rows={unseen_repository_split_pass_rows}; holdout_repo_rows={unseen_repository_holdout_repo_rows}; holdout_query_rows={unseen_repository_holdout_query_rows}; split_query_rows={unseen_repository_split_query_rows}",
+        "reason": "machine foundation freeze must reserve a repo-level unseen split before future quality comparisons",
+    },
+    {
         "requirement_id": "human-review-return-accepted",
         "status": "pass" if v53s["human_review_completed"] == "1" else "blocked",
         "required_value": v53s["expected_human_review_rows"],
@@ -511,6 +587,7 @@ machine_ready_ids = [
     "core-a-b-c-d-e-g-h-answer-citation-resource",
     "symmetric-scorer-policy-surface",
     "review-packet-ready",
+    "unseen-repository-split-ready",
 ]
 machine_complete_source_surface_ready = int(all(row["status"] == "pass" for row in requirements if row["requirement_id"] in machine_ready_ids))
 review_return_ready = int(v53s["review_return_ready"])
@@ -530,6 +607,13 @@ pm_freeze_checks = [
         "required_value": "1000 query rows, 1000 bound source spans, and 1000 passing binding-audit rows",
         "actual_value": f"{v53i['complete_source_query_rows']} query / {v53i['complete_source_span_rows']} span / binding_audit_pass={foundation_query_span_binding_pass_rows}",
         "reason": "every benchmark query must bind to a pinned source span",
+    },
+    {
+        "check_id": "unseen-repository-split",
+        "status": "pass" if unseen_repository_split_ready else "blocked",
+        "required_value": "10 repo-level split rows with 2 unseen heldout repos and 200 heldout queries",
+        "actual_value": f"split_rows={unseen_repository_split_rows_count}; pass_rows={unseen_repository_split_pass_rows}; holdout_repo_rows={unseen_repository_holdout_repo_rows}; holdout_query_rows={unseen_repository_holdout_query_rows}; calibration_repo_rows={unseen_repository_calibration_repo_rows}; split_query_rows={unseen_repository_split_query_rows}",
+        "reason": "future scorer/generator comparisons must reserve an unseen repository split before measuring quality",
     },
     {
         "check_id": "negative-abstain-control-10pct",
@@ -578,9 +662,9 @@ pm_freeze_checks = [
     },
     {
         "check_id": "replayable-artifact-chain",
-        "status": "pass" if foundation_direct_evidence_ready and foundation_direct_pinned_manifest_ready and foundation_query_span_binding_audit_ready else "blocked",
-        "required_value": "direct repo manifest, query/span, and A/B/G/H answer/citation/evaluator/resource rows copied into v53t",
-        "actual_value": f"repo_manifest={len(v53i_repo_coverage_rows)}; file_manifest={len(v53i_file_manifest_rows)}; content_snapshot={len(v53i_content_snapshot_rows)}; query={len(v53i_query_rows)}; span={len(v53i_span_rows)}; binding_audit_pass={foundation_query_span_binding_pass_rows}; evaluator={len(v53ap_evaluator_rows)}; direct_ready={foundation_direct_evidence_ready}; direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}",
+        "status": "pass" if foundation_direct_evidence_ready and foundation_direct_pinned_manifest_ready and foundation_query_span_binding_audit_ready and unseen_repository_split_ready else "blocked",
+        "required_value": "direct repo manifest, query/span, unseen split, and A/B/G/H answer/citation/evaluator/resource rows copied into v53t",
+        "actual_value": f"repo_manifest={len(v53i_repo_coverage_rows)}; file_manifest={len(v53i_file_manifest_rows)}; content_snapshot={len(v53i_content_snapshot_rows)}; query={len(v53i_query_rows)}; span={len(v53i_span_rows)}; binding_audit_pass={foundation_query_span_binding_pass_rows}; unseen_repository_split_ready={unseen_repository_split_ready}; evaluator={len(v53ap_evaluator_rows)}; direct_ready={foundation_direct_evidence_ready}; direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}",
         "reason": "output artifacts must be replayable and hash-bound",
     },
     {
@@ -614,6 +698,15 @@ foundation_freeze_rows = [
         "actual_value": f"{v53i['complete_source_query_rows']} query / {v53i['complete_source_span_rows']} span / binding_audit_pass={foundation_query_span_binding_pass_rows}",
         "evidence_path": "complete_source_query_span_binding_audit_rows.csv",
         "claim_boundary": "Allows complete-source benchmark surface wording; every query remains source-span-bound",
+    },
+    {
+        "certificate_id": "v53-complete-source-foundation-freeze",
+        "criterion_id": "unseen-repository-split",
+        "status": "pass" if unseen_repository_split_ready else "blocked",
+        "required_value": "repo-level calibration/unseen split with 2 heldout repositories and 200 heldout queries",
+        "actual_value": f"split_rows={unseen_repository_split_rows_count}; pass_rows={unseen_repository_split_pass_rows}; holdout_repo_rows={unseen_repository_holdout_repo_rows}; holdout_query_rows={unseen_repository_holdout_query_rows}; calibration_repo_rows={unseen_repository_calibration_repo_rows}; split_query_rows={unseen_repository_split_query_rows}",
+        "evidence_path": "complete_source_unseen_repository_split_rows.csv",
+        "claim_boundary": "Allows future heldout split wording only; does not imply heldout metrics or public comparison quality",
     },
     {
         "certificate_id": "v53-complete-source-foundation-freeze",
@@ -675,9 +768,9 @@ foundation_freeze_rows = [
     {
         "certificate_id": "v53-complete-source-foundation-freeze",
         "criterion_id": "replayable-artifact-chain",
-        "status": "pass" if foundation_direct_evidence_ready and foundation_direct_pinned_manifest_ready and foundation_query_span_binding_audit_ready else "blocked",
-        "required_value": "hash-bound direct repo manifest, query/span, and A/B/G/H row artifacts",
-        "actual_value": f"direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}; query_span_binding_audit_ready={foundation_query_span_binding_audit_ready}; direct_ready={foundation_direct_evidence_ready}; evaluator_rows={len(v53ap_evaluator_rows)}",
+        "status": "pass" if foundation_direct_evidence_ready and foundation_direct_pinned_manifest_ready and foundation_query_span_binding_audit_ready and unseen_repository_split_ready else "blocked",
+        "required_value": "hash-bound direct repo manifest, query/span, unseen split, and A/B/G/H row artifacts",
+        "actual_value": f"direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}; query_span_binding_audit_ready={foundation_query_span_binding_audit_ready}; unseen_repository_split_ready={unseen_repository_split_ready}; direct_ready={foundation_direct_evidence_ready}; evaluator_rows={len(v53ap_evaluator_rows)}",
         "evidence_path": "sha256_manifest.csv",
         "claim_boundary": "Allows replayable artifact wording for the emitted local run packet",
     },
@@ -799,6 +892,14 @@ pm_acceptance_evidence_rows = [
         "complete_source_query_span_binding_audit_rows.csv",
         f"query_rows={len(v53i_query_rows)}; span_rows={len(v53i_span_rows)}; binding_audit_pass_rows={foundation_query_span_binding_pass_rows}",
         "Allows 1000 source-span-bound query freeze wording; not human-reviewed correctness",
+    ),
+    pm_acceptance_row(
+        "unseen-repository-split",
+        "M2-v53-source-bound-corpus",
+        "pass" if unseen_repository_split_ready else "blocked",
+        "complete_source_unseen_repository_split_rows.csv",
+        f"split_rows={unseen_repository_split_rows_count}; pass_rows={unseen_repository_split_pass_rows}; holdout_repo_rows={unseen_repository_holdout_repo_rows}; holdout_query_rows={unseen_repository_holdout_query_rows}; split_query_rows={unseen_repository_split_query_rows}",
+        "Allows repo-level heldout split wording only; not heldout metric, quality, or public comparison wording",
     ),
     pm_acceptance_row(
         "negative-abstain-control-share",
@@ -930,6 +1031,15 @@ v1_exit_criteria_rows = [
         f"query_rows={len(v53i_query_rows)}; span_rows={len(v53i_span_rows)}; binding_audit_pass_rows={foundation_query_span_binding_pass_rows}; binding_audit_blocked_rows={foundation_query_span_binding_blocked_rows}",
         "complete_source_query_span_binding_audit_rows.csv",
         "Allows v53 1000-row source-span-bound freeze wording only; not human-reviewed correctness",
+    ),
+    v1_exit_criterion_row(
+        "unseen-repository-split-ready",
+        "v1.0 source-bound evaluation must reserve repo-level unseen heldout repositories before quality comparison",
+        "pass" if unseen_repository_split_ready else "blocked",
+        "2 heldout repos, 8 calibration repos, 200 heldout queries, and every query assigned exactly once",
+        f"split_rows={unseen_repository_split_rows_count}; pass_rows={unseen_repository_split_pass_rows}; holdout_repo_rows={unseen_repository_holdout_repo_rows}; holdout_query_rows={unseen_repository_holdout_query_rows}; calibration_repo_rows={unseen_repository_calibration_repo_rows}; split_query_rows={unseen_repository_split_query_rows}",
+        "complete_source_unseen_repository_split_rows.csv",
+        "Allows unseen split readiness wording only; not heldout metric readiness or public comparison quality",
     ),
     v1_exit_criterion_row(
         "negative-abstain-and-control-families",
@@ -1067,6 +1177,14 @@ metric = {
     "foundation_query_span_binding_audit_rows": str(foundation_query_span_binding_audit_rows),
     "foundation_query_span_binding_pass_rows": str(foundation_query_span_binding_pass_rows),
     "foundation_query_span_binding_blocked_rows": str(foundation_query_span_binding_blocked_rows),
+    "unseen_repository_split_ready": str(unseen_repository_split_ready),
+    "unseen_repository_split_rows": str(unseen_repository_split_rows_count),
+    "unseen_repository_split_pass_rows": str(unseen_repository_split_pass_rows),
+    "unseen_repository_holdout_repo_rows": str(unseen_repository_holdout_repo_rows),
+    "unseen_repository_calibration_repo_rows": str(unseen_repository_calibration_repo_rows),
+    "unseen_repository_holdout_query_rows": str(unseen_repository_holdout_query_rows),
+    "unseen_repository_calibration_query_rows": str(unseen_repository_calibration_query_rows),
+    "unseen_repository_split_query_rows": str(unseen_repository_split_query_rows),
     "foundation_direct_pinned_manifest_ready": str(foundation_direct_pinned_manifest_ready),
     "foundation_direct_repo_manifest_ready": str(foundation_direct_repo_manifest_ready),
     "foundation_direct_content_snapshot_ready": str(foundation_direct_content_snapshot_ready),
@@ -1146,6 +1264,7 @@ decision_rows = [
     {"gate": "v53q-core-scorer-policy-input", "status": "pass", "reason": f"core_answer_rows={v53q['core_answer_rows']}"},
     {"gate": "v53r-review-packet-input", "status": "pass", "reason": f"review_packet_ready={v53r['review_packet_ready']}"},
     {"gate": "machine-complete-source-surface", "status": "pass" if machine_complete_source_surface_ready else "blocked", "reason": f"machine_complete_source_surface_ready={machine_complete_source_surface_ready}"},
+    {"gate": "unseen-repository-split", "status": "pass" if unseen_repository_split_ready else "blocked", "reason": f"unseen_repository_split_ready={unseen_repository_split_ready}; holdout_repo_rows={unseen_repository_holdout_repo_rows}; holdout_query_rows={unseen_repository_holdout_query_rows}"},
     {"gate": "v53s-review-return-input", "status": "blocked" if review_return_ready == 0 else "pass", "reason": f"review_return_ready={review_return_ready}"},
     {"gate": "human-reviewed-audit", "status": "blocked", "reason": f"accepted_human_review_rows={v53s['accepted_human_review_rows']}/{v53s['expected_human_review_rows']}"},
     {"gate": "quality-comparison-claim", "status": "blocked", "reason": "quality comparison waits for accepted review return and final audit"},
@@ -1201,6 +1320,14 @@ Evidence emitted:
 - foundation_query_span_binding_audit_rows={foundation_query_span_binding_audit_rows}
 - foundation_query_span_binding_pass_rows={foundation_query_span_binding_pass_rows}
 - foundation_query_span_binding_blocked_rows={foundation_query_span_binding_blocked_rows}
+- unseen_repository_split_ready={unseen_repository_split_ready}
+- unseen_repository_split_rows={unseen_repository_split_rows_count}
+- unseen_repository_split_pass_rows={unseen_repository_split_pass_rows}
+- unseen_repository_holdout_repo_rows={unseen_repository_holdout_repo_rows}
+- unseen_repository_calibration_repo_rows={unseen_repository_calibration_repo_rows}
+- unseen_repository_holdout_query_rows={unseen_repository_holdout_query_rows}
+- unseen_repository_calibration_query_rows={unseen_repository_calibration_query_rows}
+- unseen_repository_split_query_rows={unseen_repository_split_query_rows}
 - foundation_direct_pinned_manifest_ready={foundation_direct_pinned_manifest_ready}
 - foundation_direct_repo_manifest_ready={foundation_direct_repo_manifest_ready}
 - foundation_direct_content_snapshot_ready={foundation_direct_content_snapshot_ready}
@@ -1306,6 +1433,15 @@ manifest = {
     "foundation_query_span_binding_audit_rows": foundation_query_span_binding_audit_rows,
     "foundation_query_span_binding_pass_rows": foundation_query_span_binding_pass_rows,
     "foundation_query_span_binding_blocked_rows": foundation_query_span_binding_blocked_rows,
+    "unseen_repository_split_ready": unseen_repository_split_ready,
+    "unseen_repository_split_rows": unseen_repository_split_rows_count,
+    "unseen_repository_split_pass_rows": unseen_repository_split_pass_rows,
+    "unseen_repository_holdout_repo_rows": unseen_repository_holdout_repo_rows,
+    "unseen_repository_calibration_repo_rows": unseen_repository_calibration_repo_rows,
+    "unseen_repository_holdout_query_rows": unseen_repository_holdout_query_rows,
+    "unseen_repository_calibration_query_rows": unseen_repository_calibration_query_rows,
+    "unseen_repository_split_query_rows": unseen_repository_split_query_rows,
+    "unseen_repository_split_rows_sha256": sha256(run_dir / "complete_source_unseen_repository_split_rows.csv"),
     "foundation_direct_pinned_manifest_ready": foundation_direct_pinned_manifest_ready,
     "foundation_direct_repo_manifest_ready": foundation_direct_repo_manifest_ready,
     "foundation_direct_content_snapshot_ready": foundation_direct_content_snapshot_ready,

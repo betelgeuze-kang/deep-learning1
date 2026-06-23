@@ -3,11 +3,12 @@
 The v1.0 machine foundation benchmark is frozen by
 `benchmarks/v53_source_bound_freeze.json`.
 
-The clean checkout contract is fail-closed: it lists the required v53 summary
-evidence ids, but keeps `machine_foundation_freeze_ready=false` until the
-summary artifacts are present and explicitly supplied or replayed. Local
-`results/` files must not silently turn the tracked contract into a release or
-public comparison claim.
+The clean checkout contract is evidence-bound: it lists the required v53
+summary evidence ids and records `machine_foundation_freeze_ready=true` only
+for the machine-prepared foundation once the v53 summaries and v1 exit ledger
+prove the source-bound gate. Local `results/` files must not silently turn the
+tracked contract into a human-review, release, heldout-metric, or public
+comparison claim.
 
 Verify the contract with:
 
@@ -31,6 +32,7 @@ Accepted machine-foundation evidence:
 - 10 pinned public repositories
 - 1000 source-span-bound query rows
 - 1000 source-span rows with binding audit pass
+- repo-level unseen split readiness with 2 heldout repositories and 200 heldout queries
 - 160 negative/abstain rows, including unsupported, missing-specific, and doc-code conflict controls
 - answer/citation/resource evaluator rows separated
 - A/B/G/H on the same frozen query hash as an internal pre-baseline run
@@ -40,6 +42,7 @@ Blocked claims:
 
 - clean-checkout machine foundation readiness while the required summary
   evidence files are absent
+- heldout metric readiness from the repo-level unseen split alone
 - human-reviewed correctness
 - public A/B/G/H comparison
 - D/E 30B/70B replacement or public baseline comparison

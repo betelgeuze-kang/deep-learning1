@@ -936,6 +936,7 @@ EXPECTED_V58_REQUIREMENT_IDS = [
 EXPECTED_V53_REQUIREMENT_IDS = [
     "pinned-public-repo-manifest",
     "source-span-bound-1000-query-surface",
+    "unseen-repository-split",
     "negative-unsupported-missing-doc-code-controls",
     "answer-citation-resource-separate-evaluator",
     "abgh-same-query-internal-prebaseline",
@@ -956,6 +957,14 @@ EXPECTED_V53_SUMMARY_CHECKS = {
         ("v53t", "foundation_query_span_binding_audit_ready", "1"),
         ("v53t", "foundation_query_span_binding_pass_rows", "1000"),
         ("v53t", "foundation_query_span_binding_blocked_rows", "0"),
+    ],
+    "unseen-repository-split": [
+        ("v53t", "unseen_repository_split_ready", "1"),
+        ("v53t", "unseen_repository_split_rows", "10"),
+        ("v53t", "unseen_repository_split_pass_rows", "10"),
+        ("v53t", "unseen_repository_holdout_repo_rows", "2"),
+        ("v53t", "unseen_repository_holdout_query_rows", "200"),
+        ("v53t", "unseen_repository_split_query_rows", "1000"),
     ],
     "negative-unsupported-missing-doc-code-controls": [
         ("v53i", "negative_abstain_rows", "160"),
@@ -983,6 +992,7 @@ EXPECTED_V53_SUMMARY_CHECKS = {
         ("v53aq", "selection_question_text_only", "1"),
         ("v53aq", "selection_sanitized_question_only", "1"),
         ("v53aq", "source_locator_in_question_removed_rows", "4000"),
+        ("v53aq", "selection_runtime_guard_passed_rows", "4000"),
         ("v53aq", "selection_oracle_field_used", "0"),
         ("v53aq", "source_span_oracle_selection_used", "0"),
         ("v53aq", "expected_answer_oracle_replay", "0"),
@@ -1288,6 +1298,7 @@ EXPECTED_V52_REQUIREMENT_IDS = [
 EXPECTED_V53_V1_EXIT_CRITERION_IDS = [
     "repo-count-band-10-30",
     "query-row-band-1000-3000",
+    "unseen-repository-split-ready",
     "negative-abstain-and-control-families",
     "answer-citation-separate-evaluator",
     "abgh-same-query-internal-prebaseline",

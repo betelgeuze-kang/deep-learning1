@@ -66,19 +66,19 @@ expected = {
     "quality_comparison_claim_ready": "0",
     "v53_ready": "0",
     "pm_v53_freeze_ready": "1",
-    "pm_freeze_check_rows": "10",
-    "pm_freeze_pass_rows": "10",
+    "pm_freeze_check_rows": "11",
+    "pm_freeze_pass_rows": "11",
     "pm_freeze_blocked_rows": "0",
-    "foundation_freeze_certificate_rows": "10",
-    "foundation_freeze_pass_rows": "10",
+    "foundation_freeze_certificate_rows": "11",
+    "foundation_freeze_pass_rows": "11",
     "foundation_freeze_blocked_rows": "0",
-    "pm_acceptance_evidence_rows": "10",
-    "pm_acceptance_evidence_ready_rows": "10",
-    "pm_acceptance_evidence_replay_pass_rows": "10",
-    "pm_acceptance_evidence_blocker_pass_rows": "10",
+    "pm_acceptance_evidence_rows": "11",
+    "pm_acceptance_evidence_ready_rows": "11",
+    "pm_acceptance_evidence_replay_pass_rows": "11",
+    "pm_acceptance_evidence_blocker_pass_rows": "11",
     "pm_acceptance_evidence_tests_only_rows": "0",
-    "v1_exit_criteria_rows": "6",
-    "v1_exit_criteria_ready_rows": "6",
+    "v1_exit_criteria_rows": "7",
+    "v1_exit_criteria_ready_rows": "7",
     "v1_exit_criteria_blocked_rows": "0",
     "v1_exit_repo_count_within_band": "1",
     "v1_exit_query_rows_within_band": "1",
@@ -90,6 +90,14 @@ expected = {
     "foundation_query_span_binding_audit_rows": "1000",
     "foundation_query_span_binding_pass_rows": "1000",
     "foundation_query_span_binding_blocked_rows": "0",
+    "unseen_repository_split_ready": "1",
+    "unseen_repository_split_rows": "10",
+    "unseen_repository_split_pass_rows": "10",
+    "unseen_repository_holdout_repo_rows": "2",
+    "unseen_repository_calibration_repo_rows": "8",
+    "unseen_repository_holdout_query_rows": "200",
+    "unseen_repository_calibration_query_rows": "800",
+    "unseen_repository_split_query_rows": "1000",
     "foundation_direct_pinned_manifest_ready": "1",
     "foundation_direct_repo_manifest_ready": "1",
     "foundation_direct_content_snapshot_ready": "1",
@@ -162,6 +170,7 @@ required_files = [
     "complete_source_abgh_real_adapter_freeze_rows.csv",
     "complete_source_v1_exit_criteria_rows.csv",
     "complete_source_query_span_binding_audit_rows.csv",
+    "complete_source_unseen_repository_split_rows.csv",
     "complete_source_audit_claim_rows.csv",
     "complete_source_audit_readiness_metric_rows.csv",
     "V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md",
@@ -214,6 +223,7 @@ for requirement_id in [
     "core-a-b-c-d-e-g-h-answer-citation-resource",
     "symmetric-scorer-policy-surface",
     "review-packet-ready",
+    "unseen-repository-split-ready",
 ]:
     if requirements[requirement_id]["status"] != "pass":
         raise SystemExit(f"v53t requirement should pass: {requirement_id}")
@@ -227,15 +237,16 @@ for requirement_id in [
 ]:
     if requirements[requirement_id]["status"] != "blocked":
         raise SystemExit(f"v53t requirement should stay blocked: {requirement_id}")
-if len(requirements) != 10:
+if len(requirements) != 11:
     raise SystemExit("v53t requirement row count mismatch")
 
 pm_freeze_checks = {row["check_id"]: row for row in read_csv(run_dir / "complete_source_pm_freeze_check_rows.csv")}
-if len(pm_freeze_checks) != 10:
+if len(pm_freeze_checks) != 11:
     raise SystemExit("v53t PM freeze check row count mismatch")
 for check_id in [
     "pinned-public-repo-manifest",
     "source-span-bound-1000",
+    "unseen-repository-split",
     "negative-abstain-control-10pct",
     "unsupported-claim-control",
     "missing-specific-abstain-control",
@@ -253,16 +264,21 @@ if pm_freeze_checks["replayable-artifact-chain"]["status"] != "pass" or "direct_
     raise SystemExit("v53t replayable artifact chain should be backed by direct row evidence")
 if "binding_audit_pass=1000" not in pm_freeze_checks["source-span-bound-1000"]["actual_value"]:
     raise SystemExit("v53t source-span PM check should expose 1000 passing binding-audit rows")
+if "holdout_query_rows=200" not in pm_freeze_checks["unseen-repository-split"]["actual_value"]:
+    raise SystemExit("v53t unseen split PM check should expose 200 heldout query rows")
 if "direct_pinned_manifest_ready=1" not in pm_freeze_checks["pinned-public-repo-manifest"]["actual_value"]:
     raise SystemExit("v53t pinned manifest check should expose direct pinned manifest readiness")
 if "repo_manifest=10" not in pm_freeze_checks["replayable-artifact-chain"]["actual_value"]:
     raise SystemExit("v53t replayable artifact chain should include direct repo manifest rows")
 if "binding_audit_pass=1000" not in pm_freeze_checks["replayable-artifact-chain"]["actual_value"]:
     raise SystemExit("v53t replayable artifact chain should include binding audit rows")
+if "unseen_repository_split_ready=1" not in pm_freeze_checks["replayable-artifact-chain"]["actual_value"]:
+    raise SystemExit("v53t replayable artifact chain should include unseen split readiness")
 
 query_rows = read_csv(run_dir / "source_v53i/complete_source_query_rows.csv")
 span_rows = read_csv(run_dir / "source_v53i/complete_source_span_rows.csv")
 binding_rows = read_csv(run_dir / "complete_source_query_span_binding_audit_rows.csv")
+unseen_split_rows = read_csv(run_dir / "complete_source_unseen_repository_split_rows.csv")
 content_repo_rows = read_csv(run_dir / "source_v53i/source_v53h/complete_source_content_repo_rows.csv")
 content_snapshot_rows = read_csv(run_dir / "source_v53i/source_v53h/complete_source_content_snapshot_rows.csv")
 repo_coverage_rows = read_csv(run_dir / "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv")
@@ -284,6 +300,31 @@ if len(query_rows) != 1000 or len(span_rows) != 1000:
     raise SystemExit("v53t should copy direct 1000 query/span rows")
 if len(binding_rows) != 1000:
     raise SystemExit("v53t should emit 1000 query-span binding audit rows")
+if len(unseen_split_rows) != 10:
+    raise SystemExit("v53t should emit 10 repo-level unseen split rows")
+if any(row["split_status"] != "pass" for row in unseen_split_rows):
+    raise SystemExit("v53t unseen repository split rows should all pass")
+if sum(row["split_name"] == "unseen_holdout" for row in unseen_split_rows) != 2:
+    raise SystemExit("v53t unseen repository split should reserve 2 heldout repos")
+if sum(row["split_name"] == "calibration" for row in unseen_split_rows) != 8:
+    raise SystemExit("v53t unseen repository split should keep 8 calibration repos")
+if sum(int(row["query_rows"]) for row in unseen_split_rows if row["split_name"] == "unseen_holdout") != 200:
+    raise SystemExit("v53t unseen repository split should reserve 200 heldout queries")
+if sum(int(row["query_rows"]) for row in unseen_split_rows) != len(query_rows):
+    raise SystemExit("v53t unseen repository split should assign every query exactly once")
+if any(row["query_rows"] != "100" or row["source_span_rows"] != "100" for row in unseen_split_rows):
+    raise SystemExit("v53t unseen repository split should preserve 100 query/span rows per repo")
+for flag in [
+    "repo_manifest_bound",
+    "content_snapshot_bound",
+    "head_sha_match",
+    "tree_manifest_ready",
+    "content_snapshot_ready",
+]:
+    if any(row[flag] != "1" for row in unseen_split_rows):
+        raise SystemExit(f"v53t unseen repository split should pass {flag} for every repo")
+if {row["owner_repo"] for row in unseen_split_rows} != {row["owner_repo"] for row in repo_coverage_rows}:
+    raise SystemExit("v53t unseen repository split should cover every repo manifest row")
 if any(not row["source_span_id"] for row in query_rows):
     raise SystemExit("v53t direct query rows should bind source spans")
 if any(row["binding_status"] != "pass" for row in binding_rows):
@@ -448,11 +489,12 @@ for system_id, row in v53aq_contract_rows.items():
         raise SystemExit(f"v53t v53aq contract should keep public comparison blocked for {system_id}")
 
 foundation_freeze_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "complete_source_foundation_freeze_rows.csv")}
-if len(foundation_freeze_rows) != 10:
+if len(foundation_freeze_rows) != 11:
     raise SystemExit("v53t foundation freeze certificate row count mismatch")
 for criterion_id in [
     "pinned-public-repo-manifest",
     "source-span-bound-query-surface",
+    "unseen-repository-split",
     "negative-abstain-control-share",
     "unsupported-claim-control",
     "missing-specific-abstain-control",
@@ -474,6 +516,10 @@ if foundation_freeze_rows["source-span-bound-query-surface"]["evidence_path"] !=
     raise SystemExit("v53t source-span freeze evidence should point at direct binding audit rows")
 if "binding_audit_pass=1000" not in foundation_freeze_rows["source-span-bound-query-surface"]["actual_value"]:
     raise SystemExit("v53t source-span freeze should expose binding audit pass rows")
+if foundation_freeze_rows["unseen-repository-split"]["evidence_path"] != "complete_source_unseen_repository_split_rows.csv":
+    raise SystemExit("v53t unseen split freeze evidence should point at direct split rows")
+if "holdout_query_rows=200" not in foundation_freeze_rows["unseen-repository-split"]["actual_value"]:
+    raise SystemExit("v53t unseen split freeze should expose heldout query rows")
 if foundation_freeze_rows["pinned-public-repo-manifest"]["evidence_path"] != "source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv":
     raise SystemExit("v53t pinned manifest evidence should point at direct repo coverage rows")
 if "direct_pinned_manifest_ready=1" not in foundation_freeze_rows["pinned-public-repo-manifest"]["actual_value"]:
@@ -486,11 +532,14 @@ if "real system performance" not in foundation_freeze_rows["abgh-same-query-meas
     raise SystemExit("v53t foundation freeze should keep A/B/G/H real system performance boundary closed")
 if "forbids public comparison" not in foundation_freeze_rows["public-comparison-boundary-closed"]["claim_boundary"]:
     raise SystemExit("v53t foundation freeze should explicitly forbid public comparison wording")
+if "unseen_repository_split_ready=1" not in foundation_freeze_rows["replayable-artifact-chain"]["actual_value"]:
+    raise SystemExit("v53t foundation freeze replay chain should include unseen split readiness")
 
 pm_acceptance_rows = {row["requirement_id"]: row for row in read_csv(run_dir / "complete_source_pm_acceptance_evidence_rows.csv")}
 expected_pm_acceptance_ids = {
     "pinned-public-repo-manifest",
     "source-span-query-freeze",
+    "unseen-repository-split",
     "negative-abstain-control-share",
     "unsupported-claim-control",
     "missing-specific-abstain-control",
@@ -520,12 +569,15 @@ if pm_acceptance_rows["pinned-public-repo-manifest"]["evidence_rows"] != "10":
     raise SystemExit("v53t PM acceptance should expose ten repo manifest rows")
 if pm_acceptance_rows["source-span-query-freeze"]["evidence_rows"] != "1000":
     raise SystemExit("v53t PM acceptance should expose 1000 query-span binding audit rows")
+if pm_acceptance_rows["unseen-repository-split"]["evidence_rows"] != "10":
+    raise SystemExit("v53t PM acceptance should expose 10 repo split rows")
 if pm_acceptance_rows["answer-citation-separated-evaluator"]["evidence_rows"] != "4000":
     raise SystemExit("v53t PM acceptance should expose 4000 separated evaluator rows")
 if pm_acceptance_rows["abgh-real-adapter-same-query-internal"]["evidence_rows"] != "1000":
     raise SystemExit("v53t PM acceptance should expose 1000 real-adapter same-query rows")
 for requirement_id, snippet in {
     "source-span-query-freeze": "binding_audit_pass_rows=1000",
+    "unseen-repository-split": "holdout_query_rows=200",
     "unsupported-claim-control": "unsupported_control_rows=100",
     "missing-specific-abstain-control": "missing_specific_control_rows=30",
     "doc-code-conflict-control": "doc_code_conflict_rows=140",
@@ -542,6 +594,7 @@ v1_exit_rows = {row["criterion_id"]: row for row in read_csv(run_dir / "complete
 expected_v1_exit_ids = {
     "repo-count-band-10-30",
     "query-row-band-1000-3000",
+    "unseen-repository-split-ready",
     "negative-abstain-and-control-families",
     "answer-citation-separate-evaluator",
     "abgh-same-query-internal-prebaseline",
@@ -567,6 +620,8 @@ if "repo_count=10" not in v1_exit_rows["repo-count-band-10-30"]["actual_value"]:
     raise SystemExit("v53t v1 exit repo band should expose repo_count=10")
 if "query_rows=1000" not in v1_exit_rows["query-row-band-1000-3000"]["actual_value"]:
     raise SystemExit("v53t v1 exit query band should expose query_rows=1000")
+if "holdout_query_rows=200" not in v1_exit_rows["unseen-repository-split-ready"]["actual_value"]:
+    raise SystemExit("v53t v1 exit unseen split should expose 200 heldout query rows")
 if "negative_abstain_rows=160" not in v1_exit_rows["negative-abstain-and-control-families"]["actual_value"]:
     raise SystemExit("v53t v1 exit controls should expose 160 negative/abstain rows")
 if "public_comparison_claim_ready=0" not in v1_exit_rows["abgh-same-query-internal-prebaseline"]["actual_value"]:
@@ -638,6 +693,7 @@ for gate in [
     "v53q-core-scorer-policy-input",
     "v53r-review-packet-input",
     "machine-complete-source-surface",
+    "unseen-repository-split",
 ]:
     if decisions.get(gate) != "pass":
         raise SystemExit(f"v53t gate should pass: {gate}")
@@ -670,14 +726,14 @@ for snippet in [
     "quality_comparison_claim_ready=0",
     "v53_ready=0",
     "pm_v53_freeze_ready=1",
-    "pm_freeze_check_rows=10",
+    "pm_freeze_check_rows=11",
     "pm_freeze_blocked_rows=0",
-    "foundation_freeze_certificate_rows=10",
-    "pm_acceptance_evidence_rows=10",
-    "pm_acceptance_evidence_ready_rows=10",
+    "foundation_freeze_certificate_rows=11",
+    "pm_acceptance_evidence_rows=11",
+    "pm_acceptance_evidence_ready_rows=11",
     "pm_acceptance_evidence_tests_only_rows=0",
-    "v1_exit_criteria_rows=6",
-    "v1_exit_criteria_ready_rows=6",
+    "v1_exit_criteria_rows=7",
+    "v1_exit_criteria_ready_rows=7",
     "v1_exit_criteria_blocked_rows=0",
     "v1_exit_repo_count_within_band=1",
     "v1_exit_query_rows_within_band=1",
@@ -689,6 +745,14 @@ for snippet in [
     "foundation_query_span_binding_audit_rows=1000",
     "foundation_query_span_binding_pass_rows=1000",
     "foundation_query_span_binding_blocked_rows=0",
+    "unseen_repository_split_ready=1",
+    "unseen_repository_split_rows=10",
+    "unseen_repository_split_pass_rows=10",
+    "unseen_repository_holdout_repo_rows=2",
+    "unseen_repository_calibration_repo_rows=8",
+    "unseen_repository_holdout_query_rows=200",
+    "unseen_repository_calibration_query_rows=800",
+    "unseen_repository_split_query_rows=1000",
     "foundation_direct_pinned_manifest_ready=1",
     "foundation_direct_repo_manifest_ready=1",
     "foundation_direct_content_snapshot_ready=1",
@@ -758,20 +822,20 @@ if manifest.get("machine_complete_source_surface_ready") != 1 or manifest.get("v
     raise SystemExit("v53t manifest boundary mismatch")
 if manifest.get("pm_v53_freeze_ready") != 1 or manifest.get("pm_freeze_blocked_rows") != 0:
     raise SystemExit("v53t manifest PM freeze boundary mismatch")
-if manifest.get("foundation_freeze_certificate_rows") != 10 or manifest.get("foundation_freeze_blocked_rows") != 0:
+if manifest.get("foundation_freeze_certificate_rows") != 11 or manifest.get("foundation_freeze_blocked_rows") != 0:
     raise SystemExit("v53t manifest foundation freeze row mismatch")
 if (
-    manifest.get("pm_acceptance_evidence_rows") != 10
-    or manifest.get("pm_acceptance_evidence_ready_rows") != 10
-    or manifest.get("pm_acceptance_evidence_replay_pass_rows") != 10
-    or manifest.get("pm_acceptance_evidence_blocker_pass_rows") != 10
+    manifest.get("pm_acceptance_evidence_rows") != 11
+    or manifest.get("pm_acceptance_evidence_ready_rows") != 11
+    or manifest.get("pm_acceptance_evidence_replay_pass_rows") != 11
+    or manifest.get("pm_acceptance_evidence_blocker_pass_rows") != 11
     or manifest.get("pm_acceptance_evidence_tests_only_rows") != 0
     or manifest.get("pm_acceptance_evidence_rows_sha256") != sha256(run_dir / "complete_source_pm_acceptance_evidence_rows.csv")
 ):
     raise SystemExit("v53t manifest PM acceptance evidence mismatch")
 if (
-    manifest.get("v1_exit_criteria_rows") != 6
-    or manifest.get("v1_exit_criteria_ready_rows") != 6
+    manifest.get("v1_exit_criteria_rows") != 7
+    or manifest.get("v1_exit_criteria_ready_rows") != 7
     or manifest.get("v1_exit_criteria_blocked_rows") != 0
     or manifest.get("v1_exit_repo_count_within_band") != 1
     or manifest.get("v1_exit_query_rows_within_band") != 1
@@ -798,6 +862,18 @@ if (
     or manifest.get("foundation_query_span_binding_blocked_rows") != 0
 ):
     raise SystemExit("v53t manifest query-span binding audit mismatch")
+if (
+    manifest.get("unseen_repository_split_ready") != 1
+    or manifest.get("unseen_repository_split_rows") != 10
+    or manifest.get("unseen_repository_split_pass_rows") != 10
+    or manifest.get("unseen_repository_holdout_repo_rows") != 2
+    or manifest.get("unseen_repository_calibration_repo_rows") != 8
+    or manifest.get("unseen_repository_holdout_query_rows") != 200
+    or manifest.get("unseen_repository_calibration_query_rows") != 800
+    or manifest.get("unseen_repository_split_query_rows") != 1000
+    or manifest.get("unseen_repository_split_rows_sha256") != sha256(run_dir / "complete_source_unseen_repository_split_rows.csv")
+):
+    raise SystemExit("v53t manifest unseen repository split mismatch")
 if (
     manifest.get("foundation_direct_pinned_manifest_ready") != 1
     or manifest.get("foundation_direct_repo_manifest_ready") != 1
