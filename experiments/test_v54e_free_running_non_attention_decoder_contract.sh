@@ -9,6 +9,11 @@ DECISION_CSV="$RESULTS_DIR/v54e_free_running_non_attention_decoder_contract_deci
 
 "$ROOT_DIR/experiments/run_v54e_free_running_non_attention_decoder_contract.sh" >/dev/null
 
+"$ROOT_DIR/tools/verify_artifact.py" v54-free-running-decoder \
+  "$ROOT_DIR/v54/free_running_non_attention_decoder_contract.json" \
+  --summary "$SUMMARY_CSV" \
+  --decision "$DECISION_CSV" >/dev/null
+
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib

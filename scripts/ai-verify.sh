@@ -109,6 +109,9 @@ fi
 if [ -f v54/source_verified_route_scorer_calibration_contract.json ]; then
   python3 -m json.tool v54/source_verified_route_scorer_calibration_contract.json >/dev/null
 fi
+if [ -f v54/free_running_non_attention_decoder_contract.json ]; then
+  python3 -m json.tool v54/free_running_non_attention_decoder_contract.json >/dev/null
+fi
 for schema_file in schemas/local_repo_audit_*.schema.json; do
   [ -f "$schema_file" ] || continue
   python3 -m json.tool "$schema_file" >/dev/null
@@ -297,6 +300,16 @@ if [ -x tools/verify_artifact.py ]; then
         --summary results/v54d_source_verified_route_scorer_calibration_summary.csv >/dev/null
     else
       tools/verify_artifact.py v54-route-scorer-calibration v54/source_verified_route_scorer_calibration_contract.json >/dev/null
+    fi
+  fi
+  if [ -f v54/free_running_non_attention_decoder_contract.json ]; then
+    if [ -f results/v54e_free_running_non_attention_decoder_contract_summary.csv ] &&
+       [ -f results/v54e_free_running_non_attention_decoder_contract_decision.csv ]; then
+      tools/verify_artifact.py v54-free-running-decoder v54/free_running_non_attention_decoder_contract.json \
+        --summary results/v54e_free_running_non_attention_decoder_contract_summary.csv \
+        --decision results/v54e_free_running_non_attention_decoder_contract_decision.csv >/dev/null
+    else
+      tools/verify_artifact.py v54-free-running-decoder v54/free_running_non_attention_decoder_contract.json >/dev/null
     fi
   fi
   if [ -f v54/free_running_generation_evidence_intake_contract.json ]; then

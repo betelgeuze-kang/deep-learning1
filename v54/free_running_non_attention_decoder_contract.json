@@ -1,0 +1,90 @@
+{
+  "schema_version": "v54_free_running_non_attention_decoder.v1",
+  "policy": {
+    "free_running_non_attention_decoder_contract_ready": true,
+    "free_running_decode_required": true,
+    "teacher_forcing_allowed": false,
+    "attention_blocks_allowed": false,
+    "transformer_blocks_allowed": false,
+    "raw_prompt_context_allowed": false,
+    "retrieved_text_in_prompt_allowed": false,
+    "source_locator_leakage_allowed": false,
+    "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
+    "expected_generation_rows": 4,
+    "external_label_source_ready": false,
+    "heldout_metric_ready": false,
+    "real_model_generation_ready": false,
+    "public_comparison_claim_ready": false,
+    "release_ready": false,
+    "required_artifact_count": 7,
+    "present_required_artifact_count": 0,
+    "missing_required_artifact_count": 7,
+    "missing_required_artifact_ids": [
+      "decoder-input-rows",
+      "free-running-decode-rows",
+      "token-trace-rows",
+      "negative-control-rows",
+      "boundary",
+      "manifest",
+      "sha256-manifest"
+    ]
+  },
+  "required_artifacts": [
+    {
+      "artifact_id": "decoder-input-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54e_free_running_non_attention_decoder_contract/decode_001/decoder_input_rows.csv",
+      "required_columns": ["generation_id", "generator_id", "model_visible_input_fields", "sanitized_question", "opaque_routehint", "route_state_id", "citation_handle", "attention_blocks", "transformer_blocks", "raw_prompt_context_appended", "raw_prompt_context_bytes", "retrieved_text_in_prompt", "source_locator_leakage", "teacher_forcing_used"],
+      "min_rows": 4,
+      "claim_boundary": "model-visible decoder inputs only; raw source spans and source locators are forbidden"
+    },
+    {
+      "artifact_id": "free-running-decode-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54e_free_running_non_attention_decoder_contract/decode_001/free_running_decode_rows.csv",
+      "required_columns": ["generation_id", "generator_id", "expected_behavior", "generated_text", "expected_text", "output_token_count", "free_running_decode", "teacher_forcing_used", "stopped_on_eos", "answer_correct", "abstain_correct", "wrong_answer", "citation_handle"],
+      "min_rows": 4,
+      "claim_boundary": "local free-running decode smoke only; not 1000-row real generation evidence"
+    },
+    {
+      "artifact_id": "token-trace-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54e_free_running_non_attention_decoder_contract/decode_001/token_trace_rows.csv",
+      "required_columns": ["generation_id", "position", "input_token_id", "output_token_id", "output_token", "teacher_forcing_used"],
+      "min_rows": 4,
+      "claim_boundary": "token-level evidence that generated tokens are fed forward without teacher forcing"
+    },
+    {
+      "artifact_id": "negative-control-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54e_free_running_non_attention_decoder_contract/decode_001/negative_control_rows.csv",
+      "required_columns": ["case_id", "status", "reason"],
+      "min_rows": 3,
+      "claim_boundary": "negative controls for evaluator-only fields, source locator leakage, and invalid provenance"
+    },
+    {
+      "artifact_id": "boundary",
+      "artifact_kind": "text",
+      "path": "results/v54e_free_running_non_attention_decoder_contract/decode_001/V54E_FREE_RUNNING_NON_ATTENTION_DECODER_BOUNDARY.md",
+      "required_columns": [],
+      "min_rows": 1,
+      "claim_boundary": "blocked wording boundary for real generation, public comparison, and release"
+    },
+    {
+      "artifact_id": "manifest",
+      "artifact_kind": "json",
+      "path": "results/v54e_free_running_non_attention_decoder_contract/decode_001/v54e_free_running_non_attention_decoder_manifest.json",
+      "required_columns": [],
+      "min_rows": 1,
+      "claim_boundary": "machine-readable local decoder contract manifest"
+    },
+    {
+      "artifact_id": "sha256-manifest",
+      "artifact_kind": "csv",
+      "path": "results/v54e_free_running_non_attention_decoder_contract/decode_001/sha256_manifest.csv",
+      "required_columns": ["path", "sha256", "bytes"],
+      "min_rows": 6,
+      "claim_boundary": "hash binding for generated v54e packet"
+    }
+  ]
+}
