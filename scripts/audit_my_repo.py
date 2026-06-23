@@ -141,7 +141,7 @@ CSV_CONTRACTS: dict[str, list[str]] = {
     "manual_review_queue.csv": ["finding_id", "review_queue_id", "review_types", "manual_review_required", "review_reason", "auto_promoted"],
     "plugin_rule_rows.csv": ["plugin_id", "audit_type", "rule_id", "language", "file_suffixes", "pattern_label", "evidence_policy", "confidence", "parser_id"],
     "phase_timing_rows.csv": ["phase", "wall_ms", "measured"],
-    "suppressed_findings.csv": ["suppression_id", "plugin_id", "plugin_rule_ids", "confidence", "language", "audit_type", "severity", "evidence_paths", "reason", "active"],
+    "suppressed_findings.csv": ["suppression_id", "finding_id", "plugin_id", "plugin_rule_ids", "confidence", "language", "audit_type", "severity", "evidence_paths", "citations", "citation_sha256s", "citation_span_sha256s", "reason", "active"],
     "audit_summary.csv": ["schema_version", "tool_version", "audit_my_repo_ready", "target_repo", "mode", "namespace", "generator", "question_supplied", "source_files", "source_scope", "changed_file_rows", "finding_rows", "suppression_rows", "citation_span_rows", "abstain_rows", "unsupported_claim_rows", "accuracy_rows", "citation_correctness_rows", "false_positive_candidate_rows", "manual_review_queue_rows", "wrong_answer_guard_rows", "wrong_answer_guard_pass_rows", "claim_boundary_ready", "route_memory_lineage_rows", "mmap_read_trace_rows", "compact_route_hint_rows", "grounded_generation_rows", "raw_prompt_context_bytes", "attention_blocks", "transformer_blocks", "oracle_prediction_used", "raw_input_extractor_used", "real_release_package_ready", "release_ready", "public_comparison_claim_ready", "real_model_execution_ready", "gpu_speedup_claim", "max_files", "max_total_bytes", "max_file_bytes", "max_findings", "active_plugin_ids", "scan_latency_ms", "plugin_latency_ms", "serialize_latency_ms", "verify_latency_ms", "latency_ms"],
 }
 
@@ -735,6 +735,7 @@ def build_rows(target: Path, findings: list[Finding], suppression_rules: tuple[S
         suppression_ids = suppression_ids_for_finding(target, finding, suppression_rules)
         citation_cells = []
         citation_sha256s = []
+        citation_span_sha256s = []
         for cidx, path in enumerate(finding.evidence_paths, start=1):
             if not path.exists() or not path.is_file():
                 continue
@@ -756,8 +757,10 @@ def build_rows(target: Path, findings: list[Finding], suppression_rules: tuple[S
             citation_sha256 = sha256(path)
             source_lines = read_text(path).splitlines()
             span_text = source_lines[line_no - 1].strip() if 0 < line_no <= len(source_lines) else snippet
+            span_sha256 = sha256_text(span_text)
             citation_cells.append(f"{rel_path}:{line_no}")
             citation_sha256s.append(citation_sha256)
+            citation_span_sha256s.append(span_sha256)
             span_rows.append(
                 {
                     "finding_id": finding_id,
@@ -766,7 +769,7 @@ def build_rows(target: Path, findings: list[Finding], suppression_rules: tuple[S
                     "line_start": line_no,
                     "line_end": line_no,
                     "sha256": citation_sha256,
-                    "span_sha256": sha256_text(span_text),
+                    "span_sha256": span_sha256,
                     "span_text_preview": snippet,
                     "mmap_value_byte_read": 1,
                 }
@@ -804,13 +807,17 @@ def build_rows(target: Path, findings: list[Finding], suppression_rules: tuple[S
             suppressed_rows.append(
                 {
                     "suppression_id": suppression_id,
+                    "finding_id": finding_id,
                     "plugin_id": finding.plugin_id,
                     "plugin_rule_ids": "|".join(finding.rule_ids),
                     "confidence": finding.confidence,
                     "language": finding.language,
                     "audit_type": finding.audit_type,
                     "severity": finding.severity,
-                    "evidence_paths": "|".join(rel_to_target(target, path) for path in finding.evidence_paths if path.exists()),
+                    "evidence_paths": "|".join(cell.rsplit(":", 1)[0] for cell in citation_cells),
+                    "citations": ";".join(citation_cells),
+                    "citation_sha256s": ";".join(citation_sha256s),
+                    "citation_span_sha256s": ";".join(citation_span_sha256s),
                     "reason": rule.reason,
                     "active": int(rule.active),
                 }

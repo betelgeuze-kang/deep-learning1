@@ -835,6 +835,35 @@ if "suppressed_findings.csv reason must bind suppression file" not in result.std
 
 suppressed_path.write_text(original_suppressed_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with suppressed_path.open(newline="", encoding="utf-8") as handle:
+    rows = list(csv.DictReader(handle))
+rows[0]["citation_span_sha256s"] = "sha256:" + ("0" * 64)
+with suppressed_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+new_sha = hashlib.sha256(suppressed_path.read_bytes()).hexdigest()
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  suppressed_findings.csv"):
+        sha_lines.append(f"{new_sha}  suppressed_findings.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+result = subprocess.run(
+    [str(root / "tools" / "verify_local_audit.py"), str(out)],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.PIPE,
+    text=True,
+)
+if result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject detached suppressed finding span hashes")
+if "suppressed_findings.csv citation_span_sha256s must bind suppressed finding spans" not in result.stderr:
+    raise SystemExit("local-audit verifier must explain detached suppressed finding span hashes")
+
+suppressed_path.write_text(original_suppressed_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 PY
 cat >"$TMP_DIR/bad_allowlist.json" <<'EOF'
 {

@@ -2157,27 +2157,34 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     suppression_rules = load_suppression_rules_for_verifier(out_dir, errors)
     if suppressed_rows and not suppression_rules:
         add(errors, "suppressed_findings.csv rows require a bound suppression file")
-    suppressed_finding_by_id: dict[str, dict[str, str]] = {}
+    spans_by_finding: dict[str, list[dict[str, str]]] = {}
+    for span in read_csv(out_dir / "citation_spans.csv"):
+        spans_by_finding.setdefault(span.get("finding_id", ""), []).append(span)
+    suppressed_finding_by_pair: dict[tuple[str, str], dict[str, str]] = {}
     for finding in findings:
+        finding_id = finding.get("finding_id", "")
         if finding.get("suppressed") != "1":
             continue
         for suppression_id in finding.get("suppression_ids", "").split("|"):
             if not suppression_id:
                 continue
-            if suppression_id in suppressed_finding_by_id:
-                add(errors, f"suppression id must bind exactly one finding: {suppression_id}")
+            pair = (suppression_id, finding_id)
+            if pair in suppressed_finding_by_pair:
+                add(errors, f"suppression id/finding pair must be unique: {suppression_id} {finding_id}")
             else:
-                suppressed_finding_by_id[suppression_id] = finding
-    suppressed_ids_from_findings = {
-        suppression_id
+                suppressed_finding_by_pair[pair] = finding
+    suppressed_pairs_from_findings = {
+        (suppression_id, row.get("finding_id", ""))
         for row in findings
         if row.get("suppressed") == "1"
         for suppression_id in row.get("suppression_ids", "").split("|")
         if suppression_id
     }
-    suppressed_ids_from_rows = {row.get("suppression_id", "") for row in suppressed_rows}
-    if suppressed_ids_from_rows != suppressed_ids_from_findings:
-        add(errors, "suppressed_findings.csv must exactly match suppressed finding ids")
+    suppressed_pairs_from_rows = {(row.get("suppression_id", ""), row.get("finding_id", "")) for row in suppressed_rows}
+    if len(suppressed_pairs_from_rows) != len(suppressed_rows) or ("", "") in suppressed_pairs_from_rows:
+        add(errors, "suppressed_findings.csv must contain unique suppression id/finding pairs")
+    if suppressed_pairs_from_rows != suppressed_pairs_from_findings:
+        add(errors, "suppressed_findings.csv must exactly match suppressed finding applications")
     if str(len(suppressed_rows)) != summary.get("suppression_rows"):
         add(errors, "suppression row count drift")
     for row in suppressed_rows:
@@ -2187,7 +2194,8 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
             add(errors, "suppressed_findings.csv rows must include a reason")
         if row.get("plugin_id") not in EXPECTED_PLUGIN_IDS:
             add(errors, "suppressed_findings.csv plugin_id must be registered")
-        finding = suppressed_finding_by_id.get(row.get("suppression_id", ""))
+        finding_id = row.get("finding_id", "")
+        finding = suppressed_finding_by_pair.get((row.get("suppression_id", ""), finding_id))
         if finding is None:
             continue
         suppression_id = row.get("suppression_id", "")
@@ -2214,6 +2222,13 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
         for key in ["plugin_id", "plugin_rule_ids", "confidence", "language", "audit_type", "severity"]:
             if row.get(key, "") != finding.get(key, ""):
                 add(errors, f"suppressed_findings.csv {key} must bind suppressed finding: {suppression_id}")
+        if row.get("citations", "") != finding.get("citations", ""):
+            add(errors, f"suppressed_findings.csv citations must bind suppressed finding: {suppression_id}")
+        if row.get("citation_sha256s", "") != finding.get("citation_sha256s", ""):
+            add(errors, f"suppressed_findings.csv citation_sha256s must bind suppressed finding: {suppression_id}")
+        expected_span_sha256s = ";".join(span.get("span_sha256", "") for span in spans_by_finding.get(finding_id, []))
+        if row.get("citation_span_sha256s", "") != expected_span_sha256s:
+            add(errors, f"suppressed_findings.csv citation_span_sha256s must bind suppressed finding spans: {suppression_id}")
         expected_evidence_paths = sorted(
             cell.rsplit(":", 1)[0]
             for cell in finding.get("citations", "").split(";")
