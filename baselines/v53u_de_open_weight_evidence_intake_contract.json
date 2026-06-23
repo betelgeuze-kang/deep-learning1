@@ -31,14 +31,14 @@
       "artifact_kind": "csv",
       "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/de_required_field_rows.csv",
       "required_columns": ["system_id", "artifact", "field", "required", "rule"],
-      "min_rows": 46,
+      "min_rows": 48,
       "claim_boundary": "required D/E evidence field ledger only; not supplied real baseline evidence"
     },
     {
       "artifact_id": "de-run-result-template-rows",
       "artifact_kind": "csv",
       "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/de_run_result_template_rows.csv",
-      "required_columns": ["system_id", "query_id", "sanitized_question", "corpus_snapshot_sha256", "context_budget", "retrieval_budget", "model_id", "raw_answer", "raw_citation", "abstained", "latency_ns", "peak_memory_mb", "prompt_sha256", "output_sha256", "raw_output_sha256", "prompt_template_sha256", "seed", "evaluator_version"],
+      "required_columns": ["system_id", "query_id", "sanitized_question", "corpus_snapshot_sha256", "context_budget", "retrieval_budget", "model_id", "raw_answer", "raw_citation", "abstained", "latency_ns", "peak_memory_mb", "prompt_sha256", "output_sha256", "raw_output_sha256", "prompt_template_sha256", "seed", "evaluator_version", "external_api_used"],
       "min_rows": 2000,
       "claim_boundary": "blank D/E template rows over frozen v53i queries; not measured model output"
     },

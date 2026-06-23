@@ -1151,6 +1151,7 @@ EXPECTED_V53U_ARTIFACT_COLUMNS = {
         "raw_citation", "abstained", "latency_ns", "peak_memory_mb",
         "prompt_sha256", "output_sha256", "raw_output_sha256",
         "prompt_template_sha256", "seed", "evaluator_version",
+        "external_api_used",
     ],
     "de-validation-rows": ["system_id", "check", "status", "reason"],
     "source-v53i-query-rows": [
@@ -1178,7 +1179,7 @@ EXPECTED_V53U_ARTIFACT_COLUMNS = {
     "sha256-manifest": ["path", "sha256", "bytes"],
 }
 EXPECTED_V53U_MIN_ROWS = {
-    "de-required-field-rows": 46,
+    "de-required-field-rows": 48,
     "de-run-result-template-rows": 2000,
     "de-validation-rows": 2,
     "source-v53i-query-rows": 1000,
@@ -3647,6 +3648,7 @@ def verify_v53u_de_evidence_intake(
             ("model_identity.json", "non_fixture_declared"),
             ("run_result_rows.csv", "raw_output_sha256"),
             ("run_result_rows.csv", "evaluator_version"),
+            ("run_result_rows.csv", "external_api_used"),
         ]:
             if required_rows and (system_id, artifact, field) not in required_pairs:
                 errors.append(f"{path}: de-required-field-rows missing {system_id}/{artifact}/{field}")
@@ -3663,6 +3665,9 @@ def verify_v53u_de_evidence_intake(
                 break
             if any(row.get(field, "") for field in ["raw_answer", "raw_citation", "model_id"]):
                 errors.append(f"{path}: source-controlled D/E template rows must keep answer/citation/model fields blank")
+                break
+            if row.get("external_api_used") != "0":
+                errors.append(f"{path}: source-controlled D/E template rows must set external_api_used=0")
                 break
         if counts != {"D": 1000, "E": 1000}:
             errors.append(f"{path}: D/E template rows expected 1000 each, got {counts}")

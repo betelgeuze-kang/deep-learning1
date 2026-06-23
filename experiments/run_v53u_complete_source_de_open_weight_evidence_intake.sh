@@ -174,6 +174,7 @@ for system_id in ("D", "E"):
         ("run_result_rows.csv", "latency_ns", "positive measured latency"),
         ("run_result_rows.csv", "peak_memory_mb", "positive measured peak memory"),
         ("run_result_rows.csv", "evaluator_version", "same exact evaluator version across D/E"),
+        ("run_result_rows.csv", "external_api_used", "must be 0; remote API evidence is not accepted"),
     ]:
         field_rows.append({"system_id": system_id, "artifact": artifact, "field": field, "required": "1", "rule": rule})
 write_csv(run_dir / "de_required_field_rows.csv", list(field_rows[0].keys()), field_rows)
@@ -184,7 +185,7 @@ template_fields = [
     "context_budget", "retrieval_budget", "model_id", "raw_answer",
     "raw_citation", "abstained", "latency_ns", "peak_memory_mb",
     "prompt_sha256", "output_sha256", "raw_output_sha256",
-    "prompt_template_sha256", "seed", "evaluator_version",
+    "prompt_template_sha256", "seed", "evaluator_version", "external_api_used",
 ]
 
 if missing_v53_files:
@@ -238,6 +239,7 @@ else:
                 "prompt_template_sha256": "",
                 "seed": "",
                 "evaluator_version": "",
+                "external_api_used": "0",
             })
     write_csv(run_dir / "de_run_result_template_rows.csv", template_fields, template_rows)
     artifact_rels.append("de_run_result_template_rows.csv")

@@ -91,6 +91,8 @@ if not any(row["field"] == "raw_output_sha256" for row in field_rows):
     raise SystemExit("v53u required field rows should require raw_output_sha256")
 if not any(row["field"] == "evaluator_version" for row in field_rows):
     raise SystemExit("v53u required field rows should require evaluator_version")
+if not any(row["artifact"] == "run_result_rows.csv" and row["field"] == "external_api_used" for row in field_rows):
+    raise SystemExit("v53u required field rows should require external_api_used")
 
 templates = read_csv(run_dir / "de_run_result_template_rows.csv")
 if len(templates) != 2000:
@@ -101,6 +103,8 @@ if sum(row["system_id"] == "E" for row in templates) != 1000:
     raise SystemExit("v53u should emit 1000 E template rows")
 if any(row["corpus_snapshot_sha256"] != summary["v53i_query_rows_sha256"] for row in templates):
     raise SystemExit("v53u templates should bind the v53i corpus snapshot sha")
+if any(row["external_api_used"] != "0" for row in templates):
+    raise SystemExit("v53u templates should require external_api_used=0")
 
 validation_rows = read_csv(run_dir / "de_validation_rows.csv")
 if not any(row["system_id"] == "D" and row["status"] == "blocked" for row in validation_rows):
