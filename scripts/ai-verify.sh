@@ -19,6 +19,12 @@ fi
 if [ -f experiments/test_v02_causal_next_byte_evaluation.sh ]; then
   bash -n experiments/test_v02_causal_next_byte_evaluation.sh
 fi
+if [ -f experiments/run_v53u_complete_source_de_open_weight_evidence_intake.sh ]; then
+  bash -n experiments/run_v53u_complete_source_de_open_weight_evidence_intake.sh
+fi
+if [ -f experiments/test_v53u_complete_source_de_open_weight_evidence_intake.sh ]; then
+  bash -n experiments/test_v53u_complete_source_de_open_weight_evidence_intake.sh
+fi
 
 echo "==> json"
 python3 -m json.tool opencode.json >/dev/null
