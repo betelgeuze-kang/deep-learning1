@@ -234,6 +234,11 @@ REQUIRED_V53_SOURCE_BENCHMARK_KEYS = {
     "policy",
     "requirements",
 }
+REQUIRED_V53U_DE_INTAKE_KEYS = {
+    "schema_version",
+    "policy",
+    "required_artifacts",
+}
 REQUIRED_V53_POLICY_KEYS = {
     "benchmark_id",
     "machine_foundation_freeze_ready",
@@ -244,6 +249,29 @@ REQUIRED_V53_POLICY_KEYS = {
     "present_summary_evidence_count",
     "missing_summary_evidence_count",
     "missing_summary_evidence_ids",
+}
+REQUIRED_V53U_POLICY_KEYS = {
+    "de_evidence_intake_contract_ready",
+    "required_systems",
+    "required_30b_baseline_ready",
+    "required_70b_baseline_ready",
+    "public_comparison_claim_ready",
+    "release_ready",
+    "network_or_download_allowed",
+    "external_api_allowed",
+    "fixture_rows_allowed",
+    "required_artifact_count",
+    "present_required_artifact_count",
+    "missing_required_artifact_count",
+    "missing_required_artifact_ids",
+}
+REQUIRED_V53U_ARTIFACT_KEYS = {
+    "artifact_id",
+    "artifact_kind",
+    "path",
+    "required_columns",
+    "min_rows",
+    "claim_boundary",
 }
 REQUIRED_V54_GROUNDED_GENERATION_KEYS = {
     "schema_version",
@@ -1103,6 +1131,62 @@ DEFAULT_V53_SUMMARY_PATHS = {
     "v53t": Path("results/v53t_complete_source_audit_readiness_gate_summary.csv"),
     "v53ap": Path("results/v53ap_complete_source_abgh_same_query_measured_summary.csv"),
     "v53aq": Path("results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv"),
+}
+EXPECTED_V53U_ARTIFACT_IDS = [
+    "de-required-field-rows",
+    "de-run-result-template-rows",
+    "de-validation-rows",
+    "source-v53i-query-rows",
+    "source-v53i-span-rows",
+    "source-v53t-unseen-split-rows",
+    "boundary",
+    "manifest",
+    "sha256-manifest",
+]
+EXPECTED_V53U_ARTIFACT_COLUMNS = {
+    "de-required-field-rows": ["system_id", "artifact", "field", "required", "rule"],
+    "de-run-result-template-rows": [
+        "system_id", "query_id", "sanitized_question", "corpus_snapshot_sha256",
+        "context_budget", "retrieval_budget", "model_id", "raw_answer",
+        "raw_citation", "abstained", "latency_ns", "peak_memory_mb",
+        "prompt_sha256", "output_sha256", "raw_output_sha256",
+        "prompt_template_sha256", "seed", "evaluator_version",
+    ],
+    "de-validation-rows": ["system_id", "check", "status", "reason"],
+    "source-v53i-query-rows": [
+        "query_id", "variant_id", "repo_id", "owner_repo", "head_sha",
+        "audit_type", "question", "expected_behavior", "expected_answer",
+        "expected_answer_sha256", "source_span_id", "source_span_required",
+        "source_path", "source_line_start", "source_line_end",
+        "source_file_sha256", "source_git_blob_sha", "source_category",
+        "source_snapshot_scope", "negative_or_abstain", "scale_scope",
+    ],
+    "source-v53i-span-rows": [
+        "source_span_id", "query_id", "repo_id", "owner_repo", "head_sha",
+        "path", "line_start", "line_end", "evidence_text",
+        "evidence_text_sha256", "source_file_sha256", "git_blob_sha",
+        "source_category", "local_relpath", "source_snapshot_scope",
+    ],
+    "source-v53t-unseen-split-rows": [
+        "split_row_id", "split_id", "split_name", "owner_repo", "repo_id",
+        "head_sha", "query_rows", "source_span_rows", "repo_manifest_bound",
+        "content_snapshot_bound", "head_sha_match", "tree_manifest_ready",
+        "content_snapshot_ready", "split_status", "claim_boundary",
+    ],
+    "boundary": [],
+    "manifest": [],
+    "sha256-manifest": ["path", "sha256", "bytes"],
+}
+EXPECTED_V53U_MIN_ROWS = {
+    "de-required-field-rows": 46,
+    "de-run-result-template-rows": 2000,
+    "de-validation-rows": 2,
+    "source-v53i-query-rows": 1000,
+    "source-v53i-span-rows": 1000,
+    "source-v53t-unseen-split-rows": 10,
+    "boundary": 1,
+    "manifest": 1,
+    "sha256-manifest": 8,
 }
 EXPECTED_V54_ARTIFACT_IDS = [
     "answer-rows",
@@ -3454,6 +3538,287 @@ def verify_v56_replay_contract(
     return errors
 
 
+def verify_v53u_de_evidence_intake(
+    path: Path,
+    summary_path: Path | None = None,
+    decision_path: Path | None = None,
+) -> list[str]:
+    errors: list[str] = []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    missing = REQUIRED_V53U_DE_INTAKE_KEYS - set(data)
+    if missing:
+        errors.append(f"{path}: missing v53u D/E intake keys: {', '.join(sorted(missing))}")
+        return errors
+    if data["schema_version"] != "v53u_de_open_weight_evidence_intake.v1":
+        errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
+    policy = data["policy"]
+    missing_policy = REQUIRED_V53U_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
+    if policy.get("de_evidence_intake_contract_ready") is not True:
+        errors.append(f"{path}: policy.de_evidence_intake_contract_ready must be true")
+    if policy.get("required_systems") != ["D", "E"]:
+        errors.append(f"{path}: policy.required_systems must be ['D', 'E']")
+    for field in [
+        "required_30b_baseline_ready",
+        "required_70b_baseline_ready",
+        "public_comparison_claim_ready",
+        "release_ready",
+        "network_or_download_allowed",
+        "external_api_allowed",
+        "fixture_rows_allowed",
+    ]:
+        if policy.get(field) is not False:
+            errors.append(f"{path}: policy.{field} must be false")
+
+    artifacts = data["required_artifacts"]
+    if not isinstance(artifacts, list) or not artifacts:
+        errors.append(f"{path}: required_artifacts must be a non-empty list")
+        return errors
+    artifact_ids = [row.get("artifact_id", "") for row in artifacts]
+    if artifact_ids != EXPECTED_V53U_ARTIFACT_IDS:
+        errors.append(f"{path}: required_artifacts order must match the v53u D/E intake contract")
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{path}: duplicate required_artifacts are forbidden")
+    if policy.get("required_artifact_count") != len(EXPECTED_V53U_ARTIFACT_IDS):
+        errors.append(f"{path}: policy.required_artifact_count must be {len(EXPECTED_V53U_ARTIFACT_IDS)}")
+    if policy.get("present_required_artifact_count") != 0:
+        errors.append(f"{path}: source-controlled contract must keep present_required_artifact_count=0")
+    if policy.get("missing_required_artifact_count") != len(EXPECTED_V53U_ARTIFACT_IDS):
+        errors.append(f"{path}: source-controlled contract must keep all v53u artifacts missing")
+    if policy.get("missing_required_artifact_ids") != EXPECTED_V53U_ARTIFACT_IDS:
+        errors.append(f"{path}: missing_required_artifact_ids must match v53u artifact ids")
+
+    artifact_rows_by_id: dict[str, list[dict[str, str]]] = {}
+    json_artifacts_by_id: dict[str, dict[str, object]] = {}
+    sha_manifest_root: Path | None = None
+    for index, row in enumerate(artifacts, start=1):
+        prefix = f"{path}: required_artifact[{index}]"
+        missing_row = REQUIRED_V53U_ARTIFACT_KEYS - set(row)
+        if missing_row:
+            errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
+        artifact_id = row.get("artifact_id", "")
+        artifact_kind = row.get("artifact_kind", "")
+        if artifact_kind not in {"csv", "text", "json"}:
+            errors.append(f"{prefix}: artifact_kind must be csv, text, or json")
+        required_columns = row.get("required_columns", [])
+        expected_columns = EXPECTED_V53U_ARTIFACT_COLUMNS.get(artifact_id)
+        if not isinstance(required_columns, list):
+            errors.append(f"{prefix}: required_columns must be a list")
+        elif expected_columns is not None and required_columns != expected_columns:
+            errors.append(f"{prefix}: required_columns must exactly match the v53u artifact header")
+        min_rows = row.get("min_rows")
+        expected_min_rows = EXPECTED_V53U_MIN_ROWS.get(artifact_id)
+        if not isinstance(min_rows, int) or min_rows < 1:
+            errors.append(f"{prefix}: min_rows must be a positive integer")
+        elif expected_min_rows is not None and min_rows != expected_min_rows:
+            errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+        if not row.get("claim_boundary"):
+            errors.append(f"{prefix}: claim_boundary must be non-empty")
+
+        artifact_path = Path(row.get("path", ""))
+        if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
+            continue
+        if artifact_id == "sha256-manifest":
+            sha_manifest_root = artifact_path.parent
+        if artifact_kind == "csv":
+            with artifact_path.open(newline="", encoding="utf-8") as handle:
+                reader = csv.DictReader(handle)
+                if required_columns and (reader.fieldnames or []) != required_columns:
+                    errors.append(f"{artifact_path}: header must match required_columns for {artifact_id}")
+                artifact_rows = list(reader)
+                artifact_rows_by_id[artifact_id] = artifact_rows
+                row_count = len(artifact_rows)
+            if isinstance(min_rows, int) and row_count < min_rows:
+                errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
+        elif artifact_kind == "text":
+            line_count = len([line for line in artifact_path.read_text(encoding="utf-8").splitlines() if line.strip()])
+            if isinstance(min_rows, int) and line_count < min_rows:
+                errors.append(f"{artifact_path}: expected at least {min_rows} non-empty lines, got {line_count}")
+        elif artifact_kind == "json":
+            json_artifacts_by_id[artifact_id] = json.loads(artifact_path.read_text(encoding="utf-8"))
+
+    required_rows = artifact_rows_by_id.get("de-required-field-rows", [])
+    required_pairs = {(row.get("system_id", ""), row.get("artifact", ""), row.get("field", "")) for row in required_rows}
+    for system_id in ["D", "E"]:
+        for artifact, field in [
+            ("model_identity.json", "model_artifact_sha256"),
+            ("model_identity.json", "model_revision"),
+            ("model_identity.json", "non_fixture_declared"),
+            ("run_result_rows.csv", "raw_output_sha256"),
+            ("run_result_rows.csv", "evaluator_version"),
+        ]:
+            if required_rows and (system_id, artifact, field) not in required_pairs:
+                errors.append(f"{path}: de-required-field-rows missing {system_id}/{artifact}/{field}")
+
+    template_rows = artifact_rows_by_id.get("de-run-result-template-rows", [])
+    if template_rows:
+        counts = {"D": 0, "E": 0}
+        for row in template_rows:
+            system_id = row.get("system_id", "")
+            if system_id in counts:
+                counts[system_id] += 1
+            if not str(row.get("corpus_snapshot_sha256", "")).startswith("sha256:"):
+                errors.append(f"{path}: template corpus_snapshot_sha256 must be hash-bound")
+                break
+            if any(row.get(field, "") for field in ["raw_answer", "raw_citation", "model_id"]):
+                errors.append(f"{path}: source-controlled D/E template rows must keep answer/citation/model fields blank")
+                break
+        if counts != {"D": 1000, "E": 1000}:
+            errors.append(f"{path}: D/E template rows expected 1000 each, got {counts}")
+
+    validation_rows = artifact_rows_by_id.get("de-validation-rows", [])
+    if validation_rows:
+        for row in validation_rows:
+            if row.get("status") not in {"pass", "fail", "blocked"}:
+                errors.append(f"{path}: de-validation-rows status must be pass, fail, or blocked")
+        statuses_by_system = {(row.get("system_id", ""), row.get("status", "")) for row in validation_rows}
+        if not any(system_id in {"D", "E"} for system_id, _ in statuses_by_system):
+            errors.append(f"{path}: de-validation-rows must include D or E validation status")
+
+    query_rows = artifact_rows_by_id.get("source-v53i-query-rows", [])
+    span_rows = artifact_rows_by_id.get("source-v53i-span-rows", [])
+    if query_rows and span_rows:
+        query_ids = {row.get("query_id", "") for row in query_rows}
+        span_query_ids = {row.get("query_id", "") for row in span_rows}
+        if len(query_rows) != 1000 or len(span_rows) != 1000 or query_ids != span_query_ids:
+            errors.append(f"{path}: v53i query/span rows must be 1000 rows with matching query ids")
+
+    split_rows = artifact_rows_by_id.get("source-v53t-unseen-split-rows", [])
+    if split_rows:
+        unseen_rows = [row for row in split_rows if row.get("split_name") == "unseen_holdout"]
+        if len(split_rows) != 10 or len(unseen_rows) != 2:
+            errors.append(f"{path}: unseen split must contain 10 repos and 2 unseen_holdout repos")
+        bad_split_rows = sum(1 for row in split_rows if row.get("split_status") != "pass")
+        if bad_split_rows:
+            errors.append(f"{path}: unseen split rows must all pass; bad_rows={bad_split_rows}")
+
+    manifest = json_artifacts_by_id.get("manifest", {})
+    if manifest:
+        for field in [
+            "external_api_used",
+            "fixture_rows_in_measured_registry",
+            "v1_0_comparison_ready",
+            "public_comparison_claim_ready",
+            "real_release_package_ready",
+        ]:
+            if str(manifest.get(field, "")) != "0":
+                errors.append(f"{path}: manifest.{field} must be 0")
+
+    sha_rows = artifact_rows_by_id.get("sha256-manifest", [])
+    if sha_rows:
+        artifact_root = sha_manifest_root
+        if artifact_root is None:
+            errors.append(f"{path}: sha256-manifest root could not be determined")
+            artifact_root = Path(".")
+        for row in sha_rows:
+            rel = row.get("path", "")
+            expected_sha = row.get("sha256", "")
+            expected_bytes = row.get("bytes", "")
+            if not rel or not expected_sha or not expected_bytes:
+                errors.append(f"{path}: sha256-manifest rows require path, sha256, and bytes")
+                continue
+            artifact_path = artifact_root / rel
+            if not artifact_path.is_file():
+                errors.append(f"{path}: sha256-manifest references missing artifact {rel}")
+                continue
+            if sha256(artifact_path) != expected_sha:
+                errors.append(f"{path}: sha256-manifest hash mismatch for {rel}")
+            if str(artifact_path.stat().st_size) != expected_bytes:
+                errors.append(f"{path}: sha256-manifest byte size mismatch for {rel}")
+
+    if summary_path is not None:
+        summary = read_first_csv(summary_path)
+        always_expected = {
+            "required_systems": "D,E",
+            "fixture_rows_in_measured_registry": "0",
+            "external_api_used": "0",
+            "v53i_query_rows": "1000",
+            "v53i_source_span_rows": "1000",
+            "unseen_repository_split_ready": "1",
+            "v1_0_comparison_ready": "0",
+            "public_comparison_claim_ready": "0",
+            "real_release_package_ready": "0",
+        }
+        for field, expected in always_expected.items():
+            if summary.get(field) != expected:
+                errors.append(f"{summary_path}: {field} expected {expected}, got {summary.get(field)}")
+        d_ready = summary.get("required_30b_baseline_ready") == "1"
+        e_ready = summary.get("required_70b_baseline_ready") == "1"
+        all_same_condition = all(
+            summary.get(field) == "1"
+            for field in [
+                "same_query_set_de",
+                "same_source_manifest_de",
+                "same_context_budget_de",
+                "same_retrieval_budget_de",
+                "same_evaluator_version_de",
+            ]
+        )
+        expected_intake_ready = d_ready and e_ready and all_same_condition and summary.get("raw_output_hash_bound_rate") == "1.000000"
+        if summary.get("v53u_complete_source_de_open_weight_evidence_intake_ready") != ("1" if expected_intake_ready else "0"):
+            errors.append(f"{summary_path}: v53u readiness must match D/E same-condition evidence gates")
+        default_missing = summary.get("d_30b_evidence_dir_supplied") == "0" and summary.get("e_70b_evidence_dir_supplied") == "0"
+        if default_missing:
+            default_expected = {
+                "v53u_complete_source_de_open_weight_evidence_intake_ready": "0",
+                "d_30b_supplied_evidence_ready": "0",
+                "e_70b_supplied_evidence_ready": "0",
+                "required_30b_baseline_ready": "0",
+                "required_70b_baseline_ready": "0",
+                "same_query_set_de": "0",
+                "same_source_manifest_de": "0",
+                "same_context_budget_de": "0",
+                "same_retrieval_budget_de": "0",
+                "same_evaluator_version_de": "0",
+                "raw_output_hash_bound_rate": "0.000000",
+                "d_30b_query_rows": "0",
+                "e_70b_query_rows": "0",
+                "blocking_reason": "30b:evidence-dir-missing;70b:evidence-dir-missing",
+            }
+            for field, expected in default_expected.items():
+                if summary.get(field) != expected:
+                    errors.append(f"{summary_path}: default {field} expected {expected}, got {summary.get(field)}")
+        validation_reasons = "\n".join(row.get("reason", "") for row in artifact_rows_by_id.get("de-validation-rows", []))
+        spoof_markers = [
+            "identity-model-id-placeholder-or-missing",
+            "identity-model-artifact-sha256-invalid",
+            "identity-open-weight-license-uri-invalid",
+            "identity-non-fixture-declared-not-true",
+            "raw-output-sha256-mismatch",
+        ]
+        if all(marker in validation_reasons for marker in spoof_markers):
+            for field in ["required_30b_baseline_ready", "required_70b_baseline_ready", "same_query_set_de"]:
+                if summary.get(field) != "0":
+                    errors.append(f"{summary_path}: spoofed supplied evidence must keep {field}=0")
+            if summary.get("d_30b_query_rows") != "1000" or summary.get("e_70b_query_rows") != "1000":
+                errors.append(f"{summary_path}: spoofed supplied evidence should still report D/E query row counts")
+
+    if decision_path is not None:
+        rows = read_csv_rows(decision_path)
+        decisions = {row.get("gate", ""): row.get("status", "") for row in rows}
+        if decisions.get("v53-foundation-input") != "pass":
+            errors.append(f"{decision_path}: v53-foundation-input must pass")
+        if decisions.get("public-comparison") != "blocked":
+            errors.append(f"{decision_path}: public-comparison must remain blocked")
+        if summary_path is not None:
+            summary = read_first_csv(summary_path)
+            expected_status = "pass" if summary.get("required_30b_baseline_ready") == "1" else "blocked"
+            if decisions.get("30b-real-evidence") != expected_status:
+                errors.append(f"{decision_path}: 30b-real-evidence expected {expected_status}, got {decisions.get('30b-real-evidence')}")
+            expected_status = "pass" if summary.get("required_70b_baseline_ready") == "1" else "blocked"
+            if decisions.get("70b-real-evidence") != expected_status:
+                errors.append(f"{decision_path}: 70b-real-evidence expected {expected_status}, got {decisions.get('70b-real-evidence')}")
+            same_ready = all(
+                summary.get(field) == "1"
+                for field in ["same_query_set_de", "same_context_budget_de", "same_retrieval_budget_de", "same_evaluator_version_de"]
+            )
+            expected_status = "pass" if same_ready else "blocked"
+            if decisions.get("same-condition-de") != expected_status:
+                errors.append(f"{decision_path}: same-condition-de expected {expected_status}, got {decisions.get('same-condition-de')}")
+    return errors
+
+
 def verify_v54_grounded_generation(
     path: Path,
     summary_path: Path | None = None,
@@ -5043,6 +5408,10 @@ def main() -> int:
     p_v53.add_argument("--v53ap-summary", type=Path, default=None)
     p_v53.add_argument("--v53aq-summary", type=Path, default=None)
     p_v53.add_argument("--v1-exit-ledger", type=Path, default=None)
+    p_v53u = sub.add_parser("v53u-de-open-weight-intake")
+    p_v53u.add_argument("paths", nargs="+", type=Path)
+    p_v53u.add_argument("--summary", type=Path, default=None)
+    p_v53u.add_argument("--decision", type=Path, default=None)
     p_v54 = sub.add_parser("v54-grounded-generation")
     p_v54.add_argument("paths", nargs="+", type=Path)
     p_v54.add_argument("--summary", type=Path, default=None)
@@ -5122,6 +5491,9 @@ def main() -> int:
                     args.v1_exit_ledger,
                 )
             )
+    elif args.cmd == "v53u-de-open-weight-intake":
+        for path in args.paths:
+            errors.extend(verify_v53u_de_evidence_intake(path, args.summary, args.decision))
     elif args.cmd == "v54-grounded-generation":
         for path in args.paths:
             errors.extend(verify_v54_grounded_generation(path, args.summary))

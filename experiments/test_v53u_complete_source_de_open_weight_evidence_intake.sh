@@ -11,6 +11,11 @@ SPOOF_E_DIR="$RESULTS_DIR/v53u_spoofed_70b_evidence"
 
 "$ROOT_DIR/experiments/run_v53u_complete_source_de_open_weight_evidence_intake.sh" >/dev/null
 
+"$ROOT_DIR/tools/verify_artifact.py" v53u-de-open-weight-intake \
+  "$ROOT_DIR/baselines/v53u_de_open_weight_evidence_intake_contract.json" \
+  --summary "$SUMMARY_CSV" \
+  --decision "$DECISION_CSV" >/dev/null
+
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib
@@ -235,6 +240,11 @@ PY
 V53U_30B_EVIDENCE_DIR="$SPOOF_D_DIR" \
 V53U_70B_EVIDENCE_DIR="$SPOOF_E_DIR" \
   "$ROOT_DIR/experiments/run_v53u_complete_source_de_open_weight_evidence_intake.sh" >/dev/null
+
+"$ROOT_DIR/tools/verify_artifact.py" v53u-de-open-weight-intake \
+  "$ROOT_DIR/baselines/v53u_de_open_weight_evidence_intake_contract.json" \
+  --summary "$SUMMARY_CSV" \
+  --decision "$DECISION_CSV" >/dev/null
 
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv

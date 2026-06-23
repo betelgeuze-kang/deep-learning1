@@ -1,0 +1,102 @@
+{
+  "schema_version": "v53u_de_open_weight_evidence_intake.v1",
+  "policy": {
+    "de_evidence_intake_contract_ready": true,
+    "required_systems": ["D", "E"],
+    "required_30b_baseline_ready": false,
+    "required_70b_baseline_ready": false,
+    "public_comparison_claim_ready": false,
+    "release_ready": false,
+    "network_or_download_allowed": false,
+    "external_api_allowed": false,
+    "fixture_rows_allowed": false,
+    "required_artifact_count": 9,
+    "present_required_artifact_count": 0,
+    "missing_required_artifact_count": 9,
+    "missing_required_artifact_ids": [
+      "de-required-field-rows",
+      "de-run-result-template-rows",
+      "de-validation-rows",
+      "source-v53i-query-rows",
+      "source-v53i-span-rows",
+      "source-v53t-unseen-split-rows",
+      "boundary",
+      "manifest",
+      "sha256-manifest"
+    ]
+  },
+  "required_artifacts": [
+    {
+      "artifact_id": "de-required-field-rows",
+      "artifact_kind": "csv",
+      "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/de_required_field_rows.csv",
+      "required_columns": ["system_id", "artifact", "field", "required", "rule"],
+      "min_rows": 46,
+      "claim_boundary": "required D/E evidence field ledger only; not supplied real baseline evidence"
+    },
+    {
+      "artifact_id": "de-run-result-template-rows",
+      "artifact_kind": "csv",
+      "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/de_run_result_template_rows.csv",
+      "required_columns": ["system_id", "query_id", "sanitized_question", "corpus_snapshot_sha256", "context_budget", "retrieval_budget", "model_id", "raw_answer", "raw_citation", "abstained", "latency_ns", "peak_memory_mb", "prompt_sha256", "output_sha256", "raw_output_sha256", "prompt_template_sha256", "seed", "evaluator_version"],
+      "min_rows": 2000,
+      "claim_boundary": "blank D/E template rows over frozen v53i queries; not measured model output"
+    },
+    {
+      "artifact_id": "de-validation-rows",
+      "artifact_kind": "csv",
+      "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/de_validation_rows.csv",
+      "required_columns": ["system_id", "check", "status", "reason"],
+      "min_rows": 2,
+      "claim_boundary": "validation rows must block missing, placeholder, fixture, or hash-invalid evidence"
+    },
+    {
+      "artifact_id": "source-v53i-query-rows",
+      "artifact_kind": "csv",
+      "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/source_v53i/complete_source_query_rows.csv",
+      "required_columns": ["query_id", "variant_id", "repo_id", "owner_repo", "head_sha", "audit_type", "question", "expected_behavior", "expected_answer", "expected_answer_sha256", "source_span_id", "source_span_required", "source_path", "source_line_start", "source_line_end", "source_file_sha256", "source_git_blob_sha", "source_category", "source_snapshot_scope", "negative_or_abstain", "scale_scope"],
+      "min_rows": 1000,
+      "claim_boundary": "frozen v53i query surface binding for D/E evidence intake"
+    },
+    {
+      "artifact_id": "source-v53i-span-rows",
+      "artifact_kind": "csv",
+      "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/source_v53i/complete_source_span_rows.csv",
+      "required_columns": ["source_span_id", "query_id", "repo_id", "owner_repo", "head_sha", "path", "line_start", "line_end", "evidence_text", "evidence_text_sha256", "source_file_sha256", "git_blob_sha", "source_category", "local_relpath", "source_snapshot_scope"],
+      "min_rows": 1000,
+      "claim_boundary": "frozen v53i source span binding for D/E evidence intake"
+    },
+    {
+      "artifact_id": "source-v53t-unseen-split-rows",
+      "artifact_kind": "csv",
+      "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/source_v53t/complete_source_unseen_repository_split_rows.csv",
+      "required_columns": ["split_row_id", "split_id", "split_name", "owner_repo", "repo_id", "head_sha", "query_rows", "source_span_rows", "repo_manifest_bound", "content_snapshot_bound", "head_sha_match", "tree_manifest_ready", "content_snapshot_ready", "split_status", "claim_boundary"],
+      "min_rows": 10,
+      "claim_boundary": "v53t unseen repository split binding; not heldout quality evidence by itself"
+    },
+    {
+      "artifact_id": "boundary",
+      "artifact_kind": "text",
+      "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/V53U_COMPLETE_SOURCE_DE_EVIDENCE_BOUNDARY.md",
+      "required_columns": [],
+      "min_rows": 1,
+      "claim_boundary": "blocked wording boundary for public comparison and release"
+    },
+    {
+      "artifact_id": "manifest",
+      "artifact_kind": "json",
+      "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/v53u_complete_source_de_open_weight_evidence_intake_manifest.json",
+      "required_columns": [],
+      "min_rows": 1,
+      "claim_boundary": "machine-readable D/E intake manifest"
+    },
+    {
+      "artifact_id": "sha256-manifest",
+      "artifact_kind": "csv",
+      "path": "results/v53u_complete_source_de_open_weight_evidence_intake/intake_001/sha256_manifest.csv",
+      "required_columns": ["path", "sha256", "bytes"],
+      "min_rows": 8,
+      "claim_boundary": "hash binding for generated v53u intake packet"
+    }
+  ]
+}

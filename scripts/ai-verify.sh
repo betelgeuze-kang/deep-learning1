@@ -128,6 +128,9 @@ fi
 if [ -f baselines/de_30b70b_real.json ]; then
   python3 -m json.tool baselines/de_30b70b_real.json >/dev/null
 fi
+if [ -f baselines/v53u_de_open_weight_evidence_intake_contract.json ]; then
+  python3 -m json.tool baselines/v53u_de_open_weight_evidence_intake_contract.json >/dev/null
+fi
 if [ -f baselines/v52_adapter_guard.json ]; then
   python3 -m json.tool baselines/v52_adapter_guard.json >/dev/null
 fi
@@ -242,6 +245,16 @@ if [ -x tools/verify_artifact.py ]; then
         --acceptance-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/de_30b70b_acceptance_evidence_rows.csv >/dev/null
     else
       tools/verify_artifact.py baseline-admission baselines/de_30b70b_real.json >/dev/null
+    fi
+  fi
+  if [ -f baselines/v53u_de_open_weight_evidence_intake_contract.json ]; then
+    if [ -f results/v53u_complete_source_de_open_weight_evidence_intake_summary.csv ] &&
+       [ -f results/v53u_complete_source_de_open_weight_evidence_intake_decision.csv ]; then
+      tools/verify_artifact.py v53u-de-open-weight-intake baselines/v53u_de_open_weight_evidence_intake_contract.json \
+        --summary results/v53u_complete_source_de_open_weight_evidence_intake_summary.csv \
+        --decision results/v53u_complete_source_de_open_weight_evidence_intake_decision.csv >/dev/null
+    else
+      tools/verify_artifact.py v53u-de-open-weight-intake baselines/v53u_de_open_weight_evidence_intake_contract.json >/dev/null
     fi
   fi
   if [ -f baselines/v52_adapter_guard.json ]; then
@@ -370,6 +383,9 @@ fi
 
 if [ -f experiments/test_pr_split_branch_policy.sh ]; then
   bash experiments/test_pr_split_branch_policy.sh >/dev/null
+fi
+if [ -x experiments/test_v53u_complete_source_de_open_weight_evidence_intake.sh ]; then
+  ./experiments/test_v53u_complete_source_de_open_weight_evidence_intake.sh >/dev/null
 fi
 if [ -x experiments/test_v54d_source_verified_route_scorer_calibration.sh ]; then
   ./experiments/test_v54d_source_verified_route_scorer_calibration.sh >/dev/null
