@@ -5491,6 +5491,33 @@ mmap_path.write_text(original_mmap_text_for_citation_span, encoding="utf-8")
 audit_semantic_summary_path.write_text(original_audit_semantic_summary_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
+sarif_payload = json.loads(original_sarif_text)
+tampered_sarif_suppression = False
+for result in sarif_payload["runs"][0]["results"]:
+    suppressions = result.get("suppressions", [])
+    if not suppressions:
+        continue
+    suppressions[0].setdefault("properties", {})["citation_span_sha256s"] = ["sha256:" + ("0" * 64)]
+    tampered_sarif_suppression = True
+    break
+if tampered_sarif_suppression:
+    sarif_path.write_text(json.dumps(sarif_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    new_sarif_sha = sha256(sarif_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  audit_findings.sarif.json"):
+            sha_lines.append(f"{new_sarif_sha}  audit_findings.sarif.json")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    sarif_suppression_result = subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if sarif_suppression_result.returncode == 0:
+        raise SystemExit("local-audit verifier must reject detached SARIF suppression provenance")
+    if "SARIF suppression properties drift" not in sarif_suppression_result.stderr:
+        raise SystemExit("local-audit verifier must explain SARIF suppression provenance drift")
+    sarif_path.write_text(original_sarif_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
 with citation_spans_csv_path.open(newline="", encoding="utf-8") as handle:
     citation_csv_rows = list(csv.DictReader(handle))
 citation_json_rows = [json.loads(line) for line in original_citations.splitlines() if line.strip()]

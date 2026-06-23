@@ -1369,6 +1369,10 @@ def verify_sarif(out_dir: Path, errors: list[str]) -> None:
 
     findings = read_csv(out_dir / "audit_findings.csv")
     spans = read_csv(out_dir / "citation_spans.csv")
+    suppressed_rows = read_csv(out_dir / "suppressed_findings.csv")
+    suppressions_by_finding: dict[str, list[dict[str, str]]] = {}
+    for row in suppressed_rows:
+        suppressions_by_finding.setdefault(row.get("finding_id", ""), []).append(row)
     spans_by_finding: dict[str, list[dict[str, str]]] = {}
     for span in spans:
         spans_by_finding.setdefault(span.get("finding_id", ""), []).append(span)
@@ -1429,6 +1433,25 @@ def verify_sarif(out_dir: Path, errors: list[str]) -> None:
         if finding.get("suppressed") == "1":
             if not suppressions:
                 add(errors, f"SARIF suppressed finding missing suppressions: {finding_id}")
+            expected_suppression_rows = suppressions_by_finding.get(finding_id, [])
+            if len(suppressions) != len(expected_suppression_rows):
+                add(errors, f"SARIF suppression count drift: {finding_id}")
+            for suppression, expected_row in zip(suppressions, expected_suppression_rows):
+                if suppression.get("kind") != "external":
+                    add(errors, f"SARIF suppression kind drift: {finding_id}")
+                expected_justification = "source-bound allowlist suppression: " + expected_row.get("suppression_id", "")
+                if suppression.get("justification") != expected_justification:
+                    add(errors, f"SARIF suppression justification drift: {finding_id}")
+                suppression_props = suppression.get("properties", {})
+                expected_props = {
+                    "suppression_id": expected_row.get("suppression_id", ""),
+                    "finding_id": expected_row.get("finding_id", ""),
+                    "citations": [cell for cell in expected_row.get("citations", "").split(";") if cell],
+                    "citation_sha256s": [cell for cell in expected_row.get("citation_sha256s", "").split(";") if cell],
+                    "citation_span_sha256s": [cell for cell in expected_row.get("citation_span_sha256s", "").split(";") if cell],
+                }
+                if suppression_props != expected_props:
+                    add(errors, f"SARIF suppression properties drift: {finding_id}")
         elif suppressions:
             add(errors, f"SARIF unsuppressed finding has suppressions: {finding_id}")
 

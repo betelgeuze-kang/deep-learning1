@@ -1017,10 +1017,13 @@ def sarif_level(severity: str) -> str:
     }.get(severity, "note")
 
 
-def write_sarif(staging: Path, finding_rows: list[dict], span_rows: list[dict], rule_rows: list[dict]) -> None:
+def write_sarif(staging: Path, finding_rows: list[dict], span_rows: list[dict], suppressed_rows: list[dict], rule_rows: list[dict]) -> None:
     spans_by_finding: dict[str, list[dict]] = {}
     for span in span_rows:
         spans_by_finding.setdefault(str(span["finding_id"]), []).append(span)
+    suppressions_by_finding: dict[str, list[dict]] = {}
+    for row in suppressed_rows:
+        suppressions_by_finding.setdefault(str(row["finding_id"]), []).append(row)
 
     sarif_rules = []
     rule_index: dict[str, int] = {}
@@ -1103,8 +1106,16 @@ def write_sarif(staging: Path, finding_rows: list[dict], span_rows: list[dict], 
             result["suppressions"] = [
                 {
                     "kind": "external",
-                    "justification": "source-bound allowlist suppression: " + str(finding["suppression_ids"]),
+                    "justification": "source-bound allowlist suppression: " + str(row["suppression_id"]),
+                    "properties": {
+                        "suppression_id": row["suppression_id"],
+                        "finding_id": row["finding_id"],
+                        "citations": [cell for cell in str(row["citations"]).split(";") if cell],
+                        "citation_sha256s": [cell for cell in str(row["citation_sha256s"]).split(";") if cell],
+                        "citation_span_sha256s": [cell for cell in str(row["citation_span_sha256s"]).split(";") if cell],
+                    },
                 }
+                for row in suppressions_by_finding.get(str(finding["finding_id"]), [])
             ]
         results.append(result)
 
@@ -1736,7 +1747,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
         },
     )
     write_csv(staging / "suppressed_findings.csv", CSV_CONTRACTS["suppressed_findings.csv"], suppressed_rows)
-    write_sarif(staging, finding_rows, span_rows, plugin_rule_metadata)
+    write_sarif(staging, finding_rows, span_rows, suppressed_rows, plugin_rule_metadata)
     baseline_diff_summary = write_baseline_diff(staging, baseline, finding_rows)
     write_audit_semantic_summary(staging)
     write_json(
