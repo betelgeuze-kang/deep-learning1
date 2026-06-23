@@ -103,6 +103,9 @@ fi
 if [ -f schemas/local_repo_audit_source_snapshot.schema.json ]; then
   python3 -m json.tool schemas/local_repo_audit_source_snapshot.schema.json >/dev/null
 fi
+if [ -f v54/free_running_generation_evidence_intake_contract.json ]; then
+  python3 -m json.tool v54/free_running_generation_evidence_intake_contract.json >/dev/null
+fi
 for schema_file in schemas/local_repo_audit_*.schema.json; do
   [ -f "$schema_file" ] || continue
   python3 -m json.tool "$schema_file" >/dev/null
@@ -283,6 +286,14 @@ if [ -x tools/verify_artifact.py ]; then
         --summary results/v54c_complete_source_grounded_generation_1000_summary.csv >/dev/null
     else
       tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json >/dev/null
+    fi
+  fi
+  if [ -f v54/free_running_generation_evidence_intake_contract.json ]; then
+    if [ -f results/v54f_free_running_generation_evidence_intake_summary.csv ]; then
+      tools/verify_artifact.py v54-generation-intake v54/free_running_generation_evidence_intake_contract.json \
+        --summary results/v54f_free_running_generation_evidence_intake_summary.csv >/dev/null
+    else
+      tools/verify_artifact.py v54-generation-intake v54/free_running_generation_evidence_intake_contract.json >/dev/null
     fi
   fi
   if [ -f v58/blind_eval_real.json ]; then

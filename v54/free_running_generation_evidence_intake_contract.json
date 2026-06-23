@@ -1,0 +1,91 @@
+{
+  "schema_version": "v54_free_running_generation_evidence_intake.v1",
+  "policy": {
+    "generation_evidence_intake_contract_ready": true,
+    "free_running_decode_required": true,
+    "teacher_forcing_allowed": false,
+    "raw_prompt_context_allowed": false,
+    "retrieved_text_in_prompt_allowed": false,
+    "source_locator_leakage_allowed": false,
+    "allowed_model_visible_fields": ["sanitized_question", "opaque_routehint"],
+    "expected_generation_rows": 1000,
+    "real_model_generation_ready": false,
+    "external_label_source_ready": false,
+    "heldout_metric_ready": false,
+    "public_comparison_claim_ready": false,
+    "release_ready": false,
+    "network_or_download_allowed": false,
+    "gpu_execution_allowed": false,
+    "checkpoint_download_allowed": false,
+    "required_artifact_count": 7,
+    "present_required_artifact_count": 0,
+    "missing_required_artifact_count": 7,
+    "missing_required_artifact_ids": [
+      "generation-required-field-rows",
+      "free-running-generation-template-rows",
+      "generation-validation-rows",
+      "source-v53i-query-rows",
+      "boundary",
+      "manifest",
+      "sha256-manifest"
+    ]
+  },
+  "required_artifacts": [
+    {
+      "artifact_id": "generation-required-field-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54f_free_running_generation_evidence_intake/intake_001/generation_required_field_rows.csv",
+      "required_columns": ["artifact", "field", "required", "rule"],
+      "min_rows": 20,
+      "claim_boundary": "required-field template only; not real model generation evidence"
+    },
+    {
+      "artifact_id": "free-running-generation-template-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54f_free_running_generation_evidence_intake/intake_001/free_running_generation_template_rows.csv",
+      "required_columns": ["generation_id", "query_id", "corpus_snapshot_sha256", "sanitized_question_sha256", "generator_id", "free_running_decode", "teacher_forcing_used", "raw_prompt_context_bytes", "retrieved_text_in_prompt", "source_locator_leakage", "generated_text", "citation_handle", "raw_output_sha256", "output_token_count", "latency_ns", "peak_memory_mb", "answer_correct", "citation_correct", "abstain_correct", "wrong_answer", "evaluator_version", "external_api_used"],
+      "min_rows": 1000,
+      "claim_boundary": "blank template rows over frozen v53i; not accepted real generation output"
+    },
+    {
+      "artifact_id": "generation-validation-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54f_free_running_generation_evidence_intake/intake_001/generation_validation_rows.csv",
+      "required_columns": ["check", "status", "reason"],
+      "min_rows": 1,
+      "claim_boundary": "validation row records blockers until supplied evidence passes"
+    },
+    {
+      "artifact_id": "source-v53i-query-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54f_free_running_generation_evidence_intake/intake_001/source_v53i_complete_source_query_rows.csv",
+      "required_columns": ["query_id", "variant_id", "repo_id", "owner_repo", "head_sha", "audit_type", "question", "expected_behavior", "expected_answer", "expected_answer_sha256", "source_span_id", "source_span_required", "source_path", "source_line_start", "source_line_end", "source_file_sha256", "source_git_blob_sha", "source_category", "source_snapshot_scope", "negative_or_abstain", "scale_scope"],
+      "min_rows": 1000,
+      "claim_boundary": "frozen v53i query input binding"
+    },
+    {
+      "artifact_id": "boundary",
+      "artifact_kind": "text",
+      "path": "results/v54f_free_running_generation_evidence_intake/intake_001/V54F_FREE_RUNNING_GENERATION_EVIDENCE_INTAKE_BOUNDARY.md",
+      "required_columns": [],
+      "min_rows": 1,
+      "claim_boundary": "blocked wording boundary"
+    },
+    {
+      "artifact_id": "manifest",
+      "artifact_kind": "json",
+      "path": "results/v54f_free_running_generation_evidence_intake/intake_001/v54f_free_running_generation_evidence_intake_manifest.json",
+      "required_columns": [],
+      "min_rows": 1,
+      "claim_boundary": "machine-readable fail-closed intake manifest"
+    },
+    {
+      "artifact_id": "sha256-manifest",
+      "artifact_kind": "csv",
+      "path": "results/v54f_free_running_generation_evidence_intake/intake_001/sha256_manifest.csv",
+      "required_columns": ["path", "sha256", "bytes"],
+      "min_rows": 6,
+      "claim_boundary": "hash binding for generated intake packet"
+    }
+  ]
+}

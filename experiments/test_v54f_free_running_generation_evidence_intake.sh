@@ -9,6 +9,9 @@ DECISION_CSV="$RESULTS_DIR/v54f_free_running_generation_evidence_intake_decision
 SPOOF_DIR="$RESULTS_DIR/v54f_spoofed_generation_evidence"
 
 "$ROOT_DIR/experiments/run_v54f_free_running_generation_evidence_intake.sh" >/dev/null
+"$ROOT_DIR/tools/verify_artifact.py" v54-generation-intake \
+  "$ROOT_DIR/v54/free_running_generation_evidence_intake_contract.json" \
+  --summary "$SUMMARY_CSV" >/dev/null
 
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
@@ -225,5 +228,8 @@ for gate in ["free-running-generation-evidence", "real-model-generation", "publi
 PY
 
 "$ROOT_DIR/experiments/run_v54f_free_running_generation_evidence_intake.sh" >/dev/null
+"$ROOT_DIR/tools/verify_artifact.py" v54-generation-intake \
+  "$ROOT_DIR/v54/free_running_generation_evidence_intake_contract.json" \
+  --summary "$SUMMARY_CSV" >/dev/null
 
 echo "v54f free-running generation evidence intake smoke passed"

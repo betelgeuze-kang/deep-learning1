@@ -250,6 +250,11 @@ REQUIRED_V54_GROUNDED_GENERATION_KEYS = {
     "policy",
     "required_artifacts",
 }
+REQUIRED_V54F_GENERATION_INTAKE_KEYS = {
+    "schema_version",
+    "policy",
+    "required_artifacts",
+}
 REQUIRED_V54_POLICY_KEYS = {
     "generation_contract_ready",
     "raw_prompt_context_allowed",
@@ -273,6 +278,36 @@ REQUIRED_V54_ARTIFACT_KEYS = {
     "pm_recommended_output",
     "raw_prompt_context_forbidden",
     "model_visible_leakage_forbidden",
+}
+REQUIRED_V54F_POLICY_KEYS = {
+    "generation_evidence_intake_contract_ready",
+    "free_running_decode_required",
+    "teacher_forcing_allowed",
+    "raw_prompt_context_allowed",
+    "retrieved_text_in_prompt_allowed",
+    "source_locator_leakage_allowed",
+    "allowed_model_visible_fields",
+    "expected_generation_rows",
+    "real_model_generation_ready",
+    "external_label_source_ready",
+    "heldout_metric_ready",
+    "public_comparison_claim_ready",
+    "release_ready",
+    "network_or_download_allowed",
+    "gpu_execution_allowed",
+    "checkpoint_download_allowed",
+    "required_artifact_count",
+    "present_required_artifact_count",
+    "missing_required_artifact_count",
+    "missing_required_artifact_ids",
+}
+REQUIRED_V54F_ARTIFACT_KEYS = {
+    "artifact_id",
+    "artifact_kind",
+    "path",
+    "required_columns",
+    "min_rows",
+    "claim_boundary",
 }
 REQUIRED_V53_REQUIREMENT_KEYS = {
     "requirement_id",
@@ -1122,6 +1157,49 @@ EXPECTED_V54_MIN_ROWS = {
     "compact-routehint-rows": 1000,
     "sha256-manifest": 10,
     "sha256sums": 1,
+}
+EXPECTED_V54F_ARTIFACT_IDS = [
+    "generation-required-field-rows",
+    "free-running-generation-template-rows",
+    "generation-validation-rows",
+    "source-v53i-query-rows",
+    "boundary",
+    "manifest",
+    "sha256-manifest",
+]
+EXPECTED_V54F_ARTIFACT_COLUMNS = {
+    "generation-required-field-rows": ["artifact", "field", "required", "rule"],
+    "free-running-generation-template-rows": [
+        "generation_id", "query_id", "corpus_snapshot_sha256",
+        "sanitized_question_sha256", "generator_id", "free_running_decode",
+        "teacher_forcing_used", "raw_prompt_context_bytes",
+        "retrieved_text_in_prompt", "source_locator_leakage",
+        "generated_text", "citation_handle", "raw_output_sha256",
+        "output_token_count", "latency_ns", "peak_memory_mb",
+        "answer_correct", "citation_correct", "abstain_correct",
+        "wrong_answer", "evaluator_version", "external_api_used",
+    ],
+    "generation-validation-rows": ["check", "status", "reason"],
+    "source-v53i-query-rows": [
+        "query_id", "variant_id", "repo_id", "owner_repo", "head_sha",
+        "audit_type", "question", "expected_behavior", "expected_answer",
+        "expected_answer_sha256", "source_span_id", "source_span_required",
+        "source_path", "source_line_start", "source_line_end",
+        "source_file_sha256", "source_git_blob_sha", "source_category",
+        "source_snapshot_scope", "negative_or_abstain", "scale_scope",
+    ],
+    "boundary": [],
+    "manifest": [],
+    "sha256-manifest": ["path", "sha256", "bytes"],
+}
+EXPECTED_V54F_MIN_ROWS = {
+    "generation-required-field-rows": 20,
+    "free-running-generation-template-rows": 1000,
+    "generation-validation-rows": 1,
+    "source-v53i-query-rows": 1000,
+    "boundary": 1,
+    "manifest": 1,
+    "sha256-manifest": 6,
 }
 EXPECTED_V50_ARTIFACT_IDS = [
     "source-snapshot-rows",
@@ -3427,6 +3505,144 @@ def verify_v54_grounded_generation(
     return errors
 
 
+def verify_v54_free_running_generation_intake(
+    path: Path,
+    summary_path: Path | None = None,
+) -> list[str]:
+    errors: list[str] = []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    missing = REQUIRED_V54F_GENERATION_INTAKE_KEYS - set(data)
+    if missing:
+        errors.append(f"{path}: missing v54f generation intake keys: {', '.join(sorted(missing))}")
+        return errors
+    if data["schema_version"] != "v54_free_running_generation_evidence_intake.v1":
+        errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
+    policy = data["policy"]
+    missing_policy = REQUIRED_V54F_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
+    for field in [
+        "generation_evidence_intake_contract_ready",
+        "free_running_decode_required",
+    ]:
+        if policy.get(field) is not True:
+            errors.append(f"{path}: policy.{field} must be true")
+    for field in [
+        "teacher_forcing_allowed",
+        "raw_prompt_context_allowed",
+        "retrieved_text_in_prompt_allowed",
+        "source_locator_leakage_allowed",
+        "real_model_generation_ready",
+        "external_label_source_ready",
+        "heldout_metric_ready",
+        "public_comparison_claim_ready",
+        "release_ready",
+        "network_or_download_allowed",
+        "gpu_execution_allowed",
+        "checkpoint_download_allowed",
+    ]:
+        if policy.get(field) is not False:
+            errors.append(f"{path}: policy.{field} must be false")
+    if policy.get("allowed_model_visible_fields") != ["sanitized_question", "opaque_routehint"]:
+        errors.append(f"{path}: allowed_model_visible_fields must be sanitized_question, opaque_routehint")
+    if policy.get("expected_generation_rows") != 1000:
+        errors.append(f"{path}: expected_generation_rows must be 1000")
+
+    artifacts = data["required_artifacts"]
+    if not isinstance(artifacts, list) or not artifacts:
+        errors.append(f"{path}: required_artifacts must be a non-empty list")
+        return errors
+    artifact_ids = [row.get("artifact_id", "") for row in artifacts]
+    if artifact_ids != EXPECTED_V54F_ARTIFACT_IDS:
+        errors.append(f"{path}: required_artifacts order must match the v54f intake contract")
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{path}: duplicate required_artifacts are forbidden")
+    if policy.get("required_artifact_count") != len(EXPECTED_V54F_ARTIFACT_IDS):
+        errors.append(f"{path}: policy.required_artifact_count must be {len(EXPECTED_V54F_ARTIFACT_IDS)}")
+    if policy.get("present_required_artifact_count") != 0:
+        errors.append(f"{path}: source-controlled contract must keep present_required_artifact_count=0")
+    if policy.get("missing_required_artifact_count") != len(EXPECTED_V54F_ARTIFACT_IDS):
+        errors.append(f"{path}: source-controlled contract must keep all v54f artifacts missing")
+    if policy.get("missing_required_artifact_ids") != EXPECTED_V54F_ARTIFACT_IDS:
+        errors.append(f"{path}: missing_required_artifact_ids must match v54f artifact ids")
+
+    for index, row in enumerate(artifacts, start=1):
+        prefix = f"{path}: required_artifact[{index}]"
+        missing_row = REQUIRED_V54F_ARTIFACT_KEYS - set(row)
+        if missing_row:
+            errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
+        artifact_id = row.get("artifact_id", "")
+        artifact_kind = row.get("artifact_kind", "")
+        if artifact_kind not in {"csv", "text", "json"}:
+            errors.append(f"{prefix}: artifact_kind must be csv, text, or json")
+        required_columns = row.get("required_columns", [])
+        expected_columns = EXPECTED_V54F_ARTIFACT_COLUMNS.get(artifact_id)
+        if not isinstance(required_columns, list):
+            errors.append(f"{prefix}: required_columns must be a list")
+        elif expected_columns is not None and required_columns != expected_columns:
+            errors.append(f"{prefix}: required_columns must exactly match the v54f artifact header")
+        min_rows = row.get("min_rows")
+        expected_min_rows = EXPECTED_V54F_MIN_ROWS.get(artifact_id)
+        if not isinstance(min_rows, int) or min_rows < 1:
+            errors.append(f"{prefix}: min_rows must be a positive integer")
+        elif expected_min_rows is not None and min_rows != expected_min_rows:
+            errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+        if not row.get("claim_boundary"):
+            errors.append(f"{prefix}: claim_boundary must be non-empty")
+
+        artifact_path = Path(row.get("path", ""))
+        if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
+            continue
+        if artifact_kind == "csv":
+            with artifact_path.open(newline="", encoding="utf-8") as handle:
+                reader = csv.DictReader(handle)
+                if required_columns and (reader.fieldnames or []) != required_columns:
+                    errors.append(f"{artifact_path}: header must match required_columns for {artifact_id}")
+                row_count = sum(1 for _ in reader)
+            if isinstance(min_rows, int) and row_count < min_rows:
+                errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
+        elif artifact_kind == "text":
+            line_count = len([line for line in artifact_path.read_text(encoding="utf-8").splitlines() if line.strip()])
+            if isinstance(min_rows, int) and line_count < min_rows:
+                errors.append(f"{artifact_path}: expected at least {min_rows} non-empty lines, got {line_count}")
+        elif artifact_kind == "json":
+            json.loads(artifact_path.read_text(encoding="utf-8"))
+
+    if summary_path is not None:
+        summary = read_first_csv(summary_path)
+        expected_summary = {
+            "v54f_free_running_generation_evidence_intake_ready": "1",
+            "generation_evidence_dir_supplied": "0",
+            "supplied_generation_evidence_ready": "0",
+            "real_model_generation_ready": "0",
+            "generation_rows": "0",
+            "expected_generation_rows": "1000",
+            "free_running_decode_rows": "0",
+            "teacher_forcing_used_rows": "0",
+            "raw_prompt_context_bytes": "0",
+            "retrieved_text_in_prompt_rows": "0",
+            "source_locator_leakage_rows": "0",
+            "external_label_source_ready": "0",
+            "heldout_metric_ready": "0",
+            "thresholds_declared_ready": "0",
+            "raw_output_hash_bound_rate": "0.000000",
+            "fixture_rows_in_measured_registry": "0",
+            "network_or_download_used": "0",
+            "gpu_execution_used": "0",
+            "checkpoint_downloaded": "0",
+            "external_api_used": "0",
+            "v53i_query_rows": "1000",
+            "v1_0_comparison_ready": "0",
+            "public_comparison_claim_ready": "0",
+            "real_release_package_ready": "0",
+            "blocking_reason": "generation-evidence-dir-missing",
+        }
+        for field, expected in expected_summary.items():
+            if summary.get(field) != expected:
+                errors.append(f"{summary_path}: {field} expected {expected}, got {summary.get(field)}")
+    return errors
+
+
 def verify_v53_source_benchmark(
     path: Path,
     v53i_summary: Path | None = None,
@@ -4206,6 +4422,9 @@ def main() -> int:
     p_v54 = sub.add_parser("v54-grounded-generation")
     p_v54.add_argument("paths", nargs="+", type=Path)
     p_v54.add_argument("--summary", type=Path, default=None)
+    p_v54f = sub.add_parser("v54-generation-intake")
+    p_v54f.add_argument("paths", nargs="+", type=Path)
+    p_v54f.add_argument("--summary", type=Path, default=None)
     p_v58 = sub.add_parser("v58-blind-eval")
     p_v58.add_argument("paths", nargs="+", type=Path)
     p_v58.add_argument("--readiness-ledger", type=Path, default=None)
@@ -4275,6 +4494,9 @@ def main() -> int:
     elif args.cmd == "v54-grounded-generation":
         for path in args.paths:
             errors.extend(verify_v54_grounded_generation(path, args.summary))
+    elif args.cmd == "v54-generation-intake":
+        for path in args.paths:
+            errors.extend(verify_v54_free_running_generation_intake(path, args.summary))
     elif args.cmd == "v58-blind-eval":
         for path in args.paths:
             errors.extend(verify_v58_blind_eval(path, args.readiness_ledger, args.artifact_ledger, args.template_ledger))
