@@ -559,6 +559,10 @@ Implemented now:
 - `experiments/test_v54b_routehint_generation_scale_1000.sh`
 - `experiments/run_v54c_complete_source_grounded_generation_1000.sh`
 - `experiments/test_v54c_complete_source_grounded_generation_1000.sh`
+- `experiments/run_v54d_source_verified_route_scorer_calibration.sh`
+- `experiments/test_v54d_source_verified_route_scorer_calibration.sh`
+- `experiments/run_v54e_free_running_non_attention_decoder_contract.sh`
+- `experiments/test_v54e_free_running_non_attention_decoder_contract.sh`
 - `experiments/run_v55_local_scaling_law_main_contract.sh`
 - `experiments/test_v55_local_scaling_law_main_contract.sh`
 - `experiments/run_v55b_local_scaling_law_main_120.sh`
@@ -685,6 +689,8 @@ Implemented now:
 - `results/v54_routehint_generation_1000_contract/contract_001/` contract artifacts
 - `results/v54b_routehint_generation_scale_1000/scale_001/` 1000-row RouteHint generation scale artifacts
 - `results/v54c_complete_source_grounded_generation_1000/generation_001/` 1000-row complete-source grounded generation artifacts
+- `results/v54d_source_verified_route_scorer_calibration/calibration_001/` route scorer calibration contract artifacts
+- `results/v54e_free_running_non_attention_decoder_contract/decode_001/` free-running non-attention decoder contract artifacts
 - `results/v55_local_scaling_law_main_contract/contract_001/` contract artifacts
 - `results/v55b_local_scaling_law_main_120/main_001/` six-axis / 360-row local scaling-law main artifacts
 - `results/v56_ruler_longbench_expanded_contract/contract_001/` contract artifacts
@@ -799,6 +805,8 @@ The v54b scale layer emits 1000 deterministic local RouteHint generation rows ac
 The v54c complete-source grounded generation layer replays the v54 1000-row generation target over the frozen v53i complete-source query/source-span benchmark and the v53ap A/B/G/H deterministic source-span adapter surface when the ignored `results/v54c_complete_source_grounded_generation_1000/` packet is present. The source-controlled clean-checkout contract lists the required `answer_rows.csv`, `citation_rows.csv`, `unsupported_claim_rows.csv`, `abstain_rows.csv`, `generator_resource_rows.csv`, `wrong_answer_guard_rows.csv`, compact RouteHint and generator-input rows, sha256 manifest, and `sha256sums.txt`, but keeps `deterministic_source_span_generation_fixture_ready=0` and all ten required artifact ids missing until the packet is replayed or explicitly supplied. Historical local v54c packets may record source-span-derived fixture output with v53ap H-adapter-trace provenance, no raw prompt context, no model-visible source locators, and zero real-model/human/release readiness, but the tracked contract must not promote those ignored local files into public generation or release claims.
 
 The v54d source-verified RouteMemory scorer calibration layer adds the executable contract for pairwise route scoring and calibrated abstention without promoting a generator. It implements a pure-Python scorer contract with dot-product scoring, pairwise ranking loss, top-1/top-2 margin decisions, evidence-probability gating, provenance-required abstention, and a calibration split that minimizes wrong-answer cost before unnecessary abstain cost. The smoke packet records calibration examples, decision negative controls, threshold rows, loss rows, a manifest, and sha256 bindings while keeping `external_label_source_ready=0`, `heldout_metric_ready=0`, `promotion_ready=0`, `real_model_generation_ready=0`, `public_comparison_claim_ready=0`, and `real_release_package_ready=0`.
+
+The v54e free-running non-attention decoder layer adds the executable decoder contract below RouteMemory generation without changing the v54c real-generation boundary. It implements a tiny route-state decoder with `greedy_decode` that feeds each predicted token back as the next input, records token traces with `teacher_forcing_used=0`, rejects model-visible source locators and evaluator-only fields, emits citation handles for evaluator-side resolution, and keeps `attention_blocks=0`, `transformer_blocks=0`, `raw_prompt_context_bytes=0`, `retrieved_text_in_prompt_rows=0`, and `source_locator_leakage_rows=0`. The smoke packet keeps `external_label_source_ready=0`, `heldout_metric_ready=0`, `real_model_generation_ready=0`, `public_comparison_claim_ready=0`, and `real_release_package_ready=0` until the 1000-row external-label heldout generation evidence exists.
 
 The v55 scaffold emits a six-axis / 100-row scaling-law target, fit contract rows, no-oracle/no-extractor/RouteMemory-lineage invariants, v51 seed curve copies, and claim boundary. It intentionally keeps `v55_local_scaling_law_ready=0`, `repo_count_axis_ready=0`, and `missing_scaling_curve_rows=73`.
 
