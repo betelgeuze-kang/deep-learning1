@@ -400,6 +400,7 @@ def semantic_result_sha(out_dir: Path) -> str:
 def standard_json_findings_metrics(out_dir: Path) -> dict:
     reasons: list[str] = []
     rows = read_csv(out_dir / "audit_findings.csv")
+    citation_rows = read_csv(out_dir / "citation_spans.csv")
     try:
         payload = json.loads((out_dir / "audit_findings.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -430,6 +431,19 @@ def standard_json_findings_metrics(out_dir: Path) -> dict:
         reasons.append("findings_non_object_row")
     if json_rows != rows:
         reasons.append("findings_csv_drift")
+    citation_spans = payload.get("citation_spans")
+    if not isinstance(citation_spans, list):
+        reasons.append("citation_spans_not_list")
+        citation_spans = []
+    json_citation_rows = [
+        {key: "" if value is None else str(value) for key, value in row.items()}
+        for row in citation_spans
+        if isinstance(row, dict)
+    ]
+    if len(json_citation_rows) != len(citation_spans):
+        reasons.append("citation_spans_non_object_row")
+    if json_citation_rows != citation_rows:
+        reasons.append("citation_spans_csv_drift")
     return {
         "standard_json_findings_checked": 1,
         "standard_json_findings_valid": int(not reasons),

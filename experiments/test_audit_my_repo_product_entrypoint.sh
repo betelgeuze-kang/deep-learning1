@@ -1082,6 +1082,8 @@ for idx in range(1, 4):
         raise SystemExit("standard JSON findings must keep readiness claims blocked")
     if findings_json.get("findings") != findings:
         raise SystemExit("standard JSON findings array must match audit_findings.jsonl")
+    if findings_json.get("citation_spans") != citations:
+        raise SystemExit("standard JSON citation spans must match citation_spans.jsonl")
     dashboard = (out / "AUDIT_DASHBOARD.html").read_text(encoding="utf-8")
     dashboard_json = json.loads((out / "audit_dashboard.json").read_text(encoding="utf-8"))
     for snippet in [

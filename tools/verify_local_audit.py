@@ -1314,6 +1314,15 @@ def verify_csv_jsonl(out_dir: Path, errors: list[str]) -> None:
         add(errors, "audit_findings.json findings must contain only objects")
     if read_csv(out_dir / "audit_findings.csv") != json_rows:
         add(errors, "CSV/standard JSON drift: audit_findings.csv vs audit_findings.json")
+    citation_rows = standard_json.get("citation_spans")
+    if not isinstance(citation_rows, list):
+        add(errors, "audit_findings.json citation_spans must be an array")
+        return
+    json_citation_rows = [{key: str(value) for key, value in row.items()} for row in citation_rows if isinstance(row, dict)]
+    if len(json_citation_rows) != len(citation_rows):
+        add(errors, "audit_findings.json citation_spans must contain only objects")
+    if read_csv(out_dir / "citation_spans.csv") != json_citation_rows:
+        add(errors, "CSV/standard JSON drift: citation_spans.csv vs audit_findings.json")
 
 
 def verify_sarif(out_dir: Path, errors: list[str]) -> None:

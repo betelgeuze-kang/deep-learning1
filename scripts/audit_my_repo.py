@@ -154,7 +154,7 @@ JSONL_CONTRACTS: dict[str, list[str]] = {
 
 JSON_CONTRACTS: dict[str, list[str]] = {
     "audit_dashboard.json": ["baseline", "cache_key", "claim_boundary", "dashboard_kind", "diff_counts", "generated_at_utc", "links", "mode", "namespace", "readiness", "review_counts", "run_id", "schema_version", "source_scope", "target_repo", "tool_version", "top_findings"],
-    "audit_findings.json": ["claim_boundary", "findings", "public_comparison_claim_ready", "real_model_execution_ready", "release_ready", "schema_version", "tool_version"],
+    "audit_findings.json": ["citation_spans", "claim_boundary", "findings", "public_comparison_claim_ready", "real_model_execution_ready", "release_ready", "schema_version", "tool_version"],
     "audit_findings.sarif.json": ["$schema", "runs", "version"],
     "accuracy_rows.json": ["accuracy_rows", "automatic_accuracy_claimed", "claim_boundary", "manual_accuracy_review_required", "public_comparison_claim_ready", "real_model_execution_ready", "release_ready", "rows", "schema_version", "tool_version"],
     "citation_correctness_rows.json": ["citation_correctness_rows", "claim_boundary", "manual_citation_review_required", "public_comparison_claim_ready", "real_model_execution_ready", "release_ready", "rows", "schema_version", "tool_version"],
@@ -1647,6 +1647,7 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
             "public_comparison_claim_ready": 0,
             "real_model_execution_ready": 0,
             "findings": finding_rows,
+            "citation_spans": span_rows,
         },
     )
     (staging / "citation_spans.jsonl").write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in span_rows), encoding="utf-8")

@@ -4541,6 +4541,7 @@ if source_snapshot["git_available"] != 1 or source_snapshot["git_dirty"] != 0:
 
 findings = [json.loads(line) for line in (out_a / "audit_findings.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
 findings_json = json.loads((out_a / "audit_findings.json").read_text(encoding="utf-8"))
+citations = [json.loads(line) for line in (out_a / "citation_spans.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
 if findings_json.get("schema_version") != "local_repo_audit_findings.v1":
     raise SystemExit("standard JSON findings schema version mismatch")
 if findings_json.get("tool_version") != "audit_my_repo_alpha.v1":
@@ -4551,6 +4552,8 @@ if findings_json.get("release_ready") != 0 or findings_json.get("public_comparis
     raise SystemExit("standard JSON findings must keep readiness flags false")
 if findings_json.get("findings") != findings:
     raise SystemExit("standard JSON findings must match audit_findings.jsonl")
+if findings_json.get("citation_spans") != citations:
+    raise SystemExit("standard JSON citation spans must match citation_spans.jsonl")
 plugin_ids = {row["plugin_id"] for row in findings}
 expected_plugins = {
     "doc_code_identity",
@@ -4570,7 +4573,6 @@ deprecated = [row for row in findings if row["plugin_id"] == "deprecated_api"]
 if not deprecated or deprecated[0]["language"] != "multi":
     raise SystemExit("deprecated API plugin must report multi-language coverage")
 
-citations = [json.loads(line) for line in (out_a / "citation_spans.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
 if not citations:
     raise SystemExit("citation spans must be present")
 deprecated_ids = {row["finding_id"] for row in deprecated}
@@ -5589,6 +5591,26 @@ if standard_json_payload.get("findings"):
     sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
     if subprocess.run(verify_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
         raise SystemExit("local-audit verifier must reject standard JSON findings row drift")
+    audit_findings_json_path.write_text(original_findings_json_text, encoding="utf-8")
+    sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+standard_json_payload = json.loads(original_findings_json_text)
+if standard_json_payload.get("citation_spans"):
+    standard_json_payload["citation_spans"][0]["span_sha256"] = "sha256:" + ("0" * 64)
+    audit_findings_json_path.write_text(json.dumps(standard_json_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    new_findings_standard_json_sha = sha256(audit_findings_json_path)
+    sha_lines = []
+    for line in original_sha_manifest_text.splitlines():
+        if line.endswith("  audit_findings.json"):
+            sha_lines.append(f"{new_findings_standard_json_sha}  audit_findings.json")
+        else:
+            sha_lines.append(line)
+    sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+    result = subprocess.run(verify_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if result.returncode == 0:
+        raise SystemExit("local-audit verifier must reject standard JSON citation span drift")
+    if "CSV/standard JSON drift: citation_spans.csv vs audit_findings.json" not in result.stderr:
+        raise SystemExit("local-audit verifier must name standard JSON citation span drift")
     audit_findings_json_path.write_text(original_findings_json_text, encoding="utf-8")
     sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
 
