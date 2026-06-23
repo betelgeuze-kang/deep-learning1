@@ -1,0 +1,87 @@
+{
+  "schema_version": "v54_route_scorer_calibration.v1",
+  "policy": {
+    "route_scorer_calibration_contract_ready": true,
+    "source_verified_pairwise_scorer_contract_ready": true,
+    "calibrated_abstention_required": true,
+    "calibration_split_required": true,
+    "wrong_answer_cost_must_exceed_abstain_cost": true,
+    "external_label_source_ready": false,
+    "source_provenance_required": true,
+    "heldout_metric_ready": false,
+    "promotion_ready": false,
+    "real_model_generation_ready": false,
+    "public_comparison_claim_ready": false,
+    "release_ready": false,
+    "required_artifact_count": 7,
+    "present_required_artifact_count": 0,
+    "missing_required_artifact_count": 7,
+    "missing_required_artifact_ids": [
+      "calibration-example-rows",
+      "route-decision-rows",
+      "pairwise-loss-rows",
+      "abstention-threshold-rows",
+      "boundary",
+      "manifest",
+      "sha256-manifest"
+    ]
+  },
+  "required_artifacts": [
+    {
+      "artifact_id": "calibration-example-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54d_source_verified_route_scorer_calibration/calibration_001/calibration_example_rows.csv",
+      "required_columns": ["example_id", "candidate_count", "evidence_probability", "provenance_valid", "correct_candidate", "should_answer", "calibration_split"],
+      "min_rows": 4,
+      "claim_boundary": "local calibration split examples only; not external label evidence"
+    },
+    {
+      "artifact_id": "route-decision-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54d_source_verified_route_scorer_calibration/calibration_001/route_decision_rows.csv",
+      "required_columns": ["case_id", "candidate_count", "evidence_probability", "provenance_valid", "margin_threshold", "evidence_threshold", "selected_candidate", "abstained", "reason", "margin"],
+      "min_rows": 5,
+      "claim_boundary": "deterministic route-decision smoke including abstention negative controls"
+    },
+    {
+      "artifact_id": "pairwise-loss-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54d_source_verified_route_scorer_calibration/calibration_001/pairwise_loss_rows.csv",
+      "required_columns": ["loss_id", "positive_score", "negative_score", "pairwise_ranking_loss", "comparison_loss", "loss_order_ready"],
+      "min_rows": 1,
+      "claim_boundary": "pairwise ordering contract only; not trained scorer promotion"
+    },
+    {
+      "artifact_id": "abstention-threshold-rows",
+      "artifact_kind": "csv",
+      "path": "results/v54d_source_verified_route_scorer_calibration/calibration_001/abstention_threshold_rows.csv",
+      "required_columns": ["threshold_id", "margin_threshold", "evidence_threshold", "wrong_cost", "abstain_cost", "wrong_answer_cost_gt_abstain_cost", "total_cost", "wrong_count", "unnecessary_abstain_count", "correct_abstain_count"],
+      "min_rows": 1,
+      "claim_boundary": "calibrated abstention cost contract; wrong answer cost must exceed abstain cost"
+    },
+    {
+      "artifact_id": "boundary",
+      "artifact_kind": "text",
+      "path": "results/v54d_source_verified_route_scorer_calibration/calibration_001/V54D_SOURCE_VERIFIED_ROUTE_SCORER_CALIBRATION_BOUNDARY.md",
+      "required_columns": [],
+      "min_rows": 1,
+      "claim_boundary": "blocked wording boundary for promotion, real generation, public comparison, and release"
+    },
+    {
+      "artifact_id": "manifest",
+      "artifact_kind": "json",
+      "path": "results/v54d_source_verified_route_scorer_calibration/calibration_001/v54d_source_verified_route_scorer_calibration_manifest.json",
+      "required_columns": [],
+      "min_rows": 1,
+      "claim_boundary": "machine-readable local scorer calibration manifest"
+    },
+    {
+      "artifact_id": "sha256-manifest",
+      "artifact_kind": "csv",
+      "path": "results/v54d_source_verified_route_scorer_calibration/calibration_001/sha256_manifest.csv",
+      "required_columns": ["path", "sha256", "bytes"],
+      "min_rows": 6,
+      "claim_boundary": "hash binding for generated v54d packet"
+    }
+  ]
+}

@@ -9,6 +9,10 @@ DECISION_CSV="$RESULTS_DIR/v54d_source_verified_route_scorer_calibration_decisio
 
 "$ROOT_DIR/experiments/run_v54d_source_verified_route_scorer_calibration.sh" >/dev/null
 
+"$ROOT_DIR/tools/verify_artifact.py" v54-route-scorer-calibration \
+  "$ROOT_DIR/v54/source_verified_route_scorer_calibration_contract.json" \
+  --summary "$SUMMARY_CSV" >/dev/null
+
 python3 - "$ROOT_DIR" "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib

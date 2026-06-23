@@ -106,6 +106,9 @@ fi
 if [ -f v54/free_running_generation_evidence_intake_contract.json ]; then
   python3 -m json.tool v54/free_running_generation_evidence_intake_contract.json >/dev/null
 fi
+if [ -f v54/source_verified_route_scorer_calibration_contract.json ]; then
+  python3 -m json.tool v54/source_verified_route_scorer_calibration_contract.json >/dev/null
+fi
 for schema_file in schemas/local_repo_audit_*.schema.json; do
   [ -f "$schema_file" ] || continue
   python3 -m json.tool "$schema_file" >/dev/null
@@ -286,6 +289,14 @@ if [ -x tools/verify_artifact.py ]; then
         --summary results/v54c_complete_source_grounded_generation_1000_summary.csv >/dev/null
     else
       tools/verify_artifact.py v54-grounded-generation v54/grounded_generation_contract.json >/dev/null
+    fi
+  fi
+  if [ -f v54/source_verified_route_scorer_calibration_contract.json ]; then
+    if [ -f results/v54d_source_verified_route_scorer_calibration_summary.csv ]; then
+      tools/verify_artifact.py v54-route-scorer-calibration v54/source_verified_route_scorer_calibration_contract.json \
+        --summary results/v54d_source_verified_route_scorer_calibration_summary.csv >/dev/null
+    else
+      tools/verify_artifact.py v54-route-scorer-calibration v54/source_verified_route_scorer_calibration_contract.json >/dev/null
     fi
   fi
   if [ -f v54/free_running_generation_evidence_intake_contract.json ]; then

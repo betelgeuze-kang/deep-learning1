@@ -250,6 +250,11 @@ REQUIRED_V54_GROUNDED_GENERATION_KEYS = {
     "policy",
     "required_artifacts",
 }
+REQUIRED_V54D_ROUTE_SCORER_KEYS = {
+    "schema_version",
+    "policy",
+    "required_artifacts",
+}
 REQUIRED_V54F_GENERATION_INTAKE_KEYS = {
     "schema_version",
     "policy",
@@ -278,6 +283,32 @@ REQUIRED_V54_ARTIFACT_KEYS = {
     "pm_recommended_output",
     "raw_prompt_context_forbidden",
     "model_visible_leakage_forbidden",
+}
+REQUIRED_V54D_POLICY_KEYS = {
+    "route_scorer_calibration_contract_ready",
+    "source_verified_pairwise_scorer_contract_ready",
+    "calibrated_abstention_required",
+    "calibration_split_required",
+    "wrong_answer_cost_must_exceed_abstain_cost",
+    "external_label_source_ready",
+    "source_provenance_required",
+    "heldout_metric_ready",
+    "promotion_ready",
+    "real_model_generation_ready",
+    "public_comparison_claim_ready",
+    "release_ready",
+    "required_artifact_count",
+    "present_required_artifact_count",
+    "missing_required_artifact_count",
+    "missing_required_artifact_ids",
+}
+REQUIRED_V54D_ARTIFACT_KEYS = {
+    "artifact_id",
+    "artifact_kind",
+    "path",
+    "required_columns",
+    "min_rows",
+    "claim_boundary",
 }
 REQUIRED_V54F_POLICY_KEYS = {
     "generation_evidence_intake_contract_ready",
@@ -1157,6 +1188,50 @@ EXPECTED_V54_MIN_ROWS = {
     "compact-routehint-rows": 1000,
     "sha256-manifest": 10,
     "sha256sums": 1,
+}
+EXPECTED_V54D_ARTIFACT_IDS = [
+    "calibration-example-rows",
+    "route-decision-rows",
+    "pairwise-loss-rows",
+    "abstention-threshold-rows",
+    "boundary",
+    "manifest",
+    "sha256-manifest",
+]
+EXPECTED_V54D_ARTIFACT_COLUMNS = {
+    "calibration-example-rows": [
+        "example_id", "candidate_count", "evidence_probability",
+        "provenance_valid", "correct_candidate", "should_answer",
+        "calibration_split",
+    ],
+    "route-decision-rows": [
+        "case_id", "candidate_count", "evidence_probability",
+        "provenance_valid", "margin_threshold", "evidence_threshold",
+        "selected_candidate", "abstained", "reason", "margin",
+    ],
+    "pairwise-loss-rows": [
+        "loss_id", "positive_score", "negative_score",
+        "pairwise_ranking_loss", "comparison_loss", "loss_order_ready",
+    ],
+    "abstention-threshold-rows": [
+        "threshold_id", "margin_threshold", "evidence_threshold",
+        "wrong_cost", "abstain_cost",
+        "wrong_answer_cost_gt_abstain_cost", "total_cost",
+        "wrong_count", "unnecessary_abstain_count",
+        "correct_abstain_count",
+    ],
+    "boundary": [],
+    "manifest": [],
+    "sha256-manifest": ["path", "sha256", "bytes"],
+}
+EXPECTED_V54D_MIN_ROWS = {
+    "calibration-example-rows": 4,
+    "route-decision-rows": 5,
+    "pairwise-loss-rows": 1,
+    "abstention-threshold-rows": 1,
+    "boundary": 1,
+    "manifest": 1,
+    "sha256-manifest": 6,
 }
 EXPECTED_V54F_ARTIFACT_IDS = [
     "generation-required-field-rows",
@@ -3505,6 +3580,221 @@ def verify_v54_grounded_generation(
     return errors
 
 
+def verify_v54_route_scorer_calibration(
+    path: Path,
+    summary_path: Path | None = None,
+) -> list[str]:
+    errors: list[str] = []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    missing = REQUIRED_V54D_ROUTE_SCORER_KEYS - set(data)
+    if missing:
+        errors.append(f"{path}: missing v54d route scorer keys: {', '.join(sorted(missing))}")
+        return errors
+    if data["schema_version"] != "v54_route_scorer_calibration.v1":
+        errors.append(f"{path}: unsupported schema_version={data['schema_version']}")
+    policy = data["policy"]
+    missing_policy = REQUIRED_V54D_POLICY_KEYS - set(policy)
+    if missing_policy:
+        errors.append(f"{path}: policy missing keys: {', '.join(sorted(missing_policy))}")
+    for field in [
+        "route_scorer_calibration_contract_ready",
+        "source_verified_pairwise_scorer_contract_ready",
+        "calibrated_abstention_required",
+        "calibration_split_required",
+        "wrong_answer_cost_must_exceed_abstain_cost",
+        "source_provenance_required",
+    ]:
+        if policy.get(field) is not True:
+            errors.append(f"{path}: policy.{field} must be true")
+    for field in [
+        "external_label_source_ready",
+        "heldout_metric_ready",
+        "promotion_ready",
+        "real_model_generation_ready",
+        "public_comparison_claim_ready",
+        "release_ready",
+    ]:
+        if policy.get(field) is not False:
+            errors.append(f"{path}: policy.{field} must be false")
+
+    artifacts = data["required_artifacts"]
+    if not isinstance(artifacts, list) or not artifacts:
+        errors.append(f"{path}: required_artifacts must be a non-empty list")
+        return errors
+    artifact_ids = [row.get("artifact_id", "") for row in artifacts]
+    if artifact_ids != EXPECTED_V54D_ARTIFACT_IDS:
+        errors.append(f"{path}: required_artifacts order must match the v54d route scorer contract")
+    if len(artifact_ids) != len(set(artifact_ids)):
+        errors.append(f"{path}: duplicate required_artifacts are forbidden")
+    if policy.get("required_artifact_count") != len(EXPECTED_V54D_ARTIFACT_IDS):
+        errors.append(f"{path}: policy.required_artifact_count must be {len(EXPECTED_V54D_ARTIFACT_IDS)}")
+    if policy.get("present_required_artifact_count") != 0:
+        errors.append(f"{path}: source-controlled contract must keep present_required_artifact_count=0")
+    if policy.get("missing_required_artifact_count") != len(EXPECTED_V54D_ARTIFACT_IDS):
+        errors.append(f"{path}: source-controlled contract must keep all v54d artifacts missing")
+    if policy.get("missing_required_artifact_ids") != EXPECTED_V54D_ARTIFACT_IDS:
+        errors.append(f"{path}: missing_required_artifact_ids must match v54d artifact ids")
+
+    artifact_rows_by_id: dict[str, list[dict[str, str]]] = {}
+    json_artifacts_by_id: dict[str, dict[str, object]] = {}
+    for index, row in enumerate(artifacts, start=1):
+        prefix = f"{path}: required_artifact[{index}]"
+        missing_row = REQUIRED_V54D_ARTIFACT_KEYS - set(row)
+        if missing_row:
+            errors.append(f"{prefix}: missing keys: {', '.join(sorted(missing_row))}")
+        artifact_id = row.get("artifact_id", "")
+        artifact_kind = row.get("artifact_kind", "")
+        if artifact_kind not in {"csv", "text", "json"}:
+            errors.append(f"{prefix}: artifact_kind must be csv, text, or json")
+        required_columns = row.get("required_columns", [])
+        expected_columns = EXPECTED_V54D_ARTIFACT_COLUMNS.get(artifact_id)
+        if not isinstance(required_columns, list):
+            errors.append(f"{prefix}: required_columns must be a list")
+        elif expected_columns is not None and required_columns != expected_columns:
+            errors.append(f"{prefix}: required_columns must exactly match the v54d artifact header")
+        min_rows = row.get("min_rows")
+        expected_min_rows = EXPECTED_V54D_MIN_ROWS.get(artifact_id)
+        if not isinstance(min_rows, int) or min_rows < 1:
+            errors.append(f"{prefix}: min_rows must be a positive integer")
+        elif expected_min_rows is not None and min_rows != expected_min_rows:
+            errors.append(f"{prefix}: min_rows expected {expected_min_rows}, got {min_rows}")
+        if not row.get("claim_boundary"):
+            errors.append(f"{prefix}: claim_boundary must be non-empty")
+
+        artifact_path = Path(row.get("path", ""))
+        if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
+            continue
+        if artifact_kind == "csv":
+            with artifact_path.open(newline="", encoding="utf-8") as handle:
+                reader = csv.DictReader(handle)
+                if required_columns and (reader.fieldnames or []) != required_columns:
+                    errors.append(f"{artifact_path}: header must match required_columns for {artifact_id}")
+                artifact_rows = list(reader)
+                artifact_rows_by_id[artifact_id] = artifact_rows
+                row_count = len(artifact_rows)
+            if isinstance(min_rows, int) and row_count < min_rows:
+                errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
+        elif artifact_kind == "text":
+            line_count = len([line for line in artifact_path.read_text(encoding="utf-8").splitlines() if line.strip()])
+            if isinstance(min_rows, int) and line_count < min_rows:
+                errors.append(f"{artifact_path}: expected at least {min_rows} non-empty lines, got {line_count}")
+        elif artifact_kind == "json":
+            json_artifacts_by_id[artifact_id] = json.loads(artifact_path.read_text(encoding="utf-8"))
+
+    def require_all(artifact_id: str, field: str, expected: str) -> None:
+        rows = artifact_rows_by_id.get(artifact_id, [])
+        bad_rows = sum(1 for artifact_row in rows if artifact_row.get(field) != expected)
+        if bad_rows:
+            errors.append(f"{path}: {artifact_id}.{field} expected {expected} for all rows; bad_rows={bad_rows}")
+
+    require_all("calibration-example-rows", "calibration_split", "calibration")
+    require_all("pairwise-loss-rows", "loss_order_ready", "1")
+    require_all("abstention-threshold-rows", "wrong_answer_cost_gt_abstain_cost", "1")
+    require_all("abstention-threshold-rows", "wrong_count", "0")
+
+    for row in artifact_rows_by_id.get("pairwise-loss-rows", []):
+        try:
+            pairwise_loss = float(row.get("pairwise_ranking_loss", "nan"))
+            comparison_loss = float(row.get("comparison_loss", "nan"))
+        except ValueError:
+            errors.append(f"{path}: pairwise-loss-rows loss values must be numeric")
+            continue
+        if not pairwise_loss < comparison_loss:
+            errors.append(f"{path}: pairwise_ranking_loss must be lower than comparison_loss")
+
+    for row in artifact_rows_by_id.get("abstention-threshold-rows", []):
+        try:
+            margin_threshold = float(row.get("margin_threshold", "nan"))
+            evidence_threshold = float(row.get("evidence_threshold", "nan"))
+        except ValueError:
+            errors.append(f"{path}: abstention thresholds must be numeric")
+            continue
+        if margin_threshold <= 0.0 or evidence_threshold <= 0.0:
+            errors.append(f"{path}: abstention thresholds must be positive")
+
+    route_rows = artifact_rows_by_id.get("route-decision-rows", [])
+    route_reasons = {row.get("reason", "") for row in route_rows}
+    for reason in ["selected", "ambiguous-route", "weak-evidence", "invalid-provenance", "no-candidate"]:
+        if route_rows and reason not in route_reasons:
+            errors.append(f"{path}: route-decision-rows missing reason={reason}")
+    expected_routes = {
+        "select-clear": ("0", "selected", "span-good"),
+        "abstain-ambiguous": ("1", "ambiguous-route", ""),
+        "abstain-weak": ("1", "weak-evidence", ""),
+        "abstain-invalid": ("1", "invalid-provenance", ""),
+        "abstain-empty": ("1", "no-candidate", ""),
+    }
+    routes_by_case = {row.get("case_id", ""): row for row in route_rows}
+    for case_id, (expected_abstained, expected_reason, expected_selected) in expected_routes.items():
+        if route_rows and case_id not in routes_by_case:
+            errors.append(f"{path}: route-decision-rows missing case_id={case_id}")
+            continue
+        row = routes_by_case.get(case_id)
+        if row is None:
+            continue
+        observed = (row.get("abstained", ""), row.get("reason", ""), row.get("selected_candidate", ""))
+        expected = (expected_abstained, expected_reason, expected_selected)
+        if observed != expected:
+            errors.append(f"{path}: {case_id} expected {expected}, got {observed}")
+    for row in route_rows:
+        reason = row.get("reason", "")
+        selected = row.get("selected_candidate", "")
+        abstained = row.get("abstained", "")
+        if reason == "selected":
+            if abstained != "0" or not selected:
+                errors.append(f"{path}: selected route must not abstain and must select a candidate")
+        elif reason in {"ambiguous-route", "weak-evidence", "invalid-provenance", "no-candidate"}:
+            if abstained != "1" or selected:
+                errors.append(f"{path}: {reason} route must abstain without a selected candidate")
+
+    manifest = json_artifacts_by_id.get("manifest", {})
+    for field in [
+        "source_verified_pairwise_scorer_contract_ready",
+        "calibrated_abstention_ready",
+        "calibration_split_ready",
+        "source_provenance_ready",
+    ]:
+        if manifest and manifest.get(field) != 1:
+            errors.append(f"{path}: manifest.{field} must be 1")
+    for field in [
+        "external_label_source_ready",
+        "heldout_metric_ready",
+        "promotion_ready",
+        "real_model_generation_ready",
+        "public_comparison_claim_ready",
+        "real_release_package_ready",
+    ]:
+        if manifest and manifest.get(field) != 0:
+            errors.append(f"{path}: manifest.{field} must be 0")
+
+    if summary_path is not None:
+        summary = read_first_csv(summary_path)
+        expected_summary = {
+            "v54d_source_verified_route_scorer_calibration_ready": "1",
+            "source_verified_pairwise_scorer_contract_ready": "1",
+            "calibrated_abstention_ready": "1",
+            "calibration_split_ready": "1",
+            "calibration_example_rows": "4",
+            "decision_rows": "5",
+            "negative_control_rows": "4",
+            "pairwise_loss_order_ready": "1",
+            "wrong_answer_cost_gt_abstain_cost": "1",
+            "calibration_wrong_count": "0",
+            "external_label_source_ready": "0",
+            "source_provenance_ready": "1",
+            "heldout_metric_ready": "0",
+            "promotion_ready": "0",
+            "real_model_generation_ready": "0",
+            "public_comparison_claim_ready": "0",
+            "real_release_package_ready": "0",
+            "artifact_rows": "6",
+        }
+        for field, expected in expected_summary.items():
+            if summary.get(field) != expected:
+                errors.append(f"{summary_path}: {field} expected {expected}, got {summary.get(field)}")
+    return errors
+
+
 def verify_v54_free_running_generation_intake(
     path: Path,
     summary_path: Path | None = None,
@@ -4422,6 +4712,9 @@ def main() -> int:
     p_v54 = sub.add_parser("v54-grounded-generation")
     p_v54.add_argument("paths", nargs="+", type=Path)
     p_v54.add_argument("--summary", type=Path, default=None)
+    p_v54d = sub.add_parser("v54-route-scorer-calibration")
+    p_v54d.add_argument("paths", nargs="+", type=Path)
+    p_v54d.add_argument("--summary", type=Path, default=None)
     p_v54f = sub.add_parser("v54-generation-intake")
     p_v54f.add_argument("paths", nargs="+", type=Path)
     p_v54f.add_argument("--summary", type=Path, default=None)
@@ -4494,6 +4787,9 @@ def main() -> int:
     elif args.cmd == "v54-grounded-generation":
         for path in args.paths:
             errors.extend(verify_v54_grounded_generation(path, args.summary))
+    elif args.cmd == "v54-route-scorer-calibration":
+        for path in args.paths:
+            errors.extend(verify_v54_route_scorer_calibration(path, args.summary))
     elif args.cmd == "v54-generation-intake":
         for path in args.paths:
             errors.extend(verify_v54_free_running_generation_intake(path, args.summary))
