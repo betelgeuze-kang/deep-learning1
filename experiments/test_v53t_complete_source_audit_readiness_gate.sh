@@ -141,10 +141,11 @@ expected = {
     "v53aq_real_system_performance_claim_ready": "0",
     "v53aq_internal_real_adapter_metric_claim_ready": "1",
     "v53aq_public_real_system_performance_claim_ready": "0",
-    "v53aq_answer_hash_match_rows": "84",
-    "v53aq_coherent_wrong_key_rows": "3916",
+    "v53aq_answer_hash_match_rows": "76",
+    "v53aq_coherent_wrong_key_rows": "3924",
     "v53aq_selection_sanitized_question_only": "1",
     "v53aq_source_locator_in_question_removed_rows": "4000",
+    "v53aq_selection_runtime_guard_passed_rows": "4000",
     "v53aq_public_comparison_claim_ready": "0",
     "v1_0_comparison_ready": "0",
     "real_release_package_ready": "0",
@@ -411,7 +412,7 @@ for row in v53aq_prebaseline:
         if row[field] != value:
             raise SystemExit(f"v53t v53aq same-query ledger {field}: expected {value}, got {row[field]}")
 for prefix in ["a", "b", "g", "h"]:
-    if sum(row[f"{prefix}_coherent_wrong_key"] == "1" for row in v53aq_prebaseline) != 979:
+    if sum(row[f"{prefix}_coherent_wrong_key"] == "1" for row in v53aq_prebaseline) != 981:
         raise SystemExit(f"v53t v53aq same-query ledger should preserve {prefix.upper()} coherent wrong-key count")
 if set(v53aq_contract_rows) != {"A", "B", "G", "H"}:
     raise SystemExit("v53t should copy the four-row v53aq internal prebaseline contract")
@@ -602,7 +603,7 @@ if "selection_sanitized_question_only=1" not in real_adapter_freeze_rows["questi
     raise SystemExit("v53t real-adapter freeze should expose sanitized-question selection")
 if "source_locator_in_question_removed_rows=4000" not in real_adapter_freeze_rows["question-only-selection-contract"]["actual_value"]:
     raise SystemExit("v53t real-adapter freeze should expose source-locator removal")
-if "coherent_wrong_key_rows=3916" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
+if "coherent_wrong_key_rows=3924" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("v53t real-adapter freeze should expose coherent wrong-key evidence")
 if "internal_real_adapter_metric_claim_ready=1" not in real_adapter_freeze_rows["real-adapter-execution-rows"]["actual_value"]:
     raise SystemExit("v53t real-adapter freeze should expose internal real-adapter metric readiness")
@@ -732,10 +733,11 @@ for snippet in [
     "v53aq_real_adapter_execution_ready=1",
     "v53aq_internal_real_adapter_metric_claim_ready=1",
     "v53aq_public_real_system_performance_claim_ready=0",
-    "v53aq_answer_hash_match_rows=84",
-    "v53aq_coherent_wrong_key_rows=3916",
+    "v53aq_answer_hash_match_rows=76",
+    "v53aq_coherent_wrong_key_rows=3924",
     "v53aq_selection_sanitized_question_only=1",
     "v53aq_source_locator_in_question_removed_rows=4000",
+    "v53aq_selection_runtime_guard_passed_rows=4000",
     "v53aq_public_comparison_claim_ready=0",
     "v1_0_comparison_ready=0",
 ]:
@@ -850,10 +852,11 @@ if (
     or manifest.get("v53aq_real_adapter_execution_ready") != 1
     or manifest.get("v53aq_internal_real_adapter_metric_claim_ready") != 1
     or manifest.get("v53aq_public_real_system_performance_claim_ready") != 0
-    or manifest.get("v53aq_answer_hash_match_rows") != 84
-    or manifest.get("v53aq_coherent_wrong_key_rows") != 3916
+    or manifest.get("v53aq_answer_hash_match_rows") != 76
+    or manifest.get("v53aq_coherent_wrong_key_rows") != 3924
     or manifest.get("v53aq_selection_sanitized_question_only") != 1
     or manifest.get("v53aq_source_locator_in_question_removed_rows") != 4000
+    or manifest.get("v53aq_selection_runtime_guard_passed_rows") != 4000
     or manifest.get("v53aq_public_comparison_claim_ready") != 0
 ):
     raise SystemExit("v53t manifest v53aq real-adapter boundary mismatch")

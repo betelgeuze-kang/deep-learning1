@@ -19,6 +19,7 @@ if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/s
   && grep -q 'internal_real_adapter_metric_claim_ready=1' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'public_real_system_performance_claim_ready=0' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'selection_forbidden_fields=query_id,case_id,source_row_id' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
+  && grep -q 'selection_runtime_guard_passed_rows=4000' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'parsed_path,parsed_line' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'source_sha256,file_sha256,content_sha256,sha256' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"; then
   echo "v53aq_complete_source_abgh_real_adapter_measured_dir: $RUN_DIR"
@@ -107,6 +108,7 @@ FORBIDDEN_SELECTION_FIELDS = [
     "target_label",
     "negative_or_abstain",
 ]
+MODEL_VISIBLE_SELECTION_FIELDS = {"sanitized_question"}
 
 
 def sha256(path):
@@ -147,8 +149,28 @@ def tokens(text):
 def sanitize_question_for_selection(question):
     sanitized = re.sub(r"^\[v53i:[0-9]+\]\s*", "", question)
     sanitized = re.sub(r"\b(at|by|to)\s+[A-Za-z0-9_.~+/@-]+:[0-9]+\b", r"\1 the relevant source location", sanitized)
+    sanitized = re.sub(r"\b(at|by|to)\s+[^?,]+:[0-9]+\b", r"\1 the relevant source location", sanitized)
     sanitized = re.sub(r"\s+", " ", sanitized).strip()
     return sanitized
+
+
+def contains_source_locator(text):
+    return bool(re.search(r"\b[A-Za-z0-9_.~+/@-]+:[0-9]+\b", text))
+
+
+def build_model_visible_selection_input(sanitized_question, extra_fields=None):
+    payload = {"sanitized_question": sanitized_question}
+    if extra_fields:
+        payload.update(extra_fields)
+    leaked_keys = sorted(set(payload) & set(FORBIDDEN_SELECTION_FIELDS))
+    if leaked_keys:
+        raise ValueError(f"Evaluator-only field leaked into adapter selection: {leaked_keys}")
+    unexpected_keys = sorted(set(payload) - MODEL_VISIBLE_SELECTION_FIELDS)
+    if unexpected_keys:
+        raise ValueError(f"Unexpected adapter selection field(s): {unexpected_keys}")
+    if contains_source_locator(payload["sanitized_question"]):
+        raise ValueError("Source locator leaked into adapter selection input")
+    return payload
 
 
 def parse_question_route(question):
@@ -291,7 +313,11 @@ def best_by_bm25(question, candidate_indexes=None):
     return best_idx, best_score
 
 
-def select_span(system_id, question):
+def select_span(system_id, selection_input):
+    unexpected_keys = sorted(set(selection_input) - MODEL_VISIBLE_SELECTION_FIELDS)
+    if unexpected_keys:
+        raise ValueError(f"Unexpected adapter selection field(s): {unexpected_keys}")
+    question = selection_input["sanitized_question"]
     owner, path, line = parse_question_route(question)
     route_candidates = route_index.get((owner, path, line), []) if owner and path and line else []
     path_candidates = path_line_index.get((path, line), []) if path and line else []
@@ -375,7 +401,8 @@ for system_id, system_name, adapter in SYSTEMS:
     uses_scorer = int(system_id == "H")
     for row_index, query in enumerate(queries, start=1):
         sanitized_question = sanitize_question_for_selection(query["question"])
-        selected_idx, retrieval_score, parsed_owner, parsed_path, parsed_line, selection_method, exact_route_match, scorer_used = select_span(system_id, sanitized_question)
+        selection_input = build_model_visible_selection_input(sanitized_question)
+        selected_idx, retrieval_score, parsed_owner, parsed_path, parsed_line, selection_method, exact_route_match, scorer_used = select_span(system_id, selection_input)
         span = spans[selected_idx]
         predicted_behavior = predict_behavior_from_question(sanitized_question)
         answer_text = answer_from_selected_span(predicted_behavior, span)
@@ -422,6 +449,7 @@ for system_id, system_name, adapter in SYSTEMS:
             "source_span_selection_method": selection_method,
             "selection_input_fields": "sanitized_question",
             "selection_forbidden_fields": ",".join(FORBIDDEN_SELECTION_FIELDS),
+            "selection_runtime_guard_passed": "1",
             "source_locator_in_question_removed": "1",
             "selection_oracle_field_used": "0",
             "source_span_id_match": str(source_span_id_match),
@@ -491,6 +519,7 @@ for system_id, system_name, adapter in SYSTEMS:
                 "source_location_match": str(source_location_match),
                 "selection_question_text_used": "0",
                 "selection_sanitized_question_used": "1",
+                "selection_runtime_guard_passed": "1",
                 "source_locator_in_question_removed": "1",
                 "selection_query_id_used": "0",
                 "selection_expected_answer_used": "0",
@@ -655,6 +684,7 @@ for system_id, system_name, adapter in SYSTEMS:
         counter["resource_rows"] += 1
         counter["evaluator_rows"] += 1
         counter["adapter_trace_rows"] += 1
+        counter["selection_runtime_guard_passed_rows"] += 1
         counter["routehint_rows"] += uses_routehint
         counter["route_memory_rows"] += uses_routehint
 
@@ -700,6 +730,7 @@ for system_id, system_name, _ in SYSTEMS:
             "selection_question_text_only": "1",
             "selection_sanitized_question_only": "1",
             "source_locator_in_question_removed_rows": str(counter["adapter_trace_rows"]),
+            "selection_runtime_guard_passed_rows": str(counter["selection_runtime_guard_passed_rows"]),
             "selection_oracle_field_used": "0",
             "expected_answer_oracle_replay_rows": "0",
             "deterministic_source_span_adapter_rows": "0",
@@ -909,6 +940,7 @@ for system_id, system_name, adapter in SYSTEMS:
             "selection_question_text_only": metric_row["selection_question_text_only"],
             "selection_sanitized_question_only": metric_row["selection_sanitized_question_only"],
             "source_locator_in_question_removed_rows": metric_row["source_locator_in_question_removed_rows"],
+            "selection_runtime_guard_passed_rows": metric_row["selection_runtime_guard_passed_rows"],
             "selection_oracle_field_used": metric_row["selection_oracle_field_used"],
             "expected_answer_oracle_replay_rows": metric_row["expected_answer_oracle_replay_rows"],
             "deterministic_source_span_adapter_rows": metric_row["deterministic_source_span_adapter_rows"],
@@ -946,6 +978,7 @@ ready = int(
     and len(route_memory_rows) == 2000
     and all(row["answer_rows"] == "1000" for row in metric_rows)
     and all(row["selection_oracle_field_used"] == "0" for row in adapter_trace_rows)
+    and all(row["selection_runtime_guard_passed"] == "1" for row in adapter_trace_rows)
     and same_query_internal_prebaseline_rows_ready == 1
     and internal_prebaseline_contract_ready == 1
 )
@@ -990,6 +1023,7 @@ summary = {
     "selection_question_text_only": "1",
     "selection_sanitized_question_only": "1",
     "source_locator_in_question_removed_rows": str(len(adapter_trace_rows)),
+    "selection_runtime_guard_passed_rows": str(sum(1 for row in adapter_trace_rows if row["selection_runtime_guard_passed"] == "1")),
     "selection_allowed_fields": "sanitized_question",
     "selection_forbidden_fields": ",".join(FORBIDDEN_SELECTION_FIELDS),
     "selection_oracle_field_used": "0",
@@ -1016,7 +1050,7 @@ write_csv(summary_csv, list(summary.keys()), [summary])
 
 decision_rows = [
     ("v53i-complete-source-input", "pass", f"query_rows={len(queries)}; query_hash={query_hash}"),
-    ("query-text-only-selection-contract", "pass", "adapter selection receives question text only; forbidden ground-truth fields are evaluator-only"),
+    ("query-text-only-selection-contract", "pass", "adapter selection receives question text only through a runtime allowlist guard; forbidden ground-truth fields are evaluator-only"),
     ("abgh-real-adapter-measured", "pass" if ready else "blocked", f"answer_rows={len(answer_rows)}; evaluator_rows={len(evaluator_rows)}; routehint_rows={len(routehint_rows)}"),
     ("same-query-internal-prebaseline-ledger", "pass" if same_query_internal_prebaseline_rows_ready else "blocked", f"ledger_rows={len(same_query_internal_prebaseline_rows)}; same_evaluator_resource_surface={same_query_internal_prebaseline_rows_ready}"),
     ("same-query-internal-prebaseline-system-contract", "pass" if internal_prebaseline_contract_ready else "blocked", f"contract_rows={internal_prebaseline_contract_row_count}; ready_rows={internal_prebaseline_contract_ready_rows}; public_comparison_claim_ready=0"),
@@ -1062,6 +1096,7 @@ boundary = (
     "- selection_question_text_only=1\n"
     "- selection_sanitized_question_only=1\n"
     f"- source_locator_in_question_removed_rows={len(adapter_trace_rows)}\n"
+    f"- selection_runtime_guard_passed_rows={sum(1 for row in adapter_trace_rows if row['selection_runtime_guard_passed'] == '1')}\n"
     "- selection_allowed_fields=sanitized_question\n"
     f"- selection_forbidden_fields={','.join(FORBIDDEN_SELECTION_FIELDS)}\n"
     "- selection_oracle_field_used=0\n"
@@ -1116,6 +1151,7 @@ manifest = {
     "selection_question_text_only": 1,
     "selection_sanitized_question_only": 1,
     "source_locator_in_question_removed_rows": len(adapter_trace_rows),
+    "selection_runtime_guard_passed_rows": sum(1 for row in adapter_trace_rows if row["selection_runtime_guard_passed"] == "1"),
     "selection_oracle_field_used": 0,
     "expected_answer_oracle_replay": 0,
     "deterministic_source_span_adapter_execution": 0,

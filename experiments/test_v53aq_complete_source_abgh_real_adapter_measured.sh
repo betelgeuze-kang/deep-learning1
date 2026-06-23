@@ -71,14 +71,15 @@ expected = {
     "same_source_manifest_all_local_systems": "1",
     "same_evaluator_contract_all_local_systems": "1",
     "same_resource_contract_all_local_systems": "1",
-    "answer_hash_match_rows": "84",
-    "citation_location_match_rows": "84",
-    "source_span_id_match_rows": "28",
-    "wrong_answer_rows": "3916",
-    "coherent_wrong_key_rows": "3916",
+    "answer_hash_match_rows": "76",
+    "citation_location_match_rows": "76",
+    "source_span_id_match_rows": "24",
+    "wrong_answer_rows": "3924",
+    "coherent_wrong_key_rows": "3924",
     "selection_question_text_only": "1",
     "selection_sanitized_question_only": "1",
     "source_locator_in_question_removed_rows": "4000",
+    "selection_runtime_guard_passed_rows": "4000",
     "selection_allowed_fields": "sanitized_question",
     "selection_forbidden_fields": FORBIDDEN_SELECTION_FIELDS,
     "selection_oracle_field_used": "0",
@@ -211,10 +212,10 @@ for table_name, rows in [
             raise SystemExit(f"v53aq {table_name} should cover every query for {system_id}")
 
 expected_metric_rows = {
-    "A": {"answer_hash_match_rows": "21", "citation_location_match_rows": "21", "source_span_id_match_rows": "7", "wrong_answer_rows": "979", "coherent_wrong_key_rows": "979", "routehint_rows": "0"},
-    "B": {"answer_hash_match_rows": "21", "citation_location_match_rows": "21", "source_span_id_match_rows": "7", "wrong_answer_rows": "979", "coherent_wrong_key_rows": "979", "routehint_rows": "0"},
-    "G": {"answer_hash_match_rows": "21", "citation_location_match_rows": "21", "source_span_id_match_rows": "7", "wrong_answer_rows": "979", "coherent_wrong_key_rows": "979", "routehint_rows": "1000"},
-    "H": {"answer_hash_match_rows": "21", "citation_location_match_rows": "21", "source_span_id_match_rows": "7", "wrong_answer_rows": "979", "coherent_wrong_key_rows": "979", "routehint_rows": "1000"},
+    "A": {"answer_hash_match_rows": "19", "citation_location_match_rows": "19", "source_span_id_match_rows": "6", "wrong_answer_rows": "981", "coherent_wrong_key_rows": "981", "routehint_rows": "0", "selection_runtime_guard_passed_rows": "1000"},
+    "B": {"answer_hash_match_rows": "19", "citation_location_match_rows": "19", "source_span_id_match_rows": "6", "wrong_answer_rows": "981", "coherent_wrong_key_rows": "981", "routehint_rows": "0", "selection_runtime_guard_passed_rows": "1000"},
+    "G": {"answer_hash_match_rows": "19", "citation_location_match_rows": "19", "source_span_id_match_rows": "6", "wrong_answer_rows": "981", "coherent_wrong_key_rows": "981", "routehint_rows": "1000", "selection_runtime_guard_passed_rows": "1000"},
+    "H": {"answer_hash_match_rows": "19", "citation_location_match_rows": "19", "source_span_id_match_rows": "6", "wrong_answer_rows": "981", "coherent_wrong_key_rows": "981", "routehint_rows": "1000", "selection_runtime_guard_passed_rows": "1000"},
 }
 for system_id, expected_values in expected_metric_rows.items():
     row = metrics.get(system_id)
@@ -336,7 +337,7 @@ for row in prebaseline:
         if row[field] != value:
             raise SystemExit(f"v53aq internal pre-baseline ledger {field}: expected {value}, got {row[field]}")
 for prefix in ["a", "b", "g", "h"]:
-    if sum(row[f"{prefix}_coherent_wrong_key"] == "1" for row in prebaseline) != 979:
+    if sum(row[f"{prefix}_coherent_wrong_key"] == "1" for row in prebaseline) != 981:
         raise SystemExit(f"v53aq internal pre-baseline ledger should preserve {prefix.upper()} coherent wrong-key count")
 
 if {row["evaluator_contract_id"] for row in evaluators} != {"v53aq-query-text-only-answer-citation-resource-v1"}:
@@ -368,6 +369,8 @@ for row in answers:
         raise SystemExit("v53aq answer hash mismatch")
     if row["selection_input_fields"] != "sanitized_question" or row["selection_forbidden_fields"] != FORBIDDEN_SELECTION_FIELDS:
         raise SystemExit("v53aq answer rows should disclose sanitized-question-only selection")
+    if row["selection_runtime_guard_passed"] != "1":
+        raise SystemExit("v53aq answer rows should pass the runtime selection allowlist guard")
     if row["source_locator_in_question_removed"] != "1":
         raise SystemExit("v53aq answer rows should disclose source locator removal")
     if row["selection_oracle_field_used"] != "0":
@@ -393,6 +396,8 @@ for row in adapter_traces:
         raise SystemExit("v53aq adapter trace should not use raw question text")
     if row["selection_sanitized_question_used"] != "1" or row["source_locator_in_question_removed"] != "1":
         raise SystemExit("v53aq adapter trace should use sanitized question text with source locators removed")
+    if row["selection_runtime_guard_passed"] != "1":
+        raise SystemExit("v53aq adapter trace should pass the runtime selection allowlist guard")
 if any(row["raw_context_appended"] != "0" or row["raw_prompt_context_bytes"] != "0" for row in adapter_traces):
     raise SystemExit("v53aq adapter traces should not append raw prompt context")
 if any(row["source_window_used"] != "0" or row["source_window_bytes"] != "0" for row in adapter_traces):
@@ -447,6 +452,7 @@ for field, value in {
     "selection_question_text_only": 1,
     "selection_sanitized_question_only": 1,
     "source_locator_in_question_removed_rows": 4000,
+    "selection_runtime_guard_passed_rows": 4000,
     "selection_oracle_field_used": 0,
     "expected_answer_oracle_replay": 0,
     "deterministic_source_span_adapter_execution": 0,
@@ -481,6 +487,7 @@ for snippet in [
     "internal_prebaseline_contract_ready=1",
     "selection_sanitized_question_only=1",
     "source_locator_in_question_removed_rows=4000",
+    "selection_runtime_guard_passed_rows=4000",
     "selection_allowed_fields=sanitized_question",
     f"selection_forbidden_fields={FORBIDDEN_SELECTION_FIELDS}",
     "selection_oracle_field_used=0",
