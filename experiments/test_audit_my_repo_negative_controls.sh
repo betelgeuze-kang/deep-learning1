@@ -761,6 +761,81 @@ digest = "sha256:" + hashlib.sha256(allowlist.read_bytes()).hexdigest()
 if invocation["suppression_file"] != str(allowlist) or invocation["suppression_file_sha256"] != digest:
     raise SystemExit("audit invocation must bind suppression file path and sha256")
 PY
+python3 - "$ROOT_DIR" "$TMP_DIR/allowlist_out" <<'PY'
+import csv
+import hashlib
+import subprocess
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+out = Path(sys.argv[2])
+suppressed_path = out / "suppressed_findings.csv"
+sha_manifest_path = out / "sha256sums.txt"
+original_suppressed_text = suppressed_path.read_text(encoding="utf-8")
+original_sha_manifest_text = sha_manifest_path.read_text(encoding="utf-8")
+
+with suppressed_path.open(newline="", encoding="utf-8") as handle:
+    rows = list(csv.DictReader(handle))
+if len(rows) != 1:
+    raise SystemExit("allowlist tamper fixture must have exactly one suppressed row")
+rows[0]["plugin_id"] = "missing_evidence"
+with suppressed_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+
+new_sha = hashlib.sha256(suppressed_path.read_bytes()).hexdigest()
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  suppressed_findings.csv"):
+        sha_lines.append(f"{new_sha}  suppressed_findings.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+result = subprocess.run(
+    [str(root / "tools" / "verify_local_audit.py"), str(out)],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.PIPE,
+    text=True,
+)
+if result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject suppression rows detached from finding provenance")
+if "suppressed_findings.csv plugin_id must bind suppressed finding" not in result.stderr:
+    raise SystemExit("local-audit verifier must explain detached suppression provenance")
+
+suppressed_path.write_text(original_suppressed_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+
+with suppressed_path.open(newline="", encoding="utf-8") as handle:
+    rows = list(csv.DictReader(handle))
+rows[0]["reason"] = "tampered reason that is not in the allowlist file"
+with suppressed_path.open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+new_sha = hashlib.sha256(suppressed_path.read_bytes()).hexdigest()
+sha_lines = []
+for line in original_sha_manifest_text.splitlines():
+    if line.endswith("  suppressed_findings.csv"):
+        sha_lines.append(f"{new_sha}  suppressed_findings.csv")
+    else:
+        sha_lines.append(line)
+sha_manifest_path.write_text("\n".join(sha_lines) + "\n", encoding="utf-8")
+result = subprocess.run(
+    [str(root / "tools" / "verify_local_audit.py"), str(out)],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.PIPE,
+    text=True,
+)
+if result.returncode == 0:
+    raise SystemExit("local-audit verifier must reject suppression reason drift from allowlist source")
+if "suppressed_findings.csv reason must bind suppression file" not in result.stderr:
+    raise SystemExit("local-audit verifier must explain suppression source reason drift")
+
+suppressed_path.write_text(original_suppressed_text, encoding="utf-8")
+sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+PY
 cat >"$TMP_DIR/bad_allowlist.json" <<'EOF'
 {
   "schema_version": "local_repo_audit_suppressions.v1",

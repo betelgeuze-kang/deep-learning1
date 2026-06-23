@@ -2078,6 +2078,46 @@ def verify_reproduce(out_dir: Path, manifest: dict, summary: dict[str, str], err
         add(errors, "verify.sh command drift")
 
 
+def load_suppression_rules_for_verifier(out_dir: Path, errors: list[str]) -> dict[str, dict[str, str]]:
+    invocation = read_json(out_dir / "audit_invocation.json")
+    suppression_file = str(invocation.get("suppression_file", ""))
+    if not suppression_file:
+        return {}
+    path = Path(suppression_file)
+    if is_forbidden_env_path(path):
+        add(errors, "audit_invocation suppression_file must not be .env-like")
+        return {}
+    if not path.is_file():
+        add(errors, "audit_invocation suppression_file is missing")
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        add(errors, "audit_invocation suppression_file must be readable JSON")
+        return {}
+    rows = payload.get("suppressions", payload) if isinstance(payload, dict) else payload
+    if not isinstance(rows, list):
+        add(errors, "audit_invocation suppression_file must contain suppression rows")
+        return {}
+    rules: dict[str, dict[str, str]] = {}
+    for idx, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            add(errors, "audit_invocation suppression_file rows must be objects")
+            continue
+        suppression_id = str(row.get("suppression_id") or f"suppression_{idx:04d}")
+        if suppression_id in rules:
+            add(errors, f"audit_invocation suppression_file duplicate suppression_id: {suppression_id}")
+            continue
+        rules[suppression_id] = {
+            "plugin_id": str(row.get("plugin_id") or ""),
+            "rule_id": str(row.get("rule_id") or ""),
+            "file_path": str(row.get("file_path") or ""),
+            "reason": str(row.get("reason") or "").strip(),
+            "active": "1" if bool(row.get("active", True)) else "0",
+        }
+    return rules
+
+
 def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]) -> None:
     findings = read_csv(out_dir / "audit_findings.csv")
     finding_by_id = {row.get("finding_id", ""): row for row in findings}
@@ -2114,6 +2154,20 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
     if str(len(unsupported_rows)) != summary.get("unsupported_claim_rows"):
         add(errors, "unsupported claim row count drift")
     suppressed_rows = read_csv(out_dir / "suppressed_findings.csv")
+    suppression_rules = load_suppression_rules_for_verifier(out_dir, errors)
+    if suppressed_rows and not suppression_rules:
+        add(errors, "suppressed_findings.csv rows require a bound suppression file")
+    suppressed_finding_by_id: dict[str, dict[str, str]] = {}
+    for finding in findings:
+        if finding.get("suppressed") != "1":
+            continue
+        for suppression_id in finding.get("suppression_ids", "").split("|"):
+            if not suppression_id:
+                continue
+            if suppression_id in suppressed_finding_by_id:
+                add(errors, f"suppression id must bind exactly one finding: {suppression_id}")
+            else:
+                suppressed_finding_by_id[suppression_id] = finding
     suppressed_ids_from_findings = {
         suppression_id
         for row in findings
@@ -2133,6 +2187,43 @@ def verify_manual_rows(out_dir: Path, summary: dict[str, str], errors: list[str]
             add(errors, "suppressed_findings.csv rows must include a reason")
         if row.get("plugin_id") not in EXPECTED_PLUGIN_IDS:
             add(errors, "suppressed_findings.csv plugin_id must be registered")
+        finding = suppressed_finding_by_id.get(row.get("suppression_id", ""))
+        if finding is None:
+            continue
+        suppression_id = row.get("suppression_id", "")
+        rule = suppression_rules.get(suppression_id)
+        if rule is None:
+            add(errors, f"suppressed_findings.csv suppression_id must exist in suppression file: {suppression_id}")
+        else:
+            if rule.get("active") != "1":
+                add(errors, f"suppressed_findings.csv suppression_id must bind active suppression rule: {suppression_id}")
+            if row.get("reason", "") != rule.get("reason", ""):
+                add(errors, f"suppressed_findings.csv reason must bind suppression file: {suppression_id}")
+            if rule.get("plugin_id") and rule.get("plugin_id") != finding.get("plugin_id", ""):
+                add(errors, f"suppressed_findings.csv plugin_id must satisfy suppression file: {suppression_id}")
+            finding_rule_ids = [cell for cell in finding.get("plugin_rule_ids", "").split("|") if cell]
+            if rule.get("rule_id") and rule.get("rule_id") not in finding_rule_ids:
+                add(errors, f"suppressed_findings.csv rule_id must satisfy suppression file: {suppression_id}")
+            finding_citation_paths = {
+                cell.rsplit(":", 1)[0]
+                for cell in finding.get("citations", "").split(";")
+                if ":" in cell
+            }
+            if rule.get("file_path") and rule.get("file_path") not in finding_citation_paths:
+                add(errors, f"suppressed_findings.csv file_path must satisfy suppression file: {suppression_id}")
+        for key in ["plugin_id", "plugin_rule_ids", "confidence", "language", "audit_type", "severity"]:
+            if row.get(key, "") != finding.get(key, ""):
+                add(errors, f"suppressed_findings.csv {key} must bind suppressed finding: {suppression_id}")
+        expected_evidence_paths = sorted(
+            cell.rsplit(":", 1)[0]
+            for cell in finding.get("citations", "").split(";")
+            if ":" in cell
+        )
+        actual_evidence_paths = sorted(
+            cell for cell in row.get("evidence_paths", "").split("|") if cell
+        )
+        if actual_evidence_paths != expected_evidence_paths:
+            add(errors, f"suppressed_findings.csv evidence_paths must bind suppressed finding citations: {suppression_id}")
 
     guard_rows = read_csv(out_dir / "wrong_answer_guard_rows.csv")
     guard_by_finding = {row.get("finding_id", ""): row for row in guard_rows}
