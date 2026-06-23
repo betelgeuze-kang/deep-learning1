@@ -6,7 +6,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "==> ai wrapper shell syntax"
-bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh scripts/audit_my_repo.sh scripts/audit_my_repo_pr.sh
+bash -n scripts/ai-dangerous-command-check.sh scripts/ai-cursor-network-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh scripts/audit_my_repo.sh scripts/audit_my_repo_pr.sh
 if [ -f experiments/test_audit_my_repo_product_entrypoint.sh ]; then
   bash -n experiments/test_audit_my_repo_product_entrypoint.sh
 fi
@@ -163,6 +163,8 @@ test -f docs/ai/profiles/deep-learning-research.md
 test -f docs/ai/prompts/deep_learning_research_goal_start.md
 test -f docs/ai/prompts/opencode_worker_slice.md
 test -f docs/ai/prompts/cursor_worker_slice.md
+test -f docs/ai/prompts/internal_subagent_worker_slice.md
+test -x scripts/ai-cursor-network-check.sh
 test -x scripts/ai-worker-cursor.sh
 test -x scripts/ai-worker-opencode.sh
 

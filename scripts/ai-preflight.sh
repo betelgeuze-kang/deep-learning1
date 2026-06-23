@@ -32,6 +32,7 @@ test -f docs/ai/profiles/deep-learning-research.md && ok "research profile prese
 test -f docs/ai/prompts/deep_learning_research_goal_start.md && ok "research start prompt present" || bad "research start prompt missing"
 test -f docs/ai/prompts/opencode_worker_slice.md && ok "OpenCode worker prompt present" || bad "OpenCode worker prompt missing"
 test -f docs/ai/prompts/cursor_worker_slice.md && ok "Cursor worker prompt present" || bad "Cursor worker prompt missing"
+test -f docs/ai/prompts/internal_subagent_worker_slice.md && ok "internal sub-agent worker prompt present" || bad "internal sub-agent worker prompt missing"
 
 echo
 echo "[2] Worker CLIs"
@@ -51,7 +52,7 @@ fi
 
 echo
 echo "[3] Wrapper syntax"
-if bash -n scripts/ai-dangerous-command-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh scripts/audit_my_repo.sh scripts/audit_my_repo_pr.sh; then
+if bash -n scripts/ai-dangerous-command-check.sh scripts/ai-cursor-network-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh scripts/audit_my_repo.sh scripts/audit_my_repo_pr.sh; then
   ok "ai wrapper shell syntax ok"
 else
   bad "ai wrapper shell syntax failed"
@@ -68,6 +69,20 @@ if grep -q -- '--model "$CURSOR_AGENT_MODEL"' scripts/ai-worker-cursor.sh; then
   ok "cursor worker uses configured model"
 else
   bad "cursor worker model wiring missing"
+fi
+
+if grep -q -- 'model=gpt-5.4-mini' docs/ai/prompts/internal_subagent_worker_slice.md &&
+   grep -q -- 'reasoning_effort=xhigh' docs/ai/prompts/internal_subagent_worker_slice.md &&
+   grep -q -- 'agent_type=worker' docs/ai/prompts/internal_subagent_worker_slice.md; then
+  ok "internal sub-agent fallback is pinned to gpt-5.4-mini xhigh worker"
+else
+  bad "internal sub-agent fallback model pin missing"
+fi
+
+if ./scripts/ai-cursor-network-check.sh api2.cursor.sh >/dev/null 2>&1; then
+  ok "cursor worker network/DNS reachable"
+else
+  bad "cursor worker network/DNS unavailable in this Codex environment"
 fi
 
 echo

@@ -41,6 +41,11 @@ Use Cursor Composer 2.5 (`composer-2.5`) for:
 
 `scripts/ai-worker-opencode.sh` is kept as a compatibility wrapper for the former OpenCode slot, but it routes tasks to Cursor Composer 2.5 (`composer-2.5`).
 
+If Cursor cannot run and Codex uses an internal code-implementation sub-agent
+for the same slice, use a `worker` sub-agent with `model=gpt-5.4-mini` and
+`reasoning_effort=xhigh`, using
+`docs/ai/prompts/internal_subagent_worker_slice.md`.
+
 Use Cursor auto for:
 
 - current editor selections

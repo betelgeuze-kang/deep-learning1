@@ -32,6 +32,17 @@ Prefer Cursor Composer 2.5 (`composer-2.5`) for:
 
 `scripts/ai-worker-opencode.sh` remains as a compatibility wrapper for existing dispatch habits, but it now routes the former OpenCode worker slot to Cursor Composer 2.5 (`composer-2.5`).
 
+If Cursor cannot run and Codex uses an internal sub-agent for the same
+code-implementation slice, spawn a `worker` sub-agent with:
+
+```text
+model=gpt-5.4-mini
+reasoning_effort=xhigh
+prompt_template=docs/ai/prompts/internal_subagent_worker_slice.md
+```
+
+This is a fallback worker for the same slice, not a nested autonomous loop.
+
 Prefer Cursor auto for:
 
 - small localized C++ edits around an open file

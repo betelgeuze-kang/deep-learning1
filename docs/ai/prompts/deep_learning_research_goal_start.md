@@ -30,22 +30,23 @@ Operating model:
 4. Codex owns research design, task slicing, review, metric validity, evidence boundary checks, and final acceptance.
 5. Use Cursor Composer 2.5 (`composer-2.5`) for large-context implementation slices, broad document/result/log sweeps, multi-file C++/script edits, and repeated low-cost implementation passes.
 6. Use Cursor auto for selected code, currently open files, notebooks, or IDE-attached edits.
-7. Use one worker slice at a time. Codex must inspect the diff before another delegation.
-8. Delegate only broad exploration, large mechanical edits, repeated test-fix cycles, multi-file refactors, or long docs/results/log sweeps. Do not delegate simple docs, small tests, clear localized fixes, or changes expected under roughly 100-200 LOC.
-9. Worker TASK prompts should stay short: goal, scope, file candidates, verification criteria, and forbidden changes or invariants.
-10. When delegating to the former OpenCode slot, create a prompt under `docs/ai/dispatch/`, using `docs/ai/prompts/opencode_worker_slice.md`, then run:
+7. If Cursor cannot run and Codex uses an internal code-implementation sub-agent for the same slice, spawn a `worker` sub-agent with `model=gpt-5.4-mini`, `reasoning_effort=xhigh`, using `docs/ai/prompts/internal_subagent_worker_slice.md`.
+8. Use one worker slice at a time. Codex must inspect the diff before another delegation.
+9. Delegate only broad exploration, large mechanical edits, repeated test-fix cycles, multi-file refactors, or long docs/results/log sweeps. Do not delegate simple docs, small tests, clear localized fixes, or changes expected under roughly 100-200 LOC.
+10. Worker TASK prompts should stay short: goal, scope, file candidates, verification criteria, and forbidden changes or invariants.
+11. When delegating to the former OpenCode slot, create a prompt under `docs/ai/dispatch/`, using `docs/ai/prompts/opencode_worker_slice.md`, then run:
 
    ```bash
    ./scripts/ai-worker-opencode.sh docs/ai/dispatch/<task-id>.md
    ```
 
-11. When delegating to Cursor auto, create a prompt under `docs/ai/dispatch/`, using `docs/ai/prompts/cursor_worker_slice.md`, then run:
+12. When delegating to Cursor auto, create a prompt under `docs/ai/dispatch/`, using `docs/ai/prompts/cursor_worker_slice.md`, then run:
 
    ```bash
    ./scripts/ai-worker-cursor.sh docs/ai/dispatch/<task-id>.md
    ```
 
-12. After worker output, avoid full log review by default. Inspect `git diff --stat`, core changed-file diffs, failing-test output if present, and any research claim or evidence-boundary changes. Run `./scripts/ai-verify.sh` before acceptance.
+13. After worker output, avoid full log review by default. Inspect `git diff --stat`, core changed-file diffs, failing-test output if present, and any research claim or evidence-boundary changes. Run `./scripts/ai-verify.sh` before acceptance.
 
 Research constraints:
 
