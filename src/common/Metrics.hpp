@@ -322,6 +322,8 @@ struct EpochMetricsV02 {
     double hip_device = 0.0;
     double hip_kernel_calls = 0.0;
     double hip_fallback_count = 0.0;
+    double evaluation_causal_next_byte = 0.0;
+    double future_neighbor_used = 0.0;
 };
 
 inline std::string v01_csv_header() {
@@ -506,7 +508,8 @@ inline std::string v02_csv_header() {
            "joint_vs_raw_candidate_overlap_rate,key_region_route_decode_acc,"
            "route_key_unique_count,route_signature_collision_rate,"
            "route_vs_raw_candidate_overlap_rate,"
-           "backend_active,hip_enabled,hip_device,hip_kernel_calls,hip_fallback_count";
+           "backend_active,hip_enabled,hip_device,hip_kernel_calls,hip_fallback_count,"
+           "evaluation_causal_next_byte,future_neighbor_used";
 }
 
 inline std::string to_csv_row(const CycleMetrics& metrics) {
@@ -804,7 +807,9 @@ inline std::string to_csv_row(const EpochMetricsV02& metrics) {
         << metrics.hip_enabled << ','
         << metrics.hip_device << ','
         << metrics.hip_kernel_calls << ','
-        << metrics.hip_fallback_count;
+        << metrics.hip_fallback_count << ','
+        << metrics.evaluation_causal_next_byte << ','
+        << metrics.future_neighbor_used;
     return oss.str();
 }
 

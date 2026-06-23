@@ -537,6 +537,8 @@ inline void apply_v02_overrides(V02PreParams& params, const CliArgs& args) {
             params.route_mode = value;
         } else if (key == "route-refresh" || key == "route_refresh") {
             params.route_refresh = value;
+        } else if (key == "evaluation-mode" || key == "evaluation_mode") {
+            params.evaluation_mode = value;
         } else if (key == "backend") {
             params.backend = value;
         } else if (key == "hip-device" || key == "hip_device") {
@@ -729,6 +731,7 @@ inline void print_v02_help(std::ostream& os) {
        << "  --route-mode <off|probe|jump-neighbors|hint-oracle|hint-parsed|hint-kv-exact|hint-kv-hash>\n"
        << "     jump-neighbors may use input-byte, joint-code, or state-code route keys\n"
        << "  --route-refresh <epoch|cycle>\n"
+       << "  --evaluation-mode <reconstruction|causal-next-byte>\n"
        << "  --backend <cpu|hip>\n"
        << "  --hip-device <int>\n"
        << "  --csv <path>\n";

@@ -16,6 +16,9 @@ fi
 if [ -f experiments/test_pr_split_branch_policy.sh ]; then
   bash -n experiments/test_pr_split_branch_policy.sh
 fi
+if [ -f experiments/test_v02_causal_next_byte_evaluation.sh ]; then
+  bash -n experiments/test_v02_causal_next_byte_evaluation.sh
+fi
 
 echo "==> json"
 python3 -m json.tool opencode.json >/dev/null
@@ -151,6 +154,9 @@ if [ -f CMakeLists.txt ]; then
   if [ -x build/dmv02 ]; then
     build/dmv02 --dataset counter --N 32 --epochs 1 --cycles-per-epoch 2 --seed 1 --csv results/ai_verify_v02_smoke.csv >/dev/null
     test -s results/ai_verify_v02_smoke.csv
+  fi
+  if [ -x experiments/test_v02_causal_next_byte_evaluation.sh ]; then
+    experiments/test_v02_causal_next_byte_evaluation.sh >/dev/null
   fi
 fi
 

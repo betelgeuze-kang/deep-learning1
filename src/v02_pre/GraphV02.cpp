@@ -1256,6 +1256,11 @@ void GraphV02::validate_params() const {
     if (params_.route_refresh != "epoch" && params_.route_refresh != "cycle") {
         throw std::runtime_error("route-refresh must be one of: epoch, cycle");
     }
+    if (params_.evaluation_mode != "reconstruction" &&
+        params_.evaluation_mode != "causal-next-byte") {
+        throw std::runtime_error(
+            "evaluation-mode must be one of: reconstruction, causal-next-byte");
+    }
     if (params_.K_jump > params_.K) {
         throw std::runtime_error("K-jump must be less than or equal to K");
     }
@@ -1420,6 +1425,10 @@ bool GraphV02::learned_code_key_hash_active() const {
 bool GraphV02::route_hint_active() const {
     return route_hint_oracle_active() || route_hint_parsed_active() ||
            route_hint_kv_exact_active() || route_hint_kv_hash_active();
+}
+
+bool GraphV02::causal_next_byte_evaluation() const {
+    return params_.evaluation_mode == "causal-next-byte";
 }
 
 bool GraphV02::route_hint_value_for_node(int index, std::uint8_t& out_value) const {
@@ -1990,7 +1999,7 @@ double GraphV02::local_energy_without_route(
               static_cast<double>(field_.score(1, node.input_byte, low));
 
     std::array<int, 8> effective_neighbors{};
-    const int neighbor_count = fill_effective_neighbors(index, effective_neighbors);
+    const int neighbor_count = fill_evaluation_neighbors(index, effective_neighbors);
     for (int n = 0; n < neighbor_count; ++n) {
         const NodeV02& neighbor =
             nodes_[static_cast<std::size_t>(effective_neighbors[static_cast<std::size_t>(n)])];
@@ -4443,18 +4452,19 @@ int GraphV02::edge_disagreement(int index, int neighbor_index) const {
 }
 
 int GraphV02::local_disagreement(int index) const {
-    const NodeV02& node = nodes_[static_cast<std::size_t>(index)];
+    std::array<int, 8> effective_neighbors{};
+    const int neighbor_count = fill_evaluation_neighbors(index, effective_neighbors);
     int total = 0;
-    for (int n = 0; n < params_.K; ++n) {
+    for (int n = 0; n < neighbor_count; ++n) {
         total += edge_disagreement(
-            index, node.neighbors[static_cast<std::size_t>(n)]);
+            index, effective_neighbors[static_cast<std::size_t>(n)]);
     }
     return total;
 }
 
 int GraphV02::active_jump_neighbor_count(int index) const {
     std::array<int, 8> effective_neighbors{};
-    const int neighbor_count = fill_effective_neighbors(index, effective_neighbors);
+    const int neighbor_count = fill_evaluation_neighbors(index, effective_neighbors);
     const NodeV02& node = nodes_[static_cast<std::size_t>(index)];
     int count = 0;
     for (int n = 0; n < neighbor_count; ++n) {
@@ -4624,6 +4634,27 @@ int GraphV02::fill_effective_neighbors(
     return written;
 }
 
+int GraphV02::fill_causal_neighbors(
+    int index,
+    std::array<int, 8>& out_neighbors) const {
+    int count = 0;
+    for (int distance = 1;
+         distance <= params_.R && index - distance >= 0 && count < params_.K;
+         ++distance) {
+        out_neighbors[static_cast<std::size_t>(count++)] = index - distance;
+    }
+    return count;
+}
+
+int GraphV02::fill_evaluation_neighbors(
+    int index,
+    std::array<int, 8>& out_neighbors) const {
+    if (causal_next_byte_evaluation()) {
+        return fill_causal_neighbors(index, out_neighbors);
+    }
+    return fill_effective_neighbors(index, out_neighbors);
+}
+
 int GraphV02::ring_distance(int from, int to) const {
     const int diff = std::abs(from - to);
     return std::min(diff, params_.N - diff);
@@ -4640,7 +4671,7 @@ float GraphV02::delta_energy(int index, int channel, std::uint8_t new_state) con
 float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_low) const {
     const NodeV02& node = nodes_[static_cast<std::size_t>(index)];
     std::array<int, 8> effective_neighbors{};
-    const int neighbor_count = fill_effective_neighbors(index, effective_neighbors);
+    const int neighbor_count = fill_evaluation_neighbors(index, effective_neighbors);
 
     float delta = -params_.lambda_u *
                   (field_.score(0, node.input_byte, new_high) -
@@ -4807,7 +4838,7 @@ float GraphV02::delta_energy(int index, std::uint8_t new_high, std::uint8_t new_
 int GraphV02::disagreement(int index) const {
     const NodeV02& node = nodes_[static_cast<std::size_t>(index)];
     std::array<int, 8> effective_neighbors{};
-    const int neighbor_count = fill_effective_neighbors(index, effective_neighbors);
+    const int neighbor_count = fill_evaluation_neighbors(index, effective_neighbors);
     int total = 0;
     for (int n = 0; n < neighbor_count; ++n) {
         const NodeV02& neighbor =
@@ -4886,7 +4917,7 @@ void GraphV02::accept_update(
     NodeV02& node = nodes_[static_cast<std::size_t>(index)];
     node.state = candidate.state;
     std::array<int, 8> effective_neighbors{};
-    const int neighbor_count = fill_effective_neighbors(index, effective_neighbors);
+    const int neighbor_count = fill_evaluation_neighbors(index, effective_neighbors);
 
     const float q = candidate.delta_eff;
     for (int n = 0; n < neighbor_count; ++n) {
@@ -6119,8 +6150,10 @@ EpochMetricsV02 GraphV02::collect_metrics(
                     routing_.candidate_count(route_key, i);
                 std::array<int, 8> effective_neighbors{};
                 JumpNeighborDiagnostics jump_diagnostics;
-                const int neighbor_count =
-                    fill_effective_neighbors(i, effective_neighbors, &jump_diagnostics);
+                const int neighbor_count = causal_next_byte_evaluation()
+                                               ? fill_evaluation_neighbors(i, effective_neighbors)
+                                               : fill_effective_neighbors(
+                                                     i, effective_neighbors, &jump_diagnostics);
                 const int active_jumps = jump_diagnostics.selected_jumps;
                 const bool jump_filter_gate_passed = jump_neighbors_active() && anchor_gap > route_gate;
                 routing_trigger_sum += 1.0;
@@ -7177,6 +7210,8 @@ EpochMetricsV02 GraphV02::collect_metrics(
     metrics.hip_device = static_cast<double>(backend_stats.hip_device);
     metrics.hip_kernel_calls = static_cast<double>(backend_stats.hip_kernel_calls);
     metrics.hip_fallback_count = static_cast<double>(backend_stats.hip_fallback_count);
+    metrics.evaluation_causal_next_byte = causal_next_byte_evaluation() ? 1.0 : 0.0;
+    metrics.future_neighbor_used = causal_next_byte_evaluation() ? 0.0 : 1.0;
     return metrics;
 }
 

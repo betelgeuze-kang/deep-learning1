@@ -187,6 +187,7 @@ struct V02PreParams {
     std::string routing_source = "none";
     std::string route_mode = "probe";
     std::string route_refresh = "epoch";
+    std::string evaluation_mode = "reconstruction";
 
     std::string backend = "cpu";
     int hip_device = 0;

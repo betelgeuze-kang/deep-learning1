@@ -71,6 +71,7 @@ class GraphV02 {
     bool route_code_key_hash_active() const;
     bool learned_code_key_hash_active() const;
     bool route_hint_active() const;
+    bool causal_next_byte_evaluation() const;
     bool route_hint_value_for_node(int index, std::uint8_t& out_value) const;
     bool route_hint_proposal_value_for_node(int index, std::uint8_t& out_value) const;
     double route_hint_margin_for_node(int index, std::uint8_t target_value) const;
@@ -224,6 +225,8 @@ class GraphV02 {
         int index,
         std::array<int, 8>& out_neighbors,
         JumpNeighborDiagnostics* diagnostics = nullptr) const;
+    int fill_causal_neighbors(int index, std::array<int, 8>& out_neighbors) const;
+    int fill_evaluation_neighbors(int index, std::array<int, 8>& out_neighbors) const;
     int ring_distance(int from, int to) const;
     float delta_energy(int index, int channel, std::uint8_t new_state) const;
     float delta_energy(int index, std::uint8_t new_high, std::uint8_t new_low) const;
