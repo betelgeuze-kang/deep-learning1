@@ -25,6 +25,12 @@ fi
 if [ -f experiments/test_v53u_complete_source_de_open_weight_evidence_intake.sh ]; then
   bash -n experiments/test_v53u_complete_source_de_open_weight_evidence_intake.sh
 fi
+if [ -f experiments/run_v54d_source_verified_route_scorer_calibration.sh ]; then
+  bash -n experiments/run_v54d_source_verified_route_scorer_calibration.sh
+fi
+if [ -f experiments/test_v54d_source_verified_route_scorer_calibration.sh ]; then
+  bash -n experiments/test_v54d_source_verified_route_scorer_calibration.sh
+fi
 
 echo "==> json"
 python3 -m json.tool opencode.json >/dev/null
@@ -317,6 +323,9 @@ fi
 
 if [ -f experiments/test_pr_split_branch_policy.sh ]; then
   bash experiments/test_pr_split_branch_policy.sh >/dev/null
+fi
+if [ -x experiments/test_v54d_source_verified_route_scorer_calibration.sh ]; then
+  ./experiments/test_v54d_source_verified_route_scorer_calibration.sh >/dev/null
 fi
 
 echo "==> audit-my-repo product smoke"
