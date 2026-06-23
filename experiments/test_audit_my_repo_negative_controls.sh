@@ -395,7 +395,7 @@ git -C "$parser_positive_repo" add .
 git -C "$parser_positive_repo" -c user.email=audit@example.invalid -c user.name=Audit commit -q -m init
 "$ROOT_DIR/scripts/audit_my_repo.sh" "$parser_positive_repo" \
   --mode full \
-  --max-findings 5 \
+  --max-findings 8 \
   --out "$TMP_DIR/parser_positive_out" \
   --namespace synthetic \
   --generator routehint-tiny >/dev/null
@@ -408,13 +408,20 @@ from pathlib import Path
 out = Path(sys.argv[1])
 findings = list(csv.DictReader((out / "audit_findings.csv").open(newline="", encoding="utf-8")))
 spans = list(csv.DictReader((out / "citation_spans.csv").open(newline="", encoding="utf-8")))
-deprecated = [row for row in findings if row["plugin_id"] == "deprecated_api"][0]
-if deprecated["severity"] != "medium":
+deprecated = [row for row in findings if row["plugin_id"] == "deprecated_api"]
+if not deprecated or any(row["severity"] != "medium" for row in deprecated):
     raise SystemExit("parser positive control must detect real executable deprecated API usage")
+deprecated_rule_ids = {
+    rule_id
+    for row in deprecated
+    for rule_id in row["plugin_rule_ids"].split("|")
+    if rule_id
+}
 for expected_rule in ["deprecated-api-06", "deprecated-api-08"]:
-    if expected_rule not in deprecated["plugin_rule_ids"].split("|"):
+    if expected_rule not in deprecated_rule_ids:
         raise SystemExit(f"parser positive control missing expected rule id: {expected_rule}")
-deprecated_spans = [row for row in spans if row["finding_id"] == deprecated["finding_id"]]
+deprecated_ids = {row["finding_id"] for row in deprecated}
+deprecated_spans = [row for row in spans if row["finding_id"] in deprecated_ids]
 span_by_file = {row["file_path"]: row for row in deprecated_spans}
 if span_by_file.get("app.js", {}).get("line_start") != "5":
     raise SystemExit("javascript parser must ignore regex/string decoys and cite the executable eval line")
@@ -422,7 +429,8 @@ if span_by_file.get("app.ts", {}).get("line_start") != "3":
     raise SystemExit("typescript parser must ignore template literal text and cite executable template expression eval")
 if span_by_file.get("main.cpp", {}).get("line_start") != "5":
     raise SystemExit("cpp parser must ignore raw-string decoys and cite the executable gets line")
-if "app.js:2" in deprecated["citations"] or "app.js:3" in deprecated["citations"] or "app.ts:2" in deprecated["citations"] or "main.cpp:2" in deprecated["citations"]:
+deprecated_citations = ";".join(row["citations"] for row in deprecated)
+if "app.js:2" in deprecated_citations or "app.js:3" in deprecated_citations or "app.ts:2" in deprecated_citations or "main.cpp:2" in deprecated_citations:
     raise SystemExit("deprecated API citations must not bind to regex/string/template-literal/raw-string decoys")
 PY
 
@@ -731,7 +739,7 @@ EOF
   --schema-instance "$ROOT_DIR/schemas/local_repo_audit_suppressions.schema.json" "$TMP_DIR/allowlist.json" >/dev/null
 "$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
   --mode full \
-  --max-findings 6 \
+  --max-findings 12 \
   --out "$TMP_DIR/allowlist_out" \
   --allowlist "$TMP_DIR/allowlist.json" \
   --namespace fixture \
@@ -752,8 +760,8 @@ findings = list(csv.DictReader((out / "audit_findings.csv").open(newline="", enc
 suppressed = list(csv.DictReader((out / "suppressed_findings.csv").open(newline="", encoding="utf-8")))
 if summary["suppression_rows"] != 1 or len(suppressed) != 1:
     raise SystemExit("allowlist run must record exactly one suppressed finding")
-deprecated = [row for row in findings if row["plugin_id"] == "deprecated_api"][0]
-if deprecated["suppressed"] != "1" or deprecated["suppression_ids"] != "accepted-distutils-fixture":
+deprecated = [row for row in findings if row["plugin_id"] == "deprecated_api" and row["suppression_ids"] == "accepted-distutils-fixture"]
+if len(deprecated) != 1 or deprecated[0]["suppressed"] != "1":
     raise SystemExit("deprecated finding must bind the applied suppression id")
 if suppressed[0]["reason"] != "fixture intentionally keeps distutils for allowlist coverage":
     raise SystemExit("suppressed finding must preserve allowlist reason")
@@ -864,6 +872,46 @@ if "suppressed_findings.csv citation_span_sha256s must bind suppressed finding s
 
 suppressed_path.write_text(original_suppressed_text, encoding="utf-8")
 sha_manifest_path.write_text(original_sha_manifest_text, encoding="utf-8")
+PY
+cat >"$TMP_DIR/cross_hit_allowlist.json" <<'EOF'
+{
+  "schema_version": "local_repo_audit_suppressions.v1",
+  "suppressions": [
+    {
+      "suppression_id": "cross-hit-rule-file-mismatch",
+      "plugin_id": "deprecated_api",
+      "rule_id": "deprecated-api-05",
+      "file_path": "legacy.py",
+      "reason": "fixture attempts to combine a c++ rule with the python file"
+    }
+  ]
+}
+EOF
+"$ROOT_DIR/scripts/audit_my_repo.sh" "$repo" \
+  --mode full \
+  --max-findings 12 \
+  --out "$TMP_DIR/cross_hit_allowlist_out" \
+  --allowlist "$TMP_DIR/cross_hit_allowlist.json" \
+  --namespace fixture \
+  --generator routehint-tiny >/dev/null
+"$ROOT_DIR/tools/verify_local_audit.py" "$TMP_DIR/cross_hit_allowlist_out" >/dev/null
+python3 - "$TMP_DIR/cross_hit_allowlist_out" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+out = Path(sys.argv[1])
+summary = json.loads((out / "audit_summary.json").read_text(encoding="utf-8"))
+findings = list(csv.DictReader((out / "audit_findings.csv").open(newline="", encoding="utf-8")))
+if summary["suppression_rows"] != 0:
+    raise SystemExit("allowlist rule_id and file_path must apply to the same source-bound finding")
+if any(row["suppressed"] == "1" or row["suppression_ids"] for row in findings):
+    raise SystemExit("cross-hit allowlist must not suppress unrelated deprecated findings")
+if not any(row["plugin_id"] == "deprecated_api" and row["plugin_rule_ids"] == "deprecated-api-01" and "legacy.py:" in row["citations"] for row in findings):
+    raise SystemExit("cross-hit fixture must still include the python deprecated finding")
+if not any(row["plugin_id"] == "deprecated_api" and row["plugin_rule_ids"] == "deprecated-api-05" and "legacy.cpp:" in row["citations"] for row in findings):
+    raise SystemExit("cross-hit fixture must still include the c++ deprecated finding")
 PY
 cat >"$TMP_DIR/bad_allowlist.json" <<'EOF'
 {
@@ -3462,6 +3510,24 @@ line = Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()[0].strip()
 print("sha256:" + hashlib.sha256(line.encode("utf-8")).hexdigest())
 PY
 )"
+legacy_cpp_line_sha="$(python3 - "$repo/legacy.cpp" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+
+line = Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()[1].strip()
+print("sha256:" + hashlib.sha256(line.encode("utf-8")).hexdigest())
+PY
+)"
+legacy_js_line_sha="$(python3 - "$repo/legacy.js" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+
+line = Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()[1].strip()
+print("sha256:" + hashlib.sha256(line.encode("utf-8")).hexdigest())
+PY
+)"
 readme_claim_line_sha="$(python3 - "$repo/README.md" <<'PY'
 import hashlib
 import sys
@@ -3473,6 +3539,8 @@ PY
 )"
 cat >"$TMP_DIR/real_benchmark_small_labels.jsonl" <<EOF
 {"case_id":"real_small_case","repo_path":"$repo","expected_repo_git_head":"$repo_head","human_labeled":true,"synthetic":false,"priority":"P1","maintainer_id":"maintainer-one","maintainer_feedback":true,"plugin_id":"deprecated_api","rule_id":"deprecated-api-01","file_path":"legacy.py","expected_line_start":1,"expected_line_end":1,"expected_span_sha256":"$legacy_py_line_sha","expected":"present","expected_abstain":false}
+{"case_id":"real_small_case","repo_path":"$repo","expected_repo_git_head":"$repo_head","human_labeled":true,"synthetic":false,"priority":"P2","maintainer_id":"maintainer-one","maintainer_feedback":true,"plugin_id":"deprecated_api","rule_id":"deprecated-api-05","file_path":"legacy.cpp","expected_line_start":2,"expected_line_end":2,"expected_span_sha256":"$legacy_cpp_line_sha","expected":"present","expected_abstain":false}
+{"case_id":"real_small_case","repo_path":"$repo","expected_repo_git_head":"$repo_head","human_labeled":true,"synthetic":false,"priority":"P2","maintainer_id":"maintainer-one","maintainer_feedback":true,"plugin_id":"deprecated_api","rule_id":"deprecated-api-07","file_path":"legacy.js","expected_line_start":2,"expected_line_end":2,"expected_span_sha256":"$legacy_js_line_sha","expected":"present","expected_abstain":false}
 {"case_id":"real_small_case","repo_path":"$repo","expected_repo_git_head":"$repo_head","human_labeled":true,"synthetic":false,"priority":"P2","maintainer_id":"maintainer-one","maintainer_feedback":true,"plugin_id":"unsupported_claim","rule_id":"unsupported-claim-readiness-capability-wording","file_path":"README.md","expected_line_start":3,"expected_line_end":3,"expected_span_sha256":"$readme_claim_line_sha","expected":"present"}
 EOF
 cat >"$TMP_DIR/real_benchmark_small_feedback.jsonl" <<EOF
@@ -3517,17 +3585,17 @@ if manifest["namespace"] != "real_benchmark" or manifest["real_benchmark_namespa
     raise SystemExit("real benchmark manifest must bind explicit namespace confirmation")
 if summary["product_readiness_calculated_from_real_labels"] != 1:
     raise SystemExit("real_benchmark human labels must enable readiness calculation basis")
-if summary["label_quality_total_rows"] != 2 or summary["label_quality_specific_rows"] != 2:
+if summary["label_quality_total_rows"] != 4 or summary["label_quality_specific_rows"] != 4:
     raise SystemExit("real_benchmark summary must record specific label quality rows")
 if summary["label_quality_broad_rows"] != 0 or summary["label_quality_duplicate_rows"] != 0 or summary["label_quality_contradictory_rows"] != 0:
     raise SystemExit("real_benchmark specific labels must not record label quality defects")
 if summary["label_quality_requirement_met"] != 1:
     raise SystemExit("real_benchmark specific labels must satisfy label quality requirement")
-if summary["label_source_trace_rows"] != 0 or summary["label_source_trace_missing_rows"] != 2 or summary["label_source_trace_requirement_met"] != 0:
+if summary["label_source_trace_rows"] != 0 or summary["label_source_trace_missing_rows"] != 4 or summary["label_source_trace_requirement_met"] != 0:
     raise SystemExit("real_benchmark direct labels without review queue trace must fail source trace sub-gate")
-if summary["label_citation_expectation_rows"] != 2 or summary["label_citation_expectation_met_rows"] != 2 or summary["label_citation_expectation_requirement_met"] != 1:
+if summary["label_citation_expectation_rows"] != 4 or summary["label_citation_expectation_met_rows"] != 4 or summary["label_citation_expectation_requirement_met"] != 1:
     raise SystemExit("real_benchmark with exact human citation spans must satisfy citation expectation sub-gate")
-if label_citation_payload["citation_expectation_rows"] != 2 or label_citation_payload["citation_expectation_met_rows"] != 2:
+if label_citation_payload["citation_expectation_rows"] != 4 or label_citation_payload["citation_expectation_met_rows"] != 4:
     raise SystemExit("real_benchmark citation expectation JSON must bind exact matched spans")
 if summary["design_partner_beta_candidate_ready"] != 0:
     raise SystemExit("undersized real_benchmark must not be beta candidate ready")
@@ -3544,7 +3612,7 @@ for gate_id in ["repo_snapshot_requirement_met", "label_quality_requirement_met"
         raise SystemExit(f"real_benchmark readiness JSON must pass satisfied sub-gate: {gate_id}")
 if summary["real_repo_count"] != 1 or summary["real_repo_requirement_met"] != 0:
     raise SystemExit("beta gate must require at least 10 real repositories")
-if summary["human_label_rows"] != 2 or summary["human_label_requirement_met"] != 0:
+if summary["human_label_rows"] != 4 or summary["human_label_requirement_met"] != 0:
     raise SystemExit("beta gate must require at least 300 human labels")
 if len(repo_snapshot_rows) != 1 or repo_snapshot_rows[0]["repo_snapshot_locked"] != "1":
     raise SystemExit("real benchmark must record a locked repo snapshot row")

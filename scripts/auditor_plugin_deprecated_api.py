@@ -408,23 +408,24 @@ class DeprecatedApiPlugin(AuditPlugin):
                 break
         if hits:
             hits = hits[:5]
-            labels = sorted({label for _, label, _, _ in hits})
-            rule_ids = self.rule_ids_for_labels(set(labels))
-            return [
-                Finding(
-                    self.audit_type,
-                    "Are there source-bound deprecated or legacy API usage candidates?",
-                    "Potential deprecated/legacy usage candidates detected: " + ", ".join(labels) + ".",
-                    tuple(path for path, _, _, _ in hits),
-                    tuple(needle for _, _, needle, _ in hits),
-                    severity="medium",
-                    plugin_id=self.plugin_id,
-                    language=self.language,
-                    rule_ids=rule_ids,
-                    confidence="medium",
-                    evidence_line_numbers=tuple(line_no for _, _, _, line_no in hits),
+            findings: list[Finding] = []
+            for path, label, needle, line_no in hits:
+                findings.append(
+                    Finding(
+                        self.audit_type,
+                        "Are there source-bound deprecated or legacy API usage candidates?",
+                        "Potential deprecated/legacy usage candidate detected: " + label + ".",
+                        (path,),
+                        (needle,),
+                        severity="medium",
+                        plugin_id=self.plugin_id,
+                        language=self.language,
+                        rule_ids=self.rule_ids_for_labels({label}),
+                        confidence="medium",
+                        evidence_line_numbers=(line_no,),
+                    )
                 )
-            ]
+            return findings
         evidence = (_first_existing(repo, ["README.md"]) or sources[0].path,) if sources else tuple()
         return [
             Finding(

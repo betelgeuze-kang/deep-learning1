@@ -1599,14 +1599,22 @@ def write_outputs(root: Path, target: Path, out_dir: Path, staging: Path, mode: 
     write_json(staging / "plugin_registry.json", plugin_registry_payload())
     plugin_rule_metadata = plugin_rule_rows()
     write_csv(staging / "plugin_rule_rows.csv", CSV_CONTRACTS["plugin_rule_rows.csv"], plugin_rule_metadata)
-    plugin_findings: list[Finding] = []
+    plugin_findings_by_plugin: list[list[Finding]] = []
     active_plugins = active_plugins_for_mode(mode)
     active_plugin_ids = tuple(plugin.plugin_id for plugin in active_plugins)
     plugin_start_ns = time.perf_counter_ns()
     for plugin in active_plugins:
-        plugin_findings.extend(plugin.run(target, sources))
+        plugin_findings_by_plugin.append(plugin.run(target, sources))
     timings["plugin_latency_ms"] = elapsed_ms(plugin_start_ns)
     serialize_start_ns = time.perf_counter_ns()
+    plugin_findings: list[Finding] = []
+    extra_plugin_findings: list[Finding] = []
+    for rows in plugin_findings_by_plugin:
+        if not rows:
+            continue
+        plugin_findings.append(rows[0])
+        extra_plugin_findings.extend(rows[1:])
+    plugin_findings.extend(extra_plugin_findings)
     question_finding = USER_QUESTION_PLUGIN.run_question(sources, question)
     if question_finding is not None:
         findings = plugin_findings[: max(0, budget.max_findings - 1)] + [question_finding]

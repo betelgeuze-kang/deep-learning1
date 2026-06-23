@@ -1182,6 +1182,7 @@ def evaluate_case(case: dict, out_dir: Path) -> tuple[list[dict], list[dict], li
                     "expected_line_end": "",
                     "expected_span_sha256": "",
                     "expected": "absent",
+                    "priority": "",
                     "matched_finding_id": finding.get("finding_id", ""),
                     "citation_expectation_supplied": 0,
                     "matched_citation_id": "",

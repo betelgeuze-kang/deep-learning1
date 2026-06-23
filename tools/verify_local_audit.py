@@ -1077,13 +1077,16 @@ def verify_finding_registry_binding(out_dir: Path, registry: dict, errors: list[
     finding_plugin_ids = [row.get("plugin_id", "") for row in findings]
     if set(finding_plugin_ids) != expected_plugin_ids:
         add(errors, "audit findings must contain exactly the expected required plugin rows")
-    duplicate_plugins = sorted(
-        plugin_id
-        for plugin_id in set(finding_plugin_ids)
-        if finding_plugin_ids.count(plugin_id) > 1
-    )
-    if duplicate_plugins:
-        add(errors, f"audit findings contain duplicate plugin rows: {','.join(duplicate_plugins)}")
+    finding_signatures = [
+        (
+            row.get("plugin_id", ""),
+            row.get("plugin_rule_ids", ""),
+            row.get("citations", ""),
+        )
+        for row in findings
+    ]
+    if len(finding_signatures) != len(set(finding_signatures)):
+        add(errors, "audit findings must not contain duplicate plugin/rule/citation rows")
     for row in findings:
         finding_id = row.get("finding_id", "")
         plugin_id = row.get("plugin_id", "")
