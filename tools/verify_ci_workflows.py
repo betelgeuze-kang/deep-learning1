@@ -46,6 +46,17 @@ def verify_ai_verify_workflow(root: Path, errors: list[str]) -> None:
         "DLE_VERIFY_ENABLE_HIP: \"OFF\"",
         "AI_VERIFY_JOBS: \"2\"",
         "run: ./scripts/ai-verify.sh",
+        # Pull-request code must be verified on an ephemeral GitHub-hosted
+        # runner with a credential-free, SHA-pinned checkout, and must never
+        # run on the persistent self-hosted runner.
+        "pr-safe-verify:",
+        "if: github.event_name == 'pull_request'",
+        "runs-on: ubuntu-latest",
+        "uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+        "persist-credentials: false",
+        "fetch-depth: 1",
+        "clean: true",
+        "if: github.event_name != 'pull_request'",
     ]:
         require(text, snippet, str(path), errors)
 
@@ -72,8 +83,17 @@ def verify_third_party_workflow(root: Path, errors: list[str]) -> None:
         "uses: actions/upload-artifact@v4",
         "retention-days: 1",
         "GitHub Actions self-hosted runner; automated reviewer, not a GitHub-hosted clean-room rerun.",
+        # The dispatch input must be passed through an environment variable and
+        # validated, never interpolated directly into the shell script body.
+        "RETURN_ID_INPUT: ${{ inputs.return_id }}",
+        "=~ ^[A-Za-z0-9._-]{1,80}$",
+        "\"$RETURN_ID_INPUT\" == *\"..\"*",
     ]:
         require(text, snippet, str(path), errors)
+    # Forbid the previous pattern that inlined the untrusted input into the
+    # shell script body (command-injection risk).
+    if "RETURN_ID_INPUT=\"${{" in text:
+        add(errors, f"{path}: workflow_dispatch input must not be inlined into the run script; pass it via env and validate")
 
 
 def main(argv: list[str]) -> int:
