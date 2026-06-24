@@ -4502,6 +4502,7 @@ def verify_v54_free_running_decoder_contract(
 def verify_v54_free_running_generation_intake(
     path: Path,
     summary_path: Path | None = None,
+    decision_path: Path | None = None,
 ) -> list[str]:
     errors: list[str] = []
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -4560,6 +4561,9 @@ def verify_v54_free_running_generation_intake(
     if policy.get("missing_required_artifact_ids") != EXPECTED_V54F_ARTIFACT_IDS:
         errors.append(f"{path}: missing_required_artifact_ids must match v54f artifact ids")
 
+    artifact_rows_by_id: dict[str, list[dict[str, str]]] = {}
+    json_artifacts_by_id: dict[str, dict[str, object]] = {}
+    sha_manifest_root: Path | None = None
     for index, row in enumerate(artifacts, start=1):
         prefix = f"{path}: required_artifact[{index}]"
         missing_row = REQUIRED_V54F_ARTIFACT_KEYS - set(row)
@@ -4587,12 +4591,16 @@ def verify_v54_free_running_generation_intake(
         artifact_path = Path(row.get("path", ""))
         if not artifact_path.is_file() or artifact_path.stat().st_size == 0:
             continue
+        if artifact_id == "sha256-manifest":
+            sha_manifest_root = artifact_path.parent
         if artifact_kind == "csv":
             with artifact_path.open(newline="", encoding="utf-8") as handle:
                 reader = csv.DictReader(handle)
                 if required_columns and (reader.fieldnames or []) != required_columns:
                     errors.append(f"{artifact_path}: header must match required_columns for {artifact_id}")
-                row_count = sum(1 for _ in reader)
+                artifact_rows = list(reader)
+                artifact_rows_by_id[artifact_id] = artifact_rows
+                row_count = len(artifact_rows)
             if isinstance(min_rows, int) and row_count < min_rows:
                 errors.append(f"{artifact_path}: expected at least {min_rows} data rows, got {row_count}")
         elif artifact_kind == "text":
@@ -4600,26 +4608,89 @@ def verify_v54_free_running_generation_intake(
             if isinstance(min_rows, int) and line_count < min_rows:
                 errors.append(f"{artifact_path}: expected at least {min_rows} non-empty lines, got {line_count}")
         elif artifact_kind == "json":
-            json.loads(artifact_path.read_text(encoding="utf-8"))
+            json_artifacts_by_id[artifact_id] = json.loads(artifact_path.read_text(encoding="utf-8"))
+
+    required_rows = artifact_rows_by_id.get("generation-required-field-rows", [])
+    required_fields = {(row.get("artifact", ""), row.get("field", "")) for row in required_rows}
+    for artifact, field in [
+        ("free_running_generation_rows.csv", "free_running_decode"),
+        ("free_running_generation_rows.csv", "teacher_forcing_used"),
+        ("free_running_generation_rows.csv", "raw_prompt_context_bytes"),
+        ("free_running_generation_rows.csv", "retrieved_text_in_prompt"),
+        ("free_running_generation_rows.csv", "source_locator_leakage"),
+        ("free_running_generation_rows.csv", "raw_output_sha256"),
+        ("label_source.json", "external_label_source_ready"),
+        ("heldout_metric_rows.csv", "heldout_metric_ready"),
+    ]:
+        if required_rows and (artifact, field) not in required_fields:
+            errors.append(f"{path}: generation-required-field-rows missing {artifact}/{field}")
+
+    template_rows = artifact_rows_by_id.get("free-running-generation-template-rows", [])
+    if template_rows:
+        query_ids = [row.get("query_id", "") for row in template_rows]
+        if len(query_ids) != 1000 or len(query_ids) != len(set(query_ids)):
+            errors.append(f"{path}: free-running generation template must contain 1000 unique query ids")
+        for row in template_rows:
+            if not str(row.get("corpus_snapshot_sha256", "")).startswith("sha256:"):
+                errors.append(f"{path}: template corpus_snapshot_sha256 must be hash-bound")
+                break
+            if any(row.get(field, "") for field in ["generated_text", "citation_handle", "generator_id"]):
+                errors.append(f"{path}: source-controlled generation template must keep generated fields blank")
+                break
+
+    query_rows = artifact_rows_by_id.get("source-v53i-query-rows", [])
+    if query_rows:
+        query_ids = [row.get("query_id", "") for row in query_rows]
+        if len(query_ids) != 1000 or len(query_ids) != len(set(query_ids)):
+            errors.append(f"{path}: source-v53i-query-rows must contain 1000 unique query ids")
+
+    validation_rows = artifact_rows_by_id.get("generation-validation-rows", [])
+    if validation_rows:
+        for row in validation_rows:
+            if row.get("status") not in {"pass", "blocked"}:
+                errors.append(f"{path}: generation-validation-rows status must be pass or blocked")
+
+    manifest = json_artifacts_by_id.get("manifest", {})
+    if manifest:
+        for field in [
+            "network_or_download_used",
+            "gpu_execution_used",
+            "checkpoint_downloaded",
+            "external_api_used",
+            "v1_0_comparison_ready",
+            "public_comparison_claim_ready",
+            "real_release_package_ready",
+        ]:
+            if str(manifest.get(field, "")) != "0":
+                errors.append(f"{path}: manifest.{field} must be 0")
+
+    sha_rows = artifact_rows_by_id.get("sha256-manifest", [])
+    if sha_rows:
+        artifact_root = sha_manifest_root
+        if artifact_root is None:
+            errors.append(f"{path}: sha256-manifest root could not be determined")
+            artifact_root = Path(".")
+        for row in sha_rows:
+            rel = row.get("path", "")
+            expected_sha = row.get("sha256", "")
+            expected_bytes = row.get("bytes", "")
+            if not rel or not expected_sha or not expected_bytes:
+                errors.append(f"{path}: sha256-manifest rows require path, sha256, and bytes")
+                continue
+            artifact_path = artifact_root / rel
+            if not artifact_path.is_file():
+                errors.append(f"{path}: sha256-manifest references missing artifact {rel}")
+                continue
+            if sha256(artifact_path) != expected_sha:
+                errors.append(f"{path}: sha256-manifest hash mismatch for {rel}")
+            if str(artifact_path.stat().st_size) != expected_bytes:
+                errors.append(f"{path}: sha256-manifest byte size mismatch for {rel}")
 
     if summary_path is not None:
         summary = read_first_csv(summary_path)
-        expected_summary = {
+        always_expected = {
             "v54f_free_running_generation_evidence_intake_ready": "1",
-            "generation_evidence_dir_supplied": "0",
-            "supplied_generation_evidence_ready": "0",
-            "real_model_generation_ready": "0",
-            "generation_rows": "0",
             "expected_generation_rows": "1000",
-            "free_running_decode_rows": "0",
-            "teacher_forcing_used_rows": "0",
-            "raw_prompt_context_bytes": "0",
-            "retrieved_text_in_prompt_rows": "0",
-            "source_locator_leakage_rows": "0",
-            "external_label_source_ready": "0",
-            "heldout_metric_ready": "0",
-            "thresholds_declared_ready": "0",
-            "raw_output_hash_bound_rate": "0.000000",
             "fixture_rows_in_measured_registry": "0",
             "network_or_download_used": "0",
             "gpu_execution_used": "0",
@@ -4629,11 +4700,84 @@ def verify_v54_free_running_generation_intake(
             "v1_0_comparison_ready": "0",
             "public_comparison_claim_ready": "0",
             "real_release_package_ready": "0",
-            "blocking_reason": "generation-evidence-dir-missing",
         }
-        for field, expected in expected_summary.items():
+        for field, expected in always_expected.items():
             if summary.get(field) != expected:
                 errors.append(f"{summary_path}: {field} expected {expected}, got {summary.get(field)}")
+        real_ready = summary.get("real_model_generation_ready") == "1"
+        evidence_ready = summary.get("supplied_generation_evidence_ready") == "1"
+        core_ready = (
+            evidence_ready
+            and summary.get("generation_rows") == "1000"
+            and summary.get("free_running_decode_rows") == "1000"
+            and summary.get("teacher_forcing_used_rows") == "0"
+            and summary.get("raw_prompt_context_bytes") == "0"
+            and summary.get("retrieved_text_in_prompt_rows") == "0"
+            and summary.get("source_locator_leakage_rows") == "0"
+            and summary.get("external_label_source_ready") == "1"
+            and summary.get("heldout_metric_ready") == "1"
+            and summary.get("thresholds_declared_ready") == "1"
+            and summary.get("raw_output_hash_bound_rate") == "1.000000"
+        )
+        if real_ready != core_ready:
+            errors.append(f"{summary_path}: real_model_generation_ready must match accepted 1000-row evidence gates")
+        default_missing = summary.get("generation_evidence_dir_supplied") == "0"
+        if default_missing:
+            default_expected = {
+                "supplied_generation_evidence_ready": "0",
+                "real_model_generation_ready": "0",
+                "generation_rows": "0",
+                "free_running_decode_rows": "0",
+                "teacher_forcing_used_rows": "0",
+                "raw_prompt_context_bytes": "0",
+                "retrieved_text_in_prompt_rows": "0",
+                "source_locator_leakage_rows": "0",
+                "external_label_source_ready": "0",
+                "heldout_metric_ready": "0",
+                "thresholds_declared_ready": "0",
+                "raw_output_hash_bound_rate": "0.000000",
+                "blocking_reason": "generation-evidence-dir-missing",
+            }
+            for field, expected in default_expected.items():
+                if summary.get(field) != expected:
+                    errors.append(f"{summary_path}: default {field} expected {expected}, got {summary.get(field)}")
+        spoof_markers = (
+            summary.get("generation_evidence_dir_supplied") == "1"
+            and summary.get("generation_rows") == "1"
+            and summary.get("teacher_forcing_used_rows") == "1"
+            and summary.get("raw_prompt_context_bytes") == "128"
+            and summary.get("source_locator_leakage_rows") == "1"
+        )
+        if spoof_markers:
+            for field in [
+                "supplied_generation_evidence_ready",
+                "real_model_generation_ready",
+                "external_label_source_ready",
+                "heldout_metric_ready",
+                "public_comparison_claim_ready",
+                "real_release_package_ready",
+            ]:
+                if summary.get(field) != "0":
+                    errors.append(f"{summary_path}: spoofed generation evidence must keep {field}=0")
+    if decision_path is not None:
+        decision_rows = read_csv_rows(decision_path)
+        decisions = {row.get("gate", ""): row.get("status", "") for row in decision_rows}
+        if decisions.get("v53i-frozen-query-input") != "pass":
+            errors.append(f"{decision_path}: v53i-frozen-query-input must pass")
+        for gate in ["public-comparison-claim", "real-release-package"]:
+            if decisions.get(gate) != "blocked":
+                errors.append(f"{decision_path}: {gate} must remain blocked")
+        if summary_path is not None:
+            summary = read_first_csv(summary_path)
+            expected_status = "pass" if summary.get("generation_evidence_dir_supplied") == "1" else "blocked"
+            if decisions.get("generation-evidence-dir") != expected_status:
+                errors.append(f"{decision_path}: generation-evidence-dir expected {expected_status}, got {decisions.get('generation-evidence-dir')}")
+            expected_status = "pass" if summary.get("supplied_generation_evidence_ready") == "1" else "blocked"
+            if decisions.get("free-running-generation-evidence") != expected_status:
+                errors.append(f"{decision_path}: free-running-generation-evidence expected {expected_status}, got {decisions.get('free-running-generation-evidence')}")
+            expected_status = "pass" if summary.get("real_model_generation_ready") == "1" else "blocked"
+            if decisions.get("real-model-generation") != expected_status:
+                errors.append(f"{decision_path}: real-model-generation expected {expected_status}, got {decisions.get('real-model-generation')}")
     return errors
 
 
@@ -5430,6 +5574,7 @@ def main() -> int:
     p_v54f = sub.add_parser("v54-generation-intake")
     p_v54f.add_argument("paths", nargs="+", type=Path)
     p_v54f.add_argument("--summary", type=Path, default=None)
+    p_v54f.add_argument("--decision", type=Path, default=None)
     p_v58 = sub.add_parser("v58-blind-eval")
     p_v58.add_argument("paths", nargs="+", type=Path)
     p_v58.add_argument("--readiness-ledger", type=Path, default=None)
@@ -5509,8 +5654,10 @@ def main() -> int:
         for path in args.paths:
             errors.extend(verify_v54_free_running_decoder_contract(path, args.summary, args.decision))
     elif args.cmd == "v54-generation-intake":
+        if args.decision is not None and args.summary is None:
+            errors.append("v54-generation-intake: --decision requires --summary")
         for path in args.paths:
-            errors.extend(verify_v54_free_running_generation_intake(path, args.summary))
+            errors.extend(verify_v54_free_running_generation_intake(path, args.summary, args.decision))
     elif args.cmd == "v58-blind-eval":
         for path in args.paths:
             errors.extend(verify_v58_blind_eval(path, args.readiness_ledger, args.artifact_ledger, args.template_ledger))

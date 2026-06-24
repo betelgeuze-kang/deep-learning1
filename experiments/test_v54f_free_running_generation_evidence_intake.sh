@@ -11,7 +11,15 @@ SPOOF_DIR="$RESULTS_DIR/v54f_spoofed_generation_evidence"
 "$ROOT_DIR/experiments/run_v54f_free_running_generation_evidence_intake.sh" >/dev/null
 "$ROOT_DIR/tools/verify_artifact.py" v54-generation-intake \
   "$ROOT_DIR/v54/free_running_generation_evidence_intake_contract.json" \
-  --summary "$SUMMARY_CSV" >/dev/null
+  --summary "$SUMMARY_CSV" \
+  --decision "$DECISION_CSV" >/dev/null
+
+if "$ROOT_DIR/tools/verify_artifact.py" v54-generation-intake \
+  "$ROOT_DIR/v54/free_running_generation_evidence_intake_contract.json" \
+  --decision "$DECISION_CSV" >/dev/null 2>&1; then
+  echo "v54f verifier accepted decision evidence without summary evidence" >&2
+  exit 1
+fi
 
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
@@ -179,6 +187,11 @@ PY
 
 V54F_FREE_RUNNING_GENERATION_EVIDENCE_DIR="$SPOOF_DIR" "$ROOT_DIR/experiments/run_v54f_free_running_generation_evidence_intake.sh" >/dev/null
 
+"$ROOT_DIR/tools/verify_artifact.py" v54-generation-intake \
+  "$ROOT_DIR/v54/free_running_generation_evidence_intake_contract.json" \
+  --summary "$SUMMARY_CSV" \
+  --decision "$DECISION_CSV" >/dev/null
+
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import sys
@@ -230,6 +243,7 @@ PY
 "$ROOT_DIR/experiments/run_v54f_free_running_generation_evidence_intake.sh" >/dev/null
 "$ROOT_DIR/tools/verify_artifact.py" v54-generation-intake \
   "$ROOT_DIR/v54/free_running_generation_evidence_intake_contract.json" \
-  --summary "$SUMMARY_CSV" >/dev/null
+  --summary "$SUMMARY_CSV" \
+  --decision "$DECISION_CSV" >/dev/null
 
 echo "v54f free-running generation evidence intake smoke passed"

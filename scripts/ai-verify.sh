@@ -326,9 +326,16 @@ if [ -x tools/verify_artifact.py ]; then
     fi
   fi
   if [ -f v54/free_running_generation_evidence_intake_contract.json ]; then
-    if [ -f results/v54f_free_running_generation_evidence_intake_summary.csv ]; then
+    v54f_summary="results/v54f_free_running_generation_evidence_intake_summary.csv"
+    v54f_decision="results/v54f_free_running_generation_evidence_intake_decision.csv"
+    if [ -f "$v54f_summary" ] || [ -f "$v54f_decision" ]; then
+      if [ ! -f "$v54f_summary" ] || [ ! -f "$v54f_decision" ]; then
+        echo "v54f generation intake has partial summary/decision artifacts" >&2
+        exit 1
+      fi
       tools/verify_artifact.py v54-generation-intake v54/free_running_generation_evidence_intake_contract.json \
-        --summary results/v54f_free_running_generation_evidence_intake_summary.csv >/dev/null
+        --summary "$v54f_summary" \
+        --decision "$v54f_decision" >/dev/null
     else
       tools/verify_artifact.py v54-generation-intake v54/free_running_generation_evidence_intake_contract.json >/dev/null
     fi
