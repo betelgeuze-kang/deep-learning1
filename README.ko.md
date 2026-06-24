@@ -6,6 +6,16 @@
 
 **아티팩트 경계:** 이 패키지는 휴먼 리뷰를 거친 릴리스가 아니라, 자동 검증 가능한 연구 아티팩트입니다.
 
+## Readiness 상태
+
+중앙 readiness는 스코프별로 [`readiness/typed_ready.json`](readiness/typed_ready.json)에 기록되며, `./scripts/ai-verify.sh`의 `tools/verify_artifact.py typed-readiness`로 강제됩니다. 주장 가능한 것은 typed 플래그뿐이며, 단순 `vXX_ready` 표현은 금지됩니다.
+
+- 휴먼 리더블 미러 및 전체 스코프 표: [`docs/STATUS.md`](docs/STATUS.md)
+- `v53`과 `v54`는 별도 스코프로 분리되어 추적됩니다:
+  - `v53-benchmark-foundation`: `contract_ready` + `fixture_execution_ready` (`benchmarks/v53_source_bound_freeze.json` 미러).
+  - `v54-free-running-generation`: `contract_ready`만 충족. `v54/free_running_generation_evidence_intake_contract.json`이 필수 산출물 7개 중 0개만 존재한다고 보고하므로 `fixture_execution_ready`는 `false`로 유지됩니다.
+- 모든 스코프에서 real-model execution, heldout metric, human review, independent reproduction, release는 여전히 blocked입니다.
+
 ## v1.0 Architecture Challenge 로드맵
 
 다음 공개 타이밍은 v0.3의 넓은 공개 주장이 아니라 v1.0 Architecture Challenge입니다. 목표는 RouteMemory + RouteHint를 30B-150B급 LLM+RAG baseline과 code/doc QA, grounded generation, scaling, one-command reproducibility에서 정면 비교하는 것입니다.

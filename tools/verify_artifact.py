@@ -604,6 +604,7 @@ TYPED_READINESS_KEYS = {
 AMBIGUOUS_READY_FLAGS = {
     "100b_moe_run_ready",
     "v53_ready",
+    "v54_ready",
     "v58_ready",
     "v59_ready",
     "v60_ready",
@@ -614,7 +615,8 @@ AMBIGUOUS_READY_FLAGS = {
 }
 EXPECTED_TYPED_READINESS_ORDER = [
     "pm_foundation_contract_fixture_ready",
-    "v53_v54_query_eval_contract_ready",
+    "v53_benchmark_foundation_contract_ready",
+    "v54_free_running_generation_contract_ready",
     "v58_blind_eval_protocol_contract_ready",
     "h10_real_label_contract_ready",
     "logical_100b_contract_fixture_ready",
@@ -637,10 +639,22 @@ EXPECTED_TYPED_READINESS_CONTRACTS = {
         "independent_reproduction_ready": False,
         "release_ready": False,
     },
-    "v53_v54_query_eval_contract_ready": {
-        "scope_id": "v53-v54-query-evaluation-pipeline",
+    "v53_benchmark_foundation_contract_ready": {
+        "scope_id": "v53-benchmark-foundation",
         "misleading_ready_flag": "v53_ready",
-        "evidence_path": "results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_roadmap_requirement_rows.csv",
+        "evidence_path": "benchmarks/v53_source_bound_freeze.json",
+        "contract_ready": True,
+        "fixture_execution_ready": True,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "v54_free_running_generation_contract_ready": {
+        "scope_id": "v54-free-running-generation",
+        "misleading_ready_flag": "v54_ready",
+        "evidence_path": "v54/free_running_generation_evidence_intake_contract.json",
         "contract_ready": True,
         "fixture_execution_ready": False,
         "real_model_execution_ready": False,

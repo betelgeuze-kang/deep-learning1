@@ -43,14 +43,15 @@
               "pr2_ready",
               "review_return_ready",
               "v53_ready",
+              "v54_ready",
               "v58_ready",
               "v59_ready",
               "v60_ready",
               "v61i_100b_moe_active_sparse_run_ready"
             ]
           },
-          "minItems": 9,
-          "maxItems": 9,
+          "minItems": 10,
+          "maxItems": 10,
           "uniqueItems": true
         }
       },
@@ -58,8 +59,8 @@
     },
     "rows": {
       "type": "array",
-      "minItems": 10,
-      "maxItems": 10,
+      "minItems": 11,
+      "maxItems": 11,
       "items": {
         "type": "object",
         "required": [
@@ -82,7 +83,8 @@
             "type": "string",
             "enum": [
               "pm-foundation-bundle",
-              "v53-v54-query-evaluation-pipeline",
+              "v53-benchmark-foundation",
+              "v54-free-running-generation",
               "v58-blind-eval",
               "h10-scorer-real-label-promotion",
               "v61-ssd-moe-runtime",
@@ -108,6 +110,7 @@
               "pr2_ready",
               "review_return_ready",
               "v53_ready",
+              "v54_ready",
               "v58_ready",
               "v59_ready",
               "v60_ready",
@@ -118,7 +121,8 @@
             "type": "string",
             "enum": [
               "pm_foundation_contract_fixture_ready",
-              "v53_v54_query_eval_contract_ready",
+              "v53_benchmark_foundation_contract_ready",
+              "v54_free_running_generation_contract_ready",
               "v58_blind_eval_protocol_contract_ready",
               "h10_real_label_contract_ready",
               "logical_100b_contract_fixture_ready",
