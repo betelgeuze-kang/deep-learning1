@@ -1,0 +1,73 @@
+name: Readiness transition
+description: Propose advancing a typed readiness flag for a scope.
+title: "[readiness] <scope>: <from> -> <to>"
+labels: ["readiness"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this to propose flipping a typed readiness flag in
+        `readiness/typed_ready.json`. The transition must be backed by passing
+        contract evidence and verified by `tools/verify_artifact.py`.
+  - type: input
+    id: scope
+    attributes:
+      label: Readiness scope
+      description: scope_id from readiness/typed_ready.json.
+      placeholder: v54-free-running-generation
+    validations:
+      required: true
+  - type: dropdown
+    id: from-flag
+    attributes:
+      label: Current flag (highest true)
+      options:
+        - (none)
+        - contract_ready
+        - fixture_execution_ready
+        - real_model_execution_ready
+        - heldout_metric_ready
+        - human_review_ready
+        - independent_reproduction_ready
+        - release_ready
+    validations:
+      required: true
+  - type: dropdown
+    id: to-flag
+    attributes:
+      label: Target flag to advance to
+      options:
+        - contract_ready
+        - fixture_execution_ready
+        - real_model_execution_ready
+        - heldout_metric_ready
+        - human_review_ready
+        - independent_reproduction_ready
+        - release_ready
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence supporting the transition
+      description: Contract/summary artifacts and what they report.
+    validations:
+      required: true
+  - type: input
+    id: verification-command
+    attributes:
+      label: Verification command
+      placeholder: tools/verify_artifact.py typed-readiness readiness/typed_ready.json
+    validations:
+      required: true
+  - type: checkboxes
+    id: guards
+    attributes:
+      label: Guards
+      options:
+        - label: No fixture/simulated/replayed result is being promoted as real evidence
+          required: true
+        - label: Central readiness, docs/STATUS.md, README.md and README.ko.md will be synchronized in the PR
+          required: true
+        - label: tools/verify_artifact.py and schemas/typed_readiness.schema.json updated in lockstep if row structure changes
+          required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Readiness status (typed_ready.json mirror)
+    url: https://github.com/betelgeuze-kang/deep-learning1/blob/main/docs/STATUS.md
+    about: Read the current per-scope typed readiness status before filing.
+  - name: Contributing guide
+    url: https://github.com/betelgeuze-kang/deep-learning1/blob/main/CONTRIBUTING.md
+    about: Evidence boundary, verification, and PR workflow expectations.

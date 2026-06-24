@@ -1,0 +1,18 @@
+# Default owner for everything.
+*                                   @betelgeuze-kang
+
+# Readiness contract surface: changes here must keep central readiness,
+# the verifier, the schema, and the docs mirror in lockstep.
+/readiness/                         @betelgeuze-kang
+/schemas/typed_readiness.schema.json @betelgeuze-kang
+/tools/verify_artifact.py           @betelgeuze-kang
+/tools/verify_ci_workflows.py       @betelgeuze-kang
+/docs/STATUS.md                     @betelgeuze-kang
+
+# CI / workflow security surface.
+/.github/workflows/                 @betelgeuze-kang
+
+# Evidence contracts.
+/benchmarks/                        @betelgeuze-kang
+/baselines/                         @betelgeuze-kang
+/v54/                               @betelgeuze-kang
