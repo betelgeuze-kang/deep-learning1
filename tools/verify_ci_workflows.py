@@ -62,6 +62,7 @@ def verify_ai_verify_workflow(root: Path, errors: list[str]) -> None:
         "scripts/test_v54_reference_models.py",
         "scripts/test_de_execution_packet.py",
         "scripts/test_v58_blind_eval_packet.py",
+        "scripts/test_v54_reference_training.py",
         "cmake --build build",
     ]:
         require(text, snippet, str(path), errors)

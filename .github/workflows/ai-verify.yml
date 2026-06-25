@@ -81,6 +81,9 @@ jobs:
           if [ -f scripts/test_v58_blind_eval_packet.py ]; then
             python3 scripts/test_v58_blind_eval_packet.py
           fi
+          if [ -f scripts/test_v54_reference_training.py ]; then
+            python3 scripts/test_v54_reference_training.py
+          fi
 
       - name: C++ CPU build smoke
         run: |
