@@ -19,8 +19,60 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Untrusted pull-request code is verified only on an ephemeral GitHub-hosted
+  # runner with a credential-free checkout. It never touches the persistent
+  # self-hosted runner. This is intended to be the required status check on PRs.
+  pr-safe-verify:
+    name: pr-safe-verify
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (no persisted credentials)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+
+      - name: Toolchain preflight
+        run: |
+          set -euo pipefail
+          bash --version
+          python3 --version
+          git --version
+
+      - name: Clean-room static verification
+        run: |
+          set -euo pipefail
+          # Evidence-independent checks that are safe on an ephemeral runner.
+          # The full ./scripts/ai-verify.sh evidence suite depends on generated
+          # results/ artifacts that exist only on the self-hosted runner, so it
+          # runs in the ai-verify job below on trusted (non-PR) events.
+          bash -n scripts/ai-verify.sh
+          if [ -x tools/verify_ci_workflows.py ]; then
+            tools/verify_ci_workflows.py .
+          fi
+          if [ -f schemas/typed_readiness.schema.json ]; then
+            python3 -m json.tool schemas/typed_readiness.schema.json >/dev/null
+          fi
+          if [ -f readiness/typed_ready.json ]; then
+            python3 -m json.tool readiness/typed_ready.json >/dev/null
+            tools/verify_artifact.py typed-readiness readiness/typed_ready.json
+          fi
+          if [ -f pr_slices/pr2.json ]; then
+            python3 -m json.tool pr_slices/pr2.json >/dev/null
+            tools/verify_artifact.py pr-split pr_slices/pr2.json
+          fi
+
+  # Full evidence verification runs only on trusted (non-PR) events on the
+  # persistent self-hosted runner, which carries the generated results/
+  # artifacts that ./scripts/ai-verify.sh checks.
   ai-verify:
     name: ai-verify.sh
+    if: github.event_name != 'pull_request'
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 30
     steps:
