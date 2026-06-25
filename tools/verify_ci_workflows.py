@@ -57,6 +57,12 @@ def verify_ai_verify_workflow(root: Path, errors: list[str]) -> None:
         "fetch-depth: 1",
         "clean: true",
         "if: github.event_name != 'pull_request'",
+        # pr-safe-verify must run the new Python reference smokes and a C++ CPU
+        # build smoke on the ephemeral runner.
+        "scripts/test_v54_reference_models.py",
+        "scripts/test_de_execution_packet.py",
+        "scripts/test_v58_blind_eval_packet.py",
+        "cmake --build build",
     ]:
         require(text, snippet, str(path), errors)
 
