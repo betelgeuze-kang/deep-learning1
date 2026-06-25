@@ -21,6 +21,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -45,7 +46,37 @@ source_root.mkdir(parents=True)
 evidence_dir.mkdir(parents=True)
 
 def run(cmd, cwd=None):
-    return subprocess.run(cmd, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    result = subprocess.run(cmd, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        cwd_text = str(cwd) if cwd is not None else os.getcwd()
+        command_text = " ".join(cmd)
+        stderr = result.stderr.strip() or "<empty stderr>"
+        stdout = result.stdout.strip() or "<empty stdout>"
+        raise SystemExit(
+            f"command failed: {command_text}\n"
+            f"cwd: {cwd_text}\n"
+            f"exit_code: {result.returncode}\n"
+            f"stdout:\n{stdout}\n"
+            f"stderr:\n{stderr}"
+        )
+    return result
+
+def run_retry(cmd, cwd=None, attempts=1, delay_seconds=1):
+    last_error = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return run(cmd, cwd=cwd)
+        except SystemExit as exc:
+            last_error = exc
+            if attempt >= attempts:
+                break
+            print(
+                f"retrying command after failure "
+                f"attempt={attempt}/{attempts}: {' '.join(cmd)}",
+                file=sys.stderr,
+            )
+            time.sleep(delay_seconds)
+    raise last_error
 
 def sha256(path):
     h = hashlib.sha256()
@@ -109,7 +140,12 @@ def read_readme_h1(repo_dir):
 
 def clone_repo(repo):
     dest = source_root / repo["repo_id"]
-    run(["git", "clone", "--depth", "1", repo["url"], str(dest)])
+    clone_attempts = int(os.environ.get("V50_GIT_CLONE_ATTEMPTS", "3"))
+    run_retry(
+        ["git", "clone", "--depth", "1", repo["url"], str(dest)],
+        attempts=max(1, clone_attempts),
+        delay_seconds=2,
+    )
     head = run(["git", "rev-parse", "HEAD"], cwd=dest).stdout.strip()
     repo["path"] = dest
     repo["head_sha"] = head
@@ -423,8 +459,12 @@ write_json(return_dir / "resource_envelope.json", resource_envelope)
 write_json(return_dir / "privacy_review.json", privacy_review)
 write_csv(return_dir / "acceptance_review.csv", ["gate", "status", "reason"], acceptance_rows)
 
-run_env = os.environ.copy()
-run_env["V18_COMMERCIAL_POC_DIR"] = str(return_dir)
+# Scope the child-process environment to avoid forwarding unrelated or
+# sensitive variables (tokens, secrets) into the nested v18 intake handoff.
+run_env = {
+    "PATH": os.environ.get("PATH", ""),
+    "V18_COMMERCIAL_POC_DIR": str(return_dir),
+}
 subprocess.run([str(root / "experiments" / "run_v18_external_evidence_intake.sh")], cwd=root, env=run_env, stdout=subprocess.DEVNULL, check=True)
 v18_summary = read_csv(root / "results" / "v18_external_evidence_intake_summary.csv")[0]
 shutil.copy2(root / "results" / "v18_external_evidence_intake_summary.csv", evidence_dir / "v18_public_repo_auditor_summary.csv")

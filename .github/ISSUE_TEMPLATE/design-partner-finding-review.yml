@@ -1,0 +1,99 @@
+name: Design Partner Finding Review
+description: Human review of a single audit-my-repo finding (design-partner beta evidence).
+title: "[Audit Review] "
+labels:
+  - human-review
+  - design-partner
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One issue per finding. These human labels are the only path to raise
+        `design_partner_beta_candidate_ready`; manually editing code, dashboard,
+        or readiness fields is rejected by the verifier. Keep judgements bound to
+        the exact repository commit and the cited source span.
+  - type: input
+    id: repo_head
+    attributes:
+      label: Repository commit SHA
+      description: Full SHA of the audited HEAD (must be a clean, pinned commit).
+      placeholder: 0000000000000000000000000000000000000000
+    validations:
+      required: true
+  - type: input
+    id: finding_id
+    attributes:
+      label: Finding ID
+      description: The audit-my-repo finding identifier under review.
+    validations:
+      required: true
+  - type: dropdown
+    id: expected
+    attributes:
+      label: Finding validity
+      description: Is the reported issue actually present at the cited location?
+      options:
+        - present
+        - absent
+        - ambiguous
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0
+        - P1
+        - P2
+        - informational
+    validations:
+      required: true
+  - type: dropdown
+    id: citation_correct
+    attributes:
+      label: Citation correctness
+      description: Does the file/line/SHA citation resolve to the claimed source span?
+      options:
+        - correct
+        - incorrect
+        - partial
+        - not-applicable
+    validations:
+      required: true
+  - type: textarea
+    id: citation
+    attributes:
+      label: Expected source span
+      description: File path and line range (and snippet, if helpful) that the finding should point to.
+      placeholder: |
+        path/to/file.py:120-135
+        <optional snippet>
+    validations:
+      required: true
+  - type: dropdown
+    id: reviewer_independence
+    attributes:
+      label: Reviewer independence
+      description: Relationship of the reviewer to the audited repository.
+      options:
+        - external-maintainer
+        - external-contributor
+        - independent-third-party
+        - project-internal
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Reviewer notes / rationale
+      description: Optional justification, especially for "ambiguous" or "incorrect" judgements.
+  - type: checkboxes
+    id: guards
+    attributes:
+      label: Guards
+      options:
+        - label: This judgement is based on the cited commit SHA and source span, not on a fixture or cached copy.
+          required: true
+        - label: I am not asking to change code, dashboard, or readiness fields directly; this is label evidence only.
+          required: true
