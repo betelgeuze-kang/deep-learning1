@@ -1,8 +1,9 @@
-"""Deterministic smoke test for scripts/de_execution_packet.py.
+"""Deterministic smoke test for scripts/de_execution_packet.py (preflight v2).
 
 Generates a template, fills it with synthetic schema-test values (allowed only
-for schema testing, never as measured evidence), and checks that preflight
-passes on a valid packet and blocks an unsafe one.
+for schema testing, never as measured evidence), and checks the v2 preflight:
+exact header order, explicit external_api, parameter range, system/query
+uniqueness, cross-file consistency, v53 frozen-query binding, sha256 manifest.
 
 Run:  python3 scripts/test_de_execution_packet.py
 """
@@ -30,9 +31,12 @@ NUMERIC = {
     "latency_ns",
     "peak_memory_mb",
 }
+PARAM_BY_SYSTEM = {"D": "30", "E": "70"}
+SYSTEMS = ["D", "E"]
+ROWS_PER_SYSTEM = 2
 
 
-def fill_value(field: str) -> str:
+def base_value(field: str) -> str:
     if field == "external_api_used":
         return "0"
     if field == "non_fixture_declared":
@@ -44,19 +48,44 @@ def fill_value(field: str) -> str:
     return "x"
 
 
-def fill_csv(path: Path) -> None:
+def read_rows(path: Path) -> tuple[list[str], list[dict]]:
     with path.open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
-        header = list(reader.fieldnames or [])
-        rows = list(reader)
-    for row in rows:
-        for field in header:
-            if not (row.get(field) or "").strip():
-                row[field] = fill_value(field)
+        return list(reader.fieldnames or []), list(reader)
+
+
+def write_rows(path: Path, header: list[str], rows: list[dict]) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=header, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def fill_file(path: Path, mutate) -> None:
+    header, rows = read_rows(path)
+    for index, row in enumerate(rows):
+        for field in header:
+            if not (row.get(field) or "").strip():
+                row[field] = base_value(field)
+        mutate(index, row)
+    write_rows(path, header, rows)
+
+
+def fill_packet(packet: Path) -> None:
+    def mi(_i, row):
+        sid = row["system_id"]
+        row["model_id"] = f"model-{sid}"
+        row["parameter_count_b"] = PARAM_BY_SYSTEM[sid]
+
+    def ac(_i, row):
+        row["model_id"] = f"model-{row['system_id']}"
+
+    def re_(i, row):
+        row["model_id"] = f"model-{SYSTEMS[i // ROWS_PER_SYSTEM]}"
+
+    fill_file(packet / "model_identity.csv", mi)
+    fill_file(packet / "answer_citation_raw_output.csv", ac)
+    fill_file(packet / "resource_evaluator_manifest.csv", re_)
 
 
 def run_tool(*args: str) -> int:
@@ -69,44 +98,102 @@ def run_tool(*args: str) -> int:
     ).returncode
 
 
+def template(packet: Path) -> None:
+    assert run_tool(
+        "template", "--out", str(packet), "--systems", ",".join(SYSTEMS),
+        "--rows-per-system", str(ROWS_PER_SYSTEM),
+    ) == 0
+
+
+def preflight(packet: Path, *extra: str) -> int:
+    return run_tool(
+        "preflight", "--packet", str(packet), "--systems", ",".join(SYSTEMS),
+        "--rows-per-system", str(ROWS_PER_SYSTEM), *extra,
+    )
+
+
+def fresh(tmp: Path, name: str) -> Path:
+    packet = tmp / name
+    template(packet)
+    fill_packet(packet)
+    return packet
+
+
 def main() -> int:
-    with tempfile.TemporaryDirectory() as tmp:
-        packet = Path(tmp) / "de_canary"
-        assert run_tool("template", "--out", str(packet), "--systems", "D,E", "--rows-per-system", "2") == 0
-        for name in ("model_identity.csv", "answer_citation_raw_output.csv", "resource_evaluator_manifest.csv"):
-            assert (packet / name).is_file(), name
-            fill_csv(packet / name)
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
 
-        # A fully and validly filled packet must pass preflight.
-        assert run_tool("preflight", "--packet", str(packet), "--systems", "D,E", "--rows-per-system", "2") == 0
-        print("preflight: valid filled packet PASS")
+        # 1. Valid filled packet passes.
+        packet = fresh(tmp, "valid")
+        assert preflight(packet) == 0
+        print("preflight: valid v2 packet PASS")
 
-        # An external API call must be blocked.
+        # 2. sha256 manifest: generate, then --require-manifest passes.
+        assert run_tool("manifest", "--packet", str(packet)) == 0
+        assert (packet / "sha256_manifest.csv").is_file()
+        assert preflight(packet, "--require-manifest") == 0
+        # Tamper a file -> manifest sha mismatch blocks.
         ans = packet / "answer_citation_raw_output.csv"
-        _flip_field(ans, "external_api_used", "1")
-        assert run_tool("preflight", "--packet", str(packet), "--systems", "D,E", "--rows-per-system", "2") == 1
-        print("preflight: external_api_used=1 BLOCKED")
+        ans.write_text(ans.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        assert preflight(packet, "--require-manifest") == 1
+        print("manifest: generate + verify + tamper-detect OK")
 
-        # Restore, then break row count expectation.
-        _flip_field(ans, "external_api_used", "0")
-        assert run_tool("preflight", "--packet", str(packet), "--systems", "D,E", "--rows-per-system", "99") == 1
-        print("preflight: wrong row count BLOCKED")
+        # 3. Empty external_api blocked (v2: must be explicit).
+        p = fresh(tmp, "empty_api")
+        _set_first(p / "answer_citation_raw_output.csv", "external_api_used", "")
+        assert preflight(p) == 1
+        print("preflight: empty external_api BLOCKED")
 
-    print("de execution packet smoke OK (staging/preflight only; admits no evidence)")
+        # 4. external_api=1 blocked.
+        p = fresh(tmp, "api_on")
+        _set_first(p / "answer_citation_raw_output.csv", "external_api_used", "1")
+        assert preflight(p) == 1
+        print("preflight: external_api=1 BLOCKED")
+
+        # 5. parameter_count_b out of range blocked (D must be 25-40).
+        p = fresh(tmp, "param_oor")
+        _set_first(p / "model_identity.csv", "parameter_count_b", "70")
+        assert preflight(p) == 1
+        print("preflight: parameter range BLOCKED")
+
+        # 6. Header reorder blocked (exact order required).
+        p = fresh(tmp, "reorder")
+        _swap_header(p / "resource_evaluator_manifest.csv")
+        assert preflight(p) == 1
+        print("preflight: header reorder BLOCKED")
+
+        # 7. Cross-file query inconsistency blocked.
+        p = fresh(tmp, "xfile")
+        _set_first(p / "resource_evaluator_manifest.csv", "query_id", "q9999")
+        assert preflight(p) == 1
+        print("preflight: cross-file query mismatch BLOCKED")
+
+        # 8. v53 frozen-query binding: matching set passes, mismatch blocks.
+        p = fresh(tmp, "v53bind")
+        good = tmp / "frozen_good.csv"
+        write_rows(good, ["query_id"], [{"query_id": "q0001"}, {"query_id": "q0002"}])
+        assert preflight(p, "--v53-query-manifest", str(good)) == 0
+        bad = tmp / "frozen_bad.csv"
+        write_rows(bad, ["query_id"], [{"query_id": "q0001"}, {"query_id": "q9999"}])
+        assert preflight(p, "--v53-query-manifest", str(bad)) == 1
+        print("preflight: v53 frozen-query binding OK")
+
+    print("de execution packet v2 smoke OK (staging/preflight only; admits no evidence)")
     return 0
 
 
-def _flip_field(path: Path, field: str, value: str) -> None:
-    with path.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        header = list(reader.fieldnames or [])
-        rows = list(reader)
+def _set_first(path: Path, field: str, value: str) -> None:
+    header, rows = read_rows(path)
     if rows:
         rows[0][field] = value
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=header, lineterminator="\n")
-        writer.writeheader()
-        writer.writerows(rows)
+    write_rows(path, header, rows)
+
+
+def _swap_header(path: Path) -> None:
+    header, rows = read_rows(path)
+    if len(header) >= 2:
+        header[0], header[1] = header[1], header[0]
+    write_rows(path, header, rows)
 
 
 if __name__ == "__main__":
