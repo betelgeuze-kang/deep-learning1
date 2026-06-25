@@ -1,0 +1,70 @@
+name: Evidence blocker
+description: Track a blocker that must be closed before a readiness flag can advance.
+title: "[blocker] <scope>: <short description>"
+labels: ["blocker", "evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for a concrete evidence gap that blocks a readiness transition.
+        Keep claims within the evidence boundary: a fixture, simulated, replayed,
+        or mocked result is **not** real evidence.
+  - type: input
+    id: scope
+    attributes:
+      label: Readiness scope
+      description: scope_id from readiness/typed_ready.json (e.g. v54-free-running-generation).
+      placeholder: v54-free-running-generation
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0
+        - P1
+        - P2
+    validations:
+      required: true
+  - type: textarea
+    id: blocked-claim
+    attributes:
+      label: Blocked claim
+      description: What wording / capability is blocked until this is closed?
+      placeholder: "Blocked: real free-running 1000-row generation; allowed: contract-only."
+    validations:
+      required: true
+  - type: textarea
+    id: required-evidence
+    attributes:
+      label: Required evidence
+      description: Exact artifacts/contracts that must pass to close this blocker.
+      placeholder: |
+        - v54/free_running_generation_evidence_intake_contract.json reports 7/7 required artifacts present
+        - results/v54f_.../*.csv generated and hash-bound
+    validations:
+      required: true
+  - type: input
+    id: contract-path
+    attributes:
+      label: Contract / evidence path
+      placeholder: v54/free_running_generation_evidence_intake_contract.json
+    validations:
+      required: true
+  - type: input
+    id: verification-command
+    attributes:
+      label: Verification command
+      placeholder: tools/verify_artifact.py v54-... <path>
+    validations:
+      required: true
+  - type: checkboxes
+    id: guards
+    attributes:
+      label: Guards
+      options:
+        - label: This blocker does not request promoting fixture/simulated output as real evidence
+          required: true
+        - label: Closing this will keep evaluator-only / oracle fields hidden from selection
+          required: true
