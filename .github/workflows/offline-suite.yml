@@ -6,6 +6,9 @@ name: Offline evidence suite
 # which stay on the ai-verify self-hosted job.
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
