@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """v58 blind evaluation staging helper: blinding, reviewer assignment, kappa.
 
-Three return-side staging utilities for the v58 real blind evaluation:
+Four return-side staging utilities for the v58 real blind evaluation:
 
-    blind-map         assign blind_system_id / blind_response_id and emit a
-                      blank blind-response template, plus a SECRET unblinding
-                      key kept in a separate file.
-    reviewer-registry build/validate a reviewer pool registry and assign two
+    blind-map         derive HMAC blind_system_id / blind_response_id from a
+                      per-eval secret, emit a PUBLIC blind-response template
+                      (no source identity) and SECRET key files kept separate.
+    reviewer-registry validate reviewer-pool registry integrity and assign two
                       independent reviewers from distinct pools per response.
+    completeness      verify assignment/review binding, fail closed unless every
+                      response has its two assigned reviews, and validate that
+                      review values are in the allowed vocabulary.
     kappa             compute Cohen's kappa per review metric from filled human
                       review rows and list disagreements needing adjudication.
 
@@ -25,8 +28,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import hmac
 import json
-import random
+import secrets
 import sys
 from pathlib import Path
 
@@ -39,6 +44,21 @@ KAPPA_METRICS = [
     "unsupported_abstention_correctness",
     "review_decision",
 ]
+BOOL_TRUE = {"1", "true", "yes"}
+BOOL_FALSE = {"0", "false", "no"}
+ALLOWED_REVIEW_VALUES = {
+    "answer_correctness": {"correct", "incorrect", "partial", "not_applicable"},
+    "citation_correctness": {"correct", "incorrect", "partial", "not_applicable"},
+    "abstain_correctness": {"correct", "incorrect", "not_applicable"},
+    "source_span_exactness": {"exact", "partial", "wrong", "not_applicable"},
+    "unsupported_abstention_correctness": {"correct", "incorrect", "not_applicable"},
+    "review_decision": {"accept", "reject", "revise"},
+}
+
+
+def _hmac_id(secret: str, message: str, hex_len: int) -> str:
+    digest = hmac.new(secret.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest()
+    return digest[:hex_len]
 
 
 def load_contract(path: Path) -> dict:
@@ -80,42 +100,73 @@ def cmd_blind_map(args: argparse.Namespace) -> int:
     out.mkdir(parents=True, exist_ok=True)
     blind_eval_id = args.blind_eval_id
 
-    # Deterministic blinding: source system -> opaque blind id.
-    rng = random.Random(args.seed)
-    blind_labels = [f"S{index:02d}" for index in range(1, len(systems) + 1)]
-    rng.shuffle(blind_labels)
-    mapping = dict(zip(systems, blind_labels))
+    # Per-eval HMAC secret. Blind ids are unguessable without it; only the
+    # holder of the secret (via the secret key file) can unblind.
+    secret = args.secret or secrets.token_hex(32)
+    mapping = {source: "s" + _hmac_id(secret, f"system|{blind_eval_id}|{source}", 12) for source in systems}
+    if len(set(mapping.values())) != len(systems):
+        raise SystemExit("HMAC blind-system-id collision; choose a different secret/blind_eval_id")
 
-    # SECRET unblinding key (do not share with reviewers until adjudication).
+    # SECRET artifacts (do NOT share with reviewers until adjudication finishes).
     write_csv(
-        out / "UNBLINDING_KEY.csv",
+        out / "SECRET_unblinding_key.csv",
         ["source_system_id", "blind_system_id", "blind_eval_id"],
         [
             {"source_system_id": s, "blind_system_id": mapping[s], "blind_eval_id": blind_eval_id}
             for s in systems
         ],
     )
+    (out / "SECRET_hmac_key.txt").write_text(secret + "\n", encoding="utf-8")
 
-    # Blank blind-response template (response_text filled by the executor).
+    # PUBLIC blind-response template: blind ids only, no source identity.
     rows: list[dict] = []
-    running = 0
     for source_system in systems:
         blind_system_id = mapping[source_system]
         for query_index in range(1, args.queries_per_system + 1):
-            running += 1
+            query_token = f"q{query_index:06d}"
             row = {col: "" for col in response_columns}
-            row["blind_response_id"] = f"{blind_eval_id}-r{running:06d}"
+            row["blind_response_id"] = "r" + _hmac_id(
+                secret, f"response|{blind_eval_id}|{source_system}|{query_token}", 16
+            )
             if "blind_eval_id" in row:
                 row["blind_eval_id"] = blind_eval_id
             row["blind_system_id"] = blind_system_id
+            if "query_id" in row:
+                row["query_id"] = query_token
             rows.append(row)
-    write_csv(out / "blind_response_template.csv", response_columns, rows)
+
+    # Fail closed if any source identity leaked into the public rows.
+    leaks = _source_leaks(rows, systems, mapping)
+    if leaks:
+        raise SystemExit(f"source identity leaked into public blind rows: {sorted(leaks)}")
+    if "source_system_id" in response_columns:
+        raise SystemExit("public blind-response columns must not include source_system_id")
+    if len({row["blind_response_id"] for row in rows}) != len(rows):
+        raise SystemExit("HMAC blind-response-id collision; choose a different secret/blind_eval_id")
+
+    write_csv(out / "public_blind_response_template.csv", response_columns, rows)
 
     print(
-        f"wrote blind map to {out}: {len(systems)} systems blinded, "
-        f"{len(rows)} blind responses (UNBLINDING_KEY.csv is secret)"
+        f"wrote HMAC blind map to {out}: {len(systems)} systems, {len(rows)} blind responses. "
+        f"SECRET_unblinding_key.csv + SECRET_hmac_key.txt are secret; "
+        f"public_blind_response_template.csv carries no source identity."
     )
     return 0
+
+
+def _source_leaks(rows: list[dict], systems: list[str], mapping: dict[str, str]) -> set[str]:
+    """Return source system ids that appear verbatim in any public cell."""
+    blind_values = set(mapping.values())
+    leaks: set[str] = set()
+    source_tokens = {s for s in systems if s not in blind_values}
+    for row in rows:
+        for value in row.values():
+            text = str(value)
+            for source in source_tokens:
+                # whole-token match to avoid false hits inside hashes
+                if source and (text == source or f"|{source}|" in f"|{text}|"):
+                    leaks.add(source)
+    return leaks
 
 
 # --------------------------------------------------------------------------- #
@@ -125,15 +176,42 @@ REGISTRY_COLUMNS = ["reviewer_id", "reviewer_pool_id", "reviewer_independent", "
 ASSIGNMENT_COLUMNS = ["blind_response_id", "reviewer_id", "reviewer_pool_id"]
 
 
+def _validate_registry(reviewers: list[dict], errors: list[str]) -> list[dict]:
+    """Integrity + allowed-value validation; returns assignment-eligible reviewers."""
+    seen_ids: set[str] = set()
+    eligible: list[dict] = []
+    for index, reviewer in enumerate(reviewers, start=1):
+        rid = (reviewer.get("reviewer_id") or "").strip()
+        pool = (reviewer.get("reviewer_pool_id") or "").strip()
+        independent = (reviewer.get("reviewer_independent") or "").strip().lower()
+        disclosed = (reviewer.get("conflict_disclosed") or "").strip().lower()
+        if not rid:
+            errors.append(f"registry row {index}: reviewer_id is empty")
+            continue
+        if rid in seen_ids:
+            errors.append(f"registry: duplicate reviewer_id {rid!r}")
+        seen_ids.add(rid)
+        if not pool:
+            errors.append(f"registry {rid}: reviewer_pool_id is empty")
+        if independent not in BOOL_TRUE | BOOL_FALSE:
+            errors.append(f"registry {rid}: reviewer_independent must be boolean, got {independent!r}")
+        if disclosed not in BOOL_TRUE | BOOL_FALSE:
+            errors.append(f"registry {rid}: conflict_disclosed must be boolean, got {disclosed!r}")
+        if independent in BOOL_TRUE and disclosed in BOOL_TRUE and pool:
+            eligible.append(reviewer)
+    return eligible
+
+
 def cmd_reviewer_registry(args: argparse.Namespace) -> int:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    errors: list[str] = []
 
     registry_path = Path(args.registry) if args.registry else out / "reviewer_pool_registry.csv"
     if args.registry:
         header, reviewers = read_rows(registry_path)
-        if set(header) != set(REGISTRY_COLUMNS):
-            raise SystemExit(f"{registry_path}: registry columns must be {REGISTRY_COLUMNS}")
+        if header != REGISTRY_COLUMNS:
+            raise SystemExit(f"{registry_path}: registry columns must be exactly {REGISTRY_COLUMNS}")
     else:
         # Emit a small template registry (2 pools, schema test only).
         reviewers = [
@@ -144,19 +222,25 @@ def cmd_reviewer_registry(args: argparse.Namespace) -> int:
         ]
         write_csv(registry_path, REGISTRY_COLUMNS, reviewers)
 
-    independent = [r for r in reviewers if (r.get("reviewer_independent") or "").lower() in {"1", "true", "yes"}]
-    pools = sorted({r["reviewer_pool_id"] for r in independent})
+    eligible = _validate_registry(reviewers, errors)
+    pools = sorted({r["reviewer_pool_id"] for r in eligible})
     if len(pools) < 2:
-        raise SystemExit("need independent reviewers in at least 2 distinct pools")
+        errors.append("need independent, conflict-disclosed reviewers in at least 2 distinct pools")
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        print(f"reviewer registry BLOCKED: {len(errors)} integrity issue(s)", file=sys.stderr)
+        return 1
 
     # All cross-pool reviewer pairs, for round-robin assignment.
     pairs: list[tuple[dict, dict]] = []
-    for i in range(len(independent)):
-        for j in range(i + 1, len(independent)):
-            if independent[i]["reviewer_pool_id"] != independent[j]["reviewer_pool_id"]:
-                pairs.append((independent[i], independent[j]))
+    for i in range(len(eligible)):
+        for j in range(i + 1, len(eligible)):
+            if eligible[i]["reviewer_pool_id"] != eligible[j]["reviewer_pool_id"]:
+                pairs.append((eligible[i], eligible[j]))
     if not pairs:
-        raise SystemExit("no cross-pool reviewer pair available")
+        print("no cross-pool reviewer pair available", file=sys.stderr)
+        return 1
 
     _, response_rows = read_rows(Path(args.responses))
     assignment_rows: list[dict] = []
@@ -173,8 +257,69 @@ def cmd_reviewer_registry(args: argparse.Namespace) -> int:
             )
     write_csv(out / "review_assignment.csv", ASSIGNMENT_COLUMNS, assignment_rows)
     print(
-        f"assigned 2 independent cross-pool reviewers to {len(response_rows)} responses "
-        f"({len(pools)} pools, {len(pairs)} usable pairs)"
+        f"registry valid; assigned 2 independent cross-pool reviewers to {len(response_rows)} "
+        f"responses ({len(pools)} pools, {len(pairs)} usable pairs)"
+    )
+    return 0
+
+
+def cmd_completeness(args: argparse.Namespace) -> int:
+    """Assignment/review binding + 2-review fail-closed + allowed-value validation."""
+    _, assignment_rows = read_rows(Path(args.assignment))
+    review_header, review_rows = read_rows(Path(args.reviews))
+    errors: list[str] = []
+
+    # Assigned reviewers per response (must be exactly 2, distinct, distinct pools).
+    assigned: dict[str, list[tuple[str, str]]] = {}
+    for row in assignment_rows:
+        rid = (row.get("blind_response_id") or "").strip()
+        assigned.setdefault(rid, []).append(
+            ((row.get("reviewer_id") or "").strip(), (row.get("reviewer_pool_id") or "").strip())
+        )
+    assigned_pairs: set[tuple[str, str]] = set()
+    for response_id, reviewers in assigned.items():
+        ids = [r[0] for r in reviewers]
+        pools = [r[1] for r in reviewers]
+        if len(reviewers) != 2:
+            errors.append(f"assignment {response_id}: must have exactly 2 reviewers, got {len(reviewers)}")
+        if len(set(ids)) != len(ids):
+            errors.append(f"assignment {response_id}: duplicate reviewer assigned")
+        if len(set(pools)) < min(2, len(reviewers)):
+            errors.append(f"assignment {response_id}: reviewers must be from distinct pools")
+        for rid, _pool in reviewers:
+            assigned_pairs.add((response_id, rid))
+
+    # Reviews: allowed-value validation + binding to assignment.
+    review_pairs: dict[str, set[str]] = {}
+    for index, row in enumerate(review_rows, start=1):
+        response_id = (row.get("blind_response_id") or "").strip()
+        rid = (row.get("reviewer_id") or "").strip()
+        review_pairs.setdefault(response_id, set()).add(rid)
+        if (response_id, rid) not in assigned_pairs:
+            errors.append(f"review row {index}: ({response_id}, {rid}) is not an assigned reviewer")
+        for metric, allowed in ALLOWED_REVIEW_VALUES.items():
+            if metric in review_header:
+                value = (row.get(metric) or "").strip()
+                if value and value not in allowed:
+                    errors.append(f"review row {index}: {metric}={value!r} not in {sorted(allowed)}")
+
+    # Every assigned response must have exactly 2 reviews from its assigned reviewers (fail closed).
+    for response_id, reviewers in assigned.items():
+        got = review_pairs.get(response_id, set())
+        if got != {r[0] for r in reviewers}:
+            errors.append(
+                f"response {response_id}: expected reviews from {sorted({r[0] for r in reviewers})}, "
+                f"got {sorted(got)}"
+            )
+
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        print(f"v58 review completeness BLOCKED: {len(errors)} issue(s)", file=sys.stderr)
+        return 1
+    print(
+        f"v58 review completeness ok: {len(assigned)} responses, all 2-review, "
+        "assignment/review binding consistent, allowed values valid."
     )
     return 0
 
@@ -289,13 +434,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_map.add_argument("--queries-per-system", type=int, default=500)
     p_map.add_argument("--blind-eval-id", dest="blind_eval_id", default="v58eval001")
     p_map.add_argument("--seed", type=int, default=0)
+    p_map.add_argument("--secret", default="", help="HMAC secret (hex); auto-generated if omitted")
     p_map.set_defaults(func=cmd_blind_map)
 
-    p_reg = sub.add_parser("reviewer-registry", help="registry + 2-independent-cross-pool assignment")
+    p_reg = sub.add_parser("reviewer-registry", help="registry integrity + 2-independent-cross-pool assignment")
     p_reg.add_argument("--out", required=True)
-    p_reg.add_argument("--responses", required=True, help="blind_response_template.csv")
+    p_reg.add_argument("--responses", required=True, help="blind-response template csv")
     p_reg.add_argument("--registry", default="", help="existing registry CSV (omit to emit a template)")
     p_reg.set_defaults(func=cmd_reviewer_registry)
+
+    p_done = sub.add_parser("completeness", help="assignment/review binding + 2-review fail-closed")
+    p_done.add_argument("--assignment", required=True, help="review_assignment.csv")
+    p_done.add_argument("--reviews", required=True, help="filled human-review rows CSV")
+    p_done.set_defaults(func=cmd_completeness)
 
     p_kappa = sub.add_parser("kappa", help="Cohen's kappa report from filled human-review rows")
     p_kappa.add_argument("--reviews", required=True, help="v58-human-review-rows CSV")

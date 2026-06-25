@@ -15,36 +15,46 @@ Scale target: 7 systems (A/B/C/D/E/G/H) x 500 responses = 3,500 blind responses;
 
 ```bash
 python3 scripts/v58_blind_eval_packet.py blind-map \
-  --out v58_packet --systems A,B,C,D,E,G,H --queries-per-system 500 --seed <SEED>
+  --out v58_packet --systems A,B,C,D,E,G,H --queries-per-system 500 [--secret <HEX>]
 ```
 
 Produces:
 
-- `UNBLINDING_KEY.csv` - SECRET `source_system_id -> blind_system_id` map. Do
-  **not** share with reviewers until adjudication is complete.
-- `blind_response_template.csv` - one blank row per (blind system, query) with
-  `blind_response_id` / `blind_eval_id` / `blind_system_id` prefilled and
-  `response_text` left for the executor. Response text must carry no model/run
-  identity tokens.
+- `SECRET_unblinding_key.csv` + `SECRET_hmac_key.txt` - the **secret** HMAC key
+  and `source_system_id -> blind_system_id` map. Do **not** share with reviewers
+  until adjudication is complete.
+- `public_blind_response_template.csv` - one blank row per (blind system, query)
+  with **HMAC-derived** `blind_response_id` / `blind_system_id` (unguessable
+  without the secret) and `response_text` left for the executor. The public file
+  carries **no source identity** (verified fail-closed) and `response_text` must
+  carry no model/run identity tokens.
 
 ## 2. Reviewer pool registry + assignment
 
 ```bash
-# emit a template registry (2 pools) and assign reviewers
 python3 scripts/v58_blind_eval_packet.py reviewer-registry \
-  --out v58_packet --responses v58_packet/blind_response_template.csv
-# or validate/assign against your own registry
-python3 scripts/v58_blind_eval_packet.py reviewer-registry \
-  --out v58_packet --responses v58_packet/blind_response_template.csv \
-  --registry your_reviewer_pool_registry.csv
+  --out v58_packet --responses v58_packet/public_blind_response_template.csv \
+  [--registry your_reviewer_pool_registry.csv]
 ```
 
 Registry columns: `reviewer_id`, `reviewer_pool_id`, `reviewer_independent`,
-`conflict_disclosed`. Assignment gives every response **two independent
-reviewers from distinct pools**; it fails closed if fewer than two pools of
-independent reviewers exist.
+`conflict_disclosed`. The registry is **integrity-validated** (unique ids,
+boolean fields, conflict disclosed, at least two independent pools) before
+assignment; assignment gives every response **two independent reviewers from
+distinct pools** and fails closed otherwise.
 
-## 3. Cohen's kappa report
+## 3. Review completeness (after reviews return)
+
+```bash
+python3 scripts/v58_blind_eval_packet.py completeness \
+  --assignment v58_packet/review_assignment.csv --reviews v58_human_review_rows.csv
+```
+
+Fails closed unless every response has **exactly its two assigned reviews**,
+every review is bound to an assigned `(blind_response_id, reviewer_id)`, and all
+review metric values are in the allowed vocabulary.
+
+## 4. Cohen's kappa report
 
 After human review rows come back (v58-human-review-rows shape):
 
