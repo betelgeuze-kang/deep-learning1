@@ -1,0 +1,64 @@
+name: Offline evidence suite
+
+# Runs the deterministic, hardware-free experiment test suite entirely on
+# ephemeral GitHub-hosted runners (no self-hosted runner, no GPU). This removes
+# the self-hosted runner as the gate for everything except the GPU/HIP tests,
+# which stay on the ai-verify self-hosted job.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: offline-suite-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-suite:
+    name: offline-suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    env:
+      TOTAL_SHARDS: "10"
+    steps:
+      - name: Checkout (no persisted credentials)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+
+      - name: Toolchain preflight
+        run: |
+          set -euo pipefail
+          bash --version
+          python3 --version
+          cmake --version
+          g++ --version
+          git --version
+
+      - name: C++ CPU build
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -DDLE_ENABLE_HIP=OFF
+          cmake --build build -j 2
+
+      - name: Run offline suite shard
+        env:
+          OFFLINE_SUITE_TIMEOUT: "240"
+        run: scripts/run_offline_suite.sh --shard "${{ matrix.shard }}/${TOTAL_SHARDS}"
