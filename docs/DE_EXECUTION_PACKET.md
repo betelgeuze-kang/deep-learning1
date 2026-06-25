@@ -60,13 +60,33 @@ misconfiguration low.
 ## 4. Preflight before returning
 
 ```bash
-python3 scripts/de_execution_packet.py preflight --packet de_packet_canary --systems D,E --rows-per-system 100
+# optional: bind to the frozen v53 query set and require a sha256 manifest
+python3 scripts/de_execution_packet.py manifest --packet de_packet_canary
+python3 scripts/de_execution_packet.py preflight --packet de_packet_canary \
+  --systems D,E --rows-per-system 100 \
+  --v53-query-manifest <frozen_v53_query_ids.csv> --require-manifest
 ```
 
-Preflight checks column match, non-empty required fields, sha256 formatting,
-`external_api_used=0`, `non_fixture_declared=true`, numeric fields, and row
-counts. A green preflight means the packet is well-formed for the canonical
-intake; it does not by itself make any baseline claim.
+Preflight v2 checks:
+
+- **exact header order** per file (not just the column set),
+- **explicit `external_api_used`** (empty is rejected; must be `0`/`false`),
+- **parameter range** (`parameter_count_b` within each system's min/max from the
+  contract: D 25-40B, E 65-80B),
+- **`non_fixture_declared=true`**, sha256 formatting, numeric fields,
+- **system/query uniqueness** (`(system_id, query_id)` in answers,
+  `(model_id, query_id)` in the resource manifest) and answer `model_id`
+  consistency with `model_identity`,
+- **cross-file query consistency**: every model's query set matches across the
+  answer and resource files, and all systems share the same query set,
+- **v53 frozen-query binding** (optional `--v53-query-manifest`): the shared
+  query set must equal the frozen v53 query ids; the tool reports the
+  `query_set_hash`,
+- **sha256 manifest** (`sha256_manifest.csv`, written by the `manifest`
+  command): verified when present, or required with `--require-manifest`.
+
+A green preflight means the packet is well-formed for the canonical intake; it
+does not by itself make any baseline claim.
 
 ## Exit criteria (unchanged by this tool)
 
