@@ -6,6 +6,16 @@ Korean README: [README.ko.md](README.ko.md)
 
 **Artifact boundary:** This is a machine-verifiable research artifact, not a human-reviewed release package.
 
+## Readiness status
+
+Central readiness is tracked per scope in [`readiness/typed_ready.json`](readiness/typed_ready.json) and enforced by `tools/verify_artifact.py typed-readiness` via `./scripts/ai-verify.sh`. Only typed flags are claimable; bare `vXX_ready` wording is forbidden.
+
+- Human-readable mirror and full scope table: [`docs/STATUS.md`](docs/STATUS.md)
+- `v53` and `v54` are tracked as separate scopes:
+  - `v53-benchmark-foundation`: `contract_ready` and `fixture_execution_ready` (mirrors `benchmarks/v53_source_bound_freeze.json`).
+  - `v54-free-running-generation`: `contract_ready` only; `fixture_execution_ready` stays `false` because `v54/free_running_generation_evidence_intake_contract.json` reports 0 of 7 required artifacts present.
+- Real-model execution, heldout metric, human review, independent reproduction, and release remain blocked for every scope.
+
 ## v1.0 Architecture Challenge Roadmap
 
 The next public timing target is not a broad v0.3 claim. It is the v1.0 Architecture Challenge: RouteMemory + RouteHint versus 30B-150B-class LLM+RAG baselines on code/doc QA, grounded generation, scaling, and one-command reproducibility.
