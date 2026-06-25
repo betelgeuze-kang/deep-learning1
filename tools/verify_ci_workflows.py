@@ -102,11 +102,33 @@ def verify_third_party_workflow(root: Path, errors: list[str]) -> None:
         add(errors, f"{path}: workflow_dispatch input must not be inlined into the run script; pass it via env and validate")
 
 
+def verify_offline_suite_workflow(root: Path, errors: list[str]) -> None:
+    path = root / ".github" / "workflows" / "offline-suite.yml"
+    if not path.is_file():
+        add(errors, "missing .github/workflows/offline-suite.yml")
+        return
+    text = path.read_text(encoding="utf-8")
+    # The offline lane must stay fully GitHub-hosted (no self-hosted runner).
+    if "[self-hosted" in text:
+        add(errors, f"{path}: offline suite must not use a self-hosted runner")
+    for snippet in [
+        "name: Offline evidence suite",
+        "offline-suite:",
+        "runs-on: ubuntu-latest",
+        "uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+        "persist-credentials: false",
+        "matrix:",
+        "scripts/run_offline_suite.sh --shard",
+    ]:
+        require(text, snippet, str(path), errors)
+
+
 def main(argv: list[str]) -> int:
     root = Path(argv[0]).resolve() if argv else Path.cwd()
     errors: list[str] = []
     verify_ai_verify_workflow(root, errors)
     verify_third_party_workflow(root, errors)
+    verify_offline_suite_workflow(root, errors)
     if errors:
         for error in errors:
             print(error, file=sys.stderr)
