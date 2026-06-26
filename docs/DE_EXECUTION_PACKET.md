@@ -15,6 +15,10 @@ baseline-admission / v53u intake verifiers.
 
 ## 1. Generate the blank template
 
+A filled-in example handoff package is in
+[`examples/de_packet_canary/`](../examples/de_packet_canary/) (placeholders, not
+evidence). To generate a blank packet for a real run:
+
 ```bash
 # canary (100 queries per system)
 python3 scripts/de_execution_packet.py template --out de_packet_canary --systems D,E --rows-per-system 100
