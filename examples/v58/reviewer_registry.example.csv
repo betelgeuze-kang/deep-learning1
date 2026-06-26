@@ -1,0 +1,5 @@
+reviewer_id,reviewer_pool_id,reviewer_independent,conflict_disclosed
+rev-alpha-1,pool-alpha,true,true
+rev-alpha-2,pool-alpha,true,true
+rev-beta-1,pool-beta,true,true
+rev-beta-2,pool-beta,true,true
