@@ -1,0 +1,36 @@
+- name: priority:P0
+  color: b60205
+  description: Immediate blocker for correctness, security, or evidence integrity.
+- name: priority:P1
+  color: d93f0b
+  description: Important blocker for the next readiness transition.
+- name: priority:P2
+  color: fbca04
+  description: Useful follow-up that does not block the nearest P0/P1 gate.
+- name: type:architecture
+  color: 5319e7
+  description: Research design, routing, or architecture-contract work.
+- name: type:evidence
+  color: 1d76db
+  description: Evidence intake, artifact validation, or readiness proof work.
+- name: type:security
+  color: ee0701
+  description: Security, CI hardening, or credential/runner risk.
+- name: blocked:external-evidence
+  color: c5def5
+  description: Waiting on non-fixture evidence produced outside this repository.
+- name: blocked:human-review
+  color: cccccc
+  description: Waiting on human review, adjudication, or independent acceptance.
+- name: claim-boundary
+  color: 0e8a16
+  description: Changes claim wording, evidence boundaries, or readiness semantics.
+- name: web-editable
+  color: fef2c0
+  description: Safe to complete through GitHub web editing.
+- name: local-runtime-required
+  color: d4c5f9
+  description: Requires local scripts, tests, or artifact verification.
+- name: superseded
+  color: bfdadc
+  description: PR or issue is replaced by current main or a newer claim-bound slice.

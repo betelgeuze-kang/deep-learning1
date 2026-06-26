@@ -14,6 +14,11 @@ def require(text: str, snippet: str, label: str, errors: list[str]) -> None:
         add(errors, f"{label} missing snippet: {snippet}")
 
 
+def forbid(text: str, snippet: str, label: str, errors: list[str]) -> None:
+    if snippet in text:
+        add(errors, f"{label} forbidden snippet present: {snippet}")
+
+
 def block_after(text: str, marker: str) -> str:
     start = text.find(marker)
     if start < 0:
@@ -39,10 +44,19 @@ def verify_ai_verify_workflow(root: Path, errors: list[str]) -> None:
         "contents: read",
         "concurrency:",
         "cancel-in-progress: true",
-        "ai-verify:",
-        "name: ai-verify.sh",
+        "pr-safe-verify:",
+        "name: pr-safe-ai-verify.sh",
+        "if: github.event_name == 'pull_request'",
+        "runs-on: ubuntu-latest",
+        "trusted-self-hosted-verify:",
+        "name: trusted-self-hosted-ai-verify.sh",
+        "if: github.event_name != 'pull_request'",
         "runs-on: [self-hosted, linux, x64]",
         "timeout-minutes: 30",
+        "uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "persist-credentials: false",
+        "fetch-depth: 1",
+        "clean: true",
         "DLE_VERIFY_ENABLE_HIP: \"OFF\"",
         "AI_VERIFY_JOBS: \"2\"",
         "run: ./scripts/ai-verify.sh",
@@ -64,6 +78,15 @@ def verify_ai_verify_workflow(root: Path, errors: list[str]) -> None:
         "cmake --build build",
     ]:
         require(text, snippet, str(path), errors)
+    for snippet in [
+        "https://x-access-token:",
+        "GITHUB_TOKEN: ${{ github.token }}",
+        "git remote set-url origin",
+        "git remote add origin",
+        "runs-on: [self-hosted, linux, x64]\n    timeout-minutes: 30\n    steps:",
+        "uses: actions/checkout@v4",
+    ]:
+        forbid(text, snippet, str(path), errors)
 
 
 def verify_third_party_workflow(root: Path, errors: list[str]) -> None:
@@ -84,8 +107,18 @@ def verify_third_party_workflow(root: Path, errors: list[str]) -> None:
         "name: third-party-rerun-return-manual",
         "runs-on: [self-hosted, linux, x64]",
         "timeout-minutes: 45",
+        "uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "persist-credentials: false",
+        "RETURN_ID_INPUT: ${{ inputs.return_id }}",
+        "[[ -n \"$RETURN_ID_INPUT\" && ! \"$RETURN_ID_INPUT\" =~ ^[A-Za-z0-9._-]{1,80}$ ]]",
+        "[[ \"$RETURN_ID_INPUT\" == *\"..\"* ]]",
+        "\"external_independent_reviewer\": 0",
+        "\"clean_machine\": 0",
+        "\"external_independent_environment\": 0",
+        "\"workspace_cleanliness_verified\": 0",
+        "\"runner_ephemeral_verified\": 0",
         "if: ${{ inputs.upload_artifact == 'true' }}",
-        "uses: actions/upload-artifact@v4",
+        "uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
         "retention-days: 1",
         "GitHub Actions self-hosted runner; automated reviewer, not a GitHub-hosted clean-room rerun.",
         # The dispatch input must be passed through an environment variable and
@@ -120,6 +153,15 @@ def verify_offline_suite_workflow(root: Path, errors: list[str]) -> None:
         "scripts/run_offline_suite.sh --shard",
     ]:
         require(text, snippet, str(path), errors)
+    for snippet in [
+        'RETURN_ID_INPUT="${{ inputs.return_id',
+        "uses: actions/checkout@v4",
+        "uses: actions/upload-artifact@v4",
+        '"external_independent_reviewer": 1',
+        '"clean_machine": 1',
+        '"external_independent_environment": 1',
+    ]:
+        forbid(text, snippet, str(path), errors)
 
 
 def main(argv: list[str]) -> int:

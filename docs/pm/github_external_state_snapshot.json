@@ -1,0 +1,110 @@
+{
+  "observed_at": "2026-06-25T06:10:53+09:00",
+  "repository": "betelgeuze-kang/deep-learning1",
+  "read_only": true,
+  "generated_by": "scripts/refresh_github_external_snapshots.py",
+  "open_issues": [],
+  "expected_issue_titles": [
+    "[P0] v53 frozen benchmark canonicalization",
+    "[P0] D/E 30B-70B real evidence intake",
+    "[P1] v54 real free-running generation",
+    "[P1] v58 blind human review execution",
+    "[P2] v61 one-token logits parity"
+  ],
+  "expected_issue_titles_missing": [
+    "[P0] v53 frozen benchmark canonicalization",
+    "[P0] D/E 30B-70B real evidence intake",
+    "[P1] v54 real free-running generation",
+    "[P1] v58 blind human review execution",
+    "[P2] v61 one-token logits parity"
+  ],
+  "required_labels": [
+    "priority:P0",
+    "priority:P1",
+    "priority:P2",
+    "type:architecture",
+    "type:evidence",
+    "type:security",
+    "blocked:external-evidence",
+    "blocked:human-review",
+    "claim-boundary",
+    "web-editable",
+    "local-runtime-required",
+    "superseded"
+  ],
+  "remote_labels_observed": [
+    "bug",
+    "documentation",
+    "duplicate",
+    "enhancement",
+    "good first issue",
+    "help wanted",
+    "invalid",
+    "question",
+    "wontfix"
+  ],
+  "required_labels_missing": [
+    "priority:P0",
+    "priority:P1",
+    "priority:P2",
+    "type:architecture",
+    "type:evidence",
+    "type:security",
+    "blocked:external-evidence",
+    "blocked:human-review",
+    "claim-boundary",
+    "web-editable",
+    "local-runtime-required",
+    "superseded"
+  ],
+  "prs": [
+    {
+      "number": 5,
+      "title": "Draft: harden v50 auditor correctness replay contract",
+      "state": "OPEN",
+      "is_draft": false,
+      "mergeable": "MERGEABLE",
+      "head_ref": "pr2-slice-v50-auditor-correctness",
+      "base_ref": "main",
+      "labels": [],
+      "url": "https://github.com/betelgeuze-kang/deep-learning1/pull/5",
+      "cleanup_comment_present": false,
+      "cleanup_comment_count": 0,
+      "cleanup_comment_anchor_checks": {
+        "PR #5 Cleanup Comment Draft": false,
+        "durable contract/schema/test": false,
+        "external auditor correctness evidence": false,
+        "real auditor correctness readiness": false
+      }
+    },
+    {
+      "number": 10,
+      "title": "Draft: keep v56 expanded benchmark replay blocked",
+      "state": "OPEN",
+      "is_draft": true,
+      "mergeable": "MERGEABLE",
+      "head_ref": "pr2-slice-v56-ruler-longbench-expanded",
+      "base_ref": "main",
+      "labels": [],
+      "url": "https://github.com/betelgeuze-kang/deep-learning1/pull/10",
+      "cleanup_comment_present": false,
+      "cleanup_comment_count": 0,
+      "cleanup_comment_anchor_checks": {
+        "PR #10 Cleanup Comment Draft": false,
+        "durable v56 replay contract": false,
+        "expanded replay evidence": false,
+        "leaderboard, expanded benchmark readiness, or public comparison": false
+      }
+    }
+  ],
+  "pr_cleanup_disposition_pending": [
+    5,
+    10
+  ],
+  "gh_cli_notes": [
+    "gh issue list returned an empty open issue array",
+    "gh pr view 5 and gh pr view 10 succeeded",
+    "gh label list is unavailable in installed gh 2.4.0, so labels were read with gh api repos/:owner/:repo/labels"
+  ],
+  "external_mutation_still_pending": true
+}

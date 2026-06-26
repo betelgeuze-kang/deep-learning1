@@ -112,19 +112,42 @@ jobs:
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 30
     steps:
-      - name: Shell checkout
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+
+      - name: Toolchain preflight
         run: |
           set -euo pipefail
-          git init .
-          if git remote get-url origin >/dev/null 2>&1; then
-            git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          else
-            git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          fi
-          git fetch --depth=1 origin "${GITHUB_SHA}"
-          git checkout --detach FETCH_HEAD
+          bash --version
+          python3 --version
+          cmake --version
+          g++ --version
+          git --version
+
+      - name: Run ai-verify
+        env:
+          AI_VERIFY_JOBS: "2"
+          DLE_VERIFY_ENABLE_HIP: "OFF"
+        run: ./scripts/ai-verify.sh
+
+  trusted-self-hosted-verify:
+    name: trusted-self-hosted-ai-verify.sh
+    if: github.event_name != 'pull_request'
+    runs-on: [self-hosted, linux, x64]
+    permissions:
+      contents: read
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
 
       - name: Toolchain preflight
         run: |

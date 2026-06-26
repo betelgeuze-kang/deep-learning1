@@ -61,6 +61,7 @@ jobs:
           else
             RETURN_ID="github_actions_return_${GITHUB_RUN_ID}"
           fi
+          RETURN_ID="${RETURN_ID_INPUT:-github_actions_return_${GITHUB_RUN_ID}}"
           RETURN_DIR="results/github_actions_third_party_rerun/${RETURN_ID}/third_party_return"
           mkdir -p "$RETURN_DIR"
           experiments/run_v22_clean_machine_execution_kit.sh >/dev/null
@@ -79,7 +80,7 @@ jobs:
               "reviewer_org": "GitHub Actions",
               "reviewer_contact": os.environ.get("GITHUB_SERVER_URL", "https://github.com"),
               "reviewer_kind": "automated-third-party-self-hosted-runner",
-              "external_independent_reviewer": 1,
+              "external_independent_reviewer": 0,
               "github_actor": os.environ.get("GITHUB_ACTOR", ""),
               "github_repository": os.environ.get("GITHUB_REPOSITORY", ""),
               "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
@@ -88,8 +89,10 @@ jobs:
               "review_timestamp_utc": datetime.now(timezone.utc).isoformat(),
           }
           environment = {
-              "clean_machine": 1,
-              "external_independent_environment": 1,
+              "clean_machine": 0,
+              "external_independent_environment": 0,
+              "workspace_cleanliness_verified": 0,
+              "runner_ephemeral_verified": 0,
               "environment_kind": "github-actions-self-hosted-linux-x64",
               "os": platform.platform(),
               "kernel": platform.release(),
@@ -113,7 +116,7 @@ jobs:
 
       - name: Upload third-party return artifact
         if: ${{ inputs.upload_artifact == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: third-party-rerun-return
           path: |

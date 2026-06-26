@@ -1,0 +1,167 @@
+{
+  "generated_for": "pasted-goal-2026-06-24",
+  "audited_at": "2026-06-25",
+  "completion_state": "local_artifacts_verified_external_mutation_pending",
+  "latest_read_only_complete_mode_blockers": [
+    "Required GitHub labels are still missing.",
+    "The five evidence blocker issues are still missing.",
+    "PR #5 and PR #10 cleanup comments are still missing.",
+    "PR #5 and PR #10 are still open, so final PR cleanup disposition remains pending.",
+    "GitHub settings still require delete-head-branch, squash-only merge policy, branch protection, full SHA-pinned Actions, CodeQL, secret scanning, dependency graph, vulnerability alerts, and Dependabot alerts evidence."
+  ],
+  "canonical_verification": [
+    "python3 scripts/refresh_github_external_snapshots.py",
+    "python3 tools/verify_github_governance_commands.py",
+    "python3 tools/verify_pr_cleanup_disposition_commands.py",
+    "python3 tools/verify_repo_governance.py .",
+    "python3 tools/verify_github_external_state.py --mode pending .",
+    "python3 tools/verify_github_external_state.py --mode partial . after partial approved external mutations and refreshed snapshots",
+    "tools/verify_ci_workflows.py .",
+    "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv",
+    "./scripts/ai-verify.sh",
+    "DLE_GITHUB_EXTERNAL_STATE_MODE=partial ./scripts/ai-verify.sh after partial approved external mutations and refreshed snapshots",
+    "DLE_GITHUB_EXTERNAL_STATE_MODE=complete ./scripts/ai-verify.sh after approved external mutations and refreshed snapshots"
+  ],
+  "requirements": [
+    {
+      "id": 1,
+      "requirement": "Sync central readiness and split v53/v54 readiness rows",
+      "status": "local_complete_verified",
+      "evidence": [
+        "readiness/typed_ready.json",
+        "schemas/typed_readiness.schema.json",
+        "tools/verify_artifact.py",
+        "benchmarks/v53_source_bound_freeze.json",
+        "v54/free_running_generation_evidence_intake_contract.json"
+      ],
+      "verification": [
+        "tools/verify_artifact.py typed-readiness readiness/typed_ready.json --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv"
+      ],
+      "external_action_required": false
+    },
+    {
+      "id": 2,
+      "requirement": "Shrink README/README.ko.md to current readiness dashboard and move long history",
+      "status": "local_complete_verified",
+      "evidence": [
+        "README.md",
+        "README.ko.md",
+        "docs/archive/IMPLEMENTATION_HISTORY.md",
+        "tools/verify_repo_governance.py"
+      ],
+      "verification": [
+        "python3 tools/verify_repo_governance.py ."
+      ],
+      "external_action_required": false
+    },
+    {
+      "id": 3,
+      "requirement": "Add Issue/PR templates and PM backlog",
+      "status": "local_artifacts_verified_external_issue_creation_pending",
+      "evidence": [
+        ".github/pull_request_template.md",
+        ".github/ISSUE_TEMPLATE/evidence-blocker.yml",
+        ".github/labels.yml",
+        "docs/pm/EVIDENCE_BACKLOG.md",
+        "docs/pm/github_issue_drafts.json",
+        "docs/pm/github_issue_bodies/",
+        "docs/pm/github_external_state_snapshot.json",
+        "docs/pm/GITHUB_EXTERNAL_MUTATION_RUNBOOK.md",
+        "scripts/refresh_github_external_snapshots.py",
+        "tools/verify_github_governance_commands.py",
+        "tools/verify_pr_cleanup_disposition_commands.py",
+        "tools/verify_github_external_state.py",
+        "scripts/print_github_governance_commands.py"
+      ],
+      "verification": [
+        "python3 tools/verify_repo_governance.py ."
+      ],
+      "external_action_required": true,
+      "external_action": "Create labels and the five GitHub issues after explicit approval."
+    },
+    {
+      "id": 4,
+      "requirement": "Harden GitHub Actions security and update workflow verifier",
+      "status": "local_complete_verified",
+      "evidence": [
+        ".github/workflows/ai-verify.yml",
+        ".github/workflows/third-party-rerun.yml",
+        "tools/verify_ci_workflows.py"
+      ],
+      "verification": [
+        "tools/verify_ci_workflows.py ."
+      ],
+      "external_action_required": false
+    },
+    {
+      "id": 5,
+      "requirement": "Add CODEOWNERS and review responsibility areas",
+      "status": "local_complete_verified",
+      "evidence": [
+        ".github/CODEOWNERS",
+        "tools/verify_repo_governance.py"
+      ],
+      "verification": [
+        "python3 tools/verify_repo_governance.py ."
+      ],
+      "external_action_required": false
+    },
+    {
+      "id": 6,
+      "requirement": "Add CONTRIBUTING, SECURITY, and license boundary",
+      "status": "local_boundary_complete_public_license_decision_pending",
+      "evidence": [
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "LICENSE",
+        "tools/verify_repo_governance.py"
+      ],
+      "verification": [
+        "python3 tools/verify_repo_governance.py ."
+      ],
+      "external_action_required": true,
+      "external_action": "Choose a public reuse license before any public challenge or release."
+    },
+    {
+      "id": 7,
+      "requirement": "Clean up open PR #5 and PR #10",
+      "status": "local_plan_verified_external_pr_disposition_pending",
+      "evidence": [
+        "docs/pm/PR_CLEANUP_PLAN.md",
+        "docs/pm/pr_cleanup_comments/",
+        "docs/pm/github_external_state_snapshot.json",
+        "docs/pm/GITHUB_EXTERNAL_MUTATION_RUNBOOK.md",
+        "scripts/refresh_github_external_snapshots.py",
+        "tools/verify_github_governance_commands.py",
+        "tools/verify_pr_cleanup_disposition_commands.py",
+        "tools/verify_github_external_state.py",
+        "scripts/print_github_governance_commands.py"
+      ],
+      "verification": [
+        "python3 tools/verify_repo_governance.py ."
+      ],
+      "external_action_required": true,
+      "external_action": "After explicit approval, comment on PR #5/#10. The only pre-verified disposition command packet is the superseded-close path; any merge or rebase requires separate review and approval. Completion requires refreshed evidence that both PRs are closed or merged, not merely commented."
+    },
+    {
+      "id": 8,
+      "requirement": "Apply GitHub repository settings",
+      "status": "local_checklist_verified_external_settings_pending",
+      "evidence": [
+        "docs/pm/github_settings_checklist.json",
+        "docs/pm/github_external_state_snapshot.json",
+        "docs/pm/github_settings_external_snapshot.json",
+        "docs/pm/GITHUB_EXTERNAL_MUTATION_RUNBOOK.md",
+        "scripts/refresh_github_external_snapshots.py",
+        "tools/verify_github_external_state.py",
+        "docs/pm/EVIDENCE_BACKLOG.md",
+        "tools/verify_repo_governance.py"
+      ],
+      "verification": [
+        "python3 tools/verify_repo_governance.py ."
+      ],
+      "external_action_required": true,
+      "external_action": "Apply branch protection, token, full SHA-pinned Actions, merge, CodeQL, secret scanning, dependency graph, vulnerability alert, and Dependabot alert settings in GitHub after explicit approval."
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "generated_for": "pasted-goal-2026-06-24",
+  "repository": "betelgeuze-kang/deep-learning1",
+  "manual_settings_required": [
+    {
+      "setting": "Require pull request before merging",
+      "recommended": "On",
+      "reason": "Claim-bound slices should not land directly on main."
+    },
+    {
+      "setting": "Require status checks",
+      "recommended": "AI verify required",
+      "reason": "Repository contracts are machine-verified through ai-verify."
+    },
+    {
+      "setting": "Require conversation resolution",
+      "recommended": "On",
+      "reason": "Review blockers should be explicitly resolved before merge."
+    },
+    {
+      "setting": "Block force pushes",
+      "recommended": "On",
+      "reason": "Protect evidence and review history."
+    },
+    {
+      "setting": "Block branch deletion",
+      "recommended": "On",
+      "reason": "Preserve branch evidence until PR cleanup is explicit."
+    },
+    {
+      "setting": "Automatically delete head branches",
+      "recommended": "On",
+      "reason": "Reduce stale claim-bound slice branches after merge."
+    },
+    {
+      "setting": "Default GITHUB_TOKEN permission",
+      "recommended": "Read-only",
+      "reason": "Minimize workflow token blast radius."
+    },
+    {
+      "setting": "Require full SHA-pinned Actions",
+      "recommended": "On where available",
+      "reason": "Avoid tag retargeting risk for third-party actions."
+    },
+    {
+      "setting": "CodeQL default setup",
+      "recommended": "On",
+      "reason": "Keep security findings visible."
+    },
+    {
+      "setting": "Secret scanning",
+      "recommended": "On",
+      "reason": "Detect accidental credential exposure."
+    },
+    {
+      "setting": "Dependency graph and Dependabot alerts",
+      "recommended": "On",
+      "reason": "Track dependency security exposure."
+    },
+    {
+      "setting": "Merge method",
+      "recommended": "Squash merge",
+      "reason": "Claim-bound slices remain easier to audit with one merge commit."
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "observed_at": "2026-06-25T06:10:56+09:00",
+  "repository": "betelgeuze-kang/deep-learning1",
+  "read_only": true,
+  "generated_by": "scripts/refresh_github_external_snapshots.py",
+  "repo": {
+    "private": true,
+    "default_branch": "main",
+    "has_issues": true,
+    "allow_squash_merge": true,
+    "allow_merge_commit": true,
+    "allow_rebase_merge": true,
+    "allow_auto_merge": false,
+    "delete_branch_on_merge": false,
+    "has_vulnerability_alerts": null,
+    "security_and_analysis": null
+  },
+  "workflow_permissions": {
+    "default_workflow_permissions": "read",
+    "can_approve_pull_request_reviews": false
+  },
+  "actions_permissions": {
+    "enabled": true,
+    "allowed_actions": "all",
+    "sha_pinning_required": false
+  },
+  "branch_protection": {
+    "endpoint": "repos/betelgeuze-kang/deep-learning1/branches/main/protection",
+    "status": "unavailable",
+    "http_status": 403,
+    "reason": "Upgrade to GitHub Pro or make this repository public to enable this feature.",
+    "required_pull_request_reviews": null,
+    "required_status_checks": null,
+    "required_conversation_resolution": null,
+    "allow_force_pushes": null,
+    "allow_deletions": null
+  },
+  "security_features": {
+    "codeql_default_setup": {
+      "endpoint": "repos/betelgeuze-kang/deep-learning1/code-scanning/default-setup",
+      "status": "unavailable",
+      "http_status": 403,
+      "state": null,
+      "configured": false,
+      "reason": "Code scanning is not enabled for this repository. Please enable code scanning in the repository settings."
+    },
+    "secret_scanning": {
+      "source": "repos/:owner/:repo security_and_analysis.secret_scanning.status",
+      "status": "unknown",
+      "enabled": false,
+      "reason": "security_and_analysis unavailable from repo API"
+    },
+    "dependency_graph": {
+      "source": "repos/:owner/:repo security_and_analysis.dependency_graph.status",
+      "status": "unknown",
+      "enabled": false,
+      "reason": "security_and_analysis unavailable from repo API"
+    },
+    "vulnerability_alerts": {
+      "endpoint": "repos/betelgeuze-kang/deep-learning1/vulnerability-alerts",
+      "status": "disabled",
+      "http_status": 404,
+      "enabled": false,
+      "reason": "Vulnerability alerts are disabled."
+    },
+    "dependabot_alerts": {
+      "endpoint": "repos/betelgeuze-kang/deep-learning1/dependabot/alerts?per_page=1",
+      "status": "disabled",
+      "http_status": 403,
+      "enabled": false,
+      "sample_count": null,
+      "reason": "Dependabot alerts are disabled for this repository."
+    }
+  },
+  "settings_deltas": [
+    {
+      "setting": "Automatically delete head branches",
+      "observed": false,
+      "recommended": true,
+      "action_pending": true
+    },
+    {
+      "setting": "Default GITHUB_TOKEN permission",
+      "observed": "read",
+      "recommended": "read",
+      "action_pending": false
+    },
+    {
+      "setting": "Require full SHA-pinned Actions",
+      "observed": false,
+      "recommended": true,
+      "action_pending": true
+    },
+    {
+      "setting": "Merge method",
+      "observed": "squash, merge-commit, and rebase all enabled",
+      "recommended": "prefer squash merge as the only merge method for claim-bound slices",
+      "action_pending": true
+    },
+    {
+      "setting": "Branch protection",
+      "observed": "protection endpoint unavailable for this private repository plan",
+      "recommended": "enable required PRs, AI verify status checks, conversation resolution, block force pushes, and block branch deletion when available",
+      "action_pending": true
+    },
+    {
+      "setting": "CodeQL default setup",
+      "observed": "Code scanning is not enabled for this repository. Please enable code scanning in the repository settings.",
+      "recommended": "enabled/configured",
+      "action_pending": true
+    },
+    {
+      "setting": "Secret scanning",
+      "observed": "unknown",
+      "recommended": "enabled",
+      "action_pending": true
+    },
+    {
+      "setting": "Dependency graph and Dependabot alerts",
+      "observed": {
+        "dependency_graph": "unknown",
+        "vulnerability_alerts": "disabled",
+        "dependabot_alerts": "disabled"
+      },
+      "recommended": "dependency graph and Dependabot/vulnerability alerts enabled",
+      "action_pending": true
+    }
+  ]
+}

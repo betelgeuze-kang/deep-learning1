@@ -203,6 +203,7 @@ test -f opencode.json
 test -f docs/ai/GOAL-LOOP-PLAYBOOK.md
 test -f docs/ai/profiles/deep-learning-research.md
 test -f docs/ai/prompts/deep_learning_research_goal_start.md
+test -f docs/ai/prompts/kiro_opus_prompt_architect.md
 test -f docs/ai/prompts/opencode_worker_slice.md
 test -f docs/ai/prompts/cursor_worker_slice.md
 test -f docs/ai/prompts/internal_subagent_worker_slice.md
@@ -216,6 +217,25 @@ if [ -x tools/verify_ci_workflows.py ]; then
 else
   python3 tools/verify_ci_workflows.py . >/dev/null
 fi
+
+echo "==> repo governance contract"
+python3 tools/verify_repo_governance.py . >/dev/null
+
+echo "==> github external state contract"
+github_external_state_mode="${DLE_GITHUB_EXTERNAL_STATE_MODE:-pending}"
+case "$github_external_state_mode" in
+  pending|partial|complete) ;;
+  *)
+    echo "DLE_GITHUB_EXTERNAL_STATE_MODE must be pending, partial, or complete" >&2
+    exit 1
+    ;;
+esac
+python3 tools/test_github_external_state_verifier.py >/dev/null
+python3 tools/verify_github_external_state.py --mode "$github_external_state_mode" . >/dev/null
+
+echo "==> github governance command contract"
+python3 tools/verify_github_governance_commands.py >/dev/null
+python3 tools/verify_pr_cleanup_disposition_commands.py >/dev/null
 
 if [ -x tools/verify_artifact.py ]; then
   if [ -f pr_slices/pr2.json ]; then
@@ -284,17 +304,22 @@ if [ -x tools/verify_artifact.py ]; then
     fi
   fi
   if [ -f benchmarks/v53_source_bound_freeze.json ]; then
-    if [ -f results/v53i_complete_source_query_instantiation_summary.csv ] &&
-       [ -f results/v53t_complete_source_audit_readiness_gate_summary.csv ] &&
-       [ -f results/v53ap_complete_source_abgh_same_query_measured_summary.csv ] &&
-       [ -f results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv ] &&
-       [ -f results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv ]; then
+    v53i_summary="results/v53i_complete_source_query_instantiation_summary.csv"
+    v53t_summary="results/v53t_complete_source_audit_readiness_gate_summary.csv"
+    v53ap_summary="results/v53ap_complete_source_abgh_same_query_measured_summary.csv"
+    v53aq_summary="results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv"
+    v53_v1_exit_ledger="results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv"
+    if [ -f "$v53i_summary" ] || [ -f "$v53t_summary" ] || [ -f "$v53ap_summary" ] || [ -f "$v53aq_summary" ] || [ -f "$v53_v1_exit_ledger" ]; then
+      if [ ! -f "$v53i_summary" ] || [ ! -f "$v53t_summary" ] || [ ! -f "$v53ap_summary" ] || [ ! -f "$v53aq_summary" ] || [ ! -f "$v53_v1_exit_ledger" ]; then
+        echo "v53 source benchmark has partial summary/exit-ledger artifacts" >&2
+        exit 1
+      fi
       tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json \
-        --v53i-summary results/v53i_complete_source_query_instantiation_summary.csv \
-        --v53t-summary results/v53t_complete_source_audit_readiness_gate_summary.csv \
-        --v53ap-summary results/v53ap_complete_source_abgh_same_query_measured_summary.csv \
-        --v53aq-summary results/v53aq_complete_source_abgh_real_adapter_measured_summary.csv \
-        --v1-exit-ledger results/v53t_complete_source_audit_readiness_gate/gate_001/complete_source_v1_exit_criteria_rows.csv >/dev/null
+        --v53i-summary "$v53i_summary" \
+        --v53t-summary "$v53t_summary" \
+        --v53ap-summary "$v53ap_summary" \
+        --v53aq-summary "$v53aq_summary" \
+        --v1-exit-ledger "$v53_v1_exit_ledger" >/dev/null
     else
       tools/verify_artifact.py v53-source-benchmark benchmarks/v53_source_bound_freeze.json >/dev/null
     fi

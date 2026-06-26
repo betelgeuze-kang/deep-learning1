@@ -1,0 +1,119 @@
+{
+  "generated_for": "pasted-goal-2026-06-24",
+  "canonical_readiness": "readiness/typed_ready.json",
+  "issues": [
+    {
+      "title": "[P0] v53 frozen benchmark canonicalization",
+      "labels": [
+        "priority:P0",
+        "type:evidence",
+        "claim-boundary",
+        "local-runtime-required"
+      ],
+      "scope": "v53 benchmark",
+      "target_readiness_transition": "fixture -> real execution",
+      "required_artifacts": [
+        "accepted external review return for v53 source-bound benchmark",
+        "accepted adjudication rows for query/source-span binding",
+        "non-fixture artifact hashes bound to benchmarks/v53_source_bound_freeze.json"
+      ],
+      "blocked_claims": [
+        "human-reviewed benchmark readiness",
+        "heldout metric readiness",
+        "release readiness"
+      ]
+    },
+    {
+      "title": "[P0] D/E 30B-70B real evidence intake",
+      "labels": [
+        "priority:P0",
+        "type:evidence",
+        "blocked:external-evidence",
+        "claim-boundary",
+        "local-runtime-required"
+      ],
+      "scope": "D/E baseline",
+      "target_readiness_transition": "fixture -> real execution",
+      "required_artifacts": [
+        "real D 30B baseline answer/citation/resource packet",
+        "real E 70B baseline answer/citation/resource packet",
+        "model identity and sha256 manifests for both baselines",
+        "measured registry admission rows proving fixture exclusion"
+      ],
+      "blocked_claims": [
+        "30B-150B public comparison wording",
+        "D/E measured baseline readiness",
+        "release readiness"
+      ]
+    },
+    {
+      "title": "[P1] v54 real free-running generation",
+      "labels": [
+        "priority:P1",
+        "type:evidence",
+        "blocked:external-evidence",
+        "claim-boundary",
+        "local-runtime-required"
+      ],
+      "scope": "v54 generation",
+      "target_readiness_transition": "fixture -> real execution",
+      "required_artifacts": [
+        "real free-running generation output packet",
+        "generation evidence intake decision rows",
+        "model/runtime provenance and artifact hashes",
+        "fail-closed evidence for missing or fixture-only generation packets"
+      ],
+      "blocked_claims": [
+        "actual model generation readiness",
+        "quality or benchmark generation claims",
+        "release readiness"
+      ]
+    },
+    {
+      "title": "[P1] v58 blind human review execution",
+      "labels": [
+        "priority:P1",
+        "type:evidence",
+        "blocked:human-review",
+        "claim-boundary",
+        "web-editable"
+      ],
+      "scope": "v58 blind evaluation",
+      "target_readiness_transition": "heldout -> human review",
+      "required_artifacts": [
+        "blind response intake packet",
+        "human review rows",
+        "adjudication return rows",
+        "reviewer identity/conflict disclosure metadata"
+      ],
+      "blocked_claims": [
+        "blind human review readiness",
+        "independent reproduction readiness",
+        "release readiness"
+      ]
+    },
+    {
+      "title": "[P2] v61 one-token logits parity",
+      "labels": [
+        "priority:P2",
+        "type:architecture",
+        "type:evidence",
+        "claim-boundary",
+        "local-runtime-required"
+      ],
+      "scope": "v61 SSD-MoE",
+      "target_readiness_transition": "fixture -> real execution",
+      "required_artifacts": [
+        "one-token logits parity contract output",
+        "runtime provenance and sha256 manifest",
+        "explicit no-checkpoint-payload repository proof",
+        "fail-closed rows for missing real model evidence"
+      ],
+      "blocked_claims": [
+        "actual generation readiness",
+        "near-frontier comparison claims",
+        "release readiness"
+      ]
+    }
+  ]
+}
