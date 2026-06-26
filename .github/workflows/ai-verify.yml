@@ -72,18 +72,19 @@ jobs:
       - name: Python reference smoke tests
         run: |
           set -euo pipefail
-          if [ -f scripts/test_v54_reference_models.py ]; then
-            python3 scripts/test_v54_reference_models.py
+          # Auto-discover every scripts/test_*.py smoke so new tools are
+          # CI-gated without editing this workflow. These must stay fast and
+          # clean-room (no network, no GPU, no accumulated results/).
+          shopt -s nullglob
+          tests=(scripts/test_*.py)
+          if [ ${#tests[@]} -eq 0 ]; then
+            echo "no scripts/test_*.py found" >&2
+            exit 1
           fi
-          if [ -f scripts/test_de_execution_packet.py ]; then
-            python3 scripts/test_de_execution_packet.py
-          fi
-          if [ -f scripts/test_v58_blind_eval_packet.py ]; then
-            python3 scripts/test_v58_blind_eval_packet.py
-          fi
-          if [ -f scripts/test_v54_reference_training.py ]; then
-            python3 scripts/test_v54_reference_training.py
-          fi
+          for test_file in "${tests[@]}"; do
+            echo "==> $test_file"
+            python3 "$test_file"
+          done
 
       - name: C++ CPU build smoke
         run: |
