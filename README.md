@@ -11,6 +11,7 @@ Korean README: [README.ko.md](README.ko.md)
 Central readiness is tracked per scope in [`readiness/typed_ready.json`](readiness/typed_ready.json) and enforced by `tools/verify_artifact.py typed-readiness` via `./scripts/ai-verify.sh`. Only typed flags are claimable; bare `vXX_ready` wording is forbidden.
 
 - Human-readable mirror and full scope table: [`docs/STATUS.md`](docs/STATUS.md)
+- Tooling, packets, and docs index: [`docs/INDEX.md`](docs/INDEX.md)
 - `v53` and `v54` are tracked as separate scopes:
   - `v53-benchmark-foundation`: `contract_ready` and `fixture_execution_ready` (mirrors `benchmarks/v53_source_bound_freeze.json`).
   - `v54-free-running-generation`: `contract_ready` only; `fixture_execution_ready` stays `false` because `v54/free_running_generation_evidence_intake_contract.json` reports 0 of 7 required artifacts present.

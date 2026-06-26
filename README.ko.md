@@ -11,6 +11,7 @@
 중앙 readiness는 스코프별로 [`readiness/typed_ready.json`](readiness/typed_ready.json)에 기록되며, `./scripts/ai-verify.sh`의 `tools/verify_artifact.py typed-readiness`로 강제됩니다. 주장 가능한 것은 typed 플래그뿐이며, 단순 `vXX_ready` 표현은 금지됩니다.
 
 - 휴먼 리더블 미러 및 전체 스코프 표: [`docs/STATUS.md`](docs/STATUS.md)
+- 도구·패킷·문서 색인: [`docs/INDEX.md`](docs/INDEX.md)
 - `v53`과 `v54`는 별도 스코프로 분리되어 추적됩니다:
   - `v53-benchmark-foundation`: `contract_ready` + `fixture_execution_ready` (`benchmarks/v53_source_bound_freeze.json` 미러).
   - `v54-free-running-generation`: `contract_ready`만 충족. `v54/free_running_generation_evidence_intake_contract.json`이 필수 산출물 7개 중 0개만 존재한다고 보고하므로 `fixture_execution_ready`는 `false`로 유지됩니다.
