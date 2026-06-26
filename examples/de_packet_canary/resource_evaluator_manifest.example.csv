@@ -1,0 +1,5 @@
+query_id,model_id,latency_ns,raw_prompt_context_bytes,retrieved_span_rows,peak_memory_mb,evaluator_version,evaluator_artifact_sha256,external_api_used
+q0001,<your-30b-model-id>,1200000000,4096,8,42000,<evaluator-version>,sha256:<64-hex-of-evaluator-artifact>,0
+q0002,<your-30b-model-id>,1100000000,4096,8,42000,<evaluator-version>,sha256:<64-hex-of-evaluator-artifact>,0
+q0001,<your-70b-model-id>,2400000000,4096,8,84000,<evaluator-version>,sha256:<64-hex-of-evaluator-artifact>,0
+q0002,<your-70b-model-id>,2300000000,4096,8,84000,<evaluator-version>,sha256:<64-hex-of-evaluator-artifact>,0
