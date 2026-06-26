@@ -1,0 +1,5 @@
+blind_response_id,reviewer_id,answer_correctness,citation_correctness,abstain_correctness,source_span_exactness,unsupported_abstention_correctness,review_decision
+v58eval001-r000001,rev-alpha-1,correct,correct,not_applicable,exact,not_applicable,accept
+v58eval001-r000001,rev-beta-1,correct,partial,not_applicable,partial,not_applicable,revise
+v58eval001-r000002,rev-alpha-2,incorrect,incorrect,not_applicable,wrong,not_applicable,reject
+v58eval001-r000002,rev-beta-2,incorrect,incorrect,not_applicable,wrong,not_applicable,reject

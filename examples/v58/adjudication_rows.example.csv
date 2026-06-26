@@ -1,0 +1,4 @@
+blind_response_id,metric,reviewer_a_id,reviewer_b_id,reviewer_a_value,reviewer_b_value,needs_adjudication,adjudicated_value,adjudicator_id
+v58eval001-r000001,citation_correctness,rev-alpha-1,rev-beta-1,correct,partial,1,correct,adj-1
+v58eval001-r000001,source_span_exactness,rev-alpha-1,rev-beta-1,exact,partial,1,exact,adj-1
+v58eval001-r000001,review_decision,rev-alpha-1,rev-beta-1,accept,revise,1,accept,adj-1
