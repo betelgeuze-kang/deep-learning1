@@ -4,13 +4,15 @@
 
 This repository is a machine-verifiable research artifact for `discrete-local-energy`.
 
-Codex operates from the VS Code extension using pursue-goal behavior. Cursor auto and Cursor Composer 2.5 (`composer-2.5`) are implementation workers only; Codex owns research design, task slicing, review, verification choice, and final acceptance.
+Codex operates from the VS Code extension using pursue-goal behavior. Kiro Opus 4.8 is the prompt-architect/design-draft worker for next-code-improvement slices; Cursor auto and Cursor Composer 2.5 (`composer-2.5`) are implementation workers only; Codex GPT-5.5 xhigh owns research design, task slicing, review, verification choice, and final acceptance.
 
 ## Core Rules
 
 - Keep the active goal in the Codex thread. Do not start a nested autonomous loop.
 - For research goals, paste `docs/ai/prompts/deep_learning_research_goal_start.md` into Codex first.
 - Read `docs/ai/profiles/deep-learning-research.md` before changing model, routing, checkpoint, benchmark, experiment, or evidence code.
+- Default next-code-improvement flow: Codex goal owner -> Kiro Opus 4.8 prompt design -> Cursor Composer 2.5 (`composer-2.5`) implementation -> Codex GPT-5.5 xhigh verification and acceptance.
+- For Kiro prompt-design delegation, use `docs/ai/prompts/kiro_opus_prompt_architect.md`. Kiro may draft the worker prompt, risk checklist, file candidates, and verification plan, but must not edit code, change research design, or change invariants.
 - For the former OpenCode delegation slot, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-opencode.sh <prompt-file>`; this compatibility wrapper now routes the task to Cursor Composer 2.5 (`composer-2.5`).
 - For Cursor delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-cursor.sh <prompt-file>`.
 - Prefer Cursor Composer 2.5 (`composer-2.5`) for large-context work across `docs/`, `experiments/`, `results/`, `src/`, benchmark packets, long logs, and broad mechanical implementation.
@@ -23,6 +25,7 @@ Codex operates from the VS Code extension using pursue-goal behavior. Cursor aut
 ## Worker Orchestration
 
 - Codex owns the active goal, research design, task slicing, review, verification choice, and final acceptance.
+- Kiro Opus 4.8 owns prompt architecture only: convert the active Codex goal into a scoped Cursor implementation prompt, with explicit invariants and verification criteria.
 - Codex keeps delegated TASK prompts short: goal, scope, file candidates, verification criteria, and any forbidden changes or invariant conditions.
 - Workers own exploration, implementation, testing, and summary for the delegated slice.
 - Workers must not change research design, benchmark protocol, metric definitions, seeds, data splits, evidence boundaries, acceptance thresholds, or invariants unless Codex explicitly scopes that change.

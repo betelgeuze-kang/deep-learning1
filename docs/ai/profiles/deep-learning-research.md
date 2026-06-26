@@ -5,7 +5,8 @@ Use this profile for work touching model architecture, routing, training/evaluat
 ## Role Split
 
 ```text
-Codex: research plan, experiment design, metric validity, evidence boundary review, final acceptance
+Codex GPT-5.5 xhigh: research plan, experiment design, metric validity, evidence boundary review, final acceptance
+Kiro Opus 4.8: prompt architecture, implementation-slice design draft, risk/invariant checklist
 Cursor Composer 2.5 (`composer-2.5`): large-context implementation, doc/log/result sweeps, broad edits, synthetic checks
 Cursor auto: current editor/selection/notebook-local edits
 Human owner: long runs, GPU/ROCm budget, downloads, remote writes, publication claims
@@ -21,6 +22,27 @@ Human owner: long runs, GPU/ROCm budget, downloads, remote writes, publication c
 - Current roadmap heavily uses v61 checkpoint/SSD/MoE evidence gates. Avoid materializing checkpoint payloads unless explicitly authorized.
 
 ## Routing
+
+Default next-code-improvement chain:
+
+```text
+Codex goal owner
+-> Kiro Opus 4.8 prompt design using docs/ai/prompts/kiro_opus_prompt_architect.md
+-> Cursor Composer 2.5 (`composer-2.5`) implementation
+-> Codex GPT-5.5 xhigh diff review, evidence-boundary review, ./scripts/ai-verify.sh, acceptance
+```
+
+Use Kiro Opus 4.8 when the next improvement needs a designed command prompt,
+task decomposition, file candidates, invariants, or verification criteria before
+implementation. Kiro drafts the worker prompt only; Codex reviews it before any
+implementation worker runs.
+
+Kiro is currently manual rather than a headless worker in this repository. The
+local `kiro` CLI is the IDE command and does not expose a verified stdout
+prompt-response interface. If Kiro is used, the human/Codex operator must paste
+`docs/ai/prompts/kiro_opus_prompt_architect.md` into Kiro and preserve the
+returned `Kiro design notes` block. If Kiro is skipped, record the skip reason
+in the dispatch notes.
 
 Prefer Cursor Composer 2.5 (`composer-2.5`) for:
 
