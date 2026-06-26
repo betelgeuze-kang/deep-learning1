@@ -52,7 +52,7 @@ jobs:
           # Evidence-independent checks that are safe on an ephemeral runner.
           # The full ./scripts/ai-verify.sh evidence suite depends on generated
           # results/ artifacts that exist only on the self-hosted runner, so it
-          # runs in the ai-verify job below on trusted (non-PR) events.
+          # runs in the ai-verify job below on trusted main events.
           bash -n scripts/ai-verify.sh
           if [ -x tools/verify_ci_workflows.py ]; then
             tools/verify_ci_workflows.py .
@@ -101,14 +101,17 @@ jobs:
               build/dmv02 --dataset counter --N 32 --epochs 1 --cycles-per-epoch 2 --seed 1 --csv results/ai_verify_v02_smoke.csv
               test -s results/ai_verify_v02_smoke.csv
             fi
+            bash experiments/test_v02_causal_next_byte_evaluation.sh
           fi
 
-  # Full evidence verification runs only on trusted (non-PR) events on the
+  # Full evidence verification runs only on trusted main events on the
   # persistent self-hosted runner, which carries the generated results/
   # artifacts that ./scripts/ai-verify.sh checks.
   ai-verify:
     name: ai-verify.sh
-    if: github.event_name != 'pull_request'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 30
     steps:
@@ -118,6 +121,12 @@ jobs:
         run: |
           set -euo pipefail
           git init .
+          cleanup_remote() {
+            if git remote get-url origin >/dev/null 2>&1; then
+              git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
+            fi
+          }
+          trap cleanup_remote EXIT
           if git remote get-url origin >/dev/null 2>&1; then
             git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           else
@@ -125,6 +134,8 @@ jobs:
           fi
           git fetch --depth=1 origin "${GITHUB_SHA}"
           git checkout --detach FETCH_HEAD
+          cleanup_remote
+          trap - EXIT
 
       - name: Toolchain preflight
         run: |
