@@ -1,7 +1,7 @@
 name: Evidence blocker
 description: Track a blocker that must be closed before a readiness flag can advance.
 title: "[blocker] <scope>: <short description>"
-labels: ["blocker", "evidence"]
+labels: ["blocker", "evidence", "type:evidence"]
 body:
   - type: markdown
     attributes:
@@ -9,12 +9,33 @@ body:
         Use this for a concrete evidence gap that blocks a readiness transition.
         Keep claims within the evidence boundary: a fixture, simulated, replayed,
         or mocked result is **not** real evidence.
-  - type: input
+
+        Scope examples: v53 benchmark, D/E baseline, v54 generation, v58 blind evaluation, v61 SSD-MoE.
+  - type: dropdown
     id: scope
     attributes:
       label: Readiness scope
-      description: scope_id from readiness/typed_ready.json (e.g. v54-free-running-generation).
-      placeholder: v54-free-running-generation
+      description: scope_id from readiness/typed_ready.json.
+      options:
+        - v53 benchmark
+        - D/E baseline
+        - v54 generation
+        - v58 blind evaluation
+        - v61 SSD-MoE
+    validations:
+      required: true
+  - type: dropdown
+    id: readiness
+    attributes:
+      label: Target readiness transition
+      description: Which typed transition is blocked?
+      options:
+        - contract -> fixture
+        - fixture -> real execution
+        - real execution -> heldout
+        - heldout -> human review
+        - human review -> independent reproduction
+        - independent reproduction -> release
     validations:
       required: true
   - type: dropdown
@@ -36,15 +57,24 @@ body:
     validations:
       required: true
   - type: textarea
-    id: required-evidence
+    id: evidence
     attributes:
-      label: Required evidence
+      label: Required artifacts
       description: Exact artifacts/contracts that must pass to close this blocker.
       placeholder: |
         - v54/free_running_generation_evidence_intake_contract.json reports 7/7 required artifacts present
         - results/v54f_.../*.csv generated and hash-bound
     validations:
       required: true
+  - type: textarea
+    id: required-evidence
+    attributes:
+      label: Required evidence
+      description: Additional evidence notes or verification commands.
+      placeholder: |
+        - tools/verify_artifact.py v54-... <path>
+    validations:
+      required: false
   - type: input
     id: contract-path
     attributes:

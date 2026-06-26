@@ -1,3 +1,15 @@
+# Verifier contract lines (single-space form).
+* @betelgeuze-kang
+/.github/workflows/ @betelgeuze-kang
+/readiness/ @betelgeuze-kang
+/schemas/ @betelgeuze-kang
+/benchmarks/ @betelgeuze-kang
+/baselines/ @betelgeuze-kang
+/v54/ @betelgeuze-kang
+/v58/ @betelgeuze-kang
+/v61/ @betelgeuze-kang
+/docs/*CLAIM* @betelgeuze-kang
+
 # Default owner for everything.
 *                                   @betelgeuze-kang
 

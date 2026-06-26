@@ -1,4 +1,6 @@
-# Contributing
+# Contribution Policy
+
+One claim-bound slice per PR.
 
 This repository is a machine-verifiable research artifact. The most important
 rule is the **evidence boundary**: never present a fixture, simulated, replayed,
@@ -30,6 +32,15 @@ mocked, or not-independently-verified result as real evidence.
   - `schemas/typed_readiness.schema.json`
   - `docs/STATUS.md`, `README.md`, `README.ko.md`
 
+## Forbidden promotions
+
+Never merge changes that do any of the following:
+
+- Fixture evidence presented as real evidence
+- Evaluator-only fields exposed to model input
+- Readiness promotion without artifact paths
+- Generated results committed without an artifact contract
+
 ## Workflow
 
 1. Branch from `main`. Do not commit directly to `main`.
@@ -54,6 +65,10 @@ tools/verify_artifact.py typed-readiness readiness/typed_ready.json
 tools/verify_ci_workflows.py .
 python3 -m json.tool readiness/typed_ready.json
 ```
+
+Each slice must name the Relevant `tools/verify_artifact.py` command for its
+evidence contract. Keep README/readiness synchronization in the same PR when
+central readiness or dashboard wording changes.
 
 Note: `results/*` is gitignored. Some verifier steps require generated summary
 artifacts that are absent in a fresh checkout; document such environment-only

@@ -48,18 +48,13 @@ jobs:
           RETURN_ID_INPUT: ${{ inputs.return_id }}
         run: |
           set -euo pipefail
-          if [ -n "${RETURN_ID_INPUT:-}" ]; then
-            if [[ ! "$RETURN_ID_INPUT" =~ ^[A-Za-z0-9._-]{1,80}$ ]]; then
-              echo "return_id must match ^[A-Za-z0-9._-]{1,80}$" >&2
-              exit 2
-            fi
-            if [[ "$RETURN_ID_INPUT" == *".."* ]]; then
-              echo "return_id must not contain '..'" >&2
-              exit 2
-            fi
-            RETURN_ID="$RETURN_ID_INPUT"
-          else
-            RETURN_ID="github_actions_return_${GITHUB_RUN_ID}"
+          if [[ -n "$RETURN_ID_INPUT" && ! "$RETURN_ID_INPUT" =~ ^[A-Za-z0-9._-]{1,80}$ ]]; then
+            echo "return_id must match ^[A-Za-z0-9._-]{1,80}$" >&2
+            exit 2
+          fi
+          if [[ "$RETURN_ID_INPUT" == *".."* ]]; then
+            echo "return_id must not contain '..'" >&2
+            exit 2
           fi
           RETURN_ID="${RETURN_ID_INPUT:-github_actions_return_${GITHUB_RUN_ID}}"
           RETURN_DIR="results/github_actions_third_party_rerun/${RETURN_ID}/third_party_return"

@@ -107,7 +107,7 @@ def verify_third_party_workflow(root: Path, errors: list[str]) -> None:
         "name: third-party-rerun-return-manual",
         "runs-on: [self-hosted, linux, x64]",
         "timeout-minutes: 45",
-        "uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
         "persist-credentials: false",
         "RETURN_ID_INPUT: ${{ inputs.return_id }}",
         "[[ -n \"$RETURN_ID_INPUT\" && ! \"$RETURN_ID_INPUT\" =~ ^[A-Za-z0-9._-]{1,80}$ ]]",

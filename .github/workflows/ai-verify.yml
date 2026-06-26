@@ -25,7 +25,7 @@ jobs:
   # runner with a credential-free checkout. It never touches the persistent
   # self-hosted runner. This is intended to be the required status check on PRs.
   pr-safe-verify:
-    name: pr-safe-verify
+    name: pr-safe-ai-verify.sh
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -106,34 +106,6 @@ jobs:
   # Full evidence verification runs only on trusted (non-PR) events on the
   # persistent self-hosted runner, which carries the generated results/
   # artifacts that ./scripts/ai-verify.sh checks.
-  ai-verify:
-    name: ai-verify.sh
-    if: github.event_name != 'pull_request'
-    runs-on: [self-hosted, linux, x64]
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          persist-credentials: false
-          fetch-depth: 1
-          clean: true
-
-      - name: Toolchain preflight
-        run: |
-          set -euo pipefail
-          bash --version
-          python3 --version
-          cmake --version
-          g++ --version
-          git --version
-
-      - name: Run ai-verify
-        env:
-          AI_VERIFY_JOBS: "2"
-          DLE_VERIFY_ENABLE_HIP: "OFF"
-        run: ./scripts/ai-verify.sh
-
   trusted-self-hosted-verify:
     name: trusted-self-hosted-ai-verify.sh
     if: github.event_name != 'pull_request'
