@@ -64,4 +64,4 @@ jobs:
       - name: Run offline suite shard
         env:
           OFFLINE_SUITE_TIMEOUT: "240"
-        run: scripts/run_offline_suite.sh --shard "${{ matrix.shard }}/${TOTAL_SHARDS}"
+        run: bash scripts/run_offline_suite.sh --shard "${{ matrix.shard }}/${TOTAL_SHARDS}"
