@@ -12,6 +12,7 @@ DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/abgh_evaluator_rows.csv" && -s "$RUN_DIR/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/abgh_internal_prebaseline_contract_rows.csv" ]] \
   && grep -q '^v53aq_complete_source_abgh_real_adapter_measured_ready,' "$SUMMARY_CSV" \
   && grep -q 'selection_question_text_only' "$SUMMARY_CSV" \
+  && grep -q 'future_neighbor_used' "$SUMMARY_CSV" \
   && grep -q 'real_adapter_execution_ready' "$SUMMARY_CSV" \
   && grep -q 'same_query_internal_prebaseline_rows_ready' "$SUMMARY_CSV" \
   && grep -q 'same_query_internal_prebaseline_rows=1000' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
@@ -20,6 +21,7 @@ if [[ "${V53AQ_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/s
   && grep -q 'public_real_system_performance_claim_ready=0' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'selection_forbidden_fields=query_id,case_id,source_row_id' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'selection_runtime_guard_passed_rows=4000' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
+  && grep -q 'future_neighbor_used=0' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'parsed_path,parsed_line' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md" \
   && grep -q 'source_sha256,file_sha256,content_sha256,sha256' "$RUN_DIR/V53AQ_COMPLETE_SOURCE_ABGH_REAL_ADAPTER_BOUNDARY.md"; then
   echo "v53aq_complete_source_abgh_real_adapter_measured_dir: $RUN_DIR"
@@ -369,6 +371,8 @@ for system_id, system_name, adapter in SYSTEMS:
             "expected_answer_oracle_replay": "0",
             "deterministic_source_span_adapter_execution": "0",
             "selection_oracle_field_used": "0",
+            "source_span_oracle_selection_used": "0",
+            "future_neighbor_used": "0",
             "actual_adapter_execution_ready": "1",
             "real_adapter_execution_ready": "1",
             "internal_real_adapter_metric_claim_ready": "1",
@@ -452,6 +456,8 @@ for system_id, system_name, adapter in SYSTEMS:
             "selection_runtime_guard_passed": "1",
             "source_locator_in_question_removed": "1",
             "selection_oracle_field_used": "0",
+            "source_span_oracle_selection_used": "0",
+            "future_neighbor_used": "0",
             "source_span_id_match": str(source_span_id_match),
             "source_location_match": str(source_location_match),
             "answer_hash_match": str(answer_hash_match),
@@ -493,6 +499,8 @@ for system_id, system_name, adapter in SYSTEMS:
                 "source_span_selection_method": selection_method,
                 "selection_input_fields": "sanitized_question",
                 "selection_oracle_field_used": "0",
+                "source_span_oracle_selection_used": "0",
+                "future_neighbor_used": "0",
                 "source_locator_in_question_removed": "1",
                 "parsed_owner_repo": parsed_owner,
                 "parsed_path": parsed_path,
@@ -528,6 +536,8 @@ for system_id, system_name, adapter in SYSTEMS:
                 "selection_source_path_field_used": "0",
                 "selection_source_line_field_used": "0",
                 "selection_oracle_field_used": "0",
+                "source_span_oracle_selection_used": "0",
+                "future_neighbor_used": "0",
                 "parsed_owner_repo": parsed_owner,
                 "parsed_path": parsed_path,
                 "parsed_line": parsed_line,
@@ -600,6 +610,8 @@ for system_id, system_name, adapter in SYSTEMS:
                 "selection_sanitized_question_only": "1",
                 "source_locator_in_question_removed": "1",
                 "selection_oracle_field_used": "0",
+                "source_span_oracle_selection_used": "0",
+                "future_neighbor_used": "0",
                 "expected_answer_oracle_replay": "0",
                 "deterministic_source_span_adapter_execution": "0",
                 "real_system_performance_claim_ready": "0",
@@ -732,6 +744,8 @@ for system_id, system_name, _ in SYSTEMS:
             "source_locator_in_question_removed_rows": str(counter["adapter_trace_rows"]),
             "selection_runtime_guard_passed_rows": str(counter["selection_runtime_guard_passed_rows"]),
             "selection_oracle_field_used": "0",
+            "source_span_oracle_selection_used": "0",
+            "future_neighbor_used": "0",
             "expected_answer_oracle_replay_rows": "0",
             "deterministic_source_span_adapter_rows": "0",
             "actual_adapter_execution_ready": "1",
@@ -797,6 +811,12 @@ for query in queries:
     selection_oracle_field_used_any = int(
         any(row.get("selection_oracle_field_used") == "1" for row in present_evaluators + present_traces)
     )
+    source_span_oracle_selection_used_any = int(
+        any(row.get("source_span_oracle_selection_used") == "1" for row in present_evaluators + present_traces)
+    )
+    future_neighbor_used_any = int(
+        any(row.get("future_neighbor_used") == "1" for row in present_evaluators + present_traces)
+    )
     expected_answer_oracle_replay_any = int(
         any(row.get("expected_answer_oracle_replay") == "1" for row in present_evaluators + present_traces + present_resources)
     )
@@ -829,6 +849,8 @@ for query in queries:
         "selection_sanitized_question_only_all": str(selection_question_text_only_all),
         "source_locator_in_question_removed_all": str(selection_question_text_only_all),
         "selection_oracle_field_used_any": str(selection_oracle_field_used_any),
+        "source_span_oracle_selection_used_any": str(source_span_oracle_selection_used_any),
+        "future_neighbor_used_any": str(future_neighbor_used_any),
         "expected_answer_oracle_replay_any": str(expected_answer_oracle_replay_any),
         "deterministic_source_span_adapter_execution_any": str(deterministic_source_span_adapter_execution_any),
         "g_h_routehint_no_raw_context": str(gh_routehint_no_raw_context),
@@ -860,6 +882,8 @@ same_query_internal_prebaseline_rows_ready = int(
     and all(row["same_resource_bound"] == "1" for row in same_query_internal_prebaseline_rows)
     and all(row["selection_question_text_only_all"] == "1" for row in same_query_internal_prebaseline_rows)
     and all(row["selection_oracle_field_used_any"] == "0" for row in same_query_internal_prebaseline_rows)
+    and all(row["source_span_oracle_selection_used_any"] == "0" for row in same_query_internal_prebaseline_rows)
+    and all(row["future_neighbor_used_any"] == "0" for row in same_query_internal_prebaseline_rows)
     and all(row["expected_answer_oracle_replay_any"] == "0" for row in same_query_internal_prebaseline_rows)
     and all(row["deterministic_source_span_adapter_execution_any"] == "0" for row in same_query_internal_prebaseline_rows)
     and all(row["public_comparison_claim_ready"] == "0" for row in same_query_internal_prebaseline_rows)
@@ -909,6 +933,8 @@ for system_id, system_name, adapter in SYSTEMS:
         and metric_row["selection_sanitized_question_only"] == "1"
         and metric_row["source_locator_in_question_removed_rows"] == "1000"
         and metric_row["selection_oracle_field_used"] == "0"
+        and metric_row["source_span_oracle_selection_used"] == "0"
+        and metric_row["future_neighbor_used"] == "0"
         and metric_row["expected_answer_oracle_replay_rows"] == "0"
         and metric_row["deterministic_source_span_adapter_rows"] == "0"
         and metric_row["internal_real_adapter_metric_claim_ready"] == "1"
@@ -942,6 +968,8 @@ for system_id, system_name, adapter in SYSTEMS:
             "source_locator_in_question_removed_rows": metric_row["source_locator_in_question_removed_rows"],
             "selection_runtime_guard_passed_rows": metric_row["selection_runtime_guard_passed_rows"],
             "selection_oracle_field_used": metric_row["selection_oracle_field_used"],
+            "source_span_oracle_selection_used": metric_row["source_span_oracle_selection_used"],
+            "future_neighbor_used": metric_row["future_neighbor_used"],
             "expected_answer_oracle_replay_rows": metric_row["expected_answer_oracle_replay_rows"],
             "deterministic_source_span_adapter_rows": metric_row["deterministic_source_span_adapter_rows"],
             "answer_hash_match_rows": metric_row["answer_hash_match_rows"],
@@ -978,6 +1006,8 @@ ready = int(
     and len(route_memory_rows) == 2000
     and all(row["answer_rows"] == "1000" for row in metric_rows)
     and all(row["selection_oracle_field_used"] == "0" for row in adapter_trace_rows)
+    and all(row["source_span_oracle_selection_used"] == "0" for row in adapter_trace_rows)
+    and all(row["future_neighbor_used"] == "0" for row in adapter_trace_rows)
     and all(row["selection_runtime_guard_passed"] == "1" for row in adapter_trace_rows)
     and same_query_internal_prebaseline_rows_ready == 1
     and internal_prebaseline_contract_ready == 1
@@ -1028,6 +1058,7 @@ summary = {
     "selection_forbidden_fields": ",".join(FORBIDDEN_SELECTION_FIELDS),
     "selection_oracle_field_used": "0",
     "source_span_oracle_selection_used": "0",
+    "future_neighbor_used": "0",
     "expected_answer_oracle_replay": "0",
     "expected_answer_oracle_replay_rows": "0",
     "deterministic_source_span_adapter_execution": "0",
@@ -1101,6 +1132,7 @@ boundary = (
     f"- selection_forbidden_fields={','.join(FORBIDDEN_SELECTION_FIELDS)}\n"
     "- selection_oracle_field_used=0\n"
     "- source_span_oracle_selection_used=0\n"
+    "- future_neighbor_used=0\n"
     "- expected_answer_oracle_replay=0\n"
     "- deterministic_source_span_adapter_execution=0\n"
     "- actual_adapter_execution_ready=1\n"
@@ -1153,6 +1185,8 @@ manifest = {
     "source_locator_in_question_removed_rows": len(adapter_trace_rows),
     "selection_runtime_guard_passed_rows": sum(1 for row in adapter_trace_rows if row["selection_runtime_guard_passed"] == "1"),
     "selection_oracle_field_used": 0,
+    "source_span_oracle_selection_used": 0,
+    "future_neighbor_used": 0,
     "expected_answer_oracle_replay": 0,
     "deterministic_source_span_adapter_execution": 0,
     "actual_adapter_execution_ready": 1,

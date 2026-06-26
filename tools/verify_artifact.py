@@ -656,7 +656,19 @@ EXPECTED_TYPED_READINESS_CONTRACTS = {
         "misleading_ready_flag": "v54_ready",
         "evidence_path": "v54/free_running_generation_evidence_intake_contract.json",
         "contract_ready": True,
-        "fixture_execution_ready": False,
+        "fixture_execution_ready": True,
+        "real_model_execution_ready": False,
+        "heldout_metric_ready": False,
+        "human_review_ready": False,
+        "independent_reproduction_ready": False,
+        "release_ready": False,
+    },
+    "v54_free_running_fixture_ready": {
+        "scope_id": "v54-free-running-generation",
+        "misleading_ready_flag": "v53_ready",
+        "evidence_path": "v54/free_running_generation_evidence_intake_contract.json",
+        "contract_ready": True,
+        "fixture_execution_ready": True,
         "real_model_execution_ready": False,
         "heldout_metric_ready": False,
         "human_review_ready": False,
@@ -1137,6 +1149,9 @@ EXPECTED_V53_SUMMARY_CHECKS = {
         ("v53aq", "selection_runtime_guard_passed_rows", "4000"),
         ("v53aq", "selection_oracle_field_used", "0"),
         ("v53aq", "source_span_oracle_selection_used", "0"),
+        ("v53aq", "future_neighbor_used", "0"),
+        ("v53t", "v53aq_source_span_oracle_selection_used", "0"),
+        ("v53t", "v53aq_future_neighbor_used", "0"),
         ("v53aq", "expected_answer_oracle_replay", "0"),
     ],
 }
@@ -4935,8 +4950,54 @@ def verify_v53_source_benchmark(
                 errors.append(f"{v1_exit_ledger}: {criterion_id}.blocker_false_positive_status must be pass")
             if row.get("tests_only_merge_condition") != "0":
                 errors.append(f"{v1_exit_ledger}: {criterion_id}.tests_only_merge_condition must be 0")
-            if not row.get("evidence_sha256", "").startswith("sha256:"):
+            evidence_sha256 = row.get("evidence_sha256", "")
+            if not evidence_sha256.startswith("sha256:"):
                 errors.append(f"{v1_exit_ledger}: {criterion_id}.evidence_sha256 must be sha256-bound")
+            evidence_path_text = row.get("evidence_path", "")
+            if not evidence_path_text:
+                errors.append(f"{v1_exit_ledger}: {criterion_id}.evidence_path must be non-empty")
+                continue
+            evidence_path = Path(evidence_path_text)
+            if not evidence_path.is_absolute():
+                evidence_path = v1_exit_ledger.parent / evidence_path
+            if not evidence_path.is_file():
+                errors.append(f"{v1_exit_ledger}: {criterion_id}.evidence_path missing: {evidence_path}")
+                continue
+            actual_sha256 = sha256(evidence_path)
+            if evidence_sha256 != actual_sha256:
+                errors.append(f"{v1_exit_ledger}: {criterion_id}.evidence_sha256 expected {actual_sha256}, got {evidence_sha256}")
+            try:
+                expected_rows = int(row.get("evidence_rows", ""))
+            except ValueError:
+                errors.append(f"{v1_exit_ledger}: {criterion_id}.evidence_rows must be an integer")
+            else:
+                actual_rows = len(read_csv_rows(evidence_path))
+                if expected_rows != actual_rows:
+                    errors.append(f"{v1_exit_ledger}: {criterion_id}.evidence_rows expected {actual_rows}, got {expected_rows}")
+        v53t_manifest = v1_exit_ledger.parent / "v53t_complete_source_audit_readiness_gate_manifest.json"
+        if not v53t_manifest.is_file():
+            errors.append(f"{v1_exit_ledger}: missing v53t manifest next to v1 exit ledger")
+        else:
+            manifest = json.loads(v53t_manifest.read_text(encoding="utf-8"))
+            if manifest.get("v1_exit_criteria_rows_sha256") != sha256(v1_exit_ledger):
+                errors.append(f"{v53t_manifest}: v1_exit_criteria_rows_sha256 must bind {v1_exit_ledger}")
+            for summary_name, summary_path in [
+                ("v53ap_summary_sha256", v53ap_summary),
+                ("v53aq_summary_sha256", v53aq_summary),
+            ]:
+                if summary_path is not None and manifest.get(summary_name) != sha256(summary_path):
+                    errors.append(f"{v53t_manifest}: {summary_name} must bind {summary_path}")
+        sha_manifest = v1_exit_ledger.parent / "sha256_manifest.csv"
+        if not sha_manifest.is_file():
+            errors.append(f"{v1_exit_ledger}: missing sha256_manifest.csv next to v1 exit ledger")
+        else:
+            sha_rows = {row.get("path", ""): row.get("sha256", "") for row in read_csv_rows(sha_manifest)}
+            for artifact in [v1_exit_ledger, v53t_manifest]:
+                if artifact.is_file():
+                    artifact_rel = artifact.name
+                    expected_sha = sha256(artifact)
+                    if sha_rows.get(artifact_rel) != expected_sha:
+                        errors.append(f"{sha_manifest}: {artifact_rel} expected {expected_sha}, got {sha_rows.get(artifact_rel)}")
     return errors
 
 
@@ -5644,6 +5705,15 @@ def main() -> int:
         for path in args.paths:
             errors.extend(verify_v56_replay_contract(path, args.summary, args.blocker_ledger, args.artifact_ledger))
     elif args.cmd == "v53-source-benchmark":
+        v53_evidence_args = [
+            args.v53i_summary,
+            args.v53t_summary,
+            args.v53ap_summary,
+            args.v53aq_summary,
+            args.v1_exit_ledger,
+        ]
+        if any(item is not None for item in v53_evidence_args) and not all(item is not None for item in v53_evidence_args):
+            errors.append("v53-source-benchmark: v53 summaries and --v1-exit-ledger must be supplied together")
         for path in args.paths:
             errors.extend(
                 verify_v53_source_benchmark(

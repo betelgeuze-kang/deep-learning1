@@ -84,6 +84,7 @@ expected = {
     "selection_forbidden_fields": FORBIDDEN_SELECTION_FIELDS,
     "selection_oracle_field_used": "0",
     "source_span_oracle_selection_used": "0",
+    "future_neighbor_used": "0",
     "expected_answer_oracle_replay": "0",
     "expected_answer_oracle_replay_rows": "0",
     "deterministic_source_span_adapter_execution": "0",
@@ -171,6 +172,8 @@ for system_id, row in system_rows.items():
         "expected_answer_oracle_replay",
         "deterministic_source_span_adapter_execution",
         "selection_oracle_field_used",
+        "source_span_oracle_selection_used",
+        "future_neighbor_used",
         "external_model_used",
         "external_network_used",
     ]:
@@ -236,6 +239,8 @@ for system_id, expected_values in expected_metric_rows.items():
         "selection_sanitized_question_only": "1",
         "source_locator_in_question_removed_rows": "1000",
         "selection_oracle_field_used": "0",
+        "source_span_oracle_selection_used": "0",
+        "future_neighbor_used": "0",
         "expected_answer_oracle_replay_rows": "0",
         "deterministic_source_span_adapter_rows": "0",
         "actual_adapter_execution_ready": "1",
@@ -269,6 +274,8 @@ for system_id, expected_values in expected_metric_rows.items():
         "selection_sanitized_question_only": "1",
         "source_locator_in_question_removed_rows": "1000",
         "selection_oracle_field_used": "0",
+        "source_span_oracle_selection_used": "0",
+        "future_neighbor_used": "0",
         "expected_answer_oracle_replay_rows": "0",
         "deterministic_source_span_adapter_rows": "0",
         "internal_real_adapter_metric_claim_ready": "1",
@@ -310,6 +317,8 @@ for row in prebaseline:
         "selection_sanitized_question_only_all": "1",
         "source_locator_in_question_removed_all": "1",
         "selection_oracle_field_used_any": "0",
+        "source_span_oracle_selection_used_any": "0",
+        "future_neighbor_used_any": "0",
         "expected_answer_oracle_replay_any": "0",
         "deterministic_source_span_adapter_execution_any": "0",
         "g_h_routehint_no_raw_context": "1",
@@ -351,6 +360,8 @@ if any(
     or row["selection_sanitized_question_only"] != "1"
     or row["source_locator_in_question_removed"] != "1"
     or row["selection_oracle_field_used"] != "0"
+    or row["source_span_oracle_selection_used"] != "0"
+    or row["future_neighbor_used"] != "0"
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
     or row["real_system_performance_claim_ready"] != "0"
@@ -387,6 +398,8 @@ for row in adapter_traces:
         "selection_source_path_field_used",
         "selection_source_line_field_used",
         "selection_oracle_field_used",
+        "source_span_oracle_selection_used",
+        "future_neighbor_used",
         "expected_answer_oracle_replay",
         "deterministic_source_span_adapter_execution",
     ]:
@@ -454,6 +467,8 @@ for field, value in {
     "source_locator_in_question_removed_rows": 4000,
     "selection_runtime_guard_passed_rows": 4000,
     "selection_oracle_field_used": 0,
+    "source_span_oracle_selection_used": 0,
+    "future_neighbor_used": 0,
     "expected_answer_oracle_replay": 0,
     "deterministic_source_span_adapter_execution": 0,
     "actual_adapter_execution_ready": 1,
@@ -491,6 +506,8 @@ for snippet in [
     "selection_allowed_fields=sanitized_question",
     f"selection_forbidden_fields={FORBIDDEN_SELECTION_FIELDS}",
     "selection_oracle_field_used=0",
+    "source_span_oracle_selection_used=0",
+    "future_neighbor_used=0",
     "expected_answer_oracle_replay=0",
     "deterministic_source_span_adapter_execution=0",
     "real_adapter_execution_ready=1",

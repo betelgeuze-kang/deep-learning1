@@ -9,6 +9,21 @@ DECISION_CSV="$RESULTS_DIR/v53t_complete_source_audit_readiness_gate_decision.cs
 
 V53T_REUSE_EXISTING="${V53T_REUSE_EXISTING:-1}" "$ROOT_DIR/experiments/run_v53t_complete_source_audit_readiness_gate.sh" >/dev/null
 
+"$ROOT_DIR/tools/verify_artifact.py" v53-source-benchmark \
+  "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json" \
+  --v53i-summary "$RESULTS_DIR/v53i_complete_source_query_instantiation_summary.csv" \
+  --v53t-summary "$SUMMARY_CSV" \
+  --v53ap-summary "$RESULTS_DIR/v53ap_complete_source_abgh_same_query_measured_summary.csv" \
+  --v53aq-summary "$RESULTS_DIR/v53aq_complete_source_abgh_real_adapter_measured_summary.csv" \
+  --v1-exit-ledger "$RUN_DIR/complete_source_v1_exit_criteria_rows.csv" >/dev/null
+
+if "$ROOT_DIR/tools/verify_artifact.py" v53-source-benchmark \
+  "$ROOT_DIR/benchmarks/v53_source_bound_freeze.json" \
+  --v53i-summary "$RESULTS_DIR/v53i_complete_source_query_instantiation_summary.csv" >/dev/null 2>&1; then
+  echo "v53 source benchmark verifier accepted partial summary evidence" >&2
+  exit 1
+fi
+
 python3 - "$RUN_DIR" "$SUMMARY_CSV" "$DECISION_CSV" <<'PY'
 import csv
 import hashlib
@@ -142,6 +157,8 @@ expected = {
     "v53ap_real_system_performance_claim_ready": "0",
     "v53aq_selection_question_text_only": "1",
     "v53aq_selection_oracle_field_used": "0",
+    "v53aq_source_span_oracle_selection_used": "0",
+    "v53aq_future_neighbor_used": "0",
     "v53aq_expected_answer_oracle_replay": "0",
     "v53aq_deterministic_source_span_adapter_execution": "0",
     "v53aq_actual_adapter_execution_ready": "1",
@@ -422,6 +439,8 @@ if any(
     or row["resource_row_bound"] != "1"
     or row["selection_question_text_only"] != "1"
     or row["selection_oracle_field_used"] != "0"
+    or row["source_span_oracle_selection_used"] != "0"
+    or row["future_neighbor_used"] != "0"
     or row["expected_answer_oracle_replay"] != "0"
     or row["deterministic_source_span_adapter_execution"] != "0"
     or row["real_system_performance_claim_ready"] != "0"
@@ -441,6 +460,8 @@ for row in v53aq_prebaseline:
         "selection_sanitized_question_only_all": "1",
         "source_locator_in_question_removed_all": "1",
         "selection_oracle_field_used_any": "0",
+        "source_span_oracle_selection_used_any": "0",
+        "future_neighbor_used_any": "0",
         "expected_answer_oracle_replay_any": "0",
         "deterministic_source_span_adapter_execution_any": "0",
         "g_h_routehint_no_raw_context": "1",
@@ -474,6 +495,8 @@ for system_id, row in v53aq_contract_rows.items():
         "same_resource_contract": "1",
         "selection_question_text_only": "1",
         "selection_oracle_field_used": "0",
+        "source_span_oracle_selection_used": "0",
+        "future_neighbor_used": "0",
         "expected_answer_oracle_replay_rows": "0",
         "deterministic_source_span_adapter_rows": "0",
         "internal_real_adapter_metric_claim_ready": "1",
@@ -791,6 +814,8 @@ for snippet in [
     "v53ap_real_system_performance_claim_ready=0",
     "v53aq_selection_question_text_only=1",
     "v53aq_selection_oracle_field_used=0",
+    "v53aq_source_span_oracle_selection_used=0",
+    "v53aq_future_neighbor_used=0",
     "v53aq_expected_answer_oracle_replay=0",
     "v53aq_deterministic_source_span_adapter_execution=0",
     "v53aq_actual_adapter_execution_ready=1",
@@ -922,6 +947,8 @@ if manifest.get("same_complete_source_query_hash") != 1:
 if (
     manifest.get("v53aq_selection_question_text_only") != 1
     or manifest.get("v53aq_selection_oracle_field_used") != 0
+    or manifest.get("v53aq_source_span_oracle_selection_used") != 0
+    or manifest.get("v53aq_future_neighbor_used") != 0
     or manifest.get("v53aq_expected_answer_oracle_replay") != 0
     or manifest.get("v53aq_deterministic_source_span_adapter_execution") != 0
     or manifest.get("v53aq_actual_adapter_execution_ready") != 1

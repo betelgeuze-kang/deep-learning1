@@ -112,6 +112,9 @@
         {"summary_id": "v53aq", "field": "selection_runtime_guard_passed_rows", "expected": "4000"},
         {"summary_id": "v53aq", "field": "selection_oracle_field_used", "expected": "0"},
         {"summary_id": "v53aq", "field": "source_span_oracle_selection_used", "expected": "0"},
+        {"summary_id": "v53aq", "field": "future_neighbor_used", "expected": "0"},
+        {"summary_id": "v53t", "field": "v53aq_source_span_oracle_selection_used", "expected": "0"},
+        {"summary_id": "v53t", "field": "v53aq_future_neighbor_used", "expected": "0"},
         {"summary_id": "v53aq", "field": "expected_answer_oracle_replay", "expected": "0"}
       ]
     }

@@ -9,7 +9,7 @@ RUN_DIR="$RESULTS_DIR/$PREFIX/$RUN_ID"
 SUMMARY_CSV="$RESULTS_DIR/${PREFIX}_summary.csv"
 DECISION_CSV="$RESULTS_DIR/${PREFIX}_decision.csv"
 
-if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/complete_source_pm_acceptance_evidence_rows.csv" && -s "$RUN_DIR/complete_source_abgh_real_adapter_freeze_rows.csv" && -s "$RUN_DIR/complete_source_v1_exit_criteria_rows.csv" && -s "$RUN_DIR/complete_source_query_span_binding_audit_rows.csv" && -s "$RUN_DIR/complete_source_unseen_repository_split_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_query_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_span_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_repo_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_adapter_trace_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/adapter_selection_contract_rows.csv"   && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_internal_prebaseline_contract_rows.csv" ]] && grep -q 'negative_abstain_rows=160' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'ambiguous_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'unseen_repository_split_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'pm_acceptance_evidence_rows=11' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v1_exit_criteria_rows=7' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v1_exit_machine_foundation_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_query_span_binding_audit_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_pinned_manifest_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_same_query_ledger_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_real_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_internal_real_adapter_metric_claim_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_public_real_system_performance_claim_ready=0' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_selection_runtime_guard_passed_rows=4000' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
+if [[ "${V53T_REUSE_EXISTING:-0}" == "1" && -s "$SUMMARY_CSV" && -s "$RUN_DIR/sha256_manifest.csv" && -s "$RUN_DIR/complete_source_pm_freeze_check_rows.csv" && -s "$RUN_DIR/complete_source_foundation_freeze_rows.csv" && -s "$RUN_DIR/complete_source_pm_acceptance_evidence_rows.csv" && -s "$RUN_DIR/complete_source_abgh_real_adapter_freeze_rows.csv" && -s "$RUN_DIR/complete_source_v1_exit_criteria_rows.csv" && -s "$RUN_DIR/complete_source_query_span_binding_audit_rows.csv" && -s "$RUN_DIR/complete_source_unseen_repository_split_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_query_rows.csv" && -s "$RUN_DIR/source_v53i/complete_source_span_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_repo_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/complete_source_content_snapshot_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_repo_coverage_rows.csv" && -s "$RUN_DIR/source_v53i/source_v53h/source_v53g/complete_source_file_manifest_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53ap/abgh_adapter_trace_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_system_metric_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_evaluator_rows.csv" && -s "$RUN_DIR/source_v53aq/adapter_selection_contract_rows.csv"   && -s "$RUN_DIR/source_v53aq/abgh_same_query_internal_prebaseline_rows.csv" && -s "$RUN_DIR/source_v53aq/abgh_internal_prebaseline_contract_rows.csv" ]] && grep -q 'negative_abstain_rows=160' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'ambiguous_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'missing_specific_control_rows=30' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'unseen_repository_split_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'pm_acceptance_evidence_rows=11' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v1_exit_criteria_rows=7' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v1_exit_machine_foundation_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'abgh_same_query_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_deterministic_source_span_adapter_execution=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53ap_actual_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_machine_freeze_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_query_span_binding_audit_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_direct_pinned_manifest_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_evidence_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'foundation_real_adapter_same_query_ledger_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_real_adapter_execution_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_internal_real_adapter_metric_claim_ready=1' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_public_real_system_performance_claim_ready=0' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_selection_runtime_guard_passed_rows=4000' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_source_span_oracle_selection_used=0' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md" && grep -q 'v53aq_future_neighbor_used=0' "$RUN_DIR/V53T_COMPLETE_SOURCE_AUDIT_READINESS_GATE_BOUNDARY.md"; then
   echo "v53t_complete_source_audit_readiness_gate_dir: $RUN_DIR"
   echo "summary: $SUMMARY_CSV"
   echo "decision: $DECISION_CSV"
@@ -427,6 +427,8 @@ foundation_real_adapter_evaluator_rows = sum(
     and row.get("resource_row_bound") == "1"
     and row.get("selection_question_text_only") == "1"
     and row.get("selection_oracle_field_used") == "0"
+    and row.get("source_span_oracle_selection_used") == "0"
+    and row.get("future_neighbor_used") == "0"
     and row.get("expected_answer_oracle_replay") == "0"
     and row.get("deterministic_source_span_adapter_execution") == "0"
     and row.get("real_system_performance_claim_ready") == "0"
@@ -449,6 +451,8 @@ foundation_real_adapter_same_query_ledger_ready = int(
     and all(row.get("same_resource_bound") == "1" for row in v53aq_same_query_internal_prebaseline_rows)
     and all(row.get("selection_question_text_only_all") == "1" for row in v53aq_same_query_internal_prebaseline_rows)
     and all(row.get("selection_oracle_field_used_any") == "0" for row in v53aq_same_query_internal_prebaseline_rows)
+    and all(row.get("source_span_oracle_selection_used_any") == "0" for row in v53aq_same_query_internal_prebaseline_rows)
+    and all(row.get("future_neighbor_used_any") == "0" for row in v53aq_same_query_internal_prebaseline_rows)
     and all(row.get("expected_answer_oracle_replay_any") == "0" for row in v53aq_same_query_internal_prebaseline_rows)
     and all(row.get("deterministic_source_span_adapter_execution_any") == "0" for row in v53aq_same_query_internal_prebaseline_rows)
     and all(row.get("public_comparison_claim_ready") == "0" for row in v53aq_same_query_internal_prebaseline_rows)
@@ -468,6 +472,8 @@ foundation_real_adapter_internal_contract_ready = int(
     and all(row.get("same_resource_contract") == "1" for row in v53aq_internal_prebaseline_contract_rows)
     and all(row.get("selection_question_text_only") == "1" for row in v53aq_internal_prebaseline_contract_rows)
     and all(row.get("selection_oracle_field_used") == "0" for row in v53aq_internal_prebaseline_contract_rows)
+    and all(row.get("source_span_oracle_selection_used") == "0" for row in v53aq_internal_prebaseline_contract_rows)
+    and all(row.get("future_neighbor_used") == "0" for row in v53aq_internal_prebaseline_contract_rows)
     and all(row.get("expected_answer_oracle_replay_rows") == "0" for row in v53aq_internal_prebaseline_contract_rows)
     and all(row.get("deterministic_source_span_adapter_rows") == "0" for row in v53aq_internal_prebaseline_contract_rows)
     and all(row.get("internal_real_adapter_metric_claim_ready") == "1" for row in v53aq_internal_prebaseline_contract_rows)
@@ -487,6 +493,8 @@ foundation_real_adapter_evidence_ready = int(
     and v53aq.get("selection_question_text_only") == "1"
     and v53aq.get("selection_runtime_guard_passed_rows") == "4000"
     and v53aq.get("selection_oracle_field_used") == "0"
+    and v53aq.get("source_span_oracle_selection_used") == "0"
+    and v53aq.get("future_neighbor_used") == "0"
     and v53aq.get("expected_answer_oracle_replay") == "0"
     and v53aq.get("deterministic_source_span_adapter_execution") == "0"
     and v53aq.get("public_comparison_claim_ready") == "0"
@@ -1235,6 +1243,8 @@ metric = {
     "v53aq_source_locator_in_question_removed_rows": v53aq.get("source_locator_in_question_removed_rows", "0"),
     "v53aq_selection_runtime_guard_passed_rows": v53aq.get("selection_runtime_guard_passed_rows", "0"),
     "v53aq_selection_oracle_field_used": v53aq.get("selection_oracle_field_used", "1"),
+    "v53aq_source_span_oracle_selection_used": v53aq.get("source_span_oracle_selection_used", "1"),
+    "v53aq_future_neighbor_used": v53aq.get("future_neighbor_used", "1"),
     "v53aq_expected_answer_oracle_replay": v53aq.get("expected_answer_oracle_replay", "1"),
     "v53aq_deterministic_source_span_adapter_execution": v53aq.get("deterministic_source_span_adapter_execution", "1"),
     "v53aq_actual_adapter_execution_ready": v53aq.get("actual_adapter_execution_ready", "0"),
@@ -1369,6 +1379,8 @@ Evidence emitted:
 - v53aq_source_locator_in_question_removed_rows={v53aq.get('source_locator_in_question_removed_rows', '0')}
 - v53aq_selection_runtime_guard_passed_rows={v53aq.get('selection_runtime_guard_passed_rows', '0')}
 - v53aq_selection_oracle_field_used={v53aq.get('selection_oracle_field_used', '1')}
+- v53aq_source_span_oracle_selection_used={v53aq.get('source_span_oracle_selection_used', '1')}
+- v53aq_future_neighbor_used={v53aq.get('future_neighbor_used', '1')}
 - v53aq_expected_answer_oracle_replay={v53aq.get('expected_answer_oracle_replay', '1')}
 - v53aq_deterministic_source_span_adapter_execution={v53aq.get('deterministic_source_span_adapter_execution', '1')}
 - v53aq_actual_adapter_execution_ready={v53aq.get('actual_adapter_execution_ready', '0')}
@@ -1491,6 +1503,8 @@ manifest = {
     "v53aq_source_locator_in_question_removed_rows": int(v53aq.get("source_locator_in_question_removed_rows", "0")),
     "v53aq_selection_runtime_guard_passed_rows": int(v53aq.get("selection_runtime_guard_passed_rows", "0")),
     "v53aq_selection_oracle_field_used": int(v53aq.get("selection_oracle_field_used", "1")),
+    "v53aq_source_span_oracle_selection_used": int(v53aq.get("source_span_oracle_selection_used", "1")),
+    "v53aq_future_neighbor_used": int(v53aq.get("future_neighbor_used", "1")),
     "v53aq_expected_answer_oracle_replay": int(v53aq.get("expected_answer_oracle_replay", "1")),
     "v53aq_deterministic_source_span_adapter_execution": int(v53aq.get("deterministic_source_span_adapter_execution", "1")),
     "v53aq_actual_adapter_execution_ready": int(v53aq.get("actual_adapter_execution_ready", "0")),
