@@ -1,6 +1,8 @@
 build/
 results/*
 !results/.gitkeep
+SECRET_*
+build/
 
 *.log
 *.tmp
