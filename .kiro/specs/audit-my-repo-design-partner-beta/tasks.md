@@ -23,20 +23,20 @@
     - `audit_manifest.json`(입력 경로/sha256/`source_scope`), `first_report_smoke.json`(측정 형태·`fixture_only`·readiness=0), `benchmark_run_metrics.csv` 케이스 행, `benchmark_evaluation.json` 키, `benchmark_readiness.json` 행 4필드(`gate_id`/`passed`/`observed`/`required`/`blocked_reason`) 형태를 단언
     - _Requirements: 1.2, 2.1, 2.3, 2.4, 4.4, 5.1 / C1, C2, C5_
 
-- [ ] 2. 게이트 계산 로직 속성 고정 (PBT)
-  - [ ]* 2.1 Property 2 — 임계 게이트 단조성 테스트 작성
+- [x] 2. 게이트 계산 로직 속성 고정 (PBT)
+  - [x]* 2.1 Property 2 — 임계 게이트 단조성 테스트 작성
     - **Property 2: 실제 저장소 수 임계 게이트 단조성** (basis·count 조합 100회 이상)
     - `real_repo_requirement_met == (basis==1 AND n>=10)` 및 300/3 임계 동형성 단언, 전용 파일 `scripts/test_amr_beta_p02_threshold_gates.py`
     - **Validates: Requirements 1.7, 3.8 / C5**
-  - [ ]* 2.2 Property 8 — 증거 기반 정의 테스트 작성
+  - [x]* 2.2 Property 8 — 증거 기반 정의 테스트 작성
     - **Property 8: real_human_label_basis 정의**
     - `(namespace, confirm, cases, human_labeled/synthetic)` 조합 생성, `product_readiness_calculated_from_real_labels` 정의식 단언, 전용 파일 `scripts/test_amr_beta_p08_basis_definition.py`
     - **Validates: Requirements 4.5, 6.1, 8.1 / C5**
-  - [ ]* 2.3 Property 9 — basis=0 강제 0 전파 테스트 작성
+  - [x]* 2.3 Property 9 — basis=0 강제 0 전파 테스트 작성
     - **Property 9: basis=0이면 모든 하위 게이트와 베타 게이트가 0**
     - 임의 메트릭 집합에 basis=0 주입 시 14개 `*_requirement_met`와 `design_partner_beta_candidate_ready`가 모두 0임을 단언, 전용 파일 `scripts/test_amr_beta_p09_basis_zero.py`
     - **Validates: Requirements 4.5, 6.1 / C5**
-  - [ ]* 2.4 Property 10 — 베타 게이트 논리곱 테스트 작성
+  - [x]* 2.4 Property 10 — 베타 게이트 논리곱 테스트 작성
     - **Property 10: 베타 게이트는 하위 게이트의 논리곱**
     - 14개 비트 조합에 대해 `beta == AND(subgates)`, `beta==1 ⇒ blocked_gate_rows==0`, `beta==0 ⇒ blocked_gate_rows>0` 단언, 전용 파일 `scripts/test_amr_beta_p10_beta_conjunction.py`
     - **Validates: Requirements 5.3, 5.4 / C5**
@@ -72,7 +72,7 @@
     - **Validates: Requirements 6.2, 6.3, 6.6 / C3, C4**
 
 - [ ] 4. 시간·결정성·검증 재계산 속성 고정 (PBT)
-  - [ ]* 4.1 Property 3 — 첫 보고서 시간 예산 경계 테스트 작성
+  - [x]* 4.1 Property 3 — 첫 보고서 시간 예산 경계 테스트 작성
     - **Property 3: 첫 보고서 시간 예산 경계**
     - 임의 `(total_wall_ms>=0, max_wall_ms>0)`에 대해 `within_time_budget==int(total_wall_ms<=max_wall_ms)`, `max_wall_ms==600000`에서 `total_wall_ms>600000 ⇒ within_time_budget==0` 단언, 전용 파일 `scripts/test_amr_beta_p03_time_budget.py`
     - **Validates: Requirements 2.2, 2.5, 2.6 / C2, C5**
