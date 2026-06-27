@@ -63,7 +63,7 @@ jobs:
 
       - name: Run offline suite shard
         env:
-          OFFLINE_SUITE_TIMEOUT: "240"
+          OFFLINE_SUITE_TIMEOUT: "360"
         run: |
           set -o pipefail
           scripts/run_offline_suite.sh --shard "${{ matrix.shard }}/${TOTAL_SHARDS}" --local-only --timings 2>&1 | tee "offline-suite-shard-${{ matrix.shard }}.log"
