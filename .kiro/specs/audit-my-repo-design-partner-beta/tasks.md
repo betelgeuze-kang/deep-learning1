@@ -150,8 +150,8 @@
     - `benchmark_readiness.json`의 14개 게이트 관찰값/요구값/통과 비트/차단 사유와 `design_partner_beta_candidate_ready`/`product_readiness_calculated_from_real_labels` 최종 상태를 정리. 인간 라벨이 유일 상승 경로임을 확인(수동 편집 불가).
     - _Requirements: 5.3, 5.4, 5.5, 8.1 / C5, C7_
 
-- [ ] 11. 거버넌스·기존 엔트리포인트 재사용 검증
-  - [ ] 11.1 출력 경계·git 추적·엔트리포인트 재사용 검증
+- [x] 11. 거버넌스·기존 엔트리포인트 재사용 검증
+  - [x] 11.1 출력 경계·git 추적·엔트리포인트 재사용 검증
     - 모든 증거가 `results/` 하위이고 `.gitignore` 대상임을 확인, 10MB 이상/체크포인트 산출물이 git 추적에 추가되지 않음을 확인, 8개 기존 엔트리포인트·기존 readiness 스키마·기존 이슈 템플릿만 사용했고 신규 계약/스키마가 없음을 `audit_my_repo_package.py --verify-existing`의 `REQUIRED_PRODUCT_FILES`/스키마 sha 목록으로 단언. 파일 `scripts/test_amr_beta_governance.py`
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6 / C1, C5_
 
