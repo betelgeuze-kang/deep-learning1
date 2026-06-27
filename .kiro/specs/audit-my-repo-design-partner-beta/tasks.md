@@ -88,25 +88,25 @@
 - [ ] 5. Checkpoint - 속성/단위 테스트 통과 확인
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. 픽스처 기반 라벨 루프 하니스 와이어링 (비승격)
-  - [ ] 6.1 첫 보고서 스모크 통합 드라이버 작성
+- [x] 6. 픽스처 기반 라벨 루프 하니스 와이어링 (비승격)
+  - [x] 6.1 첫 보고서 스모크 통합 드라이버 작성
     - `audit_my_repo_first_report_smoke.py`를 픽스처에 대해 서브프로세스로 실행, `within_time_budget`·`fixture_only=1`·`design_partner_beta_candidate_ready=0` 단언, 실패/초과 시 `--out` 관리 산출물 정리 동작 검증, 파일 `scripts/test_amr_beta_loop_first_report.py`
     - _Requirements: 2.1, 2.2, 2.4 / C2_
-  - [ ] 6.2 template→intake→benchmark 합성 픽스처 통합 드라이버 작성
+  - [x] 6.2 template→intake→benchmark 합성 픽스처 통합 드라이버 작성
     - `audit_my_repo_label_template.py` → `audit_my_repo_label_intake.py` → `audit_my_repo_benchmark.py`를 합성/픽스처 입력으로 연결 실행(비-real_benchmark 또는 합성 케이스 포함). 게이트가 0으로 유지되고 `synthetic` 표식이 라벨까지 보존되며 product readiness가 0임을 단언(증거 경계). 파일 `scripts/test_amr_beta_loop_label_pipeline.py`
     - _Requirements: 3.1, 3.2, 3.3, 3.5, 6.1, 6.2, 6.3 / C3, C4, C5_
-  - [ ] 6.3 네임스페이스 확인 가드 통합 테스트 작성
+  - [x] 6.3 네임스페이스 확인 가드 통합 테스트 작성
     - `--namespace real_benchmark`를 `--confirm-real-benchmark-namespace` 없이 호출 시 종료 코드 2·산출물 미기록·표준오류 메시지를 단언, 확인 플래그 동반 시 진행을 단언. 파일 `scripts/test_amr_beta_loop_namespace_guard.py`
     - _Requirements: 7.1, 7.2, 7.3 / C5_
-  - [ ] 6.4 `--verify-existing` 드리프트 거부 통합 테스트 작성
+  - [x] 6.4 `--verify-existing` 드리프트 거부 통합 테스트 작성
     - 픽스처 벤치마크 산출물에 대해 `--verify-existing`이 정상 통과, 변조/스키마 위반/인테이크·케이스 감사 재검증 실패 시 종료 코드 1을 단언(`AUDIT_MY_REPO_*_TAMPER_BEFORE_VERIFY` 음성 통제 활용). 파일 `scripts/test_amr_beta_loop_verify_existing.py`
     - _Requirements: 8.3, 8.4 / C5, C7_
 
-- [ ] 7. readiness 체크리스트 + FP/FN 도출 하니스 (픽스처)
-  - [ ] 7.1 readiness 체크리스트 산출·집계 검증 드라이버 작성
+- [x] 7. readiness 체크리스트 + FP/FN 도출 하니스 (픽스처)
+  - [x] 7.1 readiness 체크리스트 산출·집계 검증 드라이버 작성
     - 픽스처 벤치마크에서 `benchmark_readiness.json`을 산출하고 스키마 검증(`tools/validate_json_schemas.py --schema-instance`), `gate_rows/passed_gate_rows/blocked_gate_rows` 균형과 차단 사유 기록, 차단 플래그 const 0을 단언. 파일 `scripts/test_amr_beta_readiness_checklist.py`
     - _Requirements: 5.1, 5.2, 5.5, 6.4, 6.5 / C5, C7_
-  - [ ] 7.2 FP/FN 목록 도출 헬퍼 작성 (results/ 하 비커밋)
+  - [x] 7.2 FP/FN 목록 도출 헬퍼 작성 (results/ 하 비커밋)
     - `benchmark_confusion_rows.csv`의 FP/FN 행만 추출하여 케이스 식별자·발견 식별자·인용 스팬(파일/라인/sha256)을 포함한 FP/FN 목록을 `results/` 하위에 산출하는 헬퍼와 검증 테스트 작성. 신규 커밋 엔트리포인트/계약을 만들지 않고 `results/`(gitignore) 내 ad-hoc 도출로 유지하며 기존 `design-partner-finding-review` 이슈 템플릿 필드와 정합. 파일 `scripts/test_amr_beta_fp_fn_derivation.py`
     - _Requirements: 4.1, 4.2, 4.3, 9.3, 9.4 / C5, C6_
 
