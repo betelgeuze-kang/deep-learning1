@@ -38,7 +38,6 @@ jobs:
         shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     env:
       TOTAL_SHARDS: "20"
-      OFFLINE_SUITE_LOCAL_ONLY_EXCLUDE_RE: '(^|/)test_.*(external|benchmark|ruler|longbench|github_actions|commercial|codebase_auditor|routehint_generation_1000|tiny_non_attention_generator_hint|7b14b|complete_source|canary_query|ah_answer|review_return|source_system_h|clean_machine|handoff|return_tracker|real_nlg_transcript|query_instantiation|hotset_tensor_slice|doc_code_conflict|source_verified|chunk_ranker|scale|v52|v53|v58|v61).*\.sh$|route_hint_kv_hash_route_code_fallback|route_source_credit_|route_memory_abstain_retry_guardrail|route_memory_promotion_gate'
     steps:
       - name: Checkout (no persisted credentials)
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
