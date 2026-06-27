@@ -9,14 +9,15 @@ Req 9(기존 재사용, 신규 계약 금지)에 따라 변조-거부 음성 통
 재검증 실패 시 `--verify-existing`이 종료 코드 1로 거부함을 end-to-end로 단언한다(게이트
 무결성: 인간 라벨 외 수동 편집은 검증을 통과할 수 없음).
 
-`AMR_BETA_SKIP_SLOW=1`로 건너뛸 수 있다(기본은 실행).
+느린 통합 실행이므로 PR-safe `scripts/test_*.py` 자동 smoke에서는 기본 skip한다.
+명시적으로 `AMR_BETA_RUN_SLOW=1`을 설정하면 실행된다. `AMR_BETA_SKIP_SLOW=1`은
+항상 skip을 강제한다.
 """
 
 from __future__ import annotations
 
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -26,8 +27,8 @@ SUCCESS_MARKER = "audit_my_repo negative controls passed"
 
 
 def test_verify_existing_rejects_drift():
-    if os.environ.get("AMR_BETA_SKIP_SLOW") == "1":
-        print("Task 6.4 skipped (AMR_BETA_SKIP_SLOW=1)")
+    if os.environ.get("AMR_BETA_SKIP_SLOW") == "1" or os.environ.get("AMR_BETA_RUN_SLOW") != "1":
+        print("Task 6.4 skipped (set AMR_BETA_RUN_SLOW=1 to run slow integration)")
         return
     assert NEGATIVE_CONTROLS_TEST.is_file(), f"missing existing test: {NEGATIVE_CONTROLS_TEST}"
     proc = subprocess.run(
