@@ -101,6 +101,24 @@ def test_local_pm_ledger_mirrors_typed_ready_when_present():
             "it must mirror readiness/typed_ready.json"
         )
 
+    # No duplicate replacement_flag rows (a duplicate means the ledger no longer
+    # mirrors typed_ready.json even if each duplicate validates individually).
+    ledger_replacements = [r.get("replacement_flag", "") for r in ledger_rows]
+    dupes = sorted({k for k in ledger_replacements if ledger_replacements.count(k) > 1})
+    assert not dupes, f"{PM_LEDGER}: duplicate replacement_flag rows: {', '.join(dupes)}"
+
+    # Completeness: every typed_ready row that requires a PM ledger entry must be
+    # present (a truncated ledger must not pass).
+    ledger_by_replacement = {r.get("replacement_flag", ""): r for r in ledger_rows}
+    for expected_row in typed_rows:
+        if expected_row.get("pm_ledger_required") is False:
+            continue
+        rkey = expected_row["replacement_flag"]
+        assert rkey in ledger_by_replacement, (
+            f"{PM_LEDGER}: missing required typed-ready row replacement_flag={rkey} "
+            "(ledger must mirror readiness/typed_ready.json in full)"
+        )
+
     for row in ledger_rows:
         scope = row.get("scope_id", "")
         misleading = row.get("misleading_ready_flag", "")

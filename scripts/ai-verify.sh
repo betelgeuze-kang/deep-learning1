@@ -228,6 +228,9 @@ if [ -x tools/verify_artifact.py ]; then
     else
       tools/verify_artifact.py typed-readiness readiness/typed_ready.json >/dev/null
     fi
+    if [ -f scripts/test_typed_readiness_pm_ledger_drift.py ]; then
+      python3 scripts/test_typed_readiness_pm_ledger_drift.py >/dev/null
+    fi
   fi
   if [ -f leakage/retrieval_model_visible.json ]; then
     if [ -f results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_retrieval_leakage_guard_rows.csv ]; then
