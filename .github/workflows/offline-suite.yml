@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   offline-suite:
-    name: offline-suite
+    name: offline-suite shard ${{ matrix.shard }}/20
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -61,17 +61,52 @@ jobs:
           cmake -S . -B build -DDLE_ENABLE_HIP=OFF
           cmake --build build -j 2
 
+      - name: List offline suite shard
+        run: |
+          set -euo pipefail
+          selected_file="offline-suite-shard-${{ matrix.shard }}-tests.txt"
+          scripts/run_offline_suite.sh --shard "${{ matrix.shard }}/${TOTAL_SHARDS}" --local-only --list | tee "$selected_file"
+          selected_count="$(wc -l < "$selected_file" | tr -d ' ')"
+          {
+            echo "### Offline suite shard ${{ matrix.shard }}/${TOTAL_SHARDS}"
+            echo
+            echo "- Selected tests: ${selected_count}"
+            echo "- Per-test timeout: 360s"
+            echo
+            echo "<details><summary>Selected tests</summary>"
+            echo
+            echo '```text'
+            sed -n '1,160p' "$selected_file"
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run offline suite shard
         env:
           OFFLINE_SUITE_TIMEOUT: "360"
         run: |
-          set -o pipefail
-          scripts/run_offline_suite.sh --shard "${{ matrix.shard }}/${TOTAL_SHARDS}" --local-only --timings 2>&1 | tee "offline-suite-shard-${{ matrix.shard }}.log"
+          log_file="offline-suite-shard-${{ matrix.shard }}.log"
+          set +e
+          scripts/run_offline_suite.sh --shard "${{ matrix.shard }}/${TOTAL_SHARDS}" --local-only --timings 2>&1 | tee "$log_file"
+          rc="${PIPESTATUS[0]}"
+          if [ "$rc" -ne 0 ]; then
+            {
+              echo
+              echo "### Failure tail"
+              echo
+              echo '```text'
+              tail -n 200 "$log_file" || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$rc"
 
       - name: Upload offline suite failure log
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: offline-suite-${{ matrix.shard }}-log
-          path: offline-suite-shard-${{ matrix.shard }}.log
+          path: |
+            offline-suite-shard-${{ matrix.shard }}.log
+            offline-suite-shard-${{ matrix.shard }}-tests.txt
           retention-days: 1
