@@ -10,9 +10,10 @@
 # ephemeral GitHub-hosted runners: staged external evidence intake/return,
 # benchmark/review packets, baseline-war/public-repo evidence slices,
 # blind-eval intake, SSD/checkpoint runtime slices, source-verified scorer gates,
-# route-code stress sweeps, and known scale/stress tests that routinely exceed
-# the lightweight CI shard budget or require prepared artifacts. Those tests
-# remain runnable directly and in the self-hosted/evidence lanes.
+# closure/generator evidence, route-code stress sweeps, and known scale/stress
+# tests that routinely exceed the lightweight CI shard budget or require prepared
+# artifacts. Those tests remain runnable directly and in the self-hosted/evidence
+# lanes.
 #
 # Usage:
 #   scripts/run_offline_suite.sh --list              # print the selected tests
@@ -39,7 +40,7 @@ cd "$ROOT_DIR"
 PER_TEST_TIMEOUT="${OFFLINE_SUITE_TIMEOUT:-300}"
 HARDWARE_RE='hip|rocm|cuda|gpu|nvme|/dev/kfd'
 NETWORK_RE='git (fetch|clone)|curl |wget |https?://'
-DEFAULT_LOCAL_ONLY_CI_EXCLUDE_RE='(^|/)test_.*(external|benchmark|ruler|longbench|github_actions|commercial|codebase_auditor|routehint_generation_1000|tiny_non_attention_generator_hint|7b14b|complete_source|canary_query|ah_answer|review_return|source_system_h|clean_machine|handoff|return_tracker|real_nlg_transcript|query_instantiation|hotset_tensor_slice|doc_code_conflict|source_verified|chunk_ranker|scale|v1[3-9]|v2[0-9]|v3[0-9]|v52|v53|v58|v61).*\.sh$|route_hint_kv_hash_route_code_|route_source_credit_|route_memory_abstain_retry_guardrail|route_memory_promotion_gate|route_memory_wrong_candidate_robustness'
+DEFAULT_LOCAL_ONLY_CI_EXCLUDE_RE='(^|/)test_.*(external|benchmark|ruler|longbench|github_actions|commercial|codebase_auditor|routehint_generation_1000|tiny_non_attention_generator_hint|7b14b|complete_source|canary_query|ah_answer|review_return|source_system_h|clean_machine|handoff|return_tracker|real_nlg_transcript|query_instantiation|hotset_tensor_slice|doc_code_conflict|source_verified|chunk_ranker|scale|v07|v10|v1[3-9]|v2[0-9]|v3[0-9]|v48|v52|v53|v58|v61).*\.sh$|route_hint_kv_hash_route_code_|route_source_credit_|route_memory_abstain_retry_guardrail|route_memory_promotion_gate|route_memory_wrong_candidate_robustness'
 LOCAL_ONLY_CI_EXCLUDE_RE="${OFFLINE_SUITE_LOCAL_ONLY_EXCLUDE_RE:-$DEFAULT_LOCAL_ONLY_CI_EXCLUDE_RE}"
 
 mode="run"
