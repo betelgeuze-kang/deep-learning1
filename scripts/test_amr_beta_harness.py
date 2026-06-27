@@ -12,7 +12,7 @@ without modifying it, and provides:
   - `make_label_row(**overrides)`    : synthetic benchmark/human-label row builder
   - `make_finding_row(**overrides)`  : synthetic audit-finding row builder
   - `results_fixture_dir(name)`      : a gitignored results/ fixture path
-  - `require_hypothesis()`           : assert the PBT dependency is available
+  - `require_hypothesis()`           : enable PBT or deterministic no-dependency fallback
 
 Evidence boundary: every fixture/synthetic artifact produced through this harness
 is non-promoted. The blocked readiness flags (release_ready,
@@ -22,8 +22,11 @@ beta gate stays decided by the real verifier, never by these synthetic inputs.
 
 from __future__ import annotations
 
+import functools
 import importlib
+import itertools
 import sys
+import types
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -38,6 +41,109 @@ BLOCKED_READINESS_FLAGS = (
 )
 
 
+class _FallbackStrategy:
+    def __init__(self, examples):
+        self._examples = _dedupe_examples(examples)
+
+    def examples(self):
+        return list(self._examples)
+
+
+def _dedupe_examples(examples):
+    seen = set()
+    out = []
+    for value in examples:
+        marker = repr(value)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        out.append(value)
+    return out
+
+
+class _FallbackStrategies:
+    @staticmethod
+    def integers(min_value=None, max_value=None):
+        lo = 0 if min_value is None else int(min_value)
+        hi = lo + 10 if max_value is None else int(max_value)
+        if hi < lo:
+            hi = lo
+        mid = lo + (hi - lo) // 2
+        return _FallbackStrategy([lo, mid, hi])
+
+    @staticmethod
+    def booleans():
+        return _FallbackStrategy([False, True])
+
+    @staticmethod
+    def sampled_from(values):
+        vals = list(values)
+        if not vals:
+            raise ValueError("sampled_from requires at least one value")
+        return _FallbackStrategy([vals[0], vals[-1], *vals[:3]])
+
+    @staticmethod
+    def lists(element_strategy, min_size=0, max_size=None):
+        elem_examples = element_strategy.examples()
+        if not elem_examples:
+            elem_examples = [None]
+        min_size = int(min_size or 0)
+        max_size = min_size if max_size is None else int(max_size)
+        if max_size < min_size:
+            max_size = min_size
+
+        def row(length, offset=0):
+            return [elem_examples[(offset + i) % len(elem_examples)] for i in range(length)]
+
+        examples = [row(min_size)]
+        if min_size == 0:
+            examples.append([])
+        examples.append(row(max_size, offset=max(0, len(elem_examples) - 1)))
+        if max_size != min_size:
+            examples.append(row(min(max_size, max(min_size, 2))))
+        elif max_size > 0:
+            examples.append(row(max_size, offset=1))
+        return _FallbackStrategy(examples)
+
+    @staticmethod
+    def fixed_dictionaries(mapping):
+        items = list(mapping.items())
+        first = {key: strat.examples()[0] for key, strat in items}
+        last = {key: strat.examples()[-1] for key, strat in items}
+        mixed = {key: strat.examples()[idx % len(strat.examples())] for idx, (key, strat) in enumerate(items)}
+        return _FallbackStrategy([first, last, mixed])
+
+
+def _install_hypothesis_fallback():
+    strategies = _FallbackStrategies()
+
+    def settings(*_args, **_kwargs):
+        def decorate(fn):
+            return fn
+        return decorate
+
+    def given(**strategy_kwargs):
+        def decorate(fn):
+            @functools.wraps(fn)
+            def wrapper(*args, **kwargs):
+                names = list(strategy_kwargs)
+                example_lists = [strategy_kwargs[name].examples() for name in names]
+                for values in itertools.product(*example_lists):
+                    call_kwargs = dict(kwargs)
+                    call_kwargs.update(dict(zip(names, values)))
+                    fn(*args, **call_kwargs)
+            return wrapper
+        return decorate
+
+    fake = types.ModuleType("hypothesis")
+    fake.given = given
+    fake.settings = settings
+    fake.strategies = strategies
+    fake.__dict__["strategies"] = strategies
+    sys.modules["hypothesis"] = fake
+    return fake
+
+
 def load_benchmark_module():
     """Import the existing audit_my_repo_benchmark module unmodified."""
     if str(SCRIPTS_DIR) not in sys.path:
@@ -46,15 +152,17 @@ def load_benchmark_module():
 
 
 def require_hypothesis():
-    """Return the hypothesis module or raise a clear, network-free install hint."""
+    """Enable Hypothesis if installed, otherwise install a deterministic fallback.
+
+    The PR-safe CI lane is deliberately network-free and does not install optional
+    test dependencies. The fallback keeps the oracle/PBT files executable there by
+    sweeping boundary examples deterministically; local developers with Hypothesis
+    installed still get the real property-based search.
+    """
     try:
         import hypothesis  # noqa: F401
-    except ImportError as exc:  # pragma: no cover - environment guard
-        raise RuntimeError(
-            "property-based tests require 'hypothesis'. Install locally with "
-            "'python3 -m pip install hypothesis' (no network fetch is performed "
-            "by this harness)."
-        ) from exc
+    except ImportError:  # pragma: no cover - environment guard
+        return _install_hypothesis_fallback()
     return importlib.import_module("hypothesis")
 
 
