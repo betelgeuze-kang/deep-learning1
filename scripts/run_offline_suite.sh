@@ -8,10 +8,10 @@
 #
 # In --local-only mode we also exclude tests that are not clean-run standalone on
 # ephemeral GitHub-hosted runners: staged external evidence intake/return,
-# benchmark/review packets, baseline-war evidence slices, and known
-# scale/stress/checkpoint-hotset tests that routinely exceed the lightweight CI
-# shard budget or require prepared artifacts. Those tests remain runnable
-# directly and in the self-hosted/evidence lanes.
+# benchmark/review packets, baseline-war evidence slices, blind-eval intake,
+# and known scale/stress/checkpoint-hotset tests that routinely exceed the
+# lightweight CI shard budget or require prepared artifacts. Those tests remain
+# runnable directly and in the self-hosted/evidence lanes.
 #
 # Usage:
 #   scripts/run_offline_suite.sh --list              # print the selected tests
@@ -38,7 +38,7 @@ cd "$ROOT_DIR"
 PER_TEST_TIMEOUT="${OFFLINE_SUITE_TIMEOUT:-300}"
 HARDWARE_RE='hip|rocm|cuda|gpu|nvme|/dev/kfd'
 NETWORK_RE='git (fetch|clone)|curl |wget |https?://'
-DEFAULT_LOCAL_ONLY_CI_EXCLUDE_RE='(^|/)test_.*(external|benchmark|ruler|longbench|github_actions|commercial|codebase_auditor|routehint_generation_1000|tiny_non_attention_generator_hint|7b14b|complete_source|canary_query|ah_answer|review_return|source_system_h|clean_machine|handoff|return_tracker|real_nlg_transcript|query_instantiation|hotset_tensor_slice|v52|v61aa|v61ab|v61af|v61hv).*\.sh$|route_hint_kv_hash_route_code_fallback|route_source_credit_(retry_policy|fallback_policy|source_aware_scale)|route_memory_abstain_retry_guardrail|route_memory_promotion_gate'
+DEFAULT_LOCAL_ONLY_CI_EXCLUDE_RE='(^|/)test_.*(external|benchmark|ruler|longbench|github_actions|commercial|codebase_auditor|routehint_generation_1000|tiny_non_attention_generator_hint|7b14b|complete_source|canary_query|ah_answer|review_return|source_system_h|clean_machine|handoff|return_tracker|real_nlg_transcript|query_instantiation|hotset_tensor_slice|doc_code_conflict|scale|v52|v58|v61aa|v61ab|v61af|v61hv).*\.sh$|route_hint_kv_hash_route_code_fallback|route_source_credit_(retry_policy|fallback_policy|source_aware_scale)|route_memory_abstain_retry_guardrail|route_memory_promotion_gate'
 LOCAL_ONLY_CI_EXCLUDE_RE="${OFFLINE_SUITE_LOCAL_ONLY_EXCLUDE_RE:-$DEFAULT_LOCAL_ONLY_CI_EXCLUDE_RE}"
 
 mode="run"
