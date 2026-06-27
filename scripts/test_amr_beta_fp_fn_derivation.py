@@ -33,6 +33,10 @@ CONFUSION_FIELDS = bench.CONFUSION_FIELDS
 
 # Output columns aligned to the design-partner-finding-review issue template intent
 # (case + finding + cited source span). Derived under results/, never committed.
+# `evidence_eligible` marks whether the row carries a source-bound citation span:
+# unmatched FP rows (extra findings with no human-label span) still get a source
+# handle (file_path + finding_id) but are explicitly NOT eligible for promoted
+# evidence.
 FP_FN_FIELDS = [
     "case_id",
     "outcome",
@@ -43,11 +47,25 @@ FP_FN_FIELDS = [
     "expected_line_start",
     "expected_line_end",
     "expected_span_sha256",
+    "evidence_eligible",
 ]
 
 
+def _has_source_span(file_path: str, sha: str) -> bool:
+    if not file_path or not sha:
+        return False
+    if sha.startswith("sha256:") and len(sha) == len("sha256:") + 64:
+        return True
+    return len(sha) == 64 and all(c in "0123456789abcdefABCDEF" for c in sha)
+
+
 def derive_fp_fn(confusion_csv: Path, out_dir: Path) -> Path:
-    """Extract only FP/FN rows into results/<...>/fp_fn_issue_list.csv (non-promoted)."""
+    """Extract only FP/FN rows into results/<...>/fp_fn_issue_list.csv (non-promoted).
+
+    Every FP/FN row is emitted with at least a source handle (case_id + finding/label
+    id + file_path). Rows lacking a citation span (e.g. unmatched-finding FP) are
+    flagged evidence_eligible=0 so they cannot silently become promoted evidence.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "fp_fn_issue_list.csv"
     with confusion_csv.open(newline="", encoding="utf-8") as handle:
@@ -56,6 +74,8 @@ def derive_fp_fn(confusion_csv: Path, out_dir: Path) -> Path:
     for row in rows:
         if row.get("outcome") not in {"FP", "FN"}:
             continue
+        file_path = row.get("file_path", "")
+        sha = row.get("expected_span_sha256", "")
         derived.append(
             {
                 "case_id": row.get("case_id", ""),
@@ -63,10 +83,11 @@ def derive_fp_fn(confusion_csv: Path, out_dir: Path) -> Path:
                 "finding_id": row.get("matched_finding_id", ""),
                 "label_id": row.get("label_id", ""),
                 "priority": row.get("priority", ""),
-                "file_path": row.get("file_path", ""),
+                "file_path": file_path,
                 "expected_line_start": row.get("expected_line_start", ""),
                 "expected_line_end": row.get("expected_line_end", ""),
-                "expected_span_sha256": row.get("expected_span_sha256", ""),
+                "expected_span_sha256": sha,
+                "evidence_eligible": int(_has_source_span(file_path, sha)),
             }
         )
     with out_path.open("w", newline="", encoding="utf-8") as handle:
@@ -77,19 +98,25 @@ def derive_fp_fn(confusion_csv: Path, out_dir: Path) -> Path:
 
 
 def _synthetic_confusion(path: Path):
+    sha = lambda c: "sha256:" + (c * 64)
     rows = [
         {**{k: "" for k in CONFUSION_FIELDS}, "case_id": "c1", "label_id": "L1", "matched_finding_id": "F1",
          "file_path": "a.py", "expected_line_start": "1", "expected_line_end": "2",
-         "expected_span_sha256": "a" * 64, "priority": "P1", "outcome": "TP", "tp": "1", "fp": "0", "fn": "0", "tn": "0"},
+         "expected_span_sha256": sha("a"), "priority": "P1", "outcome": "TP", "tp": "1", "fp": "0", "fn": "0", "tn": "0"},
         {**{k: "" for k in CONFUSION_FIELDS}, "case_id": "c1", "label_id": "L2", "matched_finding_id": "F2",
          "file_path": "b.py", "expected_line_start": "5", "expected_line_end": "6",
-         "expected_span_sha256": "b" * 64, "priority": "P0", "outcome": "FP", "tp": "0", "fp": "1", "fn": "0", "tn": "0"},
+         "expected_span_sha256": sha("b"), "priority": "P0", "outcome": "FP", "tp": "0", "fp": "1", "fn": "0", "tn": "0"},
         {**{k: "" for k in CONFUSION_FIELDS}, "case_id": "c2", "label_id": "L3", "matched_finding_id": "",
          "file_path": "c.py", "expected_line_start": "9", "expected_line_end": "9",
-         "expected_span_sha256": "c" * 64, "priority": "P1", "outcome": "FN", "tp": "0", "fp": "0", "fn": "1", "tn": "0"},
+         "expected_span_sha256": sha("c"), "priority": "P1", "outcome": "FN", "tp": "0", "fp": "0", "fn": "1", "tn": "0"},
+        # Unmatched-finding FP: an extra finding with no human-label span. It carries
+        # a source handle (file_path + finding id) but no expected citation span.
+        {**{k: "" for k in CONFUSION_FIELDS}, "case_id": "c3", "label_id": "", "matched_finding_id": "F9",
+         "file_path": "e.py", "expected_line_start": "", "expected_line_end": "",
+         "expected_span_sha256": "", "priority": "P1", "outcome": "FP", "tp": "0", "fp": "1", "fn": "0", "tn": "0"},
         {**{k: "" for k in CONFUSION_FIELDS}, "case_id": "c2", "label_id": "L4", "matched_finding_id": "",
          "file_path": "d.py", "expected_line_start": "3", "expected_line_end": "4",
-         "expected_span_sha256": "d" * 64, "priority": "P2", "outcome": "TN", "tp": "0", "fp": "0", "fn": "0", "tn": "1"},
+         "expected_span_sha256": sha("d"), "priority": "P2", "outcome": "TN", "tp": "0", "fp": "0", "fn": "0", "tn": "1"},
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -109,15 +136,28 @@ def test_fp_fn_derivation():
         with out_path.open(newline="", encoding="utf-8") as handle:
             derived = list(csv.DictReader(handle))
 
-        # Only FP and FN survive (TP/TN excluded).
-        assert len(derived) == 2
-        assert {r["outcome"] for r in derived} == {"FP", "FN"}
+        # Only FP and FN survive (TP/TN excluded); the unmatched FP is included.
+        assert len(derived) == 3
+        assert sorted(r["outcome"] for r in derived) == ["FN", "FP", "FP"]
         for r in derived:
+            # every row carries a source handle: case + (finding or label) id + file.
             assert r["case_id"]
-            assert r["finding_id"] or r["label_id"]  # finding id (matched) or label id
+            assert r["finding_id"] or r["label_id"]
             assert r["file_path"]
-            assert r["expected_line_start"] and r["expected_line_end"]
-            assert len(r["expected_span_sha256"]) == 64
+            assert r["evidence_eligible"] in ("0", "1")
+            if r["evidence_eligible"] == "1":
+                # eligible rows have a full citation span.
+                assert r["expected_line_start"] and r["expected_line_end"]
+                assert r["expected_span_sha256"].startswith("sha256:")
+        # The unmatched FP (no span) is explicitly not eligible for promoted evidence,
+        # yet still carries its finding id + file as a review handle.
+        unmatched = [r for r in derived if r["finding_id"] == "F9"]
+        assert len(unmatched) == 1
+        assert unmatched[0]["evidence_eligible"] == "0"
+        assert unmatched[0]["file_path"] == "e.py"
+        # the labeled FP/FN spans remain eligible.
+        eligible = [r for r in derived if r["evidence_eligible"] == "1"]
+        assert len(eligible) == 2
     finally:
         shutil.rmtree(H.RESULTS_DIR / "amr_beta_harness", ignore_errors=True)
 

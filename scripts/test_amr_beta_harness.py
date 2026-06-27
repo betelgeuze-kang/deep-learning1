@@ -162,6 +162,10 @@ def require_hypothesis():
     try:
         import hypothesis  # noqa: F401
     except ImportError:  # pragma: no cover - environment guard
+        print(
+            "hypothesis not installed; using deterministic boundary-sweep fallback",
+            file=sys.stderr,
+        )
         return _install_hypothesis_fallback()
     return importlib.import_module("hypothesis")
 
@@ -233,11 +237,17 @@ _GATE_FLAG_IDS = (
 )
 
 
-def make_summary(*, gates_pass: bool = True, basis: int = 1, **overrides) -> dict:
+def make_summary(*, gates_pass: bool = True, basis: int = 1, force_beta: int | None = None, **overrides) -> dict:
     """Build a synthetic readiness summary dict.
 
     Defaults to a fully-passing real-label basis; pass overrides to drive specific
-    gates. `release_ready`/`public_comparison_claim_ready`/`real_model_execution_ready`
+    gates. The beta bit is recomputed AFTER applying overrides so that overriding a
+    gate flag (e.g. first_report_requirement_met="0") is consistently reflected in
+    design_partner_beta_candidate_ready. To set the beta bit independently (for an
+    adversarial/consistency test) pass force_beta or include
+    design_partner_beta_candidate_ready in overrides.
+
+    `release_ready`/`public_comparison_claim_ready`/`real_model_execution_ready`
     are intentionally NOT included here because the existing
     write_benchmark_readiness_json hardcodes them to 0.
     """
@@ -246,11 +256,16 @@ def make_summary(*, gates_pass: bool = True, basis: int = 1, **overrides) -> dic
     for gate_id in _GATE_FLAG_IDS:
         summary[gate_id] = flag
     summary["product_readiness_calculated_from_real_labels"] = int(basis)
-    # beta = AND of all sub-gates AND basis (mirrors the real conjunction; tests
-    # that exercise the real computation should import the module function).
-    beta = int(basis == 1 and gates_pass)
-    summary["design_partner_beta_candidate_ready"] = beta
+    # Apply caller overrides FIRST so the beta bit reflects the final gate state.
     summary.update(overrides)
+    if force_beta is not None:
+        summary["design_partner_beta_candidate_ready"] = int(force_beta)
+    elif "design_partner_beta_candidate_ready" not in overrides:
+        # beta = AND of all sub-gates AND basis (mirrors the real conjunction; tests
+        # that exercise the real computation should import the module function).
+        gate_flags = [int(str(summary.get(gate_id, "0")) == "1") for gate_id in _GATE_FLAG_IDS]
+        eff_basis = int(summary.get("product_readiness_calculated_from_real_labels", 0))
+        summary["design_partner_beta_candidate_ready"] = int(eff_basis == 1 and all(gate_flags))
     return summary
 
 
@@ -263,7 +278,7 @@ def make_finding_row(**overrides) -> dict:
         "file_path": "src/example.py",
         "line_start": 10,
         "line_end": 12,
-        "source_file_sha256": "0" * 64,
+        "source_file_sha256": "sha256:" + "0" * 64,
         "priority": "P1",
         "synthetic": 1,
     }
@@ -272,6 +287,8 @@ def make_finding_row(**overrides) -> dict:
 
 
 def make_label_row(**overrides) -> dict:
+    # Defaults match what the existing benchmark normalize_cases accepts:
+    #   expected in {present, absent}; expected_span_sha256 as sha256:<64 hex>.
     row = {
         "case_id": "fixture-case",
         "label_id": "fixture-label-1",
@@ -282,8 +299,8 @@ def make_label_row(**overrides) -> dict:
         "file_path": "src/example.py",
         "expected_line_start": 10,
         "expected_line_end": 12,
-        "expected_span_sha256": "0" * 64,
-        "expected": "true_positive",
+        "expected_span_sha256": "sha256:" + "0" * 64,
+        "expected": "present",
         "priority": "P1",
         "human_labeled": 1,
         "synthetic": 1,

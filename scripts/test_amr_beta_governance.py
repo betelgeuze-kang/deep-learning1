@@ -116,9 +116,29 @@ def test_E_entrypoint_schema_reuse_and_no_new_contracts():
     # Files this spec branch added vs origin/main must be only spec docs and
     # test_amr_beta_*.py harness/tests -- no new schema/, no new product entrypoint,
     # no checkpoint/large binaries.
+    #
+    # In a shallow PR checkout (fetch-depth=1) the origin/main ref may be absent.
+    # Distinguish that case (cannot evaluate -> explicit skip) from an actual diff
+    # failure (fail-closed). Never silently fail-open with an empty added list.
+    ref_check = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "origin/main"],
+        cwd=str(REPO_ROOT), capture_output=True, text=True,
+    )
+    if ref_check.returncode != 0 or not ref_check.stdout.strip():
+        print(
+            "test_E: origin/main ref unavailable (shallow checkout); "
+            "skipping added-file governance check (cannot evaluate, not fail-open)",
+            file=sys.stderr,
+        )
+        return
+
     diff = subprocess.run(
         ["git", "diff", "--name-only", "--diff-filter=A", "origin/main...HEAD"],
         cwd=str(REPO_ROOT), capture_output=True, text=True,
+    )
+    assert diff.returncode == 0, (
+        "failed to compute added files against origin/main; "
+        f"rc={diff.returncode}\nstdout={diff.stdout}\nstderr={diff.stderr}"
     )
     added = [p for p in diff.stdout.splitlines() if p.strip()]
     for path in added:
