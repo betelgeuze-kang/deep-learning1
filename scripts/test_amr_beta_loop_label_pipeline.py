@@ -11,15 +11,15 @@ release/public/real-model 0), 인테이크/매니페스트 sha 결합, overwrite
 end-to-end로 단언하는 기존 통합 테스트
 `experiments/test_audit_my_repo_product_entrypoint.sh`를 구동하고 통과를 단언한다.
 
-느린 통합 실행이므로 `AMR_BETA_SKIP_SLOW=1`로 건너뛸 수 있다(기본은 실행). 모든 산출물은
-스크립트 자체 임시 디렉터리에 생성되며 비승격이다.
+느린 통합 실행이므로 PR-safe `scripts/test_*.py` 자동 smoke에서는 기본 skip한다.
+명시적으로 `AMR_BETA_RUN_SLOW=1`을 설정하면 실행된다. `AMR_BETA_SKIP_SLOW=1`은
+항상 skip을 강제한다. 모든 산출물은 스크립트 자체 임시 디렉터리에 생성되며 비승격이다.
 """
 
 from __future__ import annotations
 
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -29,8 +29,8 @@ SUCCESS_MARKER = "audit_my_repo product entrypoint smoke passed"
 
 
 def test_synthetic_label_pipeline_integration():
-    if os.environ.get("AMR_BETA_SKIP_SLOW") == "1":
-        print("Task 6.2 skipped (AMR_BETA_SKIP_SLOW=1)")
+    if os.environ.get("AMR_BETA_SKIP_SLOW") == "1" or os.environ.get("AMR_BETA_RUN_SLOW") != "1":
+        print("Task 6.2 skipped (set AMR_BETA_RUN_SLOW=1 to run slow integration)")
         return
     assert ENTRYPOINT_TEST.is_file(), f"missing existing integration test: {ENTRYPOINT_TEST}"
     proc = subprocess.run(
