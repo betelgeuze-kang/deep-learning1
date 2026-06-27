@@ -6,11 +6,17 @@
 # A test is EXCLUDED (left to the self-hosted/GPU lane) when the test file, or a
 # run_*.sh it references, mentions GPU/accelerator or NVMe hardware.
 #
+# In --local-only mode we also exclude tests that are not clean-run standalone on
+# ephemeral GitHub-hosted runners: staged external evidence intake/return,
+# benchmark/review packets, and known scale/stress tests that routinely exceed
+# the lightweight CI shard budget. Those tests remain runnable directly and in
+# the self-hosted/evidence lanes.
+#
 # Usage:
 #   scripts/run_offline_suite.sh --list              # print the selected tests
 #   scripts/run_offline_suite.sh --limit 20          # run at most 20 (smoke)
 #   scripts/run_offline_suite.sh --shard 1/8         # run shard 1 of 8
-#   scripts/run_offline_suite.sh --local-only        # exclude network-dependent tests
+#   scripts/run_offline_suite.sh --local-only        # clean-run CI-safe subset
 #   scripts/run_offline_suite.sh --timings           # print per-test elapsed seconds
 #   scripts/run_offline_suite.sh --jobs 4            # run up to 4 tests in parallel
 #   scripts/run_offline_suite.sh                     # run the whole offline suite
@@ -19,7 +25,9 @@
 # --shard INDEX/TOTAL (round-robin, 1-based INDEX).
 #
 # Env:
-#   OFFLINE_SUITE_TIMEOUT  per-test timeout seconds (default 300)
+#   OFFLINE_SUITE_TIMEOUT                 per-test timeout seconds (default 300)
+#   OFFLINE_SUITE_LOCAL_ONLY_EXCLUDE_RE   override the --local-only skip regex
+#   OFFLINE_SUITE_LOG_DIR                 directory for failed-test logs
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,6 +37,8 @@ cd "$ROOT_DIR"
 PER_TEST_TIMEOUT="${OFFLINE_SUITE_TIMEOUT:-300}"
 HARDWARE_RE='hip|rocm|cuda|gpu|nvme|/dev/kfd'
 NETWORK_RE='git (fetch|clone)|curl |wget |https?://'
+DEFAULT_LOCAL_ONLY_CI_EXCLUDE_RE='(^|/)test_.*(external|benchmark|ruler|longbench|github_actions|commercial|codebase_auditor|routehint_generation_1000|tiny_non_attention_generator_hint|7b14b|complete_source|canary_query|ah_answer|review_return|source_system_h|clean_machine|handoff|return_tracker|real_nlg_transcript)\.sh$|route_hint_kv_hash_route_code_fallback|route_source_credit_(retry_policy|fallback_policy|source_aware_scale)|route_memory_abstain_retry_guardrail|route_memory_promotion_gate'
+LOCAL_ONLY_CI_EXCLUDE_RE="${OFFLINE_SUITE_LOCAL_ONLY_EXCLUDE_RE:-$DEFAULT_LOCAL_ONLY_CI_EXCLUDE_RE}"
 
 mode="run"
 limit=0
@@ -79,13 +89,26 @@ is_network_test() {
   return 1
 }
 
+is_local_only_ci_excluded_test() {
+  local test_file="$1"
+  if [[ "$test_file" =~ $LOCAL_ONLY_CI_EXCLUDE_RE ]]; then
+    return 0
+  fi
+  return 1
+}
+
 selected=()
 for test_file in $(ls experiments/test_*.sh 2>/dev/null | sort); do
   if is_hardware_test "$test_file"; then
     continue
   fi
-  if [ "$local_only" -eq 1 ] && is_network_test "$test_file"; then
-    continue
+  if [ "$local_only" -eq 1 ]; then
+    if is_network_test "$test_file"; then
+      continue
+    fi
+    if is_local_only_ci_excluded_test "$test_file"; then
+      continue
+    fi
   fi
   selected+=("$test_file")
 done
@@ -114,18 +137,31 @@ echo "==> offline-suite: running ${#selected[@]} deterministic test(s) (per-test
 
 run_one() {
   local test_file="$1"
-  local t_start t_end elapsed rc
+  local t_start t_end elapsed rc log_dir safe_name log_file
   t_start=$(date +%s)
-  timeout "$PER_TEST_TIMEOUT" bash "$test_file" >/dev/null 2>&1; rc=$?
+  log_dir="${OFFLINE_SUITE_LOG_DIR:-${RUNNER_TEMP:-/tmp}/offline-suite-logs}"
+  mkdir -p "$log_dir"
+  safe_name="${test_file//\//__}"
+  safe_name="${safe_name//[^A-Za-z0-9_.-]/_}"
+  log_file="$log_dir/${safe_name}.log"
+  timeout "$PER_TEST_TIMEOUT" bash "$test_file" >"$log_file" 2>&1; rc=$?
   t_end=$(date +%s)
   elapsed=$((t_end - t_start))
   if [ "$rc" -eq 0 ]; then
     if [ "$timings" -eq 1 ]; then
       echo "PASS ${elapsed}s $test_file"
     fi
+    rm -f "$log_file"
     return 0
   else
-    echo "FAIL ${elapsed}s $test_file"
+    if [ "$rc" -eq 124 ]; then
+      echo "FAIL ${elapsed}s $test_file (timeout after ${PER_TEST_TIMEOUT}s)"
+    else
+      echo "FAIL ${elapsed}s $test_file (exit $rc)"
+    fi
+    echo "---- output: $test_file ----"
+    sed -n '1,200p' "$log_file" || true
+    echo "---- end output: $test_file ----"
     return 1
   fi
 }
@@ -145,7 +181,7 @@ if [ "$jobs" -le 1 ]; then
   done
 else
   # Parallel execution via xargs (GNU coreutils).
-  export PER_TEST_TIMEOUT timings
+  export PER_TEST_TIMEOUT timings OFFLINE_SUITE_LOG_DIR
   export -f run_one
   results_file=$(mktemp)
   printf '%s\n' "${selected[@]}" | xargs -P "$jobs" -I {} bash -c '
