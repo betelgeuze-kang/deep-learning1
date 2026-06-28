@@ -27,3 +27,10 @@ The benchmark verifies, per case, that the current HEAD matches
 `expected_repo_git_head` and the worktree is clean
 (`repo_snapshot_requirement_met`). Dirty repos, non-git directories, HEAD
 mismatches, or missing expected HEAD keep the snapshot requirement at 0.
+
+## Namespace note
+
+Audits feeding beta evidence must be run in the real_benchmark namespace
+(`audit_my_repo.sh <repo> --namespace real_benchmark --confirm-real-benchmark-namespace ...`).
+Otherwise `audit_my_repo_label_template.py` marks the rows `synthetic=1`, the
+case stays synthetic, and `real_human_label_basis` (and the beta gate) stays 0.

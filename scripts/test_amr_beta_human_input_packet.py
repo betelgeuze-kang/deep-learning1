@@ -79,22 +79,33 @@ def test_label_example_matches_intake_contract_and_is_synthetic():
 
 def test_no_real_human_input_committed():
     # Only the *.example label file may be tracked; a real decisions JSONL or any
-    # real label/feedback evidence must not be committed.
+    # real label/feedback/benchmark evidence must not be committed.
     tracked = subprocess.run(
         ["git", "ls-files", "docs/templates/", "results/"],
         cwd=str(REPO_ROOT), capture_output=True, text=True,
     )
     assert tracked.returncode == 0, f"git ls-files failed: {tracked.stderr}"
+    # Real human-input / benchmark evidence basenames that must never be tracked.
+    forbidden_basenames = {
+        "amr-beta-human-label-decision.jsonl",  # non-example real decisions
+        "benchmark_labels.jsonl",
+        "benchmark_labels.json",
+        "benchmark_readiness.json",
+        "benchmark_maintainer_feedback.json",
+        "benchmark_maintainer_feedback.csv",
+    }
+    # results/ path substrings that indicate committed real evidence.
+    forbidden_results_substrings = ("label_intake", "audit_benchmark")
     for path in tracked.stdout.splitlines():
         p = path.strip()
         if not p:
             continue
-        # A non-example label decisions file must not be tracked.
-        assert not p.endswith("amr-beta-human-label-decision.jsonl"), (
-            f"real human-label decisions file must not be committed: {p}"
+        base = p.rsplit("/", 1)[-1]
+        assert base not in forbidden_basenames, (
+            f"real human-input/benchmark evidence must not be committed: {p}"
         )
-        if p.startswith("results/") and "label_intake" in p:
-            raise AssertionError(f"real label-intake evidence must not be committed: {p}")
+        if p.startswith("results/") and any(s in p for s in forbidden_results_substrings):
+            raise AssertionError(f"real benchmark/label evidence must not be committed: {p}")
 
 
 def _run_all():

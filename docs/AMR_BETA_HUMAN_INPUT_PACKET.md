@@ -57,20 +57,45 @@ Consumed by `scripts/audit_my_repo_benchmark.py --feedback <file>`. Each row:
 
 - `case_id` (required) — must reference a known benchmark case.
 - `maintainer_id` (required for the row to count).
-- `maintainer_feedback` (required, truthy) — raw text is hashed, not emitted.
+- `feedback_text` (required) — the raw maintainer feedback text. It is hashed
+  (`feedback_text_sha256`), not emitted. A row must include `feedback_text` or a
+  precomputed `feedback_text_sha256`.
+- `human_feedback: true` (required for the row to count; `maintainer_feedback: true`
+  is an accepted alias for this boolean flag — note this flag is NOT the text).
+- `synthetic` must be absent/false, and the referenced case must be a real
+  (non-synthetic) `real_benchmark` case, or the row will not count toward beta
+  (`counts_for_beta`).
 - `feedback_id` (optional) — safe identifier.
+
+At least 3 distinct `maintainer_id` values are required
+(`MIN_MAINTAINER_FEEDBACK_FOR_BETA=3`).
 
 See `docs/templates/amr-beta-maintainer-feedback.md`.
 
 ## Workflow once human inputs exist (run by the operator, not the agent)
 
-1. Audit each real repo: `audit_my_repo.sh <repo> --mode quick|full --out results/<repo>_audit` (>= 10 repos).
-2. Generate a label template per audit: `audit_my_repo_label_template.py --audit-output ... --out ... --case-id <repo>`.
-3. Fill human decisions (>= 300 rows total) using the 9.2 format.
-4. Compile: `audit_my_repo_label_intake.py --template ... --decisions ... --out results/<repo>_label_intake`.
-5. Collect maintainer feedback (>= 3 sources) using the 9.3 format.
-6. Run the real benchmark (runtime-approved):
-   `audit_my_repo_benchmark.py --label-intake ... --feedback ... --namespace real_benchmark --confirm-real-benchmark-namespace --mode full --out results/audit_benchmark`.
+The `synthetic` flag propagates from the **audit** stage: `audit_my_repo_label_template.py`
+marks rows `synthetic=1` unless the audit manifest was produced with
+`--namespace real_benchmark --confirm-real-benchmark-namespace`. So every stage
+that feeds beta evidence must run in the `real_benchmark` namespace, or the case
+stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
+
+1. Audit each real repo in the real_benchmark namespace (>= 10 repos):
+   `audit_my_repo.sh <repo> --mode quick|full --namespace real_benchmark --confirm-real-benchmark-namespace --out results/<repo>_audit`.
+2. Generate a label template per audit:
+   `audit_my_repo_label_template.py --audit-output results/<repo>_audit --out results/<repo>_label_template --case-id <repo>`
+   (template rows inherit `synthetic=0` only because step 1 was real_benchmark-confirmed).
+3. Fill human decisions (>= 300 rows total across repos) using the 9.2 format.
+4. Compile per repo:
+   `audit_my_repo_label_intake.py --template results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_label_intake`.
+5. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
+6. Combine repos into one benchmark run. `audit_my_repo_benchmark.py` accepts
+   **exactly one** of `--labels` or `--label-intake`; `--label-intake` is a single
+   directory (one repo). For >= 10 repos, concatenate each repo's
+   `results/<repo>_label_intake/benchmark_labels.jsonl` into one combined labels
+   file (each row already carries its `case_id`, `repo_path`, `synthetic`, and
+   `human_labeled`; the repos must exist locally), then run one benchmark:
+   `audit_my_repo_benchmark.py --labels results/combined_benchmark_labels.jsonl --feedback <feedback.jsonl> --namespace real_benchmark --confirm-real-benchmark-namespace --mode full --out results/audit_benchmark`.
 7. Inspect `benchmark_readiness.json`; re-verify with `--verify-existing`.
 
 Step 6 is a long, runtime-approved action and is **not** performed by this PR.
