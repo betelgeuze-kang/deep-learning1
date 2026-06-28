@@ -62,3 +62,53 @@ All source-controlled typed readiness rows must also appear in the PM ledger
 when `--pm-ledger` is supplied. Source-only skip exceptions are not allowed for
 PR #2 normalization, because those exceptions let ambiguous `ready=1` wording
 drift away from the replayed claim-boundary artifact.
+
+## PM ready semantic rows (generated/local ledger)
+
+`results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv` is a
+generated/local ledger. It is gitignored and is **not** a source of truth.
+
+Source of truth:
+
+- `readiness/typed_ready.json`
+- `tools/verify_artifact.py typed-readiness`
+
+When the PM ledger is present locally, it must mirror `typed_ready.json`
+(replacement_flag, scope_id, misleading_ready_flag, and the seven readiness
+booleans). Retired names must not appear:
+
+- `v53_benchmark_foundation_frozen` (retired; now `v53_benchmark_foundation_contract_ready`)
+- `v54_free_running_fixture_ready` (retired; now `v54_free_running_generation_contract_ready`)
+
+### Known stale symptom and cleanup
+
+A stale local ledger from before the typed-ready scope rename can fail
+`./scripts/ai-verify.sh` even though the tracked source is correct. The observed
+stale symptom was:
+
+- v53 replacement flag used the old `..._frozen` name
+- v54 replacement flag used the old `..._fixture_ready` name
+- v54 `misleading_ready_flag` said `v53_ready` (should be `v54_ready`)
+- v54 `fixture_execution_ready` was `1` even though typed readiness says `false`
+
+Cleanup procedure (local only; the ledger stays gitignored and is not committed):
+
+1. Correct the stale rows in
+   `results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv` so
+   that each row mirrors `readiness/typed_ready.json`. Do not delete the whole
+   `gate_001/` directory — it also holds the required D/E ledgers
+   (`de_measured_registry_exclusion_rows.csv`, `de_30b70b_acceptance_evidence_rows.csv`).
+2. Re-run the mirror check:
+   ```bash
+   tools/verify_artifact.py typed-readiness readiness/typed_ready.json \
+     --pm-ledger results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_ready_semantic_rows.csv
+   ```
+3. Re-run `./scripts/ai-verify.sh`.
+
+### Drift guard
+
+`scripts/test_typed_readiness_pm_ledger_drift.py` is a PR-safe guard (it does not
+generate or mutate any evidence). It fails if a retired typed-ready name appears
+in tracked source, and — when the local PM ledger is present — verifies it
+mirrors `readiness/typed_ready.json` and contains no retired name. If the ledger
+is absent (clean CI checkout), the ledger check is skipped.
