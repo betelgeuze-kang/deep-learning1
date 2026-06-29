@@ -85,6 +85,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_human_input_status.py",
     "python3 scripts/amr_beta_maintainer_feedback_packet.py",
     "python3 scripts/amr_beta_label_packet.py",
+    "audit_my_repo_label_template.py --verify-existing",
     "python3 scripts/amr_beta_label_intake_plan.py",
     "compiles_labels=0",
     "python3 scripts/amr_beta_benchmark_input_prepare.py",

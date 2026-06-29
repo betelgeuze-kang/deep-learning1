@@ -81,6 +81,13 @@ def main() -> int:
         template_b = tmp / "template_b"
         make_template(template_a, "case-a", ["case-a-0001", "case-a-0002"])
         make_template(template_b, "case-b", ["case-b-0001"])
+        proc = run_tool("--template-dir", str(template_a), "--template-dir", str(template_b), "--json")
+        assert proc.returncode == 1
+        unverified = json.loads(proc.stdout)
+        assert unverified["label_template_verify_existing_required"] == 1
+        assert unverified["label_template_verify_existing_failed_dirs"] == 2
+        assert "label_template --verify-existing failed" in proc.stderr
+
         decisions = tmp / "decisions.jsonl"
         write_jsonl(
             decisions,
@@ -99,10 +106,13 @@ def main() -> int:
             str(decisions),
             "--out",
             str(out_dir),
+            "--skip-verify-existing",
             "--json",
         )
         assert proc.returncode == 0, proc.stderr
         summary = json.loads(proc.stdout)
+        assert summary["label_template_verify_existing_required"] == 0
+        assert summary["label_template_verify_existing_passed_dirs"] == 0
         assert summary["candidate_label_rows"] == 3
         assert summary["valid_human_label_rows"] == 2
         assert summary["missing_candidate_label_count"] == 1
@@ -120,6 +130,7 @@ def main() -> int:
             str(decisions),
             "--per-case-out-root",
             str(per_case_root),
+            "--skip-verify-existing",
             "--json",
         )
         assert proc.returncode == 0, proc.stderr
@@ -152,6 +163,7 @@ def main() -> int:
             "--per-case-out-root",
             str(per_case_root),
             "--overwrite",
+            "--skip-verify-existing",
         )
         assert proc.returncode == 0, proc.stderr
         bad_root = tmp / "bad_per_case_packets"
@@ -163,6 +175,7 @@ def main() -> int:
             "--per-case-out-root",
             str(bad_root),
             "--overwrite",
+            "--skip-verify-existing",
         )
         assert proc.returncode == 1
         assert "refusing to delete unrelated per-case packet entry" in proc.stderr
@@ -175,6 +188,7 @@ def main() -> int:
             "--decisions",
             str(decisions),
             "--require-all-candidates",
+            "--skip-verify-existing",
         )
         assert proc.returncode == 1
         assert "missing candidate_label_id decisions" in proc.stderr
@@ -187,7 +201,13 @@ def main() -> int:
                 {"candidate_label_id": "case-a-0001", "human_labeled": True, "expected": "absent"},
             ],
         )
-        proc = run_tool("--template-dir", str(template_a), "--decisions", str(bad_decisions))
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--decisions",
+            str(bad_decisions),
+            "--skip-verify-existing",
+        )
         assert proc.returncode == 1
         assert "duplicate candidate_label_id" in proc.stderr
 
@@ -196,7 +216,13 @@ def main() -> int:
             unknown_decisions,
             [{"candidate_label_id": "case-z-0001", "human_labeled": True, "expected": "present"}],
         )
-        proc = run_tool("--template-dir", str(template_a), "--decisions", str(unknown_decisions))
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--decisions",
+            str(unknown_decisions),
+            "--skip-verify-existing",
+        )
         assert proc.returncode == 1
         assert "unknown candidate_label_id" in proc.stderr
 
@@ -205,13 +231,19 @@ def main() -> int:
             example_decisions,
             [{"candidate_label_id": "EXAMPLE-case-0001", "human_labeled": True, "expected": "present"}],
         )
-        proc = run_tool("--template-dir", str(template_a), "--decisions", str(example_decisions))
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--decisions",
+            str(example_decisions),
+            "--skip-verify-existing",
+        )
         assert proc.returncode == 1
         assert "candidate_label_id must not be example/placeholder" in proc.stderr
 
         blocked_template = tmp / "blocked_template"
         make_template(blocked_template, "case-c", ["case-c-0001"], blocked=True)
-        proc = run_tool("--template-dir", str(blocked_template))
+        proc = run_tool("--template-dir", str(blocked_template), "--skip-verify-existing")
         assert proc.returncode == 1
         assert "must keep release_ready=0" in proc.stderr
 

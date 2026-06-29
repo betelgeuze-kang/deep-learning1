@@ -149,6 +149,26 @@ def main() -> int:
         out_root = tmp / "label intake outputs"
         out_json = tmp / "label_intake_plan.json"
         out_md = tmp / "label_intake_plan.md"
+        unverified_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(tmp / "unverified_plan.json"),
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            unverified_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*unverified_args)
+        assert proc.returncode == 1
+        unverified, _ = json.JSONDecoder().raw_decode(proc.stdout.lstrip())
+        assert unverified["errors"]
+        assert "label_template --verify-existing failed" in proc.stderr
+        assert not (tmp / "unverified_plan.json").exists()
+
         args = [
             "--repo-intake",
             str(intake),
@@ -162,6 +182,7 @@ def main() -> int:
             str(out_json),
             "--out-md",
             str(out_md),
+            "--skip-verify-existing",
             "--json",
         ]
         for template_dir in template_dirs:
@@ -172,6 +193,8 @@ def main() -> int:
         assert payload["schema"] == "amr_beta_label_intake_plan.v1"
         assert payload["repo_intake_sha256"] == sha256_file(intake)
         assert payload["decisions_sha256"] == sha256_file(decisions)
+        assert payload["label_template_verify_existing_required"] == 0
+        assert payload["label_template_verify_existing_passed_dirs"] == 0
         assert payload["case_count"] == 10
         assert payload["candidate_label_rows"] == 10
         assert payload["valid_human_label_rows"] == 10
@@ -221,6 +244,7 @@ def main() -> int:
             "10",
             "--out-json",
             str(tmp / "missing_plan.json"),
+            "--skip-verify-existing",
         ]
         for template_dir in template_dirs:
             bad_args.extend(["--template-dir", str(template_dir)])
@@ -240,6 +264,7 @@ def main() -> int:
             "10",
             "--out-json",
             str(tmp / "synthetic_plan.json"),
+            "--skip-verify-existing",
             "--template-dir",
             str(synthetic_template),
         ]
