@@ -67,13 +67,22 @@ def load_repo_context(path: Path, *, min_repos: int) -> tuple[dict[str, dict[str
     return by_case, summary
 
 
-def load_templates(raw_dirs: list[str]) -> tuple[list[dict], list[str], dict[str, Path]]:
+def load_templates(raw_dirs: list[str], *, verify_existing: bool) -> tuple[list[dict], list[str], dict[str, Path], dict[str, int]]:
     rows: list[dict] = []
     errors: list[str] = []
     by_case: dict[str, Path] = {}
     case_seen: set[str] = set()
+    verify_passed_dirs = 0
+    verify_failed_dirs = 0
     for raw_dir in raw_dirs:
         template_dir = Path(raw_dir).expanduser().resolve()
+        if verify_existing:
+            verify_errors = label_packet.verify_label_template_existing(template_dir)
+            if verify_errors:
+                verify_failed_dirs += 1
+                errors.extend(verify_errors)
+            else:
+                verify_passed_dirs += 1
         loaded_rows, template_errors, _counts = label_packet.load_template_dir(template_dir)
         rows.extend(loaded_rows)
         errors.extend(template_errors)
@@ -90,7 +99,10 @@ def load_templates(raw_dirs: list[str]) -> tuple[list[dict], list[str], dict[str
     duplicate_ids = sorted({value for value in candidate_ids if candidate_ids.count(value) > 1})
     if duplicate_ids:
         errors.append(f"duplicate template candidate_label_id values: {', '.join(duplicate_ids[:10])}")
-    return rows, errors, by_case
+    return rows, errors, by_case, {
+        "label_template_verify_existing_passed_dirs": verify_passed_dirs,
+        "label_template_verify_existing_failed_dirs": verify_failed_dirs,
+    }
 
 
 def decision_map(decisions: list[dict]) -> dict[str, dict]:
@@ -193,6 +205,9 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- ready_for_label_intake_plan: {payload['ready_for_label_intake_plan']}",
         f"- valid_human_label_rows: {payload['valid_human_label_rows']}",
         f"- min_human_label_rows_required: {payload['min_human_label_rows_required']}",
+        f"- label_template_verify_existing_required: {payload['label_template_verify_existing_required']}",
+        f"- label_template_verify_existing_passed_dirs: {payload['label_template_verify_existing_passed_dirs']}",
+        f"- label_template_verify_existing_failed_dirs: {payload['label_template_verify_existing_failed_dirs']}",
         f"- compiles_labels: {payload['compiles_labels']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
         f"- runs_real_benchmark: {payload['runs_real_benchmark']}",
@@ -229,6 +244,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out-json", required=True, help="Label-intake plan JSON output.")
     parser.add_argument("--out-md", default="", help="Optional Markdown plan output.")
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--skip-verify-existing",
+        action="store_true",
+        help="Testing only: skip audit_my_repo_label_template.py --verify-existing checks.",
+    )
     parser.add_argument("--json", action="store_true")
     return parser
 
@@ -250,7 +270,10 @@ def main(argv: list[str]) -> int:
             raise ValueError(f"--decisions is not a file: {decisions_path}")
 
         repo_by_case, repo_summary = load_repo_context(repo_intake_path, min_repos=args.min_repos)
-        template_rows, template_errors, template_by_case = load_templates(args.template_dir)
+        template_rows, template_errors, template_by_case, verify_counts = load_templates(
+            args.template_dir,
+            verify_existing=not args.skip_verify_existing,
+        )
         template_case_ids = set(template_by_case)
         repo_case_ids = set(repo_by_case)
         errors = [*template_errors]
@@ -299,6 +322,13 @@ def main(argv: list[str]) -> int:
             "decisions_sha256": sha256_file(decisions_path),
             "out_root": str(out_root),
             "template_dir_count": len(args.template_dir),
+            "label_template_verify_existing_required": int(not args.skip_verify_existing),
+            "label_template_verify_existing_passed_dirs": verify_counts[
+                "label_template_verify_existing_passed_dirs"
+            ],
+            "label_template_verify_existing_failed_dirs": verify_counts[
+                "label_template_verify_existing_failed_dirs"
+            ],
             "case_count": len(per_case),
             "candidate_label_rows": len(template_rows),
             "decision_rows": len(decisions),

@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -46,6 +47,23 @@ def truthy(value: object) -> bool:
 
 def good_operator_value(value: object) -> bool:
     return not PLACEHOLDER_RE.search(str(value or "").strip())
+
+
+def verify_label_template_existing(path: Path) -> list[str]:
+    if is_forbidden_env_path(path):
+        return ["refusing .env-like label template path"]
+    tool = Path(__file__).resolve().parent / "audit_my_repo_label_template.py"
+    proc = subprocess.run(
+        [sys.executable, str(tool), "--verify-existing", str(path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode == 0:
+        return []
+    detail = (proc.stderr or proc.stdout).strip()
+    first_line = detail.splitlines()[0] if detail else "unknown failure"
+    return [f"{path}: label_template --verify-existing failed: {first_line}"]
 
 
 def read_json_or_jsonl(path: Path, input_name: str) -> list[dict]:
@@ -346,6 +364,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--require-all-candidates", action="store_true", help="Fail if any template candidate has no valid decision.")
     parser.add_argument("--enforce-min-labels", action="store_true", help="Fail unless valid decisions meet --min-labels.")
     parser.add_argument("--min-labels", type=int, default=MIN_HUMAN_LABELS_FOR_BETA)
+    parser.add_argument(
+        "--skip-verify-existing",
+        action="store_true",
+        help="Testing only: skip audit_my_repo_label_template.py --verify-existing checks.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON summary.")
     return parser
 
@@ -358,8 +381,17 @@ def main(argv: list[str]) -> int:
         packet_rows: list[dict] = []
         errors: list[str] = []
         synthetic_candidate_rows = 0
+        verify_passed_dirs = 0
+        verify_failed_dirs = 0
         for raw_template_dir in args.template_dir:
             template_dir = Path(raw_template_dir).expanduser().resolve()
+            if not args.skip_verify_existing:
+                verify_errors = verify_label_template_existing(template_dir)
+                if verify_errors:
+                    verify_failed_dirs += 1
+                    errors.extend(verify_errors)
+                else:
+                    verify_passed_dirs += 1
             rows, template_errors, counts = load_template_dir(template_dir)
             packet_rows.extend(rows)
             errors.extend(template_errors)
@@ -399,6 +431,9 @@ def main(argv: list[str]) -> int:
         summary = {
             "schema": "amr_beta_label_packet.v1",
             "template_dir_count": len(args.template_dir),
+            "label_template_verify_existing_required": int(not args.skip_verify_existing),
+            "label_template_verify_existing_passed_dirs": verify_passed_dirs,
+            "label_template_verify_existing_failed_dirs": verify_failed_dirs,
             "case_count": len(case_ids),
             "candidate_label_rows": len(packet_rows),
             "synthetic_candidate_rows": synthetic_candidate_rows,

@@ -84,6 +84,8 @@ been created:
 - [ ] Build a per-repo reviewer packet and reviewer progress summary from the
   generated templates:
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --out <reviewer-packet-dir>`.
+  The packet guard runs `audit_my_repo_label_template.py --verify-existing`
+  before reviewer packet output is accepted.
   For a batch of repo templates, write one packet directory per `case_id` plus
   an aggregate index:
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo1-template-dir> --template-dir <repo2-template-dir> --per-case-out-root results/reviewer_packets`.
@@ -255,8 +257,10 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 5. Generate the read-only label-intake command plan:
    `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
    The plan records `compiles_labels=0`, `creates_benchmark_evidence=0`, and
-   keeps beta/release/model/public comparison readiness blocked. It rejects
-   missing candidate decisions and synthetic template rows before compilation.
+   keeps beta/release/model/public comparison readiness blocked. It requires
+   each template directory to pass
+   `audit_my_repo_label_template.py --verify-existing`, and rejects missing
+   candidate decisions and synthetic template rows before compilation.
 6. Compile per repo:
    `audit_my_repo_label_intake.py --template results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_label_intake`.
 7. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
