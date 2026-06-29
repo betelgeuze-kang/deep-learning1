@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -14,6 +15,15 @@ TOOL = ROOT / "scripts" / "amr_beta_runtime_approval_request.py"
 
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def preflight_payload(*, ready: int = 1, release_ready: int = 0) -> dict:
@@ -73,11 +83,15 @@ def main() -> int:
         assert payload["requires_human_runtime_approval"] == 1
         assert payload["creates_benchmark_evidence"] == 0
         assert payload["runs_benchmark"] == 0
+        assert payload["input_preflight_sha256"] == sha256_file(preflight)
+        assert payload["runtime_commands_sha256"] == sha256_json(payload["runtime_commands"])
+        assert payload["benchmark_out"] == "/tmp/audit_benchmark"
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert payload["release_ready"] == 0
         assert "audit_my_repo_benchmark.py" in payload["runtime_commands"][1]
         markdown = out_md.read_text(encoding="utf-8")
         assert "approved_by_human: 0" in markdown
+        assert "runtime_commands_sha256" in markdown
         assert "Runtime Commands" in markdown
 
         blocked_preflight = tmp / "blocked_preflight.json"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -228,6 +229,8 @@ def main() -> int:
             str(tmp / "preflight.json"),
             "--out-md",
             str(tmp / "preflight.md"),
+            "--benchmark-out",
+            str(tmp / "audit benchmark"),
             "--json",
         ]
         for template_dir in template_dirs:
@@ -244,6 +247,9 @@ def main() -> int:
         assert payload["valid_repo_rows"] == 10
         assert payload["human_label_rows"] == 10
         assert payload["distinct_countable_maintainer_id_count"] == 3
+        benchmark_parts = shlex.split(payload["next_commands"][1])
+        assert benchmark_parts[benchmark_parts.index("--out") + 1] == str(tmp / "audit benchmark")
+        assert "'" in payload["next_commands"][1]
         assert (tmp / "preflight.json").is_file()
         assert "ready_to_request_runtime_approval: 1" in (tmp / "preflight.md").read_text(encoding="utf-8")
 
