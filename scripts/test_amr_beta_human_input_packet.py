@@ -27,6 +27,7 @@ LABEL_INTAKE = REPO_ROOT / "scripts" / "audit_my_repo_label_intake.py"
 BENCHMARK = REPO_ROOT / "scripts" / "audit_my_repo_benchmark.py"
 REPO_INTAKE_VALIDATOR = REPO_ROOT / "scripts" / "amr_beta_repo_intake_validate.py"
 HUMAN_INPUT_STATUS = REPO_ROOT / "scripts" / "amr_beta_human_input_status.py"
+MAINTAINER_FEEDBACK_PACKET = REPO_ROOT / "scripts" / "amr_beta_maintainer_feedback_packet.py"
 LABEL_PACKET = REPO_ROOT / "scripts" / "amr_beta_label_packet.py"
 BENCHMARK_INPUT_PREPARE = REPO_ROOT / "scripts" / "amr_beta_benchmark_input_prepare.py"
 RUNTIME_PREFLIGHT = REPO_ROOT / "scripts" / "amr_beta_runtime_preflight.py"
@@ -41,6 +42,7 @@ REQUIRED_FILES = [
     FEEDBACK_TEMPLATE,
     REPO_INTAKE_VALIDATOR,
     HUMAN_INPUT_STATUS,
+    MAINTAINER_FEEDBACK_PACKET,
     LABEL_PACKET,
     BENCHMARK_INPUT_PREPARE,
     RUNTIME_PREFLIGHT,
@@ -66,6 +68,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "human owner supplied and verified against local disk",
     "python3 scripts/amr_beta_repo_intake_validate.py",
     "python3 scripts/amr_beta_human_input_status.py",
+    "python3 scripts/amr_beta_maintainer_feedback_packet.py",
     "python3 scripts/amr_beta_label_packet.py",
     "python3 scripts/amr_beta_benchmark_input_prepare.py",
     "python3 scripts/amr_beta_runtime_preflight.py",
