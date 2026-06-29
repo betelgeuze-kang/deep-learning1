@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_repo_audit_plan.py"
+VALIDATOR = ROOT / "scripts" / "amr_beta_repo_intake_validate.py"
 
 
 def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
@@ -93,9 +94,13 @@ def main() -> int:
         )
         assert proc.returncode == 0, proc.stderr
         payload = json.loads(out_json.read_text(encoding="utf-8"))
+        validate = run([sys.executable, str(VALIDATOR), str(intake), "--json"], cwd=ROOT)
+        assert validate.returncode == 0, validate.stderr
+        intake_status, _ = json.JSONDecoder().raw_decode(validate.stdout.lstrip())
         assert payload["schema"] == "amr_beta_repo_audit_plan.v1"
         assert payload["repo_intake_sha256"] == sha256_file(intake)
         assert payload["valid_repo_rows"] == 10
+        assert payload["repo_snapshot_lock_sha256"] == intake_status["repo_snapshot_lock_sha256"]
         assert payload["ready_for_real_benchmark_audit_plan"] == 1
         assert payload["runs_audit"] == 0
         assert payload["runs_label_template_generation"] == 0
@@ -119,6 +124,7 @@ def main() -> int:
         assert "--per-case-out-root" in shlex.split(payload["aggregate_reviewer_packet_command"])
         markdown = out_md.read_text(encoding="utf-8")
         assert "runs_audit: 0" in markdown
+        assert "repo_snapshot_lock_sha256: sha256:" in markdown
         assert "Aggregate Reviewer Packet Command" in markdown
 
         dirty = tmp / "dirty.md"
