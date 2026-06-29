@@ -6,7 +6,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "==> ai wrapper shell syntax"
-bash -n scripts/ai-dangerous-command-check.sh scripts/ai-cursor-network-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh scripts/audit_my_repo.sh scripts/audit_my_repo_pr.sh
+bash -n scripts/ai-dangerous-command-check.sh scripts/ai-cursor-network-check.sh scripts/ai-worker-cursor.sh scripts/ai-worker-opencode.sh scripts/ai-preflight.sh scripts/ai-verify.sh scripts/audit_my_repo.sh scripts/audit_my_repo_pr.sh scripts/run_minimal_demo.sh
 if [ -f experiments/test_audit_my_repo_product_entrypoint.sh ]; then
   bash -n experiments/test_audit_my_repo_product_entrypoint.sh
 fi
@@ -405,6 +405,12 @@ if [ -x experiments/test_v54e_free_running_non_attention_decoder_contract.sh ]; 
 fi
 if [ -x experiments/test_v54f_free_running_generation_evidence_intake.sh ]; then
   ./experiments/test_v54f_free_running_generation_evidence_intake.sh >/dev/null
+fi
+if [ -f scripts/test_v54_minimal_real_model_smoke.py ]; then
+  python3 scripts/test_v54_minimal_real_model_smoke.py >/dev/null
+fi
+if [ -f scripts/test_release_review_collection.py ]; then
+  python3 scripts/test_release_review_collection.py >/dev/null
 fi
 
 echo "==> audit-my-repo product smoke"

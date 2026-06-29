@@ -616,7 +616,7 @@ AMBIGUOUS_READY_FLAGS = {
 EXPECTED_TYPED_READINESS_ORDER = [
     "pm_foundation_contract_fixture_ready",
     "v53_benchmark_foundation_contract_ready",
-    "v54_free_running_generation_contract_ready",
+    "v54_minimal_real_model_heldout_ready",
     "v58_blind_eval_protocol_contract_ready",
     "h10_real_label_contract_ready",
     "logical_100b_contract_fixture_ready",
@@ -651,14 +651,14 @@ EXPECTED_TYPED_READINESS_CONTRACTS = {
         "independent_reproduction_ready": False,
         "release_ready": False,
     },
-    "v54_free_running_generation_contract_ready": {
+    "v54_minimal_real_model_heldout_ready": {
         "scope_id": "v54-free-running-generation",
         "misleading_ready_flag": "v54_ready",
-        "evidence_path": "v54/free_running_generation_evidence_intake_contract.json",
+        "evidence_path": "results/v54_minimal_real_model_smoke_summary.csv",
         "contract_ready": True,
-        "fixture_execution_ready": False,
-        "real_model_execution_ready": False,
-        "heldout_metric_ready": False,
+        "fixture_execution_ready": True,
+        "real_model_execution_ready": True,
+        "heldout_metric_ready": True,
         "human_review_ready": False,
         "independent_reproduction_ready": False,
         "release_ready": False,
@@ -2654,10 +2654,19 @@ def verify_typed_readiness(path: Path, pm_ledger: Path | None = None) -> list[st
             errors.append(f"{prefix}: pm_ledger_required must be true")
         if not row.get("evidence_path"):
             errors.append(f"{prefix}: evidence_path must be non-empty")
-        if row.get("real_model_execution_ready") is True:
+        if row.get("real_model_execution_ready") is True and replacement != "v54_minimal_real_model_heldout_ready":
             errors.append(f"{prefix}: current contract must not mark real_model_execution_ready=true")
+        if row.get("heldout_metric_ready") is True and replacement != "v54_minimal_real_model_heldout_ready":
+            errors.append(f"{prefix}: current contract must not mark heldout_metric_ready=true")
         if row.get("release_ready") is True:
             errors.append(f"{prefix}: current contract must not mark release_ready=true")
+        if replacement == "v54_minimal_real_model_heldout_ready":
+            for field in ["contract_ready", "fixture_execution_ready", "real_model_execution_ready", "heldout_metric_ready"]:
+                if row.get(field) is not True:
+                    errors.append(f"{prefix}: v54 minimal real-model row must keep {field}=true")
+            for field in ["human_review_ready", "independent_reproduction_ready", "release_ready"]:
+                if row.get(field) is not False:
+                    errors.append(f"{prefix}: v54 minimal real-model row must keep {field}=false")
         if replacement in {"logical_100b_contract_fixture_ready", "v61i_logical_100b_contract_fixture_ready"}:
             if row.get("contract_ready") is not True or row.get("fixture_execution_ready") is not True:
                 errors.append(f"{prefix}: logical 100B rows must be contract+fixture ready")
