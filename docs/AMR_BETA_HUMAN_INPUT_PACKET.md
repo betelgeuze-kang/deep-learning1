@@ -94,6 +94,9 @@ agent-written maintainer feedback.
 
 - [ ] Collect feedback from at least 3 distinct `maintainer_id` values.
 - [ ] Bind every feedback row to a known 9.1 `case_id`.
+- [ ] Generate a case/contact request packet from the filled repo intake sheet
+  before outreach:
+  `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --out results/maintainer_feedback_packet`.
 - [ ] Require `human_feedback=true` and either `feedback_text` or
   `feedback_text_sha256`.
 - [ ] Count feedback only when its case already has `human_labeled=true` and is
@@ -182,6 +185,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 5. Compile per repo:
    `audit_my_repo_label_intake.py --template results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_label_intake`.
 6. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
+   Prepare the request packet and progress summary:
+   `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --label-intake-dir results/<repo>_label_intake --out results/maintainer_feedback_packet`.
    Check decision/feedback progress with
    `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`.
    After label intake exists, include every intake directory:
