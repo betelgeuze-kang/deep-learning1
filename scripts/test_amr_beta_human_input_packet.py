@@ -124,6 +124,7 @@ FEEDBACK_TEMPLATE_REQUIRED_SNIPPETS = [
     "maintainer_id",
     "feedback_text",
     "feedback_text_sha256",
+    "feedback_text_sha256_status",
     "human_feedback",
     "synthetic",
     "counts_for_beta",
