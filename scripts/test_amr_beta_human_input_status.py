@@ -16,6 +16,11 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
     path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows), encoding="utf-8")
 
 
+def make_label_intake(path: Path, rows: list[dict]) -> None:
+    path.mkdir()
+    write_jsonl(path / "benchmark_labels.jsonl", rows)
+
+
 def run_tool(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(TOOL), *args],
@@ -89,6 +94,82 @@ def main() -> int:
         assert proc.returncode == 0, proc.stderr
         assert '"ready_for_real_benchmark_inputs": 1' in proc.stdout
         assert '"design_partner_beta_candidate_ready": 0' in proc.stdout
+
+        label_intake = tmp / "label_intake"
+        make_label_intake(
+            label_intake,
+            [
+                {
+                    "case_id": "case-001",
+                    "label_id": "case-001-label",
+                    "repo_path": "/tmp/repo-001",
+                    "human_labeled": True,
+                    "synthetic": False,
+                    "expected": "present",
+                },
+                {
+                    "case_id": "case-002",
+                    "label_id": "case-002-label",
+                    "repo_path": "/tmp/repo-002",
+                    "human_labeled": True,
+                    "synthetic": False,
+                    "expected": "absent",
+                },
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(feedback),
+            "--label-intake-dir",
+            str(label_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert '"feedback_counts_for_beta_precheck": 1' in proc.stdout
+        assert '"distinct_countable_maintainer_id_count": 2' in proc.stdout
+
+        synthetic_label_intake = tmp / "synthetic_label_intake"
+        make_label_intake(
+            synthetic_label_intake,
+            [
+                {
+                    "case_id": "case-001",
+                    "label_id": "case-001-label",
+                    "repo_path": "/tmp/repo-001",
+                    "human_labeled": True,
+                    "synthetic": True,
+                    "expected": "present",
+                },
+                {
+                    "case_id": "case-002",
+                    "label_id": "case-002-label",
+                    "repo_path": "/tmp/repo-002",
+                    "human_labeled": True,
+                    "synthetic": False,
+                    "expected": "absent",
+                },
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(feedback),
+            "--label-intake-dir",
+            str(synthetic_label_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+        )
+        assert proc.returncode == 1
+        assert "case_id is not countable for beta" in proc.stderr
 
         bad_decisions = tmp / "bad_decisions.jsonl"
         write_jsonl(
