@@ -10,16 +10,21 @@ For each repository, record one row. Keep one case per repository.
 - [ ] Real local clone (not synthetic / not a generated fixture).
 - [ ] Clean git worktree (no uncommitted changes): `git status --porcelain` is empty.
 - [ ] HEAD pinned and recorded as `expected_repo_git_head`.
+- [ ] Owner or maintainer contact recorded for follow-up and feedback intake.
 - [ ] `case_id` is a safe identifier (`[A-Za-z0-9][A-Za-z0-9_.-]{0,127}`).
+- [ ] Audit will be run with `namespace=real_benchmark` and
+  `real_benchmark_namespace_confirmed=true`.
 
 ## Intake table (fill in)
 
-| case_id | repo_path | expected_repo_git_head | audit_mode (quick/full) | notes |
-|---|---|---|---|---|
-| example-repo-1 | /abs/path/to/repo1 | <git rev-parse HEAD> | quick | example row — replace with a real repo |
+| case_id | repo_path | expected_repo_git_head | clean_worktree | owner_or_maintainer_contact | audit_mode (quick/full) | namespace | real_benchmark_namespace_confirmed | notes |
+|---|---|---|---|---|---|---|---|---|
+| example-repo-1 | /abs/path/to/repo1 | <git rev-parse HEAD> | true | EXAMPLE-contact | quick | real_benchmark | true | example row — replace with a real repo |
 
 > The example row is a placeholder. Replace it with real repositories. At least
-> 10 real rows are required; the example does not count toward the threshold.
+> 10 real rows are required; the example does not count toward the threshold,
+> even though it shows the required `real_benchmark` namespace fields. Do not
+> leave any `EXAMPLE-*` value in the filled intake sheet.
 
 ## How HEAD is checked
 
