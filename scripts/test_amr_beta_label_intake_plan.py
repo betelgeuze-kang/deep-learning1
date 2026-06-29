@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+"""Smoke tests for scripts/amr_beta_label_intake_plan.py."""
+from __future__ import annotations
+
+import hashlib
+import json
+import shlex
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+TOOL = ROOT / "scripts" / "amr_beta_label_intake_plan.py"
+
+
+def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def write_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_jsonl(path: Path, rows: list[dict]) -> None:
+    path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows), encoding="utf-8")
+
+
+def create_repo(root: Path, index: int) -> tuple[Path, str]:
+    repo = root / f"repo {index:02d}"
+    repo.mkdir()
+    assert run(["git", "init", "-q"], cwd=repo).returncode == 0
+    (repo / "README.md").write_text(f"# repo {index}\n", encoding="utf-8")
+    assert run(["git", "add", "README.md"], cwd=repo).returncode == 0
+    commit = run(
+        [
+            "git",
+            "-c",
+            "user.name=AMR Test",
+            "-c",
+            "user.email=amr-test@example.invalid",
+            "commit",
+            "-q",
+            "-m",
+            "init",
+        ],
+        cwd=repo,
+    )
+    assert commit.returncode == 0, commit.stderr
+    head = run(["git", "rev-parse", "HEAD"], cwd=repo)
+    assert head.returncode == 0
+    return repo, head.stdout.strip()
+
+
+def write_intake(path: Path, repos: list[tuple[str, Path, str]]) -> None:
+    lines = [
+        "| case_id | repo_path | expected_repo_git_head | clean_worktree | owner_or_maintainer_contact | audit_mode | namespace | real_benchmark_namespace_confirmed | notes |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for case_id, repo, head in repos:
+        lines.append(
+            f"| {case_id} | {repo} | {head} | true | {case_id}@review.invalid | quick | real_benchmark | true | human supplied |"
+        )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def make_template(path: Path, case_id: str, *, synthetic: str = "0") -> None:
+    path.mkdir()
+    row = {
+        "case_id": case_id,
+        "candidate_label_id": f"{case_id}-0001",
+        "template_only": "1",
+        "human_labeled": "0",
+        "synthetic": synthetic,
+        "source_finding_id": f"{case_id}-finding-1",
+        "source_review_queue_id": f"{case_id}-queue-1",
+        "plugin_id": "static",
+        "rule_id": "rule",
+        "audit_type": "code",
+        "severity": "medium",
+        "confidence": "medium",
+        "suggested_expected": "present",
+        "file_path": "README.md",
+        "expected_line_start": "1",
+        "expected_line_end": "1",
+        "expected_span_sha256": "sha256:" + ("b" * 64),
+        "citation_id": f"{case_id}-citation-1",
+        "finding_answer": "Candidate finding summary.",
+        "span_text_preview": "# repo",
+        "release_ready": "0",
+        "public_comparison_claim_ready": "0",
+        "real_model_execution_ready": "0",
+        "design_partner_beta_candidate_ready": "0",
+    }
+    payload = {
+        "schema_version": "local_repo_audit_label_template.v1",
+        "tool_version": "audit_my_repo_alpha.v1",
+        "claim_boundary": "alpha-local-code-doc-audit-only",
+        "template_only": 1,
+        "human_label_rows": 0,
+        "candidate_label_rows": 1,
+        "release_ready": 0,
+        "public_comparison_claim_ready": 0,
+        "real_model_execution_ready": 0,
+        "design_partner_beta_candidate_ready": 0,
+        "rows": [row],
+    }
+    write_json(path / "label_template.json", payload)
+
+
+def run_tool(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(TOOL), *args],
+        cwd=str(ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
+def main() -> int:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
+        repos = [(f"case-{index:02d}", *create_repo(tmp, index)) for index in range(1, 11)]
+        intake = tmp / "repo intake.md"
+        write_intake(intake, repos)
+        template_dirs: list[Path] = []
+        for case_id, _repo, _head in repos:
+            template_dir = tmp / f"{case_id} template"
+            make_template(template_dir, case_id)
+            template_dirs.append(template_dir)
+        decisions = tmp / "human decisions.jsonl"
+        write_jsonl(
+            decisions,
+            [
+                {
+                    "candidate_label_id": f"{case_id}-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                    "priority": "P1",
+                }
+                for case_id, _repo, _head in repos
+            ],
+        )
+        out_root = tmp / "label intake outputs"
+        out_json = tmp / "label_intake_plan.json"
+        out_md = tmp / "label_intake_plan.md"
+        args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--out-root",
+            str(out_root),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(out_json),
+            "--out-md",
+            str(out_md),
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*args)
+        assert proc.returncode == 0, proc.stderr
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["schema"] == "amr_beta_label_intake_plan.v1"
+        assert payload["repo_intake_sha256"] == sha256_file(intake)
+        assert payload["decisions_sha256"] == sha256_file(decisions)
+        assert payload["case_count"] == 10
+        assert payload["candidate_label_rows"] == 10
+        assert payload["valid_human_label_rows"] == 10
+        assert payload["ready_for_label_intake_plan"] == 1
+        assert payload["compiles_labels"] == 0
+        assert payload["writes_label_intake_outputs"] == 0
+        assert payload["creates_benchmark_evidence"] == 0
+        assert payload["runs_real_benchmark"] == 0
+        assert payload["design_partner_beta_candidate_ready"] == 0
+        assert payload["release_ready"] == 0
+        assert payload["operator_command_count"] == 20
+        first = payload["per_case"][0]
+        compile_parts = shlex.split(first["compile_command"])
+        assert compile_parts[0] == "python3"
+        assert compile_parts[1] == "scripts/audit_my_repo_label_intake.py"
+        assert compile_parts[compile_parts.index("--template") + 1] == str(template_dirs[0])
+        assert compile_parts[compile_parts.index("--decisions") + 1] == str(decisions)
+        assert compile_parts[compile_parts.index("--repo-path") + 1] == str(repos[0][1])
+        assert compile_parts[compile_parts.index("--expected-repo-git-head") + 1] == repos[0][2].lower()
+        assert compile_parts[compile_parts.index("--out") + 1] == str(out_root / "case-01_label_intake")
+        assert "'" in first["compile_command"]
+        verify_parts = shlex.split(first["verify_command"])
+        assert verify_parts[1] == "scripts/audit_my_repo_label_intake.py"
+        assert verify_parts[verify_parts.index("--verify-existing") + 1] == str(out_root / "case-01_label_intake")
+        markdown = out_md.read_text(encoding="utf-8")
+        assert "ready_for_label_intake_plan: 1" in markdown
+        assert "compiles_labels: 0" in markdown
+
+        missing_decisions = tmp / "missing decisions.jsonl"
+        write_jsonl(
+            missing_decisions,
+            [
+                {
+                    "candidate_label_id": f"{case_id}-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                }
+                for case_id, _repo, _head in repos[:9]
+            ],
+        )
+        bad_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(missing_decisions),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(tmp / "missing_plan.json"),
+        ]
+        for template_dir in template_dirs:
+            bad_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*bad_args)
+        assert proc.returncode == 1
+        assert "missing candidate_label_id decisions" in proc.stderr
+        assert not (tmp / "missing_plan.json").exists()
+
+        synthetic_template = tmp / "case-01 synthetic template"
+        make_template(synthetic_template, "case-01", synthetic="1")
+        synthetic_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(tmp / "synthetic_plan.json"),
+            "--template-dir",
+            str(synthetic_template),
+        ]
+        for template_dir in template_dirs[1:]:
+            synthetic_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*synthetic_args)
+        assert proc.returncode == 1
+        assert "must be non-synthetic" in proc.stderr
+
+    print("AMR beta label intake plan smoke OK")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -30,6 +30,7 @@ REPO_AUDIT_PLAN = REPO_ROOT / "scripts" / "amr_beta_repo_audit_plan.py"
 HUMAN_INPUT_STATUS = REPO_ROOT / "scripts" / "amr_beta_human_input_status.py"
 MAINTAINER_FEEDBACK_PACKET = REPO_ROOT / "scripts" / "amr_beta_maintainer_feedback_packet.py"
 LABEL_PACKET = REPO_ROOT / "scripts" / "amr_beta_label_packet.py"
+LABEL_INTAKE_PLAN = REPO_ROOT / "scripts" / "amr_beta_label_intake_plan.py"
 BENCHMARK_INPUT_PREPARE = REPO_ROOT / "scripts" / "amr_beta_benchmark_input_prepare.py"
 RUNTIME_PREFLIGHT = REPO_ROOT / "scripts" / "amr_beta_runtime_preflight.py"
 RUNTIME_APPROVAL_REQUEST = REPO_ROOT / "scripts" / "amr_beta_runtime_approval_request.py"
@@ -48,6 +49,7 @@ REQUIRED_FILES = [
     HUMAN_INPUT_STATUS,
     MAINTAINER_FEEDBACK_PACKET,
     LABEL_PACKET,
+    LABEL_INTAKE_PLAN,
     BENCHMARK_INPUT_PREPARE,
     RUNTIME_PREFLIGHT,
     RUNTIME_APPROVAL_REQUEST,
@@ -79,6 +81,8 @@ PACKET_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_human_input_status.py",
     "python3 scripts/amr_beta_maintainer_feedback_packet.py",
     "python3 scripts/amr_beta_label_packet.py",
+    "python3 scripts/amr_beta_label_intake_plan.py",
+    "compiles_labels=0",
     "python3 scripts/amr_beta_benchmark_input_prepare.py",
     "python3 scripts/amr_beta_runtime_preflight.py",
     "python3 scripts/amr_beta_runtime_approval_request.py",

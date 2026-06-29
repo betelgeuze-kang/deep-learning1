@@ -430,6 +430,9 @@ fi
 if [ -f scripts/test_amr_beta_label_packet.py ]; then
   python3 scripts/test_amr_beta_label_packet.py >/dev/null
 fi
+if [ -f scripts/test_amr_beta_label_intake_plan.py ]; then
+  python3 scripts/test_amr_beta_label_intake_plan.py >/dev/null
+fi
 if [ -f scripts/test_amr_beta_benchmark_input_prepare.py ]; then
   python3 scripts/test_amr_beta_benchmark_input_prepare.py >/dev/null
 fi
