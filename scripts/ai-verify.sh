@@ -436,6 +436,9 @@ fi
 if [ -f scripts/test_amr_beta_runtime_approval_request.py ]; then
   python3 scripts/test_amr_beta_runtime_approval_request.py >/dev/null
 fi
+if [ -f scripts/test_amr_beta_runtime_approval_status.py ]; then
+  python3 scripts/test_amr_beta_runtime_approval_status.py >/dev/null
+fi
 if [ -f scripts/test_amr_beta_readiness_backlog.py ]; then
   python3 scripts/test_amr_beta_readiness_backlog.py >/dev/null
 fi

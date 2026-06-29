@@ -92,6 +92,10 @@ agent-written maintainer feedback.
 - [ ] Generate the runtime approval request packet from the green preflight;
   this does not approve or run the benchmark:
   `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
+- [ ] If the human owner approves the runtime budget, validate the supplied
+  approval record before running the long benchmark; this still does not run
+  the benchmark:
+  `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md`.
 
 ### 9.3 Maintainer feedback checklist
 
@@ -163,6 +167,35 @@ At least 3 distinct `maintainer_id` values are required
 
 See `docs/templates/amr-beta-maintainer-feedback.md`.
 
+### 9.4 Runtime approval record (JSON)
+Consumed by `scripts/amr_beta_runtime_approval_status.py --approval-record <file>`.
+This is a local operator record only. It proves that a human approved the
+runtime budget for the exact preflight/request/command hashes; it does not run
+the benchmark and does not make any beta, release, model, or public comparison
+claim true. Required fields:
+
+- `schema: "amr_beta_runtime_approval_record.v1"`
+- `approval_scope: "amr_beta_real_benchmark_runtime"`
+- `approved_by_human: true`
+- `approval_record_supplied: true`
+- `approver_id` — non-placeholder human/operator identifier; not `codex`,
+  `agent`, `automation`, `example`, `todo`, or similar placeholders.
+- `approved_at_utc` — UTC timestamp ending in `Z`.
+- `approved_runtime_budget_minutes` — positive integer.
+- `approved_preflight_sha256` — copied from the approval request/preflight.
+- `approved_request_sha256` — sha256 of
+  `results/amr_beta_runtime_approval_request.json`.
+- `approved_runtime_commands_sha256` — copied from the approval request.
+- `approved_benchmark_out` — exact benchmark output directory approved by the
+  human owner.
+- `raw_repositories_labels_feedback_remain_local: true`
+- `no_external_publication_or_release_claim: true`
+
+The validated status output keeps `creates_benchmark_evidence=0`,
+`runs_benchmark=0`, `codex_runtime_permission_granted_by_this_packet=0`,
+`design_partner_beta_candidate_ready=0`, `release_ready=0`,
+`public_comparison_claim_ready=0`, and `real_model_execution_ready=0`.
+
 ## Workflow once human inputs exist (run by the operator, not the agent)
 
 The `synthetic` flag propagates from the **audit** stage: `audit_my_repo_label_template.py`
@@ -200,6 +233,9 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
    Then generate the approval request packet:
    `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
+   If the human owner supplies a runtime approval record, validate that it binds
+   to the exact preflight, request, runtime command hash, and benchmark output:
+   `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md`.
    `audit_my_repo_benchmark.py` accepts
    **exactly one** of `--labels` or `--label-intake`; `--label-intake` is a single
    directory (one repo). For >= 10 repos, concatenate each repo's

@@ -9,7 +9,9 @@ evidence, and does not promote readiness.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import shlex
 import sys
 from pathlib import Path
 
@@ -35,6 +37,26 @@ def read_json(path: Path, input_name: str) -> dict:
     if not isinstance(payload, dict):
         raise ValueError(f"{input_name} must contain an object")
     return payload
+
+
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def command_option(command: str, option: str) -> str:
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        return ""
+    for index, part in enumerate(parts):
+        if part == option and index + 1 < len(parts):
+            return parts[index + 1]
+    return ""
 
 
 def validate_preflight(preflight: dict) -> list[str]:
@@ -70,9 +92,11 @@ def validate_preflight(preflight: dict) -> list[str]:
 
 def build_packet(preflight: dict, *, preflight_path: Path, operator_note: str) -> dict:
     commands = [str(command) for command in preflight.get("next_commands", [])]
+    benchmark_out = command_option(commands[1], "--out") if len(commands) > 1 else ""
     return {
         "schema": SCHEMA,
         "input_preflight": str(preflight_path),
+        "input_preflight_sha256": sha256_file(preflight_path),
         "request_kind": "runtime_approval_required",
         "approved_by_human": 0,
         "approval_record_supplied": 0,
@@ -91,9 +115,12 @@ def build_packet(preflight: dict, *, preflight_path: Path, operator_note: str) -
         ),
         "label_intake_case_count": int(preflight.get("label_intake_case_count", 0)),
         "runtime_commands": commands,
+        "runtime_commands_sha256": sha256_json(commands),
+        "benchmark_out": benchmark_out,
         "approval_checklist": [
             "Human operator explicitly approves runtime budget and wall-clock expectation.",
             "Human operator confirms benchmark output directory is acceptable.",
+            "Human operator records the preflight, request, and runtime command hashes in an approval record.",
             "Human operator confirms raw repositories, labels, and feedback remain local.",
             "Human operator runs the listed commands; Codex does not run the long benchmark without approval.",
             "After execution, operator verifies benchmark output with --verify-existing.",
@@ -110,6 +137,9 @@ def write_markdown(path: Path, packet: dict) -> None:
         f"- requires_human_runtime_approval: {packet['requires_human_runtime_approval']}",
         f"- creates_benchmark_evidence: {packet['creates_benchmark_evidence']}",
         f"- runs_benchmark: {packet['runs_benchmark']}",
+        f"- input_preflight_sha256: {packet['input_preflight_sha256']}",
+        f"- runtime_commands_sha256: {packet['runtime_commands_sha256']}",
+        f"- benchmark_out: {packet['benchmark_out']}",
         f"- design_partner_beta_candidate_ready: {packet['design_partner_beta_candidate_ready']}",
         f"- release_ready: {packet['release_ready']}",
         f"- public_comparison_claim_ready: {packet['public_comparison_claim_ready']}",

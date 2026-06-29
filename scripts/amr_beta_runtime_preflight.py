@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sys
 from pathlib import Path
 
@@ -161,6 +162,10 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
+def command_line(parts: list[str]) -> str:
+    return " ".join(shlex.quote(str(part)) for part in parts)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-intake", required=True, help="Filled repo-intake Markdown or CSV.")
@@ -239,20 +244,36 @@ def main(argv: list[str]) -> int:
         combined_labels = str(Path(args.combined_labels).expanduser().resolve())
         combined_summary = str(Path(args.combined_summary).expanduser().resolve())
         benchmark_out = str(Path(args.benchmark_out).expanduser().resolve())
-        next_commands = [
-            (
-                "python3 scripts/amr_beta_benchmark_input_prepare.py "
-                + " ".join(f"--label-intake-dir {Path(raw).expanduser().resolve()}" for raw in args.label_intake_dir)
-                + f" --out-labels {combined_labels} --summary {combined_summary} "
-                + f"--feedback {Path(args.feedback).expanduser().resolve()}"
-            ),
-            (
-                "python3 scripts/audit_my_repo_benchmark.py "
-                f"--labels {combined_labels} --feedback {Path(args.feedback).expanduser().resolve()} "
-                "--namespace real_benchmark --confirm-real-benchmark-namespace "
-                f"--mode full --out {benchmark_out}"
-            ),
+        feedback_path = str(Path(args.feedback).expanduser().resolve())
+        prepare_parts = ["python3", "scripts/amr_beta_benchmark_input_prepare.py"]
+        for raw in args.label_intake_dir:
+            prepare_parts.extend(["--label-intake-dir", str(Path(raw).expanduser().resolve())])
+        prepare_parts.extend(
+            [
+                "--out-labels",
+                combined_labels,
+                "--summary",
+                combined_summary,
+                "--feedback",
+                feedback_path,
+            ]
+        )
+        benchmark_parts = [
+            "python3",
+            "scripts/audit_my_repo_benchmark.py",
+            "--labels",
+            combined_labels,
+            "--feedback",
+            feedback_path,
+            "--namespace",
+            "real_benchmark",
+            "--confirm-real-benchmark-namespace",
+            "--mode",
+            "full",
+            "--out",
+            benchmark_out,
         ]
+        next_commands = [command_line(prepare_parts), command_line(benchmark_parts)]
 
         errors = [*repo_errors, *template_errors, *label_errors, *human_errors, *binding_errors]
         repo_pass = int(not repo_errors)
