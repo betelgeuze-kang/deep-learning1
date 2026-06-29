@@ -31,6 +31,7 @@ LABEL_PACKET = REPO_ROOT / "scripts" / "amr_beta_label_packet.py"
 BENCHMARK_INPUT_PREPARE = REPO_ROOT / "scripts" / "amr_beta_benchmark_input_prepare.py"
 READINESS_BACKLOG = REPO_ROOT / "scripts" / "amr_beta_readiness_backlog.py"
 DESIGN_PARTNER_PACKET = REPO_ROOT / "scripts" / "amr_beta_design_partner_packet.py"
+HARDENING_ANALYZE = REPO_ROOT / "scripts" / "amr_beta_hardening_analyze.py"
 
 REQUIRED_FILES = [
     PACKET,
@@ -43,6 +44,7 @@ REQUIRED_FILES = [
     BENCHMARK_INPUT_PREPARE,
     READINESS_BACKLOG,
     DESIGN_PARTNER_PACKET,
+    HARDENING_ANALYZE,
 ]
 
 # Claim-boundary / threshold phrases the packet must state.
@@ -66,6 +68,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_benchmark_input_prepare.py",
     "python3 scripts/amr_beta_readiness_backlog.py",
     "python3 scripts/amr_beta_design_partner_packet.py",
+    "python3 scripts/amr_beta_hardening_analyze.py",
     "--label-intake-dir",
     "reviewer progress summary",
     "does not make them\nhuman-supplied inputs",
