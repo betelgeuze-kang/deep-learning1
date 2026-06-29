@@ -92,12 +92,25 @@ def load_label_intakes(
     }
 
 
-def load_templates(raw_dirs: list[str]) -> tuple[list[dict], list[str], int]:
+def load_templates(
+    raw_dirs: list[str],
+    *,
+    verify_existing: bool,
+) -> tuple[list[dict], list[str], int, dict[str, int]]:
     rows: list[dict] = []
     errors: list[str] = []
     synthetic_rows = 0
+    verify_passed_dirs = 0
+    verify_failed_dirs = 0
     for raw_dir in raw_dirs:
         path = Path(raw_dir).expanduser().resolve()
+        if verify_existing:
+            verify_errors = label_packet.verify_label_template_existing(path)
+            if verify_errors:
+                verify_failed_dirs += 1
+                errors.extend(verify_errors)
+            else:
+                verify_passed_dirs += 1
         loaded_rows, template_errors, counts = label_packet.load_template_dir(path)
         rows.extend(loaded_rows)
         errors.extend(template_errors)
@@ -106,7 +119,11 @@ def load_templates(raw_dirs: list[str]) -> tuple[list[dict], list[str], int]:
     duplicate_ids = sorted({value for value in candidate_ids if candidate_ids.count(value) > 1})
     if duplicate_ids:
         errors.append(f"duplicate template candidate_label_id values: {', '.join(duplicate_ids[:10])}")
-    return rows, errors, synthetic_rows
+    return rows, errors, synthetic_rows, {
+        "label_template_verify_existing_required": int(verify_existing and bool(raw_dirs)),
+        "label_template_verify_existing_passed_dirs": verify_passed_dirs,
+        "label_template_verify_existing_failed_dirs": verify_failed_dirs,
+    }
 
 
 def validate_label_binding(rows: list[dict], repo_by_case: dict[str, dict[str, str]]) -> list[str]:
@@ -158,6 +175,9 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- ready_to_request_runtime_approval: {payload['ready_to_request_runtime_approval']}",
         f"- repo_intake_preflight_passed: {payload['repo_intake_preflight_passed']}",
         f"- template_preflight_passed: {payload['template_preflight_passed']}",
+        f"- label_template_verify_existing_required: {payload['label_template_verify_existing_required']}",
+        f"- label_template_verify_existing_passed_dirs: {payload['label_template_verify_existing_passed_dirs']}",
+        f"- label_template_verify_existing_failed_dirs: {payload['label_template_verify_existing_failed_dirs']}",
         f"- label_intake_preflight_passed: {payload['label_intake_preflight_passed']}",
         f"- label_intake_verify_existing_required: {payload['label_intake_verify_existing_required']}",
         f"- label_intake_verify_existing_passed_dirs: {payload['label_intake_verify_existing_passed_dirs']}",
@@ -205,7 +225,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--skip-verify-existing",
         action="store_true",
-        help="Testing only: skip audit_my_repo_label_intake.py --verify-existing checks.",
+        help=(
+            "Testing only: skip audit_my_repo_label_template.py and "
+            "audit_my_repo_label_intake.py --verify-existing checks."
+        ),
     )
     parser.add_argument("--json", action="store_true")
     return parser
@@ -221,7 +244,10 @@ def main(argv: list[str]) -> int:
         repo_errors, repo_summary = repo_intake.validate_rows(repo_rows, min_repos=args.min_repos)
         repo_by_case, _repo_by_path = repo_context(repo_rows)
 
-        template_rows, template_errors, synthetic_template_rows = load_templates(args.template_dir)
+        template_rows, template_errors, synthetic_template_rows, template_verify_counts = load_templates(
+            args.template_dir,
+            verify_existing=not args.skip_verify_existing,
+        )
         template_candidate_ids = {row["candidate_label_id"] for row in template_rows}
         template_case_ids = {row["case_id"] for row in template_rows}
         label_rows, label_errors, manifest_sha256s, verify_counts = load_label_intakes(
@@ -324,6 +350,7 @@ def main(argv: list[str]) -> int:
             "template_candidate_rows": len(template_rows),
             "template_candidate_id_count": len(template_candidate_ids),
             "synthetic_template_candidate_rows": synthetic_template_rows,
+            **template_verify_counts,
             "template_preflight_passed": template_pass,
             "label_intake_case_count": len(label_case_ids),
             "label_intake_repo_count": len(label_repo_paths),
