@@ -78,6 +78,8 @@ agent-written maintainer feedback.
   output with `--verify-existing`.
 - [ ] Concatenate only verified `benchmark_labels.jsonl` outputs into the
   combined benchmark labels file; do not hand-edit compiled label rows.
+- [ ] Prefer the preparation guard over manual concatenation:
+  `python3 scripts/amr_beta_benchmark_input_prepare.py --label-intake-dir <repo-label-intake-dir> --out-labels results/combined_benchmark_labels.jsonl --summary results/combined_benchmark_input_summary.json`.
 - [ ] Before benchmark execution, run
   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`
   to catch duplicate, missing, placeholder, and below-threshold human inputs.
@@ -176,7 +178,9 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`.
    After label intake exists, include every intake directory:
    `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake`.
-7. Combine repos into one benchmark run. `audit_my_repo_benchmark.py` accepts
+7. Prepare combined labels, then combine repos into one benchmark run.
+   `python3 scripts/amr_beta_benchmark_input_prepare.py --label-intake-dir results/<repo>_label_intake --out-labels results/combined_benchmark_labels.jsonl --summary results/combined_benchmark_input_summary.json`.
+   `audit_my_repo_benchmark.py` accepts
    **exactly one** of `--labels` or `--label-intake`; `--label-intake` is a single
    directory (one repo). For >= 10 repos, concatenate each repo's
    `results/<repo>_label_intake/benchmark_labels.jsonl` into one combined labels
