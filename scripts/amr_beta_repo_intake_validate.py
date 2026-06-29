@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+"""Validate AMR beta repository-intake sheets without creating evidence.
+
+This is a read-only operator guard for blocker 9.1. It validates a filled
+Markdown table or CSV before any audit/label/benchmark artifacts are created.
+It does not run audit-my-repo, does not write under results/, and does not
+promote readiness.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+MIN_REAL_REPOS_FOR_BETA = 10
+SAFE_CASE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+GIT_OBJECT_RE = re.compile(r"^([0-9a-f]{40}|[0-9a-f]{64})$")
+TRUTHY = {"1", "true", "yes", "y"}
+PLACEHOLDER_RE = re.compile(
+    r"(^$|example|placeholder|replace|todo|<git rev-parse head>|/abs/path/to/repo)",
+    re.IGNORECASE,
+)
+
+REQUIRED_COLUMNS = [
+    "case_id",
+    "repo_path",
+    "expected_repo_git_head",
+    "clean_worktree",
+    "owner_or_maintainer_contact",
+    "audit_mode",
+    "namespace",
+    "real_benchmark_namespace_confirmed",
+]
+
+ALIASES = {
+    "repo_id": "case_id",
+    "local_path": "repo_path",
+    "path": "repo_path",
+    "head": "expected_repo_git_head",
+    "git_head": "expected_repo_git_head",
+    "expected_head": "expected_repo_git_head",
+    "owner_maintainer_contact": "owner_or_maintainer_contact",
+    "maintainer_contact": "owner_or_maintainer_contact",
+    "owner_contact": "owner_or_maintainer_contact",
+    "audit_mode_quick_full": "audit_mode",
+    "real_benchmark_confirmed": "real_benchmark_namespace_confirmed",
+    "confirm_real_benchmark_namespace": "real_benchmark_namespace_confirmed",
+}
+
+
+def normalize_header(value: str) -> str:
+    text = re.sub(r"\([^)]*\)", "", value.strip().lower())
+    text = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+    return ALIASES.get(text, text)
+
+
+def is_forbidden_env_path(path: Path) -> bool:
+    name = path.name
+    return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
+
+
+def good_operator_value(value: str) -> bool:
+    return not PLACEHOLDER_RE.search(str(value).strip())
+
+
+def truthy(value: str) -> bool:
+    return str(value).strip().lower() in TRUTHY
+
+
+def read_markdown_table(path: Path) -> list[dict[str, str]]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    rows: list[dict[str, str]] = []
+    header: list[str] | None = None
+    for line in lines:
+        stripped = line.strip()
+        if not stripped.startswith("|") or not stripped.endswith("|"):
+            if header and rows:
+                break
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if not cells:
+            continue
+        if all(set(cell.replace(":", "").strip()) <= {"-"} for cell in cells):
+            continue
+        normalized = [normalize_header(cell) for cell in cells]
+        if header is None:
+            if "case_id" in normalized and "repo_path" in normalized:
+                header = normalized
+            continue
+        row = {column: cells[index] if index < len(cells) else "" for index, column in enumerate(header)}
+        rows.append(row)
+    return rows
+
+
+def read_csv_table(path: Path) -> list[dict[str, str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        rows = []
+        for raw in reader:
+            row = {normalize_header(key or ""): str(value or "").strip() for key, value in raw.items()}
+            rows.append(row)
+        return rows
+
+
+def read_rows(path: Path) -> list[dict[str, str]]:
+    if is_forbidden_env_path(path):
+        raise ValueError("refusing to read .env-like intake file")
+    text = path.read_text(encoding="utf-8")
+    first_nonempty = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    if first_nonempty.startswith("|"):
+        return read_markdown_table(path)
+    return read_csv_table(path)
+
+
+def git_text(repo: Path, args: list[str]) -> tuple[int, str, str]:
+    proc = subprocess.run(
+        ["git", "-C", str(repo), *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, str]]:
+    errors: list[str] = []
+    normalized = {column: str(row.get(column, "")).strip() for column in REQUIRED_COLUMNS}
+    for column in REQUIRED_COLUMNS:
+        if not normalized[column]:
+            errors.append(f"row {index}: missing {column}")
+
+    case_id = normalized["case_id"]
+    if case_id and not SAFE_CASE_ID.fullmatch(case_id):
+        errors.append(f"row {index}: case_id must be a safe identifier")
+    if case_id and not good_operator_value(case_id):
+        errors.append(f"row {index}: case_id must not be example/placeholder")
+
+    contact = normalized["owner_or_maintainer_contact"]
+    if contact and not good_operator_value(contact):
+        errors.append(f"row {index}: owner_or_maintainer_contact must be human-supplied")
+
+    audit_mode = normalized["audit_mode"].lower()
+    if audit_mode and audit_mode not in {"quick", "full"}:
+        errors.append(f"row {index}: audit_mode must be quick or full")
+
+    namespace = normalized["namespace"]
+    if namespace != "real_benchmark":
+        errors.append(f"row {index}: namespace must be real_benchmark")
+    if not truthy(normalized["real_benchmark_namespace_confirmed"]):
+        errors.append(f"row {index}: real_benchmark_namespace_confirmed must be true")
+    if not truthy(normalized["clean_worktree"]):
+        errors.append(f"row {index}: clean_worktree must be true")
+
+    expected_head = normalized["expected_repo_git_head"].lower()
+    if expected_head and not GIT_OBJECT_RE.fullmatch(expected_head):
+        errors.append(f"row {index}: expected_repo_git_head must be a full git object id")
+
+    raw_repo = normalized["repo_path"]
+    repo = Path(raw_repo).expanduser()
+    if raw_repo and not good_operator_value(raw_repo):
+        errors.append(f"row {index}: repo_path must not be example/placeholder")
+    if raw_repo and not repo.is_absolute():
+        errors.append(f"row {index}: repo_path must be absolute")
+    repo = repo.resolve()
+    if is_forbidden_env_path(repo):
+        errors.append(f"row {index}: repo_path must not be .env-like")
+    if raw_repo and not repo.is_dir():
+        errors.append(f"row {index}: repo_path is not a directory: {repo}")
+        return errors, {**normalized, "repo_path_resolved": str(repo)}
+
+    if raw_repo and repo.is_dir():
+        code, inside, _ = git_text(repo, ["rev-parse", "--is-inside-work-tree"])
+        if code != 0 or inside.strip() != "true":
+            errors.append(f"row {index}: repo_path is not a git worktree")
+        else:
+            _, head, _ = git_text(repo, ["rev-parse", "HEAD"])
+            actual_head = head.strip().lower()
+            _, status, _ = git_text(repo, ["status", "--porcelain=v1", "--untracked-files=all"])
+            if expected_head and actual_head != expected_head:
+                errors.append(f"row {index}: expected_repo_git_head mismatch")
+            if status.strip():
+                errors.append(f"row {index}: repo_dirty")
+            normalized["actual_repo_git_head"] = actual_head
+    normalized["repo_path_resolved"] = str(repo)
+    return errors, normalized
+
+
+def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[str], dict[str, object]]:
+    errors: list[str] = []
+    seen_cases: set[str] = set()
+    seen_repos: set[str] = set()
+    valid_rows = 0
+    for index, row in enumerate(rows, start=1):
+        row_errors, normalized = validate_row(row, index)
+        case_id = normalized.get("case_id", "")
+        repo_path = normalized.get("repo_path_resolved", "")
+        if case_id:
+            if case_id in seen_cases:
+                row_errors.append(f"row {index}: duplicate case_id")
+            seen_cases.add(case_id)
+        if repo_path:
+            if repo_path in seen_repos:
+                row_errors.append(f"row {index}: duplicate repo_path")
+            seen_repos.add(repo_path)
+        if row_errors:
+            errors.extend(row_errors)
+        else:
+            valid_rows += 1
+    if valid_rows < min_repos:
+        errors.append(f"valid_repo_rows {valid_rows} below required minimum {min_repos}")
+    summary = {
+        "schema": "amr_beta_repo_intake_validate.v1",
+        "total_rows": len(rows),
+        "valid_repo_rows": valid_rows,
+        "min_real_repos_required": min_repos,
+        "ready_for_real_benchmark_audit": int(not errors),
+        "design_partner_beta_candidate_ready": 0,
+        "release_ready": 0,
+        "public_comparison_claim_ready": 0,
+        "real_model_execution_ready": 0,
+    }
+    return errors, summary
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("intake", help="Filled Markdown or CSV repository-intake sheet.")
+    parser.add_argument("--min-repos", type=int, default=MIN_REAL_REPOS_FOR_BETA)
+    parser.add_argument("--json", action="store_true", help="Print machine-readable summary JSON.")
+    return parser
+
+
+def main(argv: list[str]) -> int:
+    args = build_parser().parse_args(argv)
+    path = Path(args.intake).expanduser().resolve()
+    try:
+        rows = read_rows(path)
+        errors, summary = validate_rows(rows, min_repos=args.min_repos)
+    except Exception as exc:
+        print(f"repo_intake_validate: error: {exc}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps({**summary, "errors": errors}, indent=2, sort_keys=True))
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        return 1
+    print(
+        "repo_intake_validate: ok "
+        f"valid_repo_rows={summary['valid_repo_rows']} "
+        f"min_real_repos_required={summary['min_real_repos_required']}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

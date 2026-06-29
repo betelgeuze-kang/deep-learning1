@@ -46,6 +46,8 @@ agent-written maintainer feedback.
   `expected_repo_git_head`, `clean_worktree=true`, owner/maintainer contact,
   audit mode, and `real_benchmark` namespace confirmation in
   `docs/templates/amr-beta-repo-intake.md`.
+- [ ] Validate the filled intake sheet before running audits:
+  `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>`.
 - [ ] Remove every `EXAMPLE-*` placeholder row before collection review. A row
   is usable only when the repository path, contact, HEAD, and namespace
   confirmation are human owner supplied and verified against local disk.
@@ -142,6 +144,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 
 1. Audit each real repo in the real_benchmark namespace (>= 10 repos):
    `audit_my_repo.sh <repo> --mode quick|full --namespace real_benchmark --confirm-real-benchmark-namespace --out results/<repo>_audit`.
+   Before this step, run `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>`
+   and fix every blocker it reports.
 2. Generate a label template per audit:
    `audit_my_repo_label_template.py --audit-output results/<repo>_audit --out results/<repo>_label_template --case-id <repo>`
    (template rows inherit `synthetic=0` only because step 1 was real_benchmark-confirmed).

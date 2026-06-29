@@ -25,8 +25,9 @@ LABEL_EXAMPLE = REPO_ROOT / "docs" / "templates" / "amr-beta-human-label-decisio
 FEEDBACK_TEMPLATE = REPO_ROOT / "docs" / "templates" / "amr-beta-maintainer-feedback.md"
 LABEL_INTAKE = REPO_ROOT / "scripts" / "audit_my_repo_label_intake.py"
 BENCHMARK = REPO_ROOT / "scripts" / "audit_my_repo_benchmark.py"
+REPO_INTAKE_VALIDATOR = REPO_ROOT / "scripts" / "amr_beta_repo_intake_validate.py"
 
-REQUIRED_FILES = [PACKET, REPO_INTAKE, LABEL_EXAMPLE, FEEDBACK_TEMPLATE]
+REQUIRED_FILES = [PACKET, REPO_INTAKE, LABEL_EXAMPLE, FEEDBACK_TEMPLATE, REPO_INTAKE_VALIDATOR]
 
 # Claim-boundary / threshold phrases the packet must state.
 PACKET_REQUIRED_SNIPPETS = [
@@ -43,6 +44,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "real_model_execution_ready",
     "Concatenate only verified `benchmark_labels.jsonl` outputs",
     "human owner supplied and verified against local disk",
+    "python3 scripts/amr_beta_repo_intake_validate.py",
     "does not make them\nhuman-supplied inputs",
     "counts_for_beta=0",
 ]
@@ -54,6 +56,7 @@ REPO_INTAKE_REQUIRED_SNIPPETS = [
     "real_benchmark_namespace_confirmed",
     "git status --porcelain",
     "git rev-parse HEAD",
+    "python3 scripts/amr_beta_repo_intake_validate.py",
     "example does not count toward the threshold",
     "leave any `EXAMPLE-*` value",
 ]

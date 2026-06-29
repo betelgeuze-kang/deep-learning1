@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Smoke tests for scripts/amr_beta_repo_intake_validate.py."""
+from __future__ import annotations
+
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+TOOL = ROOT / "scripts" / "amr_beta_repo_intake_validate.py"
+
+
+def run(cmd: list[str], *, cwd: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+
+def create_repo(root: Path, index: int) -> tuple[Path, str]:
+    repo = root / f"repo-{index:02d}"
+    repo.mkdir()
+    assert run(["git", "init", "-q"], cwd=repo).returncode == 0
+    (repo / "README.md").write_text(f"# repo {index}\n", encoding="utf-8")
+    assert run(["git", "add", "README.md"], cwd=repo).returncode == 0
+    commit = run(
+        [
+            "git",
+            "-c",
+            "user.name=AMR Test",
+            "-c",
+            "user.email=amr-test@example.invalid",
+            "commit",
+            "-q",
+            "-m",
+            "init",
+        ],
+        cwd=repo,
+    )
+    assert commit.returncode == 0, commit.stderr
+    head = run(["git", "rev-parse", "HEAD"], cwd=repo)
+    assert head.returncode == 0
+    return repo, head.stdout.strip()
+
+
+def write_intake(path: Path, repos: list[tuple[Path, str]], *, case_prefix: str = "case") -> None:
+    lines = [
+        "| case_id | repo_path | expected_repo_git_head | clean_worktree | owner_or_maintainer_contact | audit_mode | namespace | real_benchmark_namespace_confirmed | notes |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for index, (repo, head) in enumerate(repos, start=1):
+        lines.append(
+            f"| {case_prefix}-{index:02d} | {repo} | {head} | true | maintainer-{index:02d}@review.invalid | quick | real_benchmark | true | human supplied |"
+        )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def run_tool(path: Path, *extra: str) -> subprocess.CompletedProcess:
+    return run([sys.executable, str(TOOL), str(path), *extra], cwd=ROOT)
+
+
+def main() -> int:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
+        repos = [create_repo(tmp, index) for index in range(10)]
+
+        intake = tmp / "repo_intake.md"
+        write_intake(intake, repos)
+        proc = run_tool(intake)
+        assert proc.returncode == 0, proc.stderr
+        assert "repo_intake_validate: ok" in proc.stdout
+
+        proc = run_tool(intake, "--json")
+        assert proc.returncode == 0, proc.stderr
+        assert '"ready_for_real_benchmark_audit": 1' in proc.stdout
+        assert '"design_partner_beta_candidate_ready": 0' in proc.stdout
+
+        dirty = tmp / "dirty.md"
+        write_intake(dirty, repos)
+        (repos[0][0] / "UNTRACKED.txt").write_text("dirty\n", encoding="utf-8")
+        proc = run_tool(dirty)
+        assert proc.returncode == 1
+        assert "repo_dirty" in proc.stderr
+        (repos[0][0] / "UNTRACKED.txt").unlink()
+
+        example = tmp / "example.md"
+        write_intake(example, repos, case_prefix="EXAMPLE")
+        proc = run_tool(example)
+        assert proc.returncode == 1
+        assert "case_id must not be example/placeholder" in proc.stderr
+
+        mismatch = tmp / "mismatch.md"
+        bad_rows = [(repo, "0" * 40) if index == 0 else (repo, head) for index, (repo, head) in enumerate(repos)]
+        write_intake(mismatch, bad_rows)
+        proc = run_tool(mismatch)
+        assert proc.returncode == 1
+        assert "expected_repo_git_head mismatch" in proc.stderr
+
+        small = tmp / "small.md"
+        write_intake(small, repos[:9])
+        proc = run_tool(small)
+        assert proc.returncode == 1
+        assert "below required minimum 10" in proc.stderr
+
+    print("AMR beta repo intake validator smoke OK")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -28,6 +28,12 @@ For each repository, record one row. Keep one case per repository.
 
 ## How HEAD is checked
 
+Before running audits, validate the filled sheet:
+
+```bash
+python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>
+```
+
 The benchmark verifies, per case, that the current HEAD matches
 `expected_repo_git_head` and the worktree is clean
 (`repo_snapshot_requirement_met`). Dirty repos, non-git directories, HEAD
