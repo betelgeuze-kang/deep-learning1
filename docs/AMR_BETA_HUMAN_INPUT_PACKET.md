@@ -73,6 +73,9 @@ agent-written maintainer feedback.
   output with `--verify-existing`.
 - [ ] Concatenate only verified `benchmark_labels.jsonl` outputs into the
   combined benchmark labels file; do not hand-edit compiled label rows.
+- [ ] Before benchmark execution, run
+  `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`
+  to catch duplicate, missing, placeholder, and below-threshold human inputs.
 
 ### 9.3 Maintainer feedback checklist
 
@@ -86,6 +89,9 @@ agent-written maintainer feedback.
 - [ ] Keep raw feedback local. The benchmark emits hashes, not raw feedback
   text.
 - [ ] Reject synthetic, placeholder, example, or agent-written feedback rows.
+- [ ] Use `scripts/amr_beta_human_input_status.py` to confirm at least 3
+  distinct maintainer ids are attached to known 9.1 case ids before the
+  runtime-approved benchmark.
 
 Before any runtime-approved benchmark run, the operator should have a combined
 labels file, a feedback JSON/JSONL file, and a repo intake sheet whose recorded
@@ -153,6 +159,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 4. Compile per repo:
    `audit_my_repo_label_intake.py --template results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_label_intake`.
 5. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
+   Check decision/feedback progress with
+   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`.
 6. Combine repos into one benchmark run. `audit_my_repo_benchmark.py` accepts
    **exactly one** of `--labels` or `--label-intake`; `--label-intake` is a single
    directory (one repo). For >= 10 repos, concatenate each repo's
