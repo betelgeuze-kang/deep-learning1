@@ -427,6 +427,9 @@ fi
 if [ -f scripts/test_amr_beta_benchmark_input_prepare.py ]; then
   python3 scripts/test_amr_beta_benchmark_input_prepare.py >/dev/null
 fi
+if [ -f scripts/test_amr_beta_runtime_preflight.py ]; then
+  python3 scripts/test_amr_beta_runtime_preflight.py >/dev/null
+fi
 if [ -f scripts/test_amr_beta_readiness_backlog.py ]; then
   python3 scripts/test_amr_beta_readiness_backlog.py >/dev/null
 fi
