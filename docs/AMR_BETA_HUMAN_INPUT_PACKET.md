@@ -80,6 +80,10 @@ agent-written maintainer feedback.
   `EXAMPLE-*`.
 - [ ] As decisions arrive, rerun the reviewer progress summary:
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --decisions <decisions.jsonl> --require-all-candidates`.
+- [ ] Before compiling label-intake outputs, generate the read-only per-repo
+  label-intake command plan; this validates coverage and citation readiness but
+  does not compile labels:
+  `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
 - [ ] Run `scripts/audit_my_repo_label_intake.py` for each repo and verify each
   output with `--verify-existing`.
 - [ ] Concatenate only verified `benchmark_labels.jsonl` outputs into the
@@ -225,16 +229,21 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 4. Fill human decisions (>= 300 rows total across repos) using the 9.2 format.
    Check partial coverage or require complete candidate coverage with
    `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --decisions <repo>_decisions.jsonl --require-all-candidates`.
-5. Compile per repo:
+5. Generate the read-only label-intake command plan:
+   `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
+   The plan records `compiles_labels=0`, `creates_benchmark_evidence=0`, and
+   keeps beta/release/model/public comparison readiness blocked. It rejects
+   missing candidate decisions and synthetic template rows before compilation.
+6. Compile per repo:
    `audit_my_repo_label_intake.py --template results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_label_intake`.
-6. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
+7. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
    Prepare the request packet and progress summary:
    `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --label-intake-dir results/<repo>_label_intake --out results/maintainer_feedback_packet`.
    Check decision/feedback progress with
    `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`.
    After label intake exists, include every intake directory:
    `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake`.
-7. Prepare combined labels, then combine repos into one benchmark run.
+8. Prepare combined labels, then combine repos into one benchmark run.
    `python3 scripts/amr_beta_benchmark_input_prepare.py --label-intake-dir results/<repo>_label_intake --out-labels results/combined_benchmark_labels.jsonl --summary results/combined_benchmark_input_summary.json`.
    Before requesting runtime approval, run the final read-only preflight:
    `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
@@ -250,17 +259,17 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    file (each row already carries its `case_id`, `repo_path`, `synthetic`, and
    `human_labeled`; the repos must exist locally), then run one benchmark:
    `audit_my_repo_benchmark.py --labels results/combined_benchmark_labels.jsonl --feedback <feedback.jsonl> --namespace real_benchmark --confirm-real-benchmark-namespace --mode full --out results/audit_benchmark`.
-8. Inspect `benchmark_readiness.json`; re-verify with `--verify-existing`.
+9. Inspect `benchmark_readiness.json`; re-verify with `--verify-existing`.
    If the beta gate remains blocked, generate a remediation backlog:
    `python3 scripts/amr_beta_readiness_backlog.py --benchmark-out results/audit_benchmark --out-json results/amr_beta_readiness_backlog.json --out-md results/amr_beta_readiness_backlog.md --verify-existing`.
    For precision, citation, or label-quality blockers, generate a hardening
    analysis:
    `python3 scripts/amr_beta_hardening_analyze.py --benchmark-out results/audit_benchmark --out-json results/amr_beta_hardening_analysis.json --out-md results/amr_beta_hardening_analysis.md --verify-existing`.
-9. Package either the beta candidate packet or blocked packet from verified
+10. Package either the beta candidate packet or blocked packet from verified
    readiness/backlog artifacts:
    `python3 scripts/amr_beta_design_partner_packet.py --readiness results/audit_benchmark/benchmark_readiness.json --backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_design_partner_packet.json --out-md results/amr_beta_design_partner_packet.md`.
 
-Step 7 is a long, runtime-approved action and is **not** performed by this PR.
+Step 8 is a long, runtime-approved action and is **not** performed by this PR.
 
 ## Evidence handling
 
