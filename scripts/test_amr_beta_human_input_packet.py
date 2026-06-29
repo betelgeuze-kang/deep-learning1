@@ -87,6 +87,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_label_intake_plan.py",
     "compiles_labels=0",
     "python3 scripts/amr_beta_benchmark_input_prepare.py",
+    "audit_my_repo_label_intake.py --verify-existing",
     "python3 scripts/amr_beta_runtime_preflight.py",
     "python3 scripts/amr_beta_runtime_approval_request.py",
     "python3 scripts/amr_beta_runtime_approval_status.py",

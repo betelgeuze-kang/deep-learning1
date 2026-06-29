@@ -103,6 +103,27 @@ def main() -> int:
             "--label-intake-dir",
             str(intake_b),
             "--out-labels",
+            str(tmp / "unverified.jsonl"),
+            "--summary",
+            str(tmp / "unverified_summary.json"),
+            "--min-cases",
+            "2",
+            "--min-labels",
+            "2",
+            "--json",
+        )
+        assert proc.returncode == 1
+        unverified = json.loads(proc.stdout)
+        assert unverified["label_intake_verify_existing_required"] == 1
+        assert unverified["label_intake_verify_existing_failed_dirs"] == 2
+        assert "label_intake --verify-existing failed" in proc.stderr
+
+        proc = run_tool(
+            "--label-intake-dir",
+            str(intake_a),
+            "--label-intake-dir",
+            str(intake_b),
+            "--out-labels",
             str(out_labels),
             "--summary",
             str(summary),
@@ -110,10 +131,13 @@ def main() -> int:
             "2",
             "--min-labels",
             "2",
+            "--skip-verify-existing",
             "--json",
         )
         assert proc.returncode == 0, proc.stderr
         payload = json.loads(proc.stdout)
+        assert payload["label_intake_verify_existing_required"] == 0
+        assert payload["label_intake_verify_existing_passed_dirs"] == 0
         assert payload["ready_for_runtime_approved_real_benchmark"] == 1
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert out_labels.is_file()
@@ -131,6 +155,7 @@ def main() -> int:
             "2",
             "--min-labels",
             "2",
+            "--skip-verify-existing",
         )
         assert proc.returncode == 1
         assert "case_count 1 below required minimum 2" in proc.stderr
@@ -148,6 +173,7 @@ def main() -> int:
             "1",
             "--min-labels",
             "1",
+            "--skip-verify-existing",
         )
         assert proc.returncode == 1
         assert "synthetic labels cannot feed AMR beta benchmark input" in proc.stderr

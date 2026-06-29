@@ -100,6 +100,8 @@ been created:
   combined benchmark labels file; do not hand-edit compiled label rows.
 - [ ] Prefer the preparation guard over manual concatenation:
   `python3 scripts/amr_beta_benchmark_input_prepare.py --label-intake-dir <repo-label-intake-dir> --out-labels results/combined_benchmark_labels.jsonl --summary results/combined_benchmark_input_summary.json`.
+  This guard runs `audit_my_repo_label_intake.py --verify-existing` for every
+  label-intake directory before writing combined labels.
 - [ ] Before benchmark execution, run
   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`
   to catch duplicate, missing, placeholder, and below-threshold human inputs.
@@ -261,6 +263,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake --out-json results/amr_beta_human_input_status.json --out-md results/amr_beta_human_input_status.md --overwrite`.
 8. Prepare combined labels, then combine repos into one benchmark run.
    `python3 scripts/amr_beta_benchmark_input_prepare.py --label-intake-dir results/<repo>_label_intake --out-labels results/combined_benchmark_labels.jsonl --summary results/combined_benchmark_input_summary.json`.
+   The preparation guard requires every supplied label-intake directory to pass
+   `audit_my_repo_label_intake.py --verify-existing`.
    Before requesting runtime approval, run the final read-only preflight:
    `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
    Then generate the approval request packet:
