@@ -78,7 +78,7 @@ When the PM ledger is present locally, it must mirror `typed_ready.json`
 booleans). Retired names must not appear:
 
 - `v53_benchmark_foundation_frozen` (retired; now `v53_benchmark_foundation_contract_ready`)
-- `v54_free_running_fixture_ready` (retired; now `v54_free_running_generation_contract_ready`)
+- `v54_free_running_fixture_ready` (retired; now `v54_minimal_real_model_heldout_ready`)
 
 ### Known stale symptom and cleanup
 
@@ -89,7 +89,9 @@ stale symptom was:
 - v53 replacement flag used the old `..._frozen` name
 - v54 replacement flag used the old `..._fixture_ready` name
 - v54 `misleading_ready_flag` said `v53_ready` (should be `v54_ready`)
-- v54 `fixture_execution_ready` was `1` even though typed readiness says `false`
+- v54 readiness booleans must mirror the current minimal real-model smoke row
+  (`fixture_execution_ready=1`, `real_model_execution_ready=1`,
+  `heldout_metric_ready=1`, release-facing flags still `0`)
 
 Cleanup procedure (local only; the ledger stays gitignored and is not committed):
 

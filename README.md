@@ -14,8 +14,15 @@ Central readiness is tracked per scope in [`readiness/typed_ready.json`](readine
 - Tooling, packets, and docs index: [`docs/INDEX.md`](docs/INDEX.md)
 - `v53` and `v54` are tracked as separate scopes:
   - `v53-benchmark-foundation`: `contract_ready` and `fixture_execution_ready` (mirrors `benchmarks/v53_source_bound_freeze.json`).
-  - `v54-free-running-generation`: `contract_ready` only; `fixture_execution_ready` stays `false` because `v54/free_running_generation_evidence_intake_contract.json` reports 0 of 7 required artifacts present.
-- Real-model execution, heldout metric, human review, independent reproduction, and release remain blocked for every scope.
+  - `v54-free-running-generation`: `contract_ready`, `fixture_execution_ready`, `real_model_execution_ready`, and `heldout_metric_ready` via the minimal local real-model smoke. Human review, independent reproduction, public comparison, and release remain blocked.
+
+Single v1.0 path: [docs/RELEASE_CRITICAL_PATH.md](docs/RELEASE_CRITICAL_PATH.md)
+
+Minimal local demo:
+
+```bash
+./scripts/run_minimal_demo.sh
+```
 
 ## v1.0 Architecture Challenge Roadmap
 

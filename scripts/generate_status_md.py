@@ -57,9 +57,9 @@ def generate() -> str:
     lines.append("`v53` and `v54` are tracked as separate scopes, not one combined `v53-v54-query-evaluation-pipeline` row.\n")
     lines.append("")
     lines.append("- `v53-benchmark-foundation` is `contract_ready` and `fixture_execution_ready`. It mirrors `benchmarks/v53_source_bound_freeze.json` (`machine_foundation_freeze_ready: true`, 7/7 requirements `pass`). Real-model execution, heldout metric, human review, independent reproduction, and release remain blocked.")
-    lines.append("- `v54-free-running-generation` is `contract_ready` only. `fixture_execution_ready` is `false` because `v54/free_running_generation_evidence_intake_contract.json` reports `present_required_artifact_count: 0` of `required_artifact_count: 7`. No generation fixtures exist yet, so fixture execution must not be claimed.\n")
+    lines.append("- `v54-free-running-generation` is now `contract_ready`, `fixture_execution_ready`, `real_model_execution_ready`, and `heldout_metric_ready` via the minimal local real-model smoke at `results/v54_minimal_real_model_smoke_summary.csv`. This is a tiny heldout execution closure only: external/human labels, independent reproduction, public comparison, and release remain blocked.\n")
     lines.append("")
-    lines.append("When `v54` fixtures are produced and the intake contract reports the required artifacts present, flip `v54-free-running-generation.fixture_execution_ready` to `true` in `readiness/typed_ready.json`, update the matching expectation in `tools/verify_artifact.py`, and rerun `./scripts/ai-verify.sh`.")
+    lines.append("The full v54f 1000-row external-label generation intake remains separately blocked until non-fixture generation evidence, verified external labels, and review/adjudication artifacts return through the canonical intake.")
     lines.append("")
 
     return "\n".join(lines)

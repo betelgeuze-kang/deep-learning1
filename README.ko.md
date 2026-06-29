@@ -14,8 +14,15 @@
 - 도구·패킷·문서 색인: [`docs/INDEX.md`](docs/INDEX.md)
 - `v53`과 `v54`는 별도 스코프로 분리되어 추적됩니다:
   - `v53-benchmark-foundation`: `contract_ready` + `fixture_execution_ready` (`benchmarks/v53_source_bound_freeze.json` 미러).
-  - `v54-free-running-generation`: `contract_ready`만 충족. `v54/free_running_generation_evidence_intake_contract.json`이 필수 산출물 7개 중 0개만 존재한다고 보고하므로 `fixture_execution_ready`는 `false`로 유지됩니다.
-- 모든 스코프에서 real-model execution, heldout metric, human review, independent reproduction, release는 여전히 blocked입니다.
+  - `v54-free-running-generation`: minimal local real-model smoke로 `contract_ready`, `fixture_execution_ready`, `real_model_execution_ready`, `heldout_metric_ready`를 충족합니다. human review, independent reproduction, public comparison, release는 여전히 blocked입니다.
+
+단일 v1.0 경로: [docs/RELEASE_CRITICAL_PATH.md](docs/RELEASE_CRITICAL_PATH.md)
+
+최소 로컬 demo:
+
+```bash
+./scripts/run_minimal_demo.sh
+```
 
 ## v1.0 Architecture Challenge 로드맵
 

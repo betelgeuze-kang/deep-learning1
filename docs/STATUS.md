@@ -21,7 +21,7 @@ Ladder order: `contract_ready -> fixture_execution_ready -> real_model_execution
 |---|---|---|---|---|---|---|---|---|
 | pm-foundation-bundle | ready | ready | — | — | — | — | — | `results/v59e_one_command_pm_foundation_demo_summary.csv` |
 | v53-benchmark-foundation | ready | ready | — | — | — | — | — | `benchmarks/v53_source_bound_freeze.json` |
-| v54-free-running-generation | ready | — | — | — | — | — | — | `v54/free_running_generation_evidence_intake_contract.json` |
+| v54-free-running-generation | ready | ready | ready | ready | — | — | — | `results/v54_minimal_real_model_smoke_summary.csv` |
 | v58-blind-eval | ready | — | — | — | — | — | — | `results/v1_0_pm_pr_claim_slice_gate/gate_001/pm_blocker_required_artifact_rows.csv` |
 | h10-scorer-real-label-promotion | ready | — | — | — | — | — | — | `results/v10_h10_real_label_promotion_readiness_gate/gate_001/pm_h10_real_label_acceptance_rows.csv` |
 | v61-ssd-moe-runtime | ready | ready | — | — | — | — | — | `results/v61j_one_command_ssd_resident_demo_summary.csv` |
@@ -38,7 +38,7 @@ Ladder order: `contract_ready -> fixture_execution_ready -> real_model_execution
 
 
 - `v53-benchmark-foundation` is `contract_ready` and `fixture_execution_ready`. It mirrors `benchmarks/v53_source_bound_freeze.json` (`machine_foundation_freeze_ready: true`, 7/7 requirements `pass`). Real-model execution, heldout metric, human review, independent reproduction, and release remain blocked.
-- `v54-free-running-generation` is `contract_ready` only. `fixture_execution_ready` is `false` because `v54/free_running_generation_evidence_intake_contract.json` reports `present_required_artifact_count: 0` of `required_artifact_count: 7`. No generation fixtures exist yet, so fixture execution must not be claimed.
+- `v54-free-running-generation` is now `contract_ready`, `fixture_execution_ready`, `real_model_execution_ready`, and `heldout_metric_ready` via the minimal local real-model smoke at `results/v54_minimal_real_model_smoke_summary.csv`. This is a tiny heldout execution closure only: external/human labels, independent reproduction, public comparison, and release remain blocked.
 
 
-When `v54` fixtures are produced and the intake contract reports the required artifacts present, flip `v54-free-running-generation.fixture_execution_ready` to `true` in `readiness/typed_ready.json`, update the matching expectation in `tools/verify_artifact.py`, and rerun `./scripts/ai-verify.sh`.
+The full v54f 1000-row external-label generation intake remains separately blocked until non-fixture generation evidence, verified external labels, and review/adjudication artifacts return through the canonical intake.
