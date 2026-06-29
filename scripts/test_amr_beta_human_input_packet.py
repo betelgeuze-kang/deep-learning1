@@ -69,6 +69,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_readiness_backlog.py",
     "python3 scripts/amr_beta_design_partner_packet.py",
     "python3 scripts/amr_beta_hardening_analyze.py",
+    "--per-case-out-root",
     "--label-intake-dir",
     "reviewer progress summary",
     "does not make them\nhuman-supplied inputs",

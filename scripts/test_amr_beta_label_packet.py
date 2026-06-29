@@ -110,6 +110,63 @@ def main() -> int:
         assert (out_dir / "reviewer_candidate_packet.jsonl").is_file()
         assert (out_dir / "reviewer_progress_summary.json").is_file()
 
+        per_case_root = tmp / "per_case_packets"
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--template-dir",
+            str(template_b),
+            "--decisions",
+            str(decisions),
+            "--per-case-out-root",
+            str(per_case_root),
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        summary = json.loads(proc.stdout)
+        assert "reviewer_packet_index.json" in summary["output_files"]
+        index = json.loads((per_case_root / "reviewer_packet_index.json").read_text(encoding="utf-8"))
+        assert index["case_packet_count"] == 2
+        assert index["design_partner_beta_candidate_ready"] == 0
+        case_a_summary = json.loads(
+            (per_case_root / "case-a" / "reviewer_progress_summary.json").read_text(encoding="utf-8")
+        )
+        case_b_summary = json.loads(
+            (per_case_root / "case-b" / "reviewer_progress_summary.json").read_text(encoding="utf-8")
+        )
+        assert case_a_summary["candidate_label_rows"] == 2
+        assert case_a_summary["valid_human_label_rows"] == 1
+        assert case_a_summary["missing_candidate_label_count"] == 1
+        assert case_a_summary["ready_for_label_intake"] == 0
+        assert case_b_summary["candidate_label_rows"] == 1
+        assert case_b_summary["valid_human_label_rows"] == 1
+        assert case_b_summary["ready_for_label_intake"] == 1
+        missing_a = (per_case_root / "case-a" / "reviewer_missing_candidates.jsonl").read_text(encoding="utf-8")
+        assert "case-a-0002" in missing_a
+
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--template-dir",
+            str(template_b),
+            "--per-case-out-root",
+            str(per_case_root),
+            "--overwrite",
+        )
+        assert proc.returncode == 0, proc.stderr
+        bad_root = tmp / "bad_per_case_packets"
+        bad_root.mkdir()
+        (bad_root / "operator_notes.txt").write_text("do not delete\n", encoding="utf-8")
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--per-case-out-root",
+            str(bad_root),
+            "--overwrite",
+        )
+        assert proc.returncode == 1
+        assert "refusing to delete unrelated per-case packet entry" in proc.stderr
+
         proc = run_tool(
             "--template-dir",
             str(template_a),

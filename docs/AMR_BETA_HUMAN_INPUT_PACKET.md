@@ -66,6 +66,9 @@ agent-written maintainer feedback.
 - [ ] Build a per-repo reviewer packet and reviewer progress summary from the
   generated templates:
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --out <reviewer-packet-dir>`.
+  For a batch of repo templates, write one packet directory per `case_id` plus
+  an aggregate index:
+  `python3 scripts/amr_beta_label_packet.py --template-dir <repo1-template-dir> --template-dir <repo2-template-dir> --per-case-out-root results/reviewer_packets`.
 - [ ] Send only candidate ids from the generated templates to human reviewers.
 - [ ] Collect at least 300 human decision rows with `human_labeled=true` and
   `expected=present|absent`.
@@ -168,6 +171,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    (template rows inherit `synthetic=0` only because step 1 was real_benchmark-confirmed).
 3. Generate reviewer packets and a reviewer progress summary from the templates:
    `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --out results/<repo>_reviewer_packet`.
+   For batch handoff across many repos, use
+   `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo1>_label_template --template-dir results/<repo2>_label_template --per-case-out-root results/reviewer_packets`.
 4. Fill human decisions (>= 300 rows total across repos) using the 9.2 format.
    Check partial coverage or require complete candidate coverage with
    `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --decisions <repo>_decisions.jsonl --require-all-candidates`.
