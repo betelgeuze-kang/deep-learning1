@@ -59,12 +59,25 @@ def repo_context(rows: list[dict[str, str]]) -> tuple[dict[str, dict[str, str]],
     return by_case, by_repo
 
 
-def load_label_intakes(raw_dirs: list[str]) -> tuple[list[dict], list[str], list[str]]:
+def load_label_intakes(
+    raw_dirs: list[str],
+    *,
+    verify_existing: bool,
+) -> tuple[list[dict], list[str], list[str], dict[str, int]]:
     rows: list[dict] = []
     errors: list[str] = []
     manifest_sha256s: list[str] = []
+    verify_passed_dirs = 0
+    verify_failed_dirs = 0
     for raw_dir in raw_dirs:
         path = Path(raw_dir).expanduser().resolve()
+        if verify_existing:
+            verify_errors = human_status.verify_label_intake_existing(path)
+            if verify_errors:
+                verify_failed_dirs += 1
+                errors.extend(verify_errors)
+            else:
+                verify_passed_dirs += 1
         loaded_rows, intake_errors, _manifest = benchmark_inputs.load_label_intake_dir(
             path,
             allow_synthetic=False,
@@ -72,7 +85,11 @@ def load_label_intakes(raw_dirs: list[str]) -> tuple[list[dict], list[str], list
         rows.extend(loaded_rows)
         errors.extend(intake_errors)
         manifest_sha256s.append(benchmark_inputs.sha256_file(path / "label_intake_manifest.json"))
-    return rows, errors, manifest_sha256s
+    return rows, errors, manifest_sha256s, {
+        "label_intake_verify_existing_required": int(verify_existing and bool(raw_dirs)),
+        "label_intake_verify_existing_passed_dirs": verify_passed_dirs,
+        "label_intake_verify_existing_failed_dirs": verify_failed_dirs,
+    }
 
 
 def load_templates(raw_dirs: list[str]) -> tuple[list[dict], list[str], int]:
@@ -142,6 +159,9 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- repo_intake_preflight_passed: {payload['repo_intake_preflight_passed']}",
         f"- template_preflight_passed: {payload['template_preflight_passed']}",
         f"- label_intake_preflight_passed: {payload['label_intake_preflight_passed']}",
+        f"- label_intake_verify_existing_required: {payload['label_intake_verify_existing_required']}",
+        f"- label_intake_verify_existing_passed_dirs: {payload['label_intake_verify_existing_passed_dirs']}",
+        f"- label_intake_verify_existing_failed_dirs: {payload['label_intake_verify_existing_failed_dirs']}",
         f"- human_input_preflight_passed: {payload['human_input_preflight_passed']}",
         f"- case_binding_preflight_passed: {payload['case_binding_preflight_passed']}",
         f"- valid_repo_rows: {payload['valid_repo_rows']}",
@@ -182,6 +202,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out-json", default="")
     parser.add_argument("--out-md", default="")
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--skip-verify-existing",
+        action="store_true",
+        help="Testing only: skip audit_my_repo_label_intake.py --verify-existing checks.",
+    )
     parser.add_argument("--json", action="store_true")
     return parser
 
@@ -199,7 +224,10 @@ def main(argv: list[str]) -> int:
         template_rows, template_errors, synthetic_template_rows = load_templates(args.template_dir)
         template_candidate_ids = {row["candidate_label_id"] for row in template_rows}
         template_case_ids = {row["case_id"] for row in template_rows}
-        label_rows, label_errors, manifest_sha256s = load_label_intakes(args.label_intake_dir)
+        label_rows, label_errors, manifest_sha256s, verify_counts = load_label_intakes(
+            args.label_intake_dir,
+            verify_existing=not args.skip_verify_existing,
+        )
         label_errors.extend(duplicate_label_errors(label_rows))
         label_errors.extend(validate_label_binding(label_rows, repo_by_case))
         label_case_ids = sorted({str(row.get("case_id") or "") for row in label_rows})
@@ -210,8 +238,10 @@ def main(argv: list[str]) -> int:
             label_errors.append(f"human_label_rows {len(label_rows)} below required minimum {args.min_labels}")
 
         label_intake_case_ids, countable_case_ids, label_intake_summary = human_status.load_label_intake_context(
-            args.label_intake_dir
+            args.label_intake_dir,
+            verify_existing=False,
         )
+        label_intake_summary.update(verify_counts)
         decisions = read_json_or_jsonl(Path(args.decisions).expanduser().resolve(), "decisions")
         feedback = read_json_or_jsonl(Path(args.feedback).expanduser().resolve(), "feedback")
         known_case_ids = set(repo_by_case) | template_case_ids | label_intake_case_ids

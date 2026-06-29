@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -206,15 +207,46 @@ def read_jsonl(path: Path, input_name: str) -> list[dict]:
     return rows
 
 
-def load_label_intake_context(label_intake_dirs: list[str]) -> tuple[set[str], set[str], dict[str, int]]:
+def verify_label_intake_existing(path: Path) -> list[str]:
+    if is_forbidden_env_path(path):
+        return ["refusing .env-like label intake path"]
+    tool = Path(__file__).resolve().parent / "audit_my_repo_label_intake.py"
+    proc = subprocess.run(
+        [sys.executable, str(tool), "--verify-existing", str(path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode == 0:
+        return []
+    detail = (proc.stderr or proc.stdout).strip()
+    first_line = detail.splitlines()[0] if detail else "unknown failure"
+    return [f"{path}: label_intake --verify-existing failed: {first_line}"]
+
+
+def load_label_intake_context(
+    label_intake_dirs: list[str],
+    *,
+    verify_existing: bool = True,
+) -> tuple[set[str], set[str], dict[str, int]]:
     all_case_ids: set[str] = set()
     case_human_labeled: dict[str, bool] = {}
     case_synthetic: dict[str, bool] = {}
     label_rows = 0
+    verify_passed_dirs = 0
+    verify_failed_dirs = 0
+    verify_errors: list[str] = []
     for raw in label_intake_dirs:
         path = Path(raw).expanduser().resolve()
         if is_forbidden_env_path(path):
             raise ValueError("refusing .env-like label intake path")
+        if verify_existing:
+            errors = verify_label_intake_existing(path)
+            if errors:
+                verify_failed_dirs += 1
+                verify_errors.extend(errors)
+            else:
+                verify_passed_dirs += 1
         labels_path = path / "benchmark_labels.jsonl"
         if not labels_path.is_file():
             raise ValueError(f"label intake dir missing benchmark_labels.jsonl: {path}")
@@ -232,6 +264,8 @@ def load_label_intake_context(label_intake_dirs: list[str]) -> tuple[set[str], s
                 row.get("human_labeled", False)
             )
             case_synthetic[case_id] = case_synthetic.get(case_id, False) or truthy(row.get("synthetic", False))
+    if verify_errors:
+        raise ValueError("; ".join(verify_errors))
     countable_case_ids = {
         case_id
         for case_id in all_case_ids
@@ -239,6 +273,9 @@ def load_label_intake_context(label_intake_dirs: list[str]) -> tuple[set[str], s
     }
     return all_case_ids, countable_case_ids, {
         "label_intake_dir_count": len(label_intake_dirs),
+        "label_intake_verify_existing_required": int(verify_existing and bool(label_intake_dirs)),
+        "label_intake_verify_existing_passed_dirs": verify_passed_dirs,
+        "label_intake_verify_existing_failed_dirs": verify_failed_dirs,
         "label_intake_label_rows": label_rows,
         "label_intake_case_count": len(all_case_ids),
         "label_intake_countable_case_count": len(countable_case_ids),
@@ -390,6 +427,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out-json", default="", help="Optional read-only status JSON output.")
     parser.add_argument("--out-md", default="", help="Optional read-only status Markdown output.")
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--skip-verify-existing",
+        action="store_true",
+        help="Testing only: skip audit_my_repo_label_intake.py --verify-existing checks.",
+    )
     parser.add_argument("--json", action="store_true")
     return parser
 
@@ -399,7 +441,8 @@ def main(argv: list[str]) -> int:
     try:
         known_candidate_ids, template_case_ids = load_template_context(args.template_dir)
         label_intake_case_ids, countable_case_ids, label_intake_summary = load_label_intake_context(
-            args.label_intake_dir
+            args.label_intake_dir,
+            verify_existing=not args.skip_verify_existing,
         )
         known_case_ids = template_case_ids | load_case_ids_from_repo_intake(args.repo_intake) | label_intake_case_ids
         decision_rows = read_json_or_jsonl(Path(args.decisions).expanduser().resolve(), "decisions")

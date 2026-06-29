@@ -238,9 +238,16 @@ def main() -> int:
         for intake_dir in label_intake_dirs:
             args.extend(["--label-intake-dir", str(intake_dir)])
         proc = run_tool(*args)
+        assert proc.returncode == 1
+        assert "label_intake --verify-existing failed" in proc.stderr
+
+        args.append("--skip-verify-existing")
+        args.append("--overwrite")
+        proc = run_tool(*args)
         assert proc.returncode == 0, proc.stderr
         payload = json.loads(proc.stdout)
         assert payload["ready_to_request_runtime_approval"] == 1
+        assert payload["label_intake_verify_existing_required"] == 0
         assert payload["benchmark_runtime_approval_required"] == 1
         assert payload["creates_benchmark_evidence"] == 0
         assert payload["design_partner_beta_candidate_ready"] == 0
@@ -268,6 +275,7 @@ def main() -> int:
             "10",
             "--min-maintainers",
             "3",
+            "--skip-verify-existing",
         ]
         for template_dir in template_dirs:
             bad_args.extend(["--template-dir", str(template_dir)])
