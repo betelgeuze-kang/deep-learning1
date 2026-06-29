@@ -10,6 +10,7 @@ does not run benchmarks, and does not promote readiness.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from collections import Counter, defaultdict
@@ -76,7 +77,7 @@ def feedback_digest_preview(row: dict) -> str:
         return digest
     text = str(row.get("feedback_text") or "")
     if text:
-        return "present_unemitted"
+        return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
     return ""
 
 

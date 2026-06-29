@@ -6,6 +6,8 @@ fabricate feedback; only human-supplied maintainer feedback is used.
 Feedback is consumed by
 `scripts/audit_my_repo_benchmark.py --feedback <file>` (JSON or JSONL). Raw
 feedback text is hashed, not emitted, by the benchmark.
+The local feedback request packet reports returned raw `feedback_text` only as
+`feedback_text_sha256_status`.
 
 ## Per-row fields
 

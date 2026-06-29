@@ -2,6 +2,7 @@
 """Smoke tests for scripts/amr_beta_maintainer_feedback_packet.py."""
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -129,6 +130,29 @@ def main() -> int:
                 for index, (case_id, _repo, _head) in enumerate(repos, start=1)
             ],
         )
+        feedback_text = "Reviewed case-01 source-bound findings."
+        expected_feedback_sha = "sha256:" + hashlib.sha256(feedback_text.encode("utf-8")).hexdigest()
+        feedback_out = tmp / "feedback_packet_with_feedback"
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--label-intake-dir",
+            str(label_intake),
+            "--feedback",
+            str(feedback),
+            "--out",
+            str(feedback_out),
+            "--min-repos",
+            "3",
+        )
+        assert proc.returncode == 0, proc.stderr
+        packet_with_feedback = (feedback_out / "maintainer_feedback_request_packet.jsonl").read_text(
+            encoding="utf-8"
+        )
+        assert expected_feedback_sha in packet_with_feedback
+        assert "present_unemitted" not in packet_with_feedback
+        assert feedback_text not in packet_with_feedback
+
         proc = run_tool(
             "--repo-intake",
             str(repo_intake),

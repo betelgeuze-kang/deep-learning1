@@ -123,6 +123,8 @@ been created:
 - [ ] Generate a case/contact request packet from the filled repo intake sheet
   before outreach:
   `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --out results/maintainer_feedback_packet`.
+  When returned feedback rows include raw `feedback_text`, this packet reports
+  only `feedback_text_sha256_status`, never the raw feedback text.
 - [ ] Require `human_feedback=true` and either `feedback_text` or
   `feedback_text_sha256`.
 - [ ] Count feedback only when its case already has `human_labeled=true` and is
