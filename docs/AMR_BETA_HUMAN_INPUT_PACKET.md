@@ -63,12 +63,17 @@ agent-written maintainer feedback.
 ### 9.2 Human label checklist
 
 - [ ] Generate template-only rows from each confirmed audit output.
+- [ ] Build a per-repo reviewer packet and reviewer progress summary from the
+  generated templates:
+  `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --out <reviewer-packet-dir>`.
 - [ ] Send only candidate ids from the generated templates to human reviewers.
 - [ ] Collect at least 300 human decision rows with `human_labeled=true` and
   `expected=present|absent`.
 - [ ] Reject any decision file that contains `template_only=true`, missing
   `candidate_label_id`, duplicate `candidate_label_id`, or example ids such as
   `EXAMPLE-*`.
+- [ ] As decisions arrive, rerun the reviewer progress summary:
+  `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --decisions <decisions.jsonl> --require-all-candidates`.
 - [ ] Run `scripts/audit_my_repo_label_intake.py` for each repo and verify each
   output with `--verify-existing`.
 - [ ] Concatenate only verified `benchmark_labels.jsonl` outputs into the
@@ -155,22 +160,26 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 2. Generate a label template per audit:
    `audit_my_repo_label_template.py --audit-output results/<repo>_audit --out results/<repo>_label_template --case-id <repo>`
    (template rows inherit `synthetic=0` only because step 1 was real_benchmark-confirmed).
-3. Fill human decisions (>= 300 rows total across repos) using the 9.2 format.
-4. Compile per repo:
+3. Generate reviewer packets and a reviewer progress summary from the templates:
+   `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --out results/<repo>_reviewer_packet`.
+4. Fill human decisions (>= 300 rows total across repos) using the 9.2 format.
+   Check partial coverage or require complete candidate coverage with
+   `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --decisions <repo>_decisions.jsonl --require-all-candidates`.
+5. Compile per repo:
    `audit_my_repo_label_intake.py --template results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_label_intake`.
-5. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
+6. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
    Check decision/feedback progress with
    `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`.
-6. Combine repos into one benchmark run. `audit_my_repo_benchmark.py` accepts
+7. Combine repos into one benchmark run. `audit_my_repo_benchmark.py` accepts
    **exactly one** of `--labels` or `--label-intake`; `--label-intake` is a single
    directory (one repo). For >= 10 repos, concatenate each repo's
    `results/<repo>_label_intake/benchmark_labels.jsonl` into one combined labels
    file (each row already carries its `case_id`, `repo_path`, `synthetic`, and
    `human_labeled`; the repos must exist locally), then run one benchmark:
    `audit_my_repo_benchmark.py --labels results/combined_benchmark_labels.jsonl --feedback <feedback.jsonl> --namespace real_benchmark --confirm-real-benchmark-namespace --mode full --out results/audit_benchmark`.
-7. Inspect `benchmark_readiness.json`; re-verify with `--verify-existing`.
+8. Inspect `benchmark_readiness.json`; re-verify with `--verify-existing`.
 
-Step 6 is a long, runtime-approved action and is **not** performed by this PR.
+Step 7 is a long, runtime-approved action and is **not** performed by this PR.
 
 ## Evidence handling
 
