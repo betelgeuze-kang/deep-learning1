@@ -57,6 +57,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_repo_intake_validate.py",
     "python3 scripts/amr_beta_human_input_status.py",
     "python3 scripts/amr_beta_label_packet.py",
+    "--label-intake-dir",
     "reviewer progress summary",
     "does not make them\nhuman-supplied inputs",
     "counts_for_beta=0",
