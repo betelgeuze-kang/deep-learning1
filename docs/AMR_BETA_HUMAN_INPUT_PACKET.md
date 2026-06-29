@@ -117,6 +117,8 @@ been created:
 - [ ] After label intake outputs exist, run the final read-only runtime preflight
   before requesting approval for the long benchmark:
   `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir <repo-label-intake-dir> --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
+  Runtime preflight requires both label-template and label-intake bundles to
+  pass their `--verify-existing` checks before it can request runtime approval.
 - [ ] Generate the runtime approval request packet from the green preflight;
   this does not approve or run the benchmark:
   `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
