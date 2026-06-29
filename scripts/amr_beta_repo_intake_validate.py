@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 import subprocess
@@ -69,6 +70,11 @@ def good_operator_value(value: str) -> bool:
 
 def truthy(value: str) -> bool:
     return str(value).strip().lower() in TRUTHY
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def read_markdown_table(path: Path) -> list[dict[str, str]]:
@@ -153,6 +159,32 @@ def row_status(index: int, normalized: dict[str, str], row_errors: list[str]) ->
         "valid": int(not row_errors),
         "errors": row_errors,
     }
+
+
+def snapshot_lock_rows(row_statuses: list[dict[str, object]]) -> list[dict[str, object]]:
+    lock_rows: list[dict[str, object]] = []
+    for status in row_statuses:
+        lock_rows.append(
+            {
+                "row_index": status["row_index"],
+                "case_id": status["case_id"],
+                "repo_path_resolved": status["repo_path_resolved"],
+                "expected_repo_git_head": status["expected_repo_git_head"],
+                "actual_repo_git_head": status["actual_repo_git_head"],
+                "clean_worktree_declared": status["clean_worktree_declared"],
+                "clean_worktree_actual": status["clean_worktree_actual"],
+                "owner_or_maintainer_contact_present": status[
+                    "owner_or_maintainer_contact_present"
+                ],
+                "audit_mode": status["audit_mode"],
+                "namespace": status["namespace"],
+                "real_benchmark_namespace_confirmed": status[
+                    "real_benchmark_namespace_confirmed"
+                ],
+                "valid": status["valid"],
+            }
+        )
+    return lock_rows
 
 
 def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, str]]:
@@ -249,6 +281,7 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
         "valid_repo_rows": valid_rows,
         "min_real_repos_required": min_repos,
         "ready_for_real_benchmark_audit": int(not errors),
+        "repo_snapshot_lock_sha256": sha256_json(snapshot_lock_rows(row_statuses)),
         "row_statuses": row_statuses,
         "design_partner_beta_candidate_ready": 0,
         "release_ready": 0,

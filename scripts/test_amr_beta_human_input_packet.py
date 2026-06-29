@@ -78,6 +78,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "human owner supplied and verified against local disk",
     "python3 scripts/amr_beta_repo_intake_validate.py",
     "results/amr_beta_repo_intake_status.json",
+    "repo_snapshot_lock_sha256",
     "python3 scripts/amr_beta_repo_audit_plan.py",
     "runs_audit=0",
     "creates_benchmark_evidence=0",

@@ -74,6 +74,7 @@ def main() -> int:
         assert '"ready_for_real_benchmark_audit": 1' in proc.stdout
         assert '"design_partner_beta_candidate_ready": 0' in proc.stdout
         assert '"owner_or_maintainer_contact_present": 1' in proc.stdout
+        assert '"repo_snapshot_lock_sha256": "sha256:' in proc.stdout
         assert "maintainer-01@review.invalid" not in proc.stdout
 
         status_json = tmp / "repo_intake_status.json"
@@ -83,6 +84,7 @@ def main() -> int:
         status = json.loads(status_json.read_text(encoding="utf-8"))
         assert status["ready_for_real_benchmark_audit"] == 1
         assert status["valid_repo_rows"] == 10
+        assert status["repo_snapshot_lock_sha256"].startswith("sha256:")
         assert len(status["row_statuses"]) == 10
         assert status["row_statuses"][0]["clean_worktree_actual"] == 1
         assert status["row_statuses"][0]["owner_or_maintainer_contact_present"] == 1
@@ -98,6 +100,7 @@ def main() -> int:
         assert "repo_dirty" in proc.stderr
         dirty_status = json.loads(dirty_status_json.read_text(encoding="utf-8"))
         assert dirty_status["ready_for_real_benchmark_audit"] == 0
+        assert dirty_status["repo_snapshot_lock_sha256"].startswith("sha256:")
         assert dirty_status["row_statuses"][0]["valid"] == 0
         assert dirty_status["row_statuses"][0]["clean_worktree_actual"] == 0
         assert any("repo_dirty" in error for error in dirty_status["row_statuses"][0]["errors"])
