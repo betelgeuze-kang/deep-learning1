@@ -27,8 +27,17 @@ LABEL_INTAKE = REPO_ROOT / "scripts" / "audit_my_repo_label_intake.py"
 BENCHMARK = REPO_ROOT / "scripts" / "audit_my_repo_benchmark.py"
 REPO_INTAKE_VALIDATOR = REPO_ROOT / "scripts" / "amr_beta_repo_intake_validate.py"
 HUMAN_INPUT_STATUS = REPO_ROOT / "scripts" / "amr_beta_human_input_status.py"
+LABEL_PACKET = REPO_ROOT / "scripts" / "amr_beta_label_packet.py"
 
-REQUIRED_FILES = [PACKET, REPO_INTAKE, LABEL_EXAMPLE, FEEDBACK_TEMPLATE, REPO_INTAKE_VALIDATOR, HUMAN_INPUT_STATUS]
+REQUIRED_FILES = [
+    PACKET,
+    REPO_INTAKE,
+    LABEL_EXAMPLE,
+    FEEDBACK_TEMPLATE,
+    REPO_INTAKE_VALIDATOR,
+    HUMAN_INPUT_STATUS,
+    LABEL_PACKET,
+]
 
 # Claim-boundary / threshold phrases the packet must state.
 PACKET_REQUIRED_SNIPPETS = [
@@ -47,6 +56,8 @@ PACKET_REQUIRED_SNIPPETS = [
     "human owner supplied and verified against local disk",
     "python3 scripts/amr_beta_repo_intake_validate.py",
     "python3 scripts/amr_beta_human_input_status.py",
+    "python3 scripts/amr_beta_label_packet.py",
+    "reviewer progress summary",
     "does not make them\nhuman-supplied inputs",
     "counts_for_beta=0",
 ]
