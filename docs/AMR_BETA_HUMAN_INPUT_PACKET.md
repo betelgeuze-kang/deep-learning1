@@ -54,6 +54,10 @@ been created:
   `docs/templates/amr-beta-repo-intake.md`.
 - [ ] Validate the filled intake sheet before running audits:
   `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>`.
+- [ ] When intake is still partial or failing, write the read-only row-level
+  status summary to see which repos are dirty, mismatched, duplicated, or still
+  below threshold:
+  `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv> --out-json results/amr_beta_repo_intake_status.json --out-md results/amr_beta_repo_intake_status.md --json`.
 - [ ] Generate the read-only audit/template/reviewer handoff plan from the
   validated intake sheet; this does not run audits or create evidence:
   `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md`.

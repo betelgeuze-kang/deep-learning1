@@ -2,6 +2,7 @@
 """Smoke tests for scripts/amr_beta_repo_intake_validate.py."""
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -72,13 +73,34 @@ def main() -> int:
         assert proc.returncode == 0, proc.stderr
         assert '"ready_for_real_benchmark_audit": 1' in proc.stdout
         assert '"design_partner_beta_candidate_ready": 0' in proc.stdout
+        assert '"owner_or_maintainer_contact_present": 1' in proc.stdout
+        assert "maintainer-01@review.invalid" not in proc.stdout
+
+        status_json = tmp / "repo_intake_status.json"
+        status_md = tmp / "repo_intake_status.md"
+        proc = run_tool(intake, "--out-json", str(status_json), "--out-md", str(status_md))
+        assert proc.returncode == 0, proc.stderr
+        status = json.loads(status_json.read_text(encoding="utf-8"))
+        assert status["ready_for_real_benchmark_audit"] == 1
+        assert status["valid_repo_rows"] == 10
+        assert len(status["row_statuses"]) == 10
+        assert status["row_statuses"][0]["clean_worktree_actual"] == 1
+        assert status["row_statuses"][0]["owner_or_maintainer_contact_present"] == 1
+        assert "maintainer-01@review.invalid" not in status_json.read_text(encoding="utf-8")
+        assert "AMR Beta Repo Intake Status" in status_md.read_text(encoding="utf-8")
 
         dirty = tmp / "dirty.md"
         write_intake(dirty, repos)
         (repos[0][0] / "UNTRACKED.txt").write_text("dirty\n", encoding="utf-8")
-        proc = run_tool(dirty)
+        dirty_status_json = tmp / "dirty_repo_intake_status.json"
+        proc = run_tool(dirty, "--out-json", str(dirty_status_json))
         assert proc.returncode == 1
         assert "repo_dirty" in proc.stderr
+        dirty_status = json.loads(dirty_status_json.read_text(encoding="utf-8"))
+        assert dirty_status["ready_for_real_benchmark_audit"] == 0
+        assert dirty_status["row_statuses"][0]["valid"] == 0
+        assert dirty_status["row_statuses"][0]["clean_worktree_actual"] == 0
+        assert any("repo_dirty" in error for error in dirty_status["row_statuses"][0]["errors"])
         (repos[0][0] / "UNTRACKED.txt").unlink()
 
         example = tmp / "example.md"
