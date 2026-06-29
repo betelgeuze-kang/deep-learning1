@@ -430,6 +430,9 @@ fi
 if [ -f scripts/test_amr_beta_readiness_backlog.py ]; then
   python3 scripts/test_amr_beta_readiness_backlog.py >/dev/null
 fi
+if [ -f scripts/test_amr_beta_design_partner_packet.py ]; then
+  python3 scripts/test_amr_beta_design_partner_packet.py >/dev/null
+fi
 
 echo "==> audit-my-repo product smoke"
 if [ -x experiments/test_audit_my_repo_product_entrypoint.sh ]; then
