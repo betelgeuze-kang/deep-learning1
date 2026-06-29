@@ -162,9 +162,27 @@ def main() -> int:
             "2",
             "--json",
         )
+        assert proc.returncode == 1
+        assert "label_intake --verify-existing failed" in proc.stderr
+
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(feedback),
+            "--label-intake-dir",
+            str(label_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+            "--skip-verify-existing",
+            "--json",
+        )
         assert proc.returncode == 0, proc.stderr
         assert '"feedback_counts_for_beta_precheck": 1' in proc.stdout
         assert '"distinct_countable_maintainer_id_count": 2' in proc.stdout
+        assert '"label_intake_verify_existing_required": 0' in proc.stdout
 
         synthetic_label_intake = tmp / "synthetic_label_intake"
         make_label_intake(
@@ -199,6 +217,7 @@ def main() -> int:
             "2",
             "--min-maintainers",
             "2",
+            "--skip-verify-existing",
         )
         assert proc.returncode == 1
         assert "case_id is not countable for beta" in proc.stderr

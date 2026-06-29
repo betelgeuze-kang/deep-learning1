@@ -148,7 +148,9 @@ been created:
 - [ ] After per-repo label intake outputs exist, rerun the same status guard
   with `--label-intake-dir <repo-label-intake-dir>` for each repo so feedback
   is accepted only when its case is non-synthetic and human-labeled, matching
-  the benchmark `counts_for_beta` basis.
+  the benchmark `counts_for_beta` basis. Both the status guard and maintainer
+  feedback packet require each label-intake directory to pass
+  `audit_my_repo_label_intake.py --verify-existing`.
 
 Before any runtime-approved benchmark run, the operator should have a combined
 labels file, a feedback JSON/JSONL file, and a repo intake sheet whose recorded

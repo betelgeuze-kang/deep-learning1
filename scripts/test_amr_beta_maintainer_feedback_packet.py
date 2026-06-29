@@ -95,6 +95,17 @@ def main() -> int:
                 for case_id, repo, _head in repos
             ],
         )
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--label-intake-dir",
+            str(label_intake),
+            "--min-repos",
+            "3",
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "label_intake --verify-existing failed" in proc.stderr
 
         out_dir = tmp / "feedback_packet"
         proc = run_tool(
@@ -106,10 +117,12 @@ def main() -> int:
             str(out_dir),
             "--min-repos",
             "3",
+            "--skip-verify-existing",
         )
         assert proc.returncode == 0, proc.stderr
         summary = json.loads((out_dir / "maintainer_feedback_progress_summary.json").read_text(encoding="utf-8"))
         assert summary["request_case_rows"] == 3
+        assert summary["label_intake_verify_existing_required"] == 0
         assert summary["missing_feedback_case_rows"] == 3
         assert summary["raw_feedback_text_emitted"] == 0
         assert summary["creates_benchmark_evidence"] == 0
@@ -144,6 +157,7 @@ def main() -> int:
             str(feedback_out),
             "--min-repos",
             "3",
+            "--skip-verify-existing",
         )
         assert proc.returncode == 0, proc.stderr
         packet_with_feedback = (feedback_out / "maintainer_feedback_request_packet.jsonl").read_text(
@@ -165,6 +179,7 @@ def main() -> int:
             "--min-maintainers",
             "3",
             "--enforce-min-maintainers",
+            "--skip-verify-existing",
             "--json",
         )
         assert proc.returncode == 0, proc.stderr
@@ -200,6 +215,7 @@ def main() -> int:
             "--min-maintainers",
             "1",
             "--enforce-min-maintainers",
+            "--skip-verify-existing",
         )
         assert proc.returncode == 1
         assert "case_id is not countable for beta" in proc.stderr

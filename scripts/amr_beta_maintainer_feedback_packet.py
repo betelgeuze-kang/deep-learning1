@@ -57,8 +57,15 @@ def load_repo_intake(path: Path, min_repos: int) -> tuple[list[dict], list[str],
     return normalized_rows, errors, summary
 
 
-def load_label_context(label_intake_dirs: list[str]) -> tuple[set[str], set[str], dict[str, int], Counter[str]]:
-    all_case_ids, countable_case_ids, summary = human_status.load_label_intake_context(label_intake_dirs)
+def load_label_context(
+    label_intake_dirs: list[str],
+    *,
+    verify_existing: bool,
+) -> tuple[set[str], set[str], dict[str, int], Counter[str]]:
+    all_case_ids, countable_case_ids, summary = human_status.load_label_intake_context(
+        label_intake_dirs,
+        verify_existing=verify_existing,
+    )
     label_counts: Counter[str] = Counter()
     for raw_dir in label_intake_dirs:
         path = Path(raw_dir).expanduser().resolve()
@@ -197,6 +204,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-maintainers", type=int, default=MIN_MAINTAINERS)
     parser.add_argument("--enforce-min-maintainers", action="store_true")
     parser.add_argument("--require-countable-cases", action="store_true")
+    parser.add_argument(
+        "--skip-verify-existing",
+        action="store_true",
+        help="Testing only: skip audit_my_repo_label_intake.py --verify-existing checks.",
+    )
     parser.add_argument("--json", action="store_true")
     return parser
 
@@ -210,6 +222,9 @@ def main(argv: list[str]) -> int:
 
         label_summary = {
             "label_intake_dir_count": 0,
+            "label_intake_verify_existing_required": 0,
+            "label_intake_verify_existing_passed_dirs": 0,
+            "label_intake_verify_existing_failed_dirs": 0,
             "label_intake_label_rows": 0,
             "label_intake_case_count": 0,
             "label_intake_countable_case_count": 0,
@@ -218,7 +233,10 @@ def main(argv: list[str]) -> int:
         countable_case_ids: set[str] = set()
         label_counts: Counter[str] = Counter()
         if args.label_intake_dir:
-            label_case_ids, countable_case_ids, label_summary, label_counts = load_label_context(args.label_intake_dir)
+            label_case_ids, countable_case_ids, label_summary, label_counts = load_label_context(
+                args.label_intake_dir,
+                verify_existing=not args.skip_verify_existing,
+            )
             unknown_label_cases = sorted(label_case_ids - known_case_ids)
             for case_id in unknown_label_cases:
                 repo_errors.append(f"label intake case_id not present in repo intake: {case_id}")
