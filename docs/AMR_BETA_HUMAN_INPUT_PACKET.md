@@ -33,6 +33,68 @@ Thresholds are enforced by the existing constants in
 `MIN_REAL_REPOS_FOR_BETA=10`, `MIN_HUMAN_LABELS_FOR_BETA=300`,
 `MIN_MAINTAINER_FEEDBACK_FOR_BETA=3`.
 
+## Operator checklist for 9.1-9.3
+
+Use this checklist when handing the packet to a human operator. Do not check any
+item using fabricated repositories, generated labels, placeholder examples, or
+agent-written maintainer feedback.
+
+### 9.1 Repository intake checklist
+
+- [ ] Collect at least 10 real local repository paths from the human owner.
+- [ ] For each repository, record `case_id`, `repo_path`,
+  `expected_repo_git_head`, `clean_worktree=true`, owner/maintainer contact,
+  audit mode, and `real_benchmark` namespace confirmation in
+  `docs/templates/amr-beta-repo-intake.md`.
+- [ ] Validate the filled intake sheet before running audits:
+  `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>`.
+- [ ] Remove every `EXAMPLE-*` placeholder row before collection review. A row
+  is usable only when the repository path, contact, HEAD, and namespace
+  confirmation are human owner supplied and verified against local disk.
+- [ ] Confirm `git -C <repo_path> status --porcelain=v1 --untracked-files=all`
+  is empty for every repository.
+- [ ] Confirm `git -C <repo_path> rev-parse HEAD` exactly matches the recorded
+  `expected_repo_git_head` for every repository.
+- [ ] Run each audit with
+  `--namespace real_benchmark --confirm-real-benchmark-namespace` before
+  creating label templates. Without this, template rows stay synthetic and do
+  not count toward beta.
+
+### 9.2 Human label checklist
+
+- [ ] Generate template-only rows from each confirmed audit output.
+- [ ] Send only candidate ids from the generated templates to human reviewers.
+- [ ] Collect at least 300 human decision rows with `human_labeled=true` and
+  `expected=present|absent`.
+- [ ] Reject any decision file that contains `template_only=true`, missing
+  `candidate_label_id`, duplicate `candidate_label_id`, or example ids such as
+  `EXAMPLE-*`.
+- [ ] Run `scripts/audit_my_repo_label_intake.py` for each repo and verify each
+  output with `--verify-existing`.
+- [ ] Concatenate only verified `benchmark_labels.jsonl` outputs into the
+  combined benchmark labels file; do not hand-edit compiled label rows.
+
+### 9.3 Maintainer feedback checklist
+
+- [ ] Collect feedback from at least 3 distinct `maintainer_id` values.
+- [ ] Bind every feedback row to a known 9.1 `case_id`.
+- [ ] Require `human_feedback=true` and either `feedback_text` or
+  `feedback_text_sha256`.
+- [ ] Count feedback only when its case already has `human_labeled=true` and is
+  non-synthetic. Feedback attached to template-only or synthetic cases remains
+  `counts_for_beta=0`.
+- [ ] Keep raw feedback local. The benchmark emits hashes, not raw feedback
+  text.
+- [ ] Reject synthetic, placeholder, example, or agent-written feedback rows.
+
+Before any runtime-approved benchmark run, the operator should have a combined
+labels file, a feedback JSON/JSONL file, and a repo intake sheet whose recorded
+paths and HEADs still match local disk. These are collection prerequisites only:
+they do not make `design_partner_beta_candidate_ready` true by themselves.
+The example rows in the templates are synthetic placeholders; renaming,
+concatenating, hashing, or moving them into another file does not make them
+human-supplied inputs.
+
 ## Input formats (must match the existing tools; do not invent new contracts)
 
 ### 9.1 Repository intake
@@ -82,6 +144,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 
 1. Audit each real repo in the real_benchmark namespace (>= 10 repos):
    `audit_my_repo.sh <repo> --mode quick|full --namespace real_benchmark --confirm-real-benchmark-namespace --out results/<repo>_audit`.
+   Before this step, run `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>`
+   and fix every blocker it reports.
 2. Generate a label template per audit:
    `audit_my_repo_label_template.py --audit-output results/<repo>_audit --out results/<repo>_label_template --case-id <repo>`
    (template rows inherit `synthetic=0` only because step 1 was real_benchmark-confirmed).

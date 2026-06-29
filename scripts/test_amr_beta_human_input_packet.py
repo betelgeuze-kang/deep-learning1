@@ -23,11 +23,15 @@ PACKET = REPO_ROOT / "docs" / "AMR_BETA_HUMAN_INPUT_PACKET.md"
 REPO_INTAKE = REPO_ROOT / "docs" / "templates" / "amr-beta-repo-intake.md"
 LABEL_EXAMPLE = REPO_ROOT / "docs" / "templates" / "amr-beta-human-label-decision.jsonl.example"
 FEEDBACK_TEMPLATE = REPO_ROOT / "docs" / "templates" / "amr-beta-maintainer-feedback.md"
+LABEL_INTAKE = REPO_ROOT / "scripts" / "audit_my_repo_label_intake.py"
+BENCHMARK = REPO_ROOT / "scripts" / "audit_my_repo_benchmark.py"
+REPO_INTAKE_VALIDATOR = REPO_ROOT / "scripts" / "amr_beta_repo_intake_validate.py"
 
-REQUIRED_FILES = [PACKET, REPO_INTAKE, LABEL_EXAMPLE, FEEDBACK_TEMPLATE]
+REQUIRED_FILES = [PACKET, REPO_INTAKE, LABEL_EXAMPLE, FEEDBACK_TEMPLATE, REPO_INTAKE_VALIDATOR]
 
 # Claim-boundary / threshold phrases the packet must state.
 PACKET_REQUIRED_SNIPPETS = [
+    "Operator checklist for 9.1-9.3",
     "design_partner_beta_candidate_ready",
     "remains **blocked (0)**",
     "Templates only.",
@@ -38,6 +42,51 @@ PACKET_REQUIRED_SNIPPETS = [
     "release_ready",
     "public_comparison_claim_ready",
     "real_model_execution_ready",
+    "Concatenate only verified `benchmark_labels.jsonl` outputs",
+    "human owner supplied and verified against local disk",
+    "python3 scripts/amr_beta_repo_intake_validate.py",
+    "does not make them\nhuman-supplied inputs",
+    "counts_for_beta=0",
+]
+
+REPO_INTAKE_REQUIRED_SNIPPETS = [
+    "clean_worktree",
+    "owner_or_maintainer_contact",
+    "namespace",
+    "real_benchmark_namespace_confirmed",
+    "git status --porcelain",
+    "git rev-parse HEAD",
+    "python3 scripts/amr_beta_repo_intake_validate.py",
+    "example does not count toward the threshold",
+    "leave any `EXAMPLE-*` value",
+]
+
+FEEDBACK_TEMPLATE_REQUIRED_SNIPPETS = [
+    "case_id",
+    "maintainer_id",
+    "feedback_text",
+    "feedback_text_sha256",
+    "human_feedback",
+    "synthetic",
+    "counts_for_beta",
+    "SYNTHETIC EXAMPLE",
+]
+
+LABEL_INTAKE_CONTRACT_SNIPPETS = [
+    "must not be marked template_only",
+    "must include human_labeled=true",
+    "expected must be present or absent",
+    "requires a source-bound citation span",
+]
+
+BENCHMARK_CONTRACT_SNIPPETS = [
+    "MIN_REAL_REPOS_FOR_BETA = 10",
+    "MIN_HUMAN_LABELS_FOR_BETA = 300",
+    "MIN_MAINTAINER_FEEDBACK_FOR_BETA = 3",
+    "--namespace real_benchmark requires --confirm-real-benchmark-namespace",
+    "synthetic cases cannot be evaluated in the real_benchmark namespace",
+    "feedback row {idx} missing maintainer_id",
+    "must include feedback_text or a sha256 feedback_text_sha256",
 ]
 
 
@@ -50,6 +99,28 @@ def test_packet_states_claim_boundary_and_thresholds():
     text = PACKET.read_text(encoding="utf-8")
     missing = [s for s in PACKET_REQUIRED_SNIPPETS if s not in text]
     assert not missing, f"packet missing required snippets: {missing}"
+
+
+def test_repo_intake_template_is_operator_ready():
+    text = REPO_INTAKE.read_text(encoding="utf-8")
+    missing = [s for s in REPO_INTAKE_REQUIRED_SNIPPETS if s not in text]
+    assert not missing, f"repo intake template missing required snippets: {missing}"
+
+
+def test_feedback_template_matches_benchmark_contract_and_is_placeholder():
+    text = FEEDBACK_TEMPLATE.read_text(encoding="utf-8")
+    missing = [s for s in FEEDBACK_TEMPLATE_REQUIRED_SNIPPETS if s not in text]
+    assert not missing, f"feedback template missing required snippets: {missing}"
+
+
+def test_packet_matches_existing_tool_contracts():
+    label_intake = LABEL_INTAKE.read_text(encoding="utf-8")
+    missing = [s for s in LABEL_INTAKE_CONTRACT_SNIPPETS if s not in label_intake]
+    assert not missing, f"label intake contract snippets missing: {missing}"
+
+    benchmark = BENCHMARK.read_text(encoding="utf-8")
+    missing = [s for s in BENCHMARK_CONTRACT_SNIPPETS if s not in benchmark]
+    assert not missing, f"benchmark contract snippets missing: {missing}"
 
 
 def test_label_example_matches_intake_contract_and_is_synthetic():
@@ -111,6 +182,9 @@ def test_no_real_human_input_committed():
 def _run_all():
     test_packet_files_present()
     test_packet_states_claim_boundary_and_thresholds()
+    test_repo_intake_template_is_operator_ready()
+    test_feedback_template_matches_benchmark_contract_and_is_placeholder()
+    test_packet_matches_existing_tool_contracts()
     test_label_example_matches_intake_contract_and_is_synthetic()
     test_no_real_human_input_committed()
 
