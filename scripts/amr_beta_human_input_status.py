@@ -321,6 +321,58 @@ def validate_feedback(
     }
 
 
+def progress_percent(value: int, minimum: int) -> float:
+    if minimum <= 0:
+        return 0.0
+    return round(min(value, minimum) * 100.0 / minimum, 2)
+
+
+def write_json(path: Path, payload: dict, overwrite: bool) -> None:
+    if is_forbidden_env_path(path):
+        raise ValueError("refusing .env-like JSON output path")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {path}")
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
+    if is_forbidden_env_path(path):
+        raise ValueError("refusing .env-like Markdown output path")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {path}")
+    lines = [
+        "# AMR Beta Human Input Status",
+        "",
+        f"- ready_for_real_benchmark_inputs: {payload['ready_for_real_benchmark_inputs']}",
+        f"- valid_human_label_rows: {payload['valid_human_label_rows']}",
+        f"- min_human_label_rows_required: {payload['min_human_label_rows_required']}",
+        f"- remaining_human_label_rows: {payload['remaining_human_label_rows']}",
+        f"- human_label_progress_percent: {payload['human_label_progress_percent']}",
+        f"- effective_maintainer_id_count: {payload['effective_maintainer_id_count']}",
+        f"- min_maintainer_feedback_required: {payload['min_maintainer_feedback_required']}",
+        f"- remaining_distinct_maintainer_ids: {payload['remaining_distinct_maintainer_ids']}",
+        f"- maintainer_feedback_progress_percent: {payload['maintainer_feedback_progress_percent']}",
+        f"- feedback_counts_for_beta_precheck: {payload['feedback_counts_for_beta_precheck']}",
+        f"- compiles_labels: {payload['compiles_labels']}",
+        f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
+        f"- runs_benchmark: {payload['runs_benchmark']}",
+        f"- design_partner_beta_candidate_ready: {payload['design_partner_beta_candidate_ready']}",
+        f"- release_ready: {payload['release_ready']}",
+        f"- public_comparison_claim_ready: {payload['public_comparison_claim_ready']}",
+        f"- real_model_execution_ready: {payload['real_model_execution_ready']}",
+        "",
+        "## Errors",
+        "",
+    ]
+    if payload["errors"]:
+        lines.extend(f"- {error}" for error in payload["errors"])
+    else:
+        lines.append("- none")
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--decisions", required=True, help="Human decision JSON/JSONL file.")
@@ -335,6 +387,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--min-labels", type=int, default=MIN_HUMAN_LABELS_FOR_BETA)
     parser.add_argument("--min-maintainers", type=int, default=MIN_MAINTAINER_FEEDBACK_FOR_BETA)
+    parser.add_argument("--out-json", default="", help="Optional read-only status JSON output.")
+    parser.add_argument("--out-md", default="", help="Optional read-only status Markdown output.")
+    parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser
 
@@ -366,22 +421,25 @@ def main(argv: list[str]) -> int:
         return 1
 
     errors = [*decision_errors, *feedback_errors]
+    effective_maintainer_id_count = (
+        feedback_summary["distinct_countable_maintainer_id_count"]
+        if args.label_intake_dir
+        else feedback_summary["distinct_maintainer_id_count"]
+    )
     summary = {
         "schema": "amr_beta_human_input_status.v1",
         **decision_summary,
         "min_human_label_rows_required": args.min_labels,
+        "remaining_human_label_rows": max(0, args.min_labels - decision_summary["valid_human_label_rows"]),
+        "human_label_progress_percent": progress_percent(decision_summary["valid_human_label_rows"], args.min_labels),
         "human_label_requirement_met": int(decision_summary["valid_human_label_rows"] >= args.min_labels),
         **feedback_summary,
         **label_intake_summary,
         "min_maintainer_feedback_required": args.min_maintainers,
-        "maintainer_feedback_requirement_met": int(
-            (
-                feedback_summary["distinct_countable_maintainer_id_count"]
-                if args.label_intake_dir
-                else feedback_summary["distinct_maintainer_id_count"]
-            )
-            >= args.min_maintainers
-        ),
+        "effective_maintainer_id_count": effective_maintainer_id_count,
+        "remaining_distinct_maintainer_ids": max(0, args.min_maintainers - effective_maintainer_id_count),
+        "maintainer_feedback_progress_percent": progress_percent(effective_maintainer_id_count, args.min_maintainers),
+        "maintainer_feedback_requirement_met": int(effective_maintainer_id_count >= args.min_maintainers),
         "feedback_counts_for_beta_precheck": int(
             not args.label_intake_dir
             or (
@@ -391,13 +449,25 @@ def main(argv: list[str]) -> int:
             )
         ),
         "ready_for_real_benchmark_inputs": int(not errors),
+        "compiles_labels": 0,
+        "creates_benchmark_evidence": 0,
+        "runs_benchmark": 0,
         "design_partner_beta_candidate_ready": 0,
         "release_ready": 0,
         "public_comparison_claim_ready": 0,
         "real_model_execution_ready": 0,
     }
+    payload = {**summary, "errors": errors}
+    try:
+        if args.out_json:
+            write_json(Path(args.out_json).expanduser().resolve(), payload, args.overwrite)
+        if args.out_md:
+            write_markdown(Path(args.out_md).expanduser().resolve(), payload, args.overwrite)
+    except Exception as exc:
+        print(f"human_input_status: error: {exc}", file=sys.stderr)
+        return 1
     if args.json:
-        print(json.dumps({**summary, "errors": errors}, indent=2, sort_keys=True))
+        print(json.dumps(payload, indent=2, sort_keys=True))
     if errors:
         for error in errors:
             print(error, file=sys.stderr)

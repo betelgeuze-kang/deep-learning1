@@ -94,6 +94,38 @@ def main() -> int:
         assert proc.returncode == 0, proc.stderr
         assert '"ready_for_real_benchmark_inputs": 1' in proc.stdout
         assert '"design_partner_beta_candidate_ready": 0' in proc.stdout
+        assert '"remaining_human_label_rows": 0' in proc.stdout
+        assert '"remaining_distinct_maintainer_ids": 0' in proc.stdout
+        assert '"compiles_labels": 0' in proc.stdout
+        assert '"creates_benchmark_evidence": 0' in proc.stdout
+
+        status_json = tmp / "human_input_status.json"
+        status_md = tmp / "human_input_status.md"
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(feedback),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+            "--out-json",
+            str(status_json),
+            "--out-md",
+            str(status_md),
+        )
+        assert proc.returncode == 0, proc.stderr
+        status = json.loads(status_json.read_text(encoding="utf-8"))
+        assert status["ready_for_real_benchmark_inputs"] == 1
+        assert status["human_label_progress_percent"] == 100.0
+        assert status["maintainer_feedback_progress_percent"] == 100.0
+        assert status["compiles_labels"] == 0
+        assert status["creates_benchmark_evidence"] == 0
+        assert "Reviewed finding quality" not in status_json.read_text(encoding="utf-8")
+        assert "Reviewed finding quality" not in status_md.read_text(encoding="utf-8")
 
         label_intake = tmp / "label_intake"
         make_label_intake(
@@ -193,9 +225,14 @@ def main() -> int:
             "1",
             "--min-maintainers",
             "2",
+            "--out-json",
+            str(tmp / "bad_human_input_status.json"),
         )
         assert proc.returncode == 1
         assert "candidate_label_id must not be example/placeholder" in proc.stderr
+        bad_status = json.loads((tmp / "bad_human_input_status.json").read_text(encoding="utf-8"))
+        assert bad_status["ready_for_real_benchmark_inputs"] == 0
+        assert bad_status["errors"]
 
         unsafe_decisions = tmp / "unsafe_decisions.jsonl"
         write_jsonl(

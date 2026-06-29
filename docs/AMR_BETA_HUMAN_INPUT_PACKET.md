@@ -103,6 +103,8 @@ been created:
 - [ ] Before benchmark execution, run
   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`
   to catch duplicate, missing, placeholder, and below-threshold human inputs.
+  Write the read-only progress summary while collecting inputs:
+  `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv> --out-json results/amr_beta_human_input_status.json --out-md results/amr_beta_human_input_status.md --overwrite`.
 - [ ] After label intake outputs exist, run the final read-only runtime preflight
   before requesting approval for the long benchmark:
   `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir <repo-label-intake-dir> --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
@@ -252,9 +254,9 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    Prepare the request packet and progress summary:
    `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --label-intake-dir results/<repo>_label_intake --out results/maintainer_feedback_packet`.
    Check decision/feedback progress with
-   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`.
+   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv> --out-json results/amr_beta_human_input_status.json --out-md results/amr_beta_human_input_status.md --overwrite`.
    After label intake exists, include every intake directory:
-   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake`.
+   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake --out-json results/amr_beta_human_input_status.json --out-md results/amr_beta_human_input_status.md --overwrite`.
 8. Prepare combined labels, then combine repos into one benchmark run.
    `python3 scripts/amr_beta_benchmark_input_prepare.py --label-intake-dir results/<repo>_label_intake --out-labels results/combined_benchmark_labels.jsonl --summary results/combined_benchmark_input_summary.json`.
    Before requesting runtime approval, run the final read-only preflight:
