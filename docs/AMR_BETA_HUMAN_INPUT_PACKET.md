@@ -190,6 +190,9 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 8. Inspect `benchmark_readiness.json`; re-verify with `--verify-existing`.
    If the beta gate remains blocked, generate a remediation backlog:
    `python3 scripts/amr_beta_readiness_backlog.py --benchmark-out results/audit_benchmark --out-json results/amr_beta_readiness_backlog.json --out-md results/amr_beta_readiness_backlog.md --verify-existing`.
+   For precision, citation, or label-quality blockers, generate a hardening
+   analysis:
+   `python3 scripts/amr_beta_hardening_analyze.py --benchmark-out results/audit_benchmark --out-json results/amr_beta_hardening_analysis.json --out-md results/amr_beta_hardening_analysis.md --verify-existing`.
 9. Package either the beta candidate packet or blocked packet from verified
    readiness/backlog artifacts:
    `python3 scripts/amr_beta_design_partner_packet.py --readiness results/audit_benchmark/benchmark_readiness.json --backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_design_partner_packet.json --out-md results/amr_beta_design_partner_packet.md`.
