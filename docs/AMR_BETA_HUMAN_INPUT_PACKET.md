@@ -159,6 +159,7 @@ Consumed by `scripts/audit_my_repo_label_intake.py --decisions <file>`. Each row
 - `human_labeled: true` (required; `human_reviewed: true` is an accepted alias).
 - `expected` (required) — must be `present` or `absent` (`human_expected` is an alias).
 - `label_id` (optional) — safe identifier; defaults to `candidate_label_id`.
+- `reviewer_id` (optional) — safe, non-placeholder reviewer identifier when supplied.
 - `priority` (optional) — `P0`, `P1`, `P2`, `P3`, or empty.
 - `expected_abstain` (optional).
 
@@ -168,7 +169,8 @@ See `docs/templates/amr-beta-human-label-decision.jsonl.example`.
 Consumed by `scripts/audit_my_repo_benchmark.py --feedback <file>`. Each row:
 
 - `case_id` (required) — must reference a known benchmark case.
-- `maintainer_id` (required for the row to count).
+- `maintainer_id` (required for the row to count) — safe, non-placeholder
+  maintainer identifier.
 - `feedback_text` (required) — the raw maintainer feedback text. It is hashed
   (`feedback_text_sha256`), not emitted. A row must include `feedback_text` or a
   precomputed `feedback_text_sha256`.

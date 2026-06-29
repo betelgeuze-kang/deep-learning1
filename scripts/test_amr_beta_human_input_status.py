@@ -66,7 +66,7 @@ def main() -> int:
             [
                 {
                     "case_id": "case-001",
-                    "maintainer_id": "maintainer-alpha",
+                    "maintainer_id": "maintainer.alpha+repo@review.invalid",
                     "human_feedback": True,
                     "feedback_text": "Reviewed finding quality on local repo.",
                 },
@@ -197,6 +197,61 @@ def main() -> int:
         assert proc.returncode == 1
         assert "candidate_label_id must not be example/placeholder" in proc.stderr
 
+        unsafe_decisions = tmp / "unsafe_decisions.jsonl"
+        write_jsonl(
+            unsafe_decisions,
+            [
+                {
+                    "candidate_label_id": "../case-001-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                }
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(unsafe_decisions),
+            "--feedback",
+            str(feedback),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "1",
+            "--min-maintainers",
+            "2",
+        )
+        assert proc.returncode == 1
+        assert "candidate_label_id must be a safe identifier" in proc.stderr
+
+        bad_optional_decision_ids = tmp / "bad_optional_decision_ids.jsonl"
+        write_jsonl(
+            bad_optional_decision_ids,
+            [
+                {
+                    "candidate_label_id": "case-001-0001",
+                    "label_id": "EXAMPLE-label",
+                    "reviewer_id": "reviewer alpha",
+                    "human_labeled": True,
+                    "expected": "present",
+                }
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(bad_optional_decision_ids),
+            "--feedback",
+            str(feedback),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "1",
+            "--min-maintainers",
+            "2",
+        )
+        assert proc.returncode == 1
+        assert "label_id must not be example/placeholder" in proc.stderr
+        assert "reviewer_id must be a safe identifier" in proc.stderr
+
         bad_feedback = tmp / "bad_feedback.jsonl"
         write_jsonl(
             bad_feedback,
@@ -223,6 +278,34 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "maintainer_id must not be example/placeholder" in proc.stderr
+
+        bad_feedback_id = tmp / "bad_feedback_id.jsonl"
+        write_jsonl(
+            bad_feedback_id,
+            [
+                {
+                    "case_id": "case-001",
+                    "maintainer_id": "maintainer-gamma",
+                    "feedback_id": "../feedback",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed the real local case.",
+                }
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(bad_feedback_id),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "1",
+        )
+        assert proc.returncode == 1
+        assert "feedback_id must be a safe identifier" in proc.stderr
 
         unknown_feedback = tmp / "unknown_feedback.jsonl"
         write_jsonl(

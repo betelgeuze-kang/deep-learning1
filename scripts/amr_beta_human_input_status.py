@@ -20,6 +20,9 @@ VALID_EXPECTED = {"present", "absent"}
 VALID_PRIORITY = {"", "P0", "P1", "P2", "P3"}
 SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 PLACEHOLDER_RE = re.compile(r"(^$|example|placeholder|replace|todo)", re.IGNORECASE)
+SAFE_LABEL_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$")
+SAFE_CASE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+SAFE_MAINTAINER_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@+-]{0,191}$")
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -33,6 +36,23 @@ def truthy(value: object) -> bool:
 
 def good_operator_value(value: object) -> bool:
     return not PLACEHOLDER_RE.search(str(value or "").strip())
+
+
+def validate_optional_safe_id(
+    *,
+    errors: list[str],
+    row_prefix: str,
+    field: str,
+    value: object,
+    pattern: re.Pattern[str],
+) -> None:
+    text = str(value or "").strip()
+    if not text:
+        return
+    if not good_operator_value(text):
+        errors.append(f"{row_prefix}: {field} must not be example/placeholder")
+    elif not pattern.fullmatch(text):
+        errors.append(f"{row_prefix}: {field} must be a safe identifier")
 
 
 def read_json_or_jsonl(path: Path, input_name: str) -> list[dict]:
@@ -132,11 +152,27 @@ def validate_decisions(
             row_errors.append(f"decision row {index}: missing candidate_label_id")
         elif not good_operator_value(candidate_id):
             row_errors.append(f"decision row {index}: candidate_label_id must not be example/placeholder")
+        elif not SAFE_LABEL_ID_RE.fullmatch(candidate_id):
+            row_errors.append(f"decision row {index}: candidate_label_id must be a safe identifier")
         elif candidate_id in seen:
             row_errors.append(f"decision row {index}: duplicate candidate_label_id")
         elif known_candidate_ids and candidate_id not in known_candidate_ids:
             row_errors.append(f"decision row {index}: unknown candidate_label_id")
         seen.add(candidate_id)
+        validate_optional_safe_id(
+            errors=row_errors,
+            row_prefix=f"decision row {index}",
+            field="label_id",
+            value=row.get("label_id"),
+            pattern=SAFE_LABEL_ID_RE,
+        )
+        validate_optional_safe_id(
+            errors=row_errors,
+            row_prefix=f"decision row {index}",
+            field="reviewer_id",
+            value=row.get("reviewer_id"),
+            pattern=SAFE_LABEL_ID_RE,
+        )
         if truthy(row.get("template_only", False)):
             row_errors.append(f"decision row {index}: template_only must be false/absent")
         if not truthy(row.get("human_labeled", row.get("human_reviewed", False))):
@@ -189,6 +225,8 @@ def load_label_intake_context(label_intake_dirs: list[str]) -> tuple[set[str], s
                 raise ValueError(f"label intake row {label_rows}: missing case_id")
             if not good_operator_value(case_id):
                 raise ValueError(f"label intake row {label_rows}: case_id must not be example/placeholder")
+            if not SAFE_CASE_ID_RE.fullmatch(case_id):
+                raise ValueError(f"label intake row {label_rows}: case_id must be a safe identifier")
             all_case_ids.add(case_id)
             case_human_labeled[case_id] = case_human_labeled.get(case_id, False) or truthy(
                 row.get("human_labeled", False)
@@ -231,6 +269,8 @@ def validate_feedback(
             row_errors.append(f"feedback row {index}: missing case_id")
         elif not good_operator_value(case_id):
             row_errors.append(f"feedback row {index}: case_id must not be example/placeholder")
+        elif not SAFE_CASE_ID_RE.fullmatch(case_id):
+            row_errors.append(f"feedback row {index}: case_id must be a safe identifier")
         elif known_case_ids and case_id not in known_case_ids:
             row_errors.append(f"feedback row {index}: unknown case_id")
         elif require_countable_cases and case_id not in countable_case_ids:
@@ -242,6 +282,15 @@ def validate_feedback(
             row_errors.append(f"feedback row {index}: missing maintainer_id")
         elif not good_operator_value(maintainer_id):
             row_errors.append(f"feedback row {index}: maintainer_id must not be example/placeholder")
+        elif not SAFE_MAINTAINER_ID_RE.fullmatch(maintainer_id):
+            row_errors.append(f"feedback row {index}: maintainer_id must be a safe identifier")
+        validate_optional_safe_id(
+            errors=row_errors,
+            row_prefix=f"feedback row {index}",
+            field="feedback_id",
+            value=row.get("feedback_id"),
+            pattern=SAFE_CASE_ID_RE,
+        )
         if not truthy(row.get("human_feedback", row.get("maintainer_feedback", False))):
             row_errors.append(f"feedback row {index}: human_feedback must be true")
         if truthy(row.get("synthetic", False)):

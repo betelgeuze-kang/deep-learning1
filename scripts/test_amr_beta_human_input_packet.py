@@ -99,6 +99,8 @@ PACKET_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_hardening_analyze.py",
     "--per-case-out-root",
     "--label-intake-dir",
+    "reviewer_id",
+    "safe, non-placeholder",
     "reviewer progress summary",
     "does not make them\nhuman-supplied inputs",
     "counts_for_beta=0",

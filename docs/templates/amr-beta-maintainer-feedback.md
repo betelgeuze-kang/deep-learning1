@@ -10,7 +10,8 @@ feedback text is hashed, not emitted, by the benchmark.
 ## Per-row fields
 
 - `case_id` (required) — must reference a known benchmark case (a repo from 9.1).
-- `maintainer_id` (required) — distinct id per maintainer; needed for the row to count.
+- `maintainer_id` (required) — safe, non-placeholder distinct id per
+  maintainer; needed for the row to count.
 - `feedback_text` (required) — the maintainer's raw feedback text. It is hashed
   (`feedback_text_sha256`), not emitted. A row must include `feedback_text` or a
   precomputed `feedback_text_sha256`.
