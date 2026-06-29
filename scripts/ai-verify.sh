@@ -418,6 +418,9 @@ fi
 if [ -f scripts/test_amr_beta_repo_intake_validate.py ]; then
   python3 scripts/test_amr_beta_repo_intake_validate.py >/dev/null
 fi
+if [ -f scripts/test_amr_beta_human_input_status.py ]; then
+  python3 scripts/test_amr_beta_human_input_status.py >/dev/null
+fi
 
 echo "==> audit-my-repo product smoke"
 if [ -x experiments/test_audit_my_repo_product_entrypoint.sh ]; then
