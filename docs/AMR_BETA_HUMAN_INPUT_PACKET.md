@@ -188,6 +188,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    `human_labeled`; the repos must exist locally), then run one benchmark:
    `audit_my_repo_benchmark.py --labels results/combined_benchmark_labels.jsonl --feedback <feedback.jsonl> --namespace real_benchmark --confirm-real-benchmark-namespace --mode full --out results/audit_benchmark`.
 8. Inspect `benchmark_readiness.json`; re-verify with `--verify-existing`.
+   If the beta gate remains blocked, generate a remediation backlog:
+   `python3 scripts/amr_beta_readiness_backlog.py --benchmark-out results/audit_benchmark --out-json results/amr_beta_readiness_backlog.json --out-md results/amr_beta_readiness_backlog.md --verify-existing`.
 
 Step 7 is a long, runtime-approved action and is **not** performed by this PR.
 
