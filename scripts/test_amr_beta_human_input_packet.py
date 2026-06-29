@@ -77,6 +77,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "Concatenate only verified `benchmark_labels.jsonl` outputs",
     "human owner supplied and verified against local disk",
     "python3 scripts/amr_beta_repo_intake_validate.py",
+    "results/amr_beta_repo_intake_status.json",
     "python3 scripts/amr_beta_repo_audit_plan.py",
     "runs_audit=0",
     "creates_benchmark_evidence=0",

@@ -126,6 +126,35 @@ def git_text(repo: Path, args: list[str]) -> tuple[int, str, str]:
     return proc.returncode, proc.stdout, proc.stderr
 
 
+def row_status(index: int, normalized: dict[str, str], row_errors: list[str]) -> dict[str, object]:
+    actual_head = normalized.get("actual_repo_git_head", "")
+    clean_actual: int | None
+    if any("repo_dirty" in error for error in row_errors):
+        clean_actual = 0
+    elif actual_head:
+        clean_actual = 1
+    else:
+        clean_actual = None
+    return {
+        "row_index": index,
+        "case_id": normalized.get("case_id", ""),
+        "repo_path": normalized.get("repo_path", ""),
+        "repo_path_resolved": normalized.get("repo_path_resolved", ""),
+        "expected_repo_git_head": normalized.get("expected_repo_git_head", "").lower(),
+        "actual_repo_git_head": actual_head.lower(),
+        "clean_worktree_declared": int(truthy(normalized.get("clean_worktree", ""))),
+        "clean_worktree_actual": clean_actual,
+        "owner_or_maintainer_contact_present": int(bool(normalized.get("owner_or_maintainer_contact", ""))),
+        "audit_mode": normalized.get("audit_mode", "").lower(),
+        "namespace": normalized.get("namespace", ""),
+        "real_benchmark_namespace_confirmed": int(
+            truthy(normalized.get("real_benchmark_namespace_confirmed", ""))
+        ),
+        "valid": int(not row_errors),
+        "errors": row_errors,
+    }
+
+
 def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, str]]:
     errors: list[str] = []
     normalized = {column: str(row.get(column, "")).strip() for column in REQUIRED_COLUMNS}
@@ -194,6 +223,7 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
     seen_cases: set[str] = set()
     seen_repos: set[str] = set()
     valid_rows = 0
+    row_statuses: list[dict[str, object]] = []
     for index, row in enumerate(rows, start=1):
         row_errors, normalized = validate_row(row, index)
         case_id = normalized.get("case_id", "")
@@ -210,6 +240,7 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
             errors.extend(row_errors)
         else:
             valid_rows += 1
+        row_statuses.append(row_status(index, normalized, row_errors))
     if valid_rows < min_repos:
         errors.append(f"valid_repo_rows {valid_rows} below required minimum {min_repos}")
     summary = {
@@ -218,6 +249,7 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
         "valid_repo_rows": valid_rows,
         "min_real_repos_required": min_repos,
         "ready_for_real_benchmark_audit": int(not errors),
+        "row_statuses": row_statuses,
         "design_partner_beta_candidate_ready": 0,
         "release_ready": 0,
         "public_comparison_claim_ready": 0,
@@ -226,10 +258,60 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
     return errors, summary
 
 
+def write_json(path: Path, payload: dict, overwrite: bool) -> None:
+    if is_forbidden_env_path(path):
+        raise ValueError("refusing .env-like JSON output path")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {path}")
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
+    if is_forbidden_env_path(path):
+        raise ValueError("refusing .env-like Markdown output path")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not overwrite:
+        raise ValueError(f"output already exists; use --overwrite: {path}")
+    lines = [
+        "# AMR Beta Repo Intake Status",
+        "",
+        f"- ready_for_real_benchmark_audit: {payload['ready_for_real_benchmark_audit']}",
+        f"- valid_repo_rows: {payload['valid_repo_rows']}",
+        f"- min_real_repos_required: {payload['min_real_repos_required']}",
+        f"- design_partner_beta_candidate_ready: {payload['design_partner_beta_candidate_ready']}",
+        f"- release_ready: {payload['release_ready']}",
+        f"- public_comparison_claim_ready: {payload['public_comparison_claim_ready']}",
+        f"- real_model_execution_ready: {payload['real_model_execution_ready']}",
+        "",
+        "## Rows",
+        "",
+        "| row | case_id | valid | clean_actual | expected_head | actual_head | errors |",
+        "|---|---|---:|---:|---|---|---|",
+    ]
+    for status in payload["row_statuses"]:
+        errors = "; ".join(str(error) for error in status["errors"])
+        lines.append(
+            "| {row_index} | {case_id} | {valid} | {clean_worktree_actual} | {expected} | {actual} | {errors} |".format(
+                row_index=status["row_index"],
+                case_id=status["case_id"],
+                valid=status["valid"],
+                clean_worktree_actual=status["clean_worktree_actual"],
+                expected=status["expected_repo_git_head"],
+                actual=status["actual_repo_git_head"],
+                errors=errors,
+            )
+        )
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("intake", help="Filled Markdown or CSV repository-intake sheet.")
     parser.add_argument("--min-repos", type=int, default=MIN_REAL_REPOS_FOR_BETA)
+    parser.add_argument("--out-json", default="", help="Optional read-only status JSON output.")
+    parser.add_argument("--out-md", default="", help="Optional read-only status Markdown output.")
+    parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--json", action="store_true", help="Print machine-readable summary JSON.")
     return parser
 
@@ -240,11 +322,16 @@ def main(argv: list[str]) -> int:
     try:
         rows = read_rows(path)
         errors, summary = validate_rows(rows, min_repos=args.min_repos)
+        payload = {**summary, "errors": errors}
+        if args.out_json:
+            write_json(Path(args.out_json).expanduser().resolve(), payload, args.overwrite)
+        if args.out_md:
+            write_markdown(Path(args.out_md).expanduser().resolve(), payload, args.overwrite)
     except Exception as exc:
         print(f"repo_intake_validate: error: {exc}", file=sys.stderr)
         return 1
     if args.json:
-        print(json.dumps({**summary, "errors": errors}, indent=2, sort_keys=True))
+        print(json.dumps(payload, indent=2, sort_keys=True))
     if errors:
         for error in errors:
             print(error, file=sys.stderr)
