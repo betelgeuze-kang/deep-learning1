@@ -39,6 +39,12 @@ Use this checklist when handing the packet to a human operator. Do not check any
 item using fabricated repositories, generated labels, placeholder examples, or
 agent-written maintainer feedback.
 
+At any point, summarize the current local operator stage from existing AMR beta
+artifacts without creating evidence. Pass only artifact arguments whose files
+already exist; this full example is for the point after all listed artifacts have
+been created:
+`python3 scripts/amr_beta_operator_status.py --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
+
 ### 9.1 Repository intake checklist
 
 - [ ] Collect at least 10 real local repository paths from the human owner.
@@ -268,6 +274,10 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 10. Package either the beta candidate packet or blocked packet from verified
    readiness/backlog artifacts:
    `python3 scripts/amr_beta_design_partner_packet.py --readiness results/audit_benchmark/benchmark_readiness.json --backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_design_partner_packet.json --out-md results/amr_beta_design_partner_packet.md`.
+11. Refresh the read-only operator status summary after each artifact is
+   created, passing only the artifact arguments that already exist at that
+   point:
+   `python3 scripts/amr_beta_operator_status.py --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
 
 Step 8 is a long, runtime-approved action and is **not** performed by this PR.
 
