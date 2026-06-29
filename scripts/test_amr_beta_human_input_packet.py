@@ -31,6 +31,7 @@ MAINTAINER_FEEDBACK_PACKET = REPO_ROOT / "scripts" / "amr_beta_maintainer_feedba
 LABEL_PACKET = REPO_ROOT / "scripts" / "amr_beta_label_packet.py"
 BENCHMARK_INPUT_PREPARE = REPO_ROOT / "scripts" / "amr_beta_benchmark_input_prepare.py"
 RUNTIME_PREFLIGHT = REPO_ROOT / "scripts" / "amr_beta_runtime_preflight.py"
+RUNTIME_APPROVAL_REQUEST = REPO_ROOT / "scripts" / "amr_beta_runtime_approval_request.py"
 READINESS_BACKLOG = REPO_ROOT / "scripts" / "amr_beta_readiness_backlog.py"
 DESIGN_PARTNER_PACKET = REPO_ROOT / "scripts" / "amr_beta_design_partner_packet.py"
 HARDENING_ANALYZE = REPO_ROOT / "scripts" / "amr_beta_hardening_analyze.py"
@@ -46,6 +47,7 @@ REQUIRED_FILES = [
     LABEL_PACKET,
     BENCHMARK_INPUT_PREPARE,
     RUNTIME_PREFLIGHT,
+    RUNTIME_APPROVAL_REQUEST,
     READINESS_BACKLOG,
     DESIGN_PARTNER_PACKET,
     HARDENING_ANALYZE,
@@ -72,6 +74,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_label_packet.py",
     "python3 scripts/amr_beta_benchmark_input_prepare.py",
     "python3 scripts/amr_beta_runtime_preflight.py",
+    "python3 scripts/amr_beta_runtime_approval_request.py",
     "python3 scripts/amr_beta_readiness_backlog.py",
     "python3 scripts/amr_beta_design_partner_packet.py",
     "python3 scripts/amr_beta_hardening_analyze.py",

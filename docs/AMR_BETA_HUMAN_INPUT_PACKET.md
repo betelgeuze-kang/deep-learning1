@@ -89,6 +89,9 @@ agent-written maintainer feedback.
 - [ ] After label intake outputs exist, run the final read-only runtime preflight
   before requesting approval for the long benchmark:
   `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir <repo-label-intake-dir> --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
+- [ ] Generate the runtime approval request packet from the green preflight;
+  this does not approve or run the benchmark:
+  `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
 
 ### 9.3 Maintainer feedback checklist
 
@@ -195,6 +198,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    `python3 scripts/amr_beta_benchmark_input_prepare.py --label-intake-dir results/<repo>_label_intake --out-labels results/combined_benchmark_labels.jsonl --summary results/combined_benchmark_input_summary.json`.
    Before requesting runtime approval, run the final read-only preflight:
    `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
+   Then generate the approval request packet:
+   `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
    `audit_my_repo_benchmark.py` accepts
    **exactly one** of `--labels` or `--label-intake`; `--label-intake` is a single
    directory (one repo). For >= 10 repos, concatenate each repo's
