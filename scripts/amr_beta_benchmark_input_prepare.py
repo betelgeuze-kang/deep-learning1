@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -53,6 +54,23 @@ def sha256_file(path: Path) -> str:
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def verify_label_intake_existing(path: Path) -> list[str]:
+    if is_forbidden_env_path(path):
+        return ["refusing .env-like label intake path"]
+    tool = Path(__file__).resolve().parent / "audit_my_repo_label_intake.py"
+    proc = subprocess.run(
+        [sys.executable, str(tool), "--verify-existing", str(path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode == 0:
+        return []
+    detail = (proc.stderr or proc.stdout).strip()
+    first_line = detail.splitlines()[0] if detail else "unknown failure"
+    return [f"{path}: label_intake --verify-existing failed: {first_line}"]
 
 
 def read_jsonl(path: Path, input_name: str) -> list[dict]:
@@ -181,6 +199,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-cases", type=int, default=MIN_REAL_REPOS_FOR_BETA)
     parser.add_argument("--min-labels", type=int, default=MIN_HUMAN_LABELS_FOR_BETA)
     parser.add_argument("--allow-synthetic", action="store_true", help="Testing only: allow synthetic labels.")
+    parser.add_argument(
+        "--skip-verify-existing",
+        action="store_true",
+        help="Testing only: skip audit_my_repo_label_intake.py --verify-existing checks.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--json", action="store_true")
     return parser
@@ -192,9 +215,19 @@ def main(argv: list[str]) -> int:
     rows: list[dict] = []
     manifests: list[dict] = []
     try:
+        verify_passed_dirs = 0
+        verify_failed_dirs = 0
         for raw_dir in args.label_intake_dir:
+            intake_dir = Path(raw_dir).expanduser().resolve()
+            if not args.skip_verify_existing:
+                verify_errors = verify_label_intake_existing(intake_dir)
+                if verify_errors:
+                    verify_failed_dirs += 1
+                    errors.extend(verify_errors)
+                else:
+                    verify_passed_dirs += 1
             loaded_rows, intake_errors, manifest = load_label_intake_dir(
-                Path(raw_dir).expanduser().resolve(),
+                intake_dir,
                 allow_synthetic=args.allow_synthetic,
             )
             rows.extend(loaded_rows)
@@ -220,6 +253,9 @@ def main(argv: list[str]) -> int:
         summary = {
             "schema": TOOL_SCHEMA,
             "label_intake_dir_count": len(args.label_intake_dir),
+            "label_intake_verify_existing_required": int(not args.skip_verify_existing),
+            "label_intake_verify_existing_passed_dirs": verify_passed_dirs,
+            "label_intake_verify_existing_failed_dirs": verify_failed_dirs,
             "case_count": len(case_ids),
             "repo_count": len(repo_paths),
             "human_label_rows": len(rows),
