@@ -91,6 +91,7 @@ def main() -> int:
         assert status["valid_repo_rows"] == 10
         assert status["runs_audit"] == 0
         assert status["creates_benchmark_evidence"] == 0
+        assert status["input_path_guard_passed"] == 1
         assert status["output_path_guard_passed"] == 1
         assert status["repo_snapshot_lock_sha256"].startswith("sha256:")
         assert len(status["row_statuses"]) == 10
@@ -101,6 +102,7 @@ def main() -> int:
         assert "AMR Beta Repo Intake Status" in status_md_text
         assert "input_intake_sha256: sha256:" in status_md_text
         assert "creates_benchmark_evidence: 0" in status_md_text
+        assert "input_path_guard_passed: 1" in status_md_text
         assert "output_path_guard_passed: 1" in status_md_text
 
         unsafe_out_json = repos[0][0] / "repo_intake_status.json"
@@ -121,6 +123,43 @@ def main() -> int:
         assert "out_md must not be inside target repo" in proc.stderr
         assert not unsafe_out_json.exists()
         assert not unsafe_out_md.exists()
+
+        ignored_intake_name = "ignored_repo_intake.md"
+        (repos[0][0] / ".gitignore").write_text(f"{ignored_intake_name}\n", encoding="utf-8")
+        assert run(["git", "add", ".gitignore"], cwd=repos[0][0]).returncode == 0
+        commit = run(
+            [
+                "git",
+                "-c",
+                "user.name=AMR Test",
+                "-c",
+                "user.email=amr-test@example.invalid",
+                "commit",
+                "-q",
+                "-m",
+                "ignore unsafe intake sheet",
+            ],
+            cwd=repos[0][0],
+        )
+        assert commit.returncode == 0, commit.stderr
+        head = run(["git", "rev-parse", "HEAD"], cwd=repos[0][0])
+        assert head.returncode == 0
+        repos[0] = (repos[0][0], head.stdout.strip())
+
+        unsafe_input = repos[0][0] / ignored_intake_name
+        write_intake(unsafe_input, repos)
+        status = run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=repos[0][0])
+        assert status.returncode == 0
+        assert status.stdout.strip() == ""
+        unsafe_input_status = tmp / "unsafe_input_status.json"
+        proc = run_tool(unsafe_input, "--out-json", str(unsafe_input_status), "--json")
+        assert proc.returncode == 1
+        unsafe_input_payload = json.loads(proc.stdout)
+        assert unsafe_input_payload["ready_for_real_benchmark_audit"] == 0
+        assert unsafe_input_payload["input_path_guard_passed"] == 0
+        assert unsafe_input_payload["output_path_guard_passed"] == 1
+        assert "input_intake must not be inside target repo" in proc.stderr
+        assert not unsafe_input_status.exists()
 
         dirty = tmp / "dirty.md"
         write_intake(dirty, repos)

@@ -107,6 +107,18 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
     return errors
 
 
+def validate_input_path(intake_path: Path, target_repo_paths: list[str]) -> list[str]:
+    errors: list[str] = []
+    resolved = intake_path.resolve()
+    if is_forbidden_env_path(resolved):
+        errors.append("input_intake must not be .env-like")
+    for raw_repo in target_repo_paths:
+        repo_path = Path(str(raw_repo)).expanduser().resolve()
+        if resolved == repo_path or is_relative_to(resolved, repo_path):
+            errors.append(f"input_intake must not be inside target repo: {resolved} (repo: {repo_path})")
+    return errors
+
+
 def good_operator_value(value: str) -> bool:
     return not PLACEHOLDER_RE.search(str(value).strip())
 
@@ -394,6 +406,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- runs_label_template_generation: {payload['runs_label_template_generation']}",
         f"- writes_reviewer_packets: {payload['writes_reviewer_packets']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
+        f"- input_path_guard_passed: {payload['input_path_guard_passed']}",
         f"- output_path_guard_passed: {payload['output_path_guard_passed']}",
         f"- design_partner_beta_candidate_ready: {payload['design_partner_beta_candidate_ready']}",
         f"- release_ready: {payload['release_ready']}",
@@ -450,20 +463,23 @@ def main(argv: list[str]) -> int:
             output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
         if args.out_md:
             output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        input_path_errors = validate_input_path(path, target_repo_paths)
         output_path_errors = validate_output_paths(output_paths, target_repo_paths)
-        errors = [*row_errors, *output_path_errors]
-        if output_path_errors:
+        path_errors = [*input_path_errors, *output_path_errors]
+        errors = [*row_errors, *path_errors]
+        if path_errors:
             summary["ready_for_real_benchmark_audit"] = 0
         payload = {
             **summary,
             "input_intake": str(path),
             "input_intake_sha256": sha256_file(path),
+            "input_path_guard_passed": int(not input_path_errors),
             "output_path_guard_passed": int(not output_path_errors),
             "errors": errors,
         }
-        if args.out_json and not output_path_errors:
+        if args.out_json and not path_errors:
             write_json(output_paths["out_json"], payload, args.overwrite)
-        if args.out_md and not output_path_errors:
+        if args.out_md and not path_errors:
             write_markdown(output_paths["out_md"], payload, args.overwrite)
     except Exception as exc:
         print(f"repo_intake_validate: error: {exc}", file=sys.stderr)
