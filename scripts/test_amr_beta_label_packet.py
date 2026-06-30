@@ -139,6 +139,7 @@ def main() -> int:
         assert summary["human_labels_remaining_to_minimum"] == 298
         assert summary["cases_ready_for_label_intake"] == 1
         assert summary["cases_blocked_for_label_intake"] == 1
+        assert summary["ready_for_label_intake"] == 0
         assert summary["case_progress_rows"] == [
             {
                 "all_candidates_reviewed": 0,
@@ -235,6 +236,7 @@ def main() -> int:
         assert synthetic_summary["human_labels_remaining_to_minimum"] == 300
         assert synthetic_summary["cases_ready_for_label_intake"] == 0
         assert synthetic_summary["cases_blocked_for_label_intake"] == 1
+        assert synthetic_summary["ready_for_label_intake"] == 0
         assert synthetic_summary["case_progress_rows"][0]["synthetic_candidate_rows"] == 1
         assert synthetic_summary["case_progress_rows"][0]["all_candidates_reviewed"] == 1
         assert synthetic_summary["case_progress_rows"][0]["ready_for_label_intake"] == 0

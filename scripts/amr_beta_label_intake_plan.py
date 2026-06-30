@@ -250,6 +250,9 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "",
         f"- ready_for_label_intake_plan: {payload['ready_for_label_intake_plan']}",
         f"- valid_human_label_rows: {payload['valid_human_label_rows']}",
+        f"- non_synthetic_valid_human_label_rows: {payload['non_synthetic_valid_human_label_rows']}",
+        f"- synthetic_candidate_rows: {payload['synthetic_candidate_rows']}",
+        f"- human_labels_remaining_to_minimum: {payload['human_labels_remaining_to_minimum']}",
         f"- min_human_label_rows_required: {payload['min_human_label_rows_required']}",
         f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
         f"- label_template_bundle_sha256: {payload['label_template_bundle_sha256']}",
@@ -352,12 +355,24 @@ def main(argv: list[str]) -> int:
             decisions,
             known_candidate_ids,
         )
+        non_synthetic_candidate_ids = {
+            row["candidate_label_id"]
+            for row in template_rows
+            if str(row.get("synthetic", "0")) != "1"
+        }
+        synthetic_candidate_rows = sum(
+            1 for row in template_rows if str(row.get("synthetic", "0")) == "1"
+        )
+        non_synthetic_valid_human_label_rows = len(valid_decision_ids & non_synthetic_candidate_ids)
         errors.extend(decision_errors)
         missing_ids = sorted(known_candidate_ids - valid_decision_ids)
         if missing_ids:
             errors.append(f"missing candidate_label_id decisions: {', '.join(missing_ids[:20])}")
-        if valid_human_label_rows < args.min_labels:
-            errors.append(f"valid_human_label_rows {valid_human_label_rows} below required minimum {args.min_labels}")
+        if non_synthetic_valid_human_label_rows < args.min_labels:
+            errors.append(
+                "non_synthetic_valid_human_label_rows "
+                f"{non_synthetic_valid_human_label_rows} below required minimum {args.min_labels}"
+            )
         errors.extend(validate_compile_boundaries(template_rows, decision_map(decisions)))
 
         if errors:
@@ -404,8 +419,16 @@ def main(argv: list[str]) -> int:
             ],
             "case_count": len(per_case),
             "candidate_label_rows": len(template_rows),
+            "synthetic_candidate_rows": synthetic_candidate_rows,
+            "non_synthetic_candidate_rows": len(non_synthetic_candidate_ids),
             "decision_rows": len(decisions),
             "valid_human_label_rows": valid_human_label_rows,
+            "non_synthetic_valid_human_label_rows": non_synthetic_valid_human_label_rows,
+            "human_label_requirement_met": int(non_synthetic_valid_human_label_rows >= args.min_labels),
+            "human_labels_remaining_to_minimum": max(
+                0,
+                args.min_labels - non_synthetic_valid_human_label_rows,
+            ),
             "min_real_repos_required": int(repo_summary.get("min_real_repos_required", args.min_repos)),
             "min_human_label_rows_required": args.min_labels,
             "ready_for_label_intake_plan": 1,

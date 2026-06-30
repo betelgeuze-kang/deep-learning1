@@ -208,7 +208,12 @@ def main() -> int:
         assert payload["label_template_verify_existing_passed_dirs"] == 0
         assert payload["case_count"] == 10
         assert payload["candidate_label_rows"] == 10
+        assert payload["synthetic_candidate_rows"] == 0
+        assert payload["non_synthetic_candidate_rows"] == 10
         assert payload["valid_human_label_rows"] == 10
+        assert payload["non_synthetic_valid_human_label_rows"] == 10
+        assert payload["human_label_requirement_met"] == 1
+        assert payload["human_labels_remaining_to_minimum"] == 0
         assert payload["ready_for_label_intake_plan"] == 1
         assert payload["decision_input_guard_passed"] == 1
         assert payload["output_path_guard_passed"] == 1
@@ -234,6 +239,9 @@ def main() -> int:
         assert verify_parts[verify_parts.index("--verify-existing") + 1] == str(out_root / "case-01_label_intake")
         markdown = out_md.read_text(encoding="utf-8")
         assert "ready_for_label_intake_plan: 1" in markdown
+        assert "non_synthetic_valid_human_label_rows: 10" in markdown
+        assert "synthetic_candidate_rows: 0" in markdown
+        assert "human_labels_remaining_to_minimum: 0" in markdown
         assert "decision_input_guard_passed: 1" in markdown
         assert "output_path_guard_passed: 1" in markdown
         assert "compiles_labels: 0" in markdown
@@ -348,6 +356,7 @@ def main() -> int:
             synthetic_args.extend(["--template-dir", str(template_dir)])
         proc = run_tool(*synthetic_args)
         assert proc.returncode == 1
+        assert "non_synthetic_valid_human_label_rows 9 below required minimum 10" in proc.stderr
         assert "must be non-synthetic" in proc.stderr
 
         unsafe_decisions = repos[0][1] / "human_decisions_inside_repo.jsonl"
