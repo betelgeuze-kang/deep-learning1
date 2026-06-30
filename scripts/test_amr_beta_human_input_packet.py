@@ -78,7 +78,9 @@ PACKET_REQUIRED_SNIPPETS = [
     "human owner supplied and verified against local disk",
     "python3 scripts/amr_beta_repo_intake_validate.py",
     "results/amr_beta_repo_intake_status.json",
+    "input_intake_sha256",
     "repo_snapshot_lock_sha256",
+    "runs_audit=0",
     "python3 scripts/amr_beta_repo_audit_plan.py",
     "runs_audit=0",
     "creates_benchmark_evidence=0",
@@ -125,6 +127,8 @@ REPO_INTAKE_REQUIRED_SNIPPETS = [
     "python3 scripts/amr_beta_repo_intake_validate.py",
     "example does not count toward the threshold",
     "leave any `EXAMPLE-*` value",
+    "`*.invalid`",
+    "creates_benchmark_evidence=0",
 ]
 
 FEEDBACK_TEMPLATE_REQUIRED_SNIPPETS = [

@@ -57,7 +57,7 @@ def write_intake(path: Path, repos: list[tuple[Path, str]], *, case_prefix: str 
     for index, (repo, head) in enumerate(repos, start=1):
         mode = "full" if index == 10 else "quick"
         lines.append(
-            f"| {case_prefix}-{index:02d} | {repo} | {head} | true | maintainer-{index:02d}@review.invalid | {mode} | real_benchmark | true | human supplied |"
+            f"| {case_prefix}-{index:02d} | {repo} | {head} | true | maintainer-{index:02d}-contact | {mode} | real_benchmark | true | human supplied |"
         )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

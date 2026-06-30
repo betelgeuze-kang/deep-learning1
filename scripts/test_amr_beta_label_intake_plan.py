@@ -63,7 +63,7 @@ def write_intake(path: Path, repos: list[tuple[str, Path, str]]) -> None:
     ]
     for case_id, repo, head in repos:
         lines.append(
-            f"| {case_id} | {repo} | {head} | true | {case_id}@review.invalid | quick | real_benchmark | true | human supplied |"
+            f"| {case_id} | {repo} | {head} | true | {case_id}-maintainer-contact | quick | real_benchmark | true | human supplied |"
         )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

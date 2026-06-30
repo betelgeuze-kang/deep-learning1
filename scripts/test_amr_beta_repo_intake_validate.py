@@ -49,7 +49,7 @@ def write_intake(path: Path, repos: list[tuple[Path, str]], *, case_prefix: str 
     ]
     for index, (repo, head) in enumerate(repos, start=1):
         lines.append(
-            f"| {case_prefix}-{index:02d} | {repo} | {head} | true | maintainer-{index:02d}@review.invalid | quick | real_benchmark | true | human supplied |"
+            f"| {case_prefix}-{index:02d} | {repo} | {head} | true | maintainer-{index:02d}-contact | quick | real_benchmark | true | human supplied |"
         )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -74,8 +74,11 @@ def main() -> int:
         assert '"ready_for_real_benchmark_audit": 1' in proc.stdout
         assert '"design_partner_beta_candidate_ready": 0' in proc.stdout
         assert '"owner_or_maintainer_contact_present": 1' in proc.stdout
+        assert '"input_intake_sha256": "sha256:' in proc.stdout
         assert '"repo_snapshot_lock_sha256": "sha256:' in proc.stdout
-        assert "maintainer-01@review.invalid" not in proc.stdout
+        assert '"runs_audit": 0' in proc.stdout
+        assert '"creates_benchmark_evidence": 0' in proc.stdout
+        assert "maintainer-01-contact" not in proc.stdout
 
         status_json = tmp / "repo_intake_status.json"
         status_md = tmp / "repo_intake_status.md"
@@ -83,13 +86,20 @@ def main() -> int:
         assert proc.returncode == 0, proc.stderr
         status = json.loads(status_json.read_text(encoding="utf-8"))
         assert status["ready_for_real_benchmark_audit"] == 1
+        assert status["input_intake"] == str(intake.resolve())
+        assert status["input_intake_sha256"].startswith("sha256:")
         assert status["valid_repo_rows"] == 10
+        assert status["runs_audit"] == 0
+        assert status["creates_benchmark_evidence"] == 0
         assert status["repo_snapshot_lock_sha256"].startswith("sha256:")
         assert len(status["row_statuses"]) == 10
         assert status["row_statuses"][0]["clean_worktree_actual"] == 1
         assert status["row_statuses"][0]["owner_or_maintainer_contact_present"] == 1
-        assert "maintainer-01@review.invalid" not in status_json.read_text(encoding="utf-8")
-        assert "AMR Beta Repo Intake Status" in status_md.read_text(encoding="utf-8")
+        assert "maintainer-01-contact" not in status_json.read_text(encoding="utf-8")
+        status_md_text = status_md.read_text(encoding="utf-8")
+        assert "AMR Beta Repo Intake Status" in status_md_text
+        assert "input_intake_sha256: sha256:" in status_md_text
+        assert "creates_benchmark_evidence: 0" in status_md_text
 
         dirty = tmp / "dirty.md"
         write_intake(dirty, repos)
@@ -118,6 +128,18 @@ def main() -> int:
         proc = run_tool(mismatch)
         assert proc.returncode == 1
         assert "expected_repo_git_head mismatch" in proc.stderr
+
+        invalid_contact = tmp / "invalid_contact.md"
+        write_intake(invalid_contact, repos)
+        invalid_contact.write_text(
+            invalid_contact.read_text(encoding="utf-8").replace(
+                "maintainer-01-contact", "maintainer-01@review.invalid"
+            ),
+            encoding="utf-8",
+        )
+        proc = run_tool(invalid_contact)
+        assert proc.returncode == 1
+        assert "owner_or_maintainer_contact must be human-supplied" in proc.stderr
 
         small = tmp / "small.md"
         write_intake(small, repos[:9])

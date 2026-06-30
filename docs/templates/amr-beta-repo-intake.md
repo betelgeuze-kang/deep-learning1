@@ -11,6 +11,8 @@ For each repository, record one row. Keep one case per repository.
 - [ ] Clean git worktree (no uncommitted changes): `git status --porcelain` is empty.
 - [ ] HEAD pinned and recorded as `expected_repo_git_head`.
 - [ ] Owner or maintainer contact recorded for follow-up and feedback intake.
+  Reserved placeholder contacts such as `*.invalid`, `EXAMPLE-*`,
+  `placeholder`, `synthetic`, or `fixture` values do not count.
 - [ ] `case_id` is a safe identifier (`[A-Za-z0-9][A-Za-z0-9_.-]{0,127}`).
 - [ ] Audit will be run with `namespace=real_benchmark` and
   `real_benchmark_namespace_confirmed=true`.
@@ -38,6 +40,8 @@ The benchmark verifies, per case, that the current HEAD matches
 `expected_repo_git_head` and the worktree is clean
 (`repo_snapshot_requirement_met`). Dirty repos, non-git directories, HEAD
 mismatches, or missing expected HEAD keep the snapshot requirement at 0.
+The validator status binds the filled intake file with `input_intake_sha256`,
+keeps `runs_audit=0`, and keeps `creates_benchmark_evidence=0`.
 
 ## Namespace note
 
