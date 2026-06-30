@@ -279,8 +279,13 @@ def label_intake_plan_payload() -> dict:
         "ready_for_label_intake_plan": 1,
         "case_count": 10,
         "candidate_label_rows": 300,
+        "synthetic_candidate_rows": 0,
+        "non_synthetic_candidate_rows": 300,
         "decision_rows": 300,
         "valid_human_label_rows": 300,
+        "non_synthetic_valid_human_label_rows": 300,
+        "human_label_requirement_met": 1,
+        "human_labels_remaining_to_minimum": 0,
         "min_real_repos_required": 10,
         "min_human_label_rows_required": 300,
         "decision_input_guard_passed": 1,
@@ -1193,7 +1198,32 @@ def main() -> int:
             str(tmp / "incomplete_label_decisions_status.json"),
         )
         assert proc.returncode == 1
-        assert "candidate_label_rows, decision_rows, and valid_human_label_rows must match" in proc.stderr
+        assert (
+            "candidate_label_rows, decision_rows, valid_human_label_rows, "
+            "and non_synthetic_valid_human_label_rows must match"
+        ) in proc.stderr
+
+        synthetic_label_artifact = tmp / "synthetic_label_artifact.json"
+        synthetic_label_artifact_payload = label_intake_plan_payload()
+        synthetic_label_artifact_payload["synthetic_candidate_rows"] = 1
+        synthetic_label_artifact_payload["non_synthetic_candidate_rows"] = 299
+        synthetic_label_artifact_payload["non_synthetic_valid_human_label_rows"] = 299
+        synthetic_label_artifact_payload["human_label_requirement_met"] = 0
+        synthetic_label_artifact_payload["human_labels_remaining_to_minimum"] = 1
+        write_json(synthetic_label_artifact, synthetic_label_artifact_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(synthetic_label_artifact),
+            "--out-json",
+            str(tmp / "synthetic_label_artifact_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_intake_plan: non_synthetic_valid_human_label_rows must be >= 300" in proc.stderr
+        assert "label_intake_plan: must set human_label_requirement_met=1" in proc.stderr
+        assert "label_intake_plan: human_labels_remaining_to_minimum must be 0" in proc.stderr
+        assert "label_intake_plan: synthetic_candidate_rows must be 0" in proc.stderr
 
         empty_template_fingerprints = tmp / "empty_template_fingerprints.json"
         empty_template_fingerprints_payload = label_intake_plan_payload()

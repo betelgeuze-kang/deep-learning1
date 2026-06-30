@@ -582,6 +582,9 @@ def main(argv: list[str]) -> int:
         cases_ready_for_label_intake = sum(
             1 for row in progress_rows if row["ready_for_label_intake"] == 1
         )
+        all_cases_ready_for_label_intake = int(
+            bool(progress_rows) and cases_ready_for_label_intake == len(progress_rows)
+        )
         output_requested = bool(args.out or args.per_case_out_root)
         output_paths: dict[str, Path] = {}
         if args.out:
@@ -625,7 +628,12 @@ def main(argv: list[str]) -> int:
             "candidate_guard_passed": int(not errors),
             "decision_input_guard_passed": int(not decision_input_errors),
             "output_path_guard_passed": int(not output_path_errors),
-            "ready_for_label_intake": int(not errors and valid_human_label_rows > 0 and not missing_ids),
+            "ready_for_label_intake": int(
+                not errors
+                and non_synthetic_valid_human_label_rows > 0
+                and not missing_ids
+                and all_cases_ready_for_label_intake == 1
+            ),
             "output_files": output_files,
             "release_ready": 0,
             "public_comparison_claim_ready": 0,

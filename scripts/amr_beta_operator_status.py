@@ -900,6 +900,28 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             key="valid_human_label_rows",
             minimum=max(300, label_min_labels),
         )
+        non_synthetic_valid_human_label_rows = require_int_at_least(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="non_synthetic_valid_human_label_rows",
+            minimum=max(300, label_min_labels),
+        )
+        require_flag(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="human_label_requirement_met",
+            expected=1,
+        )
+        human_labels_remaining = require_exact_int(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="human_labels_remaining_to_minimum",
+        )
+        if human_labels_remaining != 0:
+            errors.append("label_intake_plan: human_labels_remaining_to_minimum must be 0")
         case_count = require_int_at_least(
             errors=errors,
             name="label_intake_plan",
@@ -927,6 +949,30 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             payload=label,
             key="candidate_label_rows",
         )
+        synthetic_candidate_rows = require_exact_int(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="synthetic_candidate_rows",
+        )
+        non_synthetic_candidate_rows = require_exact_int(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="non_synthetic_candidate_rows",
+        )
+        if synthetic_candidate_rows != 0:
+            errors.append("label_intake_plan: synthetic_candidate_rows must be 0")
+        if (
+            candidate_label_rows >= 0
+            and synthetic_candidate_rows >= 0
+            and non_synthetic_candidate_rows >= 0
+            and candidate_label_rows != non_synthetic_candidate_rows + synthetic_candidate_rows
+        ):
+            errors.append(
+                "label_intake_plan: candidate_label_rows must equal "
+                "non_synthetic_candidate_rows + synthetic_candidate_rows"
+            )
         decision_rows = require_exact_int(
             errors=errors,
             name="label_intake_plan",
@@ -936,9 +982,17 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
         if (
             candidate_label_rows >= 0
             and decision_rows >= 0
-            and not (candidate_label_rows == decision_rows == valid_human_label_rows)
+            and not (
+                candidate_label_rows
+                == decision_rows
+                == valid_human_label_rows
+                == non_synthetic_valid_human_label_rows
+            )
         ):
-            errors.append("label_intake_plan: candidate_label_rows, decision_rows, and valid_human_label_rows must match")
+            errors.append(
+                "label_intake_plan: candidate_label_rows, decision_rows, "
+                "valid_human_label_rows, and non_synthetic_valid_human_label_rows must match"
+            )
         for field in [
             "repo_intake_sha256",
             "repo_snapshot_lock_sha256",
