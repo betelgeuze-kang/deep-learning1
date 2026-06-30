@@ -324,6 +324,9 @@ def maintainer_feedback_packet_payload() -> dict:
     return {
         "schema": "amr_beta_maintainer_feedback_packet.v1",
         "repo_snapshot_lock_sha256": binding["repo_snapshot_lock_sha256"],
+        "feedback_sha256": binding["feedback_sha256"],
+        "feedback_bundle_sha256": binding["feedback_bundle_sha256"],
+        "feedback_digest_fingerprint_rows": 3,
         "ready_for_runtime_preflight_feedback": 1,
         "min_real_repos_required": 10,
         "valid_repo_rows": 10,
@@ -1405,6 +1408,61 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "maintainer_feedback_packet: repo_snapshot_lock_sha256 must match repo_audit_plan" in proc.stderr
+
+        missing_feedback_bundle_packet = tmp / "missing_feedback_bundle_packet.json"
+        missing_feedback_bundle_packet_payload = maintainer_feedback_packet_payload()
+        del missing_feedback_bundle_packet_payload["feedback_bundle_sha256"]
+        write_json(missing_feedback_bundle_packet, missing_feedback_bundle_packet_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(missing_feedback_bundle_packet),
+            "--out-json",
+            str(tmp / "missing_feedback_bundle_packet_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "maintainer_feedback_packet: feedback_bundle_sha256 must be a sha256 binding" in proc.stderr
+
+        stale_feedback_sha_packet = tmp / "stale_feedback_sha_packet.json"
+        stale_feedback_sha_packet_payload = maintainer_feedback_packet_payload()
+        stale_feedback_sha_packet_payload["feedback_sha256"] = fake_sha(996)
+        write_json(stale_feedback_sha_packet, stale_feedback_sha_packet_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(stale_feedback_sha_packet),
+            "--runtime-preflight",
+            str(preflight),
+            "--out-json",
+            str(tmp / "stale_feedback_sha_packet_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "runtime_preflight: feedback_sha256 must match maintainer_feedback_packet" in proc.stderr
+
+        stale_feedback_bundle_packet = tmp / "stale_feedback_bundle_packet.json"
+        stale_feedback_bundle_packet_payload = maintainer_feedback_packet_payload()
+        stale_feedback_bundle_packet_payload["feedback_bundle_sha256"] = fake_sha(997)
+        write_json(stale_feedback_bundle_packet, stale_feedback_bundle_packet_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(stale_feedback_bundle_packet),
+            "--runtime-preflight",
+            str(preflight),
+            "--out-json",
+            str(tmp / "stale_feedback_bundle_packet_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "runtime_preflight: feedback_bundle_sha256 must match maintainer_feedback_packet" in proc.stderr
 
         missing_feedback_label_context = tmp / "missing_feedback_label_context.json"
         missing_feedback_label_context_payload = maintainer_feedback_packet_payload()

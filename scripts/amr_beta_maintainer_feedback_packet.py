@@ -16,6 +16,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+import amr_beta_benchmark_input_prepare as benchmark_inputs
 import amr_beta_human_input_status as human_status
 import amr_beta_repo_intake_validate as repo_intake
 
@@ -125,6 +126,33 @@ def feedback_digest_preview(row: dict) -> str:
     if human_status.SHA_RE.fullmatch(digest):
         return digest
     return ""
+
+
+def empty_feedback_fingerprint_summary() -> dict[str, object]:
+    return {
+        "feedback_input": "",
+        "feedback_sha256": "",
+        "feedback_bundle_sha256": "",
+        "feedback_digest_fingerprint_rows": 0,
+    }
+
+
+def feedback_fingerprint_summary(path: Path, rows: list[dict]) -> dict[str, object]:
+    feedback_sha256 = benchmark_inputs.sha256_file(path)
+    fingerprints = benchmark_inputs.feedback_fingerprints(rows)
+    bundle = {
+        "schema": "amr_beta_feedback_bundle.v1",
+        "feedback_sha256": feedback_sha256,
+        "feedback_digest_fingerprints": fingerprints,
+    }
+    return {
+        "feedback_input": str(path),
+        "feedback_sha256": feedback_sha256,
+        "feedback_bundle_sha256": benchmark_inputs.sha256_json(bundle),
+        "feedback_digest_fingerprint_rows": sum(
+            1 for row in fingerprints if str(row["feedback_text_sha256"])
+        ),
+    }
 
 
 def build_request_rows(
@@ -316,8 +344,14 @@ def main(argv: list[str]) -> int:
             "feedback_countable_case_rows": 0,
             "distinct_countable_maintainer_id_count": 0,
         }
+        feedback_fingerprint = empty_feedback_fingerprint_summary()
         if args.feedback and not input_path_errors:
             feedback_rows = read_json_or_jsonl(feedback_path, "feedback") if feedback_path else []
+            feedback_fingerprint = (
+                feedback_fingerprint_summary(feedback_path, feedback_rows)
+                if feedback_path
+                else feedback_fingerprint
+            )
             feedback_errors, feedback_summary = human_status.validate_feedback(
                 feedback_rows,
                 known_case_ids=known_case_ids,
@@ -355,6 +389,7 @@ def main(argv: list[str]) -> int:
             **request_counts,
             **repo_summary,
             **label_summary,
+            **feedback_fingerprint,
             **feedback_summary,
             "min_maintainer_feedback_required": args.min_maintainers,
             "maintainer_feedback_requirement_met": maintainer_requirement_met,
