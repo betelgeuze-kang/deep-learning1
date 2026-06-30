@@ -123,7 +123,9 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   to the same validated repo snapshot and label-template bundle. It refuses
   `--out-root`, `--out-json`, or `--out-md` inside any target repository.
 - [ ] Run `scripts/audit_my_repo_label_intake.py` for each repo and verify each
-  output with `--verify-existing`.
+  output with `--verify-existing`. Keep each `--out` directory outside the
+  target repository; the compiler refuses label-intake outputs inside the repo
+  recorded by the template/audit bundle.
 - [ ] Concatenate only verified `benchmark_labels.jsonl` outputs into the
   combined benchmark labels file; do not hand-edit compiled label rows.
 - [ ] Prefer the preparation guard over manual concatenation:
@@ -303,6 +305,9 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    refuses plan or label-intake output roots inside any target repository.
 6. Compile per repo:
    `audit_my_repo_label_intake.py --template results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_label_intake`.
+   Keep `--out` outside the target repository; the compiler rejects output
+   inside the repo recorded by the template/audit bundle before creating
+   staging artifacts.
 7. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
    Prepare the request packet and progress summary:
    `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --label-intake-dir results/<repo>_label_intake --out results/maintainer_feedback_packet`.

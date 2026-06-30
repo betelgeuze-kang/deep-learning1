@@ -88,6 +88,38 @@ def is_forbidden_env_path(path: Path) -> bool:
     return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
 
 
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def load_template_audit_context(template_dir: Path) -> tuple[dict, Path]:
+    if is_forbidden_env_path(template_dir):
+        raise ValueError("refusing .env-like template path")
+    template_manifest = read_json(template_dir / "label_template_manifest.json")
+    audit_output_raw = str(template_manifest.get("input_audit_output") or "").strip()
+    if not audit_output_raw:
+        raise ValueError("label template manifest missing input_audit_output")
+    audit_output = Path(audit_output_raw).expanduser().resolve()
+    if is_forbidden_env_path(audit_output):
+        raise ValueError("refusing .env-like input audit output path")
+    return read_json(audit_output / "audit_manifest.json"), audit_output
+
+
+def validate_output_path(out_dir: Path, repo_path: str) -> None:
+    if is_forbidden_env_path(out_dir):
+        raise ValueError("refusing .env-like output directory")
+    repo_text = str(repo_path or "").strip()
+    if not repo_text:
+        raise ValueError("repo_path is required for label-intake output path guard")
+    repo = Path(repo_text).expanduser().resolve()
+    if out_dir.resolve() == repo or is_relative_to(out_dir, repo):
+        raise ValueError("refusing --out inside target repo; use an output path outside the labeled repository")
+
+
 def read_json_or_jsonl(path: Path, input_name: str) -> list[dict]:
     if is_forbidden_env_path(path):
         raise ValueError(f"refusing to read .env-like {input_name} file")
@@ -344,10 +376,10 @@ def write_label_intake_dir(
 ) -> None:
     validate_template(root, template_dir, allow_source_drift=allow_source_drift)
     template_manifest = read_json(template_dir / "label_template_manifest.json")
-    audit_output = Path(str(template_manifest["input_audit_output"])).expanduser()
-    audit_manifest = read_json(audit_output / "audit_manifest.json")
+    audit_manifest, audit_output = load_template_audit_context(template_dir)
     source_snapshot = read_json(audit_output / "source_snapshot.json")
     repo_path = resolve_repo_path(repo_path_override, audit_manifest)
+    validate_output_path(out_dir, repo_path)
     expected_repo_git_head = resolve_expected_repo_git_head(expected_repo_git_head_override, source_snapshot)
     labels, decisions = compile_benchmark_labels(
         template_dir,
@@ -414,6 +446,10 @@ def verify_label_intake_dir(out_dir: Path, *, allow_source_drift: bool = False) 
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
         return [*errors, f"label intake parse error: {exc}"]
 
+    try:
+        validate_output_path(out_dir, str(manifest.get("repo_path", "")))
+    except ValueError as exc:
+        errors.append(str(exc))
     expected_sha_paths = {"label_intake_manifest.json", *LABEL_INTAKE_ARTIFACTS}
     if set(sha_entries) != expected_sha_paths:
         errors.append("label intake sha manifest must bind exactly the managed artifacts")
@@ -531,6 +567,9 @@ def generate_intake(args: argparse.Namespace) -> None:
     out_dir = Path(args.out).expanduser().resolve()
     if is_forbidden_env_path(decisions_path):
         raise ValueError("refusing to read .env-like decisions file")
+    audit_manifest, _audit_output = load_template_audit_context(template_dir)
+    repo_path = resolve_repo_path(args.repo_path, audit_manifest)
+    validate_output_path(out_dir, repo_path)
     validate_template(root, template_dir, allow_source_drift=args.allow_source_drift)
     if not decisions_path.is_file():
         raise ValueError(f"--decisions is not a file: {decisions_path}")
