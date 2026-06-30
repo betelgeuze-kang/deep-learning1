@@ -107,12 +107,20 @@ def main() -> int:
         assert first_lock["case_id"] == "case-01"
         assert first_lock["expected_repo_git_head"] == repos[0][1].lower()
         assert first_lock["actual_repo_git_head"] == repos[0][1].lower()
+        assert first_lock["repo_git_worktree_confirmed"] == 1
+        assert first_lock["repo_head_readable"] == 1
+        assert first_lock["repo_status_readable"] == 1
+        assert first_lock["repo_head_pinned"] == 1
         assert first_lock["clean_worktree_declared"] == 1
         assert first_lock["clean_worktree_actual"] == 1
         assert first_lock["namespace"] == "real_benchmark"
         assert first_lock["real_benchmark_namespace_confirmed"] == 1
         assert first_lock["valid"] == 1
         assert len(status["row_statuses"]) == 10
+        assert status["row_statuses"][0]["repo_git_worktree_confirmed"] == 1
+        assert status["row_statuses"][0]["repo_head_readable"] == 1
+        assert status["row_statuses"][0]["repo_status_readable"] == 1
+        assert status["row_statuses"][0]["repo_head_pinned"] == 1
         assert status["row_statuses"][0]["clean_worktree_actual"] == 1
         assert status["row_statuses"][0]["owner_or_maintainer_contact_present"] == 1
         assert "maintainer-01-contact" not in status_json.read_text(encoding="utf-8")
@@ -211,6 +219,23 @@ def main() -> int:
         proc = run_tool(mismatch)
         assert proc.returncode == 1
         assert "expected_repo_git_head mismatch" in proc.stderr
+
+        empty_repo = tmp / "empty-repo"
+        empty_repo.mkdir()
+        assert run(["git", "init", "-q"], cwd=empty_repo).returncode == 0
+        empty_head = tmp / "empty_head.md"
+        empty_rows = [(empty_repo, "0" * 40), *repos[1:]]
+        write_intake(empty_head, empty_rows)
+        proc = run_tool(empty_head, "--json")
+        assert proc.returncode == 1
+        empty_status = json.loads(proc.stdout)
+        assert "unable to read git HEAD" in proc.stderr
+        assert empty_status["row_statuses"][0]["repo_git_worktree_confirmed"] == 1
+        assert empty_status["row_statuses"][0]["repo_head_readable"] == 0
+        assert empty_status["row_statuses"][0]["repo_status_readable"] == 1
+        assert empty_status["row_statuses"][0]["repo_head_pinned"] == 0
+        assert empty_status["repo_snapshot_lock_rows"][0]["repo_head_readable"] == 0
+        assert empty_status["repo_snapshot_lock_rows"][0]["repo_head_pinned"] == 0
 
         invalid_contact = tmp / "invalid_contact.md"
         write_intake(invalid_contact, repos)
