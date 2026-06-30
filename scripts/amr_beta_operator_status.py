@@ -57,6 +57,10 @@ PREFLIGHT_LIST_BINDING_KEYS = [
     "label_template_manifest_sha256s",
     "label_intake_manifest_sha256s",
 ]
+PREFLIGHT_PATH_GUARD_KEYS = [
+    "input_path_preflight_passed",
+    "output_path_preflight_passed",
+]
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -382,6 +386,10 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
     if benchmark and not status:
         errors.append("benchmark_readiness: runtime_approval_status is required")
 
+    if preflight:
+        for key in PREFLIGHT_PATH_GUARD_KEYS:
+            require_flag(errors=errors, name="runtime_preflight", payload=preflight, key=key, expected=1)
+
     if preflight and request:
         preflight_meta = metas["runtime_preflight"]
         require_bound_path(
@@ -428,6 +436,22 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             expected=0,
         )
         require_flag(errors=errors, name="runtime_approval_request", payload=request, key="runs_benchmark", expected=0)
+        for key in PREFLIGHT_PATH_GUARD_KEYS:
+            require_matching_field(
+                errors=errors,
+                name="runtime_approval_request",
+                payload=request,
+                field=key,
+                expected=preflight.get(key),
+            )
+            require_flag(errors=errors, name="runtime_approval_request", payload=request, key=key, expected=1)
+        require_flag(
+            errors=errors,
+            name="runtime_approval_request",
+            payload=request,
+            key="output_path_guard_passed",
+            expected=1,
+        )
 
     if preflight and request and status:
         preflight_meta = metas["runtime_preflight"]
@@ -503,6 +527,22 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             payload=status,
             key="codex_runtime_permission_granted_by_this_packet",
             expected=0,
+        )
+        for key in PREFLIGHT_PATH_GUARD_KEYS:
+            require_matching_field(
+                errors=errors,
+                name="runtime_approval_status",
+                payload=status,
+                field=key,
+                expected=preflight.get(key),
+            )
+            require_flag(errors=errors, name="runtime_approval_status", payload=status, key=key, expected=1)
+        require_flag(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            key="approval_request_output_path_guard_passed",
+            expected=1,
         )
         if str(status.get("approval_scope") or "") != APPROVAL_SCOPE:
             errors.append(f"runtime_approval_status: approval_scope must be {APPROVAL_SCOPE}")
@@ -683,6 +723,13 @@ def main(argv: list[str]) -> int:
                 key: list(preflight.get(key, []))
                 for key in PREFLIGHT_LIST_BINDING_KEYS
                 if preflight.get(key)
+            }
+        )
+        runtime_fingerprints.update(
+            {
+                key: int(preflight.get(key, 0))
+                for key in PREFLIGHT_PATH_GUARD_KEYS
+                if key in preflight
             }
         )
         payload = {

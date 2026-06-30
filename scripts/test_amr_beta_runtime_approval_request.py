@@ -89,6 +89,8 @@ def preflight_payload(
     ready: int = 1,
     release_ready: int = 0,
     verify_existing_required: int = 1,
+    input_path_preflight_passed: int = 1,
+    output_path_preflight_passed: int = 1,
     benchmark_out: str = "/tmp/audit_benchmark",
 ) -> dict:
     template_dir_count = 10
@@ -113,6 +115,8 @@ def preflight_payload(
         "human_label_rows": 300,
         "distinct_countable_maintainer_id_count": 3,
         "label_intake_case_count": 10,
+        "input_path_preflight_passed": input_path_preflight_passed,
+        "output_path_preflight_passed": output_path_preflight_passed,
         "design_partner_beta_candidate_ready": 0,
         "release_ready": release_ready,
         "public_comparison_claim_ready": 0,
@@ -160,6 +164,8 @@ def main() -> int:
         assert payload["requires_human_runtime_approval"] == 1
         assert payload["creates_benchmark_evidence"] == 0
         assert payload["runs_benchmark"] == 0
+        assert payload["input_path_preflight_passed"] == 1
+        assert payload["output_path_preflight_passed"] == 1
         assert payload["output_path_guard_passed"] == 1
         assert payload["input_preflight_sha256"] == sha256_file(preflight)
         assert payload["repo_snapshot_lock_sha256"] == fake_sha(2)
@@ -182,6 +188,8 @@ def main() -> int:
         assert "preflight_input_bundle_sha256: sha256:" in markdown
         assert "label_template_verify_existing_required: 1" in markdown
         assert "Runtime Commands" in markdown
+        assert "input_path_preflight_passed: 1" in markdown
+        assert "output_path_preflight_passed: 1" in markdown
         assert "output_path_guard_passed: 1" in markdown
 
         unsafe_benchmark_out = tmp / "unsafe_benchmark_out"
@@ -211,6 +219,28 @@ def main() -> int:
         proc = run_tool("--preflight", str(blocked_preflight), "--out-json", str(tmp / "blocked.json"))
         assert proc.returncode == 1
         assert "ready_to_request_runtime_approval=1" in proc.stderr
+
+        unsafe_input_preflight = tmp / "unsafe_input_preflight.json"
+        write_json(unsafe_input_preflight, preflight_payload(input_path_preflight_passed=0))
+        proc = run_tool(
+            "--preflight",
+            str(unsafe_input_preflight),
+            "--out-json",
+            str(tmp / "unsafe_input_request.json"),
+        )
+        assert proc.returncode == 1
+        assert "input_path_preflight_passed=1" in proc.stderr
+
+        unsafe_output_preflight = tmp / "unsafe_output_preflight.json"
+        write_json(unsafe_output_preflight, preflight_payload(output_path_preflight_passed=0))
+        proc = run_tool(
+            "--preflight",
+            str(unsafe_output_preflight),
+            "--out-json",
+            str(tmp / "unsafe_output_request.json"),
+        )
+        assert proc.returncode == 1
+        assert "output_path_preflight_passed=1" in proc.stderr
 
         promoted_preflight = tmp / "promoted_preflight.json"
         write_json(promoted_preflight, preflight_payload(release_ready=1))

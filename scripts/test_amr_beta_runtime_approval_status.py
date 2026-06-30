@@ -89,7 +89,13 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def preflight_payload(commands: list[str], *, verify_existing_required: int = 1) -> dict:
+def preflight_payload(
+    commands: list[str],
+    *,
+    verify_existing_required: int = 1,
+    input_path_preflight_passed: int = 1,
+    output_path_preflight_passed: int = 1,
+) -> dict:
     template_dir_count = 10
     label_intake_dir_count = 10
     return {
@@ -112,6 +118,8 @@ def preflight_payload(commands: list[str], *, verify_existing_required: int = 1)
         "human_label_rows": 300,
         "distinct_countable_maintainer_id_count": 3,
         "label_intake_case_count": 10,
+        "input_path_preflight_passed": input_path_preflight_passed,
+        "output_path_preflight_passed": output_path_preflight_passed,
         "design_partner_beta_candidate_ready": 0,
         "release_ready": 0,
         "public_comparison_claim_ready": 0,
@@ -133,6 +141,9 @@ def request_payload(preflight: Path, commands: list[str], benchmark_out: Path) -
         "benchmark_runtime_approval_required": 1,
         "creates_benchmark_evidence": 0,
         "runs_benchmark": 0,
+        "input_path_preflight_passed": 1,
+        "output_path_preflight_passed": 1,
+        "output_path_guard_passed": 1,
         "template_dir_count": 10,
         "label_template_verify_existing_required": 1,
         "label_template_verify_existing_passed_dirs": 10,
@@ -257,6 +268,9 @@ def main() -> int:
         assert payload["creates_benchmark_evidence"] == 0
         assert payload["runs_benchmark"] == 0
         assert payload["codex_runtime_permission_granted_by_this_packet"] == 0
+        assert payload["input_path_preflight_passed"] == 1
+        assert payload["output_path_preflight_passed"] == 1
+        assert payload["approval_request_output_path_guard_passed"] == 1
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert payload["release_ready"] == 0
         assert payload["benchmark_out"] == str(benchmark_out)
@@ -268,6 +282,8 @@ def main() -> int:
         assert payload["runtime_commands_sha256"] == sha256_json(commands)
         markdown = out_md.read_text(encoding="utf-8")
         assert "human_runtime_approval_record_verified: 1" in markdown
+        assert "input_path_preflight_passed: 1" in markdown
+        assert "approval_request_output_path_guard_passed: 1" in markdown
         assert "preflight_input_bundle_sha256: sha256:" in markdown
         assert "runs_benchmark: 0" in markdown
 
@@ -346,6 +362,69 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "approval request label_intake_verify_existing_passed_dirs" in proc.stderr
+
+        unsafe_path_preflight = tmp / "unsafe_path_preflight.json"
+        write_json(
+            unsafe_path_preflight,
+            preflight_payload(commands, input_path_preflight_passed=0),
+        )
+        unsafe_path_request = tmp / "unsafe_path_request.json"
+        unsafe_path_request_payload = request_payload(unsafe_path_preflight, commands, benchmark_out)
+        unsafe_path_request_payload["input_path_preflight_passed"] = 0
+        write_json(unsafe_path_request, unsafe_path_request_payload)
+        unsafe_path_record = tmp / "unsafe_path_record.json"
+        write_json(
+            unsafe_path_record,
+            record_payload(unsafe_path_preflight, unsafe_path_request, commands, benchmark_out),
+        )
+        proc = run_tool(
+            "--preflight",
+            str(unsafe_path_preflight),
+            "--request",
+            str(unsafe_path_request),
+            "--approval-record",
+            str(unsafe_path_record),
+            "--out-json",
+            str(tmp / "unsafe_path_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "input_path_preflight_passed=1" in proc.stderr
+
+        stale_path_guard_request = tmp / "stale_path_guard_request.json"
+        bad_request = request_payload(preflight, commands, benchmark_out)
+        bad_request["output_path_guard_passed"] = 0
+        write_json(stale_path_guard_request, bad_request)
+        proc = run_tool(
+            "--preflight",
+            str(preflight),
+            "--request",
+            str(stale_path_guard_request),
+            "--approval-record",
+            str(record),
+            "--out-json",
+            str(tmp / "stale_path_guard_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "output_path_guard_passed=1" in proc.stderr
+
+        moved_request_dir = benchmark_out / "copied_request"
+        moved_request_dir.mkdir(parents=True)
+        moved_request = moved_request_dir / "approval_request.json"
+        write_json(moved_request, request_payload(preflight, commands, benchmark_out))
+        moved_record = tmp / "moved_request_record.json"
+        write_json(moved_record, record_payload(preflight, moved_request, commands, benchmark_out))
+        proc = run_tool(
+            "--preflight",
+            str(preflight),
+            "--request",
+            str(moved_request),
+            "--approval-record",
+            str(moved_record),
+            "--out-json",
+            str(tmp / "moved_request_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "request path must not be inside approved benchmark output" in proc.stderr
 
         stale_fingerprint_preflight = tmp / "stale_fingerprint_preflight.json"
         stale_preflight_payload = preflight_payload(commands)
