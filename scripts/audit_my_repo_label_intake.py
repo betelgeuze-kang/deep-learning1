@@ -120,6 +120,20 @@ def validate_output_path(out_dir: Path, repo_path: str) -> None:
         raise ValueError("refusing --out inside target repo; use an output path outside the labeled repository")
 
 
+def validate_decisions_input_path(decisions_path: Path, repo_path: str) -> None:
+    if is_forbidden_env_path(decisions_path):
+        raise ValueError("refusing to read .env-like decisions file")
+    repo_text = str(repo_path or "").strip()
+    if not repo_text:
+        raise ValueError("repo_path is required for label-intake decisions path guard")
+    repo = Path(repo_text).expanduser().resolve()
+    resolved = decisions_path.expanduser().resolve()
+    if resolved == repo or is_relative_to(resolved, repo):
+        raise ValueError(
+            "refusing --decisions inside target repo; use a decisions file outside the labeled repository"
+        )
+
+
 def read_json_or_jsonl(path: Path, input_name: str) -> list[dict]:
     if is_forbidden_env_path(path):
         raise ValueError(f"refusing to read .env-like {input_name} file")
@@ -288,6 +302,7 @@ def compile_benchmark_labels(
     repo_path: str,
     expected_repo_git_head: str,
 ) -> tuple[list[dict], list[dict]]:
+    validate_decisions_input_path(decisions_path, repo_path)
     candidates = {row["candidate_label_id"]: row for row in template_rows(template_dir)}
     decisions = normalize_decisions(read_json_or_jsonl(decisions_path, "decisions"))
     labels: list[dict] = []
@@ -480,6 +495,11 @@ def verify_label_intake_dir(out_dir: Path, *, allow_source_drift: bool = False) 
         errors.append("label intake manifest template_output must be an existing absolute directory")
     if not decisions_path.is_absolute() or not decisions_path.is_file():
         errors.append("label intake manifest decisions_input must be an existing absolute file")
+    else:
+        try:
+            validate_decisions_input_path(decisions_path, str(manifest.get("repo_path", "")))
+        except ValueError as exc:
+            errors.append(str(exc))
     if not errors:
         try:
             validate_template(root, template_dir, allow_source_drift=allow_source_drift)
@@ -570,6 +590,7 @@ def generate_intake(args: argparse.Namespace) -> None:
     audit_manifest, _audit_output = load_template_audit_context(template_dir)
     repo_path = resolve_repo_path(args.repo_path, audit_manifest)
     validate_output_path(out_dir, repo_path)
+    validate_decisions_input_path(decisions_path, repo_path)
     validate_template(root, template_dir, allow_source_drift=args.allow_source_drift)
     if not decisions_path.is_file():
         raise ValueError(f"--decisions is not a file: {decisions_path}")

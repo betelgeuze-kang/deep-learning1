@@ -123,6 +123,10 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
     return errors
 
 
+def validate_decision_input_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
+    return validate_output_paths(paths, target_repo_paths)
+
+
 def validate_optional_safe_id(
     *,
     errors: list[str],
@@ -520,13 +524,23 @@ def main(argv: list[str]) -> int:
             errors.append(f"duplicate template candidate_label_id values: {', '.join(duplicate_candidate_ids[:10])}")
         known_candidate_ids = set(candidate_ids)
 
+        decision_input_paths = {
+            f"decisions_{index}": Path(raw_decisions)
+            for index, raw_decisions in enumerate(args.decisions, start=1)
+        }
+        decision_input_errors = validate_decision_input_paths(
+            decision_input_paths,
+            sorted(set(target_repo_paths)),
+        )
         decision_rows: list[dict] = []
-        for raw_decisions in args.decisions:
-            decision_rows.extend(read_json_or_jsonl(Path(raw_decisions).expanduser().resolve(), "decisions"))
+        if not decision_input_errors:
+            for raw_decisions in args.decisions:
+                decision_rows.extend(read_json_or_jsonl(Path(raw_decisions).expanduser().resolve(), "decisions"))
         decision_errors, valid_decision_ids, valid_human_label_rows = validate_decisions(
             decision_rows,
             known_candidate_ids,
         )
+        errors.extend(decision_input_errors)
         errors.extend(decision_errors)
         missing_ids = sorted(known_candidate_ids - valid_decision_ids)
         if args.require_all_candidates and missing_ids:
@@ -568,6 +582,7 @@ def main(argv: list[str]) -> int:
             "min_human_label_rows_required": args.min_labels,
             "human_label_requirement_met": int(valid_human_label_rows >= args.min_labels),
             "candidate_guard_passed": int(not errors),
+            "decision_input_guard_passed": int(not decision_input_errors),
             "output_path_guard_passed": int(not output_path_errors),
             "ready_for_label_intake": int(not errors and valid_human_label_rows > 0 and not missing_ids),
             "output_files": output_files,

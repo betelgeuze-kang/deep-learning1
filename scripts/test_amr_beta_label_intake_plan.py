@@ -210,6 +210,7 @@ def main() -> int:
         assert payload["candidate_label_rows"] == 10
         assert payload["valid_human_label_rows"] == 10
         assert payload["ready_for_label_intake_plan"] == 1
+        assert payload["decision_input_guard_passed"] == 1
         assert payload["output_path_guard_passed"] == 1
         assert payload["compiles_labels"] == 0
         assert payload["writes_label_intake_outputs"] == 0
@@ -233,6 +234,7 @@ def main() -> int:
         assert verify_parts[verify_parts.index("--verify-existing") + 1] == str(out_root / "case-01_label_intake")
         markdown = out_md.read_text(encoding="utf-8")
         assert "ready_for_label_intake_plan: 1" in markdown
+        assert "decision_input_guard_passed: 1" in markdown
         assert "output_path_guard_passed: 1" in markdown
         assert "compiles_labels: 0" in markdown
         assert "repo_snapshot_lock_sha256: sha256:" in markdown
@@ -347,6 +349,61 @@ def main() -> int:
         proc = run_tool(*synthetic_args)
         assert proc.returncode == 1
         assert "must be non-synthetic" in proc.stderr
+
+        unsafe_decisions = repos[0][1] / "human_decisions_inside_repo.jsonl"
+        write_jsonl(
+            unsafe_decisions,
+            [
+                {
+                    "candidate_label_id": f"{case_id}-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                    "priority": "P1",
+                }
+                for case_id, _repo, _head in repos
+            ],
+        )
+        assert run(["git", "add", unsafe_decisions.name], cwd=repos[0][1]).returncode == 0
+        unsafe_commit = run(
+            [
+                "git",
+                "-c",
+                "user.name=AMR Test",
+                "-c",
+                "user.email=amr-test@example.invalid",
+                "commit",
+                "-q",
+                "-m",
+                "add human decisions",
+            ],
+            cwd=repos[0][1],
+        )
+        assert unsafe_commit.returncode == 0, unsafe_commit.stderr
+        unsafe_head = run(["git", "rev-parse", "HEAD"], cwd=repos[0][1])
+        assert unsafe_head.returncode == 0
+        unsafe_repos = [
+            (case_id, repo, unsafe_head.stdout.strip() if index == 0 else head)
+            for index, (case_id, repo, head) in enumerate(repos)
+        ]
+        unsafe_intake = tmp / "unsafe decisions repo intake.md"
+        write_intake(unsafe_intake, unsafe_repos)
+        unsafe_decision_args = [
+            "--repo-intake",
+            str(unsafe_intake),
+            "--decisions",
+            str(unsafe_decisions),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(tmp / "unsafe_decisions_plan.json"),
+            "--skip-verify-existing",
+        ]
+        for template_dir in template_dirs:
+            unsafe_decision_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*unsafe_decision_args)
+        assert proc.returncode == 1
+        assert "decisions must not be inside target repo" in proc.stderr
+        assert not (tmp / "unsafe_decisions_plan.json").exists()
 
     print("AMR beta label intake plan smoke OK")
     return 0

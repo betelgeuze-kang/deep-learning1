@@ -135,6 +135,7 @@ def main() -> int:
         assert summary["valid_human_label_rows"] == 2
         assert summary["missing_candidate_label_count"] == 1
         assert summary["design_partner_beta_candidate_ready"] == 0
+        assert summary["decision_input_guard_passed"] == 1
         assert summary["output_path_guard_passed"] == 1
         assert (out_dir / "reviewer_candidate_packet.jsonl").is_file()
         assert (out_dir / "reviewer_progress_summary.json").is_file()
@@ -220,6 +221,28 @@ def main() -> int:
         assert "per_case_out_root must not be inside target repo" in proc.stderr
         assert not (target_repo / "reviewer_packet").exists()
         assert not (target_repo / "per_case_packets").exists()
+
+        unsafe_decisions = target_repo / "decisions.jsonl"
+        write_jsonl(
+            unsafe_decisions,
+            [{"candidate_label_id": "case-target-0001", "human_labeled": True, "expected": "present"}],
+        )
+        safe_packet_out = tmp / "safe_packet_out"
+        proc = run_tool(
+            "--template-dir",
+            str(target_template),
+            "--decisions",
+            str(unsafe_decisions),
+            "--out",
+            str(safe_packet_out),
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_decision_summary = json.loads(proc.stdout)
+        assert unsafe_decision_summary["decision_input_guard_passed"] == 0
+        assert "decisions_1 must not be inside target repo" in proc.stderr
+        assert not safe_packet_out.exists()
 
         same_output_root = tmp / "same_packet_root"
         proc = run_tool(

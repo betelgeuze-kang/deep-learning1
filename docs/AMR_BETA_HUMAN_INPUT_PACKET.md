@@ -115,6 +115,10 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
 - [ ] Reject any decision file that contains `template_only=true`, missing
   `candidate_label_id`, duplicate `candidate_label_id`, or example ids such as
   `EXAMPLE-*`.
+- [ ] Keep human decision JSON/JSONL files outside every target repository.
+  Reviewer-packet progress checks, label-intake planning, and the label-intake
+  compiler refuse decisions inputs inside target repos so human labeling
+  artifacts cannot dirty or become part of the source repository under review.
 - [ ] As decisions arrive, rerun the reviewer progress summary:
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --decisions <decisions.jsonl> --require-all-candidates`.
 - [ ] Before compiling label-intake outputs, generate the read-only per-repo
@@ -304,6 +308,9 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    For batch handoff across many repos, use
    `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo1>_label_template --template-dir results/<repo2>_label_template --per-case-out-root results/reviewer_packets`.
 4. Fill human decisions (>= 300 rows total across repos) using the 9.2 format.
+   Store the decisions JSON/JSONL outside every target repository; the reviewer
+   packet, label-intake plan, and label-intake compiler all refuse decisions
+   inputs inside target repos.
    Check partial coverage or require complete candidate coverage with
    `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --decisions <repo>_decisions.jsonl --require-all-candidates`.
 5. Generate the read-only label-intake command plan:
