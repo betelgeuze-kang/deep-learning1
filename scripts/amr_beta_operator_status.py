@@ -1096,6 +1096,18 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             payload=feedback,
             field="repo_snapshot_lock_sha256",
         )
+        require_sha_field(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            field="feedback_sha256",
+        )
+        require_sha_field(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            field="feedback_bundle_sha256",
+        )
         require_flag(
             errors=errors,
             name="maintainer_feedback_packet",
@@ -1221,6 +1233,17 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             expected=label.get("repo_snapshot_lock_sha256"),
             expected_name="label_intake_plan",
         )
+
+    if feedback and preflight:
+        for key in ["feedback_sha256", "feedback_bundle_sha256"]:
+            require_matching_artifact_field(
+                errors=errors,
+                name="runtime_preflight",
+                payload=preflight,
+                field=key,
+                expected=feedback.get(key),
+                expected_name="maintainer_feedback_packet",
+            )
 
     if repo and preflight:
         for key in ["repo_intake_sha256", "repo_snapshot_lock_sha256"]:

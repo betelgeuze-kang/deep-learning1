@@ -9,6 +9,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import amr_beta_benchmark_input_prepare as benchmark_inputs
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_maintainer_feedback_packet.py"
 
@@ -241,30 +243,35 @@ def main() -> int:
         assert "Reviewed case-01 from an unsafe in-repo feedback file." not in proc.stderr
 
         feedback = tmp / "feedback.jsonl"
-        write_jsonl(
-            feedback,
-            [
-                {
-                    "case_id": case_id,
-                    "maintainer_id": f"maintainer-{index}",
-                    "human_feedback": True,
-                    "feedback_text": f"Reviewed {case_id} source-bound findings.",
-                    **(
-                        {
-                            "feedback_text_sha256": "sha256:"
-                            + hashlib.sha256(
-                                f"Reviewed {case_id} source-bound findings.".encode("utf-8")
-                            ).hexdigest()
-                        }
-                        if index == 1
-                        else {}
-                    ),
-                }
-                for index, (case_id, _repo, _head) in enumerate(repos, start=1)
-            ],
-        )
+        feedback_rows = [
+            {
+                "case_id": case_id,
+                "maintainer_id": f"maintainer-{index}",
+                "human_feedback": True,
+                "feedback_text": f"Reviewed {case_id} source-bound findings.",
+                **(
+                    {
+                        "feedback_text_sha256": "sha256:"
+                        + hashlib.sha256(
+                            f"Reviewed {case_id} source-bound findings.".encode("utf-8")
+                        ).hexdigest()
+                    }
+                    if index == 1
+                    else {}
+                ),
+            }
+            for index, (case_id, _repo, _head) in enumerate(repos, start=1)
+        ]
+        write_jsonl(feedback, feedback_rows)
         feedback_text = "Reviewed case-01 source-bound findings."
         expected_feedback_sha = "sha256:" + hashlib.sha256(feedback_text.encode("utf-8")).hexdigest()
+        expected_feedback_bundle_sha = benchmark_inputs.sha256_json(
+            {
+                "schema": "amr_beta_feedback_bundle.v1",
+                "feedback_sha256": benchmark_inputs.sha256_file(feedback),
+                "feedback_digest_fingerprints": benchmark_inputs.feedback_fingerprints(feedback_rows),
+            }
+        )
         feedback_out = tmp / "feedback_packet_with_feedback"
         proc = run_tool(
             "--repo-intake",
@@ -307,6 +314,10 @@ def main() -> int:
         assert payload["maintainer_feedback_requirement_met"] == 1
         assert payload["feedback_counts_for_beta_precheck"] == 1
         assert payload["ready_for_runtime_preflight_feedback"] == 1
+        assert payload["feedback_input"] == str(feedback.resolve())
+        assert payload["feedback_sha256"] == benchmark_inputs.sha256_file(feedback)
+        assert payload["feedback_bundle_sha256"] == expected_feedback_bundle_sha
+        assert payload["feedback_digest_fingerprint_rows"] == 3
         assert payload["valid_feedback_text_input_rows"] == 3
         assert payload["valid_feedback_hash_only_rows"] == 0
         assert payload["valid_feedback_digest_rows"] == 3
@@ -314,29 +325,28 @@ def main() -> int:
 
         hash_only_feedback = tmp / "hash_only_feedback.jsonl"
         hash_only_text = "Maintainer supplied digest-only feedback for case-01."
-        write_jsonl(
-            hash_only_feedback,
-            [
-                {
-                    "case_id": "case-01",
-                    "maintainer_id": "maintainer-hash-only",
-                    "human_feedback": True,
-                    "feedback_text_sha256": "sha256:" + hashlib.sha256(hash_only_text.encode("utf-8")).hexdigest(),
-                },
-                {
-                    "case_id": "case-02",
-                    "maintainer_id": "maintainer-text-2",
-                    "human_feedback": True,
-                    "feedback_text": "Reviewed case-02 source-bound findings.",
-                },
-                {
-                    "case_id": "case-03",
-                    "maintainer_id": "maintainer-text-3",
-                    "human_feedback": True,
-                    "feedback_text": "Reviewed case-03 source-bound findings.",
-                },
-            ],
-        )
+        hash_only_rows = [
+            {
+                "case_id": "case-01",
+                "maintainer_id": "maintainer-hash-only",
+                "human_feedback": True,
+                "feedback_text_sha256": "sha256:"
+                + hashlib.sha256(hash_only_text.encode("utf-8")).hexdigest(),
+            },
+            {
+                "case_id": "case-02",
+                "maintainer_id": "maintainer-text-2",
+                "human_feedback": True,
+                "feedback_text": "Reviewed case-02 source-bound findings.",
+            },
+            {
+                "case_id": "case-03",
+                "maintainer_id": "maintainer-text-3",
+                "human_feedback": True,
+                "feedback_text": "Reviewed case-03 source-bound findings.",
+            },
+        ]
+        write_jsonl(hash_only_feedback, hash_only_rows)
         proc = run_tool(
             "--repo-intake",
             str(repo_intake),
@@ -357,6 +367,15 @@ def main() -> int:
         assert hash_only_payload["valid_feedback_text_input_rows"] == 2
         assert hash_only_payload["valid_feedback_hash_only_rows"] == 1
         assert hash_only_payload["valid_feedback_digest_rows"] == 3
+        assert hash_only_payload["feedback_sha256"] == benchmark_inputs.sha256_file(hash_only_feedback)
+        assert hash_only_payload["feedback_bundle_sha256"] == benchmark_inputs.sha256_json(
+            {
+                "schema": "amr_beta_feedback_bundle.v1",
+                "feedback_sha256": benchmark_inputs.sha256_file(hash_only_feedback),
+                "feedback_digest_fingerprints": benchmark_inputs.feedback_fingerprints(hash_only_rows),
+            }
+        )
+        assert hash_only_payload["feedback_digest_fingerprint_rows"] == 3
         assert hash_only_payload["feedback_counts_for_beta_precheck"] == 1
         assert hash_only_text not in proc.stdout
 
