@@ -75,6 +75,10 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
     return errors
 
 
+def validate_input_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
+    return validate_output_paths(paths, target_repo_paths)
+
+
 def load_repo_context(path: Path, *, min_repos: int) -> tuple[dict[str, dict[str, str]], dict]:
     raw_rows = repo_intake.read_rows(path)
     errors, summary = repo_intake.validate_rows(raw_rows, min_repos=min_repos)
@@ -252,6 +256,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- label_template_verify_existing_required: {payload['label_template_verify_existing_required']}",
         f"- label_template_verify_existing_passed_dirs: {payload['label_template_verify_existing_passed_dirs']}",
         f"- label_template_verify_existing_failed_dirs: {payload['label_template_verify_existing_failed_dirs']}",
+        f"- decision_input_guard_passed: {payload['decision_input_guard_passed']}",
         f"- output_path_guard_passed: {payload['output_path_guard_passed']}",
         f"- compiles_labels: {payload['compiles_labels']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
@@ -315,6 +320,8 @@ def main(argv: list[str]) -> int:
             raise ValueError(f"--decisions is not a file: {decisions_path}")
 
         repo_by_case, repo_summary = load_repo_context(repo_intake_path, min_repos=args.min_repos)
+        target_repo_paths = sorted({context["repo_path"] for context in repo_by_case.values()})
+        input_path_errors = validate_input_paths({"decisions": decisions_path}, target_repo_paths)
         output_paths = {
             "out_root": out_root,
             "out_json": Path(args.out_json).expanduser().resolve(),
@@ -323,7 +330,7 @@ def main(argv: list[str]) -> int:
             output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
         output_path_errors = validate_output_paths(
             output_paths,
-            sorted({context["repo_path"] for context in repo_by_case.values()}),
+            target_repo_paths,
         )
         template_rows, template_errors, template_by_case, verify_counts, template_fingerprints = load_templates(
             args.template_dir,
@@ -331,7 +338,7 @@ def main(argv: list[str]) -> int:
         )
         template_case_ids = set(template_by_case)
         repo_case_ids = set(repo_by_case)
-        errors = [*template_errors, *output_path_errors]
+        errors = [*template_errors, *input_path_errors, *output_path_errors]
         missing_repo_cases = sorted(template_case_ids - repo_case_ids)
         if missing_repo_cases:
             errors.append("template case_id values missing from repo intake: " + ", ".join(missing_repo_cases[:20]))
@@ -339,7 +346,7 @@ def main(argv: list[str]) -> int:
         if missing_template_cases:
             errors.append("repo intake case_id values missing from templates: " + ", ".join(missing_template_cases[:20]))
 
-        decisions = label_packet.read_json_or_jsonl(decisions_path, "decisions")
+        decisions = [] if input_path_errors else label_packet.read_json_or_jsonl(decisions_path, "decisions")
         known_candidate_ids = {row["candidate_label_id"] for row in template_rows}
         decision_errors, valid_decision_ids, valid_human_label_rows = label_packet.validate_decisions(
             decisions,
@@ -402,6 +409,7 @@ def main(argv: list[str]) -> int:
             "min_real_repos_required": int(repo_summary.get("min_real_repos_required", args.min_repos)),
             "min_human_label_rows_required": args.min_labels,
             "ready_for_label_intake_plan": 1,
+            "decision_input_guard_passed": int(not input_path_errors),
             "output_path_guard_passed": int(not output_path_errors),
             "compiles_labels": 0,
             "writes_label_intake_outputs": 0,
