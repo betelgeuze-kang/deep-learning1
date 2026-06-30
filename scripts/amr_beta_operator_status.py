@@ -50,6 +50,7 @@ PREFLIGHT_SHA_BINDING_KEYS = [
     "repo_snapshot_lock_sha256",
     "decisions_sha256",
     "feedback_sha256",
+    "feedback_bundle_sha256",
     "label_template_bundle_sha256",
     "label_intake_bundle_sha256",
     "preflight_input_bundle_sha256",
@@ -773,6 +774,7 @@ def runtime_fingerprint_bundle_errors(preflight: dict) -> list[str]:
         "repo_snapshot_lock_sha256": str(preflight.get("repo_snapshot_lock_sha256") or ""),
         "decisions_sha256": str(preflight.get("decisions_sha256") or ""),
         "feedback_sha256": str(preflight.get("feedback_sha256") or ""),
+        "feedback_bundle_sha256": str(preflight.get("feedback_bundle_sha256") or ""),
         "label_template_bundle_sha256": str(preflight.get("label_template_bundle_sha256") or ""),
         "label_intake_bundle_sha256": str(preflight.get("label_intake_bundle_sha256") or ""),
     }

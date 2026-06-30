@@ -79,11 +79,13 @@ def binding_payload() -> dict:
     ]
     label_template_bundle_sha256 = sha256_json(template_fingerprints)
     label_intake_bundle_sha256 = sha256_json(label_intake_fingerprints)
+    feedback_bundle_sha256 = fake_sha(5)
     input_bundle = {
         "repo_intake_sha256": fake_sha(1),
         "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
         "decisions_sha256": fake_sha(3),
         "feedback_sha256": fake_sha(4),
+        "feedback_bundle_sha256": feedback_bundle_sha256,
         "label_template_bundle_sha256": label_template_bundle_sha256,
         "label_intake_bundle_sha256": label_intake_bundle_sha256,
     }
@@ -105,10 +107,25 @@ def binding_payload() -> dict:
         "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
         "decisions_sha256": fake_sha(3),
         "feedback_sha256": fake_sha(4),
+        "feedback_bundle_sha256": feedback_bundle_sha256,
         "label_template_bundle_sha256": label_template_bundle_sha256,
         "label_intake_bundle_sha256": label_intake_bundle_sha256,
         "preflight_input_bundle_sha256": sha256_json(input_bundle),
     }
+
+
+def preflight_input_bundle_sha256(payload: dict) -> str:
+    return sha256_json(
+        {
+            "repo_intake_sha256": payload["repo_intake_sha256"],
+            "repo_snapshot_lock_sha256": payload["repo_snapshot_lock_sha256"],
+            "decisions_sha256": payload["decisions_sha256"],
+            "feedback_sha256": payload["feedback_sha256"],
+            "feedback_bundle_sha256": payload["feedback_bundle_sha256"],
+            "label_template_bundle_sha256": payload["label_template_bundle_sha256"],
+            "label_intake_bundle_sha256": payload["label_intake_bundle_sha256"],
+        }
+    )
 
 
 def run_tool(*args: str) -> subprocess.CompletedProcess:
@@ -598,15 +615,8 @@ def main() -> int:
             **base_blocked(),
         }
         malformed_preflight_payload["repo_intake_sha256"] = "sha256:" + ("z" * 64)
-        malformed_preflight_payload["preflight_input_bundle_sha256"] = sha256_json(
-            {
-                "repo_intake_sha256": malformed_preflight_payload["repo_intake_sha256"],
-                "repo_snapshot_lock_sha256": malformed_preflight_payload["repo_snapshot_lock_sha256"],
-                "decisions_sha256": malformed_preflight_payload["decisions_sha256"],
-                "feedback_sha256": malformed_preflight_payload["feedback_sha256"],
-                "label_template_bundle_sha256": malformed_preflight_payload["label_template_bundle_sha256"],
-                "label_intake_bundle_sha256": malformed_preflight_payload["label_intake_bundle_sha256"],
-            }
+        malformed_preflight_payload["preflight_input_bundle_sha256"] = preflight_input_bundle_sha256(
+            malformed_preflight_payload
         )
         write_json(malformed_preflight, malformed_preflight_payload)
         proc = run_tool(
@@ -623,6 +633,56 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "runtime_preflight: repo_intake_sha256 must be a sha256 binding" in proc.stderr
+
+        missing_feedback_bundle_preflight = tmp / "missing_feedback_bundle_preflight.json"
+        missing_feedback_bundle_payload = {
+            "schema": "amr_beta_runtime_preflight.v1",
+            "ready_to_request_runtime_approval": 1,
+            **path_guard_payload(),
+            **binding_payload(),
+            **base_blocked(),
+        }
+        del missing_feedback_bundle_payload["feedback_bundle_sha256"]
+        write_json(missing_feedback_bundle_preflight, missing_feedback_bundle_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(missing_feedback_bundle_preflight),
+            "--out-json",
+            str(tmp / "missing_feedback_bundle_preflight_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "runtime_preflight: feedback_bundle_sha256 must be a sha256 binding" in proc.stderr
+
+        stale_feedback_bundle_preflight = tmp / "stale_feedback_bundle_preflight.json"
+        stale_feedback_bundle_payload = {
+            "schema": "amr_beta_runtime_preflight.v1",
+            "ready_to_request_runtime_approval": 1,
+            **path_guard_payload(),
+            **binding_payload(),
+            **base_blocked(),
+        }
+        stale_feedback_bundle_payload["feedback_bundle_sha256"] = fake_sha(994)
+        write_json(stale_feedback_bundle_preflight, stale_feedback_bundle_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(stale_feedback_bundle_preflight),
+            "--out-json",
+            str(tmp / "stale_feedback_bundle_preflight_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "preflight_input_bundle_sha256 does not match input fingerprints" in proc.stderr
 
         stale_preflight_bundle = tmp / "stale_preflight_bundle.json"
         stale_preflight_payload = {
@@ -1099,15 +1159,8 @@ def main() -> int:
             **base_blocked(),
         }
         stale_repo_to_preflight_payload["repo_intake_sha256"] = fake_sha(996)
-        stale_repo_to_preflight_payload["preflight_input_bundle_sha256"] = sha256_json(
-            {
-                "repo_intake_sha256": stale_repo_to_preflight_payload["repo_intake_sha256"],
-                "repo_snapshot_lock_sha256": stale_repo_to_preflight_payload["repo_snapshot_lock_sha256"],
-                "decisions_sha256": stale_repo_to_preflight_payload["decisions_sha256"],
-                "feedback_sha256": stale_repo_to_preflight_payload["feedback_sha256"],
-                "label_template_bundle_sha256": stale_repo_to_preflight_payload["label_template_bundle_sha256"],
-                "label_intake_bundle_sha256": stale_repo_to_preflight_payload["label_intake_bundle_sha256"],
-            }
+        stale_repo_to_preflight_payload["preflight_input_bundle_sha256"] = preflight_input_bundle_sha256(
+            stale_repo_to_preflight_payload
         )
         write_json(stale_repo_to_preflight, stale_repo_to_preflight_payload)
         proc = run_tool(
@@ -1282,15 +1335,8 @@ def main() -> int:
             **base_blocked(),
         }
         stale_label_preflight_payload["decisions_sha256"] = fake_sha(993)
-        stale_label_preflight_payload["preflight_input_bundle_sha256"] = sha256_json(
-            {
-                "repo_intake_sha256": stale_label_preflight_payload["repo_intake_sha256"],
-                "repo_snapshot_lock_sha256": stale_label_preflight_payload["repo_snapshot_lock_sha256"],
-                "decisions_sha256": stale_label_preflight_payload["decisions_sha256"],
-                "feedback_sha256": stale_label_preflight_payload["feedback_sha256"],
-                "label_template_bundle_sha256": stale_label_preflight_payload["label_template_bundle_sha256"],
-                "label_intake_bundle_sha256": stale_label_preflight_payload["label_intake_bundle_sha256"],
-            }
+        stale_label_preflight_payload["preflight_input_bundle_sha256"] = preflight_input_bundle_sha256(
+            stale_label_preflight_payload
         )
         write_json(stale_label_preflight, stale_label_preflight_payload)
         proc = run_tool(
