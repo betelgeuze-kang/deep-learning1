@@ -13,6 +13,7 @@ For each repository, record one row. Keep one case per repository.
 - [ ] Owner or maintainer contact recorded for follow-up and feedback intake.
   Reserved placeholder contacts such as `*.invalid`, `EXAMPLE-*`,
   `placeholder`, `synthetic`, or `fixture` values do not count.
+- [ ] The filled intake sheet itself is stored outside every target repository.
 - [ ] `case_id` is a safe identifier (`[A-Za-z0-9][A-Za-z0-9_.-]{0,127}`).
 - [ ] Audit will be run with `namespace=real_benchmark` and
   `real_benchmark_namespace_confirmed=true`.
@@ -49,6 +50,10 @@ keeps `runs_audit=0`, and keeps `creates_benchmark_evidence=0`.
 When writing optional `--out-json` or `--out-md` status files, keep them outside
 every target repository. The validator refuses status outputs inside a listed
 repo so a read-only intake check cannot dirty a repo after validating it.
+Keep the filled intake sheet itself outside every target repository as well.
+The validator also refuses intake files inside a listed repo, including files
+hidden by `.gitignore`, because a clean worktree alone does not make the intake
+artifact part of the source under review.
 
 ## Namespace note
 
