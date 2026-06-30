@@ -418,6 +418,9 @@ fi
 if [ -f scripts/test_amr_beta_repo_intake_validate.py ]; then
   python3 scripts/test_amr_beta_repo_intake_validate.py >/dev/null
 fi
+if [ -f scripts/test_amr_beta_repo_intake_collect.py ]; then
+  python3 scripts/test_amr_beta_repo_intake_collect.py >/dev/null
+fi
 if [ -f scripts/test_amr_beta_repo_audit_plan.py ]; then
   python3 scripts/test_amr_beta_repo_audit_plan.py >/dev/null
 fi

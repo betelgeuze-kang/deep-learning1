@@ -41,6 +41,25 @@ Before running audits, validate the filled sheet:
 python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>
 ```
 
+If the 10 local repositories and maintainer contacts are already known, create
+and immediately validate a filled sheet from read-only git metadata:
+
+```bash
+python3 scripts/amr_beta_repo_intake_collect.py \
+  --repo /abs/path/to/repo1 --contact maintainer-1-contact \
+  --repo /abs/path/to/repo2 --contact maintainer-2-contact \
+  --confirm-real-benchmark-namespace \
+  --out results/amr_beta_repo_intake.md
+```
+
+Repeat `--repo` and `--contact` for all 10 repositories. The collector records
+the current `git rev-parse HEAD`, declares `clean_worktree=true` only when
+`git status --porcelain --untracked-files=all` is empty, writes the
+`real_benchmark` namespace fields only with explicit namespace confirmation,
+then reuses the validator contract. It refuses placeholder contacts, dirty
+repos, too few valid rows, and output paths inside target repositories. It does
+not run audits or create benchmark evidence.
+
 The benchmark verifies, per case, that the current HEAD matches
 `expected_repo_git_head` and the worktree is clean
 (`repo_snapshot_requirement_met`). Dirty repos, non-git directories, HEAD
