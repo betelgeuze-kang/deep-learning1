@@ -9,6 +9,7 @@ not promote readiness.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -54,6 +55,10 @@ def validate_optional_safe_id(
         errors.append(f"{row_prefix}: {field} must not be example/placeholder")
     elif not pattern.fullmatch(text):
         errors.append(f"{row_prefix}: {field} must be a safe identifier")
+
+
+def sha256_text(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def read_json_or_jsonl(path: Path, input_name: str) -> list[dict]:
@@ -332,6 +337,10 @@ def validate_feedback(
             row_errors.append(f"feedback row {index}: human_feedback must be true")
         if truthy(row.get("synthetic", False)):
             row_errors.append(f"feedback row {index}: synthetic must be false/absent")
+        if feedback_sha and not SHA_RE.fullmatch(feedback_sha):
+            row_errors.append(f"feedback row {index}: feedback_text_sha256 must be sha256:<64 hex>")
+        if feedback_text and SHA_RE.fullmatch(feedback_sha) and sha256_text(feedback_text) != feedback_sha:
+            row_errors.append(f"feedback row {index}: feedback_text_sha256 must match feedback_text")
         if not feedback_text and not SHA_RE.fullmatch(feedback_sha):
             row_errors.append(f"feedback row {index}: feedback_text or feedback_text_sha256 required")
         if feedback_text and not good_operator_value(feedback_text):

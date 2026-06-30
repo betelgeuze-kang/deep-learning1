@@ -80,11 +80,11 @@ def load_label_context(
 
 def feedback_digest_preview(row: dict) -> str:
     digest = str(row.get("feedback_text_sha256") or row.get("feedback_sha256") or "").strip()
-    if digest:
-        return digest
     text = str(row.get("feedback_text") or "")
     if text:
         return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+    if human_status.SHA_RE.fullmatch(digest):
+        return digest
     return ""
 
 
