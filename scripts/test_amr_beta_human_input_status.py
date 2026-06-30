@@ -21,6 +21,14 @@ def make_label_intake(path: Path, rows: list[dict]) -> None:
     write_jsonl(path / "benchmark_labels.jsonl", rows)
 
 
+def make_template(path: Path, rows: list[dict]) -> None:
+    path.mkdir()
+    (path / "label_template.json").write_text(
+        json.dumps({"rows": rows}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def run_tool(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(TOOL), *args],
@@ -98,6 +106,7 @@ def main() -> int:
         assert proc.returncode == 0, proc.stderr
         assert '"ready_for_real_benchmark_inputs": 1' in proc.stdout
         assert '"design_partner_beta_candidate_ready": 0' in proc.stdout
+        assert '"non_synthetic_valid_human_label_rows": 2' in proc.stdout
         assert '"remaining_human_label_rows": 0' in proc.stdout
         assert '"remaining_distinct_maintainer_ids": 0' in proc.stdout
         assert '"compiles_labels": 0' in proc.stdout
@@ -124,6 +133,9 @@ def main() -> int:
         assert proc.returncode == 0, proc.stderr
         status = json.loads(status_json.read_text(encoding="utf-8"))
         assert status["ready_for_real_benchmark_inputs"] == 1
+        assert status["valid_human_label_rows"] == 2
+        assert status["non_synthetic_valid_human_label_rows"] == 2
+        assert status["synthetic_or_unverified_human_label_rows"] == 0
         assert status["human_label_progress_percent"] == 100.0
         assert status["maintainer_feedback_progress_percent"] == 100.0
         assert status["compiles_labels"] == 0
@@ -132,6 +144,48 @@ def main() -> int:
         assert "Reviewed finding quality" not in status_json.read_text(encoding="utf-8")
         assert "Reviewed finding quality" not in status_md.read_text(encoding="utf-8")
         assert "output_path_guard_passed: 1" in status_md.read_text(encoding="utf-8")
+
+        template = tmp / "label_template"
+        make_template(
+            template,
+            [
+                {
+                    "case_id": "case-001",
+                    "candidate_label_id": "case-001-0001",
+                    "synthetic": "0",
+                },
+                {
+                    "case_id": "case-002",
+                    "candidate_label_id": "case-002-0001",
+                    "synthetic": "1",
+                },
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(feedback),
+            "--repo-intake",
+            str(repo_intake),
+            "--template-dir",
+            str(template),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+            "--json",
+        )
+        assert proc.returncode == 1
+        synthetic_payload = json.loads(proc.stdout)
+        assert synthetic_payload["valid_human_label_rows"] == 2
+        assert synthetic_payload["non_synthetic_valid_human_label_rows"] == 1
+        assert synthetic_payload["synthetic_or_unverified_human_label_rows"] == 1
+        assert synthetic_payload["remaining_human_label_rows"] == 1
+        assert synthetic_payload["human_label_requirement_met"] == 0
+        assert synthetic_payload["template_non_synthetic_candidate_rows"] == 1
+        assert synthetic_payload["template_synthetic_or_unverified_candidate_rows"] == 1
+        assert "non_synthetic_valid_human_label_rows 1 below required minimum 2" in proc.stderr
 
         unsafe_status_json = repo_001 / "human_input_status.json"
         unsafe_status_md = repo_002 / "human_input_status.md"
