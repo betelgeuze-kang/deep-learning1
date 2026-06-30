@@ -184,6 +184,33 @@ def duplicate_label_errors(rows: list[dict]) -> list[str]:
     return errors
 
 
+def empty_label_intake_summary(raw_dirs: list[str], *, verify_existing: bool) -> dict[str, int]:
+    return {
+        "label_intake_dir_count": len(raw_dirs),
+        "label_intake_verify_existing_required": int(verify_existing and bool(raw_dirs)),
+        "label_intake_verify_existing_passed_dirs": 0,
+        "label_intake_verify_existing_failed_dirs": 0,
+        "label_intake_label_rows": 0,
+        "label_intake_case_count": 0,
+        "label_intake_countable_case_count": 0,
+        "label_intake_synthetic_case_count": 0,
+    }
+
+
+def empty_decision_summary() -> dict[str, int]:
+    return {"total_decision_rows": 0, "valid_human_label_rows": 0}
+
+
+def empty_feedback_summary() -> dict[str, int]:
+    return {
+        "total_feedback_rows": 0,
+        "valid_feedback_rows": 0,
+        "distinct_maintainer_id_count": 0,
+        "feedback_countable_case_rows": 0,
+        "distinct_countable_maintainer_id_count": 0,
+    }
+
+
 def write_json(path: Path, payload: dict, overwrite: bool) -> None:
     if is_forbidden_env_path(path):
         raise ValueError("refusing .env-like JSON output path")
@@ -214,6 +241,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- label_intake_verify_existing_failed_dirs: {payload['label_intake_verify_existing_failed_dirs']}",
         f"- human_input_preflight_passed: {payload['human_input_preflight_passed']}",
         f"- case_binding_preflight_passed: {payload['case_binding_preflight_passed']}",
+        f"- input_path_preflight_passed: {payload['input_path_preflight_passed']}",
         f"- output_path_preflight_passed: {payload['output_path_preflight_passed']}",
         f"- valid_repo_rows: {payload['valid_repo_rows']}",
         f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
@@ -280,46 +308,89 @@ def main(argv: list[str]) -> int:
         repo_rows = repo_intake.read_rows(repo_path)
         repo_errors, repo_summary = repo_intake.validate_rows(repo_rows, min_repos=args.min_repos)
         repo_by_case, _repo_by_path = repo_context(repo_rows)
+        target_repo_paths = sorted({context["repo_path"] for context in repo_by_case.values()})
+        input_paths = {
+            "repo_intake": repo_path,
+            "decisions": decisions_path,
+            "feedback": feedback_path,
+        }
+        for index, raw_dir in enumerate(args.template_dir, start=1):
+            input_paths[f"template_dir[{index}]"] = Path(raw_dir).expanduser().resolve()
+        for index, raw_dir in enumerate(args.label_intake_dir, start=1):
+            input_paths[f"label_intake_dir[{index}]"] = Path(raw_dir).expanduser().resolve()
+        input_path_errors = benchmark_inputs.validate_input_paths(input_paths, target_repo_paths)
 
-        template_rows, template_errors, synthetic_template_rows, template_verify_counts, template_fingerprints = load_templates(
-            args.template_dir,
-            verify_existing=not args.skip_verify_existing,
-        )
-        template_candidate_ids = {row["candidate_label_id"] for row in template_rows}
-        template_case_ids = {row["case_id"] for row in template_rows}
-        label_rows, label_errors, manifest_sha256s, label_intake_fingerprints, verify_counts = load_label_intakes(
-            args.label_intake_dir,
-            verify_existing=not args.skip_verify_existing,
-        )
-        label_errors.extend(duplicate_label_errors(label_rows))
-        label_errors.extend(validate_label_binding(label_rows, repo_by_case))
-        label_case_ids = sorted({str(row.get("case_id") or "") for row in label_rows})
-        label_repo_paths = sorted({str(Path(str(row.get("repo_path") or "")).expanduser().resolve()) for row in label_rows})
-        if len(label_case_ids) < args.min_repos:
-            label_errors.append(f"label_intake_case_count {len(label_case_ids)} below required minimum {args.min_repos}")
-        if len(label_rows) < args.min_labels:
-            label_errors.append(f"human_label_rows {len(label_rows)} below required minimum {args.min_labels}")
+        if input_path_errors:
+            template_rows = []
+            template_errors = []
+            synthetic_template_rows = 0
+            template_verify_counts = {
+                "label_template_verify_existing_required": int(
+                    not args.skip_verify_existing and bool(args.template_dir)
+                ),
+                "label_template_verify_existing_passed_dirs": 0,
+                "label_template_verify_existing_failed_dirs": 0,
+            }
+            template_fingerprints = []
+            template_candidate_ids: set[str] = set()
+            template_case_ids: set[str] = set()
+            label_rows = []
+            label_errors = []
+            manifest_sha256s = []
+            label_intake_fingerprints = []
+            label_case_ids = []
+            label_repo_paths = []
+            label_intake_case_ids: set[str] = set()
+            countable_case_ids: set[str] = set()
+            label_intake_summary = empty_label_intake_summary(
+                args.label_intake_dir,
+                verify_existing=not args.skip_verify_existing,
+            )
+            decision_errors = []
+            decision_summary = empty_decision_summary()
+            feedback_errors = []
+            feedback_summary = empty_feedback_summary()
+            known_case_ids = set(repo_by_case)
+        else:
+            template_rows, template_errors, synthetic_template_rows, template_verify_counts, template_fingerprints = load_templates(
+                args.template_dir,
+                verify_existing=not args.skip_verify_existing,
+            )
+            template_candidate_ids = {row["candidate_label_id"] for row in template_rows}
+            template_case_ids = {row["case_id"] for row in template_rows}
+            label_rows, label_errors, manifest_sha256s, label_intake_fingerprints, verify_counts = load_label_intakes(
+                args.label_intake_dir,
+                verify_existing=not args.skip_verify_existing,
+            )
+            label_errors.extend(duplicate_label_errors(label_rows))
+            label_errors.extend(validate_label_binding(label_rows, repo_by_case))
+            label_case_ids = sorted({str(row.get("case_id") or "") for row in label_rows})
+            label_repo_paths = sorted({str(Path(str(row.get("repo_path") or "")).expanduser().resolve()) for row in label_rows})
+            if len(label_case_ids) < args.min_repos:
+                label_errors.append(f"label_intake_case_count {len(label_case_ids)} below required minimum {args.min_repos}")
+            if len(label_rows) < args.min_labels:
+                label_errors.append(f"human_label_rows {len(label_rows)} below required minimum {args.min_labels}")
 
-        label_intake_case_ids, countable_case_ids, label_intake_summary = human_status.load_label_intake_context(
-            args.label_intake_dir,
-            verify_existing=False,
-        )
-        label_intake_summary.update(verify_counts)
-        decisions = read_json_or_jsonl(decisions_path, "decisions")
-        feedback = read_json_or_jsonl(feedback_path, "feedback")
-        known_case_ids = set(repo_by_case) | template_case_ids | label_intake_case_ids
-        decision_errors, decision_summary = human_status.validate_decisions(
-            decisions,
-            known_candidate_ids=template_candidate_ids,
-            min_labels=args.min_labels,
-        )
-        feedback_errors, feedback_summary = human_status.validate_feedback(
-            feedback,
-            known_case_ids=known_case_ids,
-            countable_case_ids=countable_case_ids,
-            require_countable_cases=True,
-            min_maintainers=args.min_maintainers,
-        )
+            label_intake_case_ids, countable_case_ids, label_intake_summary = human_status.load_label_intake_context(
+                args.label_intake_dir,
+                verify_existing=False,
+            )
+            label_intake_summary.update(verify_counts)
+            decisions = read_json_or_jsonl(decisions_path, "decisions")
+            feedback = read_json_or_jsonl(feedback_path, "feedback")
+            known_case_ids = set(repo_by_case) | template_case_ids | label_intake_case_ids
+            decision_errors, decision_summary = human_status.validate_decisions(
+                decisions,
+                known_candidate_ids=template_candidate_ids,
+                min_labels=args.min_labels,
+            )
+            feedback_errors, feedback_summary = human_status.validate_feedback(
+                feedback,
+                known_case_ids=known_case_ids,
+                countable_case_ids=countable_case_ids,
+                require_countable_cases=True,
+                min_maintainers=args.min_maintainers,
+            )
         human_errors = [*decision_errors, *feedback_errors]
 
         binding_errors: list[str] = []
@@ -337,14 +408,16 @@ def main(argv: list[str]) -> int:
         combined_labels = str(Path(args.combined_labels).expanduser().resolve())
         combined_summary = str(Path(args.combined_summary).expanduser().resolve())
         benchmark_out = str(Path(args.benchmark_out).expanduser().resolve())
-        output_errors = benchmark_inputs.validate_output_paths(
-            {
-                "combined_labels": Path(combined_labels),
-                "combined_summary": Path(combined_summary),
-                "benchmark_out": Path(benchmark_out),
-            },
-            sorted({context["repo_path"] for context in repo_by_case.values()}),
-        )
+        output_paths = {
+            "combined_labels": Path(combined_labels),
+            "combined_summary": Path(combined_summary),
+            "benchmark_out": Path(benchmark_out),
+        }
+        if args.out_json:
+            output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
+        if args.out_md:
+            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        output_errors = benchmark_inputs.validate_output_paths(output_paths, target_repo_paths)
         feedback_path_text = str(feedback_path)
         prepare_parts = ["python3", "scripts/amr_beta_benchmark_input_prepare.py"]
         for raw in args.label_intake_dir:
@@ -376,14 +449,15 @@ def main(argv: list[str]) -> int:
             "--out",
             benchmark_out,
         ]
-        next_commands = [command_line(prepare_parts), command_line(benchmark_parts)]
+        next_commands = [] if input_path_errors or output_errors else [command_line(prepare_parts), command_line(benchmark_parts)]
 
-        errors = [*repo_errors, *template_errors, *label_errors, *human_errors, *binding_errors, *output_errors]
+        errors = [*repo_errors, *input_path_errors, *template_errors, *label_errors, *human_errors, *binding_errors, *output_errors]
         repo_pass = int(not repo_errors)
         template_pass = int(not template_errors)
         label_pass = int(not label_errors)
         human_pass = int(not human_errors)
         binding_pass = int(not binding_errors)
+        input_path_pass = int(not input_path_errors)
         output_pass = int(not output_errors)
         ready = int(not errors)
         label_template_bundle_sha256 = sha256_json(template_fingerprints)
@@ -391,8 +465,8 @@ def main(argv: list[str]) -> int:
         preflight_inputs = {
             "repo_intake_sha256": sha256_file(repo_path),
             "repo_snapshot_lock_sha256": repo_summary.get("repo_snapshot_lock_sha256", ""),
-            "decisions_sha256": sha256_file(decisions_path),
-            "feedback_sha256": sha256_file(feedback_path),
+            "decisions_sha256": "" if input_path_errors else sha256_file(decisions_path),
+            "feedback_sha256": "" if input_path_errors else sha256_file(feedback_path),
             "label_template_bundle_sha256": label_template_bundle_sha256,
             "label_intake_bundle_sha256": label_intake_bundle_sha256,
         }
@@ -442,6 +516,7 @@ def main(argv: list[str]) -> int:
             "min_maintainer_feedback_required": args.min_maintainers,
             "human_input_preflight_passed": human_pass,
             "case_binding_preflight_passed": binding_pass,
+            "input_path_preflight_passed": input_path_pass,
             "output_path_preflight_passed": output_pass,
             "ready_to_request_runtime_approval": ready,
             "benchmark_runtime_approval_required": 1,
@@ -453,9 +528,9 @@ def main(argv: list[str]) -> int:
             **BLOCKED_FLAGS,
             "errors": errors,
         }
-        if args.out_json:
+        if args.out_json and not output_errors:
             write_json(Path(args.out_json).expanduser().resolve(), payload, args.overwrite)
-        if args.out_md:
+        if args.out_md and not output_errors:
             write_markdown(Path(args.out_md).expanduser().resolve(), payload, args.overwrite)
         if args.json:
             print(json.dumps(payload, indent=2, sort_keys=True))
