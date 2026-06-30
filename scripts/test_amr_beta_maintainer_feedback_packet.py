@@ -413,6 +413,107 @@ def main() -> int:
         assert "Reviewed case-01 source-bound findings." not in proc.stderr
         assert not bad_feedback_out.exists()
 
+        duplicate_feedback_id = tmp / "duplicate_feedback_id.jsonl"
+        write_jsonl(
+            duplicate_feedback_id,
+            [
+                {
+                    "case_id": "case-01",
+                    "maintainer_id": "maintainer-duplicate-1",
+                    "feedback_id": "feedback-duplicate",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-01 source-bound findings.",
+                },
+                {
+                    "case_id": "case-02",
+                    "maintainer_id": "maintainer-duplicate-2",
+                    "feedback_id": "feedback-duplicate",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-02 source-bound findings.",
+                },
+                {
+                    "case_id": "case-03",
+                    "maintainer_id": "maintainer-duplicate-3",
+                    "feedback_id": "feedback-unique",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-03 source-bound findings.",
+                },
+            ],
+        )
+        duplicate_feedback_out = tmp / "duplicate_feedback_packet"
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--label-intake-dir",
+            str(label_intake),
+            "--feedback",
+            str(duplicate_feedback_id),
+            "--out",
+            str(duplicate_feedback_out),
+            "--min-repos",
+            "3",
+            "--min-maintainers",
+            "3",
+            "--enforce-min-maintainers",
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "duplicate feedback_id" in proc.stderr
+        assert "Reviewed case-02 source-bound findings." not in proc.stdout
+        assert "Reviewed case-02 source-bound findings." not in proc.stderr
+        assert not duplicate_feedback_out.exists()
+
+        default_feedback_id_collision = tmp / "default_feedback_id_collision.jsonl"
+        write_jsonl(
+            default_feedback_id_collision,
+            [
+                {
+                    "case_id": "case-01",
+                    "maintainer_id": "maintainer-default-1",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-01 source-bound findings.",
+                },
+                {
+                    "case_id": "case-02",
+                    "maintainer_id": "maintainer-default-2",
+                    "feedback_id": "feedback_0001",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-02 source-bound findings.",
+                },
+                {
+                    "case_id": "case-03",
+                    "maintainer_id": "maintainer-default-3",
+                    "feedback_id": "feedback_unique",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-03 source-bound findings.",
+                },
+            ],
+        )
+        default_feedback_id_out = tmp / "default_feedback_id_packet"
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--label-intake-dir",
+            str(label_intake),
+            "--feedback",
+            str(default_feedback_id_collision),
+            "--out",
+            str(default_feedback_id_out),
+            "--min-repos",
+            "3",
+            "--min-maintainers",
+            "3",
+            "--enforce-min-maintainers",
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "duplicate feedback_id" in proc.stderr
+        assert "Reviewed case-02 source-bound findings." not in proc.stdout
+        assert "Reviewed case-02 source-bound findings." not in proc.stderr
+        assert not default_feedback_id_out.exists()
+
         synthetic_intake = tmp / "synthetic_label_intake"
         make_label_intake(
             synthetic_intake,

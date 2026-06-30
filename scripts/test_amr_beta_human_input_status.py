@@ -456,6 +456,75 @@ def main() -> int:
         assert proc.returncode == 1
         assert "feedback_id must be a safe identifier" in proc.stderr
 
+        duplicate_feedback_id = tmp / "duplicate_feedback_id.jsonl"
+        write_jsonl(
+            duplicate_feedback_id,
+            [
+                {
+                    "case_id": "case-001",
+                    "maintainer_id": "maintainer-gamma",
+                    "feedback_id": "feedback-duplicate",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed the first real local case.",
+                },
+                {
+                    "case_id": "case-002",
+                    "maintainer_id": "maintainer-delta",
+                    "feedback_id": "feedback-duplicate",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed the second real local case.",
+                },
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(duplicate_feedback_id),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+        )
+        assert proc.returncode == 1
+        assert "duplicate feedback_id" in proc.stderr
+
+        default_feedback_id_collision = tmp / "default_feedback_id_collision.jsonl"
+        write_jsonl(
+            default_feedback_id_collision,
+            [
+                {
+                    "case_id": "case-001",
+                    "maintainer_id": "maintainer-gamma",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed the first real local case.",
+                },
+                {
+                    "case_id": "case-002",
+                    "maintainer_id": "maintainer-delta",
+                    "feedback_id": "feedback_0001",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed the second real local case.",
+                },
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(default_feedback_id_collision),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+        )
+        assert proc.returncode == 1
+        assert "duplicate feedback_id" in proc.stderr
+
         bad_feedback_sha = tmp / "bad_feedback_sha.jsonl"
         write_jsonl(
             bad_feedback_sha,

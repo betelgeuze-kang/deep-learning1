@@ -149,6 +149,7 @@ FEEDBACK_TEMPLATE_REQUIRED_SNIPPETS = [
     "human_feedback",
     "synthetic",
     "counts_for_beta",
+    "duplicate `feedback_id` values are",
     "SYNTHETIC EXAMPLE",
 ]
 
