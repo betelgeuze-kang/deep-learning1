@@ -22,6 +22,7 @@ def make_template(
     candidate_ids: list[str],
     *,
     blocked: bool = False,
+    synthetic: str = "0",
     target_repo: Path | None = None,
 ) -> None:
     path.mkdir()
@@ -33,7 +34,7 @@ def make_template(
                 "candidate_label_id": candidate_id,
                 "template_only": "1",
                 "human_labeled": "0",
-                "synthetic": "0",
+                "synthetic": synthetic,
                 "source_finding_id": f"finding-{index}",
                 "source_review_queue_id": f"queue-{index}",
                 "plugin_id": "static",
@@ -133,7 +134,33 @@ def main() -> int:
         assert summary["label_template_verify_existing_passed_dirs"] == 0
         assert summary["candidate_label_rows"] == 3
         assert summary["valid_human_label_rows"] == 2
+        assert summary["non_synthetic_valid_human_label_rows"] == 2
         assert summary["missing_candidate_label_count"] == 1
+        assert summary["human_labels_remaining_to_minimum"] == 298
+        assert summary["cases_ready_for_label_intake"] == 1
+        assert summary["cases_blocked_for_label_intake"] == 1
+        assert summary["case_progress_rows"] == [
+            {
+                "all_candidates_reviewed": 0,
+                "candidate_label_rows": 2,
+                "case_id": "case-a",
+                "missing_candidate_label_count": 1,
+                "ready_for_label_intake": 0,
+                "synthetic_candidate_rows": 0,
+                "template_dirs": [str(template_a.resolve())],
+                "valid_human_label_rows": 1,
+            },
+            {
+                "all_candidates_reviewed": 1,
+                "candidate_label_rows": 1,
+                "case_id": "case-b",
+                "missing_candidate_label_count": 0,
+                "ready_for_label_intake": 1,
+                "synthetic_candidate_rows": 0,
+                "template_dirs": [str(template_b.resolve())],
+                "valid_human_label_rows": 1,
+            },
+        ]
         assert summary["design_partner_beta_candidate_ready"] == 0
         assert summary["decision_input_guard_passed"] == 1
         assert summary["output_path_guard_passed"] == 1
@@ -156,9 +183,13 @@ def main() -> int:
         assert proc.returncode == 0, proc.stderr
         summary = json.loads(proc.stdout)
         assert "reviewer_packet_index.json" in summary["output_files"]
+        assert summary["human_labels_remaining_to_minimum"] == 298
+        assert summary["cases_ready_for_label_intake"] == 1
+        assert summary["cases_blocked_for_label_intake"] == 1
         index = json.loads((per_case_root / "reviewer_packet_index.json").read_text(encoding="utf-8"))
         assert index["case_packet_count"] == 2
         assert index["design_partner_beta_candidate_ready"] == 0
+        assert index["case_progress_rows"] == summary["case_progress_rows"]
         case_a_summary = json.loads(
             (per_case_root / "case-a" / "reviewer_progress_summary.json").read_text(encoding="utf-8")
         )
@@ -174,6 +205,39 @@ def main() -> int:
         assert case_b_summary["ready_for_label_intake"] == 1
         missing_a = (per_case_root / "case-a" / "reviewer_missing_candidates.jsonl").read_text(encoding="utf-8")
         assert "case-a-0002" in missing_a
+
+        synthetic_template = tmp / "synthetic_template"
+        make_template(synthetic_template, "case-synthetic", ["case-synthetic-0001"], synthetic="1")
+        synthetic_decisions = tmp / "synthetic_decisions.jsonl"
+        write_jsonl(
+            synthetic_decisions,
+            [
+                {
+                    "candidate_label_id": "case-synthetic-0001",
+                    "human_labeled": True,
+                    "expected": "present",
+                    "priority": "P1",
+                }
+            ],
+        )
+        proc = run_tool(
+            "--template-dir",
+            str(synthetic_template),
+            "--decisions",
+            str(synthetic_decisions),
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        synthetic_summary = json.loads(proc.stdout)
+        assert synthetic_summary["valid_human_label_rows"] == 1
+        assert synthetic_summary["non_synthetic_valid_human_label_rows"] == 0
+        assert synthetic_summary["human_labels_remaining_to_minimum"] == 300
+        assert synthetic_summary["cases_ready_for_label_intake"] == 0
+        assert synthetic_summary["cases_blocked_for_label_intake"] == 1
+        assert synthetic_summary["case_progress_rows"][0]["synthetic_candidate_rows"] == 1
+        assert synthetic_summary["case_progress_rows"][0]["all_candidates_reviewed"] == 1
+        assert synthetic_summary["case_progress_rows"][0]["ready_for_label_intake"] == 0
 
         proc = run_tool(
             "--template-dir",

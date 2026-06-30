@@ -127,6 +127,12 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   artifacts cannot dirty or become part of the source repository under review.
 - [ ] As decisions arrive, rerun the reviewer progress summary:
   `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --decisions <decisions.jsonl> --require-all-candidates`.
+  The JSON summary includes `case_progress_rows`,
+  `cases_ready_for_label_intake`, `cases_blocked_for_label_intake`, and
+  `non_synthetic_valid_human_label_rows`, and
+  `human_labels_remaining_to_minimum` so operators can triage per-repo coverage
+  before label-intake planning. Synthetic/template-only candidates never reduce
+  the beta threshold remainder.
 - [ ] Before compiling label-intake outputs, generate the read-only per-repo
   label-intake command plan; this validates coverage and citation readiness but
   does not compile labels:
@@ -329,6 +335,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    inputs inside target repos.
    Check partial coverage or require complete candidate coverage with
    `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --decisions <repo>_decisions.jsonl --require-all-candidates`.
+   The progress summary reports per-case reviewed/missing candidate counts and
+   the remaining non-synthetic count to the 300-label beta threshold.
 5. Generate the read-only label-intake command plan:
    `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
    The plan records `compiles_labels=0`, `creates_benchmark_evidence=0`, and
