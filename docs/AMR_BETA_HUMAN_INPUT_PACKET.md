@@ -307,16 +307,19 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    For precision, citation, or label-quality blockers, generate a hardening
    analysis:
    `python3 scripts/amr_beta_hardening_analyze.py --benchmark-out results/audit_benchmark --out-json results/amr_beta_hardening_analysis.json --out-md results/amr_beta_hardening_analysis.md --verify-existing`.
-10. Package either the beta candidate packet or blocked packet from verified
-   readiness/backlog artifacts:
-   `python3 scripts/amr_beta_design_partner_packet.py --readiness results/audit_benchmark/benchmark_readiness.json --backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_design_partner_packet.json --out-md results/amr_beta_design_partner_packet.md`.
-11. Refresh the read-only operator status summary after each artifact is
+10. Refresh the read-only operator status summary after each artifact is
    created, passing only the artifact arguments that already exist at that
    point:
    `python3 scripts/amr_beta_operator_status.py --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
    The status board refuses a runtime approval status without its exact approval
    request, refuses stale preflight/request sha bindings, and refuses readiness
    files from any benchmark output other than the human-approved `benchmark_out`.
+11. Package either the beta candidate packet or blocked packet from verified
+   readiness/backlog artifacts and the verified operator status:
+   `python3 scripts/amr_beta_design_partner_packet.py --readiness results/audit_benchmark/benchmark_readiness.json --backlog results/amr_beta_readiness_backlog.json --operator-status results/amr_beta_operator_status.json --out-json results/amr_beta_design_partner_packet.json --out-md results/amr_beta_design_partner_packet.md`.
+   The design-partner packet refuses blocked readiness without a backlog
+   artifact and refuses readiness/backlog artifacts not bound by the supplied
+   operator status.
 
 Step 8 is a long, runtime-approved action and is **not** performed by this PR.
 

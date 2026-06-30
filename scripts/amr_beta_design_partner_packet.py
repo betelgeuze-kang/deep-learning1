@@ -8,6 +8,7 @@ release/public/model readiness blocked.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -15,7 +16,10 @@ from pathlib import Path
 from amr_beta_readiness_backlog import build_backlog, is_forbidden_env_path, load_readiness, validate_readiness
 
 SCHEMA = "amr_beta_design_partner_packet.v1"
+OPERATOR_STATUS_SCHEMA = "amr_beta_operator_status.v1"
 CLAIM_BOUNDARY = "alpha-local-code-doc-audit-only"
+READY_OPERATOR_STAGE = "stage_5_beta_candidate_or_hardening"
+BLOCKED_OPERATOR_STAGE = "stage_4_real_benchmark_verified"
 BLOCKED_FLAGS = {
     "release_ready": 0,
     "public_comparison_claim_ready": 0,
@@ -53,14 +57,27 @@ def read_json(path: Path, input_name: str) -> dict:
     return payload
 
 
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def same_path(left: str, right: str) -> bool:
+    if not left or not right:
+        return False
+    return str(Path(left).expanduser().resolve()) == str(Path(right).expanduser().resolve())
+
+
 def packet_kind(readiness: dict, backlog_items: int) -> str:
     ready = int(readiness.get("design_partner_beta_candidate_ready", 0)) == 1
     return "design_partner_beta_candidate" if ready and backlog_items == 0 else "blocked_beta_candidate"
 
 
-def load_backlog(path_text: str, readiness: dict) -> list[dict]:
+def load_backlog(path_text: str, readiness: dict, readiness_path: Path) -> list[dict]:
+    expected_backlog = build_backlog(readiness)
+    if not path_text and expected_backlog:
+        raise ValueError("blocked beta packet requires a readiness backlog artifact")
     if not path_text:
-        return build_backlog(readiness)
+        return []
     path = Path(path_text).expanduser().resolve()
     payload = read_json(path, "backlog")
     backlog = payload.get("backlog", [])
@@ -72,10 +89,73 @@ def load_backlog(path_text: str, readiness: dict) -> list[dict]:
         raise ValueError("backlog JSON must keep public_comparison_claim_ready=0")
     if payload.get("real_model_execution_ready", 0) != 0:
         raise ValueError("backlog JSON must keep real_model_execution_ready=0")
-    return [row for row in backlog if isinstance(row, dict)]
+    if not same_path(str(payload.get("input_readiness") or ""), str(readiness_path)):
+        raise ValueError("backlog JSON input_readiness must match supplied readiness")
+    clean_backlog = [row for row in backlog if isinstance(row, dict)]
+    if clean_backlog != expected_backlog:
+        raise ValueError("backlog JSON does not match the supplied readiness gates")
+    if int(payload.get("backlog_items", -1)) != len(clean_backlog):
+        raise ValueError("backlog JSON backlog_items mismatch")
+    return clean_backlog
 
 
-def build_packet(readiness: dict, backlog: list[dict], *, readiness_path: Path, backlog_path: str) -> dict:
+def validate_operator_status(operator_status: dict, *, readiness_path: Path, backlog_path: str, ready: int) -> None:
+    if operator_status.get("schema") != OPERATOR_STATUS_SCHEMA:
+        raise ValueError("operator status has unexpected schema")
+    if operator_status.get("errors", []):
+        raise ValueError("operator status must have no errors")
+    for key, expected in BLOCKED_FLAGS.items():
+        if int(operator_status.get(key, -1)) != expected:
+            raise ValueError(f"operator status must keep {key}=0")
+    if int(operator_status.get("creates_benchmark_evidence", -1)) != 0:
+        raise ValueError("operator status must not create benchmark evidence")
+    if int(operator_status.get("runs_benchmark", -1)) != 0:
+        raise ValueError("operator status must not run benchmarks")
+
+    expected_stage = READY_OPERATOR_STAGE if ready == 1 else BLOCKED_OPERATOR_STAGE
+    if str(operator_status.get("current_stage") or "") != expected_stage:
+        raise ValueError(f"operator status current_stage must be {expected_stage}")
+    if int(operator_status.get("design_partner_beta_candidate_ready", -1)) != ready:
+        raise ValueError("operator status design_partner_beta_candidate_ready must match readiness")
+
+    artifacts = operator_status.get("artifacts", {})
+    if not isinstance(artifacts, dict):
+        raise ValueError("operator status artifacts must be an object")
+    for required in [
+        "runtime_preflight",
+        "runtime_approval_request",
+        "runtime_approval_status",
+        "benchmark_readiness",
+    ]:
+        if required not in artifacts:
+            raise ValueError(f"operator status missing {required} artifact")
+    readiness_meta = artifacts.get("benchmark_readiness", {})
+    if not isinstance(readiness_meta, dict):
+        raise ValueError("operator status benchmark_readiness artifact must be an object")
+    if not same_path(str(readiness_meta.get("path") or ""), str(readiness_path)):
+        raise ValueError("operator status benchmark_readiness path must match supplied readiness")
+    if str(readiness_meta.get("sha256") or "") != sha256_file(readiness_path):
+        raise ValueError("operator status benchmark_readiness sha256 must match supplied readiness")
+
+    if backlog_path:
+        backlog_meta = artifacts.get("readiness_backlog", {})
+        if not isinstance(backlog_meta, dict):
+            raise ValueError("operator status readiness_backlog artifact must be an object")
+        resolved_backlog = Path(backlog_path).expanduser().resolve()
+        if not same_path(str(backlog_meta.get("path") or ""), str(resolved_backlog)):
+            raise ValueError("operator status readiness_backlog path must match supplied backlog")
+        if str(backlog_meta.get("sha256") or "") != sha256_file(resolved_backlog):
+            raise ValueError("operator status readiness_backlog sha256 must match supplied backlog")
+
+
+def build_packet(
+    readiness: dict,
+    backlog: list[dict],
+    *,
+    readiness_path: Path,
+    backlog_path: str,
+    operator_status_path: Path,
+) -> dict:
     ready = int(readiness.get("design_partner_beta_candidate_ready", 0))
     kind = packet_kind(readiness, len(backlog))
     if ready == 1 and backlog:
@@ -86,6 +166,8 @@ def build_packet(readiness: dict, backlog: list[dict], *, readiness_path: Path, 
         "packet_kind": kind,
         "input_readiness": str(readiness_path),
         "input_backlog": backlog_path,
+        "input_operator_status": str(operator_status_path),
+        "input_operator_status_sha256": sha256_file(operator_status_path),
         "product_readiness_calculated_from_real_labels": int(
             readiness.get("product_readiness_calculated_from_real_labels", 0)
         ),
@@ -144,6 +226,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--readiness", required=True, help="Path to benchmark_readiness.json.")
     parser.add_argument("--backlog", default="", help="Optional backlog JSON from amr_beta_readiness_backlog.py.")
+    parser.add_argument("--operator-status", required=True, help="Operator status JSON from amr_beta_operator_status.py.")
     parser.add_argument("--out-json", required=True, help="Output packet JSON path.")
     parser.add_argument("--out-md", default="", help="Optional output packet Markdown path.")
     parser.add_argument("--overwrite", action="store_true")
@@ -163,12 +246,21 @@ def main(argv: list[str]) -> int:
             if args.json:
                 print(json.dumps({"schema": SCHEMA, "errors": errors}, indent=2, sort_keys=True))
             return 1
-        backlog = load_backlog(args.backlog, readiness)
+        backlog = load_backlog(args.backlog, readiness, readiness_path)
+        operator_status_path = Path(args.operator_status).expanduser().resolve()
+        operator_status = read_json(operator_status_path, "operator status")
+        validate_operator_status(
+            operator_status,
+            readiness_path=readiness_path,
+            backlog_path=args.backlog,
+            ready=int(readiness.get("design_partner_beta_candidate_ready", 0)),
+        )
         packet = build_packet(
             readiness,
             backlog,
             readiness_path=readiness_path,
             backlog_path=str(Path(args.backlog).expanduser().resolve()) if args.backlog else "",
+            operator_status_path=operator_status_path,
         )
         out_json = Path(args.out_json).expanduser().resolve()
         out_md = Path(args.out_md).expanduser().resolve() if args.out_md else None

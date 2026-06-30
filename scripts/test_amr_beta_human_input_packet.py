@@ -103,6 +103,8 @@ PACKET_REQUIRED_SNIPPETS = [
     "codex_runtime_permission_granted_by_this_packet=0",
     "python3 scripts/amr_beta_readiness_backlog.py",
     "python3 scripts/amr_beta_design_partner_packet.py",
+    "--operator-status",
+    "blocked readiness without a backlog",
     "python3 scripts/amr_beta_hardening_analyze.py",
     "--per-case-out-root",
     "--label-intake-dir",
