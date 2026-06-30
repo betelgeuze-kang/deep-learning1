@@ -23,6 +23,27 @@ def sha256_json(payload: object) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
+def fake_sha(seed: int) -> str:
+    return "sha256:" + f"{seed:064x}"[-64:]
+
+
+def binding_payload() -> dict:
+    template_dir_count = 10
+    label_intake_dir_count = 10
+    return {
+        "repo_intake_sha256": fake_sha(1),
+        "repo_snapshot_lock_sha256": fake_sha(2),
+        "decisions_sha256": fake_sha(3),
+        "feedback_sha256": fake_sha(4),
+        "label_template_bundle_sha256": fake_sha(5),
+        "label_intake_bundle_sha256": fake_sha(6),
+        "preflight_input_bundle_sha256": fake_sha(7),
+        "label_template_json_sha256s": [fake_sha(100 + index) for index in range(template_dir_count)],
+        "label_template_manifest_sha256s": [fake_sha(200 + index) for index in range(template_dir_count)],
+        "label_intake_manifest_sha256s": [fake_sha(300 + index) for index in range(label_intake_dir_count)],
+    }
+
+
 def command_line(parts: list[str]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts)
 
@@ -49,6 +70,7 @@ def preflight_payload(commands: list[str], *, verify_existing_required: int = 1)
             label_intake_dir_count if verify_existing_required else 0
         ),
         "label_intake_verify_existing_failed_dirs": 0,
+        **binding_payload(),
         "valid_repo_rows": 10,
         "human_label_rows": 300,
         "distinct_countable_maintainer_id_count": 3,
@@ -82,6 +104,7 @@ def request_payload(preflight: Path, commands: list[str], benchmark_out: Path) -
         "label_intake_verify_existing_required": 1,
         "label_intake_verify_existing_passed_dirs": 10,
         "label_intake_verify_existing_failed_dirs": 0,
+        **binding_payload(),
         "runtime_commands": commands,
         "runtime_commands_sha256": sha256_json(commands),
         "benchmark_out": str(benchmark_out.resolve()),
@@ -200,9 +223,15 @@ def main() -> int:
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert payload["release_ready"] == 0
         assert payload["benchmark_out"] == str(benchmark_out)
+        assert payload["repo_snapshot_lock_sha256"] == fake_sha(2)
+        assert payload["preflight_input_bundle_sha256"] == fake_sha(7)
+        assert payload["label_intake_manifest_sha256s"] == [
+            fake_sha(300 + index) for index in range(10)
+        ]
         assert payload["runtime_commands_sha256"] == sha256_json(commands)
         markdown = out_md.read_text(encoding="utf-8")
         assert "human_runtime_approval_record_verified: 1" in markdown
+        assert "preflight_input_bundle_sha256: sha256:" in markdown
         assert "runs_benchmark: 0" in markdown
 
         approved_request = tmp / "approved_request.json"

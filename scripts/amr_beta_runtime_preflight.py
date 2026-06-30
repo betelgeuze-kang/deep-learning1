@@ -11,6 +11,7 @@ does not create benchmark evidence, and does not promote readiness.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shlex
 import sys
@@ -41,6 +42,15 @@ def read_json_or_jsonl(path: Path, input_name: str) -> list[dict]:
     return human_status.read_json_or_jsonl(path, input_name)
 
 
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
 def repo_context(rows: list[dict[str, str]]) -> tuple[dict[str, dict[str, str]], dict[str, str]]:
     by_case: dict[str, dict[str, str]] = {}
     by_repo: dict[str, str] = {}
@@ -63,10 +73,11 @@ def load_label_intakes(
     raw_dirs: list[str],
     *,
     verify_existing: bool,
-) -> tuple[list[dict], list[str], list[str], dict[str, int]]:
+) -> tuple[list[dict], list[str], list[str], list[dict[str, str]], dict[str, int]]:
     rows: list[dict] = []
     errors: list[str] = []
     manifest_sha256s: list[str] = []
+    manifest_fingerprints: list[dict[str, str]] = []
     verify_passed_dirs = 0
     verify_failed_dirs = 0
     for raw_dir in raw_dirs:
@@ -84,8 +95,15 @@ def load_label_intakes(
         )
         rows.extend(loaded_rows)
         errors.extend(intake_errors)
-        manifest_sha256s.append(benchmark_inputs.sha256_file(path / "label_intake_manifest.json"))
-    return rows, errors, manifest_sha256s, {
+        manifest_sha256 = benchmark_inputs.sha256_file(path / "label_intake_manifest.json")
+        manifest_sha256s.append(manifest_sha256)
+        manifest_fingerprints.append(
+            {
+                "label_intake_dir": str(path),
+                "label_intake_manifest_sha256": manifest_sha256,
+            }
+        )
+    return rows, errors, manifest_sha256s, manifest_fingerprints, {
         "label_intake_verify_existing_required": int(verify_existing and bool(raw_dirs)),
         "label_intake_verify_existing_passed_dirs": verify_passed_dirs,
         "label_intake_verify_existing_failed_dirs": verify_failed_dirs,
@@ -96,9 +114,10 @@ def load_templates(
     raw_dirs: list[str],
     *,
     verify_existing: bool,
-) -> tuple[list[dict], list[str], int, dict[str, int]]:
+) -> tuple[list[dict], list[str], int, dict[str, int], list[dict[str, str]]]:
     rows: list[dict] = []
     errors: list[str] = []
+    fingerprints: list[dict[str, str]] = []
     synthetic_rows = 0
     verify_passed_dirs = 0
     verify_failed_dirs = 0
@@ -112,6 +131,17 @@ def load_templates(
             else:
                 verify_passed_dirs += 1
         loaded_rows, template_errors, counts = label_packet.load_template_dir(path)
+        template_json = path / "label_template.json"
+        template_manifest = path / "label_template_manifest.json"
+        fingerprints.append(
+            {
+                "template_dir": str(path),
+                "label_template_json_sha256": sha256_file(template_json),
+                "label_template_manifest_sha256": sha256_file(template_manifest)
+                if template_manifest.is_file()
+                else "",
+            }
+        )
         rows.extend(loaded_rows)
         errors.extend(template_errors)
         synthetic_rows += counts["synthetic_candidate_rows"]
@@ -123,7 +153,7 @@ def load_templates(
         "label_template_verify_existing_required": int(verify_existing and bool(raw_dirs)),
         "label_template_verify_existing_passed_dirs": verify_passed_dirs,
         "label_template_verify_existing_failed_dirs": verify_failed_dirs,
-    }
+    }, fingerprints
 
 
 def validate_label_binding(rows: list[dict], repo_by_case: dict[str, dict[str, str]]) -> list[str]:
@@ -185,7 +215,11 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- human_input_preflight_passed: {payload['human_input_preflight_passed']}",
         f"- case_binding_preflight_passed: {payload['case_binding_preflight_passed']}",
         f"- valid_repo_rows: {payload['valid_repo_rows']}",
+        f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
+        f"- preflight_input_bundle_sha256: {payload['preflight_input_bundle_sha256']}",
         f"- label_intake_case_count: {payload['label_intake_case_count']}",
+        f"- label_template_bundle_sha256: {payload['label_template_bundle_sha256']}",
+        f"- label_intake_bundle_sha256: {payload['label_intake_bundle_sha256']}",
         f"- human_label_rows: {payload['human_label_rows']}",
         f"- distinct_countable_maintainer_id_count: {payload['distinct_countable_maintainer_id_count']}",
         "- release/public/model readiness: 0",
@@ -240,17 +274,19 @@ def main(argv: list[str]) -> int:
         repo_path = Path(args.repo_intake).expanduser().resolve()
         if is_forbidden_env_path(repo_path):
             raise ValueError("refusing .env-like repo intake path")
+        decisions_path = Path(args.decisions).expanduser().resolve()
+        feedback_path = Path(args.feedback).expanduser().resolve()
         repo_rows = repo_intake.read_rows(repo_path)
         repo_errors, repo_summary = repo_intake.validate_rows(repo_rows, min_repos=args.min_repos)
         repo_by_case, _repo_by_path = repo_context(repo_rows)
 
-        template_rows, template_errors, synthetic_template_rows, template_verify_counts = load_templates(
+        template_rows, template_errors, synthetic_template_rows, template_verify_counts, template_fingerprints = load_templates(
             args.template_dir,
             verify_existing=not args.skip_verify_existing,
         )
         template_candidate_ids = {row["candidate_label_id"] for row in template_rows}
         template_case_ids = {row["case_id"] for row in template_rows}
-        label_rows, label_errors, manifest_sha256s, verify_counts = load_label_intakes(
+        label_rows, label_errors, manifest_sha256s, label_intake_fingerprints, verify_counts = load_label_intakes(
             args.label_intake_dir,
             verify_existing=not args.skip_verify_existing,
         )
@@ -268,8 +304,8 @@ def main(argv: list[str]) -> int:
             verify_existing=False,
         )
         label_intake_summary.update(verify_counts)
-        decisions = read_json_or_jsonl(Path(args.decisions).expanduser().resolve(), "decisions")
-        feedback = read_json_or_jsonl(Path(args.feedback).expanduser().resolve(), "feedback")
+        decisions = read_json_or_jsonl(decisions_path, "decisions")
+        feedback = read_json_or_jsonl(feedback_path, "feedback")
         known_case_ids = set(repo_by_case) | template_case_ids | label_intake_case_ids
         decision_errors, decision_summary = human_status.validate_decisions(
             decisions,
@@ -300,7 +336,7 @@ def main(argv: list[str]) -> int:
         combined_labels = str(Path(args.combined_labels).expanduser().resolve())
         combined_summary = str(Path(args.combined_summary).expanduser().resolve())
         benchmark_out = str(Path(args.benchmark_out).expanduser().resolve())
-        feedback_path = str(Path(args.feedback).expanduser().resolve())
+        feedback_path_text = str(feedback_path)
         prepare_parts = ["python3", "scripts/amr_beta_benchmark_input_prepare.py"]
         for raw in args.label_intake_dir:
             prepare_parts.extend(["--label-intake-dir", str(Path(raw).expanduser().resolve())])
@@ -311,7 +347,7 @@ def main(argv: list[str]) -> int:
                 "--summary",
                 combined_summary,
                 "--feedback",
-                feedback_path,
+                feedback_path_text,
             ]
         )
         benchmark_parts = [
@@ -320,7 +356,7 @@ def main(argv: list[str]) -> int:
             "--labels",
             combined_labels,
             "--feedback",
-            feedback_path,
+            feedback_path_text,
             "--namespace",
             "real_benchmark",
             "--confirm-real-benchmark-namespace",
@@ -338,10 +374,37 @@ def main(argv: list[str]) -> int:
         human_pass = int(not human_errors)
         binding_pass = int(not binding_errors)
         ready = int(not errors)
+        label_template_bundle_sha256 = sha256_json(template_fingerprints)
+        label_intake_bundle_sha256 = sha256_json(label_intake_fingerprints)
+        preflight_inputs = {
+            "repo_intake_sha256": sha256_file(repo_path),
+            "repo_snapshot_lock_sha256": repo_summary.get("repo_snapshot_lock_sha256", ""),
+            "decisions_sha256": sha256_file(decisions_path),
+            "feedback_sha256": sha256_file(feedback_path),
+            "label_template_bundle_sha256": label_template_bundle_sha256,
+            "label_intake_bundle_sha256": label_intake_bundle_sha256,
+        }
         payload = {
             "schema": SCHEMA,
             "repo_intake": str(repo_path),
+            "repo_intake_sha256": preflight_inputs["repo_intake_sha256"],
+            "repo_snapshot_lock_sha256": preflight_inputs["repo_snapshot_lock_sha256"],
+            "decisions": str(decisions_path),
+            "decisions_sha256": preflight_inputs["decisions_sha256"],
+            "feedback": feedback_path_text,
+            "feedback_sha256": preflight_inputs["feedback_sha256"],
+            "preflight_input_bundle_sha256": sha256_json(preflight_inputs),
             "template_dir_count": len(args.template_dir),
+            "label_template_fingerprints": template_fingerprints,
+            "label_template_json_sha256s": [
+                row["label_template_json_sha256"] for row in template_fingerprints
+            ],
+            "label_template_manifest_sha256s": [
+                row["label_template_manifest_sha256"]
+                for row in template_fingerprints
+                if row["label_template_manifest_sha256"]
+            ],
+            "label_template_bundle_sha256": label_template_bundle_sha256,
             "label_intake_dir_count": len(args.label_intake_dir),
             "valid_repo_rows": int(repo_summary.get("valid_repo_rows", 0)),
             "min_real_repos_required": args.min_repos,
@@ -356,7 +419,9 @@ def main(argv: list[str]) -> int:
             "label_intake_repo_count": len(label_repo_paths),
             "human_label_rows": len(label_rows),
             "synthetic_label_rows": sum(1 for row in label_rows if benchmark_inputs.truthy(row.get("synthetic", False))),
+            "label_intake_fingerprints": label_intake_fingerprints,
             "label_intake_manifest_sha256s": manifest_sha256s,
+            "label_intake_bundle_sha256": label_intake_bundle_sha256,
             "label_intake_preflight_passed": label_pass,
             **decision_summary,
             "min_human_label_rows_required": args.min_labels,

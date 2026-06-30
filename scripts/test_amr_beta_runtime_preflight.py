@@ -22,6 +22,11 @@ def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -247,6 +252,17 @@ def main() -> int:
         assert proc.returncode == 0, proc.stderr
         payload = json.loads(proc.stdout)
         assert payload["ready_to_request_runtime_approval"] == 1
+        assert payload["repo_intake_sha256"] == sha256_file(repo_intake)
+        assert payload["repo_snapshot_lock_sha256"].startswith("sha256:")
+        assert payload["decisions_sha256"] == sha256_file(decisions)
+        assert payload["feedback_sha256"] == sha256_file(feedback)
+        assert payload["label_template_json_sha256s"] == [
+            sha256_file(template_dir / "label_template.json") for template_dir in template_dirs
+        ]
+        assert payload["label_template_manifest_sha256s"] == []
+        assert payload["label_template_bundle_sha256"] == sha256_json(payload["label_template_fingerprints"])
+        assert payload["label_intake_bundle_sha256"] == sha256_json(payload["label_intake_fingerprints"])
+        assert payload["preflight_input_bundle_sha256"].startswith("sha256:")
         assert payload["label_template_verify_existing_required"] == 0
         assert payload["label_intake_verify_existing_required"] == 0
         assert payload["benchmark_runtime_approval_required"] == 1
@@ -260,6 +276,7 @@ def main() -> int:
         assert "'" in payload["next_commands"][1]
         assert (tmp / "preflight.json").is_file()
         assert "ready_to_request_runtime_approval: 1" in (tmp / "preflight.md").read_text(encoding="utf-8")
+        assert "preflight_input_bundle_sha256: sha256:" in (tmp / "preflight.md").read_text(encoding="utf-8")
 
         bad_intake = tmp / "bad_intake"
         make_label_intake(bad_intake, repos[0][0], repos[0][1], "0" * 40)

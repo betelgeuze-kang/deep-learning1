@@ -22,6 +22,11 @@ def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -192,7 +197,13 @@ def main() -> int:
         payload = json.loads(out_json.read_text(encoding="utf-8"))
         assert payload["schema"] == "amr_beta_label_intake_plan.v1"
         assert payload["repo_intake_sha256"] == sha256_file(intake)
+        assert payload["repo_snapshot_lock_sha256"].startswith("sha256:")
         assert payload["decisions_sha256"] == sha256_file(decisions)
+        assert payload["label_template_json_sha256s"] == [
+            sha256_file(template_dir / "label_template.json") for template_dir in template_dirs
+        ]
+        assert payload["label_template_manifest_sha256s"] == []
+        assert payload["label_template_bundle_sha256"] == sha256_json(payload["label_template_fingerprints"])
         assert payload["label_template_verify_existing_required"] == 0
         assert payload["label_template_verify_existing_passed_dirs"] == 0
         assert payload["case_count"] == 10
@@ -222,6 +233,8 @@ def main() -> int:
         markdown = out_md.read_text(encoding="utf-8")
         assert "ready_for_label_intake_plan: 1" in markdown
         assert "compiles_labels: 0" in markdown
+        assert "repo_snapshot_lock_sha256: sha256:" in markdown
+        assert "label_template_bundle_sha256: sha256:" in markdown
 
         missing_decisions = tmp / "missing decisions.jsonl"
         write_jsonl(

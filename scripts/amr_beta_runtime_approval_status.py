@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -28,6 +29,7 @@ BLOCKED_FLAGS = {
     "public_comparison_claim_ready": 0,
     "real_model_execution_ready": 0,
 }
+SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 VERIFY_EXISTING_COUNTER_KEYS = [
     "template_dir_count",
     "label_template_verify_existing_required",
@@ -37,6 +39,20 @@ VERIFY_EXISTING_COUNTER_KEYS = [
     "label_intake_verify_existing_required",
     "label_intake_verify_existing_passed_dirs",
     "label_intake_verify_existing_failed_dirs",
+]
+PREFLIGHT_SHA_BINDING_KEYS = [
+    "repo_intake_sha256",
+    "repo_snapshot_lock_sha256",
+    "decisions_sha256",
+    "feedback_sha256",
+    "label_template_bundle_sha256",
+    "label_intake_bundle_sha256",
+    "preflight_input_bundle_sha256",
+]
+PREFLIGHT_LIST_BINDING_KEYS = [
+    ("label_template_json_sha256s", "template_dir_count"),
+    ("label_template_manifest_sha256s", "template_dir_count"),
+    ("label_intake_manifest_sha256s", "label_intake_dir_count"),
 ]
 PLACEHOLDER_APPROVERS = {
     "agent",
@@ -147,12 +163,46 @@ def validate_preflight_verify_existing_counts(preflight: dict) -> list[str]:
     return errors
 
 
+def validate_preflight_sha_binding_fields(preflight: dict) -> list[str]:
+    errors: list[str] = []
+    for key in PREFLIGHT_SHA_BINDING_KEYS:
+        value = str(preflight.get(key) or "")
+        if not SHA256_RE.fullmatch(value):
+            errors.append(f"runtime preflight {key} must be a sha256 digest")
+    for key, count_key in PREFLIGHT_LIST_BINDING_KEYS:
+        expected_count = int_field(preflight, count_key, errors, "runtime preflight")
+        values = preflight.get(key)
+        if not isinstance(values, list):
+            errors.append(f"runtime preflight {key} must be a list")
+            continue
+        if expected_count > 0 and len(values) != expected_count:
+            errors.append(f"runtime preflight {key} length must equal {count_key}")
+        for value in values:
+            if not SHA256_RE.fullmatch(str(value or "")):
+                errors.append(f"runtime preflight {key} contains a non-sha256 digest")
+                break
+    return errors
+
+
 def validate_request_verify_existing_counts(preflight: dict, request: dict) -> list[str]:
     errors: list[str] = []
     for key in VERIFY_EXISTING_COUNTER_KEYS:
         preflight_value = int_field(preflight, key, errors, "runtime preflight")
         request_value = int_field(request, key, errors, "approval request")
         if request_value != preflight_value:
+            errors.append(f"approval request {key} must match runtime preflight")
+    return errors
+
+
+def validate_request_sha_binding_fields(preflight: dict, request: dict) -> list[str]:
+    errors: list[str] = []
+    for key in PREFLIGHT_SHA_BINDING_KEYS:
+        preflight_value = str(preflight.get(key) or "")
+        request_value = str(request.get(key) or "")
+        if request_value != preflight_value:
+            errors.append(f"approval request {key} must match runtime preflight")
+    for key, _count_key in PREFLIGHT_LIST_BINDING_KEYS:
+        if request.get(key) != preflight.get(key):
             errors.append(f"approval request {key} must match runtime preflight")
     return errors
 
@@ -176,6 +226,7 @@ def validate_preflight(preflight: dict) -> list[str]:
     if not isinstance(commands, list) or len(commands) < 2:
         errors.append("runtime preflight must contain benchmark preparation and run commands")
     errors.extend(validate_preflight_verify_existing_counts(preflight))
+    errors.extend(validate_preflight_sha_binding_fields(preflight))
     return errors
 
 
@@ -203,6 +254,7 @@ def validate_request(
         if int(request.get(key, 0)) != expected:
             errors.append(f"approval request packet must keep {key}=0")
     errors.extend(validate_request_verify_existing_counts(preflight, request))
+    errors.extend(validate_request_sha_binding_fields(preflight, request))
 
     request_preflight = str(request.get("input_preflight") or "")
     if not request_preflight or not same_path(request_preflight, str(preflight_path)):
@@ -298,6 +350,7 @@ def build_status(
     preflight_path: Path,
     request_path: Path,
     record_path: Path,
+    request: dict,
     record: dict,
     commands: list[str],
     benchmark_out: str,
@@ -323,6 +376,11 @@ def build_status(
         "approver_id": str(record.get("approver_id") or ""),
         "approved_at_utc": str(record.get("approved_at_utc") or ""),
         "approved_runtime_budget_minutes": positive_int(record.get("approved_runtime_budget_minutes")),
+        **{key: str(request.get(key) or "") for key in PREFLIGHT_SHA_BINDING_KEYS},
+        **{
+            key: list(request.get(key, []))
+            for key, _count_key in PREFLIGHT_LIST_BINDING_KEYS
+        },
         "runtime_commands": commands,
         "runtime_commands_sha256": commands_sha256,
         "benchmark_out": benchmark_out,
@@ -355,6 +413,10 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- runs_benchmark: {payload['runs_benchmark']}",
         f"- codex_runtime_permission_granted_by_this_packet: {payload['codex_runtime_permission_granted_by_this_packet']}",
         f"- benchmark_out: {payload['benchmark_out']}",
+        f"- preflight_input_bundle_sha256: {payload['preflight_input_bundle_sha256']}",
+        f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
+        f"- label_template_bundle_sha256: {payload['label_template_bundle_sha256']}",
+        f"- label_intake_bundle_sha256: {payload['label_intake_bundle_sha256']}",
         f"- runtime_commands_sha256: {payload['runtime_commands_sha256']}",
         f"- design_partner_beta_candidate_ready: {payload['design_partner_beta_candidate_ready']}",
         f"- release_ready: {payload['release_ready']}",
@@ -419,6 +481,7 @@ def main(argv: list[str]) -> int:
             preflight_path=preflight_path,
             request_path=request_path,
             record_path=record_path,
+            request=request,
             record=record,
             commands=commands,
             benchmark_out=benchmark_out,

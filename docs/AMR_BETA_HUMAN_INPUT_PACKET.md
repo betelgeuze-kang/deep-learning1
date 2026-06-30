@@ -108,6 +108,9 @@ requires the approval status to bind the human approval record and requires
   label-intake command plan; this validates coverage and citation readiness but
   does not compile labels:
   `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
+  The plan carries `repo_snapshot_lock_sha256`, `decisions_sha256`, and
+  `label_template_bundle_sha256` so per-repo label-intake commands remain tied
+  to the same validated repo snapshot and label-template bundle.
 - [ ] Run `scripts/audit_my_repo_label_intake.py` for each repo and verify each
   output with `--verify-existing`.
 - [ ] Concatenate only verified `benchmark_labels.jsonl` outputs into the
@@ -126,11 +129,17 @@ requires the approval status to bind the human approval record and requires
   `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir <repo-label-intake-dir> --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
   Runtime preflight requires both label-template and label-intake bundles to
   pass their `--verify-existing` checks before it can request runtime approval.
+  It records `repo_intake_sha256`, `repo_snapshot_lock_sha256`,
+  `decisions_sha256`, `feedback_sha256`, `label_template_bundle_sha256`,
+  `label_intake_bundle_sha256`, and `preflight_input_bundle_sha256` without
+  running the benchmark or creating evidence.
 - [ ] Generate the runtime approval request packet from the green preflight;
   this does not approve or run the benchmark:
   `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
   The request and status guards reject missing, skipped, failed, or inconsistent
-  label-template and label-intake `--verify-existing` counters.
+  label-template and label-intake `--verify-existing` counters. They also
+  require the approval request to preserve the preflight fingerprint fields and
+  the `label_template_manifest_sha256s` / `label_intake_manifest_sha256s` lists.
 - [ ] If the human owner approves the runtime budget, validate the supplied
   approval record before running the long benchmark; this still does not run
   the benchmark:
@@ -292,8 +301,10 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    Then generate the approval request packet:
    `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
    The approval request must preserve the preflight's required/passed/failed
-   `--verify-existing` counters; the status validator rejects missing, skipped,
-   failed, or inconsistent counters.
+   `--verify-existing` counters and fingerprint fields
+   (`preflight_input_bundle_sha256`, `label_template_bundle_sha256`, and
+   `label_intake_bundle_sha256`); the status validator rejects missing,
+   skipped, failed, stale, or inconsistent counters and fingerprints.
    If the human owner supplies a runtime approval record, validate that it binds
    to the exact preflight, request, runtime command hash, and benchmark output:
    `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md`.
