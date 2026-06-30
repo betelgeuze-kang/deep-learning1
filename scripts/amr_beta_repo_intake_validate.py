@@ -208,7 +208,7 @@ def row_status(index: int, normalized: dict[str, str], row_errors: list[str]) ->
     clean_actual: int | None
     if any("repo_dirty" in error for error in row_errors):
         clean_actual = 0
-    elif actual_head:
+    elif normalized.get("repo_status_readable") == "1" and actual_head:
         clean_actual = 1
     else:
         clean_actual = None
@@ -219,6 +219,10 @@ def row_status(index: int, normalized: dict[str, str], row_errors: list[str]) ->
         "repo_path_resolved": normalized.get("repo_path_resolved", ""),
         "expected_repo_git_head": normalized.get("expected_repo_git_head", "").lower(),
         "actual_repo_git_head": actual_head.lower(),
+        "repo_git_worktree_confirmed": int(normalized.get("repo_git_worktree_confirmed", "0") == "1"),
+        "repo_head_readable": int(normalized.get("repo_head_readable", "0") == "1"),
+        "repo_status_readable": int(normalized.get("repo_status_readable", "0") == "1"),
+        "repo_head_pinned": int(normalized.get("repo_head_pinned", "0") == "1"),
         "clean_worktree_declared": int(truthy(normalized.get("clean_worktree", ""))),
         "clean_worktree_actual": clean_actual,
         "owner_or_maintainer_contact_present": int(bool(normalized.get("owner_or_maintainer_contact", ""))),
@@ -242,6 +246,10 @@ def snapshot_lock_rows(row_statuses: list[dict[str, object]]) -> list[dict[str, 
                 "repo_path_resolved": status["repo_path_resolved"],
                 "expected_repo_git_head": status["expected_repo_git_head"],
                 "actual_repo_git_head": status["actual_repo_git_head"],
+                "repo_git_worktree_confirmed": status["repo_git_worktree_confirmed"],
+                "repo_head_readable": status["repo_head_readable"],
+                "repo_status_readable": status["repo_status_readable"],
+                "repo_head_pinned": status["repo_head_pinned"],
                 "clean_worktree_declared": status["clean_worktree_declared"],
                 "clean_worktree_actual": status["clean_worktree_actual"],
                 "owner_or_maintainer_contact_present": status[
@@ -261,6 +269,14 @@ def snapshot_lock_rows(row_statuses: list[dict[str, object]]) -> list[dict[str, 
 def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, str]]:
     errors: list[str] = []
     normalized = {column: str(row.get(column, "")).strip() for column in REQUIRED_COLUMNS}
+    normalized.update(
+        {
+            "repo_git_worktree_confirmed": "0",
+            "repo_head_readable": "0",
+            "repo_status_readable": "0",
+            "repo_head_pinned": "0",
+        }
+    )
     for column in REQUIRED_COLUMNS:
         if not normalized[column]:
             errors.append(f"row {index}: missing {column}")
@@ -323,14 +339,26 @@ def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, 
         if code != 0 or inside.strip() != "true":
             errors.append(f"row {index}: repo_path is not a git worktree")
         else:
-            _, head, _ = git_text(repo, ["rev-parse", "HEAD"])
+            normalized["repo_git_worktree_confirmed"] = "1"
+            head_code, head, _ = git_text(repo, ["rev-parse", "HEAD"])
             actual_head = head.strip().lower()
-            _, status, _ = git_text(repo, ["status", "--porcelain=v1", "--untracked-files=all"])
-            if expected_head and actual_head != expected_head:
-                errors.append(f"row {index}: expected_repo_git_head mismatch")
-            if status.strip():
-                errors.append(f"row {index}: repo_dirty")
-            normalized["actual_repo_git_head"] = actual_head
+            if head_code != 0 or not actual_head:
+                errors.append(f"row {index}: unable to read git HEAD")
+            else:
+                normalized["repo_head_readable"] = "1"
+                normalized["actual_repo_git_head"] = actual_head
+                if expected_head and actual_head == expected_head:
+                    normalized["repo_head_pinned"] = "1"
+                elif expected_head:
+                    errors.append(f"row {index}: expected_repo_git_head mismatch")
+
+            status_code, status, _ = git_text(repo, ["status", "--porcelain=v1", "--untracked-files=all"])
+            if status_code != 0:
+                errors.append(f"row {index}: unable to read git status")
+            else:
+                normalized["repo_status_readable"] = "1"
+                if status.strip():
+                    errors.append(f"row {index}: repo_dirty")
     normalized["repo_path_resolved"] = str(repo)
     return errors, normalized
 
