@@ -129,7 +129,7 @@ status while keeping all release/public/model readiness flags blocked.
   compiler refuse decisions inputs inside target repos so human labeling
   artifacts cannot dirty or become part of the source repository under review.
 - [ ] As decisions arrive, rerun the reviewer progress summary:
-  `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --decisions <decisions.jsonl> --require-all-candidates`.
+  `python3 scripts/amr_beta_label_packet.py --template-dir <repo-template-dir> --decisions <decisions.jsonl> --out results/reviewer_packet --overwrite --require-all-candidates`.
   The JSON summary includes `case_progress_rows`,
   `cases_ready_for_label_intake`, `cases_blocked_for_label_intake`, and
   `non_synthetic_valid_human_label_rows`,
@@ -137,6 +137,9 @@ status while keeping all release/public/model readiness flags blocked.
   `human_labels_remaining_to_minimum` so operators can triage per-repo coverage
   before label-intake planning. Synthetic/template-only candidates never reduce
   the beta threshold remainder.
+  For batch handoff, pass every relevant `--template-dir` and save the aggregate
+  summary that matches the same decisions file; use per-case summaries only with
+  matching per-case template and decision inputs.
 - [ ] When using the combined human-input status guard, pass every available
   `--template-dir`; with template context supplied it reports
   `non_synthetic_valid_human_label_rows` and only those decisions reduce the
@@ -347,7 +350,7 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    packet, label-intake plan, and label-intake compiler all refuse decisions
    inputs inside target repos.
    Check partial coverage or require complete candidate coverage with
-   `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --decisions <repo>_decisions.jsonl --require-all-candidates`.
+   `python3 scripts/amr_beta_label_packet.py --template-dir results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_reviewer_packet --overwrite --require-all-candidates`.
    The progress summary reports per-case reviewed/missing candidate counts and
    the remaining non-synthetic count to the 300-label beta threshold.
 5. Generate the read-only label-intake command plan:

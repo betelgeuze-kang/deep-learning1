@@ -171,6 +171,8 @@ def main() -> int:
                 "candidate_label_rows": 2,
                 "case_id": "case-a",
                 "missing_candidate_label_count": 1,
+                "non_synthetic_candidate_rows": 2,
+                "non_synthetic_valid_human_label_rows": 1,
                 "ready_for_label_intake": 0,
                 "synthetic_candidate_rows": 0,
                 "template_dirs": [str(template_a.resolve())],
@@ -181,6 +183,8 @@ def main() -> int:
                 "candidate_label_rows": 1,
                 "case_id": "case-b",
                 "missing_candidate_label_count": 0,
+                "non_synthetic_candidate_rows": 1,
+                "non_synthetic_valid_human_label_rows": 1,
                 "ready_for_label_intake": 1,
                 "synthetic_candidate_rows": 0,
                 "template_dirs": [str(template_b.resolve())],
@@ -226,9 +230,14 @@ def main() -> int:
         assert case_a_summary["valid_human_label_rows"] == 1
         assert case_a_summary["missing_candidate_label_count"] == 1
         assert case_a_summary["ready_for_label_intake"] == 0
+        assert case_a_summary["label_template_bundle_sha256"].startswith("sha256:")
+        assert case_a_summary["decisions_bundle_sha256"] == summary["decisions_bundle_sha256"]
+        assert case_a_summary["candidate_guard_passed"] == 1
         assert case_b_summary["candidate_label_rows"] == 1
         assert case_b_summary["valid_human_label_rows"] == 1
         assert case_b_summary["ready_for_label_intake"] == 1
+        assert case_b_summary["label_template_bundle_sha256"].startswith("sha256:")
+        assert case_b_summary["decisions_bundle_sha256"] == summary["decisions_bundle_sha256"]
         missing_a = (per_case_root / "case-a" / "reviewer_missing_candidates.jsonl").read_text(encoding="utf-8")
         assert "case-a-0002" in missing_a
 

@@ -354,7 +354,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--label-packet-summary",
         default="",
-        help="Optional reviewer_progress_summary.json to bind this plan to reviewed candidate coverage.",
+        help="Required reviewer_progress_summary.json to bind this plan to reviewed candidate coverage.",
     )
     parser.add_argument("--out-root", default="results/amr_beta_label_intake_work")
     parser.add_argument("--min-repos", type=int, default=repo_intake.MIN_REAL_REPOS_FOR_BETA)
@@ -420,6 +420,8 @@ def main(argv: list[str]) -> int:
         template_case_ids = set(template_by_case)
         repo_case_ids = set(repo_by_case)
         errors = [*template_errors, *input_path_errors, *output_path_errors]
+        if not label_packet_summary_path:
+            errors.append("--label-packet-summary is required")
         missing_repo_cases = sorted(template_case_ids - repo_case_ids)
         if missing_repo_cases:
             errors.append("template case_id values missing from repo intake: " + ", ".join(missing_repo_cases[:20]))
