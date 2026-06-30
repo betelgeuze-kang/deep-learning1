@@ -74,6 +74,16 @@ REPO_AUDIT_PLAN_COMMAND_FIELDS = [
     "label_template_verify_command",
     "reviewer_packet_command",
 ]
+LABEL_INTAKE_PLAN_READ_ONLY_FLAGS = [
+    "compiles_labels",
+    "writes_label_intake_outputs",
+    "creates_benchmark_evidence",
+    "runs_real_benchmark",
+]
+LABEL_INTAKE_PLAN_COMMAND_FIELDS = [
+    "compile_command",
+    "verify_command",
+]
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -365,6 +375,138 @@ def require_repo_operator_commands(
                 return
 
 
+def require_label_operator_commands(
+    *,
+    errors: list[str],
+    label: dict,
+    case_count: int,
+) -> None:
+    commands = label.get("operator_commands")
+    if not isinstance(commands, list) or not all(isinstance(command, str) and command for command in commands):
+        errors.append("label_intake_plan: operator_commands must be a non-empty string list")
+        return
+
+    command_count = require_exact_int(
+        errors=errors,
+        name="label_intake_plan",
+        payload=label,
+        key="operator_command_count",
+    )
+    if command_count >= 0 and command_count != len(commands):
+        errors.append("label_intake_plan: operator_command_count must match operator_commands length")
+    if str(label.get("operator_commands_sha256") or "") != sha256_json(commands):
+        errors.append("label_intake_plan: operator_commands_sha256 must match operator_commands")
+
+    per_case = label.get("per_case")
+    if not isinstance(per_case, list):
+        errors.append("label_intake_plan: per_case must be a list")
+        return
+    if case_count > 0 and len(per_case) != case_count:
+        errors.append("label_intake_plan: per_case length must match case_count")
+
+    expected_commands: list[str] = []
+    for row in per_case:
+        if not isinstance(row, dict):
+            errors.append("label_intake_plan: per_case rows must be objects")
+            return
+        for field in LABEL_INTAKE_PLAN_COMMAND_FIELDS:
+            command = row.get(field)
+            if not isinstance(command, str) or not command:
+                errors.append(f"label_intake_plan: per_case rows must include {field}")
+                return
+            expected_commands.append(command)
+    if commands != expected_commands:
+        errors.append("label_intake_plan: operator_commands must exactly match per_case compile/verify commands")
+
+
+def require_label_template_fingerprints(*, errors: list[str], label: dict, case_count: int) -> None:
+    template_dir_count = require_exact_int(
+        errors=errors,
+        name="label_intake_plan",
+        payload=label,
+        key="template_dir_count",
+    )
+    if template_dir_count >= 0 and template_dir_count != case_count:
+        errors.append("label_intake_plan: template_dir_count must match case_count")
+
+    fingerprints = label.get("label_template_fingerprints")
+    if not isinstance(fingerprints, list):
+        errors.append("label_intake_plan: label_template_fingerprints must be a list")
+        return
+    if case_count > 0 and len(fingerprints) != case_count:
+        errors.append("label_intake_plan: label_template_fingerprints length must match case_count")
+
+    json_sha256s: list[str] = []
+    manifest_sha256s: list[str] = []
+    for row in fingerprints:
+        if not isinstance(row, dict):
+            errors.append("label_intake_plan: label_template_fingerprints rows must be objects")
+            return
+        json_sha = str(row.get("label_template_json_sha256") or "")
+        manifest_sha = str(row.get("label_template_manifest_sha256") or "")
+        if not SHA256_RE.fullmatch(json_sha):
+            errors.append("label_intake_plan: label_template_fingerprints JSON hashes must be sha256 bindings")
+            return
+        json_sha256s.append(json_sha)
+        if manifest_sha:
+            if not SHA256_RE.fullmatch(manifest_sha):
+                errors.append("label_intake_plan: label_template_fingerprints manifest hashes must be sha256 bindings")
+                return
+            manifest_sha256s.append(manifest_sha)
+
+    if label.get("label_template_json_sha256s") != json_sha256s:
+        errors.append("label_intake_plan: label_template_json_sha256s must match label_template_fingerprints")
+    if label.get("label_template_manifest_sha256s") != manifest_sha256s:
+        errors.append("label_intake_plan: label_template_manifest_sha256s must match label_template_fingerprints")
+    if str(label.get("label_template_bundle_sha256") or "") != sha256_json(fingerprints):
+        errors.append("label_intake_plan: label_template_bundle_sha256 must match label_template_fingerprints")
+
+    require_flag(
+        errors=errors,
+        name="label_intake_plan",
+        payload=label,
+        key="label_template_verify_existing_required",
+        expected=1,
+    )
+    passed_dirs = require_exact_int(
+        errors=errors,
+        name="label_intake_plan",
+        payload=label,
+        key="label_template_verify_existing_passed_dirs",
+    )
+    failed_dirs = require_exact_int(
+        errors=errors,
+        name="label_intake_plan",
+        payload=label,
+        key="label_template_verify_existing_failed_dirs",
+    )
+    if passed_dirs >= 0 and passed_dirs != case_count:
+        errors.append("label_intake_plan: label_template_verify_existing_passed_dirs must match case_count")
+    if failed_dirs >= 0 and failed_dirs != 0:
+        errors.append("label_intake_plan: label_template_verify_existing_failed_dirs must be 0")
+
+
+def case_id_set(*, errors: list[str], name: str, payload: dict, row_field: str) -> set[str]:
+    rows = payload.get(row_field)
+    if not isinstance(rows, list):
+        errors.append(f"{name}: {row_field} must be a list")
+        return set()
+    seen: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            errors.append(f"{name}: {row_field} rows must be objects")
+            return set()
+        case_id = str(row.get("case_id") or "").strip()
+        if not case_id:
+            errors.append(f"{name}: {row_field} rows must include case_id")
+            return set()
+        if case_id in seen:
+            errors.append(f"{name}: duplicate case_id in {row_field}")
+            return set()
+        seen.add(case_id)
+    return seen
+
+
 def preflight_count(preflight: dict, key: str, errors: list[str]) -> int:
     try:
         return int(preflight.get(key, -1))
@@ -470,6 +612,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
     errors: list[str] = []
     repo = artifacts.get("repo_audit_plan")
     label = artifacts.get("label_intake_plan")
+    feedback = artifacts.get("maintainer_feedback_packet")
     preflight = artifacts.get("runtime_preflight")
     request = artifacts.get("runtime_approval_request")
     status = artifacts.get("runtime_approval_status")
@@ -506,7 +649,255 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
         require_flag(errors=errors, name="repo_audit_plan", payload=repo, key="input_path_guard_passed", expected=1)
         require_flag(errors=errors, name="repo_audit_plan", payload=repo, key="output_path_guard_passed", expected=1)
 
+    if label:
+        require_flag(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="ready_for_label_intake_plan",
+            expected=1,
+        )
+        label_min_repos = require_int_at_least(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="min_real_repos_required",
+            minimum=10,
+        )
+        label_min_labels = require_int_at_least(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="min_human_label_rows_required",
+            minimum=300,
+        )
+        valid_human_label_rows = require_int_at_least(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="valid_human_label_rows",
+            minimum=max(300, label_min_labels),
+        )
+        case_count = require_int_at_least(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="case_count",
+            minimum=max(10, label_min_repos),
+        )
+        require_int_at_least(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="candidate_label_rows",
+            minimum=valid_human_label_rows,
+        )
+        require_int_at_least(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="decision_rows",
+            minimum=valid_human_label_rows,
+        )
+        candidate_label_rows = require_exact_int(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="candidate_label_rows",
+        )
+        decision_rows = require_exact_int(
+            errors=errors,
+            name="label_intake_plan",
+            payload=label,
+            key="decision_rows",
+        )
+        if (
+            candidate_label_rows >= 0
+            and decision_rows >= 0
+            and not (candidate_label_rows == decision_rows == valid_human_label_rows)
+        ):
+            errors.append("label_intake_plan: candidate_label_rows, decision_rows, and valid_human_label_rows must match")
+        for field in [
+            "repo_intake_sha256",
+            "repo_snapshot_lock_sha256",
+            "decisions_sha256",
+            "label_template_bundle_sha256",
+            "operator_commands_sha256",
+        ]:
+            require_sha_field(errors=errors, name="label_intake_plan", payload=label, field=field)
+        for field in ["label_template_json_sha256s", "label_template_manifest_sha256s"]:
+            require_sha_list_field(errors=errors, name="label_intake_plan", payload=label, field=field)
+        for key in LABEL_INTAKE_PLAN_READ_ONLY_FLAGS:
+            require_flag(errors=errors, name="label_intake_plan", payload=label, key=key, expected=0)
+        require_flag(errors=errors, name="label_intake_plan", payload=label, key="decision_input_guard_passed", expected=1)
+        require_flag(errors=errors, name="label_intake_plan", payload=label, key="output_path_guard_passed", expected=1)
+        require_label_template_fingerprints(errors=errors, label=label, case_count=case_count)
+        require_label_operator_commands(errors=errors, label=label, case_count=case_count)
+
+    if feedback:
+        require_flag(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="ready_for_runtime_preflight_feedback",
+            expected=1,
+        )
+        feedback_min_repos = require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="min_real_repos_required",
+            minimum=10,
+        )
+        feedback_min_maintainers = require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="min_maintainer_feedback_required",
+            minimum=3,
+        )
+        require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="valid_repo_rows",
+            minimum=max(10, feedback_min_repos),
+        )
+        require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="request_case_rows",
+            minimum=max(10, feedback_min_repos),
+        )
+        require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="valid_feedback_rows",
+            minimum=feedback_min_maintainers,
+        )
+        require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="distinct_countable_maintainer_id_count",
+            minimum=feedback_min_maintainers,
+        )
+        label_intake_dir_count = require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="label_intake_dir_count",
+            minimum=1,
+        )
+        require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="label_intake_label_rows",
+            minimum=300,
+        )
+        require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="label_intake_case_count",
+            minimum=max(10, feedback_min_repos),
+        )
+        require_int_at_least(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="label_intake_countable_case_count",
+            minimum=max(10, feedback_min_repos),
+        )
+        require_sha_field(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            field="repo_snapshot_lock_sha256",
+        )
+        require_flag(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="maintainer_feedback_requirement_met",
+            expected=1,
+        )
+        require_flag(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="feedback_counts_for_beta_precheck",
+            expected=1,
+        )
+        require_flag(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="label_intake_verify_existing_required",
+            expected=1,
+        )
+        label_verify_passed = require_exact_int(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="label_intake_verify_existing_passed_dirs",
+        )
+        label_verify_failed = require_exact_int(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="label_intake_verify_existing_failed_dirs",
+        )
+        if label_verify_passed >= 0 and label_verify_passed != label_intake_dir_count:
+            errors.append(
+                "maintainer_feedback_packet: label_intake_verify_existing_passed_dirs must match label_intake_dir_count"
+            )
+        if label_verify_failed >= 0 and label_verify_failed != 0:
+            errors.append("maintainer_feedback_packet: label_intake_verify_existing_failed_dirs must be 0")
+        require_flag(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="label_intake_synthetic_case_count",
+            expected=0,
+        )
+        require_flag(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="raw_feedback_text_emitted",
+            expected=0,
+        )
+        require_flag(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="creates_benchmark_evidence",
+            expected=0,
+        )
+        require_flag(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="input_path_guard_passed",
+            expected=1,
+        )
+        require_flag(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            key="output_path_guard_passed",
+            expected=1,
+            )
+
     if repo and label:
+        repo_case_ids = case_id_set(errors=errors, name="repo_audit_plan", payload=repo, row_field="per_repo")
+        label_case_ids = case_id_set(errors=errors, name="label_intake_plan", payload=label, row_field="per_case")
+        if repo_case_ids and label_case_ids and repo_case_ids != label_case_ids:
+            errors.append("label_intake_plan: per_case case_id set must match repo_audit_plan")
         for key in ["repo_intake_sha256", "repo_snapshot_lock_sha256"]:
             require_matching_artifact_field(
                 errors=errors,
@@ -516,6 +907,42 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
                 expected=repo.get(key),
                 expected_name="repo_audit_plan",
             )
+
+    if label and preflight:
+        for key in [
+            "decisions_sha256",
+            "label_template_bundle_sha256",
+            "label_template_json_sha256s",
+            "label_template_manifest_sha256s",
+        ]:
+            require_matching_artifact_field(
+                errors=errors,
+                name="runtime_preflight",
+                payload=preflight,
+                field=key,
+                expected=label.get(key),
+                expected_name="label_intake_plan",
+            )
+
+    if repo and feedback:
+        require_matching_artifact_field(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            field="repo_snapshot_lock_sha256",
+            expected=repo.get("repo_snapshot_lock_sha256"),
+            expected_name="repo_audit_plan",
+        )
+
+    if label and feedback:
+        require_matching_artifact_field(
+            errors=errors,
+            name="maintainer_feedback_packet",
+            payload=feedback,
+            field="repo_snapshot_lock_sha256",
+            expected=label.get("repo_snapshot_lock_sha256"),
+            expected_name="label_intake_plan",
+        )
 
     if repo and preflight:
         for key in ["repo_intake_sha256", "repo_snapshot_lock_sha256"]:

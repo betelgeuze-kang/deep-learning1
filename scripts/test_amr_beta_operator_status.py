@@ -33,13 +33,10 @@ def fake_sha(seed: int) -> str:
 def binding_payload() -> dict:
     template_fingerprints = [
         {
-            "label_template_json_sha256": fake_sha(100),
-            "label_template_manifest_sha256": fake_sha(200),
-        },
-        {
-            "label_template_json_sha256": fake_sha(101),
-            "label_template_manifest_sha256": fake_sha(201),
-        },
+            "label_template_json_sha256": fake_sha(100 + index),
+            "label_template_manifest_sha256": fake_sha(200 + index),
+        }
+        for index in range(10)
     ]
     label_intake_fingerprints = [
         {"label_intake_manifest_sha256": fake_sha(300)},
@@ -156,11 +153,79 @@ def repo_audit_plan_payload() -> dict:
 
 def label_intake_plan_payload() -> dict:
     binding = binding_payload()
+    per_case: list[dict[str, str]] = []
+    commands: list[str] = []
+    for index in range(10):
+        case_id = f"case-{index:02d}"
+        row = {
+            "case_id": case_id,
+            "compile_command": f"python3 scripts/audit_my_repo_label_intake.py --template /tmp/{case_id}_template",
+            "verify_command": f"python3 scripts/audit_my_repo_label_intake.py --verify-existing /tmp/{case_id}_label_intake",
+        }
+        per_case.append(row)
+        commands.extend([row["compile_command"], row["verify_command"]])
     return {
         "schema": "amr_beta_label_intake_plan.v1",
         "repo_intake_sha256": binding["repo_intake_sha256"],
         "repo_snapshot_lock_sha256": binding["repo_snapshot_lock_sha256"],
+        "decisions_sha256": binding["decisions_sha256"],
+        "template_dir_count": 10,
+        "label_template_fingerprints": binding["label_template_fingerprints"],
+        "label_template_bundle_sha256": binding["label_template_bundle_sha256"],
+        "label_template_json_sha256s": binding["label_template_json_sha256s"],
+        "label_template_manifest_sha256s": binding["label_template_manifest_sha256s"],
+        "label_template_verify_existing_required": 1,
+        "label_template_verify_existing_passed_dirs": 10,
+        "label_template_verify_existing_failed_dirs": 0,
         "ready_for_label_intake_plan": 1,
+        "case_count": 10,
+        "candidate_label_rows": 300,
+        "decision_rows": 300,
+        "valid_human_label_rows": 300,
+        "min_real_repos_required": 10,
+        "min_human_label_rows_required": 300,
+        "decision_input_guard_passed": 1,
+        "output_path_guard_passed": 1,
+        "compiles_labels": 0,
+        "writes_label_intake_outputs": 0,
+        "creates_benchmark_evidence": 0,
+        "runs_real_benchmark": 0,
+        "operator_command_count": len(commands),
+        "operator_commands_sha256": sha256_json(commands),
+        "per_case": per_case,
+        "operator_commands": commands,
+        **base_blocked(),
+    }
+
+
+def maintainer_feedback_packet_payload() -> dict:
+    binding = binding_payload()
+    return {
+        "schema": "amr_beta_maintainer_feedback_packet.v1",
+        "repo_snapshot_lock_sha256": binding["repo_snapshot_lock_sha256"],
+        "ready_for_runtime_preflight_feedback": 1,
+        "min_real_repos_required": 10,
+        "valid_repo_rows": 10,
+        "request_case_rows": 10,
+        "min_maintainer_feedback_required": 3,
+        "label_intake_dir_count": 1,
+        "label_intake_verify_existing_required": 1,
+        "label_intake_verify_existing_passed_dirs": 1,
+        "label_intake_verify_existing_failed_dirs": 0,
+        "label_intake_label_rows": 300,
+        "label_intake_case_count": 10,
+        "label_intake_countable_case_count": 10,
+        "label_intake_synthetic_case_count": 0,
+        "valid_feedback_rows": 3,
+        "distinct_maintainer_id_count": 3,
+        "distinct_countable_maintainer_id_count": 3,
+        "feedback_countable_case_rows": 3,
+        "maintainer_feedback_requirement_met": 1,
+        "feedback_counts_for_beta_precheck": 1,
+        "raw_feedback_text_emitted": 0,
+        "creates_benchmark_evidence": 0,
+        "input_path_guard_passed": 1,
+        "output_path_guard_passed": 1,
         **base_blocked(),
     }
 
@@ -234,11 +299,7 @@ def main() -> int:
         )
         write_json(
             feedback,
-            {
-                "schema": "amr_beta_maintainer_feedback_packet.v1",
-                "ready_for_runtime_preflight_feedback": 1,
-                **base_blocked(),
-            },
+            maintainer_feedback_packet_payload(),
         )
         write_json(
             preflight,
@@ -794,6 +855,254 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "runtime_preflight: repo_intake_sha256 must match repo_audit_plan" in proc.stderr
+
+        low_label_count = tmp / "low_label_count.json"
+        low_label_count_payload = label_intake_plan_payload()
+        low_label_count_payload["valid_human_label_rows"] = 299
+        write_json(low_label_count, low_label_count_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(low_label_count),
+            "--out-json",
+            str(tmp / "low_label_count_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_intake_plan: valid_human_label_rows must be >= 300" in proc.stderr
+
+        missing_label_commands = tmp / "missing_label_commands.json"
+        missing_label_commands_payload = label_intake_plan_payload()
+        del missing_label_commands_payload["operator_commands"]
+        write_json(missing_label_commands, missing_label_commands_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(missing_label_commands),
+            "--out-json",
+            str(tmp / "missing_label_commands_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_intake_plan: operator_commands must be a non-empty string list" in proc.stderr
+
+        stale_label_commands_hash = tmp / "stale_label_commands_hash.json"
+        stale_label_commands_hash_payload = label_intake_plan_payload()
+        stale_label_commands_hash_payload["operator_commands_sha256"] = fake_sha(995)
+        write_json(stale_label_commands_hash, stale_label_commands_hash_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(stale_label_commands_hash),
+            "--out-json",
+            str(tmp / "stale_label_commands_hash_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_intake_plan: operator_commands_sha256 must match operator_commands" in proc.stderr
+
+        extra_label_command = tmp / "extra_label_command.json"
+        extra_label_command_payload = label_intake_plan_payload()
+        extra_label_command_payload["operator_commands"].append("python3 scripts/unexpected_operator_command.py")
+        extra_label_command_payload["operator_command_count"] = len(extra_label_command_payload["operator_commands"])
+        extra_label_command_payload["operator_commands_sha256"] = sha256_json(
+            extra_label_command_payload["operator_commands"]
+        )
+        write_json(extra_label_command, extra_label_command_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(extra_label_command),
+            "--out-json",
+            str(tmp / "extra_label_command_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_intake_plan: operator_commands must exactly match per_case" in proc.stderr
+
+        incomplete_label_decisions = tmp / "incomplete_label_decisions.json"
+        incomplete_label_decisions_payload = label_intake_plan_payload()
+        incomplete_label_decisions_payload["candidate_label_rows"] = 301
+        write_json(incomplete_label_decisions, incomplete_label_decisions_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(incomplete_label_decisions),
+            "--out-json",
+            str(tmp / "incomplete_label_decisions_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "candidate_label_rows, decision_rows, and valid_human_label_rows must match" in proc.stderr
+
+        empty_template_fingerprints = tmp / "empty_template_fingerprints.json"
+        empty_template_fingerprints_payload = label_intake_plan_payload()
+        empty_template_fingerprints_payload["label_template_fingerprints"] = []
+        empty_template_fingerprints_payload["label_template_json_sha256s"] = []
+        empty_template_fingerprints_payload["label_template_manifest_sha256s"] = []
+        empty_template_fingerprints_payload["label_template_bundle_sha256"] = sha256_json([])
+        write_json(empty_template_fingerprints, empty_template_fingerprints_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(empty_template_fingerprints),
+            "--out-json",
+            str(tmp / "empty_template_fingerprints_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_template_fingerprints length must match case_count" in proc.stderr
+
+        skipped_template_verify = tmp / "skipped_template_verify.json"
+        skipped_template_verify_payload = label_intake_plan_payload()
+        skipped_template_verify_payload["label_template_verify_existing_required"] = 0
+        write_json(skipped_template_verify, skipped_template_verify_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(skipped_template_verify),
+            "--out-json",
+            str(tmp / "skipped_template_verify_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_intake_plan: must set label_template_verify_existing_required=1" in proc.stderr
+
+        mismatched_label_cases = tmp / "mismatched_label_cases.json"
+        mismatched_label_cases_payload = label_intake_plan_payload()
+        mismatched_label_cases_payload["per_case"][0]["case_id"] = "other-case"
+        write_json(mismatched_label_cases, mismatched_label_cases_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(mismatched_label_cases),
+            "--out-json",
+            str(tmp / "mismatched_label_cases_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_intake_plan: per_case case_id set must match repo_audit_plan" in proc.stderr
+
+        stale_label_preflight = tmp / "stale_label_preflight.json"
+        stale_label_preflight_payload = {
+            "schema": "amr_beta_runtime_preflight.v1",
+            "ready_to_request_runtime_approval": 1,
+            **path_guard_payload(),
+            **binding_payload(),
+            **base_blocked(),
+        }
+        stale_label_preflight_payload["decisions_sha256"] = fake_sha(993)
+        stale_label_preflight_payload["preflight_input_bundle_sha256"] = sha256_json(
+            {
+                "repo_intake_sha256": stale_label_preflight_payload["repo_intake_sha256"],
+                "repo_snapshot_lock_sha256": stale_label_preflight_payload["repo_snapshot_lock_sha256"],
+                "decisions_sha256": stale_label_preflight_payload["decisions_sha256"],
+                "feedback_sha256": stale_label_preflight_payload["feedback_sha256"],
+                "label_template_bundle_sha256": stale_label_preflight_payload["label_template_bundle_sha256"],
+                "label_intake_bundle_sha256": stale_label_preflight_payload["label_intake_bundle_sha256"],
+            }
+        )
+        write_json(stale_label_preflight, stale_label_preflight_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--runtime-preflight",
+            str(stale_label_preflight),
+            "--out-json",
+            str(tmp / "stale_label_preflight_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "runtime_preflight: decisions_sha256 must match label_intake_plan" in proc.stderr
+
+        low_feedback_count = tmp / "low_feedback_count.json"
+        low_feedback_count_payload = maintainer_feedback_packet_payload()
+        low_feedback_count_payload["distinct_countable_maintainer_id_count"] = 2
+        write_json(low_feedback_count, low_feedback_count_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(low_feedback_count),
+            "--out-json",
+            str(tmp / "low_feedback_count_status.json"),
+        )
+        assert proc.returncode == 1
+        assert (
+            "maintainer_feedback_packet: distinct_countable_maintainer_id_count must be >= 3"
+            in proc.stderr
+        )
+
+        stale_feedback_precheck = tmp / "stale_feedback_precheck.json"
+        stale_feedback_precheck_payload = maintainer_feedback_packet_payload()
+        stale_feedback_precheck_payload["feedback_counts_for_beta_precheck"] = 0
+        write_json(stale_feedback_precheck, stale_feedback_precheck_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(stale_feedback_precheck),
+            "--out-json",
+            str(tmp / "stale_feedback_precheck_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "maintainer_feedback_packet: must set feedback_counts_for_beta_precheck=1" in proc.stderr
+
+        stale_feedback_snapshot = tmp / "stale_feedback_snapshot.json"
+        stale_feedback_snapshot_payload = maintainer_feedback_packet_payload()
+        stale_feedback_snapshot_payload["repo_snapshot_lock_sha256"] = fake_sha(994)
+        write_json(stale_feedback_snapshot, stale_feedback_snapshot_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(stale_feedback_snapshot),
+            "--out-json",
+            str(tmp / "stale_feedback_snapshot_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "maintainer_feedback_packet: repo_snapshot_lock_sha256 must match repo_audit_plan" in proc.stderr
+
+        missing_feedback_label_context = tmp / "missing_feedback_label_context.json"
+        missing_feedback_label_context_payload = maintainer_feedback_packet_payload()
+        del missing_feedback_label_context_payload["label_intake_dir_count"]
+        write_json(missing_feedback_label_context, missing_feedback_label_context_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(missing_feedback_label_context),
+            "--out-json",
+            str(tmp / "missing_feedback_label_context_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "maintainer_feedback_packet: label_intake_dir_count must be an integer >= 1" in proc.stderr
+
+        skipped_feedback_label_verify = tmp / "skipped_feedback_label_verify.json"
+        skipped_feedback_label_verify_payload = maintainer_feedback_packet_payload()
+        skipped_feedback_label_verify_payload["label_intake_verify_existing_required"] = 0
+        write_json(skipped_feedback_label_verify, skipped_feedback_label_verify_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(skipped_feedback_label_verify),
+            "--out-json",
+            str(tmp / "skipped_feedback_label_verify_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "maintainer_feedback_packet: must set label_intake_verify_existing_required=1" in proc.stderr
 
         bad_readiness = tmp / "bad_readiness.json"
         write_json(
