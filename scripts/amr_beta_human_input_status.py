@@ -389,6 +389,9 @@ def validate_feedback(
     countable_maintainer_ids: set[str] = set()
     countable_case_ids_seen: set[str] = set()
     valid_rows = 0
+    valid_feedback_text_input_rows = 0
+    valid_feedback_hash_only_rows = 0
+    valid_feedback_digest_rows = 0
     for index, row in enumerate(rows, start=1):
         row_errors: list[str] = []
         case_id = str(row.get("case_id") or "").strip()
@@ -437,6 +440,12 @@ def validate_feedback(
             errors.extend(row_errors)
         else:
             valid_rows += 1
+            if feedback_text:
+                valid_feedback_text_input_rows += 1
+            if not feedback_text and SHA_RE.fullmatch(feedback_sha):
+                valid_feedback_hash_only_rows += 1
+            if feedback_text or SHA_RE.fullmatch(feedback_sha):
+                valid_feedback_digest_rows += 1
             maintainer_ids.add(maintainer_id)
             if not require_countable_cases or case_id in countable_case_ids:
                 countable_maintainer_ids.add(maintainer_id)
@@ -449,6 +458,9 @@ def validate_feedback(
     return errors, {
         "total_feedback_rows": len(rows),
         "valid_feedback_rows": valid_rows,
+        "valid_feedback_text_input_rows": valid_feedback_text_input_rows,
+        "valid_feedback_hash_only_rows": valid_feedback_hash_only_rows,
+        "valid_feedback_digest_rows": valid_feedback_digest_rows,
         "distinct_maintainer_id_count": len(maintainer_ids),
         "feedback_countable_case_rows": len(countable_case_ids_seen),
         "distinct_countable_maintainer_id_count": len(countable_maintainer_ids),
@@ -490,6 +502,9 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- min_maintainer_feedback_required: {payload['min_maintainer_feedback_required']}",
         f"- remaining_distinct_maintainer_ids: {payload['remaining_distinct_maintainer_ids']}",
         f"- maintainer_feedback_progress_percent: {payload['maintainer_feedback_progress_percent']}",
+        f"- valid_feedback_text_input_rows: {payload['valid_feedback_text_input_rows']}",
+        f"- valid_feedback_hash_only_rows: {payload['valid_feedback_hash_only_rows']}",
+        f"- valid_feedback_digest_rows: {payload['valid_feedback_digest_rows']}",
         f"- feedback_counts_for_beta_precheck: {payload['feedback_counts_for_beta_precheck']}",
         f"- compiles_labels: {payload['compiles_labels']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",

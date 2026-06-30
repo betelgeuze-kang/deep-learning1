@@ -8,6 +8,10 @@ Feedback is consumed by
 feedback text is hashed, not emitted, by the benchmark.
 The local feedback request packet reports returned raw `feedback_text` only as
 `feedback_text_sha256_status`.
+Its progress summary also reports `valid_feedback_text_input_rows`,
+`valid_feedback_hash_only_rows`, and `valid_feedback_digest_rows` so operators
+can confirm raw local text was accepted only for hashing and that digest-only
+feedback rows were counted without emitting raw maintainer text.
 
 Keep the filled repo intake sheet, label-intake directories, returned feedback
 JSON/JSONL, and generated feedback packet output outside every target

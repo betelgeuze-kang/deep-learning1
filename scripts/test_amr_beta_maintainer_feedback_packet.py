@@ -307,7 +307,58 @@ def main() -> int:
         assert payload["maintainer_feedback_requirement_met"] == 1
         assert payload["feedback_counts_for_beta_precheck"] == 1
         assert payload["ready_for_runtime_preflight_feedback"] == 1
+        assert payload["valid_feedback_text_input_rows"] == 3
+        assert payload["valid_feedback_hash_only_rows"] == 0
+        assert payload["valid_feedback_digest_rows"] == 3
         assert "Reviewed case-01" not in proc.stdout
+
+        hash_only_feedback = tmp / "hash_only_feedback.jsonl"
+        hash_only_text = "Maintainer supplied digest-only feedback for case-01."
+        write_jsonl(
+            hash_only_feedback,
+            [
+                {
+                    "case_id": "case-01",
+                    "maintainer_id": "maintainer-hash-only",
+                    "human_feedback": True,
+                    "feedback_text_sha256": "sha256:" + hashlib.sha256(hash_only_text.encode("utf-8")).hexdigest(),
+                },
+                {
+                    "case_id": "case-02",
+                    "maintainer_id": "maintainer-text-2",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-02 source-bound findings.",
+                },
+                {
+                    "case_id": "case-03",
+                    "maintainer_id": "maintainer-text-3",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-03 source-bound findings.",
+                },
+            ],
+        )
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--label-intake-dir",
+            str(label_intake),
+            "--feedback",
+            str(hash_only_feedback),
+            "--min-repos",
+            "3",
+            "--min-maintainers",
+            "3",
+            "--enforce-min-maintainers",
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 0, proc.stderr
+        hash_only_payload = json.loads(proc.stdout)
+        assert hash_only_payload["valid_feedback_text_input_rows"] == 2
+        assert hash_only_payload["valid_feedback_hash_only_rows"] == 1
+        assert hash_only_payload["valid_feedback_digest_rows"] == 3
+        assert hash_only_payload["feedback_counts_for_beta_precheck"] == 1
+        assert hash_only_text not in proc.stdout
 
         bad_feedback_sha = tmp / "bad_feedback_sha.jsonl"
         write_jsonl(

@@ -138,11 +138,17 @@ def main() -> int:
         assert status["synthetic_or_unverified_human_label_rows"] == 0
         assert status["human_label_progress_percent"] == 100.0
         assert status["maintainer_feedback_progress_percent"] == 100.0
+        assert status["valid_feedback_text_input_rows"] == 2
+        assert status["valid_feedback_hash_only_rows"] == 0
+        assert status["valid_feedback_digest_rows"] == 2
         assert status["compiles_labels"] == 0
         assert status["creates_benchmark_evidence"] == 0
         assert status["output_path_guard_passed"] == 1
         assert "Reviewed finding quality" not in status_json.read_text(encoding="utf-8")
         assert "Reviewed finding quality" not in status_md.read_text(encoding="utf-8")
+        assert "valid_feedback_text_input_rows: 2" in status_md.read_text(encoding="utf-8")
+        assert "valid_feedback_hash_only_rows: 0" in status_md.read_text(encoding="utf-8")
+        assert "valid_feedback_digest_rows: 2" in status_md.read_text(encoding="utf-8")
         assert "output_path_guard_passed: 1" in status_md.read_text(encoding="utf-8")
 
         template = tmp / "label_template"
