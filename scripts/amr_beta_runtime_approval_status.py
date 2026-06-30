@@ -54,6 +54,10 @@ PREFLIGHT_LIST_BINDING_KEYS = [
     ("label_template_manifest_sha256s", "template_dir_count"),
     ("label_intake_manifest_sha256s", "label_intake_dir_count"),
 ]
+PREFLIGHT_PATH_GUARD_KEYS = [
+    "input_path_preflight_passed",
+    "output_path_preflight_passed",
+]
 PLACEHOLDER_APPROVERS = {
     "agent",
     "automation",
@@ -184,6 +188,14 @@ def validate_preflight_sha_binding_fields(preflight: dict) -> list[str]:
     return errors
 
 
+def validate_preflight_path_guard_fields(preflight: dict) -> list[str]:
+    errors: list[str] = []
+    for key in PREFLIGHT_PATH_GUARD_KEYS:
+        if int_field(preflight, key, errors, "runtime preflight") != 1:
+            errors.append(f"runtime preflight must set {key}=1")
+    return errors
+
+
 def validate_fingerprint_bundle_consistency(preflight: dict) -> list[str]:
     errors: list[str] = []
     template_fingerprints = preflight.get("label_template_fingerprints")
@@ -261,6 +273,20 @@ def validate_request_sha_binding_fields(preflight: dict, request: dict) -> list[
     return errors
 
 
+def validate_request_path_guard_fields(preflight: dict, request: dict) -> list[str]:
+    errors: list[str] = []
+    for key in PREFLIGHT_PATH_GUARD_KEYS:
+        preflight_value = int_field(preflight, key, errors, "runtime preflight")
+        request_value = int_field(request, key, errors, "approval request")
+        if request_value != preflight_value:
+            errors.append(f"approval request {key} must match runtime preflight")
+        if request_value != 1:
+            errors.append(f"approval request must preserve {key}=1")
+    if int_field(request, "output_path_guard_passed", errors, "approval request") != 1:
+        errors.append("approval request must set output_path_guard_passed=1")
+    return errors
+
+
 def validate_preflight(preflight: dict) -> list[str]:
     errors: list[str] = []
     if preflight.get("schema") != PREFLIGHT_SCHEMA:
@@ -281,6 +307,7 @@ def validate_preflight(preflight: dict) -> list[str]:
         errors.append("runtime preflight must contain benchmark preparation and run commands")
     errors.extend(validate_preflight_verify_existing_counts(preflight))
     errors.extend(validate_preflight_sha_binding_fields(preflight))
+    errors.extend(validate_preflight_path_guard_fields(preflight))
     errors.extend(validate_fingerprint_bundle_consistency(preflight))
     return errors
 
@@ -310,6 +337,7 @@ def validate_request(
             errors.append(f"approval request packet must keep {key}=0")
     errors.extend(validate_request_verify_existing_counts(preflight, request))
     errors.extend(validate_request_sha_binding_fields(preflight, request))
+    errors.extend(validate_request_path_guard_fields(preflight, request))
 
     request_preflight = str(request.get("input_preflight") or "")
     if not request_preflight or not same_path(request_preflight, str(preflight_path)):
@@ -431,6 +459,8 @@ def build_status(
         "approver_id": str(record.get("approver_id") or ""),
         "approved_at_utc": str(record.get("approved_at_utc") or ""),
         "approved_runtime_budget_minutes": positive_int(record.get("approved_runtime_budget_minutes")),
+        **{key: int(request.get(key, 0)) for key in PREFLIGHT_PATH_GUARD_KEYS},
+        "approval_request_output_path_guard_passed": int(request.get("output_path_guard_passed", 0)),
         **{key: str(request.get(key) or "") for key in PREFLIGHT_SHA_BINDING_KEYS},
         **{
             key: list(request.get(key, []))
@@ -467,6 +497,9 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
         f"- runs_benchmark: {payload['runs_benchmark']}",
         f"- codex_runtime_permission_granted_by_this_packet: {payload['codex_runtime_permission_granted_by_this_packet']}",
+        f"- input_path_preflight_passed: {payload['input_path_preflight_passed']}",
+        f"- output_path_preflight_passed: {payload['output_path_preflight_passed']}",
+        f"- approval_request_output_path_guard_passed: {payload['approval_request_output_path_guard_passed']}",
         f"- benchmark_out: {payload['benchmark_out']}",
         f"- preflight_input_bundle_sha256: {payload['preflight_input_bundle_sha256']}",
         f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",

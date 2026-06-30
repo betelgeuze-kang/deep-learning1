@@ -49,6 +49,10 @@ PREFLIGHT_LIST_BINDING_KEYS = [
     ("label_template_manifest_sha256s", "template_dir_count"),
     ("label_intake_manifest_sha256s", "label_intake_dir_count"),
 ]
+PREFLIGHT_PATH_GUARD_KEYS = [
+    "input_path_preflight_passed",
+    "output_path_preflight_passed",
+]
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -165,6 +169,14 @@ def validate_sha_binding_fields(preflight: dict) -> list[str]:
     return errors
 
 
+def validate_path_guard_fields(preflight: dict) -> list[str]:
+    errors: list[str] = []
+    for key in PREFLIGHT_PATH_GUARD_KEYS:
+        if int_field(preflight, key, errors) != 1:
+            errors.append(f"runtime preflight must set {key}=1")
+    return errors
+
+
 def validate_fingerprint_bundle_consistency(preflight: dict) -> list[str]:
     errors: list[str] = []
     template_fingerprints = preflight.get("label_template_fingerprints")
@@ -249,6 +261,7 @@ def validate_preflight(preflight: dict) -> list[str]:
             errors.append("benchmark command must be real_benchmark namespace confirmed")
     errors.extend(validate_verify_existing_counts(preflight))
     errors.extend(validate_sha_binding_fields(preflight))
+    errors.extend(validate_path_guard_fields(preflight))
     errors.extend(validate_fingerprint_bundle_consistency(preflight))
     return errors
 
@@ -277,6 +290,7 @@ def build_packet(preflight: dict, *, preflight_path: Path, operator_note: str) -
             preflight.get("distinct_countable_maintainer_id_count", 0)
         ),
         "label_intake_case_count": int(preflight.get("label_intake_case_count", 0)),
+        **{key: int(preflight.get(key, 0)) for key in PREFLIGHT_PATH_GUARD_KEYS},
         **{key: int(preflight.get(key, 0)) for key in VERIFY_EXISTING_COUNTER_KEYS},
         **{key: str(preflight.get(key) or "") for key in PREFLIGHT_SHA_BINDING_KEYS},
         **{
@@ -306,6 +320,8 @@ def write_markdown(path: Path, packet: dict) -> None:
         f"- requires_human_runtime_approval: {packet['requires_human_runtime_approval']}",
         f"- creates_benchmark_evidence: {packet['creates_benchmark_evidence']}",
         f"- runs_benchmark: {packet['runs_benchmark']}",
+        f"- input_path_preflight_passed: {packet['input_path_preflight_passed']}",
+        f"- output_path_preflight_passed: {packet['output_path_preflight_passed']}",
         f"- output_path_guard_passed: {packet['output_path_guard_passed']}",
         f"- input_preflight_sha256: {packet['input_preflight_sha256']}",
         f"- preflight_input_bundle_sha256: {packet['preflight_input_bundle_sha256']}",
