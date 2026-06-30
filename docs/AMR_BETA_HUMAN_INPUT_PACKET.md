@@ -62,9 +62,10 @@ requires the approval status to bind the human approval record and requires
   status summary to see which repos are dirty, mismatched, duplicated, or still
   below threshold:
   `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv> --out-json results/amr_beta_repo_intake_status.json --out-md results/amr_beta_repo_intake_status.md --json`.
-  The status output includes `repo_snapshot_lock_sha256`, a local fingerprint
-  of the validated repo paths, pinned HEADs, clean-worktree checks, namespace
-  confirmation, and contact-presence flags.
+  The status output includes `input_intake_sha256`, `repo_snapshot_lock_sha256`,
+  a local fingerprint of the validated repo paths, pinned HEADs,
+  clean-worktree checks, namespace confirmation, and contact-presence flags.
+  It keeps `runs_audit=0` and `creates_benchmark_evidence=0`.
 - [ ] Generate the read-only audit/template/reviewer handoff plan from the
   validated intake sheet; this does not run audits or create evidence:
   `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md`.
@@ -73,6 +74,8 @@ requires the approval status to bind the human approval record and requires
 - [ ] Remove every `EXAMPLE-*` placeholder row before collection review. A row
   is usable only when the repository path, contact, HEAD, and namespace
   confirmation are human owner supplied and verified against local disk.
+  Reserved placeholder contacts such as `*.invalid`, `placeholder`,
+  `synthetic`, or `fixture` values do not count.
 - [ ] Confirm `git -C <repo_path> status --porcelain=v1 --untracked-files=all`
   is empty for every repository.
 - [ ] Confirm `git -C <repo_path> rev-parse HEAD` exactly matches the recorded

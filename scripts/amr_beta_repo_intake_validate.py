@@ -3,8 +3,8 @@
 
 This is a read-only operator guard for blocker 9.1. It validates a filled
 Markdown table or CSV before any audit/label/benchmark artifacts are created.
-It does not run audit-my-repo, does not write under results/, and does not
-promote readiness.
+It does not run audit-my-repo, does not create benchmark evidence, and does
+not promote readiness.
 """
 from __future__ import annotations
 
@@ -23,6 +23,10 @@ GIT_OBJECT_RE = re.compile(r"^([0-9a-f]{40}|[0-9a-f]{64})$")
 TRUTHY = {"1", "true", "yes", "y"}
 PLACEHOLDER_RE = re.compile(
     r"(^$|example|placeholder|replace|todo|<git rev-parse head>|/abs/path/to/repo)",
+    re.IGNORECASE,
+)
+CONTACT_PLACEHOLDER_RE = re.compile(
+    r"(^$|example|placeholder|replace|todo|synthetic|fixture|\.invalid\b)",
     re.IGNORECASE,
 )
 
@@ -68,8 +72,16 @@ def good_operator_value(value: str) -> bool:
     return not PLACEHOLDER_RE.search(str(value).strip())
 
 
+def good_contact_value(value: str) -> bool:
+    return not CONTACT_PLACEHOLDER_RE.search(str(value).strip())
+
+
 def truthy(value: str) -> bool:
     return str(value).strip().lower() in TRUTHY
+
+
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def sha256_json(payload: object) -> str:
@@ -201,7 +213,7 @@ def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, 
         errors.append(f"row {index}: case_id must not be example/placeholder")
 
     contact = normalized["owner_or_maintainer_contact"]
-    if contact and not good_operator_value(contact):
+    if contact and (not good_operator_value(contact) or not good_contact_value(contact)):
         errors.append(f"row {index}: owner_or_maintainer_contact must be human-supplied")
 
     audit_mode = normalized["audit_mode"].lower()
@@ -281,6 +293,10 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
         "valid_repo_rows": valid_rows,
         "min_real_repos_required": min_repos,
         "ready_for_real_benchmark_audit": int(not errors),
+        "runs_audit": 0,
+        "runs_label_template_generation": 0,
+        "writes_reviewer_packets": 0,
+        "creates_benchmark_evidence": 0,
         "repo_snapshot_lock_sha256": sha256_json(snapshot_lock_rows(row_statuses)),
         "row_statuses": row_statuses,
         "design_partner_beta_candidate_ready": 0,
@@ -310,8 +326,13 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "# AMR Beta Repo Intake Status",
         "",
         f"- ready_for_real_benchmark_audit: {payload['ready_for_real_benchmark_audit']}",
+        f"- input_intake_sha256: {payload['input_intake_sha256']}",
         f"- valid_repo_rows: {payload['valid_repo_rows']}",
         f"- min_real_repos_required: {payload['min_real_repos_required']}",
+        f"- runs_audit: {payload['runs_audit']}",
+        f"- runs_label_template_generation: {payload['runs_label_template_generation']}",
+        f"- writes_reviewer_packets: {payload['writes_reviewer_packets']}",
+        f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
         f"- design_partner_beta_candidate_ready: {payload['design_partner_beta_candidate_ready']}",
         f"- release_ready: {payload['release_ready']}",
         f"- public_comparison_claim_ready: {payload['public_comparison_claim_ready']}",
@@ -355,7 +376,12 @@ def main(argv: list[str]) -> int:
     try:
         rows = read_rows(path)
         errors, summary = validate_rows(rows, min_repos=args.min_repos)
-        payload = {**summary, "errors": errors}
+        payload = {
+            **summary,
+            "input_intake": str(path),
+            "input_intake_sha256": sha256_file(path),
+            "errors": errors,
+        }
         if args.out_json:
             write_json(Path(args.out_json).expanduser().resolve(), payload, args.overwrite)
         if args.out_md:
