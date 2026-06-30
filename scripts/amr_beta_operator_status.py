@@ -61,6 +61,19 @@ PREFLIGHT_PATH_GUARD_KEYS = [
     "input_path_preflight_passed",
     "output_path_preflight_passed",
 ]
+REPO_AUDIT_PLAN_READ_ONLY_FLAGS = [
+    "runs_audit",
+    "runs_label_template_generation",
+    "writes_reviewer_packets",
+    "creates_benchmark_evidence",
+]
+REPO_AUDIT_PLAN_COMMAND_FIELDS = [
+    "audit_command",
+    "audit_verify_command",
+    "label_template_command",
+    "label_template_verify_command",
+    "reviewer_packet_command",
+]
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -213,6 +226,32 @@ def require_flag(
         errors.append(f"{name}: must set {key}={expected}")
 
 
+def require_int_at_least(
+    *,
+    errors: list[str],
+    name: str,
+    payload: dict,
+    key: str,
+    minimum: int,
+) -> int:
+    raw = payload.get(key)
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        errors.append(f"{name}: {key} must be an integer >= {minimum}")
+        return 0
+    value = raw
+    if value < minimum:
+        errors.append(f"{name}: {key} must be >= {minimum}")
+    return value
+
+
+def require_exact_int(*, errors: list[str], name: str, payload: dict, key: str) -> int:
+    raw = payload.get(key)
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        errors.append(f"{name}: {key} must be an integer")
+        return -1
+    return raw
+
+
 def require_bound_path(
     *,
     errors: list[str],
@@ -267,6 +306,63 @@ def require_matching_field(
 ) -> None:
     if payload.get(field) != expected:
         errors.append(f"{name}: {field} must match runtime_preflight")
+
+
+def require_matching_artifact_field(
+    *,
+    errors: list[str],
+    name: str,
+    payload: dict,
+    field: str,
+    expected: object,
+    expected_name: str,
+) -> None:
+    if payload.get(field) != expected:
+        errors.append(f"{name}: {field} must match {expected_name}")
+
+
+def require_repo_operator_commands(
+    *,
+    errors: list[str],
+    repo: dict,
+    valid_repo_rows: int,
+) -> None:
+    commands = repo.get("operator_commands")
+    if not isinstance(commands, list) or not all(isinstance(command, str) and command for command in commands):
+        errors.append("repo_audit_plan: operator_commands must be a non-empty string list")
+        return
+
+    command_count = require_exact_int(
+        errors=errors,
+        name="repo_audit_plan",
+        payload=repo,
+        key="operator_command_count",
+    )
+    if command_count >= 0 and command_count != len(commands):
+        errors.append("repo_audit_plan: operator_command_count must match operator_commands length")
+    if str(repo.get("operator_commands_sha256") or "") != sha256_json(commands):
+        errors.append("repo_audit_plan: operator_commands_sha256 must match operator_commands")
+
+    per_repo = repo.get("per_repo")
+    if not isinstance(per_repo, list):
+        errors.append("repo_audit_plan: per_repo must be a list")
+        return
+    if valid_repo_rows > 0 and len(per_repo) != valid_repo_rows:
+        errors.append("repo_audit_plan: per_repo length must match valid_repo_rows")
+
+    command_set = set(commands)
+    for row in per_repo:
+        if not isinstance(row, dict):
+            errors.append("repo_audit_plan: per_repo rows must be objects")
+            return
+        for field in REPO_AUDIT_PLAN_COMMAND_FIELDS:
+            command = row.get(field)
+            if not isinstance(command, str) or not command:
+                errors.append(f"repo_audit_plan: per_repo rows must include {field}")
+                return
+            if command not in command_set:
+                errors.append(f"repo_audit_plan: {field} must be included in operator_commands")
+                return
 
 
 def preflight_count(preflight: dict, key: str, errors: list[str]) -> int:
@@ -372,10 +468,65 @@ def runtime_fingerprint_errors(artifacts: dict[str, dict | None]) -> list[str]:
 
 def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, dict]) -> list[str]:
     errors: list[str] = []
+    repo = artifacts.get("repo_audit_plan")
+    label = artifacts.get("label_intake_plan")
     preflight = artifacts.get("runtime_preflight")
     request = artifacts.get("runtime_approval_request")
     status = artifacts.get("runtime_approval_status")
     benchmark = artifacts.get("benchmark_readiness")
+
+    if repo:
+        require_flag(
+            errors=errors,
+            name="repo_audit_plan",
+            payload=repo,
+            key="ready_for_real_benchmark_audit_plan",
+            expected=1,
+        )
+        min_repos = require_int_at_least(
+            errors=errors,
+            name="repo_audit_plan",
+            payload=repo,
+            key="min_real_repos_required",
+            minimum=10,
+        )
+        valid_repo_rows = require_int_at_least(
+            errors=errors,
+            name="repo_audit_plan",
+            payload=repo,
+            key="valid_repo_rows",
+            minimum=max(10, min_repos),
+        )
+        require_sha_field(errors=errors, name="repo_audit_plan", payload=repo, field="repo_intake_sha256")
+        require_sha_field(errors=errors, name="repo_audit_plan", payload=repo, field="repo_snapshot_lock_sha256")
+        require_sha_field(errors=errors, name="repo_audit_plan", payload=repo, field="operator_commands_sha256")
+        require_repo_operator_commands(errors=errors, repo=repo, valid_repo_rows=valid_repo_rows)
+        for key in REPO_AUDIT_PLAN_READ_ONLY_FLAGS:
+            require_flag(errors=errors, name="repo_audit_plan", payload=repo, key=key, expected=0)
+        require_flag(errors=errors, name="repo_audit_plan", payload=repo, key="input_path_guard_passed", expected=1)
+        require_flag(errors=errors, name="repo_audit_plan", payload=repo, key="output_path_guard_passed", expected=1)
+
+    if repo and label:
+        for key in ["repo_intake_sha256", "repo_snapshot_lock_sha256"]:
+            require_matching_artifact_field(
+                errors=errors,
+                name="label_intake_plan",
+                payload=label,
+                field=key,
+                expected=repo.get(key),
+                expected_name="repo_audit_plan",
+            )
+
+    if repo and preflight:
+        for key in ["repo_intake_sha256", "repo_snapshot_lock_sha256"]:
+            require_matching_artifact_field(
+                errors=errors,
+                name="runtime_preflight",
+                payload=preflight,
+                field=key,
+                expected=repo.get(key),
+                expected_name="repo_audit_plan",
+            )
 
     if request and not preflight:
         errors.append("runtime_approval_request: runtime_preflight is required")
