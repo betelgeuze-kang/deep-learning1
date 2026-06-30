@@ -407,6 +407,25 @@ def main() -> int:
         assert proc.returncode == 1
         assert "output_path_guard_passed=1" in proc.stderr
 
+        moved_request_dir = benchmark_out / "copied_request"
+        moved_request_dir.mkdir(parents=True)
+        moved_request = moved_request_dir / "approval_request.json"
+        write_json(moved_request, request_payload(preflight, commands, benchmark_out))
+        moved_record = tmp / "moved_request_record.json"
+        write_json(moved_record, record_payload(preflight, moved_request, commands, benchmark_out))
+        proc = run_tool(
+            "--preflight",
+            str(preflight),
+            "--request",
+            str(moved_request),
+            "--approval-record",
+            str(moved_record),
+            "--out-json",
+            str(tmp / "moved_request_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "request path must not be inside approved benchmark output" in proc.stderr
+
         stale_fingerprint_preflight = tmp / "stale_fingerprint_preflight.json"
         stale_preflight_payload = preflight_payload(commands)
         stale_preflight_payload["label_intake_bundle_sha256"] = fake_sha(999)

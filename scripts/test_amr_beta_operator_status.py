@@ -99,6 +99,13 @@ def base_blocked() -> dict:
     }
 
 
+def path_guard_payload() -> dict:
+    return {
+        "input_path_preflight_passed": 1,
+        "output_path_preflight_passed": 1,
+    }
+
+
 def request_payload(preflight: Path) -> dict:
     return {
         "schema": "amr_beta_runtime_approval_request.v1",
@@ -111,6 +118,8 @@ def request_payload(preflight: Path) -> dict:
         "benchmark_runtime_approval_required": 1,
         "creates_benchmark_evidence": 0,
         "runs_benchmark": 0,
+        **path_guard_payload(),
+        "output_path_guard_passed": 1,
         **binding_payload(),
         **base_blocked(),
     }
@@ -135,6 +144,8 @@ def approval_status_payload(preflight: Path, request: Path, record: Path, benchm
         "runs_benchmark": 0,
         "codex_runtime_permission_granted_by_this_packet": 0,
         "benchmark_out": str(benchmark_out.resolve()),
+        **path_guard_payload(),
+        "approval_request_output_path_guard_passed": 1,
         **binding_payload(),
         **base_blocked(),
     }
@@ -183,6 +194,7 @@ def main() -> int:
             {
                 "schema": "amr_beta_runtime_preflight.v1",
                 "ready_to_request_runtime_approval": 1,
+                **path_guard_payload(),
                 **binding_payload(),
                 **base_blocked(),
             },
@@ -261,9 +273,12 @@ def main() -> int:
             payload["runtime_fingerprints"]["label_intake_manifest_sha256s"]
             == expected_binding["label_intake_manifest_sha256s"]
         )
+        assert payload["runtime_fingerprints"]["input_path_preflight_passed"] == 1
+        assert payload["runtime_fingerprints"]["output_path_preflight_passed"] == 1
         markdown = out_md.read_text(encoding="utf-8")
         assert "current_stage: stage_4_runtime_approval_verified" in markdown
         assert "preflight_input_bundle_sha256: sha256:" in markdown
+        assert "input_path_preflight_passed: 1" in markdown
         assert 'label_intake_manifest_sha256s: ["sha256:' in markdown
 
         proc = run_tool(
@@ -338,6 +353,7 @@ def main() -> int:
         malformed_preflight_payload = {
             "schema": "amr_beta_runtime_preflight.v1",
             "ready_to_request_runtime_approval": 1,
+            **path_guard_payload(),
             **binding_payload(),
             **base_blocked(),
         }
@@ -372,6 +388,7 @@ def main() -> int:
         stale_preflight_payload = {
             "schema": "amr_beta_runtime_preflight.v1",
             "ready_to_request_runtime_approval": 1,
+            **path_guard_payload(),
             **binding_payload(),
             **base_blocked(),
         }
@@ -444,6 +461,27 @@ def main() -> int:
         assert proc.returncode == 1
         assert "ready_for_human_operator_benchmark_run=1" in proc.stderr
 
+        missing_request_guard = tmp / "missing_request_guard.json"
+        missing_request_guard_payload = request_payload(preflight)
+        del missing_request_guard_payload["input_path_preflight_passed"]
+        write_json(missing_request_guard, missing_request_guard_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(preflight),
+            "--runtime-approval-request",
+            str(missing_request_guard),
+            "--out-json",
+            str(tmp / "missing_request_guard_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "input_path_preflight_passed must be present" in proc.stderr
+
         malformed_request = tmp / "malformed_request.json"
         malformed_request_payload = request_payload(preflight)
         malformed_request_payload["approved_by_human"] = "true"
@@ -494,6 +532,34 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "approval_record_sha256 must be a sha256 binding" in proc.stderr
+
+        missing_status_guard = tmp / "missing_status_guard.json"
+        missing_status_guard_payload = approval_status_payload(
+            preflight,
+            approval_request,
+            approval_record,
+            benchmark_out,
+        )
+        del missing_status_guard_payload["approval_request_output_path_guard_passed"]
+        write_json(missing_status_guard, missing_status_guard_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(preflight),
+            "--runtime-approval-request",
+            str(approval_request),
+            "--runtime-approval-status",
+            str(missing_status_guard),
+            "--out-json",
+            str(tmp / "missing_status_guard_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "approval_request_output_path_guard_passed must be present" in proc.stderr
 
         stale_fingerprint_status = tmp / "stale_fingerprint_status.json"
         stale_fingerprint_status_payload = approval_status_payload(

@@ -76,6 +76,14 @@ def is_forbidden_env_path(path: Path) -> bool:
     return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
 
 
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
 def read_json(path: Path, input_name: str) -> dict:
     if is_forbidden_env_path(path):
         raise ValueError(f"refusing to read .env-like {input_name} path")
@@ -287,6 +295,21 @@ def validate_request_path_guard_fields(preflight: dict, request: dict) -> list[s
     return errors
 
 
+def validate_current_request_path(request_path: Path, benchmark_out: str) -> list[str]:
+    errors: list[str] = []
+    benchmark_out_text = str(benchmark_out or "").strip()
+    if not benchmark_out_text:
+        return errors
+    benchmark_out_path = Path(benchmark_out_text).expanduser().resolve()
+    resolved_request = request_path.resolve()
+    if resolved_request == benchmark_out_path or is_relative_to(resolved_request, benchmark_out_path):
+        errors.append(
+            "runtime approval request path must not be inside approved benchmark output: "
+            f"{resolved_request} (benchmark_out: {benchmark_out_path})"
+        )
+    return errors
+
+
 def validate_preflight(preflight: dict) -> list[str]:
     errors: list[str] = []
     if preflight.get("schema") != PREFLIGHT_SCHEMA:
@@ -367,6 +390,7 @@ def validate_request(
     request_benchmark_out = str(request.get("benchmark_out") or benchmark_out)
     if benchmark_out and not same_path(request_benchmark_out, benchmark_out):
         errors.append("approval request benchmark_out must match benchmark command --out")
+    errors.extend(validate_current_request_path(request_path, benchmark_out))
 
     benchmark_command = commands[1] if len(commands) > 1 else ""
     benchmark_parts = command_parts(benchmark_command)
