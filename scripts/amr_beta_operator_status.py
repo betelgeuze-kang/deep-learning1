@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -22,6 +23,7 @@ BLOCKED_FLAGS = {
     "public_comparison_claim_ready": 0,
     "real_model_execution_ready": 0,
 }
+SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 KNOWN_ARTIFACTS = {
     "repo_audit_plan": "amr_beta_repo_audit_plan.v1",
     "label_intake_plan": "amr_beta_label_intake_plan.v1",
@@ -41,6 +43,20 @@ STAGE_ORDER = [
     "stage_4_real_benchmark_verified",
     "stage_5_beta_candidate_or_hardening",
 ]
+PREFLIGHT_SHA_BINDING_KEYS = [
+    "repo_intake_sha256",
+    "repo_snapshot_lock_sha256",
+    "decisions_sha256",
+    "feedback_sha256",
+    "label_template_bundle_sha256",
+    "label_intake_bundle_sha256",
+    "preflight_input_bundle_sha256",
+]
+PREFLIGHT_LIST_BINDING_KEYS = [
+    "label_template_json_sha256s",
+    "label_template_manifest_sha256s",
+    "label_intake_manifest_sha256s",
+]
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -50,6 +66,11 @@ def is_forbidden_env_path(path: Path) -> bool:
 
 def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def same_path(left: str, right: str) -> bool:
@@ -216,8 +237,133 @@ def require_bound_sha(
 
 def require_sha_field(*, errors: list[str], name: str, payload: dict, field: str) -> None:
     value = str(payload.get(field) or "")
-    if not value.startswith("sha256:") or len(value) != len("sha256:") + 64:
+    if not SHA256_RE.fullmatch(value):
         errors.append(f"{name}: {field} must be a sha256 binding")
+
+
+def require_sha_list_field(*, errors: list[str], name: str, payload: dict, field: str) -> None:
+    values = payload.get(field)
+    if not isinstance(values, list):
+        errors.append(f"{name}: {field} must be a sha256 binding list")
+        return
+    for value in values:
+        text = str(value or "")
+        if not SHA256_RE.fullmatch(text):
+            errors.append(f"{name}: {field} must contain only sha256 bindings")
+            return
+
+
+def require_matching_field(
+    *,
+    errors: list[str],
+    name: str,
+    payload: dict,
+    field: str,
+    expected: object,
+) -> None:
+    if payload.get(field) != expected:
+        errors.append(f"{name}: {field} must match runtime_preflight")
+
+
+def preflight_count(preflight: dict, key: str, errors: list[str]) -> int:
+    try:
+        return int(preflight.get(key, -1))
+    except (TypeError, ValueError):
+        errors.append(f"runtime_preflight: {key} must be an integer")
+        return -1
+
+
+def runtime_fingerprint_bundle_errors(preflight: dict) -> list[str]:
+    errors: list[str] = []
+    template_fingerprints = preflight.get("label_template_fingerprints")
+    if not isinstance(template_fingerprints, list):
+        errors.append("runtime_preflight: label_template_fingerprints must be a list")
+        template_fingerprints = []
+    if len(template_fingerprints) != preflight_count(preflight, "template_dir_count", errors):
+        errors.append("runtime_preflight: label_template_fingerprints length must equal template_dir_count")
+    template_json_sha256s = [
+        str(row.get("label_template_json_sha256") or "")
+        for row in template_fingerprints
+        if isinstance(row, dict)
+    ]
+    template_manifest_sha256s = [
+        str(row.get("label_template_manifest_sha256") or "")
+        for row in template_fingerprints
+        if isinstance(row, dict) and str(row.get("label_template_manifest_sha256") or "")
+    ]
+    if preflight.get("label_template_json_sha256s") != template_json_sha256s:
+        errors.append("runtime_preflight: label_template_json_sha256s must match label_template_fingerprints")
+    if preflight.get("label_template_manifest_sha256s") != template_manifest_sha256s:
+        errors.append("runtime_preflight: label_template_manifest_sha256s must match label_template_fingerprints")
+    if str(preflight.get("label_template_bundle_sha256") or "") != sha256_json(template_fingerprints):
+        errors.append("runtime_preflight: label_template_bundle_sha256 does not match label_template_fingerprints")
+
+    label_intake_fingerprints = preflight.get("label_intake_fingerprints")
+    if not isinstance(label_intake_fingerprints, list):
+        errors.append("runtime_preflight: label_intake_fingerprints must be a list")
+        label_intake_fingerprints = []
+    if len(label_intake_fingerprints) != preflight_count(preflight, "label_intake_dir_count", errors):
+        errors.append("runtime_preflight: label_intake_fingerprints length must equal label_intake_dir_count")
+    label_intake_manifest_sha256s = [
+        str(row.get("label_intake_manifest_sha256") or "")
+        for row in label_intake_fingerprints
+        if isinstance(row, dict)
+    ]
+    if preflight.get("label_intake_manifest_sha256s") != label_intake_manifest_sha256s:
+        errors.append("runtime_preflight: label_intake_manifest_sha256s must match label_intake_fingerprints")
+    if str(preflight.get("label_intake_bundle_sha256") or "") != sha256_json(label_intake_fingerprints):
+        errors.append("runtime_preflight: label_intake_bundle_sha256 does not match label_intake_fingerprints")
+
+    input_bundle = {
+        "repo_intake_sha256": str(preflight.get("repo_intake_sha256") or ""),
+        "repo_snapshot_lock_sha256": str(preflight.get("repo_snapshot_lock_sha256") or ""),
+        "decisions_sha256": str(preflight.get("decisions_sha256") or ""),
+        "feedback_sha256": str(preflight.get("feedback_sha256") or ""),
+        "label_template_bundle_sha256": str(preflight.get("label_template_bundle_sha256") or ""),
+        "label_intake_bundle_sha256": str(preflight.get("label_intake_bundle_sha256") or ""),
+    }
+    if str(preflight.get("preflight_input_bundle_sha256") or "") != sha256_json(input_bundle):
+        errors.append("runtime_preflight: preflight_input_bundle_sha256 does not match input fingerprints")
+    return errors
+
+
+def runtime_fingerprint_errors(artifacts: dict[str, dict | None]) -> list[str]:
+    errors: list[str] = []
+    preflight = artifacts.get("runtime_preflight")
+    request = artifacts.get("runtime_approval_request")
+    status = artifacts.get("runtime_approval_status")
+    if not preflight:
+        return errors
+
+    for key in PREFLIGHT_SHA_BINDING_KEYS:
+        require_sha_field(errors=errors, name="runtime_preflight", payload=preflight, field=key)
+    for key in PREFLIGHT_LIST_BINDING_KEYS:
+        require_sha_list_field(errors=errors, name="runtime_preflight", payload=preflight, field=key)
+    errors.extend(runtime_fingerprint_bundle_errors(preflight))
+
+    for name, payload in [
+        ("runtime_approval_request", request),
+        ("runtime_approval_status", status),
+    ]:
+        if not payload:
+            continue
+        for key in PREFLIGHT_SHA_BINDING_KEYS:
+            require_matching_field(
+                errors=errors,
+                name=name,
+                payload=payload,
+                field=key,
+                expected=preflight.get(key),
+            )
+        for key in PREFLIGHT_LIST_BINDING_KEYS:
+            require_matching_field(
+                errors=errors,
+                name=name,
+                payload=payload,
+                field=key,
+                expected=preflight.get(key),
+            )
+    return errors
 
 
 def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, dict]) -> list[str]:
@@ -382,6 +528,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
                     "runtime_approval_status benchmark_out/benchmark_readiness.json"
                 )
 
+    errors.extend(runtime_fingerprint_errors(artifacts))
     return errors
 
 
@@ -464,6 +611,14 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
     lines.extend(["", "## Artifacts", ""])
     for name, meta in payload["artifacts"].items():
         lines.append(f"- {name}: {meta['path']} ({meta['schema']})")
+    if payload.get("runtime_fingerprints"):
+        lines.extend(["", "## Runtime Fingerprints", ""])
+        for key, value in payload["runtime_fingerprints"].items():
+            if isinstance(value, list):
+                rendered = json.dumps(value, sort_keys=True)
+            else:
+                rendered = str(value)
+            lines.append(f"- {key}: {rendered}")
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
@@ -517,6 +672,19 @@ def main(argv: list[str]) -> int:
             current_stage == "stage_5_beta_candidate_or_hardening"
             and truthy_int(benchmark or {}, "design_partner_beta_candidate_ready") == 1
         )
+        preflight = artifacts.get("runtime_preflight") or {}
+        runtime_fingerprints = {
+            key: str(preflight.get(key) or "")
+            for key in PREFLIGHT_SHA_BINDING_KEYS
+            if preflight.get(key)
+        }
+        runtime_fingerprints.update(
+            {
+                key: list(preflight.get(key, []))
+                for key in PREFLIGHT_LIST_BINDING_KEYS
+                if preflight.get(key)
+            }
+        )
         payload = {
             "schema": SCHEMA,
             "current_stage": current_stage,
@@ -524,6 +692,7 @@ def main(argv: list[str]) -> int:
             "next_blockers": next_blockers,
             "artifacts": artifact_meta,
             "artifact_count": len(artifact_meta),
+            "runtime_fingerprints": runtime_fingerprints,
             "creates_benchmark_evidence": 0,
             "runs_benchmark": 0,
             "design_partner_beta_candidate_ready": benchmark_ready,

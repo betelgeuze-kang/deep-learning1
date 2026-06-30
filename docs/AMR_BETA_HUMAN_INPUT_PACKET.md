@@ -47,7 +47,10 @@ been created:
 The status board validates the preflight -> approval request -> approval status
 chain by path and sha before advancing to runtime-approved stages. It also
 requires the approval status to bind the human approval record and requires
-`benchmark_readiness.json` to live under the approved `benchmark_out`.
+`benchmark_readiness.json` to live under the approved `benchmark_out`. The
+operator status also checks that runtime approval request/status artifacts carry
+the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
+`label_intake_bundle_sha256`, and manifest-sha lists recorded by the preflight.
 
 ### 9.1 Repository intake checklist
 
