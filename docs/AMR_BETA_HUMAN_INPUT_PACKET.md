@@ -136,6 +136,12 @@ status while keeping all release/public/model readiness flags blocked.
   `human_labels_remaining_to_minimum` so operators can triage per-repo coverage
   before label-intake planning. Synthetic/template-only candidates never reduce
   the beta threshold remainder.
+- [ ] When using the combined human-input status guard, pass every available
+  `--template-dir`; with template context supplied it reports
+  `non_synthetic_valid_human_label_rows` and only those decisions reduce the
+  300-label beta threshold remainder. `valid_human_label_rows` remains a
+  diagnostic all-valid count and must not be used as the beta threshold basis
+  when synthetic or unverified template candidates are present.
 - [ ] Before compiling label-intake outputs, generate the read-only per-repo
   label-intake command plan; this validates coverage and citation readiness but
   does not compile labels:

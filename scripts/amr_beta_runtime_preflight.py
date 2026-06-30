@@ -198,7 +198,12 @@ def empty_label_intake_summary(raw_dirs: list[str], *, verify_existing: bool) ->
 
 
 def empty_decision_summary() -> dict[str, int]:
-    return {"total_decision_rows": 0, "valid_human_label_rows": 0}
+    return {
+        "total_decision_rows": 0,
+        "valid_human_label_rows": 0,
+        "non_synthetic_valid_human_label_rows": 0,
+        "synthetic_or_unverified_human_label_rows": 0,
+    }
 
 
 def empty_feedback_summary() -> dict[str, int]:
@@ -333,6 +338,7 @@ def main(argv: list[str]) -> int:
             }
             template_fingerprints = []
             template_candidate_ids: set[str] = set()
+            template_non_synthetic_candidate_ids: set[str] = set()
             template_case_ids: set[str] = set()
             label_rows = []
             label_errors = []
@@ -357,6 +363,11 @@ def main(argv: list[str]) -> int:
                 verify_existing=not args.skip_verify_existing,
             )
             template_candidate_ids = {row["candidate_label_id"] for row in template_rows}
+            template_non_synthetic_candidate_ids = {
+                row["candidate_label_id"]
+                for row in template_rows
+                if not benchmark_inputs.truthy(row.get("synthetic", True))
+            }
             template_case_ids = {row["case_id"] for row in template_rows}
             label_rows, label_errors, manifest_sha256s, label_intake_fingerprints, verify_counts = load_label_intakes(
                 args.label_intake_dir,
@@ -382,6 +393,8 @@ def main(argv: list[str]) -> int:
             decision_errors, decision_summary = human_status.validate_decisions(
                 decisions,
                 known_candidate_ids=template_candidate_ids,
+                non_synthetic_candidate_ids=template_non_synthetic_candidate_ids,
+                template_context_supplied=bool(args.template_dir),
                 min_labels=args.min_labels,
             )
             feedback_errors, feedback_summary = human_status.validate_feedback(

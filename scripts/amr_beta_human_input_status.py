@@ -179,8 +179,10 @@ def read_json_or_jsonl(path: Path, input_name: str) -> list[dict]:
     return rows
 
 
-def load_template_context(template_dirs: list[str]) -> tuple[set[str], set[str]]:
+def load_template_context(template_dirs: list[str]) -> tuple[set[str], set[str], set[str], set[str]]:
     candidate_ids: set[str] = set()
+    non_synthetic_candidate_ids: set[str] = set()
+    synthetic_candidate_ids: set[str] = set()
     case_ids: set[str] = set()
     for raw in template_dirs:
         path = Path(raw).expanduser().resolve()
@@ -200,20 +202,28 @@ def load_template_context(template_dirs: list[str]) -> tuple[set[str], set[str]]
             case_id = str(row.get("case_id") or "").strip()
             if candidate_id:
                 candidate_ids.add(candidate_id)
+                if truthy(row.get("synthetic", True)):
+                    synthetic_candidate_ids.add(candidate_id)
+                else:
+                    non_synthetic_candidate_ids.add(candidate_id)
             if case_id:
                 case_ids.add(case_id)
-    return candidate_ids, case_ids
+    return candidate_ids, case_ids, non_synthetic_candidate_ids, synthetic_candidate_ids
 
 
 def validate_decisions(
     rows: list[dict],
     *,
     known_candidate_ids: set[str],
+    non_synthetic_candidate_ids: set[str],
+    template_context_supplied: bool,
     min_labels: int,
 ) -> tuple[list[str], dict[str, int]]:
     errors: list[str] = []
     seen: set[str] = set()
     valid_rows = 0
+    non_synthetic_valid_rows = 0
+    synthetic_or_unverified_valid_rows = 0
     for index, row in enumerate(rows, start=1):
         candidate_id = str(row.get("candidate_label_id") or "").strip()
         row_errors: list[str] = []
@@ -256,9 +266,24 @@ def validate_decisions(
             errors.extend(row_errors)
         else:
             valid_rows += 1
-    if valid_rows < min_labels:
-        errors.append(f"valid_human_label_rows {valid_rows} below required minimum {min_labels}")
-    return errors, {"total_decision_rows": len(rows), "valid_human_label_rows": valid_rows}
+            if template_context_supplied:
+                if candidate_id in non_synthetic_candidate_ids:
+                    non_synthetic_valid_rows += 1
+                else:
+                    synthetic_or_unverified_valid_rows += 1
+            else:
+                non_synthetic_valid_rows += 1
+    if non_synthetic_valid_rows < min_labels:
+        errors.append(
+            "non_synthetic_valid_human_label_rows "
+            f"{non_synthetic_valid_rows} below required minimum {min_labels}"
+        )
+    return errors, {
+        "total_decision_rows": len(rows),
+        "valid_human_label_rows": valid_rows,
+        "non_synthetic_valid_human_label_rows": non_synthetic_valid_rows,
+        "synthetic_or_unverified_human_label_rows": synthetic_or_unverified_valid_rows,
+    }
 
 
 def read_jsonl(path: Path, input_name: str) -> list[dict]:
@@ -456,6 +481,8 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         "",
         f"- ready_for_real_benchmark_inputs: {payload['ready_for_real_benchmark_inputs']}",
         f"- valid_human_label_rows: {payload['valid_human_label_rows']}",
+        f"- non_synthetic_valid_human_label_rows: {payload['non_synthetic_valid_human_label_rows']}",
+        f"- synthetic_or_unverified_human_label_rows: {payload['synthetic_or_unverified_human_label_rows']}",
         f"- min_human_label_rows_required: {payload['min_human_label_rows_required']}",
         f"- remaining_human_label_rows: {payload['remaining_human_label_rows']}",
         f"- human_label_progress_percent: {payload['human_label_progress_percent']}",
@@ -512,7 +539,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     args = build_parser().parse_args(argv)
     try:
-        known_candidate_ids, template_case_ids = load_template_context(args.template_dir)
+        (
+            known_candidate_ids,
+            template_case_ids,
+            non_synthetic_candidate_ids,
+            synthetic_candidate_ids,
+        ) = load_template_context(args.template_dir)
         label_intake_case_ids, countable_case_ids, label_intake_summary = load_label_intake_context(
             args.label_intake_dir,
             verify_existing=not args.skip_verify_existing,
@@ -530,6 +562,8 @@ def main(argv: list[str]) -> int:
         decision_errors, decision_summary = validate_decisions(
             decision_rows,
             known_candidate_ids=known_candidate_ids,
+            non_synthetic_candidate_ids=non_synthetic_candidate_ids,
+            template_context_supplied=bool(args.template_dir),
             min_labels=args.min_labels,
         )
         feedback_errors, feedback_summary = validate_feedback(
@@ -549,13 +583,18 @@ def main(argv: list[str]) -> int:
         if args.label_intake_dir
         else feedback_summary["distinct_maintainer_id_count"]
     )
+    countable_human_label_rows = decision_summary["non_synthetic_valid_human_label_rows"]
     summary = {
         "schema": "amr_beta_human_input_status.v1",
         **decision_summary,
+        "template_dir_count": len(args.template_dir),
+        "template_candidate_rows": len(known_candidate_ids),
+        "template_non_synthetic_candidate_rows": len(non_synthetic_candidate_ids),
+        "template_synthetic_or_unverified_candidate_rows": len(synthetic_candidate_ids),
         "min_human_label_rows_required": args.min_labels,
-        "remaining_human_label_rows": max(0, args.min_labels - decision_summary["valid_human_label_rows"]),
-        "human_label_progress_percent": progress_percent(decision_summary["valid_human_label_rows"], args.min_labels),
-        "human_label_requirement_met": int(decision_summary["valid_human_label_rows"] >= args.min_labels),
+        "remaining_human_label_rows": max(0, args.min_labels - countable_human_label_rows),
+        "human_label_progress_percent": progress_percent(countable_human_label_rows, args.min_labels),
+        "human_label_requirement_met": int(countable_human_label_rows >= args.min_labels),
         **feedback_summary,
         **label_intake_summary,
         "min_maintainer_feedback_required": args.min_maintainers,
