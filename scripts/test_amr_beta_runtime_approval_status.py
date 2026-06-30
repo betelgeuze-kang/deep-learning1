@@ -34,6 +34,7 @@ def binding_payload() -> dict:
     repo_snapshot_lock_sha256 = fake_sha(2)
     decisions_sha256 = fake_sha(3)
     feedback_sha256 = fake_sha(4)
+    feedback_bundle_sha256 = fake_sha(5)
     label_template_fingerprints = [
         {
             "template_dir": f"/tmp/template-{index}",
@@ -56,6 +57,7 @@ def binding_payload() -> dict:
         "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
         "decisions_sha256": decisions_sha256,
         "feedback_sha256": feedback_sha256,
+        "feedback_bundle_sha256": feedback_bundle_sha256,
         "label_template_bundle_sha256": label_template_bundle_sha256,
         "label_intake_bundle_sha256": label_intake_bundle_sha256,
     }
@@ -64,6 +66,7 @@ def binding_payload() -> dict:
         "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
         "decisions_sha256": decisions_sha256,
         "feedback_sha256": feedback_sha256,
+        "feedback_bundle_sha256": feedback_bundle_sha256,
         "label_template_fingerprints": label_template_fingerprints,
         "label_template_json_sha256s": [
             row["label_template_json_sha256"] for row in label_template_fingerprints
@@ -275,6 +278,7 @@ def main() -> int:
         assert payload["release_ready"] == 0
         assert payload["benchmark_out"] == str(benchmark_out)
         assert payload["repo_snapshot_lock_sha256"] == fake_sha(2)
+        assert payload["feedback_bundle_sha256"] == fake_sha(5)
         assert payload["preflight_input_bundle_sha256"] == binding_payload()["preflight_input_bundle_sha256"]
         assert payload["label_intake_manifest_sha256s"] == [
             fake_sha(300 + index) for index in range(10)
@@ -320,6 +324,23 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "approved_request_sha256" in proc.stderr
+
+        missing_feedback_bundle = tmp / "missing_feedback_bundle_preflight.json"
+        missing_feedback_bundle_payload = preflight_payload(commands)
+        del missing_feedback_bundle_payload["feedback_bundle_sha256"]
+        write_json(missing_feedback_bundle, missing_feedback_bundle_payload)
+        proc = run_tool(
+            "--preflight",
+            str(missing_feedback_bundle),
+            "--request",
+            str(request),
+            "--approval-record",
+            str(record),
+            "--out-json",
+            str(tmp / "missing_feedback_bundle_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "runtime preflight feedback_bundle_sha256 must be a sha256 digest" in proc.stderr
 
         skipped_preflight = tmp / "skipped_preflight.json"
         write_json(skipped_preflight, preflight_payload(commands, verify_existing_required=0))
