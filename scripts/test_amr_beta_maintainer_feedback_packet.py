@@ -139,6 +139,16 @@ def main() -> int:
                     "maintainer_id": f"maintainer-{index}",
                     "human_feedback": True,
                     "feedback_text": f"Reviewed {case_id} source-bound findings.",
+                    **(
+                        {
+                            "feedback_text_sha256": "sha256:"
+                            + hashlib.sha256(
+                                f"Reviewed {case_id} source-bound findings.".encode("utf-8")
+                            ).hexdigest()
+                        }
+                        if index == 1
+                        else {}
+                    ),
                 }
                 for index, (case_id, _repo, _head) in enumerate(repos, start=1)
             ],
@@ -188,6 +198,40 @@ def main() -> int:
         assert payload["feedback_counts_for_beta_precheck"] == 1
         assert payload["ready_for_runtime_preflight_feedback"] == 1
         assert "Reviewed case-01" not in proc.stdout
+
+        bad_feedback_sha = tmp / "bad_feedback_sha.jsonl"
+        write_jsonl(
+            bad_feedback_sha,
+            [
+                {
+                    "case_id": "case-01",
+                    "maintainer_id": "maintainer-1",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-01 source-bound findings.",
+                    "feedback_text_sha256": "Reviewed case-01 source-bound findings.",
+                }
+            ],
+        )
+        bad_feedback_out = tmp / "bad_feedback_packet"
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--label-intake-dir",
+            str(label_intake),
+            "--feedback",
+            str(bad_feedback_sha),
+            "--out",
+            str(bad_feedback_out),
+            "--min-repos",
+            "3",
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        assert "feedback_text_sha256 must be sha256:<64 hex>" in proc.stderr
+        assert "Reviewed case-01 source-bound findings." not in proc.stdout
+        assert "Reviewed case-01 source-bound findings." not in proc.stderr
+        assert not bad_feedback_out.exists()
 
         synthetic_intake = tmp / "synthetic_label_intake"
         make_label_intake(

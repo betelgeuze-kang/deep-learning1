@@ -212,7 +212,9 @@ Consumed by `scripts/audit_my_repo_benchmark.py --feedback <file>`. Each row:
   maintainer identifier.
 - `feedback_text` (required) — the raw maintainer feedback text. It is hashed
   (`feedback_text_sha256`), not emitted. A row must include `feedback_text` or a
-  precomputed `feedback_text_sha256`.
+  precomputed `feedback_text_sha256`. If both are supplied,
+  `feedback_text_sha256` must be a valid `sha256:<64 hex>` digest of
+  `feedback_text`.
 - `human_feedback: true` (required for the row to count; `maintainer_feedback: true`
   is an accepted alias for this boolean flag — note this flag is NOT the text).
 - `synthetic` must be absent/false, and the referenced case must be a real

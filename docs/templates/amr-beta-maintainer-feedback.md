@@ -16,7 +16,8 @@ The local feedback request packet reports returned raw `feedback_text` only as
   maintainer; needed for the row to count.
 - `feedback_text` (required) — the maintainer's raw feedback text. It is hashed
   (`feedback_text_sha256`), not emitted. A row must include `feedback_text` or a
-  precomputed `feedback_text_sha256`.
+  precomputed `feedback_text_sha256`. If both are supplied, the digest must be
+  a valid `sha256:<64 hex>` value that matches `feedback_text`.
 - `human_feedback` (required, truthy) — boolean flag that the feedback is human
   (`maintainer_feedback: true` is an accepted alias for this flag; it is NOT the
   text field).

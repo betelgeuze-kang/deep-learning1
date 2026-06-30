@@ -363,6 +363,66 @@ def main() -> int:
         assert proc.returncode == 1
         assert "feedback_id must be a safe identifier" in proc.stderr
 
+        bad_feedback_sha = tmp / "bad_feedback_sha.jsonl"
+        write_jsonl(
+            bad_feedback_sha,
+            [
+                {
+                    "case_id": "case-001",
+                    "maintainer_id": "maintainer-gamma",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed the real local case.",
+                    "feedback_text_sha256": "Reviewed the real local case.",
+                }
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(bad_feedback_sha),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "1",
+        )
+        assert proc.returncode == 1
+        assert "feedback_text_sha256 must be sha256:<64 hex>" in proc.stderr
+        assert "Reviewed the real local case." not in proc.stdout
+        assert "Reviewed the real local case." not in proc.stderr
+
+        mismatched_feedback_sha = tmp / "mismatched_feedback_sha.jsonl"
+        write_jsonl(
+            mismatched_feedback_sha,
+            [
+                {
+                    "case_id": "case-001",
+                    "maintainer_id": "maintainer-gamma",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed the real local case.",
+                    "feedback_text_sha256": "sha256:" + ("0" * 64),
+                }
+            ],
+        )
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(mismatched_feedback_sha),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "1",
+        )
+        assert proc.returncode == 1
+        assert "feedback_text_sha256 must match feedback_text" in proc.stderr
+        assert "Reviewed the real local case." not in proc.stdout
+        assert "Reviewed the real local case." not in proc.stderr
+
         unknown_feedback = tmp / "unknown_feedback.jsonl"
         write_jsonl(
             unknown_feedback,

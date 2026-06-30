@@ -22,6 +22,8 @@ OVERALL_PRECISION_THRESHOLD = 0.80
 P0_P1_PRECISION_THRESHOLD = 0.90
 SAFE_CASE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 SAFE_FEEDBACK_ID = SAFE_CASE_ID
+SAFE_MAINTAINER_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@+-]{0,191}$")
+PLACEHOLDER_RE = re.compile(r"(^$|example|placeholder|replace|todo)", re.IGNORECASE)
 VALID_LABEL_PRIORITIES = {"", "P0", "P1", "P2", "P3"}
 BENCHMARK_ARTIFACTS = (
     "benchmark_summary.json",
@@ -308,6 +310,10 @@ BENCHMARK_EVALUATION_SUMMARY_FIELDS = [
 
 def truthy(value: object) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def good_operator_value(value: object) -> bool:
+    return not PLACEHOLDER_RE.search(str(value or "").strip())
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -818,11 +824,21 @@ def normalize_maintainer_feedback(raw_rows: list[dict], cases: list[dict]) -> li
         maintainer_id = str(row.get("maintainer_id") or "").strip()
         if not maintainer_id:
             raise ValueError(f"feedback row {idx} missing maintainer_id")
+        if not good_operator_value(maintainer_id):
+            raise ValueError(f"feedback row {idx} maintainer_id must not be example/placeholder")
+        if not SAFE_MAINTAINER_ID.fullmatch(maintainer_id):
+            raise ValueError(f"feedback row {idx} maintainer_id must be a safe identifier")
         feedback_text = str(row.get("feedback_text") or "")
         provided_sha = str(row.get("feedback_text_sha256") or row.get("feedback_sha256") or "").strip()
+        if provided_sha and not is_sha256_digest(provided_sha):
+            raise ValueError(f"feedback row {idx} feedback_text_sha256 must be sha256:<64 hex>")
+        if feedback_text and not good_operator_value(feedback_text):
+            raise ValueError(f"feedback row {idx} feedback_text must not be example/placeholder")
         if feedback_text:
             feedback_sha = sha256_text(feedback_text)
             feedback_text_bytes = len(feedback_text.encode("utf-8"))
+            if provided_sha and provided_sha != feedback_sha:
+                raise ValueError(f"feedback row {idx} feedback_text_sha256 must match feedback_text")
         else:
             feedback_sha = provided_sha
             feedback_text_bytes = 0
