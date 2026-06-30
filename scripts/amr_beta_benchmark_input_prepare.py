@@ -83,6 +83,19 @@ def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) 
     return errors
 
 
+def validate_input_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
+    errors: list[str] = []
+    for name, path in paths.items():
+        resolved = path.expanduser().resolve()
+        if is_forbidden_env_path(resolved):
+            errors.append(f"{name} must not be .env-like")
+        for raw_repo in target_repo_paths:
+            repo_path = Path(raw_repo).expanduser().resolve()
+            if resolved == repo_path or is_relative_to(resolved, repo_path):
+                errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
+    return errors
+
+
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -280,6 +293,15 @@ def main(argv: list[str]) -> int:
         out_labels_path = Path(args.out_labels).expanduser().resolve()
         summary_path = Path(args.summary).expanduser().resolve()
         benchmark_out = Path(args.benchmark_out).expanduser().resolve()
+        input_paths = {
+            f"label_intake_dir[{index}]": Path(raw_dir).expanduser().resolve()
+            for index, raw_dir in enumerate(args.label_intake_dir, start=1)
+        }
+        feedback = str(Path(args.feedback).expanduser().resolve()) if args.feedback else ""
+        if feedback:
+            input_paths["feedback"] = Path(feedback)
+        input_path_errors = validate_input_paths(input_paths, repo_paths)
+        errors.extend(input_path_errors)
         errors.extend(
             validate_output_paths(
                 {
@@ -290,7 +312,6 @@ def main(argv: list[str]) -> int:
                 repo_paths,
             )
         )
-        feedback = str(Path(args.feedback).expanduser().resolve()) if args.feedback else ""
         if feedback and is_forbidden_env_path(Path(feedback)):
             raise ValueError("refusing .env-like feedback path")
         if feedback and not Path(feedback).is_file():
@@ -301,7 +322,7 @@ def main(argv: list[str]) -> int:
             "--labels",
             out_labels_path,
         ]
-        if feedback:
+        if feedback and not input_path_errors:
             benchmark_parts.extend(["--feedback", feedback])
         benchmark_parts.extend(
             [
@@ -332,6 +353,7 @@ def main(argv: list[str]) -> int:
             "benchmark_out": str(benchmark_out),
             "benchmark_command": command_line(benchmark_parts),
             "ready_for_runtime_approved_real_benchmark": int(not errors),
+            "input_path_guard_passed": int(not input_path_errors),
             "design_partner_beta_candidate_ready": 0,
             "release_ready": 0,
             "public_comparison_claim_ready": 0,

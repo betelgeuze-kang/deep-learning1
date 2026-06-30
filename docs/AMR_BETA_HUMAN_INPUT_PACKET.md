@@ -138,10 +138,12 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
 - [ ] Prefer the preparation guard over manual concatenation:
   `python3 scripts/amr_beta_benchmark_input_prepare.py --label-intake-dir <repo-label-intake-dir> --out-labels results/combined_benchmark_labels.jsonl --summary results/combined_benchmark_input_summary.json --benchmark-out results/audit_benchmark`.
   This guard runs `audit_my_repo_label_intake.py --verify-existing` for every
-  label-intake directory before writing combined labels. It refuses combined
-  label, summary, or benchmark output paths inside any target repository so
-  input preparation cannot dirty a repo that must remain clean for the
-  approved benchmark run.
+  label-intake directory before writing combined labels. Keep every
+  `--label-intake-dir`, optional `--feedback` JSON/JSONL, combined label file,
+  summary, and benchmark output outside every target repository. The guard
+  refuses those paths inside listed repos so input preparation cannot dirty or
+  source-contaminate a repo that must remain clean for the approved benchmark
+  run.
 - [ ] Before benchmark execution, run
   `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv>`
   to catch duplicate, missing, placeholder, and below-threshold human inputs.
