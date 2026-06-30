@@ -89,6 +89,7 @@ def preflight_payload(
     ready: int = 1,
     release_ready: int = 0,
     verify_existing_required: int = 1,
+    benchmark_out: str = "/tmp/audit_benchmark",
 ) -> dict:
     template_dir_count = 10
     label_intake_dir_count = 10
@@ -118,7 +119,7 @@ def preflight_payload(
         "real_model_execution_ready": 0,
         "next_commands": [
             "python3 scripts/amr_beta_benchmark_input_prepare.py --label-intake-dir /tmp/intake --out-labels /tmp/labels.jsonl --summary /tmp/summary.json --feedback /tmp/feedback.jsonl",
-            "python3 scripts/audit_my_repo_benchmark.py --labels /tmp/labels.jsonl --feedback /tmp/feedback.jsonl --namespace real_benchmark --confirm-real-benchmark-namespace --mode full --out /tmp/audit_benchmark",
+            f"python3 scripts/audit_my_repo_benchmark.py --labels /tmp/labels.jsonl --feedback /tmp/feedback.jsonl --namespace real_benchmark --confirm-real-benchmark-namespace --mode full --out {benchmark_out}",
         ],
         "errors": [],
     }
@@ -159,6 +160,7 @@ def main() -> int:
         assert payload["requires_human_runtime_approval"] == 1
         assert payload["creates_benchmark_evidence"] == 0
         assert payload["runs_benchmark"] == 0
+        assert payload["output_path_guard_passed"] == 1
         assert payload["input_preflight_sha256"] == sha256_file(preflight)
         assert payload["repo_snapshot_lock_sha256"] == fake_sha(2)
         assert payload["preflight_input_bundle_sha256"] == binding_payload()["preflight_input_bundle_sha256"]
@@ -180,6 +182,29 @@ def main() -> int:
         assert "preflight_input_bundle_sha256: sha256:" in markdown
         assert "label_template_verify_existing_required: 1" in markdown
         assert "Runtime Commands" in markdown
+        assert "output_path_guard_passed: 1" in markdown
+
+        unsafe_benchmark_out = tmp / "unsafe_benchmark_out"
+        unsafe_preflight = tmp / "unsafe_preflight.json"
+        write_json(unsafe_preflight, preflight_payload(benchmark_out=str(unsafe_benchmark_out)))
+        unsafe_out_json = unsafe_benchmark_out / "approval_request.json"
+        unsafe_out_md = unsafe_benchmark_out / "approval_request.md"
+        proc = run_tool(
+            "--preflight",
+            str(unsafe_preflight),
+            "--out-json",
+            str(unsafe_out_json),
+            "--out-md",
+            str(unsafe_out_md),
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_payload = json.loads(proc.stdout)
+        assert unsafe_payload["output_path_guard_passed"] == 0
+        assert "out_json must not be inside approved benchmark output" in proc.stderr
+        assert "out_md must not be inside approved benchmark output" in proc.stderr
+        assert not unsafe_out_json.exists()
+        assert not unsafe_out_md.exists()
 
         blocked_preflight = tmp / "blocked_preflight.json"
         write_json(blocked_preflight, preflight_payload(ready=0))

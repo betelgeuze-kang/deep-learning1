@@ -56,6 +56,34 @@ def is_forbidden_env_path(path: Path) -> bool:
     return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
 
 
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def validate_output_paths(paths: dict[str, Path], benchmark_out: str) -> list[str]:
+    errors: list[str] = []
+    seen: dict[Path, str] = {}
+    benchmark_out_text = str(benchmark_out or "").strip()
+    benchmark_out_path = Path(benchmark_out_text).expanduser().resolve() if benchmark_out_text else None
+    for name, path in paths.items():
+        resolved = path.resolve()
+        if is_forbidden_env_path(resolved):
+            errors.append(f"{name} must not be .env-like")
+        if resolved in seen:
+            errors.append(f"{name} must not reuse {seen[resolved]} path: {resolved}")
+        seen[resolved] = name
+        if benchmark_out_path is not None and (resolved == benchmark_out_path or is_relative_to(resolved, benchmark_out_path)):
+            errors.append(
+                f"{name} must not be inside approved benchmark output: {resolved} "
+                f"(benchmark_out: {benchmark_out_path})"
+            )
+    return errors
+
+
 def read_json(path: Path, input_name: str) -> dict:
     if is_forbidden_env_path(path):
         raise ValueError(f"refusing to read .env-like {input_name} path")
@@ -278,6 +306,7 @@ def write_markdown(path: Path, packet: dict) -> None:
         f"- requires_human_runtime_approval: {packet['requires_human_runtime_approval']}",
         f"- creates_benchmark_evidence: {packet['creates_benchmark_evidence']}",
         f"- runs_benchmark: {packet['runs_benchmark']}",
+        f"- output_path_guard_passed: {packet['output_path_guard_passed']}",
         f"- input_preflight_sha256: {packet['input_preflight_sha256']}",
         f"- preflight_input_bundle_sha256: {packet['preflight_input_bundle_sha256']}",
         f"- repo_snapshot_lock_sha256: {packet['repo_snapshot_lock_sha256']}",
@@ -340,11 +369,20 @@ def main(argv: list[str]) -> int:
                 print(error, file=sys.stderr)
             return 1
         packet = build_packet(preflight, preflight_path=preflight_path, operator_note=args.operator_note)
-        write_json(Path(args.out_json).expanduser().resolve(), packet, args.overwrite)
+        output_paths = {"out_json": Path(args.out_json).expanduser().resolve()}
         if args.out_md:
-            out_md = Path(args.out_md).expanduser().resolve()
-            if is_forbidden_env_path(out_md):
-                raise ValueError("refusing .env-like output path")
+            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        output_errors = validate_output_paths(output_paths, str(packet.get("benchmark_out") or ""))
+        packet["output_path_guard_passed"] = int(not output_errors)
+        if output_errors:
+            if args.json:
+                print(json.dumps({**packet, "errors": output_errors}, indent=2, sort_keys=True))
+            for error in output_errors:
+                print(error, file=sys.stderr)
+            return 1
+        write_json(output_paths["out_json"], packet, args.overwrite)
+        if args.out_md:
+            out_md = output_paths["out_md"]
             out_md.parent.mkdir(parents=True, exist_ok=True)
             if out_md.exists() and not args.overwrite:
                 raise ValueError(f"output already exists; use --overwrite: {out_md}")

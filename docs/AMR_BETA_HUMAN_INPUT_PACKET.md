@@ -155,6 +155,9 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
 - [ ] Generate the runtime approval request packet from the green preflight;
   this does not approve or run the benchmark:
   `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
+  Keep approval request outputs outside the preflight's approved
+  `benchmark_out`; the request guard refuses outputs inside the future
+  benchmark evidence directory.
   The request and status guards reject missing, skipped, failed, or inconsistent
   label-template and label-intake `--verify-existing` counters. They also
   require the approval request to preserve the preflight fingerprint fields and
@@ -334,6 +337,9 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
    Then generate the approval request packet:
    `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
+   Keep approval request outputs outside the preflight's `benchmark_out` so
+   approval paperwork cannot be mixed into the future benchmark evidence
+   directory.
    The approval request must preserve the preflight's required/passed/failed
    `--verify-existing` counters and fingerprint fields
    (`preflight_input_bundle_sha256`, `label_template_bundle_sha256`, and
