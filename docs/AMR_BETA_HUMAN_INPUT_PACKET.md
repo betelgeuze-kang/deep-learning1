@@ -183,8 +183,10 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --out results/maintainer_feedback_packet`.
   When returned feedback rows include raw `feedback_text`, this packet reports
   only `feedback_text_sha256_status`, never the raw feedback text.
-  Keep `--out` outside every target repository from the repo intake sheet; the
-  packet refuses output directories inside those repos.
+  Keep the filled repo intake sheet, every `--label-intake-dir`, every returned
+  `--feedback` JSON/JSONL, and `--out` outside every target repository from the
+  repo intake sheet; the packet refuses those inputs or outputs inside listed
+  repos, including files hidden by `.gitignore`.
 - [ ] Require `human_feedback=true` and either `feedback_text` or
   `feedback_text_sha256`.
 - [ ] Count feedback only when its case already has `human_labeled=true` and is

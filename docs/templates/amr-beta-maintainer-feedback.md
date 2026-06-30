@@ -9,6 +9,12 @@ feedback text is hashed, not emitted, by the benchmark.
 The local feedback request packet reports returned raw `feedback_text` only as
 `feedback_text_sha256_status`.
 
+Keep the filled repo intake sheet, label-intake directories, returned feedback
+JSON/JSONL, and generated feedback packet output outside every target
+repository. The packet helper rejects these inputs or outputs inside a listed
+repo, including files hidden by `.gitignore`, so feedback artifacts do not
+become part of the source under review.
+
 ## Per-row fields
 
 - `case_id` (required) — must reference a known benchmark case (a repo from 9.1).

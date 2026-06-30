@@ -126,6 +126,7 @@ def main() -> int:
         assert summary["missing_feedback_case_rows"] == 3
         assert summary["raw_feedback_text_emitted"] == 0
         assert summary["creates_benchmark_evidence"] == 0
+        assert summary["input_path_guard_passed"] == 1
         assert summary["output_path_guard_passed"] == 1
         assert summary["design_partner_beta_candidate_ready"] == 0
         packet_text = (out_dir / "maintainer_feedback_request_packet.jsonl").read_text(encoding="utf-8")
@@ -146,6 +147,98 @@ def main() -> int:
         assert unsafe_payload["output_path_guard_passed"] == 0
         assert "out must not be inside target repo" in proc.stderr
         assert not unsafe_out.exists()
+
+        ignored_label_dir_name = "ignored_label_intake"
+        ignored_feedback_name = "ignored_feedback.jsonl"
+        (repos[0][1] / ".gitignore").write_text(
+            f"{ignored_label_dir_name}/\n{ignored_feedback_name}\n",
+            encoding="utf-8",
+        )
+        assert run(["git", "add", ".gitignore"], cwd=repos[0][1]).returncode == 0
+        commit = run(
+            [
+                "git",
+                "-c",
+                "user.name=AMR Test",
+                "-c",
+                "user.email=amr-test@example.invalid",
+                "commit",
+                "-q",
+                "-m",
+                "ignore unsafe feedback inputs",
+            ],
+            cwd=repos[0][1],
+        )
+        assert commit.returncode == 0, commit.stderr
+        new_head = run(["git", "rev-parse", "HEAD"], cwd=repos[0][1])
+        assert new_head.returncode == 0
+        repos[0] = (repos[0][0], repos[0][1], new_head.stdout.strip())
+        write_repo_intake(repo_intake, repos)
+
+        unsafe_label_intake = repos[0][1] / ignored_label_dir_name
+        make_label_intake(
+            unsafe_label_intake,
+            [
+                {
+                    "case_id": "case-01",
+                    "label_id": "case-01-label",
+                    "repo_path": str(repos[0][1]),
+                    "human_labeled": True,
+                    "synthetic": False,
+                    "expected": "present",
+                }
+            ],
+        )
+        status = run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=repos[0][1])
+        assert status.returncode == 0
+        assert status.stdout.strip() == ""
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--label-intake-dir",
+            str(unsafe_label_intake),
+            "--min-repos",
+            "3",
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_label_payload = json.loads(proc.stdout)
+        assert unsafe_label_payload["input_path_guard_passed"] == 0
+        assert unsafe_label_payload["output_path_guard_passed"] == 1
+        assert "label_intake_dir[1] must not be inside target repo" in proc.stderr
+
+        unsafe_feedback = repos[0][1] / ignored_feedback_name
+        write_jsonl(
+            unsafe_feedback,
+            [
+                {
+                    "case_id": "case-01",
+                    "maintainer_id": "maintainer-unsafe",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-01 from an unsafe in-repo feedback file.",
+                }
+            ],
+        )
+        status = run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=repos[0][1])
+        assert status.returncode == 0
+        assert status.stdout.strip() == ""
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--feedback",
+            str(unsafe_feedback),
+            "--min-repos",
+            "3",
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_feedback_payload = json.loads(proc.stdout)
+        assert unsafe_feedback_payload["input_path_guard_passed"] == 0
+        assert unsafe_feedback_payload["output_path_guard_passed"] == 1
+        assert "feedback must not be inside target repo" in proc.stderr
+        assert "Reviewed case-01 from an unsafe in-repo feedback file." not in proc.stdout
+        assert "Reviewed case-01 from an unsafe in-repo feedback file." not in proc.stderr
 
         feedback = tmp / "feedback.jsonl"
         write_jsonl(

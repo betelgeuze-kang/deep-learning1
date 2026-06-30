@@ -63,6 +63,21 @@ def validate_output_path(out_dir: Path, target_repo_paths: list[str]) -> list[st
     return errors
 
 
+def validate_input_path(name: str, path: Path, target_repo_paths: list[str]) -> list[str]:
+    errors: list[str] = []
+    resolved = path.resolve()
+    if is_forbidden_env_path(resolved):
+        errors.append(f"{name} must not be .env-like")
+    for raw_repo in target_repo_paths:
+        repo_text = str(raw_repo or "").strip()
+        if not repo_text:
+            continue
+        repo_path = Path(repo_text).expanduser().resolve()
+        if resolved == repo_path or is_relative_to(resolved, repo_path):
+            errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
+    return errors
+
+
 def read_json_or_jsonl(path: Path, input_name: str) -> list[dict]:
     if is_forbidden_env_path(path):
         raise ValueError(f"refusing to read .env-like {input_name} file")
@@ -242,11 +257,24 @@ def main(argv: list[str]) -> int:
     try:
         repo_path = Path(args.repo_intake).expanduser().resolve()
         repo_rows, repo_errors, repo_summary = load_repo_intake(repo_path, args.min_repos)
+        target_repo_paths = sorted({str(row.get("repo_path_resolved") or "") for row in repo_rows})
+        input_path_errors = validate_input_path("repo_intake", repo_path, target_repo_paths)
+        for index, raw_dir in enumerate(args.label_intake_dir, start=1):
+            input_path_errors.extend(
+                validate_input_path(
+                    f"label_intake_dir[{index}]",
+                    Path(raw_dir).expanduser().resolve(),
+                    target_repo_paths,
+                )
+            )
+        feedback_path = Path(args.feedback).expanduser().resolve() if args.feedback else None
+        if feedback_path:
+            input_path_errors.extend(validate_input_path("feedback", feedback_path, target_repo_paths))
         out_path = Path(args.out).expanduser().resolve() if args.out else None
         output_path_errors = (
             validate_output_path(
                 out_path,
-                sorted({str(row.get("repo_path_resolved") or "") for row in repo_rows}),
+                target_repo_paths,
             )
             if out_path
             else []
@@ -265,7 +293,7 @@ def main(argv: list[str]) -> int:
         }
         countable_case_ids: set[str] = set()
         label_counts: Counter[str] = Counter()
-        if args.label_intake_dir:
+        if args.label_intake_dir and not input_path_errors:
             label_case_ids, countable_case_ids, label_summary, label_counts = load_label_context(
                 args.label_intake_dir,
                 verify_existing=not args.skip_verify_existing,
@@ -285,8 +313,8 @@ def main(argv: list[str]) -> int:
             "feedback_countable_case_rows": 0,
             "distinct_countable_maintainer_id_count": 0,
         }
-        if args.feedback:
-            feedback_rows = read_json_or_jsonl(Path(args.feedback).expanduser().resolve(), "feedback")
+        if args.feedback and not input_path_errors:
+            feedback_rows = read_json_or_jsonl(feedback_path, "feedback") if feedback_path else []
             feedback_errors, feedback_summary = human_status.validate_feedback(
                 feedback_rows,
                 known_case_ids=known_case_ids,
@@ -314,7 +342,7 @@ def main(argv: list[str]) -> int:
                 f"distinct_maintainer_id_count {effective_maintainer_count} below required minimum {args.min_maintainers}"
             )
 
-        errors = [*repo_errors, *feedback_errors, *output_path_errors]
+        errors = [*repo_errors, *feedback_errors, *input_path_errors, *output_path_errors]
         summary = {
             "schema": SCHEMA,
             "repo_intake": str(repo_path),
@@ -336,6 +364,7 @@ def main(argv: list[str]) -> int:
             "ready_for_runtime_preflight_feedback": int(not errors and maintainer_requirement_met == 1),
             "raw_feedback_text_emitted": 0,
             "creates_benchmark_evidence": 0,
+            "input_path_guard_passed": int(not input_path_errors),
             "output_path_guard_passed": int(not output_path_errors),
             "output_files": sorted(MANAGED_OUTPUTS) if args.out else [],
             **BLOCKED_FLAGS,
