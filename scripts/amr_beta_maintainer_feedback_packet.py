@@ -39,6 +39,30 @@ def is_forbidden_env_path(path: Path) -> bool:
     return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
 
 
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def validate_output_path(out_dir: Path, target_repo_paths: list[str]) -> list[str]:
+    errors: list[str] = []
+    if is_forbidden_env_path(out_dir):
+        errors.append("out must not be .env-like")
+        return errors
+    resolved = out_dir.resolve()
+    for raw_repo in target_repo_paths:
+        repo_text = str(raw_repo or "").strip()
+        if not repo_text:
+            continue
+        repo_path = Path(repo_text).expanduser().resolve()
+        if resolved == repo_path or is_relative_to(resolved, repo_path):
+            errors.append(f"out must not be inside target repo: {resolved} (repo: {repo_path})")
+    return errors
+
+
 def read_json_or_jsonl(path: Path, input_name: str) -> list[dict]:
     if is_forbidden_env_path(path):
         raise ValueError(f"refusing to read .env-like {input_name} file")
@@ -218,6 +242,15 @@ def main(argv: list[str]) -> int:
     try:
         repo_path = Path(args.repo_intake).expanduser().resolve()
         repo_rows, repo_errors, repo_summary = load_repo_intake(repo_path, args.min_repos)
+        out_path = Path(args.out).expanduser().resolve() if args.out else None
+        output_path_errors = (
+            validate_output_path(
+                out_path,
+                sorted({str(row.get("repo_path_resolved") or "") for row in repo_rows}),
+            )
+            if out_path
+            else []
+        )
         known_case_ids = {str(row.get("case_id") or "").strip() for row in repo_rows if str(row.get("case_id") or "").strip()}
 
         label_summary = {
@@ -281,10 +314,11 @@ def main(argv: list[str]) -> int:
                 f"distinct_maintainer_id_count {effective_maintainer_count} below required minimum {args.min_maintainers}"
             )
 
-        errors = [*repo_errors, *feedback_errors]
+        errors = [*repo_errors, *feedback_errors, *output_path_errors]
         summary = {
             "schema": SCHEMA,
             "repo_intake": str(repo_path),
+            "out": str(out_path) if out_path else "",
             "request_case_rows": len(request_rows),
             "missing_feedback_case_rows": len(missing_rows),
             **request_counts,
@@ -302,6 +336,7 @@ def main(argv: list[str]) -> int:
             "ready_for_runtime_preflight_feedback": int(not errors and maintainer_requirement_met == 1),
             "raw_feedback_text_emitted": 0,
             "creates_benchmark_evidence": 0,
+            "output_path_guard_passed": int(not output_path_errors),
             "output_files": sorted(MANAGED_OUTPUTS) if args.out else [],
             **BLOCKED_FLAGS,
         }
@@ -311,8 +346,8 @@ def main(argv: list[str]) -> int:
             for error in errors:
                 print(error, file=sys.stderr)
             return 1
-        if args.out:
-            write_outputs(Path(args.out).expanduser().resolve(), request_rows, missing_rows, summary, args.overwrite)
+        if out_path:
+            write_outputs(out_path, request_rows, missing_rows, summary, args.overwrite)
         if args.json or not args.out:
             print(json.dumps({**summary, "errors": []}, indent=2, sort_keys=True))
         if not args.json and args.out:

@@ -170,6 +170,8 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --out results/maintainer_feedback_packet`.
   When returned feedback rows include raw `feedback_text`, this packet reports
   only `feedback_text_sha256_status`, never the raw feedback text.
+  Keep `--out` outside every target repository from the repo intake sheet; the
+  packet refuses output directories inside those repos.
 - [ ] Require `human_feedback=true` and either `feedback_text` or
   `feedback_text_sha256`.
 - [ ] Count feedback only when its case already has `human_labeled=true` and is
@@ -311,6 +313,9 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
 7. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.
    Prepare the request packet and progress summary:
    `python3 scripts/amr_beta_maintainer_feedback_packet.py --repo-intake <filled-intake.md-or-csv> --label-intake-dir results/<repo>_label_intake --out results/maintainer_feedback_packet`.
+   Keep `--out` outside every target repository listed in the repo intake
+   sheet so outreach packet generation cannot dirty repos that must remain
+   clean.
    Check decision/feedback progress with
    `python3 scripts/amr_beta_human_input_status.py --decisions <decisions.jsonl> --feedback <feedback.jsonl> --repo-intake <filled-intake.md-or-csv> --out-json results/amr_beta_human_input_status.json --out-md results/amr_beta_human_input_status.md --overwrite`.
    After label intake exists, include every intake directory:

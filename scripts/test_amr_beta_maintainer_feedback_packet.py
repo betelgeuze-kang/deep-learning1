@@ -126,9 +126,26 @@ def main() -> int:
         assert summary["missing_feedback_case_rows"] == 3
         assert summary["raw_feedback_text_emitted"] == 0
         assert summary["creates_benchmark_evidence"] == 0
+        assert summary["output_path_guard_passed"] == 1
         assert summary["design_partner_beta_candidate_ready"] == 0
         packet_text = (out_dir / "maintainer_feedback_request_packet.jsonl").read_text(encoding="utf-8")
         assert "Reviewed case-" not in packet_text
+
+        unsafe_out = repos[0][1] / "feedback_packet"
+        proc = run_tool(
+            "--repo-intake",
+            str(repo_intake),
+            "--out",
+            str(unsafe_out),
+            "--min-repos",
+            "3",
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_payload = json.loads(proc.stdout)
+        assert unsafe_payload["output_path_guard_passed"] == 0
+        assert "out must not be inside target repo" in proc.stderr
+        assert not unsafe_out.exists()
 
         feedback = tmp / "feedback.jsonl"
         write_jsonl(
