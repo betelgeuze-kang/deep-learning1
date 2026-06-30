@@ -271,6 +271,7 @@ def main() -> int:
         assert payload["valid_repo_rows"] == 10
         assert payload["human_label_rows"] == 10
         assert payload["distinct_countable_maintainer_id_count"] == 3
+        assert payload["input_path_preflight_passed"] == 1
         assert payload["output_path_preflight_passed"] == 1
         assert payload["combined_labels"] == str((ROOT / "results" / "combined_benchmark_labels.jsonl").resolve())
         assert payload["benchmark_out"] == str(tmp / "audit benchmark")
@@ -281,6 +282,7 @@ def main() -> int:
         assert "'" in payload["next_commands"][1]
         assert (tmp / "preflight.json").is_file()
         assert "ready_to_request_runtime_approval: 1" in (tmp / "preflight.md").read_text(encoding="utf-8")
+        assert "input_path_preflight_passed: 1" in (tmp / "preflight.md").read_text(encoding="utf-8")
         assert "output_path_preflight_passed: 1" in (tmp / "preflight.md").read_text(encoding="utf-8")
         assert "preflight_input_bundle_sha256: sha256:" in (tmp / "preflight.md").read_text(encoding="utf-8")
 
@@ -326,6 +328,8 @@ def main() -> int:
             str(repos[0][1] / "combined labels.jsonl"),
             "--benchmark-out",
             str(repos[1][1] / "audit benchmark"),
+            "--out-json",
+            str(repos[2][1] / "preflight.json"),
             "--skip-verify-existing",
             "--json",
         ]
@@ -340,7 +344,123 @@ def main() -> int:
         assert blocked_payload["output_path_preflight_passed"] == 0
         assert "combined_labels must not be inside target repo" in proc.stderr
         assert "benchmark_out must not be inside target repo" in proc.stderr
+        assert "out_json must not be inside target repo" in proc.stderr
         assert not (repos[0][1] / "combined labels.jsonl").exists()
+        assert not (repos[2][1] / "preflight.json").exists()
+
+        ignored_label_dir_name = "ignored_label_intake"
+        ignored_feedback_name = "ignored_feedback.jsonl"
+        (repos[0][1] / ".gitignore").write_text(
+            f"{ignored_label_dir_name}/\n{ignored_feedback_name}\n",
+            encoding="utf-8",
+        )
+        assert run(["git", "add", ".gitignore"], cwd=repos[0][1]).returncode == 0
+        commit = run(
+            [
+                "git",
+                "-c",
+                "user.name=AMR Test",
+                "-c",
+                "user.email=amr-test@example.invalid",
+                "commit",
+                "-q",
+                "-m",
+                "ignore unsafe runtime preflight inputs",
+            ],
+            cwd=repos[0][1],
+        )
+        assert commit.returncode == 0, commit.stderr
+        new_head = run(["git", "rev-parse", "HEAD"], cwd=repos[0][1])
+        assert new_head.returncode == 0
+        repos[0] = (repos[0][0], repos[0][1], new_head.stdout.strip())
+        write_repo_intake(repo_intake, repos)
+        updated_template = tmp / "case-01_updated_template"
+        updated_intake = tmp / "case-01_updated_intake"
+        make_template(updated_template, repos[0][0])
+        make_label_intake(updated_intake, repos[0][0], repos[0][1], repos[0][2])
+        updated_template_dirs = [updated_template, *template_dirs[1:]]
+        updated_label_intake_dirs = [updated_intake, *label_intake_dirs[1:]]
+
+        unsafe_feedback = repos[0][1] / ignored_feedback_name
+        unsafe_feedback.write_text(
+            json.dumps(
+                {
+                    "case_id": repos[0][0],
+                    "maintainer_id": "maintainer-unsafe",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-01 from unsafe in-repo feedback.",
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        status = run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=repos[0][1])
+        assert status.returncode == 0
+        assert status.stdout.strip() == ""
+        unsafe_feedback_args = [
+            "--repo-intake",
+            str(repo_intake),
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(unsafe_feedback),
+            "--min-repos",
+            "10",
+            "--min-labels",
+            "10",
+            "--min-maintainers",
+            "3",
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in updated_template_dirs:
+            unsafe_feedback_args.extend(["--template-dir", str(template_dir)])
+        for intake_dir in updated_label_intake_dirs:
+            unsafe_feedback_args.extend(["--label-intake-dir", str(intake_dir)])
+        proc = run_tool(*unsafe_feedback_args)
+        assert proc.returncode == 1
+        unsafe_feedback_payload = json.loads(proc.stdout)
+        assert unsafe_feedback_payload["ready_to_request_runtime_approval"] == 0
+        assert unsafe_feedback_payload["input_path_preflight_passed"] == 0
+        assert unsafe_feedback_payload["feedback_sha256"] == ""
+        assert unsafe_feedback_payload["next_commands"] == []
+        assert "feedback must not be inside target repo" in proc.stderr
+        assert "Reviewed case-01 from unsafe in-repo feedback." not in proc.stdout
+        assert "Reviewed case-01 from unsafe in-repo feedback." not in proc.stderr
+
+        unsafe_label_intake = repos[0][1] / ignored_label_dir_name
+        make_label_intake(unsafe_label_intake, repos[0][0], repos[0][1], repos[0][2])
+        status = run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=repos[0][1])
+        assert status.returncode == 0
+        assert status.stdout.strip() == ""
+        unsafe_label_args = [
+            "--repo-intake",
+            str(repo_intake),
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(feedback),
+            "--min-repos",
+            "10",
+            "--min-labels",
+            "10",
+            "--min-maintainers",
+            "3",
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in updated_template_dirs:
+            unsafe_label_args.extend(["--template-dir", str(template_dir)])
+        for intake_dir in [unsafe_label_intake, *label_intake_dirs[1:]]:
+            unsafe_label_args.extend(["--label-intake-dir", str(intake_dir)])
+        proc = run_tool(*unsafe_label_args)
+        assert proc.returncode == 1
+        unsafe_label_payload = json.loads(proc.stdout)
+        assert unsafe_label_payload["ready_to_request_runtime_approval"] == 0
+        assert unsafe_label_payload["input_path_preflight_passed"] == 0
+        assert unsafe_label_payload["next_commands"] == []
+        assert "label_intake_dir[1] must not be inside target repo" in proc.stderr
 
     print("AMR beta runtime preflight smoke OK")
     return 0

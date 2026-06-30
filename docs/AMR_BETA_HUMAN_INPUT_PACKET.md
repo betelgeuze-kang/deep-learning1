@@ -161,6 +161,12 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   `decisions_sha256`, `feedback_sha256`, `label_template_bundle_sha256`,
   `label_intake_bundle_sha256`, and `preflight_input_bundle_sha256` without
   running the benchmark or creating evidence.
+  Keep the repo intake, every `--template-dir`, every `--label-intake-dir`,
+  decisions JSON/JSONL, feedback JSON/JSONL, preflight outputs, combined label
+  target, combined summary target, and benchmark output outside every target
+  repository. The preflight guard refuses those paths inside listed repos,
+  including files hidden by `.gitignore`, and omits next commands when an input
+  or output path boundary fails.
 - [ ] Generate the runtime approval request packet from the green preflight;
   this does not approve or run the benchmark:
   `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
