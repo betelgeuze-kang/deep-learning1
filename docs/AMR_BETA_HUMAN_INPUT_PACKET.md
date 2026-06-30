@@ -68,6 +68,9 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   The status output includes `input_intake_sha256`, `repo_snapshot_lock_sha256`,
   a local fingerprint of the validated repo paths, pinned HEADs,
   clean-worktree checks, namespace confirmation, and contact-presence flags.
+  Keep `--out-json` and `--out-md` outside every target repository listed in
+  the intake sheet; the validator refuses status outputs inside those repos so
+  the read-only check cannot dirty a repo after validating it.
   It keeps `runs_audit=0` and `creates_benchmark_evidence=0`.
 - [ ] Generate the read-only audit/template/reviewer handoff plan from the
   validated intake sheet; this does not run audits or create evidence:

@@ -82,6 +82,31 @@ def is_forbidden_env_path(path: Path) -> bool:
     return name == ".env" or name.startswith(".env.") or name.endswith(".env") or ".env." in name
 
 
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
+    errors: list[str] = []
+    seen: dict[Path, str] = {}
+    for name, path in paths.items():
+        resolved = path.resolve()
+        if is_forbidden_env_path(resolved):
+            errors.append(f"{name} must not be .env-like")
+        if resolved in seen:
+            errors.append(f"{name} must not reuse {seen[resolved]} path: {resolved}")
+        seen[resolved] = name
+        for raw_repo in target_repo_paths:
+            repo_path = Path(str(raw_repo)).expanduser().resolve()
+            if resolved == repo_path or is_relative_to(resolved, repo_path):
+                errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
+    return errors
+
+
 def good_operator_value(value: str) -> bool:
     return not PLACEHOLDER_RE.search(str(value).strip())
 
@@ -369,6 +394,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- runs_label_template_generation: {payload['runs_label_template_generation']}",
         f"- writes_reviewer_packets: {payload['writes_reviewer_packets']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
+        f"- output_path_guard_passed: {payload['output_path_guard_passed']}",
         f"- design_partner_beta_candidate_ready: {payload['design_partner_beta_candidate_ready']}",
         f"- release_ready: {payload['release_ready']}",
         f"- public_comparison_claim_ready: {payload['public_comparison_claim_ready']}",
@@ -411,17 +437,34 @@ def main(argv: list[str]) -> int:
     path = Path(args.intake).expanduser().resolve()
     try:
         rows = read_rows(path)
-        errors, summary = validate_rows(rows, min_repos=args.min_repos)
+        row_errors, summary = validate_rows(rows, min_repos=args.min_repos)
+        target_repo_paths = sorted(
+            {
+                str(status.get("repo_path_resolved") or "")
+                for status in summary["row_statuses"]
+                if status.get("repo_path_resolved")
+            }
+        )
+        output_paths = {}
+        if args.out_json:
+            output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
+        if args.out_md:
+            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        output_path_errors = validate_output_paths(output_paths, target_repo_paths)
+        errors = [*row_errors, *output_path_errors]
+        if output_path_errors:
+            summary["ready_for_real_benchmark_audit"] = 0
         payload = {
             **summary,
             "input_intake": str(path),
             "input_intake_sha256": sha256_file(path),
+            "output_path_guard_passed": int(not output_path_errors),
             "errors": errors,
         }
-        if args.out_json:
-            write_json(Path(args.out_json).expanduser().resolve(), payload, args.overwrite)
-        if args.out_md:
-            write_markdown(Path(args.out_md).expanduser().resolve(), payload, args.overwrite)
+        if args.out_json and not output_path_errors:
+            write_json(output_paths["out_json"], payload, args.overwrite)
+        if args.out_md and not output_path_errors:
+            write_markdown(output_paths["out_md"], payload, args.overwrite)
     except Exception as exc:
         print(f"repo_intake_validate: error: {exc}", file=sys.stderr)
         return 1
