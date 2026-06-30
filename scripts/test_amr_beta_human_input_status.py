@@ -37,11 +37,15 @@ def main() -> int:
         decisions = tmp / "decisions.jsonl"
         feedback = tmp / "feedback.jsonl"
         repo_intake = tmp / "repo_intake.md"
+        repo_001 = tmp / "repo-001"
+        repo_002 = tmp / "repo-002"
+        repo_001.mkdir()
+        repo_002.mkdir()
         repo_intake.write_text(
             "| case_id | repo_path |\n"
             "|---|---|\n"
-            "| case-001 | /tmp/repo-001 |\n"
-            "| case-002 | /tmp/repo-002 |\n",
+            f"| case-001 | {repo_001} |\n"
+            f"| case-002 | {repo_002} |\n",
             encoding="utf-8",
         )
         write_jsonl(
@@ -124,8 +128,37 @@ def main() -> int:
         assert status["maintainer_feedback_progress_percent"] == 100.0
         assert status["compiles_labels"] == 0
         assert status["creates_benchmark_evidence"] == 0
+        assert status["output_path_guard_passed"] == 1
         assert "Reviewed finding quality" not in status_json.read_text(encoding="utf-8")
         assert "Reviewed finding quality" not in status_md.read_text(encoding="utf-8")
+        assert "output_path_guard_passed: 1" in status_md.read_text(encoding="utf-8")
+
+        unsafe_status_json = repo_001 / "human_input_status.json"
+        unsafe_status_md = repo_002 / "human_input_status.md"
+        proc = run_tool(
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(feedback),
+            "--repo-intake",
+            str(repo_intake),
+            "--min-labels",
+            "2",
+            "--min-maintainers",
+            "2",
+            "--out-json",
+            str(unsafe_status_json),
+            "--out-md",
+            str(unsafe_status_md),
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_payload = json.loads(proc.stdout)
+        assert unsafe_payload["output_path_guard_passed"] == 0
+        assert "out_json must not be inside target repo" in proc.stderr
+        assert "out_md must not be inside target repo" in proc.stderr
+        assert not unsafe_status_json.exists()
+        assert not unsafe_status_md.exists()
 
         label_intake = tmp / "label_intake"
         make_label_intake(
