@@ -120,7 +120,8 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   `python3 scripts/amr_beta_label_intake_plan.py --repo-intake <filled-intake.md-or-csv> --template-dir <repo-template-dir> --decisions <decisions.jsonl> --out-root results/amr_beta_label_intake_work --out-json results/amr_beta_label_intake_plan.json --out-md results/amr_beta_label_intake_plan.md`.
   The plan carries `repo_snapshot_lock_sha256`, `decisions_sha256`, and
   `label_template_bundle_sha256` so per-repo label-intake commands remain tied
-  to the same validated repo snapshot and label-template bundle.
+  to the same validated repo snapshot and label-template bundle. It refuses
+  `--out-root`, `--out-json`, or `--out-md` inside any target repository.
 - [ ] Run `scripts/audit_my_repo_label_intake.py` for each repo and verify each
   output with `--verify-existing`.
 - [ ] Concatenate only verified `benchmark_labels.jsonl` outputs into the
@@ -298,7 +299,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    keeps beta/release/model/public comparison readiness blocked. It requires
    each template directory to pass
    `audit_my_repo_label_template.py --verify-existing`, and rejects missing
-   candidate decisions and synthetic template rows before compilation.
+   candidate decisions and synthetic template rows before compilation. It also
+   refuses plan or label-intake output roots inside any target repository.
 6. Compile per repo:
    `audit_my_repo_label_intake.py --template results/<repo>_label_template --decisions <repo>_decisions.jsonl --out results/<repo>_label_intake`.
 7. Collect maintainer feedback (>= 3 distinct `maintainer_id`) using the 9.3 format.

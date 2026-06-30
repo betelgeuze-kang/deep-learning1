@@ -49,6 +49,32 @@ def command_line(parts: list[object]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts)
 
 
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
+    errors: list[str] = []
+    resolved_by_name = {name: path.expanduser().resolve() for name, path in paths.items()}
+    seen_paths: dict[Path, str] = {}
+    for name, resolved in resolved_by_name.items():
+        if is_forbidden_env_path(resolved):
+            errors.append(f"{name} must not be .env-like")
+        if resolved in seen_paths:
+            errors.append(f"{name} must not reuse {seen_paths[resolved]} path: {resolved}")
+        else:
+            seen_paths[resolved] = name
+        for raw_repo in target_repo_paths:
+            repo_path = Path(raw_repo).expanduser().resolve()
+            if resolved == repo_path or is_relative_to(resolved, repo_path):
+                errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
+    return errors
+
+
 def load_repo_context(path: Path, *, min_repos: int) -> tuple[dict[str, dict[str, str]], dict]:
     raw_rows = repo_intake.read_rows(path)
     errors, summary = repo_intake.validate_rows(raw_rows, min_repos=min_repos)
@@ -226,6 +252,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- label_template_verify_existing_required: {payload['label_template_verify_existing_required']}",
         f"- label_template_verify_existing_passed_dirs: {payload['label_template_verify_existing_passed_dirs']}",
         f"- label_template_verify_existing_failed_dirs: {payload['label_template_verify_existing_failed_dirs']}",
+        f"- output_path_guard_passed: {payload['output_path_guard_passed']}",
         f"- compiles_labels: {payload['compiles_labels']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
         f"- runs_real_benchmark: {payload['runs_real_benchmark']}",
@@ -288,13 +315,23 @@ def main(argv: list[str]) -> int:
             raise ValueError(f"--decisions is not a file: {decisions_path}")
 
         repo_by_case, repo_summary = load_repo_context(repo_intake_path, min_repos=args.min_repos)
+        output_paths = {
+            "out_root": out_root,
+            "out_json": Path(args.out_json).expanduser().resolve(),
+        }
+        if args.out_md:
+            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        output_path_errors = validate_output_paths(
+            output_paths,
+            sorted({context["repo_path"] for context in repo_by_case.values()}),
+        )
         template_rows, template_errors, template_by_case, verify_counts, template_fingerprints = load_templates(
             args.template_dir,
             verify_existing=not args.skip_verify_existing,
         )
         template_case_ids = set(template_by_case)
         repo_case_ids = set(repo_by_case)
-        errors = [*template_errors]
+        errors = [*template_errors, *output_path_errors]
         missing_repo_cases = sorted(template_case_ids - repo_case_ids)
         if missing_repo_cases:
             errors.append("template case_id values missing from repo intake: " + ", ".join(missing_repo_cases[:20]))
@@ -365,6 +402,7 @@ def main(argv: list[str]) -> int:
             "min_real_repos_required": int(repo_summary.get("min_real_repos_required", args.min_repos)),
             "min_human_label_rows_required": args.min_labels,
             "ready_for_label_intake_plan": 1,
+            "output_path_guard_passed": int(not output_path_errors),
             "compiles_labels": 0,
             "writes_label_intake_outputs": 0,
             "creates_benchmark_evidence": 0,

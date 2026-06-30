@@ -210,6 +210,7 @@ def main() -> int:
         assert payload["candidate_label_rows"] == 10
         assert payload["valid_human_label_rows"] == 10
         assert payload["ready_for_label_intake_plan"] == 1
+        assert payload["output_path_guard_passed"] == 1
         assert payload["compiles_labels"] == 0
         assert payload["writes_label_intake_outputs"] == 0
         assert payload["creates_benchmark_evidence"] == 0
@@ -232,9 +233,36 @@ def main() -> int:
         assert verify_parts[verify_parts.index("--verify-existing") + 1] == str(out_root / "case-01_label_intake")
         markdown = out_md.read_text(encoding="utf-8")
         assert "ready_for_label_intake_plan: 1" in markdown
+        assert "output_path_guard_passed: 1" in markdown
         assert "compiles_labels: 0" in markdown
         assert "repo_snapshot_lock_sha256: sha256:" in markdown
         assert "label_template_bundle_sha256: sha256:" in markdown
+
+        unsafe_output_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(decisions),
+            "--out-root",
+            str(repos[0][1] / "label_intake_outputs"),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(repos[1][1] / "label_intake_plan.json"),
+            "--out-md",
+            str(repos[2][1] / "label_intake_plan.md"),
+            "--skip-verify-existing",
+        ]
+        for template_dir in template_dirs:
+            unsafe_output_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*unsafe_output_args)
+        assert proc.returncode == 1
+        assert "out_root must not be inside target repo" in proc.stderr
+        assert "out_json must not be inside target repo" in proc.stderr
+        assert "out_md must not be inside target repo" in proc.stderr
+        assert not (repos[0][1] / "label_intake_outputs").exists()
+        assert not (repos[1][1] / "label_intake_plan.json").exists()
+        assert not (repos[2][1] / "label_intake_plan.md").exists()
 
         missing_decisions = tmp / "missing decisions.jsonl"
         write_jsonl(
