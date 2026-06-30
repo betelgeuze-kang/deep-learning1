@@ -101,6 +101,8 @@ def main() -> int:
         assert payload["repo_intake_sha256"] == sha256_file(intake)
         assert payload["valid_repo_rows"] == 10
         assert payload["repo_snapshot_lock_sha256"] == intake_status["repo_snapshot_lock_sha256"]
+        assert payload["repo_snapshot_lock_row_count"] == 10
+        assert payload["repo_snapshot_lock_rows"] == intake_status["repo_snapshot_lock_rows"]
         assert payload["ready_for_real_benchmark_audit_plan"] == 1
         assert payload["runs_audit"] == 0
         assert payload["runs_label_template_generation"] == 0

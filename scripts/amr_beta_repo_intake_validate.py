@@ -360,6 +360,7 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
         row_statuses.append(row_status(index, normalized, row_errors))
     if valid_rows < min_repos:
         errors.append(f"valid_repo_rows {valid_rows} below required minimum {min_repos}")
+    lock_rows = snapshot_lock_rows(row_statuses)
     summary = {
         "schema": "amr_beta_repo_intake_validate.v1",
         "total_rows": len(rows),
@@ -370,7 +371,9 @@ def validate_rows(rows: list[dict[str, str]], *, min_repos: int) -> tuple[list[s
         "runs_label_template_generation": 0,
         "writes_reviewer_packets": 0,
         "creates_benchmark_evidence": 0,
-        "repo_snapshot_lock_sha256": sha256_json(snapshot_lock_rows(row_statuses)),
+        "repo_snapshot_lock_row_count": len(lock_rows),
+        "repo_snapshot_lock_rows": lock_rows,
+        "repo_snapshot_lock_sha256": sha256_json(lock_rows),
         "row_statuses": row_statuses,
         "design_partner_beta_candidate_ready": 0,
         "release_ready": 0,
@@ -402,6 +405,8 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- input_intake_sha256: {payload['input_intake_sha256']}",
         f"- valid_repo_rows: {payload['valid_repo_rows']}",
         f"- min_real_repos_required: {payload['min_real_repos_required']}",
+        f"- repo_snapshot_lock_row_count: {payload['repo_snapshot_lock_row_count']}",
+        f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
         f"- runs_audit: {payload['runs_audit']}",
         f"- runs_label_template_generation: {payload['runs_label_template_generation']}",
         f"- writes_reviewer_packets: {payload['writes_reviewer_packets']}",
