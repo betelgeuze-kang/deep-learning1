@@ -21,22 +21,61 @@ def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
 def fake_sha(seed: int) -> str:
     return "sha256:" + f"{seed:064x}"[-64:]
 
 
 def binding_payload() -> dict:
-    return {
+    template_fingerprints = [
+        {
+            "label_template_json_sha256": fake_sha(100),
+            "label_template_manifest_sha256": fake_sha(200),
+        },
+        {
+            "label_template_json_sha256": fake_sha(101),
+            "label_template_manifest_sha256": fake_sha(201),
+        },
+    ]
+    label_intake_fingerprints = [
+        {"label_intake_manifest_sha256": fake_sha(300)},
+        {"label_intake_manifest_sha256": fake_sha(301)},
+    ]
+    label_template_bundle_sha256 = sha256_json(template_fingerprints)
+    label_intake_bundle_sha256 = sha256_json(label_intake_fingerprints)
+    input_bundle = {
         "repo_intake_sha256": fake_sha(1),
         "repo_snapshot_lock_sha256": fake_sha(2),
         "decisions_sha256": fake_sha(3),
         "feedback_sha256": fake_sha(4),
-        "label_template_bundle_sha256": fake_sha(5),
-        "label_intake_bundle_sha256": fake_sha(6),
-        "preflight_input_bundle_sha256": fake_sha(7),
-        "label_template_json_sha256s": [fake_sha(100), fake_sha(101)],
-        "label_template_manifest_sha256s": [fake_sha(200), fake_sha(201)],
-        "label_intake_manifest_sha256s": [fake_sha(300), fake_sha(301)],
+        "label_template_bundle_sha256": label_template_bundle_sha256,
+        "label_intake_bundle_sha256": label_intake_bundle_sha256,
+    }
+    return {
+        "template_dir_count": len(template_fingerprints),
+        "label_template_fingerprints": template_fingerprints,
+        "label_template_json_sha256s": [
+            row["label_template_json_sha256"] for row in template_fingerprints
+        ],
+        "label_template_manifest_sha256s": [
+            row["label_template_manifest_sha256"] for row in template_fingerprints
+        ],
+        "label_intake_dir_count": len(label_intake_fingerprints),
+        "label_intake_fingerprints": label_intake_fingerprints,
+        "label_intake_manifest_sha256s": [
+            row["label_intake_manifest_sha256"] for row in label_intake_fingerprints
+        ],
+        "repo_intake_sha256": fake_sha(1),
+        "repo_snapshot_lock_sha256": fake_sha(2),
+        "decisions_sha256": fake_sha(3),
+        "feedback_sha256": fake_sha(4),
+        "label_template_bundle_sha256": label_template_bundle_sha256,
+        "label_intake_bundle_sha256": label_intake_bundle_sha256,
+        "preflight_input_bundle_sha256": sha256_json(input_bundle),
     }
 
 
@@ -205,10 +244,27 @@ def main() -> int:
         assert payload["current_stage"] == "stage_4_runtime_approval_verified"
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert "Human/operator may run" in payload["next_blockers"][0]
-        assert payload["runtime_fingerprints"]["preflight_input_bundle_sha256"] == fake_sha(7)
+        expected_binding = binding_payload()
+        assert (
+            payload["runtime_fingerprints"]["preflight_input_bundle_sha256"]
+            == expected_binding["preflight_input_bundle_sha256"]
+        )
+        assert (
+            payload["runtime_fingerprints"]["label_template_json_sha256s"]
+            == expected_binding["label_template_json_sha256s"]
+        )
+        assert (
+            payload["runtime_fingerprints"]["label_template_manifest_sha256s"]
+            == expected_binding["label_template_manifest_sha256s"]
+        )
+        assert (
+            payload["runtime_fingerprints"]["label_intake_manifest_sha256s"]
+            == expected_binding["label_intake_manifest_sha256s"]
+        )
         markdown = out_md.read_text(encoding="utf-8")
         assert "current_stage: stage_4_runtime_approval_verified" in markdown
         assert "preflight_input_bundle_sha256: sha256:" in markdown
+        assert 'label_intake_manifest_sha256s: ["sha256:' in markdown
 
         proc = run_tool(
             "--repo-audit-plan",
@@ -277,6 +333,72 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "approval_request_sha256 must match" in proc.stderr
+
+        malformed_preflight = tmp / "malformed_preflight.json"
+        malformed_preflight_payload = {
+            "schema": "amr_beta_runtime_preflight.v1",
+            "ready_to_request_runtime_approval": 1,
+            **binding_payload(),
+            **base_blocked(),
+        }
+        malformed_preflight_payload["repo_intake_sha256"] = "sha256:" + ("z" * 64)
+        malformed_preflight_payload["preflight_input_bundle_sha256"] = sha256_json(
+            {
+                "repo_intake_sha256": malformed_preflight_payload["repo_intake_sha256"],
+                "repo_snapshot_lock_sha256": malformed_preflight_payload["repo_snapshot_lock_sha256"],
+                "decisions_sha256": malformed_preflight_payload["decisions_sha256"],
+                "feedback_sha256": malformed_preflight_payload["feedback_sha256"],
+                "label_template_bundle_sha256": malformed_preflight_payload["label_template_bundle_sha256"],
+                "label_intake_bundle_sha256": malformed_preflight_payload["label_intake_bundle_sha256"],
+            }
+        )
+        write_json(malformed_preflight, malformed_preflight_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(malformed_preflight),
+            "--out-json",
+            str(tmp / "malformed_preflight_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "runtime_preflight: repo_intake_sha256 must be a sha256 binding" in proc.stderr
+
+        stale_preflight_bundle = tmp / "stale_preflight_bundle.json"
+        stale_preflight_payload = {
+            "schema": "amr_beta_runtime_preflight.v1",
+            "ready_to_request_runtime_approval": 1,
+            **binding_payload(),
+            **base_blocked(),
+        }
+        stale_preflight_payload["preflight_input_bundle_sha256"] = fake_sha(999)
+        write_json(stale_preflight_bundle, stale_preflight_payload)
+        stale_preflight_request = tmp / "stale_preflight_request.json"
+        stale_preflight_request_payload = request_payload(stale_preflight_bundle)
+        for key, value in stale_preflight_payload.items():
+            if key in binding_payload():
+                stale_preflight_request_payload[key] = value
+        write_json(stale_preflight_request, stale_preflight_request_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(stale_preflight_bundle),
+            "--runtime-approval-request",
+            str(stale_preflight_request),
+            "--out-json",
+            str(tmp / "stale_preflight_bundle_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "preflight_input_bundle_sha256 does not match input fingerprints" in proc.stderr
 
         stale_fingerprint_request = tmp / "stale_fingerprint_request.json"
         stale_fingerprint_payload = request_payload(preflight)
