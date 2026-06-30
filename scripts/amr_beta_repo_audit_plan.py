@@ -46,6 +46,25 @@ def command_line(parts: list[object]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts)
 
 
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def validate_artifact_root(artifact_root: Path, rows: list[dict[str, str]]) -> list[str]:
+    errors: list[str] = []
+    for row in rows:
+        repo_path = Path(row["repo_path_resolved"]).resolve()
+        if artifact_root.resolve() == repo_path or is_relative_to(artifact_root, repo_path):
+            errors.append(
+                f"artifact_root must not be inside target repo for case_id {row['case_id']}: {artifact_root}"
+            )
+    return errors
+
+
 def normalized_valid_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     normalized_rows: list[dict[str, str]] = []
     errors: list[str] = []
@@ -83,6 +102,13 @@ def build_plan_rows(rows: list[dict[str, str]], artifact_root: Path) -> tuple[li
                 audit_out,
             ]
         )
+        audit_verify_command = command_line(
+            [
+                "./scripts/audit_my_repo.sh",
+                "--verify-existing",
+                audit_out,
+            ]
+        )
         template_command = command_line(
             [
                 "python3",
@@ -93,6 +119,14 @@ def build_plan_rows(rows: list[dict[str, str]], artifact_root: Path) -> tuple[li
                 template_out,
                 "--case-id",
                 case_id,
+            ]
+        )
+        template_verify_command = command_line(
+            [
+                "python3",
+                "scripts/audit_my_repo_label_template.py",
+                "--verify-existing",
+                template_out,
             ]
         )
         reviewer_packet_command = command_line(
@@ -120,7 +154,9 @@ def build_plan_rows(rows: list[dict[str, str]], artifact_root: Path) -> tuple[li
                 "label_template_out": str(template_out),
                 "reviewer_packet_out": str(reviewer_out),
                 "audit_command": audit_command,
+                "audit_verify_command": audit_verify_command,
                 "label_template_command": template_command,
+                "label_template_verify_command": template_verify_command,
                 "reviewer_packet_command": reviewer_packet_command,
             }
         )
@@ -138,7 +174,9 @@ def build_payload(*, intake_path: Path, rows: list[dict[str, str]], summary: dic
         commands.extend(
             [
                 row["audit_command"],
+                row["audit_verify_command"],
                 row["label_template_command"],
+                row["label_template_verify_command"],
                 row["reviewer_packet_command"],
             ]
         )
@@ -213,8 +251,10 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
                 f"### {row['case_id']}",
                 "",
                 f"1. `{row['audit_command']}`",
-                f"2. `{row['label_template_command']}`",
-                f"3. `{row['reviewer_packet_command']}`",
+                f"2. `{row['audit_verify_command']}`",
+                f"3. `{row['label_template_command']}`",
+                f"4. `{row['label_template_verify_command']}`",
+                f"5. `{row['reviewer_packet_command']}`",
                 "",
             ]
         )
@@ -258,6 +298,13 @@ def main(argv: list[str]) -> int:
                 print(error, file=sys.stderr)
             return 1
         rows = normalized_valid_rows(raw_rows)
+        artifact_root_errors = validate_artifact_root(artifact_root, rows)
+        if artifact_root_errors:
+            if args.json:
+                print(json.dumps({"schema": SCHEMA, "errors": artifact_root_errors}, indent=2, sort_keys=True))
+            for error in artifact_root_errors:
+                print(error, file=sys.stderr)
+            return 1
         payload = build_payload(
             intake_path=intake_path,
             rows=rows,

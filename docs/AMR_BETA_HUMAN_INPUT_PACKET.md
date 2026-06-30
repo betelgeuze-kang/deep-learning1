@@ -73,7 +73,11 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   validated intake sheet; this does not run audits or create evidence:
   `python3 scripts/amr_beta_repo_audit_plan.py --repo-intake <filled-intake.md-or.csv> --artifact-root results/amr_beta_repo_audit_work --out-json results/amr_beta_repo_audit_plan.json --out-md results/amr_beta_repo_audit_plan.md`.
   The plan carries the same `repo_snapshot_lock_sha256` so the operator can tie
-  audit commands back to the validated 10-repository snapshot.
+  audit commands back to the validated 10-repository snapshot. It also refuses
+  an `--artifact-root` inside any target repo, because audit outputs would dirty
+  that repo before evidence generation.
+- [ ] Run each emitted audit verify command before its label-template command,
+  and each emitted label-template verify command before reviewer-packet handoff.
 - [ ] Remove every `EXAMPLE-*` placeholder row before collection review. A row
   is usable only when the repository path, contact, HEAD, and namespace
   confirmation are human owner supplied and verified against local disk.

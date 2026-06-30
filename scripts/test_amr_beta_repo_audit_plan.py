@@ -109,7 +109,7 @@ def main() -> int:
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert payload["release_ready"] == 0
         assert len(payload["per_repo"]) == 10
-        assert payload["operator_command_count"] == 31
+        assert payload["operator_command_count"] == 51
         first = payload["per_repo"][0]
         audit_parts = shlex.split(first["audit_command"])
         assert audit_parts[0] == "./scripts/audit_my_repo.sh"
@@ -118,9 +118,22 @@ def main() -> int:
         assert "--confirm-real-benchmark-namespace" in audit_parts
         assert audit_parts[audit_parts.index("--out") + 1] == str(artifact_root / "case-01_audit")
         assert "'" in first["audit_command"]
+        audit_verify_parts = shlex.split(first["audit_verify_command"])
+        assert audit_verify_parts == [
+            "./scripts/audit_my_repo.sh",
+            "--verify-existing",
+            str(artifact_root / "case-01_audit"),
+        ]
         template_parts = shlex.split(first["label_template_command"])
         assert template_parts[1] == "scripts/audit_my_repo_label_template.py"
         assert template_parts[template_parts.index("--case-id") + 1] == "case-01"
+        template_verify_parts = shlex.split(first["label_template_verify_command"])
+        assert template_verify_parts == [
+            "python3",
+            "scripts/audit_my_repo_label_template.py",
+            "--verify-existing",
+            str(artifact_root / "case-01_label_template"),
+        ]
         assert "--per-case-out-root" in shlex.split(payload["aggregate_reviewer_packet_command"])
         markdown = out_md.read_text(encoding="utf-8")
         assert "runs_audit: 0" in markdown
@@ -140,6 +153,20 @@ def main() -> int:
         assert "repo_dirty" in proc.stderr
         assert not (tmp / "dirty_plan.json").exists()
         (repos[0][0] / "UNTRACKED.txt").unlink()
+
+        unsafe_artifact_root = tmp / "unsafe_artifact.md"
+        write_intake(unsafe_artifact_root, repos)
+        proc = run_tool(
+            "--repo-intake",
+            str(unsafe_artifact_root),
+            "--artifact-root",
+            str(repos[0][0] / "audit_artifacts"),
+            "--out-json",
+            str(tmp / "unsafe_artifact_plan.json"),
+        )
+        assert proc.returncode == 1
+        assert "artifact_root must not be inside target repo" in proc.stderr
+        assert not (tmp / "unsafe_artifact_plan.json").exists()
 
         example = tmp / "example.md"
         write_intake(example, repos, case_prefix="EXAMPLE")
