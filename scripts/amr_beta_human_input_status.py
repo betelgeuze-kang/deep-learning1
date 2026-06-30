@@ -9,6 +9,7 @@ not promote readiness.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import re
@@ -38,6 +39,90 @@ def truthy(value: object) -> bool:
 
 def good_operator_value(value: object) -> bool:
     return not PLACEHOLDER_RE.search(str(value or "").strip())
+
+
+def normalize_repo_intake_header(value: str) -> str:
+    text = re.sub(r"\([^)]*\)", "", value.strip().lower())
+    text = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+    return {
+        "repo_id": "case_id",
+        "local_path": "repo_path",
+        "path": "repo_path",
+    }.get(text, text)
+
+
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def repo_intake_rows(path: Path) -> list[dict[str, str]]:
+    if is_forbidden_env_path(path):
+        raise ValueError("refusing .env-like repo intake path")
+    text = path.read_text(encoding="utf-8")
+    first_nonempty = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    if not first_nonempty:
+        return []
+    if first_nonempty.startswith("|"):
+        rows: list[dict[str, str]] = []
+        header: list[str] | None = None
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped.startswith("|") or not stripped.endswith("|"):
+                if header and rows:
+                    break
+                continue
+            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+            if all(set(cell.replace(":", "").strip()) <= {"-"} for cell in cells):
+                continue
+            normalized = [normalize_repo_intake_header(cell) for cell in cells]
+            if header is None:
+                if "case_id" in normalized or "repo_path" in normalized:
+                    header = normalized
+                continue
+            rows.append({column: cells[index] if index < len(cells) else "" for index, column in enumerate(header)})
+        return rows
+    with path.open(newline="", encoding="utf-8") as handle:
+        return [
+            {normalize_repo_intake_header(key or ""): str(value or "").strip() for key, value in row.items()}
+            for row in csv.DictReader(handle)
+        ]
+
+
+def load_repo_intake_context(path_text: str) -> tuple[set[str], set[str]]:
+    if not path_text:
+        return set(), set()
+    rows = repo_intake_rows(Path(path_text).expanduser().resolve())
+    case_ids: set[str] = set()
+    repo_paths: set[str] = set()
+    for row in rows:
+        case_id = str(row.get("case_id") or "").strip()
+        if case_id and good_operator_value(case_id):
+            case_ids.add(case_id)
+        raw_repo = str(row.get("repo_path") or "").strip()
+        if raw_repo and good_operator_value(raw_repo):
+            repo_paths.add(str(Path(raw_repo).expanduser().resolve()))
+    return case_ids, repo_paths
+
+
+def validate_output_paths(paths: dict[str, Path], target_repo_paths: set[str]) -> list[str]:
+    errors: list[str] = []
+    seen: dict[Path, str] = {}
+    for name, path in paths.items():
+        resolved = path.resolve()
+        if is_forbidden_env_path(resolved):
+            errors.append(f"{name} must not be .env-like")
+        if resolved in seen:
+            errors.append(f"{name} must not reuse {seen[resolved]} path: {resolved}")
+        seen[resolved] = name
+        for raw_repo in sorted(target_repo_paths):
+            repo_path = Path(raw_repo).expanduser().resolve()
+            if resolved == repo_path or is_relative_to(resolved, repo_path):
+                errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
+    return errors
 
 
 def validate_optional_safe_id(
@@ -118,28 +203,6 @@ def load_template_context(template_dirs: list[str]) -> tuple[set[str], set[str]]
             if case_id:
                 case_ids.add(case_id)
     return candidate_ids, case_ids
-
-
-def load_case_ids_from_repo_intake(path_text: str) -> set[str]:
-    if not path_text:
-        return set()
-    path = Path(path_text).expanduser().resolve()
-    if is_forbidden_env_path(path):
-        raise ValueError("refusing .env-like repo intake path")
-    text = path.read_text(encoding="utf-8")
-    case_ids: set[str] = set()
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("|") or not stripped.endswith("|"):
-            continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-        if not cells or cells[0].lower() in {"case_id", "---"}:
-            continue
-        if set(cells[0].replace(":", "").strip()) <= {"-"}:
-            continue
-        if good_operator_value(cells[0]):
-            case_ids.add(cells[0])
-    return case_ids
 
 
 def validate_decisions(
@@ -404,6 +467,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- compiles_labels: {payload['compiles_labels']}",
         f"- creates_benchmark_evidence: {payload['creates_benchmark_evidence']}",
         f"- runs_benchmark: {payload['runs_benchmark']}",
+        f"- output_path_guard_passed: {payload['output_path_guard_passed']}",
         f"- design_partner_beta_candidate_ready: {payload['design_partner_beta_candidate_ready']}",
         f"- release_ready: {payload['release_ready']}",
         f"- public_comparison_claim_ready: {payload['public_comparison_claim_ready']}",
@@ -453,7 +517,14 @@ def main(argv: list[str]) -> int:
             args.label_intake_dir,
             verify_existing=not args.skip_verify_existing,
         )
-        known_case_ids = template_case_ids | load_case_ids_from_repo_intake(args.repo_intake) | label_intake_case_ids
+        repo_intake_case_ids, target_repo_paths = load_repo_intake_context(args.repo_intake)
+        output_paths = {}
+        if args.out_json:
+            output_paths["out_json"] = Path(args.out_json).expanduser().resolve()
+        if args.out_md:
+            output_paths["out_md"] = Path(args.out_md).expanduser().resolve()
+        output_path_errors = validate_output_paths(output_paths, target_repo_paths)
+        known_case_ids = template_case_ids | repo_intake_case_ids | label_intake_case_ids
         decision_rows = read_json_or_jsonl(Path(args.decisions).expanduser().resolve(), "decisions")
         feedback_rows = read_json_or_jsonl(Path(args.feedback).expanduser().resolve(), "feedback")
         decision_errors, decision_summary = validate_decisions(
@@ -472,7 +543,7 @@ def main(argv: list[str]) -> int:
         print(f"human_input_status: error: {exc}", file=sys.stderr)
         return 1
 
-    errors = [*decision_errors, *feedback_errors]
+    errors = [*decision_errors, *feedback_errors, *output_path_errors]
     effective_maintainer_id_count = (
         feedback_summary["distinct_countable_maintainer_id_count"]
         if args.label_intake_dir
@@ -504,6 +575,7 @@ def main(argv: list[str]) -> int:
         "compiles_labels": 0,
         "creates_benchmark_evidence": 0,
         "runs_benchmark": 0,
+        "output_path_guard_passed": int(not output_path_errors),
         "design_partner_beta_candidate_ready": 0,
         "release_ready": 0,
         "public_comparison_claim_ready": 0,
@@ -511,9 +583,9 @@ def main(argv: list[str]) -> int:
     }
     payload = {**summary, "errors": errors}
     try:
-        if args.out_json:
+        if args.out_json and not output_path_errors:
             write_json(Path(args.out_json).expanduser().resolve(), payload, args.overwrite)
-        if args.out_md:
+        if args.out_md and not output_path_errors:
             write_markdown(Path(args.out_md).expanduser().resolve(), payload, args.overwrite)
     except Exception as exc:
         print(f"human_input_status: error: {exc}", file=sys.stderr)
