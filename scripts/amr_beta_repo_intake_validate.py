@@ -29,6 +29,10 @@ CONTACT_PLACEHOLDER_RE = re.compile(
     r"(^$|example|placeholder|replace|todo|synthetic|fixture|\.invalid\b)",
     re.IGNORECASE,
 )
+NOTES_PLACEHOLDER_RE = re.compile(
+    r"(example|placeholder|replace|todo|synthetic|fixture|template[-_ ]?only)",
+    re.IGNORECASE,
+)
 
 REQUIRED_COLUMNS = [
     "case_id",
@@ -39,6 +43,14 @@ REQUIRED_COLUMNS = [
     "audit_mode",
     "namespace",
     "real_benchmark_namespace_confirmed",
+]
+FORBIDDEN_REAL_ROW_FLAG_COLUMNS = [
+    "synthetic",
+    "fixture",
+    "example",
+    "placeholder",
+    "template_only",
+    "sample",
 ]
 
 ALIASES = {
@@ -215,6 +227,15 @@ def validate_row(row: dict[str, str], index: int) -> tuple[list[str], dict[str, 
     contact = normalized["owner_or_maintainer_contact"]
     if contact and (not good_operator_value(contact) or not good_contact_value(contact)):
         errors.append(f"row {index}: owner_or_maintainer_contact must be human-supplied")
+
+    for column in FORBIDDEN_REAL_ROW_FLAG_COLUMNS:
+        raw_value = str(row.get(column, "")).strip()
+        if raw_value and truthy(raw_value):
+            errors.append(f"row {index}: {column} must not be true for real repo intake")
+
+    notes = str(row.get("notes", "")).strip()
+    if notes and NOTES_PLACEHOLDER_RE.search(notes):
+        errors.append(f"row {index}: notes must not mark the row as example/placeholder/synthetic/fixture")
 
     audit_mode = normalized["audit_mode"].lower()
     if audit_mode and audit_mode not in {"quick", "full"}:
