@@ -59,6 +59,10 @@ the same `preflight_input_bundle_sha256`, `label_template_bundle_sha256`,
   `expected_repo_git_head`, `clean_worktree=true`, owner/maintainer contact,
   audit mode, and `real_benchmark` namespace confirmation in
   `docs/templates/amr-beta-repo-intake.md`.
+- [ ] If the repo paths and contacts are already known, generate the filled
+  sheet from read-only git metadata instead of hand-copying HEADs:
+  `python3 scripts/amr_beta_repo_intake_collect.py --repo <repo1> --contact <contact1> --repo <repo2> --contact <contact2> ... --confirm-real-benchmark-namespace --out results/amr_beta_repo_intake.md`.
+  The collector writes no audit, label, reviewer, or benchmark evidence.
 - [ ] Validate the filled intake sheet before running audits:
   `python3 scripts/amr_beta_repo_intake_validate.py <filled-intake.md-or.csv>`.
 - [ ] When intake is still partial or failing, write the read-only row-level
