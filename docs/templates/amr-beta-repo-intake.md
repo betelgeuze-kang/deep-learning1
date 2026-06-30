@@ -16,7 +16,7 @@ For each repository, record one row. Keep one case per repository.
 - [ ] `case_id` is a safe identifier (`[A-Za-z0-9][A-Za-z0-9_.-]{0,127}`).
 - [ ] Audit will be run with `namespace=real_benchmark` and
   `real_benchmark_namespace_confirmed=true`.
-- [ ] No row or optional metadata column marks the case as `synthetic`,
+- [ ] No row or optional metadata column affirmatively marks the case as `synthetic`,
   `fixture`, `example`, `placeholder`, or `template_only`.
 
 ## Intake table (fill in)
@@ -29,8 +29,8 @@ For each repository, record one row. Keep one case per repository.
 > 10 real rows are required; the example does not count toward the threshold,
 > even though it shows the required `real_benchmark` namespace fields. Do not
 > leave any `EXAMPLE-*` value in the filled intake sheet.
-> Do not leave `example`, `placeholder`, `synthetic`, `fixture`, or
-> `template_only` markers in `notes` or optional metadata columns.
+> Do not leave affirmative `example`, `placeholder`, `synthetic`, `fixture`,
+> or `template_only` markers in `notes` or optional metadata columns.
 
 ## How HEAD is checked
 
