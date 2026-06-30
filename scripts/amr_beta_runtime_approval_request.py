@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -23,6 +24,7 @@ BLOCKED_FLAGS = {
     "public_comparison_claim_ready": 0,
     "real_model_execution_ready": 0,
 }
+SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 VERIFY_EXISTING_COUNTER_KEYS = [
     "template_dir_count",
     "label_template_verify_existing_required",
@@ -32,6 +34,20 @@ VERIFY_EXISTING_COUNTER_KEYS = [
     "label_intake_verify_existing_required",
     "label_intake_verify_existing_passed_dirs",
     "label_intake_verify_existing_failed_dirs",
+]
+PREFLIGHT_SHA_BINDING_KEYS = [
+    "repo_intake_sha256",
+    "repo_snapshot_lock_sha256",
+    "decisions_sha256",
+    "feedback_sha256",
+    "label_template_bundle_sha256",
+    "label_intake_bundle_sha256",
+    "preflight_input_bundle_sha256",
+]
+PREFLIGHT_LIST_BINDING_KEYS = [
+    ("label_template_json_sha256s", "template_dir_count"),
+    ("label_template_manifest_sha256s", "template_dir_count"),
+    ("label_intake_manifest_sha256s", "label_intake_dir_count"),
 ]
 
 
@@ -100,6 +116,81 @@ def validate_verify_existing_counts(preflight: dict) -> list[str]:
     return errors
 
 
+def validate_sha_binding_fields(preflight: dict) -> list[str]:
+    errors: list[str] = []
+    for key in PREFLIGHT_SHA_BINDING_KEYS:
+        value = str(preflight.get(key) or "")
+        if not SHA256_RE.fullmatch(value):
+            errors.append(f"runtime preflight {key} must be a sha256 digest")
+    for key, count_key in PREFLIGHT_LIST_BINDING_KEYS:
+        expected_count = int_field(preflight, count_key, errors)
+        values = preflight.get(key)
+        if not isinstance(values, list):
+            errors.append(f"runtime preflight {key} must be a list")
+            continue
+        if expected_count > 0 and len(values) != expected_count:
+            errors.append(f"runtime preflight {key} length must equal {count_key}")
+        for value in values:
+            if not SHA256_RE.fullmatch(str(value or "")):
+                errors.append(f"runtime preflight {key} contains a non-sha256 digest")
+                break
+    return errors
+
+
+def validate_fingerprint_bundle_consistency(preflight: dict) -> list[str]:
+    errors: list[str] = []
+    template_fingerprints = preflight.get("label_template_fingerprints")
+    if not isinstance(template_fingerprints, list):
+        errors.append("runtime preflight label_template_fingerprints must be a list")
+        template_fingerprints = []
+    if len(template_fingerprints) != int(preflight.get("template_dir_count", -1)):
+        errors.append("runtime preflight label_template_fingerprints length must equal template_dir_count")
+    template_json_sha256s = [
+        str(row.get("label_template_json_sha256") or "")
+        for row in template_fingerprints
+        if isinstance(row, dict)
+    ]
+    template_manifest_sha256s = [
+        str(row.get("label_template_manifest_sha256") or "")
+        for row in template_fingerprints
+        if isinstance(row, dict) and str(row.get("label_template_manifest_sha256") or "")
+    ]
+    if preflight.get("label_template_json_sha256s") != template_json_sha256s:
+        errors.append("runtime preflight label_template_json_sha256s must match label_template_fingerprints")
+    if preflight.get("label_template_manifest_sha256s") != template_manifest_sha256s:
+        errors.append("runtime preflight label_template_manifest_sha256s must match label_template_fingerprints")
+    if str(preflight.get("label_template_bundle_sha256") or "") != sha256_json(template_fingerprints):
+        errors.append("runtime preflight label_template_bundle_sha256 does not match label_template_fingerprints")
+
+    label_intake_fingerprints = preflight.get("label_intake_fingerprints")
+    if not isinstance(label_intake_fingerprints, list):
+        errors.append("runtime preflight label_intake_fingerprints must be a list")
+        label_intake_fingerprints = []
+    if len(label_intake_fingerprints) != int(preflight.get("label_intake_dir_count", -1)):
+        errors.append("runtime preflight label_intake_fingerprints length must equal label_intake_dir_count")
+    label_intake_manifest_sha256s = [
+        str(row.get("label_intake_manifest_sha256") or "")
+        for row in label_intake_fingerprints
+        if isinstance(row, dict)
+    ]
+    if preflight.get("label_intake_manifest_sha256s") != label_intake_manifest_sha256s:
+        errors.append("runtime preflight label_intake_manifest_sha256s must match label_intake_fingerprints")
+    if str(preflight.get("label_intake_bundle_sha256") or "") != sha256_json(label_intake_fingerprints):
+        errors.append("runtime preflight label_intake_bundle_sha256 does not match label_intake_fingerprints")
+
+    input_bundle = {
+        "repo_intake_sha256": str(preflight.get("repo_intake_sha256") or ""),
+        "repo_snapshot_lock_sha256": str(preflight.get("repo_snapshot_lock_sha256") or ""),
+        "decisions_sha256": str(preflight.get("decisions_sha256") or ""),
+        "feedback_sha256": str(preflight.get("feedback_sha256") or ""),
+        "label_template_bundle_sha256": str(preflight.get("label_template_bundle_sha256") or ""),
+        "label_intake_bundle_sha256": str(preflight.get("label_intake_bundle_sha256") or ""),
+    }
+    if str(preflight.get("preflight_input_bundle_sha256") or "") != sha256_json(input_bundle):
+        errors.append("runtime preflight preflight_input_bundle_sha256 does not match input fingerprints")
+    return errors
+
+
 def validate_preflight(preflight: dict) -> list[str]:
     errors: list[str] = []
     if preflight.get("schema") != PREFLIGHT_SCHEMA:
@@ -129,6 +220,8 @@ def validate_preflight(preflight: dict) -> list[str]:
         if "--namespace real_benchmark" not in run or "--confirm-real-benchmark-namespace" not in run:
             errors.append("benchmark command must be real_benchmark namespace confirmed")
     errors.extend(validate_verify_existing_counts(preflight))
+    errors.extend(validate_sha_binding_fields(preflight))
+    errors.extend(validate_fingerprint_bundle_consistency(preflight))
     return errors
 
 
@@ -157,6 +250,11 @@ def build_packet(preflight: dict, *, preflight_path: Path, operator_note: str) -
         ),
         "label_intake_case_count": int(preflight.get("label_intake_case_count", 0)),
         **{key: int(preflight.get(key, 0)) for key in VERIFY_EXISTING_COUNTER_KEYS},
+        **{key: str(preflight.get(key) or "") for key in PREFLIGHT_SHA_BINDING_KEYS},
+        **{
+            key: list(preflight.get(key, []))
+            for key, _count_key in PREFLIGHT_LIST_BINDING_KEYS
+        },
         "runtime_commands": commands,
         "runtime_commands_sha256": sha256_json(commands),
         "benchmark_out": benchmark_out,
@@ -181,6 +279,10 @@ def write_markdown(path: Path, packet: dict) -> None:
         f"- creates_benchmark_evidence: {packet['creates_benchmark_evidence']}",
         f"- runs_benchmark: {packet['runs_benchmark']}",
         f"- input_preflight_sha256: {packet['input_preflight_sha256']}",
+        f"- preflight_input_bundle_sha256: {packet['preflight_input_bundle_sha256']}",
+        f"- repo_snapshot_lock_sha256: {packet['repo_snapshot_lock_sha256']}",
+        f"- label_template_bundle_sha256: {packet['label_template_bundle_sha256']}",
+        f"- label_intake_bundle_sha256: {packet['label_intake_bundle_sha256']}",
         f"- runtime_commands_sha256: {packet['runtime_commands_sha256']}",
         f"- benchmark_out: {packet['benchmark_out']}",
         f"- label_template_verify_existing_required: {packet['label_template_verify_existing_required']}",

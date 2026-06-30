@@ -67,10 +67,15 @@ def load_repo_context(path: Path, *, min_repos: int) -> tuple[dict[str, dict[str
     return by_case, summary
 
 
-def load_templates(raw_dirs: list[str], *, verify_existing: bool) -> tuple[list[dict], list[str], dict[str, Path], dict[str, int]]:
+def load_templates(
+    raw_dirs: list[str],
+    *,
+    verify_existing: bool,
+) -> tuple[list[dict], list[str], dict[str, Path], dict[str, int], list[dict[str, str]]]:
     rows: list[dict] = []
     errors: list[str] = []
     by_case: dict[str, Path] = {}
+    fingerprints: list[dict[str, str]] = []
     case_seen: set[str] = set()
     verify_passed_dirs = 0
     verify_failed_dirs = 0
@@ -84,6 +89,17 @@ def load_templates(raw_dirs: list[str], *, verify_existing: bool) -> tuple[list[
             else:
                 verify_passed_dirs += 1
         loaded_rows, template_errors, _counts = label_packet.load_template_dir(template_dir)
+        template_json = template_dir / "label_template.json"
+        template_manifest = template_dir / "label_template_manifest.json"
+        fingerprints.append(
+            {
+                "template_dir": str(template_dir),
+                "label_template_json_sha256": sha256_file(template_json),
+                "label_template_manifest_sha256": sha256_file(template_manifest)
+                if template_manifest.is_file()
+                else "",
+            }
+        )
         rows.extend(loaded_rows)
         errors.extend(template_errors)
         case_ids = sorted({row["case_id"] for row in loaded_rows})
@@ -102,7 +118,7 @@ def load_templates(raw_dirs: list[str], *, verify_existing: bool) -> tuple[list[
     return rows, errors, by_case, {
         "label_template_verify_existing_passed_dirs": verify_passed_dirs,
         "label_template_verify_existing_failed_dirs": verify_failed_dirs,
-    }
+    }, fingerprints
 
 
 def decision_map(decisions: list[dict]) -> dict[str, dict]:
@@ -205,6 +221,8 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- ready_for_label_intake_plan: {payload['ready_for_label_intake_plan']}",
         f"- valid_human_label_rows: {payload['valid_human_label_rows']}",
         f"- min_human_label_rows_required: {payload['min_human_label_rows_required']}",
+        f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
+        f"- label_template_bundle_sha256: {payload['label_template_bundle_sha256']}",
         f"- label_template_verify_existing_required: {payload['label_template_verify_existing_required']}",
         f"- label_template_verify_existing_passed_dirs: {payload['label_template_verify_existing_passed_dirs']}",
         f"- label_template_verify_existing_failed_dirs: {payload['label_template_verify_existing_failed_dirs']}",
@@ -270,7 +288,7 @@ def main(argv: list[str]) -> int:
             raise ValueError(f"--decisions is not a file: {decisions_path}")
 
         repo_by_case, repo_summary = load_repo_context(repo_intake_path, min_repos=args.min_repos)
-        template_rows, template_errors, template_by_case, verify_counts = load_templates(
+        template_rows, template_errors, template_by_case, verify_counts, template_fingerprints = load_templates(
             args.template_dir,
             verify_existing=not args.skip_verify_existing,
         )
@@ -318,10 +336,21 @@ def main(argv: list[str]) -> int:
             "schema": SCHEMA,
             "repo_intake": str(repo_intake_path),
             "repo_intake_sha256": sha256_file(repo_intake_path),
+            "repo_snapshot_lock_sha256": repo_summary.get("repo_snapshot_lock_sha256", ""),
             "decisions": str(decisions_path),
             "decisions_sha256": sha256_file(decisions_path),
             "out_root": str(out_root),
             "template_dir_count": len(args.template_dir),
+            "label_template_fingerprints": template_fingerprints,
+            "label_template_json_sha256s": [
+                row["label_template_json_sha256"] for row in template_fingerprints
+            ],
+            "label_template_manifest_sha256s": [
+                row["label_template_manifest_sha256"]
+                for row in template_fingerprints
+                if row["label_template_manifest_sha256"]
+            ],
+            "label_template_bundle_sha256": sha256_json(template_fingerprints),
             "label_template_verify_existing_required": int(not args.skip_verify_existing),
             "label_template_verify_existing_passed_dirs": verify_counts[
                 "label_template_verify_existing_passed_dirs"
