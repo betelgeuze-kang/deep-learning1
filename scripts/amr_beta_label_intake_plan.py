@@ -49,6 +49,13 @@ def command_line(parts: list[object]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts)
 
 
+def read_json(path: Path, input_name: str) -> dict:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{input_name} must contain an object")
+    return payload
+
+
 def is_relative_to(path: Path, parent: Path) -> bool:
     try:
         path.resolve().relative_to(parent.resolve())
@@ -180,6 +187,56 @@ def validate_compile_boundaries(template_rows: list[dict], decisions_by_id: dict
     return errors
 
 
+def validate_label_packet_summary_binding(
+    summary: dict,
+    *,
+    template_fingerprints: list[dict[str, str]],
+    decisions_fingerprints: list[dict[str, str]],
+    candidate_label_rows: int,
+    synthetic_candidate_rows: int,
+    non_synthetic_candidate_rows: int,
+    decision_rows: int,
+    valid_human_label_rows: int,
+    non_synthetic_valid_human_label_rows: int,
+    missing_candidate_label_count: int,
+) -> list[str]:
+    errors: list[str] = []
+    if summary.get("schema") != "amr_beta_label_packet.v1":
+        errors.append("label_packet_summary: schema must be amr_beta_label_packet.v1")
+    for key in [
+        "candidate_guard_passed",
+        "decision_input_guard_passed",
+        "output_path_guard_passed",
+        "ready_for_label_intake",
+    ]:
+        if summary.get(key) != 1:
+            errors.append(f"label_packet_summary: must set {key}=1")
+    expected_counts = {
+        "candidate_label_rows": candidate_label_rows,
+        "synthetic_candidate_rows": synthetic_candidate_rows,
+        "non_synthetic_candidate_rows": non_synthetic_candidate_rows,
+        "decision_rows": decision_rows,
+        "valid_human_label_rows": valid_human_label_rows,
+        "non_synthetic_valid_human_label_rows": non_synthetic_valid_human_label_rows,
+        "missing_candidate_label_count": missing_candidate_label_count,
+    }
+    for key, expected in expected_counts.items():
+        if summary.get(key) != expected:
+            errors.append(f"label_packet_summary: {key} must match label_intake_plan inputs")
+
+    template_bundle_sha256 = sha256_json(template_fingerprints)
+    decisions_bundle_sha256 = sha256_json(decisions_fingerprints)
+    if summary.get("label_template_fingerprints") != template_fingerprints:
+        errors.append("label_packet_summary: label_template_fingerprints must match label_intake_plan")
+    if summary.get("label_template_bundle_sha256") != template_bundle_sha256:
+        errors.append("label_packet_summary: label_template_bundle_sha256 must match label_intake_plan")
+    if summary.get("decisions_fingerprints") != decisions_fingerprints:
+        errors.append("label_packet_summary: decisions_fingerprints must match label_intake_plan")
+    if summary.get("decisions_bundle_sha256") != decisions_bundle_sha256:
+        errors.append("label_packet_summary: decisions_bundle_sha256 must match label_intake_plan")
+    return errors
+
+
 def build_case_rows(
     *,
     template_by_case: dict[str, Path],
@@ -256,6 +313,9 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- min_human_label_rows_required: {payload['min_human_label_rows_required']}",
         f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
         f"- label_template_bundle_sha256: {payload['label_template_bundle_sha256']}",
+        f"- label_packet_summary_bound: {payload['label_packet_summary_bound']}",
+        f"- label_packet_summary_sha256: {payload['label_packet_summary_sha256']}",
+        f"- label_packet_decisions_bundle_sha256: {payload['label_packet_decisions_bundle_sha256']}",
         f"- label_template_verify_existing_required: {payload['label_template_verify_existing_required']}",
         f"- label_template_verify_existing_passed_dirs: {payload['label_template_verify_existing_passed_dirs']}",
         f"- label_template_verify_existing_failed_dirs: {payload['label_template_verify_existing_failed_dirs']}",
@@ -291,6 +351,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo-intake", required=True, help="Filled repo-intake Markdown or CSV.")
     parser.add_argument("--template-dir", action="append", required=True, help="Label template dir; repeatable.")
     parser.add_argument("--decisions", required=True, help="Human decision JSON/JSONL file.")
+    parser.add_argument(
+        "--label-packet-summary",
+        default="",
+        help="Optional reviewer_progress_summary.json to bind this plan to reviewed candidate coverage.",
+    )
     parser.add_argument("--out-root", default="results/amr_beta_label_intake_work")
     parser.add_argument("--min-repos", type=int, default=repo_intake.MIN_REAL_REPOS_FOR_BETA)
     parser.add_argument("--min-labels", type=int, default=label_packet.MIN_HUMAN_LABELS_FOR_BETA)
@@ -311,20 +376,33 @@ def main(argv: list[str]) -> int:
     try:
         repo_intake_path = Path(args.repo_intake).expanduser().resolve()
         decisions_path = Path(args.decisions).expanduser().resolve()
+        label_packet_summary_path = (
+            Path(args.label_packet_summary).expanduser().resolve()
+            if args.label_packet_summary
+            else None
+        )
         out_root = Path(args.out_root).expanduser().resolve()
-        for path, label in [
+        path_checks: list[tuple[Path, str]] = [
             (repo_intake_path, "repo intake"),
             (decisions_path, "decisions"),
             (out_root, "output root"),
-        ]:
+        ]
+        if label_packet_summary_path:
+            path_checks.append((label_packet_summary_path, "label packet summary"))
+        for path, label in path_checks:
             if is_forbidden_env_path(path):
                 raise ValueError(f"refusing .env-like {label} path")
         if not decisions_path.is_file():
             raise ValueError(f"--decisions is not a file: {decisions_path}")
+        if label_packet_summary_path and not label_packet_summary_path.is_file():
+            raise ValueError(f"--label-packet-summary is not a file: {label_packet_summary_path}")
 
         repo_by_case, repo_summary = load_repo_context(repo_intake_path, min_repos=args.min_repos)
         target_repo_paths = sorted({context["repo_path"] for context in repo_by_case.values()})
-        input_path_errors = validate_input_paths({"decisions": decisions_path}, target_repo_paths)
+        input_paths = {"decisions": decisions_path}
+        if label_packet_summary_path:
+            input_paths["label_packet_summary"] = label_packet_summary_path
+        input_path_errors = validate_input_paths(input_paths, target_repo_paths)
         output_paths = {
             "out_root": out_root,
             "out_json": Path(args.out_json).expanduser().resolve(),
@@ -350,6 +428,16 @@ def main(argv: list[str]) -> int:
             errors.append("repo intake case_id values missing from templates: " + ", ".join(missing_template_cases[:20]))
 
         decisions = [] if input_path_errors else label_packet.read_json_or_jsonl(decisions_path, "decisions")
+        decisions_fingerprints = (
+            [
+                {
+                    "decisions": str(decisions_path),
+                    "decisions_sha256": sha256_file(decisions_path),
+                }
+            ]
+            if not input_path_errors
+            else []
+        )
         known_candidate_ids = {row["candidate_label_id"] for row in template_rows}
         decision_errors, valid_decision_ids, valid_human_label_rows = label_packet.validate_decisions(
             decisions,
@@ -374,6 +462,24 @@ def main(argv: list[str]) -> int:
                 f"{non_synthetic_valid_human_label_rows} below required minimum {args.min_labels}"
             )
         errors.extend(validate_compile_boundaries(template_rows, decision_map(decisions)))
+        label_template_bundle_sha256 = sha256_json(template_fingerprints)
+        label_packet_summary: dict = {}
+        if label_packet_summary_path and not input_path_errors:
+            label_packet_summary = read_json(label_packet_summary_path, "label packet summary")
+            errors.extend(
+                validate_label_packet_summary_binding(
+                    label_packet_summary,
+                    template_fingerprints=template_fingerprints,
+                    decisions_fingerprints=decisions_fingerprints,
+                    candidate_label_rows=len(template_rows),
+                    synthetic_candidate_rows=synthetic_candidate_rows,
+                    non_synthetic_candidate_rows=len(non_synthetic_candidate_ids),
+                    decision_rows=len(decisions),
+                    valid_human_label_rows=valid_human_label_rows,
+                    non_synthetic_valid_human_label_rows=non_synthetic_valid_human_label_rows,
+                    missing_candidate_label_count=len(missing_ids),
+                )
+            )
 
         if errors:
             if args.json:
@@ -398,6 +504,23 @@ def main(argv: list[str]) -> int:
             "repo_snapshot_lock_sha256": repo_summary.get("repo_snapshot_lock_sha256", ""),
             "decisions": str(decisions_path),
             "decisions_sha256": sha256_file(decisions_path),
+            "label_packet_summary": str(label_packet_summary_path) if label_packet_summary_path else "",
+            "label_packet_summary_sha256": sha256_file(label_packet_summary_path)
+            if label_packet_summary_path
+            else "",
+            "label_packet_summary_bound": int(label_packet_summary_path is not None),
+            "label_packet_decisions_fingerprints": label_packet_summary.get(
+                "decisions_fingerprints",
+                [],
+            ),
+            "label_packet_decisions_bundle_sha256": label_packet_summary.get(
+                "decisions_bundle_sha256",
+                "",
+            ),
+            "label_packet_template_bundle_sha256": label_packet_summary.get(
+                "label_template_bundle_sha256",
+                "",
+            ),
             "out_root": str(out_root),
             "template_dir_count": len(args.template_dir),
             "label_template_fingerprints": template_fingerprints,
@@ -409,7 +532,7 @@ def main(argv: list[str]) -> int:
                 for row in template_fingerprints
                 if row["label_template_manifest_sha256"]
             ],
-            "label_template_bundle_sha256": sha256_json(template_fingerprints),
+            "label_template_bundle_sha256": label_template_bundle_sha256,
             "label_template_verify_existing_required": int(not args.skip_verify_existing),
             "label_template_verify_existing_passed_dirs": verify_counts[
                 "label_template_verify_existing_passed_dirs"

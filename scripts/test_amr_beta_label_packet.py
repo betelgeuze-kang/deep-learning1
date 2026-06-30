@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -10,6 +11,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOL = ROOT / "scripts" / "amr_beta_label_packet.py"
+
+
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -133,6 +143,21 @@ def main() -> int:
         assert summary["label_template_verify_existing_required"] == 0
         assert summary["label_template_verify_existing_passed_dirs"] == 0
         assert summary["candidate_label_rows"] == 3
+        assert summary["non_synthetic_candidate_rows"] == 3
+        assert summary["label_template_json_sha256s"] == [
+            sha256_file(template_a / "label_template.json"),
+            sha256_file(template_b / "label_template.json"),
+        ]
+        assert summary["label_template_manifest_sha256s"] == []
+        assert summary["label_template_bundle_sha256"] == sha256_json(summary["label_template_fingerprints"])
+        assert summary["decisions_fingerprints"] == [
+            {
+                "decisions": str(decisions.resolve()),
+                "decisions_sha256": sha256_file(decisions),
+            }
+        ]
+        assert summary["decisions_sha256s"] == [sha256_file(decisions)]
+        assert summary["decisions_bundle_sha256"] == sha256_json(summary["decisions_fingerprints"])
         assert summary["valid_human_label_rows"] == 2
         assert summary["non_synthetic_valid_human_label_rows"] == 2
         assert summary["missing_candidate_label_count"] == 1

@@ -80,6 +80,13 @@ def binding_payload() -> dict:
     label_template_bundle_sha256 = sha256_json(template_fingerprints)
     label_intake_bundle_sha256 = sha256_json(label_intake_fingerprints)
     feedback_bundle_sha256 = fake_sha(5)
+    decisions = "/tmp/amr_beta_human_decisions.jsonl"
+    label_packet_decisions_fingerprints = [
+        {
+            "decisions": decisions,
+            "decisions_sha256": fake_sha(3),
+        }
+    ]
     input_bundle = {
         "repo_intake_sha256": fake_sha(1),
         "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
@@ -105,7 +112,12 @@ def binding_payload() -> dict:
         ],
         "repo_intake_sha256": fake_sha(1),
         "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
+        "decisions": decisions,
         "decisions_sha256": fake_sha(3),
+        "label_packet_summary_sha256": fake_sha(6),
+        "label_packet_decisions_fingerprints": label_packet_decisions_fingerprints,
+        "label_packet_decisions_bundle_sha256": sha256_json(label_packet_decisions_fingerprints),
+        "label_packet_template_bundle_sha256": label_template_bundle_sha256,
         "feedback_sha256": fake_sha(4),
         "feedback_bundle_sha256": feedback_bundle_sha256,
         "label_template_bundle_sha256": label_template_bundle_sha256,
@@ -284,7 +296,14 @@ def label_intake_plan_payload() -> dict:
         "schema": "amr_beta_label_intake_plan.v1",
         "repo_intake_sha256": binding["repo_intake_sha256"],
         "repo_snapshot_lock_sha256": binding["repo_snapshot_lock_sha256"],
+        "decisions": binding["decisions"],
         "decisions_sha256": binding["decisions_sha256"],
+        "label_packet_summary": "/tmp/amr_beta_label_packet_summary.json",
+        "label_packet_summary_sha256": binding["label_packet_summary_sha256"],
+        "label_packet_summary_bound": 1,
+        "label_packet_decisions_fingerprints": binding["label_packet_decisions_fingerprints"],
+        "label_packet_decisions_bundle_sha256": binding["label_packet_decisions_bundle_sha256"],
+        "label_packet_template_bundle_sha256": binding["label_packet_template_bundle_sha256"],
         "template_dir_count": 10,
         "label_template_fingerprints": binding["label_template_fingerprints"],
         "label_template_bundle_sha256": binding["label_template_bundle_sha256"],
@@ -1298,6 +1317,56 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "label_template_fingerprints length must match case_count" in proc.stderr
+
+        missing_label_packet_summary = tmp / "missing_label_packet_summary.json"
+        missing_label_packet_summary_payload = label_intake_plan_payload()
+        del missing_label_packet_summary_payload["label_packet_summary_bound"]
+        write_json(missing_label_packet_summary, missing_label_packet_summary_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(missing_label_packet_summary),
+            "--out-json",
+            str(tmp / "missing_label_packet_summary_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_packet_summary_bound must be present as an integer or boolean flag" in proc.stderr
+
+        stale_label_packet_decisions = tmp / "stale_label_packet_decisions.json"
+        stale_label_packet_decisions_payload = label_intake_plan_payload()
+        stale_label_packet_decisions_payload["label_packet_decisions_fingerprints"][0][
+            "decisions_sha256"
+        ] = fake_sha(994)
+        stale_label_packet_decisions_payload["label_packet_decisions_bundle_sha256"] = sha256_json(
+            stale_label_packet_decisions_payload["label_packet_decisions_fingerprints"]
+        )
+        write_json(stale_label_packet_decisions, stale_label_packet_decisions_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(stale_label_packet_decisions),
+            "--out-json",
+            str(tmp / "stale_label_packet_decisions_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_packet_decisions_fingerprints must match decisions input" in proc.stderr
+
+        stale_label_packet_template = tmp / "stale_label_packet_template.json"
+        stale_label_packet_template_payload = label_intake_plan_payload()
+        stale_label_packet_template_payload["label_packet_template_bundle_sha256"] = fake_sha(993)
+        write_json(stale_label_packet_template, stale_label_packet_template_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(stale_label_packet_template),
+            "--out-json",
+            str(tmp / "stale_label_packet_template_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_packet_template_bundle_sha256 must match label_template_bundle_sha256" in proc.stderr
 
         skipped_template_verify = tmp / "skipped_template_verify.json"
         skipped_template_verify_payload = label_intake_plan_payload()

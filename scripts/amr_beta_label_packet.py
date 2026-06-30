@@ -11,6 +11,7 @@ real_benchmark, and does not promote readiness.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -63,6 +64,15 @@ def read_json(path: Path, input_name: str) -> dict:
     if not isinstance(payload, dict):
         raise ValueError(f"{input_name} must contain an object")
     return payload
+
+
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def load_template_target_repo(path: Path) -> tuple[str, list[str]]:
@@ -521,6 +531,7 @@ def main(argv: list[str]) -> int:
         verify_passed_dirs = 0
         verify_failed_dirs = 0
         target_repo_paths: list[str] = []
+        template_fingerprints: list[dict[str, str]] = []
         for raw_template_dir in args.template_dir:
             template_dir = Path(raw_template_dir).expanduser().resolve()
             if not args.skip_verify_existing:
@@ -531,6 +542,17 @@ def main(argv: list[str]) -> int:
                 else:
                     verify_passed_dirs += 1
             rows, template_errors, counts = load_template_dir(template_dir)
+            template_json = template_dir / "label_template.json"
+            template_manifest = template_dir / "label_template_manifest.json"
+            template_fingerprints.append(
+                {
+                    "template_dir": str(template_dir),
+                    "label_template_json_sha256": sha256_file(template_json),
+                    "label_template_manifest_sha256": sha256_file(template_manifest)
+                    if template_manifest.is_file()
+                    else "",
+                }
+            )
             packet_rows.extend(rows)
             errors.extend(template_errors)
             synthetic_candidate_rows += counts["synthetic_candidate_rows"]
@@ -554,9 +576,17 @@ def main(argv: list[str]) -> int:
             sorted(set(target_repo_paths)),
         )
         decision_rows: list[dict] = []
+        decision_fingerprints: list[dict[str, str]] = []
         if not decision_input_errors:
             for raw_decisions in args.decisions:
-                decision_rows.extend(read_json_or_jsonl(Path(raw_decisions).expanduser().resolve(), "decisions"))
+                decision_path = Path(raw_decisions).expanduser().resolve()
+                decision_fingerprints.append(
+                    {
+                        "decisions": str(decision_path),
+                        "decisions_sha256": sha256_file(decision_path),
+                    }
+                )
+                decision_rows.extend(read_json_or_jsonl(decision_path, "decisions"))
         decision_errors, valid_decision_ids, valid_human_label_rows = validate_decisions(
             decision_rows,
             known_candidate_ids,
@@ -611,6 +641,22 @@ def main(argv: list[str]) -> int:
             "case_count": len(case_ids),
             "candidate_label_rows": len(packet_rows),
             "synthetic_candidate_rows": synthetic_candidate_rows,
+            "non_synthetic_candidate_rows": len(non_synthetic_candidate_ids),
+            "label_template_fingerprints": template_fingerprints,
+            "label_template_json_sha256s": [
+                row["label_template_json_sha256"] for row in template_fingerprints
+            ],
+            "label_template_manifest_sha256s": [
+                row["label_template_manifest_sha256"]
+                for row in template_fingerprints
+                if row["label_template_manifest_sha256"]
+            ],
+            "label_template_bundle_sha256": sha256_json(template_fingerprints),
+            "decisions_fingerprints": decision_fingerprints,
+            "decisions_sha256s": [
+                row["decisions_sha256"] for row in decision_fingerprints
+            ],
+            "decisions_bundle_sha256": sha256_json(decision_fingerprints),
             "decision_rows": len(decision_rows),
             "valid_human_label_rows": valid_human_label_rows,
             "missing_candidate_label_count": len(missing_ids),
