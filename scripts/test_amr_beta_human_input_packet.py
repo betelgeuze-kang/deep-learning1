@@ -98,6 +98,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "results/amr_beta_human_input_status.json",
     "current local operator stage",
     "preflight -> approval request -> approval status",
+    "approved `benchmark_out`",
     "amr_beta_runtime_approval_record.v1",
     "codex_runtime_permission_granted_by_this_packet=0",
     "python3 scripts/amr_beta_readiness_backlog.py",

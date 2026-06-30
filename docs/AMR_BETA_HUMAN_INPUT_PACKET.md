@@ -45,7 +45,9 @@ already exist; this full example is for the point after all listed artifacts hav
 been created:
 `python3 scripts/amr_beta_operator_status.py --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
 The status board validates the preflight -> approval request -> approval status
-chain by path and sha before advancing to runtime-approved stages.
+chain by path and sha before advancing to runtime-approved stages. It also
+requires the approval status to bind the human approval record and requires
+`benchmark_readiness.json` to live under the approved `benchmark_out`.
 
 ### 9.1 Repository intake checklist
 
@@ -313,7 +315,8 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    point:
    `python3 scripts/amr_beta_operator_status.py --repo-audit-plan results/amr_beta_repo_audit_plan.json --label-intake-plan results/amr_beta_label_intake_plan.json --maintainer-feedback-packet results/maintainer_feedback_packet/maintainer_feedback_progress_summary.json --runtime-preflight results/amr_beta_runtime_preflight.json --runtime-approval-request results/amr_beta_runtime_approval_request.json --runtime-approval-status results/amr_beta_runtime_approval_status.json --benchmark-readiness results/audit_benchmark/benchmark_readiness.json --readiness-backlog results/amr_beta_readiness_backlog.json --out-json results/amr_beta_operator_status.json --out-md results/amr_beta_operator_status.md`.
    The status board refuses a runtime approval status without its exact approval
-   request and refuses stale preflight/request sha bindings.
+   request, refuses stale preflight/request sha bindings, and refuses readiness
+   files from any benchmark output other than the human-approved `benchmark_out`.
 
 Step 8 is a long, runtime-approved action and is **not** performed by this PR.
 

@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 SCHEMA = "amr_beta_operator_status.v1"
+APPROVAL_SCOPE = "amr_beta_real_benchmark_runtime"
 BLOCKED_FLAGS = {
     "release_ready": 0,
     "public_comparison_claim_ready": 0,
@@ -162,7 +163,21 @@ def require_flag(
     key: str,
     expected: int,
 ) -> None:
-    if truthy_int(payload, key) != expected:
+    if key not in payload:
+        errors.append(f"{name}: {key} must be present as an integer or boolean flag")
+        return
+    raw = payload.get(key)
+    if isinstance(raw, bool):
+        value = int(raw)
+    elif isinstance(raw, int):
+        value = raw
+    else:
+        errors.append(f"{name}: {key} must be an integer or boolean flag")
+        return
+    if value not in {0, 1}:
+        errors.append(f"{name}: {key} must be one of [0, 1]")
+        return
+    if value != expected:
         errors.append(f"{name}: must set {key}={expected}")
 
 
@@ -190,6 +205,12 @@ def require_bound_sha(
     value = str(payload.get(field) or "")
     if value != expected_sha:
         errors.append(f"{name}: {field} must match supplied artifact sha256")
+
+
+def require_sha_field(*, errors: list[str], name: str, payload: dict, field: str) -> None:
+    value = str(payload.get(field) or "")
+    if not value.startswith("sha256:") or len(value) != len("sha256:") + 64:
+        errors.append(f"{name}: {field} must be a sha256 binding")
 
 
 def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, dict]) -> list[str]:
@@ -330,6 +351,29 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
             key="codex_runtime_permission_granted_by_this_packet",
             expected=0,
         )
+        if str(status.get("approval_scope") or "") != APPROVAL_SCOPE:
+            errors.append(f"runtime_approval_status: approval_scope must be {APPROVAL_SCOPE}")
+        if not str(status.get("approval_record") or "").strip():
+            errors.append("runtime_approval_status: approval_record is required")
+        require_sha_field(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            field="approval_record_sha256",
+        )
+
+    if benchmark and status:
+        benchmark_meta = metas["benchmark_readiness"]
+        benchmark_out = str(status.get("benchmark_out") or "")
+        if not benchmark_out:
+            errors.append("runtime_approval_status: benchmark_out is required")
+        else:
+            expected_readiness = str(Path(benchmark_out).expanduser().resolve() / "benchmark_readiness.json")
+            if not same_path(str(benchmark_meta["path"]), expected_readiness):
+                errors.append(
+                    "benchmark_readiness: path must match "
+                    "runtime_approval_status benchmark_out/benchmark_readiness.json"
+                )
 
     return errors
 
