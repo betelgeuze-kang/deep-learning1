@@ -30,6 +30,60 @@ def fake_sha(seed: int) -> str:
     return "sha256:" + f"{seed:064x}"[-64:]
 
 
+def binding_payload() -> dict:
+    template_dir_count = 10
+    label_intake_dir_count = 10
+    repo_intake_sha256 = fake_sha(1)
+    repo_snapshot_lock_sha256 = fake_sha(2)
+    decisions_sha256 = fake_sha(3)
+    feedback_sha256 = fake_sha(4)
+    label_template_fingerprints = [
+        {
+            "template_dir": f"/tmp/template-{index}",
+            "label_template_json_sha256": fake_sha(100 + index),
+            "label_template_manifest_sha256": fake_sha(200 + index),
+        }
+        for index in range(template_dir_count)
+    ]
+    label_intake_fingerprints = [
+        {
+            "label_intake_dir": f"/tmp/intake-{index}",
+            "label_intake_manifest_sha256": fake_sha(300 + index),
+        }
+        for index in range(label_intake_dir_count)
+    ]
+    label_template_bundle_sha256 = sha256_json(label_template_fingerprints)
+    label_intake_bundle_sha256 = sha256_json(label_intake_fingerprints)
+    preflight_inputs = {
+        "repo_intake_sha256": repo_intake_sha256,
+        "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
+        "decisions_sha256": decisions_sha256,
+        "feedback_sha256": feedback_sha256,
+        "label_template_bundle_sha256": label_template_bundle_sha256,
+        "label_intake_bundle_sha256": label_intake_bundle_sha256,
+    }
+    return {
+        "repo_intake_sha256": repo_intake_sha256,
+        "repo_snapshot_lock_sha256": repo_snapshot_lock_sha256,
+        "decisions_sha256": decisions_sha256,
+        "feedback_sha256": feedback_sha256,
+        "label_template_fingerprints": label_template_fingerprints,
+        "label_template_json_sha256s": [
+            row["label_template_json_sha256"] for row in label_template_fingerprints
+        ],
+        "label_template_manifest_sha256s": [
+            row["label_template_manifest_sha256"] for row in label_template_fingerprints
+        ],
+        "label_template_bundle_sha256": label_template_bundle_sha256,
+        "label_intake_fingerprints": label_intake_fingerprints,
+        "label_intake_manifest_sha256s": [
+            row["label_intake_manifest_sha256"] for row in label_intake_fingerprints
+        ],
+        "label_intake_bundle_sha256": label_intake_bundle_sha256,
+        "preflight_input_bundle_sha256": sha256_json(preflight_inputs),
+    }
+
+
 def preflight_payload(
     *,
     ready: int = 1,
@@ -53,16 +107,7 @@ def preflight_payload(
             label_intake_dir_count if verify_existing_required else 0
         ),
         "label_intake_verify_existing_failed_dirs": 0,
-        "repo_intake_sha256": fake_sha(1),
-        "repo_snapshot_lock_sha256": fake_sha(2),
-        "decisions_sha256": fake_sha(3),
-        "feedback_sha256": fake_sha(4),
-        "label_template_bundle_sha256": fake_sha(5),
-        "label_intake_bundle_sha256": fake_sha(6),
-        "preflight_input_bundle_sha256": fake_sha(7),
-        "label_template_json_sha256s": [fake_sha(100 + index) for index in range(template_dir_count)],
-        "label_template_manifest_sha256s": [fake_sha(200 + index) for index in range(template_dir_count)],
-        "label_intake_manifest_sha256s": [fake_sha(300 + index) for index in range(label_intake_dir_count)],
+        **binding_payload(),
         "valid_repo_rows": 10,
         "human_label_rows": 300,
         "distinct_countable_maintainer_id_count": 3,
@@ -116,7 +161,7 @@ def main() -> int:
         assert payload["runs_benchmark"] == 0
         assert payload["input_preflight_sha256"] == sha256_file(preflight)
         assert payload["repo_snapshot_lock_sha256"] == fake_sha(2)
-        assert payload["preflight_input_bundle_sha256"] == fake_sha(7)
+        assert payload["preflight_input_bundle_sha256"] == binding_payload()["preflight_input_bundle_sha256"]
         assert payload["label_template_manifest_sha256s"] == [
             fake_sha(200 + index) for index in range(10)
         ]
@@ -159,6 +204,19 @@ def main() -> int:
         assert proc.returncode == 1
         assert "label_template_verify_existing_required=1" in proc.stderr
         assert "label_intake_verify_existing_required=1" in proc.stderr
+
+        stale_fingerprint_preflight = tmp / "stale_fingerprint_preflight.json"
+        stale_payload = preflight_payload()
+        stale_payload["label_template_bundle_sha256"] = fake_sha(999)
+        write_json(stale_fingerprint_preflight, stale_payload)
+        proc = run_tool(
+            "--preflight",
+            str(stale_fingerprint_preflight),
+            "--out-json",
+            str(tmp / "stale_fingerprint.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_template_bundle_sha256 does not match" in proc.stderr
 
     print("AMR beta runtime approval request smoke OK")
     return 0
