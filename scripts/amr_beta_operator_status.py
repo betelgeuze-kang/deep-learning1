@@ -134,8 +134,15 @@ def benchmark_readiness_errors(payload: dict) -> list[str]:
     )
     if payload.get("schema_version") != "local_repo_audit_benchmark_readiness.v1":
         errors.append("benchmark_readiness: unexpected schema_version")
-    if truthy_int(payload, "real_human_label_basis") != 1:
-        errors.append("benchmark_readiness: real_human_label_basis must be 1 for real benchmark evidence")
+    real_label_basis = int(
+        truthy_int(payload, "real_human_label_basis") == 1
+        or truthy_int(payload, "product_readiness_calculated_from_real_labels") == 1
+    )
+    if real_label_basis != 1:
+        errors.append(
+            "benchmark_readiness: product_readiness_calculated_from_real_labels "
+            "or real_human_label_basis must be 1 for real benchmark evidence"
+        )
     return errors
 
 

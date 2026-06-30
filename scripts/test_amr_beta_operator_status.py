@@ -140,7 +140,7 @@ def main() -> int:
             readiness,
             {
                 "schema_version": "local_repo_audit_benchmark_readiness.v1",
-                "real_human_label_basis": 1,
+                "product_readiness_calculated_from_real_labels": 1,
                 "design_partner_beta_candidate_ready": 1,
                 "release_ready": 0,
                 "public_comparison_claim_ready": 0,
@@ -335,7 +335,7 @@ def main() -> int:
             wrong_readiness,
             {
                 "schema_version": "local_repo_audit_benchmark_readiness.v1",
-                "real_human_label_basis": 1,
+                "product_readiness_calculated_from_real_labels": 1,
                 "design_partner_beta_candidate_ready": 1,
                 "release_ready": 0,
                 "public_comparison_claim_ready": 0,
@@ -397,14 +397,14 @@ def main() -> int:
             str(tmp / "bad_readiness_status.json"),
         )
         assert proc.returncode == 1
-        assert "real_human_label_basis must be 1" in proc.stderr
+        assert "product_readiness_calculated_from_real_labels" in proc.stderr
 
         bad_ready_flag = tmp / "bad_ready_flag.json"
         write_json(
             bad_ready_flag,
             {
                 "schema_version": "local_repo_audit_benchmark_readiness.v1",
-                "real_human_label_basis": 1,
+                "product_readiness_calculated_from_real_labels": 1,
                 "design_partner_beta_candidate_ready": 2,
                 "release_ready": 0,
                 "public_comparison_claim_ready": 0,
