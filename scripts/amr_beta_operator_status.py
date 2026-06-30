@@ -1418,6 +1418,105 @@ def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple
     ]
 
 
+def count_int(payload: dict | None, key: str, default: int = 0) -> int:
+    if not payload:
+        return default
+    raw = payload.get(key, default)
+    if isinstance(raw, bool):
+        return int(raw)
+    if isinstance(raw, int):
+        return raw
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return default
+
+
+def progress_summary(current: int, required: int) -> dict[str, int | float]:
+    remaining = max(0, required - current)
+    percent = 0.0 if required <= 0 else round(min(current, required) * 100.0 / required, 2)
+    return {
+        "current": current,
+        "required": required,
+        "remaining": remaining,
+        "met": int(required > 0 and current >= required),
+        "progress_percent": percent,
+    }
+
+
+def build_stage_progress(artifacts: dict[str, dict | None], *, benchmark_ready: int) -> dict[str, object]:
+    repo = artifacts.get("repo_audit_plan")
+    label = artifacts.get("label_intake_plan")
+    feedback = artifacts.get("maintainer_feedback_packet")
+    preflight = artifacts.get("runtime_preflight")
+    request = artifacts.get("runtime_approval_request")
+    status = artifacts.get("runtime_approval_status")
+    benchmark = artifacts.get("benchmark_readiness")
+    backlog = artifacts.get("readiness_backlog")
+
+    repo_required = max(
+        10,
+        count_int(repo, "min_real_repos_required", 10),
+        count_int(label, "min_real_repos_required", 10),
+        count_int(feedback, "min_real_repos_required", 10),
+    )
+    repo_current = max(
+        count_int(repo, "valid_repo_rows"),
+        count_int(label, "case_count"),
+        count_int(feedback, "valid_repo_rows"),
+    )
+
+    label_required = max(
+        300,
+        count_int(label, "min_human_label_rows_required", 300),
+    )
+    label_current = max(
+        count_int(label, "valid_human_label_rows"),
+        count_int(feedback, "label_intake_label_rows"),
+    )
+
+    maintainer_required = max(
+        3,
+        count_int(feedback, "min_maintainer_feedback_required", 3),
+    )
+    maintainer_current = max(
+        count_int(feedback, "distinct_countable_maintainer_id_count"),
+        count_int(feedback, "distinct_maintainer_id_count"),
+    )
+
+    blocked_gate_rows = count_int(benchmark, "blocked_gate_rows", count_int(backlog, "blocked_gate_rows"))
+    passed_gate_rows = count_int(benchmark, "passed_gate_rows", 0)
+    gate_rows = count_int(benchmark, "gate_rows", count_int(backlog, "gate_rows"))
+
+    return {
+        "repo_intake": progress_summary(repo_current, repo_required),
+        "human_labels": progress_summary(label_current, label_required),
+        "maintainer_feedback": progress_summary(maintainer_current, maintainer_required),
+        "runtime_preflight": {
+            "ready_to_request_runtime_approval": count_int(preflight, "ready_to_request_runtime_approval"),
+            "input_path_preflight_passed": count_int(preflight, "input_path_preflight_passed"),
+            "output_path_preflight_passed": count_int(preflight, "output_path_preflight_passed"),
+        },
+        "runtime_approval": {
+            "approval_request_supplied": int(bool(request)),
+            "approval_record_verified": count_int(status, "human_runtime_approval_record_verified"),
+            "ready_for_human_operator_benchmark_run": count_int(
+                status,
+                "ready_for_human_operator_benchmark_run",
+            ),
+        },
+        "benchmark": {
+            "benchmark_readiness_supplied": int(bool(benchmark)),
+            "gate_rows": gate_rows,
+            "passed_gate_rows": passed_gate_rows,
+            "blocked_gate_rows": blocked_gate_rows,
+            "readiness_backlog_supplied": int(bool(backlog)),
+            "readiness_backlog_items": count_int(backlog, "backlog_items"),
+            "design_partner_beta_candidate_ready": benchmark_ready,
+        },
+    }
+
+
 def write_json(path: Path, payload: dict, overwrite: bool) -> None:
     if is_forbidden_env_path(path):
         raise ValueError("refusing .env-like output path")
@@ -1443,6 +1542,29 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- release_ready: {payload['release_ready']}",
         f"- public_comparison_claim_ready: {payload['public_comparison_claim_ready']}",
         f"- real_model_execution_ready: {payload['real_model_execution_ready']}",
+        "",
+        "## Stage Progress",
+        "",
+        "- repo_intake: {current}/{required} "
+        "(remaining {remaining}, met {met}, {progress_percent}%)".format(
+            **payload["stage_progress"]["repo_intake"],
+        ),
+        "- human_labels: {current}/{required} "
+        "(remaining {remaining}, met {met}, {progress_percent}%)".format(
+            **payload["stage_progress"]["human_labels"],
+        ),
+        "- maintainer_feedback: {current}/{required} "
+        "(remaining {remaining}, met {met}, {progress_percent}%)".format(
+            **payload["stage_progress"]["maintainer_feedback"],
+        ),
+        "- runtime_preflight_ready: "
+        f"{payload['stage_progress']['runtime_preflight']['ready_to_request_runtime_approval']}",
+        "- runtime_approval_verified: "
+        f"{payload['stage_progress']['runtime_approval']['approval_record_verified']}",
+        "- benchmark_readiness_supplied: "
+        f"{payload['stage_progress']['benchmark']['benchmark_readiness_supplied']}",
+        "- benchmark_blocked_gate_rows: "
+        f"{payload['stage_progress']['benchmark']['blocked_gate_rows']}",
         "",
         "## Next Blockers",
         "",
@@ -1512,6 +1634,7 @@ def main(argv: list[str]) -> int:
             current_stage == "stage_5_beta_candidate_or_hardening"
             and truthy_int(benchmark or {}, "design_partner_beta_candidate_ready") == 1
         )
+        stage_progress = build_stage_progress(artifacts, benchmark_ready=benchmark_ready)
         preflight = artifacts.get("runtime_preflight") or {}
         runtime_fingerprints = {
             key: str(preflight.get(key) or "")
@@ -1536,6 +1659,7 @@ def main(argv: list[str]) -> int:
             "schema": SCHEMA,
             "current_stage": current_stage,
             "stage_order": STAGE_ORDER,
+            "stage_progress": stage_progress,
             "next_blockers": next_blockers,
             "artifacts": artifact_meta,
             "artifact_count": len(artifact_meta),

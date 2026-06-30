@@ -441,6 +441,13 @@ def main() -> int:
         assert payload["creates_benchmark_evidence"] == 0
         assert payload["runs_benchmark"] == 0
         assert payload["design_partner_beta_candidate_ready"] == 0
+        assert payload["stage_progress"]["repo_intake"]["current"] == 10
+        assert payload["stage_progress"]["repo_intake"]["met"] == 1
+        assert payload["stage_progress"]["human_labels"]["current"] == 0
+        assert payload["stage_progress"]["human_labels"]["remaining"] == 300
+        assert payload["stage_progress"]["maintainer_feedback"]["remaining"] == 3
+        assert payload["stage_progress"]["runtime_preflight"]["ready_to_request_runtime_approval"] == 0
+        assert payload["stage_progress"]["benchmark"]["benchmark_readiness_supplied"] == 0
 
         proc = run_tool(
             "--repo-audit-plan",
@@ -467,6 +474,15 @@ def main() -> int:
         assert payload["current_stage"] == "stage_4_runtime_approval_verified"
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert "Human/operator may run" in payload["next_blockers"][0]
+        assert payload["stage_progress"]["repo_intake"]["current"] == 10
+        assert payload["stage_progress"]["repo_intake"]["met"] == 1
+        assert payload["stage_progress"]["human_labels"]["current"] == 300
+        assert payload["stage_progress"]["human_labels"]["met"] == 1
+        assert payload["stage_progress"]["maintainer_feedback"]["current"] == 3
+        assert payload["stage_progress"]["maintainer_feedback"]["met"] == 1
+        assert payload["stage_progress"]["runtime_preflight"]["ready_to_request_runtime_approval"] == 1
+        assert payload["stage_progress"]["runtime_approval"]["approval_record_verified"] == 1
+        assert payload["stage_progress"]["benchmark"]["benchmark_readiness_supplied"] == 0
         expected_binding = binding_payload()
         assert (
             payload["runtime_fingerprints"]["preflight_input_bundle_sha256"]
@@ -488,6 +504,9 @@ def main() -> int:
         assert payload["runtime_fingerprints"]["output_path_preflight_passed"] == 1
         markdown = out_md.read_text(encoding="utf-8")
         assert "current_stage: stage_4_runtime_approval_verified" in markdown
+        assert "repo_intake: 10/10" in markdown
+        assert "human_labels: 300/300" in markdown
+        assert "maintainer_feedback: 3/3" in markdown
         assert "preflight_input_bundle_sha256: sha256:" in markdown
         assert "input_path_preflight_passed: 1" in markdown
         assert 'label_intake_manifest_sha256s: ["sha256:' in markdown
@@ -517,6 +536,11 @@ def main() -> int:
         assert payload["current_stage"] == "stage_5_beta_candidate_or_hardening"
         assert payload["design_partner_beta_candidate_ready"] == 1
         assert payload["release_ready"] == 0
+        assert payload["stage_progress"]["benchmark"]["benchmark_readiness_supplied"] == 1
+        assert (
+            payload["stage_progress"]["benchmark"]["design_partner_beta_candidate_ready"]
+            == payload["design_partner_beta_candidate_ready"]
+        )
 
         missing_request_status = tmp / "missing_request_status.json"
         proc = run_tool(
