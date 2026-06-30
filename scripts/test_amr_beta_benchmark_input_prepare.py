@@ -18,6 +18,10 @@ def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def sha256_text(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -96,6 +100,34 @@ def main() -> int:
         intake_b = tmp / "intake_b"
         make_intake(intake_a, "case-a", repo_a)
         make_intake(intake_b, "case-b", repo_b)
+        feedback_text_a = "Reviewed case-a source-bound findings."
+        feedback_hash_only_text = "Reviewed case-b source-bound findings."
+        feedback_text_c = "Reviewed case-a follow-up from another maintainer."
+        feedback = tmp / "feedback.jsonl"
+        write_jsonl(
+            feedback,
+            [
+                {
+                    "case_id": "case-a",
+                    "maintainer_id": "maintainer-1",
+                    "human_feedback": True,
+                    "feedback_text": feedback_text_a,
+                    "feedback_text_sha256": sha256_text(feedback_text_a),
+                },
+                {
+                    "case_id": "case-b",
+                    "maintainer_id": "maintainer-2",
+                    "human_feedback": True,
+                    "feedback_text_sha256": sha256_text(feedback_hash_only_text),
+                },
+                {
+                    "case_id": "case-a",
+                    "maintainer_id": "maintainer-3",
+                    "human_feedback": True,
+                    "feedback_text": feedback_text_c,
+                },
+            ],
+        )
         out_labels = tmp / "combined dir" / "combined benchmark labels.jsonl"
         summary = tmp / "combined dir" / "summary.json"
         proc = run_tool(
@@ -128,6 +160,8 @@ def main() -> int:
             str(out_labels),
             "--summary",
             str(summary),
+            "--feedback",
+            str(feedback),
             "--min-cases",
             "2",
             "--min-labels",
@@ -142,13 +176,31 @@ def main() -> int:
         assert payload["ready_for_runtime_approved_real_benchmark"] == 1
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert payload["benchmark_out"] == str((ROOT / "results" / "audit_benchmark").resolve())
+        assert payload["feedback_input"] == str(feedback.resolve())
+        assert payload["feedback_sha256"] == sha256_file(feedback)
+        assert payload["feedback_bundle_sha256"].startswith("sha256:")
+        assert payload["feedback_rows"] == 3
+        assert payload["valid_feedback_rows"] == 3
+        assert payload["valid_feedback_text_input_rows"] == 2
+        assert payload["valid_feedback_hash_only_rows"] == 1
+        assert payload["valid_feedback_digest_rows"] == 3
+        assert payload["feedback_counts_for_beta_precheck"] == 1
+        assert payload["raw_feedback_text_emitted"] == 0
         benchmark_parts = shlex.split(payload["benchmark_command"])
         assert benchmark_parts[benchmark_parts.index("--labels") + 1] == str(out_labels)
+        assert benchmark_parts[benchmark_parts.index("--feedback") + 1] == str(feedback.resolve())
         assert benchmark_parts[benchmark_parts.index("--out") + 1] == str((ROOT / "results" / "audit_benchmark").resolve())
         assert "--confirm-real-benchmark-namespace" in benchmark_parts
         assert out_labels.is_file()
         assert summary.is_file()
         assert len([line for line in out_labels.read_text(encoding="utf-8").splitlines() if line.strip()]) == 2
+        summary_text = summary.read_text(encoding="utf-8")
+        assert feedback_text_a not in proc.stdout
+        assert feedback_text_c not in proc.stdout
+        assert feedback_hash_only_text not in proc.stdout
+        assert feedback_text_a not in summary_text
+        assert feedback_text_c not in summary_text
+        assert feedback_hash_only_text not in summary_text
 
         proc = run_tool(
             "--label-intake-dir",

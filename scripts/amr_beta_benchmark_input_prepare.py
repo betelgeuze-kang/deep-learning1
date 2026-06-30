@@ -17,8 +17,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import amr_beta_human_input_status as human_status
+
 MIN_REAL_REPOS_FOR_BETA = 10
 MIN_HUMAN_LABELS_FOR_BETA = 300
+MIN_MAINTAINER_FEEDBACK_FOR_BETA = human_status.MIN_MAINTAINER_FEEDBACK_FOR_BETA
 TOOL_SCHEMA = "amr_beta_benchmark_input_prepare.v1"
 BLOCKED_KEYS = [
     "release_ready",
@@ -51,6 +54,94 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return "sha256:" + digest.hexdigest()
+
+
+def sha256_json(payload: object) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def feedback_digest(row: dict) -> str:
+    text = str(row.get("feedback_text") or "")
+    supplied_digest = str(row.get("feedback_text_sha256") or row.get("feedback_sha256") or "").strip()
+    if text:
+        return human_status.sha256_text(text)
+    if human_status.SHA_RE.fullmatch(supplied_digest):
+        return supplied_digest
+    return ""
+
+
+def feedback_fingerprints(rows: list[dict]) -> list[dict[str, object]]:
+    return [
+        {
+            "row_index": index,
+            "case_id": str(row.get("case_id") or "").strip(),
+            "feedback_id": str(row.get("feedback_id") or "").strip(),
+            "maintainer_id": str(row.get("maintainer_id") or "").strip(),
+            "feedback_text_sha256": feedback_digest(row),
+        }
+        for index, row in enumerate(rows, start=1)
+    ]
+
+
+def empty_feedback_summary() -> dict[str, object]:
+    return {
+        "feedback_sha256": "",
+        "feedback_bundle_sha256": "",
+        "feedback_rows": 0,
+        "feedback_digest_fingerprint_rows": 0,
+        "total_feedback_rows": 0,
+        "valid_feedback_rows": 0,
+        "valid_feedback_text_input_rows": 0,
+        "valid_feedback_hash_only_rows": 0,
+        "valid_feedback_digest_rows": 0,
+        "distinct_maintainer_id_count": 0,
+        "feedback_countable_case_rows": 0,
+        "distinct_countable_maintainer_id_count": 0,
+        "feedback_counts_for_beta_precheck": 0,
+        "raw_feedback_text_emitted": 0,
+    }
+
+
+def summarize_feedback_bundle(
+    path: Path,
+    rows: list[dict],
+    *,
+    known_case_ids: set[str],
+    countable_case_ids: set[str],
+    min_maintainers: int,
+) -> tuple[list[str], dict[str, object]]:
+    errors, counts = human_status.validate_feedback(
+        rows,
+        known_case_ids=known_case_ids,
+        countable_case_ids=countable_case_ids,
+        require_countable_cases=True,
+        min_maintainers=min_maintainers,
+    )
+    fingerprints = feedback_fingerprints(rows)
+    feedback_sha256 = sha256_file(path)
+    bundle = {
+        "schema": "amr_beta_feedback_bundle.v1",
+        "feedback_sha256": feedback_sha256,
+        "feedback_digest_fingerprints": fingerprints,
+    }
+    summary = {
+        **empty_feedback_summary(),
+        **counts,
+        "feedback_sha256": feedback_sha256,
+        "feedback_bundle_sha256": sha256_json(bundle),
+        "feedback_rows": len(rows),
+        "feedback_digest_fingerprint_rows": sum(
+            1 for row in fingerprints if str(row["feedback_text_sha256"])
+        ),
+        "feedback_counts_for_beta_precheck": int(
+            not errors
+            and counts["valid_feedback_rows"] == len(rows)
+            and counts["distinct_countable_maintainer_id_count"] >= min_maintainers
+        ),
+        "raw_feedback_text_emitted": 0,
+    }
+    return errors, summary
 
 
 def command_line(parts: list[object]) -> str:
@@ -243,6 +334,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--benchmark-out", default="results/audit_benchmark", help="Human-approved benchmark output directory for the generated run command.")
     parser.add_argument("--min-cases", type=int, default=MIN_REAL_REPOS_FOR_BETA)
     parser.add_argument("--min-labels", type=int, default=MIN_HUMAN_LABELS_FOR_BETA)
+    parser.add_argument("--min-maintainers", type=int, default=MIN_MAINTAINER_FEEDBACK_FOR_BETA)
     parser.add_argument("--allow-synthetic", action="store_true", help="Testing only: allow synthetic labels.")
     parser.add_argument(
         "--skip-verify-existing",
@@ -316,6 +408,22 @@ def main(argv: list[str]) -> int:
             raise ValueError("refusing .env-like feedback path")
         if feedback and not Path(feedback).is_file():
             raise ValueError(f"feedback file is not a file: {feedback}")
+        feedback_summary = empty_feedback_summary()
+        if feedback and not input_path_errors:
+            feedback_rows = human_status.read_json_or_jsonl(Path(feedback), "feedback")
+            countable_case_ids = {
+                str(row.get("case_id") or "")
+                for row in rows
+                if truthy(row.get("human_labeled", False)) and not truthy(row.get("synthetic", False))
+            }
+            feedback_errors, feedback_summary = summarize_feedback_bundle(
+                Path(feedback),
+                feedback_rows,
+                known_case_ids=set(case_ids),
+                countable_case_ids=countable_case_ids,
+                min_maintainers=args.min_maintainers,
+            )
+            errors.extend(feedback_errors)
         benchmark_parts = [
             "python3",
             "scripts/audit_my_repo_benchmark.py",
@@ -350,6 +458,8 @@ def main(argv: list[str]) -> int:
                 for raw_dir in args.label_intake_dir
             ],
             "feedback_input": feedback,
+            **feedback_summary,
+            "min_maintainer_feedback_required": args.min_maintainers,
             "benchmark_out": str(benchmark_out),
             "benchmark_command": command_line(benchmark_parts),
             "ready_for_runtime_approved_real_benchmark": int(not errors),

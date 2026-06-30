@@ -206,13 +206,22 @@ def empty_decision_summary() -> dict[str, int]:
     }
 
 
-def empty_feedback_summary() -> dict[str, int]:
+def empty_feedback_summary() -> dict[str, object]:
     return {
+        "feedback_sha256": "",
+        "feedback_bundle_sha256": "",
+        "feedback_rows": 0,
+        "feedback_digest_fingerprint_rows": 0,
         "total_feedback_rows": 0,
         "valid_feedback_rows": 0,
+        "valid_feedback_text_input_rows": 0,
+        "valid_feedback_hash_only_rows": 0,
+        "valid_feedback_digest_rows": 0,
         "distinct_maintainer_id_count": 0,
         "feedback_countable_case_rows": 0,
         "distinct_countable_maintainer_id_count": 0,
+        "feedback_counts_for_beta_precheck": 0,
+        "raw_feedback_text_emitted": 0,
     }
 
 
@@ -256,6 +265,12 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- label_intake_bundle_sha256: {payload['label_intake_bundle_sha256']}",
         f"- human_label_rows: {payload['human_label_rows']}",
         f"- distinct_countable_maintainer_id_count: {payload['distinct_countable_maintainer_id_count']}",
+        f"- feedback_bundle_sha256: {payload['feedback_bundle_sha256']}",
+        f"- valid_feedback_text_input_rows: {payload['valid_feedback_text_input_rows']}",
+        f"- valid_feedback_hash_only_rows: {payload['valid_feedback_hash_only_rows']}",
+        f"- valid_feedback_digest_rows: {payload['valid_feedback_digest_rows']}",
+        f"- feedback_counts_for_beta_precheck: {payload['feedback_counts_for_beta_precheck']}",
+        f"- raw_feedback_text_emitted: {payload['raw_feedback_text_emitted']}",
         "- release/public/model readiness: 0",
         "- benchmark_runtime_approval_required: 1",
         "",
@@ -397,11 +412,11 @@ def main(argv: list[str]) -> int:
                 template_context_supplied=bool(args.template_dir),
                 min_labels=args.min_labels,
             )
-            feedback_errors, feedback_summary = human_status.validate_feedback(
+            feedback_errors, feedback_summary = benchmark_inputs.summarize_feedback_bundle(
+                feedback_path,
                 feedback,
                 known_case_ids=known_case_ids,
                 countable_case_ids=countable_case_ids,
-                require_countable_cases=True,
                 min_maintainers=args.min_maintainers,
             )
         human_errors = [*decision_errors, *feedback_errors]
@@ -480,6 +495,7 @@ def main(argv: list[str]) -> int:
             "repo_snapshot_lock_sha256": repo_summary.get("repo_snapshot_lock_sha256", ""),
             "decisions_sha256": "" if input_path_errors else sha256_file(decisions_path),
             "feedback_sha256": "" if input_path_errors else sha256_file(feedback_path),
+            "feedback_bundle_sha256": str(feedback_summary.get("feedback_bundle_sha256", "")),
             "label_template_bundle_sha256": label_template_bundle_sha256,
             "label_intake_bundle_sha256": label_intake_bundle_sha256,
         }
