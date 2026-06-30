@@ -355,21 +355,42 @@ def case_summary(case_id: str, rows: list[dict], valid_decision_ids: set[str]) -
     candidate_ids = {row["candidate_label_id"] for row in rows}
     reviewed_ids = candidate_ids & valid_decision_ids
     missing_ids = sorted(candidate_ids - valid_decision_ids)
+    synthetic_rows = sum(1 for row in rows if str(row.get("synthetic", "0")) == "1")
     return {
         "schema": "amr_beta_label_packet.v1",
         "case_id": case_id,
         "template_dirs": sorted({row["template_dir"] for row in rows}),
         "candidate_label_rows": len(rows),
-        "synthetic_candidate_rows": sum(1 for row in rows if str(row.get("synthetic", "0")) == "1"),
+        "synthetic_candidate_rows": synthetic_rows,
         "valid_human_label_rows": len(reviewed_ids),
         "missing_candidate_label_count": len(missing_ids),
         "all_candidates_reviewed": int(not missing_ids and bool(rows)),
-        "ready_for_label_intake": int(bool(rows) and not missing_ids),
+        "ready_for_label_intake": int(bool(rows) and not missing_ids and synthetic_rows == 0),
         "release_ready": 0,
         "public_comparison_claim_ready": 0,
         "real_model_execution_ready": 0,
         "design_partner_beta_candidate_ready": 0,
     }
+
+
+def case_progress_rows(packet_rows: list[dict], valid_decision_ids: set[str]) -> list[dict]:
+    grouped = group_rows_by_case(packet_rows)
+    rows: list[dict] = []
+    for case_id in sorted(grouped):
+        summary = case_summary(case_id, grouped[case_id], valid_decision_ids)
+        rows.append(
+            {
+                "case_id": case_id,
+                "template_dirs": summary["template_dirs"],
+                "candidate_label_rows": summary["candidate_label_rows"],
+                "synthetic_candidate_rows": summary["synthetic_candidate_rows"],
+                "valid_human_label_rows": summary["valid_human_label_rows"],
+                "missing_candidate_label_count": summary["missing_candidate_label_count"],
+                "all_candidates_reviewed": summary["all_candidates_reviewed"],
+                "ready_for_label_intake": summary["ready_for_label_intake"],
+            }
+        )
+    return rows
 
 
 def prepare_case_output_root(out_root: Path, case_ids: set[str], overwrite: bool) -> None:
@@ -545,10 +566,22 @@ def main(argv: list[str]) -> int:
         missing_ids = sorted(known_candidate_ids - valid_decision_ids)
         if args.require_all_candidates and missing_ids:
             errors.append(f"missing candidate_label_id decisions: {', '.join(missing_ids[:20])}")
-        if args.enforce_min_labels and valid_human_label_rows < args.min_labels:
-            errors.append(f"valid_human_label_rows {valid_human_label_rows} below required minimum {args.min_labels}")
-
+        non_synthetic_candidate_ids = {
+            row["candidate_label_id"]
+            for row in packet_rows
+            if str(row.get("synthetic", "0")) != "1"
+        }
+        non_synthetic_valid_human_label_rows = len(valid_decision_ids & non_synthetic_candidate_ids)
+        if args.enforce_min_labels and non_synthetic_valid_human_label_rows < args.min_labels:
+            errors.append(
+                "non_synthetic_valid_human_label_rows "
+                f"{non_synthetic_valid_human_label_rows} below required minimum {args.min_labels}"
+            )
         case_ids = sorted({row["case_id"] for row in packet_rows})
+        progress_rows = case_progress_rows(packet_rows, valid_decision_ids)
+        cases_ready_for_label_intake = sum(
+            1 for row in progress_rows if row["ready_for_label_intake"] == 1
+        )
         output_requested = bool(args.out or args.per_case_out_root)
         output_paths: dict[str, Path] = {}
         if args.out:
@@ -580,7 +613,15 @@ def main(argv: list[str]) -> int:
             "missing_candidate_label_count": len(missing_ids),
             "all_candidates_reviewed": int(not missing_ids and bool(packet_rows)),
             "min_human_label_rows_required": args.min_labels,
-            "human_label_requirement_met": int(valid_human_label_rows >= args.min_labels),
+            "human_label_requirement_met": int(non_synthetic_valid_human_label_rows >= args.min_labels),
+            "non_synthetic_valid_human_label_rows": non_synthetic_valid_human_label_rows,
+            "human_labels_remaining_to_minimum": max(
+                0,
+                args.min_labels - non_synthetic_valid_human_label_rows,
+            ),
+            "case_progress_rows": progress_rows,
+            "cases_ready_for_label_intake": cases_ready_for_label_intake,
+            "cases_blocked_for_label_intake": len(progress_rows) - cases_ready_for_label_intake,
             "candidate_guard_passed": int(not errors),
             "decision_input_guard_passed": int(not decision_input_errors),
             "output_path_guard_passed": int(not output_path_errors),
