@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 SCHEMA = "amr_beta_operator_status.v1"
+APPROVAL_SCOPE = "amr_beta_real_benchmark_runtime"
 BLOCKED_FLAGS = {
     "release_ready": 0,
     "public_comparison_claim_ready": 0,
@@ -49,6 +50,12 @@ def is_forbidden_env_path(path: Path) -> bool:
 
 def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def same_path(left: str, right: str) -> bool:
+    if not left or not right:
+        return False
+    return str(Path(left).expanduser().resolve()) == str(Path(right).expanduser().resolve())
 
 
 def read_json(path: Path, input_name: str) -> dict:
@@ -148,6 +155,229 @@ def load_benchmark_readiness(path_text: str) -> tuple[dict | None, dict | None, 
     return payload, meta, benchmark_readiness_errors(payload)
 
 
+def require_flag(
+    *,
+    errors: list[str],
+    name: str,
+    payload: dict,
+    key: str,
+    expected: int,
+) -> None:
+    if key not in payload:
+        errors.append(f"{name}: {key} must be present as an integer or boolean flag")
+        return
+    raw = payload.get(key)
+    if isinstance(raw, bool):
+        value = int(raw)
+    elif isinstance(raw, int):
+        value = raw
+    else:
+        errors.append(f"{name}: {key} must be an integer or boolean flag")
+        return
+    if value not in {0, 1}:
+        errors.append(f"{name}: {key} must be one of [0, 1]")
+        return
+    if value != expected:
+        errors.append(f"{name}: must set {key}={expected}")
+
+
+def require_bound_path(
+    *,
+    errors: list[str],
+    name: str,
+    payload: dict,
+    field: str,
+    expected_path: str,
+) -> None:
+    value = str(payload.get(field) or "")
+    if not same_path(value, expected_path):
+        errors.append(f"{name}: {field} must match supplied artifact path")
+
+
+def require_bound_sha(
+    *,
+    errors: list[str],
+    name: str,
+    payload: dict,
+    field: str,
+    expected_sha: str,
+) -> None:
+    value = str(payload.get(field) or "")
+    if value != expected_sha:
+        errors.append(f"{name}: {field} must match supplied artifact sha256")
+
+
+def require_sha_field(*, errors: list[str], name: str, payload: dict, field: str) -> None:
+    value = str(payload.get(field) or "")
+    if not value.startswith("sha256:") or len(value) != len("sha256:") + 64:
+        errors.append(f"{name}: {field} must be a sha256 binding")
+
+
+def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, dict]) -> list[str]:
+    errors: list[str] = []
+    preflight = artifacts.get("runtime_preflight")
+    request = artifacts.get("runtime_approval_request")
+    status = artifacts.get("runtime_approval_status")
+    benchmark = artifacts.get("benchmark_readiness")
+
+    if request and not preflight:
+        errors.append("runtime_approval_request: runtime_preflight is required")
+    if status and not request:
+        errors.append("runtime_approval_status: runtime_approval_request is required")
+    if status and not preflight:
+        errors.append("runtime_approval_status: runtime_preflight is required")
+    if benchmark and not status:
+        errors.append("benchmark_readiness: runtime_approval_status is required")
+
+    if preflight and request:
+        preflight_meta = metas["runtime_preflight"]
+        require_bound_path(
+            errors=errors,
+            name="runtime_approval_request",
+            payload=request,
+            field="input_preflight",
+            expected_path=str(preflight_meta["path"]),
+        )
+        require_bound_sha(
+            errors=errors,
+            name="runtime_approval_request",
+            payload=request,
+            field="input_preflight_sha256",
+            expected_sha=str(preflight_meta["sha256"]),
+        )
+        require_flag(errors=errors, name="runtime_approval_request", payload=request, key="approved_by_human", expected=0)
+        require_flag(
+            errors=errors,
+            name="runtime_approval_request",
+            payload=request,
+            key="approval_record_supplied",
+            expected=0,
+        )
+        require_flag(
+            errors=errors,
+            name="runtime_approval_request",
+            payload=request,
+            key="requires_human_runtime_approval",
+            expected=1,
+        )
+        require_flag(
+            errors=errors,
+            name="runtime_approval_request",
+            payload=request,
+            key="benchmark_runtime_approval_required",
+            expected=1,
+        )
+        require_flag(
+            errors=errors,
+            name="runtime_approval_request",
+            payload=request,
+            key="creates_benchmark_evidence",
+            expected=0,
+        )
+        require_flag(errors=errors, name="runtime_approval_request", payload=request, key="runs_benchmark", expected=0)
+
+    if preflight and request and status:
+        preflight_meta = metas["runtime_preflight"]
+        request_meta = metas["runtime_approval_request"]
+        require_bound_path(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            field="input_preflight",
+            expected_path=str(preflight_meta["path"]),
+        )
+        require_bound_sha(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            field="input_preflight_sha256",
+            expected_sha=str(preflight_meta["sha256"]),
+        )
+        require_bound_path(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            field="approval_request",
+            expected_path=str(request_meta["path"]),
+        )
+        require_bound_sha(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            field="approval_request_sha256",
+            expected_sha=str(request_meta["sha256"]),
+        )
+        require_flag(errors=errors, name="runtime_approval_status", payload=status, key="approved_by_human", expected=1)
+        require_flag(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            key="approval_record_supplied",
+            expected=1,
+        )
+        require_flag(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            key="human_runtime_approval_record_verified",
+            expected=1,
+        )
+        require_flag(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            key="ready_for_human_operator_benchmark_run",
+            expected=1,
+        )
+        require_flag(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            key="benchmark_runtime_approval_required",
+            expected=1,
+        )
+        require_flag(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            key="creates_benchmark_evidence",
+            expected=0,
+        )
+        require_flag(errors=errors, name="runtime_approval_status", payload=status, key="runs_benchmark", expected=0)
+        require_flag(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            key="codex_runtime_permission_granted_by_this_packet",
+            expected=0,
+        )
+        if str(status.get("approval_scope") or "") != APPROVAL_SCOPE:
+            errors.append(f"runtime_approval_status: approval_scope must be {APPROVAL_SCOPE}")
+        if not str(status.get("approval_record") or "").strip():
+            errors.append("runtime_approval_status: approval_record is required")
+        require_sha_field(
+            errors=errors,
+            name="runtime_approval_status",
+            payload=status,
+            field="approval_record_sha256",
+        )
+
+    if benchmark and status:
+        benchmark_meta = metas["benchmark_readiness"]
+        benchmark_out = str(status.get("benchmark_out") or "")
+        if not benchmark_out:
+            errors.append("runtime_approval_status: benchmark_out is required")
+        else:
+            expected_readiness = str(Path(benchmark_out).expanduser().resolve() / "benchmark_readiness.json")
+            if not same_path(str(benchmark_meta["path"]), expected_readiness):
+                errors.append(
+                    "benchmark_readiness: path must match "
+                    "runtime_approval_status benchmark_out/benchmark_readiness.json"
+                )
+
+    return errors
+
+
 def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple[str, list[str]]:
     if errors:
         return "stage_0_claim_freeze", ["Resolve artifact validation errors before advancing."]
@@ -155,6 +385,7 @@ def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple
     label = artifacts.get("label_intake_plan")
     feedback = artifacts.get("maintainer_feedback_packet")
     preflight = artifacts.get("runtime_preflight")
+    approval_request = artifacts.get("runtime_approval_request")
     approval_status = artifacts.get("runtime_approval_status")
     benchmark = artifacts.get("benchmark_readiness")
 
@@ -171,6 +402,10 @@ def compute_stage(artifacts: dict[str, dict | None], errors: list[str]) -> tuple
     if not preflight or truthy_int(preflight, "ready_to_request_runtime_approval") != 1:
         return "stage_3_maintainer_feedback_ready", [
             "Compile/verify label intake outputs and run the final runtime preflight."
+        ]
+    if not approval_request or truthy_int(approval_request, "requires_human_runtime_approval") != 1:
+        return "stage_4_runtime_preflight_ready", [
+            "Generate a runtime approval request from the green preflight."
         ]
     if not approval_status or truthy_int(approval_status, "human_runtime_approval_record_verified") != 1:
         return "stage_4_runtime_preflight_ready", [
@@ -268,9 +503,13 @@ def main(argv: list[str]) -> int:
         if benchmark_meta:
             artifact_meta["benchmark_readiness"] = benchmark_meta
         errors.extend(benchmark_errors)
+        errors.extend(artifact_chain_errors(artifacts, artifact_meta))
 
         current_stage, next_blockers = compute_stage(artifacts, errors)
-        benchmark_ready = truthy_int(benchmark or {}, "design_partner_beta_candidate_ready")
+        benchmark_ready = int(
+            current_stage == "stage_5_beta_candidate_or_hardening"
+            and truthy_int(benchmark or {}, "design_partner_beta_candidate_ready") == 1
+        )
         payload = {
             "schema": SCHEMA,
             "current_stage": current_stage,

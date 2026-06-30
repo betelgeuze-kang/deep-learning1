@@ -2,6 +2,7 @@
 """Smoke tests for scripts/amr_beta_operator_status.py."""
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -14,6 +15,10 @@ TOOL = ROOT / "scripts" / "amr_beta_operator_status.py"
 
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def run_tool(*args: str) -> subprocess.CompletedProcess:
@@ -36,6 +41,45 @@ def base_blocked() -> dict:
     }
 
 
+def request_payload(preflight: Path) -> dict:
+    return {
+        "schema": "amr_beta_runtime_approval_request.v1",
+        "input_preflight": str(preflight.resolve()),
+        "input_preflight_sha256": sha256_file(preflight),
+        "request_kind": "runtime_approval_required",
+        "approved_by_human": 0,
+        "approval_record_supplied": 0,
+        "requires_human_runtime_approval": 1,
+        "benchmark_runtime_approval_required": 1,
+        "creates_benchmark_evidence": 0,
+        "runs_benchmark": 0,
+        **base_blocked(),
+    }
+
+
+def approval_status_payload(preflight: Path, request: Path, record: Path, benchmark_out: Path) -> dict:
+    return {
+        "schema": "amr_beta_runtime_approval_status.v1",
+        "input_preflight": str(preflight.resolve()),
+        "input_preflight_sha256": sha256_file(preflight),
+        "approval_request": str(request.resolve()),
+        "approval_request_sha256": sha256_file(request),
+        "approval_record": str(record.resolve()),
+        "approval_record_sha256": sha256_file(record),
+        "approval_scope": "amr_beta_real_benchmark_runtime",
+        "approved_by_human": 1,
+        "approval_record_supplied": 1,
+        "human_runtime_approval_record_verified": 1,
+        "ready_for_human_operator_benchmark_run": 1,
+        "benchmark_runtime_approval_required": 1,
+        "creates_benchmark_evidence": 0,
+        "runs_benchmark": 0,
+        "codex_runtime_permission_granted_by_this_packet": 0,
+        "benchmark_out": str(benchmark_out.resolve()),
+        **base_blocked(),
+    }
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
@@ -44,8 +88,11 @@ def main() -> int:
         feedback = tmp / "feedback_packet.json"
         preflight = tmp / "preflight.json"
         approval_request = tmp / "approval_request.json"
+        approval_record = tmp / "approval_record.json"
         approval_status = tmp / "approval_status.json"
-        readiness = tmp / "benchmark_readiness.json"
+        benchmark_out = tmp / "audit_benchmark"
+        benchmark_out.mkdir()
+        readiness = benchmark_out / "benchmark_readiness.json"
 
         write_json(
             repo,
@@ -79,22 +126,16 @@ def main() -> int:
                 **base_blocked(),
             },
         )
+        write_json(approval_request, request_payload(preflight))
         write_json(
-            approval_request,
+            approval_record,
             {
-                "schema": "amr_beta_runtime_approval_request.v1",
-                "approved_by_human": 0,
-                **base_blocked(),
+                "schema": "amr_beta_runtime_approval_record.v1",
+                "approval_scope": "amr_beta_real_benchmark_runtime",
+                "approved_by_human": True,
             },
         )
-        write_json(
-            approval_status,
-            {
-                "schema": "amr_beta_runtime_approval_status.v1",
-                "human_runtime_approval_record_verified": 1,
-                **base_blocked(),
-            },
-        )
+        write_json(approval_status, approval_status_payload(preflight, approval_request, approval_record, benchmark_out))
         write_json(
             readiness,
             {
@@ -154,6 +195,8 @@ def main() -> int:
             str(feedback),
             "--runtime-preflight",
             str(preflight),
+            "--runtime-approval-request",
+            str(approval_request),
             "--runtime-approval-status",
             str(approval_status),
             "--benchmark-readiness",
@@ -168,6 +211,157 @@ def main() -> int:
         assert payload["current_stage"] == "stage_5_beta_candidate_or_hardening"
         assert payload["design_partner_beta_candidate_ready"] == 1
         assert payload["release_ready"] == 0
+
+        missing_request_status = tmp / "missing_request_status.json"
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(preflight),
+            "--runtime-approval-status",
+            str(approval_status),
+            "--out-json",
+            str(missing_request_status),
+        )
+        assert proc.returncode == 1
+        assert "runtime_approval_request is required" in proc.stderr
+        assert not missing_request_status.exists()
+
+        stale_status = tmp / "stale_approval_status.json"
+        stale_payload = approval_status_payload(preflight, approval_request, approval_record, benchmark_out)
+        stale_payload["approval_request_sha256"] = "sha256:" + ("0" * 64)
+        write_json(stale_status, stale_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(preflight),
+            "--runtime-approval-request",
+            str(approval_request),
+            "--runtime-approval-status",
+            str(stale_status),
+            "--out-json",
+            str(tmp / "stale_status_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "approval_request_sha256 must match" in proc.stderr
+
+        unapproved_status = tmp / "unapproved_status.json"
+        unapproved_payload = approval_status_payload(preflight, approval_request, approval_record, benchmark_out)
+        unapproved_payload["ready_for_human_operator_benchmark_run"] = 0
+        write_json(unapproved_status, unapproved_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(preflight),
+            "--runtime-approval-request",
+            str(approval_request),
+            "--runtime-approval-status",
+            str(unapproved_status),
+            "--out-json",
+            str(tmp / "unapproved_status_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "ready_for_human_operator_benchmark_run=1" in proc.stderr
+
+        malformed_request = tmp / "malformed_request.json"
+        malformed_request_payload = request_payload(preflight)
+        malformed_request_payload["approved_by_human"] = "true"
+        del malformed_request_payload["runs_benchmark"]
+        write_json(malformed_request, malformed_request_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(preflight),
+            "--runtime-approval-request",
+            str(malformed_request),
+            "--out-json",
+            str(tmp / "malformed_request_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "approved_by_human must be an integer or boolean flag" in proc.stderr
+        assert "runs_benchmark must be present" in proc.stderr
+
+        missing_record_status = tmp / "missing_record_status.json"
+        missing_record_payload = approval_status_payload(
+            preflight,
+            approval_request,
+            approval_record,
+            benchmark_out,
+        )
+        del missing_record_payload["approval_record_sha256"]
+        write_json(missing_record_status, missing_record_payload)
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(preflight),
+            "--runtime-approval-request",
+            str(approval_request),
+            "--runtime-approval-status",
+            str(missing_record_status),
+            "--out-json",
+            str(tmp / "missing_record_status_output.json"),
+        )
+        assert proc.returncode == 1
+        assert "approval_record_sha256 must be a sha256 binding" in proc.stderr
+
+        other_benchmark_out = tmp / "other_audit_benchmark"
+        other_benchmark_out.mkdir()
+        wrong_readiness = other_benchmark_out / "benchmark_readiness.json"
+        write_json(
+            wrong_readiness,
+            {
+                "schema_version": "local_repo_audit_benchmark_readiness.v1",
+                "real_human_label_basis": 1,
+                "design_partner_beta_candidate_ready": 1,
+                "release_ready": 0,
+                "public_comparison_claim_ready": 0,
+                "real_model_execution_ready": 0,
+            },
+        )
+        proc = run_tool(
+            "--repo-audit-plan",
+            str(repo),
+            "--label-intake-plan",
+            str(label),
+            "--maintainer-feedback-packet",
+            str(feedback),
+            "--runtime-preflight",
+            str(preflight),
+            "--runtime-approval-request",
+            str(approval_request),
+            "--runtime-approval-status",
+            str(approval_status),
+            "--benchmark-readiness",
+            str(wrong_readiness),
+            "--out-json",
+            str(tmp / "wrong_readiness_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "benchmark_out/benchmark_readiness.json" in proc.stderr
 
         bad_repo = tmp / "bad_repo_plan.json"
         bad_payload = {
