@@ -271,11 +271,17 @@ def main() -> int:
         assert payload["valid_repo_rows"] == 10
         assert payload["human_label_rows"] == 10
         assert payload["distinct_countable_maintainer_id_count"] == 3
+        assert payload["output_path_preflight_passed"] == 1
+        assert payload["combined_labels"] == str((ROOT / "results" / "combined_benchmark_labels.jsonl").resolve())
+        assert payload["benchmark_out"] == str(tmp / "audit benchmark")
+        prepare_parts = shlex.split(payload["next_commands"][0])
+        assert prepare_parts[prepare_parts.index("--benchmark-out") + 1] == str(tmp / "audit benchmark")
         benchmark_parts = shlex.split(payload["next_commands"][1])
         assert benchmark_parts[benchmark_parts.index("--out") + 1] == str(tmp / "audit benchmark")
         assert "'" in payload["next_commands"][1]
         assert (tmp / "preflight.json").is_file()
         assert "ready_to_request_runtime_approval: 1" in (tmp / "preflight.md").read_text(encoding="utf-8")
+        assert "output_path_preflight_passed: 1" in (tmp / "preflight.md").read_text(encoding="utf-8")
         assert "preflight_input_bundle_sha256: sha256:" in (tmp / "preflight.md").read_text(encoding="utf-8")
 
         bad_intake = tmp / "bad_intake"
@@ -302,6 +308,39 @@ def main() -> int:
         proc = run_tool(*bad_args)
         assert proc.returncode == 1
         assert "expected_repo_git_head does not match repo intake" in proc.stderr
+
+        output_bad_args = [
+            "--repo-intake",
+            str(repo_intake),
+            "--decisions",
+            str(decisions),
+            "--feedback",
+            str(feedback),
+            "--min-repos",
+            "10",
+            "--min-labels",
+            "10",
+            "--min-maintainers",
+            "3",
+            "--combined-labels",
+            str(repos[0][1] / "combined labels.jsonl"),
+            "--benchmark-out",
+            str(repos[1][1] / "audit benchmark"),
+            "--skip-verify-existing",
+            "--json",
+        ]
+        for template_dir in template_dirs:
+            output_bad_args.extend(["--template-dir", str(template_dir)])
+        for intake_dir in label_intake_dirs:
+            output_bad_args.extend(["--label-intake-dir", str(intake_dir)])
+        proc = run_tool(*output_bad_args)
+        assert proc.returncode == 1
+        blocked_payload = json.loads(proc.stdout)
+        assert blocked_payload["ready_to_request_runtime_approval"] == 0
+        assert blocked_payload["output_path_preflight_passed"] == 0
+        assert "combined_labels must not be inside target repo" in proc.stderr
+        assert "benchmark_out must not be inside target repo" in proc.stderr
+        assert not (repos[0][1] / "combined labels.jsonl").exists()
 
     print("AMR beta runtime preflight smoke OK")
     return 0

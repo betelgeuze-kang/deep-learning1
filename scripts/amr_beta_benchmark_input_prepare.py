@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -50,6 +51,36 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return "sha256:" + digest.hexdigest()
+
+
+def command_line(parts: list[object]) -> str:
+    return " ".join(shlex.quote(str(part)) for part in parts)
+
+
+def is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def validate_output_paths(paths: dict[str, Path], target_repo_paths: list[str]) -> list[str]:
+    errors: list[str] = []
+    resolved_by_name = {name: path.expanduser().resolve() for name, path in paths.items()}
+    seen_paths: dict[Path, str] = {}
+    for name, resolved in resolved_by_name.items():
+        if is_forbidden_env_path(resolved):
+            errors.append(f"{name} must not be .env-like")
+        if resolved in seen_paths:
+            errors.append(f"{name} must not reuse {seen_paths[resolved]} path: {resolved}")
+        else:
+            seen_paths[resolved] = name
+        for raw_repo in target_repo_paths:
+            repo_path = Path(raw_repo).expanduser().resolve()
+            if resolved == repo_path or is_relative_to(resolved, repo_path):
+                errors.append(f"{name} must not be inside target repo: {resolved} (repo: {repo_path})")
+    return errors
 
 
 def read_json(path: Path) -> dict:
@@ -196,6 +227,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out-labels", required=True, help="Combined benchmark labels JSONL output path.")
     parser.add_argument("--summary", required=True, help="Preparation summary JSON output path.")
     parser.add_argument("--feedback", default="", help="Optional maintainer feedback file path to bind into the run command.")
+    parser.add_argument("--benchmark-out", default="results/audit_benchmark", help="Human-approved benchmark output directory for the generated run command.")
     parser.add_argument("--min-cases", type=int, default=MIN_REAL_REPOS_FOR_BETA)
     parser.add_argument("--min-labels", type=int, default=MIN_HUMAN_LABELS_FOR_BETA)
     parser.add_argument("--allow-synthetic", action="store_true", help="Testing only: allow synthetic labels.")
@@ -240,16 +272,48 @@ def main(argv: list[str]) -> int:
                 errors.append(f"duplicate combined label row: {key[0]}:{key[1]}")
             seen_labels.add(key)
         case_ids = sorted({str(row.get("case_id")) for row in rows})
-        repo_paths = sorted({str(row.get("repo_path")) for row in rows})
+        repo_paths = sorted({str(Path(str(row.get("repo_path"))).expanduser().resolve()) for row in rows})
         if len(case_ids) < args.min_cases:
             errors.append(f"case_count {len(case_ids)} below required minimum {args.min_cases}")
         if len(rows) < args.min_labels:
             errors.append(f"human_label_rows {len(rows)} below required minimum {args.min_labels}")
+        out_labels_path = Path(args.out_labels).expanduser().resolve()
+        summary_path = Path(args.summary).expanduser().resolve()
+        benchmark_out = Path(args.benchmark_out).expanduser().resolve()
+        errors.extend(
+            validate_output_paths(
+                {
+                    "out_labels": out_labels_path,
+                    "summary": summary_path,
+                    "benchmark_out": benchmark_out,
+                },
+                repo_paths,
+            )
+        )
         feedback = str(Path(args.feedback).expanduser().resolve()) if args.feedback else ""
         if feedback and is_forbidden_env_path(Path(feedback)):
             raise ValueError("refusing .env-like feedback path")
         if feedback and not Path(feedback).is_file():
             raise ValueError(f"feedback file is not a file: {feedback}")
+        benchmark_parts = [
+            "python3",
+            "scripts/audit_my_repo_benchmark.py",
+            "--labels",
+            out_labels_path,
+        ]
+        if feedback:
+            benchmark_parts.extend(["--feedback", feedback])
+        benchmark_parts.extend(
+            [
+                "--namespace",
+                "real_benchmark",
+                "--confirm-real-benchmark-namespace",
+                "--mode",
+                "full",
+                "--out",
+                benchmark_out,
+            ]
+        )
         summary = {
             "schema": TOOL_SCHEMA,
             "label_intake_dir_count": len(args.label_intake_dir),
@@ -265,13 +329,8 @@ def main(argv: list[str]) -> int:
                 for raw_dir in args.label_intake_dir
             ],
             "feedback_input": feedback,
-            "benchmark_command": (
-                "python3 scripts/audit_my_repo_benchmark.py "
-                f"--labels {Path(args.out_labels).expanduser().resolve()} "
-                f"{'--feedback ' + feedback + ' ' if feedback else ''}"
-                "--namespace real_benchmark --confirm-real-benchmark-namespace "
-                "--mode full --out results/audit_benchmark"
-            ),
+            "benchmark_out": str(benchmark_out),
+            "benchmark_command": command_line(benchmark_parts),
             "ready_for_runtime_approved_real_benchmark": int(not errors),
             "design_partner_beta_candidate_ready": 0,
             "release_ready": 0,
@@ -285,8 +344,8 @@ def main(argv: list[str]) -> int:
                 print(error, file=sys.stderr)
             return 1
         prepare_outputs(
-            Path(args.out_labels).expanduser().resolve(),
-            Path(args.summary).expanduser().resolve(),
+            out_labels_path,
+            summary_path,
             rows,
             summary,
             args.overwrite,
