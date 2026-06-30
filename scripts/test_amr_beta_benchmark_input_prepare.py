@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -95,8 +96,8 @@ def main() -> int:
         intake_b = tmp / "intake_b"
         make_intake(intake_a, "case-a", repo_a)
         make_intake(intake_b, "case-b", repo_b)
-        out_labels = tmp / "combined" / "combined_benchmark_labels.jsonl"
-        summary = tmp / "combined" / "summary.json"
+        out_labels = tmp / "combined dir" / "combined benchmark labels.jsonl"
+        summary = tmp / "combined dir" / "summary.json"
         proc = run_tool(
             "--label-intake-dir",
             str(intake_a),
@@ -140,9 +141,59 @@ def main() -> int:
         assert payload["label_intake_verify_existing_passed_dirs"] == 0
         assert payload["ready_for_runtime_approved_real_benchmark"] == 1
         assert payload["design_partner_beta_candidate_ready"] == 0
+        assert payload["benchmark_out"] == str((ROOT / "results" / "audit_benchmark").resolve())
+        benchmark_parts = shlex.split(payload["benchmark_command"])
+        assert benchmark_parts[benchmark_parts.index("--labels") + 1] == str(out_labels)
+        assert benchmark_parts[benchmark_parts.index("--out") + 1] == str((ROOT / "results" / "audit_benchmark").resolve())
+        assert "--confirm-real-benchmark-namespace" in benchmark_parts
         assert out_labels.is_file()
         assert summary.is_file()
         assert len([line for line in out_labels.read_text(encoding="utf-8").splitlines() if line.strip()]) == 2
+
+        proc = run_tool(
+            "--label-intake-dir",
+            str(intake_a),
+            "--label-intake-dir",
+            str(intake_b),
+            "--out-labels",
+            str(repo_a / "combined_benchmark_labels.jsonl"),
+            "--summary",
+            str(tmp / "inside_repo_summary.json"),
+            "--benchmark-out",
+            str(repo_b / "audit_benchmark"),
+            "--min-cases",
+            "2",
+            "--min-labels",
+            "2",
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        blocked_payload = json.loads(proc.stdout)
+        assert blocked_payload["ready_for_runtime_approved_real_benchmark"] == 0
+        assert "out_labels must not be inside target repo" in proc.stderr
+        assert "benchmark_out must not be inside target repo" in proc.stderr
+        assert not (repo_a / "combined_benchmark_labels.jsonl").exists()
+
+        same_path = tmp / "same_output.json"
+        proc = run_tool(
+            "--label-intake-dir",
+            str(intake_a),
+            "--label-intake-dir",
+            str(intake_b),
+            "--out-labels",
+            str(same_path),
+            "--summary",
+            str(same_path),
+            "--min-cases",
+            "2",
+            "--min-labels",
+            "2",
+            "--skip-verify-existing",
+        )
+        assert proc.returncode == 1
+        assert "summary must not reuse out_labels path" in proc.stderr
+        assert not same_path.exists()
 
         proc = run_tool(
             "--label-intake-dir",

@@ -214,6 +214,7 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
         f"- label_intake_verify_existing_failed_dirs: {payload['label_intake_verify_existing_failed_dirs']}",
         f"- human_input_preflight_passed: {payload['human_input_preflight_passed']}",
         f"- case_binding_preflight_passed: {payload['case_binding_preflight_passed']}",
+        f"- output_path_preflight_passed: {payload['output_path_preflight_passed']}",
         f"- valid_repo_rows: {payload['valid_repo_rows']}",
         f"- repo_snapshot_lock_sha256: {payload['repo_snapshot_lock_sha256']}",
         f"- preflight_input_bundle_sha256: {payload['preflight_input_bundle_sha256']}",
@@ -336,6 +337,14 @@ def main(argv: list[str]) -> int:
         combined_labels = str(Path(args.combined_labels).expanduser().resolve())
         combined_summary = str(Path(args.combined_summary).expanduser().resolve())
         benchmark_out = str(Path(args.benchmark_out).expanduser().resolve())
+        output_errors = benchmark_inputs.validate_output_paths(
+            {
+                "combined_labels": Path(combined_labels),
+                "combined_summary": Path(combined_summary),
+                "benchmark_out": Path(benchmark_out),
+            },
+            sorted({context["repo_path"] for context in repo_by_case.values()}),
+        )
         feedback_path_text = str(feedback_path)
         prepare_parts = ["python3", "scripts/amr_beta_benchmark_input_prepare.py"]
         for raw in args.label_intake_dir:
@@ -348,6 +357,8 @@ def main(argv: list[str]) -> int:
                 combined_summary,
                 "--feedback",
                 feedback_path_text,
+                "--benchmark-out",
+                benchmark_out,
             ]
         )
         benchmark_parts = [
@@ -367,12 +378,13 @@ def main(argv: list[str]) -> int:
         ]
         next_commands = [command_line(prepare_parts), command_line(benchmark_parts)]
 
-        errors = [*repo_errors, *template_errors, *label_errors, *human_errors, *binding_errors]
+        errors = [*repo_errors, *template_errors, *label_errors, *human_errors, *binding_errors, *output_errors]
         repo_pass = int(not repo_errors)
         template_pass = int(not template_errors)
         label_pass = int(not label_errors)
         human_pass = int(not human_errors)
         binding_pass = int(not binding_errors)
+        output_pass = int(not output_errors)
         ready = int(not errors)
         label_template_bundle_sha256 = sha256_json(template_fingerprints)
         label_intake_bundle_sha256 = sha256_json(label_intake_fingerprints)
@@ -430,9 +442,13 @@ def main(argv: list[str]) -> int:
             "min_maintainer_feedback_required": args.min_maintainers,
             "human_input_preflight_passed": human_pass,
             "case_binding_preflight_passed": binding_pass,
+            "output_path_preflight_passed": output_pass,
             "ready_to_request_runtime_approval": ready,
             "benchmark_runtime_approval_required": 1,
             "creates_benchmark_evidence": 0,
+            "combined_labels": combined_labels,
+            "combined_summary": combined_summary,
+            "benchmark_out": benchmark_out,
             "next_commands": next_commands,
             **BLOCKED_FLAGS,
             "errors": errors,
