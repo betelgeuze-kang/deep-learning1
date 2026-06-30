@@ -92,6 +92,7 @@ PACKET_REQUIRED_SNIPPETS = [
     "audit_my_repo_label_intake.py --verify-existing",
     "python3 scripts/amr_beta_runtime_preflight.py",
     "python3 scripts/amr_beta_runtime_approval_request.py",
+    "reject missing, skipped, failed, or inconsistent",
     "python3 scripts/amr_beta_runtime_approval_status.py",
     "python3 scripts/amr_beta_operator_status.py",
     "results/amr_beta_human_input_status.json",

@@ -31,12 +31,24 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def preflight_payload(commands: list[str]) -> dict:
+def preflight_payload(commands: list[str], *, verify_existing_required: int = 1) -> dict:
+    template_dir_count = 10
+    label_intake_dir_count = 10
     return {
         "schema": "amr_beta_runtime_preflight.v1",
         "ready_to_request_runtime_approval": 1,
         "benchmark_runtime_approval_required": 1,
         "creates_benchmark_evidence": 0,
+        "template_dir_count": template_dir_count,
+        "label_template_verify_existing_required": verify_existing_required,
+        "label_template_verify_existing_passed_dirs": template_dir_count if verify_existing_required else 0,
+        "label_template_verify_existing_failed_dirs": 0,
+        "label_intake_dir_count": label_intake_dir_count,
+        "label_intake_verify_existing_required": verify_existing_required,
+        "label_intake_verify_existing_passed_dirs": (
+            label_intake_dir_count if verify_existing_required else 0
+        ),
+        "label_intake_verify_existing_failed_dirs": 0,
         "valid_repo_rows": 10,
         "human_label_rows": 300,
         "distinct_countable_maintainer_id_count": 3,
@@ -62,6 +74,14 @@ def request_payload(preflight: Path, commands: list[str], benchmark_out: Path) -
         "benchmark_runtime_approval_required": 1,
         "creates_benchmark_evidence": 0,
         "runs_benchmark": 0,
+        "template_dir_count": 10,
+        "label_template_verify_existing_required": 1,
+        "label_template_verify_existing_passed_dirs": 10,
+        "label_template_verify_existing_failed_dirs": 0,
+        "label_intake_dir_count": 10,
+        "label_intake_verify_existing_required": 1,
+        "label_intake_verify_existing_passed_dirs": 10,
+        "label_intake_verify_existing_failed_dirs": 0,
         "runtime_commands": commands,
         "runtime_commands_sha256": sha256_json(commands),
         "benchmark_out": str(benchmark_out.resolve()),
@@ -218,6 +238,48 @@ def main() -> int:
         )
         assert proc.returncode == 1
         assert "approved_request_sha256" in proc.stderr
+
+        skipped_preflight = tmp / "skipped_preflight.json"
+        write_json(skipped_preflight, preflight_payload(commands, verify_existing_required=0))
+        skipped_request = tmp / "skipped_request.json"
+        skipped_request_payload = request_payload(skipped_preflight, commands, benchmark_out)
+        skipped_request_payload["label_template_verify_existing_required"] = 0
+        skipped_request_payload["label_template_verify_existing_passed_dirs"] = 0
+        skipped_request_payload["label_intake_verify_existing_required"] = 0
+        skipped_request_payload["label_intake_verify_existing_passed_dirs"] = 0
+        write_json(skipped_request, skipped_request_payload)
+        skipped_record = tmp / "skipped_record.json"
+        write_json(skipped_record, record_payload(skipped_preflight, skipped_request, commands, benchmark_out))
+        proc = run_tool(
+            "--preflight",
+            str(skipped_preflight),
+            "--request",
+            str(skipped_request),
+            "--approval-record",
+            str(skipped_record),
+            "--out-json",
+            str(tmp / "skipped_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_template_verify_existing_required=1" in proc.stderr
+        assert "label_intake_verify_existing_required=1" in proc.stderr
+
+        stale_counter_request = tmp / "stale_counter_request.json"
+        bad_request = request_payload(preflight, commands, benchmark_out)
+        bad_request["label_intake_verify_existing_passed_dirs"] = 9
+        write_json(stale_counter_request, bad_request)
+        proc = run_tool(
+            "--preflight",
+            str(preflight),
+            "--request",
+            str(stale_counter_request),
+            "--approval-record",
+            str(record),
+            "--out-json",
+            str(tmp / "stale_counter_status.json"),
+        )
+        assert proc.returncode == 1
+        assert "approval request label_intake_verify_existing_passed_dirs" in proc.stderr
 
         agent_record = tmp / "agent_record.json"
         bad_record = record_payload(preflight, request, commands, benchmark_out)
