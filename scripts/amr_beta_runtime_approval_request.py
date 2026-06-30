@@ -23,6 +23,16 @@ BLOCKED_FLAGS = {
     "public_comparison_claim_ready": 0,
     "real_model_execution_ready": 0,
 }
+VERIFY_EXISTING_COUNTER_KEYS = [
+    "template_dir_count",
+    "label_template_verify_existing_required",
+    "label_template_verify_existing_passed_dirs",
+    "label_template_verify_existing_failed_dirs",
+    "label_intake_dir_count",
+    "label_intake_verify_existing_required",
+    "label_intake_verify_existing_passed_dirs",
+    "label_intake_verify_existing_failed_dirs",
+]
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -59,6 +69,37 @@ def command_option(command: str, option: str) -> str:
     return ""
 
 
+def int_field(payload: dict, key: str, errors: list[str]) -> int:
+    try:
+        return int(payload.get(key, -1))
+    except (TypeError, ValueError):
+        errors.append(f"runtime preflight {key} must be an integer")
+        return -1
+
+
+def validate_verify_existing_counts(preflight: dict) -> list[str]:
+    errors: list[str] = []
+    for prefix, count_key in [
+        ("label_template", "template_dir_count"),
+        ("label_intake", "label_intake_dir_count"),
+    ]:
+        dir_count = int_field(preflight, count_key, errors)
+        required = int_field(preflight, f"{prefix}_verify_existing_required", errors)
+        passed = int_field(preflight, f"{prefix}_verify_existing_passed_dirs", errors)
+        failed = int_field(preflight, f"{prefix}_verify_existing_failed_dirs", errors)
+        if dir_count <= 0:
+            errors.append(f"runtime preflight {count_key} must be positive")
+        if required != 1:
+            errors.append(f"runtime preflight must set {prefix}_verify_existing_required=1")
+        if failed != 0:
+            errors.append(f"runtime preflight must set {prefix}_verify_existing_failed_dirs=0")
+        if dir_count > 0 and passed != dir_count:
+            errors.append(
+                f"runtime preflight {prefix}_verify_existing_passed_dirs must equal {count_key}"
+            )
+    return errors
+
+
 def validate_preflight(preflight: dict) -> list[str]:
     errors: list[str] = []
     if preflight.get("schema") != PREFLIGHT_SCHEMA:
@@ -87,6 +128,7 @@ def validate_preflight(preflight: dict) -> list[str]:
             errors.append("second runtime command must run audit_my_repo_benchmark.py")
         if "--namespace real_benchmark" not in run or "--confirm-real-benchmark-namespace" not in run:
             errors.append("benchmark command must be real_benchmark namespace confirmed")
+    errors.extend(validate_verify_existing_counts(preflight))
     return errors
 
 
@@ -114,6 +156,7 @@ def build_packet(preflight: dict, *, preflight_path: Path, operator_note: str) -
             preflight.get("distinct_countable_maintainer_id_count", 0)
         ),
         "label_intake_case_count": int(preflight.get("label_intake_case_count", 0)),
+        **{key: int(preflight.get(key, 0)) for key in VERIFY_EXISTING_COUNTER_KEYS},
         "runtime_commands": commands,
         "runtime_commands_sha256": sha256_json(commands),
         "benchmark_out": benchmark_out,
@@ -140,6 +183,12 @@ def write_markdown(path: Path, packet: dict) -> None:
         f"- input_preflight_sha256: {packet['input_preflight_sha256']}",
         f"- runtime_commands_sha256: {packet['runtime_commands_sha256']}",
         f"- benchmark_out: {packet['benchmark_out']}",
+        f"- label_template_verify_existing_required: {packet['label_template_verify_existing_required']}",
+        f"- label_template_verify_existing_passed_dirs: {packet['label_template_verify_existing_passed_dirs']}",
+        f"- label_template_verify_existing_failed_dirs: {packet['label_template_verify_existing_failed_dirs']}",
+        f"- label_intake_verify_existing_required: {packet['label_intake_verify_existing_required']}",
+        f"- label_intake_verify_existing_passed_dirs: {packet['label_intake_verify_existing_passed_dirs']}",
+        f"- label_intake_verify_existing_failed_dirs: {packet['label_intake_verify_existing_failed_dirs']}",
         f"- design_partner_beta_candidate_ready: {packet['design_partner_beta_candidate_ready']}",
         f"- release_ready: {packet['release_ready']}",
         f"- public_comparison_claim_ready: {packet['public_comparison_claim_ready']}",

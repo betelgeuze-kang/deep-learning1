@@ -26,12 +26,29 @@ def sha256_json(payload: object) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
-def preflight_payload(*, ready: int = 1, release_ready: int = 0) -> dict:
+def preflight_payload(
+    *,
+    ready: int = 1,
+    release_ready: int = 0,
+    verify_existing_required: int = 1,
+) -> dict:
+    template_dir_count = 10
+    label_intake_dir_count = 10
     return {
         "schema": "amr_beta_runtime_preflight.v1",
         "ready_to_request_runtime_approval": ready,
         "benchmark_runtime_approval_required": 1,
         "creates_benchmark_evidence": 0,
+        "template_dir_count": template_dir_count,
+        "label_template_verify_existing_required": verify_existing_required,
+        "label_template_verify_existing_passed_dirs": template_dir_count if verify_existing_required else 0,
+        "label_template_verify_existing_failed_dirs": 0,
+        "label_intake_dir_count": label_intake_dir_count,
+        "label_intake_verify_existing_required": verify_existing_required,
+        "label_intake_verify_existing_passed_dirs": (
+            label_intake_dir_count if verify_existing_required else 0
+        ),
+        "label_intake_verify_existing_failed_dirs": 0,
         "valid_repo_rows": 10,
         "human_label_rows": 300,
         "distinct_countable_maintainer_id_count": 3,
@@ -88,10 +105,15 @@ def main() -> int:
         assert payload["benchmark_out"] == "/tmp/audit_benchmark"
         assert payload["design_partner_beta_candidate_ready"] == 0
         assert payload["release_ready"] == 0
+        assert payload["label_template_verify_existing_required"] == 1
+        assert payload["label_template_verify_existing_passed_dirs"] == 10
+        assert payload["label_intake_verify_existing_required"] == 1
+        assert payload["label_intake_verify_existing_passed_dirs"] == 10
         assert "audit_my_repo_benchmark.py" in payload["runtime_commands"][1]
         markdown = out_md.read_text(encoding="utf-8")
         assert "approved_by_human: 0" in markdown
         assert "runtime_commands_sha256" in markdown
+        assert "label_template_verify_existing_required: 1" in markdown
         assert "Runtime Commands" in markdown
 
         blocked_preflight = tmp / "blocked_preflight.json"
@@ -105,6 +127,18 @@ def main() -> int:
         proc = run_tool("--preflight", str(promoted_preflight), "--out-json", str(tmp / "promoted.json"))
         assert proc.returncode == 1
         assert "must keep release_ready=0" in proc.stderr
+
+        skipped_verify_preflight = tmp / "skipped_verify_preflight.json"
+        write_json(skipped_verify_preflight, preflight_payload(verify_existing_required=0))
+        proc = run_tool(
+            "--preflight",
+            str(skipped_verify_preflight),
+            "--out-json",
+            str(tmp / "skipped_verify.json"),
+        )
+        assert proc.returncode == 1
+        assert "label_template_verify_existing_required=1" in proc.stderr
+        assert "label_intake_verify_existing_required=1" in proc.stderr
 
     print("AMR beta runtime approval request smoke OK")
     return 0

@@ -122,6 +122,8 @@ been created:
 - [ ] Generate the runtime approval request packet from the green preflight;
   this does not approve or run the benchmark:
   `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
+  The request and status guards reject missing, skipped, failed, or inconsistent
+  label-template and label-intake `--verify-existing` counters.
 - [ ] If the human owner approves the runtime budget, validate the supplied
   approval record before running the long benchmark; this still does not run
   the benchmark:
@@ -282,6 +284,9 @@ stays synthetic and `real_human_label_basis` (and the beta gate) stays 0.
    `python3 scripts/amr_beta_runtime_preflight.py --repo-intake <filled-intake.md-or-csv> --template-dir results/<repo>_label_template --decisions <decisions.jsonl> --feedback <feedback.jsonl> --label-intake-dir results/<repo>_label_intake --out-json results/amr_beta_runtime_preflight.json --out-md results/amr_beta_runtime_preflight.md`.
    Then generate the approval request packet:
    `python3 scripts/amr_beta_runtime_approval_request.py --preflight results/amr_beta_runtime_preflight.json --out-json results/amr_beta_runtime_approval_request.json --out-md results/amr_beta_runtime_approval_request.md`.
+   The approval request must preserve the preflight's required/passed/failed
+   `--verify-existing` counters; the status validator rejects missing, skipped,
+   failed, or inconsistent counters.
    If the human owner supplies a runtime approval record, validate that it binds
    to the exact preflight, request, runtime command hash, and benchmark output:
    `python3 scripts/amr_beta_runtime_approval_status.py --preflight results/amr_beta_runtime_preflight.json --request results/amr_beta_runtime_approval_request.json --approval-record <human-approval-record.json> --out-json results/amr_beta_runtime_approval_status.json --out-md results/amr_beta_runtime_approval_status.md`.

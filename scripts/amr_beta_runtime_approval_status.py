@@ -28,6 +28,16 @@ BLOCKED_FLAGS = {
     "public_comparison_claim_ready": 0,
     "real_model_execution_ready": 0,
 }
+VERIFY_EXISTING_COUNTER_KEYS = [
+    "template_dir_count",
+    "label_template_verify_existing_required",
+    "label_template_verify_existing_passed_dirs",
+    "label_template_verify_existing_failed_dirs",
+    "label_intake_dir_count",
+    "label_intake_verify_existing_required",
+    "label_intake_verify_existing_passed_dirs",
+    "label_intake_verify_existing_failed_dirs",
+]
 PLACEHOLDER_APPROVERS = {
     "agent",
     "automation",
@@ -106,6 +116,47 @@ def placeholder_approver(value: object) -> bool:
     return not normalized or normalized in PLACEHOLDER_APPROVERS or normalized.startswith("example")
 
 
+def int_field(payload: dict, key: str, errors: list[str], input_name: str) -> int:
+    try:
+        return int(payload.get(key, -1))
+    except (TypeError, ValueError):
+        errors.append(f"{input_name} {key} must be an integer")
+        return -1
+
+
+def validate_preflight_verify_existing_counts(preflight: dict) -> list[str]:
+    errors: list[str] = []
+    for prefix, count_key in [
+        ("label_template", "template_dir_count"),
+        ("label_intake", "label_intake_dir_count"),
+    ]:
+        dir_count = int_field(preflight, count_key, errors, "runtime preflight")
+        required = int_field(preflight, f"{prefix}_verify_existing_required", errors, "runtime preflight")
+        passed = int_field(preflight, f"{prefix}_verify_existing_passed_dirs", errors, "runtime preflight")
+        failed = int_field(preflight, f"{prefix}_verify_existing_failed_dirs", errors, "runtime preflight")
+        if dir_count <= 0:
+            errors.append(f"runtime preflight {count_key} must be positive")
+        if required != 1:
+            errors.append(f"runtime preflight must set {prefix}_verify_existing_required=1")
+        if failed != 0:
+            errors.append(f"runtime preflight must set {prefix}_verify_existing_failed_dirs=0")
+        if dir_count > 0 and passed != dir_count:
+            errors.append(
+                f"runtime preflight {prefix}_verify_existing_passed_dirs must equal {count_key}"
+            )
+    return errors
+
+
+def validate_request_verify_existing_counts(preflight: dict, request: dict) -> list[str]:
+    errors: list[str] = []
+    for key in VERIFY_EXISTING_COUNTER_KEYS:
+        preflight_value = int_field(preflight, key, errors, "runtime preflight")
+        request_value = int_field(request, key, errors, "approval request")
+        if request_value != preflight_value:
+            errors.append(f"approval request {key} must match runtime preflight")
+    return errors
+
+
 def validate_preflight(preflight: dict) -> list[str]:
     errors: list[str] = []
     if preflight.get("schema") != PREFLIGHT_SCHEMA:
@@ -124,6 +175,7 @@ def validate_preflight(preflight: dict) -> list[str]:
     commands = preflight.get("next_commands", [])
     if not isinstance(commands, list) or len(commands) < 2:
         errors.append("runtime preflight must contain benchmark preparation and run commands")
+    errors.extend(validate_preflight_verify_existing_counts(preflight))
     return errors
 
 
@@ -150,6 +202,7 @@ def validate_request(
     for key, expected in BLOCKED_FLAGS.items():
         if int(request.get(key, 0)) != expected:
             errors.append(f"approval request packet must keep {key}=0")
+    errors.extend(validate_request_verify_existing_counts(preflight, request))
 
     request_preflight = str(request.get("input_preflight") or "")
     if not request_preflight or not same_path(request_preflight, str(preflight_path)):
