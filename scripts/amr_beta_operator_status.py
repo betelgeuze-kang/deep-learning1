@@ -41,6 +41,20 @@ STAGE_ORDER = [
     "stage_4_real_benchmark_verified",
     "stage_5_beta_candidate_or_hardening",
 ]
+PREFLIGHT_SHA_BINDING_KEYS = [
+    "repo_intake_sha256",
+    "repo_snapshot_lock_sha256",
+    "decisions_sha256",
+    "feedback_sha256",
+    "label_template_bundle_sha256",
+    "label_intake_bundle_sha256",
+    "preflight_input_bundle_sha256",
+]
+PREFLIGHT_LIST_BINDING_KEYS = [
+    "label_template_json_sha256s",
+    "label_template_manifest_sha256s",
+    "label_intake_manifest_sha256s",
+]
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -220,6 +234,68 @@ def require_sha_field(*, errors: list[str], name: str, payload: dict, field: str
         errors.append(f"{name}: {field} must be a sha256 binding")
 
 
+def require_sha_list_field(*, errors: list[str], name: str, payload: dict, field: str) -> None:
+    values = payload.get(field)
+    if not isinstance(values, list):
+        errors.append(f"{name}: {field} must be a sha256 binding list")
+        return
+    for value in values:
+        text = str(value or "")
+        if not text.startswith("sha256:") or len(text) != len("sha256:") + 64:
+            errors.append(f"{name}: {field} must contain only sha256 bindings")
+            return
+
+
+def require_matching_field(
+    *,
+    errors: list[str],
+    name: str,
+    payload: dict,
+    field: str,
+    expected: object,
+) -> None:
+    if payload.get(field) != expected:
+        errors.append(f"{name}: {field} must match runtime_preflight")
+
+
+def runtime_fingerprint_errors(artifacts: dict[str, dict | None]) -> list[str]:
+    errors: list[str] = []
+    preflight = artifacts.get("runtime_preflight")
+    request = artifacts.get("runtime_approval_request")
+    status = artifacts.get("runtime_approval_status")
+    if not preflight:
+        return errors
+
+    for key in PREFLIGHT_SHA_BINDING_KEYS:
+        require_sha_field(errors=errors, name="runtime_preflight", payload=preflight, field=key)
+    for key in PREFLIGHT_LIST_BINDING_KEYS:
+        require_sha_list_field(errors=errors, name="runtime_preflight", payload=preflight, field=key)
+
+    for name, payload in [
+        ("runtime_approval_request", request),
+        ("runtime_approval_status", status),
+    ]:
+        if not payload:
+            continue
+        for key in PREFLIGHT_SHA_BINDING_KEYS:
+            require_matching_field(
+                errors=errors,
+                name=name,
+                payload=payload,
+                field=key,
+                expected=preflight.get(key),
+            )
+        for key in PREFLIGHT_LIST_BINDING_KEYS:
+            require_matching_field(
+                errors=errors,
+                name=name,
+                payload=payload,
+                field=key,
+                expected=preflight.get(key),
+            )
+    return errors
+
+
 def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, dict]) -> list[str]:
     errors: list[str] = []
     preflight = artifacts.get("runtime_preflight")
@@ -382,6 +458,7 @@ def artifact_chain_errors(artifacts: dict[str, dict | None], metas: dict[str, di
                     "runtime_approval_status benchmark_out/benchmark_readiness.json"
                 )
 
+    errors.extend(runtime_fingerprint_errors(artifacts))
     return errors
 
 
@@ -464,6 +541,10 @@ def write_markdown(path: Path, payload: dict, overwrite: bool) -> None:
     lines.extend(["", "## Artifacts", ""])
     for name, meta in payload["artifacts"].items():
         lines.append(f"- {name}: {meta['path']} ({meta['schema']})")
+    if payload.get("runtime_fingerprints"):
+        lines.extend(["", "## Runtime Fingerprints", ""])
+        for key, value in payload["runtime_fingerprints"].items():
+            lines.append(f"- {key}: {value}")
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
@@ -517,6 +598,12 @@ def main(argv: list[str]) -> int:
             current_stage == "stage_5_beta_candidate_or_hardening"
             and truthy_int(benchmark or {}, "design_partner_beta_candidate_ready") == 1
         )
+        preflight = artifacts.get("runtime_preflight") or {}
+        runtime_fingerprints = {
+            key: str(preflight.get(key) or "")
+            for key in PREFLIGHT_SHA_BINDING_KEYS
+            if preflight.get(key)
+        }
         payload = {
             "schema": SCHEMA,
             "current_stage": current_stage,
@@ -524,6 +611,7 @@ def main(argv: list[str]) -> int:
             "next_blockers": next_blockers,
             "artifacts": artifact_meta,
             "artifact_count": len(artifact_meta),
+            "runtime_fingerprints": runtime_fingerprints,
             "creates_benchmark_evidence": 0,
             "runs_benchmark": 0,
             "design_partner_beta_candidate_ready": benchmark_ready,
