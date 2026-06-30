@@ -175,6 +175,77 @@ def main() -> int:
         assert "benchmark_out must not be inside target repo" in proc.stderr
         assert not (repo_a / "combined_benchmark_labels.jsonl").exists()
 
+        unsafe_label_intake = repo_a / "ignored_label_intake"
+        make_intake(unsafe_label_intake, "case-a", repo_a)
+        unsafe_label_out = tmp / "unsafe_label_combined.jsonl"
+        unsafe_label_summary = tmp / "unsafe_label_summary.json"
+        proc = run_tool(
+            "--label-intake-dir",
+            str(unsafe_label_intake),
+            "--out-labels",
+            str(unsafe_label_out),
+            "--summary",
+            str(unsafe_label_summary),
+            "--min-cases",
+            "1",
+            "--min-labels",
+            "1",
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_label_payload = json.loads(proc.stdout)
+        assert unsafe_label_payload["ready_for_runtime_approved_real_benchmark"] == 0
+        assert unsafe_label_payload["input_path_guard_passed"] == 0
+        assert "label_intake_dir[1] must not be inside target repo" in proc.stderr
+        assert not unsafe_label_out.exists()
+        assert not unsafe_label_summary.exists()
+
+        unsafe_feedback = repo_a / "ignored_feedback.jsonl"
+        unsafe_feedback.write_text(
+            json.dumps(
+                {
+                    "case_id": "case-a",
+                    "maintainer_id": "maintainer-unsafe",
+                    "human_feedback": True,
+                    "feedback_text": "Reviewed case-a from unsafe in-repo feedback.",
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        unsafe_feedback_out = tmp / "unsafe_feedback_combined.jsonl"
+        unsafe_feedback_summary = tmp / "unsafe_feedback_summary.json"
+        proc = run_tool(
+            "--label-intake-dir",
+            str(intake_a),
+            "--label-intake-dir",
+            str(intake_b),
+            "--out-labels",
+            str(unsafe_feedback_out),
+            "--summary",
+            str(unsafe_feedback_summary),
+            "--feedback",
+            str(unsafe_feedback),
+            "--min-cases",
+            "2",
+            "--min-labels",
+            "2",
+            "--skip-verify-existing",
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_feedback_payload = json.loads(proc.stdout)
+        assert unsafe_feedback_payload["ready_for_runtime_approved_real_benchmark"] == 0
+        assert unsafe_feedback_payload["input_path_guard_passed"] == 0
+        assert "feedback must not be inside target repo" in proc.stderr
+        assert "--feedback" not in unsafe_feedback_payload["benchmark_command"]
+        assert "Reviewed case-a from unsafe in-repo feedback." not in proc.stdout
+        assert "Reviewed case-a from unsafe in-repo feedback." not in proc.stderr
+        assert not unsafe_feedback_out.exists()
+        assert not unsafe_feedback_summary.exists()
+
         same_path = tmp / "same_output.json"
         proc = run_tool(
             "--label-intake-dir",
