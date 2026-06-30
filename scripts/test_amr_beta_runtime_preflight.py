@@ -256,6 +256,14 @@ def main() -> int:
         assert payload["repo_snapshot_lock_sha256"].startswith("sha256:")
         assert payload["decisions_sha256"] == sha256_file(decisions)
         assert payload["feedback_sha256"] == sha256_file(feedback)
+        assert payload["feedback_bundle_sha256"].startswith("sha256:")
+        assert payload["feedback_rows"] == 3
+        assert payload["valid_feedback_rows"] == 3
+        assert payload["valid_feedback_text_input_rows"] == 3
+        assert payload["valid_feedback_hash_only_rows"] == 0
+        assert payload["valid_feedback_digest_rows"] == 3
+        assert payload["feedback_counts_for_beta_precheck"] == 1
+        assert payload["raw_feedback_text_emitted"] == 0
         assert payload["label_template_json_sha256s"] == [
             sha256_file(template_dir / "label_template.json") for template_dir in template_dirs
         ]
@@ -285,6 +293,11 @@ def main() -> int:
         assert "input_path_preflight_passed: 1" in (tmp / "preflight.md").read_text(encoding="utf-8")
         assert "output_path_preflight_passed: 1" in (tmp / "preflight.md").read_text(encoding="utf-8")
         assert "preflight_input_bundle_sha256: sha256:" in (tmp / "preflight.md").read_text(encoding="utf-8")
+        assert "feedback_bundle_sha256: sha256:" in (tmp / "preflight.md").read_text(encoding="utf-8")
+        feedback_text_sample = "Reviewed case-01 candidate labels."
+        assert feedback_text_sample not in proc.stdout
+        assert feedback_text_sample not in (tmp / "preflight.json").read_text(encoding="utf-8")
+        assert feedback_text_sample not in (tmp / "preflight.md").read_text(encoding="utf-8")
 
         bad_intake = tmp / "bad_intake"
         make_label_intake(bad_intake, repos[0][0], repos[0][1], "0" * 40)
