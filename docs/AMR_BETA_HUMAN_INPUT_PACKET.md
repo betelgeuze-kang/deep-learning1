@@ -196,8 +196,9 @@ Consumed by `scripts/audit_my_repo_label_intake.py --decisions <file>`. Each row
 - `candidate_label_id` (required) — from the generated label template; must not be `template_only`.
 - `human_labeled: true` (required; `human_reviewed: true` is an accepted alias).
 - `expected` (required) — must be `present` or `absent` (`human_expected` is an alias).
-- `label_id` (optional) — safe identifier; defaults to `candidate_label_id`.
+- `label_id` (optional) — safe, non-placeholder identifier; defaults to `candidate_label_id`.
 - `reviewer_id` (optional) — safe, non-placeholder reviewer identifier when supplied.
+- `maintainer_id` (optional) — safe, non-placeholder maintainer identifier when binding decision-level maintainer feedback.
 - `priority` (optional) — `P0`, `P1`, `P2`, `P3`, or empty.
 - `expected_abstain` (optional).
 

@@ -241,6 +241,32 @@ def main() -> int:
         assert proc.returncode == 1
         assert "candidate_label_id must not be example/placeholder" in proc.stderr
 
+        bad_optional_decision_ids = tmp / "bad_optional_decision_ids.jsonl"
+        write_jsonl(
+            bad_optional_decision_ids,
+            [
+                {
+                    "candidate_label_id": "case-a-0001",
+                    "label_id": "EXAMPLE-label",
+                    "reviewer_id": "reviewer alpha",
+                    "maintainer_id": "EXAMPLE-maintainer",
+                    "human_labeled": True,
+                    "expected": "present",
+                }
+            ],
+        )
+        proc = run_tool(
+            "--template-dir",
+            str(template_a),
+            "--decisions",
+            str(bad_optional_decision_ids),
+            "--skip-verify-existing",
+        )
+        assert proc.returncode == 1
+        assert "label_id must not be example/placeholder" in proc.stderr
+        assert "reviewer_id must be a safe identifier" in proc.stderr
+        assert "maintainer_id must not be example/placeholder" in proc.stderr
+
         blocked_template = tmp / "blocked_template"
         make_template(blocked_template, "case-c", ["case-c-0001"], blocked=True)
         proc = run_tool("--template-dir", str(blocked_template), "--skip-verify-existing")

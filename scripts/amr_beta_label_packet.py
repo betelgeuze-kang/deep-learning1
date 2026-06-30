@@ -22,6 +22,7 @@ VALID_EXPECTED = {"present", "absent"}
 VALID_PRIORITY = {"", "P0", "P1", "P2", "P3"}
 PLACEHOLDER_RE = re.compile(r"(^$|example|placeholder|replace|todo)", re.IGNORECASE)
 SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$")
+SAFE_MAINTAINER_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@+-]{0,191}$")
 BLOCKED_KEYS = [
     "release_ready",
     "public_comparison_claim_ready",
@@ -47,6 +48,23 @@ def truthy(value: object) -> bool:
 
 def good_operator_value(value: object) -> bool:
     return not PLACEHOLDER_RE.search(str(value or "").strip())
+
+
+def validate_optional_safe_id(
+    *,
+    errors: list[str],
+    row_prefix: str,
+    field: str,
+    value: object,
+    pattern: re.Pattern[str],
+) -> None:
+    text = str(value or "").strip()
+    if not text:
+        return
+    if not good_operator_value(text):
+        errors.append(f"{row_prefix}: {field} must not be example/placeholder")
+    elif not pattern.fullmatch(text):
+        errors.append(f"{row_prefix}: {field} must be a safe identifier")
 
 
 def verify_label_template_existing(path: Path) -> list[str]:
@@ -196,6 +214,27 @@ def validate_decisions(rows: list[dict], known_candidate_ids: set[str]) -> tuple
         elif candidate_id not in known_candidate_ids:
             row_errors.append(f"decision row {index}: unknown candidate_label_id")
         seen.add(candidate_id)
+        validate_optional_safe_id(
+            errors=row_errors,
+            row_prefix=f"decision row {index}",
+            field="label_id",
+            value=row.get("label_id"),
+            pattern=SAFE_ID_RE,
+        )
+        validate_optional_safe_id(
+            errors=row_errors,
+            row_prefix=f"decision row {index}",
+            field="reviewer_id",
+            value=row.get("reviewer_id"),
+            pattern=SAFE_ID_RE,
+        )
+        validate_optional_safe_id(
+            errors=row_errors,
+            row_prefix=f"decision row {index}",
+            field="maintainer_id",
+            value=row.get("maintainer_id"),
+            pattern=SAFE_MAINTAINER_ID_RE,
+        )
         if truthy(row.get("template_only", False)):
             row_errors.append(f"decision row {index}: template_only must be false/absent")
         if not truthy(row.get("human_labeled", row.get("human_reviewed", False))):

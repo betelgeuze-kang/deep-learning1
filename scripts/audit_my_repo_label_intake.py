@@ -31,6 +31,8 @@ MANAGED_TOP_LEVEL = set(LABEL_INTAKE_ARTIFACTS) | {
     "label_intake_sha256sums.txt",
 }
 SAFE_LABEL_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,191}$")
+SAFE_MAINTAINER_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@+-]{0,191}$")
+PLACEHOLDER_RE = re.compile(r"(^$|example|placeholder|replace|todo)", re.IGNORECASE)
 VALID_LABEL_PRIORITIES = {"", "P0", "P1", "P2", "P3"}
 
 
@@ -52,6 +54,33 @@ def is_git_object_id(value: str) -> bool:
 
 def truthy(value: object) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
+def good_operator_value(value: object) -> bool:
+    return not PLACEHOLDER_RE.search(str(value or "").strip())
+
+
+def require_safe_non_placeholder_id(value: str, *, label: str, pattern: re.Pattern[str]) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise ValueError(f"{label} is required")
+    if not good_operator_value(text):
+        raise ValueError(f"{label} must not be example/placeholder")
+    if not pattern.fullmatch(text):
+        raise ValueError(f"{label} must be a safe identifier")
+    return text
+
+
+def normalize_optional_safe_non_placeholder_id(
+    value: object,
+    *,
+    label: str,
+    pattern: re.Pattern[str],
+) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return require_safe_non_placeholder_id(text, label=label, pattern=pattern)
 
 
 def is_forbidden_env_path(path: Path) -> bool:
@@ -143,6 +172,11 @@ def normalize_decisions(raw_rows: list[dict]) -> list[dict]:
         candidate_label_id = str(raw.get("candidate_label_id") or "").strip()
         if not candidate_label_id:
             raise ValueError(f"decision row {idx} missing candidate_label_id")
+        candidate_label_id = require_safe_non_placeholder_id(
+            candidate_label_id,
+            label=f"decision row {idx} candidate_label_id",
+            pattern=SAFE_LABEL_ID,
+        )
         if candidate_label_id in seen:
             raise ValueError(f"duplicate decision for candidate_label_id: {candidate_label_id}")
         seen.add(candidate_label_id)
@@ -157,10 +191,21 @@ def normalize_decisions(raw_rows: list[dict]) -> list[dict]:
             raw.get("expected_abstain", raw.get("human_expected_abstain", "")),
             label=f"decision {candidate_label_id} expected_abstain",
         )
-        label_id = str(raw.get("label_id") or candidate_label_id).strip()
-        if not SAFE_LABEL_ID.fullmatch(label_id):
-            raise ValueError(f"decision {candidate_label_id} label_id must be a safe identifier")
-        maintainer_id = str(raw.get("maintainer_id") or "").strip()
+        label_id = require_safe_non_placeholder_id(
+            str(raw.get("label_id") or candidate_label_id),
+            label=f"decision {candidate_label_id} label_id",
+            pattern=SAFE_LABEL_ID,
+        )
+        maintainer_id = normalize_optional_safe_non_placeholder_id(
+            raw.get("maintainer_id"),
+            label=f"decision {candidate_label_id} maintainer_id",
+            pattern=SAFE_MAINTAINER_ID,
+        )
+        reviewer_id = normalize_optional_safe_non_placeholder_id(
+            raw.get("reviewer_id"),
+            label=f"decision {candidate_label_id} reviewer_id",
+            pattern=SAFE_LABEL_ID,
+        )
         decisions.append(
             {
                 "candidate_label_id": candidate_label_id,
@@ -173,9 +218,7 @@ def normalize_decisions(raw_rows: list[dict]) -> list[dict]:
                 ),
                 "maintainer_id": maintainer_id,
                 "maintainer_feedback": int(bool(maintainer_id and truthy(raw.get("maintainer_feedback", False)))),
-                "reviewer_id_sha256": sha256_text(str(raw.get("reviewer_id") or "").strip())
-                if str(raw.get("reviewer_id") or "").strip()
-                else "",
+                "reviewer_id_sha256": sha256_text(reviewer_id) if reviewer_id else "",
             }
         )
     if not decisions:

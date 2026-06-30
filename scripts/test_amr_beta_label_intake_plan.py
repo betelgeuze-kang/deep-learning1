@@ -266,6 +266,39 @@ def main() -> int:
         assert "missing candidate_label_id decisions" in proc.stderr
         assert not (tmp / "missing_plan.json").exists()
 
+        bad_optional_decision_ids = tmp / "bad optional decision ids.jsonl"
+        write_jsonl(
+            bad_optional_decision_ids,
+            [
+                {
+                    "candidate_label_id": f"{case_id}-0001",
+                    "label_id": "EXAMPLE-label" if index == 0 else f"{case_id}-0001",
+                    "reviewer_id": "reviewer alpha" if index == 0 else "reviewer-alpha",
+                    "human_labeled": True,
+                    "expected": "present",
+                }
+                for index, (case_id, _repo, _head) in enumerate(repos)
+            ],
+        )
+        bad_optional_args = [
+            "--repo-intake",
+            str(intake),
+            "--decisions",
+            str(bad_optional_decision_ids),
+            "--min-labels",
+            "10",
+            "--out-json",
+            str(tmp / "bad_optional_plan.json"),
+            "--skip-verify-existing",
+        ]
+        for template_dir in template_dirs:
+            bad_optional_args.extend(["--template-dir", str(template_dir)])
+        proc = run_tool(*bad_optional_args)
+        assert proc.returncode == 1
+        assert "label_id must not be example/placeholder" in proc.stderr
+        assert "reviewer_id must be a safe identifier" in proc.stderr
+        assert not (tmp / "bad_optional_plan.json").exists()
+
         synthetic_template = tmp / "case-01 synthetic template"
         make_template(synthetic_template, "case-01", synthetic="1")
         synthetic_args = [
