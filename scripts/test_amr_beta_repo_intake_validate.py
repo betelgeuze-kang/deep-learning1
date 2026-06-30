@@ -91,6 +91,7 @@ def main() -> int:
         assert status["valid_repo_rows"] == 10
         assert status["runs_audit"] == 0
         assert status["creates_benchmark_evidence"] == 0
+        assert status["output_path_guard_passed"] == 1
         assert status["repo_snapshot_lock_sha256"].startswith("sha256:")
         assert len(status["row_statuses"]) == 10
         assert status["row_statuses"][0]["clean_worktree_actual"] == 1
@@ -100,6 +101,26 @@ def main() -> int:
         assert "AMR Beta Repo Intake Status" in status_md_text
         assert "input_intake_sha256: sha256:" in status_md_text
         assert "creates_benchmark_evidence: 0" in status_md_text
+        assert "output_path_guard_passed: 1" in status_md_text
+
+        unsafe_out_json = repos[0][0] / "repo_intake_status.json"
+        unsafe_out_md = repos[0][0] / "repo_intake_status.md"
+        proc = run_tool(
+            intake,
+            "--out-json",
+            str(unsafe_out_json),
+            "--out-md",
+            str(unsafe_out_md),
+            "--json",
+        )
+        assert proc.returncode == 1
+        unsafe_status = json.loads(proc.stdout)
+        assert unsafe_status["ready_for_real_benchmark_audit"] == 0
+        assert unsafe_status["output_path_guard_passed"] == 0
+        assert "out_json must not be inside target repo" in proc.stderr
+        assert "out_md must not be inside target repo" in proc.stderr
+        assert not unsafe_out_json.exists()
+        assert not unsafe_out_md.exists()
 
         dirty = tmp / "dirty.md"
         write_intake(dirty, repos)

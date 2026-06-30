@@ -46,6 +46,9 @@ The benchmark verifies, per case, that the current HEAD matches
 mismatches, or missing expected HEAD keep the snapshot requirement at 0.
 The validator status binds the filled intake file with `input_intake_sha256`,
 keeps `runs_audit=0`, and keeps `creates_benchmark_evidence=0`.
+When writing optional `--out-json` or `--out-md` status files, keep them outside
+every target repository. The validator refuses status outputs inside a listed
+repo so a read-only intake check cannot dirty a repo after validating it.
 
 ## Namespace note
 
